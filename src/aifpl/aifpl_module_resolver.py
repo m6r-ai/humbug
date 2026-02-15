@@ -115,7 +115,7 @@ class AIFPLModuleResolver:
 
         # Recursively resolve imports in all subexpressions
         resolved_elements = tuple(self.resolve(elem) for elem in expr.elements)
-        return AIFPLASTList(resolved_elements, line=expr.line, column=expr.column)
+        return AIFPLASTList(resolved_elements, line=expr.line, column=expr.column, source_file=expr.source_file)
 
     def _resolve_import(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """

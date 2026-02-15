@@ -384,7 +384,7 @@ class AIFPLCodeGen:
             local_count=lambda_ctx.max_locals,
             name=lambda_name,
             source_line=plan.source_line,
-            source_file=""  # TODO: pass source file name through if available
+            source_file=plan.source_file
         )
 
         # Add to parent's code objects

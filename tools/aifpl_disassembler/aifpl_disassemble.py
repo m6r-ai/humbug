@@ -76,7 +76,14 @@ def annotate_instruction(instr: Instruction, code: CodeObject, builtin_names: Li
         if arg1 < len(code.code_objects):
             nested = code.code_objects[arg1]
             name = nested.name or f"<lambda-{arg1}>"
-            line_info = f" at line {nested.source_line}" if (nested.source_line and nested.source_line > 0) else ""
+            loc_parts = []
+            if nested.source_file:
+                loc_parts.append(nested.source_file)
+
+            if nested.source_line and nested.source_line > 0:
+                loc_parts.append(f"line {nested.source_line}")
+
+            line_info = f" at {':'.join(loc_parts)}" if loc_parts else ""
             capture_word = "capture" if arg2 == 1 else "captures"
             annotation = f"  ; Create closure for {name}{line_info} with {arg2} {capture_word}"
 
@@ -164,8 +171,15 @@ def disassemble_with_nested(code: CodeObject, builtin_names: List[str], depth: i
     display_name = name or code.name or "<top-level>"
 
     # Add source line info to display name if available
+    loc_parts = []
+    if code.source_file:
+        loc_parts.append(code.source_file)
+
     if code.source_line and code.source_line > 0:
-        display_name = f"{display_name} [line {code.source_line}]"
+        loc_parts.append(f"line {code.source_line}")
+
+    if loc_parts:
+        display_name = f"{display_name} [{':'.join(loc_parts)}]"
 
     output = []
     output.append(f"\n{indent}{'='*70}")
@@ -223,8 +237,14 @@ def analyze_function_flow(code: CodeObject) -> Dict[int, str]:
                 if closure_idx < len(code.code_objects):
                     nested_code = code.code_objects[closure_idx]
                     func_name = nested_code.name or f"<closure-{closure_idx}>"
-                    line_info = f" [line {nested_code.source_line}]" \
-                        if (nested_code.source_line and nested_code.source_line > 0) else ""
+                    loc_parts = []
+                    if nested_code.source_file:
+                        loc_parts.append(nested_code.source_file)
+
+                    if nested_code.source_line and nested_code.source_line > 0:
+                        loc_parts.append(f"line {nested_code.source_line}")
+
+                    line_info = f" [{':'.join(loc_parts)}]" if loc_parts else ""
                     var_map[var_idx] = f"{func_name}{line_info}"
 
         if (instr.opcode == Opcode.STORE_VAR and i >= 3):
@@ -292,8 +312,15 @@ def generate_trace(code: CodeObject, builtin_names: List[str], depth: int = 0, n
     indent = "  " * depth
     display_name = name or code.name or "<top-level>"
 
+    loc_parts = []
+    if code.source_file:
+        loc_parts.append(code.source_file)
+
     if code.source_line and code.source_line > 0:
-        display_name = f"{display_name} [line {code.source_line}]"
+        loc_parts.append(f"line {code.source_line}")
+
+    if loc_parts:
+        display_name = f"{display_name} [{':'.join(loc_parts)}]"
 
     output = []
     output.append(f"\n{indent}{'='*70}")

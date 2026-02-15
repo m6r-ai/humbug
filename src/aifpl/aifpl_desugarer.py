@@ -13,7 +13,11 @@ This simplifies the compiler and enables better optimization.
 """
 
 from typing import List, Tuple, Any, cast
-from aifpl.aifpl_ast import (AIFPLASTNode, AIFPLASTSymbol, AIFPLASTList, AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex, AIFPLASTString, AIFPLASTBoolean)
+
+from aifpl.aifpl_ast import (
+    AIFPLASTNode, AIFPLASTSymbol, AIFPLASTList, AIFPLASTInteger,
+    AIFPLASTFloat, AIFPLASTComplex, AIFPLASTString, AIFPLASTBoolean
+)
 from aifpl.aifpl_error import AIFPLEvalError
 
 
@@ -22,6 +26,29 @@ class AIFPLDesugarer:
 
     def __init__(self) -> None:
         self.temp_counter = 0  # For generating unique temp variable names
+
+    def _make_symbol(self, name: str, source_node: AIFPLASTNode) -> AIFPLASTSymbol:
+        """Create a symbol with source location from another node."""
+        return AIFPLASTSymbol(
+            name,
+            line=source_node.line,
+            column=source_node.column,
+            source_file=source_node.source_file
+        )
+
+    def _make_list(self, elements: tuple, source_node: AIFPLASTNode) -> AIFPLASTList:
+        """Create a list with source location from another node."""
+        return AIFPLASTList(
+            elements,
+            line=source_node.line,
+            column=source_node.column,
+            source_file=source_node.source_file
+        )
+
+    def _get_temp_var(self) -> str:
+        """Generate a unique temporary variable name."""
+        self.temp_counter += 1
+        return f"__tmp{self.temp_counter}"
 
     def desugar(self, expr: AIFPLASTNode) -> AIFPLASTNode:
         """
@@ -85,12 +112,10 @@ class AIFPLDesugarer:
         desugared_then = self.desugar(then_expr)
         desugared_else = self.desugar(else_expr)
 
-        return AIFPLASTList((
-            AIFPLASTSymbol('if'),
-            desugared_condition,
-            desugared_then,
-            desugared_else
-        ), line=expr.line, column=expr.column)
+        return self._make_list((
+            self._make_symbol('if', expr),
+            desugared_condition, desugared_then, desugared_else
+        ), expr)
 
     def _desugar_let(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """Desugar let expression by desugaring its subexpressions."""
@@ -111,16 +136,14 @@ class AIFPLDesugarer:
 
             var_name, value_expr = binding.elements
             desugared_value = self.desugar(value_expr)
-            desugared_bindings.append(AIFPLASTList((var_name, desugared_value)))
+            desugared_bindings.append(self._make_list((var_name, desugared_value), binding))
 
         # Desugar body
         desugared_body = self.desugar(body)
 
-        return AIFPLASTList((
-            let_symbol,
-            AIFPLASTList(tuple(desugared_bindings)),
-            desugared_body
-        ), line=expr.line, column=expr.column)
+        return self._make_list((
+            let_symbol, self._make_list(tuple(desugared_bindings), bindings_list), desugared_body
+        ), expr)
 
     def _desugar_let_star(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """
@@ -158,11 +181,11 @@ class AIFPLDesugarer:
             desugared_value = self.desugar(value_expr)
 
             # Wrap result in a let with this binding
-            result = AIFPLASTList((
-                AIFPLASTSymbol('let'),
-                AIFPLASTList((AIFPLASTList((var_name, desugared_value)),)),
+            result = self._make_list((
+                self._make_symbol('let', expr),
+                self._make_list((self._make_list((var_name, desugared_value), binding),), binding),
                 result
-            ))
+            ), expr)
 
         return result
 
@@ -176,7 +199,7 @@ class AIFPLDesugarer:
         # Desugar body
         desugared_body = self.desugar(body)
 
-        return AIFPLASTList((lambda_symbol, params_list, desugared_body), line=expr.line, column=expr.column)
+        return self._make_list((lambda_symbol, params_list, desugared_body), expr)
 
     def _desugar_trace(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """
@@ -194,11 +217,11 @@ class AIFPLDesugarer:
             )
 
         # Desugar all subexpressions
-        desugared_elements: List[AIFPLASTNode] = [AIFPLASTSymbol('trace')]
+        desugared_elements: List[AIFPLASTNode] = [self._make_symbol('trace', expr)]
         for elem in expr.elements[1:]:  # Skip 'trace' symbol
             desugared_elements.append(self.desugar(elem))
 
-        return AIFPLASTList(tuple(desugared_elements), line=expr.line, column=expr.column)
+        return self._make_list(tuple(desugared_elements), expr)
 
     def _desugar_call(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """Desugar function call by desugaring all elements."""
@@ -206,7 +229,7 @@ class AIFPLDesugarer:
         for elem in expr.elements:
             desugared_elements.append(self.desugar(elem))
 
-        return AIFPLASTList(tuple(desugared_elements), line=expr.line, column=expr.column)
+        return self._make_list(tuple(desugared_elements), expr)
 
     def _desugar_match(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """

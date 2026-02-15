@@ -52,7 +52,7 @@ class AIFPLCompiler:
         self.ir_builder = AIFPLIRBuilder()
         self.codegen = AIFPLCodeGen()
 
-    def compile_to_resolved_ast(self, source: str) -> AIFPLASTNode:
+    def compile_to_resolved_ast(self, source: str, source_file: str = "") -> AIFPLASTNode:
         """
         Compile source to fully resolved AST.
 
@@ -67,12 +67,13 @@ class AIFPLCompiler:
 
         Args:
             source: AIFPL source code as a string
+            source_file: Source file name for tracking origin of AST nodes
 
         Returns:
             Fully resolved AST (all imports replaced with module ASTs)
         """
         tokens = self.lexer.lex(source)
-        ast = self.parser.parse(tokens, source)
+        ast = self.parser.parse(tokens, source, source_file)
         checked_ast = self.semantic_analyzer.analyze(ast, source)
         resolved_ast = self.module_resolver.resolve(checked_ast)
         return resolved_ast
@@ -91,7 +92,7 @@ class AIFPLCompiler:
             Compiled bytecode ready for execution
         """
         # Use the partial compilation to get resolved AST
-        resolved_ast = self.compile_to_resolved_ast(source)
+        resolved_ast = self.compile_to_resolved_ast(source, name)
         desugared_ast = self.desugarer.desugar(resolved_ast)
 
         for ast_pass in self.ast_passes:

@@ -328,7 +328,8 @@ class AIFPL:
         # This will recursively handle any imports within this module.
         # The module resolver will call begin_loading() for each nested import,
         # which provides circular import detection.
-        resolved_ast = self.compiler.compile_to_resolved_ast(code)
+        # Use module name with .aifpl extension for source_file (relative path)
+        resolved_ast = self.compiler.compile_to_resolved_ast(code, f"{module_name}.aifpl")
 
         # Cache the resolved module and update hash after successful compilation
         self.module_cache[module_name] = resolved_ast

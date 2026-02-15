@@ -52,6 +52,7 @@ class AIFPLParser:
         self.pos = 0
         self.current_token: AIFPLToken | None = None
         self.expression = ""
+        self.source_file = ""
 
         # Paren stack for tracking unclosed expressions
         self.paren_stack: List[ParenStackFrame] = []
@@ -60,9 +61,14 @@ class AIFPLParser:
         self.last_token_end_line: int = 1
         self.last_token_end_column: int = 1
 
-    def parse(self, tokens: List[AIFPLToken], expression: str = "") -> AIFPLASTNode:
+    def parse(self, tokens: List[AIFPLToken], expression: str = "", source_file: str = "") -> AIFPLASTNode:
         """
         Parse tokens into AST with detailed error reporting.
+
+        Args:
+            tokens: List of tokens to parse
+            expression: Original expression string for error context
+            source_file: Source file name for tracking origin of AST nodes
 
         Returns:
             Parsed expression
@@ -74,6 +80,7 @@ class AIFPLParser:
         self.pos = 0
         self.current_token = self.tokens[0] if self.tokens else None
         self.expression = expression
+        self.source_file = source_file
 
         if self.current_token is None:
             raise AIFPLParseError(
@@ -116,27 +123,27 @@ class AIFPLParser:
 
         if token.type == AIFPLTokenType.SYMBOL:
             self._advance()
-            return AIFPLASTSymbol(token.value, line=token.line, column=token.column)
+            return AIFPLASTSymbol(token.value, line=token.line, column=token.column, source_file=self.source_file)
 
         if token.type == AIFPLTokenType.BOOLEAN:
             self._advance()
-            return AIFPLASTBoolean(token.value, line=token.line, column=token.column)
+            return AIFPLASTBoolean(token.value, line=token.line, column=token.column, source_file=self.source_file)
 
         if token.type == AIFPLTokenType.INTEGER:
             self._advance()
-            return AIFPLASTInteger(token.value, line=token.line, column=token.column)
+            return AIFPLASTInteger(token.value, line=token.line, column=token.column, source_file=self.source_file)
 
         if token.type == AIFPLTokenType.STRING:
             self._advance()
-            return AIFPLASTString(token.value, line=token.line, column=token.column)
+            return AIFPLASTString(token.value, line=token.line, column=token.column, source_file=self.source_file)
 
         if token.type == AIFPLTokenType.FLOAT:
             self._advance()
-            return AIFPLASTFloat(token.value, line=token.line, column=token.column)
+            return AIFPLASTFloat(token.value, line=token.line, column=token.column, source_file=self.source_file)
 
         if token.type == AIFPLTokenType.COMPLEX:
             self._advance()
-            return AIFPLASTComplex(token.value, line=token.line, column=token.column)
+            return AIFPLASTComplex(token.value, line=token.line, column=token.column, source_file=self.source_file)
 
         if token.type == AIFPLTokenType.QUOTE:
             return self._parse_quoted_expression()
@@ -418,7 +425,7 @@ class AIFPLParser:
 
         self._advance()  # consume ')'
 
-        return AIFPLASTList(tuple(elements), line=start_line, column=start_col)
+        return AIFPLASTList(tuple(elements), line=start_line, column=start_col, source_file=self.source_file)
 
     def _parse_let_with_tracking(
         self,
@@ -453,7 +460,7 @@ class AIFPLParser:
         if self.current_token.type == AIFPLTokenType.RPAREN:
             self._pop_paren_frame()
             self._advance()  # consume ')'
-            return AIFPLASTList(tuple(elements), line=start_line, column=start_col)
+            return AIFPLASTList(tuple(elements), line=start_line, column=start_col, source_file=self.source_file)
 
         # Parse bindings with special tracking
         self._mark_element_start()
@@ -485,7 +492,7 @@ class AIFPLParser:
 
         self._advance()  # consume ')'
 
-        return AIFPLASTList(tuple(elements), line=start_line, column=start_col)
+        return AIFPLASTList(tuple(elements), line=start_line, column=start_col, source_file=self.source_file)
 
     def _parse_let_bindings(self) -> AIFPLASTList:
         """
@@ -531,7 +538,7 @@ class AIFPLParser:
 
         self._advance()  # consume ')'
 
-        return AIFPLASTList(tuple(bindings), line=bindings_start_line, column=bindings_start_col)
+        return AIFPLASTList(tuple(bindings), line=bindings_start_line, column=bindings_start_col, source_file=self.source_file)
 
     def _parse_single_binding(self, binding_index: int) -> AIFPLASTList:
         """
@@ -591,7 +598,7 @@ class AIFPLParser:
 
         self._advance()  # consume ')'
 
-        return AIFPLASTList(tuple(elements), line=binding_start_line, column=binding_start_col)
+        return AIFPLASTList(tuple(elements), line=binding_start_line, column=binding_start_col, source_file=self.source_file)
 
     def _create_incomplete_bindings_error(
         self,
@@ -710,8 +717,8 @@ class AIFPLParser:
         quoted_expr = self._parse_expression()
 
         # Transform 'expr into (quote expr)
-        quote_symbol = AIFPLASTSymbol("quote", line=quote_line, column=quote_col)
-        return AIFPLASTList((quote_symbol, quoted_expr), line=quote_line, column=quote_col)
+        quote_symbol = AIFPLASTSymbol("quote", line=quote_line, column=quote_col, source_file=self.source_file)
+        return AIFPLASTList((quote_symbol, quoted_expr), line=quote_line, column=quote_col, source_file=self.source_file)
 
     def _advance(self) -> None:
         """Move to the next token."""

@@ -592,7 +592,8 @@ class AIFPLIRBuilder:
             binding_name=ctx.current_binding_name,
             sibling_bindings=ctx.sibling_bindings,
             max_locals=lambda_ctx.max_locals,
-            source_line=expr.line if (hasattr(expr, 'line') and expr.line is not None) else 0
+            source_line=expr.line if (hasattr(expr, 'line') and expr.line is not None) else 0,
+            source_file=expr.source_file if (hasattr(expr, 'source_file') and expr.source_file) else ""
         )
 
     def _analyze_function_call(self, expr: AIFPLASTList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRCall:
