@@ -357,6 +357,15 @@ class ConversationTab(TabBase):
         """Cancel any ongoing AI response tasks."""
         self._conversation_widget.cancel_current_tasks()
 
+    def handle_esc_key(self) -> bool:
+        """
+        Handle Esc key press with confirmation if streaming or pending tool approval.
+
+        Returns:
+            bool: True if the Esc key was handled, False otherwise
+        """
+        return self._conversation_widget.handle_esc_key()
+
     def show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
         dialog = ConversationSettingsDialog(self)

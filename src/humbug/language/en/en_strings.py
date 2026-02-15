@@ -235,7 +235,7 @@ def get_english_strings() -> LanguageStrings:
         error_processing_metaphor="Failed to process Metaphor file:\n\n{}",
         error_saving_mindspace_settings="Failed to save mindspace settings: {}",
         error_saving_user_settings="Failed to save user settings: {}",
-        cancel_conversation="Are you sure you want to cancel the active conversation?",
+        cancel_conversation="Are you sure you want to stop the current AI response? This will terminate the ongoing conversation and may result in incomplete responses.",
 
         # Status bar
         editor_status="Line {line}, Column {column} | {encoding} | {line_ending} | {type}",

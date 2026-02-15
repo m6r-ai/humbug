@@ -2144,13 +2144,12 @@ class ColumnManager(QWidget):
         tab.show_conversation_settings_dialog()
 
     def handle_esc_key(self) -> bool:
-        """Handle processing of the "Esc" key."""
+        """Handle processing of the "Esc" key with confirmation for active conversations."""
         tab = self.get_current_tab()
         if not isinstance(tab, ConversationTab):
             return False
 
-        tab.cancel_current_tasks()
-        return True
+        return tab.handle_esc_key()
 
     def can_navigate_next_message(self) -> bool:
         """Check if next message navigation is possible."""

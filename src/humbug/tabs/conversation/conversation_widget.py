@@ -1599,6 +1599,39 @@ class ConversationWidget(QWidget):
         ai_conversation = cast(AIConversation, self._ai_conversation)
         ai_conversation.cancel_current_tasks(notify)
 
+    def handle_esc_key(self) -> bool:
+        """
+        Handle Esc key press with confirmation for active streaming or pending tool approval.
+
+        If the conversation is actively streaming or has a pending tool approval,
+        shows a confirmation dialog before canceling. The dialog warns that this
+        is a dangerous operation.
+
+        Returns:
+            bool: True if the Esc key was handled (even if user declined), False otherwise
+        """
+        # If not streaming and no pending tool approval, nothing to cancel
+        if not self._is_streaming and not self._pending_tool_call_approval:
+            return False
+
+        # Show confirmation dialog for dangerous operation
+        strings = self._language_manager.strings()
+        result = MessageBox.show_message(
+            self,
+            MessageBoxType.QUESTION,
+            strings.cancel_conversation_title,
+            strings.cancel_conversation,
+            [MessageBoxButton.YES, MessageBoxButton.NO],
+            destructive=True
+        )
+
+        # Only cancel if user confirmed
+        if result == MessageBoxButton.YES:
+            self.cancel_current_tasks()
+
+        # Return True even if user declined - we handled the Esc key
+        return True
+
     def _build_widget_style(self) -> str:
         """Build styles for the conversation widget."""
         style_manager = self._style_manager

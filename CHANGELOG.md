@@ -14,6 +14,7 @@ New features:
 - Added a pretty printer for AIFPL.
 - Added GLM-5 model, but retired GLM-4.6 models.
 - Added a new "help" tool that can provide more detailed help on other tools to reduce token usage.
+- When the user hits "Esc" to cancel a conversation, pop up a message box to confirm.
 
 Bug fixes:
 

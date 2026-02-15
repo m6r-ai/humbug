@@ -236,7 +236,7 @@ def get_arabic_strings() -> LanguageStrings:
         error_processing_metaphor="فشل في معالجة ملف ميتافور:\n\n{}",
         error_saving_mindspace_settings="فشل في حفظ الإعدادات: {}",
         error_saving_user_settings="فشل في حفظ إعدادات المستخدم: {}",
-        cancel_conversation="هل أنت متأكد من أنك تريد إلغاء المحادثة النشطة؟",
+        cancel_conversation="هل أنت متأكد من أنك تريد إيقاف استجابة الذكاء الاصطناعي الحالية؟ سيؤدي هذا إلى إنهاء المحادثة الجارية وقد يؤدي إلى استجابات غير مكتملة.",
 
         # Status bar
         editor_status="سطر {line}، عمود {column} | {encoding} | {line_ending} | {type}",
