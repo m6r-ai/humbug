@@ -22,6 +22,7 @@ Bug fixes:
 - Resolved a problem where "dim" attributes were not resetting correctly in the terminal.
 - Added a few missing escape sequences for the terminal.
 - Ensure timeouts of running AIFPL tool usage will not block/crash Humbug.
+- If we move a tab with a tool approval open, the system will now preserve that tool approval in the new tab.
 
 Internal structure changes
 

@@ -2307,6 +2307,31 @@ class ConversationWidget(QWidget):
         # If we've been asked for temporary state it means we're going to move this
         # widget so prep for moving our conversation state directly.
         if temp_state:
+            # Capture tool approval state
+            if self._pending_tool_call_approval:
+                # Find the message index
+                message_index = self._messages.index(self._pending_tool_call_approval)
+
+                # Get the message ID for robust lookup
+                message_id = self._pending_tool_call_approval.message_id()
+
+                # Get the tool approval info from the message widget
+                tool_approval_info = self._pending_tool_call_approval.get_tool_approval_info()
+
+                if tool_approval_info and tool_approval_info["tool_call"]:
+                    metadata["pending_tool_approval"] = {
+                        "message_index": message_index,
+                        "message_id": message_id,
+                        "tool_call": tool_approval_info["tool_call"].to_dict(),
+                        "reason": tool_approval_info["reason"],
+                        "context": tool_approval_info["context"],
+                        "destructive": tool_approval_info["destructive"]
+                    }
+
+                    # Clear the approval UI from the old widget
+                    self._pending_tool_call_approval.remove_tool_approval_ui()
+                    self._pending_tool_call_approval = None
+
             # Unregister callbacks from the current widget
             self._unregister_ai_conversation_callbacks()
 
@@ -2386,6 +2411,34 @@ class ConversationWidget(QWidget):
                     reasoning=AIReasoningCapability(metadata["settings"].get("reasoning", AIReasoningCapability.NO_REASONING.value))
                 )
                 self.update_conversation_settings(settings)
+
+        # Restore tool approval state if present
+        if "pending_tool_approval" in metadata:
+            approval_info = metadata["pending_tool_approval"]
+
+            # Find the message widget by ID (more robust than index)
+            message_id = approval_info["message_id"]
+            message_widget = None
+
+            for msg_widget in self._messages:
+                if msg_widget.message_id() == message_id:
+                    message_widget = msg_widget
+                    break
+
+            if message_widget:
+                # Recreate the tool call object
+                tool_call = AIToolCall.from_dict(approval_info["tool_call"])
+
+                # Show the approval UI
+                message_widget.show_tool_approval_ui(
+                    tool_call,
+                    approval_info["reason"],
+                    approval_info["context"],
+                    approval_info["destructive"]
+                )
+
+                # Update our tracking reference
+                self._pending_tool_call_approval = message_widget
 
         # Update our status
         self.status_updated.emit()

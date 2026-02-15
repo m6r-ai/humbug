@@ -1,6 +1,6 @@
 from datetime import datetime
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 import colorsys
 
 from PySide6.QtWidgets import (
@@ -192,6 +192,12 @@ class ConversationMessage(QFrame):
         self._approval_approve_button: QPushButton | None = None
         self._approval_i_am_unsure_button: QPushButton | None = None
         self._approval_reject_button: QPushButton | None = None
+
+        # Store tool approval info for potential state capture
+        self._pending_tool_call: AIToolCall | None = None
+        self._pending_tool_reason: str | None = None
+        self._pending_tool_context: str | None = None
+        self._pending_tool_destructive: bool | None = None
 
         # Track sections
         self._sections: List[ConversationMessageSection] = []
@@ -519,6 +525,12 @@ class ConversationMessage(QFrame):
         """
         assert self._approval_widget is None, "Approval widget already exists"
 
+        # Store for potential state capture
+        self._pending_tool_call = tool_call
+        self._pending_tool_reason = reason
+        self._pending_tool_context = context
+        self._pending_tool_destructive = destructive
+
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
         spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
@@ -624,6 +636,29 @@ class ConversationMessage(QFrame):
             self._approval_approve_button = None
             self._approval_i_am_unsure_button = None
             self._approval_reject_button = None
+
+        # Clear stored tool approval info
+        self._pending_tool_call = None
+        self._pending_tool_reason = None
+        self._pending_tool_context = None
+        self._pending_tool_destructive = None
+
+    def get_tool_approval_info(self) -> Dict[str, Any] | None:
+        """
+        Get information about the current tool approval request if one exists.
+
+        Returns:
+            Dictionary with tool_call, reason, context, destructive or None
+        """
+        if self._approval_widget is None:
+            return None
+
+        return {
+            "tool_call": self._pending_tool_call,
+            "reason": self._pending_tool_reason,
+            "context": self._pending_tool_context,
+            "destructive": self._pending_tool_destructive
+        }
 
     def _get_border_color(self) -> str:
         """Get the border color based on current state."""

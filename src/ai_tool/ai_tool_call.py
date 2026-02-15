@@ -23,3 +23,20 @@ class AIToolCall:
             'name': self.name,
             'arguments': self.arguments
         }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'AIToolCall':
+        """
+        Create an AIToolCall from a dictionary.
+
+        Args:
+            data: Dictionary representation of the tool call
+
+        Returns:
+            AIToolCall instance
+        """
+        return cls(
+            id=data['id'],
+            name=data['name'],
+            arguments=data['arguments']
+        )
