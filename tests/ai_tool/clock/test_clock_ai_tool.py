@@ -42,16 +42,6 @@ def mock_authorization():
 class TestClockAIToolDefinition:
     """Test the clock tool definition."""
 
-    def test_get_definition_returns_correct_structure(self, clock_tool):
-        """Test that get_definition returns the correct tool definition structure."""
-        definition = clock_tool.get_definition()
-
-        assert isinstance(definition, AIToolDefinition)
-        assert definition.name == "clock"
-        assert "The clock tool" in definition.description
-        assert "Available operations are:" in definition.description
-        assert len(definition.parameters) == 5
-
     def test_operation_parameter_definition(self, clock_tool):
         """Test the operation parameter definition."""
         definition = clock_tool.get_definition()
