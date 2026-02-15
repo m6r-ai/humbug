@@ -95,7 +95,7 @@ class AIFPLCodeGen:
     without performing any analysis.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.lambda_counter = 0  # Counter for anonymous lambdas
 
     def generate(self, plan: AIFPLIRExpr, name: str = "<module>") -> CodeObject:

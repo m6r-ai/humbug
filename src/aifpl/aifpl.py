@@ -8,6 +8,7 @@ from typing import Union, Dict, List, Iterator
 from contextlib import contextmanager
 
 from aifpl.aifpl_compiler import AIFPLCompiler
+from aifpl.aifpl_ast import AIFPLASTNode
 from aifpl.aifpl_value import AIFPLFunction, AIFPLFloat, AIFPLBoolean, AIFPLValue
 from aifpl.aifpl_vm import AIFPLVM, AIFPLTraceWatcher
 from aifpl.aifpl_error import AIFPLModuleNotFoundError, AIFPLModuleError, AIFPLCircularImportError
@@ -103,7 +104,7 @@ class AIFPL:
         self._module_path = module_path or ["."]
 
         # Module system state
-        self.module_cache: Dict[str, AIFPLValue] = {}  # module_name -> alist
+        self.module_cache: Dict[str, AIFPLASTNode] = {}  # module_name -> alist
         self.module_hashes: Dict[str, str] = {}  # module_name -> sha256 hex digest
         self.loading_stack: List[str] = []  # Track currently-loading modules for circular detection
 
@@ -264,7 +265,7 @@ class AIFPL:
             search_paths=self._module_path
         )
 
-    def load_module(self, module_name: str) -> AIFPLValue:
+    def load_module(self, module_name: str) -> AIFPLASTNode:
         """
         Load and compile a module to a fully resolved AST.
 
@@ -316,6 +317,7 @@ class AIFPL:
             if cached_hash == current_hash:
                 # Cache is valid - return cached AST
                 return self.module_cache[module_name]
+
             # Cache is stale - will reload below
 
         # Load source code
@@ -349,7 +351,7 @@ class AIFPL:
         self.module_cache.pop(module_name, None)
         self.module_hashes.pop(module_name, None)
 
-    def reload_module(self, module_name: str) -> AIFPLValue:
+    def reload_module(self, module_name: str) -> AIFPLASTNode:
         """
         Force reload a module, bypassing cache.
 

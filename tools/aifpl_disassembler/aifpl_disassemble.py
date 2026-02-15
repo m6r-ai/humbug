@@ -133,7 +133,6 @@ def annotate_instruction(instr: Instruction, code: CodeObject, builtin_names: Li
 
 def format_instruction(instr: Instruction, index: int) -> str:
     """Format instruction with appropriate arguments based on opcode."""
-    """Format instruction with natural spacing, pad to align annotations."""
     # Define which opcodes take 0, 1, or 2 arguments
     no_arg_opcodes = {
         Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST,
