@@ -293,16 +293,8 @@ class AIFPLDesugarer:
             desugared_result = self.desugar(result_expr)
 
             # Desugar the pattern into (test_expr, bindings)
-            try:
-                test_expr, bindings = self._desugar_pattern(pattern, temp_var)
-
-            except AIFPLEvalError as e:
-                # Add clause context to error message
-                clause_num = i + 1
-                raise AIFPLEvalError(
-                    message=f"Invalid pattern in clause {clause_num}",
-                    context=str(e)
-                ) from e
+            # All patterns are validated by semantic analyzer, so this cannot raise
+            test_expr, bindings = self._desugar_pattern(pattern, temp_var)
 
             if i == len(clauses) - 1:
                 # Last clause - if it fails, raise an error
@@ -498,26 +490,22 @@ class AIFPLDesugarer:
                 'string?', 'boolean?', 'list?', 'alist?', 'function?'
             }
 
-            if type_pred in valid_predicates:
-                # Variable pattern already validated by semantic analyzer
-                assert isinstance(var_pattern, AIFPLASTSymbol), \
-                    "Type pattern variable should be a symbol (validated by semantic analyzer)"
+            assert type_pred in valid_predicates, f"Unknown type predicate: {type_pred} (should be validated by semantic analyzer)"
+            assert isinstance(var_pattern, AIFPLASTSymbol), \
+                "Type pattern variable should be a symbol (validated by semantic analyzer)"
 
-                # Test: (type? temp_var)
-                test_expr = AIFPLASTList((
-                    AIFPLASTSymbol(type_pred),
-                    AIFPLASTSymbol(temp_var)
-                ))
+            # Test: (type? temp_var)
+            test_expr = AIFPLASTList((
+                AIFPLASTSymbol(type_pred),
+                AIFPLASTSymbol(temp_var)
+            ))
 
-                # Binding: if var_pattern is a variable, bind it
-                bindings: List[Tuple[str, AIFPLASTNode]] = []
-                if isinstance(var_pattern, AIFPLASTSymbol) and var_pattern.name != '_':
-                    bindings.append((var_pattern.name, AIFPLASTSymbol(temp_var)))
+            # Binding: if var_pattern is a variable, bind it
+            bindings: List[Tuple[str, AIFPLASTNode]] = []
+            if isinstance(var_pattern, AIFPLASTSymbol) and var_pattern.name != '_':
+                bindings.append((var_pattern.name, AIFPLASTSymbol(temp_var)))
 
-                return (test_expr, bindings)
-
-            # Unknown type predicate - should have been caught by semantic analyzer
-            assert False, f"Unknown type predicate: {type_pred} (should be validated by semantic analyzer)"
+            return (test_expr, bindings)
 
         # Malformed type patterns should have been caught by semantic analyzer
         # Continue with other pattern types
