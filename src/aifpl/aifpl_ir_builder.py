@@ -52,7 +52,7 @@ class AnalysisContext:
     This context does NOT emit bytecode or track constants/names.
     It only performs analysis and builds the compilation plan.
     """
-    scopes: List[CompilationScope] = field(default_factory=lambda: [CompilationScope()])
+    scopes: List[CompilationScope] = field(default_factory=list)
     parent_ctx: 'AnalysisContext | None' = None
     next_local_index: int = 0
     max_locals: int = 0
