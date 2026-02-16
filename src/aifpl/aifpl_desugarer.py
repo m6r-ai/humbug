@@ -45,11 +45,6 @@ class AIFPLDesugarer:
             source_file=source_node.source_file
         )
 
-    def _get_temp_var(self) -> str:
-        """Generate a unique temporary variable name."""
-        self.temp_counter += 1
-        return f"__tmp{self.temp_counter}"
-
     def desugar(self, expr: AIFPLASTNode) -> AIFPLASTNode:
         """
         Desugar an expression recursively.
@@ -389,35 +384,21 @@ class AIFPLDesugarer:
             )
 
         # Separate different types of bindings:
-        # 1. Element extraction bindings (list-ref) - must go inside then branch
-        # 2. Other temp bindings - can go outside
-        # 3. Pattern bindings - go inside then branch
-        element_extraction_bindings: List[Tuple[str, AIFPLASTNode]] = []
-        temp_bindings: List[Tuple[str, Any]] = []
+        # All bindings here are pattern variable bindings (user-defined names).
+        # They must go inside the then branch (only evaluated after test passes).
         pattern_bindings: List[Tuple[str, AIFPLASTNode]] = []
 
         for var_name, value_expr in bindings:
-            if var_name.startswith('#:match-tmp-'):
-                # Check if this is an element extraction (list-ref)
-                if isinstance(value_expr, AIFPLASTList) and not value_expr.is_empty():
-                    first = value_expr.first()
-                    if isinstance(first, AIFPLASTSymbol) and first.name == 'list-ref':
-                        element_extraction_bindings.append((var_name, value_expr))
-                    else:
-                        temp_bindings.append((var_name, value_expr))
-                else:
-                    temp_bindings.append((var_name, value_expr))
-            else:
-                pattern_bindings.append((var_name, value_expr))
+            # Note: Temp variables with '#:match-tmp-' prefix never appear as binding keys
+            # when this function is called. They only appear in list/cons patterns which
+            # use special markers handled earlier (lines 365-384).
+            # All bindings here are pattern variable bindings (user-defined names).
+            pattern_bindings.append((var_name, value_expr))
 
         # Element extraction and pattern bindings go inside the then branch
         # (they should only be evaluated after the test passes)
-        if element_extraction_bindings or pattern_bindings:
+        if pattern_bindings:
             binding_list = []
-            # Add element extractions first
-            binding_list.extend([AIFPLASTList((AIFPLASTSymbol(vn), ve)) for vn, ve in element_extraction_bindings])
-
-            # Then add pattern bindings
             binding_list.extend([AIFPLASTList((AIFPLASTSymbol(vn), ve)) for vn, ve in pattern_bindings])
 
             then_expr: AIFPLASTNode = AIFPLASTList((
@@ -425,32 +406,16 @@ class AIFPLDesugarer:
                 AIFPLASTList(tuple(binding_list)),
                 result_expr
             ))
-
         else:
             then_expr = result_expr
 
         # Build if expression
-        if_expr = AIFPLASTList((
+        return AIFPLASTList((
             AIFPLASTSymbol('if'),
             test_expr,
             then_expr,
             else_expr
         ))
-
-        # Other temp bindings (not element extractions) go outside the if
-        # (they're safe to evaluate before the test)
-        if temp_bindings:
-            binding_list = []
-            for var_name, value_expr in temp_bindings:
-                binding_list.append(AIFPLASTList((AIFPLASTSymbol(var_name), value_expr)))
-
-            return AIFPLASTList((
-                AIFPLASTSymbol('let*'),
-                AIFPLASTList(tuple(binding_list)),
-                if_expr
-            ))
-
-        return if_expr
 
     def _build_no_match_error(self) -> AIFPLASTNode:
         """
