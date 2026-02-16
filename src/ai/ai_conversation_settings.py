@@ -11,8 +11,8 @@ class AIConversationSettings:
     # Single dictionary of all available models
     MODELS = {
         # Anthropic models
-        "claude-haiku-4-5-20251001": AIModel(
-            name="claude-haiku-4-5-20251001",
+        "claude-haiku-4-5": AIModel(
+            name="claude-haiku-4-5",
             provider="anthropic",
             context_window=200000,
             max_output_tokens=32000,
@@ -20,8 +20,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "claude-haiku-4-5-20251001 (thinking)": AIModel(
-            name="claude-haiku-4-5-20251001",
+        "claude-haiku-4-5 (thinking)": AIModel(
+            name="claude-haiku-4-5",
             provider="anthropic",
             context_window=200000,
             max_output_tokens=32000,
@@ -29,8 +29,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "claude-sonnet-4-5-20250929": AIModel(
-            name="claude-sonnet-4-5-20250929",
+        "claude-sonnet-4-5": AIModel(
+            name="claude-sonnet-4-5",
             provider="anthropic",
             context_window=200000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
@@ -38,8 +38,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "claude-sonnet-4-5-20250929 (thinking)": AIModel(
-            name="claude-sonnet-4-5-20250929",
+        "claude-sonnet-4-5 (thinking)": AIModel(
+            name="claude-sonnet-4-5",
             provider="anthropic",
             context_window=200000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
@@ -47,8 +47,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "claude-sonnet-4-20250514": AIModel(
-            name="claude-sonnet-4-20250514",
+        "claude-opus-4-6": AIModel(
+            name="claude-opus-4-6",
             provider="anthropic",
             context_window=200000,
             max_output_tokens=32000,  # This is actually 64000 but that's too much
@@ -56,62 +56,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "claude-sonnet-4-20250514 (thinking)": AIModel(
-            name="claude-sonnet-4-20250514",
-            provider="anthropic",
-            context_window=200000,
-            max_output_tokens=32000,  # This is actually 64000 but that's too much
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "claude-opus-4-5-20250805": AIModel(
-            name="claude-opus-4-5-20251101",
-            provider="anthropic",
-            context_window=200000,
-            max_output_tokens=32000,  # This is actually 64000 but that's too much
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "claude-opus-4-5-20251101 (thinking)": AIModel(
-            name="claude-opus-4-5-20251101",
-            provider="anthropic",
-            context_window=200000,
-            max_output_tokens=32000,  # This is actuall 64000 but that's too much
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "claude-opus-4-1-20250805": AIModel(
-            name="claude-opus-4-1-20250805",
-            provider="anthropic",
-            context_window=200000,
-            max_output_tokens=32000,  # This is actually 64000 but that's too much
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "claude-opus-4-1-20250805 (thinking)": AIModel(
-            name="claude-opus-4-1-20250805",
-            provider="anthropic",
-            context_window=200000,
-            max_output_tokens=32000,  # This is actuall 64000 but that's too much
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "claude-opus-4-20250805": AIModel(
-            name="claude-opus-4-20250805",
-            provider="anthropic",
-            context_window=200000,
-            max_output_tokens=32000,  # This is actually 64000 but that's too much
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "claude-opus-4-20250514 (thinking)": AIModel(
-            name="claude-opus-4-20250514",
+        "claude-opus-4-6 (thinking)": AIModel(
+            name="claude-opus-4-6",
             provider="anthropic",
             context_window=200000,
             max_output_tokens=32000,  # This is actuall 64000 but that's too much
@@ -399,15 +345,6 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "gpt-4.1-nano": AIModel(
-            name="gpt-4.1-nano",
-            provider="openai",
-            context_window=1048576,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
         "gpt-5-mini": AIModel(
             name="gpt-5-mini",
             provider="openai",
@@ -415,24 +352,6 @@ class AIConversationSettings:
             max_output_tokens=128000,
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gpt-4.1-mini": AIModel(
-            name="gpt-4.1-mini",
-            provider="openai",
-            context_window=1048576,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gpt-4o-mini": AIModel(
-            name="gpt-4o-mini",
-            provider="openai",
-            context_window=128000,
-            max_output_tokens=16384,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "gpt-5.2 (non-reasoning)": AIModel(
@@ -449,78 +368,6 @@ class AIConversationSettings:
             provider="openai",
             context_window=400000,
             max_output_tokens=128000,
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gpt-5.1 (non-reasoning)": AIModel(
-            name="gpt-5.1",
-            provider="openai",
-            context_window=400000,
-            max_output_tokens=128000,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gpt-5.1": AIModel(
-            name="gpt-5.1",
-            provider="openai",
-            context_window=400000,
-            max_output_tokens=128000,
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gpt-5": AIModel(
-            name="gpt-5",
-            provider="openai",
-            context_window=400000,
-            max_output_tokens=128000,
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gpt-4.1": AIModel(
-            name="gpt-4.1",
-            provider="openai",
-            context_window=1048576,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gpt-4o": AIModel(
-            name="gpt-4o",
-            provider="openai",
-            context_window=128000,
-            max_output_tokens=16384,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "o4-mini": AIModel(
-            name="o4-mini",
-            provider="openai",
-            context_window=200000,
-            max_output_tokens=100000,
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "o3-mini": AIModel(
-            name="o3-mini",
-            provider="openai",
-            context_window=200000,
-            max_output_tokens=100000,
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "o3": AIModel(
-            name="o3",
-            provider="openai",
-            context_window=200000,
-            max_output_tokens=100000,
             supports_temperature=False,
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
@@ -862,7 +709,7 @@ class AIConversationSettings:
             return "gemini-2.5-flash"
 
         if "anthropic" in ai_backends:
-            return "claude-haiku-4-5-20251001"
+            return "claude-haiku-4-5"
 
         if "deepseek" in ai_backends:
             return "deepseek-chat"
@@ -874,7 +721,7 @@ class AIConversationSettings:
             return "qwen3:4b"
 
         if "openai" in ai_backends:
-            return "gpt-4.1-mini"
+            return "gpt-5-mini"
 
         if "xai" in ai_backends:
             return "grok-4-0709"
