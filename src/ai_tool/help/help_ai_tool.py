@@ -35,7 +35,8 @@ class HelpAITool(AITool):
             name="help",
             description_prefix=(
                 "Get detailed documentation for AI tools and their operations. "
-                "Use this when you need to understand tool parameters, constraints, or usage patterns."
+                "Use this when you need to understand what a tool can do, how it behaves, its tool parameters, "
+                "constraints, or usage patterns."
             ),
             additional_parameters=[
                 AIToolParameter(
@@ -47,7 +48,7 @@ class HelpAITool(AITool):
                 AIToolParameter(
                     name="operation_name",
                     type="string",
-                    description="Name of the operation to get help for (requires tool_name)",
+                    description="Name of the tool operation to get help for (requires tool_name)",
                     required=False
                 )
             ]
@@ -70,7 +71,7 @@ class HelpAITool(AITool):
                 extract_context=None,
                 allowed_parameters={"tool_name", "operation_name"},
                 required_parameters={"tool_name"},
-                description="Get detailed documentation for a tool or specific operation"
+                description="Get detailed documentation for a tool or specific operation of a tool"
             )
         }
 

@@ -15,6 +15,11 @@ New features:
 - Added GLM-5 model, but retired GLM-4.6 models.
 - Added a new "help" tool that can provide more detailed help on other tools to reduce token usage.
 - When the user hits "Esc" to cancel a conversation, pop up a message box to confirm.
+- Added support for "AGENTS.md" files to guide an LLM on discovery within the current mindspace.
+- Added support for Claude Opus 4.6.  Renamed the aliases for Claude Sonnet 4.5 and Claude Haiku 4.5 to the versions
+  that do not include dates.
+- Removed Claude Sonnet 4, Claude Opus 4 and Claude Opus 4.1
+- Removed GPT 4o, GPT 4.1 nano, GPT 4.1, GPT 5.1, GPT o3, GPT o4.
 
 Bug fixes:
 

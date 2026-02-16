@@ -159,6 +159,11 @@ def setup_ai_system_prompt() -> None:
         "- You must always use the language annotation when writing code blocks. "
         "If there is no specific language then use 'text'.  For AIFPL you must use 'aifpl'\n"
         "- You must follow best practices and include appropriate error handling when writing code\n"
+        "- AIFPL has unique syntax and semantics. "
+        "You MUST use the help tool to understand how to use it before any attempt to use it."
+        "- Always check for a file AGENTS.md in the current mindspace. If it exists, read it it contains information "
+        "that will help you understand the system and how to operate within it.  AGENTS.md files may also exist in "
+        "subdirectories, and if so they contain information about specific tools or resources relevant to that subdirectory. "
     )
 
     AIBackend.set_system_prompt(system_prompt)

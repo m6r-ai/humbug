@@ -36,20 +36,16 @@ class AIFPLAITool(AITool):
         return self._build_definition_from_operations(
             name="AIFPL",
             description_prefix=(
-                "The AIFPL (AI Functional Programming Language) tool offers a LISP-like (S expression) syntax for "
-                "mathematical expressions, string/boolean operations, list manipulation, conditional evaluation, "
-                "pattern matching, and functional programming with lambda expressions and iteration. "
+                "The AIFPL (AI Functional Programming Language) is a pure functional programming language. "
                 "It is ideal for everything from simple calculations to complex algorithms. "
-                "The language is a pure functional langage with no side effects so it does not require user approvals "
-                "to use it (unlike other tools). "
-                "While it is LISP-like, it has its own unique syntax and semantics that must be learned to use effectively. "
+                "AIFPL has no side effects, so it does not require user approvals to use it. "
                 "When annotating AIFPL code, use triple backticks with `aifpl`\n\n"
             ),
             additional_parameters=[
                 AIToolParameter(
                     name="expression",
                     type="string",
-                    description="A valid AIFPL expression using LISP-like S-expression syntax",
+                    description="A valid expression written in the AIFPL language",
                     required=True
                 )
             ]
@@ -69,7 +65,7 @@ class AIFPLAITool(AITool):
                 extract_context=self._extract_evaluate_context,
                 allowed_parameters={"expression"},
                 required_parameters={"expression"},
-                description="Evaluate an AIFPL expression"
+                description="Evaluate an expression written in the AIFPL language"
             )
         }
 
@@ -149,7 +145,7 @@ class AIFPLAITool(AITool):
 
     def get_brief_description(self) -> str:
         """Get brief one-line description for system prompt."""
-        return "Evaluates expressions using functional programming language with LISP-like syntax."
+        return "Evaluates expressions using a very efficient pure functional programming language"
 
     def get_detailed_help(self, operation: str | None = None) -> str:
         """
@@ -165,6 +161,20 @@ class AIFPLAITool(AITool):
         # Full tool help with comprehensive syntax guide
         return """# AIFPL Tool
 Syntax: (operator arg1 arg2 ...)
+
+## Key features:
+
+- Pure functional: no side effects, immutable data
+- Homoiconic: code and data use same representation (s-expressions)
+- Tail call optimization prevents stack overflow
+- Strict type system with automatic numeric promotion (integer → float → complex)
+- Numeric promotion is one-way: types promote up but never downgrade automatically
+- Mixed-type lists supported: (list 1 \"hi\" #t)
+- String literals support escapes: \\n, \\t, \\\", \\\\, \\uXXXX
+- Comments: use semicolon (;) for single-line comments, e.g., ; This is a comment
+- Numeric literals: 42 (integer), 3.14 (float), 3+4j (complex), 5j (pure imaginary), j (1j)
+- Other literals: #xFF (hex), #b1010 (binary), #o755 (octal), \"hello\" (string), #t/#f (boolean), () (empty list)
+- Constants: pi, e
 
 ## Quote - data literals and code as data:
 
@@ -335,20 +345,6 @@ Syntax: (operator arg1 arg2 ...)
 - Multiple messages: (trace \"x=\" x \"y=\" y (+ x y))
 - Useful for debugging recursive functions and complex algorithms
 - Trace output shows execution order, helping identify logic issues
-
-## Key features:
-
-- Pure functional: no side effects, immutable data
-- Homoiconic: code and data use same representation
-- Tail call optimization prevents stack overflow
-- Strict type system with automatic numeric promotion (integer → float → complex)
-- Numeric promotion is one-way: types promote up but never downgrade automatically
-- Mixed-type lists supported: (list 1 \"hi\" #t)
-- String literals support escapes: \\n, \\t, \\\", \\\\, \\uXXXX
-- Comments: use semicolon (;) for single-line comments, e.g., ; This is a comment
-- Numeric literals: 42 (integer), 3.14 (float), 3+4j (complex), 5j (pure imaginary), j (1j)
-- Other literals: #xFF (hex), #b1010 (binary), #o755 (octal), \"hello\" (string), #t/#f (boolean), () (empty list)
-- Constants: pi, e
 
 ## Important notes:
 
