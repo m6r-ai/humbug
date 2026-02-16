@@ -747,7 +747,7 @@ class SystemAITool(AITool):
         try:
             # System information
             system_info = {
-                "version": "v39",
+                "version": "v40",
                 "platform": sys.platform,
                 "platform_details": platform.platform(),
                 "architecture": platform.machine()
