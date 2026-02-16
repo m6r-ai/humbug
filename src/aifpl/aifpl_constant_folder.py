@@ -115,8 +115,8 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'alist=?': self._fold_alist_eq,
         }
 
-        # Build jump table for special form optimization.  Note we don't include match here because it
-        # has already been removed by desugaring.
+        # Build jump table for special form optimization.  Note we don't include any special forms that were
+        # removed by desugaring.
         self._special_form_jump_table = {
             'and': self._optimize_and,
             'or': self._optimize_or,

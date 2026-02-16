@@ -92,6 +92,14 @@ class TestStrictEqualityPredicates:
         with pytest.raises(AIFPLEvalError, match="integer=.*requires integer arguments.*string"):
             aifpl.evaluate('(integer=? 1 "hello")')
 
+    def test_integer_eq_requires_minimum_args(self, aifpl):
+        """Test integer=? requires at least 2 arguments."""
+        with pytest.raises(AIFPLEvalError, match="integer=.*requires at least 2 arguments"):
+            aifpl.evaluate('(integer=?)')
+
+        with pytest.raises(AIFPLEvalError, match="integer=.*requires at least 2 arguments"):
+            aifpl.evaluate('(integer=? 42)')
+
     # ========== float=? tests ==========
 
     def test_float_eq_with_floats(self, aifpl):
@@ -114,6 +122,14 @@ class TestStrictEqualityPredicates:
         with pytest.raises(AIFPLEvalError, match="float=.*requires float arguments.*complex"):
             aifpl.evaluate('(float=? 1.0 1+0j)')
 
+    def test_float_eq_requires_minimum_args(self, aifpl):
+        """Test float=? requires at least 2 arguments."""
+        with pytest.raises(AIFPLEvalError, match="float=.*requires at least 2 arguments"):
+            aifpl.evaluate('(float=?)')
+
+        with pytest.raises(AIFPLEvalError, match="float=.*requires at least 2 arguments"):
+            aifpl.evaluate('(float=? 42.0)')
+
     # ========== complex=? tests ==========
 
     def test_complex_eq_with_complex(self, aifpl):
@@ -132,6 +148,14 @@ class TestStrictEqualityPredicates:
         """Test complex=? raises error on float arguments."""
         with pytest.raises(AIFPLEvalError, match="complex=.*requires complex arguments.*float"):
             aifpl.evaluate('(complex=? 1+0j 1.0)')
+
+    def test_complex_eq_requires_minimum_args(self, aifpl):
+        """Test complex=? requires at least 2 arguments."""
+        with pytest.raises(AIFPLEvalError, match="complex=.*requires at least 2 arguments"):
+            aifpl.evaluate('(complex=?)')
+
+        with pytest.raises(AIFPLEvalError, match="complex=.*requires at least 2 arguments"):
+            aifpl.evaluate('(complex=? 1+0j)')
 
     # ========== string=? tests ==========
 
