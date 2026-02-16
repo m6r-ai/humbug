@@ -275,25 +275,17 @@ class AIFPLDesugarer:
 
         Args:
             temp_var: Name of temp variable holding the match value
-            clauses: List of (pattern, result) clauses
+            clauses: Non-empty list of (pattern, result) clauses (validated by semantic analyzer)
 
         Returns:
             Nested if/let AST
         """
-        if not clauses:
-            # No clauses - this shouldn't happen, but handle it
-            raise AIFPLEvalError(
-                message="Match expression must have at least one clause"
-            )
-
         # Process clauses in reverse order to build nested structure
         result: AIFPLASTNode | None = None
 
         for i in range(len(clauses) - 1, -1, -1):
             clause = clauses[i]
-            if not isinstance(clause, AIFPLASTList):
-                raise AIFPLEvalError("Clause must be a list")
-
+            assert isinstance(clause, AIFPLASTList), "Clause must be a list (validated by semantic analyzer)"
             pattern = clause.elements[0]
             result_expr = clause.elements[1]
 
@@ -381,9 +373,6 @@ class AIFPLDesugarer:
             )
 
         # All bindings here are pattern variable bindings (user-defined names).
-        # Temp variables with '#:match-tmp-' prefix never appear as binding keys
-        # when this function is called. They only appear in list/cons patterns which
-        # use special markers handled earlier (lines 365-384).
         # They must go inside the then branch (only evaluated after test passes).
         if bindings:
             binding_list = [AIFPLASTList((AIFPLASTSymbol(vn), ve)) for vn, ve in bindings]
