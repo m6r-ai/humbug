@@ -606,15 +606,14 @@ class AIFPLVM:
                 suggestion="Only functions can be called"
             )
 
-        # Handle builtin functions
-        # Builtins can't be tail-call-optimized, but we can return their result directly
+        # We must never see builtin functions
         if func.is_native:
-            args = [self.stack.pop() for _ in range(arity)]
-            args.reverse()
-            self.stack.pop()  # Pop function
-            assert func.native_impl is not None, f"Function {func.name} has no native implementation"
-            result = func.native_impl(args)
-            return result  # Return directly (we're in tail position)
+            raise AIFPLEvalError(
+                message="Cannot call native function with TAIL_CALL_FUNCTION opcode",
+                received=f"Attempted to call: {func.describe()} ({func.type_name()})",
+                expected="Function (lambda or builtin)",
+                suggestion="Only bytecode functions can be tail-called"
+            )
 
         # Check arity for bytecode functions
         # Must keep: arity check (runtime-dependent)
