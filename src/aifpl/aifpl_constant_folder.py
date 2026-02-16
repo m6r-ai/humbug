@@ -12,7 +12,7 @@ from typing import List
 
 from aifpl.aifpl_ast import (
     AIFPLASTNode, AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex,
-    AIFPLASTBoolean, AIFPLASTSymbol, AIFPLASTList, AIFPLASTString, AIFPLASTAList
+    AIFPLASTBoolean, AIFPLASTSymbol, AIFPLASTList, AIFPLASTString
 )
 from aifpl.aifpl_optimization_pass import AIFPLOptimizationPass
 

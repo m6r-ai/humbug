@@ -17,10 +17,9 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Tuple
 
-from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
-    AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLAList
+    AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
 )
 
 
@@ -263,76 +262,3 @@ class AIFPLASTList(AIFPLASTNode):
     def get(self, index: int) -> AIFPLASTNode:
         """Get element at index (raises IndexError if out of bounds)."""
         return self.elements[index]
-
-
-@dataclass(frozen=True)
-class AIFPLASTAList(AIFPLASTNode):
-    """
-    Represents association lists (alists) in AST - immutable key-value mappings.
-
-    Internally uses a dict for O(1) lookups while maintaining insertion order.
-    Keys must be hashable (strings, numbers, booleans, symbols).
-    """
-    pairs: Tuple[Tuple[AIFPLASTNode, AIFPLASTNode], ...] = ()
-    _lookup: dict = field(default_factory=dict, init=False, repr=False, compare=False)
-
-    def __post_init__(self) -> None:
-        """Build internal lookup dict after initialization."""
-        # Use object.__setattr__ because dataclass is frozen
-        lookup = {}
-        for key, value in self.pairs:
-            hashable_key = self._to_hashable_key(key)
-            lookup[hashable_key] = (key, value)
-
-        object.__setattr__(self, '_lookup', lookup)
-
-    def to_runtime_value(self) -> AIFPLAList:
-        """Convert to runtime alist (recursively converts elements)."""
-        runtime_pairs = tuple(
-            (key.to_runtime_value(), value.to_runtime_value())
-            for key, value in self.pairs
-        )
-        return AIFPLAList(runtime_pairs)
-
-    def type_name(self) -> str:
-        """Return type name for error messages."""
-        return "alist"
-
-    def describe(self) -> str:
-        # Format alist with curly braces: {(key1 val1) (key2 val2) ...}
-        if self.is_empty():
-            return "{}"
-        formatted_pairs = []
-        for key, value in self.pairs:
-            formatted_key = key.describe()
-            formatted_value = value.describe()
-            formatted_pairs.append(f"({formatted_key} {formatted_value})")
-
-        pairs_str = ' '.join(formatted_pairs)
-        return f"{{{pairs_str}}}"
-
-    def is_empty(self) -> bool:
-        """Check if alist is empty."""
-        return len(self.pairs) == 0
-
-    @staticmethod
-    def _to_hashable_key(key: AIFPLASTNode) -> Tuple[str, Any]:
-        """Convert AIFPL key to hashable Python value."""
-        if isinstance(key, AIFPLASTString):
-            return ('str', key.value)
-
-        if isinstance(key, (AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex)):
-            return ('num', key.value)
-
-        if isinstance(key, AIFPLASTBoolean):
-            return ('bool', key.value)
-
-        if isinstance(key, AIFPLASTSymbol):
-            return ('sym', key.name)
-
-        raise AIFPLEvalError(
-            message="AList keys must be strings, numbers, booleans, or symbols",
-            received=f"Key type: {key.type_name()}",
-            example='(alist ("name" "Alice") ("age" 30))',
-            suggestion="Use strings for most keys"
-        )

@@ -12,7 +12,7 @@ from aifpl.aifpl_error import (
 # AST types
 from aifpl.aifpl_ast import (
     AIFPLASTNode, AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex,
-    AIFPLASTString, AIFPLASTBoolean, AIFPLASTSymbol, AIFPLASTList, AIFPLASTAList
+    AIFPLASTString, AIFPLASTBoolean, AIFPLASTSymbol, AIFPLASTList
 )
 
 # Value types
@@ -41,7 +41,7 @@ __all__ = [
 
     # AST node types
     "AIFPLASTNode", "AIFPLASTInteger", "AIFPLASTFloat", "AIFPLASTComplex",
-    "AIFPLASTString", "AIFPLASTBoolean", "AIFPLASTSymbol", "AIFPLASTList", "AIFPLASTAList",
+    "AIFPLASTString", "AIFPLASTBoolean", "AIFPLASTSymbol", "AIFPLASTList",
 
     # Value types
     "AIFPLValue", "AIFPLInteger", "AIFPLFloat", "AIFPLComplex",
