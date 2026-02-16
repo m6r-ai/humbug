@@ -340,7 +340,7 @@ class AIFPLDesugarer:
     def _build_clause_with_bindings(
         self,
         test_expr: AIFPLASTNode,
-        bindings: List[Tuple[str, Any]],  # All bindings (temp + pattern vars or special markers)
+        bindings: List[Tuple[str, Any]],  # Pattern variable bindings or special markers
         result_expr: AIFPLASTNode,
         else_expr: AIFPLASTNode
     ) -> AIFPLASTNode:
@@ -357,9 +357,6 @@ class AIFPLDesugarer:
             (if test_expr
                 (let (bindings...) result_expr)
                 else_expr)
-
-        Note: If bindings include temp variables that are referenced in test_expr,
-        we need to wrap the entire if in a let for those temp bindings.
         """
         # Check if this is a list pattern (special marker)
         if (bindings and len(bindings) == 1 and bindings[0][0].startswith('__LIST_PATTERN_')):
@@ -383,23 +380,13 @@ class AIFPLDesugarer:
                 else_expr
             )
 
-        # Separate different types of bindings:
         # All bindings here are pattern variable bindings (user-defined names).
+        # Temp variables with '#:match-tmp-' prefix never appear as binding keys
+        # when this function is called. They only appear in list/cons patterns which
+        # use special markers handled earlier (lines 365-384).
         # They must go inside the then branch (only evaluated after test passes).
-        pattern_bindings: List[Tuple[str, AIFPLASTNode]] = []
-
-        for var_name, value_expr in bindings:
-            # Note: Temp variables with '#:match-tmp-' prefix never appear as binding keys
-            # when this function is called. They only appear in list/cons patterns which
-            # use special markers handled earlier (lines 365-384).
-            # All bindings here are pattern variable bindings (user-defined names).
-            pattern_bindings.append((var_name, value_expr))
-
-        # Element extraction and pattern bindings go inside the then branch
-        # (they should only be evaluated after the test passes)
-        if pattern_bindings:
-            binding_list = []
-            binding_list.extend([AIFPLASTList((AIFPLASTSymbol(vn), ve)) for vn, ve in pattern_bindings])
+        if bindings:
+            binding_list = [AIFPLASTList((AIFPLASTSymbol(vn), ve)) for vn, ve in bindings]
 
             then_expr: AIFPLASTNode = AIFPLASTList((
                 AIFPLASTSymbol('let*'),
