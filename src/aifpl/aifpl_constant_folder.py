@@ -44,7 +44,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'real', 'imag', 'complex',
         'bit-or', 'bit-and', 'bit-xor', 'bit-not',
         'bit-shift-left', 'bit-shift-right',
-        'number=?', 'integer=?', 'float=?', 'complex=?', 'boolean=?', 'string=?', 'list=?', 'alist=?'
+        'number=?', 'integer=?', 'float=?', 'complex=?', 'boolean=?', 'string=?'
     }
 
     def __init__(self) -> None:
@@ -111,8 +111,6 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'complex=?': self._fold_complex_eq,
             'boolean=?': self._fold_boolean_eq,
             'string=?': self._fold_string_eq,
-            'list=?': self._fold_list_eq,
-            'alist=?': self._fold_alist_eq,
         }
 
         # Build jump table for special form optimization.  Note we don't include any special forms that were
@@ -1015,30 +1013,6 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
 
         # Check all are strings - if not, can't fold (will error at runtime)
         if not all(isinstance(arg, AIFPLASTString) for arg in args):
-            return None
-
-        first = args[0]
-        return AIFPLASTBoolean(all(first == arg for arg in args[1:]))
-
-    def _fold_list_eq(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold list=?: all args must be lists."""
-        if len(args) < 2:
-            return None
-
-        # Check all are lists - if not, can't fold (will error at runtime)
-        if not all(isinstance(arg, AIFPLASTList) for arg in args):
-            return None
-
-        first = args[0]
-        return AIFPLASTBoolean(all(first == arg for arg in args[1:]))
-
-    def _fold_alist_eq(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold alist=?: all args must be alists."""
-        if len(args) < 2:
-            return None
-
-        # Check all are alists - if not, can't fold (will error at runtime)
-        if not all(isinstance(arg, AIFPLASTAList) for arg in args):
             return None
 
         first = args[0]
