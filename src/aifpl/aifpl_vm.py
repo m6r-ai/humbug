@@ -4,7 +4,7 @@ import difflib
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, cast, Optional, Protocol
 
-from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
+from aifpl.aifpl_builtin_registry import AIFPLBuiltinRegistry
 from aifpl.aifpl_bytecode import CodeObject, Opcode
 from aifpl.aifpl_bytecode_validator import validate_bytecode
 from aifpl.aifpl_error import AIFPLEvalError, AIFPLCancelledException

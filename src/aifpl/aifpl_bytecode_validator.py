@@ -18,7 +18,7 @@ from typing import List, Dict, Optional, Tuple, Set
 from enum import Enum
 
 from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode
-from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
+from aifpl.aifpl_builtin_registry import AIFPLBuiltinRegistry
 
 
 class ValidationErrorType(Enum):

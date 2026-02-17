@@ -5,7 +5,7 @@ AIFPL code generator - generates bytecode from IR.
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
 
-from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
+from aifpl.aifpl_builtin_registry import AIFPLBuiltinRegistry
 from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode
 from aifpl.aifpl_ir import (
     AIFPLIRExpr, AIFPLIRConstant, AIFPLIRVariable, AIFPLIRIf, AIFPLIRAnd, AIFPLIROr,

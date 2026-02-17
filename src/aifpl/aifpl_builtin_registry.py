@@ -1,4 +1,5 @@
-"""Unified builtin function registry for AIFPL.
+"""
+Unified builtin function registry for AIFPL.
 
 This module provides a single source of truth for all builtin function implementations,
 used by the bytecode VM.
@@ -6,8 +7,7 @@ used by the bytecode VM.
 
 from typing import List, Dict, Callable
 
-from aifpl.aifpl_collections import AIFPLCollectionsFunctions
-from aifpl.aifpl_math import AIFPLMathFunctions
+from aifpl.aifpl_builtin_functions import AIFPLBuiltinFunctions
 from aifpl.aifpl_value import AIFPLFunction
 
 
@@ -50,8 +50,7 @@ class AIFPLBuiltinRegistry:
         """
 
         # Create function modules
-        self.math_functions = AIFPLMathFunctions()
-        self.collections_functions = AIFPLCollectionsFunctions()
+        self.builtin_functions = AIFPLBuiltinFunctions()
 
         # Build function array in BUILTIN_TABLE order for fast VM access
         self._function_array: List[Callable] = self._build_function_array()
@@ -65,8 +64,7 @@ class AIFPLBuiltinRegistry:
         """
         # First build a temporary dict from all function modules
         functions_dict: Dict[str, Callable] = {}
-        functions_dict.update(self.math_functions.get_functions())
-        functions_dict.update(self.collections_functions.get_functions())
+        functions_dict.update(self.builtin_functions.get_functions())
 
         # Now build array in BUILTIN_TABLE order
         function_array = []

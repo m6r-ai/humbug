@@ -3,7 +3,7 @@
 from typing import List, Dict, Tuple, Set, cast
 from dataclasses import dataclass, field
 
-from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
+from aifpl.aifpl_builtin_registry import AIFPLBuiltinRegistry
 from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_ir import (
     AIFPLIRExpr, AIFPLIRConstant, AIFPLIRVariable, AIFPLIRIf, AIFPLIRLet, AIFPLIRLetrec,

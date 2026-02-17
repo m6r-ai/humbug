@@ -29,7 +29,7 @@ from aifpl import AIFPL
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_value import AIFPLValue
 from aifpl.aifpl_bytecode import Opcode, CodeObject, Instruction
-from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
+from aifpl.aifpl_builtin_registry import AIFPLBuiltinRegistry
 
 
 def format_constant(const: object) -> str:
