@@ -29,7 +29,7 @@ class AIFPLBuiltinFunctions:
     def _ensure_number(self, value: AIFPLValue, function_name: str) -> AIFPLInteger | AIFPLFloat | AIFPLComplex:
         """Ensure value is a number (old or new type), raise error if not."""
         if not isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
-            raise AIFPLEvalError(f"Function '{function_name}' requires numeric arguments, got {value.type_name()}")
+            raise AIFPLEvalError(f"Function '{function_name}' requires number arguments, got {value.type_name()}")
 
         return value
 
@@ -41,7 +41,7 @@ class AIFPLBuiltinFunctions:
         if isinstance(value, (AIFPLInteger, AIFPLFloat)):
             return value
 
-        raise AIFPLEvalError(f"Function '{function_name}' requires numeric arguments, got {value.type_name()}")
+        raise AIFPLEvalError(f"Function '{function_name}' requires real number arguments, got {value.type_name()}")
 
     def _ensure_integer(self, value: AIFPLValue, function_name: str) -> AIFPLInteger:
         """Ensure value is an integer, raise error if not."""

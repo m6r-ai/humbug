@@ -76,7 +76,7 @@ class TestPrimitiveWrappers:
             aifpl.evaluate("(let ((add +)) (add 1 \"hello\"))")
         error_msg = str(exc_info.value)
         assert "'+'" in error_msg or "Function" in error_msg
-        assert "numeric" in error_msg.lower()
+        assert "number" in error_msg.lower()
 
         # Division by zero
         with pytest.raises(AIFPLEvalError, match="Division by zero"):

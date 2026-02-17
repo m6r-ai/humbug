@@ -51,7 +51,7 @@ class TestIntegerConversion:
         """Test integer conversion from string raises error."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate('(integer "hello")')
-        assert "requires numeric arguments" in str(exc_info.value).lower()
+        assert "requires real number arguments" in str(exc_info.value).lower()
         assert "string" in str(exc_info.value).lower()
 
     def test_integer_wrong_arg_count_zero(self, aifpl):
@@ -130,7 +130,7 @@ class TestFloatConversion:
         """Test float conversion from string raises error."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate('(float "hello")')
-        assert "requires numeric arguments" in str(exc_info.value).lower()
+        assert "requires real number arguments" in str(exc_info.value).lower()
         assert "string" in str(exc_info.value).lower()
 
     def test_float_wrong_arg_count_zero(self, aifpl):

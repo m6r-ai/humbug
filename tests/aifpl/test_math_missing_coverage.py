@@ -244,10 +244,10 @@ class TestMathMissingCoverage:
         # This tests line 664 in _ensure_real_number
         # We can't directly test the helper method, but we can test functions that use it
         # min/max functions use _ensure_real_number
-        with pytest.raises(AIFPLEvalError, match="Function 'min' requires numeric arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'min' requires real number arguments"):
             aifpl.evaluate('(min "hello" 2)')
 
-        with pytest.raises(AIFPLEvalError, match="Function 'max' requires numeric arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'max' requires real number arguments"):
             aifpl.evaluate('(max #t 5)')
 
     def test_ensure_real_number_with_complex_input(self, aifpl):
@@ -279,10 +279,10 @@ class TestMathMissingCoverage:
         numeric_comparison_ops = ["<", ">", "<=", ">="]
 
         for op in numeric_comparison_ops:
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires numeric arguments"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires real number arguments"):
                 aifpl.evaluate(f'({op} "hello" 5)')
 
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires numeric arguments"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires real number arguments"):
                 aifpl.evaluate(f'({op} 5 "world")')
 
     def test_boolean_not_function_error_handling(self, aifpl):
@@ -304,25 +304,25 @@ class TestMathMissingCoverage:
     def test_arithmetic_operations_with_non_numeric_arguments(self, aifpl):
         """Test arithmetic operations with non-numeric arguments."""
         # Test individual cases to avoid the loop issue
-        with pytest.raises(AIFPLEvalError, match="Function '\\+' requires numeric arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function '\\+' requires number arguments"):
             aifpl.evaluate('(+ "hello" 5)')
 
-        with pytest.raises(AIFPLEvalError, match="Function '-' requires numeric arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function '-' requires number arguments"):
             aifpl.evaluate('(- "hello" 5)')
 
-        with pytest.raises(AIFPLEvalError, match="Function '\\*' requires numeric arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function '\\*' requires number arguments"):
             aifpl.evaluate('(* "hello" 5)')
 
-        with pytest.raises(AIFPLEvalError, match="Function '/' requires numeric arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function '/' requires number arguments"):
             aifpl.evaluate('(/ "hello" 5)')
 
-        with pytest.raises(AIFPLEvalError, match="Function '//' requires numeric arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function '//' requires real number arguments"):
             aifpl.evaluate('(// "hello" 5)')
 
-        with pytest.raises(AIFPLEvalError, match="Function '%' requires numeric arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function '%' requires real number arguments"):
             aifpl.evaluate('(% "hello" 5)')
 
-        with pytest.raises(AIFPLEvalError, match="Function '\\*\\*' requires numeric arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function '\\*\\*' requires number arguments"):
             aifpl.evaluate('(** "hello" 5)')
 
     def test_floor_division_and_modulo_argument_validation(self, aifpl):

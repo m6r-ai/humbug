@@ -150,6 +150,16 @@ class BytecodeValidator:
 
             # Boolean operations
             Opcode.NOT: (1, 1),
+
+            # Floating point operations (unary or binary)
+            Opcode.SIN: (1, 1),
+            Opcode.COS: (1, 1),
+            Opcode.TAN: (1, 1),
+            Opcode.EXP: (1, 1),
+            Opcode.POW: (2, 1),
+            Opcode.LOG: (1, 1),
+            Opcode.LOG10: (1, 1),
+            Opcode.SQRT: (1, 1),
         }
 
     def validate(self, code: CodeObject) -> None:

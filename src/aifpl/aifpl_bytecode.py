@@ -58,6 +58,16 @@ class Opcode(IntEnum):
     ALIST_P = auto()         # Check if alist
     FUNCTION_P = auto()      # Check if function
 
+    # Floating point operations
+    SIN = auto()             # Calculate sin(x)
+    COS = auto()             # Calculate cos(x)
+    TAN = auto()             # Calculate tan(x)
+    LOG = auto()             # Calculate log(x)
+    LOG10 = auto()           # Calculate log10(x)
+    EXP = auto()             # Calculate exp(x)
+    POW = auto()             # Calculate x ** y
+    SQRT = auto()            # Calculate sqrt(x)
+
     # Boolean operations
     NOT = auto()             # Logical NOT
 

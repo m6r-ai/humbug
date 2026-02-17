@@ -1,7 +1,9 @@
 """AIFPL Virtual Machine - executes bytecode."""
 
+import cmath
 import difflib
 from dataclasses import dataclass, field
+import math
 from typing import List, Dict, Any, cast, Optional, Protocol
 
 from aifpl.aifpl_builtin_registry import AIFPLBuiltinRegistry
@@ -190,6 +192,14 @@ class AIFPLVM:
         table[Opcode.ALIST_P] = self._op_alist_p
         table[Opcode.FUNCTION_P] = self._op_function_p
         table[Opcode.NOT] = self._op_not
+        table[Opcode.SIN] = self._op_sin
+        table[Opcode.COS] = self._op_cos
+        table[Opcode.TAN] = self._op_tan
+        table[Opcode.LOG] = self._op_log
+        table[Opcode.LOG10] = self._op_log10
+        table[Opcode.EXP] = self._op_exp
+        table[Opcode.POW] = self._op_pow
+        table[Opcode.SQRT] = self._op_sqrt
         return table
 
     def execute(
@@ -733,9 +743,9 @@ class AIFPLVM:
 
         return value.value
 
-    def _ensure_numeric(self, value: AIFPLValue, operation_name: str) -> int | float | complex:
+    def _ensure_number(self, value: AIFPLValue, operation_name: str) -> int | float | complex:
         """
-        Ensure value is numeric, raise user-friendly error if not.
+        Ensure value is a number, raise user-friendly error if not.
 
         This provides consistent error messages between primitive opcodes
         and CALL_BUILTIN paths.
@@ -748,11 +758,35 @@ class AIFPLVM:
             Python numeric value (int, float, or complex)
 
         Raises:
-            AIFPLEvalError: If value is not numeric
+            AIFPLEvalError: If value is not a number
         """
         if not isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError(
-                f"Function '{operation_name}' requires numeric arguments, got {value.type_name()}"
+                f"Function '{operation_name}' requires number arguments, got {value.type_name()}"
+            )
+
+        return value.value
+
+    def _ensure_real_number(self, value: AIFPLValue, operation_name: str) -> int | float:
+        """
+        Ensure value is a real number, raise user-friendly error if not.
+
+        This provides consistent error messages between primitive opcodes
+        and CALL_BUILTIN paths.
+
+        Args:
+            value: Value to check
+            operation_name: Name of operation for error message (e.g., '+', '-')
+
+        Returns:
+            Python numeric value (int or float)
+
+        Raises:
+            AIFPLEvalError: If value is not a real number
+        """
+        if not isinstance(value, (AIFPLInteger, AIFPLFloat)):
+            raise AIFPLEvalError(
+                f"Function '{operation_name}' requires real number arguments, got {value.type_name()}"
             )
 
         return value.value
@@ -779,8 +813,8 @@ class AIFPLVM:
         b = self.stack.pop()
         a = self.stack.pop()
 
-        a_val = self._ensure_numeric(a, '+')
-        b_val = self._ensure_numeric(b, '+')
+        a_val = self._ensure_number(a, '+')
+        b_val = self._ensure_number(b, '+')
         result = a_val + b_val
         self.stack.append(self._wrap_numeric_result(result))
         return None
@@ -796,8 +830,8 @@ class AIFPLVM:
         b = self.stack.pop()
         a = self.stack.pop()
 
-        a_val = self._ensure_numeric(a, '-')
-        b_val = self._ensure_numeric(b, '-')
+        a_val = self._ensure_number(a, '-')
+        b_val = self._ensure_number(b, '-')
         result = a_val - b_val
         self.stack.append(self._wrap_numeric_result(result))
         return None
@@ -813,8 +847,8 @@ class AIFPLVM:
         b = self.stack.pop()
         a = self.stack.pop()
 
-        a_val = self._ensure_numeric(a, '*')
-        b_val = self._ensure_numeric(b, '*')
+        a_val = self._ensure_number(a, '*')
+        b_val = self._ensure_number(b, '*')
         result = a_val * b_val
         self.stack.append(self._wrap_numeric_result(result))
         return None
@@ -830,8 +864,8 @@ class AIFPLVM:
         b = self.stack.pop()
         a = self.stack.pop()
 
-        a_val = self._ensure_numeric(a, '/')
-        b_val = self._ensure_numeric(b, '/')
+        a_val = self._ensure_number(a, '/')
+        b_val = self._ensure_number(b, '/')
 
         # Check for division by zero
         if b_val == 0:
@@ -963,6 +997,164 @@ class AIFPLVM:
         value = self.stack.pop()
         bool_val = self._ensure_boolean(value, "not")
         self.stack.append(AIFPLBoolean(not bool_val))
+        return None
+
+    def _op_sin(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """SIN: Compute sine of a number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'sin')
+
+        if isinstance(arg_val, complex):
+            result = cmath.sin(arg_val)
+
+        else:
+            result = math.sin(arg_val)
+
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_cos(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """COS: Compute cosine of a number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'cos')
+
+        if isinstance(arg_val, complex):
+            result = cmath.cos(arg_val)
+
+        else:
+            result = math.cos(arg_val)
+
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_tan(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """TAN: Compute tangent of a number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'tan')
+
+        if isinstance(arg_val, complex):
+            result = cmath.tan(arg_val)
+
+        else:
+            result = math.tan(arg_val)
+
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_log(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """LOG: Compute natural logarithm of a number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'log')
+
+        if isinstance(arg_val, complex):
+            result = cmath.log(arg_val)
+
+        else:
+            result = math.log(arg_val)
+
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_log10(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """LOG10: Compute base-10 logarithm of a number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'log')
+
+        if isinstance(arg_val, complex):
+            result = cmath.log10(arg_val)
+
+        else:
+            result = math.log10(arg_val)
+
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_exp(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """EXP: Compute exponential of a number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'exp')
+
+        if isinstance(arg_val, complex):
+            result = cmath.exp(arg_val)
+
+        else:
+            result = math.exp(arg_val)
+
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_sqrt(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """SQRT: Compute square root of a number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'sqrt')
+
+        if isinstance(arg_val, complex):
+            result = cmath.sqrt(arg_val)
+
+        else:
+            result = math.sqrt(arg_val)
+
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_pow(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """POW: Calculate a ** b."""
+        # Pop operands (b first, then a, so we compute a ** b)
+        b = self.stack.pop()
+        a = self.stack.pop()
+
+        a_val = self._ensure_real_number(a, 'pow')
+        b_val = self._ensure_real_number(b, 'pow')
+        result = a_val ** b_val
+        self.stack.append(self._wrap_numeric_result(result))
         return None
 
     def _setup_call_frame(self, func: AIFPLFunction) -> None:

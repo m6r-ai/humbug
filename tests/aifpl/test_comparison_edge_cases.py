@@ -85,15 +85,15 @@ class TestComparisonEdgeCases:
 
         for op in numeric_ops:
             # String arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires numeric arguments"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires real number arguments"):
                 aifpl.evaluate(f'({op} "hello" 5)')
 
             # Boolean arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires numeric arguments"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires real number arguments"):
                 aifpl.evaluate(f"({op} #t 1)")
 
             # List arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires numeric arguments"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires real number arguments"):
                 aifpl.evaluate(f"({op} (list 1 2) 3)")
 
     def test_comparison_operators_minimum_arguments(self, aifpl):

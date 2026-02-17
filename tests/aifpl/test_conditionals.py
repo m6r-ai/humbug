@@ -276,23 +276,23 @@ class TestConditionals:
     def test_comparison_operations_require_numeric_arguments(self, aifpl):
         """Test that comparison operations require numeric arguments."""
         # Less than with non-numeric arguments
-        with pytest.raises(AIFPLEvalError, match="requires numeric arguments"):
+        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
             aifpl.evaluate('(< "hello" "world")')
 
-        with pytest.raises(AIFPLEvalError, match="requires numeric arguments"):
+        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
             aifpl.evaluate('(< 1 #t)')
 
-        with pytest.raises(AIFPLEvalError, match="requires numeric arguments"):
+        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
             aifpl.evaluate('(< (list 1) (list 2))')
 
         # Other comparison operators
-        with pytest.raises(AIFPLEvalError, match="requires numeric arguments"):
+        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
             aifpl.evaluate('(> "a" "b")')
 
-        with pytest.raises(AIFPLEvalError, match="requires numeric arguments"):
+        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
             aifpl.evaluate('(<= #t #f)')
 
-        with pytest.raises(AIFPLEvalError, match="requires numeric arguments"):
+        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
             aifpl.evaluate('(>= (list 1) (list 2))')
 
     def test_comparison_operations_require_at_least_two_arguments(self, aifpl):
