@@ -1074,7 +1074,12 @@ class AIFPLVM:
             result = cmath.log(arg_val)
 
         else:
-            result = math.log(arg_val)
+            # Handle log(0) = -inf
+            if isinstance(arg_val, (int, float)) and arg_val == 0:
+                result = float('-inf')
+
+            else:
+                result = math.log(arg_val)
 
         self.stack.append(self._wrap_numeric_result(result))
         return None
@@ -1094,7 +1099,12 @@ class AIFPLVM:
             result = cmath.log10(arg_val)
 
         else:
-            result = math.log10(arg_val)
+            # Handle log(0) = -inf
+            if isinstance(arg_val, (int, float)) and arg_val == 0:
+                result = float('-inf')
+
+            else:
+                result = math.log10(arg_val)
 
         self.stack.append(self._wrap_numeric_result(result))
         return None

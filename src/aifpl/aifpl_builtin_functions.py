@@ -12,12 +12,12 @@ from aifpl.aifpl_value import (
 class AIFPLBuiltinFunctions:
     """Built-in functions for AIFPL."""
 
-    def _ensure_string(self, value: AIFPLValue, function_name: str) -> AIFPLString:
+    def _ensure_string(self, value: AIFPLValue, function_name: str) -> str:
         """Ensure value is a string, raise error if not."""
         if not isinstance(value, AIFPLString):
             raise AIFPLEvalError(f"Function '{function_name}' requires string arguments, got {value.type_name()}")
 
-        return value
+        return value.value
 
     def _ensure_list(self, value: AIFPLValue, function_name: str) -> AIFPLList:
         """Ensure value is a list, raise error if not."""
@@ -26,27 +26,27 @@ class AIFPLBuiltinFunctions:
 
         return value
 
-    def _ensure_number(self, value: AIFPLValue, function_name: str) -> AIFPLInteger | AIFPLFloat | AIFPLComplex:
+    def _ensure_number(self, value: AIFPLValue, function_name: str) -> int | float | complex:
         """Ensure value is a number (old or new type), raise error if not."""
         if not isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
             raise AIFPLEvalError(f"Function '{function_name}' requires number arguments, got {value.type_name()}")
 
-        return value
+        return value.value
 
-    def _ensure_real_number(self, value: AIFPLValue, function_name: str) -> AIFPLInteger | AIFPLFloat:
+    def _ensure_real_number(self, value: AIFPLValue, function_name: str) -> int | float:
         """Ensure value is a real number (int or float), raise error if complex."""
         if isinstance(value, AIFPLComplex):
             raise AIFPLEvalError(f"Function '{function_name}' does not support complex numbers")
 
         if isinstance(value, (AIFPLInteger, AIFPLFloat)):
-            return value
+            return value.value
 
         raise AIFPLEvalError(f"Function '{function_name}' requires real number arguments, got {value.type_name()}")
 
-    def _ensure_integer(self, value: AIFPLValue, function_name: str) -> AIFPLInteger:
+    def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
         """Ensure value is an integer, raise error if not."""
         if isinstance(value, AIFPLInteger):
-            return value
+            return value.value
 
         # Not an integer type
         if isinstance(value, (AIFPLFloat, AIFPLComplex)):
@@ -55,12 +55,12 @@ class AIFPLBuiltinFunctions:
         # Not a numeric type at all
         raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
 
-    def _ensure_boolean(self, value: AIFPLValue, function_name: str) -> AIFPLBoolean:
+    def _ensure_boolean(self, value: AIFPLValue, function_name: str) -> bool:
         """Ensure value is a boolean, raise error if not."""
         if not isinstance(value, AIFPLBoolean):
             raise AIFPLEvalError(f"Function '{function_name}' requires boolean arguments, got {value.type_name()}")
 
-        return value
+        return value.value
 
     def _wrap_numeric_result(self, result: Union[int, float, complex]) -> AIFPLValue:
         """Wrap Python numeric value in appropriate AIFPL type based on its type."""
@@ -226,7 +226,7 @@ class AIFPLBuiltinFunctions:
 
         values = []
         for arg in args:
-            val = self._ensure_number(arg, "+").value
+            val = self._ensure_number(arg, "+")
             values.append(val)
 
         return self._wrap_numeric_result(sum(values))
@@ -238,7 +238,7 @@ class AIFPLBuiltinFunctions:
 
         values = []
         for arg in args:
-            val = self._ensure_number(arg, "-").value
+            val = self._ensure_number(arg, "-")
             values.append(val)
 
         if len(args) == 1:
@@ -257,7 +257,7 @@ class AIFPLBuiltinFunctions:
 
         values = []
         for arg in args:
-            val = self._ensure_number(arg, "*").value
+            val = self._ensure_number(arg, "*")
             values.append(val)
 
         result = values[0]
@@ -273,7 +273,7 @@ class AIFPLBuiltinFunctions:
 
         values = []
         for arg in args:
-            val = self._ensure_number(arg, "/").value
+            val = self._ensure_number(arg, "/")
             values.append(val)
 
         # Check for division by zero
@@ -292,8 +292,8 @@ class AIFPLBuiltinFunctions:
         if len(args) != 2:
             raise AIFPLEvalError(f"Floor division requires exactly 2 arguments, got {len(args)}")
 
-        left_val = self._ensure_real_number(args[0], "//").value
-        right_val = self._ensure_real_number(args[1], "//").value
+        left_val = self._ensure_real_number(args[0], "//")
+        right_val = self._ensure_real_number(args[1], "//")
 
         if right_val == 0:
             raise AIFPLEvalError("Division by zero")
@@ -305,8 +305,8 @@ class AIFPLBuiltinFunctions:
         if len(args) != 2:
             raise AIFPLEvalError(f"Modulo requires exactly 2 arguments, got {len(args)}")
 
-        left_val = self._ensure_real_number(args[0], "%").value
-        right_val = self._ensure_real_number(args[1], "%").value
+        left_val = self._ensure_real_number(args[0], "%")
+        right_val = self._ensure_real_number(args[1], "%")
 
         if right_val == 0:
             raise AIFPLEvalError("Modulo by zero")
@@ -318,8 +318,8 @@ class AIFPLBuiltinFunctions:
         if len(args) != 2:
             raise AIFPLEvalError(f"Function '**' requires exactly 2 arguments, got {len(args)}")
 
-        base = self._ensure_number(args[0], "**").value
-        exponent = self._ensure_number(args[1], "**").value
+        base = self._ensure_number(args[0], "**")
+        exponent = self._ensure_number(args[1], "**")
         result = base ** exponent
         return self._wrap_numeric_result(result)
 
@@ -352,7 +352,7 @@ class AIFPLBuiltinFunctions:
 
         values = []
         for i, arg in enumerate(args):
-            val = self._ensure_real_number(arg, "<").value
+            val = self._ensure_real_number(arg, "<")
             values.append(val)
 
         # Check comparison chain
@@ -370,7 +370,7 @@ class AIFPLBuiltinFunctions:
 
         values = []
         for i, arg in enumerate(args):
-            val = self._ensure_real_number(arg, ">").value
+            val = self._ensure_real_number(arg, ">")
             values.append(val)
 
         # Check comparison chain
@@ -387,7 +387,7 @@ class AIFPLBuiltinFunctions:
 
         values = []
         for i, arg in enumerate(args):
-            val = self._ensure_real_number(arg, "<=").value
+            val = self._ensure_real_number(arg, "<=")
             values.append(val)
 
         # Check comparison chain
@@ -404,7 +404,7 @@ class AIFPLBuiltinFunctions:
 
         values = []
         for i, arg in enumerate(args):
-            val = self._ensure_real_number(arg, ">=").value
+            val = self._ensure_real_number(arg, ">=")
             values.append(val)
 
         # Check comparison chain
@@ -419,7 +419,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'not' requires exactly 1 argument, got {len(args)}")
 
-        bool_val = self._ensure_boolean(args[0], "not").value
+        bool_val = self._ensure_boolean(args[0], "not")
         return AIFPLBoolean(not bool_val)
 
     def _builtin_bit_or(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -427,7 +427,7 @@ class AIFPLBuiltinFunctions:
         if len(args) < 2:
             raise AIFPLEvalError(f"Function 'bit-or' requires at least 2 arguments, got {len(args)}")
 
-        int_args = [self._ensure_integer(arg, "bit-or").value for arg in args]
+        int_args = [self._ensure_integer(arg, "bit-or") for arg in args]
         result = int_args[0]
         for arg in int_args[1:]:
             result |= arg
@@ -439,7 +439,7 @@ class AIFPLBuiltinFunctions:
         if len(args) < 2:
             raise AIFPLEvalError(f"Function 'bit-and' requires at least 2 arguments, got {len(args)}")
 
-        int_args = [self._ensure_integer(arg, "bit-and").value for arg in args]
+        int_args = [self._ensure_integer(arg, "bit-and") for arg in args]
         result = int_args[0]
         for arg in int_args[1:]:
             result &= arg
@@ -451,7 +451,7 @@ class AIFPLBuiltinFunctions:
         if len(args) < 2:
             raise AIFPLEvalError(f"Function 'bit-xor' requires at least 2 arguments, got {len(args)}")
 
-        int_args = [self._ensure_integer(arg, "bit-xor").value for arg in args]
+        int_args = [self._ensure_integer(arg, "bit-xor") for arg in args]
         result = int_args[0]
         for arg in int_args[1:]:
             result ^= arg
@@ -463,7 +463,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'bit-not' requires exactly 1 argument, got {len(args)}")
 
-        int_val = self._ensure_integer(args[0], "bit-not").value
+        int_val = self._ensure_integer(args[0], "bit-not")
         return AIFPLInteger(~int_val)
 
     def _builtin_bit_shift_left(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -471,8 +471,8 @@ class AIFPLBuiltinFunctions:
         if len(args) != 2:
             raise AIFPLEvalError(f"Function 'bit-shift-left' requires exactly 2 arguments, got {len(args)}")
 
-        value = self._ensure_integer(args[0], "bit-shift-left").value
-        shift = self._ensure_integer(args[1], "bit-shift-left").value
+        value = self._ensure_integer(args[0], "bit-shift-left")
+        shift = self._ensure_integer(args[1], "bit-shift-left")
         return AIFPLInteger(value << shift)
 
     def _builtin_bit_shift_right(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -480,8 +480,8 @@ class AIFPLBuiltinFunctions:
         if len(args) != 2:
             raise AIFPLEvalError(f"Function 'bit-shift-right' requires exactly 2 arguments, got {len(args)}")
 
-        value = self._ensure_integer(args[0], "bit-shift-right").value
-        shift = self._ensure_integer(args[1], "bit-shift-right").value
+        value = self._ensure_integer(args[0], "bit-shift-right")
+        shift = self._ensure_integer(args[1], "bit-shift-right")
         return AIFPLInteger(value >> shift)
 
     def _builtin_sin(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -489,7 +489,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'sin' requires exactly 1 argument, got {len(args)}")
 
-        val = self._ensure_number(args[0], "sin").value
+        val = self._ensure_number(args[0], "sin")
 
         if isinstance(val, complex):
             return self._wrap_numeric_result(cmath.sin(val))
@@ -501,7 +501,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'cos' requires exactly 1 argument, got {len(args)}")
 
-        val = self._ensure_number(args[0], "cos").value
+        val = self._ensure_number(args[0], "cos")
 
         if isinstance(val, complex):
             return self._wrap_numeric_result(cmath.cos(val))
@@ -513,7 +513,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'tan' requires exactly 1 argument, got {len(args)}")
 
-        val = self._ensure_number(args[0], "tan").value
+        val = self._ensure_number(args[0], "tan")
 
         if isinstance(val, complex):
             return self._wrap_numeric_result(cmath.tan(val))
@@ -525,7 +525,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'log' requires exactly 1 argument, got {len(args)}")
 
-        val = self._ensure_number(args[0], "log").value
+        val = self._ensure_number(args[0], "log")
 
         # Handle log(0) = -inf
         if isinstance(val, (int, float)) and val == 0:
@@ -541,7 +541,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'log10' requires exactly 1 argument, got {len(args)}")
 
-        val = self._ensure_number(args[0], "log10").value
+        val = self._ensure_number(args[0], "log10")
 
         # Handle log10(0) = -inf
         if isinstance(val, (int, float)) and val == 0:
@@ -557,7 +557,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'exp' requires exactly 1 argument, got {len(args)}")
 
-        val = self._ensure_number(args[0], "exp").value
+        val = self._ensure_number(args[0], "exp")
 
         if isinstance(val, complex):
             return self._wrap_numeric_result(cmath.exp(val))
@@ -569,7 +569,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'sqrt' requires exactly 1 argument, got {len(args)}")
 
-        val = self._ensure_number(args[0], "sqrt").value
+        val = self._ensure_number(args[0], "sqrt")
 
         if isinstance(val, complex):
             return self._wrap_numeric_result(cmath.sqrt(val))
@@ -584,7 +584,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'abs' requires exactly 1 argument, got {len(args)}")
 
-        val = self._ensure_number(args[0], "abs").value
+        val = self._ensure_number(args[0], "abs")
         return self._wrap_numeric_result(abs(val))
 
     def _builtin_round(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -592,7 +592,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'round' requires exactly 1 argument, got {len(args)}")
 
-        val = self._ensure_real_number(args[0], "round").value
+        val = self._ensure_real_number(args[0], "round")
         return AIFPLInteger(round(val))
 
     def _builtin_floor(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -600,7 +600,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'floor' requires exactly 1 argument, got {len(args)}")
 
-        val = self._ensure_real_number(args[0], "floor").value
+        val = self._ensure_real_number(args[0], "floor")
         return AIFPLInteger(math.floor(val))
 
     def _builtin_ceil(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -608,7 +608,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'ceil' requires exactly 1 argument, got {len(args)}")
 
-        val = self._ensure_real_number(args[0], "ceil").value
+        val = self._ensure_real_number(args[0], "ceil")
         return AIFPLInteger(math.ceil(val))
 
     def _builtin_min(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -619,7 +619,7 @@ class AIFPLBuiltinFunctions:
         # Use type narrowing to handle only real numbers for min/max
         real_values = []
         for arg in args:
-            real_val = self._ensure_real_number(arg, "min").value
+            real_val = self._ensure_real_number(arg, "min")
             real_values.append(real_val)
 
         return self._wrap_numeric_result(min(real_values))
@@ -632,7 +632,7 @@ class AIFPLBuiltinFunctions:
         # Use type narrowing to handle only real numbers for min/max
         real_values = []
         for arg in args:
-            real_val = self._ensure_real_number(arg, "max").value
+            real_val = self._ensure_real_number(arg, "max")
             real_values.append(real_val)
 
         return self._wrap_numeric_result(max(real_values))
@@ -642,8 +642,8 @@ class AIFPLBuiltinFunctions:
         if len(args) != 2:
             raise AIFPLEvalError(f"Function 'pow' requires exactly 2 arguments, got {len(args)}")
 
-        base = self._ensure_real_number(args[0], "pow").value
-        exponent = self._ensure_real_number(args[1], "pow").value
+        base = self._ensure_real_number(args[0], "pow")
+        exponent = self._ensure_real_number(args[1], "pow")
         return self._wrap_numeric_result(base ** exponent)
 
     def _builtin_bin(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -651,7 +651,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'bin' requires exactly 1 argument, got {len(args)}")
 
-        int_val = self._ensure_integer(args[0], "bin").value
+        int_val = self._ensure_integer(args[0], "bin")
         # Convert Python's 0b1010 to Scheme's #b1010 or -#b1010
         if int_val < 0:
             return AIFPLString(f"-#b{bin(-int_val)[2:]}")
@@ -663,7 +663,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'hex' requires exactly 1 argument, got {len(args)}")
 
-        int_val = self._ensure_integer(args[0], "hex").value
+        int_val = self._ensure_integer(args[0], "hex")
         # Convert Python's 0xff to Scheme's #xff or -#xff
         if int_val < 0:
             return AIFPLString(f"-#x{hex(-int_val)[2:]}")
@@ -675,7 +675,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'oct' requires exactly 1 argument, got {len(args)}")
 
-        int_val = self._ensure_integer(args[0], "oct").value
+        int_val = self._ensure_integer(args[0], "oct")
         # Convert Python's 0o755 to Scheme's #o755 or -#o755
         if int_val < 0:
             return AIFPLString(f"-#o{oct(-int_val)[2:]}")
@@ -687,7 +687,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'real' requires exactly 1 argument, got {len(args)}")
 
-        val = self._ensure_number(args[0], "real").value
+        val = self._ensure_number(args[0], "real")
 
         if isinstance(val, complex):
             return AIFPLFloat(val.real)
@@ -700,7 +700,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'imag' requires exactly 1 argument, got {len(args)}")
 
-        val = self._ensure_number(args[0], "imag").value
+        val = self._ensure_number(args[0], "imag")
 
         if isinstance(val, complex):
             return AIFPLFloat(val.imag)
@@ -713,8 +713,8 @@ class AIFPLBuiltinFunctions:
         if len(args) != 2:
             raise AIFPLEvalError(f"Function 'complex' requires exactly 2 arguments, got {len(args)}")
 
-        real_part = self._ensure_real_number(args[0], "complex").value
-        imag_part = self._ensure_real_number(args[1], "complex").value
+        real_part = self._ensure_real_number(args[0], "complex")
+        imag_part = self._ensure_real_number(args[1], "complex")
         return AIFPLComplex(complex(real_part, imag_part))
 
     def _builtin_integer(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -722,7 +722,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'integer' requires exactly 1 argument, got {len(args)}")
 
-        val = self._ensure_real_number(args[0], "integer").value
+        val = self._ensure_real_number(args[0], "integer")
 
         # Handle float - truncate toward zero
         if isinstance(val, float):
@@ -736,7 +736,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"Function 'float' requires exactly 1 argument, got {len(args)}")
 
-        val = self._ensure_real_number(args[0], "float").value
+        val = self._ensure_real_number(args[0], "float")
         return AIFPLFloat(float(val))
 
     def _builtin_string_append(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -746,7 +746,7 @@ class AIFPLBuiltinFunctions:
 
         # Ensure all arguments are strings
         string_args = [self._ensure_string(arg, "string-append") for arg in args]
-        result = ''.join(arg.value for arg in string_args)
+        result = ''.join(arg for arg in string_args)
         return AIFPLString(result)
 
     def _builtin_string_length(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -754,7 +754,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"string-length requires exactly 1 argument, got {len(args)}")
 
-        string_arg = self._ensure_string(args[0], "string-length").value
+        string_arg = self._ensure_string(args[0], "string-length")
         return AIFPLInteger(len(string_arg))
 
     def _builtin_substring(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -762,9 +762,9 @@ class AIFPLBuiltinFunctions:
         if len(args) != 3:
             raise AIFPLEvalError(f"substring requires exactly 3 arguments, got {len(args)}")
 
-        string_arg = self._ensure_string(args[0], "substring").value
-        start_idx = self._ensure_integer(args[1], "substring").value
-        end_idx = self._ensure_integer(args[2], "substring").value
+        string_arg = self._ensure_string(args[0], "substring")
+        start_idx = self._ensure_integer(args[1], "substring")
+        end_idx = self._ensure_integer(args[2], "substring")
 
         string_len = len(string_arg)
         if start_idx < 0:
@@ -790,7 +790,7 @@ class AIFPLBuiltinFunctions:
             raise AIFPLEvalError(f"string-upcase requires exactly 1 argument, got {len(args)}")
 
         string_arg = self._ensure_string(args[0], "string-upcase")
-        return AIFPLString(string_arg.value.upper())
+        return AIFPLString(string_arg.upper())
 
     def _builtin_string_downcase(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string-downcase function."""
@@ -798,15 +798,15 @@ class AIFPLBuiltinFunctions:
             raise AIFPLEvalError(f"string-downcase requires exactly 1 argument, got {len(args)}")
 
         string_arg = self._ensure_string(args[0], "string-downcase")
-        return AIFPLString(string_arg.value.lower())
+        return AIFPLString(string_arg.lower())
 
     def _builtin_string_ref(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement string-ref function."""
         if len(args) != 2:
             raise AIFPLEvalError(f"string-ref requires exactly 2 arguments, got {len(args)}")
 
-        string_arg = self._ensure_string(args[0], "string-ref").value
-        index = self._ensure_integer(args[1], "string-ref").value
+        string_arg = self._ensure_string(args[0], "string-ref")
+        index = self._ensure_integer(args[1], "string-ref")
 
         # Check for negative index (not allowed in AIFPL)
         if index < 0:
@@ -828,18 +828,18 @@ class AIFPLBuiltinFunctions:
         try:
             # Try to parse as integer first
             # Phase 2: Return typed numbers
-            if '.' not in string_arg.value and 'e' not in string_arg.value.lower() and 'j' not in string_arg.value.lower():
-                return AIFPLInteger(int(string_arg.value))
+            if '.' not in string_arg and 'e' not in string_arg.lower() and 'j' not in string_arg.lower():
+                return AIFPLInteger(int(string_arg))
 
             # Try complex number
-            if 'j' in string_arg.value.lower():
-                return AIFPLComplex(complex(string_arg.value))
+            if 'j' in string_arg.lower():
+                return AIFPLComplex(complex(string_arg))
 
             # Otherwise float
-            return AIFPLFloat(float(string_arg.value))
+            return AIFPLFloat(float(string_arg))
 
         except ValueError as e:
-            raise AIFPLEvalError(f"Cannot convert string to number: '{string_arg.value}'") from e
+            raise AIFPLEvalError(f"Cannot convert string to number: '{string_arg}'") from e
 
     def _builtin_number_to_string(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement number->string function."""
@@ -847,7 +847,7 @@ class AIFPLBuiltinFunctions:
             raise AIFPLEvalError(f"number->string requires exactly 1 argument, got {len(args)}")
 
         # Phase 1: Works with both old and new number types via _ensure_number
-        num_arg = self._ensure_number(args[0], "number->string").value
+        num_arg = self._ensure_number(args[0], "number->string")
 
         if isinstance(num_arg, complex):
             return AIFPLString(str(num_arg).strip('()'))
@@ -859,7 +859,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 1:
             raise AIFPLEvalError(f"string-trim requires exactly 1 argument, got {len(args)}")
 
-        string_arg = self._ensure_string(args[0], "string-trim").value
+        string_arg = self._ensure_string(args[0], "string-trim")
         return AIFPLString(string_arg.strip())
 
     def _builtin_string_replace(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -867,7 +867,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 3:
             raise AIFPLEvalError(f"string-replace requires exactly 3 arguments, got {len(args)}")
 
-        string_arg, old_str, new_str = [self._ensure_string(arg, "string-replace").value for arg in args]
+        string_arg, old_str, new_str = [self._ensure_string(arg, "string-replace") for arg in args]
         result = string_arg.replace(old_str, new_str)
         return AIFPLString(result)
 
@@ -876,7 +876,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 2:
             raise AIFPLEvalError(f"string-contains? requires exactly 2 arguments, got {len(args)}")
 
-        string_arg, substring = [self._ensure_string(arg, "string-contains?").value for arg in args]
+        string_arg, substring = [self._ensure_string(arg, "string-contains?") for arg in args]
         return AIFPLBoolean(substring in string_arg)
 
     def _builtin_string_prefix_p(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -884,7 +884,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 2:
             raise AIFPLEvalError(f"string-prefix? requires exactly 2 arguments, got {len(args)}")
 
-        string_arg, prefix = [self._ensure_string(arg, "string-prefix?").value for arg in args]
+        string_arg, prefix = [self._ensure_string(arg, "string-prefix?") for arg in args]
         return AIFPLBoolean(string_arg.startswith(prefix))
 
     def _builtin_string_suffix_p(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -892,7 +892,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 2:
             raise AIFPLEvalError(f"string-suffix? requires exactly 2 arguments, got {len(args)}")
 
-        string_arg, suffix = [self._ensure_string(arg, "string-suffix?").value for arg in args]
+        string_arg, suffix = [self._ensure_string(arg, "string-suffix?") for arg in args]
         return AIFPLBoolean(string_arg.endswith(suffix))
 
     def _builtin_string_eq_p(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -900,7 +900,7 @@ class AIFPLBuiltinFunctions:
         if len(args) < 2:
             raise AIFPLEvalError(f"string=? requires at least 2 arguments, got {len(args)}")
 
-        string_args = [self._ensure_string(arg, "string=?").value for arg in args]
+        string_args = [self._ensure_string(arg, "string=?") for arg in args]
         first_val = string_args[0]
         return AIFPLBoolean(all(arg == first_val for arg in string_args[1:]))
 
@@ -1088,7 +1088,7 @@ class AIFPLBuiltinFunctions:
             raise AIFPLEvalError(f"list-ref requires exactly 2 arguments, got {len(args)}")
 
         list_val = self._ensure_list(args[0], "list-ref")
-        index = self._ensure_integer(args[1], "list-ref").value
+        index = self._ensure_integer(args[1], "list-ref")
 
         # Check for negative index (not allowed in AIFPL)
         if index < 0:
@@ -1167,7 +1167,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 2:
             raise AIFPLEvalError(f"take requires exactly 2 arguments, got {len(args)}")
 
-        n = self._ensure_integer(args[0], "take").value
+        n = self._ensure_integer(args[0], "take")
         list_val = self._ensure_list(args[1], "take")
         if n < 0:
             raise AIFPLEvalError(f"take count cannot be negative: {n}")
@@ -1179,7 +1179,7 @@ class AIFPLBuiltinFunctions:
         if len(args) != 2:
             raise AIFPLEvalError(f"drop requires exactly 2 arguments, got {len(args)}")
 
-        n = self._ensure_integer(args[0], "drop").value
+        n = self._ensure_integer(args[0], "drop")
         list_val = self._ensure_list(args[1], "drop")
         if n < 0:
             raise AIFPLEvalError(f"drop count cannot be negative: {n}")
@@ -1192,7 +1192,7 @@ class AIFPLBuiltinFunctions:
             raise AIFPLEvalError(f"string->list requires exactly 1 argument, got {len(args)}")
 
         string_arg = self._ensure_string(args[0], "string->list")
-        elements = tuple(AIFPLString(char) for char in string_arg.value)
+        elements = tuple(AIFPLString(char) for char in string_arg)
         return AIFPLList(elements)
 
     def _builtin_list_to_string(self, args: List[AIFPLValue]) -> AIFPLValue:
@@ -1211,10 +1211,10 @@ class AIFPLBuiltinFunctions:
         string_arg, delimiter = [self._ensure_string(arg, "string-split") for arg in args]
 
         # Handle empty separator case - split into individual characters
-        if delimiter.value == "":
-            return self._builtin_string_to_list([string_arg])
+        if delimiter == "":
+            return self._builtin_string_to_list([AIFPLString(string_arg)])
 
-        parts = string_arg.value.split(delimiter.value)
+        parts = string_arg.split(delimiter)
         elements = tuple(AIFPLString(part) for part in parts)
         return AIFPLList(elements)
 
@@ -1234,7 +1234,7 @@ class AIFPLBuiltinFunctions:
 
             str_items.append(item.value)
 
-        return AIFPLString(separator.value.join(str_items))
+        return AIFPLString(separator.join(str_items))
 
     def _builtin_number_p(self, args: List[AIFPLValue]) -> AIFPLValue:
         """Implement number? function."""
