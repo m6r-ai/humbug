@@ -200,6 +200,9 @@ class AIFPLVM:
         table[Opcode.EXP] = self._op_exp
         table[Opcode.POW] = self._op_pow
         table[Opcode.SQRT] = self._op_sqrt
+        table[Opcode.ABS] = self._op_abs
+        table[Opcode.CEIL] = self._op_ceil
+        table[Opcode.FLOOR] = self._op_floor
         return table
 
     def execute(
@@ -1015,7 +1018,7 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """LOG10: Compute base-10 logarithm of a number."""
         arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'log')
+        arg_val = self._ensure_number(arg, 'log10')
 
         if isinstance(arg_val, complex):
             result = cmath.log10(arg_val)
@@ -1060,6 +1063,36 @@ class AIFPLVM:
         else:
             result = math.sqrt(arg_val)
 
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_abs(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ABS: Get absolute value of a real number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'abs')
+        result = abs(arg_val)
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_ceil(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """CEIL: Get the ceiling of a real number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_real_number(arg, 'ceil')
+        result = math.ceil(arg_val)
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_floor(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOOR: Get the floor of a real number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_real_number(arg, 'floor')
+        result = math.floor(arg_val)
         self.stack.append(self._wrap_numeric_result(result))
         return None
 

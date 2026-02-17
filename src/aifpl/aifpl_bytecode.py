@@ -67,6 +67,9 @@ class Opcode(IntEnum):
     EXP = auto()             # Calculate exp(x)
     POW = auto()             # Calculate x ** y
     SQRT = auto()            # Calculate sqrt(x)
+    ABS = auto()             # Calculate abs(x)
+    FLOOR = auto()           # Calculate floor(x)
+    CEIL = auto()            # Calculate ceil(x)
 
     # Boolean operations
     NOT = auto()             # Logical NOT

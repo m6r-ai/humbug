@@ -160,6 +160,9 @@ class BytecodeValidator:
             Opcode.LOG: (1, 1),
             Opcode.LOG10: (1, 1),
             Opcode.SQRT: (1, 1),
+            Opcode.ABS: (1, 1),
+            Opcode.FLOOR: (1, 1),
+            Opcode.CEIL: (1, 1),
         }
 
     def validate(self, code: CodeObject) -> None:

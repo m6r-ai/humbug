@@ -28,6 +28,16 @@ UNARY_OPS = {
     'alist?': Opcode.ALIST_P,
     'function?': Opcode.FUNCTION_P,
     'not': Opcode.NOT,
+    'sin': Opcode.SIN,
+    'cos': Opcode.COS,
+    'tan': Opcode.TAN,
+    'log': Opcode.LOG,
+    'log10': Opcode.LOG10,
+    'exp': Opcode.EXP,
+    'sqrt': Opcode.SQRT,
+    'abs': Opcode.ABS,
+    'floor': Opcode.FLOOR,
+    'ceil': Opcode.CEIL
 }
 
 # Mapping of builtin names to binary opcodes
@@ -37,6 +47,7 @@ BINARY_OPS = {
     '-': Opcode.SUB,
     '*': Opcode.MUL,
     '/': Opcode.DIV,
+    'pow': Opcode.POW,
 }
 
 

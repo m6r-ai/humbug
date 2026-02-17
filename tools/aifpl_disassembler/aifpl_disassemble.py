@@ -147,6 +147,9 @@ def format_instruction(instr: Instruction, index: int) -> str:
         Opcode.ADD, Opcode.SUB, Opcode.MUL, Opcode.DIV,
         Opcode.NUMBER_P, Opcode.INTEGER_P, Opcode.FLOAT_P, Opcode.COMPLEX_P,
         Opcode.STRING_P, Opcode.BOOLEAN_P, Opcode.LIST_P, Opcode.ALIST_P, Opcode.FUNCTION_P,
+        Opcode.NOT,
+        Opcode.SIN, Opcode.COS, Opcode.TAN, Opcode.LOG, Opcode.LOG10, Opcode.EXP, Opcode.POW, Opcode.SQRT,
+        Opcode.ABS, Opcode.CEIL, Opcode.FLOOR
     }
 
     two_arg_opcodes = {
