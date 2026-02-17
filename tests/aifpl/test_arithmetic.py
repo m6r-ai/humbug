@@ -551,14 +551,17 @@ class TestArithmetic:
     def test_division_argument_position_specific_errors(self, aifpl):
         """Test division by zero with specific argument positions."""
         # Binary division uses primitive opcode with simpler error message
-        # Variadic division uses CALL_BUILTIN with detailed position info
+        # Variadic division is now desugared to nested binary operations,
+        # so all division errors are now simpler (no argument position)
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
             aifpl.evaluate("(/ 10 0)")
 
-        with pytest.raises(AIFPLEvalError, match="Division by zero at argument 3"):
+        # After desugaring: (/ 10 2 0) → (/ (/ 10 2) 0)
+        with pytest.raises(AIFPLEvalError, match="Division by zero"):
             aifpl.evaluate("(/ 10 2 0)")
 
-        with pytest.raises(AIFPLEvalError, match="Division by zero at argument 4"):
+        # After desugaring: (/ 24 2 3 0) → (/ (/ (/ 24 2) 3) 0)
+        with pytest.raises(AIFPLEvalError, match="Division by zero"):
             aifpl.evaluate("(/ 24 2 3 0)")
 
     def test_complex_trigonometric_edge_cases(self, aifpl):

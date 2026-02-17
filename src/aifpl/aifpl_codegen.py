@@ -5,6 +5,7 @@ AIFPL code generator - generates bytecode from IR.
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
 
+from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
 from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode
 from aifpl.aifpl_ir import (
     AIFPLIRExpr, AIFPLIRConstant, AIFPLIRVariable, AIFPLIRIf, AIFPLIRAnd, AIFPLIROr,
@@ -418,7 +419,6 @@ class AIFPLCodeGen:
             assert plan.builtin_index is not None
 
             # Get builtin name to check if it's a primitive
-            from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
             builtin_name = AIFPLBuiltinRegistry.BUILTIN_TABLE[plan.builtin_index]
 
             # Generate arguments

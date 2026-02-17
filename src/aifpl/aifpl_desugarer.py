@@ -92,6 +92,11 @@ class AIFPLDesugarer:
                 # Trace is a special form - handle it
                 return self._desugar_trace(expr)
 
+            # Check for variadic arithmetic operations
+            if name in ['+', '-', '*', '/']:
+                # Desugar variadic arithmetic to binary operations
+                return self._desugar_variadic_arithmetic(expr)
+
         # Regular function call - desugar all elements
         return self._desugar_call(expr)
 
@@ -225,6 +230,85 @@ class AIFPLDesugarer:
             desugared_elements.append(self.desugar(elem))
 
         return self._make_list(tuple(desugared_elements), expr)
+
+    def _desugar_variadic_arithmetic(self, expr: AIFPLASTList) -> AIFPLASTNode:
+        """
+        Desugar variadic arithmetic operations to nested binary operations.
+
+        Examples:
+            (+ 1 2 3) → (+ (+ 1 2) 3)
+            (- 5) → (- 0 5)  [unary negation]
+            (* 2 3 4) → (* (* 2 3) 4)
+            (+ 1) → 1  [identity]
+            (+) → 0  [zero-arg identity]
+
+        Args:
+            expr: Arithmetic expression to desugar
+
+        Returns:
+            Desugared expression (binary operations only)
+        """
+        op_symbol = expr.first()
+        assert isinstance(op_symbol, AIFPLASTSymbol)
+        op_name = op_symbol.name
+
+        args = list(expr.elements[1:])
+
+        # Handle zero-argument cases
+        if len(args) == 0:
+            if op_name == '+':
+                # (+) → 0
+                return AIFPLASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
+
+            if op_name == '*':
+                # (*) → 1
+                return AIFPLASTInteger(1, line=expr.line, column=expr.column, source_file=expr.source_file)
+
+            # (- ) and (/) with no args are errors - let them fall through to runtime
+            return self._desugar_call(expr)
+
+        # Handle single-argument cases
+        if len(args) == 1:
+            desugared_arg = self.desugar(args[0])
+
+            if op_name == '-':
+                # (- x) → (- 0 x) [unary negation]
+                zero = AIFPLASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
+                return self._make_list((op_symbol, zero, desugared_arg), expr)
+
+            if op_name == '/':
+                # (/ x) is an error - let runtime handle it
+                return self._desugar_call(expr)
+
+            # (+  x), (* x), (/ x) → x [identity]
+            # Note: (/ x) handled above as error case
+            return desugared_arg
+
+        # Handle binary case (already optimal)
+        if len(args) == 2:
+            desugared_args = [self.desugar(arg) for arg in args]
+            return self._make_list((op_symbol,) + tuple(desugared_args), expr)
+
+        # Handle variadic case (3+ arguments) - fold left to right
+        # (+ 1 2 3 4) → (+ (+ (+ 1 2) 3) 4)
+        desugared_args = [self.desugar(arg) for arg in args]
+
+        # Start with first two arguments
+        result = self._make_list((
+            self._make_symbol(op_name, expr),
+            desugared_args[0],
+            desugared_args[1]
+        ), expr)
+
+        # Fold remaining arguments left-to-right
+        for arg in desugared_args[2:]:
+            result = self._make_list((
+                self._make_symbol(op_name, expr),
+                result,
+                arg
+            ), expr)
+
+        return result
 
     def _desugar_match(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """
