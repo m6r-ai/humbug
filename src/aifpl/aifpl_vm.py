@@ -802,11 +802,7 @@ class AIFPLVM:
         return AIFPLComplex(result)
 
     def _op_add(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """ADD: Pop two values, add them, push result."""
         # Pop operands (b first, then a, so we compute a + b)
@@ -820,11 +816,7 @@ class AIFPLVM:
         return None
 
     def _op_sub(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """SUB: Pop two values, subtract them, push result."""
         b = self.stack.pop()
@@ -837,11 +829,7 @@ class AIFPLVM:
         return None
 
     def _op_mul(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """MUL: Pop two values, multiply them, push result."""
         b = self.stack.pop()
@@ -854,11 +842,7 @@ class AIFPLVM:
         return None
 
     def _op_div(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """DIV: Pop two values, divide them, push result."""
         b = self.stack.pop()
@@ -875,14 +859,8 @@ class AIFPLVM:
         self.stack.append(self._wrap_numeric_result(result))
         return None
 
-    # Type predicate operations
-
     def _op_number_p(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """NUMBER_P: Check if value is a number (integer, float, or complex)."""
         value = self.stack.pop()
@@ -891,11 +869,7 @@ class AIFPLVM:
         return None
 
     def _op_integer_p(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """INTEGER_P: Check if value is an integer."""
         value = self.stack.pop()
@@ -903,11 +877,7 @@ class AIFPLVM:
         return None
 
     def _op_float_p(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """FLOAT_P: Check if value is a float."""
         value = self.stack.pop()
@@ -915,11 +885,7 @@ class AIFPLVM:
         return None
 
     def _op_complex_p(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """COMPLEX_P: Check if value is a complex number."""
         value = self.stack.pop()
@@ -927,11 +893,7 @@ class AIFPLVM:
         return None
 
     def _op_string_p(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """STRING_P: Check if value is a string."""
         value = self.stack.pop()
@@ -939,11 +901,7 @@ class AIFPLVM:
         return None
 
     def _op_boolean_p(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """BOOLEAN_P: Check if value is a boolean."""
         value = self.stack.pop()
@@ -951,11 +909,7 @@ class AIFPLVM:
         return None
 
     def _op_list_p(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """LIST_P: Check if value is a list."""
         value = self.stack.pop()
@@ -963,11 +917,7 @@ class AIFPLVM:
         return None
 
     def _op_alist_p(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """ALIST_P: Check if value is an alist."""
         value = self.stack.pop()
@@ -975,11 +925,7 @@ class AIFPLVM:
         return None
 
     def _op_function_p(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """FUNCTION_P: Check if value is a function."""
         value = self.stack.pop()
@@ -987,11 +933,7 @@ class AIFPLVM:
         return None
 
     def _op_not(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """NOT: Logical NOT operation."""
         value = self.stack.pop()
@@ -1000,11 +942,7 @@ class AIFPLVM:
         return None
 
     def _op_sin(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """SIN: Compute sine of a number."""
         arg = self.stack.pop()
@@ -1020,11 +958,7 @@ class AIFPLVM:
         return None
 
     def _op_cos(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """COS: Compute cosine of a number."""
         arg = self.stack.pop()
@@ -1040,11 +974,7 @@ class AIFPLVM:
         return None
 
     def _op_tan(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """TAN: Compute tangent of a number."""
         arg = self.stack.pop()
@@ -1060,11 +990,7 @@ class AIFPLVM:
         return None
 
     def _op_log(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """LOG: Compute natural logarithm of a number."""
         arg = self.stack.pop()
@@ -1085,11 +1011,7 @@ class AIFPLVM:
         return None
 
     def _op_log10(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """LOG10: Compute base-10 logarithm of a number."""
         arg = self.stack.pop()
@@ -1110,11 +1032,7 @@ class AIFPLVM:
         return None
 
     def _op_exp(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """EXP: Compute exponential of a number."""
         arg = self.stack.pop()
@@ -1130,11 +1048,7 @@ class AIFPLVM:
         return None
 
     def _op_sqrt(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """SQRT: Compute square root of a number."""
         arg = self.stack.pop()
@@ -1150,11 +1064,7 @@ class AIFPLVM:
         return None
 
     def _op_pow(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """POW: Calculate a ** b."""
         # Pop operands (b first, then a, so we compute a ** b)
