@@ -130,6 +130,12 @@ class BytecodeValidator:
 
             # Trace debug
             Opcode.EMIT_TRACE: (1, 0),  # Pops 1 (message), pushes 0
+
+            # Primitive arithmetic operations (binary)
+            Opcode.ADD: (2, 1),  # Pops 2 operands, pushes 1 result
+            Opcode.SUB: (2, 1),  # Pops 2 operands, pushes 1 result
+            Opcode.MUL: (2, 1),  # Pops 2 operands, pushes 1 result
+            Opcode.DIV: (2, 1),  # Pops 2 operands, pushes 1 result
         }
 
     def validate(self, code: CodeObject) -> None:

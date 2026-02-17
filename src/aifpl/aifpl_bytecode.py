@@ -41,6 +41,13 @@ class Opcode(IntEnum):
     # Debugging
     EMIT_TRACE = auto()      # Emit trace: EMIT_TRACE (pops value, emits to watcher)
 
+    # Primitive arithmetic operations (binary)
+    # These pop two values from stack, perform operation, push result
+    ADD = auto()             # Addition: pop b, pop a, push a + b
+    SUB = auto()             # Subtraction: pop b, pop a, push a - b
+    MUL = auto()             # Multiplication: pop b, pop a, push a * b
+    DIV = auto()             # Division: pop b, pop a, push a / b
+
 
 @dataclass
 class Instruction:
@@ -61,7 +68,9 @@ class Instruction:
 
         # Opcodes with no arguments
         no_arg_opcodes = {
-            Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST, Opcode.RETURN, Opcode.EMIT_TRACE
+            Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST, Opcode.RETURN, Opcode.EMIT_TRACE,
+            # Primitive operations
+            Opcode.ADD, Opcode.SUB, Opcode.MUL, Opcode.DIV,
         }
 
         # Opcodes with two arguments

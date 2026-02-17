@@ -14,6 +14,14 @@ from aifpl.aifpl_ir import (
 from aifpl.aifpl_value import AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLBoolean, AIFPLString
 
 
+# Mapping of builtin names to primitive opcodes
+PRIMITIVE_OPS = {
+    '+': Opcode.ADD,
+    '-': Opcode.SUB,
+    '*': Opcode.MUL,
+    '/': Opcode.DIV,
+}
+
 @dataclass
 class AIFPLCodeGenContext:
     """
@@ -407,13 +415,27 @@ class AIFPLCodeGen:
 
         # Check for builtin call
         if plan.is_builtin:
+            assert plan.builtin_index is not None
+
+            # Get builtin name to check if it's a primitive
+            from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
+            builtin_name = AIFPLBuiltinRegistry.BUILTIN_TABLE[plan.builtin_index]
+
             # Generate arguments
             for arg_plan in plan.arg_plans:
                 self._generate_expr(arg_plan, ctx)
 
-            # Emit builtin call
-            assert plan.builtin_index is not None
-            ctx.emit(Opcode.CALL_BUILTIN, plan.builtin_index, len(plan.arg_plans))
+            # Check if this is a primitive operation
+            if builtin_name in PRIMITIVE_OPS and len(plan.arg_plans) == 2:
+                # Emit primitive opcode directly for binary operations only
+                # (Primitives are binary; variadic calls use CALL_BUILTIN)
+                primitive_opcode = PRIMITIVE_OPS[builtin_name]
+                ctx.emit(primitive_opcode)
+
+            else:
+                # Regular builtin call
+                ctx.emit(Opcode.CALL_BUILTIN, plan.builtin_index, len(plan.arg_plans))
+
             return
 
         # Regular function call
