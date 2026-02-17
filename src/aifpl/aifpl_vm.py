@@ -2,14 +2,15 @@
 
 import difflib
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, cast, Optional, Protocol, Callable
+from typing import List, Dict, Any, cast, Optional, Protocol
 
 from aifpl.aifpl_builtins import AIFPLBuiltinRegistry
 from aifpl.aifpl_bytecode import CodeObject, Opcode
 from aifpl.aifpl_bytecode_validator import validate_bytecode
 from aifpl.aifpl_error import AIFPLEvalError, AIFPLCancelledException
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLBoolean, AIFPLString, AIFPLList, AIFPLFunction, AIFPLInteger, AIFPLComplex, AIFPLFloat
+    AIFPLValue, AIFPLBoolean, AIFPLString, AIFPLList, AIFPLAList, AIFPLFunction,
+    AIFPLInteger, AIFPLComplex, AIFPLFloat
 )
 
 
@@ -84,10 +85,6 @@ class AIFPLVM:
 
         # Create builtin function objects for first-class function support (e.g., passed to map)
         self._builtin_functions = builtin_registry.create_builtin_function_objects()
-
-        # Create primitive wrapper functions (for first-class use of +, -, *, /)
-        self._primitive_wrappers = self._create_primitive_wrappers()
-        self._builtin_functions.update(self._primitive_wrappers)
 
         # Build dispatch table for fast opcode execution
         # This is a critical optimization: jump table dispatch is 2-3x faster than if/elif chains
@@ -183,106 +180,16 @@ class AIFPLVM:
         table[Opcode.SUB] = self._op_sub
         table[Opcode.MUL] = self._op_mul
         table[Opcode.DIV] = self._op_div
+        table[Opcode.NUMBER_P] = self._op_number_p
+        table[Opcode.INTEGER_P] = self._op_integer_p
+        table[Opcode.FLOAT_P] = self._op_float_p
+        table[Opcode.COMPLEX_P] = self._op_complex_p
+        table[Opcode.STRING_P] = self._op_string_p
+        table[Opcode.BOOLEAN_P] = self._op_boolean_p
+        table[Opcode.LIST_P] = self._op_list_p
+        table[Opcode.ALIST_P] = self._op_alist_p
+        table[Opcode.FUNCTION_P] = self._op_function_p
         return table
-
-    def _create_primitive_wrappers(self) -> Dict[str, AIFPLFunction]:
-        """
-        Create native wrapper functions for primitive operations.
-
-        These wrappers accept variadic arguments and fold them using the
-        primitive operations. This maintains the illusion that +, -, *, /
-        are variadic even though they're implemented as binary primitives.
-
-        Returns:
-            Dictionary mapping operation names to wrapper functions
-        """
-        wrappers = {}
-
-        # Create variadic wrappers using native implementations
-        wrappers['+'] = self._make_variadic_wrapper('+', Opcode.ADD, identity=0)
-        wrappers['-'] = self._make_variadic_wrapper('-', Opcode.SUB, identity=None, unary_transform=lambda x: -x)
-        wrappers['*'] = self._make_variadic_wrapper('*', Opcode.MUL, identity=1)
-        wrappers['/'] = self._make_variadic_wrapper('/', Opcode.DIV, identity=None, min_arity=2)
-
-        return wrappers
-
-    def _make_variadic_wrapper(
-        self,
-        name: str,
-        opcode: Opcode,
-        identity: Any = None,
-        unary_transform: Callable[[Any], Any] | None = None,
-        min_arity: int = 0
-    ) -> AIFPLFunction:
-        """
-        Create a variadic wrapper function for a primitive opcode.
-
-        The wrapper handles n-ary calls by folding with the binary primitive.
-
-        Args:
-            name: Function name (for debugging)
-            opcode: Primitive opcode to wrap
-            identity: Value to return for zero-arg case (None = error)
-            unary_transform: Function to apply for single-arg case (None = identity)
-            min_arity: Minimum number of arguments required
-
-        Returns:
-            AIFPLFunction with native implementation
-        """
-        def wrapper_impl(args: List[AIFPLValue]) -> AIFPLValue:
-            """Variadic wrapper implementation."""
-            if len(args) < min_arity:
-                raise AIFPLEvalError(f"Function '{name}' requires at least {min_arity} arguments, got {len(args)}")
-
-            if len(args) == 0:
-                if identity is not None:
-                    return AIFPLInteger(identity) if isinstance(identity, int) else identity
-
-                raise AIFPLEvalError(f"Function '{name}' requires at least 1 argument, got 0")
-
-            if len(args) == 1:
-                if unary_transform:
-                    val = self._ensure_numeric(args[0], name)
-                    return self._wrap_numeric_result(unary_transform(val))
-
-                return args[0]  # Identity
-
-            # Fold left using the primitive operation
-            # Extract numeric values and apply operation
-            result = args[0]
-            for arg in args[1:]:
-                # Extract numeric values
-                a_val = self._ensure_numeric(result, name)
-                b_val = self._ensure_numeric(arg, name)
-
-                # Apply the appropriate operation
-                if opcode == Opcode.ADD:
-                    result_val = a_val + b_val
-
-                elif opcode == Opcode.SUB:
-                    result_val = a_val - b_val
-
-                elif opcode == Opcode.MUL:
-                    result_val = a_val * b_val
-
-                elif opcode == Opcode.DIV:
-                    if b_val == 0:
-                        raise AIFPLEvalError("Division by zero")
-                    result_val = a_val / b_val
-
-                else:
-                    raise AIFPLEvalError(f"Unsupported primitive operation: {opcode}")
-
-                result = self._wrap_numeric_result(result_val)
-
-            return result
-
-        return AIFPLFunction(
-            parameters=('args',),
-            native_impl=wrapper_impl,
-            name=name,
-            is_variadic=True,
-        )
 
     def execute(
         self,
@@ -909,6 +816,117 @@ class AIFPLVM:
 
         result = a_val / b_val
         self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    # Type predicate operations
+
+    def _op_number_p(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_P: Check if value is a number (integer, float, or complex)."""
+        value = self.stack.pop()
+        result = isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
+        self.stack.append(AIFPLBoolean(result))
+        return None
+
+    def _op_integer_p(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_P: Check if value is an integer."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLInteger)))
+        return None
+
+    def _op_float_p(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_P: Check if value is a float."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLFloat)))
+        return None
+
+    def _op_complex_p(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX_P: Check if value is a complex number."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLComplex)))
+        return None
+
+    def _op_string_p(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_P: Check if value is a string."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLString)))
+        return None
+
+    def _op_boolean_p(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """BOOLEAN_P: Check if value is a boolean."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLBoolean)))
+        return None
+
+    def _op_list_p(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """LIST_P: Check if value is a list."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLList)))
+        return None
+
+    def _op_alist_p(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_P: Check if value is an alist."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLAList)))
+        return None
+
+    def _op_function_p(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """FUNCTION_P: Check if value is a function."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLFunction)))
         return None
 
     def _setup_call_frame(self, func: AIFPLFunction) -> None:

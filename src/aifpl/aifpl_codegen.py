@@ -15,13 +15,29 @@ from aifpl.aifpl_ir import (
 from aifpl.aifpl_value import AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLBoolean, AIFPLString
 
 
-# Mapping of builtin names to primitive opcodes
-PRIMITIVE_OPS = {
+# Mapping of builtin names to unary opcodes
+UNARY_OPS = {
+    # Unary type predicate operations
+    'number?': Opcode.NUMBER_P,
+    'integer?': Opcode.INTEGER_P,
+    'float?': Opcode.FLOAT_P,
+    'complex?': Opcode.COMPLEX_P,
+    'string?': Opcode.STRING_P,
+    'boolean?': Opcode.BOOLEAN_P,
+    'list?': Opcode.LIST_P,
+    'alist?': Opcode.ALIST_P,
+    'function?': Opcode.FUNCTION_P,
+}
+
+# Mapping of builtin names to binary opcodes
+BINARY_OPS = {
+    # Binary arithmetic operations
     '+': Opcode.ADD,
     '-': Opcode.SUB,
     '*': Opcode.MUL,
     '/': Opcode.DIV,
 }
+
 
 @dataclass
 class AIFPLCodeGenContext:
@@ -425,16 +441,21 @@ class AIFPLCodeGen:
             for arg_plan in plan.arg_plans:
                 self._generate_expr(arg_plan, ctx)
 
-            # Check if this is a primitive operation
-            if builtin_name in PRIMITIVE_OPS and len(plan.arg_plans) == 2:
-                # Emit primitive opcode directly for binary operations only
-                # (Primitives are binary; variadic calls use CALL_BUILTIN)
-                primitive_opcode = PRIMITIVE_OPS[builtin_name]
-                ctx.emit(primitive_opcode)
+            # Check if this is a primitive operation with correct arity
+            if builtin_name in BINARY_OPS:
+                if len(plan.arg_plans) == 2:
+                    primitive_opcode = BINARY_OPS[builtin_name]
+                    ctx.emit(primitive_opcode)
+                    return
 
-            else:
-                # Regular builtin call
-                ctx.emit(Opcode.CALL_BUILTIN, plan.builtin_index, len(plan.arg_plans))
+            elif builtin_name in UNARY_OPS:
+                if len(plan.arg_plans) == 1:
+                    primitive_opcode = UNARY_OPS[builtin_name]
+                    ctx.emit(primitive_opcode)
+                    return
+
+            # Regular builtin call (wrong arity or non-primitive)
+            ctx.emit(Opcode.CALL_BUILTIN, plan.builtin_index, len(plan.arg_plans))
 
             return
 

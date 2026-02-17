@@ -48,6 +48,18 @@ class Opcode(IntEnum):
     MUL = auto()             # Multiplication: pop b, pop a, push a * b
     DIV = auto()             # Division: pop b, pop a, push a / b
 
+    # Type predicate operations (unary)
+    # These pop one value from stack, check type, push boolean result
+    NUMBER_P = auto()        # Check if number (int/float/complex)
+    INTEGER_P = auto()       # Check if integer
+    FLOAT_P = auto()         # Check if float
+    COMPLEX_P = auto()       # Check if complex
+    STRING_P = auto()        # Check if string
+    BOOLEAN_P = auto()       # Check if boolean
+    LIST_P = auto()          # Check if list
+    ALIST_P = auto()         # Check if alist
+    FUNCTION_P = auto()      # Check if function
+
 
 @dataclass
 class Instruction:
@@ -69,8 +81,9 @@ class Instruction:
         # Opcodes with no arguments
         no_arg_opcodes = {
             Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST, Opcode.RETURN, Opcode.EMIT_TRACE,
-            # Primitive operations
             Opcode.ADD, Opcode.SUB, Opcode.MUL, Opcode.DIV,
+            Opcode.NUMBER_P, Opcode.INTEGER_P, Opcode.FLOAT_P, Opcode.COMPLEX_P,
+            Opcode.STRING_P, Opcode.BOOLEAN_P, Opcode.LIST_P, Opcode.ALIST_P, Opcode.FUNCTION_P,
         }
 
         # Opcodes with two arguments

@@ -136,6 +136,17 @@ class BytecodeValidator:
             Opcode.SUB: (2, 1),  # Pops 2 operands, pushes 1 result
             Opcode.MUL: (2, 1),  # Pops 2 operands, pushes 1 result
             Opcode.DIV: (2, 1),  # Pops 2 operands, pushes 1 result
+
+            # Type predicate operations (unary)
+            Opcode.NUMBER_P: (1, 1),    # Pops 1 value, pushes 1 boolean
+            Opcode.INTEGER_P: (1, 1),   # Pops 1 value, pushes 1 boolean
+            Opcode.FLOAT_P: (1, 1),     # Pops 1 value, pushes 1 boolean
+            Opcode.COMPLEX_P: (1, 1),   # Pops 1 value, pushes 1 boolean
+            Opcode.STRING_P: (1, 1),    # Pops 1 value, pushes 1 boolean
+            Opcode.BOOLEAN_P: (1, 1),   # Pops 1 value, pushes 1 boolean
+            Opcode.LIST_P: (1, 1),      # Pops 1 value, pushes 1 boolean
+            Opcode.ALIST_P: (1, 1),     # Pops 1 value, pushes 1 boolean
+            Opcode.FUNCTION_P: (1, 1),  # Pops 1 value, pushes 1 boolean
         }
 
     def validate(self, code: CodeObject) -> None:

@@ -143,7 +143,10 @@ def format_instruction(instr: Instruction, index: int) -> str:
     # Define which opcodes take 0, 1, or 2 arguments
     no_arg_opcodes = {
         Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST,
-        Opcode.RETURN, Opcode.EMIT_TRACE
+        Opcode.RETURN, Opcode.EMIT_TRACE,
+        Opcode.ADD, Opcode.SUB, Opcode.MUL, Opcode.DIV,
+        Opcode.NUMBER_P, Opcode.INTEGER_P, Opcode.FLOAT_P, Opcode.COMPLEX_P,
+        Opcode.STRING_P, Opcode.BOOLEAN_P, Opcode.LIST_P, Opcode.ALIST_P, Opcode.FUNCTION_P,
     }
 
     two_arg_opcodes = {
