@@ -41,15 +41,13 @@ class Opcode(IntEnum):
     # Debugging
     EMIT_TRACE = auto()      # Emit trace: EMIT_TRACE (pops value, emits to watcher)
 
-    # Primitive arithmetic operations (binary)
-    # These pop two values from stack, perform operation, push result
-    ADD = auto()             # Addition: pop b, pop a, push a + b
-    SUB = auto()             # Subtraction: pop b, pop a, push a - b
-    MUL = auto()             # Multiplication: pop b, pop a, push a * b
-    DIV = auto()             # Division: pop b, pop a, push a / b
+    # Arithmetic operations
+    ADD = auto()             # Calculate a + b
+    SUB = auto()             # Calculate a - b
+    MUL = auto()             # Calculate a * b
+    DIV = auto()             # Calculate a / b
 
-    # Type predicate operations (unary)
-    # These pop one value from stack, check type, push boolean result
+    # Type predicates
     NUMBER_P = auto()        # Check if number (int/float/complex)
     INTEGER_P = auto()       # Check if integer
     FLOAT_P = auto()         # Check if float
@@ -59,6 +57,9 @@ class Opcode(IntEnum):
     LIST_P = auto()          # Check if list
     ALIST_P = auto()         # Check if alist
     FUNCTION_P = auto()      # Check if function
+
+    # Boolean operations
+    NOT = auto()             # Logical NOT
 
 
 @dataclass

@@ -189,6 +189,7 @@ class AIFPLVM:
         table[Opcode.LIST_P] = self._op_list_p
         table[Opcode.ALIST_P] = self._op_alist_p
         table[Opcode.FUNCTION_P] = self._op_function_p
+        table[Opcode.NOT] = self._op_not
         return table
 
     def execute(
@@ -708,7 +709,29 @@ class AIFPLVM:
         # Continue execution (no return value)
         return None
 
-    # Primitive arithmetic operations
+    def _ensure_boolean(self, value: AIFPLValue, operation_name: str) -> bool:
+        """
+        Ensure value is a boolean, raise user-friendly error if not.
+
+        This provides consistent error messages between primitive opcodes
+        and CALL_BUILTIN paths.
+
+        Args:
+            value: Value to check
+            operation_name: Name of operation for error message (e.g., 'not', 'if')
+
+        Returns:
+            Python boolean value
+
+        Raises:
+            AIFPLEvalError: If value is not a boolean
+        """
+        if not isinstance(value, AIFPLBoolean):
+            raise AIFPLEvalError(
+                f"Function '{operation_name}' requires boolean arguments, got {value.type_name()}"
+            )
+
+        return value.value
 
     def _ensure_numeric(self, value: AIFPLValue, operation_name: str) -> int | float | complex:
         """
@@ -927,6 +950,19 @@ class AIFPLVM:
         """FUNCTION_P: Check if value is a function."""
         value = self.stack.pop()
         self.stack.append(AIFPLBoolean(isinstance(value, AIFPLFunction)))
+        return None
+
+    def _op_not(  # pylint: disable=useless-return
+        self,
+        _frame: Frame,
+        _code: CodeObject,
+        _arg1: int,
+        _arg2: int
+    ) -> AIFPLValue | None:
+        """NOT: Logical NOT operation."""
+        value = self.stack.pop()
+        bool_val = self._ensure_boolean(value, "not")
+        self.stack.append(AIFPLBoolean(not bool_val))
         return None
 
     def _setup_call_frame(self, func: AIFPLFunction) -> None:

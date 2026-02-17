@@ -27,6 +27,7 @@ UNARY_OPS = {
     'list?': Opcode.LIST_P,
     'alist?': Opcode.ALIST_P,
     'function?': Opcode.FUNCTION_P,
+    'not': Opcode.NOT,
 }
 
 # Mapping of builtin names to binary opcodes

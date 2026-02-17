@@ -122,31 +122,34 @@ class BytecodeValidator:
             # Functions - MAKE_CLOSURE pops captures and pushes closure
             # CALL_* effects depend on arity (handled specially)
             # RETURN pops 1 (handled specially as it exits)
-            Opcode.MAKE_CLOSURE: (-1, 1),  # Special: pops capture_count, pushes 1
-            Opcode.CALL_FUNCTION: (-1, 1),  # Special: pops arity+1, pushes 1
-            Opcode.TAIL_CALL_FUNCTION: (-1, 0),  # Special: pops arity+1, doesn't push (tail position)
-            Opcode.CALL_BUILTIN: (-1, 1),  # Special: pops arity, pushes 1
-            Opcode.RETURN: (1, 0),  # Pops 1, exits function
+            Opcode.MAKE_CLOSURE: (-1, 1),
+            Opcode.CALL_FUNCTION: (-1, 1),
+            Opcode.TAIL_CALL_FUNCTION: (-1, 0),
+            Opcode.CALL_BUILTIN: (-1, 1),
+            Opcode.RETURN: (1, 0),
 
             # Trace debug
             Opcode.EMIT_TRACE: (1, 0),  # Pops 1 (message), pushes 0
 
             # Primitive arithmetic operations (binary)
-            Opcode.ADD: (2, 1),  # Pops 2 operands, pushes 1 result
-            Opcode.SUB: (2, 1),  # Pops 2 operands, pushes 1 result
-            Opcode.MUL: (2, 1),  # Pops 2 operands, pushes 1 result
-            Opcode.DIV: (2, 1),  # Pops 2 operands, pushes 1 result
+            Opcode.ADD: (2, 1),
+            Opcode.SUB: (2, 1),
+            Opcode.MUL: (2, 1),
+            Opcode.DIV: (2, 1),
 
             # Type predicate operations (unary)
-            Opcode.NUMBER_P: (1, 1),    # Pops 1 value, pushes 1 boolean
-            Opcode.INTEGER_P: (1, 1),   # Pops 1 value, pushes 1 boolean
-            Opcode.FLOAT_P: (1, 1),     # Pops 1 value, pushes 1 boolean
-            Opcode.COMPLEX_P: (1, 1),   # Pops 1 value, pushes 1 boolean
-            Opcode.STRING_P: (1, 1),    # Pops 1 value, pushes 1 boolean
-            Opcode.BOOLEAN_P: (1, 1),   # Pops 1 value, pushes 1 boolean
-            Opcode.LIST_P: (1, 1),      # Pops 1 value, pushes 1 boolean
-            Opcode.ALIST_P: (1, 1),     # Pops 1 value, pushes 1 boolean
-            Opcode.FUNCTION_P: (1, 1),  # Pops 1 value, pushes 1 boolean
+            Opcode.NUMBER_P: (1, 1),
+            Opcode.INTEGER_P: (1, 1),
+            Opcode.FLOAT_P: (1, 1),
+            Opcode.COMPLEX_P: (1, 1),
+            Opcode.STRING_P: (1, 1),
+            Opcode.BOOLEAN_P: (1, 1),
+            Opcode.LIST_P: (1, 1),
+            Opcode.ALIST_P: (1, 1),
+            Opcode.FUNCTION_P: (1, 1),
+
+            # Boolean operations
+            Opcode.NOT: (1, 1),
         }
 
     def validate(self, code: CodeObject) -> None:
