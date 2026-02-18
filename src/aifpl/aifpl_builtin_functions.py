@@ -36,7 +36,7 @@ class AIFPLBuiltinFunctions:
     def _ensure_real_number(self, value: AIFPLValue, function_name: str) -> int | float:
         """Ensure value is a real number (int or float), raise error if complex."""
         if isinstance(value, AIFPLComplex):
-            raise AIFPLEvalError(f"Function '{function_name}' does not support complex numbers")
+            raise AIFPLEvalError(f"Function '{function_name}' requires real number arguments, got complex")
 
         if isinstance(value, (AIFPLInteger, AIFPLFloat)):
             return value.value

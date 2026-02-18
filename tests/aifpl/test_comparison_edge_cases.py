@@ -53,30 +53,30 @@ class TestComparisonEdgeCases:
         for op in comparison_ops:
             for complex_expr in complex_expressions:
                 # Test complex as first argument
-                with pytest.raises(AIFPLEvalError, match=f"Function '{op}' does not support complex numbers"):
+                with pytest.raises(AIFPLEvalError, match=f"requires real number argument"):
                     aifpl.evaluate(f"({op} {complex_expr} 5)")
 
                 # Test complex as second argument
-                with pytest.raises(AIFPLEvalError, match=f"Function '{op}' does not support complex numbers"):
+                with pytest.raises(AIFPLEvalError, match=f"requires real number argument"):
                     aifpl.evaluate(f"({op} 5 {complex_expr})")
 
                 # Test complex in middle of chain
-                with pytest.raises(AIFPLEvalError, match=f"Function '{op}' does not support complex numbers"):
+                with pytest.raises(AIFPLEvalError, match=f"requires real number argument"):
                     aifpl.evaluate(f"({op} 1 {complex_expr} 10)")
 
     def test_comparison_chains_with_complex_numbers(self, aifpl):
         """Test comparison chains that include complex numbers."""
         # Test longer chains with complex numbers
-        with pytest.raises(AIFPLEvalError, match="Function '<' does not support complex numbers"):
+        with pytest.raises(AIFPLEvalError, match="requires real number argument"):
             aifpl.evaluate("(< 1 2 (complex 3 1) 4)")
 
-        with pytest.raises(AIFPLEvalError, match="Function '>' does not support complex numbers"):
+        with pytest.raises(AIFPLEvalError, match="requires real number argument"):
             aifpl.evaluate("(> 10 (+ 5 1j) 3 1)")
 
-        with pytest.raises(AIFPLEvalError, match="Function '<=' does not support complex numbers"):
+        with pytest.raises(AIFPLEvalError, match="requires real number argument"):
             aifpl.evaluate("(<= 1 1j 3)")
 
-        with pytest.raises(AIFPLEvalError, match="Function '>=' does not support complex numbers"):
+        with pytest.raises(AIFPLEvalError, match="requires real number argument"):
             aifpl.evaluate("(>= 1j 0)")
 
     def test_comparison_operators_type_errors(self, aifpl):

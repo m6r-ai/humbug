@@ -24,10 +24,10 @@ class TestMathMissingCoverage:
 
         for op in comparison_ops:
             for complex_val in complex_values:
-                with pytest.raises(AIFPLEvalError, match=f"Function '{op}' does not support complex numbers"):
+                with pytest.raises(AIFPLEvalError, match=f"requires real number arguments"):
                     aifpl.evaluate(f"({op} 1 {complex_val})")
 
-                with pytest.raises(AIFPLEvalError, match=f"Function '{op}' does not support complex numbers"):
+                with pytest.raises(AIFPLEvalError, match=f"requires real number arguments"):
                     aifpl.evaluate(f"({op} {complex_val} 2)")
 
     def test_not_equal_all_arguments_equal_edge_case(self, aifpl):
@@ -168,13 +168,13 @@ class TestMathMissingCoverage:
 
         # Test with complex numbers that have non-zero imaginary parts
         for func in rounding_functions:
-            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' does not support complex numbers"):
+            with pytest.raises(AIFPLEvalError, match=f"requires real number arguments"):
                 aifpl.evaluate(f"({func} (complex 3.5 2.1))")
 
         # Test the edge case where complex number has very small imaginary part
         # This tests lines 476, 495, 514 which handle the tolerance check
         for func in rounding_functions:
-            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' does not support complex numbers"):
+            with pytest.raises(AIFPLEvalError, match=f"requires real number arguments"):
                 aifpl.evaluate(f"({func} (complex 3.5 1e-5))")
 
     # ========== Base Conversion Error Handling ==========
@@ -220,10 +220,10 @@ class TestMathMissingCoverage:
     def test_complex_function_with_complex_arguments(self, aifpl):
         """Test complex function with complex number arguments (should fail)."""
         # This tests line 632
-        with pytest.raises(AIFPLEvalError, match="Function 'complex' does not support complex numbers"):
+        with pytest.raises(AIFPLEvalError, match="requires real number argument"):
             aifpl.evaluate("(complex (complex 1 2) 3)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'complex' does not support complex numbers"):
+        with pytest.raises(AIFPLEvalError, match="requires real number argument"):
             aifpl.evaluate("(complex 1 (complex 2 3))")
 
     def test_real_imag_functions_with_complex_return_paths(self, aifpl):
@@ -254,10 +254,10 @@ class TestMathMissingCoverage:
         """Test _ensure_real_number with complex input."""
         # This tests line 667 in _ensure_real_number
         # min/max functions use _ensure_real_number and should reject complex numbers
-        with pytest.raises(AIFPLEvalError, match="Function 'min' does not support complex numbers"):
+        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
             aifpl.evaluate("(min (complex 1 2) 5)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'max' does not support complex numbers"):
+        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
             aifpl.evaluate("(max 1j 3)")
 
     # ========== Additional Edge Cases ==========

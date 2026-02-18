@@ -33,19 +33,19 @@ class TestIntegerConversion:
         """Test integer conversion from complex with zero imaginary part."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(integer (complex 3 0))")
-        assert "'integer' does not support complex numbers" in str(exc_info.value).lower()
+        assert "requires real number argument" in str(exc_info.value).lower()
 
     def test_integer_from_complex_with_tiny_imaginary(self, aifpl):
         """Test integer conversion from complex with tiny imaginary part."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(integer (complex 3.0 0.00000000001))")
-        assert "'integer' does not support complex numbers" in str(exc_info.value).lower()
+        assert "requires real number argument" in str(exc_info.value).lower()
 
     def test_integer_from_complex_with_nonzero_imaginary_error(self, aifpl):
         """Test integer conversion from complex with non-zero imaginary part raises error."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(integer (complex 3 4))")
-        assert "'integer' does not support complex numbers" in str(exc_info.value).lower()
+        assert "requires real number argument" in str(exc_info.value).lower()
 
     def test_integer_from_string_error(self, aifpl):
         """Test integer conversion from string raises error."""
@@ -112,19 +112,19 @@ class TestFloatConversion:
         """Test float conversion from complex with zero imaginary part."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(float (complex 3 0))")
-        assert "'float' does not support complex numbers" in str(exc_info.value).lower()
+        assert "requires real number argument" in str(exc_info.value).lower()
 
     def test_float_from_complex_with_tiny_imaginary(self, aifpl):
         """Test float conversion from complex with tiny imaginary part."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(float (complex 3.14 0.00000000001))")
-        assert "'float' does not support complex numbers" in str(exc_info.value).lower()
+        assert "requires real number argument" in str(exc_info.value).lower()
 
     def test_float_from_complex_with_nonzero_imaginary_error(self, aifpl):
         """Test float conversion from complex with non-zero imaginary part raises error."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(float (complex 3 4))")
-        assert "'float' does not support complex numbers" in str(exc_info.value).lower()
+        assert "requires real number argument" in str(exc_info.value).lower()
 
     def test_float_from_string_error(self, aifpl):
         """Test float conversion from string raises error."""

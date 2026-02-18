@@ -1061,7 +1061,7 @@ class AIFPLVM:
             result = cmath.sqrt(arg_val)
 
         else:
-            result = math.sqrt(arg_val)
+            result = math.sqrt(float(arg_val))
 
         self.stack.append(self._wrap_numeric_result(result))
         return None
