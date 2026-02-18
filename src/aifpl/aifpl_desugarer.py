@@ -396,6 +396,7 @@ class AIFPLDesugarer:
 
         The 2-arg case emits the binary opcode directly. The 3+-arg case wraps
         intermediate values in let bindings and chains with 'and'.
+        For != the pairwise connector is 'or' rather than 'and'.
         """
         op_symbol = expr.first()
         assert isinstance(op_symbol, AIFPLASTSymbol)
@@ -410,6 +411,8 @@ class AIFPLDesugarer:
             )
 
         # 3+ args: (op a b c d) → (and (op a b) (op b c) (op c d))
+        # For != the connector is 'or' instead of 'and': any consecutive pair
+        # differing is sufficient to make the whole expression true.
         # Bind each arg to a temp to avoid double-evaluation, then chain pairwise.
         desugared_args = [self.desugar(arg) for arg in args]
         temps = [self._gen_temp() for _ in args]
@@ -422,9 +425,10 @@ class AIFPLDesugarer:
             for i in range(len(temps) - 1)
         ]
 
-        # Chain with 'and'
+        # Chain with 'and' for ordered comparisons, 'or' for !=
+        connector = 'or' if op_name == '!=' else 'and'
         body: AIFPLASTNode = self._make_list(
-            tuple([self._make_symbol('and', expr)] + pairs), expr
+            tuple([self._make_symbol(connector, expr)] + pairs), expr
         )
 
         # Wrap in let* bindings from innermost outward
