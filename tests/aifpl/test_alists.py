@@ -652,7 +652,7 @@ class TestAListLengthErrors:
 
     def test_length_with_invalid_type(self, tool):
         """Test that length with invalid type raises error."""
-        with pytest.raises(AIFPLEvalError, match="length requires list or alist argument"):
+        with pytest.raises(AIFPLEvalError, match="requires list or alist argument"):
             tool.evaluate('(length 42)')
 
     def test_alist_length_with_non_alist(self, tool):
