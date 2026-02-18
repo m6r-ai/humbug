@@ -58,14 +58,14 @@ class TestIntegerConversion:
         """Test integer with no arguments raises error."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(integer)")
-        assert "requires exactly 1 argument" in str(exc_info.value).lower()
+        assert "expected: exactly 1 argument" in str(exc_info.value).lower()
         assert "got 0" in str(exc_info.value).lower()
 
     def test_integer_wrong_arg_count_multiple(self, aifpl):
         """Test integer with multiple arguments raises error."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(integer 1 2)")
-        assert "requires exactly 1 argument" in str(exc_info.value).lower()
+        assert "expected: exactly 1 argument" in str(exc_info.value).lower()
         assert "got 2" in str(exc_info.value).lower()
 
     def test_integer_truncates_toward_zero(self, aifpl):
@@ -137,14 +137,14 @@ class TestFloatConversion:
         """Test float with no arguments raises error."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(float)")
-        assert "requires exactly 1 argument" in str(exc_info.value).lower()
+        assert "expected: exactly 1 argument" in str(exc_info.value).lower()
         assert "got 0" in str(exc_info.value).lower()
 
     def test_float_wrong_arg_count_multiple(self, aifpl):
         """Test float with multiple arguments raises error."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate("(float 1 2)")
-        assert "requires exactly 1 argument" in str(exc_info.value).lower()
+        assert "expected: exactly 1 argument" in str(exc_info.value).lower()
         assert "got 2" in str(exc_info.value).lower()
 
     def test_float_with_negative_numbers(self, aifpl):

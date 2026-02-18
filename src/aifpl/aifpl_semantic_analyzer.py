@@ -15,6 +15,7 @@ before any transformations occur.
 from typing import List, cast
 
 from aifpl.aifpl_ast import AIFPLASTNode, AIFPLASTSymbol, AIFPLASTList, AIFPLASTString
+from aifpl.aifpl_builtin_registry import AIFPLBuiltinRegistry
 from aifpl.aifpl_error import AIFPLEvalError
 
 
@@ -795,7 +796,46 @@ class AIFPLSemanticAnalyzer:
         return expr
 
     def _analyze_call(self, expr: AIFPLASTList) -> AIFPLASTList:
-        """Validate function call by recursively analyzing all subexpressions."""
+        """Validate function call: check builtin arity, then recurse into subexpressions."""
+        first = expr.first()
+        if isinstance(first, AIFPLASTSymbol):
+            name = first.name
+            if name in AIFPLBuiltinRegistry.ARITY_TABLE:
+                min_args, max_args = AIFPLBuiltinRegistry.ARITY_TABLE[name]
+                n_args = len(expr.elements) - 1
+
+                if n_args < min_args:
+                    if min_args == max_args:
+                        expected_str = f"Exactly {min_args}"
+
+                    else:
+                        expected_str = f"At least {min_args}"
+
+                    raise AIFPLEvalError(
+                        message=f"Function '{name}' has wrong number of arguments",
+                        received=f"Got {n_args} argument{'s' if n_args != 1 else ''}",
+                        expected=f"{expected_str} argument{'s' if min_args != 1 else ''}",
+                        line=expr.line,
+                        column=expr.column,
+                        source=self.source
+                    )
+
+                if max_args is not None and n_args > max_args:
+                    if min_args == max_args:
+                        expected_str = f"Exactly {max_args}"
+
+                    else:
+                        expected_str = f"At most {max_args}"
+
+                    raise AIFPLEvalError(
+                        message=f"Function '{name}' has wrong number of arguments",
+                        received=f"Got {n_args} argument{'s' if n_args != 1 else ''}",
+                        expected=f"{expected_str} argument{'s' if max_args != 1 else ''}",
+                        line=expr.line,
+                        column=expr.column,
+                        source=self.source
+                    )
+
         # Recursively analyze all elements (function and arguments)
         for elem in expr.elements:
             self.analyze(elem, self.source)

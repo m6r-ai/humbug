@@ -47,47 +47,47 @@ class TestMathMissingCoverage:
     def test_bitwise_operations_insufficient_arguments(self, aifpl):
         """Test bitwise operations with insufficient arguments."""
         # bit-or requires at least 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-or' requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'bit-or' has wrong number of arguments"):
             aifpl.evaluate("(bit-or 5)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-or' requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'bit-or' has wrong number of arguments"):
             aifpl.evaluate("(bit-or)")
 
         # bit-and requires at least 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-and' requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'bit-and' has wrong number of arguments"):
             aifpl.evaluate("(bit-and 7)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-and' requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'bit-and' has wrong number of arguments"):
             aifpl.evaluate("(bit-and)")
 
         # bit-xor requires at least 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-xor' requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'bit-xor' has wrong number of arguments"):
             aifpl.evaluate("(bit-xor 3)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-xor' requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'bit-xor' has wrong number of arguments"):
             aifpl.evaluate("(bit-xor)")
 
     def test_bitwise_operations_wrong_argument_count(self, aifpl):
         """Test bitwise operations with wrong argument count."""
         # bit-not requires exactly 1 argument
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-not' requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="Function 'bit-not' has wrong number of arguments"):
             aifpl.evaluate("(bit-not 5 3)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-not' requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="Function 'bit-not' has wrong number of arguments"):
             aifpl.evaluate("(bit-not)")
 
         # bit-shift-left requires exactly 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-shift-left' requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'bit-shift-left' has wrong number of arguments"):
             aifpl.evaluate("(bit-shift-left 5)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-shift-left' requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'bit-shift-left' has wrong number of arguments"):
             aifpl.evaluate("(bit-shift-left 5 2 1)")
 
         # bit-shift-right requires exactly 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-shift-right' requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'bit-shift-right' has wrong number of arguments"):
             aifpl.evaluate("(bit-shift-right 8)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-shift-right' requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'bit-shift-right' has wrong number of arguments"):
             aifpl.evaluate("(bit-shift-right 8 2 1)")
 
     # ========== Mathematical Functions Error Handling ==========
@@ -98,11 +98,11 @@ class TestMathMissingCoverage:
 
         for func in trig_functions:
             # No arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' requires exactly 1 argument"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' has wrong number of arguments"):
                 aifpl.evaluate(f"({func})")
 
             # Too many arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' requires exactly 1 argument"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' has wrong number of arguments"):
                 aifpl.evaluate(f"({func} 1 2)")
 
     def test_trigonometric_functions_with_complex_numbers(self, aifpl):
@@ -127,11 +127,11 @@ class TestMathMissingCoverage:
 
         for func in log_functions:
             # No arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' requires exactly 1 argument"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' has wrong number of arguments"):
                 aifpl.evaluate(f"({func})")
 
             # Too many arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' requires exactly 1 argument"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' has wrong number of arguments"):
                 aifpl.evaluate(f"({func} 1 2)")
 
     def test_logarithmic_functions_with_complex_numbers(self, aifpl):
@@ -147,19 +147,19 @@ class TestMathMissingCoverage:
 
         for func in single_arg_functions:
             # No arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' requires exactly 1 argument"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' has wrong number of arguments"):
                 aifpl.evaluate(f"({func})")
 
             # Too many arguments (except abs which already has good coverage)
             if func != "abs":
-                with pytest.raises(AIFPLEvalError, match=f"Function '{func}' requires exactly 1 argument"):
+                with pytest.raises(AIFPLEvalError, match=f"Function '{func}' has wrong number of arguments"):
                     aifpl.evaluate(f"({func} 1 2)")
 
         # pow function requires exactly 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function 'pow' requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'pow' has wrong number of arguments"):
             aifpl.evaluate("(pow 2)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'pow' requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'pow' has wrong number of arguments"):
             aifpl.evaluate("(pow 2 3 4)")
 
     def test_rounding_functions_with_complex_numbers(self, aifpl):
@@ -185,11 +185,11 @@ class TestMathMissingCoverage:
 
         for func in base_functions:
             # No arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' requires exactly 1 argument"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' has wrong number of arguments"):
                 aifpl.evaluate(f"({func})")
 
             # Too many arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' requires exactly 1 argument"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' has wrong number of arguments"):
                 aifpl.evaluate(f"({func} 15 16)")
 
     # ========== Complex Number Functions Error Handling ==========
@@ -197,24 +197,24 @@ class TestMathMissingCoverage:
     def test_complex_number_functions_wrong_argument_count(self, aifpl):
         """Test complex number functions with wrong argument count."""
         # real function
-        with pytest.raises(AIFPLEvalError, match="Function 'real' requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="Function 'real' has wrong number of arguments"):
             aifpl.evaluate("(real)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'real' requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="Function 'real' has wrong number of arguments"):
             aifpl.evaluate("(real 1 2)")
 
         # imag function
-        with pytest.raises(AIFPLEvalError, match="Function 'imag' requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="Function 'imag' has wrong number of arguments"):
             aifpl.evaluate("(imag)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'imag' requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="Function 'imag' has wrong number of arguments"):
             aifpl.evaluate("(imag 1 2)")
 
         # complex function
-        with pytest.raises(AIFPLEvalError, match="Function 'complex' requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'complex' has wrong number of arguments"):
             aifpl.evaluate("(complex 5)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'complex' requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function 'complex' has wrong number of arguments"):
             aifpl.evaluate("(complex 1 2 3)")
 
     def test_complex_function_with_complex_arguments(self, aifpl):
@@ -268,10 +268,10 @@ class TestMathMissingCoverage:
 
         for op in comparison_ops:
             # All comparison operators require at least 2 arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires at least 2 arguments"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' has wrong number of arguments"):
                 aifpl.evaluate(f"({op} 5)")
 
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires at least 2 arguments"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' has wrong number of arguments"):
                 aifpl.evaluate(f"({op})")
 
     def test_comparison_operators_with_non_numeric_arguments(self, aifpl):
@@ -288,10 +288,10 @@ class TestMathMissingCoverage:
     def test_boolean_not_function_error_handling(self, aifpl):
         """Test not function with wrong argument count and type."""
         # Wrong argument count
-        with pytest.raises(AIFPLEvalError, match="Function 'not' requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="Function 'not' has wrong number of arguments"):
             aifpl.evaluate("(not)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'not' requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="Function 'not' has wrong number of arguments"):
             aifpl.evaluate("(not #t #f)")
 
         # Wrong argument type
@@ -328,24 +328,24 @@ class TestMathMissingCoverage:
     def test_floor_division_and_modulo_argument_validation(self, aifpl):
         """Test floor division and modulo argument count validation."""
         # Floor division requires exactly 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Floor division requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function '//' has wrong number of arguments"):
             aifpl.evaluate("(// 5)")
 
-        with pytest.raises(AIFPLEvalError, match="Floor division requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function '//' has wrong number of arguments"):
             aifpl.evaluate("(// 10 3 2)")
 
         # Modulo requires exactly 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Modulo requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function '%' has wrong number of arguments"):
             aifpl.evaluate("(% 5)")
 
-        with pytest.raises(AIFPLEvalError, match="Modulo requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function '%' has wrong number of arguments"):
             aifpl.evaluate("(% 10 3 2)")
 
     def test_exponentiation_argument_validation(self, aifpl):
         """Test exponentiation argument count validation."""
         # ** requires exactly 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function '\\*\\*' requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function '\\*\\*' has wrong number of arguments"):
             aifpl.evaluate("(** 2)")
 
-        with pytest.raises(AIFPLEvalError, match="Function '\\*\\*' requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="Function '\\*\\*' has wrong number of arguments"):
             aifpl.evaluate("(** 2 3 4)")

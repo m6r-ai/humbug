@@ -183,10 +183,10 @@ class TestConditionals:
 
     def test_not_requires_exactly_one_argument(self, aifpl):
         """Test that NOT requires exactly one argument."""
-        with pytest.raises(AIFPLEvalError, match="requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(not)')
 
-        with pytest.raises(AIFPLEvalError, match="requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(not #t #f)')
 
     @pytest.mark.parametrize("expression,expected", [
@@ -227,10 +227,10 @@ class TestConditionals:
 
     def test_equality_requires_at_least_two_arguments(self, aifpl):
         """Test that equality requires at least 2 arguments."""
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(=)')
 
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(= 1)')
 
     @pytest.mark.parametrize("expression,expected", [
@@ -297,40 +297,40 @@ class TestConditionals:
 
     def test_comparison_operations_require_at_least_two_arguments(self, aifpl):
         """Test that comparison operations require at least 2 arguments."""
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(=)')
 
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(= 1)')
 
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(!=)')
 
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(!= 1)')
 
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(<)')
 
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(< 1)')
 
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(>)')
 
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(> 5)')
 
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(<=)')
 
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(<= 1)')
 
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(>=)')
 
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(>= 5)')
 
     def test_complex_boolean_expressions(self, aifpl, helpers):

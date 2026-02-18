@@ -173,6 +173,31 @@ class BytecodeValidator:
             Opcode.LENGTH: (1, 1),
             Opcode.LIST_REF: (2, 1),
 
+            # Fold-reducible variadic operations (binary forms)
+            Opcode.BIT_OR: (2, 1),
+            Opcode.BIT_AND: (2, 1),
+            Opcode.BIT_XOR: (2, 1),
+            Opcode.APPEND: (2, 1),
+            Opcode.STRING_APPEND: (2, 1),
+            Opcode.MIN: (2, 1),
+            Opcode.MAX: (2, 1),
+
+            # Comparison / equality operations (binary forms)
+            Opcode.EQ: (2, 1),
+            Opcode.NEQ: (2, 1),
+            Opcode.LT: (2, 1),
+            Opcode.GT: (2, 1),
+            Opcode.LTE: (2, 1),
+            Opcode.GTE: (2, 1),
+            Opcode.STRING_EQ_P: (2, 1),
+            Opcode.NUMBER_EQ_P: (2, 1),
+            Opcode.INTEGER_EQ_P: (2, 1),
+            Opcode.FLOAT_EQ_P: (2, 1),
+            Opcode.COMPLEX_EQ_P: (2, 1),
+            Opcode.BOOLEAN_EQ_P: (2, 1),
+            Opcode.LIST_EQ_P: (2, 1),
+            Opcode.ALIST_EQ_P: (2, 1),
+
             # Arithmetic
             Opcode.FLOOR_DIV: (2, 1),
             Opcode.MOD: (2, 1),

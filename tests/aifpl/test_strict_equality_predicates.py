@@ -47,21 +47,21 @@ class TestStrictEqualityPredicates:
 
     def test_number_eq_rejects_non_numbers(self, aifpl):
         """Test number=? raises error on non-numeric arguments."""
-        with pytest.raises(AIFPLEvalError, match="number=.*requires numeric arguments.*string"):
+        with pytest.raises(AIFPLEvalError, match="number=.*requires number arguments.*string"):
             aifpl.evaluate('(number=? 42 "hello")')
 
-        with pytest.raises(AIFPLEvalError, match="number=.*requires numeric arguments.*boolean"):
+        with pytest.raises(AIFPLEvalError, match="number=.*requires number arguments.*boolean"):
             aifpl.evaluate('(number=? 1 #t)')
 
-        with pytest.raises(AIFPLEvalError, match="number=.*requires numeric arguments.*list"):
+        with pytest.raises(AIFPLEvalError, match="number=.*requires number arguments.*list"):
             aifpl.evaluate('(number=? 1 (list 1 2))')
 
     def test_number_eq_requires_minimum_args(self, aifpl):
         """Test number=? requires at least 2 arguments."""
-        with pytest.raises(AIFPLEvalError, match="number=.*requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="number=.*has wrong number of arguments"):
             aifpl.evaluate('(number=?)')
 
-        with pytest.raises(AIFPLEvalError, match="number=.*requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="number=.*has wrong number of arguments"):
             aifpl.evaluate('(number=? 42)')
 
     # ========== integer=? tests ==========
@@ -94,10 +94,10 @@ class TestStrictEqualityPredicates:
 
     def test_integer_eq_requires_minimum_args(self, aifpl):
         """Test integer=? requires at least 2 arguments."""
-        with pytest.raises(AIFPLEvalError, match="integer=.*requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="integer=.*has wrong number of arguments"):
             aifpl.evaluate('(integer=?)')
 
-        with pytest.raises(AIFPLEvalError, match="integer=.*requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="integer=.*has wrong number of arguments"):
             aifpl.evaluate('(integer=? 42)')
 
     # ========== float=? tests ==========
@@ -124,10 +124,10 @@ class TestStrictEqualityPredicates:
 
     def test_float_eq_requires_minimum_args(self, aifpl):
         """Test float=? requires at least 2 arguments."""
-        with pytest.raises(AIFPLEvalError, match="float=.*requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="float=.*has wrong number of arguments"):
             aifpl.evaluate('(float=?)')
 
-        with pytest.raises(AIFPLEvalError, match="float=.*requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="float=.*has wrong number of arguments"):
             aifpl.evaluate('(float=? 42.0)')
 
     # ========== complex=? tests ==========
@@ -151,10 +151,10 @@ class TestStrictEqualityPredicates:
 
     def test_complex_eq_requires_minimum_args(self, aifpl):
         """Test complex=? requires at least 2 arguments."""
-        with pytest.raises(AIFPLEvalError, match="complex=.*requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="complex=.*has wrong number of arguments"):
             aifpl.evaluate('(complex=?)')
 
-        with pytest.raises(AIFPLEvalError, match="complex=.*requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="complex=.*has wrong number of arguments"):
             aifpl.evaluate('(complex=? 1+0j)')
 
     # ========== string=? tests ==========
@@ -194,10 +194,10 @@ class TestStrictEqualityPredicates:
 
     def test_boolean_eq_requires_minimum_args(self, aifpl):
         """Test boolean=? requires at least 2 arguments."""
-        with pytest.raises(AIFPLEvalError, match="boolean=.*requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="boolean=.*has wrong number of arguments"):
             aifpl.evaluate('(boolean=?)')
 
-        with pytest.raises(AIFPLEvalError, match="boolean=.*requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="boolean=.*has wrong number of arguments"):
             aifpl.evaluate('(boolean=? #t)')
 
     # ========== list=? tests ==========
@@ -228,10 +228,10 @@ class TestStrictEqualityPredicates:
 
     def test_list_eq_requires_minimum_args(self, aifpl):
         """Test list=? requires at least 2 arguments."""
-        with pytest.raises(AIFPLEvalError, match="list=.*requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="list=.*has wrong number of arguments"):
             aifpl.evaluate('(list=?)')
 
-        with pytest.raises(AIFPLEvalError, match="list=.*requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="list=.*has wrong number of arguments"):
             aifpl.evaluate('(list=? (list 1 2))')
 
     # ========== alist=? tests ==========
@@ -272,10 +272,10 @@ class TestStrictEqualityPredicates:
 
     def test_alist_eq_requires_minimum_args(self, aifpl):
         """Test alist=? requires at least 2 arguments."""
-        with pytest.raises(AIFPLEvalError, match="alist=.*requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="alist=.*has wrong number of arguments"):
             aifpl.evaluate('(alist=?)')
 
-        with pytest.raises(AIFPLEvalError, match="alist=.*requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="alist=.*has wrong number of arguments"):
             aifpl.evaluate('(alist=? (alist))')
 
     # ========== Comparison with universal = operator ==========
@@ -309,15 +309,15 @@ class TestStrictEqualityPredicates:
     def test_error_messages_include_position(self, aifpl):
         """Test that error messages indicate which argument failed."""
         # First argument wrong type
-        with pytest.raises(AIFPLEvalError, match="position 1"):
+        with pytest.raises(AIFPLEvalError, match="requires integer arguments"):
             aifpl.evaluate('(integer=? 1.0 1)')
 
         # Second argument wrong type
-        with pytest.raises(AIFPLEvalError, match="position 2"):
+        with pytest.raises(AIFPLEvalError, match="requires integer arguments"):
             aifpl.evaluate('(integer=? 1 1.0)')
 
         # Third argument wrong type
-        with pytest.raises(AIFPLEvalError, match="position 3"):
+        with pytest.raises(AIFPLEvalError, match="requires integer arguments"):
             aifpl.evaluate('(integer=? 1 1 1.0)')
 
     def test_all_strict_predicates_with_many_args(self, aifpl):

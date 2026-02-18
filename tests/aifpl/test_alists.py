@@ -111,12 +111,12 @@ class TestAListGetErrors:
 
     def test_alist_get_wrong_arg_count_too_few(self, tool):
         """Test error with too few arguments."""
-        with pytest.raises(AIFPLEvalError, match="alist-get requires 2 or 3 arguments"):
+        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             tool.evaluate('(alist-get (alist (list "a" 1)))')
 
     def test_alist_get_wrong_arg_count_too_many(self, tool):
         """Test error with too many arguments."""
-        with pytest.raises(AIFPLEvalError, match="alist-get requires 2 or 3 arguments"):
+        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             tool.evaluate('(alist-get (alist (list "a" 1)) "a" 0 "extra")')
 
     def test_alist_get_not_alist(self, tool):
@@ -159,7 +159,7 @@ class TestAListSetErrors:
 
     def test_alist_set_wrong_arg_count(self, tool):
         """Test error with wrong number of arguments."""
-        with pytest.raises(AIFPLEvalError, match="alist-set requires exactly 3 arguments"):
+        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             tool.evaluate('(alist-set (alist (list "a" 1)) "b")')
 
     def test_alist_set_not_alist(self, tool):
@@ -192,7 +192,7 @@ class TestAListHasErrors:
 
     def test_alist_has_wrong_arg_count(self, tool):
         """Test error with wrong number of arguments."""
-        with pytest.raises(AIFPLEvalError, match="alist-has\\? requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             tool.evaluate('(alist-has? (alist (list "a" 1)))')
 
     def test_alist_has_not_alist(self, tool):
@@ -225,7 +225,7 @@ class TestAListKeysErrors:
 
     def test_alist_keys_wrong_arg_count(self, tool):
         """Test error with wrong number of arguments."""
-        with pytest.raises(AIFPLEvalError, match="alist-keys requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             tool.evaluate('(alist-keys)')
 
     def test_alist_keys_not_alist(self, tool):
@@ -258,7 +258,7 @@ class TestAListValuesErrors:
 
     def test_alist_values_wrong_arg_count(self, tool):
         """Test error with wrong number of arguments."""
-        with pytest.raises(AIFPLEvalError, match="alist-values requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             tool.evaluate('(alist-values (alist (list "a" 1)) "extra")')
 
     def test_alist_values_not_alist(self, tool):
@@ -295,7 +295,7 @@ class TestAListRemoveErrors:
 
     def test_alist_remove_wrong_arg_count(self, tool):
         """Test error with wrong number of arguments."""
-        with pytest.raises(AIFPLEvalError, match="alist-remove requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             tool.evaluate('(alist-remove (alist (list "a" 1)))')
 
     def test_alist_remove_not_alist(self, tool):
@@ -339,7 +339,7 @@ class TestAListMergeErrors:
 
     def test_alist_merge_wrong_arg_count(self, tool):
         """Test error with wrong number of arguments."""
-        with pytest.raises(AIFPLEvalError, match="alist-merge requires exactly 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             tool.evaluate('(alist-merge (alist (list "a" 1)))')
 
     def test_alist_merge_first_not_alist(self, tool):
@@ -382,7 +382,7 @@ class TestAListPredicateErrors:
 
     def test_alist_predicate_wrong_arg_count(self, tool):
         """Test error with wrong number of arguments."""
-        with pytest.raises(AIFPLEvalError, match="alist\\? requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             tool.evaluate('(alist?)')
 
 

@@ -231,24 +231,24 @@ class TestErrors:
     def test_arity_mismatch_eval_errors(self, aifpl):
         """Test that arity mismatches cause evaluation errors."""
         # Too few arguments
-        with pytest.raises(AIFPLEvalError, match="requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate("(abs)")
 
-        with pytest.raises(AIFPLEvalError, match="requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate("(string-length)")
 
         # Too many arguments
-        with pytest.raises(AIFPLEvalError, match="requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate("(abs 1 2)")
 
-        with pytest.raises(AIFPLEvalError, match="requires exactly 1 argument"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate("(not #t #f)")
 
         # Minimum argument requirements
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate("(=)")
 
-        with pytest.raises(AIFPLEvalError, match="requires at least 2 arguments"):
+        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate("(<)")
 
     def test_lambda_function_arity_eval_errors(self, aifpl):

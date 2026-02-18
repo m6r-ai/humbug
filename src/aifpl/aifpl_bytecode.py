@@ -135,6 +135,31 @@ class Opcode(IntEnum):
     ALIST_MERGE = auto()     # Merge two alists
     ALIST_SET = auto()       # Set key in alist (alist, key, value)
 
+    # Fold-reducible variadic operations (desugared to binary by desugarer)
+    BIT_OR = auto()          # Bitwise OR: a | b
+    BIT_AND = auto()         # Bitwise AND: a & b
+    BIT_XOR = auto()         # Bitwise XOR: a ^ b
+    APPEND = auto()          # Append two lists: (append a b)
+    STRING_APPEND = auto()   # Concatenate two strings: (string-append a b)
+    MIN = auto()             # Minimum of two real numbers
+    MAX = auto()             # Maximum of two real numbers
+
+    # Comparison / equality operations (desugared to binary by desugarer)
+    EQ = auto()              # a = b
+    NEQ = auto()             # a != b
+    LT = auto()              # a < b
+    GT = auto()              # a > b
+    LTE = auto()             # a <= b
+    GTE = auto()             # a >= b
+    STRING_EQ_P = auto()     # string=? a b
+    NUMBER_EQ_P = auto()     # number=? a b
+    INTEGER_EQ_P = auto()    # integer=? a b
+    FLOAT_EQ_P = auto()      # float=? a b
+    COMPLEX_EQ_P = auto()    # complex=? a b
+    BOOLEAN_EQ_P = auto()    # boolean=? a b
+    LIST_EQ_P = auto()       # list=? a b
+    ALIST_EQ_P = auto()      # alist=? a b
+
 @dataclass
 class Instruction:
     """Single bytecode instruction.
@@ -170,6 +195,12 @@ class Instruction:
             Opcode.STRING_SPLIT, Opcode.STRING_JOIN, Opcode.SUBSTRING, Opcode.STRING_REPLACE,
             Opcode.ALIST_KEYS, Opcode.ALIST_VALUES, Opcode.ALIST_LENGTH,
             Opcode.ALIST_HAS_P, Opcode.ALIST_REMOVE, Opcode.ALIST_MERGE, Opcode.ALIST_SET,
+            Opcode.BIT_OR, Opcode.BIT_AND, Opcode.BIT_XOR,
+            Opcode.APPEND, Opcode.STRING_APPEND, Opcode.MIN, Opcode.MAX,
+            Opcode.EQ, Opcode.NEQ, Opcode.LT, Opcode.GT, Opcode.LTE, Opcode.GTE,
+            Opcode.STRING_EQ_P,
+            Opcode.NUMBER_EQ_P, Opcode.INTEGER_EQ_P, Opcode.FLOAT_EQ_P, Opcode.COMPLEX_EQ_P,
+            Opcode.BOOLEAN_EQ_P, Opcode.LIST_EQ_P, Opcode.ALIST_EQ_P,
         }
         if self.opcode in no_arg_opcodes:
             return 0

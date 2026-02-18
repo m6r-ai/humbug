@@ -97,6 +97,21 @@ class AIFPLDesugarer:
                 # Desugar variadic arithmetic to binary operations
                 return self._desugar_variadic_arithmetic(expr)
 
+            # Fold-reducible variadic operations
+            if name in ['bit-or', 'bit-and', 'bit-xor', 'append', 'string-append', 'min', 'max']:
+                return self._desugar_fold_variadic(expr)
+
+            # Variadic comparison chains (short-circuit with 'and' is correct)
+            if name in ['=', '!=', '<', '>', '<=', '>=']:
+                return self._desugar_comparison_chain(expr)
+
+            # Strict equality predicates: only desugar the 2-arg case to a binary
+            # opcode; all other arities fall through to CALL_BUILTIN so the builtin
+            # handles arity errors and position-aware type errors correctly.
+            if name in ['string=?', 'number=?', 'integer=?', 'float=?',
+                        'complex=?', 'boolean=?', 'list=?', 'alist=?']:
+                return self._desugar_strict_equality(expr)
+
         # Regular function call - desugar all elements
         return self._desugar_call(expr)
 
@@ -309,6 +324,141 @@ class AIFPLDesugarer:
             ), expr)
 
         return result
+
+    def _desugar_fold_variadic(self, expr: AIFPLASTList) -> AIFPLASTNode:
+        """
+        Desugar fold-reducible variadic operations to nested binary operations.
+
+        These are operations where (f a b c) means (f (f a b) c) — a left fold.
+        Each operation has a natural identity element for the 0-arg case.
+
+        Handles:
+            bit-or, bit-and, bit-xor  — bitwise ops, identity: 0
+            append                    — list concatenation, identity: ()
+            string-append             — string concatenation, identity: ""
+            min, max                  — numeric reduction (1+ args required)
+        """
+        op_symbol = expr.first()
+        assert isinstance(op_symbol, AIFPLASTSymbol)
+        op_name = op_symbol.name
+
+        args = list(expr.elements[1:])
+
+        # 0-arg identity cases
+        if len(args) == 0:
+            if op_name == 'bit-or':
+                return AIFPLASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
+
+            if op_name == 'bit-and':
+                return AIFPLASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
+
+            if op_name == 'bit-xor':
+                return AIFPLASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
+
+            if op_name == 'append':
+                return self._make_list((self._make_symbol('quote', expr), self._make_list((), expr)), expr)
+
+            if op_name == 'string-append':
+                return AIFPLASTString("", line=expr.line, column=expr.column, source_file=expr.source_file)
+
+            # min/max with 0 args: let runtime raise the error via CALL_BUILTIN
+            return self._desugar_call(expr)
+
+        # 1-arg: identity — return the single argument as-is
+        if len(args) == 1:
+            return self.desugar(args[0])
+
+        # 2-arg: already binary, emit directly
+        if len(args) == 2:
+            return self._make_list(
+                (op_symbol, self.desugar(args[0]), self.desugar(args[1])), expr
+            )
+
+        # 3+ args: left-fold
+        desugared_args = [self.desugar(arg) for arg in args]
+        result = self._make_list(
+            (self._make_symbol(op_name, expr), desugared_args[0], desugared_args[1]), expr
+        )
+        for arg in desugared_args[2:]:
+            result = self._make_list(
+                (self._make_symbol(op_name, expr), result, arg), expr
+            )
+
+        return result
+
+    def _desugar_comparison_chain(self, expr: AIFPLASTList) -> AIFPLASTNode:
+        """
+        Desugar variadic comparison/equality operations to pairwise binary comparisons.
+
+        (op a b c) means (and (op a b) (op b c)), not a fold.
+        Each argument is evaluated once; the desugared form uses let bindings to
+        avoid double-evaluation when there are 3+ arguments.
+
+        The 2-arg case emits the binary opcode directly. The 3+-arg case wraps
+        intermediate values in let bindings and chains with 'and'.
+        """
+        op_symbol = expr.first()
+        assert isinstance(op_symbol, AIFPLASTSymbol)
+        op_name = op_symbol.name
+
+        args = list(expr.elements[1:])
+
+        # 2-arg: emit binary opcode directly (most common case)
+        if len(args) == 2:
+            return self._make_list(
+                (op_symbol, self.desugar(args[0]), self.desugar(args[1])), expr
+            )
+
+        # 3+ args: (op a b c d) → (and (op a b) (op b c) (op c d))
+        # Bind each arg to a temp to avoid double-evaluation, then chain pairwise.
+        desugared_args = [self.desugar(arg) for arg in args]
+        temps = [self._gen_temp() for _ in args]
+
+        # Build pairwise comparisons
+        pairs = [
+            self._make_list((self._make_symbol(op_name, expr),
+                             self._make_symbol(temps[i], expr),
+                             self._make_symbol(temps[i + 1], expr)), expr)
+            for i in range(len(temps) - 1)
+        ]
+
+        # Chain with 'and'
+        body: AIFPLASTNode = self._make_list(
+            tuple([self._make_symbol('and', expr)] + pairs), expr
+        )
+
+        # Wrap in let* bindings from innermost outward
+        for temp, desugared_arg in reversed(list(zip(temps, desugared_args))):
+            body = self._make_list((
+                self._make_symbol('let*', expr),
+                self._make_list((
+                    self._make_list((self._make_symbol(temp, expr), desugared_arg), expr),
+                ), expr),
+                body
+            ), expr)
+
+        return self.desugar(body)
+
+    def _desugar_strict_equality(self, expr: AIFPLASTList) -> AIFPLASTNode:
+        """
+        Desugar strict type-specific equality predicates.
+
+        Only the exact 2-arg case is desugared to a binary opcode.  All other
+        arities (0, 1, 3+) fall through to CALL_BUILTIN so the builtin
+        implementation handles arity errors and position-aware type errors.
+        """
+        op_symbol = expr.first()
+        assert isinstance(op_symbol, AIFPLASTSymbol)
+
+        args = list(expr.elements[1:])
+
+        if len(args) == 2:
+            return self._make_list(
+                (op_symbol, self.desugar(args[0]), self.desugar(args[1])), expr
+            )
+
+        # 0-arg, 1-arg, 3+-arg: let CALL_BUILTIN handle it
+        return self._desugar_call(expr)
 
     def _desugar_match(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """

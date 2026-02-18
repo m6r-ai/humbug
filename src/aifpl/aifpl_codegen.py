@@ -96,6 +96,28 @@ BINARY_OPS = {
     'alist-has?': Opcode.ALIST_HAS_P,
     'alist-remove': Opcode.ALIST_REMOVE,
     'alist-merge': Opcode.ALIST_MERGE,
+    # Fold-reducible variadic ops (desugared to binary by desugarer)
+    'bit-or': Opcode.BIT_OR,
+    'bit-and': Opcode.BIT_AND,
+    'bit-xor': Opcode.BIT_XOR,
+    'append': Opcode.APPEND,
+    'string-append': Opcode.STRING_APPEND,
+    'min': Opcode.MIN,
+    'max': Opcode.MAX,
+    '=': Opcode.EQ,
+    '!=': Opcode.NEQ,
+    '<': Opcode.LT,
+    '>': Opcode.GT,
+    '<=': Opcode.LTE,
+    '>=': Opcode.GTE,
+    'string=?': Opcode.STRING_EQ_P,
+    'number=?': Opcode.NUMBER_EQ_P,
+    'integer=?': Opcode.INTEGER_EQ_P,
+    'float=?': Opcode.FLOAT_EQ_P,
+    'complex=?': Opcode.COMPLEX_EQ_P,
+    'boolean=?': Opcode.BOOLEAN_EQ_P,
+    'list=?': Opcode.LIST_EQ_P,
+    'alist=?': Opcode.ALIST_EQ_P,
 }
 
 # Mapping of builtin names to ternary opcodes

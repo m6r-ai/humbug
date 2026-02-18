@@ -5,7 +5,7 @@ This module provides a single source of truth for all builtin function implement
 used by the bytecode VM.
 """
 
-from typing import List, Dict, Callable
+from typing import Dict, List, Callable, Optional, Tuple
 
 from aifpl.aifpl_builtin_functions import AIFPLBuiltinFunctions
 from aifpl.aifpl_value import AIFPLFunction
@@ -44,6 +44,120 @@ class AIFPLBuiltinRegistry:
         'bin', 'hex', 'oct', 'real', 'imag', 'complex',
     ]
 
+    # Authoritative arity table for all builtins.
+    #
+    # Each entry is (min_args, max_args) where max_args is None for truly
+    # variadic functions (no upper bound).  Functions with fixed arity
+    # have min_args == max_args.
+    #
+    # This is the single source of truth consumed by the semantic analyzer
+    # for early arity checking, and by create_builtin_function_objects() for
+    # building AIFPLFunction metadata.
+    ARITY_TABLE: Dict[str, Tuple[int, Optional[int]]] = {
+        # Arithmetic
+        '+': (0, None),
+        '-': (1, None),
+        '*': (0, None),
+        '/': (2, None),
+        '//': (2, 2),
+        '%': (2, 2),
+        '**': (2, 2),
+        '=': (2, None),
+        '!=': (2, None),
+        '<': (2, None),
+        '>': (2, None),
+        '<=': (2, None),
+        '>=': (2, None),
+        'not': (1, 1),
+        'bit-or': (2, None),
+        'bit-and': (2, None),
+        'bit-xor': (2, None),
+        'bit-not': (1, 1),
+        'bit-shift-left': (2, 2),
+        'bit-shift-right': (2, 2),
+        'list': (0, None),
+        'cons': (2, 2),
+        'append': (2, None),
+        'reverse': (1, 1),
+        'first': (1, 1),
+        'rest': (1, 1),
+        'length': (1, 1),
+        'last': (1, 1),
+        'member?': (2, 2),
+        'null?': (1, 1),
+        'position': (2, 2),
+        'take': (2, 2),
+        'drop': (2, 2),
+        'remove': (2, 2),
+        'list-ref': (2, 2),
+        'number?': (1, 1),
+        'integer?': (1, 1),
+        'float?': (1, 1),
+        'complex?': (1, 1),
+        'string?': (1, 1),
+        'boolean?': (1, 1),
+        'list?': (1, 1),
+        'alist?': (1, 1),
+        'function?': (1, 1),
+        'integer': (1, 1),
+        'float': (1, 1),
+        'range': (2, 3),
+        'string-append': (0, None),
+        'string-length': (1, 1),
+        'string-upcase': (1, 1),
+        'string-downcase': (1, 1),
+        'string-trim': (1, 1),
+        'string-replace': (3, 3),
+        'string-split': (2, 2),
+        'string-join': (2, 2),
+        'string-contains?': (2, 2),
+        'string-prefix?': (2, 2),
+        'string-suffix?': (2, 2),
+        'string-ref': (2, 2),
+        'substring': (3, 3),
+        'string->number': (1, 1),
+        'number->string': (1, 1),
+        'string=?': (2, None),
+        'string->list': (1, 1),
+        'list->string': (1, 1),
+        'number=?': (2, None),
+        'integer=?': (2, None),
+        'float=?': (2, None),
+        'complex=?': (2, None),
+        'boolean=?': (2, None),
+        'list=?': (2, None),
+        'alist=?': (2, None),
+        'alist': (0, None),
+        'alist-get': (2, 3),
+        'alist-set': (3, 3),
+        'alist-remove': (2, 2),
+        'alist-has?': (2, 2),
+        'alist-keys': (1, 1),
+        'alist-values': (1, 1),
+        'alist-merge': (2, 2),
+        'alist-length': (1, 1),
+        'sqrt': (1, 1),
+        'abs': (1, 1),
+        'min': (1, None),
+        'max': (1, None),
+        'pow': (2, 2),
+        'sin': (1, 1),
+        'cos': (1, 1),
+        'tan': (1, 1),
+        'log': (1, 1),
+        'log10': (1, 1),
+        'exp': (1, 1),
+        'round': (1, 1),
+        'floor': (1, 1),
+        'ceil': (1, 1),
+        'bin': (1, 1),
+        'hex': (1, 1),
+        'oct': (1, 1),
+        'real': (1, 1),
+        'imag': (1, 1),
+        'complex': (2, 2),
+    }
+
     def __init__(self) -> None:
         """
         Initialize the builtin registry.
@@ -51,6 +165,13 @@ class AIFPLBuiltinRegistry:
 
         # Create function modules
         self.builtin_functions = AIFPLBuiltinFunctions()
+
+        # Sanity check: every builtin must have an arity entry
+        missing = [name for name in self.BUILTIN_TABLE if name not in self.ARITY_TABLE]
+        if missing:
+            raise RuntimeError(
+                f"Builtins in BUILTIN_TABLE missing from ARITY_TABLE: {missing}"
+            )
 
         # Build function array in BUILTIN_TABLE order for fast VM access
         self._function_array: List[Callable] = self._build_function_array()
@@ -122,24 +243,8 @@ class AIFPLBuiltinRegistry:
 
         Returns True if the function accepts variable number of arguments.
         """
-        # Arithmetic operations are variadic
-        if name in ['+', '-', '*', '/', '//', '%', '**', 'min', 'max']:
-            return True
-
-        # List construction is variadic
-        if name in ['list', 'append']:
-            return True
-
-        # String operations that are variadic
-        if name in ['string-append', 'string-join']:
-            return True
-
-        # Bitwise operations are variadic
-        if name in ['bit-or', 'bit-and', 'bit-xor']:
-            return True
-
-        # Most other functions have fixed arity
-        return False
+        min_args, max_args = self.ARITY_TABLE[name]
+        return max_args is None or min_args != max_args
 
     def _get_builtin_parameters(self, name: str, is_variadic: bool) -> tuple:
         """
@@ -149,23 +254,7 @@ class AIFPLBuiltinRegistry:
         For fixed-arity functions, returns appropriate parameter names.
         """
         if is_variadic:
-            # Variadic functions use a single rest parameter
             return ('args',)
 
-        # Fixed arity functions - define parameters based on expected arity
-        # This is a simplified version; ideally we'd have a complete mapping
-        fixed_arity_params = {
-            # Unary functions
-            'not': ('x',),
-            'sqrt': ('x',),
-            'abs': ('x',),
-            'sin': ('x',), 'cos': ('x',), 'tan': ('x',),
-            'log': ('x',), 'log10': ('x',), 'exp': ('x',),
-            'round': ('x',), 'floor': ('x',), 'ceil': ('x',),
-
-            # Binary functions
-            'pow': ('base', 'exponent'),
-        }
-
-        # Default to ('a', 'b') for unknown fixed-arity functions
-        return fixed_arity_params.get(name, ('a', 'b'))
+        min_args, _ = self.ARITY_TABLE[name]
+        return tuple(f'arg{i}' for i in range(min_args))
