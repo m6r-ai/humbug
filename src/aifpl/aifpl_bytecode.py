@@ -146,13 +146,10 @@ class Instruction:
     arg1: int = 0
     arg2: int = 0
 
-    def __repr__(self) -> str:
-        """Human-readable representation."""
-        # Define which opcodes take 0, 1, or 2 arguments
-        # This is more reliable than checking if arguments are zero,
-        # since zero is a valid argument value (e.g., LOAD_CONST 0)
-
-        # Opcodes with no arguments
+    def arg_count(self) -> int:
+        """Return the number of arguments this instruction takes (0, 1, or 2)."""
+        # Opcodes with no arguments (all primitive operations that take operands
+        # from the stack rather than from the instruction stream)
         no_arg_opcodes = {
             Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST, Opcode.RETURN, Opcode.EMIT_TRACE,
             Opcode.ADD, Opcode.SUB, Opcode.MUL, Opcode.DIV,
@@ -174,25 +171,31 @@ class Instruction:
             Opcode.ALIST_KEYS, Opcode.ALIST_VALUES, Opcode.ALIST_LENGTH,
             Opcode.ALIST_HAS_P, Opcode.ALIST_REMOVE, Opcode.ALIST_MERGE, Opcode.ALIST_SET,
         }
+        if self.opcode in no_arg_opcodes:
+            return 0
 
-        # Opcodes with two arguments
+        # Opcodes with two instruction-stream arguments
         two_arg_opcodes = {
             Opcode.MAKE_CLOSURE,
-            Opcode.CALL_BUILTIN, Opcode.LOAD_PARENT_VAR
+            Opcode.CALL_BUILTIN, Opcode.LOAD_PARENT_VAR,
         }
+        if self.opcode in two_arg_opcodes:
+            return 2
 
-        # All other opcodes take one argument (LOAD_CONST, LOAD_VAR, STORE_VAR,
-        # LOAD_NAME, JUMP, JUMP_IF_FALSE, JUMP_IF_TRUE, RAISE_ERROR,
-        # CALL_FUNCTION, TAIL_CALL_FUNCTION)
+        # All other opcodes take one instruction-stream argument
+        # (LOAD_CONST, LOAD_VAR, STORE_VAR, LOAD_NAME, JUMP, JUMP_IF_FALSE,
+        #  JUMP_IF_TRUE, RAISE_ERROR, CALL_FUNCTION, TAIL_CALL_FUNCTION)
+        return 1
 
-        if self.opcode in no_arg_opcodes:
+    def __repr__(self) -> str:
+        """Human-readable representation."""
+        n = self.arg_count()
+        if n == 0:
             return f"{self.opcode.name}"
 
-        if self.opcode in two_arg_opcodes:
+        if n == 2:
             return f"{self.opcode.name} {self.arg1} {self.arg2}"
 
-        # One-argument opcodes (LOAD_CONST, LOAD_NAME, JUMP, POP_JUMP_IF_FALSE,
-        # POP_JUMP_IF_TRUE, RAISE_ERROR, CALL_FUNCTION)
         return f"{self.opcode.name} {self.arg1}"
 
 

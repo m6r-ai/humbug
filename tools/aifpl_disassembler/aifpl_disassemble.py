@@ -140,31 +140,14 @@ def annotate_instruction(instr: Instruction, code: CodeObject, builtin_names: Li
 
 def format_instruction(instr: Instruction, index: int) -> str:
     """Format instruction with appropriate arguments based on opcode."""
-    # Define which opcodes take 0, 1, or 2 arguments
-    no_arg_opcodes = {
-        Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST,
-        Opcode.RETURN, Opcode.EMIT_TRACE,
-        Opcode.ADD, Opcode.SUB, Opcode.MUL, Opcode.DIV,
-        Opcode.NUMBER_P, Opcode.INTEGER_P, Opcode.FLOAT_P, Opcode.COMPLEX_P,
-        Opcode.STRING_P, Opcode.BOOLEAN_P, Opcode.LIST_P, Opcode.ALIST_P, Opcode.FUNCTION_P,
-        Opcode.NOT,
-        Opcode.SIN, Opcode.COS, Opcode.TAN, Opcode.LOG, Opcode.LOG10, Opcode.EXP, Opcode.POW, Opcode.SQRT,
-        Opcode.ABS, Opcode.CEIL, Opcode.FLOOR
-    }
-
-    two_arg_opcodes = {
-        Opcode.MAKE_CLOSURE,
-        Opcode.CALL_BUILTIN, Opcode.LOAD_PARENT_VAR
-    }
-
-    # Format based on argument count
-    if instr.opcode in no_arg_opcodes:
+    n = instr.arg_count()
+    if n == 0:
         instr_str = f"{index:4}: {instr.opcode.name}"
 
-    elif instr.opcode in two_arg_opcodes:
+    elif n == 2:
         instr_str = f"{index:4}: {instr.opcode.name} {instr.arg1} {instr.arg2}"
 
-    else:  # One-argument opcodes
+    else:
         instr_str = f"{index:4}: {instr.opcode.name} {instr.arg1}"
 
     # Pad to fixed width so annotations align
