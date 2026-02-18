@@ -578,6 +578,14 @@ class BytecodeValidator:
             arity = instr.arg2
             return (arity, 1)  # Pop args, push result
 
+        if opcode == Opcode.BUILD_LIST:
+            n = instr.arg1
+            return (n, 1)  # Pop n elements, push list
+
+        if opcode == Opcode.BUILD_ALIST:
+            n = instr.arg1
+            return (n, 1)  # Pop n pair-lists, push alist
+
         # Default case
         return self.stack_effects.get(opcode, (0, 0))
 

@@ -109,22 +109,25 @@ class Opcode(IntEnum):
     REMOVE = auto()          # Remove all occurrences of item from list
 
     # String operations
-    STRING_LENGTH = auto()       # Get length of string
-    STRING_UPCASE = auto()       # Convert string to uppercase
-    STRING_DOWNCASE = auto()     # Convert string to lowercase
-    STRING_TRIM = auto()         # Trim whitespace from string
-    STRING_TO_NUMBER = auto()    # Parse string to number
-    NUMBER_TO_STRING = auto()    # Convert number to string
-    STRING_TO_LIST = auto()      # Convert string to list of characters
-    LIST_TO_STRING = auto()      # Convert list of characters to string
-    STRING_REF = auto()          # Get character at index
-    STRING_CONTAINS_P = auto()   # Check if string contains substring
-    STRING_PREFIX_P = auto()     # Check if string has prefix
-    STRING_SUFFIX_P = auto()     # Check if string has suffix
-    STRING_SPLIT = auto()        # Split string by delimiter
-    STRING_JOIN = auto()         # Join list of strings with separator
-    SUBSTRING = auto()           # Extract substring (string, start, end)
-    STRING_REPLACE = auto()      # Replace substring (string, old, new)
+    STRING_LENGTH = auto()   # Get length of string
+    STRING_UPCASE = auto()   # Convert string to uppercase
+    STRING_DOWNCASE = auto() # Convert string to lowercase
+    STRING_TRIM = auto()     # Trim whitespace from string
+    STRING_TO_NUMBER = auto()
+                             # Parse string to number
+    NUMBER_TO_STRING = auto()
+                             # Convert number to string
+    STRING_TO_LIST = auto()  # Convert string to list of characters
+    LIST_TO_STRING = auto()  # Convert list of characters to string
+    STRING_REF = auto()      # Get character at index
+    STRING_CONTAINS_P = auto()
+                             # Check if string contains substring
+    STRING_PREFIX_P = auto() # Check if string has prefix
+    STRING_SUFFIX_P = auto() # Check if string has suffix
+    STRING_SPLIT = auto()    # Split string by delimiter
+    STRING_JOIN = auto()     # Join list of strings with separator
+    SUBSTRING = auto()       # Extract substring (string, start, end)
+    STRING_REPLACE = auto()  # Replace substring (string, old, new)
 
     # Alist operations
     ALIST_KEYS = auto()      # Get all keys from alist
@@ -159,6 +162,10 @@ class Opcode(IntEnum):
     BOOLEAN_EQ_P = auto()    # boolean=? a b
     LIST_EQ_P = auto()       # list=? a b
     ALIST_EQ_P = auto()      # alist=? a b
+
+    # Collection construction opcodes (variadic, count encoded in instruction)
+    BUILD_LIST = auto()      # BUILD_LIST n  — pop n values, push AIFPLList
+    BUILD_ALIST = auto()     # BUILD_ALIST n — pop n (list key value) pair-lists, push AIFPLAList
 
 @dataclass
 class Instruction:
@@ -214,8 +221,6 @@ class Instruction:
             return 2
 
         # All other opcodes take one instruction-stream argument
-        # (LOAD_CONST, LOAD_VAR, STORE_VAR, LOAD_NAME, JUMP, JUMP_IF_FALSE,
-        #  JUMP_IF_TRUE, RAISE_ERROR, CALL_FUNCTION, TAIL_CALL_FUNCTION)
         return 1
 
     def __repr__(self) -> str:

@@ -283,6 +283,8 @@ class AIFPLVM:
         table[Opcode.BOOLEAN_EQ_P] = self._op_boolean_eq_p
         table[Opcode.LIST_EQ_P] = self._op_list_eq_p
         table[Opcode.ALIST_EQ_P] = self._op_alist_eq_p
+        table[Opcode.BUILD_LIST] = self._op_build_list
+        table[Opcode.BUILD_ALIST] = self._op_build_alist
         return table
 
     def execute(
@@ -2005,4 +2007,48 @@ class AIFPLVM:
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_alist(a, 'alist=?') == self._ensure_alist(b, 'alist=?')))
+        return None
+
+    def _op_build_list(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, n: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BUILD_LIST n: Pop n values from stack (top is last element), push AIFPLList."""
+        if n == 0:
+            self.stack.append(AIFPLList(()))
+            return None
+
+        elements = self.stack[-n:]
+        del self.stack[-n:]
+        self.stack.append(AIFPLList(tuple(elements)))
+        return None
+
+    def _op_build_alist(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, n: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BUILD_ALIST n: Pop n 2-element AIFPLList pair objects, push AIFPLAList.
+
+        Each pair on the stack is a 2-element list (list key value), matching the
+        existing (alist (list k1 v1) (list k2 v2) ...) calling convention.
+        """
+        if n == 0:
+            self.stack.append(AIFPLAList(()))
+            return None
+
+        pair_lists = self.stack[-n:]
+        del self.stack[-n:]
+        pairs = []
+        for i, pair_list in enumerate(pair_lists):
+            if not isinstance(pair_list, AIFPLList):
+                raise AIFPLEvalError(
+                    f"AList pair {i + 1} must be a list"
+                )
+
+            if len(pair_list.elements) != 2:
+                raise AIFPLEvalError(
+                    f"AList pair {i + 1} must have exactly 2 elements"
+                )
+
+            pairs.append((pair_list.elements[0], pair_list.elements[1]))
+
+        self.stack.append(AIFPLAList(tuple(pairs)))
         return None

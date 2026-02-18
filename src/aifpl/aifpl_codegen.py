@@ -127,6 +127,14 @@ TERNARY_OPS = {
     'alist-set': Opcode.ALIST_SET,
 }
 
+# Variadic collection-building opcodes.
+# Unlike fold-reducible ops these are NOT desugared to binary form; instead the
+# count of elements is encoded directly in the instruction argument.
+BUILD_OPS = {
+    'list': Opcode.BUILD_LIST,
+    'alist': Opcode.BUILD_ALIST,
+}
+
 
 @dataclass
 class AIFPLCodeGenContext:
@@ -548,6 +556,11 @@ class AIFPLCodeGen:
                     primitive_opcode = TERNARY_OPS[builtin_name]
                     ctx.emit(primitive_opcode)
                     return
+
+            elif builtin_name in BUILD_OPS:
+                build_opcode = BUILD_OPS[builtin_name]
+                ctx.emit(build_opcode, len(plan.arg_plans))
+                return
 
             # Regular builtin call (wrong arity or non-primitive)
             ctx.emit(Opcode.CALL_BUILTIN, plan.builtin_index, len(plan.arg_plans))
