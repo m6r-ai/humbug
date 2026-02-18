@@ -1061,6 +1061,9 @@ class AIFPLVM:
             result = cmath.sqrt(arg_val)
 
         else:
+            if arg_val < 0:
+                raise AIFPLEvalError("Function 'sqrt' requires a non-negative argument")
+
             result = math.sqrt(float(arg_val))
 
         self.stack.append(self._wrap_numeric_result(result))
