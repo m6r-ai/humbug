@@ -2,6 +2,10 @@
 
 ## v40 (2026-xx-xx)
 
+New features:
+
+- Added support for Claude Sonnet 4.6.
+
 ## v39 (2026-02-16)
 
 New features:

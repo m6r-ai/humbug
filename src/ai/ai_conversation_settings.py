@@ -29,6 +29,24 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
+        "claude-sonnet-4-6": AIModel(
+            name="claude-sonnet-4-6",
+            provider="anthropic",
+            context_window=200000,
+            max_output_tokens=32000,  # This is actually 64000 but that's too much
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "claude-sonnet-4-6 (thinking)": AIModel(
+            name="claude-sonnet-4-6",
+            provider="anthropic",
+            context_window=200000,
+            max_output_tokens=32000,  # This is actually 64000 but that's too much
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "claude-sonnet-4-5": AIModel(
             name="claude-sonnet-4-5",
             provider="anthropic",
