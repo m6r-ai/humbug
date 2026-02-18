@@ -260,6 +260,8 @@ class AIFPLVM:
         table[Opcode.ALIST_REMOVE] = self._op_alist_remove
         table[Opcode.ALIST_MERGE] = self._op_alist_merge
         table[Opcode.ALIST_SET] = self._op_alist_set
+        table[Opcode.ALIST_GET] = self._op_alist_get
+        table[Opcode.RANGE] = self._op_range
         # Fold-reducible variadic ops (binary forms)
         table[Opcode.BIT_OR] = self._op_bit_or
         table[Opcode.BIT_AND] = self._op_bit_and
@@ -1786,9 +1788,16 @@ class AIFPLVM:
         self.stack.append(self._ensure_alist(a, 'alist-set').set(key, value))
         return None
 
-    # ------------------------------------------------------------------
-    # Fold-reducible variadic ops (binary forms, desugared by desugarer)
-    # ------------------------------------------------------------------
+    def _op_alist_get(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_GET: Pop default, key, and alist, push value or default if not found."""
+        default = self.stack.pop()
+        key = self.stack.pop()
+        a = self.stack.pop()
+        result = self._ensure_alist(a, 'alist-get').get(key)
+        self.stack.append(result if result is not None else default)
+        return None
 
     def _op_bit_or(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
@@ -1856,10 +1865,6 @@ class AIFPLVM:
         b_val = self._ensure_real_number(b, 'max')
         self.stack.append(self._wrap_numeric_result(a_val if a_val >= b_val else b_val))
         return None
-
-    # ------------------------------------------------------------------
-    # Comparison / equality ops (binary forms, desugared by desugarer)
-    # ------------------------------------------------------------------
 
     def _op_eq(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
@@ -2051,4 +2056,20 @@ class AIFPLVM:
             pairs.append((pair_list.elements[0], pair_list.elements[1]))
 
         self.stack.append(AIFPLAList(tuple(pairs)))
+        return None
+
+    def _op_range(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """RANGE: Pop step, end, and start integers, push list of integers."""
+        step_val = self.stack.pop()
+        end_val = self.stack.pop()
+        start_val = self.stack.pop()
+        start = self._ensure_integer(start_val, 'range')
+        end = self._ensure_integer(end_val, 'range')
+        step = self._ensure_integer(step_val, 'range')
+        if step == 0:
+            raise AIFPLEvalError("Range step cannot be zero")
+
+        self.stack.append(AIFPLList(tuple(AIFPLInteger(v) for v in range(start, end, step))))
         return None

@@ -121,7 +121,7 @@ class TestAListGetErrors:
 
     def test_alist_get_not_alist(self, tool):
         """Test error when first argument is not an alist."""
-        with pytest.raises(AIFPLEvalError, match="argument must be an alist"):
+        with pytest.raises(AIFPLEvalError, match="requires alist argument"):
             tool.evaluate('(alist-get (list 1 2 3) "key")')
 
 

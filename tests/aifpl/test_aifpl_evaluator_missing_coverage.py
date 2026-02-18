@@ -63,31 +63,31 @@ class TestEvaluatorMissingCoverage:
         """Test 2-argument range with invalid start type."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate('(range "start" 10)')
-        assert "must be an integer" in str(exc_info.value)
+        assert "requires integer argument" in str(exc_info.value)
 
     def test_range_two_arg_invalid_end_type(self, aifpl):
         """Test 2-argument range with invalid end type."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate('(range 1 "end")')
-        assert "must be an integer" in str(exc_info.value)
+        assert "requires integer argument" in str(exc_info.value)
 
     def test_range_three_arg_invalid_start_type(self, aifpl):
         """Test 3-argument range with invalid start type."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate('(range "start" 10 2)')
-        assert "must be an integer" in str(exc_info.value)
+        assert "requires integer argument" in str(exc_info.value)
 
     def test_range_three_arg_invalid_end_type(self, aifpl):
         """Test 3-argument range with invalid end type."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate('(range 1 "end" 2)')
-        assert "must be an integer" in str(exc_info.value)
+        assert "requires integer argument" in str(exc_info.value)
 
     def test_range_three_arg_invalid_step_type(self, aifpl):
         """Test 3-argument range with invalid step type."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate('(range 1 10 "step")')
-        assert "must be an integer" in str(exc_info.value)
+        assert "requires integer argument" in str(exc_info.value)
 
     # ========== Integer Validation Tests ==========
 

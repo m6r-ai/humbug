@@ -253,6 +253,10 @@ class BytecodeValidator:
             Opcode.ALIST_REMOVE: (2, 1),
             Opcode.ALIST_MERGE: (2, 1),
             Opcode.ALIST_SET: (3, 1),
+            Opcode.ALIST_GET: (3, 1),
+
+            # Collection construction
+            Opcode.RANGE: (3, 1),
     }
 
     def validate(self, code: CodeObject) -> None:

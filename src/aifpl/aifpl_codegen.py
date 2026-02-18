@@ -534,6 +534,25 @@ class AIFPLCodeGen:
             # Get builtin name to check if it's a primitive
             builtin_name = AIFPLBuiltinRegistry.BUILTIN_TABLE[plan.builtin_index]
 
+            # Handle alist-get: synthesise missing default as #f
+            if builtin_name == 'alist-get':
+                for arg_plan in plan.arg_plans:
+                    self._generate_expr(arg_plan, ctx)
+                if len(plan.arg_plans) == 2:
+                    ctx.emit(Opcode.LOAD_FALSE)
+                ctx.emit(Opcode.ALIST_GET)
+                return
+
+            # Handle range: synthesise missing step as 1
+            if builtin_name == 'range':
+                for arg_plan in plan.arg_plans:
+                    self._generate_expr(arg_plan, ctx)
+                if len(plan.arg_plans) == 2:
+                    const_index = ctx.add_constant(AIFPLInteger(1))
+                    ctx.emit(Opcode.LOAD_CONST, const_index)
+                ctx.emit(Opcode.RANGE)
+                return
+
             # Generate arguments
             for arg_plan in plan.arg_plans:
                 self._generate_expr(arg_plan, ctx)

@@ -136,6 +136,7 @@ class Opcode(IntEnum):
     ALIST_HAS_P = auto()     # Check if alist has key
     ALIST_REMOVE = auto()    # Remove key from alist
     ALIST_MERGE = auto()     # Merge two alists
+    ALIST_GET = auto()       # Get value from alist by key with default: (alist-get alist key default)
     ALIST_SET = auto()       # Set key in alist (alist, key, value)
 
     # Fold-reducible variadic operations (desugared to binary by desugarer)
@@ -166,6 +167,7 @@ class Opcode(IntEnum):
     # Collection construction opcodes (variadic, count encoded in instruction)
     BUILD_LIST = auto()      # BUILD_LIST n  — pop n values, push AIFPLList
     BUILD_ALIST = auto()     # BUILD_ALIST n — pop n (list key value) pair-lists, push AIFPLAList
+    RANGE = auto()           # Generate integer range list: (range start end step)
 
 @dataclass
 class Instruction:
@@ -201,7 +203,8 @@ class Instruction:
             Opcode.STRING_REF, Opcode.STRING_CONTAINS_P, Opcode.STRING_PREFIX_P, Opcode.STRING_SUFFIX_P,
             Opcode.STRING_SPLIT, Opcode.STRING_JOIN, Opcode.SUBSTRING, Opcode.STRING_REPLACE,
             Opcode.ALIST_KEYS, Opcode.ALIST_VALUES, Opcode.ALIST_LENGTH,
-            Opcode.ALIST_HAS_P, Opcode.ALIST_REMOVE, Opcode.ALIST_MERGE, Opcode.ALIST_SET,
+            Opcode.ALIST_HAS_P, Opcode.ALIST_REMOVE, Opcode.ALIST_MERGE, Opcode.ALIST_GET, Opcode.ALIST_SET,
+            Opcode.RANGE,
             Opcode.BIT_OR, Opcode.BIT_AND, Opcode.BIT_XOR,
             Opcode.APPEND, Opcode.STRING_APPEND, Opcode.MIN, Opcode.MAX,
             Opcode.EQ, Opcode.NEQ, Opcode.LT, Opcode.GT, Opcode.LTE, Opcode.GTE,
