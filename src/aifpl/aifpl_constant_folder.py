@@ -479,14 +479,21 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         return AIFPLASTBoolean(True)
 
     def _fold_not_equal(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold inequality: (!= a b) → boolean"""
-        if len(args) != 2:
+        """Fold inequality: (!= a b c ...) → boolean
+
+        Semantics: "not all arguments are equal" — True if any pair differs.
+        This is equivalent to (not (= a b c ...)).
+        """
+        if len(args) < 2:
             return None
 
-        a = self._to_python_number(args[0])
-        b = self._to_python_number(args[1])
+        # Check if all arguments are equal; if so, != is False, otherwise True.
+        first_val = self._to_python_number(args[0])
+        for arg in args[1:]:
+            if self._to_python_number(arg) != first_val:
+                return AIFPLASTBoolean(True)
 
-        return AIFPLASTBoolean(a != b)
+        return AIFPLASTBoolean(False)
 
     def _fold_less_than(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
         """Fold less than: (< a b c ...) → boolean"""
