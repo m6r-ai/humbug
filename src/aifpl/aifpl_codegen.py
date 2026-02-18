@@ -42,7 +42,28 @@ UNARY_OPS = {
     'first': Opcode.FIRST,
     'rest': Opcode.REST,
     'last': Opcode.LAST,
-    'length': Opcode.LENGTH
+    'length': Opcode.LENGTH,
+    'round': Opcode.ROUND,
+    'integer': Opcode.TO_INTEGER,
+    'float': Opcode.TO_FLOAT,
+    'real': Opcode.REAL,
+    'imag': Opcode.IMAG,
+    'bin': Opcode.BIN,
+    'hex': Opcode.HEX,
+    'oct': Opcode.OCT,
+    'bit-not': Opcode.BIT_NOT,
+    'null?': Opcode.NULL_P,
+    'string-length': Opcode.STRING_LENGTH,
+    'string-upcase': Opcode.STRING_UPCASE,
+    'string-downcase': Opcode.STRING_DOWNCASE,
+    'string-trim': Opcode.STRING_TRIM,
+    'string->number': Opcode.STRING_TO_NUMBER,
+    'number->string': Opcode.NUMBER_TO_STRING,
+    'string->list': Opcode.STRING_TO_LIST,
+    'list->string': Opcode.LIST_TO_STRING,
+    'alist-keys': Opcode.ALIST_KEYS,
+    'alist-values': Opcode.ALIST_VALUES,
+    'alist-length': Opcode.ALIST_LENGTH,
 }
 
 # Mapping of builtin names to binary opcodes
@@ -54,7 +75,34 @@ BINARY_OPS = {
     '/': Opcode.DIV,
     'pow': Opcode.POW,
     'cons': Opcode.CONS,
-    'list-ref': Opcode.LIST_REF
+    'list-ref': Opcode.LIST_REF,
+    '//': Opcode.FLOOR_DIV,
+    '%': Opcode.MOD,
+    '**': Opcode.STAR_STAR,
+    'bit-shift-left': Opcode.BIT_SHIFT_LEFT,
+    'bit-shift-right': Opcode.BIT_SHIFT_RIGHT,
+    'complex': Opcode.MAKE_COMPLEX,
+    'member?': Opcode.MEMBER_P,
+    'position': Opcode.POSITION,
+    'take': Opcode.TAKE,
+    'drop': Opcode.DROP,
+    'remove': Opcode.REMOVE,
+    'string-ref': Opcode.STRING_REF,
+    'string-contains?': Opcode.STRING_CONTAINS_P,
+    'string-prefix?': Opcode.STRING_PREFIX_P,
+    'string-suffix?': Opcode.STRING_SUFFIX_P,
+    'string-split': Opcode.STRING_SPLIT,
+    'string-join': Opcode.STRING_JOIN,
+    'alist-has?': Opcode.ALIST_HAS_P,
+    'alist-remove': Opcode.ALIST_REMOVE,
+    'alist-merge': Opcode.ALIST_MERGE,
+}
+
+# Mapping of builtin names to ternary opcodes
+TERNARY_OPS = {
+    'substring': Opcode.SUBSTRING,
+    'string-replace': Opcode.STRING_REPLACE,
+    'alist-set': Opcode.ALIST_SET,
 }
 
 
@@ -470,6 +518,12 @@ class AIFPLCodeGen:
             elif builtin_name in UNARY_OPS:
                 if len(plan.arg_plans) == 1:
                     primitive_opcode = UNARY_OPS[builtin_name]
+                    ctx.emit(primitive_opcode)
+                    return
+
+            elif builtin_name in TERNARY_OPS:
+                if len(plan.arg_plans) == 3:
+                    primitive_opcode = TERNARY_OPS[builtin_name]
                     ctx.emit(primitive_opcode)
                     return
 

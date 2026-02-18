@@ -46,6 +46,9 @@ class Opcode(IntEnum):
     SUB = auto()             # Calculate a - b
     MUL = auto()             # Calculate a * b
     DIV = auto()             # Calculate a / b
+    FLOOR_DIV = auto()       # Calculate a // b (floor division)
+    MOD = auto()             # Calculate a % b (modulo)
+    STAR_STAR = auto()       # Calculate a ** b (complex-capable exponentiation)
 
     # Type predicates
     NUMBER_P = auto()        # Check if number (int/float/complex)
@@ -70,9 +73,25 @@ class Opcode(IntEnum):
     ABS = auto()             # Calculate abs(x)
     FLOOR = auto()           # Calculate floor(x)
     CEIL = auto()            # Calculate ceil(x)
+    ROUND = auto()           # Calculate round(x)
+
+    # Numeric conversion operations
+    TO_INTEGER = auto()      # Convert to integer
+    TO_FLOAT = auto()        # Convert to float
+    REAL = auto()            # Extract real part
+    IMAG = auto()            # Extract imaginary part
+    MAKE_COMPLEX = auto()    # Construct complex from real and imaginary parts
+    BIN = auto()             # Convert integer to binary string
+    HEX = auto()             # Convert integer to hex string
+    OCT = auto()             # Convert integer to octal string
 
     # Boolean operations
     NOT = auto()             # Logical NOT
+
+    # Bitwise operations
+    BIT_NOT = auto()         # Bitwise NOT ~x
+    BIT_SHIFT_LEFT = auto()  # Bitwise left shift x << n
+    BIT_SHIFT_RIGHT = auto() # Bitwise right shift x >> n
 
     # List operations
     CONS = auto()
@@ -82,6 +101,39 @@ class Opcode(IntEnum):
     LAST = auto()            # Get last element of list
     LENGTH = auto()          # Get length of list
     LIST_REF = auto()        # Get element at index from list: LIST_REF index
+    NULL_P = auto()          # Check if list is empty
+    MEMBER_P = auto()        # Check if item is in list
+    POSITION = auto()        # Find index of item in list
+    TAKE = auto()            # Take first n elements from list
+    DROP = auto()            # Drop first n elements from list
+    REMOVE = auto()          # Remove all occurrences of item from list
+
+    # String operations
+    STRING_LENGTH = auto()       # Get length of string
+    STRING_UPCASE = auto()       # Convert string to uppercase
+    STRING_DOWNCASE = auto()     # Convert string to lowercase
+    STRING_TRIM = auto()         # Trim whitespace from string
+    STRING_TO_NUMBER = auto()    # Parse string to number
+    NUMBER_TO_STRING = auto()    # Convert number to string
+    STRING_TO_LIST = auto()      # Convert string to list of characters
+    LIST_TO_STRING = auto()      # Convert list of characters to string
+    STRING_REF = auto()          # Get character at index
+    STRING_CONTAINS_P = auto()   # Check if string contains substring
+    STRING_PREFIX_P = auto()     # Check if string has prefix
+    STRING_SUFFIX_P = auto()     # Check if string has suffix
+    STRING_SPLIT = auto()        # Split string by delimiter
+    STRING_JOIN = auto()         # Join list of strings with separator
+    SUBSTRING = auto()           # Extract substring (string, start, end)
+    STRING_REPLACE = auto()      # Replace substring (string, old, new)
+
+    # Alist operations
+    ALIST_KEYS = auto()      # Get all keys from alist
+    ALIST_VALUES = auto()    # Get all values from alist
+    ALIST_LENGTH = auto()    # Get number of entries in alist
+    ALIST_HAS_P = auto()     # Check if alist has key
+    ALIST_REMOVE = auto()    # Remove key from alist
+    ALIST_MERGE = auto()     # Merge two alists
+    ALIST_SET = auto()       # Set key in alist (alist, key, value)
 
 @dataclass
 class Instruction:
@@ -104,8 +156,23 @@ class Instruction:
         no_arg_opcodes = {
             Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST, Opcode.RETURN, Opcode.EMIT_TRACE,
             Opcode.ADD, Opcode.SUB, Opcode.MUL, Opcode.DIV,
+            Opcode.FLOOR_DIV, Opcode.MOD, Opcode.STAR_STAR,
             Opcode.NUMBER_P, Opcode.INTEGER_P, Opcode.FLOAT_P, Opcode.COMPLEX_P,
             Opcode.STRING_P, Opcode.BOOLEAN_P, Opcode.LIST_P, Opcode.ALIST_P, Opcode.FUNCTION_P,
+            Opcode.NOT, Opcode.BIT_NOT, Opcode.BIT_SHIFT_LEFT, Opcode.BIT_SHIFT_RIGHT,
+            Opcode.SIN, Opcode.COS, Opcode.TAN, Opcode.LOG, Opcode.LOG10, Opcode.EXP,
+            Opcode.POW, Opcode.SQRT, Opcode.ABS, Opcode.FLOOR, Opcode.CEIL, Opcode.ROUND,
+            Opcode.TO_INTEGER, Opcode.TO_FLOAT, Opcode.REAL, Opcode.IMAG, Opcode.MAKE_COMPLEX,
+            Opcode.BIN, Opcode.HEX, Opcode.OCT,
+            Opcode.CONS, Opcode.REVERSE, Opcode.FIRST, Opcode.REST, Opcode.LAST,
+            Opcode.LENGTH, Opcode.LIST_REF, Opcode.NULL_P, Opcode.MEMBER_P, Opcode.POSITION,
+            Opcode.TAKE, Opcode.DROP, Opcode.REMOVE,
+            Opcode.STRING_LENGTH, Opcode.STRING_UPCASE, Opcode.STRING_DOWNCASE, Opcode.STRING_TRIM,
+            Opcode.STRING_TO_NUMBER, Opcode.NUMBER_TO_STRING, Opcode.STRING_TO_LIST, Opcode.LIST_TO_STRING,
+            Opcode.STRING_REF, Opcode.STRING_CONTAINS_P, Opcode.STRING_PREFIX_P, Opcode.STRING_SUFFIX_P,
+            Opcode.STRING_SPLIT, Opcode.STRING_JOIN, Opcode.SUBSTRING, Opcode.STRING_REPLACE,
+            Opcode.ALIST_KEYS, Opcode.ALIST_VALUES, Opcode.ALIST_LENGTH,
+            Opcode.ALIST_HAS_P, Opcode.ALIST_REMOVE, Opcode.ALIST_MERGE, Opcode.ALIST_SET,
         }
 
         # Opcodes with two arguments
@@ -114,7 +181,9 @@ class Instruction:
             Opcode.CALL_BUILTIN, Opcode.LOAD_PARENT_VAR
         }
 
-        # All other opcodes take one argument
+        # All other opcodes take one argument (LOAD_CONST, LOAD_VAR, STORE_VAR,
+        # LOAD_NAME, JUMP, JUMP_IF_FALSE, JUMP_IF_TRUE, RAISE_ERROR,
+        # CALL_FUNCTION, TAIL_CALL_FUNCTION)
 
         if self.opcode in no_arg_opcodes:
             return f"{self.opcode.name}"

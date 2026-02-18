@@ -121,7 +121,7 @@ class TestAListGetErrors:
 
     def test_alist_get_not_alist(self, tool):
         """Test error when first argument is not an alist."""
-        with pytest.raises(AIFPLEvalError, match="First argument must be an alist"):
+        with pytest.raises(AIFPLEvalError, match="argument must be an alist"):
             tool.evaluate('(alist-get (list 1 2 3) "key")')
 
 
@@ -164,7 +164,7 @@ class TestAListSetErrors:
 
     def test_alist_set_not_alist(self, tool):
         """Test error when first argument is not an alist."""
-        with pytest.raises(AIFPLEvalError, match="First argument must be an alist"):
+        with pytest.raises(AIFPLEvalError, match="requires alist argument"):
             tool.evaluate('(alist-set "not-alist" "key" "value")')
 
 
@@ -197,7 +197,7 @@ class TestAListHasErrors:
 
     def test_alist_has_not_alist(self, tool):
         """Test error when first argument is not an alist."""
-        with pytest.raises(AIFPLEvalError, match="First argument must be an alist"):
+        with pytest.raises(AIFPLEvalError, match="requires alist argument"):
             tool.evaluate('(alist-has? 42 "key")')
 
 
@@ -230,7 +230,7 @@ class TestAListKeysErrors:
 
     def test_alist_keys_not_alist(self, tool):
         """Test error when argument is not an alist."""
-        with pytest.raises(AIFPLEvalError, match="Argument must be an alist"):
+        with pytest.raises(AIFPLEvalError, match="requires alist argument"):
             tool.evaluate('(alist-keys (list 1 2 3))')
 
 
@@ -263,7 +263,7 @@ class TestAListValuesErrors:
 
     def test_alist_values_not_alist(self, tool):
         """Test error when argument is not an alist."""
-        with pytest.raises(AIFPLEvalError, match="Argument must be an alist"):
+        with pytest.raises(AIFPLEvalError, match="requires alist argument"):
             tool.evaluate('(alist-values #t)')
 
 
@@ -300,7 +300,7 @@ class TestAListRemoveErrors:
 
     def test_alist_remove_not_alist(self, tool):
         """Test error when first argument is not an alist."""
-        with pytest.raises(AIFPLEvalError, match="First argument must be an alist"):
+        with pytest.raises(AIFPLEvalError, match="requires alist argument"):
             tool.evaluate('(alist-remove (list 1 2) "key")')
 
 
@@ -344,12 +344,12 @@ class TestAListMergeErrors:
 
     def test_alist_merge_first_not_alist(self, tool):
         """Test error when first argument is not an alist."""
-        with pytest.raises(AIFPLEvalError, match="First argument must be an alist"):
+        with pytest.raises(AIFPLEvalError, match="requires alist argument"):
             tool.evaluate('(alist-merge (list 1 2) (alist (list "a" 1)))')
 
     def test_alist_merge_second_not_alist(self, tool):
         """Test error when second argument is not an alist."""
-        with pytest.raises(AIFPLEvalError, match="Second argument must be an alist"):
+        with pytest.raises(AIFPLEvalError, match="requires alist argument"):
             tool.evaluate('(alist-merge (alist (list "a" 1)) "not-alist")')
 
 
@@ -657,5 +657,5 @@ class TestAListLengthErrors:
 
     def test_alist_length_with_non_alist(self, tool):
         """Test that alist-length with non-alist raises error."""
-        with pytest.raises(AIFPLEvalError, match="alist-length requires alist argument"):
+        with pytest.raises(AIFPLEvalError, match="requires alist argument"):
             tool.evaluate('(alist-length (list 1 2 3))')

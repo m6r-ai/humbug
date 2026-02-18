@@ -171,7 +171,63 @@ class BytecodeValidator:
             Opcode.REST: (1, 1),
             Opcode.LAST: (1, 1),
             Opcode.LENGTH: (1, 1),
-            Opcode.LIST_REF: (2, 1)
+            Opcode.LIST_REF: (2, 1),
+
+            # Arithmetic
+            Opcode.FLOOR_DIV: (2, 1),
+            Opcode.MOD: (2, 1),
+            Opcode.STAR_STAR: (2, 1),
+
+            # Bitwise
+            Opcode.BIT_NOT: (1, 1),
+            Opcode.BIT_SHIFT_LEFT: (2, 1),
+            Opcode.BIT_SHIFT_RIGHT: (2, 1),
+
+            # Numeric/type conversion
+            Opcode.ROUND: (1, 1),
+            Opcode.TO_INTEGER: (1, 1),
+            Opcode.TO_FLOAT: (1, 1),
+            Opcode.REAL: (1, 1),
+            Opcode.IMAG: (1, 1),
+            Opcode.MAKE_COMPLEX: (2, 1),
+            Opcode.BIN: (1, 1),
+            Opcode.HEX: (1, 1),
+            Opcode.OCT: (1, 1),
+
+            # List
+            Opcode.NULL_P: (1, 1),
+            Opcode.MEMBER_P: (2, 1),
+            Opcode.POSITION: (2, 1),
+            Opcode.TAKE: (2, 1),
+            Opcode.DROP: (2, 1),
+            Opcode.REMOVE: (2, 1),
+
+            # String
+            Opcode.STRING_LENGTH: (1, 1),
+            Opcode.STRING_UPCASE: (1, 1),
+            Opcode.STRING_DOWNCASE: (1, 1),
+            Opcode.STRING_TRIM: (1, 1),
+            Opcode.STRING_TO_NUMBER: (1, 1),
+            Opcode.NUMBER_TO_STRING: (1, 1),
+            Opcode.STRING_TO_LIST: (1, 1),
+            Opcode.LIST_TO_STRING: (1, 1),
+            Opcode.STRING_REF: (2, 1),
+            Opcode.STRING_CONTAINS_P: (2, 1),
+            Opcode.STRING_PREFIX_P: (2, 1),
+            Opcode.STRING_SUFFIX_P: (2, 1),
+            Opcode.STRING_SPLIT: (2, 1),
+            Opcode.STRING_JOIN: (2, 1),
+            Opcode.SUBSTRING: (3, 1),
+            Opcode.STRING_REPLACE: (3, 1),
+
+            # Alist
+            Opcode.ALIST_KEYS: (1, 1),
+            Opcode.ALIST_VALUES: (1, 1),
+            Opcode.ALIST_LENGTH: (1, 1),
+            Opcode.ALIST_HAS_P: (2, 1),
+            Opcode.ALIST_REMOVE: (2, 1),
+            Opcode.ALIST_MERGE: (2, 1),
+            Opcode.ALIST_SET: (3, 1),
     }
 
     def validate(self, code: CodeObject) -> None:

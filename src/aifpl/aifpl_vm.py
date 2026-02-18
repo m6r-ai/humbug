@@ -210,6 +210,56 @@ class AIFPLVM:
         table[Opcode.REST] = self._op_rest
         table[Opcode.LAST] = self._op_last
         table[Opcode.LIST_REF] = self._op_list_ref
+        # Arithmetic
+        table[Opcode.FLOOR_DIV] = self._op_floor_div
+        table[Opcode.MOD] = self._op_mod
+        table[Opcode.STAR_STAR] = self._op_star_star
+        # Bitwise
+        table[Opcode.BIT_NOT] = self._op_bit_not
+        table[Opcode.BIT_SHIFT_LEFT] = self._op_bit_shift_left
+        table[Opcode.BIT_SHIFT_RIGHT] = self._op_bit_shift_right
+        # Numeric conversion
+        table[Opcode.ROUND] = self._op_round
+        table[Opcode.TO_INTEGER] = self._op_to_integer
+        table[Opcode.TO_FLOAT] = self._op_to_float
+        table[Opcode.REAL] = self._op_real
+        table[Opcode.IMAG] = self._op_imag
+        table[Opcode.MAKE_COMPLEX] = self._op_make_complex
+        table[Opcode.BIN] = self._op_bin
+        table[Opcode.HEX] = self._op_hex
+        table[Opcode.OCT] = self._op_oct
+        # List
+        table[Opcode.NULL_P] = self._op_null_p
+        table[Opcode.MEMBER_P] = self._op_member_p
+        table[Opcode.POSITION] = self._op_position
+        table[Opcode.TAKE] = self._op_take
+        table[Opcode.DROP] = self._op_drop
+        table[Opcode.REMOVE] = self._op_remove
+        # String
+        table[Opcode.STRING_LENGTH] = self._op_string_length
+        table[Opcode.STRING_UPCASE] = self._op_string_upcase
+        table[Opcode.STRING_DOWNCASE] = self._op_string_downcase
+        table[Opcode.STRING_TRIM] = self._op_string_trim
+        table[Opcode.STRING_TO_NUMBER] = self._op_string_to_number
+        table[Opcode.NUMBER_TO_STRING] = self._op_number_to_string
+        table[Opcode.STRING_TO_LIST] = self._op_string_to_list
+        table[Opcode.LIST_TO_STRING] = self._op_list_to_string
+        table[Opcode.STRING_REF] = self._op_string_ref
+        table[Opcode.STRING_CONTAINS_P] = self._op_string_contains_p
+        table[Opcode.STRING_PREFIX_P] = self._op_string_prefix_p
+        table[Opcode.STRING_SUFFIX_P] = self._op_string_suffix_p
+        table[Opcode.STRING_SPLIT] = self._op_string_split
+        table[Opcode.STRING_JOIN] = self._op_string_join
+        table[Opcode.SUBSTRING] = self._op_substring
+        table[Opcode.STRING_REPLACE] = self._op_string_replace
+        # Alist
+        table[Opcode.ALIST_KEYS] = self._op_alist_keys
+        table[Opcode.ALIST_VALUES] = self._op_alist_values
+        table[Opcode.ALIST_LENGTH] = self._op_alist_length
+        table[Opcode.ALIST_HAS_P] = self._op_alist_has_p
+        table[Opcode.ALIST_REMOVE] = self._op_alist_remove
+        table[Opcode.ALIST_MERGE] = self._op_alist_merge
+        table[Opcode.ALIST_SET] = self._op_alist_set
         return table
 
     def execute(
@@ -247,6 +297,34 @@ class AIFPLVM:
 
         # Execute until we return
         return self._execute_frame()
+
+    def _setup_call_frame(self, func: AIFPLFunction) -> None:
+        """
+        Setup a new frame for calling a function.
+
+        Creates a new frame, initializes it with the function's closure environment
+        and captured values, and pushes it onto the frame stack.
+
+        Arguments are assumed to be already on the stack in correct order.
+        The function prologue (STORE_VAR instructions at start of bytecode)
+        will pop these arguments into locals.
+
+        Args:
+            func: Function to call
+        """
+        code = func.bytecode
+
+        # Create new frame
+        new_frame = Frame(code)
+        new_frame.parent_frame = func.parent_frame  # Set parent frame for LOAD_PARENT_VAR
+
+        # Store captured values in locals (after parameters)
+        if func.captured_values:
+            for i, captured_val in enumerate(func.captured_values):
+                new_frame.locals[code.param_count + i] = captured_val
+
+        # Push frame onto stack
+        self.frames.append(new_frame)
 
     def _execute_frame(self) -> AIFPLValue:
         """
@@ -324,11 +402,7 @@ class AIFPLVM:
         raise AIFPLEvalError("Frame execution ended without RETURN instruction")
 
     def _op_load_const(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        code: CodeObject,
-        arg1: int,
-        _arg2: int
+        self, _frame: Frame, code: CodeObject, arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """LOAD_CONST: Push constant from pool onto stack."""
         # Validator guarantees arg1 is in bounds
@@ -337,44 +411,28 @@ class AIFPLVM:
         return None
 
     def _op_load_true(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """LOAD_TRUE: Push boolean true onto stack."""
         self.stack.append(AIFPLBoolean(True))
         return None
 
     def _op_load_false(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """LOAD_FALSE: Push boolean false onto stack."""
         self.stack.append(AIFPLBoolean(False))
         return None
 
     def _op_load_empty_list(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """LOAD_EMPTY_LIST: Push empty list onto stack."""
         self.stack.append(AIFPLList(()))
         return None
 
     def _op_load_var(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        index: int,
-        _arg2: int  # Unused - LOAD_VAR is logically 1-arg but dispatcher passes 2
+        self, _frame: Frame, _code: CodeObject, index: int, _arg2: int
     ) -> AIFPLValue | None:
         """LOAD_VAR: Load variable from current frame at index."""
         # Validator guarantees index is in bounds AND variable is initialized
@@ -384,11 +442,7 @@ class AIFPLVM:
         return None
 
     def _op_store_var(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        index: int,
-        _arg2: int  # Unused - STORE_VAR is logically 1-arg but dispatcher passes 2
+        self, _frame: Frame, _code: CodeObject, index: int, _arg2: int
     ) -> AIFPLValue | None:
         """STORE_VAR: Store top of stack to variable in current frame at index."""
         # Validator guarantees index is in bounds and stack has value
@@ -397,11 +451,7 @@ class AIFPLVM:
         return None
 
     def _op_load_parent_var(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        index: int,
-        depth: int
+        self, _frame: Frame, _code: CodeObject, index: int, depth: int
     ) -> AIFPLValue | None:
         """
         LOAD_PARENT_VAR: Load variable from parent frame.
@@ -431,11 +481,7 @@ class AIFPLVM:
         return None
 
     def _op_load_name(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        code: CodeObject,
-        arg1: int,
-        _arg2: int
+        self, _frame: Frame, code: CodeObject, arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """LOAD_NAME: Load global variable by name."""
         name = code.names[arg1]
@@ -465,22 +511,14 @@ class AIFPLVM:
         )
 
     def _op_jump(  # pylint: disable=useless-return
-        self,
-        frame: Frame,
-        _code: CodeObject,
-        target: int,
-        _arg2: int
+        self, frame: Frame, _code: CodeObject, target: int, _arg2: int
     ) -> AIFPLValue | None:
         """JUMP: Unconditional jump to instruction."""
         frame.ip = target
         return None
 
     def _op_jump_if_false(  # pylint: disable=useless-return
-        self,
-        frame: Frame,
-        _code: CodeObject,
-        target: int,
-        _arg2: int
+        self, frame: Frame, _code: CodeObject, target: int, _arg2: int
     ) -> AIFPLValue | None:
         """JUMP_IF_FALSE: Pop stack, jump if false."""
         # Validator guarantees target is valid and stack has value
@@ -495,11 +533,7 @@ class AIFPLVM:
         return None
 
     def _op_jump_if_true(  # pylint: disable=useless-return
-        self,
-        frame: Frame,
-        _code: CodeObject,
-        target: int,
-        _arg2: int
+        self, frame: Frame, _code: CodeObject, target: int, _arg2: int
     ) -> AIFPLValue | None:
         """JUMP_IF_TRUE: Pop stack, jump if true."""
         # Validator guarantees target is valid and stack has value
@@ -514,11 +548,7 @@ class AIFPLVM:
         return None
 
     def _op_raise_error(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        code: CodeObject,
-        arg1: int,
-        _arg2: int
+        self, _frame: Frame, code: CodeObject, arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """RAISE_ERROR: Raise error with message from constant pool."""
         # Validator guarantees arg1 is in bounds
@@ -530,11 +560,7 @@ class AIFPLVM:
         raise AIFPLEvalError(error_msg.value)
 
     def _op_make_closure(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        code: CodeObject,
-        arg1: int,
-        capture_count: int
+        self, _frame: Frame, code: CodeObject, arg1: int, capture_count: int
     ) -> AIFPLValue | None:
         """MAKE_CLOSURE: Create closure from code object and captured values."""
         # Validator guarantees arg1 is in bounds and stack has enough values
@@ -563,11 +589,7 @@ class AIFPLVM:
         return None
 
     def _op_call_function(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        arity: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, arity: int, _arg2: int
     ) -> AIFPLValue | None:
         """CALL_FUNCTION: Call function with arguments from stack."""
         # Validator guarantees stack has enough values (arity + 1)
@@ -614,11 +636,7 @@ class AIFPLVM:
         return None
 
     def _op_tail_call_function(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        arity: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, arity: int, _arg2: int
     ) -> TailCall | None:
         """
         TAIL_CALL_FUNCTION: Perform tail call with optimization.
@@ -675,11 +693,7 @@ class AIFPLVM:
         return TailCall(func)
 
     def _op_call_builtin(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        builtin_index: int,
-        arity: int
+        self, _frame: Frame, _code: CodeObject, builtin_index: int, arity: int
     ) -> AIFPLValue | None:
         """CALL_BUILTIN: Call builtin function by index."""
         # Validator guarantees builtin_index is valid and stack has enough values
@@ -700,11 +714,7 @@ class AIFPLVM:
         return None
 
     def _op_return(
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """RETURN: Pop frame and return value from stack."""
         # Validator guarantees stack has a value to return
@@ -712,11 +722,7 @@ class AIFPLVM:
         return self.stack.pop()
 
     def _op_emit_trace(  # pylint: disable=useless-return
-        self,
-        _frame: Frame,
-        _code: CodeObject,
-        _arg1: int,
-        _arg2: int
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """EMIT_TRACE: Pop value from stack and emit to trace watcher."""
         # Pop the message from stack
@@ -805,6 +811,27 @@ class AIFPLVM:
         """Ensure value is a list, raise error if not."""
         if not isinstance(value, AIFPLList):
             raise AIFPLEvalError(f"Function '{function_name}' requires list arguments, got {value.type_name()}")
+
+        return value
+
+    def _ensure_string(self, value: AIFPLValue, function_name: str) -> str:
+        """Ensure value is a string, raise error if not."""
+        if not isinstance(value, AIFPLString):
+            raise AIFPLEvalError(f"Function '{function_name}' requires string arguments, got {value.type_name()}")
+
+        return value.value
+
+    def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
+        """Ensure value is an integer, raise error if not."""
+        if not isinstance(value, AIFPLInteger):
+            raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
+
+        return value.value
+
+    def _ensure_alist(self, value: AIFPLValue, function_name: str) -> AIFPLAList:
+        """Ensure value is an alist, raise error if not."""
+        if not isinstance(value, AIFPLAList):
+            raise AIFPLEvalError(f"Function '{function_name}' requires alist arguments, got {value.type_name()}")
 
         return value
 
@@ -1138,34 +1165,6 @@ class AIFPLVM:
         self.stack.append(list_val.cons(head))
         return None
 
-    def _setup_call_frame(self, func: AIFPLFunction) -> None:
-        """
-        Setup a new frame for calling a function.
-
-        Creates a new frame, initializes it with the function's closure environment
-        and captured values, and pushes it onto the frame stack.
-
-        Arguments are assumed to be already on the stack in correct order.
-        The function prologue (STORE_VAR instructions at start of bytecode)
-        will pop these arguments into locals.
-
-        Args:
-            func: Function to call
-        """
-        code = func.bytecode
-
-        # Create new frame
-        new_frame = Frame(code)
-        new_frame.parent_frame = func.parent_frame  # Set parent frame for LOAD_PARENT_VAR
-
-        # Store captured values in locals (after parameters)
-        if func.captured_values:
-            for i, captured_val in enumerate(func.captured_values):
-                new_frame.locals[code.param_count + i] = captured_val
-
-        # Push frame onto stack
-        self.frames.append(new_frame)
-
     def _op_length(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1196,6 +1195,7 @@ class AIFPLVM:
         list_val = self._ensure_list(value, 'first')
         try:
             self.stack.append(list_val.first())
+
         except IndexError as e:
             raise AIFPLEvalError(str(e)) from e
 
@@ -1209,6 +1209,7 @@ class AIFPLVM:
         list_val = self._ensure_list(value, 'rest')
         try:
             self.stack.append(list_val.rest())
+
         except IndexError as e:
             raise AIFPLEvalError(str(e)) from e
 
@@ -1222,6 +1223,7 @@ class AIFPLVM:
         list_val = self._ensure_list(value, 'last')
         try:
             self.stack.append(list_val.last())
+
         except IndexError as e:
             raise AIFPLEvalError(str(e)) from e
 
@@ -1245,7 +1247,516 @@ class AIFPLVM:
 
         try:
             self.stack.append(list_val.get(index))
+
         except IndexError as e:
             raise AIFPLEvalError(f"list-ref index out of range: {index}") from e
 
+        return None
+
+    def _op_floor_div(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOOR_DIV: Pop two values, compute a // b, push result."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_real_number(a, '//')
+        b_val = self._ensure_real_number(b, '//')
+        if b_val == 0:
+            raise AIFPLEvalError("Division by zero")
+
+        self.stack.append(self._wrap_numeric_result(a_val // b_val))
+        return None
+
+    def _op_mod(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """MOD: Pop two values, compute a % b, push result."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_real_number(a, '%')
+        b_val = self._ensure_real_number(b, '%')
+        if b_val == 0:
+            raise AIFPLEvalError("Modulo by zero")
+
+        self.stack.append(self._wrap_numeric_result(a_val % b_val))
+        return None
+
+    def _op_star_star(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STAR_STAR: Pop two values, compute a ** b (complex-capable), push result."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_number(a, '**')
+        b_val = self._ensure_number(b, '**')
+        self.stack.append(self._wrap_numeric_result(a_val ** b_val))
+        return None
+
+    def _op_bit_not(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BIT_NOT: Pop an integer, push bitwise NOT."""
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'bit-not')
+        self.stack.append(AIFPLInteger(~a_val))
+        return None
+
+    def _op_bit_shift_left(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BIT_SHIFT_LEFT: Pop shift amount and value, push value << n."""
+        n = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'bit-shift-left')
+        n_val = self._ensure_integer(n, 'bit-shift-left')
+        self.stack.append(AIFPLInteger(a_val << n_val))
+        return None
+
+    def _op_bit_shift_right(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BIT_SHIFT_RIGHT: Pop shift amount and value, push value >> n."""
+        n = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'bit-shift-right')
+        n_val = self._ensure_integer(n, 'bit-shift-right')
+        self.stack.append(AIFPLInteger(a_val >> n_val))
+        return None
+
+    def _op_round(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ROUND: Pop a real number, push rounded integer."""
+        a = self.stack.pop()
+        a_val = self._ensure_real_number(a, 'round')
+        self.stack.append(AIFPLInteger(round(a_val)))
+        return None
+
+    def _op_to_integer(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """TO_INTEGER: Pop a real number, push truncated integer."""
+        a = self.stack.pop()
+        a_val = self._ensure_real_number(a, 'integer')
+        self.stack.append(AIFPLInteger(int(a_val)))
+        return None
+
+    def _op_to_float(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """TO_FLOAT: Pop a real number, push as float."""
+        a = self.stack.pop()
+        a_val = self._ensure_real_number(a, 'float')
+        self.stack.append(AIFPLFloat(float(a_val)))
+        return None
+
+    def _op_real(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REAL: Pop a number, push its real part as float."""
+        a = self.stack.pop()
+        a_val = self._ensure_number(a, 'real')
+        if isinstance(a_val, complex):
+            self.stack.append(AIFPLFloat(a_val.real))
+            return None
+
+        self.stack.append(AIFPLFloat(float(a_val)))
+        return None
+
+    def _op_imag(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """IMAG: Pop a number, push its imaginary part as float."""
+        a = self.stack.pop()
+        a_val = self._ensure_number(a, 'imag')
+        if isinstance(a_val, complex):
+            self.stack.append(AIFPLFloat(a_val.imag))
+            return None
+
+        self.stack.append(AIFPLFloat(0.0))
+        return None
+
+    def _op_make_complex(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """MAKE_COMPLEX: Pop imaginary and real parts, push complex number."""
+        imag = self.stack.pop()
+        real = self.stack.pop()
+        real_val = self._ensure_real_number(real, 'complex')
+        imag_val = self._ensure_real_number(imag, 'complex')
+        self.stack.append(AIFPLComplex(complex(real_val, imag_val)))
+        return None
+
+    def _op_bin(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BIN: Pop an integer, push Scheme-style binary string."""
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'bin')
+        if a_val < 0:
+            self.stack.append(AIFPLString(f"-#b{bin(-a_val)[2:]}"))
+            return None
+
+        self.stack.append(AIFPLString(f"#b{bin(a_val)[2:]}"))
+        return None
+
+    def _op_hex(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """HEX: Pop an integer, push Scheme-style hex string."""
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'hex')
+        if a_val < 0:
+            self.stack.append(AIFPLString(f"-#x{hex(-a_val)[2:]}"))
+            return None
+
+        self.stack.append(AIFPLString(f"#x{hex(a_val)[2:]}"))
+        return None
+
+    def _op_oct(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """OCT: Pop an integer, push Scheme-style octal string."""
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'oct')
+        if a_val < 0:
+            self.stack.append(AIFPLString(f"-#o{oct(-a_val)[2:]}"))
+            return None
+
+        self.stack.append(AIFPLString(f"#o{oct(a_val)[2:]}"))
+        return None
+
+    def _op_null_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NULL_P: Pop a list, push true if empty."""
+        value = self.stack.pop()
+        list_val = self._ensure_list(value, 'null?')
+        self.stack.append(AIFPLBoolean(list_val.is_empty()))
+        return None
+
+    def _op_member_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """MEMBER_P: Pop a list and item, push true if item is in list."""
+        list_val_raw = self.stack.pop()
+        item = self.stack.pop()
+        list_val = self._ensure_list(list_val_raw, 'member?')
+        self.stack.append(AIFPLBoolean(list_val.contains(item)))
+        return None
+
+    def _op_position(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """POSITION: Pop a list and item, push index or #f if not found."""
+        list_val_raw = self.stack.pop()
+        item = self.stack.pop()
+        list_val = self._ensure_list(list_val_raw, 'position')
+        pos = list_val.position(item)
+        self.stack.append(AIFPLInteger(pos) if pos is not None else AIFPLBoolean(False))
+        return None
+
+    def _op_take(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """TAKE: Pop a list and count n, push first n elements."""
+        list_val_raw = self.stack.pop()
+        n_val = self.stack.pop()
+        n = self._ensure_integer(n_val, 'take')
+        list_val = self._ensure_list(list_val_raw, 'take')
+        if n < 0:
+            raise AIFPLEvalError(f"take count cannot be negative: {n}")
+
+        self.stack.append(list_val.take(n))
+        return None
+
+    def _op_drop(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """DROP: Pop a list and count n, push list without first n elements."""
+        list_val_raw = self.stack.pop()
+        n_val = self.stack.pop()
+        n = self._ensure_integer(n_val, 'drop')
+        list_val = self._ensure_list(list_val_raw, 'drop')
+        if n < 0:
+            raise AIFPLEvalError(f"drop count cannot be negative: {n}")
+
+        self.stack.append(list_val.drop(n))
+        return None
+
+    def _op_remove(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REMOVE: Pop a list and item, push list with all occurrences of item removed."""
+        list_val_raw = self.stack.pop()
+        item = self.stack.pop()
+        list_val = self._ensure_list(list_val_raw, 'remove')
+        self.stack.append(list_val.remove_all(item))
+        return None
+
+    def _op_string_length(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_LENGTH: Pop a string, push its length."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLInteger(len(self._ensure_string(a, 'string-length'))))
+        return None
+
+    def _op_string_upcase(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_UPCASE: Pop a string, push uppercased string."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLString(self._ensure_string(a, 'string-upcase').upper()))
+        return None
+
+    def _op_string_downcase(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_DOWNCASE: Pop a string, push lowercased string."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLString(self._ensure_string(a, 'string-downcase').lower()))
+        return None
+
+    def _op_string_trim(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_TRIM: Pop a string, push whitespace-trimmed string."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLString(self._ensure_string(a, 'string-trim').strip()))
+        return None
+
+    def _op_string_to_number(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_TO_NUMBER: Pop a string, push parsed number."""
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string->number')
+        try:
+            if '.' not in s and 'e' not in s.lower() and 'j' not in s.lower():
+                self.stack.append(AIFPLInteger(int(s)))
+                return None
+
+            if 'j' in s.lower():
+                self.stack.append(AIFPLComplex(complex(s)))
+                return None
+
+            self.stack.append(AIFPLFloat(float(s)))
+            return None
+
+        except ValueError as e:
+            raise AIFPLEvalError(f"Cannot convert string to number: '{s}'") from e
+
+    def _op_number_to_string(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_TO_STRING: Pop a number, push string representation."""
+        a = self.stack.pop()
+        a_val = self._ensure_number(a, 'number->string')
+        if isinstance(a_val, complex):
+            self.stack.append(AIFPLString(str(a_val).strip('()')))
+            return None
+
+        self.stack.append(AIFPLString(str(a_val)))
+        return None
+
+    def _op_string_to_list(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_TO_LIST: Pop a string, push list of single-character strings."""
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string->list')
+        self.stack.append(AIFPLList(tuple(AIFPLString(ch) for ch in s)))
+        return None
+
+    def _op_list_to_string(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """LIST_TO_STRING: Pop a list of strings, push concatenated string."""
+        a = self.stack.pop()
+        list_val = self._ensure_list(a, 'list->string')
+        self.stack.append(AIFPLString(''.join(str(elem.to_python()) for elem in list_val.elements)))
+        return None
+
+    def _op_string_ref(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_REF: Pop an index and string, push character at index."""
+        index_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string-ref')
+        index = self._ensure_integer(index_val, 'string-ref')
+        if index < 0 or index >= len(s):
+            raise AIFPLEvalError(f"string-ref index out of range: {index}")
+
+        self.stack.append(AIFPLString(s[index]))
+        return None
+
+    def _op_string_contains_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_CONTAINS_P: Pop substring and string, push true if string contains substring."""
+        substr_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string-contains?')
+        substr = self._ensure_string(substr_val, 'string-contains?')
+        self.stack.append(AIFPLBoolean(substr in s))
+        return None
+
+    def _op_string_prefix_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_PREFIX_P: Pop prefix and string, push true if string starts with prefix."""
+        prefix_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string-prefix?')
+        prefix = self._ensure_string(prefix_val, 'string-prefix?')
+        self.stack.append(AIFPLBoolean(s.startswith(prefix)))
+        return None
+
+    def _op_string_suffix_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_SUFFIX_P: Pop suffix and string, push true if string ends with suffix."""
+        suffix_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string-suffix?')
+        suffix = self._ensure_string(suffix_val, 'string-suffix?')
+        self.stack.append(AIFPLBoolean(s.endswith(suffix)))
+        return None
+
+    def _op_string_split(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_SPLIT: Pop delimiter and string, push list of parts."""
+        delim_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string-split')
+        delim = self._ensure_string(delim_val, 'string-split')
+        if delim == "":
+            self.stack.append(AIFPLList(tuple(AIFPLString(ch) for ch in s)))
+            return None
+
+        self.stack.append(AIFPLList(tuple(AIFPLString(part) for part in s.split(delim))))
+        return None
+
+    def _op_string_join(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_JOIN: Pop separator and list of strings, push joined string."""
+        sep_val = self.stack.pop()
+        a = self.stack.pop()
+        list_val = self._ensure_list(a, 'string-join')
+        sep = self._ensure_string(sep_val, 'string-join')
+        parts = []
+        for item in list_val.elements:
+            if not isinstance(item, AIFPLString):
+                raise AIFPLEvalError(f"string-join requires list of strings, found {item.type_name()}")
+
+            parts.append(item.value)
+
+        self.stack.append(AIFPLString(sep.join(parts)))
+        return None
+
+    def _op_substring(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """SUBSTRING: Pop end, start, and string, push substring."""
+        end_val = self.stack.pop()
+        start_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'substring')
+        start = self._ensure_integer(start_val, 'substring')
+        end = self._ensure_integer(end_val, 'substring')
+        n = len(s)
+        if start < 0:
+            raise AIFPLEvalError(f"substring start index cannot be negative: {start}")
+
+        if end < 0:
+            raise AIFPLEvalError(f"substring end index cannot be negative: {end}")
+
+        if start > n:
+            raise AIFPLEvalError(f"substring start index out of range: {start} (string length: {n})")
+
+        if end > n:
+            raise AIFPLEvalError(f"substring end index out of range: {end} (string length: {n})")
+
+        if start > end:
+            raise AIFPLEvalError(f"substring start index ({start}) cannot be greater than end index ({end})")
+
+        self.stack.append(AIFPLString(s[start:end]))
+        return None
+
+    def _op_string_replace(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_REPLACE: Pop new, old, and string, push string with replacements."""
+        new_val = self.stack.pop()
+        old_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string-replace')
+        old = self._ensure_string(old_val, 'string-replace')
+        new = self._ensure_string(new_val, 'string-replace')
+        self.stack.append(AIFPLString(s.replace(old, new)))
+        return None
+
+    def _op_alist_keys(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_KEYS: Pop an alist, push list of its keys."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLList(self._ensure_alist(a, 'alist-keys').keys()))
+        return None
+
+    def _op_alist_values(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_VALUES: Pop an alist, push list of its values."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLList(self._ensure_alist(a, 'alist-values').values()))
+        return None
+
+    def _op_alist_length(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_LENGTH: Pop an alist, push its length."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLInteger(self._ensure_alist(a, 'alist-length').length()))
+        return None
+
+    def _op_alist_has_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_HAS_P: Pop a key and alist, push true if alist contains key."""
+        key = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_alist(a, 'alist-has?').has_key(key)))
+        return None
+
+    def _op_alist_remove(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_REMOVE: Pop a key and alist, push new alist without that key."""
+        key = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(self._ensure_alist(a, 'alist-remove').remove(key))
+        return None
+
+    def _op_alist_merge(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_MERGE: Pop two alists, push merged alist (second wins on conflicts)."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(self._ensure_alist(a, 'alist-merge').merge(self._ensure_alist(b, 'alist-merge')))
+        return None
+
+    def _op_alist_set(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_SET: Pop value, key, and alist, push new alist with key set to value."""
+        value = self.stack.pop()
+        key = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(self._ensure_alist(a, 'alist-set').set(key, value))
         return None
