@@ -74,6 +74,14 @@ class Opcode(IntEnum):
     # Boolean operations
     NOT = auto()             # Logical NOT
 
+    # List operations
+    CONS = auto()
+    REVERSE = auto()         # Reverse list on top of stack
+    FIRST = auto()           # Get first element of list
+    REST = auto()            # Get rest of list (all but first element)
+    LAST = auto()            # Get last element of list
+    LENGTH = auto()          # Get length of list
+    LIST_REF = auto()        # Get element at index from list: LIST_REF index
 
 @dataclass
 class Instruction:

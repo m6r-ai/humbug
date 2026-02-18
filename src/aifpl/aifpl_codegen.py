@@ -37,7 +37,12 @@ UNARY_OPS = {
     'sqrt': Opcode.SQRT,
     'abs': Opcode.ABS,
     'floor': Opcode.FLOOR,
-    'ceil': Opcode.CEIL
+    'ceil': Opcode.CEIL,
+    'reverse': Opcode.REVERSE,
+    'first': Opcode.FIRST,
+    'rest': Opcode.REST,
+    'last': Opcode.LAST,
+    'length': Opcode.LENGTH
 }
 
 # Mapping of builtin names to binary opcodes
@@ -48,6 +53,8 @@ BINARY_OPS = {
     '*': Opcode.MUL,
     '/': Opcode.DIV,
     'pow': Opcode.POW,
+    'cons': Opcode.CONS,
+    'list-ref': Opcode.LIST_REF
 }
 
 

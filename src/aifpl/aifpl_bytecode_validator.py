@@ -163,7 +163,16 @@ class BytecodeValidator:
             Opcode.ABS: (1, 1),
             Opcode.FLOOR: (1, 1),
             Opcode.CEIL: (1, 1),
-        }
+
+            # List operations
+            Opcode.CONS: (2, 1),
+            Opcode.REVERSE: (1, 1),
+            Opcode.FIRST: (1, 1),
+            Opcode.REST: (1, 1),
+            Opcode.LAST: (1, 1),
+            Opcode.LENGTH: (1, 1),
+            Opcode.LIST_REF: (2, 1)
+    }
 
     def validate(self, code: CodeObject) -> None:
         """

@@ -203,6 +203,13 @@ class AIFPLVM:
         table[Opcode.ABS] = self._op_abs
         table[Opcode.CEIL] = self._op_ceil
         table[Opcode.FLOOR] = self._op_floor
+        table[Opcode.CONS] = self._op_cons
+        table[Opcode.LENGTH] = self._op_length
+        table[Opcode.REVERSE] = self._op_reverse
+        table[Opcode.FIRST] = self._op_first
+        table[Opcode.REST] = self._op_rest
+        table[Opcode.LAST] = self._op_last
+        table[Opcode.LIST_REF] = self._op_list_ref
         return table
 
     def execute(
@@ -794,6 +801,13 @@ class AIFPLVM:
 
         return value.value
 
+    def _ensure_list(self, value: AIFPLValue, function_name: str) -> AIFPLList:
+        """Ensure value is a list, raise error if not."""
+        if not isinstance(value, AIFPLList):
+            raise AIFPLEvalError(f"Function '{function_name}' requires list arguments, got {value.type_name()}")
+
+        return value
+
     def _wrap_numeric_result(self, result: int | float | complex) -> AIFPLValue:
         """Wrap Python numeric value in appropriate AIFPL type."""
         if isinstance(result, int):
@@ -1113,6 +1127,17 @@ class AIFPLVM:
         self.stack.append(self._wrap_numeric_result(result))
         return None
 
+    def _op_cons(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """CONS: Pop two values, construct a new list with head and tail."""
+        tail = self.stack.pop()
+        head = self.stack.pop()
+
+        list_val = self._ensure_list(tail, 'cons')
+        self.stack.append(list_val.cons(head))
+        return None
+
     def _setup_call_frame(self, func: AIFPLFunction) -> None:
         """
         Setup a new frame for calling a function.
@@ -1140,3 +1165,87 @@ class AIFPLVM:
 
         # Push frame onto stack
         self.frames.append(new_frame)
+
+    def _op_length(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """LENGTH: Pop a list or alist, push its length as an integer."""
+        value = self.stack.pop()
+        if isinstance(value, (AIFPLList, AIFPLAList)):
+            self.stack.append(AIFPLInteger(value.length()))
+            return None
+
+        raise AIFPLEvalError(
+            f"Function 'length' requires list or alist argument, got {value.type_name()}"
+        )
+
+    def _op_reverse(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REVERSE: Pop a list, push a new list with elements in reversed order."""
+        value = self.stack.pop()
+        list_val = self._ensure_list(value, 'reverse')
+        self.stack.append(list_val.reverse())
+        return None
+
+    def _op_first(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FIRST: Pop a list, push its first element."""
+        value = self.stack.pop()
+        list_val = self._ensure_list(value, 'first')
+        try:
+            self.stack.append(list_val.first())
+        except IndexError as e:
+            raise AIFPLEvalError(str(e)) from e
+
+        return None
+
+    def _op_rest(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REST: Pop a list, push a new list of all elements except the first."""
+        value = self.stack.pop()
+        list_val = self._ensure_list(value, 'rest')
+        try:
+            self.stack.append(list_val.rest())
+        except IndexError as e:
+            raise AIFPLEvalError(str(e)) from e
+
+        return None
+
+    def _op_last(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """LAST: Pop a list, push its last element."""
+        value = self.stack.pop()
+        list_val = self._ensure_list(value, 'last')
+        try:
+            self.stack.append(list_val.last())
+        except IndexError as e:
+            raise AIFPLEvalError(str(e)) from e
+
+        return None
+
+    def _op_list_ref(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """LIST_REF: Pop an integer index and a list, push the element at that index."""
+        index_val = self.stack.pop()
+        value = self.stack.pop()
+        list_val = self._ensure_list(value, 'list-ref')
+        if not isinstance(index_val, AIFPLInteger):
+            raise AIFPLEvalError(
+                f"Function 'list-ref' requires integer index, got {index_val.type_name()}"
+            )
+
+        index = index_val.value
+        if index < 0:
+            raise AIFPLEvalError(f"list-ref index out of range: {index}")
+
+        try:
+            self.stack.append(list_val.get(index))
+        except IndexError as e:
+            raise AIFPLEvalError(f"list-ref index out of range: {index}") from e
+
+        return None
