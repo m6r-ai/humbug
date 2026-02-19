@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Any
 
 from aifpl.aifpl_builtin_registry import AIFPLBuiltinRegistry
-from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode
+from aifpl.aifpl_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Instruction, Opcode
 from aifpl.aifpl_ir import (
     AIFPLIRExpr, AIFPLIRConstant, AIFPLIRVariable, AIFPLIRIf, AIFPLIRAnd, AIFPLIROr,
     AIFPLIRQuote, AIFPLIRError, AIFPLIRLet, AIFPLIRLetrec, AIFPLIRLambda, AIFPLIRCall,
@@ -15,117 +15,12 @@ from aifpl.aifpl_ir import (
 from aifpl.aifpl_value import AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLBoolean, AIFPLString
 
 
-# Mapping of builtin names to unary opcodes
-UNARY_OPS = {
-    # Unary type predicate operations
-    'number?': Opcode.NUMBER_P,
-    'integer?': Opcode.INTEGER_P,
-    'float?': Opcode.FLOAT_P,
-    'complex?': Opcode.COMPLEX_P,
-    'string?': Opcode.STRING_P,
-    'boolean?': Opcode.BOOLEAN_P,
-    'list?': Opcode.LIST_P,
-    'alist?': Opcode.ALIST_P,
-    'function?': Opcode.FUNCTION_P,
-    'not': Opcode.NOT,
-    'sin': Opcode.SIN,
-    'cos': Opcode.COS,
-    'tan': Opcode.TAN,
-    'log': Opcode.LOG,
-    'log10': Opcode.LOG10,
-    'exp': Opcode.EXP,
-    'sqrt': Opcode.SQRT,
-    'abs': Opcode.ABS,
-    'floor': Opcode.FLOOR,
-    'ceil': Opcode.CEIL,
-    'reverse': Opcode.REVERSE,
-    'first': Opcode.FIRST,
-    'rest': Opcode.REST,
-    'last': Opcode.LAST,
-    'length': Opcode.LENGTH,
-    'round': Opcode.ROUND,
-    'integer': Opcode.TO_INTEGER,
-    'float': Opcode.TO_FLOAT,
-    'real': Opcode.REAL,
-    'imag': Opcode.IMAG,
-    'bin': Opcode.BIN,
-    'hex': Opcode.HEX,
-    'oct': Opcode.OCT,
-    'bit-not': Opcode.BIT_NOT,
-    'null?': Opcode.NULL_P,
-    'string-length': Opcode.STRING_LENGTH,
-    'string-upcase': Opcode.STRING_UPCASE,
-    'string-downcase': Opcode.STRING_DOWNCASE,
-    'string-trim': Opcode.STRING_TRIM,
-    'string->number': Opcode.STRING_TO_NUMBER,
-    'number->string': Opcode.NUMBER_TO_STRING,
-    'string->list': Opcode.STRING_TO_LIST,
-    'list->string': Opcode.LIST_TO_STRING,
-    'alist-keys': Opcode.ALIST_KEYS,
-    'alist-values': Opcode.ALIST_VALUES,
-    'alist-length': Opcode.ALIST_LENGTH,
-}
-
-# Mapping of builtin names to binary opcodes
-BINARY_OPS = {
-    # Binary arithmetic operations
-    '+': Opcode.ADD,
-    '-': Opcode.SUB,
-    '*': Opcode.MUL,
-    '/': Opcode.DIV,
-    'pow': Opcode.POW,
-    'cons': Opcode.CONS,
-    'list-ref': Opcode.LIST_REF,
-    '//': Opcode.FLOOR_DIV,
-    '%': Opcode.MOD,
-    '**': Opcode.STAR_STAR,
-    'bit-shift-left': Opcode.BIT_SHIFT_LEFT,
-    'bit-shift-right': Opcode.BIT_SHIFT_RIGHT,
-    'complex': Opcode.MAKE_COMPLEX,
-    'member?': Opcode.MEMBER_P,
-    'position': Opcode.POSITION,
-    'take': Opcode.TAKE,
-    'drop': Opcode.DROP,
-    'remove': Opcode.REMOVE,
-    'string-ref': Opcode.STRING_REF,
-    'string-contains?': Opcode.STRING_CONTAINS_P,
-    'string-prefix?': Opcode.STRING_PREFIX_P,
-    'string-suffix?': Opcode.STRING_SUFFIX_P,
-    'string-split': Opcode.STRING_SPLIT,
-    'string-join': Opcode.STRING_JOIN,
-    'alist-has?': Opcode.ALIST_HAS_P,
-    'alist-remove': Opcode.ALIST_REMOVE,
-    'alist-merge': Opcode.ALIST_MERGE,
-    # Fold-reducible variadic ops (desugared to binary by desugarer)
-    'bit-or': Opcode.BIT_OR,
-    'bit-and': Opcode.BIT_AND,
-    'bit-xor': Opcode.BIT_XOR,
-    'append': Opcode.APPEND,
-    'string-append': Opcode.STRING_APPEND,
-    'min': Opcode.MIN,
-    'max': Opcode.MAX,
-    '=': Opcode.EQ,
-    '!=': Opcode.NEQ,
-    '<': Opcode.LT,
-    '>': Opcode.GT,
-    '<=': Opcode.LTE,
-    '>=': Opcode.GTE,
-    'string=?': Opcode.STRING_EQ_P,
-    'number=?': Opcode.NUMBER_EQ_P,
-    'integer=?': Opcode.INTEGER_EQ_P,
-    'float=?': Opcode.FLOAT_EQ_P,
-    'complex=?': Opcode.COMPLEX_EQ_P,
-    'boolean=?': Opcode.BOOLEAN_EQ_P,
-    'list=?': Opcode.LIST_EQ_P,
-    'alist=?': Opcode.ALIST_EQ_P,
-}
-
-# Mapping of builtin names to ternary opcodes
-TERNARY_OPS = {
-    'substring': Opcode.SUBSTRING,
-    'string-replace': Opcode.STRING_REPLACE,
-    'alist-set': Opcode.ALIST_SET,
-}
+# Derived opcode maps for the codegen — built from the single source of truth
+# in BUILTIN_OPCODE_MAP. The codegen uses these to emit direct opcodes instead
+# of CALL_BUILTIN when a builtin is called with the correct fixed arity.
+UNARY_OPS  = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 1}
+BINARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 2}
+TERNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 3}
 
 # Variadic collection-building opcodes.
 # Unlike fold-reducible ops these are NOT desugared to binary form; instead the

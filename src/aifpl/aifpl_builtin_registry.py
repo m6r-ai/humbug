@@ -8,6 +8,7 @@ used by the bytecode VM.
 from typing import Dict, List, Callable, Optional, Tuple
 
 from aifpl.aifpl_builtin_functions import AIFPLBuiltinFunctions
+from aifpl.aifpl_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Instruction, Opcode
 from aifpl.aifpl_value import AIFPLFunction
 
 
@@ -212,10 +213,16 @@ class AIFPLBuiltinRegistry:
 
         This is used to populate the global environment with first-class function objects.
 
-        Builtins are represented as AIFPLFunction objects with:
-        - native_impl set to the Python implementation
-        - is_variadic=True for functions that accept any number of args
-        - parameters tuple indicating arity (or ('args',) for variadic)
+        Fixed-arity builtins that appear in BUILTIN_OPCODE_MAP are represented as
+        AIFPLFunction objects with a bytecode stub — a minimal CodeObject whose body
+        is the single opcode followed by RETURN.  The stub has no locals and no
+        constants; it relies entirely on the arguments already being on the stack
+        when CALL_FUNCTION enters the frame.
+
+        Only truly fixed-arity builtins (min_args == max_args in ARITY_TABLE) get
+        stubs.  Variadic builtins (max_args is None, or min_args != max_args) keep
+        their native_impl for now — they will be replaced once variadic bytecode
+        stubs are implemented.
 
         Returns:
             Dictionary mapping function names to AIFPLFunction objects
@@ -224,27 +231,65 @@ class AIFPLBuiltinRegistry:
         for i, name in enumerate(self.BUILTIN_TABLE):
             impl = self._function_array[i]
 
-            # Determine if function is variadic and its parameters
-            is_variadic = self._is_variadic_builtin(name)
-            parameters = self._get_builtin_parameters(name, is_variadic)
+            min_args, max_args = self.ARITY_TABLE[name]
+            is_fixed_arity = (max_args is not None and min_args == max_args)
 
-            builtins[name] = AIFPLFunction(
-                parameters=parameters,
-                native_impl=impl,
-                name=name,
-                is_variadic=is_variadic
-            )
+            if name in BUILTIN_OPCODE_MAP and is_fixed_arity:
+                # Truly fixed-arity builtin: generate a bytecode stub
+                opcode, arity = BUILTIN_OPCODE_MAP[name]
+                stub = self._build_stub_code_object(name, opcode, arity)
+                parameters = tuple(f'arg{i}' for i in range(arity))
+                builtins[name] = AIFPLFunction(
+                    parameters=parameters,
+                    name=name,
+                    bytecode=stub,
+                    is_variadic=False
+                )
+
+            else:
+                # Variadic builtin: keep native implementation for now
+                parameters = self._get_builtin_parameters(name, True)
+                builtins[name] = AIFPLFunction(
+                    parameters=parameters,
+                    native_impl=impl,
+                    name=name,
+                    is_variadic=True
+                )
 
         return builtins
 
-    def _is_variadic_builtin(self, name: str) -> bool:
+    def _build_stub_code_object(self, name: str, opcode: Opcode, arity: int) -> CodeObject:
         """
-        Determine if a builtin function is variadic.
+        Build a minimal CodeObject that executes a single opcode and returns.
 
-        Returns True if the function accepts variable number of arguments.
+        The stub relies on arguments already being on the stack in the correct
+        order when CALL_FUNCTION enters the frame — no STORE_VAR/LOAD_VAR
+        prologue is needed.  The body is simply:
+
+            <opcode>
+            RETURN
+
+        Args:
+            name:   Builtin name (for the code object's debug name)
+            opcode: The opcode to emit
+            arity:  Number of parameters (used only for metadata)
+
+        Returns:
+            A CodeObject suitable for use as AIFPLFunction.bytecode
         """
-        min_args, max_args = self.ARITY_TABLE[name]
-        return max_args is None or min_args != max_args
+        instructions = [
+            Instruction(opcode),
+            Instruction(Opcode.RETURN),
+        ]
+        return CodeObject(
+            instructions=instructions,
+            constants=[],
+            names=[],
+            code_objects=[],
+            param_count=arity,
+            local_count=arity,
+            name=f'<builtin:{name}>',
+        )
 
     def _get_builtin_parameters(self, name: str, is_variadic: bool) -> tuple:
         """

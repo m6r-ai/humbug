@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from enum import IntEnum, auto
-from typing import List
+from typing import Dict, List, Tuple
 
 from aifpl.aifpl_value import AIFPLValue
 
@@ -168,6 +168,122 @@ class Opcode(IntEnum):
     BUILD_LIST = auto()      # BUILD_LIST n  — pop n values, push AIFPLList
     BUILD_ALIST = auto()     # BUILD_ALIST n — pop n (list key value) pair-lists, push AIFPLAList
     RANGE = auto()           # Generate integer range list: (range start end step)
+
+
+# Maps builtin function name → (opcode, arity) for all fixed-arity builtins.
+#
+# This is the single source of truth consumed by:
+#   - aifpl_codegen.py: to derive UNARY_OPS / BINARY_OPS / TERNARY_OPS for direct call optimisation
+#   - aifpl_builtin_registry.py: to generate bytecode stubs for first-class function use
+#
+# Variadic builtins that are fold-reduced by the desugarer appear here with
+# arity=2 (their binary form), since that is the only arity a first-class call
+# will ever present to the stub.
+#
+# 'alist-get' and 'range' have optional arguments; their stubs always use the
+# 3-argument opcode form (the codegen synthesises the missing default for direct
+# calls, and the stub will do likewise).
+BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
+    'number?': (Opcode.NUMBER_P, 1),
+    'integer?': (Opcode.INTEGER_P, 1),
+    'float?': (Opcode.FLOAT_P, 1),
+    'complex?': (Opcode.COMPLEX_P, 1),
+    'string?': (Opcode.STRING_P, 1),
+    'boolean?': (Opcode.BOOLEAN_P, 1),
+    'list?': (Opcode.LIST_P, 1),
+    'alist?': (Opcode.ALIST_P, 1),
+    'function?': (Opcode.FUNCTION_P, 1),
+    'not': (Opcode.NOT, 1),
+    'sin': (Opcode.SIN, 1),
+    'cos': (Opcode.COS, 1),
+    'tan': (Opcode.TAN, 1),
+    'log': (Opcode.LOG, 1),
+    'log10': (Opcode.LOG10, 1),
+    'exp': (Opcode.EXP, 1),
+    'sqrt': (Opcode.SQRT, 1),
+    'abs': (Opcode.ABS, 1),
+    'floor': (Opcode.FLOOR, 1),
+    'ceil': (Opcode.CEIL, 1),
+    'round': (Opcode.ROUND, 1),
+    'integer': (Opcode.TO_INTEGER, 1),
+    'float': (Opcode.TO_FLOAT, 1),
+    'real': (Opcode.REAL, 1),
+    'imag': (Opcode.IMAG, 1),
+    'bin': (Opcode.BIN, 1),
+    'hex': (Opcode.HEX, 1),
+    'oct': (Opcode.OCT, 1),
+    'bit-not': (Opcode.BIT_NOT, 1),
+    'reverse': (Opcode.REVERSE, 1),
+    'first': (Opcode.FIRST, 1),
+    'rest': (Opcode.REST, 1),
+    'last': (Opcode.LAST, 1),
+    'length': (Opcode.LENGTH, 1),
+    'null?': (Opcode.NULL_P, 1),
+    'string-length': (Opcode.STRING_LENGTH, 1),
+    'string-upcase': (Opcode.STRING_UPCASE, 1),
+    'string-downcase': (Opcode.STRING_DOWNCASE, 1),
+    'string-trim': (Opcode.STRING_TRIM, 1),
+    'string->number': (Opcode.STRING_TO_NUMBER, 1),
+    'number->string': (Opcode.NUMBER_TO_STRING, 1),
+    'string->list': (Opcode.STRING_TO_LIST, 1),
+    'list->string': (Opcode.LIST_TO_STRING, 1),
+    'alist-keys': (Opcode.ALIST_KEYS, 1),
+    'alist-values': (Opcode.ALIST_VALUES, 1),
+    'alist-length': (Opcode.ALIST_LENGTH, 1),
+    '+': (Opcode.ADD, 2),
+    '-': (Opcode.SUB, 2),
+    '*': (Opcode.MUL, 2),
+    '/': (Opcode.DIV, 2),
+    '//': (Opcode.FLOOR_DIV, 2),
+    '%': (Opcode.MOD, 2),
+    '**': (Opcode.STAR_STAR, 2),
+    'pow': (Opcode.POW, 2),
+    'bit-or': (Opcode.BIT_OR, 2),
+    'bit-and': (Opcode.BIT_AND, 2),
+    'bit-xor': (Opcode.BIT_XOR, 2),
+    'bit-shift-left': (Opcode.BIT_SHIFT_LEFT, 2),
+    'bit-shift-right': (Opcode.BIT_SHIFT_RIGHT, 2),
+    '=': (Opcode.EQ, 2),
+    '!=': (Opcode.NEQ, 2),
+    '<': (Opcode.LT, 2),
+    '>': (Opcode.GT, 2),
+    '<=': (Opcode.LTE, 2),
+    '>=': (Opcode.GTE, 2),
+    'string=?': (Opcode.STRING_EQ_P, 2),
+    'number=?': (Opcode.NUMBER_EQ_P, 2),
+    'integer=?': (Opcode.INTEGER_EQ_P, 2),
+    'float=?': (Opcode.FLOAT_EQ_P, 2),
+    'complex=?': (Opcode.COMPLEX_EQ_P, 2),
+    'boolean=?': (Opcode.BOOLEAN_EQ_P, 2),
+    'list=?': (Opcode.LIST_EQ_P, 2),
+    'alist=?': (Opcode.ALIST_EQ_P, 2),
+    'cons': (Opcode.CONS, 2),
+    'append': (Opcode.APPEND, 2),
+    'list-ref': (Opcode.LIST_REF, 2),
+    'member?': (Opcode.MEMBER_P, 2),
+    'position': (Opcode.POSITION, 2),
+    'take': (Opcode.TAKE, 2),
+    'drop': (Opcode.DROP, 2),
+    'remove': (Opcode.REMOVE, 2),
+    'string-ref': (Opcode.STRING_REF, 2),
+    'string-contains?': (Opcode.STRING_CONTAINS_P, 2),
+    'string-prefix?': (Opcode.STRING_PREFIX_P, 2),
+    'string-suffix?': (Opcode.STRING_SUFFIX_P, 2),
+    'string-split': (Opcode.STRING_SPLIT, 2),
+    'string-join': (Opcode.STRING_JOIN, 2),
+    'string-append': (Opcode.STRING_APPEND, 2),
+    'alist-has?': (Opcode.ALIST_HAS_P, 2),
+    'alist-remove': (Opcode.ALIST_REMOVE, 2),
+    'alist-merge': (Opcode.ALIST_MERGE, 2),
+    'min': (Opcode.MIN, 2),
+    'max': (Opcode.MAX, 2),
+    'complex': (Opcode.MAKE_COMPLEX, 2),
+    'substring': (Opcode.SUBSTRING, 3),
+    'string-replace': (Opcode.STRING_REPLACE, 3),
+    'alist-set': (Opcode.ALIST_SET, 3),
+    'alist-get': (Opcode.ALIST_GET, 3),
+    'range': (Opcode.RANGE, 3),
+}
 
 @dataclass
 class Instruction:
