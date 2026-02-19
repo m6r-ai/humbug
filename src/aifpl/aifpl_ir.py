@@ -88,6 +88,7 @@ class AIFPLIRLambda:
     free_vars: List[str]  # Names of variables to capture
     free_var_plans: List['AIFPLIRVariable']  # Plans for loading free variables
     param_count: int
+    is_variadic: bool  # True if last param is a rest parameter
     max_locals: int  # Maximum locals needed in lambda body
     binding_name: Optional[str] = None  # Name if bound in let/letrec (for recursion)
     sibling_bindings: List[str] = field(default_factory=list)  # Sibling bindings for mutual recursion

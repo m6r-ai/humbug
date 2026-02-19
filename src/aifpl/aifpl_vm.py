@@ -610,6 +610,7 @@ class AIFPLVM:
             name=closure_code.name,
             bytecode=closure_code,
             captured_values=tuple(captured_values),
+            is_variadic=closure_code.is_variadic,
             parent_frame=current_frame  # Store parent frame for LOAD_PARENT_VAR
         )
         self.stack.append(closure)
@@ -646,7 +647,26 @@ class AIFPLVM:
         # Check arity for bytecode functions
         # Must keep: arity check (runtime-dependent - depends on what function is called)
         expected_arity = func.bytecode.param_count
-        if arity != expected_arity:
+        if func.bytecode.is_variadic:
+            # Variadic: must have at least (param_count - 1) fixed args.
+            # The last local receives all remaining args packed into a list.
+            min_arity = expected_arity - 1
+            if arity < min_arity:
+                func_name = func.name or "<lambda>"
+                raise AIFPLEvalError(
+                    message=f"Function '{func_name}' expects at least {min_arity} arguments, got {arity}",
+                    suggestion=f"Provide at least {min_arity} argument{'s' if min_arity != 1 else ''}"
+                )
+            # Pack excess args into a list and replace them on the stack with the list.
+            # Stack currently has: [fixed_args..., rest_args...]  (arity values total)
+            rest_count = arity - min_arity
+            if rest_count == 0:
+                self.stack.append(AIFPLList(()))
+            else:
+                rest_elements = tuple(self.stack[-rest_count:])
+                del self.stack[-rest_count:]
+                self.stack.append(AIFPLList(rest_elements))
+        elif arity != expected_arity:
             func_name = func.name or "<lambda>"
             raise AIFPLEvalError(
                 message=f"Function '{func_name}' expects {expected_arity} arguments, got {arity}",
@@ -654,7 +674,10 @@ class AIFPLVM:
             )
 
         # Remove function from stack
-        del self.stack[-(arity + 1)]
+        # After variadic packing the stack has param_count args; for fixed-arity
+        # it still has arity (== param_count) args.  Either way the function sits
+        # immediately below param_count values.
+        del self.stack[-(expected_arity + 1)]
 
         self._setup_call_frame(func)
 
@@ -706,15 +729,33 @@ class AIFPLVM:
         # Check arity for bytecode functions
         # Must keep: arity check (runtime-dependent)
         expected_arity = func.bytecode.param_count
-        if arity != expected_arity:
+        if func.bytecode.is_variadic:
+            # Variadic: must have at least (param_count - 1) fixed args.
+            # The last local receives all remaining args packed into a list.
+            min_arity = expected_arity - 1
+            if arity < min_arity:
+                func_name = func.name or "<lambda>"
+                raise AIFPLEvalError(
+                    message=f"Function '{func_name}' expects at least {min_arity} arguments, got {arity}",
+                    suggestion=f"Provide at least {min_arity} argument{'s' if min_arity != 1 else ''}"
+                )
+            # Pack excess args into a list and replace them on the stack with the list.
+            rest_count = arity - min_arity
+            if rest_count == 0:
+                self.stack.append(AIFPLList(()))
+            else:
+                rest_elements = tuple(self.stack[-rest_count:])
+                del self.stack[-rest_count:]
+                self.stack.append(AIFPLList(rest_elements))
+        elif arity != expected_arity:
             func_name = func.name or "<lambda>"
             raise AIFPLEvalError(
                 message=f"Function '{func_name}' expects {expected_arity} arguments, got {arity}",
                 suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
             )
 
-        # Remove function from stack (leave arguments for new frame)
-        del self.stack[-(arity + 1)]
+        # Remove function from stack (leave param_count args for new frame)
+        del self.stack[-(expected_arity + 1)]
 
         # Return TailCall marker - execution loop will handle frame replacement
         return TailCall(func)

@@ -502,10 +502,16 @@ class AIFPLIRBuilder:
         _, params_list, body = expr.elements
         assert isinstance(params_list, AIFPLASTList), "Parameter list should be a list"
 
-        # Extract parameter names
+        # Extract parameter names, stripping the dot sentinel.
+        # The semantic analyser guarantees the dot (if present) is second-to-last,
+        # followed by exactly one rest parameter symbol.
         param_names = []
+        is_variadic = False
         for param in params_list.elements:
             assert isinstance(param, AIFPLASTSymbol)
+            if param.name == '.':
+                is_variadic = True
+                continue
             param_names.append(param.name)
 
         # Find free variables
@@ -589,6 +595,7 @@ class AIFPLIRBuilder:
             parent_refs=parent_refs,
             parent_ref_plans=parent_ref_plans,
             param_count=len(param_names),
+            is_variadic=is_variadic,
             binding_name=ctx.current_binding_name,
             sibling_bindings=ctx.sibling_bindings,
             max_locals=lambda_ctx.max_locals,

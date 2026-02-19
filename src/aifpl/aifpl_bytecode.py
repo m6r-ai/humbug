@@ -261,6 +261,7 @@ class CodeObject:
     free_vars: List[str] = field(default_factory=list)  # Free variables to capture
     param_count: int = 0  # Number of parameters (for functions)
     local_count: int = 0  # Number of local variables
+    is_variadic: bool = False  # True if last param is a rest parameter (packs excess args into a list)
     name: str = "<module>"  # Name for debugging
     source_line: int = 0  # Line number in source code where this function is defined
     source_file: str = ""  # Source file name (if available)

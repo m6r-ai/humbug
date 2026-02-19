@@ -504,6 +504,7 @@ class AIFPLCodeGen:
             free_vars=plan.free_vars,
             param_count=plan.param_count,
             local_count=lambda_ctx.max_locals,
+            is_variadic=plan.is_variadic,
             name=lambda_name,
             source_line=plan.source_line,
             source_file=plan.source_file

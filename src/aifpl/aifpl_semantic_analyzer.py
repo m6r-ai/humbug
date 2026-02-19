@@ -461,9 +461,16 @@ class AIFPLSemanticAnalyzer:
                 source=self.source
             )
 
-        # Validate each parameter
+        # Validate each parameter, allowing a single dot to introduce a rest parameter.
+        # Valid forms:
+        #   (lambda (a b) ...)          — fixed arity
+        #   (lambda (a b . rest) ...)   — fixed prefix + rest
+        #   (lambda (. rest) ...)       — pure variadic (dot as first element)
         param_names: List[str] = []
-        for i, param in enumerate(params_list.elements):
+        elements = params_list.elements
+        dot_index: int | None = None
+
+        for i, param in enumerate(elements):
             if not isinstance(param, AIFPLASTSymbol):
                 raise AIFPLEvalError(
                     message=f"Lambda parameter {i+1} must be a symbol",
@@ -475,7 +482,37 @@ class AIFPLSemanticAnalyzer:
                     column=param.column,
                     source=self.source
                 )
-            param_names.append(param.name)
+
+            if param.name == '.':
+                if dot_index is not None:
+                    raise AIFPLEvalError(
+                        message="Lambda parameter list has more than one dot",
+                        received=f"Second dot at parameter position {i+1}",
+                        expected="At most one dot to introduce a rest parameter",
+                        example="(lambda (a b . rest) body)",
+                        suggestion="Use a single dot followed by one rest parameter name",
+                        line=param.line,
+                        column=param.column,
+                        source=self.source
+                    )
+                dot_index = i
+            else:
+                param_names.append(param.name)
+
+        if dot_index is not None:
+            # Dot must be second-to-last: exactly one symbol must follow it
+            if dot_index != len(elements) - 2:
+                raise AIFPLEvalError(
+                    message="Rest parameter must be the last element after the dot",
+                    received=f"Dot at position {dot_index+1} with {len(elements) - dot_index - 1} element(s) after it",
+                    expected="Exactly one symbol after the dot",
+                    example="(lambda (a b . rest) body)",
+                    suggestion="Place the dot second-to-last and the rest parameter name last",
+                    line=params_list.line,
+                    column=params_list.column,
+                    source=self.source
+                )
+            # The rest param name was already appended to param_names (dot itself was skipped)
 
         # Check for duplicate parameters
         if len(param_names) != len(set(param_names)):
