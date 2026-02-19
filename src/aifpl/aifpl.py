@@ -35,6 +35,38 @@ class AIFPL:
 
     # AIFPL implementations of higher-order functions
     _PRELUDE_SOURCE = {
+        # Variadic arithmetic builtins — implemented in AIFPL using rest parameters.
+        # The bodies use 2-arg calls which the desugarer/codegen resolve to opcodes
+        # directly, so there is no circular dependency on the function objects.
+        '+': """(lambda (. args)
+                  (if (null? args) 0
+                    (letrec ((loop (lambda (lst acc)
+                                     (if (null? lst) acc
+                                         (loop (rest lst) (+ acc (first lst)))))))
+                      (loop (rest args) (first args)))))""",
+        '-': """(lambda (. args)
+                  (if (null? args)
+                    (error "Function '-' requires at least 1 argument, got 0")
+                    (if (null? (rest args))
+                      (- 0 (first args))
+                      (letrec ((loop (lambda (lst acc)
+                                       (if (null? lst) acc
+                                           (loop (rest lst) (- acc (first lst)))))))
+                        (loop (rest args) (first args))))))""",
+        '*': """(lambda (. args)
+                  (if (null? args) 1
+                    (letrec ((loop (lambda (lst acc)
+                                     (if (null? lst) acc
+                                         (loop (rest lst) (* acc (first lst)))))))
+                      (loop (rest args) (first args)))))""",
+        '/': """(lambda (. args)
+                  (if (< (length args) 2)
+                    (error "Function '/' requires at least 2 arguments")
+                    (letrec ((loop (lambda (lst acc)
+                                     (if (null? lst) acc
+                                         (loop (rest lst) (/ acc (first lst)))))))
+                      (loop (rest args) (first args)))))""",
+        # Higher-order functions
         'map': """(lambda (f lst)
                     (letrec ((helper (lambda (f lst acc)
                                        (if (null? lst) (reverse acc)

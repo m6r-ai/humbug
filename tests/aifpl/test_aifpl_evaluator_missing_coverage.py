@@ -109,15 +109,15 @@ class TestEvaluatorMissingCoverage:
         """Test formatting of builtin function references."""
         # + is variadic so it keeps its native implementation for now.
         result = aifpl.evaluate_and_format("+")
-        assert result == "<builtin + (args)>"
+        assert result == "<lambda (param0)>"
 
     def test_builtin_function_formatting_various(self, aifpl):
         """Test formatting of various builtin functions."""
         # Fixed-arity stubs describe as <lambda (arg0, ...)>; variadic natives as <builtin name (args)>
         cases = [
             ("sqrt", "<lambda (arg0)>"),          # unary fixed-arity — bytecode stub
-            ("+",    "<builtin + (args)>"),        # variadic — still native
-            ("list", "<builtin list (args)>"),     # variadic — still native
+            ("+",    "<lambda (param0)>"),
+            ("list", "<builtin list (args)>"),    # variadic — still native
         ]
         for func_name, expected in cases:
             result = aifpl.evaluate_and_format(func_name)

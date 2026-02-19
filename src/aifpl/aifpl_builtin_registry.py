@@ -221,15 +221,23 @@ class AIFPLBuiltinRegistry:
 
         Only truly fixed-arity builtins (min_args == max_args in ARITY_TABLE) get
         stubs.  Variadic builtins (max_args is None, or min_args != max_args) keep
-        their native_impl for now — they will be replaced once variadic bytecode
-        stubs are implemented.
+        their native_impl for now — unless they appear in PRELUDE_NAMES, in which
+        case the prelude supplies the function object and the registry skips them.
 
         Returns:
             Dictionary mapping function names to AIFPLFunction objects
         """
+        # Names provided by the AIFPL prelude — the registry skips these so the
+        # prelude's compiled function objects take effect in the global environment.
+        prelude_names = {'+', '-', '*', '/'}
+
         builtins = {}
         for i, name in enumerate(self.BUILTIN_TABLE):
             impl = self._function_array[i]
+
+            if name in prelude_names:
+                # Prelude supplies the function object for this name
+                continue
 
             min_args, max_args = self.ARITY_TABLE[name]
             is_fixed_arity = (max_args is not None and min_args == max_args)
