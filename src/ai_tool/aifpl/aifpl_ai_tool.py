@@ -162,7 +162,7 @@ class AIFPLAITool(AITool):
         return """# AIFPL Tool
 Syntax: (operator arg1 arg2 ...)
 
-## Key features:
+## Key features:
 
 - Pure functional: no side effects, immutable data
 - Homoiconic: code and data use same representation (s-expressions)
@@ -176,7 +176,7 @@ Syntax: (operator arg1 arg2 ...)
 - Other literals: #xFF (hex), #b1010 (binary), #o755 (octal), \"hello\" (string), #t/#f (boolean), () (empty list)
 - Constants: pi, e
 
-## Quote - data literals and code as data:
+## Quote - data literals and code as data:
 
 - (quote expr) → returns expr without evaluation
 - 'expr → shortcut for (quote expr)
@@ -268,9 +268,14 @@ Syntax: (operator arg1 arg2 ...)
 ## Lambda functions:
 
 - (lambda (param1 param2 ...) body) → creates anonymous function
+- (lambda (param1 . rest) body) → variadic: rest receives remaining args as a list
+- (lambda (. rest) body) → fully variadic: rest receives all args as a list
 - ((lambda (x) (* x x)) 5) → 25
+- ((lambda (. args) (fold + 0 args)) 1 2 3 4 5) → 15 (variadic sum)
+- ((lambda (x . rest) (cons x (reverse rest))) 1 2 3) → (1 3 2)
 - Functions are first-class values with lexical scoping and closures
 - Tail recursion automatically optimized
+- Variadic functions accept any number of args beyond their fixed params; rest param is always a list (possibly empty)
 
 ## Local bindings:
 
@@ -346,7 +351,7 @@ Syntax: (operator arg1 arg2 ...)
 - Useful for debugging recursive functions and complex algorithms
 - Trace output shows execution order, helping identify logic issues
 
-## Important notes:
+## Important notes:
 
 - cons behavior is not the same as traditional LISP: second arg must be a list
 - Strict typing: string ops need strings, boolean ops need booleans

@@ -314,6 +314,47 @@ Lambda expressions create anonymous functions with lexical scoping and closure s
 #### Basic lambda syntax
 ```aifpl
 (lambda (param1 param2 ...) body)
+(lambda (param1 param2 . rest) body)  ; variadic: rest receives extra args as a list
+(lambda (. rest) body)                ; fully variadic: rest receives all args as a list
+```
+
+#### Variadic lambda expressions
+
+A lambda can accept a variable number of arguments by placing a dot (`.`) before the final parameter. That parameter receives all remaining arguments as a list (possibly empty):
+
+```aifpl
+; Accepts any number of arguments - all go into 'args' as a list
+((lambda (. args) (length args)) 1 2 3)         ; → 3
+((lambda (. args) args) "a" "b" "c")            ; → ("a" "b" "c")
+((lambda (. args) args))                         ; → () (zero args)
+
+; Fixed params followed by rest
+((lambda (first . rest) rest) 1 2 3 4)          ; → (2 3 4)
+((lambda (x y . rest) (list x y rest)) 1 2 3 4) ; → (1 2 (3 4))
+((lambda (x y . rest) (list x y rest)) 1 2)     ; → (1 2 ()) (rest is empty list)
+
+; Variadic functions used as first-class values
+(let ((sum (lambda (. args) (fold + 0 args))))
+  (sum 1 2 3 4 5))                              ; → 15
+
+; Function pipeline using variadic lambda
+(let ((pipe (lambda (value . functions)
+              (fold (lambda (acc f) (f acc)) value functions))))
+  (pipe 2
+    (lambda (x) (+ x 10))
+    (lambda (x) (* x 3))
+    (lambda (x) (- x 5))))                      ; → 31
+
+; Collecting arguments for later use
+(let ((make-list (lambda (. items) items)))
+  (make-list 1 "hello" #t))                     ; → (1 "hello" #t)
+```
+
+**Note:** The dot syntax is only valid as the second-to-last element in a lambda parameter list — `(a b . rest)` is valid, but `(a . b . c)` or `(. rest extra)` are not.
+
+#### Fixed-arity lambda syntax
+```aifpl
+(lambda (param1 param2 ...) body)
 ```
 
 #### Simple lambda examples
@@ -1248,7 +1289,7 @@ When using the AIFPL AI tool:
     (let ((double-then-add (compose add-one double)))
       (double-then-add 5))))                ; → 11
 
-; Chain multiple transformations
+; Chain multiple transformations (uses variadic lambda: 'functions' receives all args after 'value')
 (let ((pipe (lambda (value . functions)
               (fold (lambda (acc f) (f acc)) value functions))))
   (let ((add-ten (lambda (x) (+ x 10)))
@@ -2118,8 +2159,9 @@ AIFPL has a strict type system with the following types:
 1. **First-class values**: Functions can be passed, returned, stored in lists
 2. **Lexical scoping**: Functions access variables from their definition environment
 3. **Closures**: Functions capture their environment when created
-4. **Arity checking**: Function calls must provide exact number of parameters
-5. **Identity equality**: Each lambda creates a unique function object
+4. **Arity checking**: Fixed-arity functions require exact argument count; variadic functions require at least as many arguments as their fixed parameters
+5. **Variadic parameters**: A dot before the final parameter (e.g. `(a b . rest)`) collects remaining arguments into a list
+6. **Identity equality**: Each lambda creates a unique function object
 
 ## Pure list representation benefits
 
