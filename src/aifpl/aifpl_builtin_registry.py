@@ -22,6 +22,12 @@ class AIFPLBuiltinRegistry:
 
     # Authoritative list of builtin names mapped to indices (for CALL_BUILTIN)
     # This defines the canonical ordering - all other structures follow this order
+    #
+    # Names that have been migrated to _PRELUDE_SOURCE in aifpl.py are still kept
+    # here so that 2-arg calls inside their own prelude stub bodies are recognised
+    # by the IR builder and compiled to opcodes rather than recursive calls.
+    # create_builtin_function_objects() skips them via prelude_names so the prelude
+    # compiled lambdas take effect in the global environment instead.
     BUILTIN_TABLE = [
         '+', '-', '*', '/', '//', '%', '**',
         '=', '!=', '<', '>', '<=', '>=',
@@ -221,7 +227,7 @@ class AIFPLBuiltinRegistry:
 
         Only truly fixed-arity builtins (min_args == max_args in ARITY_TABLE) get
         stubs.  Variadic builtins (max_args is None, or min_args != max_args) keep
-        their native_impl for now — unless they appear in PRELUDE_NAMES, in which
+        their native_impl for now — unless they appear in prelude_names, in which
         case the prelude supplies the function object and the registry skips them.
 
         Returns:
@@ -229,7 +235,17 @@ class AIFPLBuiltinRegistry:
         """
         # Names provided by the AIFPL prelude — the registry skips these so the
         # prelude's compiled function objects take effect in the global environment.
-        prelude_names = {'+', '-', '*', '/'}
+        # These names are still kept in BUILTIN_TABLE/ARITY_TABLE so that 2-arg
+        # calls inside their own prelude stub bodies resolve to opcodes correctly.
+        prelude_names = {
+            '+', '-', '*', '/',
+            '=', '!=', '<', '>', '<=', '>=',
+            'bit-or', 'bit-and', 'bit-xor',
+            'append', 'string-append',
+            'min', 'max',
+            'string=?', 'number=?', 'integer=?', 'float=?', 'complex=?', 'boolean=?', 'list=?', 'alist=?',
+            'list', 'alist', 'alist-get', 'range',
+        }
 
         builtins = {}
         for i, name in enumerate(self.BUILTIN_TABLE):

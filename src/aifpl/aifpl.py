@@ -66,6 +66,206 @@ class AIFPL:
                                      (if (null? lst) acc
                                          (loop (rest lst) (/ acc (first lst)))))))
                       (loop (rest args) (first args)))))""",
+        # Comparison chains — pairwise semantics: (= a b c) means (= a b) and (= b c)
+        '=': """(lambda (. args)
+                  (if (< (length args) 2)
+                    (error "Function '=' requires at least 2 arguments")
+                    (letrec ((loop (lambda (lst prev)
+                                     (if (null? lst) #t
+                                         (if (= prev (first lst))
+                                             (loop (rest lst) (first lst))
+                                             #f)))))
+                      (loop (rest args) (first args)))))""",
+        '<': """(lambda (. args)
+                  (if (< (length args) 2)
+                    (error "Function '<' requires at least 2 arguments")
+                    (letrec ((loop (lambda (lst prev)
+                                     (if (null? lst) #t
+                                         (if (< prev (first lst))
+                                             (loop (rest lst) (first lst))
+                                             #f)))))
+                      (loop (rest args) (first args)))))""",
+        '>': """(lambda (. args)
+                  (if (< (length args) 2)
+                    (error "Function '>' requires at least 2 arguments")
+                    (letrec ((loop (lambda (lst prev)
+                                     (if (null? lst) #t
+                                         (if (> prev (first lst))
+                                             (loop (rest lst) (first lst))
+                                             #f)))))
+                      (loop (rest args) (first args)))))""",
+        '<=': """(lambda (. args)
+                   (if (< (length args) 2)
+                     (error "Function '<=' requires at least 2 arguments")
+                     (letrec ((loop (lambda (lst prev)
+                                      (if (null? lst) #t
+                                          (if (<= prev (first lst))
+                                              (loop (rest lst) (first lst))
+                                              #f)))))
+                       (loop (rest args) (first args)))))""",
+        '>=': """(lambda (. args)
+                   (if (< (length args) 2)
+                     (error "Function '>=' requires at least 2 arguments")
+                     (letrec ((loop (lambda (lst prev)
+                                      (if (null? lst) #t
+                                          (if (>= prev (first lst))
+                                              (loop (rest lst) (first lst))
+                                              #f)))))
+                       (loop (rest args) (first args)))))""",
+        # != — all-pairs distinct: every pair (i,j) where i<j must satisfy i != j
+        '!=': """(lambda (. args)
+                   (if (< (length args) 2)
+                     (error "Function '!=' requires at least 2 arguments")
+                     (letrec ((outer (lambda (lst)
+                                       (if (null? lst) #t
+                                           (letrec ((inner (lambda (rest-lst)
+                                                             (if (null? rest-lst)
+                                                                 (outer (rest lst))
+                                                                 (if (!= (first lst) (first rest-lst))
+                                                                     (inner (rest rest-lst))
+                                                                     #f)))))
+                                             (inner (rest lst)))))))
+                       (outer args))))""",
+        # Fold-reducible bitwise ops — identity 0
+        'bit-or': """(lambda (. args)
+                       (if (null? args) 0
+                         (letrec ((loop (lambda (lst acc)
+                                          (if (null? lst) acc
+                                              (loop (rest lst) (bit-or acc (first lst)))))))
+                           (loop (rest args) (first args)))))""",
+        'bit-and': """(lambda (. args)
+                        (if (null? args) 0
+                          (letrec ((loop (lambda (lst acc)
+                                           (if (null? lst) acc
+                                               (loop (rest lst) (bit-and acc (first lst)))))))
+                            (loop (rest args) (first args)))))""",
+        'bit-xor': """(lambda (. args)
+                        (if (null? args) 0
+                          (letrec ((loop (lambda (lst acc)
+                                           (if (null? lst) acc
+                                               (loop (rest lst) (bit-xor acc (first lst)))))))
+                            (loop (rest args) (first args)))))""",
+        # Fold-reducible list/string ops
+        'append': """(lambda (. args)
+                       (if (null? args) (list)
+                         (letrec ((loop (lambda (lst acc)
+                                          (if (null? lst) acc
+                                              (loop (rest lst) (append acc (first lst)))))))
+                           (loop (rest args) (first args)))))""",
+        'string-append': """(lambda (. args)
+                              (if (null? args) ""
+                                (letrec ((loop (lambda (lst acc)
+                                                 (if (null? lst) acc
+                                                     (loop (rest lst) (string-append acc (first lst)))))))
+                                  (loop (rest args) (first args)))))""",
+        # Fold-reducible min/max — require at least 1 arg
+        'min': """(lambda (. args)
+                    (if (null? args)
+                      (error "Function 'min' requires at least 1 argument")
+                      (letrec ((loop (lambda (lst acc)
+                                       (if (null? lst) acc
+                                           (loop (rest lst) (min acc (first lst)))))))
+                        (loop (rest args) (first args)))))""",
+        'max': """(lambda (. args)
+                    (if (null? args)
+                      (error "Function 'max' requires at least 1 argument")
+                      (letrec ((loop (lambda (lst acc)
+                                       (if (null? lst) acc
+                                           (loop (rest lst) (max acc (first lst)))))))
+                        (loop (rest args) (first args)))))""",
+        # Typed equality chains — pairwise, same pattern as =
+        'string=?': """(lambda (. args)
+                         (if (< (length args) 2)
+                           (error "Function 'string=?' requires at least 2 arguments")
+                           (letrec ((loop (lambda (lst prev)
+                                            (if (null? lst) #t
+                                                (if (string=? prev (first lst))
+                                                    (loop (rest lst) (first lst))
+                                                    #f)))))
+                             (loop (rest args) (first args)))))""",
+        'number=?': """(lambda (. args)
+                         (if (< (length args) 2)
+                           (error "Function 'number=?' requires at least 2 arguments")
+                           (letrec ((loop (lambda (lst prev)
+                                            (if (null? lst) #t
+                                                (if (number=? prev (first lst))
+                                                    (loop (rest lst) (first lst))
+                                                    #f)))))
+                             (loop (rest args) (first args)))))""",
+        'integer=?': """(lambda (. args)
+                          (if (< (length args) 2)
+                            (error "Function 'integer=?' requires at least 2 arguments")
+                            (letrec ((loop (lambda (lst prev)
+                                             (if (null? lst) #t
+                                                 (if (integer=? prev (first lst))
+                                                     (loop (rest lst) (first lst))
+                                                     #f)))))
+                              (loop (rest args) (first args)))))""",
+        'float=?': """(lambda (. args)
+                        (if (< (length args) 2)
+                          (error "Function 'float=?' requires at least 2 arguments")
+                          (letrec ((loop (lambda (lst prev)
+                                           (if (null? lst) #t
+                                               (if (float=? prev (first lst))
+                                                   (loop (rest lst) (first lst))
+                                                   #f)))))
+                            (loop (rest args) (first args)))))""",
+        'complex=?': """(lambda (. args)
+                          (if (< (length args) 2)
+                            (error "Function 'complex=?' requires at least 2 arguments")
+                            (letrec ((loop (lambda (lst prev)
+                                             (if (null? lst) #t
+                                                 (if (complex=? prev (first lst))
+                                                     (loop (rest lst) (first lst))
+                                                     #f)))))
+                              (loop (rest args) (first args)))))""",
+        'boolean=?': """(lambda (. args)
+                          (if (< (length args) 2)
+                            (error "Function 'boolean=?' requires at least 2 arguments")
+                            (letrec ((loop (lambda (lst prev)
+                                             (if (null? lst) #t
+                                                 (if (boolean=? prev (first lst))
+                                                     (loop (rest lst) (first lst))
+                                                     #f)))))
+                              (loop (rest args) (first args)))))""",
+        'list=?': """(lambda (. args)
+                       (if (< (length args) 2)
+                         (error "Function 'list=?' requires at least 2 arguments")
+                         (letrec ((loop (lambda (lst prev)
+                                          (if (null? lst) #t
+                                              (if (list=? prev (first lst))
+                                                  (loop (rest lst) (first lst))
+                                                  #f)))))
+                           (loop (rest args) (first args)))))""",
+        'alist=?': """(lambda (. args)
+                        (if (< (length args) 2)
+                          (error "Function 'alist=?' requires at least 2 arguments")
+                          (letrec ((loop (lambda (lst prev)
+                                           (if (null? lst) #t
+                                               (if (alist=? prev (first lst))
+                                                   (loop (rest lst) (first lst))
+                                                   #f)))))
+                            (loop (rest args) (first args)))))""",
+        # list — trivial: rest args IS the list
+        'list': """(lambda (. args) args)""",
+        # alist — collect (list key val) pairs into an alist
+        'alist': """(lambda (. args)
+                      (letrec ((loop (lambda (pairs acc)
+                                       (if (null? pairs) acc
+                                           (if (not (list? (first pairs)))
+                                               (error "alist: each argument must be a 2-element list")
+                                               (if (!= (length (first pairs)) 2)
+                                                   (error "alist: each argument must be a 2-element list")
+                                                   (loop (rest pairs)
+                                                         (alist-set acc
+                                                                    (first (first pairs))
+                                                                    (first (rest (first pairs)))))))))))
+                        (loop args (alist))))""",
+        # Optional-arg builtins with mixed fixed+rest parameters
+        'alist-get': """(lambda (a-list key . rest)
+                          (alist-get a-list key (if (null? rest) #f (first rest))))""",
+        'range': """(lambda (start end . rest)
+                      (range start end (if (null? rest) 1 (first rest))))""",
         # Higher-order functions
         'map': """(lambda (f lst)
                     (letrec ((helper (lambda (f lst acc)

@@ -117,7 +117,7 @@ class TestEvaluatorMissingCoverage:
         cases = [
             ("sqrt", "<lambda (arg0)>"),          # unary fixed-arity — bytecode stub
             ("+",    "<lambda (param0)>"),
-            ("list", "<builtin list (args)>"),    # variadic — still native
+            ("list", "<lambda (param0)>"),    # variadic — still native
         ]
         for func_name, expected in cases:
             result = aifpl.evaluate_and_format(func_name)
