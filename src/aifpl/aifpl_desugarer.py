@@ -477,8 +477,10 @@ class AIFPLDesugarer:
         if len(args) >= 3:
             # Desugar all args first
             desugared_args = [self.desugar(arg) for arg in args]
+
             # Generate temps for each arg to avoid double-evaluation
             temps = [self._gen_temp() for _ in args]
+
             # Generate temps for each pairwise result
             pair_temps = [self._gen_temp() for _ in range(len(args) - 1)]
 
