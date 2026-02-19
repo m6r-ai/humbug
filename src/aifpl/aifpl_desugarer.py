@@ -447,12 +447,25 @@ class AIFPLDesugarer:
         """
         Desugar strict type-specific equality predicates.
 
-        Only the exact 2-arg case is desugared to a binary opcode.  All other
-        arities (0, 1, 3+) fall through to CALL_BUILTIN so the builtin
-        implementation handles arity errors and position-aware type errors.
+        The 2-arg case is desugared to a binary opcode directly.
+
+        The 3+-arg case is desugared to a let*-bound sequence of pairwise binary
+        opcode calls, combined with 'and'. Crucially all pair evaluations are
+        bound in let* before the 'and' is evaluated, so no short-circuiting
+        occurs — every consecutive pair is always checked, and a type mismatch
+        on any argument raises an error regardless of position.
+
+        For example, (integer=? a b c) becomes:
+            (let* ((t0 (integer=? a b))
+                   (t1 (integer=? b c)))
+              (and t0 t1))
+
+        The 0-arg and 1-arg cases fall through to a regular call, which
+        resolves to the prelude lambda that raises the arity error.
         """
         op_symbol = expr.first()
         assert isinstance(op_symbol, AIFPLASTSymbol)
+        op_name = op_symbol.name
 
         args = list(expr.elements[1:])
 
@@ -461,7 +474,52 @@ class AIFPLDesugarer:
                 (op_symbol, self.desugar(args[0]), self.desugar(args[1])), expr
             )
 
-        # 0-arg, 1-arg, 3+-arg: let CALL_BUILTIN handle it
+        if len(args) >= 3:
+            # Desugar all args first
+            desugared_args = [self.desugar(arg) for arg in args]
+            # Generate temps for each arg to avoid double-evaluation
+            temps = [self._gen_temp() for _ in args]
+            # Generate temps for each pairwise result
+            pair_temps = [self._gen_temp() for _ in range(len(args) - 1)]
+
+            # Build pairwise binary calls: (op ti ti+1)
+            pairs = [
+                self._make_list((self._make_symbol(op_name, expr),
+                                 self._make_symbol(temps[i], expr),
+                                 self._make_symbol(temps[i + 1], expr)), expr)
+                for i in range(len(args) - 1)
+            ]
+
+            # Body: (and pair_temp0 pair_temp1 ...)
+            body: AIFPLASTNode = self._make_list(
+                tuple([self._make_symbol('and', expr)] +
+                      [self._make_symbol(pt, expr) for pt in pair_temps]),
+                expr
+            )
+
+            # Wrap pair results in let* bindings (innermost first)
+            for pt, pair in reversed(list(zip(pair_temps, pairs))):
+                body = self._make_list((
+                    self._make_symbol('let*', expr),
+                    self._make_list((
+                        self._make_list((self._make_symbol(pt, expr), pair), expr),
+                    ), expr),
+                    body
+                ), expr)
+
+            # Wrap arg values in let* bindings (innermost first)
+            for temp, desugared_arg in reversed(list(zip(temps, desugared_args))):
+                body = self._make_list((
+                    self._make_symbol('let*', expr),
+                    self._make_list((
+                        self._make_list((self._make_symbol(temp, expr), desugared_arg), expr),
+                    ), expr),
+                    body
+                ), expr)
+
+            return self.desugar(body)
+
+        # 0-arg or 1-arg: fall through to regular call → prelude lambda raises arity error
         return self._desugar_call(expr)
 
     def _desugar_match(self, expr: AIFPLASTList) -> AIFPLASTNode:
