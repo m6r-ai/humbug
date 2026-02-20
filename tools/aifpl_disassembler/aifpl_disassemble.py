@@ -124,11 +124,11 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
             capture_word = "capture" if arg2 == 1 else "captures"
             annotation = f"  ; Create closure for {name}{line_info} with {arg2} {capture_word}"
 
-    elif opcode == Opcode.CALL_FUNCTION:
+    elif opcode == Opcode.CALL:
         arg_word = "arg" if arg1 == 1 else "args"
         annotation = f"  ; Call function with {arg1} {arg_word} (function on stack)"
 
-    elif opcode == Opcode.TAIL_CALL_FUNCTION:
+    elif opcode == Opcode.TAIL_CALL:
         arg_word = "arg" if arg1 == 1 else "args"
         annotation = f"  ; Tail call function with {arg1} {arg_word}"
 
@@ -276,7 +276,7 @@ def trace_calls(code: CodeObject, var_map: Dict[int, str]) -> List[str]:
     traces = []
 
     for i, instr in enumerate(code.instructions):
-        if instr.opcode == Opcode.CALL_FUNCTION:
+        if instr.opcode == Opcode.CALL:
             arg_count = instr.arg1
             func_load_idx = i - arg_count - 1
             if func_load_idx >= 0:
@@ -291,9 +291,9 @@ def trace_calls(code: CodeObject, var_map: Dict[int, str]) -> List[str]:
                     else:
                         func_desc = f"var[{var_idx}]"
 
-                traces.append(f"Instr {i:3}: CALL_FUNCTION({arg_count} args) -> {func_desc}")
+                traces.append(f"Instr {i:3}: CALL({arg_count} args) -> {func_desc}")
 
-        elif instr.opcode == Opcode.TAIL_CALL_FUNCTION:
+        elif instr.opcode == Opcode.TAIL_CALL:
             arg_count = instr.arg1
             func_load_idx = i - arg_count - 1
             if func_load_idx >= 0:

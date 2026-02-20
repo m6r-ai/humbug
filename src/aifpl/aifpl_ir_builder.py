@@ -151,7 +151,7 @@ class AIFPLIRBuilder:
         """
         # All known builtin names — used to recognise builtin calls and mark
         # them is_builtin=True so the codegen emits direct opcodes instead of
-        # a global lookup + CALL_FUNCTION (which would recurse into the prelude lambda).
+        # a global lookup + CALL (which would recurse into the prelude lambda).
         self._builtin_names: frozenset = frozenset(AIFPLBuiltinRegistry.ARITY_TABLE.keys())
 
     def build(self, expr: AIFPLASTNode) -> AIFPLIRExpr:

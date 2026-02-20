@@ -33,15 +33,68 @@ class Opcode(IntEnum):
 
     # Functions
     MAKE_CLOSURE = auto()    # Create closure: MAKE_CLOSURE code_index capture_count
-    CALL_FUNCTION = auto()   # Call function: CALL_FUNCTION arity
-    TAIL_CALL_FUNCTION = auto()  # Tail call function: TAIL_CALL_FUNCTION arity
+    CALL = auto()            # Call function: CALL arity
+    TAIL_CALL = auto()       # Tail call function: TAIL_CALL arity
     ENTER = auto()           # Pop N args from stack into locals 0..N-1: ENTER n
     RETURN = auto()          # Return from function
 
     # Debugging
     EMIT_TRACE = auto()      # Emit trace: EMIT_TRACE (pops value, emits to watcher)
 
-    # Arithmetic operations
+    # Boolean operations
+    BOOLEAN_P = auto()       # Check if boolean
+    BOOLEAN_EQ_P = auto()    # boolean=? a b
+    BOOLEAN_NOT = auto()     # Logical NOT
+
+    # Integer operations
+    INTEGER_P = auto()       # Check if integer
+    INTEGER_EQ_P = auto()    # integer=? a b
+
+    # Complex operations
+    COMPLEX = auto()         # Construct complex from real and imaginary parts
+    COMPLEX_P = auto()       # Check if complex
+    COMPLEX_EQ_P = auto()    # complex=? a b
+    COMPLEX_REAL = auto()    # Extract real part
+    COMPLEX_IMAG = auto()    # Extract imaginary part
+
+    # String operations
+    STRING_P = auto()        # Check if string
+    STRING_EQ_P = auto()     # string=? a b
+    STRING_LENGTH = auto()   # Get length of string
+    STRING_UPCASE = auto()   # Convert string to uppercase
+    STRING_DOWNCASE = auto() # Convert string to lowercase
+    STRING_TRIM = auto()     # Trim whitespace from string
+    STRING_TO_NUMBER = auto()
+                             # Parse string to number
+    STRING_TO_LIST = auto()  # Convert string to list of characters
+    STRING_REF = auto()      # Get character at index
+    STRING_CONTAINS_P = auto()
+                             # Check if string contains substring
+    STRING_PREFIX_P = auto() # Check if string has prefix
+    STRING_SUFFIX_P = auto() # Check if string has suffix
+    STRING_SPLIT = auto()    # Split string by delimiter
+    STRING_JOIN = auto()     # Join list of strings with separator
+    STRING_APPEND = auto()   # Concatenate two strings: (string-append a b)
+    STRING_SUBSTRING = auto()
+                             # Extract substring (string, start, end)
+    STRING_REPLACE = auto()  # Replace substring (string, old, new)
+
+    # Alist operations
+    ALIST = auto()           # Create an alist
+    ALIST_P = auto()         # Check if alist
+    ALIST_EQ_P = auto()      # alist=? a b
+    ALIST_KEYS = auto()      # Get all keys from alist
+    ALIST_VALUES = auto()    # Get all values from alist
+    ALIST_LENGTH = auto()    # Get number of entries in alist
+    ALIST_HAS_P = auto()     # Check if alist has key
+    ALIST_REMOVE = auto()    # Remove key from alist
+    ALIST_MERGE = auto()     # Merge two alists
+    ALIST_SET = auto()       # Set key in alist (alist, key, value)
+    ALIST_GET = auto()       # Get value from alist by key with default: (alist-get alist key default)
+
+    # Numeric operations
+    NUMBER_P = auto()        # Check if number (int/float/complex)
+    NUMBER_EQ_P = auto()     # number=? a b
     ADD = auto()             # Calculate a + b
     SUB = auto()             # Calculate a - b
     MUL = auto()             # Calculate a * b
@@ -49,19 +102,24 @@ class Opcode(IntEnum):
     FLOOR_DIV = auto()       # Calculate a // b (floor division)
     MOD = auto()             # Calculate a % b (modulo)
     STAR_STAR = auto()       # Calculate a ** b (complex-capable exponentiation)
+    NUMBER_TO_STRING = auto()
+                             # Convert number to string
 
-    # Type predicates
-    NUMBER_P = auto()        # Check if number (int/float/complex)
-    INTEGER_P = auto()       # Check if integer
-    FLOAT_P = auto()         # Check if float
-    COMPLEX_P = auto()       # Check if complex
-    STRING_P = auto()        # Check if string
-    BOOLEAN_P = auto()       # Check if boolean
-    LIST_P = auto()          # Check if list
-    ALIST_P = auto()         # Check if alist
+    BIT_NOT = auto()         # Bitwise NOT ~x
+    BIT_SHIFT_LEFT = auto()  # Bitwise left shift x << n
+    BIT_SHIFT_RIGHT = auto() # Bitwise right shift x >> n
+    BIT_OR = auto()          # Bitwise OR: a | b
+    BIT_AND = auto()         # Bitwise AND: a & b
+    BIT_XOR = auto()         # Bitwise XOR: a ^ b
+    BIN = auto()             # Convert integer to binary string
+    HEX = auto()             # Convert integer to hex string
+    OCT = auto()             # Convert integer to octal string
+
     FUNCTION_P = auto()      # Check if function
 
     # Floating point operations
+    FLOAT_P = auto()         # Check if float
+    FLOAT_EQ_P = auto()      # float=? a b
     SIN = auto()             # Calculate sin(x)
     COS = auto()             # Calculate cos(x)
     TAN = auto()             # Calculate tan(x)
@@ -78,22 +136,10 @@ class Opcode(IntEnum):
     # Numeric conversion operations
     TO_INTEGER = auto()      # Convert to integer
     TO_FLOAT = auto()        # Convert to float
-    REAL = auto()            # Extract real part
-    IMAG = auto()            # Extract imaginary part
-    MAKE_COMPLEX = auto()    # Construct complex from real and imaginary parts
-    BIN = auto()             # Convert integer to binary string
-    HEX = auto()             # Convert integer to hex string
-    OCT = auto()             # Convert integer to octal string
-
-    # Boolean operations
-    NOT = auto()             # Logical NOT
-
-    # Bitwise operations
-    BIT_NOT = auto()         # Bitwise NOT ~x
-    BIT_SHIFT_LEFT = auto()  # Bitwise left shift x << n
-    BIT_SHIFT_RIGHT = auto() # Bitwise right shift x >> n
 
     # List operations
+    LIST_P = auto()          # Check if list
+    LIST_EQ_P = auto()       # list=? a b
     CONS = auto()
     REVERSE = auto()         # Reverse list on top of stack
     FIRST = auto()           # Get first element of list
@@ -107,66 +153,21 @@ class Opcode(IntEnum):
     TAKE = auto()            # Take first n elements from list
     DROP = auto()            # Drop first n elements from list
     REMOVE = auto()          # Remove all occurrences of item from list
-
-    # String operations
-    STRING_LENGTH = auto()   # Get length of string
-    STRING_UPCASE = auto()   # Convert string to uppercase
-    STRING_DOWNCASE = auto() # Convert string to lowercase
-    STRING_TRIM = auto()     # Trim whitespace from string
-    STRING_TO_NUMBER = auto()
-                             # Parse string to number
-    NUMBER_TO_STRING = auto()
-                             # Convert number to string
-    STRING_TO_LIST = auto()  # Convert string to list of characters
+    APPEND = auto()          # Append two lists: (append a b)
     LIST_TO_STRING = auto()  # Convert list of characters to string
-    STRING_REF = auto()      # Get character at index
-    STRING_CONTAINS_P = auto()
-                             # Check if string contains substring
-    STRING_PREFIX_P = auto() # Check if string has prefix
-    STRING_SUFFIX_P = auto() # Check if string has suffix
-    STRING_SPLIT = auto()    # Split string by delimiter
-    STRING_JOIN = auto()     # Join list of strings with separator
-    SUBSTRING = auto()       # Extract substring (string, start, end)
-    STRING_REPLACE = auto()  # Replace substring (string, old, new)
-
-    # Alist operations
-    ALIST_KEYS = auto()      # Get all keys from alist
-    ALIST_VALUES = auto()    # Get all values from alist
-    ALIST_LENGTH = auto()    # Get number of entries in alist
-    ALIST_HAS_P = auto()     # Check if alist has key
-    ALIST_REMOVE = auto()    # Remove key from alist
-    ALIST_MERGE = auto()     # Merge two alists
-    ALIST_GET = auto()       # Get value from alist by key with default: (alist-get alist key default)
-    ALIST_SET = auto()       # Set key in alist (alist, key, value)
+    BUILD_LIST = auto()      # BUILD_LIST n  — pop n values, push AIFPLList
 
     # Fold-reducible variadic operations (desugared to binary by desugarer)
-    BIT_OR = auto()          # Bitwise OR: a | b
-    BIT_AND = auto()         # Bitwise AND: a & b
-    BIT_XOR = auto()         # Bitwise XOR: a ^ b
-    APPEND = auto()          # Append two lists: (append a b)
-    STRING_APPEND = auto()   # Concatenate two strings: (string-append a b)
     MIN = auto()             # Minimum of two real numbers
     MAX = auto()             # Maximum of two real numbers
-
-    # Comparison / equality operations (desugared to binary by desugarer)
     EQ = auto()              # a = b
     NEQ = auto()             # a != b
     LT = auto()              # a < b
     GT = auto()              # a > b
     LTE = auto()             # a <= b
     GTE = auto()             # a >= b
-    STRING_EQ_P = auto()     # string=? a b
-    NUMBER_EQ_P = auto()     # number=? a b
-    INTEGER_EQ_P = auto()    # integer=? a b
-    FLOAT_EQ_P = auto()      # float=? a b
-    COMPLEX_EQ_P = auto()    # complex=? a b
-    BOOLEAN_EQ_P = auto()    # boolean=? a b
-    LIST_EQ_P = auto()       # list=? a b
-    ALIST_EQ_P = auto()      # alist=? a b
 
     # Collection construction opcodes (variadic, count encoded in instruction)
-    BUILD_LIST = auto()      # BUILD_LIST n  — pop n values, push AIFPLList
-    BUILD_ALIST = auto()     # BUILD_ALIST n — pop n (list key value) pair-lists, push AIFPLAList
     RANGE = auto()           # Generate integer range list: (range start end step)
 
 
@@ -184,16 +185,48 @@ class Opcode(IntEnum):
 # 3-argument opcode form (the codegen synthesises the missing default for direct
 # calls, and the stub will do likewise).
 BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
-    'number?': (Opcode.NUMBER_P, 1),
+    'boolean=?': (Opcode.BOOLEAN_EQ_P, 2),
+    'not': (Opcode.BOOLEAN_NOT, 1),
     'integer?': (Opcode.INTEGER_P, 1),
-    'float?': (Opcode.FLOAT_P, 1),
+    'integer=?': (Opcode.INTEGER_EQ_P, 2),
+    'complex': (Opcode.COMPLEX, 2),
     'complex?': (Opcode.COMPLEX_P, 1),
+    'complex=?': (Opcode.COMPLEX_EQ_P, 2),
+    'real': (Opcode.COMPLEX_REAL, 1),
+    'imag': (Opcode.COMPLEX_IMAG, 1),
+    'alist?': (Opcode.ALIST_P, 1),
+    'alist=?': (Opcode.ALIST_EQ_P, 2),
+    'alist-keys': (Opcode.ALIST_KEYS, 1),
+    'alist-values': (Opcode.ALIST_VALUES, 1),
+    'alist-length': (Opcode.ALIST_LENGTH, 1),
+    'alist-has?': (Opcode.ALIST_HAS_P, 2),
+    'alist-remove': (Opcode.ALIST_REMOVE, 2),
+    'alist-merge': (Opcode.ALIST_MERGE, 2),
+    'alist-set': (Opcode.ALIST_SET, 3),
+    'alist-get': (Opcode.ALIST_GET, 3),
     'string?': (Opcode.STRING_P, 1),
+    'string=?': (Opcode.STRING_EQ_P, 2),
+    'string-length': (Opcode.STRING_LENGTH, 1),
+    'string-upcase': (Opcode.STRING_UPCASE, 1),
+    'string-downcase': (Opcode.STRING_DOWNCASE, 1),
+    'string-trim': (Opcode.STRING_TRIM, 1),
+    'string->number': (Opcode.STRING_TO_NUMBER, 1),
+    'string->list': (Opcode.STRING_TO_LIST, 1),
+    'string-ref': (Opcode.STRING_REF, 2),
+    'string-contains?': (Opcode.STRING_CONTAINS_P, 2),
+    'string-prefix?': (Opcode.STRING_PREFIX_P, 2),
+    'string-suffix?': (Opcode.STRING_SUFFIX_P, 2),
+    'string-split': (Opcode.STRING_SPLIT, 2),
+    'string-join': (Opcode.STRING_JOIN, 2),
+    'string-append': (Opcode.STRING_APPEND, 2),
+    'substring': (Opcode.STRING_SUBSTRING, 3),
+    'string-replace': (Opcode.STRING_REPLACE, 3),
+
+    'number?': (Opcode.NUMBER_P, 1),
+    'float?': (Opcode.FLOAT_P, 1),
     'boolean?': (Opcode.BOOLEAN_P, 1),
     'list?': (Opcode.LIST_P, 1),
-    'alist?': (Opcode.ALIST_P, 1),
     'function?': (Opcode.FUNCTION_P, 1),
-    'not': (Opcode.NOT, 1),
     'sin': (Opcode.SIN, 1),
     'cos': (Opcode.COS, 1),
     'tan': (Opcode.TAN, 1),
@@ -207,8 +240,6 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'round': (Opcode.ROUND, 1),
     'integer': (Opcode.TO_INTEGER, 1),
     'float': (Opcode.TO_FLOAT, 1),
-    'real': (Opcode.REAL, 1),
-    'imag': (Opcode.IMAG, 1),
     'bin': (Opcode.BIN, 1),
     'hex': (Opcode.HEX, 1),
     'oct': (Opcode.OCT, 1),
@@ -219,17 +250,8 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'last': (Opcode.LAST, 1),
     'length': (Opcode.LENGTH, 1),
     'null?': (Opcode.NULL_P, 1),
-    'string-length': (Opcode.STRING_LENGTH, 1),
-    'string-upcase': (Opcode.STRING_UPCASE, 1),
-    'string-downcase': (Opcode.STRING_DOWNCASE, 1),
-    'string-trim': (Opcode.STRING_TRIM, 1),
-    'string->number': (Opcode.STRING_TO_NUMBER, 1),
     'number->string': (Opcode.NUMBER_TO_STRING, 1),
-    'string->list': (Opcode.STRING_TO_LIST, 1),
     'list->string': (Opcode.LIST_TO_STRING, 1),
-    'alist-keys': (Opcode.ALIST_KEYS, 1),
-    'alist-values': (Opcode.ALIST_VALUES, 1),
-    'alist-length': (Opcode.ALIST_LENGTH, 1),
     '+': (Opcode.ADD, 2),
     '-': (Opcode.SUB, 2),
     '*': (Opcode.MUL, 2),
@@ -249,14 +271,9 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     '>': (Opcode.GT, 2),
     '<=': (Opcode.LTE, 2),
     '>=': (Opcode.GTE, 2),
-    'string=?': (Opcode.STRING_EQ_P, 2),
     'number=?': (Opcode.NUMBER_EQ_P, 2),
-    'integer=?': (Opcode.INTEGER_EQ_P, 2),
     'float=?': (Opcode.FLOAT_EQ_P, 2),
-    'complex=?': (Opcode.COMPLEX_EQ_P, 2),
-    'boolean=?': (Opcode.BOOLEAN_EQ_P, 2),
     'list=?': (Opcode.LIST_EQ_P, 2),
-    'alist=?': (Opcode.ALIST_EQ_P, 2),
     'cons': (Opcode.CONS, 2),
     'append': (Opcode.APPEND, 2),
     'list-ref': (Opcode.LIST_REF, 2),
@@ -265,23 +282,8 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'take': (Opcode.TAKE, 2),
     'drop': (Opcode.DROP, 2),
     'remove': (Opcode.REMOVE, 2),
-    'string-ref': (Opcode.STRING_REF, 2),
-    'string-contains?': (Opcode.STRING_CONTAINS_P, 2),
-    'string-prefix?': (Opcode.STRING_PREFIX_P, 2),
-    'string-suffix?': (Opcode.STRING_SUFFIX_P, 2),
-    'string-split': (Opcode.STRING_SPLIT, 2),
-    'string-join': (Opcode.STRING_JOIN, 2),
-    'string-append': (Opcode.STRING_APPEND, 2),
-    'alist-has?': (Opcode.ALIST_HAS_P, 2),
-    'alist-remove': (Opcode.ALIST_REMOVE, 2),
-    'alist-merge': (Opcode.ALIST_MERGE, 2),
     'min': (Opcode.MIN, 2),
     'max': (Opcode.MAX, 2),
-    'complex': (Opcode.MAKE_COMPLEX, 2),
-    'substring': (Opcode.SUBSTRING, 3),
-    'string-replace': (Opcode.STRING_REPLACE, 3),
-    'alist-set': (Opcode.ALIST_SET, 3),
-    'alist-get': (Opcode.ALIST_GET, 3),
     'range': (Opcode.RANGE, 3),
 }
 
@@ -306,10 +308,10 @@ class Instruction:
             Opcode.FLOOR_DIV, Opcode.MOD, Opcode.STAR_STAR,
             Opcode.NUMBER_P, Opcode.INTEGER_P, Opcode.FLOAT_P, Opcode.COMPLEX_P,
             Opcode.STRING_P, Opcode.BOOLEAN_P, Opcode.LIST_P, Opcode.ALIST_P, Opcode.FUNCTION_P,
-            Opcode.NOT, Opcode.BIT_NOT, Opcode.BIT_SHIFT_LEFT, Opcode.BIT_SHIFT_RIGHT,
+            Opcode.BOOLEAN_NOT, Opcode.BIT_NOT, Opcode.BIT_SHIFT_LEFT, Opcode.BIT_SHIFT_RIGHT,
             Opcode.SIN, Opcode.COS, Opcode.TAN, Opcode.LOG, Opcode.LOG10, Opcode.EXP,
             Opcode.POW, Opcode.SQRT, Opcode.ABS, Opcode.FLOOR, Opcode.CEIL, Opcode.ROUND,
-            Opcode.TO_INTEGER, Opcode.TO_FLOAT, Opcode.REAL, Opcode.IMAG, Opcode.MAKE_COMPLEX,
+            Opcode.TO_INTEGER, Opcode.TO_FLOAT, Opcode.COMPLEX_REAL, Opcode.COMPLEX_IMAG, Opcode.COMPLEX,
             Opcode.BIN, Opcode.HEX, Opcode.OCT,
             Opcode.CONS, Opcode.REVERSE, Opcode.FIRST, Opcode.REST, Opcode.LAST,
             Opcode.LENGTH, Opcode.LIST_REF, Opcode.NULL_P, Opcode.MEMBER_P, Opcode.POSITION,
@@ -317,7 +319,7 @@ class Instruction:
             Opcode.STRING_LENGTH, Opcode.STRING_UPCASE, Opcode.STRING_DOWNCASE, Opcode.STRING_TRIM,
             Opcode.STRING_TO_NUMBER, Opcode.NUMBER_TO_STRING, Opcode.STRING_TO_LIST, Opcode.LIST_TO_STRING,
             Opcode.STRING_REF, Opcode.STRING_CONTAINS_P, Opcode.STRING_PREFIX_P, Opcode.STRING_SUFFIX_P,
-            Opcode.STRING_SPLIT, Opcode.STRING_JOIN, Opcode.SUBSTRING, Opcode.STRING_REPLACE,
+            Opcode.STRING_SPLIT, Opcode.STRING_JOIN, Opcode.STRING_SUBSTRING, Opcode.STRING_REPLACE,
             Opcode.ALIST_KEYS, Opcode.ALIST_VALUES, Opcode.ALIST_LENGTH,
             Opcode.ALIST_HAS_P, Opcode.ALIST_REMOVE, Opcode.ALIST_MERGE, Opcode.ALIST_GET, Opcode.ALIST_SET,
             Opcode.RANGE,

@@ -171,25 +171,58 @@ class AIFPLVM:
         table[Opcode.JUMP_IF_TRUE] = self._op_jump_if_true
         table[Opcode.RAISE_ERROR] = self._op_raise_error
         table[Opcode.MAKE_CLOSURE] = self._op_make_closure
-        table[Opcode.CALL_FUNCTION] = self._op_call_function
-        table[Opcode.TAIL_CALL_FUNCTION] = self._op_tail_call_function
+        table[Opcode.CALL] = self._op_call
+        table[Opcode.TAIL_CALL] = self._op_tail_call
         table[Opcode.ENTER] = self._op_enter
         table[Opcode.RETURN] = self._op_return
         table[Opcode.EMIT_TRACE] = self._op_emit_trace
+        table[Opcode.FUNCTION_P] = self._op_function_p
+        table[Opcode.BOOLEAN_P] = self._op_boolean_p
+        table[Opcode.BOOLEAN_EQ_P] = self._op_boolean_eq_p
+        table[Opcode.BOOLEAN_NOT] = self._op_boolean_not
+        table[Opcode.INTEGER_P] = self._op_integer_p
+        table[Opcode.INTEGER_EQ_P] = self._op_integer_eq_p
+        table[Opcode.COMPLEX] = self._op_complex
+        table[Opcode.COMPLEX_P] = self._op_complex_p
+        table[Opcode.COMPLEX_EQ_P] = self._op_complex_eq_p
+        table[Opcode.COMPLEX_REAL] = self._op_complex_real
+        table[Opcode.COMPLEX_IMAG] = self._op_complex_imag
+        table[Opcode.STRING_P] = self._op_string_p
+        table[Opcode.STRING_EQ_P] = self._op_string_eq_p
+        table[Opcode.STRING_LENGTH] = self._op_string_length
+        table[Opcode.STRING_UPCASE] = self._op_string_upcase
+        table[Opcode.STRING_DOWNCASE] = self._op_string_downcase
+        table[Opcode.STRING_TRIM] = self._op_string_trim
+        table[Opcode.STRING_TO_NUMBER] = self._op_string_to_number
+        table[Opcode.STRING_TO_LIST] = self._op_string_to_list
+        table[Opcode.STRING_REF] = self._op_string_ref
+        table[Opcode.STRING_CONTAINS_P] = self._op_string_contains_p
+        table[Opcode.STRING_PREFIX_P] = self._op_string_prefix_p
+        table[Opcode.STRING_SUFFIX_P] = self._op_string_suffix_p
+        table[Opcode.STRING_SPLIT] = self._op_string_split
+        table[Opcode.STRING_JOIN] = self._op_string_join
+        table[Opcode.STRING_APPEND] = self._op_string_append
+        table[Opcode.STRING_SUBSTRING] = self._op_string_substring
+        table[Opcode.STRING_REPLACE] = self._op_string_replace
+        table[Opcode.ALIST] = self._op_alist
+        table[Opcode.ALIST_P] = self._op_alist_p
+        table[Opcode.ALIST_EQ_P] = self._op_alist_eq_p
+        table[Opcode.ALIST_KEYS] = self._op_alist_keys
+        table[Opcode.ALIST_VALUES] = self._op_alist_values
+        table[Opcode.ALIST_LENGTH] = self._op_alist_length
+        table[Opcode.ALIST_HAS_P] = self._op_alist_has_p
+        table[Opcode.ALIST_REMOVE] = self._op_alist_remove
+        table[Opcode.ALIST_MERGE] = self._op_alist_merge
+        table[Opcode.ALIST_SET] = self._op_alist_set
+        table[Opcode.ALIST_GET] = self._op_alist_get
+
         table[Opcode.ADD] = self._op_add
         table[Opcode.SUB] = self._op_sub
         table[Opcode.MUL] = self._op_mul
         table[Opcode.DIV] = self._op_div
         table[Opcode.NUMBER_P] = self._op_number_p
-        table[Opcode.INTEGER_P] = self._op_integer_p
         table[Opcode.FLOAT_P] = self._op_float_p
-        table[Opcode.COMPLEX_P] = self._op_complex_p
-        table[Opcode.STRING_P] = self._op_string_p
-        table[Opcode.BOOLEAN_P] = self._op_boolean_p
         table[Opcode.LIST_P] = self._op_list_p
-        table[Opcode.ALIST_P] = self._op_alist_p
-        table[Opcode.FUNCTION_P] = self._op_function_p
-        table[Opcode.NOT] = self._op_not
         table[Opcode.SIN] = self._op_sin
         table[Opcode.COS] = self._op_cos
         table[Opcode.TAN] = self._op_tan
@@ -217,9 +250,6 @@ class AIFPLVM:
         table[Opcode.ROUND] = self._op_round
         table[Opcode.TO_INTEGER] = self._op_to_integer
         table[Opcode.TO_FLOAT] = self._op_to_float
-        table[Opcode.REAL] = self._op_real
-        table[Opcode.IMAG] = self._op_imag
-        table[Opcode.MAKE_COMPLEX] = self._op_make_complex
         table[Opcode.BIN] = self._op_bin
         table[Opcode.HEX] = self._op_hex
         table[Opcode.OCT] = self._op_oct
@@ -229,36 +259,13 @@ class AIFPLVM:
         table[Opcode.TAKE] = self._op_take
         table[Opcode.DROP] = self._op_drop
         table[Opcode.REMOVE] = self._op_remove
-        table[Opcode.STRING_LENGTH] = self._op_string_length
-        table[Opcode.STRING_UPCASE] = self._op_string_upcase
-        table[Opcode.STRING_DOWNCASE] = self._op_string_downcase
-        table[Opcode.STRING_TRIM] = self._op_string_trim
-        table[Opcode.STRING_TO_NUMBER] = self._op_string_to_number
         table[Opcode.NUMBER_TO_STRING] = self._op_number_to_string
-        table[Opcode.STRING_TO_LIST] = self._op_string_to_list
         table[Opcode.LIST_TO_STRING] = self._op_list_to_string
-        table[Opcode.STRING_REF] = self._op_string_ref
-        table[Opcode.STRING_CONTAINS_P] = self._op_string_contains_p
-        table[Opcode.STRING_PREFIX_P] = self._op_string_prefix_p
-        table[Opcode.STRING_SUFFIX_P] = self._op_string_suffix_p
-        table[Opcode.STRING_SPLIT] = self._op_string_split
-        table[Opcode.STRING_JOIN] = self._op_string_join
-        table[Opcode.SUBSTRING] = self._op_substring
-        table[Opcode.STRING_REPLACE] = self._op_string_replace
-        table[Opcode.ALIST_KEYS] = self._op_alist_keys
-        table[Opcode.ALIST_VALUES] = self._op_alist_values
-        table[Opcode.ALIST_LENGTH] = self._op_alist_length
-        table[Opcode.ALIST_HAS_P] = self._op_alist_has_p
-        table[Opcode.ALIST_REMOVE] = self._op_alist_remove
-        table[Opcode.ALIST_MERGE] = self._op_alist_merge
-        table[Opcode.ALIST_SET] = self._op_alist_set
-        table[Opcode.ALIST_GET] = self._op_alist_get
         table[Opcode.RANGE] = self._op_range
         table[Opcode.BIT_OR] = self._op_bit_or
         table[Opcode.BIT_AND] = self._op_bit_and
         table[Opcode.BIT_XOR] = self._op_bit_xor
         table[Opcode.APPEND] = self._op_append
-        table[Opcode.STRING_APPEND] = self._op_string_append
         table[Opcode.MIN] = self._op_min
         table[Opcode.MAX] = self._op_max
         table[Opcode.EQ] = self._op_eq
@@ -267,17 +274,112 @@ class AIFPLVM:
         table[Opcode.GT] = self._op_gt
         table[Opcode.LTE] = self._op_lte
         table[Opcode.GTE] = self._op_gte
-        table[Opcode.STRING_EQ_P] = self._op_string_eq_p
         table[Opcode.NUMBER_EQ_P] = self._op_number_eq_p
-        table[Opcode.INTEGER_EQ_P] = self._op_integer_eq_p
         table[Opcode.FLOAT_EQ_P] = self._op_float_eq_p
-        table[Opcode.COMPLEX_EQ_P] = self._op_complex_eq_p
-        table[Opcode.BOOLEAN_EQ_P] = self._op_boolean_eq_p
         table[Opcode.LIST_EQ_P] = self._op_list_eq_p
-        table[Opcode.ALIST_EQ_P] = self._op_alist_eq_p
         table[Opcode.BUILD_LIST] = self._op_build_list
-        table[Opcode.BUILD_ALIST] = self._op_build_alist
         return table
+
+    def _ensure_boolean(self, value: AIFPLValue, operation_name: str) -> bool:
+        """
+        Ensure value is a boolean, raise user-friendly error if not.
+
+        Args:
+            value: Value to check
+            operation_name: Name of operation for error message (e.g., 'not', 'if')
+
+        Returns:
+            Python boolean value
+
+        Raises:
+            AIFPLEvalError: If value is not a boolean
+        """
+        if not isinstance(value, AIFPLBoolean):
+            raise AIFPLEvalError(
+                f"Function '{operation_name}' requires boolean arguments, got {value.type_name()}"
+            )
+
+        return value.value
+
+    def _ensure_number(self, value: AIFPLValue, operation_name: str) -> int | float | complex:
+        """
+        Ensure value is a number, raise user-friendly error if not.
+
+        Args:
+            value: Value to check
+            operation_name: Name of operation for error message (e.g., '+', '-')
+
+        Returns:
+            Python numeric value (int, float, or complex)
+
+        Raises:
+            AIFPLEvalError: If value is not a number
+        """
+        if not isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
+            raise AIFPLEvalError(
+                f"Function '{operation_name}' requires number arguments, got {value.type_name()}"
+            )
+
+        return value.value
+
+    def _ensure_real_number(self, value: AIFPLValue, operation_name: str) -> int | float:
+        """
+        Ensure value is a real number, raise user-friendly error if not.
+
+        Args:
+            value: Value to check
+            operation_name: Name of operation for error message (e.g., '+', '-')
+
+        Returns:
+            Python numeric value (int or float)
+
+        Raises:
+            AIFPLEvalError: If value is not a real number
+        """
+        if not isinstance(value, (AIFPLInteger, AIFPLFloat)):
+            raise AIFPLEvalError(
+                f"Function '{operation_name}' requires real number arguments, got {value.type_name()}"
+            )
+
+        return value.value
+
+    def _ensure_list(self, value: AIFPLValue, function_name: str) -> AIFPLList:
+        """Ensure value is a list, raise error if not."""
+        if not isinstance(value, AIFPLList):
+            raise AIFPLEvalError(f"Function '{function_name}' requires list arguments, got {value.type_name()}")
+
+        return value
+
+    def _ensure_string(self, value: AIFPLValue, function_name: str) -> str:
+        """Ensure value is a string, raise error if not."""
+        if not isinstance(value, AIFPLString):
+            raise AIFPLEvalError(f"Function '{function_name}' requires string arguments, got {value.type_name()}")
+
+        return value.value
+
+    def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
+        """Ensure value is an integer, raise error if not."""
+        if not isinstance(value, AIFPLInteger):
+            raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
+
+        return value.value
+
+    def _ensure_alist(self, value: AIFPLValue, function_name: str) -> AIFPLAList:
+        """Ensure value is an alist, raise error if not."""
+        if not isinstance(value, AIFPLAList):
+            raise AIFPLEvalError(f"Function '{function_name}' requires alist arguments, got {value.type_name()}")
+
+        return value
+
+    def _wrap_numeric_result(self, result: int | float | complex) -> AIFPLValue:
+        """Wrap Python numeric value in appropriate AIFPL type."""
+        if isinstance(result, int):
+            return AIFPLInteger(result)
+
+        if isinstance(result, float):
+            return AIFPLFloat(result)
+
+        return AIFPLComplex(result)
 
     def execute(
         self,
@@ -620,10 +722,10 @@ class AIFPLVM:
         self.stack.append(closure)
         return None
 
-    def _op_call_function(  # pylint: disable=useless-return
+    def _op_call(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, arity: int, _arg2: int
     ) -> AIFPLValue | None:
-        """CALL_FUNCTION: Call function with arguments from stack."""
+        """CALL: Call function with arguments from stack."""
         # Validator guarantees stack has enough values (arity + 1)
 
         # Function is on top of the stack
@@ -688,11 +790,11 @@ class AIFPLVM:
         self.stack.append(result)
         return None
 
-    def _op_tail_call_function(  # pylint: disable=useless-return
+    def _op_tail_call(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, arity: int, _arg2: int
     ) -> TailCall | None:
         """
-        TAIL_CALL_FUNCTION: Perform tail call with optimization.
+        TAIL_CALL: Perform tail call with optimization.
 
         Returns a TailCall marker that the execution loop will handle by
         replacing the current frame with the target frame, achieving true
@@ -769,106 +871,436 @@ class AIFPLVM:
         # Continue execution (no return value)
         return None
 
-    def _ensure_boolean(self, value: AIFPLValue, operation_name: str) -> bool:
+    def _op_function_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FUNCTION_P: Check if value is a function."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLFunction)))
+        return None
+
+    def _op_boolean_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BOOLEAN_P: Check if value is a boolean."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLBoolean)))
+        return None
+
+    def _op_boolean_eq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BOOLEAN_EQ_P: Pop two values, push true if both are booleans and equal."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        bool_a = self._ensure_boolean(a, 'boolean=?')
+        bool_b = self._ensure_boolean(b, 'boolean=?')
+        self.stack.append(AIFPLBoolean(bool_a == bool_b))
+        return None
+
+    def _op_integer_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_P: Check if value is an integer."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLInteger)))
+        return None
+
+    def _op_integer_eq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_EQ_P: Pop two values, push true if both are integers and equal."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        if not isinstance(a, AIFPLInteger):
+            raise AIFPLEvalError(f"Function 'integer=?' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, AIFPLInteger):
+            raise AIFPLEvalError(f"Function 'integer=?' requires integer arguments, got {b.type_name()}")
+
+        self.stack.append(AIFPLBoolean(a.value == b.value))
+        return None
+
+    def _op_complex(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX: Pop imaginary and real parts, push complex number."""
+        imag = self.stack.pop()
+        real = self.stack.pop()
+        real_val = self._ensure_real_number(real, 'complex')
+        imag_val = self._ensure_real_number(imag, 'complex')
+        self.stack.append(AIFPLComplex(complex(real_val, imag_val)))
+        return None
+
+    def _op_complex_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX_P: Check if value is a complex number."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLComplex)))
+        return None
+
+    def _op_complex_eq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX_EQ_P: Pop two values, push true if both are complex and equal."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        if not isinstance(a, AIFPLComplex):
+            raise AIFPLEvalError(f"Function 'complex=?' requires complex arguments, got {a.type_name()}")
+
+        if not isinstance(b, AIFPLComplex):
+            raise AIFPLEvalError(f"Function 'complex=?' requires complex arguments, got {b.type_name()}")
+
+        self.stack.append(AIFPLBoolean(a.value == b.value))
+        return None
+
+    def _op_complex_real(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX_REAL: Pop a complex number, push its real part as float."""
+        a = self.stack.pop()
+        a_val = self._ensure_number(a, 'real')
+        if isinstance(a_val, complex):
+            self.stack.append(AIFPLFloat(a_val.real))
+            return None
+
+        self.stack.append(AIFPLFloat(float(a_val)))
+        return None
+
+    def _op_complex_imag(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX_IMAG: Pop a complex number, push its imaginary part as float."""
+        a = self.stack.pop()
+        a_val = self._ensure_number(a, 'imag')
+        if isinstance(a_val, complex):
+            self.stack.append(AIFPLFloat(a_val.imag))
+            return None
+
+        self.stack.append(AIFPLFloat(0.0))
+        return None
+
+    def _op_string_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_P: Check if value is a string."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLString)))
+        return None
+
+    def _op_string_eq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_EQ_P: Pop two strings, push true if they are equal."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_string(a, 'string=?') == self._ensure_string(b, 'string=?')))
+        return None
+
+    def _op_string_length(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_LENGTH: Pop a string, push its length."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLInteger(len(self._ensure_string(a, 'string-length'))))
+        return None
+
+    def _op_string_upcase(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_UPCASE: Pop a string, push uppercased string."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLString(self._ensure_string(a, 'string-upcase').upper()))
+        return None
+
+    def _op_string_downcase(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_DOWNCASE: Pop a string, push lowercased string."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLString(self._ensure_string(a, 'string-downcase').lower()))
+        return None
+
+    def _op_string_trim(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_TRIM: Pop a string, push whitespace-trimmed string."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLString(self._ensure_string(a, 'string-trim').strip()))
+        return None
+
+    def _op_string_to_number(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_TO_NUMBER: Pop a string, push parsed number."""
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string->number')
+        try:
+            if '.' not in s and 'e' not in s.lower() and 'j' not in s.lower():
+                self.stack.append(AIFPLInteger(int(s)))
+                return None
+
+            if 'j' in s.lower():
+                self.stack.append(AIFPLComplex(complex(s)))
+                return None
+
+            self.stack.append(AIFPLFloat(float(s)))
+            return None
+
+        except ValueError as e:
+            raise AIFPLEvalError(f"Cannot convert string to number: '{s}'") from e
+
+    def _op_string_to_list(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_TO_LIST: Pop a string, push list of single-character strings."""
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string->list')
+        self.stack.append(AIFPLList(tuple(AIFPLString(ch) for ch in s)))
+        return None
+
+    def _op_string_ref(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_REF: Pop an index and string, push character at index."""
+        index_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string-ref')
+        index = self._ensure_integer(index_val, 'string-ref')
+        if index < 0 or index >= len(s):
+            raise AIFPLEvalError(f"string-ref index out of range: {index}")
+
+        self.stack.append(AIFPLString(s[index]))
+        return None
+
+    def _op_string_contains_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_CONTAINS_P: Pop substring and string, push true if string contains substring."""
+        substr_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string-contains?')
+        substr = self._ensure_string(substr_val, 'string-contains?')
+        self.stack.append(AIFPLBoolean(substr in s))
+        return None
+
+    def _op_string_prefix_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_PREFIX_P: Pop prefix and string, push true if string starts with prefix."""
+        prefix_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string-prefix?')
+        prefix = self._ensure_string(prefix_val, 'string-prefix?')
+        self.stack.append(AIFPLBoolean(s.startswith(prefix)))
+        return None
+
+    def _op_string_suffix_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_SUFFIX_P: Pop suffix and string, push true if string ends with suffix."""
+        suffix_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string-suffix?')
+        suffix = self._ensure_string(suffix_val, 'string-suffix?')
+        self.stack.append(AIFPLBoolean(s.endswith(suffix)))
+        return None
+
+    def _op_string_split(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_SPLIT: Pop delimiter and string, push list of parts."""
+        delim_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string-split')
+        delim = self._ensure_string(delim_val, 'string-split')
+        if delim == "":
+            self.stack.append(AIFPLList(tuple(AIFPLString(ch) for ch in s)))
+            return None
+
+        self.stack.append(AIFPLList(tuple(AIFPLString(part) for part in s.split(delim))))
+        return None
+
+    def _op_string_join(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_JOIN: Pop separator and list of strings, push joined string."""
+        sep_val = self.stack.pop()
+        a = self.stack.pop()
+        list_val = self._ensure_list(a, 'string-join')
+        sep = self._ensure_string(sep_val, 'string-join')
+        parts = []
+        for item in list_val.elements:
+            if not isinstance(item, AIFPLString):
+                raise AIFPLEvalError(f"string-join requires list of strings, found {item.type_name()}")
+
+            parts.append(item.value)
+
+        self.stack.append(AIFPLString(sep.join(parts)))
+        return None
+
+    def _op_string_substring(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_SUBSTRING: Pop end, start, and string, push substring."""
+        end_val = self.stack.pop()
+        start_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'substring')
+        start = self._ensure_integer(start_val, 'substring')
+        end = self._ensure_integer(end_val, 'substring')
+        n = len(s)
+        if start < 0:
+            raise AIFPLEvalError(f"substring start index cannot be negative: {start}")
+
+        if end < 0:
+            raise AIFPLEvalError(f"substring end index cannot be negative: {end}")
+
+        if start > n:
+            raise AIFPLEvalError(f"substring start index out of range: {start} (string length: {n})")
+
+        if end > n:
+            raise AIFPLEvalError(f"substring end index out of range: {end} (string length: {n})")
+
+        if start > end:
+            raise AIFPLEvalError(f"substring start index ({start}) cannot be greater than end index ({end})")
+
+        self.stack.append(AIFPLString(s[start:end]))
+        return None
+
+    def _op_string_replace(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_REPLACE: Pop new, old, and string, push string with replacements."""
+        new_val = self.stack.pop()
+        old_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string-replace')
+        old = self._ensure_string(old_val, 'string-replace')
+        new = self._ensure_string(new_val, 'string-replace')
+        self.stack.append(AIFPLString(s.replace(old, new)))
+        return None
+
+    def _op_alist(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, n: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST n: Pop n 2-element AIFPLList pair objects, push AIFPLAList.
+
+        Each pair on the stack is a 2-element list (list key value), matching the
+        existing (alist (list k1 v1) (list k2 v2) ...) calling convention.
         """
-        Ensure value is a boolean, raise user-friendly error if not.
+        if n == 0:
+            self.stack.append(AIFPLAList(()))
+            return None
 
-        Args:
-            value: Value to check
-            operation_name: Name of operation for error message (e.g., 'not', 'if')
+        pair_lists = self.stack[-n:]
+        del self.stack[-n:]
+        pairs = []
+        for i, pair_list in enumerate(pair_lists):
+            if not isinstance(pair_list, AIFPLList):
+                raise AIFPLEvalError(
+                    f"AList pair {i + 1} must be a list"
+                )
 
-        Returns:
-            Python boolean value
+            if len(pair_list.elements) != 2:
+                raise AIFPLEvalError(
+                    f"AList pair {i + 1} must have exactly 2 elements"
+                )
 
-        Raises:
-            AIFPLEvalError: If value is not a boolean
-        """
-        if not isinstance(value, AIFPLBoolean):
-            raise AIFPLEvalError(
-                f"Function '{operation_name}' requires boolean arguments, got {value.type_name()}"
-            )
+            pairs.append((pair_list.elements[0], pair_list.elements[1]))
 
-        return value.value
+        self.stack.append(AIFPLAList(tuple(pairs)))
+        return None
 
-    def _ensure_number(self, value: AIFPLValue, operation_name: str) -> int | float | complex:
-        """
-        Ensure value is a number, raise user-friendly error if not.
+    def _op_alist_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_P: Check if value is an alist."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLAList)))
+        return None
 
-        Args:
-            value: Value to check
-            operation_name: Name of operation for error message (e.g., '+', '-')
+    def _op_alist_eq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_EQ_P: Pop two values, push true if both are alists and equal."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_alist(a, 'alist=?') == self._ensure_alist(b, 'alist=?')))
+        return None
 
-        Returns:
-            Python numeric value (int, float, or complex)
+    def _op_alist_keys(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_KEYS: Pop an alist, push list of its keys."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLList(self._ensure_alist(a, 'alist-keys').keys()))
+        return None
 
-        Raises:
-            AIFPLEvalError: If value is not a number
-        """
-        if not isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
-            raise AIFPLEvalError(
-                f"Function '{operation_name}' requires number arguments, got {value.type_name()}"
-            )
+    def _op_alist_values(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_VALUES: Pop an alist, push list of its values."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLList(self._ensure_alist(a, 'alist-values').values()))
+        return None
 
-        return value.value
+    def _op_alist_length(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_LENGTH: Pop an alist, push its length."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLInteger(self._ensure_alist(a, 'alist-length').length()))
+        return None
 
-    def _ensure_real_number(self, value: AIFPLValue, operation_name: str) -> int | float:
-        """
-        Ensure value is a real number, raise user-friendly error if not.
+    def _op_alist_has_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_HAS_P: Pop a key and alist, push true if alist contains key."""
+        key = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_alist(a, 'alist-has?').has_key(key)))
+        return None
 
-        Args:
-            value: Value to check
-            operation_name: Name of operation for error message (e.g., '+', '-')
+    def _op_alist_remove(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_REMOVE: Pop a key and alist, push new alist without that key."""
+        key = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(self._ensure_alist(a, 'alist-remove').remove(key))
+        return None
 
-        Returns:
-            Python numeric value (int or float)
+    def _op_alist_merge(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_MERGE: Pop two alists, push merged alist (second wins on conflicts)."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(self._ensure_alist(a, 'alist-merge').merge(self._ensure_alist(b, 'alist-merge')))
+        return None
 
-        Raises:
-            AIFPLEvalError: If value is not a real number
-        """
-        if not isinstance(value, (AIFPLInteger, AIFPLFloat)):
-            raise AIFPLEvalError(
-                f"Function '{operation_name}' requires real number arguments, got {value.type_name()}"
-            )
+    def _op_alist_set(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_SET: Pop value, key, and alist, push new alist with key set to value."""
+        value = self.stack.pop()
+        key = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(self._ensure_alist(a, 'alist-set').set(key, value))
+        return None
 
-        return value.value
-
-    def _ensure_list(self, value: AIFPLValue, function_name: str) -> AIFPLList:
-        """Ensure value is a list, raise error if not."""
-        if not isinstance(value, AIFPLList):
-            raise AIFPLEvalError(f"Function '{function_name}' requires list arguments, got {value.type_name()}")
-
-        return value
-
-    def _ensure_string(self, value: AIFPLValue, function_name: str) -> str:
-        """Ensure value is a string, raise error if not."""
-        if not isinstance(value, AIFPLString):
-            raise AIFPLEvalError(f"Function '{function_name}' requires string arguments, got {value.type_name()}")
-
-        return value.value
-
-    def _ensure_integer(self, value: AIFPLValue, function_name: str) -> int:
-        """Ensure value is an integer, raise error if not."""
-        if not isinstance(value, AIFPLInteger):
-            raise AIFPLEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
-
-        return value.value
-
-    def _ensure_alist(self, value: AIFPLValue, function_name: str) -> AIFPLAList:
-        """Ensure value is an alist, raise error if not."""
-        if not isinstance(value, AIFPLAList):
-            raise AIFPLEvalError(f"Function '{function_name}' requires alist arguments, got {value.type_name()}")
-
-        return value
-
-    def _wrap_numeric_result(self, result: int | float | complex) -> AIFPLValue:
-        """Wrap Python numeric value in appropriate AIFPL type."""
-        if isinstance(result, int):
-            return AIFPLInteger(result)
-
-        if isinstance(result, float):
-            return AIFPLFloat(result)
-
-        return AIFPLComplex(result)
+    def _op_alist_get(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_GET: Pop default, key, and alist, push value or default if not found."""
+        default = self.stack.pop()
+        key = self.stack.pop()
+        a = self.stack.pop()
+        result = self._ensure_alist(a, 'alist-get').get(key)
+        self.stack.append(result if result is not None else default)
+        return None
 
     def _op_add(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
@@ -937,44 +1369,12 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(result))
         return None
 
-    def _op_integer_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """INTEGER_P: Check if value is an integer."""
-        value = self.stack.pop()
-        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLInteger)))
-        return None
-
     def _op_float_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """FLOAT_P: Check if value is a float."""
         value = self.stack.pop()
         self.stack.append(AIFPLBoolean(isinstance(value, AIFPLFloat)))
-        return None
-
-    def _op_complex_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """COMPLEX_P: Check if value is a complex number."""
-        value = self.stack.pop()
-        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLComplex)))
-        return None
-
-    def _op_string_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_P: Check if value is a string."""
-        value = self.stack.pop()
-        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLString)))
-        return None
-
-    def _op_boolean_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """BOOLEAN_P: Check if value is a boolean."""
-        value = self.stack.pop()
-        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLBoolean)))
         return None
 
     def _op_list_p(  # pylint: disable=useless-return
@@ -985,26 +1385,10 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(isinstance(value, AIFPLList)))
         return None
 
-    def _op_alist_p(  # pylint: disable=useless-return
+    def _op_boolean_not(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """ALIST_P: Check if value is an alist."""
-        value = self.stack.pop()
-        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLAList)))
-        return None
-
-    def _op_function_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """FUNCTION_P: Check if value is a function."""
-        value = self.stack.pop()
-        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLFunction)))
-        return None
-
-    def _op_not(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NOT: Logical NOT operation."""
+        """BOOLEAN_NOT: Logical NOT operation."""
         value = self.stack.pop()
         bool_val = self._ensure_boolean(value, "not")
         self.stack.append(AIFPLBoolean(not bool_val))
@@ -1375,43 +1759,6 @@ class AIFPLVM:
         self.stack.append(AIFPLFloat(float(a_val)))
         return None
 
-    def _op_real(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """REAL: Pop a number, push its real part as float."""
-        a = self.stack.pop()
-        a_val = self._ensure_number(a, 'real')
-        if isinstance(a_val, complex):
-            self.stack.append(AIFPLFloat(a_val.real))
-            return None
-
-        self.stack.append(AIFPLFloat(float(a_val)))
-        return None
-
-    def _op_imag(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """IMAG: Pop a number, push its imaginary part as float."""
-        a = self.stack.pop()
-        a_val = self._ensure_number(a, 'imag')
-        if isinstance(a_val, complex):
-            self.stack.append(AIFPLFloat(a_val.imag))
-            return None
-
-        self.stack.append(AIFPLFloat(0.0))
-        return None
-
-    def _op_make_complex(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """MAKE_COMPLEX: Pop imaginary and real parts, push complex number."""
-        imag = self.stack.pop()
-        real = self.stack.pop()
-        real_val = self._ensure_real_number(real, 'complex')
-        imag_val = self._ensure_real_number(imag, 'complex')
-        self.stack.append(AIFPLComplex(complex(real_val, imag_val)))
-        return None
-
     def _op_bin(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1519,59 +1866,6 @@ class AIFPLVM:
         self.stack.append(list_val.remove_all(item))
         return None
 
-    def _op_string_length(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_LENGTH: Pop a string, push its length."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLInteger(len(self._ensure_string(a, 'string-length'))))
-        return None
-
-    def _op_string_upcase(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_UPCASE: Pop a string, push uppercased string."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLString(self._ensure_string(a, 'string-upcase').upper()))
-        return None
-
-    def _op_string_downcase(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_DOWNCASE: Pop a string, push lowercased string."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLString(self._ensure_string(a, 'string-downcase').lower()))
-        return None
-
-    def _op_string_trim(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_TRIM: Pop a string, push whitespace-trimmed string."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLString(self._ensure_string(a, 'string-trim').strip()))
-        return None
-
-    def _op_string_to_number(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_TO_NUMBER: Pop a string, push parsed number."""
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string->number')
-        try:
-            if '.' not in s and 'e' not in s.lower() and 'j' not in s.lower():
-                self.stack.append(AIFPLInteger(int(s)))
-                return None
-
-            if 'j' in s.lower():
-                self.stack.append(AIFPLComplex(complex(s)))
-                return None
-
-            self.stack.append(AIFPLFloat(float(s)))
-            return None
-
-        except ValueError as e:
-            raise AIFPLEvalError(f"Cannot convert string to number: '{s}'") from e
-
     def _op_number_to_string(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1585,15 +1879,6 @@ class AIFPLVM:
         self.stack.append(AIFPLString(str(a_val)))
         return None
 
-    def _op_string_to_list(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_TO_LIST: Pop a string, push list of single-character strings."""
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string->list')
-        self.stack.append(AIFPLList(tuple(AIFPLString(ch) for ch in s)))
-        return None
-
     def _op_list_to_string(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1601,200 +1886,6 @@ class AIFPLVM:
         a = self.stack.pop()
         list_val = self._ensure_list(a, 'list->string')
         self.stack.append(AIFPLString(''.join(str(elem.to_python()) for elem in list_val.elements)))
-        return None
-
-    def _op_string_ref(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_REF: Pop an index and string, push character at index."""
-        index_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string-ref')
-        index = self._ensure_integer(index_val, 'string-ref')
-        if index < 0 or index >= len(s):
-            raise AIFPLEvalError(f"string-ref index out of range: {index}")
-
-        self.stack.append(AIFPLString(s[index]))
-        return None
-
-    def _op_string_contains_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_CONTAINS_P: Pop substring and string, push true if string contains substring."""
-        substr_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string-contains?')
-        substr = self._ensure_string(substr_val, 'string-contains?')
-        self.stack.append(AIFPLBoolean(substr in s))
-        return None
-
-    def _op_string_prefix_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_PREFIX_P: Pop prefix and string, push true if string starts with prefix."""
-        prefix_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string-prefix?')
-        prefix = self._ensure_string(prefix_val, 'string-prefix?')
-        self.stack.append(AIFPLBoolean(s.startswith(prefix)))
-        return None
-
-    def _op_string_suffix_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_SUFFIX_P: Pop suffix and string, push true if string ends with suffix."""
-        suffix_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string-suffix?')
-        suffix = self._ensure_string(suffix_val, 'string-suffix?')
-        self.stack.append(AIFPLBoolean(s.endswith(suffix)))
-        return None
-
-    def _op_string_split(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_SPLIT: Pop delimiter and string, push list of parts."""
-        delim_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string-split')
-        delim = self._ensure_string(delim_val, 'string-split')
-        if delim == "":
-            self.stack.append(AIFPLList(tuple(AIFPLString(ch) for ch in s)))
-            return None
-
-        self.stack.append(AIFPLList(tuple(AIFPLString(part) for part in s.split(delim))))
-        return None
-
-    def _op_string_join(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_JOIN: Pop separator and list of strings, push joined string."""
-        sep_val = self.stack.pop()
-        a = self.stack.pop()
-        list_val = self._ensure_list(a, 'string-join')
-        sep = self._ensure_string(sep_val, 'string-join')
-        parts = []
-        for item in list_val.elements:
-            if not isinstance(item, AIFPLString):
-                raise AIFPLEvalError(f"string-join requires list of strings, found {item.type_name()}")
-
-            parts.append(item.value)
-
-        self.stack.append(AIFPLString(sep.join(parts)))
-        return None
-
-    def _op_substring(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """SUBSTRING: Pop end, start, and string, push substring."""
-        end_val = self.stack.pop()
-        start_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'substring')
-        start = self._ensure_integer(start_val, 'substring')
-        end = self._ensure_integer(end_val, 'substring')
-        n = len(s)
-        if start < 0:
-            raise AIFPLEvalError(f"substring start index cannot be negative: {start}")
-
-        if end < 0:
-            raise AIFPLEvalError(f"substring end index cannot be negative: {end}")
-
-        if start > n:
-            raise AIFPLEvalError(f"substring start index out of range: {start} (string length: {n})")
-
-        if end > n:
-            raise AIFPLEvalError(f"substring end index out of range: {end} (string length: {n})")
-
-        if start > end:
-            raise AIFPLEvalError(f"substring start index ({start}) cannot be greater than end index ({end})")
-
-        self.stack.append(AIFPLString(s[start:end]))
-        return None
-
-    def _op_string_replace(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_REPLACE: Pop new, old, and string, push string with replacements."""
-        new_val = self.stack.pop()
-        old_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string-replace')
-        old = self._ensure_string(old_val, 'string-replace')
-        new = self._ensure_string(new_val, 'string-replace')
-        self.stack.append(AIFPLString(s.replace(old, new)))
-        return None
-
-    def _op_alist_keys(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """ALIST_KEYS: Pop an alist, push list of its keys."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLList(self._ensure_alist(a, 'alist-keys').keys()))
-        return None
-
-    def _op_alist_values(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """ALIST_VALUES: Pop an alist, push list of its values."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLList(self._ensure_alist(a, 'alist-values').values()))
-        return None
-
-    def _op_alist_length(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """ALIST_LENGTH: Pop an alist, push its length."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLInteger(self._ensure_alist(a, 'alist-length').length()))
-        return None
-
-    def _op_alist_has_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """ALIST_HAS_P: Pop a key and alist, push true if alist contains key."""
-        key = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(self._ensure_alist(a, 'alist-has?').has_key(key)))
-        return None
-
-    def _op_alist_remove(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """ALIST_REMOVE: Pop a key and alist, push new alist without that key."""
-        key = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(self._ensure_alist(a, 'alist-remove').remove(key))
-        return None
-
-    def _op_alist_merge(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """ALIST_MERGE: Pop two alists, push merged alist (second wins on conflicts)."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(self._ensure_alist(a, 'alist-merge').merge(self._ensure_alist(b, 'alist-merge')))
-        return None
-
-    def _op_alist_set(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """ALIST_SET: Pop value, key, and alist, push new alist with key set to value."""
-        value = self.stack.pop()
-        key = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(self._ensure_alist(a, 'alist-set').set(key, value))
-        return None
-
-    def _op_alist_get(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """ALIST_GET: Pop default, key, and alist, push value or default if not found."""
-        default = self.stack.pop()
-        key = self.stack.pop()
-        a = self.stack.pop()
-        result = self._ensure_alist(a, 'alist-get').get(key)
-        self.stack.append(result if result is not None else default)
         return None
 
     def _op_bit_or(  # pylint: disable=useless-return
@@ -1918,15 +2009,6 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(self._ensure_real_number(a, '>=') >= self._ensure_real_number(b, '>=')))
         return None
 
-    def _op_string_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_EQ_P: Pop two strings, push true if they are equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(self._ensure_string(a, 'string=?') == self._ensure_string(b, 'string=?')))
-        return None
-
     def _op_number_eq_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1936,21 +2018,6 @@ class AIFPLVM:
         self._ensure_number(a, 'number=?')
         self._ensure_number(b, 'number=?')
         self.stack.append(AIFPLBoolean(a == b))
-        return None
-
-    def _op_integer_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """INTEGER_EQ_P: Pop two values, push true if both are integers and equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        if not isinstance(a, AIFPLInteger):
-            raise AIFPLEvalError(f"Function 'integer=?' requires integer arguments, got {a.type_name()}")
-
-        if not isinstance(b, AIFPLInteger):
-            raise AIFPLEvalError(f"Function 'integer=?' requires integer arguments, got {b.type_name()}")
-
-        self.stack.append(AIFPLBoolean(a.value == b.value))
         return None
 
     def _op_float_eq_p(  # pylint: disable=useless-return
@@ -1968,32 +2035,6 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(a.value == b.value))
         return None
 
-    def _op_complex_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """COMPLEX_EQ_P: Pop two values, push true if both are complex and equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        if not isinstance(a, AIFPLComplex):
-            raise AIFPLEvalError(f"Function 'complex=?' requires complex arguments, got {a.type_name()}")
-
-        if not isinstance(b, AIFPLComplex):
-            raise AIFPLEvalError(f"Function 'complex=?' requires complex arguments, got {b.type_name()}")
-
-        self.stack.append(AIFPLBoolean(a.value == b.value))
-        return None
-
-    def _op_boolean_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """BOOLEAN_EQ_P: Pop two values, push true if both are booleans and equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        bool_a = self._ensure_boolean(a, 'boolean=?')
-        bool_b = self._ensure_boolean(b, 'boolean=?')
-        self.stack.append(AIFPLBoolean(bool_a == bool_b))
-        return None
-
     def _op_list_eq_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -2001,15 +2042,6 @@ class AIFPLVM:
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_list(a, 'list=?') == self._ensure_list(b, 'list=?')))
-        return None
-
-    def _op_alist_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """ALIST_EQ_P: Pop two values, push true if both are alists and equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(self._ensure_alist(a, 'alist=?') == self._ensure_alist(b, 'alist=?')))
         return None
 
     def _op_build_list(  # pylint: disable=useless-return
@@ -2023,37 +2055,6 @@ class AIFPLVM:
         elements = self.stack[-n:]
         del self.stack[-n:]
         self.stack.append(AIFPLList(tuple(elements)))
-        return None
-
-    def _op_build_alist(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, n: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """BUILD_ALIST n: Pop n 2-element AIFPLList pair objects, push AIFPLAList.
-
-        Each pair on the stack is a 2-element list (list key value), matching the
-        existing (alist (list k1 v1) (list k2 v2) ...) calling convention.
-        """
-        if n == 0:
-            self.stack.append(AIFPLAList(()))
-            return None
-
-        pair_lists = self.stack[-n:]
-        del self.stack[-n:]
-        pairs = []
-        for i, pair_list in enumerate(pair_lists):
-            if not isinstance(pair_list, AIFPLList):
-                raise AIFPLEvalError(
-                    f"AList pair {i + 1} must be a list"
-                )
-
-            if len(pair_list.elements) != 2:
-                raise AIFPLEvalError(
-                    f"AList pair {i + 1} must have exactly 2 elements"
-                )
-
-            pairs.append((pair_list.elements[0], pair_list.elements[1]))
-
-        self.stack.append(AIFPLAList(tuple(pairs)))
         return None
 
     def _op_range(  # pylint: disable=useless-return

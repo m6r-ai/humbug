@@ -119,13 +119,57 @@ class BytecodeValidator:
             # CALL_* effects depend on arity (handled specially)
             # RETURN pops 1 (handled specially as it exits)
             Opcode.MAKE_CLOSURE: (-1, 1),
-            Opcode.CALL_FUNCTION: (-1, 1),
-            Opcode.TAIL_CALL_FUNCTION: (-1, 0),
+            Opcode.CALL: (-1, 1),
+            Opcode.TAIL_CALL: (-1, 0),
             # ENTER effect is n-dependent; handled in _get_stack_effect
             Opcode.RETURN: (1, 0),
 
             # Trace debug
             Opcode.EMIT_TRACE: (1, 0),  # Pops 1 (message), pushes 0
+
+            # Boolean operations
+            Opcode.BOOLEAN_P: (1, 1),
+            Opcode.BOOLEAN_EQ_P: (2, 1),
+            Opcode.BOOLEAN_NOT: (1, 1),
+
+            # Integer operations
+            Opcode.INTEGER_P: (1, 1),
+            Opcode.INTEGER_EQ_P: (2, 1),
+
+            # Complex number operations
+            Opcode.COMPLEX: (2, 1),
+            Opcode.COMPLEX_P: (1, 1),
+            Opcode.COMPLEX_EQ_P: (2, 1),
+            Opcode.COMPLEX_REAL: (1, 1),
+            Opcode.COMPLEX_IMAG: (1, 1),
+
+            # String
+            Opcode.STRING_LENGTH: (1, 1),
+            Opcode.STRING_UPCASE: (1, 1),
+            Opcode.STRING_DOWNCASE: (1, 1),
+            Opcode.STRING_TRIM: (1, 1),
+            Opcode.STRING_TO_NUMBER: (1, 1),
+            Opcode.STRING_TO_LIST: (1, 1),
+            Opcode.STRING_REF: (2, 1),
+            Opcode.STRING_CONTAINS_P: (2, 1),
+            Opcode.STRING_PREFIX_P: (2, 1),
+            Opcode.STRING_SUFFIX_P: (2, 1),
+            Opcode.STRING_SPLIT: (2, 1),
+            Opcode.STRING_JOIN: (2, 1),
+            Opcode.STRING_SUBSTRING: (3, 1),
+            Opcode.STRING_REPLACE: (3, 1),
+
+            # Alist
+            Opcode.ALIST_P: (1, 1),
+            Opcode.ALIST_EQ_P: (2, 1),
+            Opcode.ALIST_KEYS: (1, 1),
+            Opcode.ALIST_VALUES: (1, 1),
+            Opcode.ALIST_LENGTH: (1, 1),
+            Opcode.ALIST_HAS_P: (2, 1),
+            Opcode.ALIST_REMOVE: (2, 1),
+            Opcode.ALIST_MERGE: (2, 1),
+            Opcode.ALIST_SET: (3, 1),
+            Opcode.ALIST_GET: (3, 1),
 
             # Primitive arithmetic operations (binary)
             Opcode.ADD: (2, 1),
@@ -135,17 +179,10 @@ class BytecodeValidator:
 
             # Type predicate operations (unary)
             Opcode.NUMBER_P: (1, 1),
-            Opcode.INTEGER_P: (1, 1),
             Opcode.FLOAT_P: (1, 1),
-            Opcode.COMPLEX_P: (1, 1),
             Opcode.STRING_P: (1, 1),
-            Opcode.BOOLEAN_P: (1, 1),
             Opcode.LIST_P: (1, 1),
-            Opcode.ALIST_P: (1, 1),
             Opcode.FUNCTION_P: (1, 1),
-
-            # Boolean operations
-            Opcode.NOT: (1, 1),
 
             # Floating point operations (unary or binary)
             Opcode.SIN: (1, 1),
@@ -187,12 +224,8 @@ class BytecodeValidator:
             Opcode.GTE: (2, 1),
             Opcode.STRING_EQ_P: (2, 1),
             Opcode.NUMBER_EQ_P: (2, 1),
-            Opcode.INTEGER_EQ_P: (2, 1),
             Opcode.FLOAT_EQ_P: (2, 1),
-            Opcode.COMPLEX_EQ_P: (2, 1),
-            Opcode.BOOLEAN_EQ_P: (2, 1),
             Opcode.LIST_EQ_P: (2, 1),
-            Opcode.ALIST_EQ_P: (2, 1),
 
             # Arithmetic
             Opcode.FLOOR_DIV: (2, 1),
@@ -208,12 +241,12 @@ class BytecodeValidator:
             Opcode.ROUND: (1, 1),
             Opcode.TO_INTEGER: (1, 1),
             Opcode.TO_FLOAT: (1, 1),
-            Opcode.REAL: (1, 1),
-            Opcode.IMAG: (1, 1),
-            Opcode.MAKE_COMPLEX: (2, 1),
             Opcode.BIN: (1, 1),
             Opcode.HEX: (1, 1),
             Opcode.OCT: (1, 1),
+
+            Opcode.NUMBER_TO_STRING: (1, 1),
+            Opcode.LIST_TO_STRING: (1, 1),
 
             # List
             Opcode.NULL_P: (1, 1),
@@ -222,34 +255,6 @@ class BytecodeValidator:
             Opcode.TAKE: (2, 1),
             Opcode.DROP: (2, 1),
             Opcode.REMOVE: (2, 1),
-
-            # String
-            Opcode.STRING_LENGTH: (1, 1),
-            Opcode.STRING_UPCASE: (1, 1),
-            Opcode.STRING_DOWNCASE: (1, 1),
-            Opcode.STRING_TRIM: (1, 1),
-            Opcode.STRING_TO_NUMBER: (1, 1),
-            Opcode.NUMBER_TO_STRING: (1, 1),
-            Opcode.STRING_TO_LIST: (1, 1),
-            Opcode.LIST_TO_STRING: (1, 1),
-            Opcode.STRING_REF: (2, 1),
-            Opcode.STRING_CONTAINS_P: (2, 1),
-            Opcode.STRING_PREFIX_P: (2, 1),
-            Opcode.STRING_SUFFIX_P: (2, 1),
-            Opcode.STRING_SPLIT: (2, 1),
-            Opcode.STRING_JOIN: (2, 1),
-            Opcode.SUBSTRING: (3, 1),
-            Opcode.STRING_REPLACE: (3, 1),
-
-            # Alist
-            Opcode.ALIST_KEYS: (1, 1),
-            Opcode.ALIST_VALUES: (1, 1),
-            Opcode.ALIST_LENGTH: (1, 1),
-            Opcode.ALIST_HAS_P: (2, 1),
-            Opcode.ALIST_REMOVE: (2, 1),
-            Opcode.ALIST_MERGE: (2, 1),
-            Opcode.ALIST_SET: (3, 1),
-            Opcode.ALIST_GET: (3, 1),
 
             # Collection construction
             Opcode.RANGE: (3, 1),
@@ -400,7 +405,7 @@ class BytecodeValidator:
 
         # Check that all reachable paths end with RETURN or TAIL_CALL
         # We do this by checking that every basic block either:
-        # 1. Ends with RETURN or TAIL_CALL_FUNCTION
+        # 1. Ends with RETURN or TAIL_CALL
         # 2. Has successors
         for block in cfg.values():
             if not block.visited:
@@ -410,7 +415,7 @@ class BytecodeValidator:
 
             # Check if block ends properly
             ends_properly = (
-                last_instr.opcode in (Opcode.RETURN, Opcode.TAIL_CALL_FUNCTION, Opcode.RAISE_ERROR) or
+                last_instr.opcode in (Opcode.RETURN, Opcode.TAIL_CALL, Opcode.RAISE_ERROR) or
                 len(block.successors) > 0
             )
 
@@ -577,11 +582,11 @@ class BytecodeValidator:
             capture_count = instr.arg2
             return (capture_count, 1)  # Pop captures, push closure
 
-        if opcode == Opcode.CALL_FUNCTION:
+        if opcode == Opcode.CALL:
             arity = instr.arg1
             return (arity + 1, 1)  # Pop function + args, push result
 
-        if opcode == Opcode.TAIL_CALL_FUNCTION:
+        if opcode == Opcode.TAIL_CALL:
             arity = instr.arg1
             return (arity + 1, 0)  # Pop function + args, tail position (no push)
 
@@ -593,7 +598,7 @@ class BytecodeValidator:
             n = instr.arg1
             return (n, 1)  # Pop n elements, push list
 
-        if opcode == Opcode.BUILD_ALIST:
+        if opcode == Opcode.ALIST:
             n = instr.arg1
             return (n, 1)  # Pop n pair-lists, push alist
 
@@ -609,7 +614,7 @@ class BytecodeValidator:
             return []
 
         # Tail calls are terminal (they replace the frame)
-        if opcode == Opcode.TAIL_CALL_FUNCTION:
+        if opcode == Opcode.TAIL_CALL:
             return []
 
         successors = []
@@ -651,7 +656,7 @@ class BytecodeValidator:
                         leaders.add(i + 1)
 
             # Instruction after RETURN/RAISE_ERROR is a leader (if exists)
-            if instr.opcode in (Opcode.RETURN, Opcode.RAISE_ERROR, Opcode.TAIL_CALL_FUNCTION):
+            if instr.opcode in (Opcode.RETURN, Opcode.RAISE_ERROR, Opcode.TAIL_CALL):
                 if i + 1 < len(code.instructions):
                     leaders.add(i + 1)
 

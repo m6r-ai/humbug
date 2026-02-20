@@ -26,7 +26,7 @@ TERNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if a
 # count of elements is encoded directly in the instruction argument.
 BUILD_OPS = {
     'list': Opcode.BUILD_LIST,
-    'alist': Opcode.BUILD_ALIST,
+    'alist': Opcode.ALIST,
 }
 
 
@@ -227,7 +227,7 @@ class AIFPLCodeGen:
         then_terminates = False
         if ctx.instructions:
             last_op = ctx.instructions[-1].opcode
-            if last_op in (Opcode.RETURN, Opcode.TAIL_CALL_FUNCTION, Opcode.JUMP, Opcode.RAISE_ERROR):
+            if last_op in (Opcode.RETURN, Opcode.TAIL_CALL, Opcode.JUMP, Opcode.RAISE_ERROR):
                 then_terminates = True
 
         # Only emit jump past else if then branch doesn't terminate
@@ -483,10 +483,10 @@ class AIFPLCodeGen:
 
         # Emit call
         if plan.is_tail_call:
-            ctx.emit(Opcode.TAIL_CALL_FUNCTION, len(plan.arg_plans))
+            ctx.emit(Opcode.TAIL_CALL, len(plan.arg_plans))
 
         else:
-            ctx.emit(Opcode.CALL_FUNCTION, len(plan.arg_plans))
+            ctx.emit(Opcode.CALL, len(plan.arg_plans))
 
     def _generate_empty_list(self, _plan: AIFPLIREmptyList, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for an empty list literal."""

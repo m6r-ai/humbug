@@ -146,7 +146,7 @@ class AIFPLBuiltinRegistry:
         AIFPLFunction objects with a bytecode stub — a minimal CodeObject whose body
         is the single opcode followed by RETURN.  The stub has no locals and no
         constants; it relies entirely on the arguments already being on the stack
-        when CALL_FUNCTION enters the frame.
+        when CALL enters the frame.
 
         Names provided by the AIFPL prelude are skipped entirely — the prelude's
         compiled lambda objects take effect in the global environment instead.

@@ -120,7 +120,7 @@ class BytecodeStats:
         load_opcodes = {'LOAD_CONST', 'LOAD_VAR', 'LOAD_NAME', 'LOAD_TRUE', 'LOAD_FALSE', 'LOAD_EMPTY_LIST'}
         store_opcodes = {'STORE_VAR'}
         control_opcodes = {'JUMP', 'JUMP_IF_FALSE', 'JUMP_IF_TRUE'}
-        function_opcodes = {'MAKE_CLOSURE', 'CALL_FUNCTION', 'CALL_BUILTIN', 'RETURN'}
+        function_opcodes = {'MAKE_CLOSURE', 'CALL', 'CALL_BUILTIN', 'RETURN'}
 
         self.arithmetic_ops = sum(count for op, count in self.instruction_counts.items() if op in arithmetic_opcodes)
         self.load_ops = sum(count for op, count in self.instruction_counts.items() if op in load_opcodes)

@@ -131,7 +131,7 @@ class TestBytecodeValidator:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_CONST, 0),  # Push 1 item
-                Instruction(Opcode.CALL_FUNCTION, 2),  # Try to call with arity 2 (needs 3 items: func + 2 args)
+                Instruction(Opcode.CALL, 2),  # Try to call with arity 2 (needs 3 items: func + 2 args)
                 Instruction(Opcode.RETURN),
             ],
             constants=[AIFPLInteger(42)],
@@ -304,13 +304,13 @@ class TestBytecodeValidator:
         assert exc_info.value.error_type == ValidationErrorType.MISSING_RETURN
 
     def test_tail_call_is_terminal(self):
-        """Test that TAIL_CALL_FUNCTION is treated as terminal (no successors)."""
-        # TAIL_CALL_FUNCTION should be terminal, code after it is unreachable but valid
+        """Test that TAIL_CALL is treated as terminal (no successors)."""
+        # TAIL_CALL should be terminal, code after it is unreachable but valid
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_NAME, 0),        # Load function
                 Instruction(Opcode.LOAD_CONST, 0),       # Load arg
-                Instruction(Opcode.TAIL_CALL_FUNCTION, 1),  # Tail call
+                Instruction(Opcode.TAIL_CALL, 1),        # Tail call
                 Instruction(Opcode.LOAD_CONST, 0),       # Unreachable (but valid)
                 Instruction(Opcode.RETURN),              # Unreachable (but valid)
             ],

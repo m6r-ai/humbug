@@ -3,14 +3,6 @@ Tests for Tail Call Optimization (TCO) with Mutual Recursion.
 
 These tests verify that AIFPL's tail call optimization works correctly
 for mutually recursive functions (functions that call each other).
-
-IMPLEMENTATION STATUS: ✅ IMPLEMENTED
-
-The mutual recursion TCO has been successfully implemented using:
-1. TAIL_CALL_FUNCTION opcode (separate from CALL_FUNCTION)
-2. binding_group_id field to track functions from the same letrec binding
-3. VM checks binding_group_id to recognize mutual recursion
-4. VM reuses frame for mutually recursive tail calls
 """
 
 import pytest
