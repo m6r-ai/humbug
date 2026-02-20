@@ -476,11 +476,11 @@ class AIFPLCodeGen:
             return
 
         # Regular function call
-        self._generate_expr(plan.func_plan, ctx)
-
-        # Generate arguments
+        # Convention: args are pushed first (bottom of frame), function on top.
         for arg_plan in plan.arg_plans:
             self._generate_expr(arg_plan, ctx)
+
+        self._generate_expr(plan.func_plan, ctx)
 
         # Emit call
         if plan.is_tail_call:

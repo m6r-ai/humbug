@@ -326,7 +326,6 @@ class AIFPLVM:
         Creates a new frame, initializes it with the function's closure environment
         and captured values, and pushes it onto the frame stack.
 
-        Arguments are assumed to be already on the stack in correct order.
         The function prologue (STORE_VAR instructions at start of bytecode)
         will pop these arguments into locals.
 
@@ -617,9 +616,8 @@ class AIFPLVM:
         """CALL_FUNCTION: Call function with arguments from stack."""
         # Validator guarantees stack has enough values (arity + 1)
 
-        # Get function from under the arguments
-        # Must keep type check (runtime-dependent - could be any value)
-        func = self.stack[-(arity + 1)]
+        # Function is on top of the stack
+        func = self.stack.pop()
         if not isinstance(func, AIFPLFunction):
             raise AIFPLEvalError(
                 message="Cannot call non-function value",
@@ -660,12 +658,6 @@ class AIFPLVM:
                 suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
             )
 
-        # Remove function from stack
-        # After variadic packing the stack has param_count args; for fixed-arity
-        # it still has arity (== param_count) args.  Either way the function sits
-        # immediately below param_count values.
-        del self.stack[-(expected_arity + 1)]
-
         self._setup_call_frame(func)
 
         result = self._execute_frame()
@@ -684,9 +676,10 @@ class AIFPLVM:
         """
         # Validator guarantees stack has enough values (arity + 1)
 
-        # Get function from stack (below arguments)
+        # Function is on top of the stack (pushed after arguments).
+        # Pop it first, then args sit naturally at the top.
         # Must keep type check (runtime-dependent)
-        func = self.stack[-(arity + 1)]
+        func = self.stack.pop()
 
         if not isinstance(func, AIFPLFunction):
             raise AIFPLEvalError(
@@ -709,14 +702,17 @@ class AIFPLVM:
                     message=f"Function '{func_name}' expects at least {min_arity} arguments, got {arity}",
                     suggestion=f"Provide at least {min_arity} argument{'s' if min_arity != 1 else ''}"
                 )
+
             # Pack excess args into a list and replace them on the stack with the list.
             rest_count = arity - min_arity
             if rest_count == 0:
                 self.stack.append(AIFPLList(()))
+
             else:
                 rest_elements = tuple(self.stack[-rest_count:])
                 del self.stack[-rest_count:]
                 self.stack.append(AIFPLList(rest_elements))
+
         elif arity != expected_arity:
             func_name = func.name or "<lambda>"
             raise AIFPLEvalError(
@@ -724,9 +720,7 @@ class AIFPLVM:
                 suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
             )
 
-        # Remove function from stack (leave param_count args for new frame)
-        del self.stack[-(expected_arity + 1)]
-
+        # Function was already popped above; stack now has exactly param_count args on top.
         # Return TailCall marker - execution loop will handle frame replacement
         return TailCall(func)
 
