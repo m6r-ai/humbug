@@ -373,8 +373,6 @@ class AIFPLCodeGen:
         # Generate body
         self._generate_expr(plan.body_plan, lambda_ctx)
 
-        # No automatic RETURN - the body_plan must explicitly include AIFPLIRReturn
-
         # Generate a descriptive name for the lambda
         if plan.binding_name:
             # Use the binding name if available (from let/letrec)
@@ -396,6 +394,7 @@ class AIFPLCodeGen:
             names=lambda_ctx.names,
             code_objects=lambda_ctx.code_objects,
             free_vars=plan.free_vars,
+            param_names=plan.params,
             param_count=plan.param_count,
             local_count=lambda_ctx.max_locals,
             is_variadic=plan.is_variadic,

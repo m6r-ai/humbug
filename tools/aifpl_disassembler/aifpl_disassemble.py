@@ -49,6 +49,35 @@ def format_constant(const: object) -> str:
     return str(const)
 
 
+def describe_local(index: int, code: CodeObject) -> str:
+    """
+    Return a human-readable description of a local variable slot.
+
+    The frame layout is:
+      [0 .. param_count-1]                      parameters
+      [param_count .. param_count+len(free_vars)-1]  captured variables
+      [param_count+len(free_vars) .. local_count-1]  let/letrec locals
+
+    Parameter names come from code.param_names (populated by the codegen).
+    Captured variable names come from code.free_vars.
+    Body locals have no stored name so are shown as local[N].
+    """
+    param_count = code.param_count
+    capture_count = len(code.free_vars)
+
+    if index < param_count:
+        # Parameter slot — use stored name if available
+        if index < len(code.param_names):
+            return f"param '{code.param_names[index]}'"
+        return f"param[{index}]"
+    captured_index = index - param_count
+    if captured_index < capture_count:
+        return f"captured '{code.free_vars[captured_index]}'"
+
+    local_index = index - param_count - capture_count
+    return f"local[{local_index}]"
+
+
 def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
     """Add annotation to instruction showing what it does."""
     opcode = instr.opcode
@@ -66,10 +95,10 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
             annotation = f"  ; Load constant: {const_str}"
 
     elif opcode == Opcode.LOAD_VAR:
-        annotation = f"  ; Load var[{arg1}]"
+        annotation = f"  ; Load {describe_local(arg1, code)}"
 
     elif opcode == Opcode.STORE_VAR:
-        annotation = f"  ; Store to var[{arg1}]"
+        annotation = f"  ; Store to {describe_local(arg1, code)}"
 
     elif opcode == Opcode.MAKE_CLOSURE:
         if arg1 < len(code.code_objects):
@@ -121,7 +150,7 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
             annotation = f"  ; Load name: {name}"
 
     elif opcode == Opcode.LOAD_PARENT_VAR:
-        annotation = f"  ; Load parent var[{arg1}] from frame {arg2} levels up"
+        annotation = f"  ; Load parent var[{arg1}] ({arg2} frame{'s' if arg2 != 1 else ''} up)"
 
     elif opcode == Opcode.RAISE_ERROR:
         if arg1 < len(code.constants):

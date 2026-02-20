@@ -374,6 +374,7 @@ class CodeObject:
 
     # Function metadata
     free_vars: List[str] = field(default_factory=list)  # Free variables to capture
+    param_names: List[str] = field(default_factory=list)  # Parameter names (in order, parallel to param_count)
     param_count: int = 0  # Number of parameters (for functions)
     local_count: int = 0  # Number of local variables
     is_variadic: bool = False  # True if last param is a rest parameter (packs excess args into a list)
