@@ -28,18 +28,6 @@ class AIFPLTraceWatcher(Protocol):
 
 
 @dataclass
-class TailCall:
-    """
-    Marker for tail call optimization.
-
-    When a handler returns this, the execution loop will replace the current
-    frame with a new frame for the target function, achieving true tail call
-    optimization with constant stack space.
-    """
-    func: AIFPLFunction
-
-
-@dataclass
 class Frame:
     """
     Execution frame for function calls.
@@ -351,11 +339,6 @@ class AIFPLVM:
         """
         Execute frames using jump table dispatch with tail call optimization.
 
-        This method implements a trampoline pattern: when a handler returns a
-        TailCall marker, we replace the current frame with the target frame
-        and continue execution, achieving true tail call optimization with
-        constant stack space.
-
         Returns:
             Result value when frame returns
         """
@@ -373,6 +356,7 @@ class AIFPLVM:
 
         while True:
             # Re-fetch code and instructions each iteration in case frame.code changes (mutual recursion TCO)
+            frame = self.frames[-1]
             code = frame.code
             instructions = code.instructions
             if frame.ip >= len(instructions):
@@ -401,19 +385,6 @@ class AIFPLVM:
             result = handler(frame, code, instr.arg1, instr.arg2)
             if result is None:
                 # Fast path: continue execution
-                continue
-
-            # Check if it's a tail call
-            if isinstance(result, TailCall):
-                # Optimization: reuse frame for self-recursion
-                if result.func.bytecode == frame.code:
-                    frame.ip = 0
-                    continue
-
-                # Replace frame for general tail call
-                self.frames.pop()
-                self._setup_call_frame(result.func)
-                frame = self.frames[-1]  # Update frame reference
                 continue
 
             # Otherwise it's a return value (from RETURN opcode)
@@ -665,14 +636,13 @@ class AIFPLVM:
         return None
 
     def _op_tail_call_function(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, arity: int, _arg2: int
-    ) -> TailCall | None:
+        self, frame: Frame, _code: CodeObject, arity: int, _arg2: int
+    ) -> None:
         """
         TAIL_CALL_FUNCTION: Perform tail call with optimization.
 
-        Returns a TailCall marker that the execution loop will handle by
-        replacing the current frame with the target frame, achieving true
-        tail call optimization with constant stack space for all tail calls.
+        This method implements a trampoline pattern: we replace the current frame with the target frame
+        and continue execution, achieving true tail call optimization with constant stack space.
         """
         # Validator guarantees stack has enough values (arity + 1)
 
@@ -720,9 +690,17 @@ class AIFPLVM:
                 suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
             )
 
-        # Function was already popped above; stack now has exactly param_count args on top.
-        # Return TailCall marker - execution loop will handle frame replacement
-        return TailCall(func)
+        # If this is a recursive call to the same function, we can optimize by just resetting the instruction pointer
+        # and reusing the current frame.
+        if func.bytecode == frame.code:
+            frame.ip = 0
+            return None
+
+        # Replace frame for general tail call
+        self.frames.pop()
+        self._setup_call_frame(func)
+        frame = self.frames[-1]  # Update frame reference
+        return None
 
     def _op_return(
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
