@@ -268,43 +268,6 @@ class TestBytecodeValidator:
         # Should not raise
         validate_bytecode(code)
 
-    def test_invalid_builtin_index(self):
-        """Test that invalid builtin index is caught."""
-        code = CodeObject(
-            instructions=[
-                Instruction(Opcode.CALL_BUILTIN, 999, 0),  # Invalid builtin index
-                Instruction(Opcode.RETURN),
-            ],
-            constants=[],
-            names=[],
-            code_objects=[],
-            local_count=0
-        )
-
-        with pytest.raises(ValidationError) as exc_info:
-            validate_bytecode(code)
-
-        assert exc_info.value.error_type == ValidationErrorType.INDEX_OUT_OF_BOUNDS
-        assert "Builtin index" in exc_info.value.message
-
-    def test_valid_builtin_call(self):
-        """Test that valid builtin call passes validation."""
-        code = CodeObject(
-            instructions=[
-                Instruction(Opcode.LOAD_CONST, 0),       # Push arg
-                Instruction(Opcode.LOAD_CONST, 1),       # Push arg
-                Instruction(Opcode.CALL_BUILTIN, 0, 2),  # Call builtin with 2 args
-                Instruction(Opcode.RETURN),
-            ],
-            constants=[AIFPLInteger(1), AIFPLInteger(2)],
-            names=[],
-            code_objects=[],
-            local_count=0
-        )
-
-        # Should not raise
-        validate_bytecode(code)
-
     def test_empty_code_object(self):
         """Test that empty code object is caught."""
         code = CodeObject(

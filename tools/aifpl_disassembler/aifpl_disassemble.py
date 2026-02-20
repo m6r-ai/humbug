@@ -29,7 +29,6 @@ from aifpl import AIFPL
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_value import AIFPLValue
 from aifpl.aifpl_bytecode import Opcode, CodeObject, Instruction
-from aifpl.aifpl_builtin_registry import AIFPLBuiltinRegistry
 
 
 def format_constant(const: object) -> str:
@@ -50,7 +49,7 @@ def format_constant(const: object) -> str:
     return str(const)
 
 
-def annotate_instruction(instr: Instruction, code: CodeObject, builtin_names: List[str]) -> str:
+def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
     """Add annotation to instruction showing what it does."""
     opcode = instr.opcode
     arg1 = instr.arg1
@@ -94,12 +93,6 @@ def annotate_instruction(instr: Instruction, code: CodeObject, builtin_names: Li
     elif opcode == Opcode.TAIL_CALL_FUNCTION:
         arg_word = "arg" if arg1 == 1 else "args"
         annotation = f"  ; Tail call function with {arg1} {arg_word}"
-
-    elif opcode == Opcode.CALL_BUILTIN:
-        arg_word = "arg" if arg2 == 1 else "args"
-        builtin_name = builtin_names[arg1] if arg1 < len(builtin_names) else f"<unknown-{arg1}>"
-        # Show both name and index for clarity
-        annotation = f"  ; Call builtin '{builtin_name}' (#{arg1}) with {arg2} {arg_word}"
 
     elif opcode == Opcode.JUMP:
         annotation = f"  ; Jump to instruction {arg1}"
@@ -154,7 +147,7 @@ def format_instruction(instr: Instruction, index: int) -> str:
     return instr_str.ljust(40)
 
 
-def disassemble_with_nested(code: CodeObject, builtin_names: List[str], depth: int = 0, name: str | None = None) -> List[str]:
+def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None = None) -> List[str]:
     """Recursively disassemble code object and all nested code objects."""
     indent = "  " * depth
     display_name = name or code.name or "<top-level>"
@@ -194,10 +187,11 @@ def disassemble_with_nested(code: CodeObject, builtin_names: List[str], depth: i
     output.append(f"{indent}Instructions:")
     output.append(f"{indent}{'-'*70}")
     for i, instr in enumerate(code.instructions):
-        annotation = annotate_instruction(instr, code, builtin_names)
+        annotation = annotate_instruction(instr, code)
         instr_str = format_instruction(instr, i)
         if annotation:
             output.append(f"{indent}{instr_str}{annotation}")
+
         else:
             output.append(f"{indent}{instr_str}")
 
@@ -207,7 +201,7 @@ def disassemble_with_nested(code: CodeObject, builtin_names: List[str], depth: i
     # Recursively disassemble nested code objects
     for i, nested_code in enumerate(code.code_objects):
         nested_name = nested_code.name or f"<nested-{i}>"
-        nested_output = disassemble_with_nested(nested_code, builtin_names, depth + 1, nested_name)
+        nested_output = disassemble_with_nested(nested_code, depth + 1, nested_name)
         output.extend(nested_output)
 
     return output
@@ -235,21 +229,6 @@ def analyze_function_flow(code: CodeObject) -> Dict[int, str]:
 
                     line_info = f" [{':'.join(loc_parts)}]" if loc_parts else ""
                     var_map[var_idx] = f"{func_name}{line_info}"
-
-        if (instr.opcode == Opcode.STORE_VAR and i >= 3):
-            if (code.instructions[i-1].opcode == Opcode.CALL_BUILTIN and
-                code.instructions[i-2].opcode == Opcode.LOAD_CONST):
-                const_idx = code.instructions[i-2].arg1
-                var_idx = instr.arg2
-                if const_idx < len(code.constants):
-                    key = code.constants[const_idx]
-                    if hasattr(key, 'value'):
-                        key_str = key.value
-
-                    else:
-                        key_str = str(key)
-
-                    var_map[var_idx] = f"<from-alist: {key_str}>"
 
     return var_map
 
@@ -296,7 +275,7 @@ def trace_calls(code: CodeObject, var_map: Dict[int, str]) -> List[str]:
     return traces
 
 
-def generate_trace(code: CodeObject, builtin_names: List[str], depth: int = 0, name: str | None =None) -> List[str]:
+def generate_trace(code: CodeObject, depth: int = 0, name: str | None = None) -> List[str]:
     """Generate function call trace."""
     indent = "  " * depth
     display_name = name or code.name or "<top-level>"
@@ -341,7 +320,7 @@ def generate_trace(code: CodeObject, builtin_names: List[str], depth: int = 0, n
 
     for i, nested_code in enumerate(code.code_objects):
         nested_name = nested_code.name or f"<closure-{i}>"
-        nested_output = generate_trace(nested_code, builtin_names, depth + 1, nested_name)
+        nested_output = generate_trace(nested_code, depth + 1, nested_name)
         output.extend(nested_output)
 
     return output
@@ -388,11 +367,8 @@ def main() -> int:
         traceback.print_exc()
         return 1
 
-    # Get builtin names for annotation
-    builtin_names = AIFPLBuiltinRegistry.BUILTIN_TABLE
-
     # Generate disassembly
-    output_lines = disassemble_with_nested(code, builtin_names, name=args.file)
+    output_lines = disassemble_with_nested(code, name=args.file)
 
     # Add trace if requested
     if args.trace:
@@ -400,7 +376,7 @@ def main() -> int:
         output_lines.append("="*80)
         output_lines.append("FUNCTION CALL TRACE")
         output_lines.append("="*80)
-        trace_lines = generate_trace(code, builtin_names, name=args.file)
+        trace_lines = generate_trace(code, name=args.file)
         output_lines.extend(trace_lines)
 
     # Output

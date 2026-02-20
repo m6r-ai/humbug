@@ -18,7 +18,6 @@ from typing import List, Dict, Optional, Tuple, Set
 from enum import Enum
 
 from aifpl.aifpl_bytecode import CodeObject, Instruction, Opcode
-from aifpl.aifpl_builtin_registry import AIFPLBuiltinRegistry
 
 
 class ValidationErrorType(Enum):
@@ -90,9 +89,6 @@ class BytecodeValidator:
 
     def __init__(self) -> None:
         """Initialize validator."""
-        # Get builtin count for validation
-        self.builtin_count = len(AIFPLBuiltinRegistry.BUILTIN_TABLE)
-
         # Track which opcodes affect stack depth and how
         self._init_opcode_metadata()
 
@@ -125,7 +121,6 @@ class BytecodeValidator:
             Opcode.MAKE_CLOSURE: (-1, 1),
             Opcode.CALL_FUNCTION: (-1, 1),
             Opcode.TAIL_CALL_FUNCTION: (-1, 0),
-            Opcode.CALL_BUILTIN: (-1, 1),
             Opcode.RETURN: (1, 0),
 
             # Trace debug
@@ -368,17 +363,6 @@ class BytecodeValidator:
                         opcode=opcode
                     )
 
-            # Validate builtin indices
-            if opcode == Opcode.CALL_BUILTIN:
-                builtin_index = instr.arg1
-                if builtin_index < 0 or builtin_index >= self.builtin_count:
-                    raise ValidationError(
-                        ValidationErrorType.INDEX_OUT_OF_BOUNDS,
-                        f"Builtin index {builtin_index} out of bounds (builtin count: {self.builtin_count})",
-                        instruction_index=i,
-                        opcode=opcode
-                    )
-
             # Validate jump targets
             if opcode in (Opcode.JUMP, Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE):
                 target = instr.arg1
@@ -577,10 +561,6 @@ class BytecodeValidator:
         if opcode == Opcode.TAIL_CALL_FUNCTION:
             arity = instr.arg1
             return (arity + 1, 0)  # Pop function + args, tail position (no push)
-
-        if opcode == Opcode.CALL_BUILTIN:
-            arity = instr.arg2
-            return (arity, 1)  # Pop args, push result
 
         if opcode == Opcode.BUILD_LIST:
             n = instr.arg1

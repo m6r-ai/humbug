@@ -1,13 +1,12 @@
 """
 Unified builtin function registry for AIFPL.
 
-This module provides a single source of truth for all builtin function implementations,
-used by the bytecode VM.
+This module provides builtin function metadata and first-class function objects
+for all builtins, used by the VM to populate the global environment.
 """
 
-from typing import Dict, List, Callable, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
-from aifpl.aifpl_builtin_functions import AIFPLBuiltinFunctions
 from aifpl.aifpl_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Instruction, Opcode
 from aifpl.aifpl_value import AIFPLFunction
 
@@ -16,40 +15,12 @@ class AIFPLBuiltinRegistry:
     """
     Central registry for all builtin functions.
 
-    This class aggregates builtin implementations from various modules and provides
-    a unified array-based interface for fast VM access.
+    Provides arity metadata (consumed by the semantic analyser) and
+    AIFPLFunction objects (consumed by the VM to populate globals).
+    Fixed-arity builtins are represented as bytecode stubs; variadic
+    builtins whose function objects are supplied by the AIFPL prelude
+    are skipped here so the prelude lambdas take effect instead.
     """
-
-    # Authoritative list of builtin names mapped to indices (for CALL_BUILTIN)
-    # This defines the canonical ordering - all other structures follow this order
-    #
-    # Names that have been migrated to _PRELUDE_SOURCE in aifpl.py are still kept
-    # here so that 2-arg calls inside their own prelude stub bodies are recognised
-    # by the IR builder and compiled to opcodes rather than recursive calls.
-    # create_builtin_function_objects() skips them via prelude_names so the prelude
-    # compiled lambdas take effect in the global environment instead.
-    BUILTIN_TABLE = [
-        '+', '-', '*', '/', '//', '%', '**',
-        '=', '!=', '<', '>', '<=', '>=',
-        'not',
-        'bit-or', 'bit-and', 'bit-xor', 'bit-not', 'bit-shift-left', 'bit-shift-right',
-        'list', 'cons', 'append', 'reverse', 'first', 'rest', 'length', 'last',
-        'member?', 'null?', 'position', 'take', 'drop', 'remove', 'list-ref',
-        'number?', 'integer?', 'float?', 'complex?', 'string?', 'boolean?', 'list?', 'alist?', 'function?',
-        'integer', 'float',
-        'range',
-        'string-append', 'string-length', 'string-upcase', 'string-downcase',
-        'string-trim', 'string-replace', 'string-split', 'string-join',
-        'string-contains?', 'string-prefix?', 'string-suffix?', 'string-ref',
-        'substring', 'string->number', 'number->string', 'string=?', 'string->list', 'list->string',
-        'number=?', 'integer=?', 'float=?', 'complex=?', 'boolean=?', 'list=?', 'alist=?',
-        'alist', 'alist-get', 'alist-set', 'alist-remove', 'alist-has?',
-        'alist-keys', 'alist-values', 'alist-merge', 'alist-length',
-        'sqrt', 'abs', 'min', 'max', 'pow',
-        'sin', 'cos', 'tan', 'log', 'log10', 'exp',
-        'round', 'floor', 'ceil',
-        'bin', 'hex', 'oct', 'real', 'imag', 'complex',
-    ]
 
     # Authoritative arity table for all builtins.
     #
@@ -165,54 +136,6 @@ class AIFPLBuiltinRegistry:
         'complex': (2, 2),
     }
 
-    def __init__(self) -> None:
-        """
-        Initialize the builtin registry.
-        """
-
-        # Create function modules
-        self.builtin_functions = AIFPLBuiltinFunctions()
-
-        # Sanity check: every builtin must have an arity entry
-        missing = [name for name in self.BUILTIN_TABLE if name not in self.ARITY_TABLE]
-        if missing:
-            raise RuntimeError(
-                f"Builtins in BUILTIN_TABLE missing from ARITY_TABLE: {missing}"
-            )
-
-        # Build function array in BUILTIN_TABLE order for fast VM access
-        self._function_array: List[Callable] = self._build_function_array()
-
-    def _build_function_array(self) -> List[Callable]:
-        """
-        Build array of builtin functions in BUILTIN_TABLE order.
-
-        Returns:
-            List of function implementations indexed by BUILTIN_TABLE position
-        """
-        # First build a temporary dict from all function modules
-        functions_dict: Dict[str, Callable] = {}
-        functions_dict.update(self.builtin_functions.get_functions())
-
-        # Now build array in BUILTIN_TABLE order
-        function_array = []
-        for name in self.BUILTIN_TABLE:
-            if name not in functions_dict:
-                raise RuntimeError(f"Builtin function '{name}' in BUILTIN_TABLE but not implemented")
-
-            function_array.append(functions_dict[name])
-
-        return function_array
-
-    def get_function_array(self) -> List[Callable]:
-        """
-        Get the builtin function array for VM use.
-
-        Returns:
-            List of function implementations indexed by BUILTIN_TABLE position
-        """
-        return self._function_array
-
     def create_builtin_function_objects(self) -> Dict[str, AIFPLFunction]:
         """
         Create AIFPLFunction objects for all builtins.
@@ -225,18 +148,17 @@ class AIFPLBuiltinRegistry:
         constants; it relies entirely on the arguments already being on the stack
         when CALL_FUNCTION enters the frame.
 
-        Only truly fixed-arity builtins (min_args == max_args in ARITY_TABLE) get
-        stubs.  Variadic builtins (max_args is None, or min_args != max_args) keep
-        their native_impl for now — unless they appear in prelude_names, in which
-        case the prelude supplies the function object and the registry skips them.
+        Names provided by the AIFPL prelude are skipped entirely — the prelude's
+        compiled lambda objects take effect in the global environment instead.
 
         Returns:
             Dictionary mapping function names to AIFPLFunction objects
         """
         # Names provided by the AIFPL prelude — the registry skips these so the
         # prelude's compiled function objects take effect in the global environment.
-        # These names are still kept in BUILTIN_TABLE/ARITY_TABLE so that 2-arg
-        # calls inside their own prelude stub bodies resolve to opcodes correctly.
+        # These names are still kept in ARITY_TABLE so that 2-arg calls inside
+        # their own prelude stub bodies resolve to opcodes correctly via
+        # BUILTIN_OPCODE_MAP in the codegen.
         prelude_names = {
             '+', '-', '*', '/',
             '=', '!=', '<', '>', '<=', '>=',
@@ -248,20 +170,29 @@ class AIFPLBuiltinRegistry:
         }
 
         builtins = {}
-        for i, name in enumerate(self.BUILTIN_TABLE):
-            impl = self._function_array[i]
-
+        for name, (min_args, max_args) in self.ARITY_TABLE.items():
             if name in prelude_names:
                 # Prelude supplies the function object for this name
                 continue
 
-            min_args, max_args = self.ARITY_TABLE[name]
             is_fixed_arity = (max_args is not None and min_args == max_args)
 
             if name in BUILTIN_OPCODE_MAP and is_fixed_arity:
                 # Truly fixed-arity builtin: generate a bytecode stub
                 opcode, arity = BUILTIN_OPCODE_MAP[name]
-                stub = self._build_stub_code_object(name, opcode, arity)
+                instructions = [
+                    Instruction(opcode),
+                    Instruction(Opcode.RETURN),
+                ]
+                stub = CodeObject(
+                    instructions=instructions,
+                    constants=[],
+                    names=[],
+                    code_objects=[],
+                    param_count=arity,
+                    local_count=arity,
+                    name=f'<builtin:{name}>',
+                )
                 parameters = tuple(f'arg{i}' for i in range(arity))
                 builtins[name] = AIFPLFunction(
                     parameters=parameters,
@@ -270,60 +201,4 @@ class AIFPLBuiltinRegistry:
                     is_variadic=False
                 )
 
-            else:
-                # Variadic builtin: keep native implementation for now
-                parameters = self._get_builtin_parameters(name, True)
-                builtins[name] = AIFPLFunction(
-                    parameters=parameters,
-                    native_impl=impl,
-                    name=name,
-                    is_variadic=True
-                )
-
         return builtins
-
-    def _build_stub_code_object(self, name: str, opcode: Opcode, arity: int) -> CodeObject:
-        """
-        Build a minimal CodeObject that executes a single opcode and returns.
-
-        The stub relies on arguments already being on the stack in the correct
-        order when CALL_FUNCTION enters the frame — no STORE_VAR/LOAD_VAR
-        prologue is needed.  The body is simply:
-
-            <opcode>
-            RETURN
-
-        Args:
-            name:   Builtin name (for the code object's debug name)
-            opcode: The opcode to emit
-            arity:  Number of parameters (used only for metadata)
-
-        Returns:
-            A CodeObject suitable for use as AIFPLFunction.bytecode
-        """
-        instructions = [
-            Instruction(opcode),
-            Instruction(Opcode.RETURN),
-        ]
-        return CodeObject(
-            instructions=instructions,
-            constants=[],
-            names=[],
-            code_objects=[],
-            param_count=arity,
-            local_count=arity,
-            name=f'<builtin:{name}>',
-        )
-
-    def _get_builtin_parameters(self, name: str, is_variadic: bool) -> tuple:
-        """
-        Get parameter tuple for a builtin function.
-
-        For variadic functions, returns ('args',) to indicate rest parameter.
-        For fixed-arity functions, returns appropriate parameter names.
-        """
-        if is_variadic:
-            return ('args',)
-
-        min_args, _ = self.ARITY_TABLE[name]
-        return tuple(f'arg{i}' for i in range(min_args))

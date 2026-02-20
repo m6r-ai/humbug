@@ -79,11 +79,8 @@ class AIFPLVM:
         # Check cancellation every N instructions (balance between responsiveness and performance)
         self._cancellation_check_interval: int = 1000
 
-        # Create builtin registry and get function array for fast lookup
+        # Create builtin registry to build first-class function objects
         builtin_registry = AIFPLBuiltinRegistry()
-
-        # Get builtin function array for O(1) direct indexing in CALL_BUILTIN
-        self._builtin_function_array = builtin_registry.get_function_array()
 
         # Create builtin function objects for first-class function support (e.g., passed to map)
         self._builtin_functions = builtin_registry.create_builtin_function_objects()
@@ -174,7 +171,6 @@ class AIFPLVM:
         table[Opcode.RAISE_ERROR] = self._op_raise_error
         table[Opcode.MAKE_CLOSURE] = self._op_make_closure
         table[Opcode.CALL_FUNCTION] = self._op_call_function
-        table[Opcode.CALL_BUILTIN] = self._op_call_builtin
         table[Opcode.TAIL_CALL_FUNCTION] = self._op_tail_call_function
         table[Opcode.RETURN] = self._op_return
         table[Opcode.EMIT_TRACE] = self._op_emit_trace
@@ -760,27 +756,6 @@ class AIFPLVM:
         # Return TailCall marker - execution loop will handle frame replacement
         return TailCall(func)
 
-    def _op_call_builtin(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, builtin_index: int, arity: int
-    ) -> AIFPLValue | None:
-        """CALL_BUILTIN: Call builtin function by index."""
-        # Validator guarantees builtin_index is valid and stack has enough values
-        # Direct array access without bounds checking
-        # Get arguments from stack
-        if arity == 0:
-            args = []
-
-        else:
-            # Slice gets args in correct order, then delete them from stack
-            args = self.stack[-arity:]
-            del self.stack[-arity:]
-
-        # Direct array indexing - O(1) lookup, no bounds check needed
-        func = self._builtin_function_array[builtin_index]
-        result = func(args)
-        self.stack.append(result)
-        return None
-
     def _op_return(
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -807,9 +782,6 @@ class AIFPLVM:
         """
         Ensure value is a boolean, raise user-friendly error if not.
 
-        This provides consistent error messages between primitive opcodes
-        and CALL_BUILTIN paths.
-
         Args:
             value: Value to check
             operation_name: Name of operation for error message (e.g., 'not', 'if')
@@ -831,9 +803,6 @@ class AIFPLVM:
         """
         Ensure value is a number, raise user-friendly error if not.
 
-        This provides consistent error messages between primitive opcodes
-        and CALL_BUILTIN paths.
-
         Args:
             value: Value to check
             operation_name: Name of operation for error message (e.g., '+', '-')
@@ -854,9 +823,6 @@ class AIFPLVM:
     def _ensure_real_number(self, value: AIFPLValue, operation_name: str) -> int | float:
         """
         Ensure value is a real number, raise user-friendly error if not.
-
-        This provides consistent error messages between primitive opcodes
-        and CALL_BUILTIN paths.
 
         Args:
             value: Value to check

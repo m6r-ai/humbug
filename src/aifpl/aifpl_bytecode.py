@@ -35,7 +35,6 @@ class Opcode(IntEnum):
     MAKE_CLOSURE = auto()    # Create closure: MAKE_CLOSURE code_index capture_count
     CALL_FUNCTION = auto()   # Call function: CALL_FUNCTION arity
     TAIL_CALL_FUNCTION = auto()  # Tail call function: TAIL_CALL_FUNCTION arity
-    CALL_BUILTIN = auto()    # Call builtin: CALL_BUILTIN builtin_index arity
     RETURN = auto()          # Return from function
 
     # Debugging
@@ -334,7 +333,7 @@ class Instruction:
         # Opcodes with two instruction-stream arguments
         two_arg_opcodes = {
             Opcode.MAKE_CLOSURE,
-            Opcode.CALL_BUILTIN, Opcode.LOAD_PARENT_VAR,
+            Opcode.LOAD_PARENT_VAR,
         }
         if self.opcode in two_arg_opcodes:
             return 2

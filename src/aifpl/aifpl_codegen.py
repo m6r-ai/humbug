@@ -5,7 +5,6 @@ AIFPL code generator - generates bytecode from IR.
 from dataclasses import dataclass, field
 from typing import List, Dict, Any
 
-from aifpl.aifpl_builtin_registry import AIFPLBuiltinRegistry
 from aifpl.aifpl_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Instruction, Opcode
 from aifpl.aifpl_ir import (
     AIFPLIRExpr, AIFPLIRConstant, AIFPLIRVariable, AIFPLIRIf, AIFPLIRAnd, AIFPLIROr,
@@ -17,7 +16,7 @@ from aifpl.aifpl_value import AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex
 
 # Derived opcode maps for the codegen — built from the single source of truth
 # in BUILTIN_OPCODE_MAP. The codegen uses these to emit direct opcodes instead
-# of CALL_BUILTIN when a builtin is called with the correct fixed arity.
+# builtins called with the correct fixed arity.
 UNARY_OPS  = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 1}
 BINARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 2}
 TERNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 3}
@@ -425,17 +424,17 @@ class AIFPLCodeGen:
 
         # Check for builtin call
         if plan.is_builtin:
-            assert plan.builtin_index is not None
-
-            # Get builtin name to check if it's a primitive
-            builtin_name = AIFPLBuiltinRegistry.BUILTIN_TABLE[plan.builtin_index]
+            assert plan.builtin_name is not None
+            builtin_name = plan.builtin_name
 
             # Handle alist-get: synthesise missing default as #f
             if builtin_name == 'alist-get':
                 for arg_plan in plan.arg_plans:
                     self._generate_expr(arg_plan, ctx)
+
                 if len(plan.arg_plans) == 2:
                     ctx.emit(Opcode.LOAD_FALSE)
+
                 ctx.emit(Opcode.ALIST_GET)
                 return
 
@@ -443,9 +442,11 @@ class AIFPLCodeGen:
             if builtin_name == 'range':
                 for arg_plan in plan.arg_plans:
                     self._generate_expr(arg_plan, ctx)
+
                 if len(plan.arg_plans) == 2:
                     const_index = ctx.add_constant(AIFPLInteger(1))
                     ctx.emit(Opcode.LOAD_CONST, const_index)
+
                 ctx.emit(Opcode.RANGE)
                 return
 
@@ -477,10 +478,10 @@ class AIFPLCodeGen:
                 ctx.emit(build_opcode, len(plan.arg_plans))
                 return
 
-            # Regular builtin call (wrong arity or non-primitive)
-            ctx.emit(Opcode.CALL_BUILTIN, plan.builtin_index, len(plan.arg_plans))
-
-            return
+            # All builtins must be handled by a direct opcode path above.
+            # Reaching here means the IR emitted a builtin call that has no
+            # corresponding opcode — this is a compiler bug.
+            raise AssertionError(f"Unhandled builtin in codegen: '{builtin_name}' with {len(plan.arg_plans)} args")
 
         # Regular function call
         # Generate function expression
@@ -519,6 +520,7 @@ class AIFPLCodeGen:
         for message_plan in plan.message_plans:
             # Generate code to evaluate the message
             self._generate_expr(message_plan, ctx)
+
             # Emit EMIT_TRACE (pops value, emits to watcher)
             ctx.emit(Opcode.EMIT_TRACE)
 

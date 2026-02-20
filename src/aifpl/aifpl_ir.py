@@ -106,7 +106,7 @@ class AIFPLIRCall:
     is_tail_call: bool
     is_tail_recursive: bool  # True if this is a tail-recursive self-call
     is_builtin: bool
-    builtin_index: Optional[int]  # Index in builtin table if is_builtin=True
+    builtin_name: Optional[str]  # Builtin name if is_builtin=True, else None
 
 
 @dataclass

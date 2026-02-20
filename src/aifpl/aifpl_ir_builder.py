@@ -149,7 +149,10 @@ class AIFPLIRBuilder:
         """
         Initialize IR builder.
         """
-        self.builtin_indices = {name: i for i, name in enumerate(AIFPLBuiltinRegistry.BUILTIN_TABLE)}
+        # All known builtin names — used to recognise builtin calls and mark
+        # them is_builtin=True so the codegen emits direct opcodes instead of
+        # a global lookup + CALL_FUNCTION (which would recurse into the prelude lambda).
+        self._builtin_names: frozenset = frozenset(AIFPLBuiltinRegistry.ARITY_TABLE.keys())
 
     def build(self, expr: AIFPLASTNode) -> AIFPLIRExpr:
         """
@@ -611,9 +614,8 @@ class AIFPLIRBuilder:
         func_type = type(func_expr)
 
         # Check if calling a known builtin
-        if func_type is AIFPLASTSymbol and cast(AIFPLASTSymbol, func_expr).name in self.builtin_indices:
+        if func_type is AIFPLASTSymbol and cast(AIFPLASTSymbol, func_expr).name in self._builtin_names:
             builtin_name = cast(AIFPLASTSymbol, func_expr).name
-            builtin_index = self.builtin_indices[builtin_name]
 
             # Analyze arguments
             arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
@@ -624,7 +626,7 @@ class AIFPLIRBuilder:
                 is_tail_call=False,  # Builtins are never tail-called
                 is_tail_recursive=False,
                 is_builtin=True,
-                builtin_index=builtin_index
+                builtin_name=builtin_name
             )
 
         # Check for tail-recursive call
@@ -651,7 +653,7 @@ class AIFPLIRBuilder:
             is_tail_call=in_tail_position,
             is_tail_recursive=is_tail_recursive,
             is_builtin=False,
-            builtin_index=None
+            builtin_name=None
         )
 
     def _find_free_variables(self, expr: AIFPLASTNode, bound_vars: Set[str], parent_ctx: AnalysisContext) -> List[str]:
