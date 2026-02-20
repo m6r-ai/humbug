@@ -105,11 +105,8 @@ class AIFPLDesugarer:
             if name in ['=', '!=', '<', '>', '<=', '>=']:
                 return self._desugar_comparison_chain(expr)
 
-            # Strict equality predicates: only desugar the 2-arg case to a binary
-            # opcode; all other arities fall through to CALL_BUILTIN so the builtin
-            # handles arity errors and position-aware type errors correctly.
-            if name in ['string=?', 'number=?', 'integer=?', 'float=?',
-                        'complex=?', 'boolean=?', 'list=?', 'alist=?']:
+            # Strict equality predicates
+            if name in ['string=?', 'number=?', 'integer=?', 'float=?', 'complex=?', 'boolean=?', 'list=?', 'alist=?']:
                 return self._desugar_strict_equality(expr)
 
         # Regular function call - desugar all elements
@@ -594,27 +591,26 @@ class AIFPLDesugarer:
             # All patterns are validated by semantic analyzer, so this cannot raise
             test_expr, bindings = self._desugar_pattern(pattern, temp_var)
 
+            # If this is the last clause, the else branch is the no-match error
             if i == len(clauses) - 1:
-                # Last clause - if it fails, raise an error
-                if result is None:
-                    # This is the only clause, or we're building from the last
-                    result = self._build_clause_with_bindings(
-                        test_expr,
-                        bindings,
-                        desugared_result,
-                        self._build_no_match_error()
-                    )
-
-            else:
-                # Not the last clause - chain with else
-                # result is guaranteed to be set here because we process in reverse
-                assert result is not None
+                no_match_error = AIFPLASTList((
+                    AIFPLASTSymbol('error'),
+                    AIFPLASTString("No patterns matched in match expression")
+                ))
                 result = self._build_clause_with_bindings(
                     test_expr,
                     bindings,
                     desugared_result,
-                    result
+                    no_match_error
                 )
+                continue
+
+            result = self._build_clause_with_bindings(
+                test_expr,
+                bindings,
+                desugared_result,
+                cast(AIFPLASTNode, result)
+            )
 
         assert result is not None
         return result
@@ -681,23 +677,6 @@ class AIFPLDesugarer:
             test_expr,
             then_expr,
             else_expr
-        ))
-
-    def _build_no_match_error(self) -> AIFPLASTNode:
-        """
-        Build an expression that raises a no-match error.
-
-        We need to produce the standard error message:
-        "No patterns matched in match expression"
-
-        We'll generate a call to a special form that the IR builder recognizes,
-        or generate code that will produce the right error message.
-        """
-        # Generate: (error "No patterns matched in match expression")
-        # The compiler should recognize this and emit RAISE_ERROR
-        return AIFPLASTList((
-            AIFPLASTSymbol('error'),
-            AIFPLASTString("No patterns matched in match expression")
         ))
 
     def _desugar_pattern(
@@ -1102,35 +1081,19 @@ class AIFPLDesugarer:
             AIFPLASTSymbol(temp_var)
         ))
 
-        if dot_position > 0:
-            length_test = AIFPLASTList((
-                AIFPLASTSymbol('>='),
-                AIFPLASTList((
-                    AIFPLASTSymbol('length'),
-                    AIFPLASTSymbol(temp_var)
-                )),
-                AIFPLASTInteger(dot_position)
-            ))
-            combined_test = AIFPLASTList((
-                AIFPLASTSymbol('and'),
-                list_test,
-                length_test
-            ))
-
-        else:
-            # (. tail) pattern - just need non-empty list
-            non_empty_test = AIFPLASTList((
-                AIFPLASTSymbol('not'),
-                AIFPLASTList((
-                    AIFPLASTSymbol('null?'),
-                    AIFPLASTSymbol(temp_var)
-                ))
-            ))
-            combined_test = AIFPLASTList((
-                AIFPLASTSymbol('and'),
-                list_test,
-                non_empty_test
-            ))
+        length_test = AIFPLASTList((
+            AIFPLASTSymbol('>='),
+            AIFPLASTList((
+                AIFPLASTSymbol('length'),
+                AIFPLASTSymbol(temp_var)
+            )),
+            AIFPLASTInteger(dot_position)
+        ))
+        combined_test = AIFPLASTList((
+            AIFPLASTSymbol('and'),
+            list_test,
+            length_test
+        ))
 
         # Collect head element info
         head_elements: List[Tuple[AIFPLASTNode, str, AIFPLASTNode]] = []
