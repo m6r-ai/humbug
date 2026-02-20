@@ -137,21 +137,14 @@ class AIFPLSemanticAnalyzer:
                 source=self.source
             )
 
-        if len(expr.elements) > 3:
-            raise AIFPLEvalError(
-                message="Let expression has too many elements",
-                received=f"Got {len(expr.elements)} elements",
-                expected="Exactly 3 elements: (let ((bindings...)) body)",
-                example="(let ((x 5) (y 10)) (+ x y))",
-                suggestion="Let takes only bindings and one body expression. "
-                    "Use (let (...) (begin expr1 expr2)) for multiple expressions",
-                line=expr.line,
-                column=expr.column,
-                source=self.source
-            )
+        # _parse_let_with_tracking hard-caps 'let' at exactly 3 elements
+        # (keyword + bindings + body) before consuming ')' — no loop after body.
+        assert len(expr.elements) <= 3, (
+            f"Parser invariant violated: 'let' produced {len(expr.elements)} elements "
+            f"(expected ≤ 3); _parse_let_with_tracking should cap at 3"
+        )
 
         _, bindings_list, body = expr.elements
-
         if not isinstance(bindings_list, AIFPLASTList):
             raise AIFPLEvalError(
                 message="Let binding list must be a list",
@@ -342,20 +335,14 @@ class AIFPLSemanticAnalyzer:
                 source=self.source
             )
 
-        if len(expr.elements) > 3:
-            raise AIFPLEvalError(
-                message="Letrec expression has too many elements",
-                received=f"Got {len(expr.elements)} elements",
-                expected="Exactly 3 elements: (letrec ((bindings...)) body)",
-                example="(letrec ((fact (lambda (n) ...))) (fact 5))",
-                suggestion="Letrec takes only bindings and one body expression",
-                line=expr.line,
-                column=expr.column,
-                source=self.source
-            )
+        # _parse_let_with_tracking hard-caps 'letrec' at exactly 3 elements
+        # (keyword + bindings + body) before consuming ')' — no loop after body.
+        assert len(expr.elements) <= 3, (
+            f"Parser invariant violated: 'letrec' produced {len(expr.elements)} elements "
+            f"(expected ≤ 3); _parse_let_with_tracking should cap at 3"
+        )
 
         _, bindings_list, body = expr.elements
-
         if not isinstance(bindings_list, AIFPLASTList):
             raise AIFPLEvalError(
                 message="Letrec binding list must be a list",
@@ -622,6 +609,12 @@ class AIFPLSemanticAnalyzer:
         if pattern.is_empty():
             return
 
+        # Validate type predicate
+        type_predicates = {
+            'number?', 'integer?', 'float?', 'complex?',
+            'string?', 'boolean?', 'list?', 'alist?', 'function?'
+        }
+
         # Check for type pattern: (type? var)
         if (len(pattern.elements) == 2 and
             isinstance(pattern.elements[0], AIFPLASTSymbol) and
@@ -629,14 +622,7 @@ class AIFPLSemanticAnalyzer:
 
             type_pred = pattern.elements[0].name
             var_pattern = pattern.elements[1]
-
-            # Validate type predicate
-            valid_predicates = {
-                'number?', 'integer?', 'float?', 'complex?',
-                'string?', 'boolean?', 'list?', 'alist?', 'function?'
-            }
-
-            if type_pred in valid_predicates:
+            if type_pred in type_predicates:
                 # Validate variable pattern
                 if not isinstance(var_pattern, AIFPLASTSymbol):
                     raise AIFPLEvalError(
@@ -669,12 +655,7 @@ class AIFPLSemanticAnalyzer:
             pattern.elements[0].name.endswith('?')):
 
             type_pred = pattern.elements[0].name
-            valid_predicates = {
-                'number?', 'integer?', 'float?', 'complex?',
-                'string?', 'boolean?', 'list?', 'alist?', 'function?'
-            }
-
-            if type_pred in valid_predicates:
+            if type_pred in type_predicates:
                 # Type predicate but wrong number of arguments
                 if len(pattern.elements) == 1:
                     raise AIFPLEvalError(
