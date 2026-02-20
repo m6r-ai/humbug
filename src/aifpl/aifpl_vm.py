@@ -61,7 +61,13 @@ class AIFPLVM:
 
     def __init__(self, validate: bool = True) -> None:
         self.stack: List[AIFPLValue] = []
-        self.frames: List[Frame] = []
+
+        # We operate with a sentinel frame so there's always a current frame, simplifying LOAD_PARENT_VAR logic.
+        main_frame = Frame(CodeObject(
+            name="<main>", instructions=[], constants=[], names=[], code_objects=[], local_count=0, param_count=0, is_variadic=False
+        ))
+        self.frames: List[Frame] = [main_frame]
+        self.current_frame: Frame = main_frame
         self.globals: Dict[str, AIFPLValue] = {}
         self.validate_bytecode = validate  # Whether to validate bytecode before execution
 
@@ -82,7 +88,6 @@ class AIFPLVM:
         self._builtin_functions = builtin_registry.create_builtin_function_objects()
 
         # Build dispatch table for fast opcode execution
-        # This is a critical optimization: jump table dispatch is 2-3x faster than if/elif chains
         self._dispatch_table = self._build_dispatch_table()
 
     def set_trace_watcher(self, watcher: Optional[AIFPLTraceWatcher]) -> None:
@@ -304,9 +309,12 @@ class AIFPLVM:
 
         # Reset execution state
         self.stack = []
+        self.frames = self.frames[:1]  # Keep only the main sentinel frame
         frame = Frame(code)
         frame.locals = [None] * code.local_count
-        self.frames = [frame]
+        frame.parent_frame = self.current_frame
+        self.frames.append(frame)
+        self.current_frame = frame
 
         # Execute until we return
         return self._execute_frame(frame)
@@ -377,6 +385,7 @@ class AIFPLVM:
 
                 # Replace frame for general tail call
                 self.frames.pop()
+                self.current_frame = self.frames[-1]
                 func = result.func
                 code = func.bytecode
 
@@ -392,7 +401,8 @@ class AIFPLVM:
 
                 # Push frame onto stack
                 self.frames.append(new_frame)
-                frame = self.frames[-1]  # Update frame reference
+                self.current_frame = new_frame
+                frame = new_frame  # Update frame reference
                 code = frame.code
                 instructions = code.instructions
                 continue
@@ -438,7 +448,7 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """LOAD_VAR: Load variable from current frame at index."""
         # Validator guarantees index is in bounds AND variable is initialized
-        current_frame = self.frames[-1]
+        current_frame = self.current_frame
         value = current_frame.locals[index]
         self.stack.append(cast(AIFPLValue, value))
         return None
@@ -449,7 +459,7 @@ class AIFPLVM:
         """STORE_VAR: Store top of stack to variable in current frame at index."""
         # Validator guarantees index is in bounds and stack has value
         value = self.stack.pop()
-        self.frames[-1].locals[index] = value
+        self.current_frame.locals[index] = value
         return None
 
     def _op_load_parent_var(  # pylint: disable=useless-return
@@ -467,7 +477,7 @@ class AIFPLVM:
         """
         # Validator guarantees depth >= 1
         # Walk up parent frame chain by depth
-        current_frame = self.frames[-1]
+        current_frame = self.current_frame
         parent_frame = current_frame.parent_frame
 
         # Walk up the chain (validator guarantees this won't be None)
@@ -578,7 +588,7 @@ class AIFPLVM:
 
         # Create closure with captured values and parent frame reference
         # Parent frame is used by LOAD_PARENT_VAR for recursive bindings
-        current_frame = self.frames[-1] if self.frames else None
+        current_frame = self.current_frame
 
         closure = AIFPLFunction(
             parameters=tuple(f"param{i}" for i in range(closure_code.param_count)),
@@ -653,6 +663,7 @@ class AIFPLVM:
 
         # Push frame onto stack
         self.frames.append(new_frame)
+        self.current_frame = new_frame
 
         result = self._execute_frame(new_frame)
         self.stack.append(result)
@@ -722,6 +733,7 @@ class AIFPLVM:
         """RETURN: Pop frame and return value from stack."""
         # Validator guarantees stack has a value to return
         self.frames.pop()
+        self.current_frame = self.frames[-1]
         return self.stack.pop()
 
     def _op_emit_trace(  # pylint: disable=useless-return
