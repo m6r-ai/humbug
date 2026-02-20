@@ -456,35 +456,26 @@ class AIFPLCodeGen:
 
             # Check if this is a primitive operation with correct arity
             if builtin_name in BINARY_OPS:
-                if len(plan.arg_plans) == 2:
-                    primitive_opcode = BINARY_OPS[builtin_name]
-                    ctx.emit(primitive_opcode)
-                    return
-
-            elif builtin_name in UNARY_OPS:
-                if len(plan.arg_plans) == 1:
-                    primitive_opcode = UNARY_OPS[builtin_name]
-                    ctx.emit(primitive_opcode)
-                    return
-
-            elif builtin_name in TERNARY_OPS:
-                if len(plan.arg_plans) == 3:
-                    primitive_opcode = TERNARY_OPS[builtin_name]
-                    ctx.emit(primitive_opcode)
-                    return
-
-            elif builtin_name in BUILD_OPS:
-                build_opcode = BUILD_OPS[builtin_name]
-                ctx.emit(build_opcode, len(plan.arg_plans))
+                primitive_opcode = BINARY_OPS[builtin_name]
+                ctx.emit(primitive_opcode)
                 return
 
-            # All builtins must be handled by a direct opcode path above.
-            # Reaching here means the IR emitted a builtin call that has no
-            # corresponding opcode — this is a compiler bug.
-            raise AssertionError(f"Unhandled builtin in codegen: '{builtin_name}' with {len(plan.arg_plans)} args")
+            if builtin_name in UNARY_OPS:
+                primitive_opcode = UNARY_OPS[builtin_name]
+                ctx.emit(primitive_opcode)
+                return
+
+            if builtin_name in TERNARY_OPS:
+                primitive_opcode = TERNARY_OPS[builtin_name]
+                ctx.emit(primitive_opcode)
+                return
+
+            assert builtin_name in BUILD_OPS, f"No opcode for '{builtin_name}' with {len(plan.arg_plans)} args"
+            build_opcode = BUILD_OPS[builtin_name]
+            ctx.emit(build_opcode, len(plan.arg_plans))
+            return
 
         # Regular function call
-        # Generate function expression
         self._generate_expr(plan.func_plan, ctx)
 
         # Generate arguments
