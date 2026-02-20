@@ -391,6 +391,7 @@ class CodeObject:
         lines.append("  Instructions:")
         for i, instr in enumerate(self.instructions):
             lines.append(f"    {i:3d}: {instr}")
+
         return "\n".join(lines)
 
     def disassemble(self) -> str:

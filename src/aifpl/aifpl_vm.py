@@ -51,10 +51,6 @@ class Frame:
     locals: List[AIFPLValue | None] = field(init=False)  # Local variables
     parent_frame: 'Frame | None' = None  # Parent frame for LOAD_PARENT_VAR (lexical parent)
 
-    def __post_init__(self) -> None:
-        """Initialize locals array based on code object."""
-        self.locals = [None] * self.code.local_count
-
 
 class AIFPLVM:
     """
@@ -316,7 +312,9 @@ class AIFPLVM:
 
         # Reset execution state
         self.stack = []
-        self.frames = [Frame(code)]
+        frame = Frame(code)
+        frame.locals = [None] * code.local_count
+        self.frames = [frame]
 
         # Execute until we return
         return self._execute_frame()
@@ -339,6 +337,7 @@ class AIFPLVM:
 
         # Create new frame
         new_frame = Frame(code)
+        new_frame.locals = [None] * code.local_count
         new_frame.parent_frame = func.parent_frame  # Set parent frame for LOAD_PARENT_VAR
 
         # Store captured values in locals (after parameters)
@@ -621,7 +620,6 @@ class AIFPLVM:
         # Get function from under the arguments
         # Must keep type check (runtime-dependent - could be any value)
         func = self.stack[-(arity + 1)]
-
         if not isinstance(func, AIFPLFunction):
             raise AIFPLEvalError(
                 message="Cannot call non-function value",
@@ -643,15 +641,18 @@ class AIFPLVM:
                     message=f"Function '{func_name}' expects at least {min_arity} arguments, got {arity}",
                     suggestion=f"Provide at least {min_arity} argument{'s' if min_arity != 1 else ''}"
                 )
+
             # Pack excess args into a list and replace them on the stack with the list.
             # Stack currently has: [fixed_args..., rest_args...]  (arity values total)
             rest_count = arity - min_arity
             if rest_count == 0:
                 self.stack.append(AIFPLList(()))
+
             else:
                 rest_elements = tuple(self.stack[-rest_count:])
                 del self.stack[-rest_count:]
                 self.stack.append(AIFPLList(rest_elements))
+
         elif arity != expected_arity:
             func_name = func.name or "<lambda>"
             raise AIFPLEvalError(
