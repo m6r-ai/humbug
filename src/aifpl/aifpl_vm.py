@@ -28,6 +28,18 @@ class AIFPLTraceWatcher(Protocol):
 
 
 @dataclass
+class TailCall:
+    """
+    Marker for tail call optimization.
+
+    When a handler returns this, the execution loop will replace the current
+    frame with a new frame for the target function, achieving true tail call
+    optimization with constant stack space.
+    """
+    func: AIFPLFunction
+
+
+@dataclass
 class Frame:
     """
     Execution frame for function calls.
@@ -190,15 +202,12 @@ class AIFPLVM:
         table[Opcode.REST] = self._op_rest
         table[Opcode.LAST] = self._op_last
         table[Opcode.LIST_REF] = self._op_list_ref
-        # Arithmetic
         table[Opcode.FLOOR_DIV] = self._op_floor_div
         table[Opcode.MOD] = self._op_mod
         table[Opcode.STAR_STAR] = self._op_star_star
-        # Bitwise
         table[Opcode.BIT_NOT] = self._op_bit_not
         table[Opcode.BIT_SHIFT_LEFT] = self._op_bit_shift_left
         table[Opcode.BIT_SHIFT_RIGHT] = self._op_bit_shift_right
-        # Numeric conversion
         table[Opcode.ROUND] = self._op_round
         table[Opcode.TO_INTEGER] = self._op_to_integer
         table[Opcode.TO_FLOAT] = self._op_to_float
@@ -208,14 +217,12 @@ class AIFPLVM:
         table[Opcode.BIN] = self._op_bin
         table[Opcode.HEX] = self._op_hex
         table[Opcode.OCT] = self._op_oct
-        # List
         table[Opcode.NULL_P] = self._op_null_p
         table[Opcode.MEMBER_P] = self._op_member_p
         table[Opcode.POSITION] = self._op_position
         table[Opcode.TAKE] = self._op_take
         table[Opcode.DROP] = self._op_drop
         table[Opcode.REMOVE] = self._op_remove
-        # String
         table[Opcode.STRING_LENGTH] = self._op_string_length
         table[Opcode.STRING_UPCASE] = self._op_string_upcase
         table[Opcode.STRING_DOWNCASE] = self._op_string_downcase
@@ -232,7 +239,6 @@ class AIFPLVM:
         table[Opcode.STRING_JOIN] = self._op_string_join
         table[Opcode.SUBSTRING] = self._op_substring
         table[Opcode.STRING_REPLACE] = self._op_string_replace
-        # Alist
         table[Opcode.ALIST_KEYS] = self._op_alist_keys
         table[Opcode.ALIST_VALUES] = self._op_alist_values
         table[Opcode.ALIST_LENGTH] = self._op_alist_length
@@ -242,7 +248,6 @@ class AIFPLVM:
         table[Opcode.ALIST_SET] = self._op_alist_set
         table[Opcode.ALIST_GET] = self._op_alist_get
         table[Opcode.RANGE] = self._op_range
-        # Fold-reducible variadic ops (binary forms)
         table[Opcode.BIT_OR] = self._op_bit_or
         table[Opcode.BIT_AND] = self._op_bit_and
         table[Opcode.BIT_XOR] = self._op_bit_xor
@@ -250,7 +255,6 @@ class AIFPLVM:
         table[Opcode.STRING_APPEND] = self._op_string_append
         table[Opcode.MIN] = self._op_min
         table[Opcode.MAX] = self._op_max
-        # Comparison / equality ops (binary forms)
         table[Opcode.EQ] = self._op_eq
         table[Opcode.NEQ] = self._op_neq
         table[Opcode.LT] = self._op_lt
@@ -305,44 +309,22 @@ class AIFPLVM:
         self.frames = [frame]
 
         # Execute until we return
-        return self._execute_frame()
+        return self._execute_frame(frame)
 
-    def _setup_call_frame(self, func: AIFPLFunction) -> None:
+    def _execute_frame(self, frame: Frame) -> AIFPLValue:
         """
-        Setup a new frame for calling a function.
+        Execute a frame using jump table dispatch with tail call optimization.
 
-        Creates a new frame, initializes it with the function's closure environment
-        and captured values, and pushes it onto the frame stack.
-
-        The function prologue (STORE_VAR instructions at start of bytecode)
-        will pop these arguments into locals.
-
-        Args:
-            func: Function to call
-        """
-        code = func.bytecode
-
-        # Create new frame
-        new_frame = Frame(code)
-        new_frame.locals = [None] * code.local_count
-        new_frame.parent_frame = func.parent_frame  # Set parent frame for LOAD_PARENT_VAR
-
-        # Store captured values in locals (after parameters)
-        if func.captured_values:
-            for i, captured_val in enumerate(func.captured_values):
-                new_frame.locals[code.param_count + i] = captured_val
-
-        # Push frame onto stack
-        self.frames.append(new_frame)
-
-    def _execute_frame(self) -> AIFPLValue:
-        """
-        Execute frames using jump table dispatch with tail call optimization.
+        This method implements a trampoline pattern: when a handler returns a
+        TailCall marker, we replace the current frame with the target frame
+        and continue execution, achieving true tail call optimization with
+        constant stack space.
 
         Returns:
             Result value when frame returns
         """
-        frame = self.frames[-1]
+        code = frame.code
+        instructions = code.instructions
 
         # Cache dispatch table in local variable for faster access
         dispatch = self._dispatch_table
@@ -356,7 +338,6 @@ class AIFPLVM:
 
         while True:
             # Re-fetch code and instructions each iteration in case frame.code changes (mutual recursion TCO)
-            frame = self.frames[-1]
             code = frame.code
             instructions = code.instructions
             if frame.ip >= len(instructions):
@@ -385,6 +366,35 @@ class AIFPLVM:
             result = handler(frame, code, instr.arg1, instr.arg2)
             if result is None:
                 # Fast path: continue execution
+                continue
+
+            # Check if it's a tail call
+            if isinstance(result, TailCall):
+                # Optimization: reuse frame for self-recursion
+                if result.func.bytecode == frame.code:
+                    frame.ip = 0
+                    continue
+
+                # Replace frame for general tail call
+                self.frames.pop()
+                func = result.func
+                code = func.bytecode
+
+                # Create new frame
+                new_frame = Frame(code)
+                new_frame.locals = [None] * code.local_count
+                new_frame.parent_frame = func.parent_frame  # Set parent frame for LOAD_PARENT_VAR
+
+                # Store captured values in locals (after parameters)
+                if func.captured_values:
+                    for i, captured_val in enumerate(func.captured_values):
+                        new_frame.locals[code.param_count + i] = captured_val
+
+                # Push frame onto stack
+                self.frames.append(new_frame)
+                frame = self.frames[-1]  # Update frame reference
+                code = frame.code
+                instructions = code.instructions
                 continue
 
             # Otherwise it's a return value (from RETURN opcode)
@@ -629,20 +639,34 @@ class AIFPLVM:
                 suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
             )
 
-        self._setup_call_frame(func)
+        code = func.bytecode
 
-        result = self._execute_frame()
+        # Create new frame
+        new_frame = Frame(code)
+        new_frame.locals = [None] * code.local_count
+        new_frame.parent_frame = func.parent_frame  # Set parent frame for LOAD_PARENT_VAR
+
+        # Store captured values in locals (after parameters)
+        if func.captured_values:
+            for i, captured_val in enumerate(func.captured_values):
+                new_frame.locals[code.param_count + i] = captured_val
+
+        # Push frame onto stack
+        self.frames.append(new_frame)
+
+        result = self._execute_frame(new_frame)
         self.stack.append(result)
         return None
 
     def _op_tail_call_function(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, arity: int, _arg2: int
-    ) -> None:
+        self, _frame: Frame, _code: CodeObject, arity: int, _arg2: int
+    ) -> TailCall | None:
         """
         TAIL_CALL_FUNCTION: Perform tail call with optimization.
 
-        This method implements a trampoline pattern: we replace the current frame with the target frame
-        and continue execution, achieving true tail call optimization with constant stack space.
+        Returns a TailCall marker that the execution loop will handle by
+        replacing the current frame with the target frame, achieving true
+        tail call optimization with constant stack space for all tail calls.
         """
         # Validator guarantees stack has enough values (arity + 1)
 
@@ -690,17 +714,7 @@ class AIFPLVM:
                 suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
             )
 
-        # If this is a recursive call to the same function, we can optimize by just resetting the instruction pointer
-        # and reusing the current frame.
-        if func.bytecode == frame.code:
-            frame.ip = 0
-            return None
-
-        # Replace frame for general tail call
-        self.frames.pop()
-        self._setup_call_frame(func)
-        frame = self.frames[-1]  # Update frame reference
-        return None
+        return TailCall(func)
 
     def _op_return(
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
