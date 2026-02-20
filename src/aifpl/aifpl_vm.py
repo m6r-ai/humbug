@@ -580,11 +580,12 @@ class AIFPLVM:
         closure_code = code.code_objects[arg1]
 
         # Pop captured values from stack (in reverse order)
-        captured_values = []
-        for _ in range(capture_count):
-            captured_values.append(self.stack.pop())
+        if capture_count == 0:
+            captured_values = []
 
-        captured_values.reverse()
+        else:
+            captured_values = self.stack[-capture_count:]
+            del self.stack[-capture_count:]
 
         # Create closure with captured values and parent frame reference
         # Parent frame is used by LOAD_PARENT_VAR for recursive bindings
