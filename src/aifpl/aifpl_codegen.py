@@ -363,9 +363,9 @@ class AIFPLCodeGen:
         # Create nested context for lambda body
         lambda_ctx = AIFPLCodeGenContext()
 
-        # Generate function prologue: pop arguments from stack into locals
-        for i in range(len(plan.params) - 1, -1, -1):
-            lambda_ctx.emit(Opcode.STORE_VAR, i)
+        # Generate function prologue: pop all N arguments from stack into locals 0..N-1
+        if plan.params:
+            lambda_ctx.emit(Opcode.ENTER, len(plan.params))
 
         # Set max locals from plan
         lambda_ctx.max_locals = plan.max_locals

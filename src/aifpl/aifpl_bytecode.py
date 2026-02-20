@@ -35,6 +35,7 @@ class Opcode(IntEnum):
     MAKE_CLOSURE = auto()    # Create closure: MAKE_CLOSURE code_index capture_count
     CALL_FUNCTION = auto()   # Call function: CALL_FUNCTION arity
     TAIL_CALL_FUNCTION = auto()  # Tail call function: TAIL_CALL_FUNCTION arity
+    ENTER = auto()           # Pop N args from stack into locals 0..N-1: ENTER n
     RETURN = auto()          # Return from function
 
     # Debugging

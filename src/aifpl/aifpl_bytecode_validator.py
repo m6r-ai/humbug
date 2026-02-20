@@ -121,6 +121,7 @@ class BytecodeValidator:
             Opcode.MAKE_CLOSURE: (-1, 1),
             Opcode.CALL_FUNCTION: (-1, 1),
             Opcode.TAIL_CALL_FUNCTION: (-1, 0),
+            # ENTER effect is n-dependent; handled in _get_stack_effect
             Opcode.RETURN: (1, 0),
 
             # Trace debug
@@ -341,6 +342,24 @@ class BytecodeValidator:
                         opcode=opcode
                     )
 
+            # Validate ENTER: n must match param_count and fit within local_count
+            if opcode == Opcode.ENTER:
+                n = instr.arg1
+                if n != code.param_count:
+                    raise ValidationError(
+                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
+                        f"ENTER count {n} does not match param_count {code.param_count}",
+                        instruction_index=i,
+                        opcode=opcode
+                    )
+                if n > code.local_count:
+                    raise ValidationError(
+                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
+                        f"ENTER count {n} exceeds local_count {code.local_count}",
+                        instruction_index=i,
+                        opcode=opcode
+                    )
+
             # Validate LOAD_PARENT_VAR indices
             if opcode == Opcode.LOAD_PARENT_VAR:
                 var_index = instr.arg1
@@ -482,10 +501,10 @@ class BytecodeValidator:
         # Maps instruction index -> set of initialized variable indices
         initialized_at: Dict[int, Set[int]] = {}
 
-        # Initial state: for functions, parameters are initialized by caller
-        # For closures, captured variables (free_vars) are initialized during closure creation
-        # Captured variables are stored after parameters: indices [param_count, param_count + len(free_vars))
-        initial_initialized = set(range(code.param_count))
+        # Initial state: captured variables are pre-initialized by MAKE_CLOSURE before the frame runs.
+        # Parameters are no longer pre-seeded here; ENTER at instruction 0 initializes them,
+        # and the dataflow analysis tracks that naturally.
+        initial_initialized: Set[int] = set()
         if code.free_vars:
             initial_initialized.update(range(code.param_count, code.param_count + len(code.free_vars)))
 
@@ -524,6 +543,10 @@ class BytecodeValidator:
                 var_index = instr.arg1
                 new_initialized.add(var_index)
 
+            # ENTER marks locals 0..n-1 as initialized
+            if opcode == Opcode.ENTER:
+                new_initialized.update(range(instr.arg1))
+
             # Get successors
             successors = self._get_successors(instr_idx, instr, code)
 
@@ -561,6 +584,10 @@ class BytecodeValidator:
         if opcode == Opcode.TAIL_CALL_FUNCTION:
             arity = instr.arg1
             return (arity + 1, 0)  # Pop function + args, tail position (no push)
+
+        if opcode == Opcode.ENTER:
+            n = instr.arg1
+            return (n, 0)  # Pop n args from stack, store into locals 0..n-1
 
         if opcode == Opcode.BUILD_LIST:
             n = instr.arg1

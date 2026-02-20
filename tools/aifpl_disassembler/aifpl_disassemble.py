@@ -100,6 +100,15 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
     elif opcode == Opcode.STORE_VAR:
         annotation = f"  ; Store to {describe_local(arg1, code)}"
 
+    elif opcode == Opcode.ENTER:
+        n = arg1
+        if n > 0 and code.param_names:
+            names = ', '.join(f"'{name}'" for name in code.param_names[:n])
+            annotation = f"  ; Store {n} params into locals: {names}"
+
+        else:
+            annotation = f"  ; Store {n} params into locals 0..{n - 1}"
+
     elif opcode == Opcode.MAKE_CLOSURE:
         if arg1 < len(code.code_objects):
             nested = code.code_objects[arg1]

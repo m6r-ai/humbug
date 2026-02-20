@@ -173,6 +173,7 @@ class AIFPLVM:
         table[Opcode.MAKE_CLOSURE] = self._op_make_closure
         table[Opcode.CALL_FUNCTION] = self._op_call_function
         table[Opcode.TAIL_CALL_FUNCTION] = self._op_tail_call_function
+        table[Opcode.ENTER] = self._op_enter
         table[Opcode.RETURN] = self._op_return
         table[Opcode.EMIT_TRACE] = self._op_emit_trace
         table[Opcode.ADD] = self._op_add
@@ -460,6 +461,23 @@ class AIFPLVM:
         # Validator guarantees index is in bounds and stack has value
         value = self.stack.pop()
         self.current_frame.locals[index] = value
+        return None
+
+    def _op_enter(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, n: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """
+        ENTER n: Pop n arguments from stack into locals 0..n-1.
+
+        Arguments are pushed left-to-right by the caller, so the last parameter
+        is on top of the stack. We pop in reverse order so that param 0 ends up
+        in locals[0], param 1 in locals[1], etc.
+        """
+        # Validator guarantees n >= 1 and stack has at least n values
+        current_frame = self.current_frame
+        for i in range(n - 1, -1, -1):
+            current_frame.locals[i] = self.stack.pop()
+
         return None
 
     def _op_load_parent_var(  # pylint: disable=useless-return
