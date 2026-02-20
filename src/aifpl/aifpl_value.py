@@ -7,7 +7,7 @@ This separation keeps runtime values fast and memory-efficient.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, List, Tuple, Callable
+from typing import Any, List, Tuple
 
 from aifpl.aifpl_error import AIFPLEvalError
 
@@ -461,16 +461,11 @@ class AIFPLFunction(AIFPLValue):
     Represents a function (both user-defined lambdas and builtins).
 
     This is a first-class value that can be passed around as a value.
-
-    A function can be either:
-    - A user-defined lambda
-    - A builtin with a native Python implementation
     """
     parameters: Tuple[str, ...]
     name: str | None = None
     bytecode: Any = None  # CodeObject for bytecode-compiled functions
     captured_values: Tuple[Any, ...] = ()  # Captured free variables for closures
-    native_impl: Callable | None = None  # Python function for builtins
     is_variadic: bool = False  # True if function accepts variable number of args
     parent_frame: Any = None  # Parent frame for LOAD_PARENT_VAR (lexical parent)
 
@@ -481,11 +476,6 @@ class AIFPLFunction(AIFPLValue):
     def type_name(self) -> str:
         return "function"
 
-    @property
-    def is_native(self) -> bool:
-        """Check if this is a native (builtin) function."""
-        return self.native_impl is not None
-
     def describe(self) -> str:
         """Return a human-readable description of this function."""
         param_str = ', '.join(self.parameters)
@@ -494,8 +484,5 @@ class AIFPLFunction(AIFPLValue):
             regular_params = ', '.join(self.parameters[:-1]) if len(self.parameters) > 1 else ''
             rest_param = self.parameters[-1]
             param_str = f"{regular_params} . {rest_param}".strip(' .')
-
-        if self.is_native:
-            return f"<builtin {self.name} ({param_str})>"
 
         return f"<lambda ({param_str})>"

@@ -630,16 +630,6 @@ class AIFPLVM:
                 suggestion="Only functions can be called"
             )
 
-        # Handle builtin functions
-        if func.is_native:
-            args = [self.stack.pop() for _ in range(arity)]
-            args.reverse()
-            self.stack.pop()  # Pop function
-            assert func.native_impl is not None, f"Function {func.name} has no native implementation"
-            result = func.native_impl(args)
-            self.stack.append(result)
-            return None
-
         # Check arity for bytecode functions
         # Must keep: arity check (runtime-dependent - depends on what function is called)
         expected_arity = func.bytecode.param_count
@@ -704,23 +694,6 @@ class AIFPLVM:
                 expected="Function (lambda or builtin)",
                 suggestion="Only functions can be called"
             )
-
-        # Handle native functions (builtins/wrappers)
-        # Native functions can't be tail-call optimized (no bytecode frames),
-        # but we can call them directly without building up frames
-        if func.is_native:
-            # Pop arguments from stack
-            args = [self.stack.pop() for _ in range(arity)]
-            args.reverse()
-            self.stack.pop()  # Pop function
-
-            # Call native implementation directly
-            assert func.native_impl is not None, f"Function {func.name} has no native implementation"
-            result = func.native_impl(args)
-
-            # Pop the current frame and return result
-            self.frames.pop()
-            return result
 
         # Check arity for bytecode functions
         # Must keep: arity check (runtime-dependent)

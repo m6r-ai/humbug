@@ -358,7 +358,7 @@ class AIFPLDesugarer:
             if op_name == 'string-append':
                 return AIFPLASTString("", line=expr.line, column=expr.column, source_file=expr.source_file)
 
-            # min/max with 0 args: let runtime raise the error via CALL_BUILTIN
+            # min/max with 0 args: let runtime raise the error
             return self._desugar_call(expr)
 
         # 1-arg: identity — return the single argument as-is
