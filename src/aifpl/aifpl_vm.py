@@ -182,11 +182,52 @@ class AIFPLVM:
         table[Opcode.BOOLEAN_NOT] = self._op_boolean_not
         table[Opcode.INTEGER_P] = self._op_integer_p
         table[Opcode.INTEGER_EQ_P] = self._op_integer_eq_p
+        table[Opcode.INTEGER_BIT_NOT] = self._op_integer_bit_not
+        table[Opcode.INTEGER_BIT_SHIFT_LEFT] = self._op_integer_bit_shift_left
+        table[Opcode.INTEGER_BIT_SHIFT_RIGHT] = self._op_integer_bit_shift_right
+        table[Opcode.INTEGER_BIT_OR] = self._op_integer_bit_or
+        table[Opcode.INTEGER_BIT_AND] = self._op_integer_bit_and
+        table[Opcode.INTEGER_BIT_XOR] = self._op_integer_bit_xor
+        table[Opcode.INTEGER_TO_STRING_BIN] = self._op_integer_to_string_bin
+        table[Opcode.INTEGER_TO_STRING_HEX] = self._op_integer_to_string_hex
+        table[Opcode.INTEGER_TO_STRING_OCT] = self._op_integer_to_string_oct
+        table[Opcode.FLOAT_P] = self._op_float_p
+        table[Opcode.FLOAT_EQ_P] = self._op_float_eq_p
+        table[Opcode.REAL_LT] = self._op_real_lt
+        table[Opcode.REAL_GT] = self._op_real_gt
+        table[Opcode.REAL_LTE] = self._op_real_lte
+        table[Opcode.REAL_GTE] = self._op_real_gte
+        table[Opcode.REAL_FLOOR_DIV] = self._op_real_floor_div
+        table[Opcode.REAL_MOD] = self._op_real_mod
+        table[Opcode.REAL_POW] = self._op_real_pow
+        table[Opcode.REAL_FLOOR] = self._op_real_floor
+        table[Opcode.REAL_CEIL] = self._op_real_ceil
+        table[Opcode.REAL_ROUND] = self._op_real_round
+        table[Opcode.REAL_TO_INTEGER] = self._op_real_to_integer
+        table[Opcode.REAL_TO_FLOAT] = self._op_real_to_float
+        table[Opcode.REAL_MIN] = self._op_real_min
+        table[Opcode.REAL_MAX] = self._op_real_max
         table[Opcode.COMPLEX] = self._op_complex
         table[Opcode.COMPLEX_P] = self._op_complex_p
         table[Opcode.COMPLEX_EQ_P] = self._op_complex_eq_p
         table[Opcode.COMPLEX_REAL] = self._op_complex_real
         table[Opcode.COMPLEX_IMAG] = self._op_complex_imag
+        table[Opcode.NUMBER_P] = self._op_number_p
+        table[Opcode.NUMBER_EQ_P] = self._op_number_eq_p
+        table[Opcode.NUMBER_ADD] = self._op_number_add
+        table[Opcode.NUMBER_SUB] = self._op_number_sub
+        table[Opcode.NUMBER_MUL] = self._op_number_mul
+        table[Opcode.NUMBER_DIV] = self._op_number_div
+        table[Opcode.NUMBER_STAR_STAR] = self._op_number_star_star
+        table[Opcode.NUMBER_SIN] = self._op_number_sin
+        table[Opcode.NUMBER_COS] = self._op_number_cos
+        table[Opcode.NUMBER_TAN] = self._op_number_tan
+        table[Opcode.NUMBER_LOG] = self._op_number_log
+        table[Opcode.NUMBER_LOG10] = self._op_number_log10
+        table[Opcode.NUMBER_EXP] = self._op_number_exp
+        table[Opcode.NUMBER_SQRT] = self._op_number_sqrt
+        table[Opcode.NUMBER_ABS] = self._op_number_abs
+        table[Opcode.NUMBER_TO_STRING] = self._op_number_to_string
         table[Opcode.STRING_P] = self._op_string_p
         table[Opcode.STRING_EQ_P] = self._op_string_eq_p
         table[Opcode.STRING_LENGTH] = self._op_string_length
@@ -233,51 +274,9 @@ class AIFPLVM:
         table[Opcode.LIST_REMOVE] = self._op_list_remove
         table[Opcode.LIST_APPEND] = self._op_list_append
         table[Opcode.LIST_TO_STRING] = self._op_list_to_string
-
-        table[Opcode.ADD] = self._op_add
-        table[Opcode.SUB] = self._op_sub
-        table[Opcode.MUL] = self._op_mul
-        table[Opcode.DIV] = self._op_div
-        table[Opcode.NUMBER_P] = self._op_number_p
-        table[Opcode.FLOAT_P] = self._op_float_p
-        table[Opcode.SIN] = self._op_sin
-        table[Opcode.COS] = self._op_cos
-        table[Opcode.TAN] = self._op_tan
-        table[Opcode.LOG] = self._op_log
-        table[Opcode.LOG10] = self._op_log10
-        table[Opcode.EXP] = self._op_exp
-        table[Opcode.POW] = self._op_pow
-        table[Opcode.SQRT] = self._op_sqrt
-        table[Opcode.ABS] = self._op_abs
-        table[Opcode.CEIL] = self._op_ceil
-        table[Opcode.FLOOR] = self._op_floor
-        table[Opcode.FLOOR_DIV] = self._op_floor_div
-        table[Opcode.MOD] = self._op_mod
-        table[Opcode.STAR_STAR] = self._op_star_star
-        table[Opcode.BIT_NOT] = self._op_bit_not
-        table[Opcode.BIT_SHIFT_LEFT] = self._op_bit_shift_left
-        table[Opcode.BIT_SHIFT_RIGHT] = self._op_bit_shift_right
-        table[Opcode.ROUND] = self._op_round
-        table[Opcode.TO_INTEGER] = self._op_to_integer
-        table[Opcode.TO_FLOAT] = self._op_to_float
-        table[Opcode.BIN] = self._op_bin
-        table[Opcode.HEX] = self._op_hex
-        table[Opcode.OCT] = self._op_oct
-        table[Opcode.NUMBER_TO_STRING] = self._op_number_to_string
-        table[Opcode.RANGE] = self._op_range
-        table[Opcode.BIT_OR] = self._op_bit_or
-        table[Opcode.BIT_AND] = self._op_bit_and
-        table[Opcode.BIT_XOR] = self._op_bit_xor
-        table[Opcode.MIN] = self._op_min
-        table[Opcode.MAX] = self._op_max
         table[Opcode.EQ] = self._op_eq
         table[Opcode.NEQ] = self._op_neq
-        table[Opcode.LT] = self._op_lt
-        table[Opcode.GT] = self._op_gt
-        table[Opcode.LTE] = self._op_lte
-        table[Opcode.GTE] = self._op_gte
-        table[Opcode.NUMBER_EQ_P] = self._op_number_eq_p
-        table[Opcode.FLOAT_EQ_P] = self._op_float_eq_p
+        table[Opcode.RANGE] = self._op_range
         return table
 
     def _ensure_boolean(self, value: AIFPLValue, operation_name: str) -> bool:
@@ -898,6 +897,15 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(bool_a == bool_b))
         return None
 
+    def _op_boolean_not(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BOOLEAN_NOT: Logical NOT operation."""
+        value = self.stack.pop()
+        bool_val = self._ensure_boolean(value, "not")
+        self.stack.append(AIFPLBoolean(not bool_val))
+        return None
+
     def _op_integer_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -919,6 +927,273 @@ class AIFPLVM:
             raise AIFPLEvalError(f"Function 'integer=?' requires integer arguments, got {b.type_name()}")
 
         self.stack.append(AIFPLBoolean(a.value == b.value))
+        return None
+
+    def _op_integer_bit_not(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BIT_NOT: Pop an integer, push bitwise NOT."""
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'bit-not')
+        self.stack.append(AIFPLInteger(~a_val))
+        return None
+
+    def _op_integer_bit_shift_left(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BIT_SHIFT_LEFT: Pop shift amount and value, push value << n."""
+        n = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'bit-shift-left')
+        n_val = self._ensure_integer(n, 'bit-shift-left')
+        self.stack.append(AIFPLInteger(a_val << n_val))
+        return None
+
+    def _op_integer_bit_shift_right(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BIT_SHIFT_RIGHT: Pop shift amount and value, push value >> n."""
+        n = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'bit-shift-right')
+        n_val = self._ensure_integer(n, 'bit-shift-right')
+        self.stack.append(AIFPLInteger(a_val >> n_val))
+        return None
+
+    def _op_integer_bit_or(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BIT_OR: Pop two integers, push a | b."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLInteger(self._ensure_integer(a, 'bit-or') | self._ensure_integer(b, 'bit-or')))
+        return None
+
+    def _op_integer_bit_and(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BIT_AND: Pop two integers, push a & b."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLInteger(self._ensure_integer(a, 'bit-and') & self._ensure_integer(b, 'bit-and')))
+        return None
+
+    def _op_integer_bit_xor(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BIT_XOR: Pop two integers, push a ^ b."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLInteger(self._ensure_integer(a, 'bit-xor') ^ self._ensure_integer(b, 'bit-xor')))
+        return None
+
+    def _op_integer_to_string_bin(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BIN: Pop an integer, push Scheme-style binary string."""
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'bin')
+        if a_val < 0:
+            self.stack.append(AIFPLString(f"-#b{bin(-a_val)[2:]}"))
+            return None
+
+        self.stack.append(AIFPLString(f"#b{bin(a_val)[2:]}"))
+        return None
+
+    def _op_integer_to_string_hex(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """HEX: Pop an integer, push Scheme-style hex string."""
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'hex')
+        if a_val < 0:
+            self.stack.append(AIFPLString(f"-#x{hex(-a_val)[2:]}"))
+            return None
+
+        self.stack.append(AIFPLString(f"#x{hex(a_val)[2:]}"))
+        return None
+
+    def _op_integer_to_string_oct(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """OCT: Pop an integer, push Scheme-style octal string."""
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'oct')
+        if a_val < 0:
+            self.stack.append(AIFPLString(f"-#o{oct(-a_val)[2:]}"))
+            return None
+
+        self.stack.append(AIFPLString(f"#o{oct(a_val)[2:]}"))
+        return None
+
+    def _op_float_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_P: Check if value is a float."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLFloat)))
+        return None
+
+    def _op_float_eq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_EQ_P: Pop two values, push true if both are floats and equal."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        if not isinstance(a, AIFPLFloat):
+            raise AIFPLEvalError(f"Function 'float=?' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, AIFPLFloat):
+            raise AIFPLEvalError(f"Function 'float=?' requires float arguments, got {b.type_name()}")
+
+        self.stack.append(AIFPLBoolean(a.value == b.value))
+        return None
+
+    def _op_real_lt(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REAL_LT: Pop two real numbers, push true if a < b."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_real_number(a, '<') < self._ensure_real_number(b, '<')))
+        return None
+
+    def _op_real_gt(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REAL_GT: Pop two real numbers, push true if a > b."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_real_number(a, '>') > self._ensure_real_number(b, '>')))
+        return None
+
+    def _op_real_lte(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REAL_LTE: Pop two real numbers, push true if a <= b."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_real_number(a, '<=') <= self._ensure_real_number(b, '<=')))
+        return None
+
+    def _op_real_gte(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REAL_GTE: Pop two real numbers, push true if a >= b."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_real_number(a, '>=') >= self._ensure_real_number(b, '>=')))
+        return None
+
+    def _op_real_floor_div(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REAL_FLOOR_DIV: Pop two values, compute a // b, push result."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_real_number(a, '//')
+        b_val = self._ensure_real_number(b, '//')
+        if b_val == 0:
+            raise AIFPLEvalError("Division by zero")
+
+        self.stack.append(self._wrap_numeric_result(a_val // b_val))
+        return None
+
+    def _op_real_mod(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REAL_MOD: Pop two values, compute a % b, push result."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_real_number(a, '%')
+        b_val = self._ensure_real_number(b, '%')
+        if b_val == 0:
+            raise AIFPLEvalError("Modulo by zero")
+
+        self.stack.append(self._wrap_numeric_result(a_val % b_val))
+        return None
+
+    def _op_real_pow(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REAL_POW: Calculate a ** b."""
+        # Pop operands (b first, then a, so we compute a ** b)
+        b = self.stack.pop()
+        a = self.stack.pop()
+
+        a_val = self._ensure_real_number(a, 'pow')
+        b_val = self._ensure_real_number(b, 'pow')
+        result = a_val ** b_val
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_real_floor(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REAL_FLOOR: Get the floor of a real number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_real_number(arg, 'floor')
+        result = math.floor(arg_val)
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_real_ceil(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REAL_CEIL: Get the ceiling of a real number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_real_number(arg, 'ceil')
+        result = math.ceil(arg_val)
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_real_round(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REAL_ROUND: Pop a real number, push rounded integer."""
+        a = self.stack.pop()
+        a_val = self._ensure_real_number(a, 'round')
+        self.stack.append(AIFPLInteger(round(a_val)))
+        return None
+
+    def _op_real_to_integer(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REAL_TO_INTEGER: Pop a real number, push truncated integer."""
+        a = self.stack.pop()
+        a_val = self._ensure_real_number(a, 'integer')
+        self.stack.append(AIFPLInteger(int(a_val)))
+        return None
+
+    def _op_real_to_float(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REAL_TO_FLOAT: Pop a real number, push as float."""
+        a = self.stack.pop()
+        a_val = self._ensure_real_number(a, 'float')
+        self.stack.append(AIFPLFloat(float(a_val)))
+        return None
+
+    def _op_real_min(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REAL_MIN: Pop two real numbers, push the smaller."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_real_number(a, 'min')
+        b_val = self._ensure_real_number(b, 'min')
+        self.stack.append(self._wrap_numeric_result(a_val if a_val <= b_val else b_val))
+        return None
+
+    def _op_real_max(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REAL_MAX: Pop two real numbers, push the larger."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_real_number(a, 'max')
+        b_val = self._ensure_real_number(b, 'max')
+        self.stack.append(self._wrap_numeric_result(a_val if a_val >= b_val else b_val))
         return None
 
     def _op_complex(  # pylint: disable=useless-return
@@ -979,6 +1254,243 @@ class AIFPLVM:
             return None
 
         self.stack.append(AIFPLFloat(0.0))
+        return None
+
+    def _op_number_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_P: Check if value is a number (integer, float, or complex)."""
+        value = self.stack.pop()
+        result = isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
+        self.stack.append(AIFPLBoolean(result))
+        return None
+
+    def _op_number_eq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_EQ_P: Pop two numbers, push true if they are numerically equal."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self._ensure_number(a, 'number=?')
+        self._ensure_number(b, 'number=?')
+        self.stack.append(AIFPLBoolean(a == b))
+        return None
+
+    def _op_number_add(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_ADD: Pop two values, add them, push result."""
+        # Pop operands (b first, then a, so we compute a + b)
+        b = self.stack.pop()
+        a = self.stack.pop()
+
+        a_val = self._ensure_number(a, '+')
+        b_val = self._ensure_number(b, '+')
+        result = a_val + b_val
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_number_sub(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_SUB: Pop two values, subtract them, push result."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+
+        a_val = self._ensure_number(a, '-')
+        b_val = self._ensure_number(b, '-')
+        result = a_val - b_val
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_number_mul(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_MUL: Pop two values, multiply them, push result."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+
+        a_val = self._ensure_number(a, '*')
+        b_val = self._ensure_number(b, '*')
+        result = a_val * b_val
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_number_div(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_DIV: Pop two values, divide them, push result."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+
+        a_val = self._ensure_number(a, '/')
+        b_val = self._ensure_number(b, '/')
+
+        # Check for division by zero
+        if b_val == 0:
+            raise AIFPLEvalError("Division by zero")
+
+        result = a_val / b_val
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_number_star_star(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_STAR_STAR: Pop two values, compute a ** b (complex-capable), push result."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_number(a, '**')
+        b_val = self._ensure_number(b, '**')
+        self.stack.append(self._wrap_numeric_result(a_val ** b_val))
+        return None
+
+    def _op_number_sin(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_SIN: Compute sine of a number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'sin')
+
+        if isinstance(arg_val, complex):
+            result = cmath.sin(arg_val)
+
+        else:
+            result = math.sin(arg_val)
+
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_number_cos(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_COS: Compute cosine of a number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'cos')
+
+        if isinstance(arg_val, complex):
+            result = cmath.cos(arg_val)
+
+        else:
+            result = math.cos(arg_val)
+
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_number_tan(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_TAN: Compute tangent of a number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'tan')
+
+        if isinstance(arg_val, complex):
+            result = cmath.tan(arg_val)
+
+        else:
+            result = math.tan(arg_val)
+
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_number_log(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_LOG: Compute natural logarithm of a number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'log')
+
+        if isinstance(arg_val, complex):
+            result = cmath.log(arg_val)
+
+        else:
+            # Handle log(0) = -inf
+            if isinstance(arg_val, (int, float)) and arg_val == 0:
+                result = float('-inf')
+
+            else:
+                result = math.log(arg_val)
+
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_number_log10(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_LOG10: Compute base-10 logarithm of a number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'log10')
+
+        if isinstance(arg_val, complex):
+            result = cmath.log10(arg_val)
+
+        else:
+            # Handle log(0) = -inf
+            if isinstance(arg_val, (int, float)) and arg_val == 0:
+                result = float('-inf')
+
+            else:
+                result = math.log10(arg_val)
+
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_number_exp(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_EXP: Compute exponential of a number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'exp')
+
+        if isinstance(arg_val, complex):
+            result = cmath.exp(arg_val)
+
+        else:
+            result = math.exp(arg_val)
+
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_number_sqrt(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_SQRT: Compute square root of a number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'sqrt')
+
+        if isinstance(arg_val, complex):
+            result = cmath.sqrt(arg_val)
+
+        else:
+            if arg_val < 0:
+                raise AIFPLEvalError("Function 'sqrt' requires a non-negative argument")
+
+            result = math.sqrt(float(arg_val))
+
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_number_abs(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_ABS: Get absolute value of a real number."""
+        arg = self.stack.pop()
+        arg_val = self._ensure_number(arg, 'abs')
+        result = abs(arg_val)
+        self.stack.append(self._wrap_numeric_result(result))
+        return None
+
+    def _op_number_to_string(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NUMBER_TO_STRING: Pop a number, push string representation."""
+        a = self.stack.pop()
+        a_val = self._ensure_number(a, 'number->string')
+        if isinstance(a_val, complex):
+            self.stack.append(AIFPLString(str(a_val).strip('()')))
+            return None
+
+        self.stack.append(AIFPLString(str(a_val)))
         return None
 
     def _op_string_p(  # pylint: disable=useless-return
@@ -1180,6 +1692,15 @@ class AIFPLVM:
         old = self._ensure_string(old_val, 'string-replace')
         new = self._ensure_string(new_val, 'string-replace')
         self.stack.append(AIFPLString(s.replace(old, new)))
+        return None
+
+    def _op_string_append(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_APPEND: Pop two strings, push concatenated string."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLString(self._ensure_string(a, 'string-append') + self._ensure_string(b, 'string-append')))
         return None
 
     def _op_alist(  # pylint: disable=useless-return
@@ -1517,466 +2038,6 @@ class AIFPLVM:
         self.stack.append(AIFPLString(''.join(str(elem.to_python()) for elem in list_val.elements)))
         return None
 
-    def _op_add(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """ADD: Pop two values, add them, push result."""
-        # Pop operands (b first, then a, so we compute a + b)
-        b = self.stack.pop()
-        a = self.stack.pop()
-
-        a_val = self._ensure_number(a, '+')
-        b_val = self._ensure_number(b, '+')
-        result = a_val + b_val
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_sub(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """SUB: Pop two values, subtract them, push result."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-
-        a_val = self._ensure_number(a, '-')
-        b_val = self._ensure_number(b, '-')
-        result = a_val - b_val
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_mul(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """MUL: Pop two values, multiply them, push result."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-
-        a_val = self._ensure_number(a, '*')
-        b_val = self._ensure_number(b, '*')
-        result = a_val * b_val
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_div(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """DIV: Pop two values, divide them, push result."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-
-        a_val = self._ensure_number(a, '/')
-        b_val = self._ensure_number(b, '/')
-
-        # Check for division by zero
-        if b_val == 0:
-            raise AIFPLEvalError("Division by zero")
-
-        result = a_val / b_val
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_number_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_P: Check if value is a number (integer, float, or complex)."""
-        value = self.stack.pop()
-        result = isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
-        self.stack.append(AIFPLBoolean(result))
-        return None
-
-    def _op_float_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """FLOAT_P: Check if value is a float."""
-        value = self.stack.pop()
-        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLFloat)))
-        return None
-
-    def _op_boolean_not(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """BOOLEAN_NOT: Logical NOT operation."""
-        value = self.stack.pop()
-        bool_val = self._ensure_boolean(value, "not")
-        self.stack.append(AIFPLBoolean(not bool_val))
-        return None
-
-    def _op_sin(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """SIN: Compute sine of a number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'sin')
-
-        if isinstance(arg_val, complex):
-            result = cmath.sin(arg_val)
-
-        else:
-            result = math.sin(arg_val)
-
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_cos(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """COS: Compute cosine of a number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'cos')
-
-        if isinstance(arg_val, complex):
-            result = cmath.cos(arg_val)
-
-        else:
-            result = math.cos(arg_val)
-
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_tan(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """TAN: Compute tangent of a number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'tan')
-
-        if isinstance(arg_val, complex):
-            result = cmath.tan(arg_val)
-
-        else:
-            result = math.tan(arg_val)
-
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_log(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """LOG: Compute natural logarithm of a number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'log')
-
-        if isinstance(arg_val, complex):
-            result = cmath.log(arg_val)
-
-        else:
-            # Handle log(0) = -inf
-            if isinstance(arg_val, (int, float)) and arg_val == 0:
-                result = float('-inf')
-
-            else:
-                result = math.log(arg_val)
-
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_log10(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """LOG10: Compute base-10 logarithm of a number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'log10')
-
-        if isinstance(arg_val, complex):
-            result = cmath.log10(arg_val)
-
-        else:
-            # Handle log(0) = -inf
-            if isinstance(arg_val, (int, float)) and arg_val == 0:
-                result = float('-inf')
-
-            else:
-                result = math.log10(arg_val)
-
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_exp(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """EXP: Compute exponential of a number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'exp')
-
-        if isinstance(arg_val, complex):
-            result = cmath.exp(arg_val)
-
-        else:
-            result = math.exp(arg_val)
-
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_sqrt(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """SQRT: Compute square root of a number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'sqrt')
-
-        if isinstance(arg_val, complex):
-            result = cmath.sqrt(arg_val)
-
-        else:
-            if arg_val < 0:
-                raise AIFPLEvalError("Function 'sqrt' requires a non-negative argument")
-
-            result = math.sqrt(float(arg_val))
-
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_abs(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """ABS: Get absolute value of a real number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'abs')
-        result = abs(arg_val)
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_ceil(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """CEIL: Get the ceiling of a real number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_real_number(arg, 'ceil')
-        result = math.ceil(arg_val)
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_floor(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """FLOOR: Get the floor of a real number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_real_number(arg, 'floor')
-        result = math.floor(arg_val)
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_pow(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """POW: Calculate a ** b."""
-        # Pop operands (b first, then a, so we compute a ** b)
-        b = self.stack.pop()
-        a = self.stack.pop()
-
-        a_val = self._ensure_real_number(a, 'pow')
-        b_val = self._ensure_real_number(b, 'pow')
-        result = a_val ** b_val
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_floor_div(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """FLOOR_DIV: Pop two values, compute a // b, push result."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_real_number(a, '//')
-        b_val = self._ensure_real_number(b, '//')
-        if b_val == 0:
-            raise AIFPLEvalError("Division by zero")
-
-        self.stack.append(self._wrap_numeric_result(a_val // b_val))
-        return None
-
-    def _op_mod(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """MOD: Pop two values, compute a % b, push result."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_real_number(a, '%')
-        b_val = self._ensure_real_number(b, '%')
-        if b_val == 0:
-            raise AIFPLEvalError("Modulo by zero")
-
-        self.stack.append(self._wrap_numeric_result(a_val % b_val))
-        return None
-
-    def _op_star_star(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STAR_STAR: Pop two values, compute a ** b (complex-capable), push result."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_number(a, '**')
-        b_val = self._ensure_number(b, '**')
-        self.stack.append(self._wrap_numeric_result(a_val ** b_val))
-        return None
-
-    def _op_bit_not(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """BIT_NOT: Pop an integer, push bitwise NOT."""
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'bit-not')
-        self.stack.append(AIFPLInteger(~a_val))
-        return None
-
-    def _op_bit_shift_left(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """BIT_SHIFT_LEFT: Pop shift amount and value, push value << n."""
-        n = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'bit-shift-left')
-        n_val = self._ensure_integer(n, 'bit-shift-left')
-        self.stack.append(AIFPLInteger(a_val << n_val))
-        return None
-
-    def _op_bit_shift_right(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """BIT_SHIFT_RIGHT: Pop shift amount and value, push value >> n."""
-        n = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'bit-shift-right')
-        n_val = self._ensure_integer(n, 'bit-shift-right')
-        self.stack.append(AIFPLInteger(a_val >> n_val))
-        return None
-
-    def _op_round(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """ROUND: Pop a real number, push rounded integer."""
-        a = self.stack.pop()
-        a_val = self._ensure_real_number(a, 'round')
-        self.stack.append(AIFPLInteger(round(a_val)))
-        return None
-
-    def _op_to_integer(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """TO_INTEGER: Pop a real number, push truncated integer."""
-        a = self.stack.pop()
-        a_val = self._ensure_real_number(a, 'integer')
-        self.stack.append(AIFPLInteger(int(a_val)))
-        return None
-
-    def _op_to_float(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """TO_FLOAT: Pop a real number, push as float."""
-        a = self.stack.pop()
-        a_val = self._ensure_real_number(a, 'float')
-        self.stack.append(AIFPLFloat(float(a_val)))
-        return None
-
-    def _op_bin(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """BIN: Pop an integer, push Scheme-style binary string."""
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'bin')
-        if a_val < 0:
-            self.stack.append(AIFPLString(f"-#b{bin(-a_val)[2:]}"))
-            return None
-
-        self.stack.append(AIFPLString(f"#b{bin(a_val)[2:]}"))
-        return None
-
-    def _op_hex(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """HEX: Pop an integer, push Scheme-style hex string."""
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'hex')
-        if a_val < 0:
-            self.stack.append(AIFPLString(f"-#x{hex(-a_val)[2:]}"))
-            return None
-
-        self.stack.append(AIFPLString(f"#x{hex(a_val)[2:]}"))
-        return None
-
-    def _op_oct(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """OCT: Pop an integer, push Scheme-style octal string."""
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'oct')
-        if a_val < 0:
-            self.stack.append(AIFPLString(f"-#o{oct(-a_val)[2:]}"))
-            return None
-
-        self.stack.append(AIFPLString(f"#o{oct(a_val)[2:]}"))
-        return None
-
-    def _op_number_to_string(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_TO_STRING: Pop a number, push string representation."""
-        a = self.stack.pop()
-        a_val = self._ensure_number(a, 'number->string')
-        if isinstance(a_val, complex):
-            self.stack.append(AIFPLString(str(a_val).strip('()')))
-            return None
-
-        self.stack.append(AIFPLString(str(a_val)))
-        return None
-
-    def _op_bit_or(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """BIT_OR: Pop two integers, push a | b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLInteger(self._ensure_integer(a, 'bit-or') | self._ensure_integer(b, 'bit-or')))
-        return None
-
-    def _op_bit_and(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """BIT_AND: Pop two integers, push a & b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLInteger(self._ensure_integer(a, 'bit-and') & self._ensure_integer(b, 'bit-and')))
-        return None
-
-    def _op_bit_xor(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """BIT_XOR: Pop two integers, push a ^ b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLInteger(self._ensure_integer(a, 'bit-xor') ^ self._ensure_integer(b, 'bit-xor')))
-        return None
-
-    def _op_string_append(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_APPEND: Pop two strings, push concatenated string."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLString(self._ensure_string(a, 'string-append') + self._ensure_string(b, 'string-append')))
-        return None
-
-    def _op_min(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """MIN: Pop two real numbers, push the smaller."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_real_number(a, 'min')
-        b_val = self._ensure_real_number(b, 'min')
-        self.stack.append(self._wrap_numeric_result(a_val if a_val <= b_val else b_val))
-        return None
-
-    def _op_max(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """MAX: Pop two real numbers, push the larger."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_real_number(a, 'max')
-        b_val = self._ensure_real_number(b, 'max')
-        self.stack.append(self._wrap_numeric_result(a_val if a_val >= b_val else b_val))
-        return None
-
     def _op_eq(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1993,68 +2054,6 @@ class AIFPLVM:
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(a != b))
-        return None
-
-    def _op_lt(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """LT: Pop two real numbers, push true if a < b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(self._ensure_real_number(a, '<') < self._ensure_real_number(b, '<')))
-        return None
-
-    def _op_gt(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """GT: Pop two real numbers, push true if a > b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(self._ensure_real_number(a, '>') > self._ensure_real_number(b, '>')))
-        return None
-
-    def _op_lte(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """LTE: Pop two real numbers, push true if a <= b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(self._ensure_real_number(a, '<=') <= self._ensure_real_number(b, '<=')))
-        return None
-
-    def _op_gte(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """GTE: Pop two real numbers, push true if a >= b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(self._ensure_real_number(a, '>=') >= self._ensure_real_number(b, '>=')))
-        return None
-
-    def _op_number_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_EQ_P: Pop two numbers, push true if they are numerically equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self._ensure_number(a, 'number=?')
-        self._ensure_number(b, 'number=?')
-        self.stack.append(AIFPLBoolean(a == b))
-        return None
-
-    def _op_float_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """FLOAT_EQ_P: Pop two values, push true if both are floats and equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        if not isinstance(a, AIFPLFloat):
-            raise AIFPLEvalError(f"Function 'float=?' requires float arguments, got {a.type_name()}")
-
-        if not isinstance(b, AIFPLFloat):
-            raise AIFPLEvalError(f"Function 'float=?' requires float arguments, got {b.type_name()}")
-
-        self.stack.append(AIFPLBoolean(a.value == b.value))
         return None
 
     def _op_range(  # pylint: disable=useless-return

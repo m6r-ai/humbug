@@ -41,6 +41,9 @@ class Opcode(IntEnum):
     # Debugging
     EMIT_TRACE = auto()      # Emit trace: EMIT_TRACE (pops value, emits to watcher)
 
+    # Function operations
+    FUNCTION_P = auto()      # Check if function
+
     # Boolean operations
     BOOLEAN_P = auto()       # Check if boolean
     BOOLEAN_EQ_P = auto()    # boolean=? a b
@@ -49,6 +52,40 @@ class Opcode(IntEnum):
     # Integer operations
     INTEGER_P = auto()       # Check if integer
     INTEGER_EQ_P = auto()    # integer=? a b
+    INTEGER_BIT_NOT = auto() # Bitwise NOT ~x
+    INTEGER_BIT_SHIFT_LEFT = auto()
+                             # Bitwise left shift x << n
+    INTEGER_BIT_SHIFT_RIGHT = auto()
+                             # Bitwise right shift x >> n
+    INTEGER_BIT_OR = auto()  # Bitwise OR: a | b
+    INTEGER_BIT_AND = auto() # Bitwise AND: a & b
+    INTEGER_BIT_XOR = auto() # Bitwise XOR: a ^ b
+    INTEGER_TO_STRING_BIN = auto()
+                             # Convert integer to binary string
+    INTEGER_TO_STRING_HEX = auto()
+                             # Convert integer to hex string
+    INTEGER_TO_STRING_OCT = auto()
+                             # Convert integer to octal string
+
+    # Floating point operations
+    FLOAT_P = auto()         # Check if float
+    FLOAT_EQ_P = auto()      # float=? a b
+
+    # Real number operations
+    REAL_LT = auto()         # a < b
+    REAL_GT = auto()         # a > b
+    REAL_LTE = auto()        # a <= b
+    REAL_GTE = auto()        # a >= b
+    REAL_FLOOR_DIV = auto()  # Calculate a // b (floor division)
+    REAL_MOD = auto()        # Calculate a % b (modulo)
+    REAL_POW = auto()        # Calculate x ** y
+    REAL_FLOOR = auto()      # Calculate floor(x)
+    REAL_CEIL = auto()       # Calculate ceil(x)
+    REAL_ROUND = auto()      # Calculate round(x)
+    REAL_TO_INTEGER = auto() # Convert to integer
+    REAL_TO_FLOAT = auto()   # Convert to float
+    REAL_MIN = auto()        # Minimum of two real numbers
+    REAL_MAX = auto()        # Maximum of two real numbers
 
     # Complex operations
     COMPLEX = auto()         # Construct complex from real and imaginary parts
@@ -56,6 +93,26 @@ class Opcode(IntEnum):
     COMPLEX_EQ_P = auto()    # complex=? a b
     COMPLEX_REAL = auto()    # Extract real part
     COMPLEX_IMAG = auto()    # Extract imaginary part
+
+    # Numeric operations
+    NUMBER_P = auto()        # Check if number (int/float/complex)
+    NUMBER_EQ_P = auto()     # number=? a b
+    NUMBER_ADD = auto()      # Calculate a + b
+    NUMBER_SUB = auto()      # Calculate a - b
+    NUMBER_MUL = auto()      # Calculate a * b
+    NUMBER_DIV = auto()      # Calculate a / b
+    NUMBER_STAR_STAR = auto()
+                             # Calculate a ** b (complex-capable exponentiation)
+    NUMBER_SIN = auto()      # Calculate sin(x)
+    NUMBER_COS = auto()      # Calculate cos(x)
+    NUMBER_TAN = auto()      # Calculate tan(x)
+    NUMBER_LOG = auto()      # Calculate log(x)
+    NUMBER_LOG10 = auto()    # Calculate log10(x)
+    NUMBER_EXP = auto()      # Calculate exp(x)
+    NUMBER_SQRT = auto()     # Calculate sqrt(x)
+    NUMBER_ABS = auto()      # Calculate abs(x)
+    NUMBER_TO_STRING = auto()
+                             # Convert number to string
 
     # String operations
     STRING_P = auto()        # Check if string
@@ -112,62 +169,11 @@ class Opcode(IntEnum):
     LIST_APPEND = auto()     # Append two lists: (append a b)
     LIST_TO_STRING = auto()  # Convert list of characters to string
 
-    # Numeric operations
-    NUMBER_P = auto()        # Check if number (int/float/complex)
-    NUMBER_EQ_P = auto()     # number=? a b
-    ADD = auto()             # Calculate a + b
-    SUB = auto()             # Calculate a - b
-    MUL = auto()             # Calculate a * b
-    DIV = auto()             # Calculate a / b
-    FLOOR_DIV = auto()       # Calculate a // b (floor division)
-    MOD = auto()             # Calculate a % b (modulo)
-    STAR_STAR = auto()       # Calculate a ** b (complex-capable exponentiation)
-    NUMBER_TO_STRING = auto()
-                             # Convert number to string
-
-    BIT_NOT = auto()         # Bitwise NOT ~x
-    BIT_SHIFT_LEFT = auto()  # Bitwise left shift x << n
-    BIT_SHIFT_RIGHT = auto() # Bitwise right shift x >> n
-    BIT_OR = auto()          # Bitwise OR: a | b
-    BIT_AND = auto()         # Bitwise AND: a & b
-    BIT_XOR = auto()         # Bitwise XOR: a ^ b
-    BIN = auto()             # Convert integer to binary string
-    HEX = auto()             # Convert integer to hex string
-    OCT = auto()             # Convert integer to octal string
-
-    FUNCTION_P = auto()      # Check if function
-
-    # Floating point operations
-    FLOAT_P = auto()         # Check if float
-    FLOAT_EQ_P = auto()      # float=? a b
-    SIN = auto()             # Calculate sin(x)
-    COS = auto()             # Calculate cos(x)
-    TAN = auto()             # Calculate tan(x)
-    LOG = auto()             # Calculate log(x)
-    LOG10 = auto()           # Calculate log10(x)
-    EXP = auto()             # Calculate exp(x)
-    POW = auto()             # Calculate x ** y
-    SQRT = auto()            # Calculate sqrt(x)
-    ABS = auto()             # Calculate abs(x)
-    FLOOR = auto()           # Calculate floor(x)
-    CEIL = auto()            # Calculate ceil(x)
-    ROUND = auto()           # Calculate round(x)
-
-    # Numeric conversion operations
-    TO_INTEGER = auto()      # Convert to integer
-    TO_FLOAT = auto()        # Convert to float
-
-    # Fold-reducible variadic operations (desugared to binary by desugarer)
-    MIN = auto()             # Minimum of two real numbers
-    MAX = auto()             # Maximum of two real numbers
+    # General equality operations
     EQ = auto()              # a = b
     NEQ = auto()             # a != b
-    LT = auto()              # a < b
-    GT = auto()              # a > b
-    LTE = auto()             # a <= b
-    GTE = auto()             # a >= b
 
-    # Collection construction opcodes (variadic, count encoded in instruction)
+    # Generate integer range list
     RANGE = auto()           # Generate integer range list: (range start end step)
 
 
@@ -185,15 +191,58 @@ class Opcode(IntEnum):
 # 3-argument opcode form (the codegen synthesises the missing default for direct
 # calls, and the stub will do likewise).
 BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
+    'function?': (Opcode.FUNCTION_P, 1),
+    'boolean?': (Opcode.BOOLEAN_P, 1),
     'boolean=?': (Opcode.BOOLEAN_EQ_P, 2),
     'not': (Opcode.BOOLEAN_NOT, 1),
     'integer?': (Opcode.INTEGER_P, 1),
     'integer=?': (Opcode.INTEGER_EQ_P, 2),
+    'bit-not': (Opcode.INTEGER_BIT_NOT, 1),
+    'bit-shift-left': (Opcode.INTEGER_BIT_SHIFT_LEFT, 2),
+    'bit-shift-right': (Opcode.INTEGER_BIT_SHIFT_RIGHT, 2),
+    'bit-or': (Opcode.INTEGER_BIT_OR, 2),
+    'bit-and': (Opcode.INTEGER_BIT_AND, 2),
+    'bit-xor': (Opcode.INTEGER_BIT_XOR, 2),
+    'bin': (Opcode.INTEGER_TO_STRING_BIN, 1),
+    'hex': (Opcode.INTEGER_TO_STRING_HEX, 1),
+    'oct': (Opcode.INTEGER_TO_STRING_OCT, 1),
+    'float?': (Opcode.FLOAT_P, 1),
+    'float=?': (Opcode.FLOAT_EQ_P, 2),
+    '<': (Opcode.REAL_LT, 2),
+    '>': (Opcode.REAL_GT, 2),
+    '<=': (Opcode.REAL_LTE, 2),
+    '>=': (Opcode.REAL_GTE, 2),
+    '//': (Opcode.REAL_FLOOR_DIV, 2),
+    '%': (Opcode.REAL_MOD, 2),
+    'pow': (Opcode.REAL_POW, 2),
+    'floor': (Opcode.REAL_FLOOR, 1),
+    'ceil': (Opcode.REAL_CEIL, 1),
+    'round': (Opcode.REAL_ROUND, 1),
+    'integer': (Opcode.REAL_TO_INTEGER, 1),
+    'float': (Opcode.REAL_TO_FLOAT, 1),
+    'min': (Opcode.REAL_MIN, 2),
+    'max': (Opcode.REAL_MAX, 2),
     'complex': (Opcode.COMPLEX, 2),
     'complex?': (Opcode.COMPLEX_P, 1),
     'complex=?': (Opcode.COMPLEX_EQ_P, 2),
     'real': (Opcode.COMPLEX_REAL, 1),
     'imag': (Opcode.COMPLEX_IMAG, 1),
+    'number?': (Opcode.NUMBER_P, 1),
+    'number=?': (Opcode.NUMBER_EQ_P, 2),
+    '+': (Opcode.NUMBER_ADD, 2),
+    '-': (Opcode.NUMBER_SUB, 2),
+    '*': (Opcode.NUMBER_MUL, 2),
+    '/': (Opcode.NUMBER_DIV, 2),
+    '**': (Opcode.NUMBER_STAR_STAR, 2),
+    'sin': (Opcode.NUMBER_SIN, 1),
+    'cos': (Opcode.NUMBER_COS, 1),
+    'tan': (Opcode.NUMBER_TAN, 1),
+    'log': (Opcode.NUMBER_LOG, 1),
+    'log10': (Opcode.NUMBER_LOG10, 1),
+    'exp': (Opcode.NUMBER_EXP, 1),
+    'sqrt': (Opcode.NUMBER_SQRT, 1),
+    'abs': (Opcode.NUMBER_ABS, 1),
+    'number->string': (Opcode.NUMBER_TO_STRING, 1),
     'alist?': (Opcode.ALIST_P, 1),
     'alist=?': (Opcode.ALIST_EQ_P, 2),
     'alist-keys': (Opcode.ALIST_KEYS, 1),
@@ -238,52 +287,8 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'remove': (Opcode.LIST_REMOVE, 2),
     'append': (Opcode.LIST_APPEND, 2),
     'list->string': (Opcode.LIST_TO_STRING, 1),
-
-    'number?': (Opcode.NUMBER_P, 1),
-    'float?': (Opcode.FLOAT_P, 1),
-    'boolean?': (Opcode.BOOLEAN_P, 1),
-    'function?': (Opcode.FUNCTION_P, 1),
-    'sin': (Opcode.SIN, 1),
-    'cos': (Opcode.COS, 1),
-    'tan': (Opcode.TAN, 1),
-    'log': (Opcode.LOG, 1),
-    'log10': (Opcode.LOG10, 1),
-    'exp': (Opcode.EXP, 1),
-    'sqrt': (Opcode.SQRT, 1),
-    'abs': (Opcode.ABS, 1),
-    'floor': (Opcode.FLOOR, 1),
-    'ceil': (Opcode.CEIL, 1),
-    'round': (Opcode.ROUND, 1),
-    'integer': (Opcode.TO_INTEGER, 1),
-    'float': (Opcode.TO_FLOAT, 1),
-    'bin': (Opcode.BIN, 1),
-    'hex': (Opcode.HEX, 1),
-    'oct': (Opcode.OCT, 1),
-    'bit-not': (Opcode.BIT_NOT, 1),
-    'number->string': (Opcode.NUMBER_TO_STRING, 1),
-    '+': (Opcode.ADD, 2),
-    '-': (Opcode.SUB, 2),
-    '*': (Opcode.MUL, 2),
-    '/': (Opcode.DIV, 2),
-    '//': (Opcode.FLOOR_DIV, 2),
-    '%': (Opcode.MOD, 2),
-    '**': (Opcode.STAR_STAR, 2),
-    'pow': (Opcode.POW, 2),
-    'bit-or': (Opcode.BIT_OR, 2),
-    'bit-and': (Opcode.BIT_AND, 2),
-    'bit-xor': (Opcode.BIT_XOR, 2),
-    'bit-shift-left': (Opcode.BIT_SHIFT_LEFT, 2),
-    'bit-shift-right': (Opcode.BIT_SHIFT_RIGHT, 2),
     '=': (Opcode.EQ, 2),
     '!=': (Opcode.NEQ, 2),
-    '<': (Opcode.LT, 2),
-    '>': (Opcode.GT, 2),
-    '<=': (Opcode.LTE, 2),
-    '>=': (Opcode.GTE, 2),
-    'number=?': (Opcode.NUMBER_EQ_P, 2),
-    'float=?': (Opcode.FLOAT_EQ_P, 2),
-    'min': (Opcode.MIN, 2),
-    'max': (Opcode.MAX, 2),
     'range': (Opcode.RANGE, 3),
 }
 
@@ -304,15 +309,15 @@ class Instruction:
         # from the stack rather than from the instruction stream)
         no_arg_opcodes = {
             Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST, Opcode.RETURN, Opcode.EMIT_TRACE,
-            Opcode.ADD, Opcode.SUB, Opcode.MUL, Opcode.DIV,
-            Opcode.FLOOR_DIV, Opcode.MOD, Opcode.STAR_STAR,
+            Opcode.NUMBER_ADD, Opcode.NUMBER_SUB, Opcode.NUMBER_MUL, Opcode.NUMBER_DIV,
+            Opcode.REAL_FLOOR_DIV, Opcode.REAL_MOD, Opcode.NUMBER_STAR_STAR,
             Opcode.NUMBER_P, Opcode.INTEGER_P, Opcode.FLOAT_P, Opcode.COMPLEX_P,
             Opcode.STRING_P, Opcode.BOOLEAN_P, Opcode.LIST_P, Opcode.ALIST_P, Opcode.FUNCTION_P,
-            Opcode.BOOLEAN_NOT, Opcode.BIT_NOT, Opcode.BIT_SHIFT_LEFT, Opcode.BIT_SHIFT_RIGHT,
-            Opcode.SIN, Opcode.COS, Opcode.TAN, Opcode.LOG, Opcode.LOG10, Opcode.EXP,
-            Opcode.POW, Opcode.SQRT, Opcode.ABS, Opcode.FLOOR, Opcode.CEIL, Opcode.ROUND,
-            Opcode.TO_INTEGER, Opcode.TO_FLOAT, Opcode.COMPLEX_REAL, Opcode.COMPLEX_IMAG, Opcode.COMPLEX,
-            Opcode.BIN, Opcode.HEX, Opcode.OCT,
+            Opcode.BOOLEAN_NOT, Opcode.INTEGER_BIT_NOT, Opcode.INTEGER_BIT_SHIFT_LEFT, Opcode.INTEGER_BIT_SHIFT_RIGHT,
+            Opcode.NUMBER_SIN, Opcode.NUMBER_COS, Opcode.NUMBER_TAN, Opcode.NUMBER_LOG, Opcode.NUMBER_LOG10, Opcode.NUMBER_EXP,
+            Opcode.REAL_POW, Opcode.NUMBER_SQRT, Opcode.NUMBER_ABS, Opcode.REAL_FLOOR, Opcode.REAL_CEIL, Opcode.REAL_ROUND,
+            Opcode.REAL_TO_INTEGER, Opcode.REAL_TO_FLOAT, Opcode.COMPLEX_REAL, Opcode.COMPLEX_IMAG, Opcode.COMPLEX,
+            Opcode.INTEGER_TO_STRING_BIN, Opcode.INTEGER_TO_STRING_HEX, Opcode.INTEGER_TO_STRING_OCT,
             Opcode.LIST_CONS, Opcode.LIST_REVERSE, Opcode.LIST_FIRST, Opcode.LIST_REST, Opcode.LIST_LAST,
             Opcode.LIST_LENGTH, Opcode.LIST_REF, Opcode.LIST_NULL_P, Opcode.LIST_MEMBER_P, Opcode.LIST_POSITION,
             Opcode.LIST_TAKE, Opcode.LIST_DROP, Opcode.LIST_REMOVE,
@@ -323,9 +328,9 @@ class Instruction:
             Opcode.ALIST_KEYS, Opcode.ALIST_VALUES, Opcode.ALIST_LENGTH,
             Opcode.ALIST_HAS_P, Opcode.ALIST_REMOVE, Opcode.ALIST_MERGE, Opcode.ALIST_GET, Opcode.ALIST_SET,
             Opcode.RANGE,
-            Opcode.BIT_OR, Opcode.BIT_AND, Opcode.BIT_XOR,
-            Opcode.LIST_APPEND, Opcode.STRING_APPEND, Opcode.MIN, Opcode.MAX,
-            Opcode.EQ, Opcode.NEQ, Opcode.LT, Opcode.GT, Opcode.LTE, Opcode.GTE,
+            Opcode.INTEGER_BIT_OR, Opcode.INTEGER_BIT_AND, Opcode.INTEGER_BIT_XOR,
+            Opcode.LIST_APPEND, Opcode.STRING_APPEND, Opcode.REAL_MIN, Opcode.REAL_MAX,
+            Opcode.EQ, Opcode.NEQ, Opcode.REAL_LT, Opcode.REAL_GT, Opcode.REAL_LTE, Opcode.REAL_GTE,
             Opcode.STRING_EQ_P,
             Opcode.NUMBER_EQ_P, Opcode.INTEGER_EQ_P, Opcode.FLOAT_EQ_P, Opcode.COMPLEX_EQ_P,
             Opcode.BOOLEAN_EQ_P, Opcode.LIST_EQ_P, Opcode.ALIST_EQ_P,

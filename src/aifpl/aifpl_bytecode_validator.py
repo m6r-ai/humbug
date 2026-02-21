@@ -127,6 +127,9 @@ class BytecodeValidator:
             # Trace debug
             Opcode.EMIT_TRACE: (1, 0),  # Pops 1 (message), pushes 0
 
+            # Function operations
+            Opcode.FUNCTION_P: (1, 1),
+
             # Boolean operations
             Opcode.BOOLEAN_P: (1, 1),
             Opcode.BOOLEAN_EQ_P: (2, 1),
@@ -135,6 +138,19 @@ class BytecodeValidator:
             # Integer operations
             Opcode.INTEGER_P: (1, 1),
             Opcode.INTEGER_EQ_P: (2, 1),
+            Opcode.INTEGER_BIT_NOT: (1, 1),
+            Opcode.INTEGER_BIT_SHIFT_LEFT: (2, 1),
+            Opcode.INTEGER_BIT_SHIFT_RIGHT: (2, 1),
+            Opcode.INTEGER_BIT_OR: (2, 1),
+            Opcode.INTEGER_BIT_AND: (2, 1),
+            Opcode.INTEGER_BIT_XOR: (2, 1),
+            Opcode.INTEGER_TO_STRING_BIN: (1, 1),
+            Opcode.INTEGER_TO_STRING_HEX: (1, 1),
+            Opcode.INTEGER_TO_STRING_OCT: (1, 1),
+
+            # Floating point operations
+            Opcode.FLOAT_P: (1, 1),
+            Opcode.FLOAT_EQ_P: (2, 1),
 
             # Complex number operations
             Opcode.COMPLEX: (2, 1),
@@ -143,7 +159,43 @@ class BytecodeValidator:
             Opcode.COMPLEX_REAL: (1, 1),
             Opcode.COMPLEX_IMAG: (1, 1),
 
+            # Real number operations
+            Opcode.REAL_LT: (2, 1),
+            Opcode.REAL_GT: (2, 1),
+            Opcode.REAL_LTE: (2, 1),
+            Opcode.REAL_GTE: (2, 1),
+            Opcode.REAL_FLOOR_DIV: (2, 1),
+            Opcode.REAL_MOD: (2, 1),
+            Opcode.REAL_POW: (2, 1),
+            Opcode.REAL_FLOOR: (1, 1),
+            Opcode.REAL_CEIL: (1, 1),
+            Opcode.REAL_ROUND: (1, 1),
+            Opcode.REAL_TO_INTEGER: (1, 1),
+            Opcode.REAL_TO_FLOAT: (1, 1),
+            Opcode.REAL_MIN: (2, 1),
+            Opcode.REAL_MAX: (2, 1),
+
+            # Number operations
+            Opcode.NUMBER_P: (1, 1),
+            Opcode.NUMBER_EQ_P: (2, 1),
+            Opcode.NUMBER_ADD: (2, 1),
+            Opcode.NUMBER_SUB: (2, 1),
+            Opcode.NUMBER_MUL: (2, 1),
+            Opcode.NUMBER_DIV: (2, 1),
+            Opcode.NUMBER_STAR_STAR: (2, 1),
+            Opcode.NUMBER_SIN: (1, 1),
+            Opcode.NUMBER_COS: (1, 1),
+            Opcode.NUMBER_TAN: (1, 1),
+            Opcode.NUMBER_EXP: (1, 1),
+            Opcode.NUMBER_LOG: (1, 1),
+            Opcode.NUMBER_LOG10: (1, 1),
+            Opcode.NUMBER_SQRT: (1, 1),
+            Opcode.NUMBER_ABS: (1, 1),
+            Opcode.NUMBER_TO_STRING: (1, 1),
+
             # String
+            Opcode.STRING_P: (1, 1),
+            Opcode.STRING_EQ_P: (2, 1),
             Opcode.STRING_LENGTH: (1, 1),
             Opcode.STRING_UPCASE: (1, 1),
             Opcode.STRING_DOWNCASE: (1, 1),
@@ -158,6 +210,7 @@ class BytecodeValidator:
             Opcode.STRING_JOIN: (2, 1),
             Opcode.STRING_SUBSTRING: (3, 1),
             Opcode.STRING_REPLACE: (3, 1),
+            Opcode.STRING_APPEND: (2, 1),
 
             # Alist
             Opcode.ALIST_P: (1, 1),
@@ -190,71 +243,10 @@ class BytecodeValidator:
             Opcode.LIST_APPEND: (2, 1),
             Opcode.LIST_TO_STRING: (1, 1),
 
-            # Primitive arithmetic operations (binary)
-            Opcode.ADD: (2, 1),
-            Opcode.SUB: (2, 1),
-            Opcode.MUL: (2, 1),
-            Opcode.DIV: (2, 1),
-
-            # Type predicate operations (unary)
-            Opcode.NUMBER_P: (1, 1),
-            Opcode.FLOAT_P: (1, 1),
-            Opcode.STRING_P: (1, 1),
-            Opcode.FUNCTION_P: (1, 1),
-
-            # Floating point operations (unary or binary)
-            Opcode.SIN: (1, 1),
-            Opcode.COS: (1, 1),
-            Opcode.TAN: (1, 1),
-            Opcode.EXP: (1, 1),
-            Opcode.POW: (2, 1),
-            Opcode.LOG: (1, 1),
-            Opcode.LOG10: (1, 1),
-            Opcode.SQRT: (1, 1),
-            Opcode.ABS: (1, 1),
-            Opcode.FLOOR: (1, 1),
-            Opcode.CEIL: (1, 1),
-
-            # Fold-reducible variadic operations (binary forms)
-            Opcode.BIT_OR: (2, 1),
-            Opcode.BIT_AND: (2, 1),
-            Opcode.BIT_XOR: (2, 1),
-            Opcode.STRING_APPEND: (2, 1),
-            Opcode.MIN: (2, 1),
-            Opcode.MAX: (2, 1),
-
-            # Comparison / equality operations (binary forms)
+            # General equality operations
             Opcode.EQ: (2, 1),
             Opcode.NEQ: (2, 1),
-            Opcode.LT: (2, 1),
-            Opcode.GT: (2, 1),
-            Opcode.LTE: (2, 1),
-            Opcode.GTE: (2, 1),
-            Opcode.STRING_EQ_P: (2, 1),
-            Opcode.NUMBER_EQ_P: (2, 1),
-            Opcode.FLOAT_EQ_P: (2, 1),
 
-            # Arithmetic
-            Opcode.FLOOR_DIV: (2, 1),
-            Opcode.MOD: (2, 1),
-            Opcode.STAR_STAR: (2, 1),
-
-            # Bitwise
-            Opcode.BIT_NOT: (1, 1),
-            Opcode.BIT_SHIFT_LEFT: (2, 1),
-            Opcode.BIT_SHIFT_RIGHT: (2, 1),
-
-            # Numeric/type conversion
-            Opcode.ROUND: (1, 1),
-            Opcode.TO_INTEGER: (1, 1),
-            Opcode.TO_FLOAT: (1, 1),
-            Opcode.BIN: (1, 1),
-            Opcode.HEX: (1, 1),
-            Opcode.OCT: (1, 1),
-
-            Opcode.NUMBER_TO_STRING: (1, 1),
-
-            # Collection construction
             Opcode.RANGE: (3, 1),
     }
 
