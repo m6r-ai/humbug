@@ -92,6 +92,26 @@ class Opcode(IntEnum):
     ALIST_SET = auto()       # Set key in alist (alist, key, value)
     ALIST_GET = auto()       # Get value from alist by key with default: (alist-get alist key default)
 
+    # List operations
+    LIST = auto()            # Build list
+    LIST_P = auto()          # Check if list
+    LIST_EQ_P = auto()       # list=? a b
+    LIST_CONS = auto()
+    LIST_REVERSE = auto()    # Reverse list on top of stack
+    LIST_FIRST = auto()      # Get first element of list
+    LIST_REST = auto()       # Get rest of list (all but first element)
+    LIST_LAST = auto()       # Get last element of list
+    LIST_LENGTH = auto()     # Get length of list
+    LIST_REF = auto()        # Get element at index from list: LIST_REF index
+    LIST_NULL_P = auto()     # Check if list is empty
+    LIST_MEMBER_P = auto()   # Check if item is in list
+    LIST_POSITION = auto()   # Find index of item in list
+    LIST_TAKE = auto()       # Take first n elements from list
+    LIST_DROP = auto()       # Drop first n elements from list
+    LIST_REMOVE = auto()     # Remove all occurrences of item from list
+    LIST_APPEND = auto()     # Append two lists: (append a b)
+    LIST_TO_STRING = auto()  # Convert list of characters to string
+
     # Numeric operations
     NUMBER_P = auto()        # Check if number (int/float/complex)
     NUMBER_EQ_P = auto()     # number=? a b
@@ -136,26 +156,6 @@ class Opcode(IntEnum):
     # Numeric conversion operations
     TO_INTEGER = auto()      # Convert to integer
     TO_FLOAT = auto()        # Convert to float
-
-    # List operations
-    LIST_P = auto()          # Check if list
-    LIST_EQ_P = auto()       # list=? a b
-    CONS = auto()
-    REVERSE = auto()         # Reverse list on top of stack
-    FIRST = auto()           # Get first element of list
-    REST = auto()            # Get rest of list (all but first element)
-    LAST = auto()            # Get last element of list
-    LENGTH = auto()          # Get length of list
-    LIST_REF = auto()        # Get element at index from list: LIST_REF index
-    NULL_P = auto()          # Check if list is empty
-    MEMBER_P = auto()        # Check if item is in list
-    POSITION = auto()        # Find index of item in list
-    TAKE = auto()            # Take first n elements from list
-    DROP = auto()            # Drop first n elements from list
-    REMOVE = auto()          # Remove all occurrences of item from list
-    APPEND = auto()          # Append two lists: (append a b)
-    LIST_TO_STRING = auto()  # Convert list of characters to string
-    BUILD_LIST = auto()      # BUILD_LIST n  — pop n values, push AIFPLList
 
     # Fold-reducible variadic operations (desugared to binary by desugarer)
     MIN = auto()             # Minimum of two real numbers
@@ -221,11 +221,27 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'string-append': (Opcode.STRING_APPEND, 2),
     'substring': (Opcode.STRING_SUBSTRING, 3),
     'string-replace': (Opcode.STRING_REPLACE, 3),
+    'list?': (Opcode.LIST_P, 1),
+    'list=?': (Opcode.LIST_EQ_P, 2),
+    'cons': (Opcode.LIST_CONS, 2),
+    'reverse': (Opcode.LIST_REVERSE, 1),
+    'first': (Opcode.LIST_FIRST, 1),
+    'rest': (Opcode.LIST_REST, 1),
+    'last': (Opcode.LIST_LAST, 1),
+    'length': (Opcode.LIST_LENGTH, 1),
+    'list-ref': (Opcode.LIST_REF, 2),
+    'null?': (Opcode.LIST_NULL_P, 1),
+    'member?': (Opcode.LIST_MEMBER_P, 2),
+    'position': (Opcode.LIST_POSITION, 2),
+    'take': (Opcode.LIST_TAKE, 2),
+    'drop': (Opcode.LIST_DROP, 2),
+    'remove': (Opcode.LIST_REMOVE, 2),
+    'append': (Opcode.LIST_APPEND, 2),
+    'list->string': (Opcode.LIST_TO_STRING, 1),
 
     'number?': (Opcode.NUMBER_P, 1),
     'float?': (Opcode.FLOAT_P, 1),
     'boolean?': (Opcode.BOOLEAN_P, 1),
-    'list?': (Opcode.LIST_P, 1),
     'function?': (Opcode.FUNCTION_P, 1),
     'sin': (Opcode.SIN, 1),
     'cos': (Opcode.COS, 1),
@@ -244,14 +260,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'hex': (Opcode.HEX, 1),
     'oct': (Opcode.OCT, 1),
     'bit-not': (Opcode.BIT_NOT, 1),
-    'reverse': (Opcode.REVERSE, 1),
-    'first': (Opcode.FIRST, 1),
-    'rest': (Opcode.REST, 1),
-    'last': (Opcode.LAST, 1),
-    'length': (Opcode.LENGTH, 1),
-    'null?': (Opcode.NULL_P, 1),
     'number->string': (Opcode.NUMBER_TO_STRING, 1),
-    'list->string': (Opcode.LIST_TO_STRING, 1),
     '+': (Opcode.ADD, 2),
     '-': (Opcode.SUB, 2),
     '*': (Opcode.MUL, 2),
@@ -273,15 +282,6 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     '>=': (Opcode.GTE, 2),
     'number=?': (Opcode.NUMBER_EQ_P, 2),
     'float=?': (Opcode.FLOAT_EQ_P, 2),
-    'list=?': (Opcode.LIST_EQ_P, 2),
-    'cons': (Opcode.CONS, 2),
-    'append': (Opcode.APPEND, 2),
-    'list-ref': (Opcode.LIST_REF, 2),
-    'member?': (Opcode.MEMBER_P, 2),
-    'position': (Opcode.POSITION, 2),
-    'take': (Opcode.TAKE, 2),
-    'drop': (Opcode.DROP, 2),
-    'remove': (Opcode.REMOVE, 2),
     'min': (Opcode.MIN, 2),
     'max': (Opcode.MAX, 2),
     'range': (Opcode.RANGE, 3),
@@ -313,9 +313,9 @@ class Instruction:
             Opcode.POW, Opcode.SQRT, Opcode.ABS, Opcode.FLOOR, Opcode.CEIL, Opcode.ROUND,
             Opcode.TO_INTEGER, Opcode.TO_FLOAT, Opcode.COMPLEX_REAL, Opcode.COMPLEX_IMAG, Opcode.COMPLEX,
             Opcode.BIN, Opcode.HEX, Opcode.OCT,
-            Opcode.CONS, Opcode.REVERSE, Opcode.FIRST, Opcode.REST, Opcode.LAST,
-            Opcode.LENGTH, Opcode.LIST_REF, Opcode.NULL_P, Opcode.MEMBER_P, Opcode.POSITION,
-            Opcode.TAKE, Opcode.DROP, Opcode.REMOVE,
+            Opcode.LIST_CONS, Opcode.LIST_REVERSE, Opcode.LIST_FIRST, Opcode.LIST_REST, Opcode.LIST_LAST,
+            Opcode.LIST_LENGTH, Opcode.LIST_REF, Opcode.LIST_NULL_P, Opcode.LIST_MEMBER_P, Opcode.LIST_POSITION,
+            Opcode.LIST_TAKE, Opcode.LIST_DROP, Opcode.LIST_REMOVE,
             Opcode.STRING_LENGTH, Opcode.STRING_UPCASE, Opcode.STRING_DOWNCASE, Opcode.STRING_TRIM,
             Opcode.STRING_TO_NUMBER, Opcode.NUMBER_TO_STRING, Opcode.STRING_TO_LIST, Opcode.LIST_TO_STRING,
             Opcode.STRING_REF, Opcode.STRING_CONTAINS_P, Opcode.STRING_PREFIX_P, Opcode.STRING_SUFFIX_P,
@@ -324,7 +324,7 @@ class Instruction:
             Opcode.ALIST_HAS_P, Opcode.ALIST_REMOVE, Opcode.ALIST_MERGE, Opcode.ALIST_GET, Opcode.ALIST_SET,
             Opcode.RANGE,
             Opcode.BIT_OR, Opcode.BIT_AND, Opcode.BIT_XOR,
-            Opcode.APPEND, Opcode.STRING_APPEND, Opcode.MIN, Opcode.MAX,
+            Opcode.LIST_APPEND, Opcode.STRING_APPEND, Opcode.MIN, Opcode.MAX,
             Opcode.EQ, Opcode.NEQ, Opcode.LT, Opcode.GT, Opcode.LTE, Opcode.GTE,
             Opcode.STRING_EQ_P,
             Opcode.NUMBER_EQ_P, Opcode.INTEGER_EQ_P, Opcode.FLOAT_EQ_P, Opcode.COMPLEX_EQ_P,

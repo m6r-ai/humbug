@@ -215,6 +215,24 @@ class AIFPLVM:
         table[Opcode.ALIST_MERGE] = self._op_alist_merge
         table[Opcode.ALIST_SET] = self._op_alist_set
         table[Opcode.ALIST_GET] = self._op_alist_get
+        table[Opcode.LIST] = self._op_list
+        table[Opcode.LIST_P] = self._op_list_p
+        table[Opcode.LIST_EQ_P] = self._op_list_eq_p
+        table[Opcode.LIST_CONS] = self._op_list_cons
+        table[Opcode.LIST_LENGTH] = self._op_list_length
+        table[Opcode.LIST_REVERSE] = self._op_list_reverse
+        table[Opcode.LIST_FIRST] = self._op_list_first
+        table[Opcode.LIST_REST] = self._op_list_rest
+        table[Opcode.LIST_LAST] = self._op_list_last
+        table[Opcode.LIST_REF] = self._op_list_ref
+        table[Opcode.LIST_NULL_P] = self._op_list_null_p
+        table[Opcode.LIST_MEMBER_P] = self._op_list_member_p
+        table[Opcode.LIST_POSITION] = self._op_list_position
+        table[Opcode.LIST_TAKE] = self._op_list_take
+        table[Opcode.LIST_DROP] = self._op_list_drop
+        table[Opcode.LIST_REMOVE] = self._op_list_remove
+        table[Opcode.LIST_APPEND] = self._op_list_append
+        table[Opcode.LIST_TO_STRING] = self._op_list_to_string
 
         table[Opcode.ADD] = self._op_add
         table[Opcode.SUB] = self._op_sub
@@ -222,7 +240,6 @@ class AIFPLVM:
         table[Opcode.DIV] = self._op_div
         table[Opcode.NUMBER_P] = self._op_number_p
         table[Opcode.FLOAT_P] = self._op_float_p
-        table[Opcode.LIST_P] = self._op_list_p
         table[Opcode.SIN] = self._op_sin
         table[Opcode.COS] = self._op_cos
         table[Opcode.TAN] = self._op_tan
@@ -234,13 +251,6 @@ class AIFPLVM:
         table[Opcode.ABS] = self._op_abs
         table[Opcode.CEIL] = self._op_ceil
         table[Opcode.FLOOR] = self._op_floor
-        table[Opcode.CONS] = self._op_cons
-        table[Opcode.LENGTH] = self._op_length
-        table[Opcode.REVERSE] = self._op_reverse
-        table[Opcode.FIRST] = self._op_first
-        table[Opcode.REST] = self._op_rest
-        table[Opcode.LAST] = self._op_last
-        table[Opcode.LIST_REF] = self._op_list_ref
         table[Opcode.FLOOR_DIV] = self._op_floor_div
         table[Opcode.MOD] = self._op_mod
         table[Opcode.STAR_STAR] = self._op_star_star
@@ -253,19 +263,11 @@ class AIFPLVM:
         table[Opcode.BIN] = self._op_bin
         table[Opcode.HEX] = self._op_hex
         table[Opcode.OCT] = self._op_oct
-        table[Opcode.NULL_P] = self._op_null_p
-        table[Opcode.MEMBER_P] = self._op_member_p
-        table[Opcode.POSITION] = self._op_position
-        table[Opcode.TAKE] = self._op_take
-        table[Opcode.DROP] = self._op_drop
-        table[Opcode.REMOVE] = self._op_remove
         table[Opcode.NUMBER_TO_STRING] = self._op_number_to_string
-        table[Opcode.LIST_TO_STRING] = self._op_list_to_string
         table[Opcode.RANGE] = self._op_range
         table[Opcode.BIT_OR] = self._op_bit_or
         table[Opcode.BIT_AND] = self._op_bit_and
         table[Opcode.BIT_XOR] = self._op_bit_xor
-        table[Opcode.APPEND] = self._op_append
         table[Opcode.MIN] = self._op_min
         table[Opcode.MAX] = self._op_max
         table[Opcode.EQ] = self._op_eq
@@ -276,8 +278,6 @@ class AIFPLVM:
         table[Opcode.GTE] = self._op_gte
         table[Opcode.NUMBER_EQ_P] = self._op_number_eq_p
         table[Opcode.FLOAT_EQ_P] = self._op_float_eq_p
-        table[Opcode.LIST_EQ_P] = self._op_list_eq_p
-        table[Opcode.BUILD_LIST] = self._op_build_list
         return table
 
     def _ensure_boolean(self, value: AIFPLValue, operation_name: str) -> bool:
@@ -1302,6 +1302,221 @@ class AIFPLVM:
         self.stack.append(result if result is not None else default)
         return None
 
+    def _op_list(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, n: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """LIST n: Pop n values from stack (top is last element), push AIFPLList."""
+        if n == 0:
+            self.stack.append(AIFPLList(()))
+            return None
+
+        elements = self.stack[-n:]
+        del self.stack[-n:]
+        self.stack.append(AIFPLList(tuple(elements)))
+        return None
+
+    def _op_list_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """LIST_P: Check if value is a list."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLList)))
+        return None
+
+    def _op_list_eq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """LIST_EQ_P: Pop two values, push true if both are lists and equal."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_list(a, 'list=?') == self._ensure_list(b, 'list=?')))
+        return None
+
+    def _op_list_cons(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """CONS: Pop two values, construct a new list with head and tail."""
+        tail = self.stack.pop()
+        head = self.stack.pop()
+
+        list_val = self._ensure_list(tail, 'cons')
+        self.stack.append(list_val.cons(head))
+        return None
+
+    def _op_list_reverse(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REVERSE: Pop a list, push a new list with elements in reversed order."""
+        value = self.stack.pop()
+        list_val = self._ensure_list(value, 'reverse')
+        self.stack.append(list_val.reverse())
+        return None
+
+    def _op_list_first(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FIRST: Pop a list, push its first element."""
+        value = self.stack.pop()
+        list_val = self._ensure_list(value, 'first')
+        try:
+            self.stack.append(list_val.first())
+
+        except IndexError as e:
+            raise AIFPLEvalError(str(e)) from e
+
+        return None
+
+    def _op_list_rest(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REST: Pop a list, push a new list of all elements except the first."""
+        value = self.stack.pop()
+        list_val = self._ensure_list(value, 'rest')
+        try:
+            self.stack.append(list_val.rest())
+
+        except IndexError as e:
+            raise AIFPLEvalError(str(e)) from e
+
+        return None
+
+    def _op_list_last(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """LAST: Pop a list, push its last element."""
+        value = self.stack.pop()
+        list_val = self._ensure_list(value, 'last')
+        try:
+            self.stack.append(list_val.last())
+
+        except IndexError as e:
+            raise AIFPLEvalError(str(e)) from e
+
+        return None
+
+    def _op_list_length(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """LENGTH: Pop a list or alist, push its length as an integer."""
+        value = self.stack.pop()
+        if isinstance(value, (AIFPLList, AIFPLAList)):
+            self.stack.append(AIFPLInteger(value.length()))
+            return None
+
+        raise AIFPLEvalError(
+            f"Function 'length' requires list or alist argument, got {value.type_name()}"
+        )
+
+    def _op_list_ref(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """LIST_REF: Pop an integer index and a list, push the element at that index."""
+        index_val = self.stack.pop()
+        value = self.stack.pop()
+        list_val = self._ensure_list(value, 'list-ref')
+        if not isinstance(index_val, AIFPLInteger):
+            raise AIFPLEvalError(
+                f"Function 'list-ref' requires integer index, got {index_val.type_name()}"
+            )
+
+        index = index_val.value
+        if index < 0:
+            raise AIFPLEvalError(f"list-ref index out of range: {index}")
+
+        try:
+            self.stack.append(list_val.get(index))
+
+        except IndexError as e:
+            raise AIFPLEvalError(f"list-ref index out of range: {index}") from e
+
+        return None
+
+    def _op_list_null_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NULL_P: Pop a list, push true if empty."""
+        value = self.stack.pop()
+        list_val = self._ensure_list(value, 'null?')
+        self.stack.append(AIFPLBoolean(list_val.is_empty()))
+        return None
+
+    def _op_list_member_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """MEMBER_P: Pop a list and item, push true if item is in list."""
+        list_val_raw = self.stack.pop()
+        item = self.stack.pop()
+        list_val = self._ensure_list(list_val_raw, 'member?')
+        self.stack.append(AIFPLBoolean(list_val.contains(item)))
+        return None
+
+    def _op_list_position(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """POSITION: Pop a list and item, push index or #f if not found."""
+        list_val_raw = self.stack.pop()
+        item = self.stack.pop()
+        list_val = self._ensure_list(list_val_raw, 'position')
+        pos = list_val.position(item)
+        self.stack.append(AIFPLInteger(pos) if pos is not None else AIFPLBoolean(False))
+        return None
+
+    def _op_list_take(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """TAKE: Pop a list and count n, push first n elements."""
+        list_val_raw = self.stack.pop()
+        n_val = self.stack.pop()
+        n = self._ensure_integer(n_val, 'take')
+        list_val = self._ensure_list(list_val_raw, 'take')
+        if n < 0:
+            raise AIFPLEvalError(f"take count cannot be negative: {n}")
+
+        self.stack.append(list_val.take(n))
+        return None
+
+    def _op_list_drop(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """DROP: Pop a list and count n, push list without first n elements."""
+        list_val_raw = self.stack.pop()
+        n_val = self.stack.pop()
+        n = self._ensure_integer(n_val, 'drop')
+        list_val = self._ensure_list(list_val_raw, 'drop')
+        if n < 0:
+            raise AIFPLEvalError(f"drop count cannot be negative: {n}")
+
+        self.stack.append(list_val.drop(n))
+        return None
+
+    def _op_list_remove(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """REMOVE: Pop a list and item, push list with all occurrences of item removed."""
+        list_val_raw = self.stack.pop()
+        item = self.stack.pop()
+        list_val = self._ensure_list(list_val_raw, 'remove')
+        self.stack.append(list_val.remove_all(item))
+        return None
+
+    def _op_list_append(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """APPEND: Pop two lists, push concatenated list."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(self._ensure_list(a, 'append').append_list(self._ensure_list(b, 'append')))
+        return None
+
+    def _op_list_to_string(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """LIST_TO_STRING: Pop a list of strings, push concatenated string."""
+        a = self.stack.pop()
+        list_val = self._ensure_list(a, 'list->string')
+        self.stack.append(AIFPLString(''.join(str(elem.to_python()) for elem in list_val.elements)))
+        return None
+
     def _op_add(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1375,14 +1590,6 @@ class AIFPLVM:
         """FLOAT_P: Check if value is a float."""
         value = self.stack.pop()
         self.stack.append(AIFPLBoolean(isinstance(value, AIFPLFloat)))
-        return None
-
-    def _op_list_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """LIST_P: Check if value is a list."""
-        value = self.stack.pop()
-        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLList)))
         return None
 
     def _op_boolean_not(  # pylint: disable=useless-return
@@ -1563,105 +1770,6 @@ class AIFPLVM:
         self.stack.append(self._wrap_numeric_result(result))
         return None
 
-    def _op_cons(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """CONS: Pop two values, construct a new list with head and tail."""
-        tail = self.stack.pop()
-        head = self.stack.pop()
-
-        list_val = self._ensure_list(tail, 'cons')
-        self.stack.append(list_val.cons(head))
-        return None
-
-    def _op_length(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """LENGTH: Pop a list or alist, push its length as an integer."""
-        value = self.stack.pop()
-        if isinstance(value, (AIFPLList, AIFPLAList)):
-            self.stack.append(AIFPLInteger(value.length()))
-            return None
-
-        raise AIFPLEvalError(
-            f"Function 'length' requires list or alist argument, got {value.type_name()}"
-        )
-
-    def _op_reverse(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """REVERSE: Pop a list, push a new list with elements in reversed order."""
-        value = self.stack.pop()
-        list_val = self._ensure_list(value, 'reverse')
-        self.stack.append(list_val.reverse())
-        return None
-
-    def _op_first(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """FIRST: Pop a list, push its first element."""
-        value = self.stack.pop()
-        list_val = self._ensure_list(value, 'first')
-        try:
-            self.stack.append(list_val.first())
-
-        except IndexError as e:
-            raise AIFPLEvalError(str(e)) from e
-
-        return None
-
-    def _op_rest(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """REST: Pop a list, push a new list of all elements except the first."""
-        value = self.stack.pop()
-        list_val = self._ensure_list(value, 'rest')
-        try:
-            self.stack.append(list_val.rest())
-
-        except IndexError as e:
-            raise AIFPLEvalError(str(e)) from e
-
-        return None
-
-    def _op_last(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """LAST: Pop a list, push its last element."""
-        value = self.stack.pop()
-        list_val = self._ensure_list(value, 'last')
-        try:
-            self.stack.append(list_val.last())
-
-        except IndexError as e:
-            raise AIFPLEvalError(str(e)) from e
-
-        return None
-
-    def _op_list_ref(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """LIST_REF: Pop an integer index and a list, push the element at that index."""
-        index_val = self.stack.pop()
-        value = self.stack.pop()
-        list_val = self._ensure_list(value, 'list-ref')
-        if not isinstance(index_val, AIFPLInteger):
-            raise AIFPLEvalError(
-                f"Function 'list-ref' requires integer index, got {index_val.type_name()}"
-            )
-
-        index = index_val.value
-        if index < 0:
-            raise AIFPLEvalError(f"list-ref index out of range: {index}")
-
-        try:
-            self.stack.append(list_val.get(index))
-
-        except IndexError as e:
-            raise AIFPLEvalError(f"list-ref index out of range: {index}") from e
-
-        return None
-
     def _op_floor_div(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1798,74 +1906,6 @@ class AIFPLVM:
         self.stack.append(AIFPLString(f"#o{oct(a_val)[2:]}"))
         return None
 
-    def _op_null_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NULL_P: Pop a list, push true if empty."""
-        value = self.stack.pop()
-        list_val = self._ensure_list(value, 'null?')
-        self.stack.append(AIFPLBoolean(list_val.is_empty()))
-        return None
-
-    def _op_member_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """MEMBER_P: Pop a list and item, push true if item is in list."""
-        list_val_raw = self.stack.pop()
-        item = self.stack.pop()
-        list_val = self._ensure_list(list_val_raw, 'member?')
-        self.stack.append(AIFPLBoolean(list_val.contains(item)))
-        return None
-
-    def _op_position(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """POSITION: Pop a list and item, push index or #f if not found."""
-        list_val_raw = self.stack.pop()
-        item = self.stack.pop()
-        list_val = self._ensure_list(list_val_raw, 'position')
-        pos = list_val.position(item)
-        self.stack.append(AIFPLInteger(pos) if pos is not None else AIFPLBoolean(False))
-        return None
-
-    def _op_take(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """TAKE: Pop a list and count n, push first n elements."""
-        list_val_raw = self.stack.pop()
-        n_val = self.stack.pop()
-        n = self._ensure_integer(n_val, 'take')
-        list_val = self._ensure_list(list_val_raw, 'take')
-        if n < 0:
-            raise AIFPLEvalError(f"take count cannot be negative: {n}")
-
-        self.stack.append(list_val.take(n))
-        return None
-
-    def _op_drop(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """DROP: Pop a list and count n, push list without first n elements."""
-        list_val_raw = self.stack.pop()
-        n_val = self.stack.pop()
-        n = self._ensure_integer(n_val, 'drop')
-        list_val = self._ensure_list(list_val_raw, 'drop')
-        if n < 0:
-            raise AIFPLEvalError(f"drop count cannot be negative: {n}")
-
-        self.stack.append(list_val.drop(n))
-        return None
-
-    def _op_remove(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """REMOVE: Pop a list and item, push list with all occurrences of item removed."""
-        list_val_raw = self.stack.pop()
-        item = self.stack.pop()
-        list_val = self._ensure_list(list_val_raw, 'remove')
-        self.stack.append(list_val.remove_all(item))
-        return None
-
     def _op_number_to_string(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1877,15 +1917,6 @@ class AIFPLVM:
             return None
 
         self.stack.append(AIFPLString(str(a_val)))
-        return None
-
-    def _op_list_to_string(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """LIST_TO_STRING: Pop a list of strings, push concatenated string."""
-        a = self.stack.pop()
-        list_val = self._ensure_list(a, 'list->string')
-        self.stack.append(AIFPLString(''.join(str(elem.to_python()) for elem in list_val.elements)))
         return None
 
     def _op_bit_or(  # pylint: disable=useless-return
@@ -1913,15 +1944,6 @@ class AIFPLVM:
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLInteger(self._ensure_integer(a, 'bit-xor') ^ self._ensure_integer(b, 'bit-xor')))
-        return None
-
-    def _op_append(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """APPEND: Pop two lists, push concatenated list."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(self._ensure_list(a, 'append').append_list(self._ensure_list(b, 'append')))
         return None
 
     def _op_string_append(  # pylint: disable=useless-return
@@ -2033,28 +2055,6 @@ class AIFPLVM:
             raise AIFPLEvalError(f"Function 'float=?' requires float arguments, got {b.type_name()}")
 
         self.stack.append(AIFPLBoolean(a.value == b.value))
-        return None
-
-    def _op_list_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """LIST_EQ_P: Pop two values, push true if both are lists and equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(self._ensure_list(a, 'list=?') == self._ensure_list(b, 'list=?')))
-        return None
-
-    def _op_build_list(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, n: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """BUILD_LIST n: Pop n values from stack (top is last element), push AIFPLList."""
-        if n == 0:
-            self.stack.append(AIFPLList(()))
-            return None
-
-        elements = self.stack[-n:]
-        del self.stack[-n:]
-        self.stack.append(AIFPLList(tuple(elements)))
         return None
 
     def _op_range(  # pylint: disable=useless-return

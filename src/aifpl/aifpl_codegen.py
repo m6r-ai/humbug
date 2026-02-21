@@ -25,7 +25,7 @@ TERNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if a
 # Unlike fold-reducible ops these are NOT desugared to binary form; instead the
 # count of elements is encoded directly in the instruction argument.
 BUILD_OPS = {
-    'list': Opcode.BUILD_LIST,
+    'list': Opcode.LIST,
     'alist': Opcode.ALIST,
 }
 

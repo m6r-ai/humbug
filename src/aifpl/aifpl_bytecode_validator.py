@@ -171,6 +171,25 @@ class BytecodeValidator:
             Opcode.ALIST_SET: (3, 1),
             Opcode.ALIST_GET: (3, 1),
 
+            # List operations
+            Opcode.LIST_P: (1, 1),
+            Opcode.LIST_EQ_P: (2, 1),
+            Opcode.LIST_CONS: (2, 1),
+            Opcode.LIST_REVERSE: (1, 1),
+            Opcode.LIST_FIRST: (1, 1),
+            Opcode.LIST_REST: (1, 1),
+            Opcode.LIST_LAST: (1, 1),
+            Opcode.LIST_LENGTH: (1, 1),
+            Opcode.LIST_REF: (2, 1),
+            Opcode.LIST_NULL_P: (1, 1),
+            Opcode.LIST_MEMBER_P: (2, 1),
+            Opcode.LIST_POSITION: (2, 1),
+            Opcode.LIST_TAKE: (2, 1),
+            Opcode.LIST_DROP: (2, 1),
+            Opcode.LIST_REMOVE: (2, 1),
+            Opcode.LIST_APPEND: (2, 1),
+            Opcode.LIST_TO_STRING: (1, 1),
+
             # Primitive arithmetic operations (binary)
             Opcode.ADD: (2, 1),
             Opcode.SUB: (2, 1),
@@ -181,7 +200,6 @@ class BytecodeValidator:
             Opcode.NUMBER_P: (1, 1),
             Opcode.FLOAT_P: (1, 1),
             Opcode.STRING_P: (1, 1),
-            Opcode.LIST_P: (1, 1),
             Opcode.FUNCTION_P: (1, 1),
 
             # Floating point operations (unary or binary)
@@ -197,20 +215,10 @@ class BytecodeValidator:
             Opcode.FLOOR: (1, 1),
             Opcode.CEIL: (1, 1),
 
-            # List operations
-            Opcode.CONS: (2, 1),
-            Opcode.REVERSE: (1, 1),
-            Opcode.FIRST: (1, 1),
-            Opcode.REST: (1, 1),
-            Opcode.LAST: (1, 1),
-            Opcode.LENGTH: (1, 1),
-            Opcode.LIST_REF: (2, 1),
-
             # Fold-reducible variadic operations (binary forms)
             Opcode.BIT_OR: (2, 1),
             Opcode.BIT_AND: (2, 1),
             Opcode.BIT_XOR: (2, 1),
-            Opcode.APPEND: (2, 1),
             Opcode.STRING_APPEND: (2, 1),
             Opcode.MIN: (2, 1),
             Opcode.MAX: (2, 1),
@@ -225,7 +233,6 @@ class BytecodeValidator:
             Opcode.STRING_EQ_P: (2, 1),
             Opcode.NUMBER_EQ_P: (2, 1),
             Opcode.FLOAT_EQ_P: (2, 1),
-            Opcode.LIST_EQ_P: (2, 1),
 
             # Arithmetic
             Opcode.FLOOR_DIV: (2, 1),
@@ -246,15 +253,6 @@ class BytecodeValidator:
             Opcode.OCT: (1, 1),
 
             Opcode.NUMBER_TO_STRING: (1, 1),
-            Opcode.LIST_TO_STRING: (1, 1),
-
-            # List
-            Opcode.NULL_P: (1, 1),
-            Opcode.MEMBER_P: (2, 1),
-            Opcode.POSITION: (2, 1),
-            Opcode.TAKE: (2, 1),
-            Opcode.DROP: (2, 1),
-            Opcode.REMOVE: (2, 1),
 
             # Collection construction
             Opcode.RANGE: (3, 1),
@@ -594,7 +592,7 @@ class BytecodeValidator:
             n = instr.arg1
             return (n, 0)  # Pop n args from stack, store into locals 0..n-1
 
-        if opcode == Opcode.BUILD_LIST:
+        if opcode == Opcode.LIST:
             n = instr.arg1
             return (n, 1)  # Pop n elements, push list
 
