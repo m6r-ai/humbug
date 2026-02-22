@@ -134,6 +134,43 @@ class AIFPLBuiltinRegistry:
         'real': (1, 1),
         'imag': (1, 1),
         'complex': (2, 2),
+        # Type-specific integer arithmetic
+        'integer+': (2, 2),
+        'integer-': (2, 2),
+        'integer*': (2, 2),
+        'integer/': (2, 2),
+        'integer-negate': (1, 1),
+        # Type-specific float arithmetic
+        'float+': (2, 2),
+        'float-': (2, 2),
+        'float*': (2, 2),
+        'float/': (2, 2),
+        'float-negate': (1, 1),
+        'float-pow': (2, 2),
+        # Type-specific float transcendentals
+        'float-sin': (1, 1),
+        'float-cos': (1, 1),
+        'float-tan': (1, 1),
+        'float-log': (1, 1),
+        'float-log10': (1, 1),
+        'float-exp': (1, 1),
+        'float-sqrt': (1, 1),
+        'float-abs': (1, 1),
+        # Type-specific complex arithmetic
+        'complex+': (2, 2),
+        'complex-': (2, 2),
+        'complex*': (2, 2),
+        'complex/': (2, 2),
+        'complex-negate': (1, 1),
+        'complex-pow': (2, 2),
+        # Type-specific complex transcendentals
+        'complex-sin': (1, 1),
+        'complex-cos': (1, 1),
+        'complex-tan': (1, 1),
+        'complex-log': (1, 1),
+        'complex-exp': (1, 1),
+        'complex-sqrt': (1, 1),
+        'complex-abs': (1, 1),
     }
 
     def create_builtin_function_objects(self) -> Dict[str, AIFPLFunction]:

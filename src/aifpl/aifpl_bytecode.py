@@ -67,9 +67,32 @@ class Opcode(IntEnum):
     INTEGER_TO_STRING_OCT = auto()
                              # Convert integer to octal string
 
+    # Type-specific integer arithmetic
+    INTEGER_ADD = auto()     # integer+ a b
+    INTEGER_SUB = auto()     # integer- a b
+    INTEGER_MUL = auto()     # integer* a b
+    INTEGER_DIV = auto()     # integer/ a b  (floor division)
+    INTEGER_NEG = auto()     # integer-negate x  (unary minus)
+
     # Floating point operations
     FLOAT_P = auto()         # Check if float
     FLOAT_EQ_P = auto()      # float=? a b
+
+    # Type-specific float arithmetic and transcendentals
+    FLOAT_ADD = auto()       # float+ a b
+    FLOAT_SUB = auto()       # float- a b
+    FLOAT_MUL = auto()       # float* a b
+    FLOAT_DIV = auto()       # float/ a b
+    FLOAT_NEG = auto()       # float-negate x  (unary minus)
+    FLOAT_POW = auto()       # float-pow a b
+    FLOAT_SIN = auto()       # float-sin x
+    FLOAT_COS = auto()       # float-cos x
+    FLOAT_TAN = auto()       # float-tan x
+    FLOAT_LOG = auto()       # float-log x
+    FLOAT_LOG10 = auto()     # float-log10 x
+    FLOAT_EXP = auto()       # float-exp x
+    FLOAT_SQRT = auto()      # float-sqrt x
+    FLOAT_ABS = auto()       # float-abs x
 
     # Real number operations
     REAL_LT = auto()         # a < b
@@ -93,6 +116,21 @@ class Opcode(IntEnum):
     COMPLEX_EQ_P = auto()    # complex=? a b
     COMPLEX_REAL = auto()    # Extract real part
     COMPLEX_IMAG = auto()    # Extract imaginary part
+
+    # Type-specific complex arithmetic and transcendentals
+    COMPLEX_ADD = auto()     # complex+ a b
+    COMPLEX_SUB = auto()     # complex- a b
+    COMPLEX_MUL = auto()     # complex* a b
+    COMPLEX_DIV = auto()     # complex/ a b
+    COMPLEX_NEG = auto()     # complex-negate x  (unary minus)
+    COMPLEX_POW = auto()     # complex-pow a b
+    COMPLEX_SIN = auto()     # complex-sin x
+    COMPLEX_COS = auto()     # complex-cos x
+    COMPLEX_TAN = auto()     # complex-tan x
+    COMPLEX_LOG = auto()     # complex-log x
+    COMPLEX_EXP = auto()     # complex-exp x
+    COMPLEX_SQRT = auto()    # complex-sqrt x
+    COMPLEX_ABS = auto()     # complex-abs x  (returns float: magnitude)
 
     # Numeric operations
     NUMBER_P = auto()        # Check if number (int/float/complex)
@@ -206,8 +244,27 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'bin': (Opcode.INTEGER_TO_STRING_BIN, 1),
     'hex': (Opcode.INTEGER_TO_STRING_HEX, 1),
     'oct': (Opcode.INTEGER_TO_STRING_OCT, 1),
+    'integer+': (Opcode.INTEGER_ADD, 2),
+    'integer-': (Opcode.INTEGER_SUB, 2),
+    'integer*': (Opcode.INTEGER_MUL, 2),
+    'integer/': (Opcode.INTEGER_DIV, 2),
+    'integer-negate': (Opcode.INTEGER_NEG, 1),
     'float?': (Opcode.FLOAT_P, 1),
     'float=?': (Opcode.FLOAT_EQ_P, 2),
+    'float+': (Opcode.FLOAT_ADD, 2),
+    'float-': (Opcode.FLOAT_SUB, 2),
+    'float*': (Opcode.FLOAT_MUL, 2),
+    'float/': (Opcode.FLOAT_DIV, 2),
+    'float-negate': (Opcode.FLOAT_NEG, 1),
+    'float-pow': (Opcode.FLOAT_POW, 2),
+    'float-sin': (Opcode.FLOAT_SIN, 1),
+    'float-cos': (Opcode.FLOAT_COS, 1),
+    'float-tan': (Opcode.FLOAT_TAN, 1),
+    'float-log': (Opcode.FLOAT_LOG, 1),
+    'float-log10': (Opcode.FLOAT_LOG10, 1),
+    'float-exp': (Opcode.FLOAT_EXP, 1),
+    'float-sqrt': (Opcode.FLOAT_SQRT, 1),
+    'float-abs': (Opcode.FLOAT_ABS, 1),
     '<': (Opcode.REAL_LT, 2),
     '>': (Opcode.REAL_GT, 2),
     '<=': (Opcode.REAL_LTE, 2),
@@ -225,6 +282,19 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'complex': (Opcode.COMPLEX, 2),
     'complex?': (Opcode.COMPLEX_P, 1),
     'complex=?': (Opcode.COMPLEX_EQ_P, 2),
+    'complex+': (Opcode.COMPLEX_ADD, 2),
+    'complex-': (Opcode.COMPLEX_SUB, 2),
+    'complex*': (Opcode.COMPLEX_MUL, 2),
+    'complex/': (Opcode.COMPLEX_DIV, 2),
+    'complex-negate': (Opcode.COMPLEX_NEG, 1),
+    'complex-pow': (Opcode.COMPLEX_POW, 2),
+    'complex-sin': (Opcode.COMPLEX_SIN, 1),
+    'complex-cos': (Opcode.COMPLEX_COS, 1),
+    'complex-tan': (Opcode.COMPLEX_TAN, 1),
+    'complex-log': (Opcode.COMPLEX_LOG, 1),
+    'complex-exp': (Opcode.COMPLEX_EXP, 1),
+    'complex-sqrt': (Opcode.COMPLEX_SQRT, 1),
+    'complex-abs': (Opcode.COMPLEX_ABS, 1),
     'real': (Opcode.COMPLEX_REAL, 1),
     'imag': (Opcode.COMPLEX_IMAG, 1),
     'number?': (Opcode.NUMBER_P, 1),
@@ -334,6 +404,11 @@ class Instruction:
             Opcode.STRING_EQ_P,
             Opcode.NUMBER_EQ_P, Opcode.INTEGER_EQ_P, Opcode.FLOAT_EQ_P, Opcode.COMPLEX_EQ_P,
             Opcode.BOOLEAN_EQ_P, Opcode.LIST_EQ_P, Opcode.ALIST_EQ_P,
+            Opcode.INTEGER_ADD, Opcode.INTEGER_SUB, Opcode.INTEGER_MUL, Opcode.INTEGER_DIV, Opcode.INTEGER_NEG,
+            Opcode.FLOAT_ADD, Opcode.FLOAT_SUB, Opcode.FLOAT_MUL, Opcode.FLOAT_DIV, Opcode.FLOAT_NEG,
+            Opcode.FLOAT_POW, Opcode.FLOAT_SIN, Opcode.FLOAT_COS, Opcode.FLOAT_TAN, Opcode.FLOAT_LOG, Opcode.FLOAT_LOG10, Opcode.FLOAT_EXP, Opcode.FLOAT_SQRT, Opcode.FLOAT_ABS,
+            Opcode.COMPLEX_ADD, Opcode.COMPLEX_SUB, Opcode.COMPLEX_MUL, Opcode.COMPLEX_DIV, Opcode.COMPLEX_NEG,
+            Opcode.COMPLEX_POW, Opcode.COMPLEX_SIN, Opcode.COMPLEX_COS, Opcode.COMPLEX_TAN, Opcode.COMPLEX_LOG, Opcode.COMPLEX_EXP, Opcode.COMPLEX_SQRT, Opcode.COMPLEX_ABS,
         }
         if self.opcode in no_arg_opcodes:
             return 0
