@@ -44,10 +44,10 @@ class TestAIFPLEnvironmentEdgeCases:
                     pass
 
         # Mathematical functions
-        math_functions = ["abs", "sqrt", "sin", "cos", "tan", "log", "exp", "log10"]
+        math_functions = ["float-abs", "float-sqrt", "float-sin", "float-cos", "float-tan", "float-log", "float-exp", "float-log10"]
 
         for func in math_functions:
-            result = aifpl.evaluate(f"({func} 1)")
+            result = aifpl.evaluate(f"({func} 1.0)")
             assert isinstance(result, (int, float, complex))
 
         # List functions

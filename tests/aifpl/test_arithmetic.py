@@ -196,14 +196,14 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("expression,expected_approx", [
         # Trigonometric functions
-        ("(sin 0)", 0.0),
-        ("(sin (float* pi 0.5))", 1.0),
-        ("(sin pi)", 0.0),
-        ("(cos 0)", 1.0),
-        ("(cos (float* pi 0.5))", 0.0),
-        ("(cos pi)", -1.0),
-        ("(tan 0)", 0.0),
-        ("(tan (float* pi 0.25))", 1.0),
+        ("(float-sin 0.0)", 0.0),
+        ("(float-sin (float* pi 0.5))", 1.0),
+        ("(float-sin pi)", 0.0),
+        ("(float-cos 0.0)", 1.0),
+        ("(float-cos (float* pi 0.5))", 0.0),
+        ("(float-cos pi)", -1.0),
+        ("(float-tan 0.0)", 0.0),
+        ("(float-tan (float* pi 0.25))", 1.0),
     ])
     def test_trigonometric_functions(self, aifpl, expression, expected_approx):
         """Test trigonometric functions."""
@@ -213,19 +213,19 @@ class TestArithmetic:
     def test_trigonometric_with_complex(self, aifpl):
         """Test trigonometric functions with complex arguments."""
         # sin(i) = i*sinh(1)
-        result = aifpl.evaluate("(sin 1j)")
+        result = aifpl.evaluate("(complex-sin 1j)")
         expected = 1j * math.sinh(1)
         assert abs(result - expected) < 1e-10
 
     @pytest.mark.parametrize("expression,expected_approx", [
         # Logarithmic functions
-        ("(log e)", 1.0),
-        ("(log 1)", 0.0),
-        ("(exp 0)", 1.0),
-        ("(exp 1)", math.e),
-        ("(log10 10)", 1.0),
-        ("(log10 100)", 2.0),
-        ("(log10 1)", 0.0),
+        ("(float-log e)", 1.0),
+        ("(float-log 1.0)", 0.0),
+        ("(float-exp 0.0)", 1.0),
+        ("(float-exp 1.0)", math.e),
+        ("(float-log10 10.0)", 1.0),
+        ("(float-log10 100.0)", 2.0),
+        ("(float-log10 1.0)", 0.0),
     ])
     def test_logarithmic_functions(self, aifpl, expression, expected_approx):
         """Test logarithmic and exponential functions."""
@@ -235,19 +235,19 @@ class TestArithmetic:
     def test_logarithmic_with_complex(self, aifpl):
         """Test logarithmic functions with complex arguments."""
         # log(-1) = i*pi
-        result = aifpl.evaluate("(log -1)")
+        result = aifpl.evaluate("(complex-log -1+0j)")
         expected = 1j * math.pi
         assert abs(result - expected) < 1e-10
 
     @pytest.mark.parametrize("expression,expected", [
         # Square root
-        ("(sqrt 4)", "2.0"),  # sqrt returns float
-        ("(sqrt 9)", "3.0"),  # sqrt returns float
-        ("(sqrt 16)", "4.0"),  # sqrt returns float
-        ("(sqrt 2)", str(math.sqrt(2))),
+        ("(float-sqrt 4.0)", "2.0"),  # sqrt returns float
+        ("(float-sqrt 9.0)", "3.0"),  # sqrt returns float
+        ("(float-sqrt 16.0)", "4.0"),  # sqrt returns float
+        ("(float-sqrt 2.0)", str(math.sqrt(2))),
 
         # Square root of zero
-        ("(sqrt 0)", "0.0"),  # sqrt returns float
+        ("(float-sqrt 0.0)", "0.0"),  # sqrt returns float
     ])
     def test_sqrt_function(self, aifpl, expression, expected):
         """Test square root function."""
@@ -261,15 +261,15 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("expression,expected", [
         # Absolute value
-        ("(abs 5)", "5"),
-        ("(abs -5)", "5"),
-        ("(abs 0)", "0"),
-        ("(abs 3.14)", "3.14"),
-        ("(abs -3.14)", "3.14"),
+        ("(float-abs 5.0)", "5.0"),
+        ("(float-abs -5.0)", "5.0"),
+        ("(float-abs 0.0)", "0.0"),
+        ("(float-abs 3.14)", "3.14"),
+        ("(float-abs -3.14)", "3.14"),
 
         # Complex absolute value (magnitude)
-        ("(abs (complex 3 4))", "5.0"),  # |3+4i| = 5, abs of complex returns float
-        ("(abs 1j)", "1.0"),  # |i| = 1, abs of complex returns float
+        ("(complex-abs (complex 3 4))", "5.0"),  # |3+4i| = 5, abs of complex returns float
+        ("(complex-abs 1j)", "1.0"),  # |i| = 1, abs of complex returns float
     ])
     def test_abs_function(self, aifpl, expression, expected):
         """Test absolute value function."""
@@ -495,19 +495,19 @@ class TestArithmetic:
     def test_complex_trigonometric_edge_cases(self, aifpl):
         """Test trigonometric functions with pure imaginary numbers."""
         # Test tan with complex numbers to hit the complex branch
-        result = aifpl.evaluate("(tan 1j)")
+        result = aifpl.evaluate("(complex-tan 1j)")
         expected = cmath.tan(1j)
         assert abs(result - expected) < 1e-10
 
     def test_logarithm_negative_numbers_return_complex(self, aifpl):
         """Test that logarithms of negative numbers return complex results."""
         # Test log with negative real numbers
-        result = aifpl.evaluate("(log -2)")
+        result = aifpl.evaluate("(complex-log -2+0j)")
         expected = cmath.log(-2)
         assert abs(result - expected) < 1e-10
 
         # Test log10 with negative real numbers
-        result = aifpl.evaluate("(log10 -10)")
+        result = aifpl.evaluate("(complex-log10 -10+0j)")
         expected = cmath.log10(-10)
         assert abs(result - expected) < 1e-10
 
@@ -515,22 +515,22 @@ class TestArithmetic:
         """Test sqrt with negative and complex numbers."""
         # Test sqrt with negative numbers
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(sqrt -9)")
+            aifpl.evaluate("(floor-sqrt -9.0)")
 
         # Test sqrt with complex numbers
-        result = aifpl.evaluate("(sqrt (complex 0 4))")
+        result = aifpl.evaluate("(complex-sqrt (complex 0 4))")
         expected = cmath.sqrt(4j)
         assert abs(result - expected) < 1e-10
 
     def test_exponential_with_complex_numbers(self, aifpl):
         """Test exponential function with complex arguments."""
         # Test exp with complex numbers
-        result = aifpl.evaluate("(exp (complex 1 2))")
+        result = aifpl.evaluate("(complex-exp (complex 1 2))")
         expected = cmath.exp(1+2j)
         assert abs(result - expected) < 1e-10
 
         # Test exp with pure imaginary
-        result = aifpl.evaluate("(exp 1j)")
+        result = aifpl.evaluate("(complex-exp 1j)")
         expected = cmath.exp(1j)
         assert abs(result - expected) < 1e-10
 

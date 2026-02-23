@@ -106,143 +106,143 @@ class TestAIFPLMathEdgeCases:
     def test_root_operations_edge_cases(self, aifpl):
         """Test root operations edge cases."""
         # Basic square roots
-        assert aifpl.evaluate("(sqrt 0)") == 0
-        assert aifpl.evaluate("(sqrt 1)") == 1
-        assert aifpl.evaluate("(sqrt 4)") == 2
-        assert aifpl.evaluate("(sqrt 9)") == 3
+        assert aifpl.evaluate("(float-sqrt 0.0)") == 0.0
+        assert aifpl.evaluate("(float-sqrt 1.0)") == 1.0
+        assert aifpl.evaluate("(float-sqrt 4.0)") == 2.0
+        assert aifpl.evaluate("(float-sqrt 9.0)") == 3.0
 
         # Irrational roots
-        result = aifpl.evaluate("(sqrt 2)")
+        result = aifpl.evaluate("(float-sqrt 2.0)")
         assert abs(result - math.sqrt(2)) < 1e-10
 
-        result = aifpl.evaluate("(sqrt 3)")
+        result = aifpl.evaluate("(float-sqrt 3.0)")
         assert abs(result - math.sqrt(3)) < 1e-10
 
         # Square root of complex negative numbers (should return complex)
-        result = aifpl.evaluate("(sqrt -4+0j)")
+        result = aifpl.evaluate("(complex-sqrt -4+0j)")
         assert isinstance(result, complex)
         assert abs(result - 2j) < 1e-10
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(sqrt -1)")
+            aifpl.evaluate("(float-sqrt -1.0)")
 
         # Square root of complex numbers
-        result = aifpl.evaluate("(sqrt (complex 3 4))")
+        result = aifpl.evaluate("(complex-sqrt (complex 3 4))")
         expected = cmath.sqrt(3+4j)
         assert abs(result - expected) < 1e-10
 
     def test_trigonometric_edge_cases(self, aifpl):
         """Test trigonometric function edge cases."""
         # Special angle values
-        result = aifpl.evaluate("(sin 0)")
+        result = aifpl.evaluate("(float-sin 0.0)")
         assert abs(result - 0) < 1e-10
 
-        result = aifpl.evaluate("(sin (float* pi 0.5))")
+        result = aifpl.evaluate("(float-sin (float* pi 0.5))")
         assert abs(result - 1) < 1e-10
 
-        result = aifpl.evaluate("(sin pi)")
+        result = aifpl.evaluate("(float-sin pi)")
         assert abs(result - 0) < 1e-10
 
-        result = aifpl.evaluate("(cos 0)")
+        result = aifpl.evaluate("(float-cos 0.0)")
         assert abs(result - 1) < 1e-10
 
-        result = aifpl.evaluate("(cos (float* pi 0.5))")
+        result = aifpl.evaluate("(float-cos (float* pi 0.5))")
         assert abs(result - 0) < 1e-10
 
-        result = aifpl.evaluate("(cos pi)")
+        result = aifpl.evaluate("(float-cos pi)")
         assert abs(result - (-1)) < 1e-10
 
-        result = aifpl.evaluate("(tan 0)")
+        result = aifpl.evaluate("(float-tan 0.0)")
         assert abs(result - 0) < 1e-10
 
-        result = aifpl.evaluate("(tan (float* pi 0.25))")
+        result = aifpl.evaluate("(float-tan (float* pi 0.25))")
         assert abs(result - 1) < 1e-10
 
         # Negative angles
-        result = aifpl.evaluate("(sin (float* -1.0 pi))")
+        result = aifpl.evaluate("(float-sin (float* -1.0 pi))")
         assert abs(result - 0) < 1e-10
 
-        result = aifpl.evaluate("(cos (float* -1.0 pi))")
+        result = aifpl.evaluate("(float-cos (float* -1.0 pi))")
         assert abs(result - (-1)) < 1e-10
 
         # Very small angles (sin(x) ≈ x for small x)
-        result = aifpl.evaluate("(sin 0.001)")
+        result = aifpl.evaluate("(float-sin 0.001)")
         assert abs(result - 0.001) < 1e-6
 
         # Large angles (periodicity)
-        result = aifpl.evaluate("(sin (float* 2.0 pi))")
+        result = aifpl.evaluate("(float-sin (float* 2.0 pi))")
         assert abs(result - 0) < 1e-10
 
-        result = aifpl.evaluate("(cos (float* 2.0 pi))")
+        result = aifpl.evaluate("(float-cos (float* 2.0 pi))")
         assert abs(result - 1) < 1e-10
 
     def test_trigonometric_with_complex_numbers(self, aifpl):
         """Test trigonometric functions with complex arguments."""
         # sin(i) = i*sinh(1)
-        result = aifpl.evaluate("(sin 1j)")
+        result = aifpl.evaluate("(complex-sin 1j)")
         expected = 1j * math.sinh(1)
         assert abs(result - expected) < 1e-10
 
         # cos(i) = cosh(1)
-        result = aifpl.evaluate("(cos 1j)")
+        result = aifpl.evaluate("(complex-cos 1j)")
         expected = math.cosh(1)
         assert abs(result - expected) < 1e-10
 
         # Complex trigonometric identities
         # sin^2 + cos^2 = 1 should hold for complex numbers too
         z = 1 + 2j
-        result_sin = aifpl.evaluate("(sin (complex 1 2))")
-        result_cos = aifpl.evaluate("(cos (complex 1 2))")
+        result_sin = aifpl.evaluate("(complex-sin (complex 1.0 2.0))")
+        result_cos = aifpl.evaluate("(complex-cos (complex 1.0 2.0))")
         identity_result = result_sin**2 + result_cos**2
         assert abs(identity_result - 1) < 1e-10
 
     def test_logarithmic_edge_cases(self, aifpl):
         """Test logarithmic function edge cases."""
         # Natural logarithm edge cases
-        result = aifpl.evaluate("(log 1)")
+        result = aifpl.evaluate("(float-log 1.0)")
         assert abs(result - 0) < 1e-10
 
-        result = aifpl.evaluate("(log e)")
+        result = aifpl.evaluate("(float-log e)")
         assert abs(result - 1) < 1e-10
 
         # Base-10 logarithm edge cases
-        result = aifpl.evaluate("(log10 1)")
+        result = aifpl.evaluate("(float-log10 1.0)")
         assert abs(result - 0) < 1e-10
 
-        result = aifpl.evaluate("(log10 10)")
+        result = aifpl.evaluate("(float-log10 10.0)")
         assert abs(result - 1) < 1e-10
 
-        result = aifpl.evaluate("(log10 100)")
+        result = aifpl.evaluate("(float-log10 100.0)")
         assert abs(result - 2) < 1e-10
 
-        result = aifpl.evaluate("(log10 1000)")
+        result = aifpl.evaluate("(float-log10 1000.0)")
         assert abs(result - 3) < 1e-10
 
         # Logarithm of numbers less than 1
-        result = aifpl.evaluate("(log 0.5)")
+        result = aifpl.evaluate("(float-log 0.5)")
         assert abs(result - math.log(0.5)) < 1e-10
 
-        result = aifpl.evaluate("(log10 0.1)")
+        result = aifpl.evaluate("(float-log10 0.1)")
         assert abs(result - (-1)) < 1e-10
 
         # Logarithm of very small positive numbers
-        result = aifpl.evaluate("(log 1e-10)")
+        result = aifpl.evaluate("(float-log 1e-10)")
         assert abs(result - math.log(1e-10)) < 1e-10
 
     def test_logarithmic_with_complex_numbers(self, aifpl):
         """Test logarithmic functions with complex arguments."""
         # log(-1) = i*pi
-        result = aifpl.evaluate("(log -1)")
+        result = aifpl.evaluate("(complex-log -1+0j)")
         expected = 1j * math.pi
         assert abs(result - expected) < 1e-10
 
         # log(i) = i*pi/2
-        result = aifpl.evaluate("(log 1j)")
+        result = aifpl.evaluate("(complex-log 1j)")
         expected = 1j * math.pi / 2
         assert abs(result - expected) < 1e-10
 
         # log of complex number
-        result = aifpl.evaluate("(log (complex 1 1))")
+        result = aifpl.evaluate("(complex-log (complex 1 1))")
         expected = cmath.log(1+1j)
         assert abs(result - expected) < 1e-10
 
@@ -250,7 +250,7 @@ class TestAIFPLMathEdgeCases:
         """Test logarithmic function domain errors."""
         # Logarithm of zero should raise error or return -inf
         try:
-            result = aifpl.evaluate("(log 0)")
+            result = aifpl.evaluate("(float-log 0.0)")
             # If it doesn't raise an error, it should be -inf
             assert math.isinf(result) and result < 0
 
@@ -259,14 +259,14 @@ class TestAIFPLMathEdgeCases:
             pass
 
         try:
-            result = aifpl.evaluate("(log10 0)")
+            result = aifpl.evaluate("(float-log10 0.0)")
             assert math.isinf(result) and result < 0
         except AIFPLEvalError:
             pass
 
         # Logarithm of negative real numbers (should return complex or error)
         try:
-            result = aifpl.evaluate("(log -2)")
+            result = aifpl.evaluate("(complex-log -2.0)")
             # Should either be complex or raise error
             if not isinstance(result, complex):
                 pytest.fail("log of negative number should return complex")
@@ -277,52 +277,44 @@ class TestAIFPLMathEdgeCases:
     def test_exponential_edge_cases(self, aifpl):
         """Test exponential function edge cases."""
         # Basic exponential cases
-        result = aifpl.evaluate("(exp 0)")
+        result = aifpl.evaluate("(float-exp 0.0)")
         assert abs(result - 1) < 1e-10
 
-        result = aifpl.evaluate("(exp 1)")
+        result = aifpl.evaluate("(float-exp 1.0)")
         assert abs(result - math.e) < 1e-10
 
         # Negative exponents
-        result = aifpl.evaluate("(exp -1)")
+        result = aifpl.evaluate("(float-exp -1.0)")
         assert abs(result - (1/math.e)) < 1e-10
 
         # Large exponents
-        result = aifpl.evaluate("(exp 10)")
+        result = aifpl.evaluate("(float-exp 10.0)")
         assert abs(result - math.exp(10)) < 1e-5
 
         # Very small exponents
-        result = aifpl.evaluate("(exp -10)")
+        result = aifpl.evaluate("(float-exp -10.0)")
         assert abs(result - math.exp(-10)) < 1e-15
 
         # exp(i*pi) = -1 (Euler's identity)
-        result = aifpl.evaluate("(exp (complex* 1j (complex pi 0.0)))")
+        result = aifpl.evaluate("(complex-exp (complex* 1j (complex pi 0.0)))")
         assert abs(result - (-1)) < 1e-10
 
         # exp(i*pi/2) = i
-        result = aifpl.evaluate("(exp (complex* 1j (complex (float* pi 0.5) 0.0)))")
+        result = aifpl.evaluate("(complex-exp (complex* 1j (complex (float* pi 0.5) 0.0)))")
         assert abs(result - 1j) < 1e-10
 
     def test_absolute_value_edge_cases(self, aifpl):
         """Test absolute value edge cases."""
-        # Basic absolute values
-        assert aifpl.evaluate("(abs 5)") == 5
-        assert aifpl.evaluate("(abs -5)") == 5
-        assert aifpl.evaluate("(abs 0)") == 0
-        assert aifpl.evaluate("(abs 3.14)") == 3.14
-        assert aifpl.evaluate("(abs -3.14)") == 3.14
-
-        # Complex absolute value (magnitude)
-        assert aifpl.evaluate("(abs (complex 3 4))") == 5.0
-        assert aifpl.evaluate("(abs 1j)") == 1.0
-        assert aifpl.evaluate("(abs (complex -3 -4))") == 5.0
+        assert aifpl.evaluate("(complex-abs (complex 3.0 4.0))") == 5.0
+        assert aifpl.evaluate("(complex-abs 1j)") == 1.0
+        assert aifpl.evaluate("(complex-abs (complex -3.0 -4.0))") == 5.0
 
         # Very small numbers
-        result = aifpl.evaluate("(abs -1e-100)")
+        result = aifpl.evaluate("(float-abs -1e-100)")
         assert result == 1e-100
 
         # Very large numbers
-        result = aifpl.evaluate("(abs -1e100)")
+        result = aifpl.evaluate("(float-abs -1e100)")
         assert result == 1e100
 
     def test_rounding_functions_edge_cases(self, aifpl):
@@ -694,8 +686,8 @@ class TestAIFPLMathEdgeCases:
         assert aifpl.evaluate("(float-expt 5.0 0.0)") == 1.0
 
         # Logarithm identities (approximately)
-        result = aifpl.evaluate("(log (exp 5))")
+        result = aifpl.evaluate("(float-log (float-exp 5.0))")
         assert abs(result - 5) < 1e-10
 
-        result = aifpl.evaluate("(exp (log 5))")
+        result = aifpl.evaluate("(float-exp (float-log 5.0))")
         assert abs(result - 5) < 1e-10

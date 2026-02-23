@@ -55,7 +55,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # Dependencies involving function calls
         result = aifpl.evaluate("""
         (let* ((x 4.0)
-               (y (integer (sqrt x)))
+               (y (integer (float-sqrt x)))
                (z (integer* y y)))
           z)
         """)
@@ -64,8 +64,8 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # Complex function dependencies
         result = aifpl.evaluate("""
         (let* ((angle (float* pi 0.5))
-               (sin-val (sin angle))
-               (cos-val (cos angle))
+               (sin-val (float-sin angle))
+               (cos-val (float-cos angle))
                (sum (float+ sin-val cos-val)))
           (round sum))
         """)

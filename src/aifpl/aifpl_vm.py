@@ -193,6 +193,7 @@ class AIFPLVM:
         table[Opcode.INTEGER_MUL] = self._op_integer_mul
         table[Opcode.INTEGER_DIV] = self._op_integer_div
         table[Opcode.INTEGER_NEG] = self._op_integer_neg
+        table[Opcode.INTEGER_ABS] = self._op_integer_abs
         table[Opcode.INTEGER_BIT_NOT] = self._op_integer_bit_not
         table[Opcode.INTEGER_BIT_SHIFT_LEFT] = self._op_integer_bit_shift_left
         table[Opcode.INTEGER_BIT_SHIFT_RIGHT] = self._op_integer_bit_shift_right
@@ -253,19 +254,12 @@ class AIFPLVM:
         table[Opcode.COMPLEX_COS] = self._op_complex_cos
         table[Opcode.COMPLEX_TAN] = self._op_complex_tan
         table[Opcode.COMPLEX_LOG] = self._op_complex_log
+        table[Opcode.COMPLEX_LOG10] = self._op_complex_log10
         table[Opcode.COMPLEX_EXP] = self._op_complex_exp
         table[Opcode.COMPLEX_SQRT] = self._op_complex_sqrt
         table[Opcode.COMPLEX_ABS] = self._op_complex_abs
         table[Opcode.NUMBER_P] = self._op_number_p
         table[Opcode.NUMBER_EQ_P] = self._op_number_eq_p
-        table[Opcode.NUMBER_SIN] = self._op_number_sin
-        table[Opcode.NUMBER_COS] = self._op_number_cos
-        table[Opcode.NUMBER_TAN] = self._op_number_tan
-        table[Opcode.NUMBER_LOG] = self._op_number_log
-        table[Opcode.NUMBER_LOG10] = self._op_number_log10
-        table[Opcode.NUMBER_EXP] = self._op_number_exp
-        table[Opcode.NUMBER_SQRT] = self._op_number_sqrt
-        table[Opcode.NUMBER_ABS] = self._op_number_abs
         table[Opcode.NUMBER_TO_STRING] = self._op_number_to_string
         table[Opcode.STRING_P] = self._op_string_p
         table[Opcode.STRING_EQ_P] = self._op_string_eq_p
@@ -1102,6 +1096,14 @@ class AIFPLVM:
         self.stack.append(AIFPLInteger(-self._ensure_integer(a, 'integer-negate')))
         return None
 
+    def _op_integer_abs(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_ABS: Pop an integer, push its absolute value."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLInteger(abs(self._ensure_integer(a, 'integer-abs'))))
+        return None
+
     def _op_integer_bit_not(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1723,6 +1725,14 @@ class AIFPLVM:
         self.stack.append(AIFPLComplex(cmath.log(self._ensure_complex(a, 'complex-log'))))
         return None
 
+    def _op_complex_log10(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX_LOG10: Pop a complex number, push log10(x)."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLComplex(cmath.log10(self._ensure_complex(a, 'complex-log10'))))
+        return None
+
     def _op_complex_exp(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1765,141 +1775,6 @@ class AIFPLVM:
         self._ensure_number(a, 'number=?')
         self._ensure_number(b, 'number=?')
         self.stack.append(AIFPLBoolean(a == b))
-        return None
-
-    def _op_number_sin(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_SIN: Compute sine of a number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'sin')
-
-        if isinstance(arg_val, complex):
-            result = cmath.sin(arg_val)
-
-        else:
-            result = math.sin(arg_val)
-
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_number_cos(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_COS: Compute cosine of a number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'cos')
-
-        if isinstance(arg_val, complex):
-            result = cmath.cos(arg_val)
-
-        else:
-            result = math.cos(arg_val)
-
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_number_tan(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_TAN: Compute tangent of a number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'tan')
-
-        if isinstance(arg_val, complex):
-            result = cmath.tan(arg_val)
-
-        else:
-            result = math.tan(arg_val)
-
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_number_log(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_LOG: Compute natural logarithm of a number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'log')
-
-        if isinstance(arg_val, complex):
-            result = cmath.log(arg_val)
-
-        else:
-            # Handle log(0) = -inf
-            if isinstance(arg_val, (int, float)) and arg_val == 0:
-                result = float('-inf')
-
-            else:
-                result = math.log(arg_val)
-
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_number_log10(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_LOG10: Compute base-10 logarithm of a number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'log10')
-
-        if isinstance(arg_val, complex):
-            result = cmath.log10(arg_val)
-
-        else:
-            # Handle log(0) = -inf
-            if isinstance(arg_val, (int, float)) and arg_val == 0:
-                result = float('-inf')
-
-            else:
-                result = math.log10(arg_val)
-
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_number_exp(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_EXP: Compute exponential of a number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'exp')
-
-        if isinstance(arg_val, complex):
-            result = cmath.exp(arg_val)
-
-        else:
-            result = math.exp(arg_val)
-
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_number_sqrt(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_SQRT: Compute square root of a number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'sqrt')
-
-        if isinstance(arg_val, complex):
-            result = cmath.sqrt(arg_val)
-
-        else:
-            if arg_val < 0:
-                raise AIFPLEvalError("Function 'sqrt' requires a non-negative argument")
-
-            result = math.sqrt(float(arg_val))
-
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_number_abs(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_ABS: Get absolute value of a real number."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_number(arg, 'abs')
-        result = abs(arg_val)
-        self.stack.append(self._wrap_numeric_result(result))
         return None
 
     def _op_number_to_string(  # pylint: disable=useless-return

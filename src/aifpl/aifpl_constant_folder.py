@@ -49,6 +49,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'integer*',
         'integer/',
         'integer-negate',
+        'integer-abs',
         'bit-or',
         'bit-and',
         'bit-xor',
@@ -82,6 +83,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'complex-cos',
         'complex-tan',
         'complex-log',
+        'complex-log10',
         'complex-exp',
         'complex-sqrt',
         'complex-abs',
@@ -100,61 +102,22 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         """
         # Build jump table for foldable builtin operations
         self._builtin_jump_table = {
-            # Arithmetic operations
-            '//': self._fold_floor_divide,
-            '%': self._fold_modulo,
-
-            # Comparison operations
-            '=': self._fold_equal,
-            '!=': self._fold_not_equal,
-            '<': self._fold_less_than,
-            '>': self._fold_greater_than,
-            '<=': self._fold_less_equal,
-            '>=': self._fold_greater_equal,
-
-            # Boolean logic
+            'boolean=?': self._fold_boolean_eq,
             'not': self._fold_not,
-
-            # Math functions
-            'sqrt': self._fold_sqrt,
-            'abs': self._fold_abs,
-            'min': self._fold_min,
-            'max': self._fold_max,
-            'expt': self._fold_expt,
-            'sin': self._fold_sin,
-            'cos': self._fold_cos,
-            'tan': self._fold_tan,
-            'log': self._fold_log,
-            'log10': self._fold_log10,
-            'exp': self._fold_exp,
-            'round': self._fold_round,
-            'floor': self._fold_floor,
-            'ceil': self._fold_ceil,
-
-            # Bitwise operations
+            'integer=?': self._fold_integer_eq,
+            'integer+': self._fold_integer_add,
+            'integer-': self._fold_integer_sub,
+            'integer*': self._fold_integer_mul,
+            'integer/': self._fold_integer_div,
+            'integer-negate': self._fold_integer_negate,
+            'integer-abs': self._fold_integer_abs,
             'bit-or': self._fold_bit_or,
             'bit-and': self._fold_bit_and,
             'bit-xor': self._fold_bit_xor,
             'bit-not': self._fold_bit_not,
             'bit-shift-left': self._fold_bit_shift_left,
             'bit-shift-right': self._fold_bit_shift_right,
-
-            # Strict type-specific equality predicates
-            'number=?': self._fold_number_eq,
-            'integer=?': self._fold_integer_eq,
             'float=?': self._fold_float_eq,
-            'complex=?': self._fold_complex_eq,
-            'boolean=?': self._fold_boolean_eq,
-            'string=?': self._fold_string_eq,
-
-            # Typed integer arithmetic
-            'integer+': self._fold_integer_add,
-            'integer-': self._fold_integer_sub,
-            'integer*': self._fold_integer_mul,
-            'integer/': self._fold_integer_div,
-            'integer-negate': self._fold_integer_negate,
-
-            # Typed float arithmetic and transcendentals
             'float+': self._fold_float_add,
             'float-': self._fold_float_sub,
             'float*': self._fold_float_mul,
@@ -169,8 +132,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'float-exp': self._fold_float_exp,
             'float-sqrt': self._fold_float_sqrt,
             'float-abs': self._fold_float_abs,
-
-            # Typed complex arithmetic and transcendentals
+            'complex=?': self._fold_complex_eq,
             'complex': self._fold_complex,
             'complex+': self._fold_complex_add,
             'complex-': self._fold_complex_sub,
@@ -184,9 +146,31 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'complex-cos': self._fold_complex_cos,
             'complex-tan': self._fold_complex_tan,
             'complex-log': self._fold_complex_log,
+            'complex-log10': self._fold_complex_log10,
             'complex-exp': self._fold_complex_exp,
             'complex-sqrt': self._fold_complex_sqrt,
             'complex-abs': self._fold_complex_abs,
+            'string=?': self._fold_string_eq,
+
+            # Arithmetic operations
+            '//': self._fold_floor_divide,
+            '%': self._fold_modulo,
+
+            # Comparison operations
+            '=': self._fold_equal,
+            '!=': self._fold_not_equal,
+            '<': self._fold_less_than,
+            '>': self._fold_greater_than,
+            '<=': self._fold_less_equal,
+            '>=': self._fold_greater_equal,
+            'min': self._fold_min,
+            'max': self._fold_max,
+            'round': self._fold_round,
+            'floor': self._fold_floor,
+            'ceil': self._fold_ceil,
+
+            # Strict type-specific equality predicates
+            'number=?': self._fold_number_eq,
         }
 
         # Build jump table for special form optimization.  Note we don't include any special forms that were
@@ -516,6 +500,13 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             return None
 
         return AIFPLASTInteger(-args[0].value)
+
+    def _fold_integer_abs(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold integer-abs: arg must be integer, returns integer."""
+        if not isinstance(args[0], AIFPLASTInteger):
+            return None
+
+        return AIFPLASTInteger(abs(args[0].value))
 
     def _fold_bit_or(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
         """Fold bit-or: (bit-or a b ...) → bitwise OR"""
@@ -870,6 +861,13 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             return None
 
         return AIFPLASTComplex(cmath.log(args[0].value))
+
+    def _fold_complex_log10(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex-log10: arg must be complex, returns complex."""
+        if not isinstance(args[0], AIFPLASTComplex):
+            return None
+
+        return AIFPLASTComplex(cmath.log10(args[0].value))
 
     def _fold_complex_exp(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
         """Fold complex-exp: arg must be complex, returns complex."""

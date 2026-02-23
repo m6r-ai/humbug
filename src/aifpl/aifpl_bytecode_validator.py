@@ -201,6 +201,7 @@ class BytecodeValidator:
             Opcode.COMPLEX_COS: (1, 1),
             Opcode.COMPLEX_TAN: (1, 1),
             Opcode.COMPLEX_LOG: (1, 1),
+            Opcode.COMPLEX_LOG10: (1, 1),
             Opcode.COMPLEX_EXP: (1, 1),
             Opcode.COMPLEX_SQRT: (1, 1),
             Opcode.COMPLEX_ABS: (1, 1),
@@ -222,14 +223,6 @@ class BytecodeValidator:
             # Number operations
             Opcode.NUMBER_P: (1, 1),
             Opcode.NUMBER_EQ_P: (2, 1),
-            Opcode.NUMBER_SIN: (1, 1),
-            Opcode.NUMBER_COS: (1, 1),
-            Opcode.NUMBER_TAN: (1, 1),
-            Opcode.NUMBER_EXP: (1, 1),
-            Opcode.NUMBER_LOG: (1, 1),
-            Opcode.NUMBER_LOG10: (1, 1),
-            Opcode.NUMBER_SQRT: (1, 1),
-            Opcode.NUMBER_ABS: (1, 1),
             Opcode.NUMBER_TO_STRING: (1, 1),
 
             # String

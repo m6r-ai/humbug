@@ -421,7 +421,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         """Test pattern matching with nested function calls."""
         # Pattern match on nested function results
         result = aifpl.evaluate('''
-        (match (abs -5)
+        (match (integer-abs -5)
           (5 "five")
           ((number? n) "other")
           (_ "not number"))

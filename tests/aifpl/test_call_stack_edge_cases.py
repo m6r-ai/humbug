@@ -132,7 +132,7 @@ class TestAIFPLCallStackEdgeCases:
         complex_expr = """
         (float+ (float (integer* 2 (integer+ 3 4)))
                 (float/ (float+ 10.0 5.0) (float- 8.0 3.0))
-                (float (abs (integer- 2 7))))
+                (float (integer-abs (integer- 2 7))))
         """
         result = aifpl.evaluate(complex_expr)
         assert result == 22  # (2*7) + (15/5) + 5 = 14 + 3 + 5 = 22

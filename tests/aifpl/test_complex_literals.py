@@ -136,7 +136,7 @@ class TestComplexNumberLiterals:
         assert aifpl.evaluate("(imag 5j)") == 5
 
         # Absolute value (magnitude)
-        result = aifpl.evaluate("(abs 3+4j)")
+        result = aifpl.evaluate("(complex-abs 3+4j)")
         assert abs(result - 5.0) < 1e-10, f"Expected |3+4j| = 5, got {result}"
 
         # Complex constructor still works

@@ -63,6 +63,7 @@ class Opcode(IntEnum):
     INTEGER_MUL = auto()     # integer* a b
     INTEGER_DIV = auto()     # integer/ a b  (floor division)
     INTEGER_NEG = auto()     # integer-negate x  (unary minus)
+    INTEGER_ABS = auto()     # integer-abs x
     INTEGER_BIT_NOT = auto() # Bitwise NOT ~x
     INTEGER_BIT_SHIFT_LEFT = auto()
                              # Bitwise left shift x << n
@@ -134,6 +135,7 @@ class Opcode(IntEnum):
     COMPLEX_COS = auto()     # complex-cos x
     COMPLEX_TAN = auto()     # complex-tan x
     COMPLEX_LOG = auto()     # complex-log x
+    COMPLEX_LOG10 = auto()   # complex-log10 x
     COMPLEX_EXP = auto()     # complex-exp x
     COMPLEX_SQRT = auto()    # complex-sqrt x
     COMPLEX_ABS = auto()     # complex-abs x  (returns float: magnitude)
@@ -141,14 +143,6 @@ class Opcode(IntEnum):
     # Numeric operations
     NUMBER_P = auto()        # Check if number (int/float/complex)
     NUMBER_EQ_P = auto()     # number=? a b
-    NUMBER_SIN = auto()      # Calculate sin(x)
-    NUMBER_COS = auto()      # Calculate cos(x)
-    NUMBER_TAN = auto()      # Calculate tan(x)
-    NUMBER_LOG = auto()      # Calculate log(x)
-    NUMBER_LOG10 = auto()    # Calculate log10(x)
-    NUMBER_EXP = auto()      # Calculate exp(x)
-    NUMBER_SQRT = auto()     # Calculate sqrt(x)
-    NUMBER_ABS = auto()      # Calculate abs(x)
     NUMBER_TO_STRING = auto()
                              # Convert number to string
 
@@ -311,6 +305,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'complex-cos': (Opcode.COMPLEX_COS, 1),
     'complex-tan': (Opcode.COMPLEX_TAN, 1),
     'complex-log': (Opcode.COMPLEX_LOG, 1),
+    'complex-log10': (Opcode.COMPLEX_LOG10, 1),
     'complex-exp': (Opcode.COMPLEX_EXP, 1),
     'complex-sqrt': (Opcode.COMPLEX_SQRT, 1),
     'complex-abs': (Opcode.COMPLEX_ABS, 1),
@@ -318,14 +313,6 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'imag': (Opcode.COMPLEX_IMAG, 1),
     'number?': (Opcode.NUMBER_P, 1),
     'number=?': (Opcode.NUMBER_EQ_P, 2),
-    'sin': (Opcode.NUMBER_SIN, 1),
-    'cos': (Opcode.NUMBER_COS, 1),
-    'tan': (Opcode.NUMBER_TAN, 1),
-    'log': (Opcode.NUMBER_LOG, 1),
-    'log10': (Opcode.NUMBER_LOG10, 1),
-    'exp': (Opcode.NUMBER_EXP, 1),
-    'sqrt': (Opcode.NUMBER_SQRT, 1),
-    'abs': (Opcode.NUMBER_ABS, 1),
     'number->string': (Opcode.NUMBER_TO_STRING, 1),
     'alist?': (Opcode.ALIST_P, 1),
     'alist=?': (Opcode.ALIST_EQ_P, 2),
@@ -404,8 +391,7 @@ class Instruction:
             Opcode.NUMBER_P, Opcode.INTEGER_P, Opcode.FLOAT_P, Opcode.COMPLEX_P,
             Opcode.STRING_P, Opcode.BOOLEAN_P, Opcode.LIST_P, Opcode.ALIST_P, Opcode.FUNCTION_P,
             Opcode.BOOLEAN_NOT, Opcode.INTEGER_BIT_NOT, Opcode.INTEGER_BIT_SHIFT_LEFT, Opcode.INTEGER_BIT_SHIFT_RIGHT,
-            Opcode.NUMBER_SIN, Opcode.NUMBER_COS, Opcode.NUMBER_TAN, Opcode.NUMBER_LOG, Opcode.NUMBER_LOG10, Opcode.NUMBER_EXP,
-            Opcode.REAL_EXPT, Opcode.NUMBER_SQRT, Opcode.NUMBER_ABS, Opcode.REAL_FLOOR, Opcode.REAL_CEIL, Opcode.REAL_ROUND,
+            Opcode.REAL_EXPT, Opcode.REAL_FLOOR, Opcode.REAL_CEIL, Opcode.REAL_ROUND,
             Opcode.FLOAT_TO_INTEGER, Opcode.INTEGER_TO_FLOAT, Opcode.COMPLEX_REAL, Opcode.COMPLEX_IMAG, Opcode.COMPLEX,
             Opcode.INTEGER_TO_STRING_BIN, Opcode.INTEGER_TO_STRING_HEX, Opcode.INTEGER_TO_STRING_OCT,
             Opcode.LIST_CONS, Opcode.LIST_REVERSE, Opcode.LIST_FIRST, Opcode.LIST_REST, Opcode.LIST_LAST,

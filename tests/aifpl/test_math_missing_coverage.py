@@ -108,22 +108,22 @@ class TestMathMissingCoverage:
     def test_trigonometric_functions_with_complex_numbers(self, aifpl):
         """Test trigonometric functions with complex arguments (should work)."""
         # This tests the complex number branches that were missing coverage
-        result = aifpl.evaluate("(sin (complex 1 2))")
+        result = aifpl.evaluate("(complex-sin (complex 1 2))")
         expected = cmath.sin(1+2j)
         assert abs(result - expected) < 1e-10
 
-        result = aifpl.evaluate("(cos (complex 1 2))")
+        result = aifpl.evaluate("(complex-cos (complex 1 2))")
         expected = cmath.cos(1+2j)
         assert abs(result - expected) < 1e-10
 
         # tan with complex numbers - this tests line 403
-        result = aifpl.evaluate("(tan (complex 0.5 0.5))")
+        result = aifpl.evaluate("(complex-tan (complex 0.5 0.5))")
         expected = cmath.tan(0.5+0.5j)
         assert abs(result - expected) < 1e-10
 
     def test_logarithmic_functions_wrong_argument_count(self, aifpl):
         """Test logarithmic functions with wrong argument count."""
-        log_functions = ["log", "log10", "exp"]
+        log_functions = ["float-log", "float-log10", "float-exp"]
 
         for func in log_functions:
             # No arguments
@@ -132,18 +132,18 @@ class TestMathMissingCoverage:
 
             # Too many arguments
             with pytest.raises(AIFPLEvalError, match=f"Function '{func}' has wrong number of arguments"):
-                aifpl.evaluate(f"({func} 1 2)")
+                aifpl.evaluate(f"({func} 1.0 2.0)")
 
     def test_logarithmic_functions_with_complex_numbers(self, aifpl):
         """Test logarithmic functions with complex arguments."""
         # log10 with complex numbers - this tests line 429
-        result = aifpl.evaluate("(log10 (complex -1 0))")
+        result = aifpl.evaluate("(complex-log10 (complex -1 0))")
         expected = cmath.log10(-1+0j)
         assert abs(result - expected) < 1e-10
 
     def test_other_math_functions_wrong_argument_count(self, aifpl):
         """Test other mathematical functions with wrong argument count."""
-        single_arg_functions = ["sqrt", "abs", "round", "floor", "ceil"]
+        single_arg_functions = ["float-sqrt", "float-abs", "round", "floor", "ceil"]
 
         for func in single_arg_functions:
             # No arguments

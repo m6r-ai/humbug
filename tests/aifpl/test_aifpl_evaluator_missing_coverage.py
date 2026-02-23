@@ -107,15 +107,15 @@ class TestEvaluatorMissingCoverage:
 
     def test_builtin_function_formatting(self, aifpl):
         """Test formatting of builtin function references."""
-        result = aifpl.evaluate_and_format("sqrt")
+        result = aifpl.evaluate_and_format("float-sqrt")
         assert result == "<lambda (arg0)>"
 
     def test_builtin_function_formatting_various(self, aifpl):
         """Test formatting of various builtin functions."""
         # Fixed-arity stubs describe as <lambda (arg0, ...)>
         cases = [
-            ("sqrt", "<lambda (arg0)>"),          # unary fixed-arity — bytecode stub
-            ("list", "<lambda (param0)>"),    # variadic — still native
+            ("float-sqrt", "<lambda (arg0)>"),  # unary fixed-arity — bytecode stub
+            ("list", "<lambda (param0)>"),      # variadic — still native
         ]
         for func_name, expected in cases:
             result = aifpl.evaluate_and_format(func_name)
