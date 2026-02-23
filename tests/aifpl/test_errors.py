@@ -246,7 +246,7 @@ class TestErrors:
 
         # Minimum argument requirements
         with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate("(=)")
+            aifpl.evaluate("(integer=?)")
 
         with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate("(<)")

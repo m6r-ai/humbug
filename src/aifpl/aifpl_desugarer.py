@@ -94,12 +94,9 @@ class AIFPLDesugarer:
 
             # Check for typed variadic arithmetic operations
             if name in [
-                'integer+', 'integer-', 'integer*',
-                'integer/',
-                'float+', 'float-', 'float*',
-                'float/',
-                'complex+', 'complex-', 'complex*',
-                'complex/',
+                'integer+', 'integer-', 'integer*', 'integer/',
+                'float+', 'float-', 'float*', 'float/',
+                'complex+', 'complex-', 'complex*', 'complex/',
             ]:
                 return self._desugar_variadic_arithmetic(expr)
 
@@ -108,12 +105,20 @@ class AIFPLDesugarer:
                 return self._desugar_fold_variadic(expr)
 
             # Variadic comparison chains (short-circuit with 'and' is correct)
-            if name in ['=', '!=', '<', '>', '<=', '>=']:
+            if name in ['<', '>', '<=', '>=']:
                 return self._desugar_comparison_chain(expr)
 
             # Strict equality predicates
-            if name in ['string=?', 'number=?', 'integer=?', 'float=?', 'complex=?', 'boolean=?', 'list=?', 'alist=?']:
+            if name in [
+                'boolean=?', 'integer=?', 'float=?', 'complex=?', 'string=?', 'list=?', 'alist=?'
+            ]:
                 return self._desugar_strict_equality(expr)
+
+            # Strict inequality predicates
+            if name in [
+                'boolean!=?', 'integer!=?', 'float!=?', 'complex!=?', 'string!=?', 'list!=?', 'alist!=?'
+            ]:
+                return self._desugar_strict_inequality(expr)
 
         # Regular function call - desugar all elements
         return self._desugar_call(expr)
@@ -455,10 +460,9 @@ class AIFPLDesugarer:
             for i in range(len(temps) - 1)
         ]
 
-        # Chain with 'and' for ordered comparisons, 'or' for !=
-        connector = 'or' if op_name == '!=' else 'and'
+        # Chain with 'and' for ordered comparisons
         body: AIFPLASTNode = self._make_list(
-            tuple([self._make_symbol(connector, expr)] + pairs), expr
+            tuple([self._make_symbol('and', expr)] + pairs), expr
         )
 
         # Wrap in let* bindings from innermost outward
@@ -473,7 +477,7 @@ class AIFPLDesugarer:
 
         return self.desugar(body)
 
-    def _desugar_strict_equality(self, expr: AIFPLASTList) -> AIFPLASTNode:
+    def _desugar_strict_equality_chain(self, expr: AIFPLASTList, check_eq: bool) -> AIFPLASTNode:
         """
         Desugar strict type-specific equality predicates.
 
@@ -523,9 +527,9 @@ class AIFPLDesugarer:
             ]
 
             # Body: (and pair_temp0 pair_temp1 ...)
+            connector = 'and' if check_eq else 'or'
             body: AIFPLASTNode = self._make_list(
-                tuple([self._make_symbol('and', expr)] +
-                      [self._make_symbol(pt, expr) for pt in pair_temps]),
+                tuple([self._make_symbol(connector, expr)] + [self._make_symbol(pt, expr) for pt in pair_temps]),
                 expr
             )
 
@@ -553,6 +557,14 @@ class AIFPLDesugarer:
 
         # 0-arg or 1-arg: fall through to regular call → prelude lambda raises arity error
         return self._desugar_call(expr)
+
+    def _desugar_strict_equality(self, expr: AIFPLASTList) -> AIFPLASTNode:
+        """Desugar strict type-specific equality predicates."""
+        return self._desugar_strict_equality_chain(expr, check_eq=True)
+
+    def _desugar_strict_inequality(self, expr: AIFPLASTList) -> AIFPLASTNode:
+        """Desugar strict type-specific inequality predicates."""
+        return self._desugar_strict_equality_chain(expr, check_eq=False)
 
     def _desugar_match(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """
@@ -734,10 +746,46 @@ class AIFPLDesugarer:
         """
         # Literal patterns: numbers, strings, booleans
         # Phase 1: Accept both old and new numeric types as literals
-        if isinstance(pattern, (AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex, AIFPLASTString, AIFPLASTBoolean)):
+        if isinstance(pattern, AIFPLASTBoolean):
             # Test: (= temp_var literal)
             test_expr = AIFPLASTList((
-                AIFPLASTSymbol('='),
+                AIFPLASTSymbol('boolean=?'),
+                AIFPLASTSymbol(temp_var),
+                pattern
+            ))
+            return (test_expr, [])
+
+        if isinstance(pattern, AIFPLASTInteger):
+            # Test: (= temp_var literal)
+            test_expr = AIFPLASTList((
+                AIFPLASTSymbol('integer=?'),
+                AIFPLASTSymbol(temp_var),
+                pattern
+            ))
+            return (test_expr, [])
+
+        if isinstance(pattern, AIFPLASTFloat):
+            # Test: (= temp_var literal)
+            test_expr = AIFPLASTList((
+                AIFPLASTSymbol('float=?'),
+                AIFPLASTSymbol(temp_var),
+                pattern
+            ))
+            return (test_expr, [])
+
+        if isinstance(pattern, AIFPLASTComplex):
+            # Test: (= temp_var literal)
+            test_expr = AIFPLASTList((
+                AIFPLASTSymbol('complex=?'),
+                AIFPLASTSymbol(temp_var),
+                pattern
+            ))
+            return (test_expr, [])
+
+        if isinstance(pattern, AIFPLASTString):
+            # Test: (= temp_var literal)
+            test_expr = AIFPLASTList((
+                AIFPLASTSymbol('string=?'),
                 AIFPLASTSymbol(temp_var),
                 pattern
             ))
@@ -865,7 +913,7 @@ class AIFPLDesugarer:
 
         # Second test: (= (length temp_var) num_elements)
         length_test = AIFPLASTList((
-            AIFPLASTSymbol('='),
+            AIFPLASTSymbol('integer=?'),
             AIFPLASTList((
                 AIFPLASTSymbol('length'),
                 AIFPLASTSymbol(temp_var)

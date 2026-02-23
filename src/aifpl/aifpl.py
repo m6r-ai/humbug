@@ -35,16 +35,6 @@ class AIFPL:
 
     # AIFPL implementations of higher-order functions
     _PRELUDE_SOURCE = {
-        # Comparison chains — pairwise semantics: (= a b c) means (= a b) and (= b c)
-        '=': """(lambda (. args)
-                  (if (< (length args) 2)
-                    (error "Function '=' requires at least 2 arguments")
-                    (letrec ((loop (lambda (lst prev)
-                                     (if (null? lst) #t
-                                         (if (= prev (first lst))
-                                             (loop (rest lst) (first lst))
-                                             #f)))))
-                      (loop (rest args) (first args)))))""",
         '<': """(lambda (. args)
                   (if (< (length args) 2)
                     (error "Function '<' requires at least 2 arguments")
@@ -81,19 +71,6 @@ class AIFPL:
                                               (loop (rest lst) (first lst))
                                               #f)))))
                        (loop (rest args) (first args)))))""",
-        '!=': """(lambda (. args)
-                   (if (< (length args) 2)
-                     (error "Function '!=' requires at least 2 arguments")
-                     (letrec ((outer (lambda (lst)
-                                       (if (null? lst) #t
-                                           (letrec ((inner (lambda (rest-lst)
-                                                             (if (null? rest-lst)
-                                                                 (outer (rest lst))
-                                                                 (if (!= (first lst) (first rest-lst))
-                                                                     (inner (rest rest-lst))
-                                                                     #f)))))
-                                             (inner (rest lst)))))))
-                       (outer args))))""",
         'min': """(lambda (. args)
                     (if (null? args)
                       (error "Function 'min' requires at least 1 argument")

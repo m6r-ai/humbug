@@ -1,5 +1,6 @@
 """Tests to address missing coverage in aifpl_math.py."""
 
+import re
 import pytest
 import cmath
 
@@ -33,13 +34,13 @@ class TestMathMissingCoverage:
     def test_not_equal_all_arguments_equal_edge_case(self, aifpl):
         """Test != operator when all arguments are actually equal (returns False)."""
         # This tests line 190 which was missing coverage
-        result = aifpl.evaluate("(!= 5 5 5 5)")
+        result = aifpl.evaluate("(integer!=? 5 5 5 5)")
         assert result is False
 
-        result = aifpl.evaluate('(!= "hello" "hello")')
+        result = aifpl.evaluate('(string!=? "hello" "hello")')
         assert result is False
 
-        result = aifpl.evaluate("(!= #t #t #t)")
+        result = aifpl.evaluate("(boolean!=? #t #t #t)")
         assert result is False
 
     # ========== Bitwise Operations Error Handling ==========
@@ -261,14 +262,14 @@ class TestMathMissingCoverage:
 
     def test_comparison_operators_error_handling(self, aifpl):
         """Test comparison operators with insufficient arguments."""
-        comparison_ops = ["=", "!=", "<", ">", "<=", ">="]
+        comparison_ops = ["integer=?", "integer!=?", "<", ">", "<=", ">="]
 
         for op in comparison_ops:
             # All comparison operators require at least 2 arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' has wrong number of arguments"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{re.escape(op)}' has wrong number of arguments"):
                 aifpl.evaluate(f"({op} 5)")
 
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' has wrong number of arguments"):
+            with pytest.raises(AIFPLEvalError, match=f"Function '{re.escape(op)}' has wrong number of arguments"):
                 aifpl.evaluate(f"({op})")
 
     def test_comparison_operators_with_non_numeric_arguments(self, aifpl):

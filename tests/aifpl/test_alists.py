@@ -553,12 +553,6 @@ class TestAListEquality:
         result = tool.evaluate('(alist!=? (alist (list "a" 1)) (alist (list "a" 2)))')
         assert result is True
 
-    def test_alist_not_equal_to_list(self, tool):
-        """Test that alist is not equal to list."""
-        result = tool.evaluate('(= (alist (list "a" 1)) (list 1 2))')
-        assert result is False
-
-
 
 class TestAListLength:
     """Test alist length operations."""

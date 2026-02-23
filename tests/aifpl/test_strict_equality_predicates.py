@@ -278,20 +278,6 @@ class TestStrictEqualityPredicates:
         with pytest.raises(AIFPLEvalError, match="alist=.*has wrong number of arguments"):
             aifpl.evaluate('(alist=? (alist))')
 
-    # ========== Comparison with universal = operator ==========
-
-    def test_strict_predicates_vs_universal_equals(self, aifpl):
-        """Test that strict predicates are more restrictive than =."""
-        # Universal = works across types
-        assert aifpl.evaluate('(= 1 1.0)') is True
-
-        # But strict predicates reject cross-type
-        with pytest.raises(AIFPLEvalError, match="integer=.*requires integer arguments"):
-            aifpl.evaluate('(integer=? 1 1.0)')
-
-        with pytest.raises(AIFPLEvalError, match="float=.*requires float arguments"):
-            aifpl.evaluate('(float=? 1.0 1)')
-
     def test_strict_predicates_provide_type_checking(self, aifpl):
         """Test that strict predicates serve as type assertions."""
         # string=? ensures all args are strings

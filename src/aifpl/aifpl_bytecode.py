@@ -208,10 +208,6 @@ class Opcode(IntEnum):
     LIST_APPEND = auto()     # Append two lists: (append a b)
     LIST_TO_STRING = auto()  # Convert list of characters to string
 
-    # General equality operations
-    EQ = auto()              # a = b
-    NEQ = auto()             # a != b
-
     # Generate integer range list
     RANGE = auto()           # Generate integer range list: (range start end step)
 
@@ -365,8 +361,6 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'remove': (Opcode.LIST_REMOVE, 2),
     'append': (Opcode.LIST_APPEND, 2),
     'list->string': (Opcode.LIST_TO_STRING, 1),
-    '=': (Opcode.EQ, 2),
-    '!=': (Opcode.NEQ, 2),
     'range': (Opcode.RANGE, 3),
 }
 
@@ -406,7 +400,7 @@ class Instruction:
             Opcode.RANGE,
             Opcode.INTEGER_BIT_OR, Opcode.INTEGER_BIT_AND, Opcode.INTEGER_BIT_XOR,
             Opcode.LIST_APPEND, Opcode.STRING_APPEND, Opcode.REAL_MIN, Opcode.REAL_MAX,
-            Opcode.EQ, Opcode.NEQ, Opcode.REAL_LT, Opcode.REAL_GT, Opcode.REAL_LTE, Opcode.REAL_GTE,
+            Opcode.REAL_LT, Opcode.REAL_GT, Opcode.REAL_LTE, Opcode.REAL_GTE,
             Opcode.STRING_EQ_P,
             Opcode.NUMBER_EQ_P, Opcode.INTEGER_EQ_P, Opcode.FLOAT_EQ_P, Opcode.COMPLEX_EQ_P,
             Opcode.BOOLEAN_EQ_P, Opcode.LIST_EQ_P, Opcode.ALIST_EQ_P,

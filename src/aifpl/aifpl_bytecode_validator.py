@@ -282,10 +282,6 @@ class BytecodeValidator:
             Opcode.LIST_APPEND: (2, 1),
             Opcode.LIST_TO_STRING: (1, 1),
 
-            # General equality operations
-            Opcode.EQ: (2, 1),
-            Opcode.NEQ: (2, 1),
-
             Opcode.RANGE: (3, 1),
     }
 

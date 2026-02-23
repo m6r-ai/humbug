@@ -314,8 +314,6 @@ class AIFPLVM:
         table[Opcode.LIST_REMOVE] = self._op_list_remove
         table[Opcode.LIST_APPEND] = self._op_list_append
         table[Opcode.LIST_TO_STRING] = self._op_list_to_string
-        table[Opcode.EQ] = self._op_eq
-        table[Opcode.NEQ] = self._op_neq
         table[Opcode.RANGE] = self._op_range
         return table
 
@@ -2396,24 +2394,6 @@ class AIFPLVM:
         a = self.stack.pop()
         list_val = self._ensure_list(a, 'list->string')
         self.stack.append(AIFPLString(''.join(str(elem.to_python()) for elem in list_val.elements)))
-        return None
-
-    def _op_eq(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """EQ: Pop two values, push true if they are equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(a == b))
-        return None
-
-    def _op_neq(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NEQ: Pop two values, push true if they are not equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(a != b))
         return None
 
     def _op_range(  # pylint: disable=useless-return

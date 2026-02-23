@@ -191,35 +191,30 @@ class TestConditionals:
 
     @pytest.mark.parametrize("expression,expected", [
         # Numeric equality
-        ('(= 1 1)', '#t'),
-        ('(= 1 2)', '#f'),
-        ('(= 1 1 1)', '#t'),
-        ('(= 1 1 2)', '#f'),
-        ('(= 5 5 5 5)', '#t'),
-
-        # Mixed numeric types
-        ('(= 1 1.0)', '#t'),
-        ('(= 2 2.0)', '#t'),
-        ('(= 3.14 3.14)', '#t'),
+        ('(integer=? 1 1)', '#t'),
+        ('(integer=? 1 2)', '#f'),
+        ('(integer=? 1 1 1)', '#t'),
+        ('(integer=? 1 1 2)', '#f'),
+        ('(integer=? 5 5 5 5)', '#t'),
 
         # String equality
-        ('(= "hello" "hello")', '#t'),
-        ('(= "hello" "world")', '#f'),
-        ('(= "test" "test" "test")', '#t'),
+        ('(string=? "hello" "hello")', '#t'),
+        ('(string=? "hello" "world")', '#f'),
+        ('(string=? "test" "test" "test")', '#t'),
 
         # Boolean equality
-        ('(= #t #t)', '#t'),
-        ('(= #f #f)', '#t'),
-        ('(= #t #f)', '#f'),
+        ('(boolean=? #t #t)', '#t'),
+        ('(boolean=? #f #f)', '#t'),
+        ('(boolean=? #t #f)', '#f'),
 
         # List equality
-        ('(= (list 1 2) (list 1 2))', '#t'),
-        ('(= (list 1 2) (list 2 1))', '#f'),
-        ('(= (list) (list))', '#t'),
+        ('(list=? (list 1 2) (list 1 2))', '#t'),
+        ('(list=? (list 1 2) (list 2 1))', '#f'),
+        ('(list=? (list) (list))', '#t'),
 
         # Complex number equality
-        ('(= (complex 1 2) (complex 1 2))', '#t'),
-        ('(= (complex 1 2) (complex 2 1))', '#f'),
+        ('(complex=? (complex 1 2) (complex 1 2))', '#t'),
+        ('(complex=? (complex 1 2) (complex 2 1))', '#f'),
     ])
     def test_equality_comparison(self, aifpl, expression, expected):
         """Test equality comparison operator."""
@@ -228,10 +223,10 @@ class TestConditionals:
     def test_equality_requires_at_least_two_arguments(self, aifpl):
         """Test that equality requires at least 2 arguments."""
         with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(=)')
+            aifpl.evaluate('(integer=?)')
 
         with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(= 1)')
+            aifpl.evaluate('(integer=? 1)')
 
     @pytest.mark.parametrize("expression,expected", [
         # Less than
@@ -298,16 +293,16 @@ class TestConditionals:
     def test_comparison_operations_require_at_least_two_arguments(self, aifpl):
         """Test that comparison operations require at least 2 arguments."""
         with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(=)')
+            aifpl.evaluate('(integer=?)')
 
         with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(= 1)')
+            aifpl.evaluate('(integer=? 1)')
 
         with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(!=)')
+            aifpl.evaluate('(integer!=?)')
 
         with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(!= 1)')
+            aifpl.evaluate('(integer!=? 1)')
 
         with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(<)')
@@ -520,15 +515,3 @@ class TestConditionals:
 
         helpers.assert_evaluates_to(aifpl, '(<= 1 1 2 2 3)', '#t')
         helpers.assert_evaluates_to(aifpl, '(>= 3 2 2 1 1)', '#t')
-
-    def test_mixed_type_equality_edge_cases(self, aifpl, helpers):
-        """Test equality comparison with mixed types."""
-        # Different types should not be equal
-        helpers.assert_evaluates_to(aifpl, '(= 1 "1")', '#f')
-        helpers.assert_evaluates_to(aifpl, '(= #t 1)', '#f')
-        helpers.assert_evaluates_to(aifpl, '(= #f 0)', '#f')
-        helpers.assert_evaluates_to(aifpl, '(= (list 1) 1)', '#f')
-
-        # Complex numbers and reals
-        helpers.assert_evaluates_to(aifpl, '(= 5 (complex 5 0))', '#t')  # Should be equal
-        helpers.assert_evaluates_to(aifpl, '(= 5 (complex 5 1))', '#f')  # Should not be equal

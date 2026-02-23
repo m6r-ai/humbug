@@ -11,32 +11,32 @@ class TestComparisonEdgeCases:
     def test_inequality_all_equal_case(self, aifpl):
         """Test != operator when all arguments are equal (should return False)."""
         # This specifically tests the missing line 190 in _builtin_bang_eq
-        result = aifpl.evaluate("(!= 5 5 5)")
+        result = aifpl.evaluate("(integer!=? 5 5 5)")
         assert result is False
 
-        result = aifpl.evaluate("(!= 1.5 1.5)")
+        result = aifpl.evaluate("(float!=? 1.5 1.5)")
         assert result is False
 
-        result = aifpl.evaluate('(!= "test" "test" "test")')
+        result = aifpl.evaluate('(string!=? "test" "test" "test")')
         assert result is False
 
-        result = aifpl.evaluate("(!= #t #t)")
+        result = aifpl.evaluate("(boolean!=? #t #t)")
         assert result is False
 
         # Test with many equal arguments
-        result = aifpl.evaluate("(!= 42 42 42 42 42)")
+        result = aifpl.evaluate("(integer!=? 42 42 42 42 42)")
         assert result is False
 
     def test_inequality_mixed_cases(self, aifpl):
         """Test != operator with mixed equal and unequal arguments."""
         # These should return True (some arguments are different)
-        result = aifpl.evaluate("(!= 1 2 1)")
+        result = aifpl.evaluate("(integer!=? 1 2 1)")
         assert result is True
 
-        result = aifpl.evaluate("(!= 5 5 6)")
+        result = aifpl.evaluate("(integer!=? 5 5 6)")
         assert result is True
 
-        result = aifpl.evaluate('(!= "a" "b" "a")')
+        result = aifpl.evaluate('(string!=? "a" "b" "a")')
         assert result is True
 
     def test_comparison_operators_complex_rejection(self, aifpl):
@@ -98,7 +98,7 @@ class TestComparisonEdgeCases:
 
     def test_comparison_operators_minimum_arguments(self, aifpl):
         """Test that comparison operators require minimum arguments."""
-        all_comparison_ops = ["=", "!=", "<", ">", "<=", ">="]
+        all_comparison_ops = ["<", ">", "<=", ">="]
 
         for op in all_comparison_ops:
             # No arguments
@@ -151,5 +151,5 @@ class TestComparisonEdgeCases:
         result = aifpl.evaluate("(>= 10 8 8 5)")
         assert result is True
 
-        result = aifpl.evaluate("(= 5 5 5 5)")
+        result = aifpl.evaluate("(integer=? 5 5 5 5)")
         assert result is True

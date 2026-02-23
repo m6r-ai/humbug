@@ -26,23 +26,23 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
     improves runtime performance.
 
     Examples:
-        (+ 1 2) → 3
-        (* 2 3) → 6
-        (+ (* 2 3) (* 4 5)) → 26
-        (< 5 10) → #t
+        (integer+ 1 2) → 3
+        (integer* 2 3) → 6
+        (integer+ (integer* 2 3) (integer* 4 5)) → 26
+        (integer< 5 10) → #t
         (and #t #t) → #t
     """
 
     # Builtin operations we can fold
     FOLDABLE_BUILTINS = {
-        'boolean=?',
-        'not',
         '//', '%',
-        '=', '!=', '<', '>', '<=', '>=',
-        'sqrt', 'abs', 'min', 'max', 'expt',
-        'sin', 'cos', 'tan', 'log', 'log10', 'exp',
+        '<', '>', '<=', '>=',
+        'min', 'max',
         'round', 'floor', 'ceil',
         'number=?',
+
+        'boolean=?',
+        'not',
         'integer=?',
         'integer+',
         'integer-',
@@ -103,8 +103,10 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         # Build jump table for foldable builtin operations
         self._builtin_jump_table = {
             'boolean=?': self._fold_boolean_eq,
+            'boolean!=?': self._fold_boolean_neq,
             'not': self._fold_not,
             'integer=?': self._fold_integer_eq,
+            'integer!=?': self._fold_integer_neq,
             'integer+': self._fold_integer_add,
             'integer-': self._fold_integer_sub,
             'integer*': self._fold_integer_mul,
@@ -118,6 +120,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'bit-shift-left': self._fold_bit_shift_left,
             'bit-shift-right': self._fold_bit_shift_right,
             'float=?': self._fold_float_eq,
+            'float!=?': self._fold_float_neq,
             'float+': self._fold_float_add,
             'float-': self._fold_float_sub,
             'float*': self._fold_float_mul,
@@ -133,6 +136,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'float-sqrt': self._fold_float_sqrt,
             'float-abs': self._fold_float_abs,
             'complex=?': self._fold_complex_eq,
+            'complex!=?': self._fold_complex_neq,
             'complex': self._fold_complex,
             'complex+': self._fold_complex_add,
             'complex-': self._fold_complex_sub,
@@ -151,14 +155,13 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'complex-sqrt': self._fold_complex_sqrt,
             'complex-abs': self._fold_complex_abs,
             'string=?': self._fold_string_eq,
+            'string!=?': self._fold_string_neq,
 
             # Arithmetic operations
             '//': self._fold_floor_divide,
             '%': self._fold_modulo,
 
             # Comparison operations
-            '=': self._fold_equal,
-            '!=': self._fold_not_equal,
             '<': self._fold_less_than,
             '>': self._fold_greater_than,
             '<=': self._fold_less_equal,
@@ -431,6 +434,19 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         first = args[0]
         return AIFPLASTBoolean(all(first == arg for arg in args[1:]))
 
+    def _fold_boolean_neq(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """
+        Fold inequality: (boolean!= a b c ...) → boolean
+
+        Semantics: "not all arguments are equal" — True if any pair differs.
+        This is equivalent to (not (= a b c ...)).
+        """
+        if not all(isinstance(arg, AIFPLASTBoolean) for arg in args):
+            return None
+
+        first = args[0]
+        return AIFPLASTBoolean(not all(first == arg for arg in args[1:]))
+
     def _fold_not(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
         """Fold not: (not a) → boolean"""
         if not isinstance(args[0], AIFPLASTBoolean):
@@ -446,6 +462,19 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
 
         first = args[0]
         return AIFPLASTBoolean(all(first == arg for arg in args[1:]))
+
+    def _fold_integer_neq(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """
+        Fold inequality: (integer!= a b c ...) → boolean
+
+        Semantics: "not all arguments are equal" — True if any pair differs.
+        This is equivalent to (not (= a b c ...)).
+        """
+        if not all(isinstance(arg, AIFPLASTInteger) for arg in args):
+            return None
+
+        first = args[0]
+        return AIFPLASTBoolean(not all(first == arg for arg in args[1:]))
 
     def _fold_integer_add(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
         """Fold integer+: all args must be integers, returns integer."""
@@ -596,6 +625,19 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
 
         first = args[0]
         return AIFPLASTBoolean(all(first == arg for arg in args[1:]))
+
+    def _fold_float_neq(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """
+        Fold inequality: (float!= a b c ...) → boolean
+
+        Semantics: "not all arguments are equal" — True if any pair differs.
+        This is equivalent to (not (= a b c ...)).
+        """
+        if not all(isinstance(arg, AIFPLASTFloat) for arg in args):
+            return None
+
+        first = args[0]
+        return AIFPLASTBoolean(not all(first == arg for arg in args[1:]))
 
     def _fold_float_add(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
         """Fold float+: all args must be floats, returns float."""
@@ -754,6 +796,19 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         first = args[0]
         return AIFPLASTBoolean(all(first == arg for arg in args[1:]))
 
+    def _fold_complex_neq(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """
+        Fold inequality: (complex!= a b c ...) → boolean
+
+        Semantics: "not all arguments are equal" — True if any pair differs.
+        This is equivalent to (not (= a b c ...)).
+        """
+        if not all(isinstance(arg, AIFPLASTComplex) for arg in args):
+            return None
+
+        first = args[0]
+        return AIFPLASTBoolean(not all(first == arg for arg in args[1:]))
+
     def _fold_complex_add(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
         """Fold complex+: all args must be complex, returns complex."""
         if not all(isinstance(a, AIFPLASTComplex) for a in args):
@@ -899,6 +954,19 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         first = args[0]
         return AIFPLASTBoolean(all(first == arg for arg in args[1:]))
 
+    def _fold_string_neq(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """
+        Fold inequality: (string!= a b c ...) → boolean
+
+        Semantics: "not all arguments are equal" — True if any pair differs.
+        This is equivalent to (not (= a b c ...)).
+        """
+        if not all(isinstance(arg, AIFPLASTString) for arg in args):
+            return None
+
+        first = args[0]
+        return AIFPLASTBoolean(not all(first == arg for arg in args[1:]))
+
     def _fold_floor_divide(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
         """Fold floor division: (// a b) → floor quotient"""
         a, b = self._to_python_number(args[0]), self._to_python_number(args[1])
@@ -928,30 +996,6 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         return self._from_python_number(result)
 
     # Comparison operations
-
-    def _fold_equal(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold equality: (= a b c ...) → boolean"""
-        # Check if all arguments are equal
-        first_val = self._to_python_number(args[0])
-        for arg in args[1:]:
-            if self._to_python_number(arg) != first_val:
-                return AIFPLASTBoolean(False)
-
-        return AIFPLASTBoolean(True)
-
-    def _fold_not_equal(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold inequality: (!= a b c ...) → boolean
-
-        Semantics: "not all arguments are equal" — True if any pair differs.
-        This is equivalent to (not (= a b c ...)).
-        """
-        # Check if all arguments are equal; if so, != is False, otherwise True.
-        first_val = self._to_python_number(args[0])
-        for arg in args[1:]:
-            if self._to_python_number(arg) != first_val:
-                return AIFPLASTBoolean(True)
-
-        return AIFPLASTBoolean(False)
 
     def _fold_less_than(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
         """Fold less than: (< a b c ...) → boolean"""
