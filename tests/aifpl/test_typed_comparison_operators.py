@@ -50,9 +50,6 @@ class TestBooleanNeqP:
         with pytest.raises(AIFPLEvalError, match="boolean!=.*has wrong number of arguments"):
             aifpl.evaluate('(boolean!=? #t)')
 
-        with pytest.raises(AIFPLEvalError, match="boolean!=.*has wrong number of arguments"):
-            aifpl.evaluate('(boolean!=? #t #f #t)')
-
 
 class TestIntegerNeqP:
     """Tests for integer!=?"""
@@ -89,9 +86,6 @@ class TestIntegerNeqP:
         with pytest.raises(AIFPLEvalError, match="integer!=.*has wrong number of arguments"):
             aifpl.evaluate('(integer!=? 1)')
 
-        with pytest.raises(AIFPLEvalError, match="integer!=.*has wrong number of arguments"):
-            aifpl.evaluate('(integer!=? 1 2 3)')
-
 
 class TestFloatNeqP:
     """Tests for float!=?"""
@@ -122,9 +116,6 @@ class TestFloatNeqP:
         with pytest.raises(AIFPLEvalError, match="float!=.*has wrong number of arguments"):
             aifpl.evaluate('(float!=? 1.0)')
 
-        with pytest.raises(AIFPLEvalError, match="float!=.*has wrong number of arguments"):
-            aifpl.evaluate('(float!=? 1.0 2.0 3.0)')
-
 
 class TestComplexNeqP:
     """Tests for complex!=?"""
@@ -152,9 +143,6 @@ class TestComplexNeqP:
         with pytest.raises(AIFPLEvalError, match="complex!=.*has wrong number of arguments"):
             aifpl.evaluate('(complex!=? 1+2j)')
 
-        with pytest.raises(AIFPLEvalError, match="complex!=.*has wrong number of arguments"):
-            aifpl.evaluate('(complex!=? 1+2j 1+3j 1+4j)')
-
 
 class TestStringNeqP:
     """Tests for string!=?"""
@@ -181,9 +169,6 @@ class TestStringNeqP:
 
         with pytest.raises(AIFPLEvalError, match="string!=.*has wrong number of arguments"):
             aifpl.evaluate('(string!=? "a")')
-
-        with pytest.raises(AIFPLEvalError, match="string!=.*has wrong number of arguments"):
-            aifpl.evaluate('(string!=? "a" "b" "c")')
 
 
 class TestListNeqP:
@@ -216,9 +201,6 @@ class TestListNeqP:
         with pytest.raises(AIFPLEvalError, match="list!=.*has wrong number of arguments"):
             aifpl.evaluate('(list!=? (list 1))')
 
-        with pytest.raises(AIFPLEvalError, match="list!=.*has wrong number of arguments"):
-            aifpl.evaluate('(list!=? (list 1) (list 2) (list 3))')
-
 
 class TestAlistNeqP:
     """Tests for alist!=?"""
@@ -244,9 +226,6 @@ class TestAlistNeqP:
 
         with pytest.raises(AIFPLEvalError, match="alist!=.*has wrong number of arguments"):
             aifpl.evaluate('(alist!=? (alist))')
-
-        with pytest.raises(AIFPLEvalError, match="alist!=.*has wrong number of arguments"):
-            aifpl.evaluate('(alist!=? (alist) (alist) (alist))')
 
 
 # ---------------------------------------------------------------------------

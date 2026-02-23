@@ -20,54 +20,54 @@ class TestEquality:
     def test_equals_operator_with_strings(self, aifpl):
         """Test that = operator works with strings."""
         # The = operator uses Python's __eq__ internally
-        result = aifpl.evaluate('(= "hello" "hello")')
+        result = aifpl.evaluate('(string=? "hello" "hello")')
         assert result is True
 
-        result = aifpl.evaluate('(= "hello" "world")')
+        result = aifpl.evaluate('(string=? "hello" "world")')
         assert result is False
 
         # Multiple strings
-        result = aifpl.evaluate('(= "test" "test" "test")')
+        result = aifpl.evaluate('(string=? "test" "test" "test")')
         assert result is True
 
-        result = aifpl.evaluate('(= "a" "a" "b")')
+        result = aifpl.evaluate('(string=? "a" "a" "b")')
         assert result is False
 
     def test_equals_operator_with_booleans(self, aifpl):
         """Test that = operator works with booleans."""
-        result = aifpl.evaluate('(= #t #t)')
+        result = aifpl.evaluate('(boolean=? #t #t)')
         assert result is True
 
-        result = aifpl.evaluate('(= #f #f)')
+        result = aifpl.evaluate('(boolean=? #f #f)')
         assert result is True
 
-        result = aifpl.evaluate('(= #t #f)')
+        result = aifpl.evaluate('(boolean=? #t #f)')
         assert result is False
 
         # Multiple booleans
-        result = aifpl.evaluate('(= #t #t #t)')
+        result = aifpl.evaluate('(boolean=? #t #t #t)')
         assert result is True
 
-        result = aifpl.evaluate('(= #f #f #f)')
+        result = aifpl.evaluate('(boolean=? #f #f #f)')
         assert result is True
 
     def test_not_equals_operator_with_strings(self, aifpl):
         """Test that != operator works with strings."""
-        result = aifpl.evaluate('(!= "hello" "world")')
+        result = aifpl.evaluate('(string!=? "hello" "world")')
         assert result is True
 
-        result = aifpl.evaluate('(!= "hello" "hello")')
+        result = aifpl.evaluate('(string!=? "hello" "hello")')
         assert result is False
 
-        result = aifpl.evaluate('(!= "a" "b" "c")')
+        result = aifpl.evaluate('(string!=? "a" "b" "c")')
         assert result is True
 
     def test_not_equals_operator_with_booleans(self, aifpl):
         """Test that != operator works with booleans."""
-        result = aifpl.evaluate('(!= #t #f)')
+        result = aifpl.evaluate('(boolean!=? #t #f)')
         assert result is True
 
-        result = aifpl.evaluate('(!= #t #t)')
+        result = aifpl.evaluate('(boolean!=? #t #t)')
         assert result is False
 
     def test_string_in_list_operations(self, aifpl):

@@ -16,7 +16,7 @@ class TestConditionals:
         # If with numeric conditions
         ('(if (> 5 3) "greater" "less")', '"greater"'),
         ('(if (< 5 3) "greater" "less")', '"less"'),
-        ('(if (= 5 5) "equal" "not equal")', '"equal"'),
+        ('(if (integer=? 5 5) "equal" "not equal")', '"equal"'),
 
         # If with different result types
         ('(if #t 42 0)', '42'),
@@ -338,13 +338,13 @@ class TestConditionals:
         # De Morgan's laws
         helpers.assert_evaluates_to(
             aifpl,
-            '(= (not (and #t #f)) (or (not #t) (not #f)))',
+            '(boolean=? (not (and #t #f)) (or (not #t) (not #f)))',
             '#t'
         )
 
         helpers.assert_evaluates_to(
             aifpl,
-            '(= (not (or #t #f)) (and (not #t) (not #f)))',
+            '(boolean=? (not (or #t #f)) (and (not #t) (not #f)))',
             '#t'
         )
 
@@ -372,7 +372,7 @@ class TestConditionals:
 
         helpers.assert_evaluates_to(
             aifpl,
-            '(if (= 0 0) "zero" "not zero")',
+            '(if (integer=? 0 0) "zero" "not zero")',
             '"zero"'
         )
 
@@ -458,7 +458,7 @@ class TestConditionals:
         nested_expr = '''
         (if (> 10 5)
             (if (< 3 7)
-                (if (= 2 2) "all true" "third false")
+                (if (integer=? 2 2) "all true" "third false")
                 "second false")
             "first false")
         '''
@@ -468,7 +468,7 @@ class TestConditionals:
         decision_tree = '''
         (if (> 15 10)
             (if (< 5 8)
-                (if (= 3 3) 
+                (if (integer=? 3 3) 
                     (if #t "deeply nested true" "impossible")
                     "equality false")
                 "comparison false")
@@ -481,7 +481,7 @@ class TestConditionals:
         # Division by zero prevention
         helpers.assert_evaluates_to(
             aifpl,
-            '(if (= 5 0) (/ 10 5) "divisor is zero")',
+            '(if (integer=? 5 0) (/ 10 5) "divisor is zero")',
             '"divisor is zero"'
         )
 

@@ -474,7 +474,7 @@ class TestAListPatternMatching:
         result = tool.evaluate('''
             (match (alist (list "type" "user") (list "name" "Alice"))
               ((alist? data)
-               (if (= (alist-get data "type") "user")
+               (if (string=? (alist-get data "type") "user")
                    (alist-get data "name")
                    "unknown"))
               (_ "not-alist"))
@@ -535,22 +535,22 @@ class TestAListEquality:
 
     def test_alist_equality_same_content(self, tool):
         """Test that alists with same content are equal."""
-        result = tool.evaluate('(= (alist (list "a" 1) (list "b" 2)) (alist (list "a" 1) (list "b" 2)))')
+        result = tool.evaluate('(alist=? (alist (list "a" 1) (list "b" 2)) (alist (list "a" 1) (list "b" 2)))')
         assert result is True
 
     def test_alist_equality_different_content(self, tool):
         """Test that alists with different content are not equal."""
-        result = tool.evaluate('(= (alist (list "a" 1) (list "b" 2)) (alist (list "a" 1) (list "b" 3)))')
+        result = tool.evaluate('(alist=? (alist (list "a" 1) (list "b" 2)) (alist (list "a" 1) (list "b" 3)))')
         assert result is False
 
     def test_alist_equality_different_keys(self, tool):
         """Test that alists with different keys are not equal."""
-        result = tool.evaluate('(= (alist (list "a" 1)) (alist (list "b" 1)))')
+        result = tool.evaluate('(alist=? (alist (list "a" 1)) (alist (list "b" 1)))')
         assert result is False
 
     def test_alist_inequality(self, tool):
         """Test alist inequality operator."""
-        result = tool.evaluate('(!= (alist (list "a" 1)) (alist (list "a" 2)))')
+        result = tool.evaluate('(alist!=? (alist (list "a" 1)) (alist (list "a" 2)))')
         assert result is True
 
     def test_alist_not_equal_to_list(self, tool):
@@ -612,7 +612,7 @@ class TestAListLength:
         """Test that length of alist equals length of its keys."""
         result = tool.evaluate('''
             (let ((my-alist (alist (list "a" 1) (list "b" 2) (list "c" 3))))
-              (= (length my-alist) (length (alist-keys my-alist))))
+              (integer=? (length my-alist) (length (alist-keys my-alist))))
         ''')
         assert result is True
 
@@ -634,7 +634,7 @@ class TestAListLengthFunction:
         """Test that alist-length and length return same result."""
         result = tool.evaluate('''
             (let ((a (alist (list "a" 1) (list "b" 2) (list "c" 3))))
-              (= (length a) (alist-length a)))
+              (integer=? (length a) (alist-length a)))
         ''')
         assert result is True
 

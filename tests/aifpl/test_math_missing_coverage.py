@@ -94,7 +94,7 @@ class TestMathMissingCoverage:
 
     def test_trigonometric_functions_wrong_argument_count(self, aifpl):
         """Test trigonometric functions with wrong argument count."""
-        trig_functions = ["sin", "cos", "tan"]
+        trig_functions = ["float-sin", "float-cos", "float-tan"]
 
         for func in trig_functions:
             # No arguments

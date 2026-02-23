@@ -291,9 +291,9 @@ class TestComplexNumberLiterals:
                 aifpl.evaluate(f"({op} 3+4j 5+6j)")
 
         # But equality should work
-        assert aifpl.evaluate("(= 3+4j 3+4j)") is True
-        assert aifpl.evaluate("(= 3+4j 3+5j)") is False
-        assert aifpl.evaluate("(!= 3+4j 3+5j)") is True
+        assert aifpl.evaluate("(complex=? 3+4j 3+4j)") is True
+        assert aifpl.evaluate("(complex=? 3+4j 3+5j)") is False
+        assert aifpl.evaluate("(complex!=? 3+4j 3+5j)") is True
 
     def test_complex_type_predicates(self, aifpl):
         """Test type predicates with complex numbers."""

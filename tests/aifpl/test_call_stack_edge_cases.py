@@ -89,7 +89,7 @@ class TestAIFPLCallStackEdgeCases:
 
         # Conditional with complex expressions
         result = aifpl.evaluate('''
-        (if (= (integer+ 2 3) 5)
+        (if (integer=? (integer+ 2 3) 5)
             (integer* 2 (integer+ 3 4))
             (float/ 10.0 2.0))
         ''')

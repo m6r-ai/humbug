@@ -151,8 +151,8 @@ class TestRecursiveNestedLambdas:
         # Even/odd mutual recursion used in map
         helpers.assert_evaluates_to(
             aifpl,
-            '''(letrec ((is-even (lambda (n) (if (= n 0) #t (is-odd (integer- n 1)))))
-                  (is-odd (lambda (n) (if (= n 0) #f (is-even (integer- n 1))))))
+            '''(letrec ((is-even (lambda (n) (if (integer=? n 0) #t (is-odd (integer- n 1)))))
+                  (is-odd (lambda (n) (if (integer=? n 0) #f (is-even (integer- n 1))))))
               (map (lambda (x) (is-even x)) (list 0 1 2 3 4)))''',
             '(#t #f #t #f #t)'
         )
@@ -203,7 +203,7 @@ class TestRecursiveNestedLambdas:
         helpers.assert_evaluates_to(
             aifpl,
             '''(letrec ((reaches-target (lambda (n target)
-                                        (if (= n target)
+                                        (if (integer=? n target)
                                            #t
                                            (if (< n target)
                                                #f
@@ -218,9 +218,9 @@ class TestRecursiveNestedLambdas:
         helpers.assert_evaluates_to(
             aifpl,
             '''(letrec ((get-neighbors (lambda (node)
-                                       (if (= node 1)
+                                       (if (integer=? node 1)
                                            (list 2 3)
-                                           (if (= node 2)
+                                           (if (integer=? node 2)
                                                (list 4)
                                                (list)))))
                   (visit-all (lambda (node visited)

@@ -374,7 +374,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         (let* ((x 5)
                (y 3)
                (greater (> x y))
-               (equal (= x y))
+               (equal (integer=? x y))
                (result (and greater (not equal))))
           result)
         """)
@@ -401,7 +401,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # List processing pipeline
         result = aifpl.evaluate("""
         (let* ((numbers (range 1 6))
-               (evens (filter (lambda (x) (= (% x 2) 0)) numbers))
+               (evens (filter (lambda (x) (integer=? (% x 2) 0)) numbers))
                (squares (map (lambda (x) (integer* x x)) evens))
                (sum (fold integer+ 0 squares)))
           sum)

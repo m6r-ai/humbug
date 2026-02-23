@@ -392,26 +392,26 @@ class TestLists:
 
     @pytest.mark.parametrize("expression,expected", [
         # List equality
-        ('(= (list) (list))', '#t'),
-        ('(= (list 1) (list 1))', '#t'),
-        ('(= (list 1 2 3) (list 1 2 3))', '#t'),
-        ('(= (list 1 2) (list 1 2 3))', '#f'),  # Different lengths
-        ('(= (list 1 2 3) (list 1 3 2))', '#f'),  # Different order
+        ('(list=? (list) (list))', '#t'),
+        ('(list=? (list 1) (list 1))', '#t'),
+        ('(list=? (list 1 2 3) (list 1 2 3))', '#t'),
+        ('(list=? (list 1 2) (list 1 2 3))', '#f'),  # Different lengths
+        ('(list=? (list 1 2 3) (list 1 3 2))', '#f'),  # Different order
 
         # Mixed type list equality
-        ('(= (list 1 "hello" #t) (list 1 "hello" #t))', '#t'),
-        ('(= (list 1 "hello") (list 1 "world"))', '#f'),
+        ('(list=? (list 1 "hello" #t) (list 1 "hello" #t))', '#t'),
+        ('(list=? (list 1 "hello") (list 1 "world"))', '#f'),
 
         # Nested list equality
-        ('(= (list (list 1 2) (list 3 4)) (list (list 1 2) (list 3 4)))', '#t'),
-        ('(= (list (list 1 2)) (list (list 1 3)))', '#f'),
+        ('(list=? (list (list 1 2) (list 3 4)) (list (list 1 2) (list 3 4)))', '#t'),
+        ('(list=? (list (list 1 2)) (list (list 1 3)))', '#f'),
 
         # Multiple list equality
-        ('(= (list 1 2) (list 1 2) (list 1 2))', '#t'),
-        ('(= (list 1 2) (list 1 2) (list 1 3))', '#f'),
+        ('(list=? (list 1 2) (list 1 2) (list 1 2))', '#t'),
+        ('(list=? (list 1 2) (list 1 2) (list 1 3))', '#f'),
     ])
     def test_list_equality(self, aifpl, expression, expected):
-        """Test list equality using = operator."""
+        """Test list equality using list=? operator."""
         assert aifpl.evaluate_and_format(expression) == expected
 
     def test_list_comparison_operators_not_supported(self, aifpl):

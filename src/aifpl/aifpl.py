@@ -81,7 +81,6 @@ class AIFPL:
                                               (loop (rest lst) (first lst))
                                               #f)))))
                        (loop (rest args) (first args)))))""",
-        # != — all-pairs distinct: every pair (i,j) where i<j must satisfy i != j
         '!=': """(lambda (. args)
                    (if (< (length args) 2)
                      (error "Function '!=' requires at least 2 arguments")
@@ -95,7 +94,6 @@ class AIFPL:
                                                                      #f)))))
                                              (inner (rest lst)))))))
                        (outer args))))""",
-        # Fold-reducible min/max — require at least 1 arg
         'min': """(lambda (. args)
                     (if (null? args)
                       (error "Function 'min' requires at least 1 argument")
@@ -110,7 +108,6 @@ class AIFPL:
                                        (if (null? lst) acc
                                            (loop (rest lst) (max acc (first lst)))))))
                         (loop (rest args) (first args)))))""",
-        # Typed equality chains — pairwise, same pattern as =
         'number=?': """(lambda (. args)
                          (if (< (length args) 2)
                            (error "Function 'number=?' requires at least 2 arguments")
@@ -129,6 +126,18 @@ class AIFPL:
                                                      (loop (rest lst) (first lst))
                                                      #f)))))
                               (loop (rest args) (first args)))))""",
+        'boolean!=?': """(lambda (. args)
+                            (if (< (length args) 2)
+                              (error "Function 'boolean!=?' requires at least 2 arguments")
+                              (letrec ((outer (lambda (lst)
+                                                (if (null? lst) #t
+                                                    (letrec ((inner (lambda (rest-lst)
+                                                                      (if (null? rest-lst)
+                                                                          (outer (rest lst))
+                                                                          (if (boolean!=? (first lst) (first rest-lst))
+                                                                              (inner (rest rest-lst))
+                                                                              #f)))))
+                                                      (inner (rest lst)))))))                                (outer args))))""",
         'integer=?': """(lambda (. args)
                           (if (< (length args) 2)
                             (error "Function 'integer=?' requires at least 2 arguments")
@@ -138,6 +147,18 @@ class AIFPL:
                                                      (loop (rest lst) (first lst))
                                                      #f)))))
                               (loop (rest args) (first args)))))""",
+        'integer!=?': """(lambda (. args)
+                            (if (< (length args) 2)
+                              (error "Function 'integer!=?' requires at least 2 arguments")
+                              (letrec ((outer (lambda (lst)
+                                                (if (null? lst) #t
+                                                    (letrec ((inner (lambda (rest-lst)
+                                                                      (if (null? rest-lst)
+                                                                          (outer (rest lst))
+                                                                          (if (integer!=? (first lst) (first rest-lst))
+                                                                              (inner (rest rest-lst))
+                                                                              #f)))))
+                                                      (inner (rest lst)))))))                                (outer args))))""",
         'integer+': """(lambda (. args)
                          (if (null? args) 0
                            (letrec ((loop (lambda (lst acc)
@@ -193,6 +214,18 @@ class AIFPL:
                                                    (loop (rest lst) (first lst))
                                                    #f)))))
                             (loop (rest args) (first args)))))""",
+        'float!=?': """(lambda (. args)
+                            (if (< (length args) 2)
+                              (error "Function 'float!=?' requires at least 2 arguments")
+                              (letrec ((outer (lambda (lst)
+                                                (if (null? lst) #t
+                                                    (letrec ((inner (lambda (rest-lst)
+                                                                      (if (null? rest-lst)
+                                                                          (outer (rest lst))
+                                                                          (if (float!=? (first lst) (first rest-lst))
+                                                                              (inner (rest rest-lst))
+                                                                              #f)))))
+                                                      (inner (rest lst)))))))                                (outer args))))""",
         'float+': """(lambda (. args)
                        (if (null? args) 0.0
                          (letrec ((loop (lambda (lst acc)
@@ -237,6 +270,18 @@ class AIFPL:
                                                      (loop (rest lst) (first lst))
                                                      #f)))))
                               (loop (rest args) (first args)))))""",
+        'complex!=?': """(lambda (. args)
+                            (if (< (length args) 2)
+                              (error "Function 'complex!=?' requires at least 2 arguments")
+                              (letrec ((outer (lambda (lst)
+                                                (if (null? lst) #t
+                                                    (letrec ((inner (lambda (rest-lst)
+                                                                      (if (null? rest-lst)
+                                                                          (outer (rest lst))
+                                                                          (if (complex!=? (first lst) (first rest-lst))
+                                                                              (inner (rest rest-lst))
+                                                                              #f)))))
+                                                      (inner (rest lst)))))))                                (outer args))))""",
         'complex+': """(lambda (. args)
                          (if (null? args)
                            (error "Function 'complex+' requires at least 1 argument, got 0")
@@ -283,6 +328,18 @@ class AIFPL:
                                                     (loop (rest lst) (first lst))
                                                     #f)))))
                              (loop (rest args) (first args)))))""",
+        'string!=?': """(lambda (. args)
+                            (if (< (length args) 2)
+                              (error "Function 'string!=?' requires at least 2 arguments")
+                              (letrec ((outer (lambda (lst)
+                                                (if (null? lst) #t
+                                                    (letrec ((inner (lambda (rest-lst)
+                                                                      (if (null? rest-lst)
+                                                                          (outer (rest lst))
+                                                                          (if (string!=? (first lst) (first rest-lst))
+                                                                              (inner (rest rest-lst))
+                                                                              #f)))))
+                                                      (inner (rest lst)))))))                                (outer args))))""",
         'string-append': """(lambda (. args)
                               (if (null? args) ""
                                 (letrec ((loop (lambda (lst acc)
@@ -299,6 +356,18 @@ class AIFPL:
                                                   (loop (rest lst) (first lst))
                                                   #f)))))
                            (loop (rest args) (first args)))))""",
+        'list!=?': """(lambda (. args)
+                            (if (< (length args) 2)
+                              (error "Function 'list!=?' requires at least 2 arguments")
+                              (letrec ((outer (lambda (lst)
+                                                (if (null? lst) #t
+                                                    (letrec ((inner (lambda (rest-lst)
+                                                                      (if (null? rest-lst)
+                                                                          (outer (rest lst))
+                                                                          (if (list!=? (first lst) (first rest-lst))
+                                                                              (inner (rest rest-lst))
+                                                                              #f)))))
+                                                      (inner (rest lst)))))))                                (outer args))))""",
         'append': """(lambda (. args)
                        (if (null? args) (list)
                          (letrec ((loop (lambda (lst acc)
@@ -326,6 +395,18 @@ class AIFPL:
                                                    (loop (rest lst) (first lst))
                                                    #f)))))
                             (loop (rest args) (first args)))))""",
+        'alist!=?': """(lambda (. args)
+                            (if (< (length args) 2)
+                              (error "Function 'alist!=?' requires at least 2 arguments")
+                              (letrec ((outer (lambda (lst)
+                                                (if (null? lst) #t
+                                                    (letrec ((inner (lambda (rest-lst)
+                                                                      (if (null? rest-lst)
+                                                                          (outer (rest lst))
+                                                                          (if (alist!=? (first lst) (first rest-lst))
+                                                                              (inner (rest rest-lst))
+                                                                              #f)))))
+                                                      (inner (rest lst)))))))                                (outer args))))""",
         'alist-get': """(lambda (a-list key . rest)
                           (alist-get a-list key (if (null? rest) #f (first rest))))""",
         'range': """(lambda (start end . rest)

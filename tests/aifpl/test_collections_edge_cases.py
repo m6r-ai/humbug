@@ -195,25 +195,25 @@ class TestAIFPLCollectionEdgeCases:
     def test_collection_equality_edge_cases(self, aifpl):
         """Test collection equality edge cases."""
         # Empty list equality
-        assert aifpl.evaluate("(= () ())") is True
-        assert aifpl.evaluate("(= (list) ())") is True
-        assert aifpl.evaluate("(= () (list))") is True
+        assert aifpl.evaluate("(list=? () ())") is True
+        assert aifpl.evaluate("(list=? (list) ())") is True
+        assert aifpl.evaluate("(list=? () (list))") is True
 
         # Single element equality
-        assert aifpl.evaluate("(= (list 1) (list 1))") is True
-        assert aifpl.evaluate("(!= (list 1) (list 2))") is True
+        assert aifpl.evaluate("(list=? (list 1) (list 1))") is True
+        assert aifpl.evaluate("(list!=? (list 1) (list 2))") is True
 
         # Multi-element equality
-        assert aifpl.evaluate("(= (list 1 2 3) (list 1 2 3))") is True
-        assert aifpl.evaluate("(!= (list 1 2 3) (list 3 2 1))") is True
+        assert aifpl.evaluate("(list=? (list 1 2 3) (list 1 2 3))") is True
+        assert aifpl.evaluate("(list!=? (list 1 2 3) (list 3 2 1))") is True
 
         # Mixed type equality
-        assert aifpl.evaluate('(= (list 1 "hello") (list 1 "hello"))') is True
-        assert aifpl.evaluate('(!= (list 1 "hello") (list 1 "world"))') is True
+        assert aifpl.evaluate('(list=? (list 1 "hello") (list 1 "hello"))') is True
+        assert aifpl.evaluate('(list!=? (list 1 "hello") (list 1 "world"))') is True
 
         # Nested list equality
-        assert aifpl.evaluate("(= (list (list 1 2)) (list (list 1 2)))") is True
-        assert aifpl.evaluate("(!= (list (list 1 2)) (list (list 2 1)))") is True
+        assert aifpl.evaluate("(list=? (list (list 1 2)) (list (list 1 2)))") is True
+        assert aifpl.evaluate("(list!=? (list (list 1 2)) (list (list 2 1)))") is True
 
     def test_collection_immutability(self, aifpl):
         """Test that collection operations don't modify originals."""

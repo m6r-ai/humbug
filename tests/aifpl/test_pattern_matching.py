@@ -558,7 +558,7 @@ class TestPatternMatching:
         # Simulating Maybe/Option type with lists
         option_example = '''
         (let ((safe-divide (lambda (a b)
-                            (if (= b 0)
+                            (if (integer=? b 0)
                                 (list "none")
                                 (list "some" (float/ (float a) (float b)))))
               )

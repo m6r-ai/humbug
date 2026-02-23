@@ -139,11 +139,11 @@ class TestEvaluatorMissingCoverage:
         """Test call chain cleanup with mutual recursion."""
         mutual_recursion_code = """
         (letrec ((is-even (lambda (n)
-                            (if (= n 0)
+                            (if (integer=? n 0)
                                 #t
                                 (is-odd (integer- n 1)))))
                  (is-odd (lambda (n)
-                           (if (= n 0)
+                           (if (integer=? n 0)
                                #f
                                (is-even (integer- n 1))))))
           (is-even 4))
@@ -251,7 +251,7 @@ class TestEvaluatorMissingCoverage:
         # Create a tail-recursive countdown function
         countdown_code = """
         (letrec ((countdown (lambda (n acc)
-                             (if (= n 0)
+                             (if (integer=? n 0)
                                  acc
                                  (countdown (integer- n 1) (integer+ acc n))))))
           (countdown 10 0))
@@ -265,7 +265,7 @@ class TestEvaluatorMissingCoverage:
         # Create recursive function that will eventually error
         error_code = """
         (letrec ((error-func (lambda (n)
-                              (if (= n 0)
+                              (if (integer=? n 0)
                                   (integer/ 1 0)
                                   (error-func (integer- n 1))))))
           (error-func 3))

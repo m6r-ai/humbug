@@ -173,7 +173,7 @@ class TestFunctional:
     @pytest.mark.parametrize("expression,expected", [
         # Basic filter operations
         ('(filter (lambda (x) (> x 0)) (list -1 2 -3 4))', '(2 4)'),
-        ('(filter (lambda (x) (= x 0)) (list 1 0 2 0 3))', '(0 0)'),
+        ('(filter (lambda (x) (integer=? x 0)) (list 1 0 2 0 3))', '(0 0)'),
 
         # Filter with empty list
         ('(filter (lambda (x) #t) (list))', '()'),
@@ -289,7 +289,7 @@ class TestFunctional:
     @pytest.mark.parametrize("expression,expected", [
         # Basic find operations
         ('(find (lambda (x) (> x 5)) (list 1 3 7 2))', '7'),
-        ('(find (lambda (x) (= x 0)) (list 1 2 0 3))', '0'),
+        ('(find (lambda (x) (integer=? x 0)) (list 1 2 0 3))', '0'),
 
         # Find with no match returns #f
         ('(find (lambda (x) (> x 10)) (list 1 2 3))', '#f'),
@@ -330,7 +330,7 @@ class TestFunctional:
         ('(any? (lambda (x) #t) (list))', '#f'),
 
         # any? short-circuits on first true
-        ('(any? (lambda (x) (= x 2)) (list 1 2 3))', '#t'),
+        ('(any? (lambda (x) (integer=? x 2)) (list 1 2 3))', '#t'),
     ])
     def test_any_predicate_function(self, aifpl, expression, expected):
         """Test any? higher-order predicate function."""
@@ -424,8 +424,8 @@ class TestFunctional:
         """Test mutual recursion between lambda functions."""
         # Even/odd mutual recursion
         even_odd_expr = '''
-        (letrec ((is-even (lambda (n) (if (= n 0) #t (is-odd (integer- n 1)))))
-                 (is-odd (lambda (n) (if (= n 0) #f (is-even (integer- n 1))))))
+        (letrec ((is-even (lambda (n) (if (integer=? n 0) #t (is-odd (integer- n 1)))))
+                 (is-odd (lambda (n) (if (integer=? n 0) #f (is-even (integer- n 1))))))
           (list (is-even 4) (is-odd 4) (is-even 7) (is-odd 7)))
         '''
         helpers.assert_evaluates_to(aifpl, even_odd_expr, '(#t #f #f #t)')
@@ -478,7 +478,7 @@ class TestFunctional:
         (fold integer+
               0
               (filter (lambda (x) (> x 10))
-                      (map (lambda (x) (if (= (% x 2) 0) (integer* x x) x))
+                      (map (lambda (x) (if (integer=? (% x 2) 0) (integer* x x) x))
                            (list 1 2 3 4 5 6))))
         '''
         # 1->1, 2->4, 3->3, 4->16, 5->5, 6->36
@@ -510,7 +510,7 @@ class TestFunctional:
         # Filter even numbers from range and double them
         even_doubled = '''
         (map (lambda (x) (integer* x 2))
-             (filter (lambda (x) (= (% x 2) 0))
+             (filter (lambda (x) (integer=? (% x 2) 0))
                      (range 1 11)))
         '''
         helpers.assert_evaluates_to(aifpl, even_doubled, '(4 8 12 16 20)')
@@ -653,7 +653,7 @@ class TestFunctional:
         # find with nested lambda
         helpers.assert_evaluates_to(
             aifpl,
-            '(find (lambda (x) ((lambda (y) (= y 3)) x)) (list 1 3 7))',
+            '(find (lambda (x) ((lambda (y) (integer=? y 3)) x)) (list 1 3 7))',
             '3'
         )
 
@@ -723,7 +723,7 @@ class TestFunctional:
         ('(filter (lambda (x) ((lambda (y) (> y 0)) x)) (list -1 2 -3 4))', '(2 4)'),
         ('(any? (lambda (x) ((lambda (y) (> y 5)) x)) (list 1 3 7))', '#t'),
         ('(all? (lambda (x) ((lambda (y) (> y 0)) x)) (list 1 3 7))', '#t'),
-        ('(find (lambda (x) ((lambda (y) (= y 3)) x)) (list 1 3 7))', '3'),
+        ('(find (lambda (x) ((lambda (y) (integer=? y 3)) x)) (list 1 3 7))', '3'),
         ('(fold (lambda (acc x) ((lambda (y) (integer+ acc y)) (integer* x 2))) 0 (list 1 2 3))', '12'),
     ])
     def test_nested_lambda_bug_cases(self, aifpl, expression, expected):

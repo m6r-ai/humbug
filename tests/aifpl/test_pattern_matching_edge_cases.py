@@ -527,7 +527,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         # Pattern matching with arithmetic in guards
         result = aifpl.evaluate('''
         (match 10
-          ((number? n) (if (= (% n 2) 0) "even" "odd"))
+          ((number? n) (if (integer=? (% n 2) 0) "even" "odd"))
           (_ "not number"))
         ''')
         assert result == "even"

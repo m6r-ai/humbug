@@ -91,7 +91,7 @@ class TestFormatting:
         ("(not #t)", "#f"),
 
         # Boolean comparisons
-        ("(= 1 1)", "#t"),
+        ("(integer=? 1 1)", "#t"),
         ("(> 5 3)", "#t"),
         ("(< 5 3)", "#f"),
     ])

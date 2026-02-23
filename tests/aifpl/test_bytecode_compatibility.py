@@ -93,7 +93,7 @@ class TestLambda:
         """Test recursive functions (critical test!)"""
         result = aifpl.evaluate("""
             (letrec ((factorial (lambda (n)
-                (if (= n 0)
+                (if (integer=? n 0)
                     1
                     (integer* n (factorial (integer- n 1)))))))
               (factorial 5))

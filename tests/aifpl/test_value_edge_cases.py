@@ -143,12 +143,12 @@ class TestAIFPLValueEdgeCases:
     def test_value_comparison_edge_cases(self, aifpl):
         """Test value comparison edge cases."""
         # Floating point comparisons
-        assert aifpl.evaluate("(= 0.1 0.1)") is True
-        assert aifpl.evaluate("(= 0.0 -0.0)") is True
+        assert aifpl.evaluate("(float=? 0.1 0.1)") is True
+        assert aifpl.evaluate("(float=? 0.0 -0.0)") is True
 
         # Complex number comparisons
-        assert aifpl.evaluate("(= (complex 1 2) (complex 1 2))") is True
-        assert aifpl.evaluate("(!= (complex 1 2) (complex 1 3))") is True
+        assert aifpl.evaluate("(complex=? (complex 1 2) (complex 1 2))") is True
+        assert aifpl.evaluate("(complex!=? (complex 1 2) (complex 1 3))") is True
 
         # String comparisons
         assert aifpl.evaluate('(string=? "" "")') is True
@@ -261,18 +261,18 @@ class TestAIFPLValueEdgeCases:
     def test_value_equality_edge_cases(self, aifpl):
         """Test value equality edge cases."""
         # Numeric equality across types
-        assert aifpl.evaluate("(= 5 5.0)") is True
-        assert aifpl.evaluate("(= 0 0.0)") is True
-        assert aifpl.evaluate("(= -0 0)") is True
+        assert aifpl.evaluate("(number=? 5 5.0)") is True
+        assert aifpl.evaluate("(number=? 0 0.0)") is True
+        assert aifpl.evaluate("(integer=? -0 0)") is True
 
         # Complex number equality
-        assert aifpl.evaluate("(= (complex 5 0) 5)") is True
-        assert aifpl.evaluate("(= (complex 0 1) 1j)") is True
+        assert aifpl.evaluate("(number=? (complex 5 0) 5)") is True
+        assert aifpl.evaluate("(complex=? (complex 0 1) 1j)") is True
 
         # List equality
-        assert aifpl.evaluate("(= (list 1 2) (list 1 2))") is True
-        assert aifpl.evaluate("(= () ())") is True
-        assert aifpl.evaluate("(!= (list 1 2) (list 2 1))") is True
+        assert aifpl.evaluate("(list=? (list 1 2) (list 1 2))") is True
+        assert aifpl.evaluate("(list=? () ())") is True
+        assert aifpl.evaluate("(list!=? (list 1 2) (list 2 1))") is True
 
     def test_value_conversion_edge_cases(self, aifpl):
         """Test value conversion edge cases."""

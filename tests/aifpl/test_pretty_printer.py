@@ -223,7 +223,7 @@ class TestPrettyPrinterIndentation:
     def test_letrec_binding_value_indentation(self):
         """Test that letrec binding values are indented correctly."""
         printer = AIFPLPrettyPrinter()
-        code = "(letrec ((factorial (lambda (n) (if (= n 0) 1 (* n (factorial (- n 1))))))) (factorial 5))"
+        code = "(letrec ((factorial (lambda (n) (if (integer=? n 0) 1 (integer* n (factorial (integer- n 1))))))) (factorial 5))"
         result = printer.format(code)
 
         # Now uses expanded format with bindings on next line

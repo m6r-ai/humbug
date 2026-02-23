@@ -59,7 +59,7 @@ class TestCommentBlankLinesInBindings:
         """Test that complex multi-line lambda bindings don't get blank lines without comments."""
         printer = AIFPLPrettyPrinter()
         # Mutually recursive functions with complex bodies (like the old test)
-        code = """(letrec ((even? (lambda (n) (or (= n 0) (odd? (- n 1))))) (odd? (lambda (n) (and (!= n 0) (even? (- n 1)))))) (even? 10))"""
+        code = """(letrec ((even? (lambda (n) (or (integer=? n 0) (odd? (- n 1))))) (odd? (lambda (n) (and (integer!=? n 0) (even? (- n 1)))))) (even? 10))"""
         result = printer.format(code)
 
         lines = result.split('\n')

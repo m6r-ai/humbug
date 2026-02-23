@@ -189,9 +189,9 @@ class TestTailCallOptimizationWithLet:
         """
         conditional_in_let = '''
         (letrec ((collatz (lambda (n steps)
-                           (if (= n 1) 
+                           (if (integer=? n 1) 
                                steps 
-                               (let ((next-n (if (= (% n 2) 0) (integer/ n 2) (integer+ (integer* n 3) 1))))
+                               (let ((next-n (if (integer=? (% n 2) 0) (integer/ n 2) (integer+ (integer* n 3) 1))))
                                  (collatz next-n (integer+ steps 1)))))))
           (collatz 100 0))
         '''
@@ -309,12 +309,12 @@ class TestTailCallOptimizationLetEdgeCases:
         """
         mutual_with_let = '''
         (letrec ((is-even (lambda (n) 
-                           (if (= n 0) 
+                           (if (integer=? n 0) 
                                #t 
                                (let ((next (integer- n 1)))
                                  (is-odd next)))))
                  (is-odd (lambda (n) 
-                          (if (= n 0) 
+                          (if (integer=? n 0) 
                               #f 
                               (let ((next (integer- n 1)))
                                 (is-even next))))))
@@ -346,7 +346,7 @@ class TestTailCallOptimizationVerification:
         (letrec ((f (lambda (n) 
                      (if (<= n 0) 
                          "zero" 
-                         (if (= n 1) 
+                         (if (integer=? n 1) 
                              "one" 
                              (f (integer- n 2)))))))
           (f 100))
@@ -361,7 +361,7 @@ class TestTailCallOptimizationVerification:
         (letrec ((f (lambda (n acc)
                      (if (<= n 0)
                          acc
-                         (if (= (% n 2) 0)
+                         (if (integer=? (% n 2) 0)
                              (let ((half (integer/ n 2)))
                                (f half (integer+ acc 1)))
                              (let ((next (integer- n 1)))
@@ -383,10 +383,10 @@ class TestTailCallOptimizationVerification:
         (letrec ((process (lambda (n mode acc)
                            (if (<= n 0)
                                acc
-                               (if (= mode 0)
+                               (if (integer=? mode 0)
                                    ; Direct tail call
                                    (process (integer- n 1) 1 (integer+ acc 1))
-                                   (if (= mode 1)
+                                   (if (integer=? mode 1)
                                        ; Tail call in if branch
                                        (process (integer- n 1) 2 (integer+ acc 2))
                                        ; Tail call after let

@@ -445,9 +445,9 @@ class TestAIFPLEnvironmentEdgeCases:
             # Functions that reference each other
             result = aifpl.evaluate("""
             (let ((even? (lambda (n)
-                          (if (= n 0) #t (odd? (integer- n 1)))))
+                          (if (integer=? n 0) #t (odd? (integer- n 1)))))
                   (odd? (lambda (n)
-                         (if (= n 0) #f (even? (integer- n 1))))))
+                         (if (integer=? n 0) #f (even? (integer- n 1))))))
               (even? 4))
             """)
             assert result is True
