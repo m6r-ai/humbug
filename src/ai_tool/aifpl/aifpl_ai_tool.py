@@ -193,7 +193,7 @@ Syntax: (operator arg1 arg2 ...)
 - Other: (abs -5), (sqrt 4.0), (round 3.7) → 4, (floor 3.7) → 3, (ceil 3.2) → 4
 - Trig: (sin 0.0), (cos 0.0), (tan 0.0)
 - Logs: (log 1.0), (log10 1.0), (exp 0.0)
-- Aggregation: (min 1 5 3), (max 1 5 3), (pow 2 3)
+- Aggregation: (min 1 5 3), (max 1 5 3)
 - Bitwise: (bit-or 5 3), (bit-and 7 3), (bit-xor 5 3), (bit-not 5)
 - Bit shifts: (bit-shift-left 1 3), (bit-shift-right 8 2)
 - Base conversion: (bin 255), (hex 255), (oct 255)
@@ -211,7 +211,7 @@ Float arithmetic (all args must be floats; use (float x) to convert integers):
 - (float+ 1.0 2.0 3.0) → 6.0, (float- 10.0 3.0) → 7.0
 - (float* 2.0 3.0) → 6.0, (float/ 10.0 4.0) → 2.5
 - (float/ 4.0) → 0.25 (reciprocal), (float-negate 3.0) → -3.0
-- (float-pow 2.0 10.0) → 1024.0
+- (float-expt 2.0 10.0) → 1024.0
 - (float+) → 0.0, (float*) → 1.0 (zero-arg identities)
 - Transcendentals: (float-sin 0.0) → 0.0, (float-cos 0.0) → 1.0, (float-tan 0.0) → 0.0
 - (float-log 1.0) → 0.0, (float-log10 1.0) → 0.0, (float-exp 0.0) → 1.0
@@ -229,6 +229,7 @@ Complex arithmetic (all args must be complex; use (complex r i) to construct):
 - (complex-abs (complex 3 4)) → 5.0 (returns float, not complex)
 - (complex+) → 0+0j, (complex*) → 1+0j (zero-arg identities)
 - Transcendentals: complex-sin, complex-cos, complex-tan, complex-log, complex-exp, complex-sqrt
+- Exponentials: complex-expt
 
 ## Complex numbers:
 
