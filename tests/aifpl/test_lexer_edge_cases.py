@@ -269,12 +269,12 @@ class TestAIFPLLexerEdgeCases:
         """Test parentheses tokenization edge cases."""
         # Nested parentheses
         nested_cases = [
-            "()",                           # Empty
-            "(())",                         # Nested empty
-            "((()))",                       # Deeply nested empty
-            "(+ 1 2)",                      # Simple expression
-            "(+ 1 (+ 2 3))",               # Nested expression
-            "(+ (* 2 3) (- 5 1))",         # Multiple nested
+            "()",
+            "(())",
+            "((()))",
+            "(integer+ 1 2)",
+            "(integer+ 1 (integer+ 2 3))",
+            "(integer+ (integer* 2 3) (integer- 5 1))",
         ]
 
         for expr in nested_cases:
@@ -490,7 +490,7 @@ class TestAIFPLLexerEdgeCases:
         """Test lexer with edge case combinations."""
         # Mixed token types in expressions
         mixed_cases = [
-            '(+ 42 3.14)',                      # Integer + float
+            '(float+ 42.0 3.14)',               # Float + float
             '(string-append "hello" " world")', # Strings with spaces
             '(list 1 "two" #t)',               # Mixed types
             '(if #t 42 "false")',              # Boolean condition
@@ -506,9 +506,9 @@ class TestAIFPLLexerEdgeCases:
 
         # Whitespace in various positions
         whitespace_cases = [
-            ' ( + 1 2 ) ',                     # Spaces around everything
-            '(\t+\n1\r2\n)',                   # Mixed whitespace
-            '(  +   1    2   )',               # Irregular spacing
+            ' ( integer+ 1 2 ) ',              # Spaces around everything
+            '(\tinteger+\n1\r2\n)',            # Mixed whitespace
+            '(  integer+   1    2   )',        # Irregular spacing
         ]
 
         for expr in whitespace_cases:
@@ -532,14 +532,14 @@ class TestAIFPLLexerEdgeCases:
                 aifpl.evaluate(invalid)
 
         # Should still work after multiple errors
-        result = aifpl.evaluate("(+ 1 2)")
+        result = aifpl.evaluate("(integer+ 1 2)")
         assert result == 3
 
     def test_lexer_memory_efficiency(self, aifpl):
         """Test lexer memory efficiency with large inputs."""
         # Large expression with many tokens (reduced to 100 to avoid deep recursion
         # in constant folder after variadic desugaring)
-        large_expr = "(+ " + " ".join(str(i) for i in range(100)) + ")"
+        large_expr = "(integer+ " + " ".join(str(i) for i in range(100)) + ")"
         result = aifpl.evaluate(large_expr)
         assert result == sum(range(100))
 
@@ -722,10 +722,10 @@ class TestAIFPLLexerEdgeCases:
 
         # Positive numbers in expressions
         expression_cases = [
-            ("(+ +1 +2)", 3),
-            ("(* +5 +3)", 15),
-            ("(- +10 +3)", 7),
-            ("(/ +20 +4)", 5),
+            ("(integer+ +1 +2)", 3),
+            ("(integer* +5 +3)", 15),
+            ("(integer- +10 +3)", 7),
+            ("(integer/ +20 +4)", 5),
         ]
 
         for expr, expected in expression_cases:
@@ -734,9 +734,9 @@ class TestAIFPLLexerEdgeCases:
 
         # Mixed positive and negative
         mixed_cases = [
-            ("(+ +5 -3)", 2),
-            ("(- +10 -5)", 15),
-            ("(* +2 -3)", -6),
+            ("(integer+ +5 -3)", 2),
+            ("(integer- +10 -5)", 15),
+            ("(integer* +2 -3)", -6),
         ]
 
         for expr, expected in mixed_cases:

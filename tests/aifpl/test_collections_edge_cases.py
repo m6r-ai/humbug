@@ -319,16 +319,16 @@ class TestAIFPLCollectionEdgeCases:
     def test_collection_higher_order_edge_cases(self, aifpl):
         """Test higher-order function edge cases with collections."""
         # Map with empty list
-        assert aifpl.evaluate("(map (lambda (x) (* x 2)) ())") == []
+        assert aifpl.evaluate("(map (lambda (x) (integer* x 2)) ())") == []
 
         # Filter with empty list
         assert aifpl.evaluate("(filter (lambda (x) #t) ())") == []
 
         # Fold with empty list
-        assert aifpl.evaluate("(fold + 0 ())") == 0
+        assert aifpl.evaluate("(fold integer+ 0 ())") == 0
 
         # Map with single element
-        assert aifpl.evaluate("(map (lambda (x) (* x 2)) (list 5))") == [10]
+        assert aifpl.evaluate("(map (lambda (x) (integer* x 2)) (list 5))") == [10]
 
         # Filter that removes all elements
         assert aifpl.evaluate("(filter (lambda (x) #f) (list 1 2 3))") == []
@@ -337,7 +337,7 @@ class TestAIFPLCollectionEdgeCases:
         assert aifpl.evaluate("(filter (lambda (x) #t) (list 1 2 3))") == [1, 2, 3]
 
         # Map with complex transformation
-        result = aifpl.evaluate("(map (lambda (x) (list x (* x 2))) (list 1 2 3))")
+        result = aifpl.evaluate("(map (lambda (x) (list x (integer* x 2))) (list 1 2 3))")
         assert result == [[1, 2], [2, 4], [3, 6]]
 
     def test_collection_search_edge_cases(self, aifpl):
@@ -706,7 +706,7 @@ class TestAIFPLCollectionEdgeCases:
     def test_function_predicate_return_coverage(self, aifpl):
         """Test function? return statement coverage."""
         # Test with function values to ensure return statement is covered
-        assert aifpl.evaluate("(function? +)") is True
+        assert aifpl.evaluate("(function? integer+)") is True
         assert aifpl.evaluate("(function? (lambda (x) x))") is True
 
         # Test with non-function values

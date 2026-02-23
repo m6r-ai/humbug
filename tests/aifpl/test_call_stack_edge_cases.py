@@ -12,35 +12,35 @@ class TestAIFPLCallStackEdgeCases:
     def test_basic_call_stack_functionality(self, aifpl):
         """Test basic call stack functionality."""
         # Simple nested function calls should work
-        result = aifpl.evaluate("(+ 1 (+ 2 3))")
+        result = aifpl.evaluate("(integer+ 1 (integer+ 2 3))")
         assert result == 6
 
         # More deeply nested calls
-        result = aifpl.evaluate("(+ 1 (+ 2 (+ 3 4)))")
+        result = aifpl.evaluate("(integer+ 1 (integer+ 2 (integer+ 3 4)))")
         assert result == 10
 
         # Function calls with multiple arguments
-        result = aifpl.evaluate("(+ (+ 1 2) (+ 3 4) (+ 5 6))")
+        result = aifpl.evaluate("(integer+ (integer+ 1 2) (integer+ 3 4) (integer+ 5 6))")
         assert result == 21
 
     def test_call_stack_with_lambda_functions(self, aifpl):
         """Test call stack behavior with lambda functions."""
         # Simple lambda call
-        result = aifpl.evaluate("((lambda (x) (+ x 1)) 5)")
+        result = aifpl.evaluate("((lambda (x) (integer+ x 1)) 5)")
         assert result == 6
 
         # Nested lambda calls
-        result = aifpl.evaluate("((lambda (x) ((lambda (y) (+ x y)) 3)) 5)")
+        result = aifpl.evaluate("((lambda (x) ((lambda (y) (integer+ x y)) 3)) 5)")
         assert result == 8
 
         # Lambda with multiple arguments
-        result = aifpl.evaluate("((lambda (x y z) (+ x y z)) 1 2 3)")
+        result = aifpl.evaluate("((lambda (x y z) (integer+ x y z)) 1 2 3)")
         assert result == 6
 
     def test_call_stack_with_higher_order_functions(self, aifpl):
         """Test call stack with higher-order functions."""
         # Map function creates nested calls
-        result = aifpl.evaluate("(map (lambda (x) (* x 2)) (list 1 2 3))")
+        result = aifpl.evaluate("(map (lambda (x) (integer* x 2)) (list 1 2 3))")
         assert result == [2, 4, 6]
 
         # Filter function with predicate calls
@@ -48,35 +48,35 @@ class TestAIFPLCallStackEdgeCases:
         assert result == [3, 4]
 
         # Fold function with accumulator calls
-        result = aifpl.evaluate("(fold + 0 (list 1 2 3 4))")
+        result = aifpl.evaluate("(fold integer+ 0 (list 1 2 3 4))")
         assert result == 10
 
     def test_call_stack_with_let_bindings(self, aifpl):
         """Test call stack behavior with let bindings."""
         # Simple let binding
-        result = aifpl.evaluate("(let ((x 5)) (+ x 1))")
+        result = aifpl.evaluate("(let ((x 5)) (integer+ x 1))")
         assert result == 6
 
         # Nested let bindings
         result = aifpl.evaluate("""
         (let ((x 5))
           (let ((y 3))
-            (+ x y)))
+            (integer+ x y)))
         """)
         assert result == 8
 
         # Let with sequential dependencies
         result = aifpl.evaluate("""
         (let* ((x 5)
-               (y (* x 2)))
-          (+ x y))
+               (y (integer* x 2)))
+          (integer+ x y))
         """)
         assert result == 15
 
     def test_call_stack_with_conditional_expressions(self, aifpl):
         """Test call stack with conditional expressions."""
         # Simple conditional
-        result = aifpl.evaluate('(if #t (+ 1 2) (+ 3 4))')
+        result = aifpl.evaluate('(if #t (integer+ 1 2) (integer+ 3 4))')
         assert result == 3
 
         # Nested conditionals
@@ -89,9 +89,9 @@ class TestAIFPLCallStackEdgeCases:
 
         # Conditional with complex expressions
         result = aifpl.evaluate('''
-        (if (= (+ 2 3) 5)
-            (* 2 (+ 3 4))
-            (/ 10 2))
+        (if (= (integer+ 2 3) 5)
+            (integer* 2 (integer+ 3 4))
+            (float/ 10.0 2.0))
         ''')
         assert result == 14
 
@@ -99,15 +99,15 @@ class TestAIFPLCallStackEdgeCases:
         """Test that errors propagate correctly through call stack."""
         # Error in nested arithmetic
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(+ 1 (/ 2 0))")
+            aifpl.evaluate("(integer+ 1 (integer/ 2 0))")
 
         # Error in lambda function
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("((lambda (x) (/ x 0)) 5)")
+            aifpl.evaluate("((lambda (x) (integer/ x 0)) 5)")
 
         # Error in higher-order function
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(map (lambda (x) (/ x 0)) (list 1 2 3))")
+            aifpl.evaluate("(map (lambda (x) (integer/ x 0)) (list 1 2 3))")
 
     def test_call_stack_with_recursive_functions(self, aifpl):
         """Test call stack with recursive functions (if supported)."""
@@ -117,7 +117,7 @@ class TestAIFPLCallStackEdgeCases:
             (let ((factorial (lambda (n)
                               (if (<= n 1)
                                   1
-                                  (* n (factorial (- n 1)))))))
+                                  (integer* n (factorial (integer- n 1)))))))
               (factorial 5))
             """)
             assert result == 120
@@ -128,18 +128,19 @@ class TestAIFPLCallStackEdgeCases:
     def test_call_stack_with_complex_expressions(self, aifpl):
         """Test call stack with complex nested expressions."""
         # Complex arithmetic expression
+        # float+ is used because float/ returns a float, so all operands must be float
         complex_expr = """
-        (+ (* 2 (+ 3 4))
-           (/ (+ 10 5) (- 8 3))
-           (abs (- 2 7)))
+        (float+ (float (integer* 2 (integer+ 3 4)))
+                (float/ (float+ 10.0 5.0) (float- 8.0 3.0))
+                (float (abs (integer- 2 7))))
         """
         result = aifpl.evaluate(complex_expr)
         assert result == 22  # (2*7) + (15/5) + 5 = 14 + 3 + 5 = 22
 
         # Complex functional expression
         functional_expr = """
-        (fold + 0
-              (map (lambda (x) (* x x))
+        (fold integer+ 0
+              (map (lambda (x) (integer* x x))
                    (filter (lambda (x) (> x 0))
                            (list -2 1 -3 2 3))))
         """
@@ -149,12 +150,12 @@ class TestAIFPLCallStackEdgeCases:
     def test_call_stack_memory_efficiency(self, aifpl):
         """Test call stack memory efficiency."""
         # Large number of sequential calls
-        large_expr = "(+ " + " ".join(str(i) for i in range(100)) + ")"
+        large_expr = "(integer+ " + " ".join(str(i) for i in range(100)) + ")"
         result = aifpl.evaluate(large_expr)
         assert result == sum(range(100))
 
         # Deep but linear call stack
-        linear_deep = "(+ 1 " * 50 + "1" + ")" * 50
+        linear_deep = "(integer+ 1 " * 50 + "1" + ")" * 50
         try:
             result = aifpl.evaluate(linear_deep)
             assert result == 51
@@ -177,8 +178,8 @@ class TestAIFPLCallStackEdgeCases:
         result = aifpl.evaluate('''
         (string->number
           (string-append
-            (number->string (+ 2 3))
-            (number->string (* 2 2))))
+            (number->string (integer+ 2 3))
+            (number->string (integer* 2 2))))
         ''')
         assert result == 54  # "5" + "4" = "54" -> 54
 
@@ -197,7 +198,7 @@ class TestAIFPLCallStackEdgeCases:
         result = aifpl.evaluate("""
         (length
           (filter (lambda (x) (> x 0))
-                  (map (lambda (x) (- x 2))
+                  (map (lambda (x) (integer- x 2))
                        (list 1 2 3 4 5))))
         """)
         assert result == 3  # [-1, 0, 1, 2, 3] -> [1, 2, 3] -> length 3
@@ -210,7 +211,7 @@ class TestAIFPLCallStackEdgeCases:
             (let ((tail-sum (lambda (n acc)
                              (if (<= n 0)
                                  acc
-                                 (tail-sum (- n 1) (+ acc n))))))
+                                 (tail-sum (integer- n 1) (integer+ acc n))))))
               (tail-sum 100 0))
             """
             result = aifpl.evaluate(tail_recursive)
@@ -226,7 +227,7 @@ class TestAIFPLCallStackEdgeCases:
             aifpl.evaluate("""
             (let ((f (lambda (x)
                       (let ((g (lambda (y)
-                                (/ y 0))))
+                                (integer/ y 0))))
                         (g x)))))
               (f 5))
             """)
@@ -239,7 +240,7 @@ class TestAIFPLCallStackEdgeCases:
         """Test call stack with pattern matching (if supported)."""
         try:
             result = aifpl.evaluate("""
-            (match (+ 2 3)
+            (match (integer+ 2 3)
               ((number? n) (if (> n 3) "big" "small"))
               (_ "not number"))
             """)
@@ -253,10 +254,10 @@ class TestAIFPLCallStackEdgeCases:
         # Multiple independent evaluations should not interfere
         results = []
         expressions = [
-            "(+ 1 2)",
-            "(* 3 4)",
-            "(/ 12 3)",
-            "(- 10 5)",
+            "(integer+ 1 2)",
+            "(integer* 3 4)",
+            "(float/ 12.0 3.0)",
+            "(integer- 10 5)",
         ]
 
         for expr in expressions:
@@ -270,7 +271,7 @@ class TestAIFPLCallStackEdgeCases:
         # Closure capturing outer variable
         result = aifpl.evaluate("""
         (let ((x 10))
-          (let ((f (lambda (y) (+ x y))))
+          (let ((f (lambda (y) (integer+ x y))))
             (f 5)))
         """)
         assert result == 15
@@ -279,7 +280,7 @@ class TestAIFPLCallStackEdgeCases:
         result = aifpl.evaluate("""
         (let ((x 10))
           (let ((f (lambda (y)
-                    (let ((g (lambda (z) (+ x y z))))
+                    (let ((g (lambda (z) (integer+ x y z))))
                       (g 3)))))
             (f 5)))
         """)
@@ -293,20 +294,20 @@ class TestAIFPLCallStackEdgeCases:
             (let ((f (lambda (x)
                       (let ((g (lambda (y)
                                 (let ((h (lambda (z)
-                                          (/ z 0))))
+                                          (integer/ z 0))))
                                   (h y)))))
                         (g x)))))
               (f 5))
             """)
 
         # After exception, evaluator should be in clean state
-        result = aifpl.evaluate("(+ 1 2)")
+        result = aifpl.evaluate("(integer+ 1 2)")
         assert result == 3
 
     def test_call_stack_with_large_argument_lists(self, aifpl):
         """Test call stack with functions that have many arguments."""
         # Function with many arguments
-        many_args = "(+ " + " ".join(str(i) for i in range(50)) + ")"
+        many_args = "(integer+ " + " ".join(str(i) for i in range(50)) + ")"
         result = aifpl.evaluate(many_args)
         assert result == sum(range(50))
 
@@ -314,7 +315,7 @@ class TestAIFPLCallStackEdgeCases:
         try:
             lambda_many_params = """
             ((lambda (a b c d e f g h i j)
-               (+ a b c d e f g h i j))
+               (integer+ a b c d e f g h i j))
              1 2 3 4 5 6 7 8 9 10)
             """
             result = aifpl.evaluate(lambda_many_params)
@@ -330,8 +331,8 @@ class TestAIFPLCallStackEdgeCases:
         (if (> (length (list 1 2 3)) 2)
             (string->number
               (string-append
-                (number->string (+ 5 5))
-                (number->string (* 2 3))))
+                (number->string (integer+ 5 5))
+                (number->string (integer* 2 3))))
             0)
         """
         result = aifpl.evaluate(mixed_expr)

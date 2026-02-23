@@ -115,12 +115,12 @@ class TestComplexNumberLiterals:
     def test_complex_in_expressions(self, aifpl):
         """Test complex literals in arithmetic expressions."""
         test_cases = [
-            ("(+ 1 2+3j)", 3+3j),
-            ("(+ 2+3j 1)", 3+3j),
-            ("(+ 1+2j 3+4j)", 4+6j),
-            ("(- 5+7j 2+3j)", 3+4j),
-            ("(* 2 3+4j)", 6+8j),
-            ("(* 1+2j 3+4j)", -5+10j),  # (1+2j)(3+4j) = 3+4j+6j+8j² = 3+10j-8 = -5+10j
+            ("(complex+ (complex 1 0) 2+3j)", 3+3j),
+            ("(complex+ 2+3j (complex 1 0))", 3+3j),
+            ("(complex+ 1+2j 3+4j)", 4+6j),
+            ("(complex- 5+7j 2+3j)", 3+4j),
+            ("(complex* (complex 2 0) 3+4j)", 6+8j),
+            ("(complex* 1+2j 3+4j)", -5+10j),  # (1+2j)(3+4j) = 3+4j+6j+8j² = 3+10j-8 = -5+10j
         ]
 
         for expr, expected in test_cases:
@@ -243,19 +243,19 @@ class TestComplexNumberLiterals:
         """Test complex literals mixed with other numeric types."""
         test_cases = [
             # Complex + integer
-            ("(+ 3+4j 5)", 8+4j),
+            ("(complex+ 3+4j (complex 5 0))", 8+4j),
 
             # Complex + float
-            ("(+ 3+4j 1.5)", 4.5+4j),
+            ("(complex+ 3+4j (complex 1.5 0))", 4.5+4j),
 
             # Complex + complex
-            ("(+ 3+4j 1+2j)", 4+6j),
+            ("(complex+ 3+4j 1+2j)", 4+6j),
 
             # Mixed operations
-            ("(+ 1 2.5 3+4j)", 6.5+4j),
+            ("(complex+ (complex+ (complex 1 0) (complex 2.5 0)) 3+4j)", 6.5+4j),
 
             # Division
-            ("(/ 6+8j 2)", 3+4j),
+            ("(complex/ 6+8j (complex 2 0))", 3+4j),
         ]
 
         for expr, expected in test_cases:
@@ -276,7 +276,7 @@ class TestComplexNumberLiterals:
         assert result[2] == 4
 
         # Map over complex numbers
-        result = aifpl.evaluate("(map (lambda (x) (* x 2)) (list 1+1j 2+2j))")
+        result = aifpl.evaluate("(map (lambda (x) (complex* x (complex 2 0))) (list 1+1j 2+2j))")
         assert len(result) == 2
         assert result[0] == 2+2j
         assert result[1] == 4+4j

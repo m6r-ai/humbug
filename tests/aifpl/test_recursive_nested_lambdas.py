@@ -26,7 +26,7 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((factorial (lambda (n)
                                  (if (<= n 1)
                                      1
-                                     (* n (factorial (- n 1)))))))
+                                     (integer* n (factorial (integer- n 1)))))))
               (factorial 5))''',
             '120'
         )
@@ -38,8 +38,8 @@ class TestRecursiveNestedLambdas:
                   (factorial (lambda (n)
                               (if (<= n 1)
                                   1
-                                  (* n (factorial (- n 1)))))))
-              (+ x (factorial 5)))''',
+                                  (integer* n (factorial (integer- n 1)))))))
+              (integer+ x (factorial 5)))''',
             '130'
         )
 
@@ -53,7 +53,7 @@ class TestRecursiveNestedLambdas:
                          (lambda (n)
                            (if (<= n 1)
                                1
-                               (* n ((make-factorial) (- n 1))))))))
+                               (integer* n ((make-factorial) (integer- n 1))))))))
               ((make-factorial) 5))''',
             '120'
         )
@@ -70,7 +70,7 @@ class TestRecursiveNestedLambdas:
                                 (if (> id 1)
                                     (fold append (list)
                                           (map (lambda (next-id) (visit next-id new-path))
-                                               (list (- id 1))))
+                                               (list (integer- id 1))))
                                     (list id)))))))
               (visit 3 (list)))''',
             '(1)'
@@ -87,7 +87,7 @@ class TestRecursiveNestedLambdas:
                               (list id)
                               (let ((new-path (cons id path)))
                                 (if (> id 1)
-                                    (visit (- id 1) new-path)
+                                    (visit (integer- id 1) new-path)
                                     (list id)))))))
               (visit 3 (list)))''',
             '(1)'
@@ -127,7 +127,7 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((is-valid (lambda (n)
                                  (if (<= n 1)
                                      #t
-                                     (and (> n 0) (is-valid (- n 1)))))))
+                                     (and (> n 0) (is-valid (integer- n 1)))))))
               (filter (lambda (x) (is-valid x)) (list 1 2 3)))''',
             '(1 2 3)'
         )
@@ -140,8 +140,8 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((sum-to (lambda (n)
                                (if (<= n 0)
                                    0
-                                   (+ n (sum-to (- n 1)))))))
-              (fold + 0
+                                   (integer+ n (sum-to (integer- n 1)))))))
+              (fold integer+ 0
                     (map (lambda (x) (sum-to x)) (list 1 2 3))))''',
             '10'  # sum-to(1)=1, sum-to(2)=3, sum-to(3)=6, total=10
         )
@@ -151,8 +151,8 @@ class TestRecursiveNestedLambdas:
         # Even/odd mutual recursion used in map
         helpers.assert_evaluates_to(
             aifpl,
-            '''(letrec ((is-even (lambda (n) (if (= n 0) #t (is-odd (- n 1)))))
-                  (is-odd (lambda (n) (if (= n 0) #f (is-even (- n 1))))))
+            '''(letrec ((is-even (lambda (n) (if (= n 0) #t (is-odd (integer- n 1)))))
+                  (is-odd (lambda (n) (if (= n 0) #f (is-even (integer- n 1))))))
               (map (lambda (x) (is-even x)) (list 0 1 2 3 4)))''',
             '(#t #f #t #f #t)'
         )
@@ -167,7 +167,7 @@ class TestRecursiveNestedLambdas:
                                    (list)
                                    (fold append
                                          (list n)
-                                         (map (lambda (x) (process (- x 1)))
+                                         (map (lambda (x) (process (integer- x 1)))
                                               (list n)))))))
               (process 3))''',
             '(3 2 1)'
@@ -181,7 +181,7 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((has-path (lambda (n)
                                  (if (<= n 1)
                                      #t
-                                     (has-path (- n 1))))))
+                                     (has-path (integer- n 1))))))
               (any? (lambda (x) (has-path x)) (list 1 2 3)))''',
             '#t'
         )
@@ -192,7 +192,7 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((is-positive-chain (lambda (n)
                                            (if (<= n 1)
                                                #t
-                                               (and (> n 0) (is-positive-chain (- n 1)))))))
+                                               (and (> n 0) (is-positive-chain (integer- n 1)))))))
               (all? (lambda (x) (is-positive-chain x)) (list 1 2 3)))''',
             '#t'
         )
@@ -207,7 +207,7 @@ class TestRecursiveNestedLambdas:
                                            #t
                                            (if (< n target)
                                                #f
-                                               (reaches-target (- n 1) target))))))
+                                               (reaches-target (integer- n 1) target))))))
               (find (lambda (x) (reaches-target x 5)) (list 3 5 7)))''',
             '5'
         )
@@ -246,7 +246,7 @@ class TestRecursiveNestedLambdas:
                                    (fold append
                                          (list n)
                                          (map (lambda (x)
-                                               (let ((result (compute (- x 1))))
+                                               (let ((result (compute (integer- x 1))))
                                                  result))
                                               (list n)))))))
               (compute 3))''',
@@ -261,11 +261,11 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((process (lambda (n)
                                (if (<= n 0)
                                    0
-                                   (fold +
+                                   (fold integer+
                                          n
                                          (map (lambda (x)
                                                (if (> x 1)
-                                                   (process (- x 1))
+                                                   (process (integer- x 1))
                                                    0))
                                               (list n)))))))
               (process 3))''',
@@ -280,14 +280,14 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((outer (lambda (n)
                              (if (<= n 0)
                                  0
-                                 (fold +
+                                 (fold integer+
                                        0
                                        (map (lambda (a)
-                                             (fold +
+                                             (fold integer+
                                                    0
                                                    (map (lambda (b)
                                                          (if (> b 0)
-                                                             (outer (- b 1))
+                                                             (outer (integer- b 1))
                                                              b))
                                                         (list a))))
                                             (list n)))))))
@@ -303,10 +303,10 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((fib (lambda (n)
                            (if (<= n 1)
                                n
-                               (fold +
+                               (fold integer+
                                      0
                                      (map (lambda (x) (fib x))
-                                          (list (- n 1) (- n 2))))))))
+                                          (list (integer- n 1) (integer- n 2))))))))
               (fib 6))''',
             '8'  # Fibonacci(6) = 8
         )
@@ -320,9 +320,9 @@ class TestRecursiveNestedLambdas:
                   (compute (lambda (n)
                             (if (<= n 0)
                                 base
-                                (fold +
+                                (fold integer+
                                       0
-                                      (map (lambda (x) (compute (- x 1)))
+                                      (map (lambda (x) (compute (integer- x 1)))
                                            (list n)))))))
               (compute 2))''',
             '10'  # compute(2) -> map over (list 2) -> compute(1) -> base = 10
@@ -336,9 +336,9 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((count-down (lambda (n acc)
                                    (if (<= n 0)
                                        acc
-                                       (fold +
+                                       (fold integer+
                                              0
-                                             (map (lambda (x) (count-down (- x 1) (+ acc 1)))
+                                             (map (lambda (x) (count-down (integer- x 1) (integer+ acc 1)))
                                                    (list n)))))))
               (count-down 10 0))''',
             '10'
@@ -357,7 +357,7 @@ class TestRecursiveNestedLambdasBytecode:
                                  (list n)
                                  (fold append
                                        (list n)
-                                       (map (lambda (x) (visit (- x 1)))
+                                       (map (lambda (x) (visit (integer- x 1)))
                                             (list n)))))))
               (visit 4))''',
             '(4 3 2 1)'
@@ -372,7 +372,7 @@ class TestRecursiveNestedLambdasBytecode:
                          (lambda (n)
                            (if (<= n 0)
                                start
-                               ((make-counter (+ start 1)) (- n 1)))))))
+                               ((make-counter (integer+ start 1)) (integer- n 1)))))))
               ((make-counter 0) 5))''',
             '0'  # Returns start value after 5 recursive calls
         )
@@ -381,8 +381,8 @@ class TestRecursiveNestedLambdasBytecode:
         """Test bytecode compilation of mutual recursion in map."""
         helpers.assert_evaluates_to(
             aifpl,
-            '''(letrec ((ping (lambda (n) (if (<= n 0) 0 (+ 1 (pong (- n 1))))))
-                  (pong (lambda (n) (if (<= n 0) 0 (+ 1 (ping (- n 1)))))))
+            '''(letrec ((ping (lambda (n) (if (<= n 0) 0 (integer+ 1 (pong (integer- n 1))))))
+                  (pong (lambda (n) (if (<= n 0) 0 (integer+ 1 (ping (integer- n 1)))))))
               (map (lambda (x) (ping x)) (list 1 2 3)))''',
             '(1 2 3)'
         )
@@ -395,9 +395,9 @@ class TestRecursiveNestedLambdasBytecode:
                   (recurse (lambda (n)
                             (if (<= n 0)
                                 outer
-                                (fold +
+                                (fold integer+
                                       0
-                                      (map (lambda (x) (recurse (- x 1)))
+                                      (map (lambda (x) (recurse (integer- x 1)))
                                            (list n)))))))
               (recurse 3))''',
             '100'  # recurse(3) -> map over (list 3) -> recurse(2) -> ... -> recurse(0) -> outer = 100
@@ -558,8 +558,8 @@ class TestLetrecLambdasInDataStructures:
         # Two mutually recursive functions in lists
         helpers.assert_evaluates_to(
             aifpl,
-            '''(letrec ((x (list (lambda (n) (if (<= n 0) 0 (+ 1 ((first y) (- n 1)))))))
-                        (y (list (lambda (n) (if (<= n 0) 0 (+ 1 ((first x) (- n 1))))))))
+            '''(letrec ((x (list (lambda (n) (if (<= n 0) 0 (integer+ 1 ((first y) (integer- n 1)))))))
+                        (y (list (lambda (n) (if (<= n 0) 0 (integer+ 1 ((first x) (integer- n 1))))))))
                   ((first x) 4))''',
             '4'  # Mutual recursion works
         )
@@ -646,8 +646,8 @@ class TestLetrecLambdasInDataStructuresBytecode:
         """Test bytecode compilation of mutual recursion in lists."""
         helpers.assert_evaluates_to(
             aifpl,
-            '''(letrec ((x (list (lambda (n) (if (<= n 0) 0 (+ 1 ((first y) (- n 1)))))))
-                        (y (list (lambda (n) (if (<= n 0) 0 (+ 1 ((first x) (- n 1))))))))
+            '''(letrec ((x (list (lambda (n) (if (<= n 0) 0 (integer+ 1 ((first y) (integer- n 1)))))))
+                        (y (list (lambda (n) (if (<= n 0) 0 (integer+ 1 ((first x) (integer- n 1))))))))
                   ((first x) 4))''',
             '4'
         )

@@ -35,37 +35,6 @@ class AIFPL:
 
     # AIFPL implementations of higher-order functions
     _PRELUDE_SOURCE = {
-        # Variadic arithmetic builtins — implemented in AIFPL using rest parameters.
-        # The bodies use 2-arg calls which the desugarer/codegen resolve to opcodes
-        # directly, so there is no circular dependency on the function objects.
-        '+': """(lambda (. args)
-                  (if (null? args) 0
-                    (letrec ((loop (lambda (lst acc)
-                                     (if (null? lst) acc
-                                         (loop (rest lst) (+ acc (first lst)))))))
-                      (loop (rest args) (first args)))))""",
-        '-': """(lambda (. args)
-                  (if (null? args)
-                    (error "Function '-' requires at least 1 argument, got 0")
-                    (if (null? (rest args))
-                      (- 0 (first args))
-                      (letrec ((loop (lambda (lst acc)
-                                       (if (null? lst) acc
-                                           (loop (rest lst) (- acc (first lst)))))))
-                        (loop (rest args) (first args))))))""",
-        '*': """(lambda (. args)
-                  (if (null? args) 1
-                    (letrec ((loop (lambda (lst acc)
-                                     (if (null? lst) acc
-                                         (loop (rest lst) (* acc (first lst)))))))
-                      (loop (rest args) (first args)))))""",
-        '/': """(lambda (. args)
-                  (if (< (length args) 2)
-                    (error "Function '/' requires at least 2 arguments")
-                    (letrec ((loop (lambda (lst acc)
-                                     (if (null? lst) acc
-                                         (loop (rest lst) (/ acc (first lst)))))))
-                      (loop (rest args) (first args)))))""",
         # Comparison chains — pairwise semantics: (= a b c) means (= a b) and (= b c)
         '=': """(lambda (. args)
                   (if (< (length args) 2)
@@ -126,38 +95,6 @@ class AIFPL:
                                                                      #f)))))
                                              (inner (rest lst)))))))
                        (outer args))))""",
-        # Fold-reducible bitwise ops — identity 0
-        'bit-or': """(lambda (. args)
-                       (if (null? args) 0
-                         (letrec ((loop (lambda (lst acc)
-                                          (if (null? lst) acc
-                                              (loop (rest lst) (bit-or acc (first lst)))))))
-                           (loop (rest args) (first args)))))""",
-        'bit-and': """(lambda (. args)
-                        (if (null? args) 0
-                          (letrec ((loop (lambda (lst acc)
-                                           (if (null? lst) acc
-                                               (loop (rest lst) (bit-and acc (first lst)))))))
-                            (loop (rest args) (first args)))))""",
-        'bit-xor': """(lambda (. args)
-                        (if (null? args) 0
-                          (letrec ((loop (lambda (lst acc)
-                                           (if (null? lst) acc
-                                               (loop (rest lst) (bit-xor acc (first lst)))))))
-                            (loop (rest args) (first args)))))""",
-        # Fold-reducible list/string ops
-        'append': """(lambda (. args)
-                       (if (null? args) (list)
-                         (letrec ((loop (lambda (lst acc)
-                                          (if (null? lst) acc
-                                              (loop (rest lst) (append acc (first lst)))))))
-                           (loop (rest args) (first args)))))""",
-        'string-append': """(lambda (. args)
-                              (if (null? args) ""
-                                (letrec ((loop (lambda (lst acc)
-                                                 (if (null? lst) acc
-                                                     (loop (rest lst) (string-append acc (first lst)))))))
-                                  (loop (rest args) (first args)))))""",
         # Fold-reducible min/max — require at least 1 arg
         'min': """(lambda (. args)
                     (if (null? args)
@@ -174,15 +111,6 @@ class AIFPL:
                                            (loop (rest lst) (max acc (first lst)))))))
                         (loop (rest args) (first args)))))""",
         # Typed equality chains — pairwise, same pattern as =
-        'string=?': """(lambda (. args)
-                         (if (< (length args) 2)
-                           (error "Function 'string=?' requires at least 2 arguments")
-                           (letrec ((loop (lambda (lst prev)
-                                            (if (null? lst) #t
-                                                (if (string=? prev (first lst))
-                                                    (loop (rest lst) (first lst))
-                                                    #f)))))
-                             (loop (rest args) (first args)))))""",
         'number=?': """(lambda (. args)
                          (if (< (length args) 2)
                            (error "Function 'number=?' requires at least 2 arguments")
@@ -192,33 +120,6 @@ class AIFPL:
                                                     (loop (rest lst) (first lst))
                                                     #f)))))
                              (loop (rest args) (first args)))))""",
-        'integer=?': """(lambda (. args)
-                          (if (< (length args) 2)
-                            (error "Function 'integer=?' requires at least 2 arguments")
-                            (letrec ((loop (lambda (lst prev)
-                                             (if (null? lst) #t
-                                                 (if (integer=? prev (first lst))
-                                                     (loop (rest lst) (first lst))
-                                                     #f)))))
-                              (loop (rest args) (first args)))))""",
-        'float=?': """(lambda (. args)
-                        (if (< (length args) 2)
-                          (error "Function 'float=?' requires at least 2 arguments")
-                          (letrec ((loop (lambda (lst prev)
-                                           (if (null? lst) #t
-                                               (if (float=? prev (first lst))
-                                                   (loop (rest lst) (first lst))
-                                                   #f)))))
-                            (loop (rest args) (first args)))))""",
-        'complex=?': """(lambda (. args)
-                          (if (< (length args) 2)
-                            (error "Function 'complex=?' requires at least 2 arguments")
-                            (letrec ((loop (lambda (lst prev)
-                                             (if (null? lst) #t
-                                                 (if (complex=? prev (first lst))
-                                                     (loop (rest lst) (first lst))
-                                                     #f)))))
-                              (loop (rest args) (first args)))))""",
         'boolean=?': """(lambda (. args)
                           (if (< (length args) 2)
                             (error "Function 'boolean=?' requires at least 2 arguments")
@@ -228,46 +129,15 @@ class AIFPL:
                                                      (loop (rest lst) (first lst))
                                                      #f)))))
                               (loop (rest args) (first args)))))""",
-        'list=?': """(lambda (. args)
-                       (if (< (length args) 2)
-                         (error "Function 'list=?' requires at least 2 arguments")
-                         (letrec ((loop (lambda (lst prev)
-                                          (if (null? lst) #t
-                                              (if (list=? prev (first lst))
-                                                  (loop (rest lst) (first lst))
-                                                  #f)))))
-                           (loop (rest args) (first args)))))""",
-        'alist=?': """(lambda (. args)
-                        (if (< (length args) 2)
-                          (error "Function 'alist=?' requires at least 2 arguments")
-                          (letrec ((loop (lambda (lst prev)
-                                           (if (null? lst) #t
-                                               (if (alist=? prev (first lst))
-                                                   (loop (rest lst) (first lst))
-                                                   #f)))))
-                            (loop (rest args) (first args)))))""",
-        # list — trivial: rest args IS the list
-        'list': """(lambda (. args) args)""",
-        # alist — collect (list key val) pairs into an alist
-        'alist': """(lambda (. args)
-                      (letrec ((loop (lambda (pairs acc)
-                                       (if (null? pairs) acc
-                                           (if (not (list? (first pairs)))
-                                               (error "alist: each argument must be a 2-element list")
-                                               (if (!= (length (first pairs)) 2)
-                                                   (error "alist: each argument must be a 2-element list")
-                                                   (loop (rest pairs)
-                                                         (alist-set acc
-                                                                    (first (first pairs))
-                                                                    (first (rest (first pairs)))))))))))
-                        (loop args (alist))))""",
-        # Optional-arg builtins with mixed fixed+rest parameters
-        'alist-get': """(lambda (a-list key . rest)
-                          (alist-get a-list key (if (null? rest) #f (first rest))))""",
-        'range': """(lambda (start end . rest)
-                      (range start end (if (null? rest) 1 (first rest))))""",
-        # Higher-order functions
-        # Type-specific variadic integer arithmetic
+        'integer=?': """(lambda (. args)
+                          (if (< (length args) 2)
+                            (error "Function 'integer=?' requires at least 2 arguments")
+                            (letrec ((loop (lambda (lst prev)
+                                             (if (null? lst) #t
+                                                 (if (integer=? prev (first lst))
+                                                     (loop (rest lst) (first lst))
+                                                     #f)))))
+                              (loop (rest args) (first args)))))""",
         'integer+': """(lambda (. args)
                          (if (null? args) 0
                            (letrec ((loop (lambda (lst acc)
@@ -296,7 +166,33 @@ class AIFPL:
                                             (if (null? lst) acc
                                                 (loop (rest lst) (integer/ acc (first lst)))))))
                              (loop (rest args) (first args)))))""",
-        # Type-specific variadic float arithmetic
+        'bit-or': """(lambda (. args)
+                       (if (null? args) 0
+                         (letrec ((loop (lambda (lst acc)
+                                          (if (null? lst) acc
+                                              (loop (rest lst) (bit-or acc (first lst)))))))
+                           (loop (rest args) (first args)))))""",
+        'bit-and': """(lambda (. args)
+                        (if (null? args) 0
+                          (letrec ((loop (lambda (lst acc)
+                                           (if (null? lst) acc
+                                               (loop (rest lst) (bit-and acc (first lst)))))))
+                            (loop (rest args) (first args)))))""",
+        'bit-xor': """(lambda (. args)
+                        (if (null? args) 0
+                          (letrec ((loop (lambda (lst acc)
+                                           (if (null? lst) acc
+                                               (loop (rest lst) (bit-xor acc (first lst)))))))
+                            (loop (rest args) (first args)))))""",
+        'float=?': """(lambda (. args)
+                        (if (< (length args) 2)
+                          (error "Function 'float=?' requires at least 2 arguments")
+                          (letrec ((loop (lambda (lst prev)
+                                           (if (null? lst) #t
+                                               (if (float=? prev (first lst))
+                                                   (loop (rest lst) (first lst))
+                                                   #f)))))
+                            (loop (rest args) (first args)))))""",
         'float+': """(lambda (. args)
                        (if (null? args) 0.0
                          (letrec ((loop (lambda (lst acc)
@@ -325,14 +221,22 @@ class AIFPL:
                                           (if (null? lst) acc
                                               (loop (rest lst) (float/ acc (first lst)))))))
                            (loop (rest args) (first args)))))""",
-        'float-pow': """(lambda (. args)
+        'float-expt': """(lambda (. args)
+                           (if (< (length args) 2)
+                             (error "Function 'float-expt' requires at least 2 arguments")
+                             (letrec ((loop (lambda (lst acc)
+                                              (if (null? lst) acc
+                                                  (loop (rest lst) (float-expt acc (first lst)))))))
+                               (loop (rest args) (first args)))))""",
+        'complex=?': """(lambda (. args)
                           (if (< (length args) 2)
-                            (error "Function 'float-pow' requires at least 2 arguments")
-                            (letrec ((loop (lambda (lst acc)
-                                             (if (null? lst) acc
-                                                 (loop (rest lst) (float-pow acc (first lst)))))))
+                            (error "Function 'complex=?' requires at least 2 arguments")
+                            (letrec ((loop (lambda (lst prev)
+                                             (if (null? lst) #t
+                                                 (if (complex=? prev (first lst))
+                                                     (loop (rest lst) (first lst))
+                                                     #f)))))
                               (loop (rest args) (first args)))))""",
-        # Type-specific variadic complex arithmetic
         'complex+': """(lambda (. args)
                          (if (null? args)
                            (error "Function 'complex+' requires at least 1 argument, got 0")
@@ -363,13 +267,69 @@ class AIFPL:
                                             (if (null? lst) acc
                                                 (loop (rest lst) (complex/ acc (first lst)))))))
                              (loop (rest args) (first args)))))""",
-        'complex-pow': """(lambda (. args)
-                            (if (< (length args) 2)
-                              (error "Function 'complex-pow' requires at least 2 arguments")
-                              (letrec ((loop (lambda (lst acc)
-                                               (if (null? lst) acc
-                                                   (loop (rest lst) (complex-pow acc (first lst)))))))
-                                (loop (rest args) (first args)))))""",
+        'complex-expt': """(lambda (. args)
+                             (if (< (length args) 2)
+                               (error "Function 'complex-expt' requires at least 2 arguments")
+                               (letrec ((loop (lambda (lst acc)
+                                                (if (null? lst) acc
+                                                    (loop (rest lst) (complex-expt acc (first lst)))))))
+                                 (loop (rest args) (first args)))))""",
+        'string=?': """(lambda (. args)
+                         (if (< (length args) 2)
+                           (error "Function 'string=?' requires at least 2 arguments")
+                           (letrec ((loop (lambda (lst prev)
+                                            (if (null? lst) #t
+                                                (if (string=? prev (first lst))
+                                                    (loop (rest lst) (first lst))
+                                                    #f)))))
+                             (loop (rest args) (first args)))))""",
+        'string-append': """(lambda (. args)
+                              (if (null? args) ""
+                                (letrec ((loop (lambda (lst acc)
+                                                 (if (null? lst) acc
+                                                     (loop (rest lst) (string-append acc (first lst)))))))
+                                  (loop (rest args) (first args)))))""",
+        'list': """(lambda (. args) args)""",
+        'list=?': """(lambda (. args)
+                       (if (< (length args) 2)
+                         (error "Function 'list=?' requires at least 2 arguments")
+                         (letrec ((loop (lambda (lst prev)
+                                          (if (null? lst) #t
+                                              (if (list=? prev (first lst))
+                                                  (loop (rest lst) (first lst))
+                                                  #f)))))
+                           (loop (rest args) (first args)))))""",
+        'append': """(lambda (. args)
+                       (if (null? args) (list)
+                         (letrec ((loop (lambda (lst acc)
+                                          (if (null? lst) acc
+                                              (loop (rest lst) (append acc (first lst)))))))
+                           (loop (rest args) (first args)))))""",
+        'alist': """(lambda (. args)
+                      (letrec ((loop (lambda (pairs acc)
+                                       (if (null? pairs) acc
+                                           (if (not (list? (first pairs)))
+                                               (error "alist: each argument must be a 2-element list")
+                                               (if (!= (length (first pairs)) 2)
+                                                   (error "alist: each argument must be a 2-element list")
+                                                   (loop (rest pairs)
+                                                         (alist-set acc
+                                                                    (first (first pairs))
+                                                                    (first (rest (first pairs)))))))))))
+                        (loop args (alist))))""",
+        'alist=?': """(lambda (. args)
+                        (if (< (length args) 2)
+                          (error "Function 'alist=?' requires at least 2 arguments")
+                          (letrec ((loop (lambda (lst prev)
+                                           (if (null? lst) #t
+                                               (if (alist=? prev (first lst))
+                                                   (loop (rest lst) (first lst))
+                                                   #f)))))
+                            (loop (rest args) (first args)))))""",
+        'alist-get': """(lambda (a-list key . rest)
+                          (alist-get a-list key (if (null? rest) #f (first rest))))""",
+        'range': """(lambda (start end . rest)
+                      (range start end (if (null? rest) 1 (first rest))))""",
         'map': """(lambda (f lst)
                     (letrec ((helper (lambda (f lst acc)
                                        (if (null? lst) (reverse acc)

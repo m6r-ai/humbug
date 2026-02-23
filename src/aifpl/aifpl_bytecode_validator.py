@@ -158,6 +158,7 @@ class BytecodeValidator:
             Opcode.INTEGER_TO_STRING_BIN: (1, 1),
             Opcode.INTEGER_TO_STRING_HEX: (1, 1),
             Opcode.INTEGER_TO_STRING_OCT: (1, 1),
+            Opcode.INTEGER_TO_FLOAT: (1, 1),
 
             # Floating point operations
             Opcode.FLOAT_P: (1, 1),
@@ -172,7 +173,7 @@ class BytecodeValidator:
             Opcode.FLOAT_MUL: (2, 1),
             Opcode.FLOAT_DIV: (2, 1),
             Opcode.FLOAT_NEG: (1, 1),
-            Opcode.FLOAT_POW: (2, 1),
+            Opcode.FLOAT_EXPT: (2, 1),
             Opcode.FLOAT_SIN: (1, 1),
             Opcode.FLOAT_COS: (1, 1),
             Opcode.FLOAT_TAN: (1, 1),
@@ -181,6 +182,7 @@ class BytecodeValidator:
             Opcode.FLOAT_EXP: (1, 1),
             Opcode.FLOAT_SQRT: (1, 1),
             Opcode.FLOAT_ABS: (1, 1),
+            Opcode.FLOAT_TO_INTEGER: (1, 1),
 
             # Complex number operations
             Opcode.COMPLEX: (2, 1),
@@ -194,7 +196,7 @@ class BytecodeValidator:
             Opcode.COMPLEX_MUL: (2, 1),
             Opcode.COMPLEX_DIV: (2, 1),
             Opcode.COMPLEX_NEG: (1, 1),
-            Opcode.COMPLEX_POW: (2, 1),
+            Opcode.COMPLEX_EXPT: (2, 1),
             Opcode.COMPLEX_SIN: (1, 1),
             Opcode.COMPLEX_COS: (1, 1),
             Opcode.COMPLEX_TAN: (1, 1),
@@ -210,23 +212,16 @@ class BytecodeValidator:
             Opcode.REAL_GTE: (2, 1),
             Opcode.REAL_FLOOR_DIV: (2, 1),
             Opcode.REAL_MOD: (2, 1),
-            Opcode.REAL_POW: (2, 1),
+            Opcode.REAL_EXPT: (2, 1),
             Opcode.REAL_FLOOR: (1, 1),
             Opcode.REAL_CEIL: (1, 1),
             Opcode.REAL_ROUND: (1, 1),
-            Opcode.REAL_TO_INTEGER: (1, 1),
-            Opcode.REAL_TO_FLOAT: (1, 1),
             Opcode.REAL_MIN: (2, 1),
             Opcode.REAL_MAX: (2, 1),
 
             # Number operations
             Opcode.NUMBER_P: (1, 1),
             Opcode.NUMBER_EQ_P: (2, 1),
-            Opcode.NUMBER_ADD: (2, 1),
-            Opcode.NUMBER_SUB: (2, 1),
-            Opcode.NUMBER_MUL: (2, 1),
-            Opcode.NUMBER_DIV: (2, 1),
-            Opcode.NUMBER_STAR_STAR: (2, 1),
             Opcode.NUMBER_SIN: (1, 1),
             Opcode.NUMBER_COS: (1, 1),
             Opcode.NUMBER_TAN: (1, 1),

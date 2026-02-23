@@ -11,140 +11,148 @@ class TestArithmetic:
     """Test arithmetic operations and mathematical functions."""
 
     @pytest.mark.parametrize("expression,expected", [
-        # Basic addition
-        ("(+ 1 2)", "3"),
-        ("(+ 1 2 3)", "6"),
-        ("(+ 1 2 3 4)", "10"),
-
-        # Addition identity (empty)
-        ("(+)", "0"),
-
-        # Single argument
-        ("(+ 5)", "5"),
-
-        # Type promotion int -> float
-        ("(+ 1 2.5)", "3.5"),
-        ("(+ 1.5 2)", "3.5"),
-        ("(+ 1.1 2.2)", "3.3000000000000003"),  # Floating point precision
-
-        # Type promotion int/float -> complex
-        ("(+ 1 1j)", "1+1j"),
-        ("(+ 2.5 1j)", "2.5+1j"),
-        ("(+ 1j 3)", "3+1j"),
-
-        # Complex addition
-        ("(+ (complex 1 2) (complex 3 4))", "4+6j"),
+        # Basic integer addition
+        ("(integer+ 1 2)", "3"),
+        ("(integer+ 1 2 3)", "6"),
+        ("(integer+ 1 2 3 4)", "10"),
 
         # Negative numbers
-        ("(+ -1 2)", "1"),
-        ("(+ 1 -2)", "-1"),
-        ("(+ -1 -2)", "-3"),
+        ("(integer+ -1 2)", "1"),
+        ("(integer+ 1 -2)", "-1"),
+        ("(integer+ -1 -2)", "-3"),
     ])
-    def test_addition(self, aifpl, expression, expected):
-        """Test addition operation with various argument types and counts."""
+    def test_integer_addition(self, aifpl, expression, expected):
+        """Test integer addition operation."""
         assert aifpl.evaluate_and_format(expression) == expected
 
     @pytest.mark.parametrize("expression,expected", [
-        # Basic subtraction
-        ("(- 5 3)", "2"),
-        ("(- 10 3 2)", "5"),  # Left associative: ((10 - 3) - 2)
+        # Basic float addition
+        ("(float+ 1.5 2.5)", "4.0"),
+        ("(float+ 1.1 2.2)", "3.3000000000000003"),  # Floating point precision
+        ("(float+ 1.0 2.0 3.0)", "6.0"),
+    ])
+    def test_float_addition(self, aifpl, expression, expected):
+        """Test float addition operation."""
+        assert aifpl.evaluate_and_format(expression) == expected
+
+    @pytest.mark.parametrize("expression,expected", [
+        # Complex addition
+        ("(complex+ (complex 1 2) (complex 3 4))", "4+6j"),
+    ])
+    def test_complex_addition(self, aifpl, expression, expected):
+        """Test complex addition operation."""
+        assert aifpl.evaluate_and_format(expression) == expected
+
+    @pytest.mark.parametrize("expression,expected", [
+        # Basic integer subtraction
+        ("(integer- 5 3)", "2"),
+        ("(integer- 10 3 2)", "5"),  # Left associative: ((10 - 3) - 2)
 
         # Unary minus
-        ("(- 5)", "-5"),
-        ("(- -3)", "3"),
-
-        # Type promotion
-        ("(- 5.5 2)", "3.5"),
-        ("(- 5 2.5)", "2.5"),
-
-        # Complex subtraction
-        ("(- (complex 5 3) (complex 2 1))", "3+2j"),
-        ("(- 5 1j)", "5-1j"),
+        ("(integer- 5)", "-5"),
+        ("(integer- -3)", "3"),
 
         # Multiple arguments
-        ("(- 10 1 2 3)", "4"),  # ((((10 - 1) - 2) - 3)
+        ("(integer- 10 1 2 3)", "4"),  # ((((10 - 1) - 2) - 3)
     ])
-    def test_subtraction(self, aifpl, expression, expected):
-        """Test subtraction operation including unary minus."""
+    def test_integer_subtraction(self, aifpl, expression, expected):
+        """Test integer subtraction operation including unary minus."""
         assert aifpl.evaluate_and_format(expression) == expected
 
     @pytest.mark.parametrize("expression,expected", [
-        # Basic multiplication
-        ("(* 2 3)", "6"),
-        ("(* 2 3 4)", "24"),
+        # Basic float subtraction
+        ("(float- 5.5 2.5)", "3.0"),
+        ("(float- 10.0 3.0 2.0)", "5.0"),
+    ])
+    def test_float_subtraction(self, aifpl, expression, expected):
+        """Test float subtraction operation."""
+        assert aifpl.evaluate_and_format(expression) == expected
 
-        # Multiplication identity (empty)
-        ("(*)", "1"),
+    @pytest.mark.parametrize("expression,expected", [
+        # Complex subtraction
+        ("(complex- (complex 5 3) (complex 2 1))", "3+2j"),
+    ])
+    def test_complex_subtraction(self, aifpl, expression, expected):
+        """Test complex subtraction operation."""
+        assert aifpl.evaluate_and_format(expression) == expected
 
-        # Single argument
-        ("(* 7)", "7"),
-
-        # Type promotion
-        ("(* 2 3.5)", "7.0"),  # int * float = float
-        ("(* 2.5 4)", "10.0"),  # float * int = float
-
-        # Complex multiplication
-        ("(* 2 1j)", "2j"),
-        ("(* 1j 1j)", "-1+0j"),  # j*j = -1, simplifies to float when imag part is 0
-        ("(* (complex 2 3) (complex 1 4))", "-10+11j"),
+    @pytest.mark.parametrize("expression,expected", [
+        # Basic integer multiplication
+        ("(integer* 2 3)", "6"),
+        ("(integer* 2 3 4)", "24"),
 
         # Zero multiplication
-        ("(* 5 0)", "0"),
-        ("(* 0 5)", "0"),
+        ("(integer* 5 0)", "0"),
+        ("(integer* 0 5)", "0"),
 
         # Negative numbers
-        ("(* -2 3)", "-6"),
-        ("(* 2 -3)", "-6"),
-        ("(* -2 -3)", "6"),
+        ("(integer* -2 3)", "-6"),
+        ("(integer* 2 -3)", "-6"),
+        ("(integer* -2 -3)", "6"),
     ])
-    def test_multiplication(self, aifpl, expression, expected):
-        """Test multiplication operation with various types."""
+    def test_integer_multiplication(self, aifpl, expression, expected):
+        """Test integer multiplication operation."""
         assert aifpl.evaluate_and_format(expression) == expected
 
     @pytest.mark.parametrize("expression,expected", [
-        # Basic division
-        ("(/ 6 2)", "3.0"),  # Division always returns float
-        ("(/ 8 4)", "2.0"),  # Division always returns float
-        ("(/ 7 2)", "3.5"),  # Integer division becomes float
+        # Basic float multiplication
+        ("(float* 2.5 4.0)", "10.0"),
+        ("(float* 3.0 3.5)", "10.5"),
+    ])
+    def test_float_multiplication(self, aifpl, expression, expected):
+        """Test float multiplication operation."""
+        assert aifpl.evaluate_and_format(expression) == expected
+
+    @pytest.mark.parametrize("expression,expected", [
+        # Complex multiplication
+        ("(complex* (complex 2 3) (complex 1 4))", "-10+11j"),
+    ])
+    def test_complex_multiplication(self, aifpl, expression, expected):
+        """Test complex multiplication operation."""
+        assert aifpl.evaluate_and_format(expression) == expected
+
+    @pytest.mark.parametrize("expression,expected", [
+        # Integer division (floor division semantics)
+        ("(integer/ 6 2)", "3"),
+        ("(integer/ 8 4)", "2"),
+        ("(integer/ 7 2)", "3"),  # Floor division
 
         # Multiple arguments (left associative)
-        ("(/ 24 2 3)", "4.0"),  # ((24 / 2) / 3) - division always returns float
-        ("(/ 100 5 2)", "10.0"),  # ((100 / 5) / 2) - division always returns float
-
-        # Type promotion
-        ("(/ 5.0 2)", "2.5"),
-        ("(/ 10 2.5)", "4.0"),  # Division always returns float
-
-        # Complex division
-        ("(/ (complex 4 2) (complex 1 1))", "3-1j"),
-        ("(/ 6 1j)", "-6j"),
-
-        # Fraction results
-        ("(/ 1 3)", "0.3333333333333333"),
+        ("(integer/ 24 2 3)", "4"),
+        ("(integer/ 100 5 2)", "10"),
     ])
-    def test_division(self, aifpl, expression, expected):
-        """Test division operation."""
+    def test_integer_division(self, aifpl, expression, expected):
+        """Test integer division operation (floor division)."""
+        assert aifpl.evaluate_and_format(expression) == expected
+
+    @pytest.mark.parametrize("expression,expected", [
+        # Float division
+        ("(float/ 5.0 2.0)", "2.5"),
+        ("(float/ 1.0 3.0)", "0.3333333333333333"),
+        ("(float/ 10.0 2.5)", "4.0"),
+
+        # Multiple arguments (left associative)
+        ("(float/ 24.0 2.0 3.0)", "4.0"),
+    ])
+    def test_float_division(self, aifpl, expression, expected):
+        """Test float division operation."""
         assert aifpl.evaluate_and_format(expression) == expected
 
     def test_division_by_zero(self, aifpl):
         """Test that division by zero raises appropriate error."""
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate("(/ 1 0)")
+            aifpl.evaluate("(integer/ 1 0)")
 
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate("(/ 5 2 0)")
+            aifpl.evaluate("(float/ 1.0 0.0)")
 
     @pytest.mark.parametrize("expression,expected", [
-        # Floor division
+        # Floor division (integer inputs only)
         ("(// 7 2)", "3"),
         ("(// 8 3)", "2"),
         ("(// -7 2)", "-4"),  # Floor division rounds down
         ("(// 7 -2)", "-4"),
         ("(// -7 -2)", "3"),
-
-        # Float inputs
-        ("(// 7.5 2)", "3.0"),  # Floor division with float returns float
-        ("(// 7 2.0)", "3.0"),  # Floor division with float returns float
     ])
     def test_floor_division(self, aifpl, expression, expected):
         """Test floor division operation."""
@@ -156,7 +164,7 @@ class TestArithmetic:
             aifpl.evaluate("(// 1 0)")
 
     @pytest.mark.parametrize("expression,expected", [
-        # Basic modulo
+        # Basic modulo (integer inputs only)
         ("(% 7 3)", "1"),
         ("(% 8 3)", "2"),
         ("(% 9 3)", "0"),
@@ -165,10 +173,6 @@ class TestArithmetic:
         ("(% -7 3)", "2"),  # Python modulo behavior
         ("(% 7 -3)", "-2"),
         ("(% -7 -3)", "-1"),
-
-        # Float inputs
-        ("(% 7.5 3)", "1.5"),
-        ("(% 7 3.0)", "1.0"),  # Modulo with float returns float
     ])
     def test_modulo(self, aifpl, expression, expected):
         """Test modulo operation."""
@@ -180,54 +184,26 @@ class TestArithmetic:
             aifpl.evaluate("(% 1 0)")
 
     @pytest.mark.parametrize("expression,expected", [
-        # Basic exponentiation
-        ("(** 2 3)", "8"),
-        ("(** 3 2)", "9"),
-        ("(** 5 0)", "1"),
-        ("(** 0 5)", "0"),
-
-        # Negative exponents
-        ("(** 2 -1)", "0.5"),
-        ("(** 4 -2)", "0.0625"),
-
-        # Float exponents
-        ("(** 4 0.5)", "2.0"),  # Square root - returns float
-        ("(** 8 0.3333333333333333)", "2"),  # Cube root (approximately)
-
-        # Complex exponentiation
-        ("(** 1j 2)", "-1+0j"),
-        ("(** (complex 1 1) 2)", "2j"),
-    ])
-    def test_exponentiation(self, aifpl, expression, expected):
-        """Test exponentiation operation."""
-        result = aifpl.evaluate_and_format(expression)
-        if "0.3333333333333333" in expression:
-            # For cube root, check approximately
-            actual = float(result)
-            assert abs(actual - 2.0) < 0.1
-        else:
-            assert result == expected
-
-    @pytest.mark.parametrize("expression,expected", [
-        # Basic pow (same as **)
-        ("(pow 2 3)", "8"),
-        ("(pow 3 2)", "9"),
-        ("(pow 5 0)", "1"),
+        # Basic pow (integer inputs)
+        ("(float-expt 2.0 3.0)", "8.0"),
+        ("(float-expt 3.0 2.0)", "9.0"),
+        ("(float-expt 5.0 0.0)", "1.0"),
+        ("(float-expt 0.0 5.0)", "0.0"),
     ])
     def test_pow_function(self, aifpl, expression, expected):
-        """Test pow function (alias for **)."""
+        """Test pow function."""
         assert aifpl.evaluate_and_format(expression) == expected
 
     @pytest.mark.parametrize("expression,expected_approx", [
         # Trigonometric functions
         ("(sin 0)", 0.0),
-        ("(sin (* pi 0.5))", 1.0),
+        ("(sin (float* pi 0.5))", 1.0),
         ("(sin pi)", 0.0),
         ("(cos 0)", 1.0),
-        ("(cos (* pi 0.5))", 0.0),
+        ("(cos (float* pi 0.5))", 0.0),
         ("(cos pi)", -1.0),
         ("(tan 0)", 0.0),
-        ("(tan (* pi 0.25))", 1.0),
+        ("(tan (float* pi 0.25))", 1.0),
     ])
     def test_trigonometric_functions(self, aifpl, expression, expected_approx):
         """Test trigonometric functions."""
@@ -500,20 +476,6 @@ class TestArithmetic:
         """Test various number format literals."""
         assert aifpl.evaluate_and_format(number_format) == expected
 
-    def test_arithmetic_type_errors(self, aifpl):
-        """Test that arithmetic operations reject non-numeric types."""
-        # String arguments
-        with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(+ 1 "hello")')
-
-        # Boolean arguments
-        with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(* 2 #t)")
-
-        # List arguments
-        with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(- 5 (list 1 2))")
-
     def test_arity_errors(self, aifpl):
         """Test that operators with fixed arity reject wrong argument counts."""
         # Binary operators
@@ -523,47 +485,12 @@ class TestArithmetic:
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(% 1)")  # Modulo needs 2 args
 
-        with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(** 1)")  # Exponentiation needs 2 args
-
         # Unary operators
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(abs)")  # abs needs 1 arg
 
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(abs 1 2)")  # abs takes only 1 arg
-
-    def test_division_minimum_args(self, aifpl):
-        """Test that zero-arg division is an error; 1-arg is the reciprocal."""
-        with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(/)")
-
-        # (/ x) is now the Lisp reciprocal convention: (/ 1 x)
-        assert aifpl.evaluate_and_format("(/ 5)") == "0.2"
-        assert aifpl.evaluate_and_format("(/ 4)") == "0.25"
-
-    def test_subtraction_minimum_args(self, aifpl):
-        """Test that subtraction requires at least 1 argument."""
-        with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(-)")
-
-    # ========== Additional Coverage Tests ==========
-
-    def test_division_argument_position_specific_errors(self, aifpl):
-        """Test division by zero with specific argument positions."""
-        # Binary division uses primitive opcode with simpler error message
-        # Variadic division is now desugared to nested binary operations,
-        # so all division errors are now simpler (no argument position)
-        with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate("(/ 10 0)")
-
-        # After desugaring: (/ 10 2 0) → (/ (/ 10 2) 0)
-        with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate("(/ 10 2 0)")
-
-        # After desugaring: (/ 24 2 3 0) → (/ (/ (/ 24 2) 3) 0)
-        with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate("(/ 24 2 3 0)")
 
     def test_complex_trigonometric_edge_cases(self, aifpl):
         """Test trigonometric functions with pure imaginary numbers."""
@@ -609,16 +536,15 @@ class TestArithmetic:
 
     def test_rounding_with_near_zero_complex_parts(self, aifpl):
         """Test rounding functions with complex numbers having tiny imaginary parts."""
-        # This should test the tolerance checking in rounding functions
         # Create a complex number with a very small but non-zero imaginary part
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(round (+ 3.5 (* 1j 1e-5)))")
+            aifpl.evaluate("(round (complex+ (complex 3.5 0.0) (complex* 1j (complex 1e-5 0.0))))")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(floor (+ 2.7 (* 1j 1e-8)))")
+            aifpl.evaluate("(floor (complex+ (complex 2.7 0.0) (complex* 1j (complex 1e-8 0.0))))")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(ceil (+ 4.1 (* 1j 1e-6)))")
+            aifpl.evaluate("(ceil (complex+ (complex 4.1 0.0) (complex* 1j (complex 1e-6 0.0))))")
 
     def test_real_imag_with_integer_results(self, aifpl):
         """Test real/imag functions that return integers."""

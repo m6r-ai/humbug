@@ -27,7 +27,7 @@ class TestAIFPLEnvironmentEdgeCases:
     def test_global_environment_functions(self, aifpl):
         """Test that global environment contains expected functions."""
         # Arithmetic functions should be available
-        arithmetic_functions = ["+", "-", "*", "/", "//", "%", "**", "pow"]
+        arithmetic_functions = ["//", "%", "pow"]
 
         for func in arithmetic_functions:
             try:
@@ -98,7 +98,7 @@ class TestAIFPLEnvironmentEdgeCases:
         # Sequential let bindings
         result = aifpl.evaluate("""
         (let* ((x 5)
-               (y (+ x 3)))
+               (y (integer+ x 3)))
           y)
         """)
         assert result == 8  # x is available when defining y
@@ -115,7 +115,7 @@ class TestAIFPLEnvironmentEdgeCases:
         # Lambda captures outer variables (closure)
         result = aifpl.evaluate("""
         (let ((x 10))
-          ((lambda (y) (+ x y)) 5))
+          ((lambda (y) (integer+ x y)) 5))
         """)
         assert result == 15
 
@@ -124,7 +124,7 @@ class TestAIFPLEnvironmentEdgeCases:
         (let ((x 10))
           (let ((f (lambda (y)
                     (lambda (z)
-                      (+ x y z)))))
+                      (integer+ x y z)))))
             ((f 5) 3)))
         """)
         assert result == 18  # 10 + 5 + 3
@@ -137,7 +137,7 @@ class TestAIFPLEnvironmentEdgeCases:
           (let ((b 2))
             (let ((c 3))
               (let ((d 4))
-                (+ a b c d)))))
+                (integer+ a b c d)))))
         """)
         assert result == 10
 
@@ -159,7 +159,7 @@ class TestAIFPLEnvironmentEdgeCases:
 
         # Undefined variable in expression
         with pytest.raises(AIFPLEvalError, match="Undefined variable"):
-            aifpl.evaluate("(+ 1 undefined-var)")
+            aifpl.evaluate("(integer+ 1 undefined-var)")
 
         # Undefined variable in let binding
         with pytest.raises(AIFPLEvalError, match="Undefined variable"):
@@ -185,7 +185,7 @@ class TestAIFPLEnvironmentEdgeCases:
         # Lambda passed to map captures environment
         result = aifpl.evaluate("""
         (let ((multiplier 3))
-          (map (lambda (x) (* x multiplier)) (list 1 2 3)))
+          (map (lambda (x) (integer* x multiplier)) (list 1 2 3)))
         """)
         assert result == [3, 6, 9]
 
@@ -199,7 +199,7 @@ class TestAIFPLEnvironmentEdgeCases:
         # Fold with closure
         result = aifpl.evaluate("""
         (let ((base 10))
-          (fold (lambda (acc x) (+ acc x base)) 0 (list 1 2 3)))
+          (fold (lambda (acc x) (integer+ acc x base)) 0 (list 1 2 3)))
         """)
         assert result == 36  # 0 + (1+10) + (2+10) + (3+10) = 36
 
@@ -208,9 +208,9 @@ class TestAIFPLEnvironmentEdgeCases:
         # Variables should be available throughout their scope
         result = aifpl.evaluate("""
         (let ((x 5))
-          (let ((y (+ x 3)))
-            (let ((z (* x y)))
-              (+ x y z))))
+          (let ((y (integer+ x 3)))
+            (let ((z (integer* x y)))
+              (integer+ x y z))))
         """)
         # x=5, y=5+3=8, z=5*8=40, sum=5+8+40=53
         assert result == 53
@@ -236,7 +236,7 @@ class TestAIFPLEnvironmentEdgeCases:
             (let ((factorial (lambda (n)
                               (if (<= n 1)
                                   1
-                                  (* n (factorial (- n 1)))))))
+                                  (integer* n (factorial (integer- n 1)))))))
               (factorial 5))
             """)
             assert result == 120
@@ -260,7 +260,7 @@ class TestAIFPLEnvironmentEdgeCases:
         # Closure with multiple captured variables
         result = aifpl.evaluate("""
         (let ((a 2) (b 3) (c 4))
-          (let ((f (lambda (x) (+ a b c x))))
+          (let ((f (lambda (x) (integer+ a b c x))))
             (f 5)))
         """)
         assert result == 14  # 2 + 3 + 4 + 5
@@ -270,7 +270,7 @@ class TestAIFPLEnvironmentEdgeCases:
         (let ((multiplier 5))
           (let ((make-adder (lambda (n)
                              (lambda (x)
-                               (+ (* x multiplier) n)))))
+                               (integer+ (integer* x multiplier) n)))))
             ((make-adder 10) 3)))
         """)
         assert result == 25  # (3 * 5) + 10
@@ -301,7 +301,7 @@ class TestAIFPLEnvironmentEdgeCases:
             # Pattern matching with variable binding
             result = aifpl.evaluate("""
             (match 42
-              ((number? n) (+ n 10))
+              ((number? n) (integer+ n 10))
               (_ 0))
             """)
             assert result == 52
@@ -314,7 +314,7 @@ class TestAIFPLEnvironmentEdgeCases:
         # Many variables in single scope
         many_vars = """
         (let (""" + " ".join(f"(var{i} {i})" for i in range(50)) + """)
-          (+ """ + " ".join(f"var{i}" for i in range(50)) + """))
+          (integer+ """ + " ".join(f"var{i}" for i in range(50)) + """))
         """
         result = aifpl.evaluate(many_vars)
         assert result == sum(range(50))
@@ -322,7 +322,7 @@ class TestAIFPLEnvironmentEdgeCases:
         # Deeply nested scopes
         nested_scopes = "x"
         for i in range(20):
-            nested_scopes = f"(let ((x{i} {i})) (+ x{i} {nested_scopes}))"
+            nested_scopes = f"(let ((x{i} {i})) (integer+ x{i} {nested_scopes}))"
 
         try:
             result = aifpl.evaluate(nested_scopes)
@@ -375,7 +375,7 @@ class TestAIFPLEnvironmentEdgeCases:
         (let ((x 1))
           (let ((x 2))
             (let ((x 3))
-              (+ x (let ((x 4)) x)))))
+              (integer+ x (let ((x 4)) x)))))
         """)
         assert result == 7  # 3 + 4
 
@@ -383,16 +383,16 @@ class TestAIFPLEnvironmentEdgeCases:
         """Test environment with function definitions."""
         # Define and use function in same scope
         result = aifpl.evaluate("""
-        (let ((square (lambda (x) (* x x))))
+        (let ((square (lambda (x) (integer* x x))))
           (square 5))
         """)
         assert result == 25
 
         # Function using other functions from same scope
         result = aifpl.evaluate("""
-        (let ((double (lambda (x) (* x 2)))
-              (triple (lambda (x) (* x 3))))
-          (let ((combine (lambda (x) (+ (double x) (triple x)))))
+        (let ((double (lambda (x) (integer* x 2)))
+              (triple (lambda (x) (integer* x 3))))
+          (let ((combine (lambda (x) (integer+ (double x) (triple x)))))
             (combine 4)))
         """)
         assert result == 20  # (4*2) + (4*3) = 8 + 12 = 20
@@ -403,12 +403,12 @@ class TestAIFPLEnvironmentEdgeCases:
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("""
             (let ((x 10))
-              (let ((y (/ x 0)))
+              (let ((y (integer/ x 0)))
                 y))
             """)
 
         # Next evaluation should work normally
-        result = aifpl.evaluate("(+ 1 2)")
+        result = aifpl.evaluate("(integer+ 1 2)")
         assert result == 3
 
         # Global environment should be unchanged
@@ -421,7 +421,7 @@ class TestAIFPLEnvironmentEdgeCases:
         large_closure = """
         (let (""" + " ".join(f"(var{i} {i})" for i in range(20)) + """)
           (let ((f (lambda (x) 
-                    (+ x """ + " ".join(f"var{i}" for i in range(20)) + """))))
+                    (integer+ x """ + " ".join(f"var{i}" for i in range(20)) + """))))
             (f 100)))
         """
         result = aifpl.evaluate(large_closure)
@@ -445,9 +445,9 @@ class TestAIFPLEnvironmentEdgeCases:
             # Functions that reference each other
             result = aifpl.evaluate("""
             (let ((even? (lambda (n)
-                          (if (= n 0) #t (odd? (- n 1)))))
+                          (if (= n 0) #t (odd? (integer- n 1)))))
                   (odd? (lambda (n)
-                         (if (= n 0) #f (even? (- n 1))))))
+                         (if (= n 0) #f (even? (integer- n 1))))))
               (even? 4))
             """)
             assert result is True

@@ -27,15 +27,15 @@ class TestAIFPLValueEdgeCases:
     def test_floating_point_precision_edge_cases(self, aifpl):
         """Test floating point precision and edge cases."""
         # Test precision limits
-        result = aifpl.evaluate("(/ 1 3)")
+        result = aifpl.evaluate("(float/ 1.0 3.0)")
         assert abs(result - (1/3)) < 1e-15
 
         # Test very small differences
-        result = aifpl.evaluate("(- 1.0000000000000001 1.0)")
+        result = aifpl.evaluate("(float- 1.0000000000000001 1.0)")
         assert result == 1.0000000000000001 - 1.0
 
         # Test addition of very different magnitudes
-        result = aifpl.evaluate("(+ 1e20 1)")
+        result = aifpl.evaluate("(float+ 1e20 1.0)")
         assert result == 1e20 + 1
 
     def test_complex_number_edge_cases(self, aifpl):
@@ -125,18 +125,18 @@ class TestAIFPLValueEdgeCases:
 
     def test_numeric_type_coercion_edge_cases(self, aifpl):
         """Test numeric type coercion edge cases."""
-        # Integer to float promotion
-        result = aifpl.evaluate("(+ 1 2.5)")
+        # Integer to float promotion via explicit conversion
+        result = aifpl.evaluate("(float+ (float 1) 2.5)")
         assert result == 3.5
         assert isinstance(result, float)
 
-        # Float to complex promotion
-        result = aifpl.evaluate("(+ 2.5 1j)")
+        # Float to complex promotion via explicit conversion
+        result = aifpl.evaluate("(complex+ (complex 2.5 0) (complex 0 1))")
         assert result == 2.5+1j
         assert isinstance(result, complex)
 
-        # Integer to complex promotion
-        result = aifpl.evaluate("(+ 1 1j)")
+        # Integer to complex promotion via explicit conversion
+        result = aifpl.evaluate("(complex+ (complex 1 0) (complex 0 1))")
         assert result == 1+1j
         assert isinstance(result, complex)
 
@@ -214,7 +214,7 @@ class TestAIFPLValueEdgeCases:
         """Test handling of infinity and NaN values."""
         # Test division that results in infinity
         try:
-            result = aifpl.evaluate("(/ 1.0 0.0)")
+            result = aifpl.evaluate("(float/ 1.0 0.0)")
             # This might raise an error or return infinity
             if not isinstance(result, Exception):
                 assert math.isinf(result)
@@ -223,7 +223,7 @@ class TestAIFPLValueEdgeCases:
             pass
 
         # Test operations with very large numbers
-        result = aifpl.evaluate("(* 1e100 1e100)")
+        result = aifpl.evaluate("(float* 1e100 1e100)")
         if not math.isinf(result):
             assert result == 1e200
 
@@ -293,16 +293,16 @@ class TestAIFPLValueEdgeCases:
     def test_value_arithmetic_edge_cases(self, aifpl):
         """Test arithmetic operations with edge case values."""
         # Operations with zero
-        assert aifpl.evaluate("(+ 0 5)") == 5
-        assert aifpl.evaluate("(* 0 5)") == 0
-        assert aifpl.evaluate("(- 5 0)") == 5
+        assert aifpl.evaluate("(integer+ 0 5)") == 5
+        assert aifpl.evaluate("(integer* 0 5)") == 0
+        assert aifpl.evaluate("(integer- 5 0)") == 5
 
         # Operations with negative zero
-        result = aifpl.evaluate("(+ -0.0 0.0)")
+        result = aifpl.evaluate("(float+ -0.0 0.0)")
         assert result == 0.0
 
         # Operations with very small numbers
-        result = aifpl.evaluate("(+ 1e-100 1e-100)")
+        result = aifpl.evaluate("(float+ 1e-100 1e-100)")
         assert result == 2e-100
 
     def test_value_string_operations_edge_cases(self, aifpl):

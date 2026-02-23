@@ -48,10 +48,10 @@ class TestParserWithTypedNumbers:
     def test_parser_creates_complex_with_flag(self):
         """With flag enabled, parser should create AIFPLASTComplex."""
         lexer = AIFPLLexer()
-        tokens = lexer.lex("(+ 3 (* 4 1j))")
+        tokens = lexer.lex("(integer+ 3 4)")
         parser = AIFPLParser()
         parser.use_typed_numbers = True
-        result = parser.parse(tokens, "(+ 3 (* 4 1j))")
+        result = parser.parse(tokens, "(integer+ 3 4)")
 
         # The expression itself is a list, but we can check the numbers in it
         assert result.elements[1].value == 3
@@ -67,7 +67,7 @@ class TestTypePredicatesWithNewTypes:
         aifpl = AIFPL()
         assert aifpl.evaluate("(number? 42)") == True
         assert aifpl.evaluate("(number? 3.14)") == True
-        assert aifpl.evaluate("(number? (+ 1 (* 2 1j)))") == True
+        assert aifpl.evaluate("(number? (complex+ (complex 1 0) (complex* (complex 2 0) 1j)))") == True
         assert aifpl.evaluate('(number? "hello")') == False
 
     def test_integer_predicate_with_old_type(self):
@@ -76,7 +76,7 @@ class TestTypePredicatesWithNewTypes:
         aifpl = AIFPL()
         assert aifpl.evaluate("(integer? 42)") == True
         assert aifpl.evaluate("(integer? 3.14)") == False
-        assert aifpl.evaluate("(integer? (+ 1 (* 2 1j)))") == False
+        assert aifpl.evaluate("(integer? (complex+ (complex 1 0) (complex* (complex 2 0) 1j)))") == False
 
     def test_float_predicate_with_old_type(self):
         """float? should work with typed numbers."""
@@ -84,12 +84,12 @@ class TestTypePredicatesWithNewTypes:
         aifpl = AIFPL()
         assert aifpl.evaluate("(float? 3.14)") == True
         assert aifpl.evaluate("(float? 42)") == False
-        assert aifpl.evaluate("(float? (+ 1 (* 2 1j)))") == False
+        assert aifpl.evaluate("(float? (complex+ (complex 1 0) (complex* (complex 2 0) 1j)))") == False
 
     def test_complex_predicate_with_old_type(self):
         """complex? should work with typed numbers."""
         from aifpl import AIFPL
         aifpl = AIFPL()
-        assert aifpl.evaluate("(complex? (+ 1 (* 2 1j)))") == True
+        assert aifpl.evaluate("(complex? (complex+ (complex 1 0) (complex* (complex 2 0) 1j)))") == True
         assert aifpl.evaluate("(complex? 42)") == False
         assert aifpl.evaluate("(complex? 3.14)") == False

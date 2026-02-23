@@ -45,8 +45,8 @@ class TestFormatting:
         ("(complex 3 0)", "3+0j"),
         ("(complex -1 -2)", "-1-2j"),
         ("1j", "1j"),
-        ("(* 2 1j)", "2j"),
-        ("(+ 1 1j)", "1+1j"),
+        ("(complex* (complex 2 0) 1j)", "2j"),
+        ("(complex+ (complex 1 0) 1j)", "1+1j"),
     ])
     def test_complex_number_formatting(self, aifpl, expression, expected_format):
         """Test complex number formatting in LISP output."""
@@ -55,11 +55,11 @@ class TestFormatting:
     def test_complex_number_simplification(self, aifpl):
         """Test that complex numbers with negligible imaginary parts are simplified."""
         # Very small imaginary part should be simplified
-        result = aifpl.evaluate_and_format("(+ 5 (* 1e-15 1j))")
+        result = aifpl.evaluate_and_format("(complex+ (complex 5 0) (complex* (complex 1e-15 0) 1j))")
         assert result == "5+1e-15j"  # Should be simplified to float (real part of complex)
 
         # Larger imaginary part should be preserved
-        result = aifpl.evaluate_and_format("(+ 5 (* 1e-5 1j))")
+        result = aifpl.evaluate_and_format("(complex+ (complex 5 0) (complex* (complex 1e-5 0) 1j))")
         assert "5+1" in result and "j" in result  # Should remain complex
 
     @pytest.mark.parametrize("expression,expected_format", [
@@ -177,16 +177,16 @@ class TestFormatting:
     def test_arithmetic_result_formatting(self, aifpl, helpers):
         """Test that arithmetic operations produce properly formatted results."""
         # Integer results
-        helpers.assert_evaluates_to(aifpl, '(+ 1 2)', '3')
-        helpers.assert_evaluates_to(aifpl, '(* 3 4)', '12')
+        helpers.assert_evaluates_to(aifpl, '(integer+ 1 2)', '3')
+        helpers.assert_evaluates_to(aifpl, '(integer* 3 4)', '12')
 
         # Float results
-        helpers.assert_evaluates_to(aifpl, '(/ 7 2)', '3.5')
-        helpers.assert_evaluates_to(aifpl, '(+ 1.5 2.5)', '4.0')  # Preserves float type
+        helpers.assert_evaluates_to(aifpl, '(float/ 7.0 2.0)', '3.5')
+        helpers.assert_evaluates_to(aifpl, '(float+ 1.5 2.5)', '4.0')  # Preserves float type
 
         # Complex results
-        helpers.assert_evaluates_to(aifpl, '(+ 1 1j)', '1+1j')
-        helpers.assert_evaluates_to(aifpl, '(* 1j 1j)', '-1+0j')  # Simplifies to float when imag is 0
+        helpers.assert_evaluates_to(aifpl, '(complex+ (complex 1 0) 1j)', '1+1j')
+        helpers.assert_evaluates_to(aifpl, '(complex* 1j 1j)', '-1+0j')  # Simplifies to float when imag is 0
 
     def test_string_operation_result_formatting(self, aifpl, helpers):
         """Test that string operations produce properly formatted results."""
@@ -224,7 +224,7 @@ class TestFormatting:
         # Map results
         helpers.assert_evaluates_to(
             aifpl, 
-            '(map (lambda (x) (* x 2)) (list 1 2 3))', 
+            '(map (lambda (x) (integer* x 2)) (list 1 2 3))', 
             '(2 4 6)'
         )
 
@@ -238,7 +238,7 @@ class TestFormatting:
         # Fold results
         helpers.assert_evaluates_to(
             aifpl, 
-            '(fold + 0 (list 1 2 3 4))', 
+            '(fold integer+ 0 (list 1 2 3 4))', 
             '10'
         )
 
@@ -249,7 +249,7 @@ class TestFormatting:
         """Test that lambda functions are formatted appropriately."""
         # Lambda functions should have a readable representation
         # Note: This tests the Python object representation, not LISP formatting
-        lambda_expr = '(lambda (x) (* x 2))'
+        lambda_expr = '(lambda (x) (integer* x 2))'
         result = aifpl.evaluate(lambda_expr)
 
         # When formatted for LISP output, should show as function representation
@@ -260,7 +260,7 @@ class TestFormatting:
         """Test that let expressions produce properly formatted results."""
         # Let expressions should format their body result
         helpers.assert_evaluates_to(aifpl, '(let ((x 5)) x)', '5')
-        helpers.assert_evaluates_to(aifpl, '(let ((x 5) (y 3)) (+ x y))', '8')
+        helpers.assert_evaluates_to(aifpl, '(let ((x 5) (y 3)) (integer+ x y))', '8')
         helpers.assert_evaluates_to(
             aifpl, 
             '(let ((name "hello")) (string-append name " world"))', 
@@ -297,18 +297,18 @@ class TestFormatting:
 
         # Different ways of creating the same number should format identically
         num1 = aifpl.evaluate_and_format('6')
-        num2 = aifpl.evaluate_and_format('(+ 2 4)')
-        num3 = aifpl.evaluate_and_format('(* 2 3)')
+        num2 = aifpl.evaluate_and_format('(integer+ 2 4)')
+        num3 = aifpl.evaluate_and_format('(integer* 2 3)')
 
         assert num1 == num2 == num3 == '6'
 
     def test_edge_case_formatting(self, aifpl, helpers):
         """Test formatting of edge cases and boundary values."""
         # Very large numbers
-        helpers.assert_evaluates_to(aifpl, '(** 2 20)', '1048576')
+        helpers.assert_evaluates_to(aifpl, '(float-expt 2.0 20.0)', '1048576.0')
 
         # Very small numbers (close to zero)
-        result = aifpl.evaluate_and_format('(/ 1 1000000)')
+        result = aifpl.evaluate_and_format('(float/ 1.0 1000000.0)')
         assert '1e-06' in result or '0.000001' in result
 
         # Empty structures
@@ -350,11 +350,11 @@ class TestFormatting:
     def test_number_precision_formatting(self, aifpl):
         """Test that number precision is maintained in formatting."""
         # Float precision should be preserved reasonably
-        result = aifpl.evaluate_and_format('(/ 1 3)')
+        result = aifpl.evaluate_and_format('(float/ 1.0 3.0)')
         assert '0.333333' in result  # Should show reasonable precision
 
         # Very precise calculations
-        result = aifpl.evaluate_and_format('(+ 0.1 0.2)')
+        result = aifpl.evaluate_and_format('(float+ 0.1 0.2)')
         # This might have floating point precision issues, but should be formatted consistently
         assert result.startswith('0.3')
 
@@ -362,7 +362,7 @@ class TestFormatting:
         """Test formatting of results from complex expressions."""
         # Complex functional pipeline
         complex_result = '''
-        (map (lambda (x) (+ x 1))
+        (map (lambda (x) (integer+ x 1))
              (filter (lambda (x) (> x 0))
                      (list -1 2 -3 4 5)))
         '''
@@ -371,7 +371,7 @@ class TestFormatting:
         # Nested let with lambda
         nested_result = '''
         (let ((multiplier 10))
-          (let ((f (lambda (x) (* x multiplier))))
+          (let ((f (lambda (x) (integer* x multiplier))))
             (list (f 1) (f 2) (f 3))))
         '''
         helpers.assert_evaluates_to(aifpl, nested_result, '(10 20 30)')
@@ -379,13 +379,13 @@ class TestFormatting:
     def test_error_vs_success_formatting_distinction(self, aifpl):
         """Test that successful results are formatted while errors are not."""
         # Successful evaluation should return formatted string
-        success_result = aifpl.evaluate_and_format('(+ 1 2)')
+        success_result = aifpl.evaluate_and_format('(integer+ 1 2)')
         assert success_result == '3'
         assert isinstance(success_result, str)
 
         # Error should raise exception, not return formatted error
         with pytest.raises(Exception):  # Should raise some form of error
-            aifpl.evaluate_and_format('(/ 1 0)')
+            aifpl.evaluate_and_format('(integer/ 1 0)')
 
     def test_consistency_between_evaluation_methods(self, aifpl):
         """Test consistency between evaluate() and evaluate_and_format()."""
@@ -396,7 +396,7 @@ class TestFormatting:
             '#t',
             '#f',
             '(list 1 2 3)',
-            '(+ 1 2)',
+            '(integer+ 1 2)',
             '(string-append "hello" " " "world")',
             '(if #t "yes" "no")',
         ]

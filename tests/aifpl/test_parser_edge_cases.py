@@ -11,11 +11,11 @@ class TestAIFPLParserEdgeCases:
     def test_deeply_nested_expressions(self, aifpl):
         """Test parsing of deeply nested expressions."""
         # Nested arithmetic
-        result = aifpl.evaluate("(+ (+ (+ 1 2) 3) 4)")
+        result = aifpl.evaluate("(integer+ (integer+ (integer+ 1 2) 3) 4)")
         assert result == 10
 
         # Nested function calls
-        result = aifpl.evaluate("(abs (- (max 1 5 3) (min 1 5 3)))")
+        result = aifpl.evaluate("(abs (integer- (max 1 5 3) (min 1 5 3)))")
         assert result == 4
 
         # Nested lists
@@ -23,7 +23,7 @@ class TestAIFPLParserEdgeCases:
         assert result == [[1, 2], [3, 4]]
 
         # Very deep nesting (within reasonable limits)
-        deep_expr = "(+ " * 50 + "1" + " 0)" * 50
+        deep_expr = "(integer+ " * 50 + "1" + " 0)" * 50
         result = aifpl.evaluate(deep_expr)
         assert result == 1
 
@@ -31,11 +31,11 @@ class TestAIFPLParserEdgeCases:
         """Test comprehensive whitespace handling scenarios."""
         # Various whitespace characters
         test_cases = [
-            ("  ( +   1    2   3  )  ", 6),
-            ("(\n+\n1\n2\n3\n)", 6),
-            ("(\t+\t1\t2\t3\t)", 6),
-            ("(\r+\r1\r2\r3\r)", 6),
-            (" ( + \t 1 \n 2 \r 3 ) ", 6),
+            ("  ( integer+   1    2   3  )  ", 6),
+            ("(\ninteger+\n1\n2\n3\n)", 6),
+            ("(\tinteger+\t1\t2\t3\t)", 6),
+            ("(\rinteger+\r1\r2\r3\r)", 6),
+            (" ( integer+ \t 1 \n 2 \r 3 ) ", 6),
         ]
 
         for expr, expected in test_cases:
@@ -47,7 +47,7 @@ class TestAIFPLParserEdgeCases:
         # Comments might not be implemented, but test if they are
         try:
             # Single line comments
-            result = aifpl.evaluate("(+ 1 2) ; this is a comment")
+            result = aifpl.evaluate("(integer+ 1 2) ; this is a comment")
             assert result == 3
         except (AIFPLParseError, AIFPLTokenError):
             # Comments might not be supported, which is fine
@@ -56,7 +56,7 @@ class TestAIFPLParserEdgeCases:
         try:
             # Comments with newlines
             result = aifpl.evaluate("""
-            (+ 1 ; first number
+            (integer+ 1 ; first number
                2) ; second number
             """)
             assert result == 3
@@ -67,31 +67,31 @@ class TestAIFPLParserEdgeCases:
         """Test comprehensive malformed syntax scenarios."""
         malformed_expressions = [
             # Unmatched parentheses variations
-            "((+ 1 2)",
-            "(+ 1 2))",
-            "((+ 1 2",
-            "(+ 1 2 3))",
+            "((integer+ 1 2)",
+            "(integer+ 1 2))",
+            "((integer+ 1 2",
+            "(integer+ 1 2 3))",
             "(((",
             ")))",
 
             # Empty expressions that should fail
-            "(/)",
-            "(-)",
+            "(integer/)",
+            "(integer-)",
 
             # Invalid tokens in expressions
-            "(+ 1 2 @)",
-            "(+ 1 2 #xyz)",
-            "(+ 1 2 $)",
-            "(+ 1 2 %invalid)",
+            "(integer+ 1 2 @)",
+            "(integer+ 1 2 #xyz)",
+            "(integer+ 1 2 $)",
+            "(integer+ 1 2 %invalid)",
 
             # Malformed numbers
-            "(+ 1 2.3.4)",
-            "(+ 1 2e)",
-            "(+ 1 .)",
+            "(integer+ 1 2.3.4)",
+            "(integer+ 1 2e)",
+            "(integer+ 1 .)",
 
             # Invalid identifiers
             "(123abc 1 2)",
-            "(+ 1abc 2)",
+            "(integer+ 1abc 2)",
         ]
 
         for expr in malformed_expressions:
@@ -272,27 +272,27 @@ class TestAIFPLParserEdgeCases:
         assert result == [[1, 2], [3, 4]]
 
         # Lists with expressions
-        result = aifpl.evaluate("(list (+ 1 2) (* 3 4))")
+        result = aifpl.evaluate("(list (integer+ 1 2) (integer* 3 4))")
         assert result == [3, 12]
 
     def test_function_call_parsing_edge_cases(self, aifpl):
         """Test function call parsing edge cases."""
         # Zero argument functions
-        result = aifpl.evaluate("(+)")  # Should be 0 (additive identity)
+        result = aifpl.evaluate("(integer+)")  # Should be 0 (additive identity)
         assert result == 0
 
-        result = aifpl.evaluate("(*)")  # Should be 1 (multiplicative identity)
+        result = aifpl.evaluate("(integer*)")  # Should be 1 (multiplicative identity)
         assert result == 1
 
         # Single argument functions
-        result = aifpl.evaluate("(+ 5)")
+        result = aifpl.evaluate("(integer+ 5)")
         assert result == 5
 
-        result = aifpl.evaluate("(- 5)")  # Unary minus
+        result = aifpl.evaluate("(integer- 5)")  # Unary minus
         assert result == -5
 
         # Many argument functions
-        result = aifpl.evaluate("(+ 1 2 3 4 5 6 7 8 9 10)")
+        result = aifpl.evaluate("(integer+ 1 2 3 4 5 6 7 8 9 10)")
         assert result == 55
 
     def test_lambda_parsing_edge_cases(self, aifpl):
@@ -306,11 +306,11 @@ class TestAIFPLParserEdgeCases:
         assert result == 5
 
         # Multiple parameter lambda
-        result = aifpl.evaluate("((lambda (x y z) (+ x y z)) 1 2 3)")
+        result = aifpl.evaluate("((lambda (x y z) (integer+ x y z)) 1 2 3)")
         assert result == 6
 
         # Lambda with complex body
-        result = aifpl.evaluate("((lambda (x) (+ (* x x) 1)) 3)")
+        result = aifpl.evaluate("((lambda (x) (integer+ (integer* x x) 1)) 3)")
         assert result == 10
 
     def test_let_parsing_edge_cases(self, aifpl):
@@ -320,15 +320,15 @@ class TestAIFPLParserEdgeCases:
         assert result == 5
 
         # Multiple bindings
-        result = aifpl.evaluate("(let ((x 5) (y 3)) (+ x y))")
+        result = aifpl.evaluate("(let ((x 5) (y 3)) (integer+ x y))")
         assert result == 8
 
         # Sequential dependency
-        result = aifpl.evaluate("(let* ((x 5) (y (* x 2))) (+ x y))")
+        result = aifpl.evaluate("(let* ((x 5) (y (integer* x 2))) (integer+ x y))")
         assert result == 15
 
         # Complex expressions in bindings
-        result = aifpl.evaluate("(let ((x (+ 1 2)) (y (* 3 4))) (+ x y))")
+        result = aifpl.evaluate("(let ((x (integer+ 1 2)) (y (integer* 3 4))) (integer+ x y))")
         assert result == 15
 
     def test_conditional_parsing_edge_cases(self, aifpl):
@@ -345,7 +345,7 @@ class TestAIFPLParserEdgeCases:
         assert result == "inner-yes"
 
         # Conditionals with expressions
-        result = aifpl.evaluate("(if (> 5 3) (+ 1 2) (- 1 2))")
+        result = aifpl.evaluate("(if (> 5 3) (integer+ 1 2) (integer- 1 2))")
         assert result == 3
 
     def test_parser_error_recovery(self, aifpl):
@@ -355,7 +355,7 @@ class TestAIFPLParserEdgeCases:
             aifpl.evaluate("(+ 1 2")
 
         # Next evaluation should work normally
-        result = aifpl.evaluate("(+ 1 2)")
+        result = aifpl.evaluate("(integer+ 1 2)")
         assert result == 3
 
         # Multiple errors in sequence
@@ -365,7 +365,7 @@ class TestAIFPLParserEdgeCases:
                 aifpl.evaluate(expr)
 
         # Should still work after multiple errors
-        result = aifpl.evaluate("(* 2 3)")
+        result = aifpl.evaluate("(integer* 2 3)")
         assert result == 6
 
     def test_parser_position_tracking(self, aifpl):
@@ -395,7 +395,7 @@ class TestAIFPLParserEdgeCases:
         assert result[999] == 999
 
         # Large arithmetic expression
-        large_arith_expr = "(+ " + " ".join(str(i) for i in range(100)) + ")"
+        large_arith_expr = "(integer+ " + " ".join(str(i) for i in range(100)) + ")"
         result = aifpl.evaluate(large_arith_expr)
         assert result == sum(range(100))
 
@@ -477,9 +477,9 @@ class TestAIFPLParserEdgeCases:
         # In LISP, everything is explicit with parentheses
         # These should all be unambiguous
         expressions = [
-            "(+ 1 (* 2 3))",      # 1 + (2 * 3) = 7
-            "(* (+ 1 2) 3)",      # (1 + 2) * 3 = 9
-            "(+ (* 2 3) (* 4 5))", # (2 * 3) + (4 * 5) = 26
+            "(integer+ 1 (integer* 2 3))",            # 1 + (2 * 3) = 7
+            "(integer* (integer+ 1 2) 3)",            # (1 + 2) * 3 = 9
+            "(integer+ (integer* 2 3) (integer* 4 5))", # (2 * 3) + (4 * 5) = 26
         ]
 
         expected = [7, 9, 26]

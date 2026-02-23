@@ -20,7 +20,7 @@ class TestErrors:
 
         # FIXED: Use actually invalid character instead of & which is valid
         with pytest.raises(AIFPLTokenError):
-            aifpl.evaluate("(+ 1 @ 2)")
+            aifpl.evaluate("(integer+ 1 @ 2)")
 
     def test_unterminated_string_token_error(self, aifpl):
         """Test that unterminated strings cause tokenization errors."""
@@ -94,13 +94,13 @@ class TestErrors:
     def test_unmatched_parentheses_parse_error(self, aifpl):
         """Test that unmatched parentheses cause parse errors."""
         with pytest.raises(AIFPLParseError, match="Unterminated list"):
-            aifpl.evaluate("(+ 1 2")
+            aifpl.evaluate("(integer+ 1 2")
 
         with pytest.raises(AIFPLParseError, match="Unterminated list"):
-            aifpl.evaluate("(* (+ 1 2) 3")
+            aifpl.evaluate("(integer* (integer+ 1 2) 3")
 
         with pytest.raises(AIFPLParseError, match="Unexpected token after complete expression"):
-            aifpl.evaluate("+ 1 2)")
+            aifpl.evaluate("integer+ 1 2)")
 
     def test_unexpected_token_after_expression_parse_error(self, aifpl):
         """Test that extra tokens after complete expression cause parse errors."""
@@ -108,7 +108,7 @@ class TestErrors:
             aifpl.evaluate("42 43")
 
         with pytest.raises(AIFPLParseError, match="Unexpected token after complete expression"):
-            aifpl.evaluate("(+ 1 2) (+ 3 4)")
+            aifpl.evaluate("(integer+ 1 2) (integer+ 3 4)")
 
     def test_invalid_lambda_syntax_parse_error(self, aifpl):
         """Test that invalid lambda syntax causes evaluation errors (pure list approach)."""
@@ -119,23 +119,23 @@ class TestErrors:
             aifpl.evaluate("(lambda (x))")  # Missing body
 
         with pytest.raises(AIFPLEvalError, match="Lambda expression structure is incorrect"):
-            aifpl.evaluate("(lambda (x) (+ x 1) extra)")  # Too many elements
+            aifpl.evaluate("(lambda (x) (integer+ x 1) extra)")  # Too many elements
 
     def test_invalid_lambda_parameters_parse_error(self, aifpl):
         """Test that invalid lambda parameters cause evaluation errors (pure list approach)."""
         with pytest.raises(AIFPLEvalError, match="Lambda parameter .* must be a symbol"):
-            aifpl.evaluate("(lambda (1) (+ 1 1))")  # Number as parameter
+            aifpl.evaluate("(lambda (1) (integer+ 1 1))")  # Number as parameter
 
         with pytest.raises(AIFPLEvalError, match="Lambda parameter .* must be a symbol"):
-            aifpl.evaluate('(lambda ("x") (+ x 1))')  # String as parameter
+            aifpl.evaluate('(lambda ("x") (integer+ x 1))')  # String as parameter
 
     def test_duplicate_lambda_parameters_parse_error(self, aifpl):
         """Test that duplicate lambda parameters cause evaluation errors (pure list approach)."""
         with pytest.raises(AIFPLEvalError, match="Lambda parameters must be unique"):
-            aifpl.evaluate("(lambda (x x) (+ x x))")
+            aifpl.evaluate("(lambda (x x) (integer+ x x))")
 
         with pytest.raises(AIFPLEvalError, match="Lambda parameters must be unique"):
-            aifpl.evaluate("(lambda (x y x) (+ x y))")
+            aifpl.evaluate("(lambda (x y x) (integer+ x y))")
 
     def test_invalid_let_syntax_parse_error(self, aifpl):
         """Test that invalid let syntax causes evaluation errors (pure list approach)."""
@@ -167,7 +167,7 @@ class TestErrors:
             aifpl.evaluate("(let ((x 1) (x 2)) x)")
 
         with pytest.raises(AIFPLEvalError, match="Let binding variables must be unique"):
-            aifpl.evaluate("(let ((x 1) (y 2) (x 3)) (+ x y))")
+            aifpl.evaluate("(let ((x 1) (y 2) (x 3)) (integer+ x y))")
 
     # ========== Evaluation Errors ==========
 
@@ -177,7 +177,7 @@ class TestErrors:
             aifpl.evaluate("undefined-var")
 
         with pytest.raises(AIFPLEvalError, match="Undefined variable"):
-            aifpl.evaluate("(+ 1 undefined-var)")
+            aifpl.evaluate("(integer+ 1 undefined-var)")
 
     def test_undefined_function_eval_error(self, aifpl):
         """Test that undefined functions cause evaluation errors."""
@@ -191,10 +191,10 @@ class TestErrors:
     def test_division_by_zero_eval_error(self, aifpl):
         """Test that division by zero causes evaluation errors."""
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate("(/ 1 0)")
+            aifpl.evaluate("(integer/ 1 0)")
 
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate("(/ 5 2 0)")
+            aifpl.evaluate("(integer/ 5 0)")
 
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
             aifpl.evaluate("(// 1 0)")
@@ -206,13 +206,13 @@ class TestErrors:
         """Test that type mismatches cause evaluation errors."""
         # Arithmetic with non-numbers
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(+ 1 "hello")')
+            aifpl.evaluate('(integer+ 1 "hello")')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(* 2 #t)")
+            aifpl.evaluate("(integer* 2 #t)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(- 5 (list 1 2))")
+            aifpl.evaluate("(integer- 5 (list 1 2))")
 
         # Boolean operations with non-booleans
         with pytest.raises(AIFPLEvalError, match="must be boolean"):
@@ -255,7 +255,7 @@ class TestErrors:
         """Test that lambda function arity mismatches cause evaluation errors."""
         # Too few arguments
         with pytest.raises(AIFPLEvalError, match="expects .* arguments, got .*"):
-            aifpl.evaluate("((lambda (x y) (+ x y)) 5)")
+            aifpl.evaluate("((lambda (x y) (integer+ x y)) 5)")
 
         # Too many arguments
         with pytest.raises(AIFPLEvalError, match="expects .* argument.*, got .*"):
@@ -414,12 +414,12 @@ class TestErrors:
         """Test that error messages include position information where helpful."""
         # This is a sampling test for error message quality
         try:
-            aifpl.evaluate("(+ 1 @)")
+            aifpl.evaluate("(integer+ 1 @)")
         except AIFPLTokenError as e:
             assert "position" in str(e) or "@" in str(e)
 
         try:
-            aifpl.evaluate("(+ 1 2")
+            aifpl.evaluate("(integer+ 1 2")
         except AIFPLParseError as e:
             assert "position" in str(e) or "parenthesis" in str(e)
 
@@ -438,7 +438,7 @@ class TestErrors:
         """Test that function call errors provide parameter context."""
         # Lambda arity error should show expected vs actual
         try:
-            aifpl.evaluate("((lambda (x y) (+ x y)) 5)")
+            aifpl.evaluate("((lambda (x y) (integer+ x y)) 5)")
         except AIFPLEvalError as e:
             error_msg = str(e)
             assert "expects 2 arguments" in error_msg
@@ -464,49 +464,49 @@ class TestErrors:
         """Test that errors in nested expressions are properly propagated."""
         # Error in nested arithmetic
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(+ (* 2 3) (/ 1 0))")
+            aifpl.evaluate("(integer+ (integer* 2 3) (integer/ 1 0))")
 
         # Error in nested function call
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(string-length (+ 1 2))")
+            aifpl.evaluate("(string-length (integer+ 1 2))")
 
         # Error in conditional branch (should still be caught despite lazy evaluation)
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(if #t (/ 1 0) 42)")
+            aifpl.evaluate("(if #t (integer/ 1 0) 42)")
 
     def test_error_in_higher_order_functions(self, aifpl):
         """Test error handling in higher-order function contexts."""
         # Error in map function
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(map (lambda (x) (/ x 0)) (list 1 2 3))")
+            aifpl.evaluate("(map (lambda (x) (integer/ x 0)) (list 1 2 3))")
 
         # Error in filter predicate
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(filter (lambda (x) (+ x \"hello\")) (list 1 2 3))")
+            aifpl.evaluate("(filter (lambda (x) (integer+ x \"hello\")) (list 1 2 3))")
 
         # Error in fold function
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(fold (lambda (acc x) (/ acc x)) 1 (list 1 0 2))")
+            aifpl.evaluate("(fold (lambda (acc x) (integer/ acc x)) 1 (list 1 0 2))")
 
     def test_error_in_let_binding_evaluation(self, aifpl):
         """Test error handling in let binding evaluation."""
         # Error in binding expression
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(let ((x (/ 1 0))) x)")
+            aifpl.evaluate("(let ((x (integer/ 1 0))) x)")
 
         # Error in sequential binding
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(let ((x 5) (y (/ x 0))) y)")
+            aifpl.evaluate("(let ((x 5) (y (integer/ x 0))) y)")
 
     def test_error_in_lambda_closure_context(self, aifpl):
         """Test error handling in lambda closure contexts."""
         # Error accessing undefined variable in closure
         with pytest.raises(AIFPLEvalError, match="Undefined variable"):
-            aifpl.evaluate("(let ((f (lambda (x) (+ x undefined-var)))) (f 5))")
+            aifpl.evaluate("(let ((f (lambda (x) (integer+ x undefined-var)))) (f 5))")
 
         # Type error in closure
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(let ((f (lambda (x) (+ x "hello")))) (f 5))')
+            aifpl.evaluate('(let ((f (lambda (x) (integer+ x "hello")))) (f 5))')
 
     # ========== Exception Hierarchy Tests ==========
 
@@ -531,11 +531,11 @@ class TestErrors:
 
         # Parse error
         with pytest.raises(AIFPLError):
-            aifpl.evaluate("(+ 1 2")
+            aifpl.evaluate("(integer+ 1 2")
 
         # Eval error
         with pytest.raises(AIFPLError):
-            aifpl.evaluate("(/ 1 0)")
+            aifpl.evaluate("(integer/ 1 0)")
 
     def test_specific_exception_catching(self, aifpl):
         """Test that specific exception types can be caught individually."""
@@ -545,11 +545,11 @@ class TestErrors:
 
         # Catch specific parse error
         with pytest.raises(AIFPLParseError):
-            aifpl.evaluate("(+ 1 2")
+            aifpl.evaluate("(integer+ 1 2")
 
         # Catch specific eval error
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(/ 1 0)")
+            aifpl.evaluate("(integer/ 1 0)")
 
     def test_exception_chaining_preservation(self, aifpl):
         """Test that exception chaining is preserved where appropriate."""
@@ -564,10 +564,10 @@ class TestErrors:
         """Test that errors properly terminate evaluation."""
         # After an error, the evaluator should be in a clean state for next evaluation
         with pytest.raises(AIFPLError):
-            aifpl.evaluate("(/ 1 0)")
+            aifpl.evaluate("(integer/ 1 0)")
 
         # Next evaluation should work normally
-        result = aifpl.evaluate("(+ 1 2)")
+        result = aifpl.evaluate("(integer+ 1 2)")
         assert result == 3
 
     def test_complex_error_scenarios(self, aifpl):
@@ -577,7 +577,7 @@ class TestErrors:
         (let ((x 10))
           (let ((f (lambda (y)
                     (if (> y 0)
-                        (+ x (/ y 0))
+                        (integer+ x (integer/ y 0))
                         y))))
             (f 5)))
         '''
@@ -587,8 +587,8 @@ class TestErrors:
 
         # Error in deeply nested functional composition
         nested_functional = '''
-        (fold + 0
-              (map (lambda (x) (/ x 0))
+        (fold integer+ 0
+              (map (lambda (x) (integer/ x 0))
                    (filter (lambda (x) (> x 0))
                            (list 1 2 3))))
         '''

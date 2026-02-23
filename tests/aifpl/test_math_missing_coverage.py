@@ -16,7 +16,7 @@ class TestMathMissingCoverage:
         complex_values = [
             "(complex 1 2)",
             "1j",
-            "(+ 3 1j)",
+            "(complex 3 1)",
             "(complex -1 5)"
         ]
 
@@ -155,12 +155,9 @@ class TestMathMissingCoverage:
                 with pytest.raises(AIFPLEvalError, match=f"Function '{func}' has wrong number of arguments"):
                     aifpl.evaluate(f"({func} 1 2)")
 
-        # pow function requires exactly 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function 'pow' has wrong number of arguments"):
-            aifpl.evaluate("(pow 2)")
-
-        with pytest.raises(AIFPLEvalError, match="Function 'pow' has wrong number of arguments"):
-            aifpl.evaluate("(pow 2 3 4)")
+        # float-expt function requires at least 2 arguments
+        with pytest.raises(AIFPLEvalError, match="Function 'float-expt' has wrong number of arguments"):
+            aifpl.evaluate("(float-expt 2.0)")
 
     def test_rounding_functions_with_complex_numbers(self, aifpl):
         """Test rounding functions with complex numbers (should fail)."""
@@ -301,30 +298,6 @@ class TestMathMissingCoverage:
         with pytest.raises(AIFPLEvalError, match="Function 'not' requires boolean arguments"):
             aifpl.evaluate('(not "hello")')
 
-    def test_arithmetic_operations_with_non_numeric_arguments(self, aifpl):
-        """Test arithmetic operations with non-numeric arguments."""
-        # Test individual cases to avoid the loop issue
-        with pytest.raises(AIFPLEvalError, match="Function '\\+' requires number arguments"):
-            aifpl.evaluate('(+ "hello" 5)')
-
-        with pytest.raises(AIFPLEvalError, match="Function '-' requires number arguments"):
-            aifpl.evaluate('(- "hello" 5)')
-
-        with pytest.raises(AIFPLEvalError, match="Function '\\*' requires number arguments"):
-            aifpl.evaluate('(* "hello" 5)')
-
-        with pytest.raises(AIFPLEvalError, match="Function '/' requires number arguments"):
-            aifpl.evaluate('(/ "hello" 5)')
-
-        with pytest.raises(AIFPLEvalError, match="Function '//' requires real number arguments"):
-            aifpl.evaluate('(// "hello" 5)')
-
-        with pytest.raises(AIFPLEvalError, match="Function '%' requires real number arguments"):
-            aifpl.evaluate('(% "hello" 5)')
-
-        with pytest.raises(AIFPLEvalError, match="Function '\\*\\*' requires number arguments"):
-            aifpl.evaluate('(** "hello" 5)')
-
     def test_floor_division_and_modulo_argument_validation(self, aifpl):
         """Test floor division and modulo argument count validation."""
         # Floor division requires exactly 2 arguments
@@ -340,12 +313,3 @@ class TestMathMissingCoverage:
 
         with pytest.raises(AIFPLEvalError, match="Function '%' has wrong number of arguments"):
             aifpl.evaluate("(% 10 3 2)")
-
-    def test_exponentiation_argument_validation(self, aifpl):
-        """Test exponentiation argument count validation."""
-        # ** requires exactly 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function '\\*\\*' has wrong number of arguments"):
-            aifpl.evaluate("(** 2)")
-
-        with pytest.raises(AIFPLEvalError, match="Function '\\*\\*' has wrong number of arguments"):
-            aifpl.evaluate("(** 2 3 4)")

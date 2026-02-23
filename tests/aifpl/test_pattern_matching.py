@@ -59,12 +59,12 @@ class TestPatternMatching:
 
     @pytest.mark.parametrize("expression,expected", [
         # Simple variable binding
-        ('(match 42 (x (* x 2)))', '84'),
+        ('(match 42 (x (integer* x 2)))', '84'),
         ('(match "hello" (s (string-length s)))', '5'),
         ('(match #t (b (if b "yes" "no")))', '"yes"'),
 
         # Variable binding with multiple patterns
-        ('(match 10 (5 "five") (x (+ x 1)))', '11'),
+        ('(match 10 (5 "five") (x (integer+ x 1)))', '11'),
         ('(match "world" ("hello" "greeting") (s (string-upcase s)))', '"WORLD"'),
 
         # Variable binding in complex expressions
@@ -80,26 +80,26 @@ class TestPatternMatching:
         # Variable bound in pattern should not be available outside
         helpers.assert_evaluates_to(
             aifpl,
-            '(let ((result (match 42 (x (* x 2))))) result)',
+            '(let ((result (match 42 (x (integer* x 2))))) result)',
             '84'
         )
 
         # Variable x should not be defined outside the match
         with pytest.raises(AIFPLEvalError, match="Undefined variable"):
-            aifpl.evaluate('(let ((result (match 42 (x (* x 2))))) (+ result x))')
+            aifpl.evaluate('(let ((result (match 42 (x (integer* x 2))))) (integer+ result x))')
 
     def test_variable_binding_shadowing(self, aifpl, helpers):
         """Test that pattern variables can shadow outer bindings."""
         helpers.assert_evaluates_to(
             aifpl,
-            '(let ((x 10)) (match 5 (x (* x 3))))',
+            '(let ((x 10)) (match 5 (x (integer* x 3))))',
             '15'  # Inner x (5) shadows outer x (10)
         )
 
         # Outer x should still be accessible after match
         helpers.assert_evaluates_to(
             aifpl,
-            '(let ((x 10)) (let ((result (match 5 (x (* x 3))))) (+ result x)))',
+            '(let ((x 10)) (let ((result (match 5 (x (integer* x 3))))) (integer+ result x)))',
             '25'  # 15 + 10
         )
 
@@ -126,18 +126,18 @@ class TestPatternMatching:
         """Test that wildcard patterns don't create variable bindings."""
         # Wildcard should not create a binding for _
         with pytest.raises(AIFPLEvalError, match="Undefined variable"):
-            aifpl.evaluate('(match 42 (_ (+ _ 1)))')
+            aifpl.evaluate('(match 42 (_ (integer+ _ 1)))')
 
     # ========== Type Pattern Matching ==========
 
     @pytest.mark.parametrize("expression,expected", [
         # Number type patterns
-        ('(match 42 ((number? n) (+ n 1)) (_ "not number"))', '43'),
-        ('(match "hello" ((number? n) (+ n 1)) (_ "not number"))', '"not number"'),
+        ('(match 42 ((number? n) (integer+ n 1)) (_ "not number"))', '43'),
+        ('(match "hello" ((number? n) (integer+ n 1)) (_ "not number"))', '"not number"'),
 
         # Integer type patterns
-        ('(match 42 ((integer? i) (* i 2)) (_ "not integer"))', '84'),
-        ('(match 3.14 ((integer? i) (* i 2)) (_ "not integer"))', '"not integer"'),
+        ('(match 42 ((integer? i) (integer* i 2)) (_ "not integer"))', '84'),
+        ('(match 3.14 ((integer? i) (integer* i 2)) (_ "not integer"))', '"not integer"'),
 
         # Float type patterns
         ('(match 3.14 ((float? f) (round f)) (_ "not float"))', '3'),
@@ -172,7 +172,7 @@ class TestPatternMatching:
         # Variable should be bound and usable in the body
         helpers.assert_evaluates_to(
             aifpl,
-            '(match 42 ((number? n) (let ((doubled (* n 2))) doubled)))',
+            '(match 42 ((number? n) (let ((doubled (integer* n 2))) doubled)))',
             '84'
         )
 
@@ -206,16 +206,16 @@ class TestPatternMatching:
         ('(match (list 1) (() "empty") (_ "non-empty"))', '"non-empty"'),
 
         # Fixed-length list patterns
-        ('(match (list 1 2 3) ((a b c) (+ a b c)) (_ "wrong length"))', '6'),
-        ('(match (list 1 2) ((a b c) (+ a b c)) (_ "wrong length"))', '"wrong length"'),
+        ('(match (list 1 2 3) ((a b c) (integer+ a b c)) (_ "wrong length"))', '6'),
+        ('(match (list 1 2) ((a b c) (integer+ a b c)) (_ "wrong length"))', '"wrong length"'),
         ('(match (list "x" "y") ((a b) (string-append a b)) (_ "other"))', '"xy"'),
 
         # Single element list patterns
-        ('(match (list 42) ((x) (* x 2)) (_ "not single"))', '84'),
-        ('(match (list 1 2) ((x) (* x 2)) (_ "not single"))', '"not single"'),
+        ('(match (list 42) ((x) (integer* x 2)) (_ "not single"))', '84'),
+        ('(match (list 1 2) ((x) (integer* x 2)) (_ "not single"))', '"not single"'),
 
         # Nested list patterns
-        ('(match (list (list 1 2) (list 3 4)) (((a b) (c d)) (+ a b c d)) (_ "other"))', '10'),
+        ('(match (list (list 1 2) (list 3 4)) (((a b) (c d)) (integer+ a b c d)) (_ "other"))', '10'),
     ])
     def test_list_structure_patterns(self, aifpl, expression, expected):
         """Test list structure pattern matching."""
@@ -277,7 +277,7 @@ class TestPatternMatching:
         # Nested list with type patterns
         complex_pattern = '''
         (match (list (list 1 2) "test" (list 3 4))
-               (((a b) (string? s) (c d)) (list (+ a b c d) (string-length s)))
+               (((a b) (string? s) (c d)) (list (integer+ a b c d) (string-length s)))
                (_ "no match"))
         '''
         helpers.assert_evaluates_to(aifpl, complex_pattern, '(10 4)')
@@ -286,7 +286,7 @@ class TestPatternMatching:
         mixed_pattern = '''
         (match (list 42 (list "x" "y") #t)
                (((number? n) (a b) (boolean? flag))
-                (if flag (+ n (string-length (string-append a b))) n))
+                (if flag (integer+ n (string-length (string-append a b))) n))
                (_ "no match"))
         '''
         helpers.assert_evaluates_to(aifpl, mixed_pattern, '44')  # 42 + 2
@@ -296,14 +296,14 @@ class TestPatternMatching:
         # Pattern matching with additional conditions
         guarded_pattern = '''
         (match 15
-               ((number? n) (if (> n 10) (* n 2) n))
+               ((number? n) (if (> n 10) (integer* n 2) n))
                (_ "not number"))
         '''
         helpers.assert_evaluates_to(aifpl, guarded_pattern, '30')
 
         guarded_pattern_2 = '''
         (match 5
-               ((number? n) (if (> n 10) (* n 2) n))
+               ((number? n) (if (> n 10) (integer* n 2) n))
                (_ "not number"))
         '''
         helpers.assert_evaluates_to(aifpl, guarded_pattern_2, '5')
@@ -315,7 +315,7 @@ class TestPatternMatching:
         let_with_match = '''
         (let ((data (list 1 2 3)))
           (match data
-                 ((a b c) (+ a b c))
+                 ((a b c) (integer+ a b c))
                  (_ 0)))
         '''
         helpers.assert_evaluates_to(aifpl, let_with_match, '6')
@@ -323,9 +323,9 @@ class TestPatternMatching:
         # Let binding used in pattern result
         let_in_result = '''
         (match 42
-               (x (let ((doubled (* x 2))
-                        (tripled (* x 3)))
-                    (+ doubled tripled)))
+               (x (let ((doubled (integer* x 2))
+                        (tripled (integer* x 3)))
+                    (integer+ doubled tripled)))
                (_ 0))
         '''
         helpers.assert_evaluates_to(aifpl, let_in_result, '210')  # 84 + 126
@@ -335,7 +335,7 @@ class TestPatternMatching:
         # Lambda in pattern result
         lambda_result = '''
         (match 5
-               (x ((lambda (n) (* n n)) x))
+               (x ((lambda (n) (integer* n n)) x))
                (_ 0))
         '''
         helpers.assert_evaluates_to(aifpl, lambda_result, '25')
@@ -344,7 +344,7 @@ class TestPatternMatching:
         pattern_function = '''
         (let ((matcher (lambda (val)
                         (match val
-                               ((number? n) (* n 2))
+                               ((number? n) (integer* n 2))
                                ((string? s) (string-length s))
                                (_ 0)))))
           (list (matcher 21) (matcher "hello") (matcher #t)))
@@ -357,7 +357,7 @@ class TestPatternMatching:
         map_with_match = '''
         (map (lambda (item)
                (match item
-                      ((number? n) (* n 2))
+                      ((number? n) (integer* n 2))
                       ((string? s) (string-length s))
                       (_ 0)))
              (list 5 "hello" #t 10))
@@ -380,7 +380,7 @@ class TestPatternMatching:
         (match (list 1 (list 2 3))
                ((a (list? inner))
                 (match inner
-                       ((b c) (+ a b c))
+                       ((b c) (integer+ a b c))
                        (_ a)))
                (_ 0))
         '''
@@ -480,16 +480,16 @@ class TestPatternMatching:
         """Test error handling in pattern result evaluation."""
         # Division by zero in pattern result
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate('(match 42 (x (/ x 0)) (_ "other"))')
+            aifpl.evaluate('(match 42 (x (float/ (float x) 0.0)) (_ "other"))')
 
         # Type error in pattern result
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(match 42 (x (+ x "hello")) (_ "other"))')
+            aifpl.evaluate('(match 42 (x (integer+ x "hello")) (_ "other"))')
 
     def test_undefined_variable_in_pattern_result(self, aifpl):
         """Test undefined variable errors in pattern results."""
         with pytest.raises(AIFPLEvalError, match="Undefined variable"):
-            aifpl.evaluate('(match 42 (x (+ x undefined-var)) (_ "other"))')
+            aifpl.evaluate('(match 42 (x (integer+ x undefined-var)) (_ "other"))')
 
     # ========== Practical Examples and Real-World Usage ==========
 
@@ -511,7 +511,7 @@ class TestPatternMatching:
         (letrec ((my-length (lambda (lst)
                              (match lst
                                     (() 0)
-                                    ((head . tail) (+ 1 (my-length tail)))))))
+                                    ((head . tail) (integer+ 1 (my-length tail)))))))
           (my-length (list 1 2 3 4 5)))
         '''
         helpers.assert_evaluates_to(aifpl, list_length, '5')
@@ -547,7 +547,7 @@ class TestPatternMatching:
         (letrec ((sum-tree (lambda (tree)
                             (match tree
                                    ((number? n) n)
-                                   ((left right) (+ (sum-tree left) (sum-tree right)))
+                                   ((left right) (integer+ (sum-tree left) (sum-tree right)))
                                    (_ 0)))))
           (sum-tree (list (list 1 2) (list 3 4))))
         '''
@@ -560,7 +560,8 @@ class TestPatternMatching:
         (let ((safe-divide (lambda (a b)
                             (if (= b 0)
                                 (list "none")
-                                (list "some" (/ a b)))))
+                                (list "some" (float/ (float a) (float b)))))
+              )
               (get-value (lambda (option)
                           (match option
                                  (("none") "no value")
@@ -577,8 +578,8 @@ class TestPatternMatching:
         command_processor = '''
         (let ((execute (lambda (cmd)
                         (match cmd
-                               (("add" (number? a) (number? b)) (+ a b))
-                               (("multiply" (number? a) (number? b)) (* a b))
+                               (("add" (number? a) (number? b)) (integer+ a b))
+                               (("multiply" (number? a) (number? b)) (integer* a b))
                                (("greet" (string? name)) (string-append "Hello, " name))
                                (("length" (string? s)) (string-length s))
                                (_ "unknown command")))))
@@ -609,7 +610,7 @@ class TestPatternMatching:
         # Deeply nested list patterns
         deep_nesting = '''
         (match (list (list (list 1 2) (list 3 4)) (list (list 5 6) (list 7 8)))
-               ((((a b) (c d)) ((e f) (g h))) (+ a b c d e f g h))
+               ((((a b) (c d)) ((e f) (g h))) (integer+ a b c d e f g h))
                (_ "no match"))
         '''
         helpers.assert_evaluates_to(aifpl, deep_nesting, '36')  # 1+2+3+4+5+6+7+8
@@ -620,8 +621,8 @@ class TestPatternMatching:
         complex_fold = '''
         (fold (lambda (acc item)
                 (match item
-                       ((number? n) (+ acc n))
-                       ((string? s) (+ acc (string-length s)))
+                       ((number? n) (integer+ acc n))
+                       ((string? s) (integer+ acc (string-length s)))
                        (_ acc)))
               0
               (list 10 "hello" #t 20 "world" (list 1 2)))
@@ -634,7 +635,7 @@ class TestPatternMatching:
                                   (match data
                                          ((number? n) n)
                                          ((string? s) (string-length s))
-                                         ((list? l) (fold + 0 (map process-nested l)))
+                                         ((list? l) (fold integer+ 0 (map process-nested l)))
                                          (_ 0)))))
           (process-nested (list 10 "test" (list 5 "hi") 20)))
         '''

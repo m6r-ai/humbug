@@ -77,7 +77,7 @@ class TestVariadicLambdaArithmetic:
         """Variadic sum with zero arguments returns identity 0."""
         expr = '''
         (let ((my-sum (lambda (. args)
-                        (fold + 0 args))))
+                        (fold integer+ 0 args))))
           (my-sum))
         '''
         assert aifpl.evaluate_and_format(expr) == '0'
@@ -86,7 +86,7 @@ class TestVariadicLambdaArithmetic:
         """Variadic sum with one argument returns that argument."""
         expr = '''
         (let ((my-sum (lambda (. args)
-                        (fold + 0 args))))
+                        (fold integer+ 0 args))))
           (my-sum 7))
         '''
         assert aifpl.evaluate_and_format(expr) == '7'
@@ -95,7 +95,7 @@ class TestVariadicLambdaArithmetic:
         """Variadic sum with multiple arguments folds correctly."""
         expr = '''
         (let ((my-sum (lambda (. args)
-                        (fold + 0 args))))
+                        (fold integer+ 0 args))))
           (my-sum 1 2 3 4 5))
         '''
         assert aifpl.evaluate_and_format(expr) == '15'
@@ -104,7 +104,7 @@ class TestVariadicLambdaArithmetic:
         """Variadic product using fold."""
         expr = '''
         (let ((my-product (lambda (. args)
-                            (fold * 1 args))))
+                            (fold integer* 1 args))))
           (my-product 2 3 4))
         '''
         assert aifpl.evaluate_and_format(expr) == '24'
@@ -181,7 +181,7 @@ class TestVariadicLambdaHigherOrder:
         # fold calls (f acc element) with exactly 2 args
         expr = '''
         (let ((my-add (lambda (a . rest)
-                        (fold + a rest))))
+                        (fold integer+ a rest))))
           (fold my-add 0 (list 1 2 3 4)))
         '''
         assert aifpl.evaluate_and_format(expr) == '10'
@@ -191,7 +191,7 @@ class TestVariadicLambdaHigherOrder:
         expr = '''
         (let ((make-adder (lambda (base)
                             (lambda (. args)
-                              (fold + base args)))))
+                              (fold integer+ base args)))))
           (let ((add-from-10 (make-adder 10)))
             (add-from-10 1 2 3)))
         '''
@@ -203,7 +203,7 @@ class TestVariadicLambdaHigherOrder:
         (letrec ((sum-all (lambda (. args)
                             (letrec ((loop (lambda (lst acc)
                                              (if (null? lst) acc
-                                                 (loop (rest lst) (+ acc (first lst)))))))
+                                                 (loop (rest lst) (integer+ acc (first lst)))))))
                               (loop args 0)))))
           (sum-all 10 20 30))
         '''
@@ -212,8 +212,8 @@ class TestVariadicLambdaHigherOrder:
     def test_variadic_stored_in_list(self, aifpl):
         """Variadic functions stored in a list and retrieved by index."""
         expr = '''
-        (let ((ops (list (lambda (. args) (fold + 0 args))
-                         (lambda (. args) (fold * 1 args)))))
+        (let ((ops (list (lambda (. args) (fold integer+ 0 args))
+                         (lambda (. args) (fold integer* 1 args)))))
           (list ((first ops) 1 2 3)
                 ((list-ref ops 1) 2 3 4)))
         '''
@@ -229,7 +229,7 @@ class TestVariadicLambdaTailCalls:
         (let ((sum-all (lambda (. args)
                          (letrec ((loop (lambda (lst acc)
                                           (if (null? lst) acc
-                                              (loop (rest lst) (+ acc (first lst)))))))
+                                              (loop (rest lst) (integer+ acc (first lst)))))))
                            (loop args 0)))))
           (sum-all 1 2 3 4 5 6 7 8 9 10))
         '''
@@ -242,7 +242,7 @@ class TestVariadicLambdaTailCalls:
         (let ((sum-all (lambda (. args)
                          (letrec ((loop (lambda (lst acc)
                                           (if (null? lst) acc
-                                              (loop (rest lst) (+ acc (first lst)))))))
+                                              (loop (rest lst) (integer+ acc (first lst)))))))
                            (loop args 0)))))
           (fold (lambda (f x) (f x))
                 sum-all
@@ -254,7 +254,7 @@ class TestVariadicLambdaTailCalls:
         (let ((sum-all (lambda (. args)
                          (letrec ((loop (lambda (lst acc)
                                           (if (null? lst) acc
-                                              (loop (rest lst) (+ acc (first lst)))))))
+                                              (loop (rest lst) (integer+ acc (first lst)))))))
                            (loop args 0)))))
           (sum-all 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20))
         '''
@@ -307,7 +307,7 @@ class TestVariadicLambdaClosures:
         """Rest-parameter lambda can close over an outer binding."""
         expr = '''
         (let ((base 100))
-          ((lambda (. args) (fold + base args)) 1 2 3))
+          ((lambda (. args) (fold integer+ base args)) 1 2 3))
         '''
         assert aifpl.evaluate_and_format(expr) == '106'
 
@@ -316,7 +316,7 @@ class TestVariadicLambdaClosures:
         expr = '''
         (let ((scale 3))
           (let ((scale-and-sum (lambda (. args)
-                                 (fold + 0 (map (lambda (x) (* x scale)) args)))))
+                                 (fold integer+ 0 (map (lambda (x) (integer* x scale)) args)))))
             (scale-and-sum 1 2 3 4)))
         '''
         # (1+2+3+4)*3 = 30
@@ -327,7 +327,7 @@ class TestVariadicLambdaClosures:
         expr = '''
         (let ((make-accumulator (lambda (init)
                                   (lambda (. args)
-                                    (fold + init args)))))
+                                    (fold integer+ init args)))))
           (let ((acc (make-accumulator 1000)))
             (acc 1 2 3)))
         '''

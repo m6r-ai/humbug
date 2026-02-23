@@ -13,23 +13,20 @@ class TestAIFPLMathEdgeCases:
     def test_division_edge_cases(self, aifpl):
         """Test division edge cases beyond basic division by zero."""
         # Division by very small numbers
-        result = aifpl.evaluate("(/ 1 0.001)")
+        result = aifpl.evaluate("(float/ 1.0 0.001)")
         assert abs(result - 1000.0) < 1e-10
 
-        result = aifpl.evaluate("(/ 1 1e-10)")
+        result = aifpl.evaluate("(float/ 1.0 1e-10)")
         assert abs(result - 1e10) < 1e-5
 
         # Division resulting in very small numbers
-        result = aifpl.evaluate("(/ 1e-10 1)")
+        result = aifpl.evaluate("(float/ 1e-10 1.0)")
         assert abs(result - 1e-10) < 1e-15
 
-        result = aifpl.evaluate("(/ 1 1000000)")
+        result = aifpl.evaluate("(float/ 1.0 1000000.0)")
         assert abs(result - 1e-6) < 1e-12
 
-        # Integer vs float division
-        result = aifpl.evaluate("(/ 5 2)")
-        assert result == 2.5
-
+        # Floor division (integer inputs)
         result = aifpl.evaluate("(// 5 2)")
         assert result == 2
 
@@ -37,7 +34,7 @@ class TestAIFPLMathEdgeCases:
         assert result == 1
 
         # Negative number division
-        result = aifpl.evaluate("(/ -10 3)")
+        result = aifpl.evaluate("(float/ -10.0 3.0)")
         assert abs(result - (-10/3)) < 1e-10
 
         result = aifpl.evaluate("(// -10 3)")
@@ -50,10 +47,10 @@ class TestAIFPLMathEdgeCases:
         """Test comprehensive division by zero scenarios."""
         # Basic division by zero
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate("(/ 1 0)")
+            aifpl.evaluate("(float/ 1.0 0.0)")
 
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate("(/ 5 2 0)")
+            aifpl.evaluate("(integer/ 1 0)")
 
         # Floor division by zero
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
@@ -65,44 +62,44 @@ class TestAIFPLMathEdgeCases:
 
         # Division by zero in complex expressions
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate("(+ 1 (/ 2 0))")
+            aifpl.evaluate("(integer+ 1 (integer/ 2 0))")
 
         # Division by expression that evaluates to zero
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate("(/ 5 (- 3 3))")
+            aifpl.evaluate("(float/ 5.0 (float- 3.0 3.0))")
 
     def test_power_and_exponentiation_edge_cases(self, aifpl):
         """Test power and exponentiation edge cases."""
-        # Special power cases
-        assert aifpl.evaluate("(** 0 0)") == 1  # 0^0 = 1 by convention
-        assert aifpl.evaluate("(** 1 1000)") == 1  # 1^anything = 1
-        assert aifpl.evaluate("(** 2 0)") == 1  # anything^0 = 1
-        assert aifpl.evaluate("(** -1 2)") == 1  # (-1)^even = 1
-        assert aifpl.evaluate("(** -1 3)") == -1  # (-1)^odd = -1
+        # Special power cases using expt
+        assert aifpl.evaluate("(float-expt 0.0 0.0)") == 1.0  # 0^0 = 1 by convention
+        assert aifpl.evaluate("(float-expt 1.0 1000.0)") == 1.0  # 1^anything = 1
+        assert aifpl.evaluate("(float-expt 2.0 0.0)") == 1.0  # anything^0 = 1
+        assert aifpl.evaluate("(float-expt -1.0 2.0)") == 1.0  # (-1)^even = 1
+        assert aifpl.evaluate("(float-expt -1.0 3.0)") == -1.0  # (-1)^odd = -1
 
         # Negative exponents
-        result = aifpl.evaluate("(** 2 -1)")
+        result = aifpl.evaluate("(float-expt 2.0 -1.0)")
         assert abs(result - 0.5) < 1e-10
 
-        result = aifpl.evaluate("(** 4 -2)")
+        result = aifpl.evaluate("(float-expt 4.0 -2.0)")
         assert abs(result - 0.0625) < 1e-10
 
         # Fractional exponents (roots)
-        result = aifpl.evaluate("(** 4 0.5)")
+        result = aifpl.evaluate("(float-expt 4.0 0.5)")
         assert abs(result - 2.0) < 1e-10
 
-        result = aifpl.evaluate("(** 8 0.3333333333333333)")
+        result = aifpl.evaluate("(float-expt 8.0 0.3333333333333333)")
         assert abs(result - 2.0) < 0.1  # Cube root approximation
 
         # Large exponents
-        result = aifpl.evaluate("(** 10 10)")
-        assert result == 10000000000
+        result = aifpl.evaluate("(float-expt 10.0 10.0)")
+        assert result == 10000000000.0
 
-        # Complex exponentiation
-        result = aifpl.evaluate("(** 1j 2)")
+        # Complex exponentiation via expt
+        result = aifpl.evaluate("(complex-expt 1j 2+0j)")
         assert abs(result - (-1)) < 1e-10
 
-        result = aifpl.evaluate("(** (complex 1 1) 2)")
+        result = aifpl.evaluate("(complex-expt (complex 1 1) 2+0j)")
         expected = (1+1j)**2
         assert abs(result - expected) < 1e-10
 
@@ -140,7 +137,7 @@ class TestAIFPLMathEdgeCases:
         result = aifpl.evaluate("(sin 0)")
         assert abs(result - 0) < 1e-10
 
-        result = aifpl.evaluate("(sin (* pi 0.5))")
+        result = aifpl.evaluate("(sin (float* pi 0.5))")
         assert abs(result - 1) < 1e-10
 
         result = aifpl.evaluate("(sin pi)")
@@ -149,7 +146,7 @@ class TestAIFPLMathEdgeCases:
         result = aifpl.evaluate("(cos 0)")
         assert abs(result - 1) < 1e-10
 
-        result = aifpl.evaluate("(cos (* pi 0.5))")
+        result = aifpl.evaluate("(cos (float* pi 0.5))")
         assert abs(result - 0) < 1e-10
 
         result = aifpl.evaluate("(cos pi)")
@@ -158,14 +155,14 @@ class TestAIFPLMathEdgeCases:
         result = aifpl.evaluate("(tan 0)")
         assert abs(result - 0) < 1e-10
 
-        result = aifpl.evaluate("(tan (* pi 0.25))")
+        result = aifpl.evaluate("(tan (float* pi 0.25))")
         assert abs(result - 1) < 1e-10
 
         # Negative angles
-        result = aifpl.evaluate("(sin (* -1 pi))")
+        result = aifpl.evaluate("(sin (float* -1.0 pi))")
         assert abs(result - 0) < 1e-10
 
-        result = aifpl.evaluate("(cos (* -1 pi))")
+        result = aifpl.evaluate("(cos (float* -1.0 pi))")
         assert abs(result - (-1)) < 1e-10
 
         # Very small angles (sin(x) ≈ x for small x)
@@ -173,10 +170,10 @@ class TestAIFPLMathEdgeCases:
         assert abs(result - 0.001) < 1e-6
 
         # Large angles (periodicity)
-        result = aifpl.evaluate("(sin (* 2 pi))")
+        result = aifpl.evaluate("(sin (float* 2.0 pi))")
         assert abs(result - 0) < 1e-10
 
-        result = aifpl.evaluate("(cos (* 2 pi))")
+        result = aifpl.evaluate("(cos (float* 2.0 pi))")
         assert abs(result - 1) < 1e-10
 
     def test_trigonometric_with_complex_numbers(self, aifpl):
@@ -299,11 +296,11 @@ class TestAIFPLMathEdgeCases:
         assert abs(result - math.exp(-10)) < 1e-15
 
         # exp(i*pi) = -1 (Euler's identity)
-        result = aifpl.evaluate("(exp (* 1j pi))")
+        result = aifpl.evaluate("(exp (complex* 1j (complex pi 0.0)))")
         assert abs(result - (-1)) < 1e-10
 
         # exp(i*pi/2) = i
-        result = aifpl.evaluate("(exp (* 1j pi 0.5))")
+        result = aifpl.evaluate("(exp (complex* 1j (complex (float* pi 0.5) 0.0)))")
         assert abs(result - 1j) < 1e-10
 
     def test_absolute_value_edge_cases(self, aifpl):
@@ -379,7 +376,7 @@ class TestAIFPLMathEdgeCases:
             "(complex 1 2)",
             "1j",
             "(complex 3 4)",
-            "(+ 5 1j)",
+            "(complex+ (complex 5 0) (complex 0 1))",
         ]
 
         for value in complex_values:
@@ -589,13 +586,13 @@ class TestAIFPLMathEdgeCases:
         assert aifpl.evaluate("(imag 1j)") == 1
 
         # Complex arithmetic edge cases
-        result = aifpl.evaluate("(+ (complex 1 2) (complex 3 4))")
+        result = aifpl.evaluate("(complex+ (complex 1 2) (complex 3 4))")
         assert result == 4+6j
 
-        result = aifpl.evaluate("(* (complex 1 2) (complex 3 4))")
+        result = aifpl.evaluate("(complex* (complex 1 2) (complex 3 4))")
         assert result == (1+2j)*(3+4j)
 
-        result = aifpl.evaluate("(/ (complex 4 2) (complex 1 1))")
+        result = aifpl.evaluate("(complex/ (complex 4 2) (complex 1 1))")
         expected = (4+2j)/(1+1j)
         assert abs(result - expected) < 1e-10
 
@@ -614,47 +611,21 @@ class TestAIFPLMathEdgeCases:
         assert j_value == 1j
 
         # Use constants in expressions
-        result = aifpl.evaluate("(* 2 pi)")
+        result = aifpl.evaluate("(float* 2.0 pi)")
         assert abs(result - (2 * math.pi)) < 1e-10
 
-        result = aifpl.evaluate("(** e 2)")
+        result = aifpl.evaluate("(float-expt e 2.0)")
         assert abs(result - (math.e ** 2)) < 1e-10
 
-        result = aifpl.evaluate("(* 1j 1j)")
+        result = aifpl.evaluate("(complex* 1j 1j)")
         assert abs(result - (-1)) < 1e-10
-
-    def test_arithmetic_type_coercion_edge_cases(self, aifpl):
-        """Test arithmetic type coercion edge cases."""
-        # Integer to float coercion
-        result = aifpl.evaluate("(+ 1 2.5)")
-        assert result == 3.5
-        assert isinstance(result, float)
-
-        result = aifpl.evaluate("(* 2 3.0)")
-        assert result == 6.0
-        assert isinstance(result, float)
-
-        # Float to complex coercion
-        result = aifpl.evaluate("(+ 2.5 1j)")
-        assert result == 2.5+1.0j
-        assert isinstance(result, complex)
-
-        # Integer to complex coercion
-        result = aifpl.evaluate("(+ 1 1j)")
-        assert result == 1.0+1.0j
-        assert isinstance(result, complex)
-
-        # Mixed operations
-        result = aifpl.evaluate("(+ 1 2.5 1j)")
-        assert result == 3.5+1.0j
-        assert isinstance(result, complex)
 
     def test_infinity_and_nan_edge_cases(self, aifpl):
         """Test handling of infinity and NaN values."""
         # Test operations that might produce infinity
         try:
             # Very large exponentiation
-            result = aifpl.evaluate("(** 10 1000)")
+            result = aifpl.evaluate("(float-expt 10.0 1000.0)")
             # This might be infinity or a very large number
             if math.isinf(result):
                 assert result > 0  # Should be positive infinity
@@ -664,7 +635,7 @@ class TestAIFPLMathEdgeCases:
 
         # Test operations with very large numbers
         try:
-            result = aifpl.evaluate("(* 1e100 1e100)")
+            result = aifpl.evaluate("(float* 1e100 1e100)")
             if math.isinf(result):
                 assert result > 0
             else:
@@ -675,7 +646,7 @@ class TestAIFPLMathEdgeCases:
         # Test operations that might produce NaN
         try:
             # 0/0 might produce NaN instead of error
-            result = aifpl.evaluate("(/ 0.0 0.0)")
+            result = aifpl.evaluate("(float/ 0.0 0.0)")
             if not isinstance(result, Exception) and not math.isnan(result):
                 # If it doesn't produce NaN or error, it should at least be handled
                 pass
@@ -686,19 +657,19 @@ class TestAIFPLMathEdgeCases:
     def test_mathematical_precision_limits(self, aifpl):
         """Test mathematical precision limits."""
         # Very small number operations
-        result = aifpl.evaluate("(+ 1e-100 1e-100)")
+        result = aifpl.evaluate("(float+ 1e-100 1e-100)")
         assert result == 2e-100
 
         # Operations near machine epsilon
-        result = aifpl.evaluate("(+ 1.0 1e-15)")
+        result = aifpl.evaluate("(float+ 1.0 1e-15)")
         assert result == 1.0 + 1e-15
 
         # Very large number operations
-        result = aifpl.evaluate("(+ 1e100 1e100)")
+        result = aifpl.evaluate("(float+ 1e100 1e100)")
         assert result == 2e100
 
         # Precision loss in floating point
-        result = aifpl.evaluate("(+ 1e20 1)")
+        result = aifpl.evaluate("(float+ 1e20 1.0)")
         # This might lose precision due to floating point limitations
         # The test just ensures it doesn't crash
         assert isinstance(result, (int, float))
@@ -706,21 +677,21 @@ class TestAIFPLMathEdgeCases:
     def test_mathematical_identities(self, aifpl):
         """Test that mathematical identities hold."""
         # Additive identity
-        assert aifpl.evaluate("(+ 5 0)") == 5
-        assert aifpl.evaluate("(+ 0 5)") == 5
+        assert aifpl.evaluate("(integer+ 5 0)") == 5
+        assert aifpl.evaluate("(integer+ 0 5)") == 5
 
         # Multiplicative identity
-        assert aifpl.evaluate("(* 5 1)") == 5
-        assert aifpl.evaluate("(* 1 5)") == 5
+        assert aifpl.evaluate("(integer* 5 1)") == 5
+        assert aifpl.evaluate("(integer* 1 5)") == 5
 
         # Multiplicative zero
-        assert aifpl.evaluate("(* 5 0)") == 0
-        assert aifpl.evaluate("(* 0 5)") == 0
+        assert aifpl.evaluate("(integer* 5 0)") == 0
+        assert aifpl.evaluate("(integer* 0 5)") == 0
 
-        # Exponentiation identities
-        assert aifpl.evaluate("(** 5 1)") == 5
-        assert aifpl.evaluate("(** 1 5)") == 1
-        assert aifpl.evaluate("(** 5 0)") == 1
+        # Exponentiation identities (using float-expt)
+        assert aifpl.evaluate("(float-expt 5.0 1.0)") == 5.0
+        assert aifpl.evaluate("(float-expt 1.0 5.0)") == 1.0
+        assert aifpl.evaluate("(float-expt 5.0 0.0)") == 1.0
 
         # Logarithm identities (approximately)
         result = aifpl.evaluate("(log (exp 5))")

@@ -34,13 +34,13 @@ class TestEvaluatorMissingCoverage:
     def test_lambda_invalid_single_parameter_number(self, aifpl):
         """Test lambda with invalid single parameter (number)."""
         with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(lambda 123 (+ 1 2))")
+            aifpl.evaluate("(lambda 123 (integer+ 1 2))")
         assert "must be a list" in str(exc_info.value)
 
     def test_lambda_invalid_single_parameter_string(self, aifpl):
         """Test lambda with invalid single parameter (string)."""
         with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate('(lambda "param" (+ 1 2))')
+            aifpl.evaluate('(lambda "param" (integer+ 1 2))')
         assert "must be a list" in str(exc_info.value)
 
     # ========== Let Form Validation Tests ==========
@@ -48,13 +48,13 @@ class TestEvaluatorMissingCoverage:
     def test_let_non_list_binding_structure(self, aifpl):
         """Test let with non-list binding structure."""
         with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(let 123 (+ 1 2))")
+            aifpl.evaluate("(let 123 (integer+ 1 2))")
         assert "binding list must be a list" in str(exc_info.value)
 
     def test_let_non_list_individual_binding(self, aifpl):
         """Test let with non-list individual binding."""
         with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(let (x (y 2)) (+ x y))")
+            aifpl.evaluate("(let (x (y 2)) (integer+ x y))")
         assert "binding 1 must be a list" in str(exc_info.value)
 
     # ========== Range Function Edge Cases ==========
@@ -107,16 +107,14 @@ class TestEvaluatorMissingCoverage:
 
     def test_builtin_function_formatting(self, aifpl):
         """Test formatting of builtin function references."""
-        # + is variadic so it keeps its native implementation for now.
-        result = aifpl.evaluate_and_format("+")
-        assert result == "<lambda (param0)>"
+        result = aifpl.evaluate_and_format("sqrt")
+        assert result == "<lambda (arg0)>"
 
     def test_builtin_function_formatting_various(self, aifpl):
         """Test formatting of various builtin functions."""
-        # Fixed-arity stubs describe as <lambda (arg0, ...)>; variadic natives as <builtin name (args)>
+        # Fixed-arity stubs describe as <lambda (arg0, ...)>
         cases = [
             ("sqrt", "<lambda (arg0)>"),          # unary fixed-arity — bytecode stub
-            ("+",    "<lambda (param0)>"),
             ("list", "<lambda (param0)>"),    # variadic — still native
         ]
         for func_name, expected in cases:
@@ -131,7 +129,7 @@ class TestEvaluatorMissingCoverage:
         (letrec ((factorial (lambda (n)
                               (if (<= n 1)
                                   1
-                                  (* n (factorial (- n 1)))))))
+                                  (integer* n (factorial (integer- n 1)))))))
           (factorial 5))
         """
         result = aifpl.evaluate(recursive_code)
@@ -143,11 +141,11 @@ class TestEvaluatorMissingCoverage:
         (letrec ((is-even (lambda (n)
                             (if (= n 0)
                                 #t
-                                (is-odd (- n 1)))))
+                                (is-odd (integer- n 1)))))
                  (is-odd (lambda (n)
                            (if (= n 0)
                                #f
-                               (is-even (- n 1))))))
+                               (is-even (integer- n 1))))))
           (is-even 4))
         """
         result = aifpl.evaluate(mutual_recursion_code)
@@ -207,7 +205,7 @@ class TestEvaluatorMissingCoverage:
     def test_builtin_functions_in_global_env(self, aifpl):
         """Test that builtin functions are available in global environment."""
         # Test that builtin functions are accessible
-        result = aifpl.evaluate("(+ 1 2)")
+        result = aifpl.evaluate("(integer+ 1 2)")
         assert result == 3
 
     # ========== Partial Coverage Branch Tests ==========
@@ -223,7 +221,7 @@ class TestEvaluatorMissingCoverage:
         assert result2 == 42
 
         # Multiple parameters
-        result3 = aifpl.evaluate("((lambda (x y) (+ x y)) 1 2)")
+        result3 = aifpl.evaluate("((lambda (x y) (integer+ x y)) 1 2)")
         assert result3 == 3
 
     def test_list_type_checking_branches(self, aifpl):
@@ -239,11 +237,11 @@ class TestEvaluatorMissingCoverage:
     def test_function_type_checking_branches(self, aifpl):
         """Test function type checking in various contexts."""
         # Test calling builtin function
-        result1 = aifpl.evaluate("(+ 1 2)")
+        result1 = aifpl.evaluate("(integer+ 1 2)")
         assert result1 == 3
 
         # Test calling lambda function
-        result2 = aifpl.evaluate("((lambda (x) (* x 2)) 5)")
+        result2 = aifpl.evaluate("((lambda (x) (integer* x 2)) 5)")
         assert result2 == 10
 
     # ========== Complex Integration Tests ==========
@@ -255,7 +253,7 @@ class TestEvaluatorMissingCoverage:
         (letrec ((countdown (lambda (n acc)
                              (if (= n 0)
                                  acc
-                                 (countdown (- n 1) (+ acc n))))))
+                                 (countdown (integer- n 1) (integer+ acc n))))))
           (countdown 10 0))
         """
         result = aifpl.evaluate(countdown_code)
@@ -268,8 +266,8 @@ class TestEvaluatorMissingCoverage:
         error_code = """
         (letrec ((error-func (lambda (n)
                               (if (= n 0)
-                                  (/ 1 0)
-                                  (error-func (- n 1))))))
+                                  (integer/ 1 0)
+                                  (error-func (integer- n 1))))))
           (error-func 3))
         """
         with pytest.raises(AIFPLEvalError) as exc_info:
@@ -285,6 +283,6 @@ class TestEvaluatorMissingCoverage:
         result2 = aifpl.evaluate("(or #f #t)")
         assert result2 is True
 
-        result3 = aifpl.evaluate("(map (lambda (x) (* x 2)) (list 1 2 3))")
+        result3 = aifpl.evaluate("(map (lambda (x) (integer* x 2)) (list 1 2 3))")
         expected = [2, 4, 6]
         assert result3 == expected

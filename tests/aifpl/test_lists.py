@@ -431,16 +431,16 @@ class TestLists:
     def test_list_arithmetic_not_supported(self, aifpl):
         """Test that lists don't support arithmetic operations."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(+ (list 1 2) (list 3 4))')
+            aifpl.evaluate('(integer+ (list 1 2) (list 3 4))')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(* (list 1 2) 3)')
+            aifpl.evaluate('(integer* (list 1 2) 3)')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(- (list 5 6) (list 1 2))')
+            aifpl.evaluate('(integer- (list 5 6) (list 1 2))')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(/ (list 10) (list 2))')
+            aifpl.evaluate('(integer/ (list 10) (list 2))')
 
     def test_list_function_arity_validation(self, aifpl):
         """Test that list functions validate argument counts."""

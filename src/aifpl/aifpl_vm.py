@@ -202,6 +202,7 @@ class AIFPLVM:
         table[Opcode.INTEGER_TO_STRING_BIN] = self._op_integer_to_string_bin
         table[Opcode.INTEGER_TO_STRING_HEX] = self._op_integer_to_string_hex
         table[Opcode.INTEGER_TO_STRING_OCT] = self._op_integer_to_string_oct
+        table[Opcode.INTEGER_TO_FLOAT] = self._op_integer_to_float
         table[Opcode.FLOAT_P] = self._op_float_p
         table[Opcode.FLOAT_EQ_P] = self._op_float_eq_p
         table[Opcode.FLOAT_NEQ_P] = self._op_float_neq_p
@@ -214,7 +215,7 @@ class AIFPLVM:
         table[Opcode.FLOAT_MUL] = self._op_float_mul
         table[Opcode.FLOAT_DIV] = self._op_float_div
         table[Opcode.FLOAT_NEG] = self._op_float_neg
-        table[Opcode.FLOAT_POW] = self._op_float_pow
+        table[Opcode.FLOAT_EXPT] = self._op_float_expt
         table[Opcode.FLOAT_SIN] = self._op_float_sin
         table[Opcode.FLOAT_COS] = self._op_float_cos
         table[Opcode.FLOAT_TAN] = self._op_float_tan
@@ -223,32 +224,31 @@ class AIFPLVM:
         table[Opcode.FLOAT_EXP] = self._op_float_exp
         table[Opcode.FLOAT_SQRT] = self._op_float_sqrt
         table[Opcode.FLOAT_ABS] = self._op_float_abs
+        table[Opcode.FLOAT_TO_INTEGER] = self._op_float_to_integer
         table[Opcode.REAL_LT] = self._op_real_lt
         table[Opcode.REAL_GT] = self._op_real_gt
         table[Opcode.REAL_LTE] = self._op_real_lte
         table[Opcode.REAL_GTE] = self._op_real_gte
         table[Opcode.REAL_FLOOR_DIV] = self._op_real_floor_div
         table[Opcode.REAL_MOD] = self._op_real_mod
-        table[Opcode.REAL_POW] = self._op_real_pow
+        table[Opcode.REAL_EXPT] = self._op_real_expt
         table[Opcode.REAL_FLOOR] = self._op_real_floor
         table[Opcode.REAL_CEIL] = self._op_real_ceil
         table[Opcode.REAL_ROUND] = self._op_real_round
-        table[Opcode.REAL_TO_INTEGER] = self._op_real_to_integer
-        table[Opcode.REAL_TO_FLOAT] = self._op_real_to_float
         table[Opcode.REAL_MIN] = self._op_real_min
         table[Opcode.REAL_MAX] = self._op_real_max
         table[Opcode.COMPLEX] = self._op_complex
         table[Opcode.COMPLEX_P] = self._op_complex_p
         table[Opcode.COMPLEX_EQ_P] = self._op_complex_eq_p
         table[Opcode.COMPLEX_NEQ_P] = self._op_complex_neq_p
-        table[Opcode.COMPLEX_REAL] = self._op_complex_real
-        table[Opcode.COMPLEX_IMAG] = self._op_complex_imag
         table[Opcode.COMPLEX_ADD] = self._op_complex_add
         table[Opcode.COMPLEX_SUB] = self._op_complex_sub
         table[Opcode.COMPLEX_MUL] = self._op_complex_mul
         table[Opcode.COMPLEX_DIV] = self._op_complex_div
         table[Opcode.COMPLEX_NEG] = self._op_complex_neg
-        table[Opcode.COMPLEX_POW] = self._op_complex_pow
+        table[Opcode.COMPLEX_REAL] = self._op_complex_real
+        table[Opcode.COMPLEX_IMAG] = self._op_complex_imag
+        table[Opcode.COMPLEX_EXPT] = self._op_complex_expt
         table[Opcode.COMPLEX_SIN] = self._op_complex_sin
         table[Opcode.COMPLEX_COS] = self._op_complex_cos
         table[Opcode.COMPLEX_TAN] = self._op_complex_tan
@@ -258,11 +258,6 @@ class AIFPLVM:
         table[Opcode.COMPLEX_ABS] = self._op_complex_abs
         table[Opcode.NUMBER_P] = self._op_number_p
         table[Opcode.NUMBER_EQ_P] = self._op_number_eq_p
-        table[Opcode.NUMBER_ADD] = self._op_number_add
-        table[Opcode.NUMBER_SUB] = self._op_number_sub
-        table[Opcode.NUMBER_MUL] = self._op_number_mul
-        table[Opcode.NUMBER_DIV] = self._op_number_div
-        table[Opcode.NUMBER_STAR_STAR] = self._op_number_star_star
         table[Opcode.NUMBER_SIN] = self._op_number_sin
         table[Opcode.NUMBER_COS] = self._op_number_cos
         table[Opcode.NUMBER_TAN] = self._op_number_tan
@@ -1204,6 +1199,15 @@ class AIFPLVM:
         self.stack.append(AIFPLString(f"#o{oct(a_val)[2:]}"))
         return None
 
+    def _op_integer_to_float(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_TO_FLOAT: Pop an integer, push as float."""
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'float')
+        self.stack.append(AIFPLFloat(float(a_val)))
+        return None
+
     def _op_float_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1325,13 +1329,13 @@ class AIFPLVM:
         self.stack.append(AIFPLFloat(-self._ensure_float(a, 'float-negate')))
         return None
 
-    def _op_float_pow(  # pylint: disable=useless-return
+    def _op_float_expt(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """FLOAT_POW: Pop two floats, push a ** b as float."""
+        """FLOAT_EXPT: Pop two floats, push a ** b as float."""
         b = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append(AIFPLFloat(self._ensure_float(a, 'float-pow') ** self._ensure_float(b, 'float-pow')))
+        self.stack.append(AIFPLFloat(self._ensure_float(a, 'float-expt') ** self._ensure_float(b, 'float-expt')))
         return None
 
     def _op_float_sin(  # pylint: disable=useless-return
@@ -1418,6 +1422,15 @@ class AIFPLVM:
         self.stack.append(AIFPLFloat(abs(self._ensure_float(a, 'float-abs'))))
         return None
 
+    def _op_float_to_integer(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_TO_INTEGER: Pop a float, push truncated integer."""
+        a = self.stack.pop()
+        a_val = self._ensure_float(a, 'integer')
+        self.stack.append(AIFPLInteger(int(a_val)))
+        return None
+
     def _op_real_lt(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1482,16 +1495,16 @@ class AIFPLVM:
         self.stack.append(self._wrap_numeric_result(a_val % b_val))
         return None
 
-    def _op_real_pow(  # pylint: disable=useless-return
+    def _op_real_expt(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """REAL_POW: Calculate a ** b."""
+        """REAL_EXPT: Calculate a ** b."""
         # Pop operands (b first, then a, so we compute a ** b)
         b = self.stack.pop()
         a = self.stack.pop()
 
-        a_val = self._ensure_real_number(a, 'pow')
-        b_val = self._ensure_real_number(b, 'pow')
+        a_val = self._ensure_real_number(a, 'expt')
+        b_val = self._ensure_real_number(b, 'expt')
         result = a_val ** b_val
         self.stack.append(self._wrap_numeric_result(result))
         return None
@@ -1523,24 +1536,6 @@ class AIFPLVM:
         a = self.stack.pop()
         a_val = self._ensure_real_number(a, 'round')
         self.stack.append(AIFPLInteger(round(a_val)))
-        return None
-
-    def _op_real_to_integer(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """REAL_TO_INTEGER: Pop a real number, push truncated integer."""
-        a = self.stack.pop()
-        a_val = self._ensure_real_number(a, 'integer')
-        self.stack.append(AIFPLInteger(int(a_val)))
-        return None
-
-    def _op_real_to_float(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """REAL_TO_FLOAT: Pop a real number, push as float."""
-        a = self.stack.pop()
-        a_val = self._ensure_real_number(a, 'float')
-        self.stack.append(AIFPLFloat(float(a_val)))
         return None
 
     def _op_real_min(  # pylint: disable=useless-return
@@ -1612,32 +1607,6 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(a.value != b.value))
         return None
 
-    def _op_complex_real(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """COMPLEX_REAL: Pop a complex number, push its real part as float."""
-        a = self.stack.pop()
-        a_val = self._ensure_number(a, 'real')
-        if isinstance(a_val, complex):
-            self.stack.append(AIFPLFloat(a_val.real))
-            return None
-
-        self.stack.append(AIFPLFloat(float(a_val)))
-        return None
-
-    def _op_complex_imag(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """COMPLEX_IMAG: Pop a complex number, push its imaginary part as float."""
-        a = self.stack.pop()
-        a_val = self._ensure_number(a, 'imag')
-        if isinstance(a_val, complex):
-            self.stack.append(AIFPLFloat(a_val.imag))
-            return None
-
-        self.stack.append(AIFPLFloat(0.0))
-        return None
-
     def _op_complex_add(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1687,13 +1656,39 @@ class AIFPLVM:
         self.stack.append(AIFPLComplex(-self._ensure_complex(a, 'complex-negate')))
         return None
 
-    def _op_complex_pow(  # pylint: disable=useless-return
+    def _op_complex_real(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """COMPLEX_POW: Pop two complex numbers, push a ** b."""
+        """COMPLEX_REAL: Pop a complex number, push its real part as float."""
+        a = self.stack.pop()
+        a_val = self._ensure_number(a, 'real')
+        if isinstance(a_val, complex):
+            self.stack.append(AIFPLFloat(a_val.real))
+            return None
+
+        self.stack.append(AIFPLFloat(float(a_val)))
+        return None
+
+    def _op_complex_imag(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX_IMAG: Pop a complex number, push its imaginary part as float."""
+        a = self.stack.pop()
+        a_val = self._ensure_number(a, 'imag')
+        if isinstance(a_val, complex):
+            self.stack.append(AIFPLFloat(a_val.imag))
+            return None
+
+        self.stack.append(AIFPLFloat(0.0))
+        return None
+
+    def _op_complex_expt(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX_EXPT: Pop two complex numbers, push a ** b."""
         b = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append(AIFPLComplex(self._ensure_complex(a, 'complex-pow') ** self._ensure_complex(b, 'complex-pow')))
+        self.stack.append(AIFPLComplex(self._ensure_complex(a, 'complex-expt') ** self._ensure_complex(b, 'complex-expt')))
         return None
 
     def _op_complex_sin(  # pylint: disable=useless-return
@@ -1770,75 +1765,6 @@ class AIFPLVM:
         self._ensure_number(a, 'number=?')
         self._ensure_number(b, 'number=?')
         self.stack.append(AIFPLBoolean(a == b))
-        return None
-
-    def _op_number_add(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_ADD: Pop two values, add them, push result."""
-        # Pop operands (b first, then a, so we compute a + b)
-        b = self.stack.pop()
-        a = self.stack.pop()
-
-        a_val = self._ensure_number(a, '+')
-        b_val = self._ensure_number(b, '+')
-        result = a_val + b_val
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_number_sub(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_SUB: Pop two values, subtract them, push result."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-
-        a_val = self._ensure_number(a, '-')
-        b_val = self._ensure_number(b, '-')
-        result = a_val - b_val
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_number_mul(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_MUL: Pop two values, multiply them, push result."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-
-        a_val = self._ensure_number(a, '*')
-        b_val = self._ensure_number(b, '*')
-        result = a_val * b_val
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_number_div(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_DIV: Pop two values, divide them, push result."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-
-        a_val = self._ensure_number(a, '/')
-        b_val = self._ensure_number(b, '/')
-
-        # Check for division by zero
-        if b_val == 0:
-            raise AIFPLEvalError("Division by zero")
-
-        result = a_val / b_val
-        self.stack.append(self._wrap_numeric_result(result))
-        return None
-
-    def _op_number_star_star(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_STAR_STAR: Pop two values, compute a ** b (complex-capable), push result."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_number(a, '**')
-        b_val = self._ensure_number(b, '**')
-        self.stack.append(self._wrap_numeric_result(a_val ** b_val))
         return None
 
     def _op_number_sin(  # pylint: disable=useless-return

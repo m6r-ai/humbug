@@ -25,8 +25,8 @@ class TestConditionals:
         ('(if #f (list 1 2) (list 3 4))', '(3 4)'),
 
         # If with complex expressions in branches
-        ('(if #t (+ 1 2) (* 3 4))', '3'),
-        ('(if #f (+ 1 2) (* 3 4))', '12'),
+        ('(if #t (integer+ 1 2) (integer* 3 4))', '3'),
+        ('(if #f (integer+ 1 2) (integer* 3 4))', '12'),
     ])
     def test_basic_if_expressions(self, aifpl, expression, expected):
         """Test basic if expressions with various conditions and result types."""
@@ -35,10 +35,10 @@ class TestConditionals:
     def test_if_lazy_evaluation_prevents_errors(self, aifpl):
         """Test that if expressions use lazy evaluation to prevent errors."""
         # Division by zero in unused branch should not cause error
-        result = aifpl.evaluate_and_format('(if #t 42 (/ 1 0))')
+        result = aifpl.evaluate_and_format('(if #t 42 (integer/ 1 0))')
         assert result == '42'
 
-        result = aifpl.evaluate_and_format('(if #f (/ 1 0) 24)')
+        result = aifpl.evaluate_and_format('(if #f (integer/ 1 0) 24)')
         assert result == '24'
 
         # Undefined symbol in unused branch should not cause error
@@ -366,7 +366,7 @@ class TestConditionals:
         # Safe division based on condition
         helpers.assert_evaluates_to(
             aifpl,
-            '(if (> 10 0) (/ 20 10) "undefined")',
+            '(if (> 10 0) (float/ 20.0 10.0) "undefined")',
             '2.0'
         )
 

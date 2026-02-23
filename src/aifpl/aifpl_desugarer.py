@@ -92,11 +92,6 @@ class AIFPLDesugarer:
                 # Trace is a special form - handle it
                 return self._desugar_trace(expr)
 
-            # Check for variadic arithmetic operations
-            if name in ['+', '-', '*', '/']:
-                # Desugar variadic arithmetic to binary operations
-                return self._desugar_variadic_arithmetic(expr)
-
             # Check for typed variadic arithmetic operations
             if name in [
                 'integer+', 'integer-', 'integer*',
@@ -278,13 +273,9 @@ class AIFPLDesugarer:
         args = list(expr.elements[1:])
 
         # Determine identity elements and sub operator for this family.
-        if op_name in ('+', '-', '*', '/'):
+        if op_name in ('integer+', 'integer-', 'integer*', 'integer/'):
             zero: AIFPLASTNode = AIFPLASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
             one: AIFPLASTNode = AIFPLASTInteger(1, line=expr.line, column=expr.column, source_file=expr.source_file)
-            sub_op = '-'
-        elif op_name in ('integer+', 'integer-', 'integer*', 'integer/'):
-            zero = AIFPLASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
-            one = AIFPLASTInteger(1, line=expr.line, column=expr.column, source_file=expr.source_file)
             sub_op = 'integer-'
         elif op_name in ('float+', 'float-', 'float*', 'float/'):
             zero = AIFPLASTFloat(0.0, line=expr.line, column=expr.column, source_file=expr.source_file)
@@ -297,14 +288,14 @@ class AIFPLDesugarer:
         else:
             assert False, f"Unexpected operator in _desugar_variadic_arithmetic: {op_name!r}"
 
-        is_add = op_name in ('+', 'integer+', 'float+', 'complex+')
-        is_mul = op_name in ('*', 'integer*', 'float*', 'complex*')
-        is_sub = op_name in ('-', 'integer-', 'float-', 'complex-')
+        is_add = op_name in ('integer+', 'float+', 'complex+')
+        is_mul = op_name in ('integer*', 'float*', 'complex*')
+        is_sub = op_name in ('integer-', 'float-', 'complex-')
         # integer/ is binary-only: (integer/ x) has no sensible reciprocal
-        # (floor(1/x) == 0 for all x > 1).  Generic /, float/, complex/ all
-        # support the Lisp reciprocal convention: (/ x) → (/ 1 x).
+        # (floor(1/x) == 0 for all x > 1).  float/, complex/ support the
+        # Lisp reciprocal convention: (op x) → (op identity x).
         is_div_error = op_name == 'integer/'
-        is_div_reciprocal = op_name in ('/', 'float/', 'complex/')
+        is_div_reciprocal = op_name in ('float/', 'complex/')
 
         # Handle zero-argument cases
         if len(args) == 0:

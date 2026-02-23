@@ -5,14 +5,7 @@ from aifpl.aifpl_error import AIFPLEvalError
 
 
 class TestIntegerConversion:
-    """Test the integer conversion function."""
-
-    def test_integer_from_integer(self, aifpl):
-        """Test integer conversion from integer (no change)."""
-        result = aifpl.evaluate("(integer 5)")
-        assert result == 5
-        # Verify it's actually an integer type
-        assert isinstance(result, int)
+    """Test the integer conversion function (FLOAT_TO_INTEGER: requires float argument)."""
 
     def test_integer_from_positive_float(self, aifpl):
         """Test integer conversion from positive float (truncates)."""
@@ -29,30 +22,39 @@ class TestIntegerConversion:
         result = aifpl.evaluate("(integer 5.0)")
         assert result == 5
 
-    def test_integer_from_complex_with_zero_imaginary(self, aifpl):
-        """Test integer conversion from complex with zero imaginary part."""
-        with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(integer (complex 3 0))")
-        assert "requires real number argument" in str(exc_info.value).lower()
+    def test_integer_truncates_toward_zero(self, aifpl):
+        """Test that integer truncates toward zero (not floor)."""
+        # Positive: 3.7 -> 3 (same as floor)
+        assert aifpl.evaluate("(integer 3.7)") == 3
+        # Negative: -3.7 -> -3 (different from floor which would be -4)
+        assert aifpl.evaluate("(integer -3.7)") == -3
 
-    def test_integer_from_complex_with_tiny_imaginary(self, aifpl):
-        """Test integer conversion from complex with tiny imaginary part."""
-        with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(integer (complex 3.0 0.00000000001))")
-        assert "requires real number argument" in str(exc_info.value).lower()
+    def test_integer_with_large_numbers(self, aifpl):
+        """Test integer conversion with large numbers."""
+        result = aifpl.evaluate("(integer 999999999.9)")
+        assert result == 999999999
 
-    def test_integer_from_complex_with_nonzero_imaginary_error(self, aifpl):
-        """Test integer conversion from complex with non-zero imaginary part raises error."""
+    def test_integer_with_zero(self, aifpl):
+        """Test integer conversion with zero float."""
+        assert aifpl.evaluate("(integer 0.0)") == 0
+
+    def test_integer_from_integer(self, aifpl):
+        """Test that integer conversion from integer raises error (requires float argument)."""
         with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(integer (complex 3 4))")
-        assert "requires real number argument" in str(exc_info.value).lower()
+            aifpl.evaluate("(integer 5)")
+        assert "requires float argument" in str(exc_info.value).lower()
+
+    def test_integer_from_complex_error(self, aifpl):
+        """Test that integer conversion from complex raises error (requires float argument)."""
+        with pytest.raises(AIFPLEvalError) as exc_info:
+            aifpl.evaluate("(integer (complex 3.0 0.0))")
+        assert "requires float argument" in str(exc_info.value).lower()
 
     def test_integer_from_string_error(self, aifpl):
         """Test integer conversion from string raises error."""
         with pytest.raises(AIFPLEvalError) as exc_info:
             aifpl.evaluate('(integer "hello")')
-        assert "requires real number arguments" in str(exc_info.value).lower()
-        assert "string" in str(exc_info.value).lower()
+        assert "requires float argument" in str(exc_info.value).lower()
 
     def test_integer_wrong_arg_count_zero(self, aifpl):
         """Test integer with no arguments raises error."""
@@ -68,70 +70,16 @@ class TestIntegerConversion:
         assert "expected: exactly 1 argument" in str(exc_info.value).lower()
         assert "got 2" in str(exc_info.value).lower()
 
-    def test_integer_truncates_toward_zero(self, aifpl):
-        """Test that integer truncates toward zero (not floor)."""
-        # Positive: 3.7 -> 3 (same as floor)
-        assert aifpl.evaluate("(integer 3.7)") == 3
-        # Negative: -3.7 -> -3 (different from floor which would be -4)
-        assert aifpl.evaluate("(integer -3.7)") == -3
-        assert aifpl.evaluate("(floor -3.7)") == -4
-
-    def test_integer_with_large_numbers(self, aifpl):
-        """Test integer conversion with large numbers."""
-        result = aifpl.evaluate("(integer 999999999.9)")
-        assert result == 999999999
-
-    def test_integer_with_zero(self, aifpl):
-        """Test integer conversion with zero."""
-        assert aifpl.evaluate("(integer 0)") == 0
-        assert aifpl.evaluate("(integer 0.0)") == 0
-
 
 class TestFloatConversion:
-    """Test the float conversion function."""
-
-    def test_float_from_float(self, aifpl):
-        """Test float conversion from float (no change)."""
-        result = aifpl.evaluate("(float 3.14)")
-        assert result == 3.14
-        assert isinstance(result, float)
+    """Test the float conversion function (INTEGER_TO_FLOAT: requires integer argument)."""
 
     def test_float_from_integer(self, aifpl):
         """Test float conversion from integer."""
         result = aifpl.evaluate("(float 5)")
-        # Note: AIFPL currently converts 5.0 to 5 when returning Python values
+        # Verify it is recognised as a float type
+        assert aifpl.evaluate("(float? (float 5))") is True
         assert result == 5
-
-    def test_float_from_float_with_zero_decimal(self, aifpl):
-        """Test float conversion from float like 5.0 (stays as float)."""
-        result = aifpl.evaluate("(float 5.0)")
-        # Note: AIFPL currently converts 5.0 to 5 when returning Python values
-        assert result == 5
-
-    def test_float_from_complex_with_zero_imaginary(self, aifpl):
-        """Test float conversion from complex with zero imaginary part."""
-        with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(float (complex 3 0))")
-        assert "requires real number argument" in str(exc_info.value).lower()
-
-    def test_float_from_complex_with_tiny_imaginary(self, aifpl):
-        """Test float conversion from complex with tiny imaginary part."""
-        with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(float (complex 3.14 0.00000000001))")
-        assert "requires real number argument" in str(exc_info.value).lower()
-
-    def test_float_from_complex_with_nonzero_imaginary_error(self, aifpl):
-        """Test float conversion from complex with non-zero imaginary part raises error."""
-        with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(float (complex 3 4))")
-        assert "requires real number argument" in str(exc_info.value).lower()
-
-    def test_float_from_string_error(self, aifpl):
-        """Test float conversion from string raises error."""
-        with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate('(float "hello")')
-        assert "requires real number arguments" in str(exc_info.value).lower()
-        assert "string" in str(exc_info.value).lower()
 
     def test_float_wrong_arg_count_zero(self, aifpl):
         """Test float with no arguments raises error."""
@@ -148,22 +96,37 @@ class TestFloatConversion:
         assert "got 2" in str(exc_info.value).lower()
 
     def test_float_with_negative_numbers(self, aifpl):
-        """Test float conversion with negative numbers."""
+        """Test float conversion with negative integer."""
         result = aifpl.evaluate("(float -42)")
-        # Note: AIFPL currently converts -42.0 to -42 when returning Python values
         assert result == -42
 
     def test_float_with_zero(self, aifpl):
-        """Test float conversion with zero."""
+        """Test float conversion with zero integer."""
         result = aifpl.evaluate("(float 0)")
-        # Note: AIFPL currently converts 0.0 to 0 when returning Python values
         assert result == 0
 
     def test_float_with_large_numbers(self, aifpl):
-        """Test float conversion with large numbers."""
+        """Test float conversion with large integer."""
         result = aifpl.evaluate("(float 999999999)")
-        # Note: AIFPL currently converts 999999999.0 to 999999999 when returning Python values
         assert result == 999999999
+
+    def test_float_from_float(self, aifpl):
+        """Test that float conversion from float raises error (requires integer argument)."""
+        with pytest.raises(AIFPLEvalError) as exc_info:
+            aifpl.evaluate("(float 3.14)")
+        assert "requires integer argument" in str(exc_info.value).lower()
+
+    def test_float_from_complex_error(self, aifpl):
+        """Test that float conversion from complex raises error (requires integer argument)."""
+        with pytest.raises(AIFPLEvalError) as exc_info:
+            aifpl.evaluate("(float (complex 3 0))")
+        assert "requires integer argument" in str(exc_info.value).lower()
+
+    def test_float_from_string_error(self, aifpl):
+        """Test float conversion from string raises error."""
+        with pytest.raises(AIFPLEvalError) as exc_info:
+            aifpl.evaluate('(float "hello")')
+        assert "requires integer argument" in str(exc_info.value).lower()
 
 
 class TestConversionRoundTrip:
@@ -171,25 +134,16 @@ class TestConversionRoundTrip:
 
     def test_integer_to_float_to_integer(self, aifpl):
         """Test converting integer to float and back."""
+        # (float 42) is integer->float, (integer ...) on the float result is float->integer
         result = aifpl.evaluate("(integer (float 42))")
         assert result == 42
 
     def test_float_to_integer_to_float(self, aifpl):
         """Test converting float to integer and back (loses precision)."""
+        # (integer 3.7) is float->integer giving 3, (float 3) is integer->float
+        # AIFPL returns 3 (integer representation of 3.0)
         result = aifpl.evaluate("(float (integer 3.7))")
-        # Note: AIFPL currently converts 3.0 to 3 when returning Python values
         assert result == 3  # Not 3.7, precision is lost
-
-    def test_conversion_with_arithmetic(self, aifpl):
-        """Test conversions combined with arithmetic."""
-        # (integer (+ 2.5 2.5)) should be 5
-        result = aifpl.evaluate("(integer (+ 2.5 2.5))")
-        assert result == 5
-
-        # (float (+ 2 3)) should be 5.0
-        result = aifpl.evaluate("(float (+ 2 3))")
-        # Note: AIFPL currently converts 5.0 to 5 when returning Python values
-        assert result == 5
 
 
 class TestTypePredicatesWithConversions:

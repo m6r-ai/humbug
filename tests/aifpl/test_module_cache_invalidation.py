@@ -222,7 +222,7 @@ class TestHashComputation:
         large_content = "; Large module\n"
         large_content += "(let (\n"
         for i in range(1000):
-            large_content += f"  (func{i} (lambda (x) (* x {i})))\n"
+            large_content += f"  (func{i} (lambda (x) (integer* x {i})))\n"
         large_content += ")\n  (alist\n"
         for i in range(100):
             large_content += f"    (list \"func{i}\" func{i})\n"

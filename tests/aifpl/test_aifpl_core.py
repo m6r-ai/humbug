@@ -72,15 +72,15 @@ class TestAIFPLCore:
 
     def test_simple_arithmetic_integration(self, aifpl, helpers):
         """Test basic arithmetic through full pipeline."""
-        helpers.assert_evaluates_to(aifpl, "(+ 1 2)", "3")
-        helpers.assert_evaluates_to(aifpl, "(- 5 3)", "2")
-        helpers.assert_evaluates_to(aifpl, "(* 2 3)", "6")
-        helpers.assert_evaluates_to(aifpl, "(/ 8 2)", "4.0")
+        helpers.assert_evaluates_to(aifpl, "(integer+ 1 2)", "3")
+        helpers.assert_evaluates_to(aifpl, "(integer- 5 3)", "2")
+        helpers.assert_evaluates_to(aifpl, "(integer* 2 3)", "6")
+        helpers.assert_evaluates_to(aifpl, "(float/ 8.0 2.0)", "4.0")
 
     def test_nested_expressions_integration(self, aifpl, helpers):
         """Test nested expressions through full pipeline."""
-        helpers.assert_evaluates_to(aifpl, "(+ (* 2 3) (- 5 1))", "10")
-        helpers.assert_evaluates_to(aifpl, "(* (+ 1 2) (+ 3 4))", "21")
+        helpers.assert_evaluates_to(aifpl, "(integer+ (integer* 2 3) (integer- 5 1))", "10")
+        helpers.assert_evaluates_to(aifpl, "(integer* (integer+ 1 2) (integer+ 3 4))", "21")
 
     def test_constants_integration(self, aifpl):
         """Test mathematical constants are available."""
@@ -127,7 +127,7 @@ class TestAIFPLCore:
             '"hello"',
             "#t",
             "#f",
-            "(+ 1 2 3)",
+            "(integer+ 1 2 3)",
             "(list 1 2 3)",
             "(string-append \"hello\" \" \" \"world\")",
         ]
@@ -159,8 +159,8 @@ class TestAIFPLCore:
     def test_whitespace_handling(self, aifpl, helpers):
         """Test that whitespace is handled correctly."""
         # Extra whitespace should be ignored
-        helpers.assert_evaluates_to(aifpl, "  ( +   1    2   )  ", "3")
-        helpers.assert_evaluates_to(aifpl, "\n(\t+\n1\n2\n)\n", "3")
+        helpers.assert_evaluates_to(aifpl, "  ( integer+   1    2   )  ", "3")
+        helpers.assert_evaluates_to(aifpl, "\n(\t integer+\n1\n2\n)\n", "3")
 
         # Whitespace in strings should be preserved
         helpers.assert_evaluates_to(aifpl, '"  hello  world  "', '"  hello  world  "')
@@ -171,7 +171,7 @@ class TestAIFPLCore:
             aifpl.evaluate("1 2")
 
         with pytest.raises(AIFPLParseError, match=r"Unexpected token after complete expression"):
-            aifpl.evaluate("(+ 1 2) (+ 3 4)")
+            aifpl.evaluate("(integer+ 1 2) (integer+ 3 4)")
 
     def test_exception_hierarchy(self):
         """Test that all AIFPL exceptions inherit from AIFPLError."""

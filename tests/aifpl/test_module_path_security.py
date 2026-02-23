@@ -198,7 +198,7 @@ class TestValidPaths:
         lib_dir.mkdir()
 
         module_file = lib_dir / "utils.aifpl"
-        module_file.write_text("(alist (list \"square\" (lambda (x) (* x x))))")
+        module_file.write_text("(alist (list \"square\" (lambda (x) (integer* x x))))")
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
@@ -345,7 +345,7 @@ class TestCacheClearingBehavior:
         assert "persistent" in aifpl.module_cache
 
         # Second evaluation - cache should still have it
-        aifpl.evaluate('(+ 1 1)')  # Unrelated evaluation
+        aifpl.evaluate('(integer+ 1 1)')  # Unrelated evaluation
         assert "persistent" in aifpl.module_cache
 
         # Third evaluation using the module

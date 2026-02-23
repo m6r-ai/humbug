@@ -428,7 +428,7 @@ class TestAListWithFunctionalOperations:
         """Test folding over alist values."""
         result = tool.evaluate('''
             (let ((data (alist (list "a" 1) (list "b" 2) (list "c" 3))))
-              (fold + 0 (alist-values data)))
+              (fold integer+ 0 (alist-values data)))
         ''')
         assert result == 6
 
@@ -642,7 +642,7 @@ class TestAListLengthFunction:
         """Test using alist-length in arithmetic expression."""
         result = tool.evaluate('''
             (let ((data (alist (list "a" 1) (list "b" 2))))
-              (* (alist-length data) 10))
+              (integer* (alist-length data) 10))
         ''')
         assert result == 20
 

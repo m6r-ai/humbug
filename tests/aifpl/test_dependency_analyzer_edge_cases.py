@@ -13,16 +13,16 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # Simple sequential dependency
         result = aifpl.evaluate("""
         (let* ((x 5)
-               (y (+ x 3)))
-          (+ x y))
+               (y (integer+ x 3)))
+          (integer+ x y))
         """)
         assert result == 13  # x=5, y=8, sum=13
 
         # Multiple dependencies
         result = aifpl.evaluate("""
         (let* ((a 2)
-               (b (* a 3))
-               (c (+ a b)))
+               (b (integer* a 3))
+               (c (integer+ a b)))
           c)
         """)
         assert result == 8  # a=2, b=6, c=8
@@ -32,10 +32,10 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # Long dependency chain
         result = aifpl.evaluate("""
         (let* ((a 1)
-               (b (+ a 1))
-               (c (+ b 1))
-               (d (+ c 1))
-               (e (+ d 1)))
+               (b (integer+ a 1))
+               (c (integer+ b 1))
+               (d (integer+ c 1))
+               (e (integer+ d 1)))
           e)
         """)
         assert result == 5
@@ -43,9 +43,9 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # Branching dependencies
         result = aifpl.evaluate("""
         (let* ((base 10)
-               (left (* base 2))
-               (right (* base 3))
-               (sum (+ left right)))
+               (left (integer* base 2))
+               (right (integer* base 3))
+               (sum (integer+ left right)))
           sum)
         """)
         assert result == 50  # base=10, left=20, right=30, sum=50
@@ -54,19 +54,19 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         """Test dependency analysis with function calls."""
         # Dependencies involving function calls
         result = aifpl.evaluate("""
-        (let* ((x 4)
-               (y (sqrt x))
-               (z (* y y)))
+        (let* ((x 4.0)
+               (y (integer (sqrt x)))
+               (z (integer* y y)))
           z)
         """)
         assert result == 4  # x=4, y=2, z=4
 
         # Complex function dependencies
         result = aifpl.evaluate("""
-        (let* ((angle (* pi 0.5))
+        (let* ((angle (float* pi 0.5))
                (sin-val (sin angle))
                (cos-val (cos angle))
-               (sum (+ sin-val cos-val)))
+               (sum (float+ sin-val cos-val)))
           (round sum))
         """)
         assert result == 1  # sin(π/2) + cos(π/2) ≈ 1 + 0 = 1
@@ -77,7 +77,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         result = aifpl.evaluate("""
         (let* ((flag #t)
                (x 10)
-               (result (if flag (+ x 5) (- x 5))))
+               (result (if flag (integer+ x 5) (integer- x 5))))
           result)
         """)
         assert result == 15
@@ -87,7 +87,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         (let* ((a 5)
                (b 3)
                (condition (> a b))
-               (result (if condition (* a b) (+ a b))))
+               (result (if condition (integer* a b) (integer+ a b))))
           result)
         """)
         assert result == 15  # 5 > 3 is true, so 5 * 3 = 15
@@ -97,7 +97,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # Lambda capturing variables from let bindings
         result = aifpl.evaluate("""
         (let* ((multiplier 3)
-               (f (lambda (x) (* x multiplier)))
+               (f (lambda (x) (integer* x multiplier)))
                (result (f 4)))
           result)
         """)
@@ -106,8 +106,8 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # Complex lambda dependencies
         result = aifpl.evaluate("""
         (let* ((base 10)
-               (adder (lambda (x) (+ x base)))
-               (doubler (lambda (x) (* x 2)))
+               (adder (lambda (x) (integer+ x base)))
+               (doubler (lambda (x) (integer* x 2)))
                (composer (lambda (x) (doubler (adder x))))
                (result (composer 5)))
           result)
@@ -128,8 +128,8 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # Complex list processing
         result = aifpl.evaluate("""
         (let* ((numbers (list 1 2 3 4 5))
-               (doubled (map (lambda (x) (* x 2)) numbers))
-               (sum (fold + 0 doubled)))
+               (doubled (map (lambda (x) (integer* x 2)) numbers))
+               (sum (fold integer+ 0 doubled)))
           sum)
         """)
         assert result == 30  # (2+4+6+8+10) = 30
@@ -162,7 +162,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         with pytest.raises(AIFPLEvalError, match="Undefined variable"):
             aifpl.evaluate("""
             (let* ((x undefined-var)
-                   (y (+ x 1)))
+                   (y (integer+ x 1)))
               y)
             """)
 
@@ -170,8 +170,8 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         try:
             # This might be allowed or might cause an error
             result = aifpl.evaluate("""
-            (let* ((x (+ y 1))
-                   (y (+ x 1)))
+            (let* ((x (integer+ y 1))
+                   (y (integer+ x 1)))
               x)
             """)
             # If it succeeds, that's also valid (might use forward references)
@@ -184,8 +184,8 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # Nested let with dependencies
         result = aifpl.evaluate("""
         (let ((outer 10))
-          (let* ((inner (+ outer 5))
-                 (combined (+ outer inner)))
+          (let* ((inner (integer+ outer 5))
+                 (combined (integer+ outer inner)))
             combined))
         """)
         assert result == 25  # outer=10, inner=15, combined=25
@@ -193,10 +193,10 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # Multiple levels of nesting
         result = aifpl.evaluate("""
         (let ((a 1))
-          (let ((b (+ a 1)))
-            (let ((c (+ a b)))
-              (let ((d (+ b c)))
-                (+ a b c d)))))
+          (let ((b (integer+ a 1)))
+            (let ((c (integer+ a b)))
+              (let ((d (integer+ b c)))
+                (integer+ a b c d)))))
         """)
         # a=1, b=2, c=3, d=5, sum=11
         assert result == 11
@@ -207,7 +207,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         result = aifpl.evaluate("""
         (let* ((base 5)
                (numbers (list 1 2 3))
-               (add-base (lambda (x) (+ x base)))
+               (add-base (lambda (x) (integer+ x base)))
                (results (map add-base numbers)))
           results)
         """)
@@ -228,7 +228,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # Many variables with dependencies
         many_deps = """
         (let* (""" + "\n".join(
-            f"(var{i} {i})" if i == 0 else f"(var{i} (+ var{i-1} 1))"
+            f"(var{i} {i})" if i == 0 else f"(var{i} (integer+ var{i-1} 1))"
             for i in range(20)
         ) + """)
           var19)
@@ -237,16 +237,18 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         assert result == 19
 
         # Complex dependency graph
+        # a=1, b=2, c=3, d=5, e=6, f=11, g=6, h=5.5, sum=11.5
+        # f/2 is float division since result is 5.5
         complex_deps = """
         (let* ((a 1)
-               (b (+ a 1))
-               (c (+ a 2))
-               (d (+ b c))
-               (e (* b c))
-               (f (+ d e))
-               (g (- f d))
-               (h (/ f 2)))
-          (+ g h))
+               (b (integer+ a 1))
+               (c (integer+ a 2))
+               (d (integer+ b c))
+               (e (integer* b c))
+               (f (integer+ d e))
+               (g (integer- f d))
+               (h (float/ (float f) 2.0)))
+          (float+ (float g) h))
         """
         result = aifpl.evaluate(complex_deps)
         # a=1, b=2, c=3, d=5, e=6, f=11, g=6, h=5.5, sum=11.5
@@ -260,7 +262,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
             (let* ((factorial (lambda (n)
                                (if (<= n 1)
                                    1
-                                   (* n (factorial (- n 1))))))
+                                   (integer* n (factorial (integer- n 1))))))
                    (result (factorial 5)))
               result)
             """)
@@ -276,7 +278,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
             result = aifpl.evaluate("""
             (let* ((value 42)
                    (result (match value
-                             ((number? n) (+ n 10))
+                             ((number? n) (integer+ n 10))
                              (_ 0))))
               result)
             """)
@@ -291,7 +293,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         result = aifpl.evaluate("""
         (let* ((x 10)
                (y 20)
-               (f (lambda (z) (+ x y z)))
+               (f (lambda (z) (integer+ x y z)))
                (result (f 5)))
           result)
         """)
@@ -303,7 +305,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
               (multiplier 3)
               (make-func (lambda (offset)
                           (lambda (x)
-                            (+ (* x multiplier) base offset))))
+                            (integer+ (integer* x multiplier) base offset))))
               (func (make-func 2))
               (result (func 4)))
           result)
@@ -315,9 +317,9 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # Mathematical operations
         result = aifpl.evaluate("""
         (let* ((x 2)
-               (squared (* x x))
-               (cubed (* squared x))
-               (sum (+ x squared cubed)))
+               (squared (integer* x x))
+               (cubed (integer* squared x))
+               (sum (integer+ x squared cubed)))
           sum)
         """)
         assert result == 14  # 2 + 4 + 8 = 14
@@ -327,7 +329,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         (let* ((base "hello")
                (upper (string-upcase base))
                (length-val (string-length upper))
-               (doubled (* length-val 2)))
+               (doubled (integer* length-val 2)))
           doubled)
         """)
         assert result == 10  # "HELLO" has 5 chars, doubled = 10
@@ -339,7 +341,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         (let* ((num 42)
                (str (number->string num))
                (back-to-num (string->number str))
-               (doubled (* back-to-num 2)))
+               (doubled (integer* back-to-num 2)))
           doubled)
         """)
         assert result == 84
@@ -385,10 +387,10 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         (let* ((start 2)
                (diff 3)
                (term1 start)
-               (term2 (+ term1 diff))
-               (term3 (+ term2 diff))
-               (term4 (+ term3 diff))
-               (sum (+ term1 term2 term3 term4)))
+               (term2 (integer+ term1 diff))
+               (term3 (integer+ term2 diff))
+               (term4 (integer+ term3 diff))
+               (sum (integer+ term1 term2 term3 term4)))
           sum)
         """)
         # term1=2, term2=5, term3=8, term4=11, sum=26
@@ -400,8 +402,8 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         result = aifpl.evaluate("""
         (let* ((numbers (range 1 6))
                (evens (filter (lambda (x) (= (% x 2) 0)) numbers))
-               (squares (map (lambda (x) (* x x)) evens))
-               (sum (fold + 0 squares)))
+               (squares (map (lambda (x) (integer* x x)) evens))
+               (sum (fold integer+ 0 squares)))
           sum)
         """)
         assert result == 20  # evens=[2,4], squares=[4,16], sum=20
@@ -410,8 +412,8 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         """Test dependency analysis with edge case ordering."""
         # Variables defined in reverse dependency order
         result = aifpl.evaluate("""
-        (letrec ((z (+ x y))
-                 (y (+ x 1))
+        (letrec ((z (integer+ x y))
+                 (y (integer+ x 1))
                  (x 5))
           z)
         """)
@@ -419,10 +421,10 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
 
         # Mixed ordering
         result = aifpl.evaluate("""
-        (letrec ((c (+ a b))
+        (letrec ((c (integer+ a b))
                  (a 3)
-                 (b (* a 2))
-                 (d (- c a)))
+                 (b (integer* a 2))
+                 (d (integer- c a)))
           d)
         """)
         assert result == 6  # a=3, b=6, c=9, d=6
@@ -433,8 +435,8 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("""
             (let* ((a 5)
-                   (b (/ a 0))
-                   (c (+ b 1)))
+                   (b (integer/ a 0))
+                   (c (integer+ b 1)))
               c)
             """)
 
@@ -442,8 +444,8 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("""
             (let* ((good 42)
-                   (bad (/ 1 0))
-                   (dependent (+ bad 1)))
+                   (bad (integer/ 1 0))
+                   (dependent (integer+ bad 1)))
               good)
             """)
 
@@ -454,11 +456,11 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         (let* (""" + "\n".join([
             f"(base{i} {i})" for i in range(10)
         ] + [
-            f"(derived{i} (+ base{i} base{(i+1)%10}))" for i in range(10)
+            f"(derived{i} (integer+ base{i} base{(i+1)%10}))" for i in range(10)
         ] + [
-            f"(final{i} (* derived{i} 2))" for i in range(10)
+            f"(final{i} (integer* derived{i} 2))" for i in range(10)
         ]) + """)
-          (+ """ + " ".join(f"final{i}" for i in range(10)) + """))
+          (integer+ """ + " ".join(f"final{i}" for i in range(10)) + """))
         """
         result = aifpl.evaluate(large_graph)
         # Should compute without memory issues
@@ -468,9 +470,9 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         """Test dependency analysis with functional composition."""
         # Function composition chain
         result = aifpl.evaluate("""
-        (let* ((add1 (lambda (x) (+ x 1)))
-               (mul2 (lambda (x) (* x 2)))
-               (sub3 (lambda (x) (- x 3)))
+        (let* ((add1 (lambda (x) (integer+ x 1)))
+               (mul2 (lambda (x) (integer* x 2)))
+               (sub3 (lambda (x) (integer- x 3)))
                (compose (lambda (f g) (lambda (x) (f (g x)))))
                (func1 (compose mul2 add1))
                (func2 (compose sub3 func1))

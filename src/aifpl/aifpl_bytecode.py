@@ -77,6 +77,7 @@ class Opcode(IntEnum):
                              # Convert integer to hex string
     INTEGER_TO_STRING_OCT = auto()
                              # Convert integer to octal string
+    INTEGER_TO_FLOAT = auto() # Convert integer to float
 
     # Floating point operations
     FLOAT_P = auto()         # Check if float
@@ -91,7 +92,7 @@ class Opcode(IntEnum):
     FLOAT_MUL = auto()       # float* a b
     FLOAT_DIV = auto()       # float/ a b
     FLOAT_NEG = auto()       # float-negate x  (unary minus)
-    FLOAT_POW = auto()       # float-pow a b
+    FLOAT_EXPT = auto()      # float-expt a b
     FLOAT_SIN = auto()       # float-sin x
     FLOAT_COS = auto()       # float-cos x
     FLOAT_TAN = auto()       # float-tan x
@@ -100,6 +101,7 @@ class Opcode(IntEnum):
     FLOAT_EXP = auto()       # float-exp x
     FLOAT_SQRT = auto()      # float-sqrt x
     FLOAT_ABS = auto()       # float-abs x
+    FLOAT_TO_INTEGER = auto() # Convert float to integer
 
     # Real number operations
     REAL_LT = auto()         # a < b
@@ -108,12 +110,10 @@ class Opcode(IntEnum):
     REAL_GTE = auto()        # a >= b
     REAL_FLOOR_DIV = auto()  # Calculate a // b (floor division)
     REAL_MOD = auto()        # Calculate a % b (modulo)
-    REAL_POW = auto()        # Calculate x ** y
+    REAL_EXPT = auto()       # Calculate x ** y
     REAL_FLOOR = auto()      # Calculate floor(x)
     REAL_CEIL = auto()       # Calculate ceil(x)
     REAL_ROUND = auto()      # Calculate round(x)
-    REAL_TO_INTEGER = auto() # Convert to integer
-    REAL_TO_FLOAT = auto()   # Convert to float
     REAL_MIN = auto()        # Minimum of two real numbers
     REAL_MAX = auto()        # Maximum of two real numbers
 
@@ -122,14 +122,14 @@ class Opcode(IntEnum):
     COMPLEX_P = auto()       # Check if complex
     COMPLEX_EQ_P = auto()    # complex=? a b
     COMPLEX_NEQ_P = auto()   # complex!=? a b
-    COMPLEX_REAL = auto()    # Extract real part
-    COMPLEX_IMAG = auto()    # Extract imaginary part
     COMPLEX_ADD = auto()     # complex+ a b
     COMPLEX_SUB = auto()     # complex- a b
     COMPLEX_MUL = auto()     # complex* a b
     COMPLEX_DIV = auto()     # complex/ a b
     COMPLEX_NEG = auto()     # complex-negate x  (unary minus)
-    COMPLEX_POW = auto()     # complex-pow a b
+    COMPLEX_REAL = auto()    # Extract real part
+    COMPLEX_IMAG = auto()    # Extract imaginary part
+    COMPLEX_EXPT = auto()    # complex-expt a b
     COMPLEX_SIN = auto()     # complex-sin x
     COMPLEX_COS = auto()     # complex-cos x
     COMPLEX_TAN = auto()     # complex-tan x
@@ -141,12 +141,6 @@ class Opcode(IntEnum):
     # Numeric operations
     NUMBER_P = auto()        # Check if number (int/float/complex)
     NUMBER_EQ_P = auto()     # number=? a b
-    NUMBER_ADD = auto()      # Calculate a + b
-    NUMBER_SUB = auto()      # Calculate a - b
-    NUMBER_MUL = auto()      # Calculate a * b
-    NUMBER_DIV = auto()      # Calculate a / b
-    NUMBER_STAR_STAR = auto()
-                             # Calculate a ** b (complex-capable exponentiation)
     NUMBER_SIN = auto()      # Calculate sin(x)
     NUMBER_COS = auto()      # Calculate cos(x)
     NUMBER_TAN = auto()      # Calculate tan(x)
@@ -280,7 +274,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'float*': (Opcode.FLOAT_MUL, 2),
     'float/': (Opcode.FLOAT_DIV, 2),
     'float-negate': (Opcode.FLOAT_NEG, 1),
-    'float-pow': (Opcode.FLOAT_POW, 2),
+    'float-expt': (Opcode.FLOAT_EXPT, 2),
     'float-sin': (Opcode.FLOAT_SIN, 1),
     'float-cos': (Opcode.FLOAT_COS, 1),
     'float-tan': (Opcode.FLOAT_TAN, 1),
@@ -295,12 +289,12 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     '>=': (Opcode.REAL_GTE, 2),
     '//': (Opcode.REAL_FLOOR_DIV, 2),
     '%': (Opcode.REAL_MOD, 2),
-    'pow': (Opcode.REAL_POW, 2),
+    'expt': (Opcode.REAL_EXPT, 2),
     'floor': (Opcode.REAL_FLOOR, 1),
     'ceil': (Opcode.REAL_CEIL, 1),
     'round': (Opcode.REAL_ROUND, 1),
-    'integer': (Opcode.REAL_TO_INTEGER, 1),
-    'float': (Opcode.REAL_TO_FLOAT, 1),
+    'integer': (Opcode.FLOAT_TO_INTEGER, 1),
+    'float': (Opcode.INTEGER_TO_FLOAT, 1),
     'min': (Opcode.REAL_MIN, 2),
     'max': (Opcode.REAL_MAX, 2),
     'complex': (Opcode.COMPLEX, 2),
@@ -312,7 +306,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'complex*': (Opcode.COMPLEX_MUL, 2),
     'complex/': (Opcode.COMPLEX_DIV, 2),
     'complex-negate': (Opcode.COMPLEX_NEG, 1),
-    'complex-pow': (Opcode.COMPLEX_POW, 2),
+    'complex-expt': (Opcode.COMPLEX_EXPT, 2),
     'complex-sin': (Opcode.COMPLEX_SIN, 1),
     'complex-cos': (Opcode.COMPLEX_COS, 1),
     'complex-tan': (Opcode.COMPLEX_TAN, 1),
@@ -324,11 +318,6 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'imag': (Opcode.COMPLEX_IMAG, 1),
     'number?': (Opcode.NUMBER_P, 1),
     'number=?': (Opcode.NUMBER_EQ_P, 2),
-    '+': (Opcode.NUMBER_ADD, 2),
-    '-': (Opcode.NUMBER_SUB, 2),
-    '*': (Opcode.NUMBER_MUL, 2),
-    '/': (Opcode.NUMBER_DIV, 2),
-    '**': (Opcode.NUMBER_STAR_STAR, 2),
     'sin': (Opcode.NUMBER_SIN, 1),
     'cos': (Opcode.NUMBER_COS, 1),
     'tan': (Opcode.NUMBER_TAN, 1),
@@ -411,14 +400,13 @@ class Instruction:
         # from the stack rather than from the instruction stream)
         no_arg_opcodes = {
             Opcode.LOAD_TRUE, Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST, Opcode.RETURN, Opcode.EMIT_TRACE,
-            Opcode.NUMBER_ADD, Opcode.NUMBER_SUB, Opcode.NUMBER_MUL, Opcode.NUMBER_DIV,
-            Opcode.REAL_FLOOR_DIV, Opcode.REAL_MOD, Opcode.NUMBER_STAR_STAR,
+            Opcode.REAL_FLOOR_DIV, Opcode.REAL_MOD,
             Opcode.NUMBER_P, Opcode.INTEGER_P, Opcode.FLOAT_P, Opcode.COMPLEX_P,
             Opcode.STRING_P, Opcode.BOOLEAN_P, Opcode.LIST_P, Opcode.ALIST_P, Opcode.FUNCTION_P,
             Opcode.BOOLEAN_NOT, Opcode.INTEGER_BIT_NOT, Opcode.INTEGER_BIT_SHIFT_LEFT, Opcode.INTEGER_BIT_SHIFT_RIGHT,
             Opcode.NUMBER_SIN, Opcode.NUMBER_COS, Opcode.NUMBER_TAN, Opcode.NUMBER_LOG, Opcode.NUMBER_LOG10, Opcode.NUMBER_EXP,
-            Opcode.REAL_POW, Opcode.NUMBER_SQRT, Opcode.NUMBER_ABS, Opcode.REAL_FLOOR, Opcode.REAL_CEIL, Opcode.REAL_ROUND,
-            Opcode.REAL_TO_INTEGER, Opcode.REAL_TO_FLOAT, Opcode.COMPLEX_REAL, Opcode.COMPLEX_IMAG, Opcode.COMPLEX,
+            Opcode.REAL_EXPT, Opcode.NUMBER_SQRT, Opcode.NUMBER_ABS, Opcode.REAL_FLOOR, Opcode.REAL_CEIL, Opcode.REAL_ROUND,
+            Opcode.FLOAT_TO_INTEGER, Opcode.INTEGER_TO_FLOAT, Opcode.COMPLEX_REAL, Opcode.COMPLEX_IMAG, Opcode.COMPLEX,
             Opcode.INTEGER_TO_STRING_BIN, Opcode.INTEGER_TO_STRING_HEX, Opcode.INTEGER_TO_STRING_OCT,
             Opcode.LIST_CONS, Opcode.LIST_REVERSE, Opcode.LIST_FIRST, Opcode.LIST_REST, Opcode.LIST_LAST,
             Opcode.LIST_LENGTH, Opcode.LIST_REF, Opcode.LIST_NULL_P, Opcode.LIST_MEMBER_P, Opcode.LIST_POSITION,
@@ -444,10 +432,10 @@ class Instruction:
             Opcode.LIST_NEQ_P, Opcode.ALIST_NEQ_P,
             Opcode.INTEGER_ADD, Opcode.INTEGER_SUB, Opcode.INTEGER_MUL, Opcode.INTEGER_DIV, Opcode.INTEGER_NEG,
             Opcode.FLOAT_ADD, Opcode.FLOAT_SUB, Opcode.FLOAT_MUL, Opcode.FLOAT_DIV, Opcode.FLOAT_NEG,
-            Opcode.FLOAT_POW, Opcode.FLOAT_SIN, Opcode.FLOAT_COS, Opcode.FLOAT_TAN, Opcode.FLOAT_LOG,
+            Opcode.FLOAT_EXPT, Opcode.FLOAT_SIN, Opcode.FLOAT_COS, Opcode.FLOAT_TAN, Opcode.FLOAT_LOG,
             Opcode.FLOAT_LOG10, Opcode.FLOAT_EXP, Opcode.FLOAT_SQRT, Opcode.FLOAT_ABS,
             Opcode.COMPLEX_ADD, Opcode.COMPLEX_SUB, Opcode.COMPLEX_MUL, Opcode.COMPLEX_DIV, Opcode.COMPLEX_NEG,
-            Opcode.COMPLEX_POW, Opcode.COMPLEX_SIN, Opcode.COMPLEX_COS, Opcode.COMPLEX_TAN, Opcode.COMPLEX_LOG,
+            Opcode.COMPLEX_EXPT, Opcode.COMPLEX_SIN, Opcode.COMPLEX_COS, Opcode.COMPLEX_TAN, Opcode.COMPLEX_LOG,
             Opcode.COMPLEX_EXP, Opcode.COMPLEX_SQRT, Opcode.COMPLEX_ABS,
         }
         if self.opcode in no_arg_opcodes:

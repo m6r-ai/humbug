@@ -22,22 +22,22 @@ class TestBasicArithmetic:
     """Test basic arithmetic operations."""
 
     def test_simple_addition(self, aifpl):
-        assert aifpl.evaluate("(+ 1 2)") == 3
+        assert aifpl.evaluate("(integer+ 1 2)") == 3
 
     def test_multiple_addition(self, aifpl):
-        assert aifpl.evaluate("(+ 1 2 3 4 5)") == 15
+        assert aifpl.evaluate("(integer+ 1 2 3 4 5)") == 15
 
     def test_subtraction(self, aifpl):
-        assert aifpl.evaluate("(- 10 3)") == 7
+        assert aifpl.evaluate("(integer- 10 3)") == 7
 
     def test_multiplication(self, aifpl):
-        assert aifpl.evaluate("(* 2 3 4)") == 24
+        assert aifpl.evaluate("(integer* 2 3 4)") == 24
 
     def test_division(self, aifpl):
-        assert aifpl.evaluate("(/ 12 3)") == 4.0
+        assert aifpl.evaluate("(float/ 12.0 3.0)") == 4.0
 
     def test_nested_arithmetic(self, aifpl):
-        assert aifpl.evaluate("(+ (* 2 3) (- 10 5))") == 11
+        assert aifpl.evaluate("(integer+ (integer* 2 3) (integer- 10 5))") == 11
 
 
 class TestConditionals:
@@ -63,13 +63,13 @@ class TestLet:
         assert aifpl.evaluate("(let ((x 5)) x)") == 5
 
     def test_let_with_operation(self, aifpl):
-        assert aifpl.evaluate("(let ((x 5) (y 10)) (+ x y))") == 15
+        assert aifpl.evaluate("(let ((x 5) (y 10)) (integer+ x y))") == 15
 
     def test_let_with_expression(self, aifpl):
-        assert aifpl.evaluate("(let ((x (+ 2 3))) (* x 2))") == 10
+        assert aifpl.evaluate("(let ((x (integer+ 2 3))) (integer* x 2))") == 10
 
     def test_nested_let(self, aifpl):
-        result = aifpl.evaluate("(let ((x 5)) (let ((y 10)) (+ x y)))")
+        result = aifpl.evaluate("(let ((x 5)) (let ((y 10)) (integer+ x y)))")
         assert result == 15
 
 
@@ -77,14 +77,14 @@ class TestLambda:
     """Test lambda function operations."""
 
     def test_simple_lambda(self, aifpl):
-        assert aifpl.evaluate("((lambda (x) (* x x)) 5)") == 25
+        assert aifpl.evaluate("((lambda (x) (integer* x x)) 5)") == 25
 
     def test_lambda_with_multiple_params(self, aifpl):
-        assert aifpl.evaluate("((lambda (x y) (+ x y)) 3 4)") == 7
+        assert aifpl.evaluate("((lambda (x y) (integer+ x y)) 3 4)") == 7
 
     def test_lambda_in_let(self, aifpl):
         result = aifpl.evaluate("""
-            (let ((square (lambda (x) (* x x))))
+            (let ((square (lambda (x) (integer* x x))))
               (square 6))
         """)
         assert result == 36
@@ -95,7 +95,7 @@ class TestLambda:
             (letrec ((factorial (lambda (n)
                 (if (= n 0)
                     1
-                    (* n (factorial (- n 1)))))))
+                    (integer* n (factorial (integer- n 1)))))))
               (factorial 5))
         """)
         assert result == 120
@@ -127,7 +127,7 @@ class TestHigherOrder:
     """Test higher-order function operations."""
 
     def test_map(self, aifpl):
-        result = aifpl.evaluate("(map (lambda (x) (* x 2)) (list 1 2 3))")
+        result = aifpl.evaluate("(map (lambda (x) (integer* x 2)) (list 1 2 3))")
         assert result == [2, 4, 6]
 
     def test_filter(self, aifpl):
@@ -135,7 +135,7 @@ class TestHigherOrder:
         assert result == [3, 4]
 
     def test_fold(self, aifpl):
-        result = aifpl.evaluate("(fold + 0 (list 1 2 3 4))")
+        result = aifpl.evaluate("(fold integer+ 0 (list 1 2 3 4))")
         assert result == 10
 
 
@@ -172,7 +172,7 @@ class TestErrors:
 
     def test_division_by_zero(self, aifpl):
         with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(/ 1 0)")
+            aifpl.evaluate("(integer/ 1 0)")
         assert "zero" in str(exc_info.value).lower()
 
     def test_undefined_variable(self, aifpl):
@@ -189,10 +189,10 @@ class TestErrors:
 
     def test_type_error(self, aifpl):
         with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate('(+ 1 "string")')
+            aifpl.evaluate('(integer+ 1 "string")')
         # Should mention type error
         error_msg = str(exc_info.value).lower()
-        assert "number" in error_msg or "numeric" in error_msg or "type" in error_msg
+        assert "number" in error_msg or "numeric" in error_msg or "type" in error_msg or "integer" in error_msg
 
 
 if __name__ == "__main__":

@@ -29,7 +29,7 @@ class TestModuleSystemBasics:
         # Create a simple module
         module_file = tmp_path / "math_utils.aifpl"
         module_file.write_text("""
-(let ((square (lambda (x) (* x x))))
+(let ((square (lambda (x) (integer* x x))))
   (alist (list "square" square)))
 """)
 
@@ -46,9 +46,9 @@ class TestModuleSystemBasics:
         """Test module with multiple exported functions."""
         module_file = tmp_path / "utils.aifpl"
         module_file.write_text("""
-(let ((add-one (lambda (x) (+ x 1)))
-      (double (lambda (x) (* x 2)))
-      (negate (lambda (x) (- 0 x))))
+(let ((add-one (lambda (x) (integer+ x 1)))
+      (double (lambda (x) (integer* x 2)))
+      (negate (lambda (x) (integer-negate x))))
   (alist
     (list "add-one" add-one)
     (list "double" double)
@@ -59,7 +59,7 @@ class TestModuleSystemBasics:
 
         result = aifpl.evaluate('''
 (let ((utils (import "utils")))
-  (+ ((alist-get utils "add-one") 10)
+  (integer+ ((alist-get utils "add-one") 10)
      ((alist-get utils "double") 5)
      ((alist-get utils "negate") 3)))
 ''')
@@ -72,11 +72,11 @@ class TestModuleSystemBasics:
         """Test that functions not in alist are private."""
         module_file = tmp_path / "private_test.aifpl"
         module_file.write_text("""
-(letrec ((helper (lambda (x) (* x 2)))
+(letrec ((helper (lambda (x) (integer* x 2)))
          (public-fn (lambda (x) (helper x))))
   (alist
     (list "public" public-fn)
-    (list "also-public" (lambda (x) (+ x 1)))))
+    (list "also-public" (lambda (x) (integer+ x 1)))))
 """)
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
@@ -118,7 +118,7 @@ class TestModuleCaching:
         """Test that importing same module multiple times uses cache."""
         module_file = tmp_path / "multi.aifpl"
         module_file.write_text("""
-(let ((fn (lambda (x) (* x x))))
+(let ((fn (lambda (x) (integer* x x))))
   (alist (list "square" fn)))
 """)
 
@@ -127,7 +127,7 @@ class TestModuleCaching:
         result = aifpl.evaluate('''
 (let ((m1 (import "multi"))
       (m2 (import "multi")))
-  (+ ((alist-get m1 "square") 3)
+  (integer+ ((alist-get m1 "square") 3)
      ((alist-get m2 "square") 4)))
 ''')
 
@@ -364,7 +364,7 @@ class TestTransitiveImports:
         """Test module that imports another module."""
         # Base module
         (tmp_path / "base.aifpl").write_text("""
-(let ((add (lambda (x y) (+ x y))))
+(let ((add (lambda (x y) (integer+ x y))))
   (alist (list "add" add)))
 """)
 
@@ -437,7 +437,7 @@ class TestTransitiveImports:
       (right (import "right")))
   (alist
     (list "sum" (lambda ()
-      (+ ((alist-get left "get-left"))
+      (integer+ ((alist-get left "get-left"))
          ((alist-get right "get-right")))))))
 """)
 
@@ -460,7 +460,7 @@ class TestModuleCompilation:
         (tmp_path / "let_test.aifpl").write_text("""
 (let ((x 10)
       (y 20))
-  (let ((sum (lambda () (+ x y))))
+  (let ((sum (lambda () (integer+ x y))))
     (alist (list "sum" sum))))
 """)
 
@@ -479,7 +479,7 @@ class TestModuleCompilation:
 (letrec ((factorial (lambda (n)
                       (if (<= n 1)
                           1
-                          (* n (factorial (- n 1)))))))
+                          (integer* n (factorial (integer- n 1)))))))
   (alist (list "factorial" factorial)))
 """)
 
@@ -497,7 +497,7 @@ class TestModuleCompilation:
         (tmp_path / "cond_test.aifpl").write_text("""
 (let ((abs-val (lambda (x)
                  (if (< x 0)
-                     (- 0 x)
+                     (integer-negate x)
                      x))))
   (alist (list "abs" abs-val)))
 """)
@@ -515,7 +515,7 @@ class TestModuleCompilation:
         """Test module using map, filter, fold."""
         (tmp_path / "hof.aifpl").write_text("""
 (let ((sum-squares (lambda (lst)
-                     (fold + 0 (map (lambda (x) (* x x)) lst)))))
+                     (fold integer+ 0 (map (lambda (x) (integer* x x)) lst)))))
   (alist (list "sum-squares" sum-squares)))
 """)
 
@@ -570,7 +570,7 @@ class TestModuleEdgeCases:
 (let ((mod (import "complex")))
   (let ((data (alist-get mod "data"))
         (nested (alist-get mod "nested")))
-    (+ (first data)
+    (integer+ (first data)
        (alist-get nested "inner"))))
 ''')
 

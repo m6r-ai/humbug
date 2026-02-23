@@ -44,8 +44,8 @@ class TestComparisonEdgeCases:
         complex_expressions = [
             "(complex 1 2)",
             "1j",
-            "(+ 1 1j)",
-            "(* 2 1j)"
+            "(complex+ (complex 1 0) 1j)",
+            "(complex* (complex 2 0) 1j)"
         ]
 
         comparison_ops = ["<", ">", "<=", ">="]
@@ -71,7 +71,7 @@ class TestComparisonEdgeCases:
             aifpl.evaluate("(< 1 2 (complex 3 1) 4)")
 
         with pytest.raises(AIFPLEvalError, match="requires real number argument"):
-            aifpl.evaluate("(> 10 (+ 5 1j) 3 1)")
+            aifpl.evaluate("(> 10 (complex+ (complex 5 0) 1j) 3 1)")
 
         with pytest.raises(AIFPLEvalError, match="requires real number argument"):
             aifpl.evaluate("(<= 1 1j 3)")

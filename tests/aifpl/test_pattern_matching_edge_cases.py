@@ -96,7 +96,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         assert result == 42
 
         # Variable binding with transformation
-        result = aifpl.evaluate('(match 5 ((number? n) (* n 2)) (_ 0))')
+        result = aifpl.evaluate('(match 5 ((number? n) (integer* n 2)) (_ 0))')
         assert result == 10
 
         # String variable binding
@@ -105,7 +105,7 @@ class TestAIFPLPatternMatchingEdgeCases:
 
         # Multiple variable bindings (if supported)
         try:
-            result = aifpl.evaluate('(match (list 1 2) ((a b) (+ a b)) (_ 0))')
+            result = aifpl.evaluate('(match (list 1 2) ((a b) (integer+ a b)) (_ 0))')
             assert result == 3
         except AIFPLEvalError:
             # Multiple variable binding might not be supported
@@ -130,7 +130,7 @@ class TestAIFPLPatternMatchingEdgeCases:
 
         # Multiple element list pattern
         try:
-            result = aifpl.evaluate('(match (list 1 2 3) ((a b c) (+ a b c)) (_ 0))')
+            result = aifpl.evaluate('(match (list 1 2 3) ((a b c) (integer+ a b c)) (_ 0))')
             assert result == 6
         except AIFPLEvalError:
             # Multiple element destructuring might not be supported
@@ -148,7 +148,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         """Test nested pattern matching edge cases."""
         # Nested list patterns
         try:
-            result = aifpl.evaluate('(match (list (list 1 2) 3) (((a b) c) (+ a b c)) (_ 0))')
+            result = aifpl.evaluate('(match (list (list 1 2) 3) (((a b) c) (integer+ a b c)) (_ 0))')
             assert result == 6
         except AIFPLEvalError:
             # Nested patterns might not be supported
@@ -299,7 +299,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('''
         (let ((x 42))
           (match x
-            ((number? n) (* n 2))
+            ((number? n) (integer* n 2))
             (_ 0)))
         ''')
         assert result == 84
@@ -307,7 +307,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         # Let bindings in pattern match results
         result = aifpl.evaluate('''
         (match 5
-          ((number? n) (let ((doubled (* n 2))) (+ doubled 1)))
+          ((number? n) (let ((doubled (integer* n 2))) (integer+ doubled 1)))
           (_ 0))
         ''')
         assert result == 11
@@ -319,7 +319,7 @@ class TestAIFPLPatternMatchingEdgeCases:
             result = aifpl.evaluate('''
             (map (lambda (x)
                    (match x
-                     ((number? n) (* n 2))
+                     ((number? n) (integer* n 2))
                      (_ 0)))
                  (list 1 2 3))
             ''')
@@ -375,7 +375,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         """Test pattern matching with results of arithmetic operations."""
         # Match result of arithmetic
         result = aifpl.evaluate('''
-        (match (+ 2 3)
+        (match (integer+ 2 3)
           (5 "five")
           ((number? n) "other number")
           (_ "not a number"))
@@ -384,7 +384,7 @@ class TestAIFPLPatternMatchingEdgeCases:
 
         # Match with complex arithmetic
         result = aifpl.evaluate('''
-        (match (* (+ 1 2) (- 5 3))
+        (match (integer* (integer+ 1 2) (integer- 5 3))
           (6 "six")
           ((number? n) "other number")
           (_ "not a number"))
@@ -461,9 +461,9 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('''
         (match 3
           ((number? n)
-           (let ((squared (* n n))
-                 (doubled (* n 2)))
-             (+ squared doubled)))
+           (let ((squared (integer* n n))
+                 (doubled (integer* n 2)))
+             (integer+ squared doubled)))
           (_ 0))
         ''')
         assert result == 15  # 3^2 + 3*2 = 9 + 6 = 15

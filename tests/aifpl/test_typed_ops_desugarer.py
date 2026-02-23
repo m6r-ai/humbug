@@ -152,14 +152,7 @@ class TestDesugarerOneArg:
         assert isinstance(zero, AIFPLASTComplex)
         assert zero.value == 0+0j
 
-    # --- division: reciprocal for /, float/, complex/; error path for integer/ ---
-
-    def test_generic_div_one_arg_reciprocal(self):
-        result = desugar("(/ 4)")
-        assert op_name(result) == "/"
-        one = result.elements[1]
-        assert isinstance(one, AIFPLASTInteger)
-        assert one.value == 1
+    # --- division: reciprocal for float/, complex/; error path for integer/ ---
 
     def test_float_div_one_arg_reciprocal(self):
         result = desugar("(float/ 4.0)")
@@ -398,19 +391,6 @@ class TestComplexOpsEval:
     def test_complex_ops_reject_float(self, aifpl):
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(complex* (complex 1 2) 3.0)")
-
-
-class TestGenericDivReciprocal:
-    """Generic / now supports the Lisp reciprocal convention."""
-
-    @pytest.mark.parametrize("expr,expected", [
-        ("(/ 4)", "0.25"),
-        ("(/ 2)", "0.5"),
-        ("(/ 1)", "1.0"),
-        ("(/ 5)", "0.2"),
-    ])
-    def test_generic_div_reciprocal(self, aifpl, expr, expected):
-        assert aifpl.evaluate_and_format(expr) == expected
 
 
 class TestFirstClassUse:

@@ -20,8 +20,8 @@ class TestMutualRecursionBasic:
         This should work even without TCO optimization.
         """
         even_odd = '''
-        (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1)))))
-                 (odd? (lambda (n) (if (= n 0) #f (even? (- n 1))))))
+        (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (integer- n 1)))))
+                 (odd? (lambda (n) (if (= n 0) #f (even? (integer- n 1))))))
           (even? 10))
         '''
         helpers.assert_evaluates_to(aifpl, even_odd, '#t')
@@ -33,8 +33,8 @@ class TestMutualRecursionBasic:
         This should work even without TCO optimization.
         """
         even_odd = '''
-        (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1)))))
-                 (odd? (lambda (n) (if (= n 0) #f (even? (- n 1))))))
+        (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (integer- n 1)))))
+                 (odd? (lambda (n) (if (= n 0) #f (even? (integer- n 1))))))
           (even? 100))
         '''
         helpers.assert_evaluates_to(aifpl, even_odd, '#t')
@@ -46,8 +46,8 @@ class TestMutualRecursionBasic:
         This REQUIRES TCO to work - will fail without it.
         """
         even_odd = '''
-        (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1)))))
-                 (odd? (lambda (n) (if (= n 0) #f (even? (- n 1))))))
+        (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (integer- n 1)))))
+                 (odd? (lambda (n) (if (= n 0) #f (even? (integer- n 1))))))
           (even? 10000))
         '''
         helpers.assert_evaluates_to(aifpl, even_odd, '#t')
@@ -59,8 +59,8 @@ class TestMutualRecursionBasic:
         This is the stress test from the issue documentation.
         """
         even_odd = '''
-        (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1)))))
-                 (odd? (lambda (n) (if (= n 0) #f (even? (- n 1))))))
+        (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (integer- n 1)))))
+                 (odd? (lambda (n) (if (= n 0) #f (even? (integer- n 1))))))
           (even? 100000))
         '''
         helpers.assert_evaluates_to(aifpl, even_odd, '#t')
@@ -72,8 +72,8 @@ class TestMutualRecursionBasic:
         Verifies that both directions of mutual recursion work.
         """
         even_odd = '''
-        (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1)))))
-                 (odd? (lambda (n) (if (= n 0) #f (even? (- n 1))))))
+        (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (integer- n 1)))))
+                 (odd? (lambda (n) (if (= n 0) #f (even? (integer- n 1))))))
           (odd? 10001))
         '''
         helpers.assert_evaluates_to(aifpl, even_odd, '#t')
@@ -92,11 +92,11 @@ class TestMutualRecursionWithAccumulators:
         (letrec ((count-down-a (lambda (n acc)
                                  (if (<= n 0)
                                      acc
-                                     (count-down-b (- n 1) (+ acc 1)))))
+                                     (count-down-b (integer- n 1) (integer+ acc 1)))))
                  (count-down-b (lambda (n acc)
                                  (if (<= n 0)
                                      acc
-                                     (count-down-a (- n 1) (+ acc 2))))))
+                                     (count-down-a (integer- n 1) (integer+ acc 2))))))
           (count-down-a 5000 0))
         '''
         result = aifpl.evaluate(mutual_with_acc)
@@ -134,9 +134,9 @@ class TestMutualRecursionMultipleFunctions:
         Tests that TCO works for more complex mutual recursion patterns.
         """
         three_way = '''
-        (letrec ((func-a (lambda (n) (if (<= n 0) "a" (func-b (- n 1)))))
-                 (func-b (lambda (n) (if (<= n 0) "b" (func-c (- n 1)))))
-                 (func-c (lambda (n) (if (<= n 0) "c" (func-a (- n 1))))))
+        (letrec ((func-a (lambda (n) (if (<= n 0) "a" (func-b (integer- n 1)))))
+                 (func-b (lambda (n) (if (<= n 0) "b" (func-c (integer- n 1)))))
+                 (func-c (lambda (n) (if (<= n 0) "c" (func-a (integer- n 1))))))
           (func-a 10000))
         '''
         result = aifpl.evaluate_and_format(three_way)
@@ -149,10 +149,10 @@ class TestMutualRecursionMultipleFunctions:
         Tests even more complex mutual recursion patterns.
         """
         four_way = '''
-        (letrec ((func-a (lambda (n) (if (<= n 0) 1 (func-b (- n 1)))))
-                 (func-b (lambda (n) (if (<= n 0) 2 (func-c (- n 1)))))
-                 (func-c (lambda (n) (if (<= n 0) 3 (func-d (- n 1)))))
-                 (func-d (lambda (n) (if (<= n 0) 4 (func-a (- n 1))))))
+        (letrec ((func-a (lambda (n) (if (<= n 0) 1 (func-b (integer- n 1)))))
+                 (func-b (lambda (n) (if (<= n 0) 2 (func-c (integer- n 1)))))
+                 (func-c (lambda (n) (if (<= n 0) 3 (func-d (integer- n 1)))))
+                 (func-d (lambda (n) (if (<= n 0) 4 (func-a (integer- n 1))))))
           (func-a 10000))
         '''
         result = aifpl.evaluate(four_way)
@@ -172,12 +172,12 @@ class TestMutualRecursionWithLet:
         (letrec ((even? (lambda (n)
                           (if (= n 0)
                               #t
-                              (let ((next (- n 1)))
+                              (let ((next (integer- n 1)))
                                 (odd? next)))))
                  (odd? (lambda (n)
                          (if (= n 0)
                              #f
-                             (let ((next (- n 1)))
+                             (let ((next (integer- n 1)))
                                (even? next))))))
           (even? 10000))
         '''
@@ -191,14 +191,14 @@ class TestMutualRecursionWithLet:
         (letrec ((func-a (lambda (n acc)
                           (if (<= n 0)
                               acc
-                              (let ((next-n (- n 1))
-                                    (next-acc (+ acc 1)))
+                              (let ((next-n (integer- n 1))
+                                    (next-acc (integer+ acc 1)))
                                 (func-b next-n next-acc)))))
                  (func-b (lambda (n acc)
                           (if (<= n 0)
                               acc
-                              (let ((next-n (- n 1))
-                                    (next-acc (* acc 2)))
+                              (let ((next-n (integer- n 1))
+                                    (next-acc (integer* acc 2)))
                                 (func-a next-n next-acc))))))
           (func-a 1000 1))
         '''
@@ -218,7 +218,7 @@ class TestMutualRecursionEdgeCases:
         """
         different_arities = '''
         (letrec ((func-one (lambda (n) (if (<= n 0) "done" (func-two n 0))))
-                 (func-two (lambda (n acc) (if (<= n 0) acc (func-one (- n 1))))))
+                 (func-two (lambda (n acc) (if (<= n 0) acc (func-one (integer- n 1))))))
           (func-one 10))
         '''
         result = aifpl.evaluate_and_format(different_arities)
@@ -232,7 +232,7 @@ class TestMutualRecursionEdgeCases:
         """
         different_arities = '''
         (letrec ((func-one (lambda (n) (if (<= n 0) "done" (func-two n 0))))
-                 (func-two (lambda (n acc) (if (<= n 0) acc (func-one (- n 1))))))
+                 (func-two (lambda (n acc) (if (<= n 0) acc (func-one (integer- n 1))))))
           (func-one 10000))
         '''
         result = aifpl.evaluate_and_format(different_arities)
@@ -249,14 +249,14 @@ class TestMutualRecursionEdgeCases:
                              (if (<= n 0)
                                  mode
                                  (if (= mode 0)
-                                     (process-b (- n 1) 1)
-                                     (process-b (- n 1) 0)))))
+                                     (process-b (integer- n 1) 1)
+                                     (process-b (integer- n 1) 0)))))
                  (process-b (lambda (n mode)
                              (if (<= n 0)
                                  mode
                                  (if (= mode 0)
-                                     (process-a (- n 1) 1)
-                                     (process-a (- n 1) 0))))))
+                                     (process-a (integer- n 1) 1)
+                                     (process-a (integer- n 1) 0))))))
           (process-a 10000 0))
         '''
         result = aifpl.evaluate(with_conditionals)
@@ -269,9 +269,9 @@ class TestMutualRecursionEdgeCases:
         Tests that both patterns can coexist in the same letrec.
         """
         mixed = '''
-        (letrec ((self-rec (lambda (n) (if (<= n 0) 0 (self-rec (- n 1)))))
-                 (mutual-a (lambda (n) (if (<= n 0) 1 (mutual-b (- n 1)))))
-                 (mutual-b (lambda (n) (if (<= n 0) 2 (mutual-a (- n 1))))))
+        (letrec ((self-rec (lambda (n) (if (<= n 0) 0 (self-rec (integer- n 1)))))
+                 (mutual-a (lambda (n) (if (<= n 0) 1 (mutual-b (integer- n 1)))))
+                 (mutual-b (lambda (n) (if (<= n 0) 2 (mutual-a (integer- n 1))))))
           (list (self-rec 10) (mutual-a 10)))
         '''
         helpers.assert_evaluates_to(aifpl, mixed, '(0 1)')
@@ -283,9 +283,9 @@ class TestMutualRecursionEdgeCases:
         Self-recursion should use existing TCO, mutual recursion should use new TCO.
         """
         mixed = '''
-        (letrec ((self-rec (lambda (n) (if (<= n 0) 0 (self-rec (- n 1)))))
-                 (mutual-a (lambda (n) (if (<= n 0) 1 (mutual-b (- n 1)))))
-                 (mutual-b (lambda (n) (if (<= n 0) 2 (mutual-a (- n 1))))))
+        (letrec ((self-rec (lambda (n) (if (<= n 0) 0 (self-rec (integer- n 1)))))
+                 (mutual-a (lambda (n) (if (<= n 0) 1 (mutual-b (integer- n 1)))))
+                 (mutual-b (lambda (n) (if (<= n 0) 2 (mutual-a (integer- n 1))))))
           (list (self-rec 10000) (mutual-a 10000)))
         '''
         helpers.assert_evaluates_to(aifpl, mixed, '(0 1)')
@@ -331,12 +331,12 @@ class TestMutualRecursionPracticalExamples:
                                (if (null? lst)
                                    (list pos-acc neg-acc)
                                    (let ((val (first lst)))
-                                     (process-neg (rest lst) (+ pos-acc val) neg-acc)))))
+                                     (process-neg (rest lst) (integer+ pos-acc val) neg-acc)))))
                  (process-neg (lambda (lst pos-acc neg-acc)
                                (if (null? lst)
                                    (list pos-acc neg-acc)
                                    (let ((val (first lst)))
-                                     (process-pos (rest lst) pos-acc (+ neg-acc val)))))))
+                                     (process-pos (rest lst) pos-acc (integer+ neg-acc val)))))))
           (process-pos (range 1 1001) 0 0))
         '''
         result = aifpl.evaluate(alternating)
@@ -353,8 +353,8 @@ class TestMutualRecursionPerformance:
         This is the ultimate test - the value from the issue documentation.
         """
         deep = '''
-        (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1)))))
-                 (odd? (lambda (n) (if (= n 0) #f (even? (- n 1))))))
+        (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (integer- n 1)))))
+                 (odd? (lambda (n) (if (= n 0) #f (even? (integer- n 1))))))
           (even? 100000))
         '''
 
@@ -368,15 +368,15 @@ class TestMutualRecursionPerformance:
         """
         # Self-recursion (already works)
         self_rec = '''
-        (letrec ((countdown (lambda (n) (if (<= n 0) "done" (countdown (- n 1))))))
+        (letrec ((countdown (lambda (n) (if (<= n 0) "done" (countdown (integer- n 1))))))
           (countdown 100000))
         '''
         assert aifpl.evaluate_and_format(self_rec) == '"done"'
 
         # Mutual recursion (now works!)
         mutual_rec = '''
-        (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1)))))
-                 (odd? (lambda (n) (if (= n 0) #f (even? (- n 1))))))
+        (letrec ((even? (lambda (n) (if (= n 0) #t (odd? (integer- n 1)))))
+                 (odd? (lambda (n) (if (= n 0) #f (even? (integer- n 1))))))
           (even? 100000))
         '''
         assert aifpl.evaluate_and_format(mutual_rec) == '#t'
@@ -392,12 +392,12 @@ class TestMutualRecursionCorrectness:
         This validates the logic is correct before testing TCO.
         """
         tests = [
-            ('(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (- n 1)))))) (even? 0))', '#t'),
-            ('(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (- n 1)))))) (odd? 0))', '#f'),
-            ('(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (- n 1)))))) (even? 1))', '#f'),
-            ('(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (- n 1)))))) (odd? 1))', '#t'),
-            ('(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (- n 1)))))) (even? 4))', '#t'),
-            ('(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (- n 1)))))) (odd? 5))', '#t'),
+            ('(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (integer- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (integer- n 1)))))) (even? 0))', '#t'),
+            ('(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (integer- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (integer- n 1)))))) (odd? 0))', '#f'),
+            ('(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (integer- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (integer- n 1)))))) (even? 1))', '#f'),
+            ('(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (integer- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (integer- n 1)))))) (odd? 1))', '#t'),
+            ('(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (integer- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (integer- n 1)))))) (even? 4))', '#t'),
+            ('(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (integer- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (integer- n 1)))))) (odd? 5))', '#t'),
         ]
 
         for expr, expected in tests:
@@ -412,13 +412,13 @@ class TestMutualRecursionCorrectness:
         # Test even numbers
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (- n 1)))))) (even? 10000))',
+            '(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (integer- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (integer- n 1)))))) (even? 10000))',
             '#t'
         )
 
         # Test odd numbers
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (- n 1)))))) (odd? 10001))',
+            '(letrec ((even? (lambda (n) (if (= n 0) #t (odd? (integer- n 1))))) (odd? (lambda (n) (if (= n 0) #f (even? (integer- n 1)))))) (odd? 10001))',
             '#t'
         )
