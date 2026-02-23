@@ -97,6 +97,17 @@ class AIFPLDesugarer:
                 # Desugar variadic arithmetic to binary operations
                 return self._desugar_variadic_arithmetic(expr)
 
+            # Check for typed variadic arithmetic operations
+            if name in [
+                'integer+', 'integer-', 'integer*',
+                'integer/',
+                'float+', 'float-', 'float*',
+                'float/',
+                'complex+', 'complex-', 'complex*',
+                'complex/',
+            ]:
+                return self._desugar_variadic_arithmetic(expr)
+
             # Fold-reducible variadic operations
             if name in ['bit-or', 'bit-and', 'bit-xor', 'append', 'string-append', 'min', 'max']:
                 return self._desugar_fold_variadic(expr)
@@ -266,34 +277,65 @@ class AIFPLDesugarer:
 
         args = list(expr.elements[1:])
 
+        # Determine identity elements and sub operator for this family.
+        if op_name in ('+', '-', '*', '/'):
+            zero: AIFPLASTNode = AIFPLASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
+            one: AIFPLASTNode = AIFPLASTInteger(1, line=expr.line, column=expr.column, source_file=expr.source_file)
+            sub_op = '-'
+        elif op_name in ('integer+', 'integer-', 'integer*', 'integer/'):
+            zero = AIFPLASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
+            one = AIFPLASTInteger(1, line=expr.line, column=expr.column, source_file=expr.source_file)
+            sub_op = 'integer-'
+        elif op_name in ('float+', 'float-', 'float*', 'float/'):
+            zero = AIFPLASTFloat(0.0, line=expr.line, column=expr.column, source_file=expr.source_file)
+            one = AIFPLASTFloat(1.0, line=expr.line, column=expr.column, source_file=expr.source_file)
+            sub_op = 'float-'
+        elif op_name in ('complex+', 'complex-', 'complex*', 'complex/'):
+            zero = AIFPLASTComplex(0+0j, line=expr.line, column=expr.column, source_file=expr.source_file)
+            one = AIFPLASTComplex(1+0j, line=expr.line, column=expr.column, source_file=expr.source_file)
+            sub_op = 'complex-'
+        else:
+            assert False, f"Unexpected operator in _desugar_variadic_arithmetic: {op_name!r}"
+
+        is_add = op_name in ('+', 'integer+', 'float+', 'complex+')
+        is_mul = op_name in ('*', 'integer*', 'float*', 'complex*')
+        is_sub = op_name in ('-', 'integer-', 'float-', 'complex-')
+        # integer/ is binary-only: (integer/ x) has no sensible reciprocal
+        # (floor(1/x) == 0 for all x > 1).  Generic /, float/, complex/ all
+        # support the Lisp reciprocal convention: (/ x) → (/ 1 x).
+        is_div_error = op_name == 'integer/'
+        is_div_reciprocal = op_name in ('/', 'float/', 'complex/')
+
         # Handle zero-argument cases
         if len(args) == 0:
-            if op_name == '+':
-                # (+) → 0
-                return AIFPLASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
+            if is_add:
+                # (+) / (integer+) / (float+) / (complex+) → identity element
+                return zero
 
-            if op_name == '*':
-                # (*) → 1
-                return AIFPLASTInteger(1, line=expr.line, column=expr.column, source_file=expr.source_file)
+            if is_mul:
+                # (*) / (integer*) / (float*) / (complex*) → identity element
+                return one
 
-            # (- ) and (/) with no args are errors - let them fall through to runtime
+            # subtraction/division with no args are errors — fall through to runtime
             return self._desugar_call(expr)
 
         # Handle single-argument cases
         if len(args) == 1:
             desugared_arg = self.desugar(args[0])
 
-            if op_name == '-':
-                # (- x) → (- 0 x) [unary negation]
-                zero = AIFPLASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
-                return self._make_list((op_symbol, zero, desugared_arg), expr)
+            if is_sub:
+                # (- x) → (- 0 x), (integer- x) → (integer- 0 x), etc.
+                return self._make_list((self._make_symbol(sub_op, expr), zero, desugared_arg), expr)
 
-            if op_name == '/':
-                # (/ x) is an error - let runtime handle it
+            if is_div_reciprocal:
+                # (/ x) → (/ 1 x), (float/ x) → (float/ 1.0 x), (complex/ x) → (complex/ 1+0j x)
+                return self._make_list((self._make_symbol(op_name, expr), one, desugared_arg), expr)
+
+            if is_div_error:
+                # (integer/ x) is an error — floor(1/x) == 0 for x > 1, almost certainly not intended
                 return self._desugar_call(expr)
 
-            # (+  x), (* x), (/ x) → x [identity]
-            # Note: (/ x) handled above as error case
+            # (+ x), (* x), (integer+ x), (float* x), (complex+ x), etc. → x [identity]
             return desugared_arg
 
         # Handle binary case (already optimal)

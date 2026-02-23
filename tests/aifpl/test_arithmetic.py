@@ -534,12 +534,13 @@ class TestArithmetic:
             aifpl.evaluate("(abs 1 2)")  # abs takes only 1 arg
 
     def test_division_minimum_args(self, aifpl):
-        """Test that division requires at least 2 arguments."""
+        """Test that zero-arg division is an error; 1-arg is the reciprocal."""
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(/)")
 
-        with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(/ 5)")
+        # (/ x) is now the Lisp reciprocal convention: (/ 1 x)
+        assert aifpl.evaluate_and_format("(/ 5)") == "0.2"
+        assert aifpl.evaluate_and_format("(/ 4)") == "0.25"
 
     def test_subtraction_minimum_args(self, aifpl):
         """Test that subtraction requires at least 1 argument."""
