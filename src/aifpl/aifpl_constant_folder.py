@@ -44,7 +44,20 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'real', 'imag', 'complex',
         'bit-or', 'bit-and', 'bit-xor', 'bit-not',
         'bit-shift-left', 'bit-shift-right',
-        'number=?', 'integer=?', 'float=?', 'complex=?', 'boolean=?', 'string=?'
+        'number=?', 'integer=?', 'float=?', 'complex=?', 'boolean=?', 'string=?',
+        # Typed arithmetic
+        'integer+', 'integer-', 'integer*', 'integer/',
+        'integer-negate',
+        # Typed float arithmetic and transcendentals
+        'float+', 'float-', 'float*', 'float/',
+        'float-negate', 'float-pow',
+        'float-sin', 'float-cos', 'float-tan',
+        'float-log', 'float-log10', 'float-exp', 'float-sqrt', 'float-abs',
+        # Typed complex arithmetic and transcendentals
+        'complex+', 'complex-', 'complex*', 'complex/',
+        'complex-negate', 'complex-pow',
+        'complex-sin', 'complex-cos', 'complex-tan',
+        'complex-log', 'complex-exp', 'complex-sqrt', 'complex-abs',
     }
 
     def __init__(self) -> None:
@@ -111,6 +124,44 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'complex=?': self._fold_complex_eq,
             'boolean=?': self._fold_boolean_eq,
             'string=?': self._fold_string_eq,
+
+            # Typed integer arithmetic
+            'integer+': self._fold_integer_add,
+            'integer-': self._fold_integer_sub,
+            'integer*': self._fold_integer_mul,
+            'integer/': self._fold_integer_div,
+            'integer-negate': self._fold_integer_negate,
+
+            # Typed float arithmetic and transcendentals
+            'float+': self._fold_float_add,
+            'float-': self._fold_float_sub,
+            'float*': self._fold_float_mul,
+            'float/': self._fold_float_div,
+            'float-negate': self._fold_float_negate,
+            'float-pow': self._fold_float_pow,
+            'float-sin': self._fold_float_sin,
+            'float-cos': self._fold_float_cos,
+            'float-tan': self._fold_float_tan,
+            'float-log': self._fold_float_log,
+            'float-log10': self._fold_float_log10,
+            'float-exp': self._fold_float_exp,
+            'float-sqrt': self._fold_float_sqrt,
+            'float-abs': self._fold_float_abs,
+
+            # Typed complex arithmetic and transcendentals
+            'complex+': self._fold_complex_add,
+            'complex-': self._fold_complex_sub,
+            'complex*': self._fold_complex_mul,
+            'complex/': self._fold_complex_div,
+            'complex-negate': self._fold_complex_negate,
+            'complex-pow': self._fold_complex_pow,
+            'complex-sin': self._fold_complex_sin,
+            'complex-cos': self._fold_complex_cos,
+            'complex-tan': self._fold_complex_tan,
+            'complex-log': self._fold_complex_log,
+            'complex-exp': self._fold_complex_exp,
+            'complex-sqrt': self._fold_complex_sqrt,
+            'complex-abs': self._fold_complex_abs,
         }
 
         # Build jump table for special form optimization.  Note we don't include any special forms that were
@@ -893,6 +944,315 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
 
         first = args[0]
         return AIFPLASTBoolean(all(first == arg for arg in args[1:]))
+
+    # -----------------------------------------------------------------------
+    # Typed integer arithmetic
+    # -----------------------------------------------------------------------
+
+    def _fold_integer_add(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold integer+: all args must be integers, returns integer."""
+        if not all(isinstance(a, AIFPLASTInteger) for a in args):
+            return None
+
+        result = sum(a.value for a in args)  # type: ignore[union-attr]
+        return AIFPLASTInteger(result)
+
+    def _fold_integer_sub(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold integer-: all args must be integers, returns integer."""
+        if not all(isinstance(a, AIFPLASTInteger) for a in args):
+            return None
+
+        # By the time we reach the folder, desugaring has already reduced this
+        # to a binary call, so len(args) == 2 always.  Guard anyway.
+        result = args[0].value  # type: ignore[union-attr]
+        for a in args[1:]:
+            result -= a.value  # type: ignore[union-attr]
+
+        return AIFPLASTInteger(result)
+
+    def _fold_integer_mul(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold integer*: all args must be integers, returns integer."""
+        if not all(isinstance(a, AIFPLASTInteger) for a in args):
+            return None
+
+        result = 1
+        for a in args:
+            result *= a.value  # type: ignore[union-attr]
+
+        return AIFPLASTInteger(result)
+
+    def _fold_integer_div(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold integer/: all args must be integers, floor division, returns integer."""
+        if not all(isinstance(a, AIFPLASTInteger) for a in args):
+            return None
+
+        result = args[0].value  # type: ignore[union-attr]
+        for a in args[1:]:
+            divisor = a.value  # type: ignore[union-attr]
+            if divisor == 0:
+                return None  # Division by zero — let runtime raise the error
+
+            result //= divisor
+
+        return AIFPLASTInteger(result)
+
+    def _fold_integer_negate(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold integer-negate: arg must be integer, returns integer."""
+        if not isinstance(args[0], AIFPLASTInteger):
+            return None
+
+        return AIFPLASTInteger(-args[0].value)
+
+    # -----------------------------------------------------------------------
+    # Typed float arithmetic and transcendentals
+    # -----------------------------------------------------------------------
+
+    def _fold_float_add(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float+: all args must be floats, returns float."""
+        if not all(isinstance(a, AIFPLASTFloat) for a in args):
+            return None
+
+        result = sum(a.value for a in args)  # type: ignore[union-attr]
+        return AIFPLASTFloat(result)
+
+    def _fold_float_sub(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-: all args must be floats, returns float."""
+        if not all(isinstance(a, AIFPLASTFloat) for a in args):
+            return None
+
+        result = args[0].value  # type: ignore[union-attr]
+        for a in args[1:]:
+            result -= a.value  # type: ignore[union-attr]
+
+        return AIFPLASTFloat(result)
+
+    def _fold_float_mul(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float*: all args must be floats, returns float."""
+        if not all(isinstance(a, AIFPLASTFloat) for a in args):
+            return None
+
+        result = 1.0
+        for a in args:
+            result *= a.value  # type: ignore[union-attr]
+
+        return AIFPLASTFloat(result)
+
+    def _fold_float_div(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float/: all args must be floats, true division, returns float."""
+        if not all(isinstance(a, AIFPLASTFloat) for a in args):
+            return None
+
+        result = args[0].value  # type: ignore[union-attr]
+        for a in args[1:]:
+            divisor = a.value  # type: ignore[union-attr]
+            if divisor == 0.0:
+                return None  # Division by zero — let runtime raise the error
+
+            result /= divisor
+
+        return AIFPLASTFloat(result)
+
+    def _fold_float_negate(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-negate: arg must be float, returns float."""
+        if not isinstance(args[0], AIFPLASTFloat):
+            return None
+
+        return AIFPLASTFloat(-args[0].value)
+
+    def _fold_float_pow(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-pow: both args must be floats, returns float."""
+        if not all(isinstance(a, AIFPLASTFloat) for a in args):
+            return None
+
+        result = args[0].value ** args[1].value  # type: ignore[union-attr]
+        return AIFPLASTFloat(result)
+
+    def _fold_float_sin(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-sin: arg must be float, returns float."""
+        if not isinstance(args[0], AIFPLASTFloat):
+            return None
+
+        return AIFPLASTFloat(math.sin(args[0].value))
+
+    def _fold_float_cos(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-cos: arg must be float, returns float."""
+        if not isinstance(args[0], AIFPLASTFloat):
+            return None
+
+        return AIFPLASTFloat(math.cos(args[0].value))
+
+    def _fold_float_tan(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-tan: arg must be float, returns float."""
+        if not isinstance(args[0], AIFPLASTFloat):
+            return None
+
+        return AIFPLASTFloat(math.tan(args[0].value))
+
+    def _fold_float_log(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-log: arg must be float, returns float. Zero → -inf, negative → don't fold."""
+        if not isinstance(args[0], AIFPLASTFloat):
+            return None
+
+        val = args[0].value
+        if val < 0.0:
+            return None  # Negative arg is a runtime error — don't fold
+
+        if val == 0.0:
+            return AIFPLASTFloat(float('-inf'))
+
+        return AIFPLASTFloat(math.log(val))
+
+    def _fold_float_log10(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-log10: arg must be float, returns float. Zero → -inf, negative → don't fold."""
+        if not isinstance(args[0], AIFPLASTFloat):
+            return None
+
+        val = args[0].value
+        if val < 0.0:
+            return None  # Negative arg is a runtime error — don't fold
+
+        if val == 0.0:
+            return AIFPLASTFloat(float('-inf'))
+
+        return AIFPLASTFloat(math.log10(val))
+
+    def _fold_float_exp(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-exp: arg must be float, returns float."""
+        if not isinstance(args[0], AIFPLASTFloat):
+            return None
+
+        return AIFPLASTFloat(math.exp(args[0].value))
+
+    def _fold_float_sqrt(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-sqrt: arg must be non-negative float, returns float."""
+        if not isinstance(args[0], AIFPLASTFloat):
+            return None
+
+        val = args[0].value
+        if val < 0.0:
+            return None  # Negative arg is a runtime error — don't fold
+
+        return AIFPLASTFloat(math.sqrt(val))
+
+    def _fold_float_abs(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-abs: arg must be float, returns float."""
+        if not isinstance(args[0], AIFPLASTFloat):
+            return None
+
+        return AIFPLASTFloat(abs(args[0].value))
+
+    # -----------------------------------------------------------------------
+    # Typed complex arithmetic and transcendentals
+    # -----------------------------------------------------------------------
+
+    def _fold_complex_add(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex+: all args must be complex, returns complex."""
+        if not all(isinstance(a, AIFPLASTComplex) for a in args):
+            return None
+
+        result = sum((a.value for a in args), 0j)  # type: ignore[union-attr]
+        return AIFPLASTComplex(result)
+
+    def _fold_complex_sub(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex-: all args must be complex, returns complex."""
+        if not all(isinstance(a, AIFPLASTComplex) for a in args):
+            return None
+
+        result = args[0].value  # type: ignore[union-attr]
+        for a in args[1:]:
+            result -= a.value  # type: ignore[union-attr]
+
+        return AIFPLASTComplex(result)
+
+    def _fold_complex_mul(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex*: all args must be complex, returns complex."""
+        if not all(isinstance(a, AIFPLASTComplex) for a in args):
+            return None
+
+        result = complex(1, 0)
+        for a in args:
+            result *= a.value  # type: ignore[union-attr]
+
+        return AIFPLASTComplex(result)
+
+    def _fold_complex_div(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex/: all args must be complex, returns complex."""
+        if not all(isinstance(a, AIFPLASTComplex) for a in args):
+            return None
+
+        result = args[0].value  # type: ignore[union-attr]
+        for a in args[1:]:
+            divisor = a.value  # type: ignore[union-attr]
+            if divisor == 0j:
+                return None  # Division by zero — let runtime raise the error
+
+            result /= divisor
+
+        return AIFPLASTComplex(result)
+
+    def _fold_complex_negate(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex-negate: arg must be complex, returns complex."""
+        if not isinstance(args[0], AIFPLASTComplex):
+            return None
+
+        return AIFPLASTComplex(-args[0].value)
+
+    def _fold_complex_pow(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex-pow: both args must be complex, returns complex."""
+        if not all(isinstance(a, AIFPLASTComplex) for a in args):
+            return None
+
+        result = args[0].value ** args[1].value  # type: ignore[union-attr]
+        return AIFPLASTComplex(result)
+
+    def _fold_complex_sin(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex-sin: arg must be complex, returns complex."""
+        if not isinstance(args[0], AIFPLASTComplex):
+            return None
+
+        return AIFPLASTComplex(cmath.sin(args[0].value))
+
+    def _fold_complex_cos(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex-cos: arg must be complex, returns complex."""
+        if not isinstance(args[0], AIFPLASTComplex):
+            return None
+
+        return AIFPLASTComplex(cmath.cos(args[0].value))
+
+    def _fold_complex_tan(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex-tan: arg must be complex, returns complex."""
+        if not isinstance(args[0], AIFPLASTComplex):
+            return None
+
+        return AIFPLASTComplex(cmath.tan(args[0].value))
+
+    def _fold_complex_log(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex-log: arg must be complex, returns complex."""
+        if not isinstance(args[0], AIFPLASTComplex):
+            return None
+
+        return AIFPLASTComplex(cmath.log(args[0].value))
+
+    def _fold_complex_exp(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex-exp: arg must be complex, returns complex."""
+        if not isinstance(args[0], AIFPLASTComplex):
+            return None
+
+        return AIFPLASTComplex(cmath.exp(args[0].value))
+
+    def _fold_complex_sqrt(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex-sqrt: arg must be complex, returns complex."""
+        if not isinstance(args[0], AIFPLASTComplex):
+            return None
+
+        return AIFPLASTComplex(cmath.sqrt(args[0].value))
+
+    def _fold_complex_abs(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex-abs: arg must be complex, returns float (magnitude)."""
+        if not isinstance(args[0], AIFPLASTComplex):
+            return None
+
+        return AIFPLASTFloat(abs(args[0].value))
 
     def _to_python_number(self, value: AIFPLASTNode) -> int | float | complex:
         """Convert AIFPL numeric value to Python number."""
