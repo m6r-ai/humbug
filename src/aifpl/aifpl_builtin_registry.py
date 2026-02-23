@@ -135,18 +135,18 @@ class AIFPLBuiltinRegistry:
         'imag': (1, 1),
         'complex': (2, 2),
         # Type-specific integer arithmetic
-        'integer+': (2, 2),
-        'integer-': (2, 2),
-        'integer*': (2, 2),
-        'integer/': (2, 2),
+        'integer+': (0, None),
+        'integer-': (1, None),
+        'integer*': (0, None),
+        'integer/': (2, None),
         'integer-negate': (1, 1),
         # Type-specific float arithmetic
-        'float+': (2, 2),
-        'float-': (2, 2),
-        'float*': (2, 2),
-        'float/': (2, 2),
+        'float+': (0, None),
+        'float-': (1, None),
+        'float*': (0, None),
+        'float/': (2, None),
         'float-negate': (1, 1),
-        'float-pow': (2, 2),
+        'float-pow': (2, None),
         # Type-specific float transcendentals
         'float-sin': (1, 1),
         'float-cos': (1, 1),
@@ -157,12 +157,12 @@ class AIFPLBuiltinRegistry:
         'float-sqrt': (1, 1),
         'float-abs': (1, 1),
         # Type-specific complex arithmetic
-        'complex+': (2, 2),
-        'complex-': (2, 2),
-        'complex*': (2, 2),
-        'complex/': (2, 2),
+        'complex+': (1, None),
+        'complex-': (1, None),
+        'complex*': (1, None),
+        'complex/': (2, None),
         'complex-negate': (1, 1),
-        'complex-pow': (2, 2),
+        'complex-pow': (2, None),
         # Type-specific complex transcendentals
         'complex-sin': (1, 1),
         'complex-cos': (1, 1),
@@ -204,6 +204,9 @@ class AIFPLBuiltinRegistry:
             'min', 'max',
             'string=?', 'number=?', 'integer=?', 'float=?', 'complex=?', 'boolean=?', 'list=?', 'alist=?',
             'list', 'alist', 'alist-get', 'range',
+            'integer+', 'integer-', 'integer*', 'integer/',
+            'float+', 'float-', 'float*', 'float/', 'float-pow',
+            'complex+', 'complex-', 'complex*', 'complex/', 'complex-pow',
         }
 
         builtins = {}

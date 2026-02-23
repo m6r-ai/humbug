@@ -267,6 +267,109 @@ class AIFPL:
         'range': """(lambda (start end . rest)
                       (range start end (if (null? rest) 1 (first rest))))""",
         # Higher-order functions
+        # Type-specific variadic integer arithmetic
+        'integer+': """(lambda (. args)
+                         (if (null? args) 0
+                           (letrec ((loop (lambda (lst acc)
+                                            (if (null? lst) acc
+                                                (loop (rest lst) (integer+ acc (first lst)))))))
+                             (loop (rest args) (first args)))))""",
+        'integer-': """(lambda (. args)
+                         (if (null? args)
+                           (error "Function 'integer-' requires at least 1 argument, got 0")
+                           (if (null? (rest args))
+                             (integer-negate (first args))
+                             (letrec ((loop (lambda (lst acc)
+                                              (if (null? lst) acc
+                                                  (loop (rest lst) (integer- acc (first lst)))))))
+                               (loop (rest args) (first args))))))""",
+        'integer*': """(lambda (. args)
+                         (if (null? args) 1
+                           (letrec ((loop (lambda (lst acc)
+                                            (if (null? lst) acc
+                                                (loop (rest lst) (integer* acc (first lst)))))))
+                             (loop (rest args) (first args)))))""",
+        'integer/': """(lambda (. args)
+                         (if (< (length args) 2)
+                           (error "Function 'integer/' requires at least 2 arguments")
+                           (letrec ((loop (lambda (lst acc)
+                                            (if (null? lst) acc
+                                                (loop (rest lst) (integer/ acc (first lst)))))))
+                             (loop (rest args) (first args)))))""",
+        # Type-specific variadic float arithmetic
+        'float+': """(lambda (. args)
+                       (if (null? args) 0.0
+                         (letrec ((loop (lambda (lst acc)
+                                          (if (null? lst) acc
+                                              (loop (rest lst) (float+ acc (first lst)))))))
+                           (loop (rest args) (first args)))))""",
+        'float-': """(lambda (. args)
+                       (if (null? args)
+                         (error "Function 'float-' requires at least 1 argument, got 0")
+                         (if (null? (rest args))
+                           (float-negate (first args))
+                           (letrec ((loop (lambda (lst acc)
+                                            (if (null? lst) acc
+                                                (loop (rest lst) (float- acc (first lst)))))))
+                             (loop (rest args) (first args))))))""",
+        'float*': """(lambda (. args)
+                       (if (null? args) 1.0
+                         (letrec ((loop (lambda (lst acc)
+                                          (if (null? lst) acc
+                                              (loop (rest lst) (float* acc (first lst)))))))
+                           (loop (rest args) (first args)))))""",
+        'float/': """(lambda (. args)
+                       (if (< (length args) 2)
+                         (error "Function 'float/' requires at least 2 arguments")
+                         (letrec ((loop (lambda (lst acc)
+                                          (if (null? lst) acc
+                                              (loop (rest lst) (float/ acc (first lst)))))))
+                           (loop (rest args) (first args)))))""",
+        'float-pow': """(lambda (. args)
+                          (if (< (length args) 2)
+                            (error "Function 'float-pow' requires at least 2 arguments")
+                            (letrec ((loop (lambda (lst acc)
+                                             (if (null? lst) acc
+                                                 (loop (rest lst) (float-pow acc (first lst)))))))
+                              (loop (rest args) (first args)))))""",
+        # Type-specific variadic complex arithmetic
+        'complex+': """(lambda (. args)
+                         (if (null? args)
+                           (error "Function 'complex+' requires at least 1 argument, got 0")
+                           (letrec ((loop (lambda (lst acc)
+                                            (if (null? lst) acc
+                                                (loop (rest lst) (complex+ acc (first lst)))))))
+                             (loop (rest args) (first args)))))""",
+        'complex-': """(lambda (. args)
+                         (if (null? args)
+                           (error "Function 'complex-' requires at least 1 argument, got 0")
+                           (if (null? (rest args))
+                             (complex-negate (first args))
+                             (letrec ((loop (lambda (lst acc)
+                                              (if (null? lst) acc
+                                                  (loop (rest lst) (complex- acc (first lst)))))))
+                               (loop (rest args) (first args))))))""",
+        'complex*': """(lambda (. args)
+                         (if (null? args)
+                           (error "Function 'complex*' requires at least 1 argument, got 0")
+                           (letrec ((loop (lambda (lst acc)
+                                            (if (null? lst) acc
+                                                (loop (rest lst) (complex* acc (first lst)))))))
+                             (loop (rest args) (first args)))))""",
+        'complex/': """(lambda (. args)
+                         (if (< (length args) 2)
+                           (error "Function 'complex/' requires at least 2 arguments")
+                           (letrec ((loop (lambda (lst acc)
+                                            (if (null? lst) acc
+                                                (loop (rest lst) (complex/ acc (first lst)))))))
+                             (loop (rest args) (first args)))))""",
+        'complex-pow': """(lambda (. args)
+                            (if (< (length args) 2)
+                              (error "Function 'complex-pow' requires at least 2 arguments")
+                              (letrec ((loop (lambda (lst acc)
+                                               (if (null? lst) acc
+                                                   (loop (rest lst) (complex-pow acc (first lst)))))))
+                                (loop (rest args) (first args)))))""",
         'map': """(lambda (f lst)
                     (letrec ((helper (lambda (f lst acc)
                                        (if (null? lst) (reverse acc)

@@ -52,6 +52,11 @@ class Opcode(IntEnum):
     # Integer operations
     INTEGER_P = auto()       # Check if integer
     INTEGER_EQ_P = auto()    # integer=? a b
+    INTEGER_ADD = auto()     # integer+ a b
+    INTEGER_SUB = auto()     # integer- a b
+    INTEGER_MUL = auto()     # integer* a b
+    INTEGER_DIV = auto()     # integer/ a b  (floor division)
+    INTEGER_NEG = auto()     # integer-negate x  (unary minus)
     INTEGER_BIT_NOT = auto() # Bitwise NOT ~x
     INTEGER_BIT_SHIFT_LEFT = auto()
                              # Bitwise left shift x << n
@@ -67,18 +72,9 @@ class Opcode(IntEnum):
     INTEGER_TO_STRING_OCT = auto()
                              # Convert integer to octal string
 
-    # Type-specific integer arithmetic
-    INTEGER_ADD = auto()     # integer+ a b
-    INTEGER_SUB = auto()     # integer- a b
-    INTEGER_MUL = auto()     # integer* a b
-    INTEGER_DIV = auto()     # integer/ a b  (floor division)
-    INTEGER_NEG = auto()     # integer-negate x  (unary minus)
-
     # Floating point operations
     FLOAT_P = auto()         # Check if float
     FLOAT_EQ_P = auto()      # float=? a b
-
-    # Type-specific float arithmetic and transcendentals
     FLOAT_ADD = auto()       # float+ a b
     FLOAT_SUB = auto()       # float- a b
     FLOAT_MUL = auto()       # float* a b
@@ -116,8 +112,6 @@ class Opcode(IntEnum):
     COMPLEX_EQ_P = auto()    # complex=? a b
     COMPLEX_REAL = auto()    # Extract real part
     COMPLEX_IMAG = auto()    # Extract imaginary part
-
-    # Type-specific complex arithmetic and transcendentals
     COMPLEX_ADD = auto()     # complex+ a b
     COMPLEX_SUB = auto()     # complex- a b
     COMPLEX_MUL = auto()     # complex* a b
@@ -406,9 +400,11 @@ class Instruction:
             Opcode.BOOLEAN_EQ_P, Opcode.LIST_EQ_P, Opcode.ALIST_EQ_P,
             Opcode.INTEGER_ADD, Opcode.INTEGER_SUB, Opcode.INTEGER_MUL, Opcode.INTEGER_DIV, Opcode.INTEGER_NEG,
             Opcode.FLOAT_ADD, Opcode.FLOAT_SUB, Opcode.FLOAT_MUL, Opcode.FLOAT_DIV, Opcode.FLOAT_NEG,
-            Opcode.FLOAT_POW, Opcode.FLOAT_SIN, Opcode.FLOAT_COS, Opcode.FLOAT_TAN, Opcode.FLOAT_LOG, Opcode.FLOAT_LOG10, Opcode.FLOAT_EXP, Opcode.FLOAT_SQRT, Opcode.FLOAT_ABS,
+            Opcode.FLOAT_POW, Opcode.FLOAT_SIN, Opcode.FLOAT_COS, Opcode.FLOAT_TAN, Opcode.FLOAT_LOG,
+            Opcode.FLOAT_LOG10, Opcode.FLOAT_EXP, Opcode.FLOAT_SQRT, Opcode.FLOAT_ABS,
             Opcode.COMPLEX_ADD, Opcode.COMPLEX_SUB, Opcode.COMPLEX_MUL, Opcode.COMPLEX_DIV, Opcode.COMPLEX_NEG,
-            Opcode.COMPLEX_POW, Opcode.COMPLEX_SIN, Opcode.COMPLEX_COS, Opcode.COMPLEX_TAN, Opcode.COMPLEX_LOG, Opcode.COMPLEX_EXP, Opcode.COMPLEX_SQRT, Opcode.COMPLEX_ABS,
+            Opcode.COMPLEX_POW, Opcode.COMPLEX_SIN, Opcode.COMPLEX_COS, Opcode.COMPLEX_TAN, Opcode.COMPLEX_LOG,
+            Opcode.COMPLEX_EXP, Opcode.COMPLEX_SQRT, Opcode.COMPLEX_ABS,
         }
         if self.opcode in no_arg_opcodes:
             return 0
