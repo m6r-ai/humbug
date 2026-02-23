@@ -54,6 +54,10 @@ class Opcode(IntEnum):
     INTEGER_P = auto()       # Check if integer
     INTEGER_EQ_P = auto()    # integer=? a b
     INTEGER_NEQ_P = auto()   # integer!=? a b
+    INTEGER_LT_P = auto()    # integer<? a b
+    INTEGER_GT_P = auto()    # integer>? a b
+    INTEGER_LTE_P = auto()   # integer<=? a b
+    INTEGER_GTE_P = auto()   # integer>=? a b
     INTEGER_ADD = auto()     # integer+ a b
     INTEGER_SUB = auto()     # integer- a b
     INTEGER_MUL = auto()     # integer* a b
@@ -65,10 +69,6 @@ class Opcode(IntEnum):
     INTEGER_BIT_SHIFT_RIGHT = auto()
                              # Bitwise right shift x >> n
     INTEGER_BIT_OR = auto()  # Bitwise OR: a | b
-    INTEGER_LT = auto()      # integer<? a b
-    INTEGER_GT = auto()      # integer>? a b
-    INTEGER_LTE = auto()     # integer<=? a b
-    INTEGER_GTE = auto()     # integer>=? a b
     INTEGER_BIT_AND = auto() # Bitwise AND: a & b
     INTEGER_BIT_XOR = auto() # Bitwise XOR: a ^ b
     INTEGER_TO_STRING_BIN = auto()
@@ -82,6 +82,10 @@ class Opcode(IntEnum):
     FLOAT_P = auto()         # Check if float
     FLOAT_EQ_P = auto()      # float=? a b
     FLOAT_NEQ_P = auto()     # float!=? a b
+    FLOAT_LT_P = auto()      # float<? a b
+    FLOAT_GT_P = auto()      # float>? a b
+    FLOAT_LTE_P = auto()     # float<=? a b
+    FLOAT_GTE_P = auto()     # float>=? a b
     FLOAT_ADD = auto()       # float+ a b
     FLOAT_SUB = auto()       # float- a b
     FLOAT_MUL = auto()       # float* a b
@@ -96,10 +100,6 @@ class Opcode(IntEnum):
     FLOAT_EXP = auto()       # float-exp x
     FLOAT_SQRT = auto()      # float-sqrt x
     FLOAT_ABS = auto()       # float-abs x
-    FLOAT_LT = auto()        # float<? a b
-    FLOAT_GT = auto()        # float>? a b
-    FLOAT_LTE = auto()       # float<=? a b
-    FLOAT_GTE = auto()       # float>=? a b
 
     # Real number operations
     REAL_LT = auto()         # a < b
@@ -162,6 +162,10 @@ class Opcode(IntEnum):
     STRING_P = auto()        # Check if string
     STRING_EQ_P = auto()     # string=? a b
     STRING_NEQ_P = auto()    # string!=? a b
+    STRING_LT_P = auto()     # string<? a b  (lexicographic)
+    STRING_GT_P = auto()     # string>? a b  (lexicographic)
+    STRING_LTE_P = auto()    # string<=? a b (lexicographic)
+    STRING_GTE_P = auto()    # string>=? a b (lexicographic)
     STRING_LENGTH = auto()   # Get length of string
     STRING_UPCASE = auto()   # Convert string to uppercase
     STRING_DOWNCASE = auto() # Convert string to lowercase
@@ -180,10 +184,6 @@ class Opcode(IntEnum):
     STRING_SUBSTRING = auto()
                              # Extract substring (string, start, end)
     STRING_REPLACE = auto()  # Replace substring (string, old, new)
-    STRING_LT = auto()       # string<? a b  (lexicographic)
-    STRING_GT = auto()       # string>? a b  (lexicographic)
-    STRING_LTE = auto()      # string<=? a b (lexicographic)
-    STRING_GTE = auto()      # string>=? a b (lexicographic)
 
     # Alist operations
     ALIST = auto()           # Create an alist
@@ -250,10 +250,10 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'integer?': (Opcode.INTEGER_P, 1),
     'integer=?': (Opcode.INTEGER_EQ_P, 2),
     'integer!=?': (Opcode.INTEGER_NEQ_P, 2),
-    'integer<?': (Opcode.INTEGER_LT, 2),
-    'integer>?': (Opcode.INTEGER_GT, 2),
-    'integer<=?': (Opcode.INTEGER_LTE, 2),
-    'integer>=?': (Opcode.INTEGER_GTE, 2),
+    'integer<?': (Opcode.INTEGER_LT_P, 2),
+    'integer>?': (Opcode.INTEGER_GT_P, 2),
+    'integer<=?': (Opcode.INTEGER_LTE_P, 2),
+    'integer>=?': (Opcode.INTEGER_GTE_P, 2),
     'bit-not': (Opcode.INTEGER_BIT_NOT, 1),
     'bit-shift-left': (Opcode.INTEGER_BIT_SHIFT_LEFT, 2),
     'bit-shift-right': (Opcode.INTEGER_BIT_SHIFT_RIGHT, 2),
@@ -271,10 +271,10 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'float?': (Opcode.FLOAT_P, 1),
     'float=?': (Opcode.FLOAT_EQ_P, 2),
     'float!=?': (Opcode.FLOAT_NEQ_P, 2),
-    'float<?': (Opcode.FLOAT_LT, 2),
-    'float>?': (Opcode.FLOAT_GT, 2),
-    'float<=?': (Opcode.FLOAT_LTE, 2),
-    'float>=?': (Opcode.FLOAT_GTE, 2),
+    'float<?': (Opcode.FLOAT_LT_P, 2),
+    'float>?': (Opcode.FLOAT_GT_P, 2),
+    'float<=?': (Opcode.FLOAT_LTE_P, 2),
+    'float>=?': (Opcode.FLOAT_GTE_P, 2),
     'float+': (Opcode.FLOAT_ADD, 2),
     'float-': (Opcode.FLOAT_SUB, 2),
     'float*': (Opcode.FLOAT_MUL, 2),
@@ -352,10 +352,10 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'string?': (Opcode.STRING_P, 1),
     'string=?': (Opcode.STRING_EQ_P, 2),
     'string!=?': (Opcode.STRING_NEQ_P, 2),
-    'string<?': (Opcode.STRING_LT, 2),
-    'string>?': (Opcode.STRING_GT, 2),
-    'string<=?': (Opcode.STRING_LTE, 2),
-    'string>=?': (Opcode.STRING_GTE, 2),
+    'string<?': (Opcode.STRING_LT_P, 2),
+    'string>?': (Opcode.STRING_GT_P, 2),
+    'string<=?': (Opcode.STRING_LTE_P, 2),
+    'string>=?': (Opcode.STRING_GTE_P, 2),
     'string-length': (Opcode.STRING_LENGTH, 1),
     'string-upcase': (Opcode.STRING_UPCASE, 1),
     'string-downcase': (Opcode.STRING_DOWNCASE, 1),
@@ -436,10 +436,10 @@ class Instruction:
             Opcode.STRING_EQ_P,
             Opcode.NUMBER_EQ_P, Opcode.INTEGER_EQ_P, Opcode.FLOAT_EQ_P, Opcode.COMPLEX_EQ_P,
             Opcode.BOOLEAN_EQ_P, Opcode.LIST_EQ_P, Opcode.ALIST_EQ_P,
-            Opcode.STRING_NEQ_P, Opcode.STRING_LT, Opcode.STRING_GT, Opcode.STRING_LTE, Opcode.STRING_GTE,
+            Opcode.STRING_NEQ_P, Opcode.STRING_LT_P, Opcode.STRING_GT_P, Opcode.STRING_LTE_P, Opcode.STRING_GTE_P,
             Opcode.BOOLEAN_NEQ_P,
-            Opcode.INTEGER_NEQ_P, Opcode.INTEGER_LT, Opcode.INTEGER_GT, Opcode.INTEGER_LTE, Opcode.INTEGER_GTE,
-            Opcode.FLOAT_NEQ_P, Opcode.FLOAT_LT, Opcode.FLOAT_GT, Opcode.FLOAT_LTE, Opcode.FLOAT_GTE,
+            Opcode.INTEGER_NEQ_P, Opcode.INTEGER_LT_P, Opcode.INTEGER_GT_P, Opcode.INTEGER_LTE_P, Opcode.INTEGER_GTE_P,
+            Opcode.FLOAT_NEQ_P, Opcode.FLOAT_LT_P, Opcode.FLOAT_GT_P, Opcode.FLOAT_LTE_P, Opcode.FLOAT_GTE_P,
             Opcode.COMPLEX_NEQ_P,
             Opcode.LIST_NEQ_P, Opcode.ALIST_NEQ_P,
             Opcode.INTEGER_ADD, Opcode.INTEGER_SUB, Opcode.INTEGER_MUL, Opcode.INTEGER_DIV, Opcode.INTEGER_NEG,

@@ -184,10 +184,10 @@ class AIFPLVM:
         table[Opcode.INTEGER_P] = self._op_integer_p
         table[Opcode.INTEGER_EQ_P] = self._op_integer_eq_p
         table[Opcode.INTEGER_NEQ_P] = self._op_integer_neq_p
-        table[Opcode.INTEGER_LT] = self._op_integer_lt
-        table[Opcode.INTEGER_GT] = self._op_integer_gt
-        table[Opcode.INTEGER_LTE] = self._op_integer_lte
-        table[Opcode.INTEGER_GTE] = self._op_integer_gte
+        table[Opcode.INTEGER_LT_P] = self._op_integer_lt_p
+        table[Opcode.INTEGER_GT_P] = self._op_integer_gt_p
+        table[Opcode.INTEGER_LTE_P] = self._op_integer_lte_p
+        table[Opcode.INTEGER_GTE_P] = self._op_integer_gte_p
         table[Opcode.INTEGER_ADD] = self._op_integer_add
         table[Opcode.INTEGER_SUB] = self._op_integer_sub
         table[Opcode.INTEGER_MUL] = self._op_integer_mul
@@ -205,10 +205,10 @@ class AIFPLVM:
         table[Opcode.FLOAT_P] = self._op_float_p
         table[Opcode.FLOAT_EQ_P] = self._op_float_eq_p
         table[Opcode.FLOAT_NEQ_P] = self._op_float_neq_p
-        table[Opcode.FLOAT_LT] = self._op_float_lt
-        table[Opcode.FLOAT_GT] = self._op_float_gt
-        table[Opcode.FLOAT_LTE] = self._op_float_lte
-        table[Opcode.FLOAT_GTE] = self._op_float_gte
+        table[Opcode.FLOAT_LT_P] = self._op_float_lt_p
+        table[Opcode.FLOAT_GT_P] = self._op_float_gt_p
+        table[Opcode.FLOAT_LTE_P] = self._op_float_lte_p
+        table[Opcode.FLOAT_GTE_P] = self._op_float_gte_p
         table[Opcode.FLOAT_ADD] = self._op_float_add
         table[Opcode.FLOAT_SUB] = self._op_float_sub
         table[Opcode.FLOAT_MUL] = self._op_float_mul
@@ -275,10 +275,10 @@ class AIFPLVM:
         table[Opcode.STRING_P] = self._op_string_p
         table[Opcode.STRING_EQ_P] = self._op_string_eq_p
         table[Opcode.STRING_NEQ_P] = self._op_string_neq_p
-        table[Opcode.STRING_LT] = self._op_string_lt
-        table[Opcode.STRING_GT] = self._op_string_gt
-        table[Opcode.STRING_LTE] = self._op_string_lte
-        table[Opcode.STRING_GTE] = self._op_string_gte
+        table[Opcode.STRING_LT_P] = self._op_string_lt_p
+        table[Opcode.STRING_GT_P] = self._op_string_gt_p
+        table[Opcode.STRING_LTE_P] = self._op_string_lte_p
+        table[Opcode.STRING_GTE_P] = self._op_string_gte_p
         table[Opcode.STRING_LENGTH] = self._op_string_length
         table[Opcode.STRING_UPCASE] = self._op_string_upcase
         table[Opcode.STRING_DOWNCASE] = self._op_string_downcase
@@ -1022,37 +1022,37 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(a.value != b.value))
         return None
 
-    def _op_integer_lt(  # pylint: disable=useless-return
+    def _op_integer_lt_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """INTEGER_LT: Pop two integers, push true if a < b."""
+        """INTEGER_LT_P: Pop two integers, push true if a < b."""
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_integer(a, 'integer<?') < self._ensure_integer(b, 'integer<?')))
         return None
 
-    def _op_integer_gt(  # pylint: disable=useless-return
+    def _op_integer_gt_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """INTEGER_GT: Pop two integers, push true if a > b."""
+        """INTEGER_GT_P: Pop two integers, push true if a > b."""
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_integer(a, 'integer>?') > self._ensure_integer(b, 'integer>?')))
         return None
 
-    def _op_integer_lte(  # pylint: disable=useless-return
+    def _op_integer_lte_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """INTEGER_LTE: Pop two integers, push true if a <= b."""
+        """INTEGER_LTE_P: Pop two integers, push true if a <= b."""
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_integer(a, 'integer<=?') <= self._ensure_integer(b, 'integer<=?')))
         return None
 
-    def _op_integer_gte(  # pylint: disable=useless-return
+    def _op_integer_gte_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """INTEGER_GTE: Pop two integers, push true if a >= b."""
+        """INTEGER_GTE_P: Pop two integers, push true if a >= b."""
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_integer(a, 'integer>=?') >= self._ensure_integer(b, 'integer>=?')))
@@ -1240,37 +1240,37 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(a.value != b.value))
         return None
 
-    def _op_float_lt(  # pylint: disable=useless-return
+    def _op_float_lt_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """FLOAT_LT: Pop two floats, push true if a < b."""
+        """FLOAT_LT_P: Pop two floats, push true if a < b."""
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_float(a, 'float<?') < self._ensure_float(b, 'float<?')))
         return None
 
-    def _op_float_gt(  # pylint: disable=useless-return
+    def _op_float_gt_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """FLOAT_GT: Pop two floats, push true if a > b."""
+        """FLOAT_GT_P: Pop two floats, push true if a > b."""
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_float(a, 'float>?') > self._ensure_float(b, 'float>?')))
         return None
 
-    def _op_float_lte(  # pylint: disable=useless-return
+    def _op_float_lte_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """FLOAT_LTE: Pop two floats, push true if a <= b."""
+        """FLOAT_LTE_P: Pop two floats, push true if a <= b."""
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_float(a, 'float<=?') <= self._ensure_float(b, 'float<=?')))
         return None
 
-    def _op_float_gte(  # pylint: disable=useless-return
+    def _op_float_gte_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """FLOAT_GTE: Pop two floats, push true if a >= b."""
+        """FLOAT_GTE_P: Pop two floats, push true if a >= b."""
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_float(a, 'float>=?') >= self._ensure_float(b, 'float>=?')))
@@ -2015,37 +2015,37 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(self._ensure_string(a, 'string!=?') != self._ensure_string(b, 'string!=?')))
         return None
 
-    def _op_string_lt(  # pylint: disable=useless-return
+    def _op_string_lt_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """STRING_LT: Pop two strings, push true if a < b (lexicographic)."""
+        """STRING_LT_P: Pop two strings, push true if a < b (lexicographic)."""
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_string(a, 'string<?') < self._ensure_string(b, 'string<?')))
         return None
 
-    def _op_string_gt(  # pylint: disable=useless-return
+    def _op_string_gt_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """STRING_GT: Pop two strings, push true if a > b (lexicographic)."""
+        """STRING_GT_P: Pop two strings, push true if a > b (lexicographic)."""
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_string(a, 'string>?') > self._ensure_string(b, 'string>?')))
         return None
 
-    def _op_string_lte(  # pylint: disable=useless-return
+    def _op_string_lte_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """STRING_LTE: Pop two strings, push true if a <= b (lexicographic)."""
+        """STRING_LTE_P: Pop two strings, push true if a <= b (lexicographic)."""
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_string(a, 'string<=?') <= self._ensure_string(b, 'string<=?')))
         return None
 
-    def _op_string_gte(  # pylint: disable=useless-return
+    def _op_string_gte_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """STRING_GTE: Pop two strings, push true if a >= b (lexicographic)."""
+        """STRING_GTE_P: Pop two strings, push true if a >= b (lexicographic)."""
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_string(a, 'string>=?') >= self._ensure_string(b, 'string>=?')))
