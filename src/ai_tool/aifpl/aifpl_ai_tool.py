@@ -167,8 +167,7 @@ Syntax: (operator arg1 arg2 ...)
 - Pure functional: no side effects, immutable data
 - Homoiconic: code and data use same representation (s-expressions)
 - Tail call optimization prevents stack overflow
-- Strict type system with automatic numeric promotion (integer → float → complex)
-- Numeric promotion is one-way: types promote up but never downgrade automatically
+- Strict type system: no implicit coercion between numeric types; use typed operators (integer+, float*, complex/) to enforce types explicitly
 - Mixed-type lists supported: (list 1 \"hi\" #t)
 - String literals support escapes: \\n, \\t, \\\", \\\\, \\uXXXX
 - Comments: use semicolon (;) for single-line comments, e.g., ; This is a comment
@@ -180,23 +179,53 @@ Syntax: (operator arg1 arg2 ...)
 
 - (quote expr) → returns expr without evaluation
 - 'expr → shortcut for (quote expr)
-- '(+ 1 2 3) → (+ 1 2 3) (as data, not evaluated)
-- (list 'hello (+ 1 2) 'world) → (hello 3 world)
-- Enables symbolic programming: (first '(+ 1 2)) → +
+- '(integer+ 1 2 3) → (integer+ 1 2 3) (as data, not evaluated)
+- (list 'hello (integer+ 1 2) 'world) → (hello 3 world)
+- Enables symbolic programming: (first '(integer+ 1 2)) → integer+
 - Code and data have identical representation (homoiconicity)
 
 ## Arithmetic and math:
 
-- Basic: (+ 1 2 3), (- 10 3), (* 2 3 4), (/ 12 3), (// 7 3), (% 7 3), (** 2 3)
-- Division (/) always returns float: (/ 10 2) → 5.0, (/ 10 3) → 3.333...; use (//) for integer division
-- Trig: (sin (* pi 0.5)), (cos 0), (tan (* pi 0.25))
-- Logs: (log e), (log10 100), (exp 1)
-- Other: (sqrt 16), (abs -5)
-- Round to integer: (round 3.7) → 4, (floor 3.7) → 3, (ceil 3.2) → 4
+- Modulo: (% 7 3) → 1
+- Other: (abs -5), (sqrt 4.0), (round 3.7) → 4, (floor 3.7) → 3, (ceil 3.2) → 4
+- Trig: (sin 0.0), (cos 0.0), (tan 0.0)
+- Logs: (log 1.0), (log10 1.0), (exp 0.0)
 - Aggregation: (min 1 5 3), (max 1 5 3), (pow 2 3)
 - Bitwise: (bit-or 5 3), (bit-and 7 3), (bit-xor 5 3), (bit-not 5)
 - Bit shifts: (bit-shift-left 1 3), (bit-shift-right 8 2)
 - Base conversion: (bin 255), (hex 255), (oct 255)
+
+## Typed arithmetic operators:
+
+Integer arithmetic (all args must be integers; type error otherwise):
+- (integer+ 1 2 3) → 6, (integer- 10 3) → 7, (integer* 2 3 4) → 24
+- (integer/ 7 3) → 2 (floor division), (integer/ -7 2) → -4
+- (integer- 5) → -5 (unary negation), (integer-negate 5) → -5
+- (integer+) → 0, (integer*) → 1 (zero-arg identities)
+- Use abs for absolute value (no integer-abs)
+
+Float arithmetic (all args must be floats; use (float x) to convert integers):
+- (float+ 1.0 2.0 3.0) → 6.0, (float- 10.0 3.0) → 7.0
+- (float* 2.0 3.0) → 6.0, (float/ 10.0 4.0) → 2.5
+- (float/ 4.0) → 0.25 (reciprocal), (float-negate 3.0) → -3.0
+- (float-pow 2.0 10.0) → 1024.0
+- (float+) → 0.0, (float*) → 1.0 (zero-arg identities)
+- Transcendentals: (float-sin 0.0) → 0.0, (float-cos 0.0) → 1.0, (float-tan 0.0) → 0.0
+- (float-log 1.0) → 0.0, (float-log10 1.0) → 0.0, (float-exp 0.0) → 1.0
+- (float-sqrt 4.0) → 2.0, (float-abs -3.0) → 3.0
+- float-log/float-log10 of zero → -inf; negative arg is a runtime error
+- float-sqrt of negative → runtime error (use complex-sqrt instead)
+
+Complex arithmetic (all args must be complex; use (complex r i) to construct):
+- (complex+ (complex 1 2) (complex 3 4)) → 4+6j
+- (complex- (complex 5 3) (complex 2 1)) → 3+2j
+- (complex* (complex 1 2) (complex 3 4)) → -5+10j
+- (complex/ (complex 4 2) (complex 1 1)) → 3-1j
+- (complex/ (complex 2 0)) → 0.5+0j (reciprocal)
+- (complex-negate (complex 3 4)) → -3-4j
+- (complex-abs (complex 3 4)) → 5.0 (returns float, not complex)
+- (complex+) → 0+0j, (complex*) → 1+0j (zero-arg identities)
+- Transcendentals: complex-sin, complex-cos, complex-tan, complex-log, complex-exp, complex-sqrt
 
 ## Complex numbers:
 
@@ -204,7 +233,7 @@ Syntax: (operator arg1 arg2 ...)
 - Pure imaginary: 4j, -5j, 1.5e2j → 4j, -5j, 150j
 - Complex: 3+4j, 3-4j, 1e2+3e-1j → (3+4j), (3-4j), (100+0.3j)
 - (complex 3 4) → (3+4j) (construct complex number)
-- Use in expressions: (+ 1 2+3j) → (3+3j), (* 2 3+4j) → (6+8j)
+- Use explicit construction: (complex+ (complex 1 0) (complex 2 3)) → 3+3j
 - (real 3+4j) → 3, (imag 3+4j) → 4, (abs 3+4j) → 5.0
 - (real 42) → 42, (imag 42) → 0 (works on all numbers)
 
@@ -213,13 +242,13 @@ Syntax: (operator arg1 arg2 ...)
 - (integer x) → convert to integer (truncates toward zero): (integer 3.7) → 3, (integer -2.9) → -2
 - (float x) → convert to float: (float 42) → 42.0, (float 3) → 3.0
 - (complex real imag) → construct complex: (complex 3 4) → (3+4j)
-- Use for explicit type control and conversions between numeric types
+- These are the primary way to move between numeric types; there is no automatic promotion
 
 ## Comparison and boolean:
 
 - (= 1 1), (!= 1 2), (< 1 2), (> 3 2), (<= 1 1), (>= 2 1)
 - (and #t #f), (or #t #f), (not #t)
-- (if (> 5 3) "yes" "no"), lazy evaluation: (if #t 42 (/ 1 0))
+- (if (> 5 3) "yes" "no"), lazy evaluation: (if #t 42 0)
 
 ## String operations:
 
@@ -253,15 +282,15 @@ Syntax: (operator arg1 arg2 ...)
 - Type checking: (alist? value)
 - Nested alists: (alist (list "user" (alist (list "name" "Bob") (list "id" 123))))
 - Works with functional operations: (map f (alist-keys data)), (filter pred (alist-values data))
-"- Pattern matching: (match data ((alist? a) ...) (_ ...))\n"
-"- Maintains insertion order, optimized for data processing workflows\n\n"
+- Pattern matching: (match data ((alist? a) ...) (_ ...))
+- Maintains insertion order, optimized for data processing workflows
 
 ## Type predicates:
 
 - (number? 42) → #t, excludes booleans: (number? #t) → #f
 - (integer? 42) → #t, (integer? 3.14) → #f, (integer? (round 3.7)) → #t
-- (float? 3.14) → #t, (float? 42) → #f, (float? (/ 1 2)) → #t
-- (complex? (+ 1 j)) → #t, (complex? 42) → #f
+- (float? 3.14) → #t, (float? 42) → #f, (float? (float/ 1.0 2.0)) → #t
+- (complex? (complex 1 1)) → #t, (complex? 42) → #f
 - (string? "hello") → #t, (boolean? #t) → #t, (list? (list 1 2)) → #t, (alist? (alist ...)) → #t
 - (function? (lambda (x) x)) → #t
 
@@ -270,8 +299,8 @@ Syntax: (operator arg1 arg2 ...)
 - (lambda (param1 param2 ...) body) → creates anonymous function
 - (lambda (param1 . rest) body) → variadic: rest receives remaining args as a list
 - (lambda (. rest) body) → fully variadic: rest receives all args as a list
-- ((lambda (x) (* x x)) 5) → 25
-- ((lambda (. args) (fold + 0 args)) 1 2 3 4 5) → 15 (variadic sum)
+- ((lambda (x) (integer* x x)) 5) → 25
+- ((lambda (. args) (fold integer+ 0 args)) 1 2 3 4 5) → 15 (variadic sum)
 - ((lambda (x . rest) (cons x (reverse rest))) 1 2 3) → (1 3 2)
 - Functions are first-class values with lexical scoping and closures
 - Tail recursion automatically optimized
@@ -280,25 +309,25 @@ Syntax: (operator arg1 arg2 ...)
 ## Local bindings:
 
 - (let ((var1 val1) (var2 val2) ...) body) → parallel binding (bindings independent)
-- (let ((x 5) (y 10)) (+ x y)) → 15 (x and y don't reference each other)
+- (let ((x 5) (y 10)) (integer+ x y)) → 15 (x and y don't reference each other)
 - Bindings in let cannot reference each other; use let* for sequential bindings
 - (let* ((var1 val1) (var2 val2) ...) body) → sequential binding
-- (let* ((x 5) (y (* x 2))) (+ x y)) → 15 (y can reference x)
-- (let* ((x 1) (x (+ x 10))) x) → 11 (shadowing works in let*)
+- (let* ((x 5) (y (integer* x 2))) (integer+ x y)) → 15 (y can reference x)
+- (let* ((x 1) (x (integer+ x 10))) x) → 11 (shadowing works in let*)
 - Use let for independent bindings, let* for sequential dependencies
 
 ## Recursive bindings:
 
 - (letrec ((var1 val1) (var2 val2) ...) body) → recursive binding
-- (letrec ((fact (lambda (n) (if (<= n 1) 1 (* n (fact (- n 1))))))) (fact 5)) → 120
+- (letrec ((fact (lambda (n) (if (<= n 1) 1 (integer* n (fact (integer- n 1))))))) (fact 5)) → 120
 - Supports self-recursion and mutual recursion
 - Use only when you need functions that reference themselves
 
 ## Higher-order functions:
 
-- (map func list) → (map (lambda (x) (* x 2)) (list 1 2 3)) → (2 4 6)
+- (map func list) → (map (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
 - (filter predicate list) → (filter (lambda (x) (> x 0)) (list -1 2 -3 4)) → (2 4)
-- (fold func init list) → (fold + 0 (list 1 2 3 4)) → 10
+- (fold func init list) → (fold integer+ 0 (list 1 2 3 4)) → 10
 - (range start end [step]) → (range 1 5) → (1 2 3 4)
 - (find predicate list), (any? predicate list), (all? predicate list)
 
@@ -306,14 +335,14 @@ Syntax: (operator arg1 arg2 ...)
 
 - (match expression (pattern1 result1) (pattern2 result2) (_ default)) → powerful declarative dispatch
 - Literal patterns: (match x (42 "found") ("hello" "greeting") (_ "other"))
-- Variable binding: (match x ((number? n) (* n 2)) ((string? s) (string-upcase s)))
+- Variable binding: (match x ((number? n) (integer* n 2)) ((string? s) (string-upcase s)))
 - Wildcard patterns: _ matches anything without binding
 - Type patterns: (number? var), (string? var), (list? var), (boolean? var), (function? var)
 - Empty list: (match lst (() "empty") ((x) "singleton") (_ "multiple"))
-- List destructuring: (match lst ((a b c) (+ a b c)) ((head . tail) (cons head tail)))
+- List destructuring: (match lst ((a b c) (integer+ a b c)) ((head . tail) (cons head tail)))
 - Nested patterns: (match data (((number? x) (string? y)) (list x y)) (_ "no match"))
 - First match wins: patterns are tested in order, use specific patterns before general ones
-- Example: (match data (42 "answer") ((number? n) (* n 2)) ((string? s) (string-upcase s))
+- Example: (match data (42 "answer") ((number? n) (integer* n 2)) ((string? s) (string-upcase s))
 ((head . tail) (list head (length tail))) (_ \"unknown\"))
 
 ## Module system:
@@ -324,8 +353,8 @@ Syntax: (operator arg1 arg2 ...)
 - Circular imports are detected and prevented with clear error messages
 - Example module (math_utils.aifpl):
   ```aifpl
-  (let ((square (lambda (x) (* x x)))
-        (cube (lambda (x) (* x x x))))
+  (let ((square (lambda (x) (integer* x x)))
+        (cube (lambda (x) (integer* x (integer* x x)))))
     (alist
       (list \"square\" square)
       (list \"cube\" cube)))
@@ -347,7 +376,7 @@ Syntax: (operator arg1 arg2 ...)
 - Messages are evaluated and converted to strings for output
 - Traces appear in the tool result context for inspection
 - Example: (trace \"Computing factorial\" (factorial 5))
-- Multiple messages: (trace \"x=\" x \"y=\" y (+ x y))
+- Multiple messages: (trace \"x=\" x \"y=\" y (integer+ x y))
 - Useful for debugging recursive functions and complex algorithms
 - Trace output shows execution order, helping identify logic issues
 
@@ -355,6 +384,7 @@ Syntax: (operator arg1 arg2 ...)
 
 - cons behavior is not the same as traditional LISP: second arg must be a list
 - Strict typing: string ops need strings, boolean ops need booleans
+- Round to integer: (round 3.7) → 4, (floor 3.7) → 3, (ceil 3.2) → 4
 - Lists only support = and != comparisons, not < > <= >=
 - Conditions must be boolean: (if #t ...) works, (if 1 ...) doesn't
 - Use for calculations, data processing, and functional programming only
