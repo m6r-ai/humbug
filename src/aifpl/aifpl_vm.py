@@ -179,9 +179,15 @@ class AIFPLVM:
         table[Opcode.FUNCTION_P] = self._op_function_p
         table[Opcode.BOOLEAN_P] = self._op_boolean_p
         table[Opcode.BOOLEAN_EQ_P] = self._op_boolean_eq_p
+        table[Opcode.BOOLEAN_NEQ_P] = self._op_boolean_neq_p
         table[Opcode.BOOLEAN_NOT] = self._op_boolean_not
         table[Opcode.INTEGER_P] = self._op_integer_p
         table[Opcode.INTEGER_EQ_P] = self._op_integer_eq_p
+        table[Opcode.INTEGER_NEQ_P] = self._op_integer_neq_p
+        table[Opcode.INTEGER_LT] = self._op_integer_lt
+        table[Opcode.INTEGER_GT] = self._op_integer_gt
+        table[Opcode.INTEGER_LTE] = self._op_integer_lte
+        table[Opcode.INTEGER_GTE] = self._op_integer_gte
         table[Opcode.INTEGER_ADD] = self._op_integer_add
         table[Opcode.INTEGER_SUB] = self._op_integer_sub
         table[Opcode.INTEGER_MUL] = self._op_integer_mul
@@ -198,6 +204,11 @@ class AIFPLVM:
         table[Opcode.INTEGER_TO_STRING_OCT] = self._op_integer_to_string_oct
         table[Opcode.FLOAT_P] = self._op_float_p
         table[Opcode.FLOAT_EQ_P] = self._op_float_eq_p
+        table[Opcode.FLOAT_NEQ_P] = self._op_float_neq_p
+        table[Opcode.FLOAT_LT] = self._op_float_lt
+        table[Opcode.FLOAT_GT] = self._op_float_gt
+        table[Opcode.FLOAT_LTE] = self._op_float_lte
+        table[Opcode.FLOAT_GTE] = self._op_float_gte
         table[Opcode.FLOAT_ADD] = self._op_float_add
         table[Opcode.FLOAT_SUB] = self._op_float_sub
         table[Opcode.FLOAT_MUL] = self._op_float_mul
@@ -229,6 +240,7 @@ class AIFPLVM:
         table[Opcode.COMPLEX] = self._op_complex
         table[Opcode.COMPLEX_P] = self._op_complex_p
         table[Opcode.COMPLEX_EQ_P] = self._op_complex_eq_p
+        table[Opcode.COMPLEX_NEQ_P] = self._op_complex_neq_p
         table[Opcode.COMPLEX_REAL] = self._op_complex_real
         table[Opcode.COMPLEX_IMAG] = self._op_complex_imag
         table[Opcode.COMPLEX_ADD] = self._op_complex_add
@@ -262,6 +274,11 @@ class AIFPLVM:
         table[Opcode.NUMBER_TO_STRING] = self._op_number_to_string
         table[Opcode.STRING_P] = self._op_string_p
         table[Opcode.STRING_EQ_P] = self._op_string_eq_p
+        table[Opcode.STRING_NEQ_P] = self._op_string_neq_p
+        table[Opcode.STRING_LT] = self._op_string_lt
+        table[Opcode.STRING_GT] = self._op_string_gt
+        table[Opcode.STRING_LTE] = self._op_string_lte
+        table[Opcode.STRING_GTE] = self._op_string_gte
         table[Opcode.STRING_LENGTH] = self._op_string_length
         table[Opcode.STRING_UPCASE] = self._op_string_upcase
         table[Opcode.STRING_DOWNCASE] = self._op_string_downcase
@@ -280,6 +297,7 @@ class AIFPLVM:
         table[Opcode.ALIST] = self._op_alist
         table[Opcode.ALIST_P] = self._op_alist_p
         table[Opcode.ALIST_EQ_P] = self._op_alist_eq_p
+        table[Opcode.ALIST_NEQ_P] = self._op_alist_neq_p
         table[Opcode.ALIST_KEYS] = self._op_alist_keys
         table[Opcode.ALIST_VALUES] = self._op_alist_values
         table[Opcode.ALIST_LENGTH] = self._op_alist_length
@@ -291,6 +309,7 @@ class AIFPLVM:
         table[Opcode.LIST] = self._op_list
         table[Opcode.LIST_P] = self._op_list_p
         table[Opcode.LIST_EQ_P] = self._op_list_eq_p
+        table[Opcode.LIST_NEQ_P] = self._op_list_neq_p
         table[Opcode.LIST_CONS] = self._op_list_cons
         table[Opcode.LIST_LENGTH] = self._op_list_length
         table[Opcode.LIST_REVERSE] = self._op_list_reverse
@@ -947,6 +966,17 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(bool_a == bool_b))
         return None
 
+    def _op_boolean_neq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """BOOLEAN_NEQ_P: Pop two values, push true if both are booleans and not equal."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        bool_a = self._ensure_boolean(a, 'boolean!=?')
+        bool_b = self._ensure_boolean(b, 'boolean!=?')
+        self.stack.append(AIFPLBoolean(bool_a != bool_b))
+        return None
+
     def _op_boolean_not(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -977,6 +1007,55 @@ class AIFPLVM:
             raise AIFPLEvalError(f"Function 'integer=?' requires integer arguments, got {b.type_name()}")
 
         self.stack.append(AIFPLBoolean(a.value == b.value))
+        return None
+
+    def _op_integer_neq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_NEQ_P: Pop two values, push true if both are integers and not equal."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        if not isinstance(a, AIFPLInteger):
+            raise AIFPLEvalError(f"Function 'integer!=?' requires integer arguments, got {a.type_name()}")
+        if not isinstance(b, AIFPLInteger):
+            raise AIFPLEvalError(f"Function 'integer!=?' requires integer arguments, got {b.type_name()}")
+        self.stack.append(AIFPLBoolean(a.value != b.value))
+        return None
+
+    def _op_integer_lt(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_LT: Pop two integers, push true if a < b."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_integer(a, 'integer<?') < self._ensure_integer(b, 'integer<?')))
+        return None
+
+    def _op_integer_gt(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_GT: Pop two integers, push true if a > b."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_integer(a, 'integer>?') > self._ensure_integer(b, 'integer>?')))
+        return None
+
+    def _op_integer_lte(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_LTE: Pop two integers, push true if a <= b."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_integer(a, 'integer<=?') <= self._ensure_integer(b, 'integer<=?')))
+        return None
+
+    def _op_integer_gte(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_GTE: Pop two integers, push true if a >= b."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_integer(a, 'integer>=?') >= self._ensure_integer(b, 'integer>=?')))
         return None
 
     def _op_integer_add(  # pylint: disable=useless-return
@@ -1146,6 +1225,55 @@ class AIFPLVM:
             raise AIFPLEvalError(f"Function 'float=?' requires float arguments, got {b.type_name()}")
 
         self.stack.append(AIFPLBoolean(a.value == b.value))
+        return None
+
+    def _op_float_neq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_NEQ_P: Pop two values, push true if both are floats and not equal."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        if not isinstance(a, AIFPLFloat):
+            raise AIFPLEvalError(f"Function 'float!=?' requires float arguments, got {a.type_name()}")
+        if not isinstance(b, AIFPLFloat):
+            raise AIFPLEvalError(f"Function 'float!=?' requires float arguments, got {b.type_name()}")
+        self.stack.append(AIFPLBoolean(a.value != b.value))
+        return None
+
+    def _op_float_lt(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_LT: Pop two floats, push true if a < b."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_float(a, 'float<?') < self._ensure_float(b, 'float<?')))
+        return None
+
+    def _op_float_gt(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_GT: Pop two floats, push true if a > b."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_float(a, 'float>?') > self._ensure_float(b, 'float>?')))
+        return None
+
+    def _op_float_lte(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_LTE: Pop two floats, push true if a <= b."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_float(a, 'float<=?') <= self._ensure_float(b, 'float<=?')))
+        return None
+
+    def _op_float_gte(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_GTE: Pop two floats, push true if a >= b."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_float(a, 'float>=?') >= self._ensure_float(b, 'float>=?')))
         return None
 
     def _op_float_add(  # pylint: disable=useless-return
@@ -1469,6 +1597,19 @@ class AIFPLVM:
             raise AIFPLEvalError(f"Function 'complex=?' requires complex arguments, got {b.type_name()}")
 
         self.stack.append(AIFPLBoolean(a.value == b.value))
+        return None
+
+    def _op_complex_neq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX_NEQ_P: Pop two values, push true if both are complex and not equal."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        if not isinstance(a, AIFPLComplex):
+            raise AIFPLEvalError(f"Function 'complex!=?' requires complex arguments, got {a.type_name()}")
+        if not isinstance(b, AIFPLComplex):
+            raise AIFPLEvalError(f"Function 'complex!=?' requires complex arguments, got {b.type_name()}")
+        self.stack.append(AIFPLBoolean(a.value != b.value))
         return None
 
     def _op_complex_real(  # pylint: disable=useless-return
@@ -1865,6 +2006,51 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(self._ensure_string(a, 'string=?') == self._ensure_string(b, 'string=?')))
         return None
 
+    def _op_string_neq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_NEQ_P: Pop two strings, push true if they are not equal."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_string(a, 'string!=?') != self._ensure_string(b, 'string!=?')))
+        return None
+
+    def _op_string_lt(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_LT: Pop two strings, push true if a < b (lexicographic)."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_string(a, 'string<?') < self._ensure_string(b, 'string<?')))
+        return None
+
+    def _op_string_gt(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_GT: Pop two strings, push true if a > b (lexicographic)."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_string(a, 'string>?') > self._ensure_string(b, 'string>?')))
+        return None
+
+    def _op_string_lte(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_LTE: Pop two strings, push true if a <= b (lexicographic)."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_string(a, 'string<=?') <= self._ensure_string(b, 'string<=?')))
+        return None
+
+    def _op_string_gte(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_GTE: Pop two strings, push true if a >= b (lexicographic)."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_string(a, 'string>=?') >= self._ensure_string(b, 'string>=?')))
+        return None
+
     def _op_string_length(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -2106,6 +2292,15 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(self._ensure_alist(a, 'alist=?') == self._ensure_alist(b, 'alist=?')))
         return None
 
+    def _op_alist_neq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """ALIST_NEQ_P: Pop two values, push true if both are alists and not equal."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_alist(a, 'alist!=?') != self._ensure_alist(b, 'alist!=?')))
+        return None
+
     def _op_alist_keys(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -2206,6 +2401,15 @@ class AIFPLVM:
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_list(a, 'list=?') == self._ensure_list(b, 'list=?')))
+        return None
+
+    def _op_list_neq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """LIST_NEQ_P: Pop two values, push true if both are lists and not equal."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        self.stack.append(AIFPLBoolean(self._ensure_list(a, 'list!=?') != self._ensure_list(b, 'list!=?')))
         return None
 
     def _op_list_cons(  # pylint: disable=useless-return

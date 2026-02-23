@@ -47,11 +47,13 @@ class Opcode(IntEnum):
     # Boolean operations
     BOOLEAN_P = auto()       # Check if boolean
     BOOLEAN_EQ_P = auto()    # boolean=? a b
+    BOOLEAN_NEQ_P = auto()   # boolean!=? a b
     BOOLEAN_NOT = auto()     # Logical NOT
 
     # Integer operations
     INTEGER_P = auto()       # Check if integer
     INTEGER_EQ_P = auto()    # integer=? a b
+    INTEGER_NEQ_P = auto()   # integer!=? a b
     INTEGER_ADD = auto()     # integer+ a b
     INTEGER_SUB = auto()     # integer- a b
     INTEGER_MUL = auto()     # integer* a b
@@ -63,6 +65,10 @@ class Opcode(IntEnum):
     INTEGER_BIT_SHIFT_RIGHT = auto()
                              # Bitwise right shift x >> n
     INTEGER_BIT_OR = auto()  # Bitwise OR: a | b
+    INTEGER_LT = auto()      # integer<? a b
+    INTEGER_GT = auto()      # integer>? a b
+    INTEGER_LTE = auto()     # integer<=? a b
+    INTEGER_GTE = auto()     # integer>=? a b
     INTEGER_BIT_AND = auto() # Bitwise AND: a & b
     INTEGER_BIT_XOR = auto() # Bitwise XOR: a ^ b
     INTEGER_TO_STRING_BIN = auto()
@@ -75,6 +81,7 @@ class Opcode(IntEnum):
     # Floating point operations
     FLOAT_P = auto()         # Check if float
     FLOAT_EQ_P = auto()      # float=? a b
+    FLOAT_NEQ_P = auto()     # float!=? a b
     FLOAT_ADD = auto()       # float+ a b
     FLOAT_SUB = auto()       # float- a b
     FLOAT_MUL = auto()       # float* a b
@@ -89,6 +96,10 @@ class Opcode(IntEnum):
     FLOAT_EXP = auto()       # float-exp x
     FLOAT_SQRT = auto()      # float-sqrt x
     FLOAT_ABS = auto()       # float-abs x
+    FLOAT_LT = auto()        # float<? a b
+    FLOAT_GT = auto()        # float>? a b
+    FLOAT_LTE = auto()       # float<=? a b
+    FLOAT_GTE = auto()       # float>=? a b
 
     # Real number operations
     REAL_LT = auto()         # a < b
@@ -110,6 +121,7 @@ class Opcode(IntEnum):
     COMPLEX = auto()         # Construct complex from real and imaginary parts
     COMPLEX_P = auto()       # Check if complex
     COMPLEX_EQ_P = auto()    # complex=? a b
+    COMPLEX_NEQ_P = auto()   # complex!=? a b
     COMPLEX_REAL = auto()    # Extract real part
     COMPLEX_IMAG = auto()    # Extract imaginary part
     COMPLEX_ADD = auto()     # complex+ a b
@@ -149,6 +161,7 @@ class Opcode(IntEnum):
     # String operations
     STRING_P = auto()        # Check if string
     STRING_EQ_P = auto()     # string=? a b
+    STRING_NEQ_P = auto()    # string!=? a b
     STRING_LENGTH = auto()   # Get length of string
     STRING_UPCASE = auto()   # Convert string to uppercase
     STRING_DOWNCASE = auto() # Convert string to lowercase
@@ -167,11 +180,16 @@ class Opcode(IntEnum):
     STRING_SUBSTRING = auto()
                              # Extract substring (string, start, end)
     STRING_REPLACE = auto()  # Replace substring (string, old, new)
+    STRING_LT = auto()       # string<? a b  (lexicographic)
+    STRING_GT = auto()       # string>? a b  (lexicographic)
+    STRING_LTE = auto()      # string<=? a b (lexicographic)
+    STRING_GTE = auto()      # string>=? a b (lexicographic)
 
     # Alist operations
     ALIST = auto()           # Create an alist
     ALIST_P = auto()         # Check if alist
     ALIST_EQ_P = auto()      # alist=? a b
+    ALIST_NEQ_P = auto()     # alist!=? a b
     ALIST_KEYS = auto()      # Get all keys from alist
     ALIST_VALUES = auto()    # Get all values from alist
     ALIST_LENGTH = auto()    # Get number of entries in alist
@@ -185,6 +203,7 @@ class Opcode(IntEnum):
     LIST = auto()            # Build list
     LIST_P = auto()          # Check if list
     LIST_EQ_P = auto()       # list=? a b
+    LIST_NEQ_P = auto()      # list!=? a b
     LIST_CONS = auto()
     LIST_REVERSE = auto()    # Reverse list on top of stack
     LIST_FIRST = auto()      # Get first element of list
@@ -226,9 +245,15 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'function?': (Opcode.FUNCTION_P, 1),
     'boolean?': (Opcode.BOOLEAN_P, 1),
     'boolean=?': (Opcode.BOOLEAN_EQ_P, 2),
+    'boolean!=?': (Opcode.BOOLEAN_NEQ_P, 2),
     'not': (Opcode.BOOLEAN_NOT, 1),
     'integer?': (Opcode.INTEGER_P, 1),
     'integer=?': (Opcode.INTEGER_EQ_P, 2),
+    'integer!=?': (Opcode.INTEGER_NEQ_P, 2),
+    'integer<?': (Opcode.INTEGER_LT, 2),
+    'integer>?': (Opcode.INTEGER_GT, 2),
+    'integer<=?': (Opcode.INTEGER_LTE, 2),
+    'integer>=?': (Opcode.INTEGER_GTE, 2),
     'bit-not': (Opcode.INTEGER_BIT_NOT, 1),
     'bit-shift-left': (Opcode.INTEGER_BIT_SHIFT_LEFT, 2),
     'bit-shift-right': (Opcode.INTEGER_BIT_SHIFT_RIGHT, 2),
@@ -245,6 +270,11 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'integer-negate': (Opcode.INTEGER_NEG, 1),
     'float?': (Opcode.FLOAT_P, 1),
     'float=?': (Opcode.FLOAT_EQ_P, 2),
+    'float!=?': (Opcode.FLOAT_NEQ_P, 2),
+    'float<?': (Opcode.FLOAT_LT, 2),
+    'float>?': (Opcode.FLOAT_GT, 2),
+    'float<=?': (Opcode.FLOAT_LTE, 2),
+    'float>=?': (Opcode.FLOAT_GTE, 2),
     'float+': (Opcode.FLOAT_ADD, 2),
     'float-': (Opcode.FLOAT_SUB, 2),
     'float*': (Opcode.FLOAT_MUL, 2),
@@ -276,6 +306,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'complex': (Opcode.COMPLEX, 2),
     'complex?': (Opcode.COMPLEX_P, 1),
     'complex=?': (Opcode.COMPLEX_EQ_P, 2),
+    'complex!=?': (Opcode.COMPLEX_NEQ_P, 2),
     'complex+': (Opcode.COMPLEX_ADD, 2),
     'complex-': (Opcode.COMPLEX_SUB, 2),
     'complex*': (Opcode.COMPLEX_MUL, 2),
@@ -309,6 +340,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'number->string': (Opcode.NUMBER_TO_STRING, 1),
     'alist?': (Opcode.ALIST_P, 1),
     'alist=?': (Opcode.ALIST_EQ_P, 2),
+    'alist!=?': (Opcode.ALIST_NEQ_P, 2),
     'alist-keys': (Opcode.ALIST_KEYS, 1),
     'alist-values': (Opcode.ALIST_VALUES, 1),
     'alist-length': (Opcode.ALIST_LENGTH, 1),
@@ -319,6 +351,11 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'alist-get': (Opcode.ALIST_GET, 3),
     'string?': (Opcode.STRING_P, 1),
     'string=?': (Opcode.STRING_EQ_P, 2),
+    'string!=?': (Opcode.STRING_NEQ_P, 2),
+    'string<?': (Opcode.STRING_LT, 2),
+    'string>?': (Opcode.STRING_GT, 2),
+    'string<=?': (Opcode.STRING_LTE, 2),
+    'string>=?': (Opcode.STRING_GTE, 2),
     'string-length': (Opcode.STRING_LENGTH, 1),
     'string-upcase': (Opcode.STRING_UPCASE, 1),
     'string-downcase': (Opcode.STRING_DOWNCASE, 1),
@@ -336,6 +373,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'string-replace': (Opcode.STRING_REPLACE, 3),
     'list?': (Opcode.LIST_P, 1),
     'list=?': (Opcode.LIST_EQ_P, 2),
+    'list!=?': (Opcode.LIST_NEQ_P, 2),
     'cons': (Opcode.LIST_CONS, 2),
     'reverse': (Opcode.LIST_REVERSE, 1),
     'first': (Opcode.LIST_FIRST, 1),
@@ -398,6 +436,12 @@ class Instruction:
             Opcode.STRING_EQ_P,
             Opcode.NUMBER_EQ_P, Opcode.INTEGER_EQ_P, Opcode.FLOAT_EQ_P, Opcode.COMPLEX_EQ_P,
             Opcode.BOOLEAN_EQ_P, Opcode.LIST_EQ_P, Opcode.ALIST_EQ_P,
+            Opcode.STRING_NEQ_P, Opcode.STRING_LT, Opcode.STRING_GT, Opcode.STRING_LTE, Opcode.STRING_GTE,
+            Opcode.BOOLEAN_NEQ_P,
+            Opcode.INTEGER_NEQ_P, Opcode.INTEGER_LT, Opcode.INTEGER_GT, Opcode.INTEGER_LTE, Opcode.INTEGER_GTE,
+            Opcode.FLOAT_NEQ_P, Opcode.FLOAT_LT, Opcode.FLOAT_GT, Opcode.FLOAT_LTE, Opcode.FLOAT_GTE,
+            Opcode.COMPLEX_NEQ_P,
+            Opcode.LIST_NEQ_P, Opcode.ALIST_NEQ_P,
             Opcode.INTEGER_ADD, Opcode.INTEGER_SUB, Opcode.INTEGER_MUL, Opcode.INTEGER_DIV, Opcode.INTEGER_NEG,
             Opcode.FLOAT_ADD, Opcode.FLOAT_SUB, Opcode.FLOAT_MUL, Opcode.FLOAT_DIV, Opcode.FLOAT_NEG,
             Opcode.FLOAT_POW, Opcode.FLOAT_SIN, Opcode.FLOAT_COS, Opcode.FLOAT_TAN, Opcode.FLOAT_LOG,

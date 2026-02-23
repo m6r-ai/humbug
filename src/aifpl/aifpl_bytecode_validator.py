@@ -133,11 +133,13 @@ class BytecodeValidator:
             # Boolean operations
             Opcode.BOOLEAN_P: (1, 1),
             Opcode.BOOLEAN_EQ_P: (2, 1),
+            Opcode.BOOLEAN_NEQ_P: (2, 1),
             Opcode.BOOLEAN_NOT: (1, 1),
 
             # Integer operations
             Opcode.INTEGER_P: (1, 1),
             Opcode.INTEGER_EQ_P: (2, 1),
+            Opcode.INTEGER_NEQ_P: (2, 1),
             Opcode.INTEGER_ADD: (2, 1),
             Opcode.INTEGER_SUB: (2, 1),
             Opcode.INTEGER_MUL: (2, 1),
@@ -147,6 +149,10 @@ class BytecodeValidator:
             Opcode.INTEGER_BIT_SHIFT_LEFT: (2, 1),
             Opcode.INTEGER_BIT_SHIFT_RIGHT: (2, 1),
             Opcode.INTEGER_BIT_OR: (2, 1),
+            Opcode.INTEGER_LT: (2, 1),
+            Opcode.INTEGER_GT: (2, 1),
+            Opcode.INTEGER_LTE: (2, 1),
+            Opcode.INTEGER_GTE: (2, 1),
             Opcode.INTEGER_BIT_AND: (2, 1),
             Opcode.INTEGER_BIT_XOR: (2, 1),
             Opcode.INTEGER_TO_STRING_BIN: (1, 1),
@@ -156,6 +162,11 @@ class BytecodeValidator:
             # Floating point operations
             Opcode.FLOAT_P: (1, 1),
             Opcode.FLOAT_EQ_P: (2, 1),
+            Opcode.FLOAT_NEQ_P: (2, 1),
+            Opcode.FLOAT_LT: (2, 1),
+            Opcode.FLOAT_GT: (2, 1),
+            Opcode.FLOAT_LTE: (2, 1),
+            Opcode.FLOAT_GTE: (2, 1),
             Opcode.FLOAT_ADD: (2, 1),
             Opcode.FLOAT_SUB: (2, 1),
             Opcode.FLOAT_MUL: (2, 1),
@@ -175,6 +186,7 @@ class BytecodeValidator:
             Opcode.COMPLEX: (2, 1),
             Opcode.COMPLEX_P: (1, 1),
             Opcode.COMPLEX_EQ_P: (2, 1),
+            Opcode.COMPLEX_NEQ_P: (2, 1),
             Opcode.COMPLEX_REAL: (1, 1),
             Opcode.COMPLEX_IMAG: (1, 1),
             Opcode.COMPLEX_ADD: (2, 1),
@@ -228,6 +240,11 @@ class BytecodeValidator:
             # String
             Opcode.STRING_P: (1, 1),
             Opcode.STRING_EQ_P: (2, 1),
+            Opcode.STRING_NEQ_P: (2, 1),
+            Opcode.STRING_LT: (2, 1),
+            Opcode.STRING_GT: (2, 1),
+            Opcode.STRING_LTE: (2, 1),
+            Opcode.STRING_GTE: (2, 1),
             Opcode.STRING_LENGTH: (1, 1),
             Opcode.STRING_UPCASE: (1, 1),
             Opcode.STRING_DOWNCASE: (1, 1),
@@ -247,6 +264,7 @@ class BytecodeValidator:
             # Alist
             Opcode.ALIST_P: (1, 1),
             Opcode.ALIST_EQ_P: (2, 1),
+            Opcode.ALIST_NEQ_P: (2, 1),
             Opcode.ALIST_KEYS: (1, 1),
             Opcode.ALIST_VALUES: (1, 1),
             Opcode.ALIST_LENGTH: (1, 1),
@@ -259,6 +277,7 @@ class BytecodeValidator:
             # List operations
             Opcode.LIST_P: (1, 1),
             Opcode.LIST_EQ_P: (2, 1),
+            Opcode.LIST_NEQ_P: (2, 1),
             Opcode.LIST_CONS: (2, 1),
             Opcode.LIST_REVERSE: (1, 1),
             Opcode.LIST_FIRST: (1, 1),

@@ -162,8 +162,11 @@ class AIFPLAITool(AITool):
         return """# AIFPL Tool
 Syntax: (operator arg1 arg2 ...)
 
-## Key features:
+## Introduction
 
+- AIFPL (AI Functional Programming Language) is a pure functional programming language designed for efficient expression evaluation.
+- It is designed for AIs to use, human users are secondary.
+- Operations are runtime typed but most operations will strictly only work on one specific type.
 - Pure functional: no side effects, immutable data
 - Homoiconic: code and data use same representation (s-expressions)
 - Tail call optimization prevents stack overflow
@@ -246,9 +249,24 @@ Complex arithmetic (all args must be complex; use (complex r i) to construct):
 
 ## Comparison and boolean:
 
-- (= 1 1), (!= 1 2), (< 1 2), (> 3 2), (<= 1 1), (>= 2 1)
+Type-specific equality and inequality (strict: both args must be the same type):
+- integer: (integer=? 1 1), (integer!=? 1 2)
+- float:   (float=? 1.0 1.0), (float!=? 1.0 2.0)
+- complex: (complex=? 1+2j 1+2j), (complex!=? 1+2j 1+3j)
+- string:  (string=? "hi" "hi"), (string!=? "hi" "bye")
+- boolean: (boolean=? #t #t), (boolean!=? #t #f)
+- list:    (list=? (list 1 2) (list 1 2)), (list!=? (list 1 2) (list 1 3))
+- alist:   (alist=? a1 a2), (alist!=? a1 a2)
+
+Type-specific ordered comparisons (strict: both args must be the same type):
+- integer: (integer<? 1 2), (integer>? 3 2), (integer<=? 1 1), (integer>=? 2 1)
+- float:   (float<? 1.0 2.0), (float>? 3.0 2.0), (float<=? 1.0 1.0), (float>=? 2.0 1.0)
+- string:  (string<? "apple" "banana"), (string>? "b" "a"), (string<=? "a" "a"), (string>=? "b" "a")
+- String ordering is Unicode codepoint order (same as Python str), not locale-aware collation
+- Complex numbers have no ordering; use (complex-abs z) to compare magnitudes as floats
+
 - (and #t #f), (or #t #f), (not #t)
-- (if (> 5 3) "yes" "no"), lazy evaluation: (if #t 42 0)
+- (if (integer>? 5 3) "yes" "no"), lazy evaluation: (if #t 42 0)
 
 ## String operations:
 
@@ -256,7 +274,8 @@ Complex arithmetic (all args must be complex; use (complex r i) to construct):
 - Access: (string-ref "hello" 1) → "e" (character at 0-based index)
 - Manipulation: (substring "hello" 1 4), (string-upcase "hello"), (string-downcase "HELLO")
 - Utilities: (string-trim "  hello  "), (string-replace "banana" "a" "o")
-- Predicates: (string-contains? "hello" "ell"), (string-prefix? "hello" "he"), (string-suffix? "hello" "lo"), (string=? "hi" "hi")
+- Equality/ordering predicates: (string=? "hi" "hi"), (string!=? "hi" "bye"), (string<? "apple" "banana"), (string>? "b" "a"), (string<=? "a" "a"), (string>=? "b" "a")
+- Search predicates: (string-contains? "hello" "ell"), (string-prefix? "hello" "he"), (string-suffix? "hello" "lo")
 - Conversion: (string->number "42"), (number->string 42)
 - String-list: (string->list "hi") → ("h" "i"), (list->string (list "h" "i")) → "hi"
 - Split/join: (string-split "a,b,c" ",") → ("a" "b" "c"), (string-join (list "hello" "world") " ") → "hello world"
@@ -319,14 +338,14 @@ Complex arithmetic (all args must be complex; use (complex r i) to construct):
 ## Recursive bindings:
 
 - (letrec ((var1 val1) (var2 val2) ...) body) → recursive binding
-- (letrec ((fact (lambda (n) (if (<= n 1) 1 (integer* n (fact (integer- n 1))))))) (fact 5)) → 120
+- (letrec ((fact (lambda (n) (if (integer<=? n 1) 1 (integer* n (fact (integer- n 1))))))) (fact 5)) → 120
 - Supports self-recursion and mutual recursion
 - Use only when you need functions that reference themselves
 
 ## Higher-order functions:
 
 - (map func list) → (map (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
-- (filter predicate list) → (filter (lambda (x) (> x 0)) (list -1 2 -3 4)) → (2 4)
+- (filter predicate list) → (filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
 - (fold func init list) → (fold integer+ 0 (list 1 2 3 4)) → 10
 - (range start end [step]) → (range 1 5) → (1 2 3 4)
 - (find predicate list), (any? predicate list), (all? predicate list)
@@ -385,7 +404,8 @@ Complex arithmetic (all args must be complex; use (complex r i) to construct):
 - cons behavior is not the same as traditional LISP: second arg must be a list
 - Strict typing: string ops need strings, boolean ops need booleans
 - Round to integer: (round 3.7) → 4, (floor 3.7) → 3, (ceil 3.2) → 4
-- Lists only support = and != comparisons, not < > <= >=
+- All comparison operators are type-specific: use integer=?, float<?, string>=? etc. — never the generic =, !=, <, >, <=, >=
+- Lists and alists support =? and !=? only; they have no ordering
 - Conditions must be boolean: (if #t ...) works, (if 1 ...) doesn't
 - Use for calculations, data processing, and functional programming only
 - The user will not see the AIFPL code or AIFPL results directly; if you want to show either, you must format it as a message to the user.
