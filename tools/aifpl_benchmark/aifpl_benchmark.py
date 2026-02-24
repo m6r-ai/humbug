@@ -212,19 +212,19 @@ class Benchmark:
 # Define comprehensive benchmark suite (92 benchmarks)
 BENCHMARKS = [
     # === ARITHMETIC ===
-    Benchmark("Simple Addition", "arithmetic", "(+ 1 2 3 4 5)", iterations=5000),
-    Benchmark("Nested Arithmetic", "arithmetic", "(* (+ 1 2 3) (- 10 5) (/ 20 4))", iterations=5000),
-    Benchmark("Deep Nesting", "arithmetic", "(+ (* (- (/ 100 5) 3) 2) (- (* 7 3) (/ 42 6)))", iterations=5000),
-    Benchmark("Many Operations", "arithmetic", "(+ 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)", iterations=5000),
+    Benchmark("Simple Addition", "arithmetic", "(integer+ 1 2 3 4 5)", iterations=5000),
+    Benchmark("Nested Arithmetic", "arithmetic", "(integer* (integer+ 1 2 3) (integer- 10 5) (integer/ 20 4))", iterations=5000),
+    Benchmark("Deep Nesting", "arithmetic", "(integer+ (integer* (integer- (integer/ 100 5) 3) 2) (integer- (integer* 7 3) (integer/ 42 6)))", iterations=5000),
+    Benchmark("Many Operations", "arithmetic", "(integer+ 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)", iterations=5000),
 
     # === COMPARISONS ===
-    Benchmark("Simple Comparison", "comparisons", "(< 5 10)", iterations=5000),
-    Benchmark("Chained Comparisons", "comparisons", "(and (< 1 5) (> 10 3) (= 7 7) (!= 4 5))", iterations=5000),
-    Benchmark("List Equality", "comparisons", "(= (list 1 2 3 4 5) (list 1 2 3 4 5))", iterations=3000),
+    Benchmark("Simple Comparison", "comparisons", "(integer<? 5 10)", iterations=5000),
+    Benchmark("Chained Comparisons", "comparisons", "(and (integer<? 1 5) (integer>? 10 3) (integer=? 7 7) (integer!=? 4 5))", iterations=5000),
+    Benchmark("List Equality", "comparisons", "(list=? (list 1 2 3 4 5) (list 1 2 3 4 5))", iterations=3000),
     Benchmark(
         "Deep List Equality",
         "comparisons",
-        "(= (list (list 1 2) (list 3 4)) (list (list 1 2) (list 3 4)))",
+        "(list=? (list (list 1 2) (list 3 4)) (list (list 1 2) (list 3 4)))",
         iterations=2000
     ),
 
@@ -235,67 +235,67 @@ BENCHMARKS = [
     Benchmark("Complex Boolean", "boolean", "(and (or #t #f) (not #f) (or (and #t #t) #f))", iterations=5000),
 
     # === CONDITIONALS ===
-    Benchmark("Simple If", "conditionals", "(if (> 5 3) 10 20)", iterations=5000),
-    Benchmark("Nested If", "conditionals", "(if (> 5 3) (if (< 2 4) 10 20) 30)", iterations=5000),
+    Benchmark("Simple If", "conditionals", "(if (integer>? 5 3) 10 20)", iterations=5000),
+    Benchmark("Nested If", "conditionals", "(if (integer>? 5 3) (if (integer<? 2 4) 10 20) 30)", iterations=5000),
     Benchmark("If Chain", "conditionals", "(if #f 1 (if #f 2 (if #f 3 (if #f 4 5))))", iterations=5000),
 
     # === LAMBDA FUNCTIONS ===
-    Benchmark("Simple Lambda", "lambda", "((lambda (x) (* x x)) 5)", iterations=3000),
-    Benchmark("Lambda Multiple Args", "lambda", "((lambda (x y z) (+ (* x y) z)) 3 4 5)", iterations=3000),
-    Benchmark("Nested Lambda", "lambda", "((lambda (x) ((lambda (y) (+ x y)) 10)) 5)", iterations=2000),
-    Benchmark("Lambda Returning Lambda", "lambda", "(((lambda (x) (lambda (y) (+ x y))) 5) 10)", iterations=2000),
+    Benchmark("Simple Lambda", "lambda", "((lambda (x) (integer* x x)) 5)", iterations=3000),
+    Benchmark("Lambda Multiple Args", "lambda", "((lambda (x y z) (integer+ (integer* x y) z)) 3 4 5)", iterations=3000),
+    Benchmark("Nested Lambda", "lambda", "((lambda (x) ((lambda (y) (integer+ x y)) 10)) 5)", iterations=2000),
+    Benchmark("Lambda Returning Lambda", "lambda", "(((lambda (x) (lambda (y) (integer+ x y))) 5) 10)", iterations=2000),
 
     # === CLOSURES ===
-    Benchmark("Simple Closure", "closures", "(let ((x 10)) ((lambda (y) (+ x y)) 5))", iterations=3000),
-    Benchmark("Multiple Captures", "closures", "(let ((a 1) (b 2) (c 3)) ((lambda (x) (+ a b c x)) 4))", iterations=2000),
-    Benchmark("Nested Closures", "closures", "(let ((x 10)) (let ((f (lambda (y) (+ x y)))) (f 5)))", iterations=2000),
+    Benchmark("Simple Closure", "closures", "(let ((x 10)) ((lambda (y) (integer+ x y)) 5))", iterations=3000),
+    Benchmark("Multiple Captures", "closures", "(let ((a 1) (b 2) (c 3)) ((lambda (x) (integer+ a b c x)) 4))", iterations=2000),
+    Benchmark("Nested Closures", "closures", "(let ((x 10)) (let ((f (lambda (y) (integer+ x y)))) (f 5)))", iterations=2000),
     Benchmark(
         "Closure Factory",
         "closures",
-        "(let ((make-adder (lambda (n) (lambda (x) (+ x n))))) ((make-adder 10) 5))",
+        "(let ((make-adder (lambda (n) (lambda (x) (integer+ x n))))) ((make-adder 10) 5))",
         iterations=2000
     ),
 
     # === LET BINDINGS ===
-    Benchmark("Simple Let", "let", "(let ((x 5) (y 10)) (+ x y))", iterations=5000),
+    Benchmark("Simple Let", "let", "(let ((x 5) (y 10)) (integer+ x y))", iterations=5000),
     Benchmark(
         "Let Many Bindings",
         "let",
-        "(let ((a 1) (b 2) (c 3) (d 4) (e 5) (f 6) (g 7) (h 8) (i 9) (j 10)) (+ a b c d e f g h i j))",
+        "(let ((a 1) (b 2) (c 3) (d 4) (e 5) (f 6) (g 7) (h 8) (i 9) (j 10)) (integer+ a b c d e f g h i j))",
         iterations=3000
     ),
-    Benchmark("Nested Let", "let", "(let ((x 5)) (let ((y 10)) (let ((z 15)) (+ x y z))))", iterations=3000),
-    Benchmark("Let with Computation", "let", "(let ((x (* 5 5)) (y (+ 10 10)) (z (- 30 5))) (* x y z))", iterations=3000),
+    Benchmark("Nested Let", "let", "(let ((x 5)) (let ((y 10)) (let ((z 15)) (integer+ x y z))))", iterations=3000),
+    Benchmark("Let with Computation", "let", "(let ((x (integer* 5 5)) (y (integer+ 10 10)) (z (integer- 30 5))) (integer* x y z))", iterations=3000),
 
     # === RECURSION ===
     Benchmark(
         "Factorial (5)",
         "recursion",
-        "(letrec ((factorial (lambda (n) (if (<= n 1) 1 (* n (factorial (- n 1))))))) (factorial 5))",
+        "(letrec ((factorial (lambda (n) (if (integer<=? n 1) 1 (integer* n (factorial (integer- n 1))))))) (factorial 5))",
         iterations=1000
     ),
     Benchmark(
         "Factorial (10)",
         "recursion",
-        "(letrec ((factorial (lambda (n) (if (<= n 1) 1 (* n (factorial (- n 1))))))) (factorial 10))",
+        "(letrec ((factorial (lambda (n) (if (integer<=? n 1) 1 (integer* n (factorial (integer- n 1))))))) (factorial 10))",
         iterations=500
     ),
     Benchmark(
         "Fibonacci (10)",
         "recursion",
-        "(letrec ((fib (lambda (n) (if (<= n 1) n (+ (fib (- n 1)) (fib (- n 2))))))) (fib 10))",
+        "(letrec ((fib (lambda (n) (if (integer<=? n 1) n (integer+ (fib (integer- n 1)) (fib (integer- n 2))))))) (fib 10))",
         iterations=100
     ),
     Benchmark(
         "Tail Recursive Sum (50)",
         "recursion",
-        "(letrec ((sum-tail (lambda (n acc) (if (<= n 0) acc (sum-tail (- n 1) (+ acc n)))))) (sum-tail 50 0))",
+        "(letrec ((sum-tail (lambda (n acc) (if (integer<=? n 0) acc (sum-tail (integer- n 1) (integer+ acc n)))))) (sum-tail 50 0))",
         iterations=1000
     ),
     Benchmark(
         "Tail Recursive Sum (100)",
         "recursion",
-        "(letrec ((sum-tail (lambda (n acc) (if (<= n 0) acc (sum-tail (- n 1) (+ acc n)))))) (sum-tail 100 0))",
+        "(letrec ((sum-tail (lambda (n acc) (if (integer<=? n 0) acc (sum-tail (integer- n 1) (integer+ acc n)))))) (sum-tail 100 0))",
         iterations=500
     ),
 
@@ -312,21 +312,21 @@ BENCHMARKS = [
     Benchmark("List Position", "lists", "(position 7 (list 1 2 3 4 5 6 7 8 9 10))", iterations=3000),
 
     # === HIGHER-ORDER FUNCTIONS ===
-    Benchmark("Map (10)", "higher-order", "(map (lambda (x) (* x x)) (list 1 2 3 4 5 6 7 8 9 10))", iterations=1000),
-    Benchmark("Map (50)", "higher-order", "(map (lambda (x) (* x x)) (range 1 51))", iterations=200),
-    Benchmark("Map (100)", "higher-order", "(map (lambda (x) (* x x)) (range 1 101))", iterations=100),
-    Benchmark("Filter (50)", "higher-order", "(filter (lambda (x) (> x 25)) (range 1 51))", iterations=200),
-    Benchmark("Filter (100)", "higher-order", "(filter (lambda (x) (> x 50)) (range 1 101))", iterations=100),
-    Benchmark("Fold (50)", "higher-order", "(fold + 0 (range 1 51))", iterations=200),
-    Benchmark("Fold (100)", "higher-order", "(fold + 0 (range 1 101))", iterations=100),
+    Benchmark("Map (10)", "higher-order", "(map (lambda (x) (integer* x x)) (list 1 2 3 4 5 6 7 8 9 10))", iterations=1000),
+    Benchmark("Map (50)", "higher-order", "(map (lambda (x) (integer* x x)) (range 1 51))", iterations=200),
+    Benchmark("Map (100)", "higher-order", "(map (lambda (x) (integer* x x)) (range 1 101))", iterations=100),
+    Benchmark("Filter (50)", "higher-order", "(filter (lambda (x) (integer>? x 25)) (range 1 51))", iterations=200),
+    Benchmark("Filter (100)", "higher-order", "(filter (lambda (x) (integer>? x 50)) (range 1 101))", iterations=100),
+    Benchmark("Fold (50)", "higher-order", "(fold integer+ 0 (range 1 51))", iterations=200),
+    Benchmark("Fold (100)", "higher-order", "(fold integer+ 0 (range 1 101))", iterations=100),
     Benchmark(
-        "Map+Filter Pipeline", "higher-order", "(filter (lambda (x) (> x 50)) (map (lambda (x) (* x 2)) (range 1 51)))",
+        "Map+Filter Pipeline", "higher-order", "(filter (lambda (x) (integer>? x 50)) (map (lambda (x) (integer* x 2)) (range 1 51)))",
         iterations=100
     ),
-    Benchmark("Map+Fold Pipeline", "higher-order", "(fold + 0 (map (lambda (x) (* x x)) (range 1 51)))", iterations=100),
-    Benchmark("Find", "higher-order", "(find (lambda (x) (> x 50)) (range 1 101))", iterations=500),
-    Benchmark("Any?", "higher-order", "(any? (lambda (x) (> x 90)) (range 1 101))", iterations=500),
-    Benchmark("All?", "higher-order", "(all? (lambda (x) (> x 0)) (range 1 101))", iterations=500),
+    Benchmark("Map+Fold Pipeline", "higher-order", "(fold integer+ 0 (map (lambda (x) (integer* x x)) (range 1 51)))", iterations=100),
+    Benchmark("Find", "higher-order", "(find (lambda (x) (integer>? x 50)) (range 1 101))", iterations=500),
+    Benchmark("Any?", "higher-order", "(any? (lambda (x) (integer>? x 90)) (range 1 101))", iterations=500),
+    Benchmark("All?", "higher-order", "(all? (lambda (x) (integer>? x 0)) (range 1 101))", iterations=500),
 
     # === STRING OPERATIONS ===
     Benchmark("String Append", "strings", '(string-append "hello" " " "world")', iterations=5000),
@@ -349,32 +349,32 @@ BENCHMARKS = [
 
     # === PATTERN MATCHING ===
     Benchmark("Pattern Match Literal", "match", "(match 42 (42 \"found\") (_ \"not found\"))", iterations=3000),
-    Benchmark("Pattern Match Variable", "match", "(match 42 (x (* x 2)))", iterations=3000),
-    Benchmark("Pattern Match Type", "match", "(match 42 ((integer? i) (* i 2)) (_ 0))", iterations=2000),
+    Benchmark("Pattern Match Variable", "match", "(match 42 (x (integer* x 2)))", iterations=3000),
+    Benchmark("Pattern Match Type", "match", "(match 42 ((integer? i) (integer* i 2)) (_ 0))", iterations=2000),
     Benchmark("Pattern Match List", "match", "(match (list 1 2 3) ((a b c) b))", iterations=2000),
-    Benchmark("Pattern Match Nested", "match", "(match (list (list 1 2) (list 3 4)) (((a b) (c d)) (+ a b c d)))", iterations=1000),
+    Benchmark("Pattern Match Nested", "match", "(match (list (list 1 2) (list 3 4)) (((a b) (c d)) (integer+ a b c d)))", iterations=1000),
     Benchmark("Pattern Match Cons", "match", "(match (list 1 2 3 4 5) ((head . tail) head))", iterations=2000),
     Benchmark("Pattern Match Multiple", "match", "(match 5 (1 \"one\") (2 \"two\") (3 \"three\") (4 \"four\") (5 \"five\") (_ \"other\"))", iterations=2000),
 
     # === MATH FUNCTIONS ===
-    Benchmark("Sqrt", "math", "(sqrt 16)", iterations=5000),
-    Benchmark("Sqrt Negative", "math", "(sqrt -4+0j)", iterations=3000),
-    Benchmark("Abs", "math", "(abs -42)", iterations=5000),
-    Benchmark("Min/Max", "math", "(+ (min 1 2 3 4 5) (max 1 2 3 4 5))", iterations=5000),
-    Benchmark("Pow", "math", "(pow 2 10)", iterations=5000),
-    Benchmark("Trigonometry", "math", "(+ (sin 0.5) (cos 0.5) (tan 0.5))", iterations=3000),
-    Benchmark("Logarithms", "math", "(+ (log 10) (log10 100))", iterations=3000),
-    Benchmark("Complex Numbers", "math", "(+ (real (complex 3 4)) (imag (complex 3 4)))", iterations=3000),
-    Benchmark("Rounding", "math", "(+ (round 3.7) (floor 3.7) (ceil 3.2))", iterations=5000),
+    Benchmark("Sqrt", "math", "(float-sqrt 16.0)", iterations=5000),
+    Benchmark("Sqrt Negative", "math", "(complex-sqrt -4+0j)", iterations=3000),
+    Benchmark("Abs", "math", "(integer-abs -42)", iterations=5000),
+    Benchmark("Min/Max", "math", "(integer+ (min 1 2 3 4 5) (max 1 2 3 4 5))", iterations=5000),
+    Benchmark("Pow", "math", "(float-expt 2.0 10.0)", iterations=5000),
+    Benchmark("Trigonometry", "math", "(float+ (float-sin 0.5) (float-cos 0.5) (float-tan 0.5))", iterations=3000),
+    Benchmark("Logarithms", "math", "(float+ (float-log 10.0) (float-log10 100.0))", iterations=3000),
+    Benchmark("Complex Numbers", "math", "(integer+ (real (complex 3 4)) (imag (complex 3 4)))", iterations=3000),
+    Benchmark("Rounding", "math", "(integer+ (round 3.7) (floor 3.7) (ceil 3.2))", iterations=5000),
 
     # === TYPE PREDICATES ===
-    Benchmark("Type Checks", "types", "(and (number? 42) (string? \"hi\") (boolean? #t) (list? (list 1 2)))", iterations=5000),
+    Benchmark("Type Checks", "types", "(and (integer? 42) (string? \"hi\") (boolean? #t) (list? (list 1 2)))", iterations=5000),
     Benchmark("Integer/Float/Complex", "types", "(and (integer? 42) (float? 3.14) (complex? (complex 1 2)))", iterations=3000),
 
     # === REALISTIC WORKLOADS ===
     Benchmark("Data Processing", "realistic",
               """(let ((data (range 1 21)))
-                   (fold + 0 (map (lambda (x) (* x x)) (filter (lambda (x) (> x 10)) data))))""", iterations=200),
+                   (fold integer+ 0 (map (lambda (x) (integer* x x)) (filter (lambda (x) (integer>? x 10)) data))))""", iterations=200),
     Benchmark("Nested Data Structure", "realistic",
               """(let ((users (list
                               (alist (list "name" "Alice") (list "age" 30))
@@ -385,20 +385,20 @@ BENCHMARKS = [
               """(letrec ((sum-list (lambda (lst)
                                      (if (null? lst)
                                          0
-                                         (+ (first lst) (sum-list (rest lst)))))))
+                                         (integer+ (first lst) (sum-list (rest lst)))))))
                    (sum-list (list 1 2 3 4 5 6 7 8 9 10)))""", iterations=500),
     Benchmark("Pattern Match Pipeline", "realistic",
               """(map (lambda (x)
                           (match x
-                            ((integer? i) (* i 2))
+                            ((integer? i) (integer* i 2))
                             ((string? s) (string-length s))
                             (_ 0)))
                         (list 1 2 "hello" 3 "world" 4))""", iterations=500),
     Benchmark("Closure-based Counter", "realistic",
               """(let ((make-counter (lambda (start)
-                                      (lambda (inc) (+ start inc)))))
+                                      (lambda (inc) (integer+ start inc)))))
                    (let ((counter (make-counter 10)))
-                     (+ (counter 1) (counter 2) (counter 3))))""", iterations=1000),
+                     (integer+ (counter 1) (counter 2) (counter 3))))""", iterations=1000),
 ]
 
 # Quick benchmark subset for fast iteration

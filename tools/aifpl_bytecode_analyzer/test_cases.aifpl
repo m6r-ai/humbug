@@ -4,36 +4,36 @@
 ; =============================================================================
 ; 1. SIMPLE ARITHMETIC CONSTANTS
 ; =============================================================================
-(let ((buffer-size (* 1024 1024))
-      (timeout-ms (* 1000 30))
-      (max-retries (+ 3 2)))
-  (+ buffer-size timeout-ms max-retries))
+(let ((buffer-size (integer* 1024 1024))
+      (timeout-ms (integer* 1000 30))
+      (max-retries (integer+ 3 2)))
+  (integer+ buffer-size timeout-ms max-retries))
 
 ; =============================================================================
 ; 2. NESTED ARITHMETIC
 ; =============================================================================
-(let ((a (* 2 3))
-      (b (+ 4 5))
-      (c (- 10 1)))
-  (+ (* a b) c))
+(let ((a (integer* 2 3))
+      (b (integer+ 4 5))
+      (c (integer- 10 1)))
+  (integer+ (integer* a b) c))
 
 ; =============================================================================
 ; 3. MATHEMATICAL CONSTANTS
 ; =============================================================================
-(let ((gravity (* 9.8 1.0))
-      (pi-over-2 (/ 3.14159 2))
-      (degrees-to-radians (/ 3.14159 180)))
+(let ((gravity (float* 9.8 1.0))
+      (pi-over-2 (float/ 3.14159 2.0))
+      (degrees-to-radians (float/ 3.14159 180.0)))
   (lambda (angle)
-    (* angle degrees-to-radians)))
+    (float* angle degrees-to-radians)))
 
 ; =============================================================================
 ; 4. UNIT CONVERSIONS
 ; =============================================================================
-(let ((meters-to-feet (/ 1.0 0.3048))
-      (kg-to-pounds (/ 1.0 0.453592)))
+(let ((meters-to-feet (float/ 1.0 0.3048))
+      (kg-to-pounds (float/ 1.0 0.453592)))
   (lambda (meters kg)
-    (list (* meters meters-to-feet)
-          (* kg kg-to-pounds))))
+    (list (float* meters meters-to-feet)
+          (float* kg kg-to-pounds))))
 
 ; =============================================================================
 ; 5. BIT OPERATIONS
@@ -56,33 +56,33 @@
 ; 7. CONFIGURATION OBJECT
 ; =============================================================================
 (alist 
-  (list "port" (+ 8000 80))
-  (list "workers" (* 4 2))
-  (list "timeout" (* 60 5))
-  (list "buffer-size" (* 1024 8))
-  (list "max-connections" (+ 100 50)))
+  (list "port" (integer+ 8000 80))
+  (list "workers" (integer* 4 2))
+  (list "timeout" (integer* 60 5))
+  (list "buffer-size" (integer* 1024 8))
+  (list "max-connections" (integer+ 100 50)))
 
 ; =============================================================================
 ; 8. ALGORITHM PARAMETERS
 ; =============================================================================
-(let ((learning-rate (/ 1.0 1000))
-      (batch-size (* 32 4))
-      (epochs (+ 50 50))
-      (hidden-units (* 128 2)))
+(let ((learning-rate (float/ 1.0 1000.0))
+      (batch-size (integer* 32 4))
+      (epochs (integer+ 50 50))
+      (hidden-units (integer* 128 2)))
   (list learning-rate batch-size epochs hidden-units))
 
 ; =============================================================================
 ; 9. RANGE CALCULATIONS
 ; =============================================================================
-(let ((start-index (+ 0 1))
-      (end-index (- 100 1))
-      (step-size (+ 1 1)))
+(let ((start-index (integer+ 0 1))
+      (end-index (integer- 100 1))
+      (step-size (integer+ 1 1)))
   (range start-index end-index step-size))
 
 ; =============================================================================
 ; 10. COMPARISON OPERATIONS
 ; =============================================================================
-(let ((min-value (< 5 10))
-      (max-value (> 100 50))
-      (equal-check (= 42 42)))
+(let ((min-value (integer<? 5 10))
+      (max-value (integer>? 100 50))
+      (equal-check (integer=? 42 42)))
   (and min-value max-value equal-check))
