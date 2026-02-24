@@ -1,22 +1,22 @@
 ; Math utility functions module
 ; Provides common mathematical operations
 
-(let ((square (lambda (x) (* x x)))
-      (cube (lambda (x) (* x x x)))
+(let ((square (lambda (x) (integer* x x)))
+      (cube (lambda (x) (integer* x (integer* x x))))
       (factorial (lambda (n)
                    (letrec ((fact (lambda (n acc)
                                     (if (<= n 1)
                                         acc
-                                        (fact (- n 1) (* acc n))))))
+                                        (fact (integer- n 1) (integer* acc n))))))
                      (fact n 1))))
       (abs-value (lambda (x)
                    (if (< x 0)
-                       (- 0 x)
+                       (integer- 0 x)
                        x)))
       (pow (lambda (base exp)
              (if (= exp 0)
                  1
-                 (* base (pow base (- exp 1)))))))
+                 (integer* base (pow base (integer- exp 1)))))))
   
   ; Export public API
   (alist
