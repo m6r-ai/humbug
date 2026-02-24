@@ -48,11 +48,11 @@ class AIFPLInteger(AIFPLValue):
         return str(self.value)
 
     def __eq__(self, other: Any) -> bool:
-        """Compare numeric values, allowing cross-type comparison."""
-        if isinstance(other, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
-            return self.value == other.value
+        """Compare numeric values."""
+        if not isinstance(other, AIFPLInteger):
+            return False
 
-        return False
+        return self.value == other.value
 
 
 @dataclass(frozen=True)
@@ -70,11 +70,11 @@ class AIFPLFloat(AIFPLValue):
         return str(self.value)
 
     def __eq__(self, other: Any) -> bool:
-        """Compare numeric values, allowing cross-type comparison."""
-        if isinstance(other, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
-            return self.value == other.value
+        """Compare numeric values."""
+        if not isinstance(other, AIFPLFloat):
+            return False
 
-        return False
+        return self.value == other.value
 
 
 @dataclass(frozen=True)
@@ -92,11 +92,11 @@ class AIFPLComplex(AIFPLValue):
         return str(self.value).strip('()')
 
     def __eq__(self, other: Any) -> bool:
-        """Compare numeric values, allowing cross-type comparison."""
-        if isinstance(other, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
-            return self.value == other.value
+        """Compare numeric values."""
+        if not isinstance(other, AIFPLComplex):
+            return False
 
-        return False
+        return self.value == other.value
 
 
 @dataclass(frozen=True)
@@ -143,9 +143,10 @@ class AIFPLString(AIFPLValue):
 
     def __eq__(self, other: Any) -> bool:
         """Compare string values, ignoring metadata (line, column)."""
-        if isinstance(other, AIFPLString):
-            return self.value == other.value
-        return False
+        if not isinstance(other, AIFPLString):
+            return False
+
+        return self.value == other.value
 
 
 @dataclass(frozen=True)
@@ -164,9 +165,10 @@ class AIFPLBoolean(AIFPLValue):
 
     def __eq__(self, other: Any) -> bool:
         """Compare boolean values, ignoring metadata (line, column)."""
-        if isinstance(other, AIFPLBoolean):
-            return self.value == other.value
-        return False
+        if not isinstance(other, AIFPLBoolean):
+            return False
+
+        return self.value == other.value
 
 
 @dataclass(frozen=True)
