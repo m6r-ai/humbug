@@ -428,11 +428,11 @@ class AIFPL:
                                                                               #f)))))
                                                       (inner (list-rest lst)))))))
                                 (outer args))))""",
-        'list-append': """(lambda (. args)
+        'list-concat': """(lambda (. args)
                             (if (list-null? args) (list)
                               (letrec ((loop (lambda (lst acc)
                                                (if (list-null? lst) acc
-                                                   (loop (list-rest lst) (list-append acc (list-first lst)))))))
+                                                   (loop (list-rest lst) (list-concat acc (list-first lst)))))))
                                 (loop (list-rest args) (list-first args)))))""",
         'alist': """(lambda (. args)
                       (letrec ((loop (lambda (pairs acc)
@@ -476,16 +476,20 @@ class AIFPL:
                              (if (list-null? rest)
                                  (string-slice str start (string-length str))
                                  (string-slice str start (list-first rest))))""",
+        'list-slice': """(lambda (lst start . rest)
+                             (if (list-null? rest)
+                                 (list-slice lst start (list-length lst))
+                                 (list-slice lst start (list-first rest))))""",
         'map': """(lambda (f lst)
                     (letrec ((helper (lambda (f lst acc)
                                        (if (list-null? lst) (list-reverse acc)
-                                           (helper f (list-rest lst) (list-cons (f (list-first lst)) acc))))))
+                                           (helper f (list-rest lst) (list-prepend acc (f (list-first lst))))))))
                     (helper f lst (list))))""",
         'filter': """(lambda (pred lst)
                     (letrec ((helper (lambda (pred lst acc)
                                        (if (list-null? lst) (list-reverse acc)
                                            (if (pred (list-first lst))
-                                               (helper pred (list-rest lst) (list-cons (list-first lst) acc))
+                                               (helper pred (list-rest lst) (list-prepend acc (list-first lst)))
                                                (helper pred (list-rest lst) acc))))))
                         (helper pred lst (list))))""",
         'fold': """(lambda (f init lst)

@@ -371,7 +371,7 @@ class TestConditionals:
 
         helpers.assert_evaluates_to(
             aifpl,
-            '(if (list-member? 2 (list 1 2 3)) "found" "not found")',
+            '(if (list-member? (list 1 2 3) 2) "found" "not found")',
             '"found"'
         )
 

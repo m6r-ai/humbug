@@ -119,7 +119,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # List dependencies
         result = aifpl.evaluate("""
         (let* ((base-list (list 1 2 3))
-              (extended (list-append base-list (list 4 5)))
+              (extended (list-concat base-list (list 4 5)))
               (length-val (list-length extended)))
           length-val)
         """)

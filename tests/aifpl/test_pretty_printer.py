@@ -511,13 +511,13 @@ class TestPrettyPrinterCommentsInSpecialForms:
     ; Found a cycle - extract the cycle from path
     (let ((cycle-start-pos (list-position task-id path)))
       (if (!= cycle-start-pos #f)
-        (list (list-drop cycle-start-pos (list-append path (list task-id))))
+        (list (list-slice (list-concat path (list task-id)) cycle-start-pos))
         (list)))
     ; Not a cycle yet, continue DFS
     (let* ((successors (get-successors task-id dependencies))
-           (new-path (list-append path (list task-id)))
-           (new-visited (list-cons task-id visited-in-path)))
-      (fold list-append (list)
+           (new-path (list-concat path (list task-id)))
+           (new-visited (list-prepend visited-in-path task-id)))
+      (fold list-concat (list)
             (map (lambda (succ) (dfs-visit succ new-path new-visited))
                  successors))))
   ; Else branch
@@ -672,13 +672,13 @@ class TestPrettyPrinterCommentsInSpecialForms:
     ; Found a cycle - extract the cycle from path
     (let ((cycle-start-pos (list-position task-id path)))
       (if (!= cycle-start-pos #f)
-        (list (list-drop cycle-start-pos (list-append path (list task-id))))
+        (list (list-slice (list-concat path (list task-id)) cycle-start-pos))
         (list)))
     ; Not a cycle yet, continue DFS
     (let* ((successors (get-successors task-id dependencies))
-           (new-path (list-append path (list task-id)))
-           (new-visited (list-cons task-id visited-in-path)))
-      (fold list-append (list)
+           (new-path (list-concat path (list task-id)))
+           (new-visited (list-prepend visited-in-path task-id)))
+      (fold list-concat (list)
             (map (lambda (succ) (dfs-visit succ new-path new-visited))
                  successors)))))"""
         result = printer.format(code)

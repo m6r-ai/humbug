@@ -289,13 +289,16 @@ Syntax: (operator arg1 arg2 ...)
 
 ## List operations:
 
-- Uses proper lists only, not cons cells, and the list-cons operator requires that the second argument is a list
-- Construction: (list 1 2 3), (list-cons 1 (list 2 3)), (list-append (list 1 2) (list 3 4))
+- Uses proper lists only, not cons cells
+- Construction: (list 1 2 3), (list-prepend lst item), (list-append lst item), (list-concat lst1 lst2)
+- (list-prepend (list 2 3) 1) → (1 2 3), (list-append (list 1 2) 3) → (1 2 3)
+- (list-concat (list 1 2) (list 3 4)) → (1 2 3 4)
 - Access: (list-first (list 1 2 3)), (list-rest (list 1 2 3)), (list-last (list 1 2 3))
 - Indexed access: (list-ref (list "a" "b" "c") 1) → "b" (0-based index)
-- Properties: (list-length (list 1 2 3)), (list-null? (list)), (list-member? 2 (list 1 2 3))
-- Utilities: (list-reverse (list 1 2 3)), (list-remove 2 (list 1 2 3 2 4)), (list-position 2 (list 1 2 3)) → 1 or #f
-- Slicing: (list-take 3 (list 1 2 3 4 5)), (list-drop 2 (list 1 2 3 4 5))
+- Properties: (list-length (list 1 2 3)), (list-null? (list)), (list-member? (list 1 2 3) 2)
+- Utilities: (list-reverse (list 1 2 3)), (list-remove (list 1 2 3 2 4) 2), (list-position (list 1 2 3) 2) → 1 or #f
+- Slicing: (list-slice lst start) → from start to end, (list-slice lst start end) → from start to end (exclusive)
+- (list-slice (list 1 2 3 4 5) 2) → (3 4 5), (list-slice (list 1 2 3 4 5) 1 3) → (2 3)
 
 ## Association lists (alists):
 
@@ -326,7 +329,7 @@ Syntax: (operator arg1 arg2 ...)
 - (lambda (. rest) body) → fully variadic: rest receives all args as a list
 - ((lambda (x) (integer* x x)) 5) → 25
 - ((lambda (. args) (fold integer+ 0 args)) 1 2 3 4 5) → 15 (variadic sum)
-- ((lambda (x . rest) (list-cons x (list-reverse rest))) 1 2 3) → (1 3 2)
+- ((lambda (x . rest) (list-prepend (list-reverse rest) x)) 1 2 3) → (1 3 2)
 - Functions are first-class values with lexical scoping and closures
 - Tail recursion automatically optimized
 - Variadic functions accept any number of args beyond their fixed params; rest param is always a list (possibly empty)
@@ -364,7 +367,7 @@ Syntax: (operator arg1 arg2 ...)
 - Wildcard patterns: _ matches anything without binding
 - Type patterns: (integer? var), (string? var), (list? var), (boolean? var), (function? var)
 - Empty list: (match lst (() "empty") ((x) "singleton") (_ "multiple"))
-- List destructuring: (match lst ((a b c) (integer+ a b c)) ((head . tail) (list-cons head tail)))
+- List destructuring: (match lst ((a b c) (integer+ a b c)) ((head . tail) (list-prepend tail head)))
 - Nested patterns: (match data (((integer? x) (string? y)) (list x y)) (_ "no match"))
 - First match wins: patterns are tested in order, use specific patterns before general ones
 - Example: (match data (42 "answer") ((integer? n) (integer* n 2)) ((string? s) (string-upcase s))
@@ -407,9 +410,9 @@ Syntax: (operator arg1 arg2 ...)
 
 ## Important notes:
 
-- list-cons behavior is not the same as traditional LISP: second arg must be a list
+- list-prepend and list-append both take list first, item second: (list-prepend lst item), (list-append lst item)
 - Strict typing: string ops need strings, boolean ops need booleans
-- float-floor, float-ceil, float-round all return float, not integer; use (integer (float-round x)) to get an integer
+- float-floor, float-ceil, float-round all return float, not integer; use (float->integer (float-round x)) to get an integer
 - All comparison operators are type-specific: use integer=?, float<?, string>=? etc.
 - Lists and alists support =? and !=? only; they have no ordering
 - Conditions must be boolean: (if #t ...) works, (if 1 ...) doesn't

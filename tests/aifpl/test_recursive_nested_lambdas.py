@@ -64,11 +64,11 @@ class TestRecursiveNestedLambdas:
         helpers.assert_evaluates_to(
             aifpl,
             '''(letrec ((visit (lambda (id path)
-                          (if (list-member? id path)
+                          (if (list-member? path id)
                               (list)
-                              (let ((new-path (list-cons id path)))
+                              (let ((new-path (list-prepend path id)))
                                 (if (integer>? id 1)
-                                    (fold list-append (list)
+                                    (fold list-concat (list)
                                           (map (lambda (next-id) (visit next-id new-path))
                                                (list (integer- id 1))))
                                     (list id)))))))
@@ -83,9 +83,9 @@ class TestRecursiveNestedLambdas:
             aifpl,
             '''(letrec ((all-ids (list 1 2 3))
                   (visit (lambda (id path)
-                          (if (list-member? id path)
+                          (if (list-member? path id)
                               (list id)
-                              (let ((new-path (list-cons id path)))
+                              (let ((new-path (list-prepend path id)))
                                 (if (integer>? id 1)
                                     (visit (integer- id 1) new-path)
                                     (list id)))))))
@@ -105,15 +105,15 @@ class TestRecursiveNestedLambdas:
                                        (list))))
                   (dfs-visit
                     (lambda (task-id path visited-in-path)
-                      (if (list-member? task-id visited-in-path)
+                      (if (list-member? visited-in-path task-id)
                           (list (list "cycle" task-id))
                           (let ((successors (get-successors task-id)))
-                            (let ((new-path (list-append path (list task-id)))
-                                  (new-visited (list-cons task-id visited-in-path)))
-                              (fold list-append (list)
+                            (let ((new-path (list-concat path (list task-id)))
+                                  (new-visited (list-prepend visited-in-path task-id)))
+                              (fold list-concat (list)
                                     (map (lambda (succ) (dfs-visit succ new-path new-visited))
                                          successors))))))))
-              (fold list-append (list)
+              (fold list-concat (list)
                     (map (lambda (task-id) (dfs-visit task-id (list) (list)))
                          all-task-ids)))''',
             '()'  # No cycles detected
@@ -165,7 +165,7 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((process (lambda (n)
                                (if (integer<=? n 0)
                                    (list)
-                                   (fold list-append
+                                   (fold list-concat
                                          (list n)
                                          (map (lambda (x) (process (integer- x 1)))
                                               (list n)))))))
@@ -224,9 +224,9 @@ class TestRecursiveNestedLambdas:
                                                (list 4)
                                                (list)))))
                   (visit-all (lambda (node visited)
-                              (if (list-member? node visited)
+                              (if (list-member? visited node)
                                   visited
-                                  (let ((new-visited (list-cons node visited)))
+                                  (let ((new-visited (list-prepend visited node)))
                                     (fold (lambda (acc neighbor)
                                            (visit-all neighbor acc))
                                           new-visited
@@ -243,7 +243,7 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((compute (lambda (n)
                                (if (integer<=? n 1)
                                    (list n)
-                                   (fold list-append
+                                   (fold list-concat
                                          (list n)
                                          (map (lambda (x)
                                                (let ((result (compute (integer- x 1))))
@@ -355,7 +355,7 @@ class TestRecursiveNestedLambdasBytecode:
             '''(letrec ((visit (lambda (n)
                              (if (integer<=? n 1)
                                  (list n)
-                                 (fold list-append
+                                 (fold list-concat
                                        (list n)
                                        (map (lambda (x) (visit (integer- x 1)))
                                             (list n)))))))
@@ -466,7 +466,7 @@ class TestLetrecLambdasInDataStructures:
         # Lambda in cons cell
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list-cons (lambda () x) (list)))) (list-first x))',
+            '(letrec ((x (list-prepend (list) (lambda () x)))) (list-first x))',
             '<lambda ()>'  # Returns the lambda
         )
 
@@ -474,7 +474,7 @@ class TestLetrecLambdasInDataStructures:
         """Test calling lambda from cons cell."""
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list-cons (lambda () x) (list)))) ((list-first x)))',
+            '(letrec ((x (list-prepend (list) (lambda () x)))) ((list-first x)))',
             '(<lambda ()>)'  # Returns x (the cons cell)
         )
 

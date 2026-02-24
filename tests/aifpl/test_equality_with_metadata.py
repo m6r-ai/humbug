@@ -73,26 +73,26 @@ class TestEquality:
     def test_string_in_list_operations(self, aifpl):
         """Test that strings work correctly in list operations (uses __eq__)."""
         # member? uses __eq__ internally
-        result = aifpl.evaluate('(list-member? "hello" (list "hello" "world"))')
+        result = aifpl.evaluate('(list-member? (list "hello" "world") "hello")')
         assert result is True
 
-        result = aifpl.evaluate('(list-member? "test" (list "hello" "world"))')
+        result = aifpl.evaluate('(list-member? (list "hello" "world") "test")')
         assert result is False
 
         # position uses __eq__ internally
-        result = aifpl.evaluate('(list-position "world" (list "hello" "world" "test"))')
+        result = aifpl.evaluate('(list-position (list "hello" "world" "test") "world")')
         assert result == 1
 
-        result = aifpl.evaluate('(list-position "missing" (list "hello" "world"))')
+        result = aifpl.evaluate('(list-position (list "hello" "world") "missing")')
         assert result is False
 
     def test_boolean_in_list_operations(self, aifpl):
         """Test that booleans work correctly in list operations."""
-        result = aifpl.evaluate('(list-member? #t (list #t #f))')
+        result = aifpl.evaluate('(list-member? (list #t #f) #t)')
         assert result is True
 
-        result = aifpl.evaluate('(list-member? #t (list #f #f))')
+        result = aifpl.evaluate('(list-member? (list #f #f) #t)')
         assert result is False
 
-        result = aifpl.evaluate('(list-position #f (list #t #f #t))')
+        result = aifpl.evaluate('(list-position (list #t #f #t) #f)')
         assert result == 1

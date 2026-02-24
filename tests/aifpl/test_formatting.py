@@ -141,10 +141,10 @@ class TestFormatting:
     def test_list_operations_formatting(self, aifpl, helpers):
         """Test that list operations produce properly formatted results."""
         # cons operation
-        helpers.assert_evaluates_to(aifpl, '(list-cons 1 (list 2 3))', '(1 2 3)')
+        helpers.assert_evaluates_to(aifpl, '(list-prepend (list 2 3) 1)', '(1 2 3)')
 
-        # list-append operation
-        helpers.assert_evaluates_to(aifpl, '(list-append (list 1 2) (list 3 4))', '(1 2 3 4)')
+        # list-concat operation
+        helpers.assert_evaluates_to(aifpl, '(list-concat (list 1 2) (list 3 4))', '(1 2 3 4)')
 
         # reverse operation
         helpers.assert_evaluates_to(aifpl, '(list-reverse (list 1 2 3))', '(3 2 1)')
@@ -290,8 +290,8 @@ class TestFormatting:
         """Test that formatting is consistent for equivalent expressions."""
         # Different ways of creating the same list should format identically
         list1 = aifpl.evaluate_and_format('(list 1 2 3)')
-        list2 = aifpl.evaluate_and_format('(list-cons 1 (list-cons 2 (list-cons 3 (list))))')
-        list3 = aifpl.evaluate_and_format('(list-append (list 1) (list 2) (list 3))')
+        list2 = aifpl.evaluate_and_format('(list-prepend (list-prepend (list-prepend (list) 3) 2) 1)')
+        list3 = aifpl.evaluate_and_format('(list-concat (list 1) (list 2) (list 3))')
 
         assert list1 == list2 == list3 == '(1 2 3)'
 

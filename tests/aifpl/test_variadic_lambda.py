@@ -30,7 +30,7 @@ class TestVariadicLambdaBasic:
     def test_mixed_fixed_and_rest(self, aifpl):
         """Fixed parameters are bound normally; rest collects the remainder."""
         assert aifpl.evaluate_and_format(
-            '((lambda (x . rest) (list-cons x rest)) 10 20 30)'
+            '((lambda (x . rest) (list-prepend rest x)) 10 20 30)'
         ) == '(10 20 30)'
 
     def test_mixed_two_fixed_and_rest(self, aifpl):
@@ -141,11 +141,11 @@ class TestVariadicLambdaListOps:
         assert aifpl.evaluate_and_format(expr) == '(1 2 3 4)'
 
     def test_variadic_append(self, aifpl):
-        """Variadic list-append using fold."""
+        """Variadic list-concat using fold."""
         expr = '''
-        (let ((my-list-append (lambda (. lists)
-                           (fold list-append (list) lists))))
-          (my-list-append (list 1 2) (list 3 4) (list 5)))
+        (let ((my-list-concat (lambda (. lists)
+                           (fold list-concat (list) lists))))
+          (my-list-concat (list 1 2) (list 3 4) (list 5)))
         '''
         assert aifpl.evaluate_and_format(expr) == '(1 2 3 4 5)'
 
@@ -171,7 +171,7 @@ class TestVariadicLambdaHigherOrder:
         """A variadic function used as the mapped function (single-arg call)."""
         # map calls (f element) with exactly 1 arg, so rest is empty
         expr = '''
-        (let ((wrap (lambda (x . rest) (list-cons x rest))))
+        (let ((wrap (lambda (x . rest) (list-prepend rest x))))
           (map wrap (list 1 2 3)))
         '''
         assert aifpl.evaluate_and_format(expr) == '((1) (2) (3))'
@@ -346,7 +346,7 @@ class TestVariadicLambdaDescribe:
     def test_variadic_function_is_callable(self, aifpl):
         """A variadic function stored in a variable is callable."""
         expr = '''
-        (let ((f (lambda (x . rest) (list-cons x rest))))
+        (let ((f (lambda (x . rest) (list-prepend rest x))))
           (f 1 2 3))
         '''
         assert aifpl.evaluate_and_format(expr) == '(1 2 3)'

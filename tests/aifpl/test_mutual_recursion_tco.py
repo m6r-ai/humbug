@@ -113,7 +113,7 @@ class TestMutualRecursionWithAccumulators:
         (letrec ((process-evens (lambda (lst acc)
                                   (if (list-null? lst)
                                       acc
-                                      (process-odds (list-rest lst) (list-cons (list-first lst) acc)))))
+                                      (process-odds (list-rest lst) (list-prepend acc (list-first lst))))))
                  (process-odds (lambda (lst acc)
                                  (if (list-null? lst)
                                      acc

@@ -25,20 +25,22 @@ class TestAIFPLCollectionEdgeCases:
 
         # Empty list operations that should work
         assert aifpl.evaluate("(list-reverse ())") == []
-        assert aifpl.evaluate("(list-append () ())") == []
-        assert aifpl.evaluate("(list-append () (list 1))") == [1]
-        assert aifpl.evaluate("(list-append (list 1) ())") == [1]
+        assert aifpl.evaluate("(list-concat () ())") == []
+        assert aifpl.evaluate("(list-concat () (list 1))") == [1]
+        assert aifpl.evaluate("(list-concat (list 1) ())") == [1]
 
         # Empty list membership and search
-        assert aifpl.evaluate("(list-member? 1 ())") is False
-        assert aifpl.evaluate("(list-position 1 ())") is False
+        assert aifpl.evaluate("(list-member? () 1)") is False
+        assert aifpl.evaluate("(list-position () 1)") is False
 
         # Empty list utilities
-        assert aifpl.evaluate("(list-remove 1 ())") == []
-        assert aifpl.evaluate("(list-take 5 ())") == []
-        assert aifpl.evaluate("(list-drop 5 ())") == []
-        assert aifpl.evaluate("(list-take 0 ())") == []
-        assert aifpl.evaluate("(list-drop 0 ())") == []
+        assert aifpl.evaluate("(list-remove () 1)") == []
+        assert aifpl.evaluate("(list-slice () 0 0)") == []
+        assert aifpl.evaluate("(list-slice () 0)") == []
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate("(list-slice () 0 5)")  # end out of range on empty list
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate("(list-slice () 5)")    # start out of range on empty list
 
     def test_empty_collection_error_cases(self, aifpl):
         """Test operations that should fail on empty collections."""
@@ -63,14 +65,14 @@ class TestAIFPLCollectionEdgeCases:
 
         # Single element list transformations
         assert aifpl.evaluate("(list-reverse (list 42))") == [42]
-        assert aifpl.evaluate("(list-append (list 42) ())") == [42]
-        assert aifpl.evaluate("(list-append () (list 42))") == [42]
+        assert aifpl.evaluate("(list-concat (list 42) ())") == [42]
+        assert aifpl.evaluate("(list-concat () (list 42))") == [42]
 
         # Single element list membership
-        assert aifpl.evaluate("(list-member? 42 (list 42))") is True
-        assert aifpl.evaluate("(list-member? 43 (list 42))") is False
-        assert aifpl.evaluate("(list-position 42 (list 42))") == 0
-        assert aifpl.evaluate("(list-position 43 (list 42))") is False
+        assert aifpl.evaluate("(list-member? (list 42) 42)") is True
+        assert aifpl.evaluate("(list-member? (list 42) 43)") is False
+        assert aifpl.evaluate("(list-position (list 42) 42)") == 0
+        assert aifpl.evaluate("(list-position (list 42) 43)") is False
 
     def test_boundary_index_operations(self, aifpl):
         """Test boundary conditions for indexed operations."""
@@ -97,29 +99,31 @@ class TestAIFPLCollectionEdgeCases:
         test_list = "(list 1 2 3 4 5)"
 
         # Normal take/drop operations
-        assert aifpl.evaluate(f"(list-take 0 {test_list})") == []
-        assert aifpl.evaluate(f"(list-take 1 {test_list})") == [1]
-        assert aifpl.evaluate(f"(list-take 3 {test_list})") == [1, 2, 3]
-        assert aifpl.evaluate(f"(list-take 5 {test_list})") == [1, 2, 3, 4, 5]
+        assert aifpl.evaluate(f"(list-slice {test_list} 0 0)") == []
+        assert aifpl.evaluate(f"(list-slice {test_list} 0 1)") == [1]
+        assert aifpl.evaluate(f"(list-slice {test_list} 0 3)") == [1, 2, 3]
+        assert aifpl.evaluate(f"(list-slice {test_list} 0 5)") == [1, 2, 3, 4, 5]
 
-        # Take more than available (should return all)
-        assert aifpl.evaluate(f"(list-take 10 {test_list})") == [1, 2, 3, 4, 5]
+        # Take more than available (should raise error)
+        with pytest.raises(AIFPLEvalError, match="out of range"):
+            aifpl.evaluate(f"(list-slice {test_list} 0 10)")
 
         # Drop operations
-        assert aifpl.evaluate(f"(list-drop 0 {test_list})") == [1, 2, 3, 4, 5]
-        assert aifpl.evaluate(f"(list-drop 1 {test_list})") == [2, 3, 4, 5]
-        assert aifpl.evaluate(f"(list-drop 3 {test_list})") == [4, 5]
-        assert aifpl.evaluate(f"(list-drop 5 {test_list})") == []
+        assert aifpl.evaluate(f"(list-slice {test_list} 0)") == [1, 2, 3, 4, 5]
+        assert aifpl.evaluate(f"(list-slice {test_list} 1)") == [2, 3, 4, 5]
+        assert aifpl.evaluate(f"(list-slice {test_list} 3)") == [4, 5]
+        assert aifpl.evaluate(f"(list-slice {test_list} 5)") == []
 
-        # Drop more than available (should return empty)
-        assert aifpl.evaluate(f"(list-drop 10 {test_list})") == []
+        # Drop more than available (should raise error)
+        with pytest.raises(AIFPLEvalError, match="out of range"):
+            aifpl.evaluate(f"(list-slice {test_list} 10)")
 
         # Negative arguments should be handled
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate(f"(list-take -1 {test_list})")
+            aifpl.evaluate(f"(list-slice {test_list} 0 -1)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate(f"(list-drop -1 {test_list})")
+            aifpl.evaluate(f"(list-slice {test_list} -1)")
 
     def test_mixed_type_collections(self, aifpl):
         """Test collections with mixed data types."""
@@ -137,17 +141,17 @@ class TestAIFPLCollectionEdgeCases:
         assert aifpl.evaluate(f"(list-ref {mixed_list} 4)") == [2, 3]
 
         # Membership tests with mixed types
-        assert aifpl.evaluate(f"(list-member? 1 {mixed_list})") is True
-        assert aifpl.evaluate(f'(list-member? "hello" {mixed_list})') is True
-        assert aifpl.evaluate(f"(list-member? #t {mixed_list})") is True
-        assert aifpl.evaluate(f"(list-member? 3.14 {mixed_list})") is True
-        assert aifpl.evaluate(f"(list-member? 42 {mixed_list})") is False
+        assert aifpl.evaluate(f"(list-member? {mixed_list} 1)") is True
+        assert aifpl.evaluate(f'(list-member? {mixed_list} "hello")') is True
+        assert aifpl.evaluate(f"(list-member? {mixed_list} #t)") is True
+        assert aifpl.evaluate(f"(list-member? {mixed_list} 3.14)") is True
+        assert aifpl.evaluate(f"(list-member? {mixed_list} 42)") is False
 
         # Position tests with mixed types
-        assert aifpl.evaluate(f"(list-position 1 {mixed_list})") == 0
-        assert aifpl.evaluate(f'(list-position "hello" {mixed_list})') == 1
-        assert aifpl.evaluate(f"(list-position #t {mixed_list})") == 2
-        assert aifpl.evaluate(f"(list-position 42 {mixed_list})") is False
+        assert aifpl.evaluate(f"(list-position {mixed_list} 1)") == 0
+        assert aifpl.evaluate(f'(list-position {mixed_list} "hello")') == 1
+        assert aifpl.evaluate(f"(list-position {mixed_list} #t)") == 2
+        assert aifpl.evaluate(f"(list-position {mixed_list} 42)") is False
 
     def test_nested_collections(self, aifpl):
         """Test operations on nested collections."""
@@ -188,9 +192,9 @@ class TestAIFPLCollectionEdgeCases:
         assert aifpl.evaluate("(list-ref (range 1 1001) 999)") == 1000
 
         # Take/drop on large list
-        assert aifpl.evaluate("(list-length (list-take 100 (range 1 1001)))") == 100
-        assert aifpl.evaluate("(list-length (list-drop 900 (range 1 1001)))") == 100
-        assert aifpl.evaluate("(list-first (list-drop 500 (range 1 1001)))") == 501
+        assert aifpl.evaluate("(list-length (list-slice (range 1 1001) 0 100))") == 100
+        assert aifpl.evaluate("(list-length (list-slice (range 1 1001) 900))") == 100
+        assert aifpl.evaluate("(list-first (list-slice (range 1 1001) 500))") == 501
 
     def test_collection_equality_edge_cases(self, aifpl):
         """Test collection equality edge cases."""
@@ -220,12 +224,12 @@ class TestAIFPLCollectionEdgeCases:
         # Original list should not be modified by operations
         original_expr = "(list 1 2 3)"
 
-        # Test that list-append doesn't modify original
+        # Test that list-concat doesn't modify original
         result = aifpl.evaluate(f"""
         (let ((original {original_expr}))
           (list
             original
-            (list-append original (list 4))
+            (list-concat original (list 4))
             original))
         """)
 
@@ -270,17 +274,17 @@ class TestAIFPLCollectionEdgeCases:
 
         # cons requires second argument to be list
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-cons 1 "hello")')
+            aifpl.evaluate('(list-prepend "hello" 1)')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(list-cons 1 42)")
+            aifpl.evaluate("(list-prepend 42 1)")
 
-        # list-append requires all arguments to be lists
+        # list-concat requires all arguments to be lists
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-append (list 1 2) "hello")')
+            aifpl.evaluate('(list-concat (list 1 2) "hello")')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(list-append (list 1 2) 42)")
+            aifpl.evaluate("(list-concat (list 1 2) 42)")
 
     def test_collection_arity_errors(self, aifpl):
         """Test arity errors with collection operations."""
@@ -291,10 +295,10 @@ class TestAIFPLCollectionEdgeCases:
             aifpl.evaluate("(cons)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(list-cons 1)")
+            aifpl.evaluate("(list-prepend 1)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(list-cons 1 (list 2) 3)")
+            aifpl.evaluate("(list-prepend 1 (list 2) 3)")
 
         # first, rest, last require exactly 1 argument
         with pytest.raises(AIFPLEvalError):
@@ -345,25 +349,25 @@ class TestAIFPLCollectionEdgeCases:
         test_list = "(list 1 2 3 2 4)"
 
         # Position of first occurrence
-        assert aifpl.evaluate(f"(list-position 2 {test_list})") == 1  # First occurrence
+        assert aifpl.evaluate(f"(list-position {test_list} 2)") == 1  # First occurrence
 
         # Position of non-existent element
-        assert aifpl.evaluate(f"(list-position 99 {test_list})") is False
+        assert aifpl.evaluate(f"(list-position {test_list} 99)") is False
 
         # Member tests
-        assert aifpl.evaluate(f"(list-member? 1 {test_list})") is True
-        assert aifpl.evaluate(f"(list-member? 99 {test_list})") is False
+        assert aifpl.evaluate(f"(list-member? {test_list} 1)") is True
+        assert aifpl.evaluate(f"(list-member? {test_list} 99)") is False
 
         # Remove operations
-        assert aifpl.evaluate(f"(list-remove 2 {test_list})") == [1, 3, 4]  # Removes all occurrences
-        assert aifpl.evaluate(f"(list-remove 99 {test_list})") == [1, 2, 3, 2, 4]  # No change
+        assert aifpl.evaluate(f"(list-remove {test_list} 2)") == [1, 3, 4]  # Removes all occurrences
+        assert aifpl.evaluate(f"(list-remove {test_list} 99)") == [1, 2, 3, 2, 4]  # No change
 
         # Search in mixed-type list
         mixed = '(list 1 "hello" #t 2)'
-        assert aifpl.evaluate(f'(list-position "hello" {mixed})') == 1
-        assert aifpl.evaluate(f"(list-position #t {mixed})") == 2
-        assert aifpl.evaluate(f'(list-member? "hello" {mixed})') is True
-        assert aifpl.evaluate(f"(list-member? #f {mixed})") is False
+        assert aifpl.evaluate(f'(list-position {mixed} "hello")') == 1
+        assert aifpl.evaluate(f"(list-position {mixed} #t)") == 2
+        assert aifpl.evaluate(f'(list-member? {mixed} "hello")') is True
+        assert aifpl.evaluate(f"(list-member? {mixed} #f)") is False
 
     def test_collection_range_edge_cases(self, aifpl):
         """Test range function edge cases."""
@@ -397,41 +401,41 @@ class TestAIFPLCollectionEdgeCases:
     def test_collection_cons_edge_cases(self, aifpl):
         """Test cons operation edge cases."""
         # Cons to empty list
-        assert aifpl.evaluate("(list-cons 1 ())") == [1]
+        assert aifpl.evaluate("(list-prepend () 1)") == [1]
 
         # Cons to single element list
-        assert aifpl.evaluate("(list-cons 0 (list 1))") == [0, 1]
+        assert aifpl.evaluate("(list-prepend (list 1) 0)") == [0, 1]
 
         # Cons to multi-element list
-        assert aifpl.evaluate("(list-cons 0 (list 1 2 3))") == [0, 1, 2, 3]
+        assert aifpl.evaluate("(list-prepend (list 1 2 3) 0)") == [0, 1, 2, 3]
 
         # Cons different types
-        assert aifpl.evaluate('(list-cons "hello" (list 1 2))') == ["hello", 1, 2]
-        assert aifpl.evaluate("(list-cons #t (list 1 2))") == [True, 1, 2]
+        assert aifpl.evaluate('(list-prepend (list 1 2) "hello")') == ["hello", 1, 2]
+        assert aifpl.evaluate("(list-prepend (list 1 2) #t)") == [True, 1, 2]
 
         # Cons nested structures
-        assert aifpl.evaluate("(list-cons (list 0) (list 1 2))") == [[0], 1, 2]
+        assert aifpl.evaluate("(list-prepend (list 1 2) (list 0))") == [[0], 1, 2]
 
     def test_collection_append_edge_cases(self, aifpl):
-        """Test list-append operation edge cases."""
+        """Test list-concat operation edge cases."""
         # Append empty lists
-        assert aifpl.evaluate("(list-append () ())") == []
-        assert aifpl.evaluate("(list-append () () ())") == []
+        assert aifpl.evaluate("(list-concat () ())") == []
+        assert aifpl.evaluate("(list-concat () () ())") == []
 
         # Append to empty
-        assert aifpl.evaluate("(list-append () (list 1 2))") == [1, 2]
-        assert aifpl.evaluate("(list-append (list 1 2) ())") == [1, 2]
+        assert aifpl.evaluate("(list-concat () (list 1 2))") == [1, 2]
+        assert aifpl.evaluate("(list-concat (list 1 2) ())") == [1, 2]
 
         # Append multiple lists
-        assert aifpl.evaluate("(list-append (list 1) (list 2) (list 3))") == [1, 2, 3]
-        assert aifpl.evaluate("(list-append (list 1 2) (list 3 4) (list 5 6))") == [1, 2, 3, 4, 5, 6]
+        assert aifpl.evaluate("(list-concat (list 1) (list 2) (list 3))") == [1, 2, 3]
+        assert aifpl.evaluate("(list-concat (list 1 2) (list 3 4) (list 5 6))") == [1, 2, 3, 4, 5, 6]
 
         # Append with mixed types
-        result = aifpl.evaluate('(list-append (list 1) (list "hello") (list #t))')
+        result = aifpl.evaluate('(list-concat (list 1) (list "hello") (list #t))')
         assert result == [1, "hello", True]
 
         # Append nested structures
-        result = aifpl.evaluate("(list-append (list (list 1)) (list (list 2)))")
+        result = aifpl.evaluate("(list-concat (list (list 1)) (list (list 2)))")
         assert result == [[1], [2]]
 
     def test_collection_reverse_edge_cases(self, aifpl):
@@ -459,8 +463,8 @@ class TestAIFPLCollectionEdgeCases:
 
     def test_collection_memory_efficiency_large_operations(self, aifpl):
         """Test memory efficiency with large collection operations."""
-        # Large list-append operations
-        result = aifpl.evaluate("(list-length (list-append (range 1 501) (range 501 1001)))")
+        # Large list-concat operations
+        result = aifpl.evaluate("(list-length (list-concat (range 1 501) (range 501 1001)))")
         assert result == 1000
 
         # Large reverse operations
@@ -468,11 +472,11 @@ class TestAIFPLCollectionEdgeCases:
         assert result == 1000
 
         # Large take/drop combinations
-        result = aifpl.evaluate("(list-length (list-take 100 (list-drop 400 (range 1 1001))))")
+        result = aifpl.evaluate("(list-length (list-slice (list-slice (range 1 1001) 400) 0 100))")
         assert result == 100
 
         # Nested large operations
-        result = aifpl.evaluate("(list-length (list-reverse (list-take 500 (range 1 1001))))")
+        result = aifpl.evaluate("(list-length (list-reverse (list-slice (range 1 1001) 0 500)))")
         assert result == 500
 
     # New tests for missing coverage
@@ -569,15 +573,15 @@ class TestAIFPLCollectionEdgeCases:
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             aifpl.evaluate("(list-position 1 (list 1 2) (list 3))")
 
-        # drop requires exactly 2 arguments
+        # slice requires 2 or 3 arguments
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate("(list-drop)")
+            aifpl.evaluate("(list-slice)")
 
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate("(list-drop 1)")
+            aifpl.evaluate("(list-slice (list 1 2))")
 
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate("(list-drop 1 (list 1 2) (list 3))")
+            aifpl.evaluate("(list-slice (list 1 2) 0 1 2)")
 
     def test_string_list_conversion_arity_errors(self, aifpl):
         """Test arity errors for string-list conversion functions."""

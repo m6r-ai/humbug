@@ -69,7 +69,7 @@ class TestStrings:
         assert result == expected_content
 
     @pytest.mark.parametrize("expression,expected", [
-        # Basic string list-append
+        # Basic string append
         ('(string-append "hello" " " "world")', '"hello world"'),
         ('(string-append "a" "b" "c")', '"abc"'),
 

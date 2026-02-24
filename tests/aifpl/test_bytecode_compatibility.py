@@ -114,10 +114,10 @@ class TestLists:
         assert aifpl.evaluate("(list-rest (list 1 2 3))") == [2, 3]
 
     def test_cons(self, aifpl):
-        assert aifpl.evaluate("(list-cons 1 (list 2 3))") == [1, 2, 3]
+        assert aifpl.evaluate("(list-prepend (list 2 3) 1)") == [1, 2, 3]
 
     def test_append(self, aifpl):
-        assert aifpl.evaluate("(list-append (list 1 2) (list 3 4))") == [1, 2, 3, 4]
+        assert aifpl.evaluate("(list-concat (list 1 2) (list 3 4))") == [1, 2, 3, 4]
 
     def test_length(self, aifpl):
         assert aifpl.evaluate("(list-length (list 1 2 3))") == 3

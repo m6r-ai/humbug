@@ -105,7 +105,7 @@ class AIFPLDesugarer:
                 'bit-or', 'bit-and', 'bit-xor',
                 'integer-min', 'integer-max',
                 'float-min', 'float-max',
-                'list-append',
+                'list-concat',
                 'string-append',
             ]:
                 return self._desugar_fold_variadic(expr)
@@ -379,7 +379,7 @@ class AIFPLDesugarer:
 
         Handles:
             bit-or, bit-and, bit-xor  — bitwise ops, identity: 0
-            list-append               — list concatenation, identity: ()
+            list-concat               — list concatenation, identity: ()
             string-append             — string concatenation, identity: ""
             min, max                  — numeric reduction (1+ args required)
         """
@@ -400,7 +400,7 @@ class AIFPLDesugarer:
             if op_name == 'bit-xor':
                 return AIFPLASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
 
-            if op_name == 'list-append':
+            if op_name == 'list-concat':
                 return self._make_list((self._make_symbol('quote', expr), self._make_list((), expr)), expr)
 
             if op_name == 'string-append':
@@ -1208,9 +1208,9 @@ class AIFPLDesugarer:
 
         # Extract tail: (drop dot_position temp_var)
         tail_value = AIFPLASTList((
-            AIFPLASTSymbol('list-drop'),
-            AIFPLASTInteger(dot_position),
-            AIFPLASTSymbol(temp_var)
+            AIFPLASTSymbol('list-slice'),
+            AIFPLASTSymbol(temp_var),
+            AIFPLASTInteger(dot_position)
         ))
 
         # Add tail to element info

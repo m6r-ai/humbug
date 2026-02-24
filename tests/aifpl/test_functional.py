@@ -222,7 +222,7 @@ class TestFunctional:
         ('(fold integer+ 10 (list 5))', '15'),
 
         # Fold for list construction (reverse)
-        ('(fold (lambda (acc x) (list-cons x acc)) (list) (list 1 2 3))', '(3 2 1)'),
+        ('(fold (lambda (acc x) (list-prepend acc x)) (list) (list 1 2 3))', '(3 2 1)'),
     ])
     def test_fold_function(self, aifpl, expression, expected):
         """Test fold higher-order function."""

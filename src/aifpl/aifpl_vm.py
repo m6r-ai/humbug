@@ -297,7 +297,8 @@ class AIFPLVM:
         table[Opcode.LIST_P] = self._op_list_p
         table[Opcode.LIST_EQ_P] = self._op_list_eq_p
         table[Opcode.LIST_NEQ_P] = self._op_list_neq_p
-        table[Opcode.LIST_CONS] = self._op_list_cons
+        table[Opcode.LIST_PREPEND] = self._op_list_prepend
+        table[Opcode.LIST_APPEND] = self._op_list_append
         table[Opcode.LIST_LENGTH] = self._op_list_length
         table[Opcode.LIST_REVERSE] = self._op_list_reverse
         table[Opcode.LIST_FIRST] = self._op_list_first
@@ -307,10 +308,9 @@ class AIFPLVM:
         table[Opcode.LIST_NULL_P] = self._op_list_null_p
         table[Opcode.LIST_MEMBER_P] = self._op_list_member_p
         table[Opcode.LIST_POSITION] = self._op_list_position
-        table[Opcode.LIST_TAKE] = self._op_list_take
-        table[Opcode.LIST_DROP] = self._op_list_drop
+        table[Opcode.LIST_SLICE] = self._op_list_slice
         table[Opcode.LIST_REMOVE] = self._op_list_remove
-        table[Opcode.LIST_APPEND] = self._op_list_append
+        table[Opcode.LIST_CONCAT] = self._op_list_concat
         table[Opcode.LIST_TO_STRING] = self._op_list_to_string
         table[Opcode.RANGE] = self._op_range
         return table
@@ -2139,15 +2139,24 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(self._ensure_list(a, 'list!=?') != self._ensure_list(b, 'list!=?')))
         return None
 
-    def _op_list_cons(  # pylint: disable=useless-return
+    def _op_list_prepend(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """CONS: Pop two values, construct a new list with head and tail."""
-        tail = self.stack.pop()
-        head = self.stack.pop()
+        """LIST_PREPEND: Pop item and list (list first, item second on stack), push list with item prepended."""
+        item = self.stack.pop()
+        list_val_raw = self.stack.pop()
+        list_val = self._ensure_list(list_val_raw, 'list-prepend')
+        self.stack.append(list_val.cons(item))
+        return None
 
-        list_val = self._ensure_list(tail, 'list-cons')
-        self.stack.append(list_val.cons(head))
+    def _op_list_append(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """LIST_APPEND: Pop item and list (list first, item second on stack), push list with item appended at end."""
+        item = self.stack.pop()
+        list_val_raw = self.stack.pop()
+        list_val = self._ensure_list(list_val_raw, 'list-append')
+        self.stack.append(AIFPLList(list_val.elements + (item,)))
         return None
 
     def _op_list_reverse(  # pylint: disable=useless-return
@@ -2250,9 +2259,9 @@ class AIFPLVM:
     def _op_list_member_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """MEMBER_P: Pop a list and item, push true if item is in list."""
-        list_val_raw = self.stack.pop()
+        """MEMBER_P: Pop item and list (list first, item second on stack), push true if item is in list."""
         item = self.stack.pop()
+        list_val_raw = self.stack.pop()
         list_val = self._ensure_list(list_val_raw, 'list-member?')
         self.stack.append(AIFPLBoolean(list_val.contains(item)))
         return None
@@ -2260,59 +2269,60 @@ class AIFPLVM:
     def _op_list_position(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """POSITION: Pop a list and item, push index or #f if not found."""
-        list_val_raw = self.stack.pop()
+        """POSITION: Pop item and list (list first, item second on stack), push index or #f if not found."""
         item = self.stack.pop()
+        list_val_raw = self.stack.pop()
         list_val = self._ensure_list(list_val_raw, 'list-position')
         pos = list_val.position(item)
         self.stack.append(AIFPLInteger(pos) if pos is not None else AIFPLBoolean(False))
         return None
 
-    def _op_list_take(  # pylint: disable=useless-return
+    def _op_list_slice(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """TAKE: Pop a list and count n, push first n elements."""
+        """LIST_SLICE: Pop end, start, and list, push slice from start to end (exclusive)."""
+        end_val = self.stack.pop()
+        start_val = self.stack.pop()
         list_val_raw = self.stack.pop()
-        n_val = self.stack.pop()
-        n = self._ensure_integer(n_val, 'list-take')
-        list_val = self._ensure_list(list_val_raw, 'list-take')
-        if n < 0:
-            raise AIFPLEvalError(f"list-take count cannot be negative: {n}")
+        list_val = self._ensure_list(list_val_raw, 'list-slice')
+        start = self._ensure_integer(start_val, 'list-slice')
+        end = self._ensure_integer(end_val, 'list-slice')
+        n = list_val.length()
+        if start < 0:
+            raise AIFPLEvalError(f"list-slice start index cannot be negative: {start}")
 
-        self.stack.append(list_val.take(n))
-        return None
+        if end < 0:
+            raise AIFPLEvalError(f"list-slice end index cannot be negative: {end}")
 
-    def _op_list_drop(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """DROP: Pop a list and count n, push list without first n elements."""
-        list_val_raw = self.stack.pop()
-        n_val = self.stack.pop()
-        n = self._ensure_integer(n_val, 'list-drop')
-        list_val = self._ensure_list(list_val_raw, 'list-drop')
-        if n < 0:
-            raise AIFPLEvalError(f"list-drop count cannot be negative: {n}")
+        if start > n:
+            raise AIFPLEvalError(f"list-slice start index out of range: {start} (list length: {n})")
 
-        self.stack.append(list_val.drop(n))
+        if end > n:
+            raise AIFPLEvalError(f"list-slice end index out of range: {end} (list length: {n})")
+
+        if start > end:
+            raise AIFPLEvalError(f"list-slice start index ({start}) cannot be greater than end index ({end})")
+
+        self.stack.append(AIFPLList(list_val.elements[start:end]))
         return None
 
     def _op_list_remove(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """REMOVE: Pop a list and item, push list with all occurrences of item removed."""
-        list_val_raw = self.stack.pop()
+        """REMOVE: Pop item and list (list first, item second on stack), push list with all occurrences removed."""
         item = self.stack.pop()
+        list_val_raw = self.stack.pop()
         list_val = self._ensure_list(list_val_raw, 'list-remove')
         self.stack.append(list_val.remove_all(item))
         return None
 
-    def _op_list_append(  # pylint: disable=useless-return
+    def _op_list_concat(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """APPEND: Pop two lists, push concatenated list."""
         b = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append(self._ensure_list(a, 'list-append').append_list(self._ensure_list(b, 'list-append')))
+        self.stack.append(self._ensure_list(a, 'list-concat').append_list(self._ensure_list(b, 'list-concat')))
         return None
 
     def _op_list_to_string(  # pylint: disable=useless-return

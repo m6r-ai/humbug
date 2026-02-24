@@ -46,70 +46,70 @@ class TestLists:
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic cons operations
-        ('(list-cons 1 (list 2 3))', '(1 2 3)'),
-        ('(list-cons "hello" (list "world"))', '("hello" "world")'),
-        ('(list-cons #t (list #f))', '(#t #f)'),
+        ('(list-prepend (list 2 3) 1)', '(1 2 3)'),
+        ('(list-prepend (list "world") "hello")', '("hello" "world")'),
+        ('(list-prepend (list #f) #t)', '(#t #f)'),
 
         # Cons with empty list
-        ('(list-cons 1 (list))', '(1)'),
+        ('(list-prepend (list) 1)', '(1)'),
 
         # Cons with mixed types
-        ('(list-cons 1 (list "hello" #t))', '(1 "hello" #t)'),
+        ('(list-prepend (list "hello" #t) 1)', '(1 "hello" #t)'),
 
         # Nested cons
-        ('(list-cons (list 1 2) (list (list 3 4)))', '((1 2) (3 4))'),
+        ('(list-prepend (list (list 3 4)) (list 1 2))', '((1 2) (3 4))'),
     ])
     def test_cons_operation(self, aifpl, expression, expected):
         """Test cons operation for prepending elements."""
         assert aifpl.evaluate_and_format(expression) == expected
 
     def test_cons_requires_list_as_second_argument(self, aifpl):
-        """Test that cons requires a list as the second argument."""
+        """Test that list-prepend requires a list as the first argument."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-cons 1 2)')  # Second arg must be list
+            aifpl.evaluate('(list-prepend 2 1)')  # First arg must be list
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-cons 1 "hello")')  # Second arg must be list
+            aifpl.evaluate('(list-prepend "hello" 1)')  # First arg must be list
 
     @pytest.mark.parametrize("expression,expected", [
-        # Basic list-append operations
-        ('(list-append (list 1 2) (list 3 4))', '(1 2 3 4)'),
-        ('(list-append (list) (list 1 2))', '(1 2)'),
-        ('(list-append (list 1 2) (list))', '(1 2)'),
-        ('(list-append (list) (list))', '()'),
+        # Basic list-concat operations
+        ('(list-concat (list 1 2) (list 3 4))', '(1 2 3 4)'),
+        ('(list-concat (list) (list 1 2))', '(1 2)'),
+        ('(list-concat (list 1 2) (list))', '(1 2)'),
+        ('(list-concat (list) (list))', '()'),
 
-        # Multiple list-append
-        ('(list-append (list 1) (list 2) (list 3))', '(1 2 3)'),
-        ('(list-append (list 1 2) (list 3 4) (list 5 6))', '(1 2 3 4 5 6)'),
+        # Multiple list-concat
+        ('(list-concat (list 1) (list 2) (list 3))', '(1 2 3)'),
+        ('(list-concat (list 1 2) (list 3 4) (list 5 6))', '(1 2 3 4 5 6)'),
 
-        # Mixed type list-append
-        ('(list-append (list 1 "hello") (list #t 3.14))', '(1 "hello" #t 3.14)'),
+        # Mixed type list-concat
+        ('(list-concat (list 1 "hello") (list #t 3.14))', '(1 "hello" #t 3.14)'),
 
-        # Nested list-append
-        ('(list-append (list (list 1 2)) (list (list 3 4)))', '((1 2) (3 4))'),
+        # Nested list-concat
+        ('(list-concat (list (list 1 2)) (list (list 3 4)))', '((1 2) (3 4))'),
     ])
     def test_append_operation(self, aifpl, expression, expected):
-        """Test list-append operation for concatenating lists."""
+        """Test list-concat operation for concatenating lists."""
         assert aifpl.evaluate_and_format(expression) == expected
 
     def test_append_requires_all_list_arguments(self, aifpl):
-        """Test that list-append requires all arguments to be lists."""
+        """Test that list-concat requires all arguments to be lists."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-append (list 1 2) 3)')
+            aifpl.evaluate('(list-concat (list 1 2) 3)')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-append "hello" (list 1 2))')
+            aifpl.evaluate('(list-concat "hello" (list 1 2))')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-append (list 1) #t (list 2))')
+            aifpl.evaluate('(list-concat (list 1) #t (list 2))')
 
     def test_append_minimum_arguments(self, aifpl):
-        """Test that list-append requires at least 2 arguments."""
+        """Test that list-concat requires at least 2 arguments."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-append)')
+            aifpl.evaluate('(list-concat)')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-append (list 1 2))')
+            aifpl.evaluate('(list-concat (list 1 2))')
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic reverse operations
@@ -281,22 +281,22 @@ class TestLists:
 
     @pytest.mark.parametrize("expression,expected", [
         # Member predicate
-        ('(list-member? 2 (list 1 2 3))', '#t'),
-        ('(list-member? 5 (list 1 2 3))', '#f'),
-        ('(list-member? "hello" (list "hello" "world"))', '#t'),
-        ('(list-member? "test" (list "hello" "world"))', '#f'),
-        ('(list-member? #t (list #t #f))', '#t'),
-        ('(list-member? #f (list #t))', '#f'),
+        ('(list-member? (list 1 2 3) 2)', '#t'),
+        ('(list-member? (list 1 2 3) 5)', '#f'),
+        ('(list-member? (list "hello" "world") "hello")', '#t'),
+        ('(list-member? (list "hello" "world") "test")', '#f'),
+        ('(list-member? (list #t #f) #t)', '#t'),
+        ('(list-member? (list #t) #f)', '#f'),
 
         # Member with mixed types
-        ('(list-member? 1 (list 1 "hello" #t))', '#t'),
-        ('(list-member? "hello" (list 1 "hello" #t))', '#t'),
-        ('(list-member? #t (list 1 "hello" #t))', '#t'),
-        ('(list-member? 42 (list 1 "hello" #t))', '#f'),
+        ('(list-member? (list 1 "hello" #t) 1)', '#t'),
+        ('(list-member? (list 1 "hello" #t) "hello")', '#t'),
+        ('(list-member? (list 1 "hello" #t) #t)', '#t'),
+        ('(list-member? (list 1 "hello" #t) 42)', '#f'),
 
         # Member with nested lists
-        ('(list-member? (list 1 2) (list (list 1 2) (list 3 4)))', '#t'),
-        ('(list-member? (list 5 6) (list (list 1 2) (list 3 4)))', '#f'),
+        ('(list-member? (list (list 1 2) (list 3 4)) (list 1 2))', '#t'),
+        ('(list-member? (list (list 1 2) (list 3 4)) (list 5 6))', '#f'),
     ])
     def test_member_predicate(self, aifpl, expression, expected):
         """Test member? predicate for checking list membership."""
@@ -305,25 +305,23 @@ class TestLists:
     def test_member_requires_list_argument(self, aifpl):
         """Test that member? requires a list as second argument."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-member? 1 "hello")')
+            aifpl.evaluate('(list-member? "hello" 1)')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-member? 1 42)')
+            aifpl.evaluate('(list-member? 42 1)')
 
     @pytest.mark.parametrize("expression,expected", [
         # Take operation
-        ('(list-take 0 (list 1 2 3 4 5))', '()'),
-        ('(list-take 1 (list 1 2 3 4 5))', '(1)'),
-        ('(list-take 3 (list 1 2 3 4 5))', '(1 2 3)'),
-        ('(list-take 5 (list 1 2 3 4 5))', '(1 2 3 4 5)'),
-        ('(list-take 10 (list 1 2 3))', '(1 2 3)'),  # Take more than available
+        ('(list-slice (list 1 2 3 4 5) 0 0)', '()'),
+        ('(list-slice (list 1 2 3 4 5) 0 1)', '(1)'),
+        ('(list-slice (list 1 2 3 4 5) 0 3)', '(1 2 3)'),
+        ('(list-slice (list 1 2 3 4 5) 0 5)', '(1 2 3 4 5)'),
 
         # Take with mixed types
-        ('(list-take 2 (list 1 "hello" #t 3.14))', '(1 "hello")'),
+        ('(list-slice (list 1 "hello" #t 3.14) 0 2)', '(1 "hello")'),
 
         # Take from empty list
-        ('(list-take 0 (list))', '()'),
-        ('(list-take 5 (list))', '()'),  # Take from empty list returns empty
+        ('(list-slice (list) 0 0)', '()'),
     ])
     def test_take_operation(self, aifpl, expression, expected):
         """Test take operation for getting first n elements."""
@@ -332,38 +330,41 @@ class TestLists:
     def test_take_negative_count_error(self, aifpl):
         """Test that take rejects negative counts."""
         with pytest.raises(AIFPLEvalError, match="cannot be negative"):
-            aifpl.evaluate('(list-take -1 (list 1 2 3))')
+            aifpl.evaluate('(list-slice (list 1 2 3) 0 -1)')
+
+    def test_take_out_of_range_error(self, aifpl):
+        """Test that list-slice rejects out-of-range indices."""
+        with pytest.raises(AIFPLEvalError, match="out of range"):
+            aifpl.evaluate('(list-slice (list 1 2 3) 0 10)')
 
     def test_take_requires_list_argument(self, aifpl):
         """Test that take requires a list as second argument."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-take 2 "hello")')
+            aifpl.evaluate('(list-slice "hello" 0 2)')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-take 2 42)')
+            aifpl.evaluate('(list-slice 42 0 2)')
 
     def test_take_requires_integer_count(self, aifpl):
         """Test that take requires integer count."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-take "hello" (list 1 2 3))')
+            aifpl.evaluate('(list-slice (list 1 2 3) 0 "hello")')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-take 2.5 (list 1 2 3))')
+            aifpl.evaluate('(list-slice (list 1 2 3) 0 2.5)')
 
     @pytest.mark.parametrize("expression,expected", [
         # Drop operation
-        ('(list-drop 0 (list 1 2 3 4 5))', '(1 2 3 4 5)'),
-        ('(list-drop 1 (list 1 2 3 4 5))', '(2 3 4 5)'),
-        ('(list-drop 3 (list 1 2 3 4 5))', '(4 5)'),
-        ('(list-drop 5 (list 1 2 3 4 5))', '()'),
-        ('(list-drop 10 (list 1 2 3))', '()'),  # Drop more than available
+        ('(list-slice (list 1 2 3 4 5) 0)', '(1 2 3 4 5)'),
+        ('(list-slice (list 1 2 3 4 5) 1)', '(2 3 4 5)'),
+        ('(list-slice (list 1 2 3 4 5) 3)', '(4 5)'),
+        ('(list-slice (list 1 2 3 4 5) 5)', '()'),
 
         # Drop with mixed types
-        ('(list-drop 2 (list 1 "hello" #t 3.14))', '(#t 3.14)'),
+        ('(list-slice (list 1 "hello" #t 3.14) 2)', '(#t 3.14)'),
 
         # Drop from empty list
-        ('(list-drop 0 (list))', '()'),
-        ('(list-drop 5 (list))', '()'),  # Drop from empty list returns empty
+        ('(list-slice (list) 0)', '()'),
     ])
     def test_drop_operation(self, aifpl, expression, expected):
         """Test drop operation for removing first n elements."""
@@ -372,23 +373,28 @@ class TestLists:
     def test_drop_negative_count_error(self, aifpl):
         """Test that drop rejects negative counts."""
         with pytest.raises(AIFPLEvalError, match="cannot be negative"):
-            aifpl.evaluate('(list-drop -1 (list 1 2 3))')
+            aifpl.evaluate('(list-slice (list 1 2 3) -1)')
+
+    def test_drop_out_of_range_error(self, aifpl):
+        """Test that list-slice rejects out-of-range start index."""
+        with pytest.raises(AIFPLEvalError, match="out of range"):
+            aifpl.evaluate('(list-slice (list 1 2 3) 10)')
 
     def test_drop_requires_list_argument(self, aifpl):
         """Test that drop requires a list as second argument."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-drop 2 "hello")')
+            aifpl.evaluate('(list-slice "hello" 2)')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-drop 2 42)')
+            aifpl.evaluate('(list-slice 42 2)')
 
     def test_drop_requires_integer_count(self, aifpl):
         """Test that drop requires integer count."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-drop "hello" (list 1 2 3))')
+            aifpl.evaluate('(list-slice (list 1 2 3) "hello")')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-drop 2.5 (list 1 2 3))')
+            aifpl.evaluate('(list-slice (list 1 2 3) 2.5)')
 
     @pytest.mark.parametrize("expression,expected", [
         # List equality
@@ -446,10 +452,10 @@ class TestLists:
         """Test that list functions validate argument counts."""
         # cons requires exactly 2 arguments
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-cons 1)')
+            aifpl.evaluate('(list-prepend 1)')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-cons 1 (list 2) (list 3))')
+            aifpl.evaluate('(list-prepend 1 (list 2) (list 3))')
 
         # first requires exactly 1 argument
         with pytest.raises(AIFPLEvalError):
@@ -465,19 +471,19 @@ class TestLists:
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(list-ref (list 1) 0 1)')
 
-        # take requires exactly 2 arguments
+        # slice requires 2 or 3 arguments
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-take 3)')
+            aifpl.evaluate('(list-slice (list 1 2 3))')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-take 3 (list 1 2) (list 3 4))')
+            aifpl.evaluate('(list-slice (list 1 2 3) 1 2 3)')
 
     def test_complex_list_operations(self, aifpl, helpers):
         """Test complex combinations of list operations."""
-        # Reverse of list-append
+        # Reverse of list-concat
         helpers.assert_evaluates_to(
             aifpl,
-            '(list-reverse (list-append (list 1 2) (list 3 4)))',
+            '(list-reverse (list-concat (list 1 2) (list 3 4)))',
             '(4 3 2 1)'
         )
 
@@ -504,8 +510,8 @@ class TestLists:
 
         # Take and drop complementarity
         original_list = '(list 1 2 3 4 5)'
-        take_expr = f'(list-take 3 {original_list})'
-        drop_expr = f'(list-drop 3 {original_list})'
+        take_expr = f'(list-slice {original_list} 0 3)'
+        drop_expr = f'(list-slice {original_list} 3)'
 
         take_result = aifpl.evaluate_and_format(take_expr)
         drop_result = aifpl.evaluate_and_format(drop_expr)
@@ -513,8 +519,8 @@ class TestLists:
         assert take_result == '(1 2 3)'
         assert drop_result == '(4 5)'
 
-        # list-append take and drop should reconstruct original
-        reconstruct_expr = f'(list-append (list-take 3 {original_list}) (list-drop 3 {original_list}))'
+        # list-concat take and drop should reconstruct original
+        reconstruct_expr = f'(list-concat (list-slice {original_list} 0 3) (list-slice {original_list} 3))'
         helpers.assert_evaluates_to(aifpl, reconstruct_expr, '(1 2 3 4 5)')
 
     def test_list_with_all_data_types(self, aifpl, helpers):
@@ -592,26 +598,26 @@ class TestLists:
         # Take all elements should give original
         helpers.assert_evaluates_to(
             aifpl,
-            f'(list-take (list-length {test_list}) {test_list})',
+            f'(list-slice {test_list} 0 (list-length {test_list}))',
             '(1 2 3 4 5)'
         )
 
         # Drop zero elements should give original
         helpers.assert_evaluates_to(
             aifpl,
-            f'(list-drop 0 {test_list})',
+            f'(list-slice {test_list} 0)',
             '(1 2 3 4 5)'
         )
 
-        # list-append empty list should give original
+        # list-concat empty list should give original
         helpers.assert_evaluates_to(
             aifpl,
-            f'(list-append {test_list} (list))',
+            f'(list-concat {test_list} (list))',
             '(1 2 3 4 5)'
         )
 
         helpers.assert_evaluates_to(
             aifpl,
-            f'(list-append (list) {test_list})',
+            f'(list-concat (list) {test_list})',
             '(1 2 3 4 5)'
         )

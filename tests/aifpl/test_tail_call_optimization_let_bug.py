@@ -148,7 +148,7 @@ class TestTailCallOptimizationWithLet:
         simple_csv_parser = '''
         (letrec ((parse-chars (lambda (chars in-quotes current-field fields)
                                (if (list-null? chars)
-                                   (list-reverse (list-cons current-field fields))
+                                   (list-reverse (list-prepend fields current-field))
                                    (let ((c (list-first chars))
                                          (rest-chars (list-rest chars)))
                                      (if (string=? c ",")
@@ -156,7 +156,7 @@ class TestTailCallOptimizationWithLet:
                                              (parse-chars rest-chars in-quotes 
                                                         (string-append current-field c) fields)
                                              (parse-chars rest-chars #f "" 
-                                                        (list-cons current-field fields)))
+                                                        (list-prepend fields current-field)))
                                          (parse-chars rest-chars in-quotes 
                                                     (string-append current-field c) fields)))))))
           (parse-chars (string->list "field1,field2,field3") #f "" (list)))
@@ -246,7 +246,7 @@ class TestTailCallOptimizationWithLet:
                                      acc 
                                      (let ((head (list-first chars))
                                            (tail (list-rest chars)))
-                                       (reverse-chars tail (list-cons head acc)))))))
+                                       (reverse-chars tail (list-prepend acc head)))))))
           (list->string (reverse-chars (string->list "This is a reasonably long string to reverse") (list))))
         '''
         helpers.assert_evaluates_to(aifpl, string_reverse, '"esrever ot gnirts gnol ylbanosaer a si sihT"')
@@ -264,7 +264,7 @@ class TestTailCallOptimizationWithLet:
                                  (let ((head (list-first lst))
                                        (tail (list-rest lst)))
                                    (if (pred head)
-                                       (my-filter pred tail (list-cons head acc))
+                                       (my-filter pred tail (list-prepend acc head))
                                        (my-filter pred tail acc)))))))
           (my-filter (lambda (x) (integer>? x 5)) (range 1 11) (list)))
         '''

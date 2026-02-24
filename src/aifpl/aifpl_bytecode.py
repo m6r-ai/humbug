@@ -187,7 +187,8 @@ class Opcode(IntEnum):
     LIST_P = auto()          # Check if list
     LIST_EQ_P = auto()       # list=? a b
     LIST_NEQ_P = auto()      # list!=? a b
-    LIST_CONS = auto()
+    LIST_PREPEND = auto()
+    LIST_APPEND = auto()     # Append single item to end of list: (list-append lst item)
     LIST_REVERSE = auto()    # Reverse list on top of stack
     LIST_FIRST = auto()      # Get first element of list
     LIST_REST = auto()       # Get rest of list (all but first element)
@@ -197,10 +198,9 @@ class Opcode(IntEnum):
     LIST_NULL_P = auto()     # Check if list is empty
     LIST_MEMBER_P = auto()   # Check if item is in list
     LIST_POSITION = auto()   # Find index of item in list
-    LIST_TAKE = auto()       # Take first n elements from list
-    LIST_DROP = auto()       # Drop first n elements from list
+    LIST_SLICE = auto()      # Slice list: (list-slice lst start [end])
     LIST_REMOVE = auto()     # Remove all occurrences of item from list
-    LIST_APPEND = auto()     # Append two lists: (append a b)
+    LIST_CONCAT = auto()     # Append two lists: (append a b)
     LIST_TO_STRING = auto()  # Convert list of characters to string
 
     # Generate integer range list
@@ -329,7 +329,8 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'list?': (Opcode.LIST_P, 1),
     'list=?': (Opcode.LIST_EQ_P, 2),
     'list!=?': (Opcode.LIST_NEQ_P, 2),
-    'list-cons': (Opcode.LIST_CONS, 2),
+    'list-prepend': (Opcode.LIST_PREPEND, 2),
+    'list-append': (Opcode.LIST_APPEND, 2),
     'list-reverse': (Opcode.LIST_REVERSE, 1),
     'list-first': (Opcode.LIST_FIRST, 1),
     'list-rest': (Opcode.LIST_REST, 1),
@@ -339,10 +340,9 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'list-null?': (Opcode.LIST_NULL_P, 1),
     'list-member?': (Opcode.LIST_MEMBER_P, 2),
     'list-position': (Opcode.LIST_POSITION, 2),
-    'list-take': (Opcode.LIST_TAKE, 2),
-    'list-drop': (Opcode.LIST_DROP, 2),
+    'list-slice': (Opcode.LIST_SLICE, 3),
     'list-remove': (Opcode.LIST_REMOVE, 2),
-    'list-append': (Opcode.LIST_APPEND, 2),
+    'list-concat': (Opcode.LIST_CONCAT, 2),
     'list->string': (Opcode.LIST_TO_STRING, 1),
     'alist?': (Opcode.ALIST_P, 1),
     'alist=?': (Opcode.ALIST_EQ_P, 2),
@@ -486,7 +486,8 @@ class Instruction:
             Opcode.LIST_P,
             Opcode.LIST_EQ_P,
             Opcode.LIST_NEQ_P,
-            Opcode.LIST_CONS,
+            Opcode.LIST_PREPEND,
+            Opcode.LIST_APPEND,
             Opcode.LIST_REVERSE,
             Opcode.LIST_FIRST,
             Opcode.LIST_REST,
@@ -496,10 +497,10 @@ class Instruction:
             Opcode.LIST_NULL_P,
             Opcode.LIST_MEMBER_P,
             Opcode.LIST_POSITION,
-            Opcode.LIST_TAKE,
-            Opcode.LIST_DROP,
+            Opcode.LIST_SLICE,
+            Opcode.LIST_SLICE,
             Opcode.LIST_REMOVE,
-            Opcode.LIST_APPEND,
+            Opcode.LIST_CONCAT,
             Opcode.LIST_TO_STRING,
             Opcode.ALIST_P,
             Opcode.ALIST_EQ_P,

@@ -51,13 +51,13 @@ class TestAIFPLEnvironmentEdgeCases:
             assert isinstance(result, (int, float, complex))
 
         # List functions
-        list_functions = ["list", "list-first", "list-rest", "list-last", "list-length", "list-reverse", "list-append"]
+        list_functions = ["list", "list-first", "list-rest", "list-last", "list-length", "list-reverse", "list-concat"]
 
         for func in list_functions:
             try:
                 if func == "list":
                     result = aifpl.evaluate(f"({func} 1 2 3)")
-                elif func in ["list-append"]:
+                elif func in ["list-concat"]:
                     result = aifpl.evaluate(f"({func} (list 1) (list 2))")
                 else:
                     result = aifpl.evaluate(f"({func} (list 1 2 3))")
@@ -345,7 +345,7 @@ class TestAIFPLEnvironmentEdgeCases:
         # List operations with captured variables
         result = aifpl.evaluate("""
         (let ((base-list (list 1 2 3)))
-          (let ((extended (list-append base-list (list 4 5))))
+          (let ((extended (list-concat base-list (list 4 5))))
             (list-length extended)))
         """)
         assert result == 5

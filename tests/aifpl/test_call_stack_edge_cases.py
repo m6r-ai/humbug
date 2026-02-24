@@ -187,7 +187,7 @@ class TestAIFPLCallStackEdgeCases:
         """Test call stack with list operations."""
         # Nested list operations
         result = aifpl.evaluate("""
-        (list-append
+        (list-concat
           (list 1 2)
           (list-reverse (list 3 4 5))
           (list 6))

@@ -303,13 +303,12 @@ BENCHMARKS = [
     Benchmark("List Creation (5)", "lists", "(list 1 2 3 4 5)", iterations=5000),
     Benchmark("List Creation (10)", "lists", "(list 1 2 3 4 5 6 7 8 9 10)", iterations=5000),
     Benchmark("List Creation (20)", "lists", "(list 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)", iterations=3000),
-    Benchmark("List Append", "lists", "(append (list 1 2 3) (list 4 5 6))", iterations=3000),
+    Benchmark("List Concatenate", "lists", "(list-concat (list 1 2 3) (list 4 5 6))", iterations=3000),
     Benchmark("List Reverse (10)", "lists", "(list-reverse (list 1 2 3 4 5 6 7 8 9 10))", iterations=3000),
     Benchmark("List Reverse (20)", "lists", "(list-reverse (list 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20))", iterations=2000),
     Benchmark("List First/Rest", "lists", "(list-first (list-rest (list 1 2 3 4 5)))", iterations=5000),
     Benchmark("List Member", "lists", "(list-member? 5 (list 1 2 3 4 5 6 7 8 9 10))", iterations=3000),
-    Benchmark("List Take/Drop", "lists", "(list-take 5 (list-drop 3 (list 1 2 3 4 5 6 7 8 9 10)))", iterations=3000),
-    Benchmark("List Position", "lists", "(list-position 7 (list 1 2 3 4 5 6 7 8 9 10))", iterations=3000),
+    Benchmark("List Position", "lists", "(list-position (list 1 2 3 4 5 6 7 8 9 10) 7)", iterations=3000),
 
     # === HIGHER-ORDER FUNCTIONS ===
     Benchmark("Map (10)", "higher-order", "(map (lambda (x) (integer* x x)) (list 1 2 3 4 5 6 7 8 9 10))", iterations=1000),
@@ -336,7 +335,7 @@ BENCHMARKS = [
     Benchmark("String Manipulation", "strings", '(string-upcase (string-append "hello" " " "world"))', iterations=3000),
     Benchmark("String Contains", "strings", '(string-contains? "hello world" "wor")', iterations=5000),
     Benchmark("String Replace", "strings", '(string-replace "hello world" "world" "universe")', iterations=3000),
-    Benchmark("Substring", "strings", '(substring "hello world" 0 5)', iterations=5000),
+    Benchmark("String Slice", "strings", '(string-slice "hello world" 0 5)', iterations=5000),
 
     # === ALIST OPERATIONS ===
     Benchmark("Alist Creation (5)", "alists", '(alist (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4) (list "e" 5))', iterations=3000),
@@ -364,8 +363,8 @@ BENCHMARKS = [
     Benchmark("Pow", "math", "(float-expt 2.0 10.0)", iterations=5000),
     Benchmark("Trigonometry", "math", "(float+ (float-sin 0.5) (float-cos 0.5) (float-tan 0.5))", iterations=3000),
     Benchmark("Logarithms", "math", "(float+ (float-log 10.0) (float-log10 100.0))", iterations=3000),
-    Benchmark("Complex Numbers", "math", "(integer+ (complex-real (complex 3 4)) (complex-imag (complex 3 4)))", iterations=3000),
-    Benchmark("Rounding", "math", "(integer+ (integer (float-round 3.7)) (integer (float-floor 3.7)) (integer (float-ceil 3.2)))", iterations=5000),
+    Benchmark("Complex Numbers", "math", "(float+ (complex-real (complex 3 4)) (complex-imag (complex 3 4)))", iterations=3000),
+    Benchmark("Rounding", "math", "(integer+ (float->integer (float-round 3.7)) (float->integer (float-floor 3.7)) (float->integer (float-ceil 3.2)))", iterations=5000),
 
     # === TYPE PREDICATES ===
     Benchmark("Type Checks", "types", "(and (integer? 42) (string? \"hi\") (boolean? #t) (list? (list 1 2)))", iterations=5000),
@@ -385,7 +384,7 @@ BENCHMARKS = [
               """(letrec ((sum-list (lambda (lst)
                                      (if (list-null? lst)
                                          0
-                                         (integer+ (list-first lst) (sum-list (list-rest lst))))))\
+                                         (integer+ (list-first lst) (sum-list (list-rest lst)))))))
                    (sum-list (list 1 2 3 4 5 6 7 8 9 10)))""", iterations=500),
     Benchmark("Pattern Match Pipeline", "realistic",
               """(map (lambda (x)

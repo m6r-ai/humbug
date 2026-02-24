@@ -243,7 +243,7 @@ class TestAIFPLValueEdgeCases:
         (let ((original (list 1 2 3)))
           (list
             original
-            (list-append original (list 4))
+            (list-concat original (list 4))
             original))
         """)
 
