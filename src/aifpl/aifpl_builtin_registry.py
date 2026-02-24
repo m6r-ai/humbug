@@ -258,28 +258,30 @@ class AIFPLBuiltinRegistry:
 
             is_fixed_arity = (max_args is not None and min_args == max_args)
 
-            if name in BUILTIN_OPCODE_MAP and is_fixed_arity:
-                # Truly fixed-arity builtin: generate a bytecode stub
-                opcode, arity = BUILTIN_OPCODE_MAP[name]
-                instructions = [
-                    Instruction(opcode),
-                    Instruction(Opcode.RETURN),
-                ]
-                stub = CodeObject(
-                    instructions=instructions,
-                    constants=[],
-                    names=[],
-                    code_objects=[],
-                    param_count=arity,
-                    local_count=arity,
-                    name=f'<builtin:{name}>',
-                )
-                parameters = tuple(f'arg{i}' for i in range(arity))
-                builtins[name] = AIFPLFunction(
-                    parameters=parameters,
-                    name=name,
-                    bytecode=stub,
-                    is_variadic=False
-                )
+            assert name in BUILTIN_OPCODE_MAP, f"Builtin '{name}' is missing from BUILTIN_OPCODE_MAP"
+            assert is_fixed_arity, f"Builtin '{name}' is variadic but missing from prelude_names set"
+
+            # Truly fixed-arity builtin: generate a bytecode stub
+            opcode, arity = BUILTIN_OPCODE_MAP[name]
+            instructions = [
+                Instruction(opcode),
+                Instruction(Opcode.RETURN),
+            ]
+            stub = CodeObject(
+                instructions=instructions,
+                constants=[],
+                names=[],
+                code_objects=[],
+                param_count=arity,
+                local_count=arity,
+                name=f'<builtin:{name}>',
+            )
+            parameters = tuple(f'arg{i}' for i in range(arity))
+            builtins[name] = AIFPLFunction(
+                parameters=parameters,
+                name=name,
+                bytecode=stub,
+                is_variadic=False
+            )
 
         return builtins
