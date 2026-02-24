@@ -9,8 +9,8 @@
                     (if (= (string-length s) 0)
                         s
                         (string-append
-                          (string-upcase (substring s 0 1))
-                          (string-downcase (substring s 1 (string-length s)))))))
+                          (string-upcase (string-slice s 0 1))
+                          (string-downcase (string-slice s 1))))))
       (reverse-string (lambda (s)
                         (list->string (list-reverse (string->list s)))))
       (count-words (lambda (s)

@@ -143,8 +143,8 @@ class TestFormatting:
         # cons operation
         helpers.assert_evaluates_to(aifpl, '(list-cons 1 (list 2 3))', '(1 2 3)')
 
-        # append operation
-        helpers.assert_evaluates_to(aifpl, '(append (list 1 2) (list 3 4))', '(1 2 3 4)')
+        # list-append operation
+        helpers.assert_evaluates_to(aifpl, '(list-append (list 1 2) (list 3 4))', '(1 2 3 4)')
 
         # reverse operation
         helpers.assert_evaluates_to(aifpl, '(list-reverse (list 1 2 3))', '(3 2 1)')
@@ -291,7 +291,7 @@ class TestFormatting:
         # Different ways of creating the same list should format identically
         list1 = aifpl.evaluate_and_format('(list 1 2 3)')
         list2 = aifpl.evaluate_and_format('(list-cons 1 (list-cons 2 (list-cons 3 (list))))')
-        list3 = aifpl.evaluate_and_format('(append (list 1) (list 2) (list 3))')
+        list3 = aifpl.evaluate_and_format('(list-append (list 1) (list 2) (list 3))')
 
         assert list1 == list2 == list3 == '(1 2 3)'
 

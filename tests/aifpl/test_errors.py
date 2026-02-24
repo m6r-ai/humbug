@@ -285,7 +285,7 @@ class TestErrors:
             aifpl.evaluate('(list-cons 1 "hello")')  # Second arg must be list
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(append (list 1 2) "hello")')  # All args must be lists
+            aifpl.evaluate('(list-append (list 1 2) "hello")')  # All args must be lists
 
     def test_empty_list_access_errors(self, aifpl):
         """Test that accessing empty lists causes evaluation errors."""

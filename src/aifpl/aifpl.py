@@ -428,12 +428,12 @@ class AIFPL:
                                                                               #f)))))
                                                       (inner (list-rest lst)))))))
                                 (outer args))))""",
-        'append': """(lambda (. args)
-                       (if (list-null? args) (list)
-                         (letrec ((loop (lambda (lst acc)
-                                          (if (list-null? lst) acc
-                                              (loop (list-rest lst) (append acc (list-first lst)))))))
-                           (loop (list-rest args) (list-first args)))))""",
+        'list-append': """(lambda (. args)
+                            (if (list-null? args) (list)
+                              (letrec ((loop (lambda (lst acc)
+                                               (if (list-null? lst) acc
+                                                   (loop (list-rest lst) (list-append acc (list-first lst)))))))
+                                (loop (list-rest args) (list-first args)))))""",
         'alist': """(lambda (. args)
                       (letrec ((loop (lambda (pairs acc)
                                        (if (list-null? pairs) acc
@@ -472,6 +472,10 @@ class AIFPL:
                           (alist-get a-list key (if (list-null? rest) #f (list-first rest))))""",
         'range': """(lambda (start end . rest)
                       (range start end (if (list-null? rest) 1 (list-first rest))))""",
+        'string-slice': """(lambda (str start . rest)
+                             (if (list-null? rest)
+                                 (string-slice str start (string-length str))
+                                 (string-slice str start (list-first rest))))""",
         'map': """(lambda (f lst)
                     (letrec ((helper (lambda (f lst acc)
                                        (if (list-null? lst) (list-reverse acc)

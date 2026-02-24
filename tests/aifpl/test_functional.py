@@ -577,7 +577,7 @@ class TestFunctional:
         # Lambda using multiple let-bound variables
         complex_interaction = '''
         (let ((a 5) (b 10) (c 2))
-          (let ((compute (lambda (x) (float+ (float (integer* a x)) (float* (float b) (float/ (float x) (float c))))))
+          (let ((compute (lambda (x) (float+ (integer->float (integer* a x)) (float* (integer->float b) (float/ (integer->float x) (integer->float c))))))
                 (value 4))
             (compute value)))
         '''

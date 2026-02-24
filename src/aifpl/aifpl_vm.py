@@ -279,7 +279,7 @@ class AIFPLVM:
         table[Opcode.STRING_SPLIT] = self._op_string_split
         table[Opcode.STRING_JOIN] = self._op_string_join
         table[Opcode.STRING_APPEND] = self._op_string_append
-        table[Opcode.STRING_SUBSTRING] = self._op_string_substring
+        table[Opcode.STRING_SLICE] = self._op_string_slice
         table[Opcode.STRING_REPLACE] = self._op_string_replace
         table[Opcode.ALIST] = self._op_alist
         table[Opcode.ALIST_P] = self._op_alist_p
@@ -1177,7 +1177,7 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """INTEGER_TO_FLOAT: Pop an integer, push as float."""
         a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'float')
+        a_val = self._ensure_integer(a, 'integer->float')
         self.stack.append(AIFPLFloat(float(a_val)))
         return None
 
@@ -1428,7 +1428,7 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """FLOAT_TO_INTEGER: Pop a float, push truncated integer."""
         a = self.stack.pop()
-        a_val = self._ensure_float(a, 'integer')
+        a_val = self._ensure_float(a, 'float->integer')
         self.stack.append(AIFPLInteger(int(a_val)))
         return None
 
@@ -1920,31 +1920,31 @@ class AIFPLVM:
         self.stack.append(AIFPLString(sep.join(parts)))
         return None
 
-    def _op_string_substring(  # pylint: disable=useless-return
+    def _op_string_slice(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """STRING_SUBSTRING: Pop end, start, and string, push substring."""
+        """STRING_SLICE: Pop end, start, and string, push slice."""
         end_val = self.stack.pop()
         start_val = self.stack.pop()
         a = self.stack.pop()
-        s = self._ensure_string(a, 'substring')
-        start = self._ensure_integer(start_val, 'substring')
-        end = self._ensure_integer(end_val, 'substring')
+        s = self._ensure_string(a, 'string-slice')
+        start = self._ensure_integer(start_val, 'string-slice')
+        end = self._ensure_integer(end_val, 'string-slice')
         n = len(s)
         if start < 0:
-            raise AIFPLEvalError(f"substring start index cannot be negative: {start}")
+            raise AIFPLEvalError(f"string-slice start index cannot be negative: {start}")
 
         if end < 0:
-            raise AIFPLEvalError(f"substring end index cannot be negative: {end}")
+            raise AIFPLEvalError(f"string-slice end index cannot be negative: {end}")
 
         if start > n:
-            raise AIFPLEvalError(f"substring start index out of range: {start} (string length: {n})")
+            raise AIFPLEvalError(f"string-slice start index out of range: {start} (string length: {n})")
 
         if end > n:
-            raise AIFPLEvalError(f"substring end index out of range: {end} (string length: {n})")
+            raise AIFPLEvalError(f"string-slice end index out of range: {end} (string length: {n})")
 
         if start > end:
-            raise AIFPLEvalError(f"substring start index ({start}) cannot be greater than end index ({end})")
+            raise AIFPLEvalError(f"string-slice start index ({start}) cannot be greater than end index ({end})")
 
         self.stack.append(AIFPLString(s[start:end]))
         return None
@@ -2312,7 +2312,7 @@ class AIFPLVM:
         """APPEND: Pop two lists, push concatenated list."""
         b = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append(self._ensure_list(a, 'append').append_list(self._ensure_list(b, 'append')))
+        self.stack.append(self._ensure_list(a, 'list-append').append_list(self._ensure_list(b, 'list-append')))
         return None
 
     def _op_list_to_string(  # pylint: disable=useless-return

@@ -55,7 +55,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # Dependencies involving function calls
         result = aifpl.evaluate("""
         (let* ((x 4.0)
-               (y (integer (float-sqrt x)))
+               (y (float->integer (float-sqrt x)))
                (z (integer* y y)))
           z)
         """)
@@ -119,7 +119,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # List dependencies
         result = aifpl.evaluate("""
         (let* ((base-list (list 1 2 3))
-              (extended (append base-list (list 4 5)))
+              (extended (list-append base-list (list 4 5)))
               (length-val (list-length extended)))
           length-val)
         """)
@@ -247,8 +247,8 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
                (e (integer* b c))
                (f (integer+ d e))
                (g (integer- f d))
-               (h (float/ (float f) 2.0)))
-          (float+ (float g) h))
+               (h (float/ (integer->float f) 2.0)))
+          (float+ (integer->float g) h))
         """
         result = aifpl.evaluate(complex_deps)
         # a=1, b=2, c=3, d=5, e=6, f=11, g=6, h=5.5, sum=11.5

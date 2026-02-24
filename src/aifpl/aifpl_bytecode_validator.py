@@ -239,7 +239,7 @@ class BytecodeValidator:
             Opcode.STRING_SUFFIX_P: (2, 1),
             Opcode.STRING_SPLIT: (2, 1),
             Opcode.STRING_JOIN: (2, 1),
-            Opcode.STRING_SUBSTRING: (3, 1),
+            Opcode.STRING_SLICE: (3, 1),
             Opcode.STRING_REPLACE: (3, 1),
             Opcode.STRING_APPEND: (2, 1),
 

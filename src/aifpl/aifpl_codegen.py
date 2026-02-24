@@ -449,6 +449,21 @@ class AIFPLCodeGen:
                 ctx.emit(Opcode.RANGE)
                 return
 
+            # Handle string-slice: synthesise missing end as (string-length str)
+            if builtin_name == 'string-slice':
+                # Push the string argument first
+                self._generate_expr(plan.arg_plans[0], ctx)
+                # Push the start argument
+                self._generate_expr(plan.arg_plans[1], ctx)
+                if len(plan.arg_plans) == 2:
+                    # Synthesise end = (string-length str): push str again, emit STRING_LENGTH
+                    self._generate_expr(plan.arg_plans[0], ctx)
+                    ctx.emit(Opcode.STRING_LENGTH)
+                else:
+                    self._generate_expr(plan.arg_plans[2], ctx)
+                ctx.emit(Opcode.STRING_SLICE)
+                return
+
             # Generate arguments
             for arg_plan in plan.arg_plans:
                 self._generate_expr(arg_plan, ctx)

@@ -130,9 +130,9 @@ class TestAIFPLCallStackEdgeCases:
         # Complex arithmetic expression
         # float+ is used because float/ returns a float, so all operands must be float
         complex_expr = """
-        (float+ (float (integer* 2 (integer+ 3 4)))
+        (float+ (integer->float (integer* 2 (integer+ 3 4)))
                 (float/ (float+ 10.0 5.0) (float- 8.0 3.0))
-                (float (integer-abs (integer- 2 7))))
+                (integer->float (integer-abs (integer- 2 7))))
         """
         result = aifpl.evaluate(complex_expr)
         assert result == 22  # (2*7) + (15/5) + 5 = 14 + 3 + 5 = 22
@@ -187,7 +187,7 @@ class TestAIFPLCallStackEdgeCases:
         """Test call stack with list operations."""
         # Nested list operations
         result = aifpl.evaluate("""
-        (append
+        (list-append
           (list 1 2)
           (list-reverse (list 3 4 5))
           (list 6))

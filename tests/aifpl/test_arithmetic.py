@@ -147,7 +147,7 @@ class TestArithmetic:
             aifpl.evaluate("(float/ 1.0 0.0)")
 
     @pytest.mark.parametrize("expression,expected", [
-        # Basic modulo (integer inputs only)
+        # Basic modulo (float->integer inputs only)
         ("(integer% 7 3)", "1"),
         ("(integer% 8 3)", "2"),
         ("(integer% 9 3)", "0"),
@@ -167,7 +167,7 @@ class TestArithmetic:
             aifpl.evaluate("(integer% 1 0)")
 
     @pytest.mark.parametrize("expression,expected", [
-        # Basic pow (integer inputs)
+        # Basic pow (float->integer inputs)
         ("(float-expt 2.0 3.0)", "8.0"),
         ("(float-expt 3.0 2.0)", "9.0"),
         ("(float-expt 5.0 0.0)", "1.0"),

@@ -461,7 +461,7 @@ class TestPatternMatching:
         """Test error handling in pattern result evaluation."""
         # Division by zero in pattern result
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate('(match 42 (x (float/ (float x) 0.0)) (_ "other"))')
+            aifpl.evaluate('(match 42 (x (float/ (integer->float x) 0.0)) (_ "other"))')
 
         # Type error in pattern result
         with pytest.raises(AIFPLEvalError):
@@ -541,7 +541,7 @@ class TestPatternMatching:
         (let ((safe-divide (lambda (a b)
                             (if (integer=? b 0)
                                 (list "none")
-                                (list "some" (float/ (float a) (float b)))))
+                                (list "some" (float/ (integer->float a) (integer->float b)))))
               )
               (get-value (lambda (option)
                           (match option

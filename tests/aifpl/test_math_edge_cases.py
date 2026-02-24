@@ -26,7 +26,7 @@ class TestAIFPLMathEdgeCases:
         result = aifpl.evaluate("(float/ 1.0 1000000.0)")
         assert abs(result - 1e-6) < 1e-12
 
-        # Floor division (integer inputs)
+        # Floor division (float->integer inputs)
         result = aifpl.evaluate("(float// 5.0 2.0)")
         assert result == 2.0
 

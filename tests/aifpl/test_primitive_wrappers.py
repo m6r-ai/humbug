@@ -92,7 +92,7 @@ class TestPrimitiveWrappers:
         # Multiplication
         assert aifpl.evaluate("((lambda (op) (op 2 3 4)) integer*)") == 24
 
-        # Division (float)
+        # Division (integer->float)
         assert aifpl.evaluate("((lambda (op) (op 12.0 3.0)) float/)") == 4.0
 
     def test_wrapper_nested_usage(self, aifpl):

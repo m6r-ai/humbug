@@ -165,8 +165,7 @@ class Opcode(IntEnum):
     STRING_SPLIT = auto()    # Split string by delimiter
     STRING_JOIN = auto()     # Join list of strings with separator
     STRING_APPEND = auto()   # Concatenate two strings: (string-append a b)
-    STRING_SUBSTRING = auto()
-                             # Extract substring (string, start, end)
+    STRING_SLICE = auto()    # Extract substring (string, start, end)
     STRING_REPLACE = auto()  # Replace substring (string, old, new)
 
     # Alist operations
@@ -253,7 +252,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'bin': (Opcode.INTEGER_TO_STRING_BIN, 1),
     'hex': (Opcode.INTEGER_TO_STRING_HEX, 1),
     'oct': (Opcode.INTEGER_TO_STRING_OCT, 1),
-    'float': (Opcode.INTEGER_TO_FLOAT, 1),
+    'integer->float': (Opcode.INTEGER_TO_FLOAT, 1),
     'float?': (Opcode.FLOAT_P, 1),
     'float=?': (Opcode.FLOAT_EQ_P, 2),
     'float!=?': (Opcode.FLOAT_NEQ_P, 2),
@@ -277,7 +276,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'float-exp': (Opcode.FLOAT_EXP, 1),
     'float-sqrt': (Opcode.FLOAT_SQRT, 1),
     'float-abs': (Opcode.FLOAT_ABS, 1),
-    'integer': (Opcode.FLOAT_TO_INTEGER, 1),
+    'float->integer': (Opcode.FLOAT_TO_INTEGER, 1),
     'float->string': (Opcode.FLOAT_TO_STRING, 1),
     'float-floor': (Opcode.FLOAT_FLOOR, 1),
     'float-ceil': (Opcode.FLOAT_CEIL, 1),
@@ -325,7 +324,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'string-split': (Opcode.STRING_SPLIT, 2),
     'string-join': (Opcode.STRING_JOIN, 2),
     'string-append': (Opcode.STRING_APPEND, 2),
-    'substring': (Opcode.STRING_SUBSTRING, 3),
+    'string-slice': (Opcode.STRING_SLICE, 3),
     'string-replace': (Opcode.STRING_REPLACE, 3),
     'list?': (Opcode.LIST_P, 1),
     'list=?': (Opcode.LIST_EQ_P, 2),
@@ -343,7 +342,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'list-take': (Opcode.LIST_TAKE, 2),
     'list-drop': (Opcode.LIST_DROP, 2),
     'list-remove': (Opcode.LIST_REMOVE, 2),
-    'append': (Opcode.LIST_APPEND, 2),
+    'list-append': (Opcode.LIST_APPEND, 2),
     'list->string': (Opcode.LIST_TO_STRING, 1),
     'alist?': (Opcode.ALIST_P, 1),
     'alist=?': (Opcode.ALIST_EQ_P, 2),
@@ -482,7 +481,7 @@ class Instruction:
             Opcode.STRING_SPLIT,
             Opcode.STRING_JOIN,
             Opcode.STRING_APPEND,
-            Opcode.STRING_SUBSTRING,
+            Opcode.STRING_SLICE,
             Opcode.STRING_REPLACE,
             Opcode.LIST_P,
             Opcode.LIST_EQ_P,

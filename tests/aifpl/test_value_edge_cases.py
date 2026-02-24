@@ -126,7 +126,7 @@ class TestAIFPLValueEdgeCases:
     def test_numeric_type_coercion_edge_cases(self, aifpl):
         """Test numeric type coercion edge cases."""
         # Integer to float promotion via explicit conversion
-        result = aifpl.evaluate("(float+ (float 1) 2.5)")
+        result = aifpl.evaluate("(float+ (integer->float 1) 2.5)")
         assert result == 3.5
         assert isinstance(result, float)
 
@@ -243,7 +243,7 @@ class TestAIFPLValueEdgeCases:
         (let ((original (list 1 2 3)))
           (list
             original
-            (append original (list 4))
+            (list-append original (list 4))
             original))
         """)
 

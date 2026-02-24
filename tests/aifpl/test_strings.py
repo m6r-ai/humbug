@@ -69,7 +69,7 @@ class TestStrings:
         assert result == expected_content
 
     @pytest.mark.parametrize("expression,expected", [
-        # Basic string append
+        # Basic string list-append
         ('(string-append "hello" " " "world")', '"hello world"'),
         ('(string-append "a" "b" "c")', '"abc"'),
 
@@ -109,109 +109,121 @@ class TestStrings:
         assert aifpl.evaluate_and_format(expression) == expected
 
     @pytest.mark.parametrize("expression,expected", [
-        # Basic substring
-        ('(substring "hello" 1 4)', '"ell"'),  # Indices 1, 2, 3
-        ('(substring "hello" 0 5)', '"hello"'),  # Full string
-        ('(substring "hello" 0 1)', '"h"'),  # First character
-        ('(substring "hello" 4 5)', '"o"'),  # Last character
+        # Basic string-slice (3-argument form)
+        ('(string-slice "hello" 1 4)', '"ell"'),  # Indices 1, 2, 3
+        ('(string-slice "hello" 0 5)', '"hello"'),  # Full string
+        ('(string-slice "hello" 0 1)', '"h"'),  # First character
+        ('(string-slice "hello" 4 5)', '"o"'),  # Last character
 
-        # Empty substring
-        ('(substring "hello" 2 2)', '""'),  # Empty range
-        ('(substring "hello" 0 0)', '""'),  # Empty range at start
+        # Empty string-slice
+        ('(string-slice "hello" 2 2)', '""'),  # Empty range
+        ('(string-slice "hello" 0 0)', '""'),  # Empty range at start
 
-        # Unicode substrings
-        ('(substring "世界你好" 1 3)', '"界你"'),
-        ('(substring "café" 1 3)', '"af"'),
+        # Unicode string-slices
+        ('(string-slice "世界你好" 1 3)', '"界你"'),
+        ('(string-slice "café" 1 3)', '"af"'),
     ])
-    def test_substring(self, aifpl, expression, expected):
-        """Test substring function."""
+    def test_string_slice(self, aifpl, expression, expected):
+        """Test string-slice function (3-argument form)."""
         assert aifpl.evaluate_and_format(expression) == expected
 
-    def test_substring_index_errors(self, aifpl):
-        """Test substring with invalid indices."""
+    @pytest.mark.parametrize("expression,expected", [
+        # string-slice 2-argument form: (string-slice str start) -> from start to end
+        ('(string-slice "hello" 2)', '"llo"'),    # from index 2 to end
+        ('(string-slice "hello" 0)', '"hello"'),  # full string
+        ('(string-slice "hello" 5)', '""'),        # start at end -> empty
+        ('(string-slice "hello" 1)', '"ello"'),   # from index 1 to end
+        ('(string-slice "hello" 4)', '"o"'),       # last character only
+    ])
+    def test_string_slice_two_arg_form(self, aifpl, expression, expected):
+        """Test string-slice function (2-argument form: from index to end of string)."""
+        assert aifpl.evaluate_and_format(expression) == expected
+
+    def test_string_slice_index_errors(self, aifpl):
+        """Test string-slice with invalid indices."""
         # Index out of range should be handled gracefully or raise error
         # Let's test the current behavior
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(substring "hello" 0 10)')  # End beyond string
+            aifpl.evaluate('(string-slice "hello" 0 10)')  # End beyond string
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(substring "hello" -1 3)')  # Negative start
+            aifpl.evaluate('(string-slice "hello" -1 3)')  # Negative start
 
-    def test_substring_negative_end_index(self, aifpl):
-        """Test substring with negative end index."""
-        with pytest.raises(AIFPLEvalError, match="substring end index cannot be negative"):
-            aifpl.evaluate('(substring "hello" 1 -1)')
+    def test_string_slice_negative_end_index(self, aifpl):
+        """Test string-slice with negative end index."""
+        with pytest.raises(AIFPLEvalError, match="string-slice end index cannot be negative"):
+            aifpl.evaluate('(string-slice "hello" 1 -1)')
 
-        with pytest.raises(AIFPLEvalError, match="substring end index cannot be negative"):
-            aifpl.evaluate('(substring "test" 0 -5)')
+        with pytest.raises(AIFPLEvalError, match="string-slice end index cannot be negative"):
+            aifpl.evaluate('(string-slice "test" 0 -5)')
 
-        with pytest.raises(AIFPLEvalError, match="substring end index cannot be negative"):
-            aifpl.evaluate('(substring "" 0 -1)')  # Empty string with negative end
+        with pytest.raises(AIFPLEvalError, match="string-slice end index cannot be negative"):
+            aifpl.evaluate('(string-slice "" 0 -1)')  # Empty string with negative end
 
-    def test_substring_start_index_out_of_range(self, aifpl):
-        """Test substring with start index beyond string length."""
-        with pytest.raises(AIFPLEvalError, match="substring start index out of range"):
-            aifpl.evaluate('(substring "hello" 10 15)')  # start_idx > string_len
+    def test_string_slice_start_index_out_of_range(self, aifpl):
+        """Test string-slice with start index beyond string length."""
+        with pytest.raises(AIFPLEvalError, match="string-slice start index out of range"):
+            aifpl.evaluate('(string-slice "hello" 10 15)')  # start_idx > string_len
 
-        with pytest.raises(AIFPLEvalError, match="substring start index out of range"):
-            aifpl.evaluate('(substring "hi" 5 6)')  # start_idx > string_len
+        with pytest.raises(AIFPLEvalError, match="string-slice start index out of range"):
+            aifpl.evaluate('(string-slice "hi" 5 6)')  # start_idx > string_len
 
-        with pytest.raises(AIFPLEvalError, match="substring start index out of range"):
-            aifpl.evaluate('(substring "" 1 2)')  # start_idx > empty string length
-
-        # Test with Unicode strings
-        with pytest.raises(AIFPLEvalError, match="substring start index out of range"):
-            aifpl.evaluate('(substring "世界" 5 6)')  # start beyond Unicode string
-
-    def test_substring_start_greater_than_end(self, aifpl):
-        """Test substring with start index greater than end index."""
-        with pytest.raises(AIFPLEvalError, match="start index.*cannot be greater than end index"):
-            aifpl.evaluate('(substring "hello" 3 1)')  # start > end
-
-        with pytest.raises(AIFPLEvalError, match="start index.*cannot be greater than end index"):
-            aifpl.evaluate('(substring "test" 4 2)')  # start > end
-
-        with pytest.raises(AIFPLEvalError, match="start index.*cannot be greater than end index"):
-            aifpl.evaluate('(substring "world" 5 0)')  # start > end
+        with pytest.raises(AIFPLEvalError, match="string-slice start index out of range"):
+            aifpl.evaluate('(string-slice "" 1 2)')  # start_idx > empty string length
 
         # Test with Unicode strings
-        with pytest.raises(AIFPLEvalError, match="start index.*cannot be greater than end index"):
-            aifpl.evaluate('(substring "café" 3 1)')  # start > end with Unicode
+        with pytest.raises(AIFPLEvalError, match="string-slice start index out of range"):
+            aifpl.evaluate('(string-slice "世界" 5 6)')  # start beyond Unicode string
 
-    def test_substring_edge_cases_comprehensive(self, aifpl):
-        """Test comprehensive edge cases for substring validation."""
+    def test_string_slice_start_greater_than_end(self, aifpl):
+        """Test string-slice with start index greater than end index."""
+        with pytest.raises(AIFPLEvalError, match="start index.*cannot be greater than end index"):
+            aifpl.evaluate('(string-slice "hello" 3 1)')  # start > end
+
+        with pytest.raises(AIFPLEvalError, match="start index.*cannot be greater than end index"):
+            aifpl.evaluate('(string-slice "test" 4 2)')  # start > end
+
+        with pytest.raises(AIFPLEvalError, match="start index.*cannot be greater than end index"):
+            aifpl.evaluate('(string-slice "world" 5 0)')  # start > end
+
+        # Test with Unicode strings
+        with pytest.raises(AIFPLEvalError, match="start index.*cannot be greater than end index"):
+            aifpl.evaluate('(string-slice "café" 3 1)')  # start > end with Unicode
+
+    def test_string_slice_edge_cases_comprehensive(self, aifpl):
+        """Test comprehensive edge cases for string-slice validation."""
         # Valid boundary cases (should work)
-        assert aifpl.evaluate_and_format('(substring "hello" 5 5)') == '""'  # start == end == length
-        assert aifpl.evaluate_and_format('(substring "hello" 0 0)') == '""'  # start == end == 0
-        assert aifpl.evaluate_and_format('(substring "hello" 2 2)') == '""'  # start == end in middle
+        assert aifpl.evaluate_and_format('(string-slice "hello" 5 5)') == '""'  # start == end == length
+        assert aifpl.evaluate_and_format('(string-slice "hello" 0 0)') == '""'  # start == end == 0
+        assert aifpl.evaluate_and_format('(string-slice "hello" 2 2)') == '""'  # start == end in middle
 
         # Test validation order precedence
-        with pytest.raises(AIFPLEvalError, match="substring start index cannot be negative"):
-            aifpl.evaluate('(substring "test" -1 10)')  # start negative, end out of range
+        with pytest.raises(AIFPLEvalError, match="string-slice start index cannot be negative"):
+            aifpl.evaluate('(string-slice "test" -1 10)')  # start negative, end out of range
 
-        with pytest.raises(AIFPLEvalError, match="substring end index cannot be negative"):
-            aifpl.evaluate('(substring "test" 0 -1)')  # start valid, end negative
+        with pytest.raises(AIFPLEvalError, match="string-slice end index cannot be negative"):
+            aifpl.evaluate('(string-slice "test" 0 -1)')  # start valid, end negative
 
-        with pytest.raises(AIFPLEvalError, match="substring start index out of range"):
-            aifpl.evaluate('(substring "test" 10 15)')  # both out of range, start checked first
+        with pytest.raises(AIFPLEvalError, match="string-slice start index out of range"):
+            aifpl.evaluate('(string-slice "test" 10 15)')  # both out of range, start checked first
 
-    def test_substring_with_different_string_lengths(self, aifpl):
+    def test_string_slice_with_different_string_lengths(self, aifpl):
         """Test error conditions with various string lengths."""
         # Empty string
-        with pytest.raises(AIFPLEvalError, match="substring start index out of range"):
-            aifpl.evaluate('(substring "" 1 1)')
+        with pytest.raises(AIFPLEvalError, match="string-slice start index out of range"):
+            aifpl.evaluate('(string-slice "" 1 1)')
 
         # Single character
-        with pytest.raises(AIFPLEvalError, match="substring start index out of range"):
-            aifpl.evaluate('(substring "a" 2 3)')
+        with pytest.raises(AIFPLEvalError, match="string-slice start index out of range"):
+            aifpl.evaluate('(string-slice "a" 2 3)')
 
         # Long string
         with pytest.raises(AIFPLEvalError, match="start index.*cannot be greater than end index"):
-            aifpl.evaluate('(substring "abcdefghijklmnop" 10 5)')
+            aifpl.evaluate('(string-slice "abcdefghijklmnop" 10 5)')
 
         # Multiple violations - should catch first one encountered
-        with pytest.raises(AIFPLEvalError, match="substring start index cannot be negative"):
-            aifpl.evaluate('(substring "hello" -1 -2)')  # Both negative, start checked first
+        with pytest.raises(AIFPLEvalError, match="string-slice start index cannot be negative"):
+            aifpl.evaluate('(string-slice "hello" -1 -2)')  # Both negative, start checked first
 
     @pytest.mark.parametrize("expression,expected", [
         # String case conversion
@@ -463,9 +475,9 @@ class TestStrings:
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-length (list "h" "i"))')
 
-        # substring with non-string
+        # string-slice with non-string
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(substring 42 0 1)')
+            aifpl.evaluate('(string-slice 42 0 1)')
 
         # string-upcase/downcase with non-string
         with pytest.raises(AIFPLEvalError):
@@ -546,12 +558,9 @@ class TestStrings:
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-ref "hello")')
 
-        # Functions requiring exactly 3 arguments
+        # string-slice requires 2 or 3 arguments (not 1)
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(substring "hello" 1)')
-
-        with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(substring "hello")')
+            aifpl.evaluate('(string-slice "hello")')
 
     def test_round_trip_string_list_conversion(self, aifpl):
         """Test round-trip conversion between strings and lists."""

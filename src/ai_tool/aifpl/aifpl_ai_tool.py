@@ -204,7 +204,7 @@ Syntax: (operator arg1 arg2 ...)
 - (integer% 7 3) → 1 (modulo), (integer% -7 2) → 1, (integer% 7 -3) → -2 (result takes sign of divisor)
 - (integer-abs -5) → 5 (absolute value)
 
-### Float arithmetic (all args must be floats; use (float x) to convert integers):
+### Float arithmetic (all args must be floats; use (integer->float x) to convert integers):
 
 - (float+ 1.0 2.0 3.0) → 6.0, (float- 10.0 3.0) → 7.0
 - (float* 2.0 3.0) → 6.0, (float/ 10.0 4.0) → 2.5
@@ -246,8 +246,8 @@ Syntax: (operator arg1 arg2 ...)
 
 ## Type construction and conversion:
 
-- (integer x) → convert to integer (truncates toward zero): (integer 3.7) → 3, (integer -2.9) → -2
-- (float x) → convert to float: (float 42) → 42.0, (float 3) → 3.0
+- (float->integer x) → convert float to integer (truncates toward zero): (float->integer 3.7) → 3, (float->integer -2.9) → -2
+- (integer->float x) → convert integer to float: (integer->float 42) → 42.0, (integer->float 3) → 3.0
 - (complex real imag) → construct complex: (complex 3 4) → (3+4j)
 - (integer->string 42) → "42", (float->string 3.14) → "3.14", (complex->string 3+4j) → "3+4j"
 - These are the primary way to move between numeric types; there is no automatic promotion
@@ -279,7 +279,7 @@ Syntax: (operator arg1 arg2 ...)
 
 - Basic: (string-append "hello" " " "world"), (string-length "hello")
 - Access: (string-ref "hello" 1) → "e" (character at 0-based index)
-- Manipulation: (substring "hello" 1 4), (string-upcase "hello"), (string-downcase "HELLO")
+- Manipulation: (string-slice "hello" 1 4), (string-slice "hello" 2) → "llo", (string-upcase "hello"), (string-downcase "HELLO")
 - Utilities: (string-trim "  hello  "), (string-replace "banana" "a" "o")
 - Equality/ordering predicates: (string=? "hi" "hi"), (string!=? "hi" "bye"), (string<? "apple" "banana"), (string>? "b" "a"), (string<=? "a" "a"), (string>=? "b" "a")
 - Search predicates: (string-contains? "hello" "ell"), (string-prefix? "hello" "he"), (string-suffix? "hello" "lo")
@@ -290,7 +290,7 @@ Syntax: (operator arg1 arg2 ...)
 ## List operations:
 
 - Uses proper lists only, not cons cells, and the list-cons operator requires that the second argument is a list
-- Construction: (list 1 2 3), (list-cons 1 (list 2 3)), (append (list 1 2) (list 3 4))
+- Construction: (list 1 2 3), (list-cons 1 (list 2 3)), (list-append (list 1 2) (list 3 4))
 - Access: (list-first (list 1 2 3)), (list-rest (list 1 2 3)), (list-last (list 1 2 3))
 - Indexed access: (list-ref (list "a" "b" "c") 1) → "b" (0-based index)
 - Properties: (list-length (list 1 2 3)), (list-null? (list)), (list-member? 2 (list 1 2 3))

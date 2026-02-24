@@ -68,7 +68,7 @@ class TestRecursiveNestedLambdas:
                               (list)
                               (let ((new-path (list-cons id path)))
                                 (if (integer>? id 1)
-                                    (fold append (list)
+                                    (fold list-append (list)
                                           (map (lambda (next-id) (visit next-id new-path))
                                                (list (integer- id 1))))
                                     (list id)))))))
@@ -108,12 +108,12 @@ class TestRecursiveNestedLambdas:
                       (if (list-member? task-id visited-in-path)
                           (list (list "cycle" task-id))
                           (let ((successors (get-successors task-id)))
-                            (let ((new-path (append path (list task-id)))
+                            (let ((new-path (list-append path (list task-id)))
                                   (new-visited (list-cons task-id visited-in-path)))
-                              (fold append (list)
+                              (fold list-append (list)
                                     (map (lambda (succ) (dfs-visit succ new-path new-visited))
                                          successors))))))))
-              (fold append (list)
+              (fold list-append (list)
                     (map (lambda (task-id) (dfs-visit task-id (list) (list)))
                          all-task-ids)))''',
             '()'  # No cycles detected
@@ -165,7 +165,7 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((process (lambda (n)
                                (if (integer<=? n 0)
                                    (list)
-                                   (fold append
+                                   (fold list-append
                                          (list n)
                                          (map (lambda (x) (process (integer- x 1)))
                                               (list n)))))))
@@ -243,7 +243,7 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((compute (lambda (n)
                                (if (integer<=? n 1)
                                    (list n)
-                                   (fold append
+                                   (fold list-append
                                          (list n)
                                          (map (lambda (x)
                                                (let ((result (compute (integer- x 1))))
@@ -355,7 +355,7 @@ class TestRecursiveNestedLambdasBytecode:
             '''(letrec ((visit (lambda (n)
                              (if (integer<=? n 1)
                                  (list n)
-                                 (fold append
+                                 (fold list-append
                                        (list n)
                                        (map (lambda (x) (visit (integer- x 1)))
                                             (list n)))))))

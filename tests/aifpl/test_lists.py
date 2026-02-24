@@ -72,44 +72,44 @@ class TestLists:
             aifpl.evaluate('(list-cons 1 "hello")')  # Second arg must be list
 
     @pytest.mark.parametrize("expression,expected", [
-        # Basic append operations
-        ('(append (list 1 2) (list 3 4))', '(1 2 3 4)'),
-        ('(append (list) (list 1 2))', '(1 2)'),
-        ('(append (list 1 2) (list))', '(1 2)'),
-        ('(append (list) (list))', '()'),
+        # Basic list-append operations
+        ('(list-append (list 1 2) (list 3 4))', '(1 2 3 4)'),
+        ('(list-append (list) (list 1 2))', '(1 2)'),
+        ('(list-append (list 1 2) (list))', '(1 2)'),
+        ('(list-append (list) (list))', '()'),
 
-        # Multiple list append
-        ('(append (list 1) (list 2) (list 3))', '(1 2 3)'),
-        ('(append (list 1 2) (list 3 4) (list 5 6))', '(1 2 3 4 5 6)'),
+        # Multiple list-append
+        ('(list-append (list 1) (list 2) (list 3))', '(1 2 3)'),
+        ('(list-append (list 1 2) (list 3 4) (list 5 6))', '(1 2 3 4 5 6)'),
 
-        # Mixed type append
-        ('(append (list 1 "hello") (list #t 3.14))', '(1 "hello" #t 3.14)'),
+        # Mixed type list-append
+        ('(list-append (list 1 "hello") (list #t 3.14))', '(1 "hello" #t 3.14)'),
 
-        # Nested list append
-        ('(append (list (list 1 2)) (list (list 3 4)))', '((1 2) (3 4))'),
+        # Nested list-append
+        ('(list-append (list (list 1 2)) (list (list 3 4)))', '((1 2) (3 4))'),
     ])
     def test_append_operation(self, aifpl, expression, expected):
-        """Test append operation for concatenating lists."""
+        """Test list-append operation for concatenating lists."""
         assert aifpl.evaluate_and_format(expression) == expected
 
     def test_append_requires_all_list_arguments(self, aifpl):
-        """Test that append requires all arguments to be lists."""
+        """Test that list-append requires all arguments to be lists."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(append (list 1 2) 3)')
+            aifpl.evaluate('(list-append (list 1 2) 3)')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(append "hello" (list 1 2))')
+            aifpl.evaluate('(list-append "hello" (list 1 2))')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(append (list 1) #t (list 2))')
+            aifpl.evaluate('(list-append (list 1) #t (list 2))')
 
     def test_append_minimum_arguments(self, aifpl):
-        """Test that append requires at least 2 arguments."""
+        """Test that list-append requires at least 2 arguments."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(append)')
+            aifpl.evaluate('(list-append)')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(append (list 1 2))')
+            aifpl.evaluate('(list-append (list 1 2))')
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic reverse operations
@@ -474,10 +474,10 @@ class TestLists:
 
     def test_complex_list_operations(self, aifpl, helpers):
         """Test complex combinations of list operations."""
-        # Reverse of append
+        # Reverse of list-append
         helpers.assert_evaluates_to(
             aifpl,
-            '(list-reverse (append (list 1 2) (list 3 4)))',
+            '(list-reverse (list-append (list 1 2) (list 3 4)))',
             '(4 3 2 1)'
         )
 
@@ -513,8 +513,8 @@ class TestLists:
         assert take_result == '(1 2 3)'
         assert drop_result == '(4 5)'
 
-        # Append take and drop should reconstruct original
-        reconstruct_expr = f'(append (list-take 3 {original_list}) (list-drop 3 {original_list}))'
+        # list-append take and drop should reconstruct original
+        reconstruct_expr = f'(list-append (list-take 3 {original_list}) (list-drop 3 {original_list}))'
         helpers.assert_evaluates_to(aifpl, reconstruct_expr, '(1 2 3 4 5)')
 
     def test_list_with_all_data_types(self, aifpl, helpers):
@@ -603,15 +603,15 @@ class TestLists:
             '(1 2 3 4 5)'
         )
 
-        # Append empty list should give original
+        # list-append empty list should give original
         helpers.assert_evaluates_to(
             aifpl,
-            f'(append {test_list} (list))',
+            f'(list-append {test_list} (list))',
             '(1 2 3 4 5)'
         )
 
         helpers.assert_evaluates_to(
             aifpl,
-            f'(append (list) {test_list})',
+            f'(list-append (list) {test_list})',
             '(1 2 3 4 5)'
         )

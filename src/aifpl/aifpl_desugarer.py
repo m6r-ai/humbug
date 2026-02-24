@@ -105,7 +105,7 @@ class AIFPLDesugarer:
                 'bit-or', 'bit-and', 'bit-xor',
                 'integer-min', 'integer-max',
                 'float-min', 'float-max',
-                'append', 
+                'list-append',
                 'string-append',
             ]:
                 return self._desugar_fold_variadic(expr)
@@ -379,7 +379,7 @@ class AIFPLDesugarer:
 
         Handles:
             bit-or, bit-and, bit-xor  — bitwise ops, identity: 0
-            append                    — list concatenation, identity: ()
+            list-append               — list concatenation, identity: ()
             string-append             — string concatenation, identity: ""
             min, max                  — numeric reduction (1+ args required)
         """
@@ -400,7 +400,7 @@ class AIFPLDesugarer:
             if op_name == 'bit-xor':
                 return AIFPLASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
 
-            if op_name == 'append':
+            if op_name == 'list-append':
                 return self._make_list((self._make_symbol('quote', expr), self._make_list((), expr)), expr)
 
             if op_name == 'string-append':

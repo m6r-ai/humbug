@@ -141,11 +141,11 @@ class TestVariadicLambdaListOps:
         assert aifpl.evaluate_and_format(expr) == '(1 2 3 4)'
 
     def test_variadic_append(self, aifpl):
-        """Variadic append using fold."""
+        """Variadic list-append using fold."""
         expr = '''
-        (let ((my-append (lambda (. lists)
-                           (fold append (list) lists))))
-          (my-append (list 1 2) (list 3 4) (list 5)))
+        (let ((my-list-append (lambda (. lists)
+                           (fold list-append (list) lists))))
+          (my-list-append (list 1 2) (list 3 4) (list 5)))
         '''
         assert aifpl.evaluate_and_format(expr) == '(1 2 3 4 5)'
 

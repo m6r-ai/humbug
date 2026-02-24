@@ -25,9 +25,9 @@ class TestAIFPLCollectionEdgeCases:
 
         # Empty list operations that should work
         assert aifpl.evaluate("(list-reverse ())") == []
-        assert aifpl.evaluate("(append () ())") == []
-        assert aifpl.evaluate("(append () (list 1))") == [1]
-        assert aifpl.evaluate("(append (list 1) ())") == [1]
+        assert aifpl.evaluate("(list-append () ())") == []
+        assert aifpl.evaluate("(list-append () (list 1))") == [1]
+        assert aifpl.evaluate("(list-append (list 1) ())") == [1]
 
         # Empty list membership and search
         assert aifpl.evaluate("(list-member? 1 ())") is False
@@ -63,8 +63,8 @@ class TestAIFPLCollectionEdgeCases:
 
         # Single element list transformations
         assert aifpl.evaluate("(list-reverse (list 42))") == [42]
-        assert aifpl.evaluate("(append (list 42) ())") == [42]
-        assert aifpl.evaluate("(append () (list 42))") == [42]
+        assert aifpl.evaluate("(list-append (list 42) ())") == [42]
+        assert aifpl.evaluate("(list-append () (list 42))") == [42]
 
         # Single element list membership
         assert aifpl.evaluate("(list-member? 42 (list 42))") is True
@@ -220,12 +220,12 @@ class TestAIFPLCollectionEdgeCases:
         # Original list should not be modified by operations
         original_expr = "(list 1 2 3)"
 
-        # Test that append doesn't modify original
+        # Test that list-append doesn't modify original
         result = aifpl.evaluate(f"""
         (let ((original {original_expr}))
           (list
             original
-            (append original (list 4))
+            (list-append original (list 4))
             original))
         """)
 
@@ -275,12 +275,12 @@ class TestAIFPLCollectionEdgeCases:
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(list-cons 1 42)")
 
-        # append requires all arguments to be lists
+        # list-append requires all arguments to be lists
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(append (list 1 2) "hello")')
+            aifpl.evaluate('(list-append (list 1 2) "hello")')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(append (list 1 2) 42)")
+            aifpl.evaluate("(list-append (list 1 2) 42)")
 
     def test_collection_arity_errors(self, aifpl):
         """Test arity errors with collection operations."""
@@ -413,25 +413,25 @@ class TestAIFPLCollectionEdgeCases:
         assert aifpl.evaluate("(list-cons (list 0) (list 1 2))") == [[0], 1, 2]
 
     def test_collection_append_edge_cases(self, aifpl):
-        """Test append operation edge cases."""
+        """Test list-append operation edge cases."""
         # Append empty lists
-        assert aifpl.evaluate("(append () ())") == []
-        assert aifpl.evaluate("(append () () ())") == []
+        assert aifpl.evaluate("(list-append () ())") == []
+        assert aifpl.evaluate("(list-append () () ())") == []
 
         # Append to empty
-        assert aifpl.evaluate("(append () (list 1 2))") == [1, 2]
-        assert aifpl.evaluate("(append (list 1 2) ())") == [1, 2]
+        assert aifpl.evaluate("(list-append () (list 1 2))") == [1, 2]
+        assert aifpl.evaluate("(list-append (list 1 2) ())") == [1, 2]
 
         # Append multiple lists
-        assert aifpl.evaluate("(append (list 1) (list 2) (list 3))") == [1, 2, 3]
-        assert aifpl.evaluate("(append (list 1 2) (list 3 4) (list 5 6))") == [1, 2, 3, 4, 5, 6]
+        assert aifpl.evaluate("(list-append (list 1) (list 2) (list 3))") == [1, 2, 3]
+        assert aifpl.evaluate("(list-append (list 1 2) (list 3 4) (list 5 6))") == [1, 2, 3, 4, 5, 6]
 
         # Append with mixed types
-        result = aifpl.evaluate('(append (list 1) (list "hello") (list #t))')
+        result = aifpl.evaluate('(list-append (list 1) (list "hello") (list #t))')
         assert result == [1, "hello", True]
 
         # Append nested structures
-        result = aifpl.evaluate("(append (list (list 1)) (list (list 2)))")
+        result = aifpl.evaluate("(list-append (list (list 1)) (list (list 2)))")
         assert result == [[1], [2]]
 
     def test_collection_reverse_edge_cases(self, aifpl):
@@ -459,8 +459,8 @@ class TestAIFPLCollectionEdgeCases:
 
     def test_collection_memory_efficiency_large_operations(self, aifpl):
         """Test memory efficiency with large collection operations."""
-        # Large append operations
-        result = aifpl.evaluate("(list-length (append (range 1 501) (range 501 1001)))")
+        # Large list-append operations
+        result = aifpl.evaluate("(list-length (list-append (range 1 501) (range 501 1001)))")
         assert result == 1000
 
         # Large reverse operations
