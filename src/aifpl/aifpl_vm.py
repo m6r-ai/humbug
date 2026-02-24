@@ -333,27 +333,6 @@ class AIFPLVM:
 
         return value.value
 
-    def _ensure_number(self, value: AIFPLValue, operation_name: str) -> int | float | complex:
-        """
-        Ensure value is a number, raise user-friendly error if not.
-
-        Args:
-            value: Value to check
-            operation_name: Name of operation for error message (e.g., '+', '-')
-
-        Returns:
-            Python numeric value (int, float, or complex)
-
-        Raises:
-            AIFPLEvalError: If value is not a number
-        """
-        if not isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex)):
-            raise AIFPLEvalError(
-                f"Function '{operation_name}' requires number arguments, got {value.type_name()}"
-            )
-
-        return value.value
-
     def _ensure_real_number(self, value: AIFPLValue, operation_name: str) -> int | float:
         """
         Ensure value is a real number, raise user-friendly error if not.
@@ -1632,12 +1611,8 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """COMPLEX_REAL: Pop a complex number, push its real part as float."""
         a = self.stack.pop()
-        a_val = self._ensure_number(a, 'real')
-        if isinstance(a_val, complex):
-            self.stack.append(AIFPLFloat(a_val.real))
-            return None
-
-        self.stack.append(AIFPLFloat(float(a_val)))
+        a_val = self._ensure_complex(a, 'real')
+        self.stack.append(AIFPLFloat(a_val.real))
         return None
 
     def _op_complex_imag(  # pylint: disable=useless-return
@@ -1645,12 +1620,8 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """COMPLEX_IMAG: Pop a complex number, push its imaginary part as float."""
         a = self.stack.pop()
-        a_val = self._ensure_number(a, 'imag')
-        if isinstance(a_val, complex):
-            self.stack.append(AIFPLFloat(a_val.imag))
-            return None
-
-        self.stack.append(AIFPLFloat(0.0))
+        a_val = self._ensure_complex(a, 'imag')
+        self.stack.append(AIFPLFloat(a_val.imag))
         return None
 
     def _op_complex_expt(  # pylint: disable=useless-return

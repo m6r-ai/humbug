@@ -158,9 +158,10 @@ class AIFPLBuiltinRegistry:
         'alist-values': (1, 1),
         'alist-merge': (2, 2),
         'alist-length': (1, 1),
+        'range': (2, 3),
+
         '//': (2, 2),
         '%': (2, 2),
-        'range': (2, 3),
         'min': (1, None),
         'max': (1, None),
         'round': (1, 1),

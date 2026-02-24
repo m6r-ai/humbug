@@ -84,9 +84,14 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'real',
         'imag',
         'string=?',
-        '//', '%',
-        'min', 'max',
-        'round', 'floor', 'ceil',
+
+        '//',
+        '%',
+        'min',
+        'max',
+        'round',
+        'floor',
+        'ceil',
     }
 
     def __init__(self) -> None:
@@ -154,11 +159,8 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'string=?': self._fold_string_eq,
             'string!=?': self._fold_string_neq,
 
-            # Arithmetic operations
             '//': self._fold_floor_divide,
             '%': self._fold_modulo,
-
-            # Comparison operations
             'min': self._fold_min,
             'max': self._fold_max,
             'round': self._fold_round,

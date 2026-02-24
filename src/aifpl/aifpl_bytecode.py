@@ -345,6 +345,8 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'alist-merge': (Opcode.ALIST_MERGE, 2),
     'alist-set': (Opcode.ALIST_SET, 3),
     'alist-get': (Opcode.ALIST_GET, 3),
+    'range': (Opcode.RANGE, 3),
+
     '//': (Opcode.REAL_FLOOR_DIV, 2),
     '%': (Opcode.REAL_MOD, 2),
     'floor': (Opcode.REAL_FLOOR, 1),
@@ -352,7 +354,6 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'round': (Opcode.REAL_ROUND, 1),
     'min': (Opcode.REAL_MIN, 2),
     'max': (Opcode.REAL_MAX, 2),
-    'range': (Opcode.RANGE, 3),
 }
 
 @dataclass
