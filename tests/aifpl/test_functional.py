@@ -172,7 +172,7 @@ class TestFunctional:
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic filter operations
-        ('(filter (lambda (x) (> x 0)) (list -1 2 -3 4))', '(2 4)'),
+        ('(filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4))', '(2 4)'),
         ('(filter (lambda (x) (integer=? x 0)) (list 1 0 2 0 3))', '(0 0)'),
 
         # Filter with empty list
@@ -288,17 +288,17 @@ class TestFunctional:
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic find operations
-        ('(find (lambda (x) (> x 5)) (list 1 3 7 2))', '7'),
+        ('(find (lambda (x) (integer>? x 5)) (list 1 3 7 2))', '7'),
         ('(find (lambda (x) (integer=? x 0)) (list 1 2 0 3))', '0'),
 
         # Find with no match returns #f
-        ('(find (lambda (x) (> x 10)) (list 1 2 3))', '#f'),
+        ('(find (lambda (x) (integer>? x 10)) (list 1 2 3))', '#f'),
 
         # Find in empty list returns #f
         ('(find (lambda (x) #t) (list))', '#f'),
 
         # Find first match (short-circuit)
-        ('(find (lambda (x) (> x 2)) (list 1 3 5 7))', '3'),
+        ('(find (lambda (x) (integer>? x 2)) (list 1 3 5 7))', '3'),
 
         # Find with string predicate
         ('(find (lambda (s) (string-contains? s "o")) (list "hello" "world" "test"))', '"hello"'),
@@ -323,8 +323,8 @@ class TestFunctional:
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic any? operations
-        ('(any? (lambda (x) (> x 5)) (list 1 3 7))', '#t'),
-        ('(any? (lambda (x) (> x 10)) (list 1 3 7))', '#f'),
+        ('(any? (lambda (x) (integer>? x 5)) (list 1 3 7))', '#t'),
+        ('(any? (lambda (x) (integer>? x 10)) (list 1 3 7))', '#f'),
 
         # any? with empty list returns #f
         ('(any? (lambda (x) #t) (list))', '#f'),
@@ -338,14 +338,14 @@ class TestFunctional:
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic all? operations
-        ('(all? (lambda (x) (> x 0)) (list 1 3 7))', '#t'),
-        ('(all? (lambda (x) (> x 5)) (list 1 3 7))', '#f'),
+        ('(all? (lambda (x) (integer>? x 0)) (list 1 3 7))', '#t'),
+        ('(all? (lambda (x) (integer>? x 5)) (list 1 3 7))', '#f'),
 
         # all? with empty list returns #t (vacuous truth)
         ('(all? (lambda (x) #f) (list))', '#t'),
 
         # all? short-circuits on first false
-        ('(all? (lambda (x) (< x 5)) (list 1 2 6 3))', '#f'),
+        ('(all? (lambda (x) (integer<? x 5)) (list 1 2 6 3))', '#f'),
     ])
     def test_all_predicate_function(self, aifpl, expression, expected):
         """Test all? higher-order predicate function."""
@@ -378,7 +378,7 @@ class TestFunctional:
         """Test complex combinations of functional operations."""
         # Map followed by filter
         pipeline1 = '''
-        (filter (lambda (x) (> x 5))
+        (filter (lambda (x) (integer>? x 5))
                 (map (lambda (x) (integer* x 2)) (list 1 2 3 4 5)))
         '''
         helpers.assert_evaluates_to(aifpl, pipeline1, '(6 8 10)')
@@ -386,7 +386,7 @@ class TestFunctional:
         # Filter followed by fold
         pipeline2 = '''
         (fold integer+ 0
-              (filter (lambda (x) (> x 0)) (list -1 2 -3 4 5)))
+              (filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4 5)))
         '''
         helpers.assert_evaluates_to(aifpl, pipeline2, '11')  # 2 + 4 + 5
 
@@ -394,7 +394,7 @@ class TestFunctional:
         pipeline3 = '''
         (fold integer*
               1
-              (filter (lambda (x) (> x 1))
+              (filter (lambda (x) (integer>? x 1))
                       (map (lambda (x) (integer* x x))
                            (list 1 2 3 4))))
         '''
@@ -405,7 +405,7 @@ class TestFunctional:
         # Factorial using tail recursion
         factorial_expr = '''
         (letrec ((factorial (lambda (n acc)
-                             (if (<= n 1) acc (factorial (integer- n 1) (integer* n acc))))))
+                             (if (integer<=? n 1) acc (factorial (integer- n 1) (integer* n acc))))))
           (factorial 5 1))
         '''
         helpers.assert_evaluates_to(aifpl, factorial_expr, '120')
@@ -477,7 +477,7 @@ class TestFunctional:
         data_processing = '''
         (fold integer+
               0
-              (filter (lambda (x) (> x 10))
+              (filter (lambda (x) (integer>? x 10))
                       (map (lambda (x) (if (integer=? (% x 2) 0) (integer* x x) x))
                            (list 1 2 3 4 5 6))))
         '''
@@ -612,7 +612,7 @@ class TestFunctional:
         # Filter with nested lambda
         helpers.assert_evaluates_to(
             aifpl,
-            '(filter (lambda (x) ((lambda (y) (> y 0)) x)) (list -1 2 -3 4))',
+            '(filter (lambda (x) ((lambda (y) (integer>? y 0)) x)) (list -1 2 -3 4))',
             '(2 4)'
         )
 
@@ -621,7 +621,7 @@ class TestFunctional:
             aifpl,
             '''(let* ((process-list (lambda (lst)
                                      (map (lambda (x) 
-                                            (if (> x 0)
+                                            (if (integer>? x 0)
                                                 ((lambda (y) (integer* y y)) x)
                                                 ((lambda (z) (integer-negate z)) x)))
                                           lst))))
@@ -639,14 +639,14 @@ class TestFunctional:
         # any? with nested lambda
         helpers.assert_evaluates_to(
             aifpl,
-            '(any? (lambda (x) ((lambda (y) (> y 5)) x)) (list 1 3 7))',
+            '(any? (lambda (x) ((lambda (y) (integer>? y 5)) x)) (list 1 3 7))',
             '#t'
         )
 
         # all? with nested lambda
         helpers.assert_evaluates_to(
             aifpl,
-            '(all? (lambda (x) ((lambda (y) (> y 0)) x)) (list 1 3 7))',
+            '(all? (lambda (x) ((lambda (y) (integer>? y 0)) x)) (list 1 3 7))',
             '#t'
         )
 
@@ -672,7 +672,7 @@ class TestFunctional:
         helpers.assert_evaluates_to(
             aifpl,
             '''(letrec ((factorial (lambda (n)
-                                   (if (<= n 1) 
+                                   (if (integer<=? n 1) 
                                        1 
                                        (integer* n (factorial (integer- n 1)))))))
                  (factorial 4))''',
@@ -711,7 +711,7 @@ class TestFunctional:
             aifpl,
             '''(let ((data (list 1 2 3 4 5)))
                  (fold integer+ 0 
-                       (filter (lambda (x) ((lambda (y) (> y 2)) x))
+                       (filter (lambda (x) ((lambda (y) (integer>? y 2)) x))
                                (map (lambda (x) ((lambda (y) (integer* y 2)) x)) 
                                     data))))''',
             '28'  # map: (2 4 6 8 10), filter: (4 6 8 10), fold: 4+6+8+10 = 28
@@ -720,9 +720,9 @@ class TestFunctional:
     @pytest.mark.parametrize("expression,expected", [
         # These are the core failing cases that expose the bug
         ('(map (lambda (x) ((lambda (y) (integer* y 2)) x)) (list 1 2 3))', '(2 4 6)'),
-        ('(filter (lambda (x) ((lambda (y) (> y 0)) x)) (list -1 2 -3 4))', '(2 4)'),
-        ('(any? (lambda (x) ((lambda (y) (> y 5)) x)) (list 1 3 7))', '#t'),
-        ('(all? (lambda (x) ((lambda (y) (> y 0)) x)) (list 1 3 7))', '#t'),
+        ('(filter (lambda (x) ((lambda (y) (integer>? y 0)) x)) (list -1 2 -3 4))', '(2 4)'),
+        ('(any? (lambda (x) ((lambda (y) (integer>? y 5)) x)) (list 1 3 7))', '#t'),
+        ('(all? (lambda (x) ((lambda (y) (integer>? y 0)) x)) (list 1 3 7))', '#t'),
         ('(find (lambda (x) ((lambda (y) (integer=? y 3)) x)) (list 1 3 7))', '3'),
         ('(fold (lambda (acc x) ((lambda (y) (integer+ acc y)) (integer* x 2))) 0 (list 1 2 3))', '12'),
     ])

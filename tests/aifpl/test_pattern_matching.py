@@ -68,8 +68,8 @@ class TestPatternMatching:
         ('(match "world" ("hello" "greeting") (s (string-upcase s)))', '"WORLD"'),
 
         # Variable binding in complex expressions
-        ('(match 7 (n (if (> n 5) "big" "small")))', '"big"'),
-        ('(match 3 (n (if (> n 5) "big" "small")))', '"small"'),
+        ('(match 7 (n (if (integer>? n 5) "big" "small")))', '"big"'),
+        ('(match 3 (n (if (integer>? n 5) "big" "small")))', '"small"'),
     ])
     def test_variable_binding_patterns(self, aifpl, expression, expected):
         """Test variable binding in patterns."""
@@ -261,7 +261,7 @@ class TestPatternMatching:
         # List of numbers
         helpers.assert_evaluates_to(
             aifpl,
-            '(match (list 1 2 3) ((list? l) (if (> (length l) 2) "long list" "short list")))',
+            '(match (list 1 2 3) ((list? l) (if (integer>? (length l) 2) "long list" "short list")))',
             '"long list"'
         )
 
@@ -296,14 +296,14 @@ class TestPatternMatching:
         # Pattern matching with additional conditions
         guarded_pattern = '''
         (match 15
-               ((number? n) (if (> n 10) (integer* n 2) n))
+               ((number? n) (if (integer>? n 10) (integer* n 2) n))
                (_ "not number"))
         '''
         helpers.assert_evaluates_to(aifpl, guarded_pattern, '30')
 
         guarded_pattern_2 = '''
         (match 5
-               ((number? n) (if (> n 10) (integer* n 2) n))
+               ((number? n) (if (integer>? n 10) (integer* n 2) n))
                (_ "not number"))
         '''
         helpers.assert_evaluates_to(aifpl, guarded_pattern_2, '5')
@@ -368,7 +368,7 @@ class TestPatternMatching:
         filter_with_match = '''
         (filter (lambda (item)
                   (match item
-                         ((number? n) (> n 5))
+                         ((number? n) (integer>? n 5))
                          (_ #f)))
                 (list 1 10 "hello" 7 3))
         '''
@@ -522,8 +522,8 @@ class TestPatternMatching:
         data_processor = '''
         (let ((process (lambda (data)
                         (match data
-                               ((number? n) (if (> n 0) "positive" "non-positive"))
-                               ((string? s) (if (> (string-length s) 5) "long" "short"))
+                               ((number? n) (if (integer>? n 0) "positive" "non-positive"))
+                               ((string? s) (if (integer>? (string-length s) 5) "long" "short"))
                                ((list? l) (if (null? l) "empty-list" "non-empty-list"))
                                (_ "unknown")))))
           (list (process 42)
@@ -602,7 +602,7 @@ class TestPatternMatching:
         (match 50
                (1 "one") (2 "two") (3 "three") (4 "four") (5 "five")
                (10 "ten") (20 "twenty") (30 "thirty") (40 "forty")
-               ((number? n) (if (> n 45) "big number" "medium number"))
+               ((number? n) (if (integer>? n 45) "big number" "medium number"))
                (_ "unknown"))
         '''
         helpers.assert_evaluates_to(aifpl, many_patterns, '"big number"')

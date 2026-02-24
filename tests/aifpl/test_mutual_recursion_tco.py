@@ -90,11 +90,11 @@ class TestMutualRecursionWithAccumulators:
         """
         mutual_with_acc = '''
         (letrec ((count-down-a (lambda (n acc)
-                                 (if (<= n 0)
+                                 (if (integer<=? n 0)
                                      acc
                                      (count-down-b (integer- n 1) (integer+ acc 1)))))
                  (count-down-b (lambda (n acc)
-                                 (if (<= n 0)
+                                 (if (integer<=? n 0)
                                      acc
                                      (count-down-a (integer- n 1) (integer+ acc 2))))))
           (count-down-a 5000 0))
@@ -134,9 +134,9 @@ class TestMutualRecursionMultipleFunctions:
         Tests that TCO works for more complex mutual recursion patterns.
         """
         three_way = '''
-        (letrec ((func-a (lambda (n) (if (<= n 0) "a" (func-b (integer- n 1)))))
-                 (func-b (lambda (n) (if (<= n 0) "b" (func-c (integer- n 1)))))
-                 (func-c (lambda (n) (if (<= n 0) "c" (func-a (integer- n 1))))))
+        (letrec ((func-a (lambda (n) (if (integer<=? n 0) "a" (func-b (integer- n 1)))))
+                 (func-b (lambda (n) (if (integer<=? n 0) "b" (func-c (integer- n 1)))))
+                 (func-c (lambda (n) (if (integer<=? n 0) "c" (func-a (integer- n 1))))))
           (func-a 10000))
         '''
         result = aifpl.evaluate_and_format(three_way)
@@ -149,10 +149,10 @@ class TestMutualRecursionMultipleFunctions:
         Tests even more complex mutual recursion patterns.
         """
         four_way = '''
-        (letrec ((func-a (lambda (n) (if (<= n 0) 1 (func-b (integer- n 1)))))
-                 (func-b (lambda (n) (if (<= n 0) 2 (func-c (integer- n 1)))))
-                 (func-c (lambda (n) (if (<= n 0) 3 (func-d (integer- n 1)))))
-                 (func-d (lambda (n) (if (<= n 0) 4 (func-a (integer- n 1))))))
+        (letrec ((func-a (lambda (n) (if (integer<=? n 0) 1 (func-b (integer- n 1)))))
+                 (func-b (lambda (n) (if (integer<=? n 0) 2 (func-c (integer- n 1)))))
+                 (func-c (lambda (n) (if (integer<=? n 0) 3 (func-d (integer- n 1)))))
+                 (func-d (lambda (n) (if (integer<=? n 0) 4 (func-a (integer- n 1))))))
           (func-a 10000))
         '''
         result = aifpl.evaluate(four_way)
@@ -189,13 +189,13 @@ class TestMutualRecursionWithLet:
         """
         mutual_complex = '''
         (letrec ((func-a (lambda (n acc)
-                          (if (<= n 0)
+                          (if (integer<=? n 0)
                               acc
                               (let ((next-n (integer- n 1))
                                     (next-acc (integer+ acc 1)))
                                 (func-b next-n next-acc)))))
                  (func-b (lambda (n acc)
-                          (if (<= n 0)
+                          (if (integer<=? n 0)
                               acc
                               (let ((next-n (integer- n 1))
                                     (next-acc (integer* acc 2)))
@@ -217,8 +217,8 @@ class TestMutualRecursionEdgeCases:
         This should work even without TCO.
         """
         different_arities = '''
-        (letrec ((func-one (lambda (n) (if (<= n 0) "done" (func-two n 0))))
-                 (func-two (lambda (n acc) (if (<= n 0) acc (func-one (integer- n 1))))))
+        (letrec ((func-one (lambda (n) (if (integer<=? n 0) "done" (func-two n 0))))
+                 (func-two (lambda (n acc) (if (integer<=? n 0) acc (func-one (integer- n 1))))))
           (func-one 10))
         '''
         result = aifpl.evaluate_and_format(different_arities)
@@ -231,8 +231,8 @@ class TestMutualRecursionEdgeCases:
         Tests that TCO handles functions with different parameter counts.
         """
         different_arities = '''
-        (letrec ((func-one (lambda (n) (if (<= n 0) "done" (func-two n 0))))
-                 (func-two (lambda (n acc) (if (<= n 0) acc (func-one (integer- n 1))))))
+        (letrec ((func-one (lambda (n) (if (integer<=? n 0) "done" (func-two n 0))))
+                 (func-two (lambda (n acc) (if (integer<=? n 0) acc (func-one (integer- n 1))))))
           (func-one 10000))
         '''
         result = aifpl.evaluate_and_format(different_arities)
@@ -246,13 +246,13 @@ class TestMutualRecursionEdgeCases:
         """
         with_conditionals = '''
         (letrec ((process-a (lambda (n mode)
-                             (if (<= n 0)
+                             (if (integer<=? n 0)
                                  mode
                                  (if (integer=? mode 0)
                                      (process-b (integer- n 1) 1)
                                      (process-b (integer- n 1) 0)))))
                  (process-b (lambda (n mode)
-                             (if (<= n 0)
+                             (if (integer<=? n 0)
                                  mode
                                  (if (integer=? mode 0)
                                      (process-a (integer- n 1) 1)
@@ -269,9 +269,9 @@ class TestMutualRecursionEdgeCases:
         Tests that both patterns can coexist in the same letrec.
         """
         mixed = '''
-        (letrec ((self-rec (lambda (n) (if (<= n 0) 0 (self-rec (integer- n 1)))))
-                 (mutual-a (lambda (n) (if (<= n 0) 1 (mutual-b (integer- n 1)))))
-                 (mutual-b (lambda (n) (if (<= n 0) 2 (mutual-a (integer- n 1))))))
+        (letrec ((self-rec (lambda (n) (if (integer<=? n 0) 0 (self-rec (integer- n 1)))))
+                 (mutual-a (lambda (n) (if (integer<=? n 0) 1 (mutual-b (integer- n 1)))))
+                 (mutual-b (lambda (n) (if (integer<=? n 0) 2 (mutual-a (integer- n 1))))))
           (list (self-rec 10) (mutual-a 10)))
         '''
         helpers.assert_evaluates_to(aifpl, mixed, '(0 1)')
@@ -283,9 +283,9 @@ class TestMutualRecursionEdgeCases:
         Self-recursion should use existing TCO, mutual recursion should use new TCO.
         """
         mixed = '''
-        (letrec ((self-rec (lambda (n) (if (<= n 0) 0 (self-rec (integer- n 1)))))
-                 (mutual-a (lambda (n) (if (<= n 0) 1 (mutual-b (integer- n 1)))))
-                 (mutual-b (lambda (n) (if (<= n 0) 2 (mutual-a (integer- n 1))))))
+        (letrec ((self-rec (lambda (n) (if (integer<=? n 0) 0 (self-rec (integer- n 1)))))
+                 (mutual-a (lambda (n) (if (integer<=? n 0) 1 (mutual-b (integer- n 1)))))
+                 (mutual-b (lambda (n) (if (integer<=? n 0) 2 (mutual-a (integer- n 1))))))
           (list (self-rec 10000) (mutual-a 10000)))
         '''
         helpers.assert_evaluates_to(aifpl, mixed, '(0 1)')
@@ -368,7 +368,7 @@ class TestMutualRecursionPerformance:
         """
         # Self-recursion (already works)
         self_rec = '''
-        (letrec ((countdown (lambda (n) (if (<= n 0) "done" (countdown (integer- n 1))))))
+        (letrec ((countdown (lambda (n) (if (integer<=? n 0) "done" (countdown (integer- n 1))))))
           (countdown 100000))
         '''
         assert aifpl.evaluate_and_format(self_rec) == '"done"'

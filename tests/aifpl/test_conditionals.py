@@ -14,8 +14,8 @@ class TestConditionals:
         ('(if #f "yes" "no")', '"no"'),
 
         # If with numeric conditions
-        ('(if (> 5 3) "greater" "less")', '"greater"'),
-        ('(if (< 5 3) "greater" "less")', '"less"'),
+        ('(if (integer>? 5 3) "greater" "less")', '"greater"'),
+        ('(if (integer<? 5 3) "greater" "less")', '"less"'),
         ('(if (integer=? 5 5) "equal" "not equal")', '"equal"'),
 
         # If with different result types
@@ -55,7 +55,7 @@ class TestConditionals:
         assert result == '"empty"'
 
         # The false branch would cause an error if evaluated
-        result = aifpl.evaluate_and_format('(if (> 10 5) "big" (first (list)))')
+        result = aifpl.evaluate_and_format('(if (integer>? 10 5) "big" (first (list)))')
         assert result == '"big"'
 
     def test_if_requires_boolean_condition(self, aifpl):
@@ -90,9 +90,9 @@ class TestConditionals:
         ('(if #f (if #t "inner-true" "inner-false") "outer-false")', '"outer-false"'),
 
         # Complex nested conditions
-        ('(if (> 10 5) (if (< 3 7) "both-true" "first-true-second-false") "first-false")', '"both-true"'),
-        ('(if (> 10 5) (if (> 3 7) "both-true" "first-true-second-false") "first-false")', '"first-true-second-false"'),
-        ('(if (< 10 5) (if (< 3 7) "both-true" "first-false-second-true") "first-false")', '"first-false"'),
+        ('(if (integer>? 10 5) (if (integer<? 3 7) "both-true" "first-true-second-false") "first-false")', '"both-true"'),
+        ('(if (integer>? 10 5) (if (integer>? 3 7) "both-true" "first-true-second-false") "first-false")', '"first-true-second-false"'),
+        ('(if (integer<? 10 5) (if (integer<? 3 7) "both-true" "first-false-second-true") "first-false")', '"first-false"'),
     ])
     def test_nested_if_expressions(self, aifpl, expression, expected):
         """Test nested if expressions."""
@@ -361,7 +361,7 @@ class TestConditionals:
         # Safe division based on condition
         helpers.assert_evaluates_to(
             aifpl,
-            '(if (> 10 0) (float/ 20.0 10.0) "undefined")',
+            '(if (integer>? 10 0) (float/ 20.0 10.0) "undefined")',
             '2.0'
         )
 
@@ -374,13 +374,13 @@ class TestConditionals:
         # Multiple conditions
         helpers.assert_evaluates_to(
             aifpl,
-            '(if (and (> 5 3) (< 2 4)) "both true" "at least one false")',
+            '(if (and (integer>? 5 3) (integer<? 2 4)) "both true" "at least one false")',
             '"both true"'
         )
 
         helpers.assert_evaluates_to(
             aifpl,
-            '(if (or (> 5 10) (< 2 4)) "at least one true" "both false")',
+            '(if (or (integer>? 5 10) (integer<? 2 4)) "at least one true" "both false")',
             '"at least one true"'
         )
 
@@ -451,8 +451,8 @@ class TestConditionals:
         """Test deeply nested conditional expressions."""
         # Nested ternary-like logic
         nested_expr = '''
-        (if (> 10 5)
-            (if (< 3 7)
+        (if (integer>? 10 5)
+            (if (integer<? 3 7)
                 (if (integer=? 2 2) "all true" "third false")
                 "second false")
             "first false")
@@ -461,8 +461,8 @@ class TestConditionals:
 
         # Complex decision tree
         decision_tree = '''
-        (if (> 15 10)
-            (if (< 5 8)
+        (if (integer>? 15 10)
+            (if (integer<? 5 8)
                 (if (integer=? 3 3) 
                     (if #t "deeply nested true" "impossible")
                     "equality false")
@@ -490,7 +490,7 @@ class TestConditionals:
         # Invalid string index prevention
         helpers.assert_evaluates_to(
             aifpl,
-            '(if (< (string-length "hi") 5) "short string" (string-ref "hi" 10))',
+            '(if (integer<? (string-length "hi") 5) "short string" (string-ref "hi" 10))',
             '"short string"'
         )
 

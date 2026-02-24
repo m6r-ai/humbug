@@ -34,7 +34,7 @@ class TestTailCallOptimizationWithLet:
         # Simple countdown - direct tail call
         direct_recursion = '''
         (letrec ((countdown (lambda (n)
-                             (if (<= n 0) 
+                             (if (integer<=? n 0) 
                                  "done" 
                                  (countdown (integer- n 1))))))
           (countdown 200))
@@ -50,7 +50,7 @@ class TestTailCallOptimizationWithLet:
         """
         let_then_recursion = '''
         (letrec ((countdown (lambda (n)
-                             (if (<= n 0) 
+                             (if (integer<=? n 0) 
                                  "done" 
                                  (let ((next-n (integer- n 1)))
                                    (countdown next-n))))))
@@ -67,7 +67,7 @@ class TestTailCallOptimizationWithLet:
         """
         accumulator_with_let = '''
         (letrec ((sum-to-n (lambda (n acc)
-                            (if (<= n 0) 
+                            (if (integer<=? n 0) 
                                 acc 
                                 (let ((next-acc (integer+ acc n)))
                                   (sum-to-n (integer- n 1) next-acc))))))
@@ -85,7 +85,7 @@ class TestTailCallOptimizationWithLet:
         """
         multiple_bindings = '''
         (letrec ((compute (lambda (n result)
-                           (if (<= n 0) 
+                           (if (integer<=? n 0) 
                                result 
                                (let ((next-n (integer- n 1))
                                      (next-result (integer* result 2)))
@@ -171,7 +171,7 @@ class TestTailCallOptimizationWithLet:
         """
         nested_let = '''
         (letrec ((process (lambda (n acc)
-                           (if (<= n 0) 
+                           (if (integer<=? n 0) 
                                acc 
                                (let ((temp1 (integer- n 1)))
                                  (let ((temp2 (integer+ acc n)))
@@ -206,14 +206,14 @@ class TestTailCallOptimizationWithLet:
         """
         # Direct tail call - works
         direct = '''
-        (letrec ((f (lambda (n) (if (<= n 0) "done" (f (integer- n 1))))))
+        (letrec ((f (lambda (n) (if (integer<=? n 0) "done" (f (integer- n 1))))))
           (f 500))
         '''
         assert aifpl.evaluate_and_format(direct) == '"done"'
 
         # Let-based tail call - now also works!
         with_let = '''
-        (letrec ((f (lambda (n) (if (<= n 0) "done" (let ((x (integer- n 1))) (f x))))))
+        (letrec ((f (lambda (n) (if (integer<=? n 0) "done" (let ((x (integer- n 1))) (f x))))))
           (f 500))
         '''
         assert aifpl.evaluate_and_format(with_let) == '"done"'
@@ -227,7 +227,7 @@ class TestTailCallOptimizationWithLet:
         """
         # This now works with proper TCO
         test_depth = '''
-        (letrec ((f (lambda (n) (if (<= n 0) n (let ((x (integer- n 1))) (f x))))))
+        (letrec ((f (lambda (n) (if (integer<=? n 0) n (let ((x (integer- n 1))) (f x))))))
           (f 500))
         '''
 
@@ -266,7 +266,7 @@ class TestTailCallOptimizationWithLet:
                                    (if (pred head)
                                        (my-filter pred tail (cons head acc))
                                        (my-filter pred tail acc)))))))
-          (my-filter (lambda (x) (> x 5)) (range 1 11) (list)))
+          (my-filter (lambda (x) (integer>? x 5)) (range 1 11) (list)))
         '''
         # Should return list of numbers from 6 to 10
         helpers.assert_evaluates_to(aifpl, custom_filter, '(6 7 8 9 10)')
@@ -280,7 +280,7 @@ class TestTailCallOptimizationLetEdgeCases:
         Edge case: Empty let before tail call works.
         """
         empty_let = '''
-        (letrec ((f (lambda (n) (if (<= n 0) "done" (let () (f (integer- n 1)))))))
+        (letrec ((f (lambda (n) (if (integer<=? n 0) "done" (let () (f (integer- n 1)))))))
           (f 100))
         '''
         helpers.assert_evaluates_to(aifpl, empty_let, '"done"')
@@ -291,7 +291,7 @@ class TestTailCallOptimizationLetEdgeCases:
         """
         unused_binding = '''
         (letrec ((f (lambda (n) 
-                     (if (<= n 0) 
+                     (if (integer<=? n 0) 
                          "done" 
                          (let ((unused 42))
                            (f (integer- n 1)))))))
@@ -335,7 +335,7 @@ class TestTailCallOptimizationVerification:
         """Verify that direct tail calls continue to work after the fix."""
         direct = '''
         (letrec ((f (lambda (n acc) 
-                     (if (<= n 0) acc (f (integer- n 1) (integer+ acc 1))))))
+                     (if (integer<=? n 0) acc (f (integer- n 1) (integer+ acc 1))))))
           (f 500 0))
         '''
         helpers.assert_evaluates_to(aifpl, direct, '500')
@@ -344,7 +344,7 @@ class TestTailCallOptimizationVerification:
         """Verify that tail calls in if branches continue to work."""
         if_branches = '''
         (letrec ((f (lambda (n) 
-                     (if (<= n 0) 
+                     (if (integer<=? n 0) 
                          "zero" 
                          (if (integer=? n 1) 
                              "one" 
@@ -359,7 +359,7 @@ class TestTailCallOptimizationVerification:
         """
         combined = '''
         (letrec ((f (lambda (n acc)
-                     (if (<= n 0)
+                     (if (integer<=? n 0)
                          acc
                          (if (integer=? (% n 2) 0)
                              (let ((half (integer/ n 2)))
@@ -381,7 +381,7 @@ class TestTailCallOptimizationVerification:
         """
         comprehensive = '''
         (letrec ((process (lambda (n mode acc)
-                           (if (<= n 0)
+                           (if (integer<=? n 0)
                                acc
                                (if (integer=? mode 0)
                                    ; Direct tail call
@@ -410,7 +410,7 @@ class TestTailCallOptimizationPerformance:
         """
         deep = '''
         (letrec ((countdown (lambda (n)
-                             (if (<= n 0)
+                             (if (integer<=? n 0)
                                  "done"
                                  (let ((next (integer- n 1)))
                                    (countdown next))))))
@@ -425,7 +425,7 @@ class TestTailCallOptimizationPerformance:
         """
         factorial = '''
         (letrec ((fact (lambda (n acc)
-                        (if (<= n 1)
+                        (if (integer<=? n 1)
                             acc
                             (let ((next-n (integer- n 1))
                                   (next-acc (integer* n acc)))
@@ -440,7 +440,7 @@ class TestTailCallOptimizationPerformance:
         """
         fibonacci = '''
         (letrec ((fib (lambda (n a b)
-                       (if (<= n 0)
+                       (if (integer<=? n 0)
                            a
                            (let ((next-n (integer- n 1))
                                  (next-a b)
