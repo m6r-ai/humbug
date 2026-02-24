@@ -230,7 +230,7 @@ class TestAIFPLValueEdgeCases:
         assert result[999] == 1000
 
         # Large string operations - check actual format
-        result = aifpl.evaluate('(string-join (map number->string (range 1 101)) ",")')
+        result = aifpl.evaluate('(string-join (map integer->string (range 1 101)) ",")')
         assert isinstance(result, str)
         # AIFPL returns the string without quotes in the result
         assert result.startswith('1,2,3')
@@ -272,14 +272,8 @@ class TestAIFPLValueEdgeCases:
         assert aifpl.evaluate('(string->number "3.14")') == 3.14
         assert aifpl.evaluate('(string->number "-5")') == -5
 
-        # Number to string conversions
-        assert aifpl.evaluate('(number->string 42)') == "42"
-        assert aifpl.evaluate('(number->string 3.14)') == "3.14"
-        assert aifpl.evaluate('(number->string -5)') == "-5"
-
         # Edge case conversions
         assert aifpl.evaluate('(string->number "0")') == 0
-        assert aifpl.evaluate('(number->string 0)') == "0"
 
     def test_value_arithmetic_edge_cases(self, aifpl):
         """Test arithmetic operations with edge case values."""

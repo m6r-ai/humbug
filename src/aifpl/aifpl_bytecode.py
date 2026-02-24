@@ -72,6 +72,8 @@ class Opcode(IntEnum):
     INTEGER_BIT_OR = auto()  # Bitwise OR: a | b
     INTEGER_BIT_AND = auto() # Bitwise AND: a & b
     INTEGER_BIT_XOR = auto() # Bitwise XOR: a ^ b
+    INTEGER_TO_STRING = auto()
+                             # Convert integer to string
     INTEGER_TO_STRING_BIN = auto()
                              # Convert integer to binary string
     INTEGER_TO_STRING_HEX = auto()
@@ -102,7 +104,9 @@ class Opcode(IntEnum):
     FLOAT_EXP = auto()       # float-exp x
     FLOAT_SQRT = auto()      # float-sqrt x
     FLOAT_ABS = auto()       # float-abs x
-    FLOAT_TO_INTEGER = auto() # Convert float to integer
+    FLOAT_TO_INTEGER = auto()
+                             # Convert float to integer
+    FLOAT_TO_STRING = auto() # Convert float to string
 
     # Real number operations
     REAL_FLOOR_DIV = auto()  # Calculate a // b (floor division)
@@ -134,10 +138,8 @@ class Opcode(IntEnum):
     COMPLEX_EXP = auto()     # complex-exp x
     COMPLEX_SQRT = auto()    # complex-sqrt x
     COMPLEX_ABS = auto()     # complex-abs x  (returns float: magnitude)
-
-    # Numeric operations
-    NUMBER_TO_STRING = auto()
-                             # Convert number to string
+    COMPLEX_TO_STRING = auto()
+                             # Convert complex to string
 
     # String operations
     STRING_P = auto()        # Check if string
@@ -243,6 +245,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'bit-or': (Opcode.INTEGER_BIT_OR, 2),
     'bit-and': (Opcode.INTEGER_BIT_AND, 2),
     'bit-xor': (Opcode.INTEGER_BIT_XOR, 2),
+    'integer->string': (Opcode.INTEGER_TO_STRING, 1),
     'bin': (Opcode.INTEGER_TO_STRING_BIN, 1),
     'hex': (Opcode.INTEGER_TO_STRING_HEX, 1),
     'oct': (Opcode.INTEGER_TO_STRING_OCT, 1),
@@ -269,6 +272,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'float-sqrt': (Opcode.FLOAT_SQRT, 1),
     'float-abs': (Opcode.FLOAT_ABS, 1),
     'integer': (Opcode.FLOAT_TO_INTEGER, 1),
+    'float->string': (Opcode.FLOAT_TO_STRING, 1),
     'complex': (Opcode.COMPLEX, 2),
     'complex?': (Opcode.COMPLEX_P, 1),
     'complex=?': (Opcode.COMPLEX_EQ_P, 2),
@@ -287,6 +291,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'complex-exp': (Opcode.COMPLEX_EXP, 1),
     'complex-sqrt': (Opcode.COMPLEX_SQRT, 1),
     'complex-abs': (Opcode.COMPLEX_ABS, 1),
+    'complex->string': (Opcode.COMPLEX_TO_STRING, 1),
     'real': (Opcode.COMPLEX_REAL, 1),
     'imag': (Opcode.COMPLEX_IMAG, 1),
     'string?': (Opcode.STRING_P, 1),
@@ -340,7 +345,6 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'alist-merge': (Opcode.ALIST_MERGE, 2),
     'alist-set': (Opcode.ALIST_SET, 3),
     'alist-get': (Opcode.ALIST_GET, 3),
-    'number->string': (Opcode.NUMBER_TO_STRING, 1),
     '//': (Opcode.REAL_FLOOR_DIV, 2),
     '%': (Opcode.REAL_MOD, 2),
     'floor': (Opcode.REAL_FLOOR, 1),
@@ -396,6 +400,7 @@ class Instruction:
             Opcode.INTEGER_BIT_NOT,
             Opcode.INTEGER_BIT_SHIFT_LEFT,
             Opcode.INTEGER_BIT_SHIFT_RIGHT,
+            Opcode.INTEGER_TO_STRING,
             Opcode.INTEGER_TO_STRING_BIN,
             Opcode.INTEGER_TO_STRING_HEX,
             Opcode.INTEGER_TO_STRING_OCT,
@@ -422,6 +427,7 @@ class Instruction:
             Opcode.FLOAT_SQRT,
             Opcode.FLOAT_ABS,
             Opcode.FLOAT_TO_INTEGER,
+            Opcode.FLOAT_TO_STRING,
             Opcode.COMPLEX,
             Opcode.COMPLEX_P,
             Opcode.COMPLEX_EQ_P,
@@ -441,6 +447,7 @@ class Instruction:
             Opcode.COMPLEX_ABS,
             Opcode.COMPLEX_REAL,
             Opcode.COMPLEX_IMAG,
+            Opcode.COMPLEX_TO_STRING,
             Opcode.STRING_P,
             Opcode.STRING_EQ_P,
             Opcode.STRING_NEQ_P,
@@ -500,7 +507,6 @@ class Instruction:
             Opcode.REAL_FLOOR,
             Opcode.REAL_CEIL,
             Opcode.REAL_ROUND,
-            Opcode.NUMBER_TO_STRING,
         }
         if self.opcode in no_arg_opcodes:
             return 0

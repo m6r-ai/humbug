@@ -339,7 +339,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # Number/string conversions
         result = aifpl.evaluate("""
         (let* ((num 42)
-               (str (number->string num))
+               (str (integer->string num))
                (back-to-num (string->number str))
                (doubled (integer* back-to-num 2)))
           doubled)
@@ -349,7 +349,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # Complex type conversion chain
         result = aifpl.evaluate("""
         (let* ((numbers (list 1 2 3))
-               (strings (map number->string numbers))
+               (strings (map integer->string numbers))
                (joined (string-join strings ","))
                (length-val (string-length joined)))
           length-val)

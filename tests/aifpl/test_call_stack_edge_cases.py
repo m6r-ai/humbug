@@ -178,8 +178,8 @@ class TestAIFPLCallStackEdgeCases:
         result = aifpl.evaluate('''
         (string->number
           (string-append
-            (number->string (integer+ 2 3))
-            (number->string (integer* 2 2))))
+            (integer->string (integer+ 2 3))
+            (integer->string (integer* 2 2))))
         ''')
         assert result == 54  # "5" + "4" = "54" -> 54
 
@@ -331,8 +331,8 @@ class TestAIFPLCallStackEdgeCases:
         (if (integer>? (length (list 1 2 3)) 2)
             (string->number
               (string-append
-                (number->string (integer+ 5 5))
-                (number->string (integer* 2 3))))
+                (integer->string (integer+ 5 5))
+                (integer->string (integer* 2 3))))
             0)
         """
         result = aifpl.evaluate(mixed_expr)

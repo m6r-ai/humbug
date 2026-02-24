@@ -155,6 +155,7 @@ class BytecodeValidator:
             Opcode.INTEGER_BIT_OR: (2, 1),
             Opcode.INTEGER_BIT_AND: (2, 1),
             Opcode.INTEGER_BIT_XOR: (2, 1),
+            Opcode.INTEGER_TO_STRING: (1, 1),
             Opcode.INTEGER_TO_STRING_BIN: (1, 1),
             Opcode.INTEGER_TO_STRING_HEX: (1, 1),
             Opcode.INTEGER_TO_STRING_OCT: (1, 1),
@@ -183,6 +184,7 @@ class BytecodeValidator:
             Opcode.FLOAT_SQRT: (1, 1),
             Opcode.FLOAT_ABS: (1, 1),
             Opcode.FLOAT_TO_INTEGER: (1, 1),
+            Opcode.FLOAT_TO_STRING: (1, 1),
 
             # Complex number operations
             Opcode.COMPLEX: (2, 1),
@@ -205,6 +207,7 @@ class BytecodeValidator:
             Opcode.COMPLEX_EXP: (1, 1),
             Opcode.COMPLEX_SQRT: (1, 1),
             Opcode.COMPLEX_ABS: (1, 1),
+            Opcode.COMPLEX_TO_STRING: (1, 1),
 
             # Real number operations
             Opcode.REAL_FLOOR_DIV: (2, 1),
@@ -214,9 +217,6 @@ class BytecodeValidator:
             Opcode.REAL_ROUND: (1, 1),
             Opcode.REAL_MIN: (2, 1),
             Opcode.REAL_MAX: (2, 1),
-
-            # Number operations
-            Opcode.NUMBER_TO_STRING: (1, 1),
 
             # String
             Opcode.STRING_P: (1, 1),

@@ -251,7 +251,7 @@ class TestAIFPLLexerEdgeCases:
             "string-length",    # Hyphenated
             "list-ref",         # Hyphenated
             "string->number",   # Arrow notation
-            "number->string",   # Arrow notation
+            "integer->string",  # Arrow notation
             "string=?",         # Question mark
             "null?",            # Question mark
             "member?",          # Question mark

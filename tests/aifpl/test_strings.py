@@ -359,14 +359,14 @@ class TestStrings:
 
     @pytest.mark.parametrize("expression,expected", [
         # Number to string conversion
-        ('(number->string 42)', '"42"'),
-        ('(number->string 3.14)', '"3.14"'),
-        ('(number->string -5)', '"-5"'),
-        ('(number->string 0)', '"0"'),
+        ('(integer->string 42)', '"42"'),
+        ('(float->string 3.14)', '"3.14"'),
+        ('(integer->string -5)', '"-5"'),
+        ('(integer->string 0)', '"0"'),
 
         # Complex numbers
-        ('(number->string (complex 1 2))', '"1+2j"'),
-        ('(number->string 1j)', '"1j"'),
+        ('(complex->string (complex 1 2))', '"1+2j"'),
+        ('(complex->string 1j)', '"1j"'),
     ])
     def test_number_to_string(self, aifpl, expression, expected):
         """Test number->string conversion."""
@@ -494,9 +494,17 @@ class TestStrings:
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string->number 42)')
 
-        # number->string requires number
+        # integer->string requires number
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(number->string "hello")')
+            aifpl.evaluate('(integer->string "hello")')
+
+        # float->string requires number
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate('(float->string "hello")')
+
+        # complex->string requires number
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate('(complex->string "hello")')
 
         # string->list requires string
         with pytest.raises(AIFPLEvalError):
@@ -588,6 +596,6 @@ class TestStrings:
         # String operations with conversions
         helpers.assert_evaluates_to(
             aifpl,
-            '(string-append "Count: " (number->string 42))',
+            '(string-append "Count: " (integer->string 42))',
             '"Count: 42"'
         )

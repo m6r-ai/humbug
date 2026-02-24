@@ -200,6 +200,7 @@ class AIFPLVM:
         table[Opcode.INTEGER_BIT_OR] = self._op_integer_bit_or
         table[Opcode.INTEGER_BIT_AND] = self._op_integer_bit_and
         table[Opcode.INTEGER_BIT_XOR] = self._op_integer_bit_xor
+        table[Opcode.INTEGER_TO_STRING] = self._op_integer_to_string
         table[Opcode.INTEGER_TO_STRING_BIN] = self._op_integer_to_string_bin
         table[Opcode.INTEGER_TO_STRING_HEX] = self._op_integer_to_string_hex
         table[Opcode.INTEGER_TO_STRING_OCT] = self._op_integer_to_string_oct
@@ -226,6 +227,7 @@ class AIFPLVM:
         table[Opcode.FLOAT_SQRT] = self._op_float_sqrt
         table[Opcode.FLOAT_ABS] = self._op_float_abs
         table[Opcode.FLOAT_TO_INTEGER] = self._op_float_to_integer
+        table[Opcode.FLOAT_TO_STRING] = self._op_float_to_string
         table[Opcode.REAL_FLOOR_DIV] = self._op_real_floor_div
         table[Opcode.REAL_MOD] = self._op_real_mod
         table[Opcode.REAL_FLOOR] = self._op_real_floor
@@ -253,7 +255,7 @@ class AIFPLVM:
         table[Opcode.COMPLEX_EXP] = self._op_complex_exp
         table[Opcode.COMPLEX_SQRT] = self._op_complex_sqrt
         table[Opcode.COMPLEX_ABS] = self._op_complex_abs
-        table[Opcode.NUMBER_TO_STRING] = self._op_number_to_string
+        table[Opcode.COMPLEX_TO_STRING] = self._op_complex_to_string
         table[Opcode.STRING_P] = self._op_string_p
         table[Opcode.STRING_EQ_P] = self._op_string_eq_p
         table[Opcode.STRING_NEQ_P] = self._op_string_neq_p
@@ -1153,6 +1155,19 @@ class AIFPLVM:
         self.stack.append(AIFPLInteger(self._ensure_integer(a, 'bit-xor') ^ self._ensure_integer(b, 'bit-xor')))
         return None
 
+    def _op_integer_to_string(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_TO_STRING: Pop an integer, push string representation."""
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'integer->string')
+        if isinstance(a_val, complex):
+            self.stack.append(AIFPLString(str(a_val).strip('()')))
+            return None
+
+        self.stack.append(AIFPLString(str(a_val)))
+        return None
+
     def _op_integer_to_string_bin(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1422,6 +1437,19 @@ class AIFPLVM:
         a = self.stack.pop()
         a_val = self._ensure_float(a, 'integer')
         self.stack.append(AIFPLInteger(int(a_val)))
+        return None
+
+    def _op_float_to_string(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_TO_STRING: Pop a float, push string representation."""
+        a = self.stack.pop()
+        a_val = self._ensure_float(a, 'float->string')
+        if isinstance(a_val, complex):
+            self.stack.append(AIFPLString(str(a_val).strip('()')))
+            return None
+
+        self.stack.append(AIFPLString(str(a_val)))
         return None
 
     def _op_real_floor_div(  # pylint: disable=useless-return
@@ -1698,12 +1726,12 @@ class AIFPLVM:
         self.stack.append(AIFPLFloat(abs(self._ensure_complex(a, 'complex-abs'))))
         return None
 
-    def _op_number_to_string(  # pylint: disable=useless-return
+    def _op_complex_to_string(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """NUMBER_TO_STRING: Pop a number, push string representation."""
+        """COMPLEX_TO_STRING: Pop a complex number, push string representation."""
         a = self.stack.pop()
-        a_val = self._ensure_number(a, 'number->string')
+        a_val = self._ensure_complex(a, 'complex->string')
         if isinstance(a_val, complex):
             self.stack.append(AIFPLString(str(a_val).strip('()')))
             return None
