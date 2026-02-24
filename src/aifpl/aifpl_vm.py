@@ -1084,7 +1084,7 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """INTEGER_NEG: Pop an integer, push its negation."""
         a = self.stack.pop()
-        self.stack.append(AIFPLInteger(-self._ensure_integer(a, 'integer-negate')))
+        self.stack.append(AIFPLInteger(-self._ensure_integer(a, 'integer-neg')))
         return None
 
     def _op_integer_abs(  # pylint: disable=useless-return
@@ -1319,7 +1319,7 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """FLOAT_NEG: Pop a float, push its negation."""
         a = self.stack.pop()
-        self.stack.append(AIFPLFloat(-self._ensure_float(a, 'float-negate')))
+        self.stack.append(AIFPLFloat(-self._ensure_float(a, 'float-neg')))
         return None
 
     def _op_float_expt(  # pylint: disable=useless-return
@@ -1596,7 +1596,7 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """COMPLEX_NEG: Pop a complex number, push its negation."""
         a = self.stack.pop()
-        self.stack.append(AIFPLComplex(-self._ensure_complex(a, 'complex-negate')))
+        self.stack.append(AIFPLComplex(-self._ensure_complex(a, 'complex-neg')))
         return None
 
     def _op_complex_real(  # pylint: disable=useless-return

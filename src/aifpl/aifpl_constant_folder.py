@@ -42,7 +42,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'integer-',
         'integer*',
         'integer/',
-        'integer-negate',
+        'integer-neg',
         'integer-abs',
         'bit-or',
         'bit-and',
@@ -55,7 +55,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'float-',
         'float*',
         'float/',
-        'float-negate',
+        'float-neg',
         'float-expt',
         'float-sin',
         'float-cos',
@@ -71,7 +71,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'complex-',
         'complex*',
         'complex/',
-        'complex-negate',
+        'complex-neg',
         'complex-expt',
         'complex-sin',
         'complex-cos',
@@ -108,7 +108,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'integer-': self._fold_integer_sub,
             'integer*': self._fold_integer_mul,
             'integer/': self._fold_integer_div,
-            'integer-negate': self._fold_integer_negate,
+            'integer-neg': self._fold_integer_neg,
             'integer-abs': self._fold_integer_abs,
             'bit-or': self._fold_bit_or,
             'bit-and': self._fold_bit_and,
@@ -122,7 +122,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'float-': self._fold_float_sub,
             'float*': self._fold_float_mul,
             'float/': self._fold_float_div,
-            'float-negate': self._fold_float_negate,
+            'float-neg': self._fold_float_neg,
             'float-expt': self._fold_float_expt,
             'float-sin': self._fold_float_sin,
             'float-cos': self._fold_float_cos,
@@ -141,7 +141,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'complex/': self._fold_complex_div,
             'real': self._fold_real,
             'imag': self._fold_imag,
-            'complex-negate': self._fold_complex_negate,
+            'complex-neg': self._fold_complex_neg,
             'complex-expt': self._fold_complex_expt,
             'complex-sin': self._fold_complex_sin,
             'complex-cos': self._fold_complex_cos,
@@ -513,8 +513,8 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
 
         return AIFPLASTInteger(result)
 
-    def _fold_integer_negate(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold integer-negate: arg must be integer, returns integer."""
+    def _fold_integer_neg(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold integer-neg: arg must be integer, returns integer."""
         if not isinstance(args[0], AIFPLASTInteger):
             return None
 
@@ -674,8 +674,8 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
 
         return AIFPLASTFloat(result)
 
-    def _fold_float_negate(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold float-negate: arg must be float, returns float."""
+    def _fold_float_neg(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-neg: arg must be float, returns float."""
         if not isinstance(args[0], AIFPLASTFloat):
             return None
 
@@ -844,8 +844,8 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
 
         return AIFPLASTComplex(result)
 
-    def _fold_complex_negate(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold complex-negate: arg must be complex, returns complex."""
+    def _fold_complex_neg(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex-neg: arg must be complex, returns complex."""
         if not isinstance(args[0], AIFPLASTComplex):
             return None
 

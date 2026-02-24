@@ -390,8 +390,8 @@ class TestFloatOrderedComparisons:
         # Use float-log of a very small positive number to get a large negative result
         assert aifpl.evaluate('(float<? (float-log 0.001) 0.0)') is True
         assert aifpl.evaluate('(float>? (float-log 1000.0) 0.0)') is True
-        assert aifpl.evaluate('(float<=? (float-negate 1.0) 0.0)') is True
-        assert aifpl.evaluate('(float>=? 1.0 (float-negate 1.0))') is True
+        assert aifpl.evaluate('(float<=? (float-neg 1.0) 0.0)') is True
+        assert aifpl.evaluate('(float>=? 1.0 (float-neg 1.0))') is True
 
     def test_float_comparisons_usable_in_conditionals(self, aifpl):
         assert aifpl.evaluate('(if (float<? 1.0 2.0) #t #f)') is True

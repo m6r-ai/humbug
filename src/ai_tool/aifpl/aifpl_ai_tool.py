@@ -307,7 +307,6 @@ Type-specific ordered comparisons (strict: both args must be the same type):
 
 ## Type predicates:
 
-- (number? 42) → #t, excludes booleans: (number? #t) → #f
 - (integer? 42) → #t, (integer? 3.14) → #f, (integer? (round 3.7)) → #t
 - (float? 3.14) → #t, (float? 42) → #f, (float? (float/ 1.0 2.0)) → #t
 - (complex? (complex 1 1)) → #t, (complex? 42) → #f
@@ -355,14 +354,14 @@ Type-specific ordered comparisons (strict: both args must be the same type):
 
 - (match expression (pattern1 result1) (pattern2 result2) (_ default)) → powerful declarative dispatch
 - Literal patterns: (match x (42 "found") ("hello" "greeting") (_ "other"))
-- Variable binding: (match x ((number? n) (integer* n 2)) ((string? s) (string-upcase s)))
+- Variable binding: (match x ((integer? n) (integer* n 2)) ((string? s) (string-upcase s)))
 - Wildcard patterns: _ matches anything without binding
-- Type patterns: (number? var), (string? var), (list? var), (boolean? var), (function? var)
+- Type patterns: (integer? var), (string? var), (list? var), (boolean? var), (function? var)
 - Empty list: (match lst (() "empty") ((x) "singleton") (_ "multiple"))
 - List destructuring: (match lst ((a b c) (integer+ a b c)) ((head . tail) (cons head tail)))
-- Nested patterns: (match data (((number? x) (string? y)) (list x y)) (_ "no match"))
+- Nested patterns: (match data (((integer? x) (string? y)) (list x y)) (_ "no match"))
 - First match wins: patterns are tested in order, use specific patterns before general ones
-- Example: (match data (42 "answer") ((number? n) (integer* n 2)) ((string? s) (string-upcase s))
+- Example: (match data (42 "answer") ((integer? n) (integer* n 2)) ((string? s) (string-upcase s))
 ((head . tail) (list head (length tail))) (_ \"unknown\"))
 
 ## Module system:

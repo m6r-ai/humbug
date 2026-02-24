@@ -623,7 +623,7 @@ class TestFunctional:
                                      (map (lambda (x) 
                                             (if (integer>? x 0)
                                                 ((lambda (y) (integer* y y)) x)
-                                                ((lambda (z) (integer-negate z)) x)))
+                                                ((lambda (z) (integer-neg z)) x)))
                                           lst))))
                   (process-list (list -2 3 -1 4)))''',
             '(2 9 1 16)'

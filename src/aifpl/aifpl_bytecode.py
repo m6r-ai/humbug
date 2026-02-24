@@ -62,7 +62,7 @@ class Opcode(IntEnum):
     INTEGER_SUB = auto()     # integer- a b
     INTEGER_MUL = auto()     # integer* a b
     INTEGER_DIV = auto()     # integer/ a b  (floor division)
-    INTEGER_NEG = auto()     # integer-negate x  (unary minus)
+    INTEGER_NEG = auto()     # integer-neg x  (unary minus)
     INTEGER_ABS = auto()     # integer-abs x
     INTEGER_BIT_NOT = auto() # Bitwise NOT ~x
     INTEGER_BIT_SHIFT_LEFT = auto()
@@ -92,7 +92,7 @@ class Opcode(IntEnum):
     FLOAT_SUB = auto()       # float- a b
     FLOAT_MUL = auto()       # float* a b
     FLOAT_DIV = auto()       # float/ a b
-    FLOAT_NEG = auto()       # float-negate x  (unary minus)
+    FLOAT_NEG = auto()       # float-neg x  (unary minus)
     FLOAT_EXPT = auto()      # float-expt a b
     FLOAT_SIN = auto()       # float-sin x
     FLOAT_COS = auto()       # float-cos x
@@ -122,7 +122,7 @@ class Opcode(IntEnum):
     COMPLEX_SUB = auto()     # complex- a b
     COMPLEX_MUL = auto()     # complex* a b
     COMPLEX_DIV = auto()     # complex/ a b
-    COMPLEX_NEG = auto()     # complex-negate x  (unary minus)
+    COMPLEX_NEG = auto()     # complex-neg x  (unary minus)
     COMPLEX_REAL = auto()    # Extract real part
     COMPLEX_IMAG = auto()    # Extract imaginary part
     COMPLEX_EXPT = auto()    # complex-expt a b
@@ -235,7 +235,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'integer-': (Opcode.INTEGER_SUB, 2),
     'integer*': (Opcode.INTEGER_MUL, 2),
     'integer/': (Opcode.INTEGER_DIV, 2),
-    'integer-negate': (Opcode.INTEGER_NEG, 1),
+    'integer-neg': (Opcode.INTEGER_NEG, 1),
     'integer-abs': (Opcode.INTEGER_ABS, 1),
     'bit-not': (Opcode.INTEGER_BIT_NOT, 1),
     'bit-shift-left': (Opcode.INTEGER_BIT_SHIFT_LEFT, 2),
@@ -258,7 +258,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'float-': (Opcode.FLOAT_SUB, 2),
     'float*': (Opcode.FLOAT_MUL, 2),
     'float/': (Opcode.FLOAT_DIV, 2),
-    'float-negate': (Opcode.FLOAT_NEG, 1),
+    'float-neg': (Opcode.FLOAT_NEG, 1),
     'float-expt': (Opcode.FLOAT_EXPT, 2),
     'float-sin': (Opcode.FLOAT_SIN, 1),
     'float-cos': (Opcode.FLOAT_COS, 1),
@@ -277,7 +277,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'complex-': (Opcode.COMPLEX_SUB, 2),
     'complex*': (Opcode.COMPLEX_MUL, 2),
     'complex/': (Opcode.COMPLEX_DIV, 2),
-    'complex-negate': (Opcode.COMPLEX_NEG, 1),
+    'complex-neg': (Opcode.COMPLEX_NEG, 1),
     'complex-expt': (Opcode.COMPLEX_EXPT, 2),
     'complex-sin': (Opcode.COMPLEX_SIN, 1),
     'complex-cos': (Opcode.COMPLEX_COS, 1),

@@ -139,7 +139,7 @@ class AIFPL:
                          (if (null? args)
                            (error "Function 'integer-' requires at least 1 argument, got 0")
                            (if (null? (rest args))
-                             (integer-negate (first args))
+                             (integer-neg (first args))
                              (letrec ((loop (lambda (lst acc)
                                               (if (null? lst) acc
                                                   (loop (rest lst) (integer- acc (first lst)))))))
@@ -243,7 +243,7 @@ class AIFPL:
                        (if (null? args)
                          (error "Function 'float-' requires at least 1 argument, got 0")
                          (if (null? (rest args))
-                           (float-negate (first args))
+                           (float-neg (first args))
                            (letrec ((loop (lambda (lst acc)
                                             (if (null? lst) acc
                                                 (loop (rest lst) (float- acc (first lst)))))))
@@ -301,7 +301,7 @@ class AIFPL:
                          (if (null? args)
                            (error "Function 'complex-' requires at least 1 argument, got 0")
                            (if (null? (rest args))
-                             (complex-negate (first args))
+                             (complex-neg (first args))
                              (letrec ((loop (lambda (lst acc)
                                               (if (null? lst) acc
                                                   (loop (rest lst) (complex- acc (first lst)))))))

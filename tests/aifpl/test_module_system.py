@@ -48,7 +48,7 @@ class TestModuleSystemBasics:
         module_file.write_text("""
 (let ((add-one (lambda (x) (integer+ x 1)))
       (double (lambda (x) (integer* x 2)))
-      (negate (lambda (x) (integer-negate x))))
+      (negate (lambda (x) (integer-neg x))))
   (alist
     (list "add-one" add-one)
     (list "double" double)
@@ -497,7 +497,7 @@ class TestModuleCompilation:
         (tmp_path / "cond_test.aifpl").write_text("""
 (let ((abs-val (lambda (x)
                  (if (integer<? x 0)
-                     (integer-negate x)
+                     (integer-neg x)
                      x))))
   (alist (list "abs" abs-val)))
 """)
