@@ -216,8 +216,6 @@ class BytecodeValidator:
             Opcode.REAL_MAX: (2, 1),
 
             # Number operations
-            Opcode.NUMBER_P: (1, 1),
-            Opcode.NUMBER_EQ_P: (2, 1),
             Opcode.NUMBER_TO_STRING: (1, 1),
 
             # String

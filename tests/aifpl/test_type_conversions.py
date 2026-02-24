@@ -168,8 +168,3 @@ class TestTypePredicatesWithConversions:
         """Test that float conversion from integer is not an integer."""
         result = aifpl.evaluate("(integer? (float 5))")
         assert result is False
-
-    def test_both_are_numbers(self, aifpl):
-        """Test that both conversions produce numbers."""
-        assert aifpl.evaluate("(number? (integer 3.7))") is True
-        assert aifpl.evaluate("(number? (float 5))") is True

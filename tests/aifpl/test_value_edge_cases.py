@@ -182,12 +182,6 @@ class TestAIFPLValueEdgeCases:
 
     def test_value_type_predicates_edge_cases(self, aifpl):
         """Test type predicate edge cases."""
-        # Number type predicates with edge cases
-        assert aifpl.evaluate("(number? 0)") is True
-        assert aifpl.evaluate("(number? 0.0)") is True
-        assert aifpl.evaluate("(number? (complex 0 0))") is True
-        assert aifpl.evaluate("(number? #t)") is False
-
         # Integer vs float distinction
         assert aifpl.evaluate("(integer? 5)") is True
         assert aifpl.evaluate("(integer? 5.0)") is False
@@ -261,12 +255,9 @@ class TestAIFPLValueEdgeCases:
     def test_value_equality_edge_cases(self, aifpl):
         """Test value equality edge cases."""
         # Numeric equality across types
-        assert aifpl.evaluate("(number=? 5 5.0)") is True
-        assert aifpl.evaluate("(number=? 0 0.0)") is True
         assert aifpl.evaluate("(integer=? -0 0)") is True
 
         # Complex number equality
-        assert aifpl.evaluate("(number=? (complex 5 0) 5)") is True
         assert aifpl.evaluate("(complex=? (complex 0 1) 1j)") is True
 
         # List equality

@@ -617,13 +617,6 @@ class TestAIFPLCollectionEdgeCases:
 
     def test_type_predicate_arity_errors(self, aifpl):
         """Test arity errors for type predicate functions."""
-        # number? requires exactly 1 argument
-        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate("(number?)")
-
-        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate("(number? 1 2)")
-
         # integer? requires exactly 1 argument
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             aifpl.evaluate("(integer?)")

@@ -745,7 +745,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
 ```aifpl
 ; Match by type with binding
 (match 42
-  ((number? n) (+ n 10))
+  ((integer? n) (+ n 10))
   ((string? s) (string-length s))
   (_ "unknown type"))                       ; → 52
 
@@ -831,7 +831,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
 ; Combine patterns with guards (using nested match)
 (let ((classify-number (lambda (n)
                          (match n
-                           ((number? x)
+                           ((integer? x)
                             (match #t
                               ((if (> x 0)) "positive")
                               ((if (< x 0)) "negative")
@@ -861,9 +861,9 @@ Pattern matching provides a powerful way to destructure and analyze data based o
 ; Tree-like structure processing
 (let ((evaluate-expr (lambda (expr)
                        (match expr
-                         (((number? n)) n)
-                         (("+" left right) (+ (evaluate-expr left) (evaluate-expr right)))
-                         (("*" left right) (* (evaluate-expr left) (evaluate-expr right)))
+                         (((integer? n)) n)
+                         (("+" left right) (integer+ (evaluate-expr left) (evaluate-expr right)))
+                         (("*" left right) (integer* (evaluate-expr left) (evaluate-expr right)))
                          (_ "invalid expression")))))
   (evaluate-expr (list "+" (list 10) (list "*" (list 5) (list 3)))))  ; → 25
 ```
@@ -875,7 +875,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
                              (if (list? data)
                                  (if (= (length data) 3)
                                      (if (string? (first data))
-                                         (if (number? (first (rest data)))
+                                         (if (integer? (first (rest data)))
                                              (string-append (first data) ": "
                                                           (number->string (first (rest data))))
                                              "second not number")
@@ -887,7 +887,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
 ; Equivalent pattern matching (much cleaner)
 (let ((process-pattern (lambda (data)
                          (match data
-                           (((string? name) (number? value) extra)
+                           (((string? name) (integer? value) extra)
                             (string-append name ": " (number->string value)))
                            (_ "invalid format")))))
   (process-pattern (list "score" 95 "points")))      ; → "score: 95"
@@ -929,7 +929,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
 (let ((json-to-string (lambda (json)
                         (match json
                           (((string? s)) (string-append "\"" s "\""))
-                          (((number? n)) (number->string n))
+                          (((integer? n)) (number->string n))
                           (((boolean? b)) (if b "true" "false"))
                           (("object" . pairs)
                            (let ((pair-strings (map (lambda (pair)
@@ -959,7 +959,7 @@ Pattern matching provides a powerful way to destructure and analyze data based o
                   (match x
                     (0 "zero")              ; Most specific first
                     (1 "one")
-                    ((number? n) "other number")  ; More general
+                    ((integer? n) "other number")  ; More general
                     (_ "not a number")))))          ; Most general last
   (list (classify 0) (classify 1) (classify 42) (classify "hello")))
 ; → ("zero" "one" "other number" "not a number")
@@ -1465,10 +1465,6 @@ AIFPL supports conditional evaluation with lazy evaluation of branches:
 AIFPL provides comprehensive type checking functions:
 
 ```aifpl
-; Numeric type checking
-(number? 42)                          ; → #t (any numeric type)
-(number? #t)                          ; → #f (booleans are not numbers)
-
 ; Specific numeric type checking
 (integer? 42)                         ; → #t
 (integer? 3.14)                       ; → #f
@@ -1520,7 +1516,7 @@ Comments extend to the end of the line and are ignored during evaluation.
 ```aifpl
 ; Conditional type handling
 (let ((process-value (lambda (x)
-                       (if (number? x)
+                       (if (integer? x)
                            (* x 2)
                            (if (string? x)
                                (string-upcase x)
@@ -1531,7 +1527,7 @@ Comments extend to the end of the line and are ignored during evaluation.
 
 ; Type validation
 (let ((validate-numbers (lambda (lst)
-                          (if (all? number? lst)
+                          (if (all? integer? lst)
                               (fold + 0 lst)
                               "error: non-numeric values found"))))
   (list (validate-numbers (list 1 2 3))      ; → 6
@@ -2118,7 +2114,7 @@ AIFPL has a strict type system with the following types:
 (list (lambda (x) (+ x 1)) (lambda (x) (* x 2)))  ; → (<lambda (x)> <lambda (x)>)
 
 ; Valid - type checking with predicates
-(if (number? x) (* x 2) "not a number")
+(if (integer? x) (* x 2) "not an integer")
 (filter string? (list 1 "hello" #t "world"))  ; → ("hello" "world")
 
 ; Valid - quote for data literals (both forms)
@@ -2129,7 +2125,7 @@ AIFPL has a strict type system with the following types:
 
 ; Valid - pattern matching
 (match 42
-  ((number? n) (* n 2))
+  ((integer? n) (* n 2))
   (_ "not a number"))                 ; → 84
 
 ; Invalid - type mismatch
@@ -2198,7 +2194,7 @@ The pure list approach provides several advantages:
 ; Type-based processing with pattern matching
 (let ((safe-operation (lambda (x y)
                         (match (list x y)
-                          (((number? a) (number? b)) (+ a b))
+                          (((integer? a) (integer? b)) (integer+ a b))
                           (((string? a) (string? b)) (string-append a " " b))
                           (((list? a) (list? b)) (append a b))
                           (_ "incompatible types")))))
@@ -2334,8 +2330,8 @@ The pure list approach provides several advantages:
 ```aifpl
 ; Polymorphic function with type checking
 (letrec ((safe-process (lambda (value)
-                         (if (number? value)
-                             (* value value)
+                         (if (integer? value)
+                             (integer* value value)
                              (if (string? value)
                                  (string-upcase value)
                                  (if (list? value)
@@ -2346,8 +2342,8 @@ The pure list approach provides several advantages:
 ; Type validation pipeline
 (letrec ((validate-input (lambda (data)
                            (if (list? data)
-                               (if (all? number? data)
-                                   (fold + 0 data)
+                               (if (all? integer? data)
+                                   (fold integer+ 0 data)
                                    "error: non-numeric data")
                                "error: not a list"))))
   (list (validate-input (list 1 2 3))        ; → 6
@@ -2356,14 +2352,14 @@ The pure list approach provides several advantages:
 
 ; Mixed type list processing
 (letrec ((categorize (lambda (items)
-                       (let ((numbers (filter number? items))
+                       (let ((integers (filter integer? items))
                              (strings (filter string? items))
                              (booleans (filter boolean? items)))
-                         (list (list "numbers" numbers)
+                         (list (list "integers" integers)
                                (list "strings" strings)
                                (list "booleans" booleans))))))
-  (categorize (list 1 "hello" #t 3.14 "world" #f)))
-; → (("numbers" (1 3.14)) ("strings" ("hello" "world")) ("booleans" (#t #f)))
+  (categorize (list 1 "hello" #t 3 "world" #f)))
+; → (("integers" (1 3)) ("strings" ("hello" "world")) ("booleans" (#t #f)))
 ```
 
 ### String processing

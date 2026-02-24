@@ -49,15 +49,6 @@ class AIFPL:
                                        (if (null? lst) acc
                                            (loop (rest lst) (max acc (first lst)))))))
                         (loop (rest args) (first args)))))""",
-        'number=?': """(lambda (. args)
-                         (if (integer<? (length args) 2)
-                           (error "Function 'number=?' requires at least 2 arguments")
-                           (letrec ((loop (lambda (lst prev)
-                                            (if (null? lst) #t
-                                                (if (number=? prev (first lst))
-                                                    (loop (rest lst) (first lst))
-                                                    #f)))))
-                             (loop (rest args) (first args)))))""",
         'boolean=?': """(lambda (. args)
                           (if (integer<? (length args) 2)
                             (error "Function 'boolean=?' requires at least 2 arguments")

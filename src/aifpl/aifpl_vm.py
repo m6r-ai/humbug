@@ -253,8 +253,6 @@ class AIFPLVM:
         table[Opcode.COMPLEX_EXP] = self._op_complex_exp
         table[Opcode.COMPLEX_SQRT] = self._op_complex_sqrt
         table[Opcode.COMPLEX_ABS] = self._op_complex_abs
-        table[Opcode.NUMBER_P] = self._op_number_p
-        table[Opcode.NUMBER_EQ_P] = self._op_number_eq_p
         table[Opcode.NUMBER_TO_STRING] = self._op_number_to_string
         table[Opcode.STRING_P] = self._op_string_p
         table[Opcode.STRING_EQ_P] = self._op_string_eq_p
@@ -1698,26 +1696,6 @@ class AIFPLVM:
         """COMPLEX_ABS: Pop a complex number, push its magnitude as float."""
         a = self.stack.pop()
         self.stack.append(AIFPLFloat(abs(self._ensure_complex(a, 'complex-abs'))))
-        return None
-
-    def _op_number_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_P: Check if value is a number (integer, float, or complex)."""
-        value = self.stack.pop()
-        result = isinstance(value, (AIFPLInteger, AIFPLFloat, AIFPLComplex))
-        self.stack.append(AIFPLBoolean(result))
-        return None
-
-    def _op_number_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """NUMBER_EQ_P: Pop two numbers, push true if they are numerically equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self._ensure_number(a, 'number=?')
-        self._ensure_number(b, 'number=?')
-        self.stack.append(AIFPLBoolean(a == b))
         return None
 
     def _op_number_to_string(  # pylint: disable=useless-return

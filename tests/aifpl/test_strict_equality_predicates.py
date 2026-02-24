@@ -2,7 +2,7 @@
 
 This module tests the strict equality predicates that require all arguments
 to be of a specific type and raise errors on type mismatches:
-- number=?, integer=?, float=?, complex=?
+- integer=?, float=?, complex=?
 - string=? (already existed, but tested here for completeness)
 - boolean=?, list=?, alist=?
 """
@@ -14,55 +14,6 @@ from aifpl import AIFPLEvalError
 
 class TestStrictEqualityPredicates:
     """Test strict type-specific equality predicates."""
-
-    # ========== number=? tests ==========
-
-    def test_number_eq_with_same_type(self, aifpl):
-        """Test number=? with arguments of the same numeric type."""
-        # Integers
-        assert aifpl.evaluate('(number=? 42 42)') is True
-        assert aifpl.evaluate('(number=? 42 43)') is False
-        assert aifpl.evaluate('(number=? 1 1 1 1)') is True
-        assert aifpl.evaluate('(number=? 1 1 2)') is False
-
-        # Floats
-        assert aifpl.evaluate('(number=? 3.14 3.14)') is True
-        assert aifpl.evaluate('(number=? 3.14 3.15)') is False
-
-        # Complex
-        assert aifpl.evaluate('(number=? 1+2j 1+2j)') is True
-        assert aifpl.evaluate('(number=? 1+2j 1+3j)') is False
-
-    def test_number_eq_with_cross_type(self, aifpl):
-        """Test number=? allows cross-type numeric comparison."""
-        # Integer and float
-        assert aifpl.evaluate('(number=? 1 1.0)') is True
-        assert aifpl.evaluate('(number=? 2 2.0 2)') is True
-
-        # Integer and complex
-        assert aifpl.evaluate('(number=? 1 1+0j)') is True
-
-        # Float and complex
-        assert aifpl.evaluate('(number=? 1.0 1+0j)') is True
-
-    def test_number_eq_rejects_non_numbers(self, aifpl):
-        """Test number=? raises error on non-numeric arguments."""
-        with pytest.raises(AIFPLEvalError, match="number=.*requires number arguments.*string"):
-            aifpl.evaluate('(number=? 42 "hello")')
-
-        with pytest.raises(AIFPLEvalError, match="number=.*requires number arguments.*boolean"):
-            aifpl.evaluate('(number=? 1 #t)')
-
-        with pytest.raises(AIFPLEvalError, match="number=.*requires number arguments.*list"):
-            aifpl.evaluate('(number=? 1 (list 1 2))')
-
-    def test_number_eq_requires_minimum_args(self, aifpl):
-        """Test number=? requires at least 2 arguments."""
-        with pytest.raises(AIFPLEvalError, match="number=.*has wrong number of arguments"):
-            aifpl.evaluate('(number=?)')
-
-        with pytest.raises(AIFPLEvalError, match="number=.*has wrong number of arguments"):
-            aifpl.evaluate('(number=? 42)')
 
     # ========== integer=? tests ==========
 
@@ -308,7 +259,6 @@ class TestStrictEqualityPredicates:
 
     def test_all_strict_predicates_with_many_args(self, aifpl):
         """Test all strict predicates work with more than 2 arguments."""
-        assert aifpl.evaluate('(number=? 1 1 1 1 1)') is True
         assert aifpl.evaluate('(integer=? 1 1 1 1)') is True
         assert aifpl.evaluate('(float=? 1.0 1.0 1.0)') is True
         assert aifpl.evaluate('(complex=? 1j 1j 1j)') is True

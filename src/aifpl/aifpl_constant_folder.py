@@ -35,11 +35,6 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
 
     # Builtin operations we can fold
     FOLDABLE_BUILTINS = {
-        '//', '%',
-        'min', 'max',
-        'round', 'floor', 'ceil',
-        'number=?',
-
         'boolean=?',
         'not',
         'integer=?',
@@ -89,6 +84,9 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'real',
         'imag',
         'string=?',
+        '//', '%',
+        'min', 'max',
+        'round', 'floor', 'ceil',
     }
 
     def __init__(self) -> None:
@@ -166,9 +164,6 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'round': self._fold_round,
             'floor': self._fold_floor,
             'ceil': self._fold_ceil,
-
-            # Strict type-specific equality predicates
-            'number=?': self._fold_number_eq,
         }
 
         # Build jump table for special form optimization.  Note we don't include any special forms that were
@@ -1238,17 +1233,6 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
 
         result = math.ceil(val)
         return AIFPLASTInteger(int(result))
-
-    # Strict type-specific equality predicates
-    def _fold_number_eq(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold number=?: all args must be numbers, allows cross-type comparison."""
-        # Check all are numbers
-        if not all(isinstance(arg, (AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex)) for arg in args):
-            return None  # Not all numbers, can't fold (will error at runtime)
-
-        # Compare using Python equality (which allows cross-type)
-        first = args[0]
-        return AIFPLASTBoolean(all(first == arg for arg in args[1:]))
 
     def _to_python_number(self, value: AIFPLASTNode) -> int | float | complex:
         """Convert AIFPL numeric value to Python number."""

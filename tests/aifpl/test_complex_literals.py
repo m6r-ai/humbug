@@ -304,10 +304,6 @@ class TestComplexNumberLiterals:
         assert aifpl.evaluate("(complex? 42)") is False
         assert aifpl.evaluate("(complex? 3.14)") is False
 
-        # number? should return true for complex
-        assert aifpl.evaluate("(number? 3+4j)") is True
-        assert aifpl.evaluate("(number? 1j)") is True
-
         # integer? and float? should return false for complex
         assert aifpl.evaluate("(integer? 3+4j)") is False
         assert aifpl.evaluate("(float? 3+4j)") is False
