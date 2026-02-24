@@ -297,9 +297,6 @@ class TestIntegerOrderedComparisons:
             with pytest.raises(AIFPLEvalError, match=f"{op}.*has wrong number of arguments"):
                 aifpl.evaluate(f'({op} 1)')
 
-            with pytest.raises(AIFPLEvalError, match=f"{op}.*has wrong number of arguments"):
-                aifpl.evaluate(f'({op} 1 2 3)')
-
     def test_integer_comparisons_large_values(self, aifpl):
         """Test with arbitrarily large integers (Python's unbounded integers)."""
         big = 10 ** 50
@@ -387,9 +384,6 @@ class TestFloatOrderedComparisons:
 
             with pytest.raises(AIFPLEvalError, match=f"{op}.*has wrong number of arguments"):
                 aifpl.evaluate(f'({op} 1.0)')
-
-            with pytest.raises(AIFPLEvalError, match=f"{op}.*has wrong number of arguments"):
-                aifpl.evaluate(f'({op} 1.0 2.0 3.0)')
 
     def test_float_comparisons_special_values(self, aifpl):
         """Test with very large and very small values."""
@@ -485,9 +479,6 @@ class TestStringOrderedComparisons:
 
             with pytest.raises(AIFPLEvalError, match=f"{op}.*has wrong number of arguments"):
                 aifpl.evaluate(f'({op} "a")')
-
-            with pytest.raises(AIFPLEvalError, match=f"{op}.*has wrong number of arguments"):
-                aifpl.evaluate(f'({op} "a" "b" "c")')
 
     def test_string_comparisons_usable_in_conditionals(self, aifpl):
         assert aifpl.evaluate('(if (string<? "a" "b") #t #f)') is True

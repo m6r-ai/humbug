@@ -105,7 +105,12 @@ class AIFPLDesugarer:
                 return self._desugar_fold_variadic(expr)
 
             # Variadic comparison chains (short-circuit with 'and' is correct)
-            if name in ['<', '>', '<=', '>=']:
+            if name in [
+                '<', '>', '<=', '>=',
+                'integer<?', 'integer>?', 'integer<=?', 'integer>=?',
+                'float<?',   'float>?',   'float<=?',   'float>=?',
+                'string<?',  'string>?',  'string<=?',  'string>=?',
+            ]:
                 return self._desugar_comparison_chain(expr)
 
             # Strict equality predicates

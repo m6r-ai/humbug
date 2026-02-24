@@ -136,6 +136,42 @@ class AIFPL:
                                                                               (inner (rest rest-lst))
                                                                               #f)))))
                                                       (inner (rest lst)))))))                                (outer args))))""",
+        'integer<?': """(lambda (. args)
+                          (if (< (length args) 2)
+                            (error "Function 'integer<?' requires at least 2 arguments")
+                            (letrec ((loop (lambda (lst prev)
+                                             (if (null? lst) #t
+                                                 (if (integer<? prev (first lst))
+                                                     (loop (rest lst) (first lst))
+                                                     #f)))))
+                              (loop (rest args) (first args)))))""",
+        'integer>?': """(lambda (. args)
+                          (if (< (length args) 2)
+                            (error "Function 'integer>?' requires at least 2 arguments")
+                            (letrec ((loop (lambda (lst prev)
+                                             (if (null? lst) #t
+                                                 (if (integer>? prev (first lst))
+                                                     (loop (rest lst) (first lst))
+                                                     #f)))))
+                              (loop (rest args) (first args)))))""",
+        'integer<=?': """(lambda (. args)
+                           (if (< (length args) 2)
+                             (error "Function 'integer<=?' requires at least 2 arguments")
+                             (letrec ((loop (lambda (lst prev)
+                                              (if (null? lst) #t
+                                                  (if (integer<=? prev (first lst))
+                                                      (loop (rest lst) (first lst))
+                                                      #f)))))
+                               (loop (rest args) (first args)))))""",
+        'integer>=?': """(lambda (. args)
+                           (if (< (length args) 2)
+                             (error "Function 'integer>=?' requires at least 2 arguments")
+                             (letrec ((loop (lambda (lst prev)
+                                              (if (null? lst) #t
+                                                  (if (integer>=? prev (first lst))
+                                                      (loop (rest lst) (first lst))
+                                                      #f)))))
+                               (loop (rest args) (first args)))))""",
         'integer+': """(lambda (. args)
                          (if (null? args) 0
                            (letrec ((loop (lambda (lst acc)
@@ -203,6 +239,42 @@ class AIFPL:
                                                                               (inner (rest rest-lst))
                                                                               #f)))))
                                                       (inner (rest lst)))))))                                (outer args))))""",
+        'float<?': """(lambda (. args)
+                        (if (< (length args) 2)
+                          (error "Function 'float<?' requires at least 2 arguments")
+                          (letrec ((loop (lambda (lst prev)
+                                           (if (null? lst) #t
+                                               (if (float<? prev (first lst))
+                                                   (loop (rest lst) (first lst))
+                                                   #f)))))
+                            (loop (rest args) (first args)))))""",
+        'float>?': """(lambda (. args)
+                        (if (< (length args) 2)
+                          (error "Function 'float>?' requires at least 2 arguments")
+                          (letrec ((loop (lambda (lst prev)
+                                           (if (null? lst) #t
+                                               (if (float>? prev (first lst))
+                                                   (loop (rest lst) (first lst))
+                                                   #f)))))
+                            (loop (rest args) (first args)))))""",
+        'float<=?': """(lambda (. args)
+                         (if (< (length args) 2)
+                           (error "Function 'float<=?' requires at least 2 arguments")
+                           (letrec ((loop (lambda (lst prev)
+                                            (if (null? lst) #t
+                                                (if (float<=? prev (first lst))
+                                                    (loop (rest lst) (first lst))
+                                                    #f)))))
+                             (loop (rest args) (first args)))))""",
+        'float>=?': """(lambda (. args)
+                         (if (< (length args) 2)
+                           (error "Function 'float>=?' requires at least 2 arguments")
+                           (letrec ((loop (lambda (lst prev)
+                                            (if (null? lst) #t
+                                                (if (float>=? prev (first lst))
+                                                    (loop (rest lst) (first lst))
+                                                    #f)))))
+                             (loop (rest args) (first args)))))""",
         'float+': """(lambda (. args)
                        (if (null? args) 0.0
                          (letrec ((loop (lambda (lst acc)
@@ -317,6 +389,42 @@ class AIFPL:
                                                                               (inner (rest rest-lst))
                                                                               #f)))))
                                                       (inner (rest lst)))))))                                (outer args))))""",
+        'string<?': """(lambda (. args)
+                         (if (< (length args) 2)
+                           (error "Function 'string<?' requires at least 2 arguments")
+                           (letrec ((loop (lambda (lst prev)
+                                            (if (null? lst) #t
+                                                (if (string<? prev (first lst))
+                                                    (loop (rest lst) (first lst))
+                                                    #f)))))
+                             (loop (rest args) (first args)))))""",
+        'string>?': """(lambda (. args)
+                         (if (< (length args) 2)
+                           (error "Function 'string>?' requires at least 2 arguments")
+                           (letrec ((loop (lambda (lst prev)
+                                            (if (null? lst) #t
+                                                (if (string>? prev (first lst))
+                                                    (loop (rest lst) (first lst))
+                                                    #f)))))
+                             (loop (rest args) (first args)))))""",
+        'string<=?': """(lambda (. args)
+                          (if (< (length args) 2)
+                            (error "Function 'string<=?' requires at least 2 arguments")
+                            (letrec ((loop (lambda (lst prev)
+                                             (if (null? lst) #t
+                                                 (if (string<=? prev (first lst))
+                                                     (loop (rest lst) (first lst))
+                                                     #f)))))
+                              (loop (rest args) (first args)))))""",
+        'string>=?': """(lambda (. args)
+                          (if (< (length args) 2)
+                            (error "Function 'string>=?' requires at least 2 arguments")
+                            (letrec ((loop (lambda (lst prev)
+                                             (if (null? lst) #t
+                                                 (if (string>=? prev (first lst))
+                                                     (loop (rest lst) (first lst))
+                                                     #f)))))
+                              (loop (rest args) (first args)))))""",
         'string-append': """(lambda (. args)
                               (if (null? args) ""
                                 (letrec ((loop (lambda (lst acc)
