@@ -68,11 +68,7 @@ class AIFPLASTInteger(AIFPLASTNode):
         return str(self.value)
 
     def __eq__(self, other: Any) -> bool:
-        """Compare numeric values, allowing cross-type comparison."""
-        if isinstance(other, (AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex)):
-            return self.value == other.value
-
-        return False
+        return self.value == other.value
 
 
 @dataclass(frozen=True)
@@ -91,11 +87,7 @@ class AIFPLASTFloat(AIFPLASTNode):
         return str(self.value)
 
     def __eq__(self, other: Any) -> bool:
-        """Compare numeric values, allowing cross-type comparison."""
-        if isinstance(other, (AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex)):
-            return self.value == other.value
-
-        return False
+        return self.value == other.value
 
 
 @dataclass(frozen=True)
@@ -114,11 +106,7 @@ class AIFPLASTComplex(AIFPLASTNode):
         return str(self.value).strip('()')
 
     def __eq__(self, other: Any) -> bool:
-        """Compare numeric values, allowing cross-type comparison."""
-        if isinstance(other, (AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex)):
-            return self.value == other.value
-
-        return False
+        return self.value == other.value
 
 
 @dataclass(frozen=True)
@@ -164,11 +152,7 @@ class AIFPLASTString(AIFPLASTNode):
         return f'"{escaped_content}"'
 
     def __eq__(self, other: Any) -> bool:
-        """Compare string values, ignoring metadata (line, column)."""
-        if isinstance(other, AIFPLASTString):
-            return self.value == other.value
-
-        return False
+        return self.value == other.value
 
 
 @dataclass(frozen=True)
@@ -187,10 +171,7 @@ class AIFPLASTBoolean(AIFPLASTNode):
         return "#t" if self.value else "#f"
 
     def __eq__(self, other: Any) -> bool:
-        """Compare boolean values, ignoring metadata (line, column)."""
-        if isinstance(other, AIFPLASTBoolean):
-            return self.value == other.value
-        return False
+        return self.value == other.value
 
 
 @dataclass(frozen=True)
