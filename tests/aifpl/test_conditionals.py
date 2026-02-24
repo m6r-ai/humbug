@@ -230,65 +230,65 @@ class TestConditionals:
 
     @pytest.mark.parametrize("expression,expected", [
         # Less than
-        ('(< 1 2)', '#t'),
-        ('(< 2 1)', '#f'),
-        ('(< 1 1)', '#f'),
-        ('(< 1 2 3)', '#t'),  # Chain: 1 < 2 < 3
-        ('(< 1 3 2)', '#f'),  # Chain fails: 3 < 2 is false
+        ('(integer<? 1 2)', '#t'),
+        ('(integer<? 2 1)', '#f'),
+        ('(integer<? 1 1)', '#f'),
+        ('(integer<? 1 2 3)', '#t'),  # Chain: 1 < 2 < 3
+        ('(integer<? 1 3 2)', '#f'),  # Chain fails: 3 < 2 is false
 
         # Less than or equal
-        ('(<= 1 2)', '#t'),
-        ('(<= 2 1)', '#f'),
-        ('(<= 1 1)', '#t'),  # Equal case
-        ('(<= 1 1 2)', '#t'),
-        ('(<= 1 2 1)', '#f'),
+        ('(integer<=? 1 2)', '#t'),
+        ('(integer<=? 2 1)', '#f'),
+        ('(integer<=? 1 1)', '#t'),  # Equal case
+        ('(integer<=? 1 1 2)', '#t'),
+        ('(integer<=? 1 2 1)', '#f'),
 
         # Greater than
-        ('(> 2 1)', '#t'),
-        ('(> 1 2)', '#f'),
-        ('(> 1 1)', '#f'),
-        ('(> 3 2 1)', '#t'),  # Chain: 3 > 2 > 1
-        ('(> 3 1 2)', '#f'),  # Chain fails: 1 > 2 is false
+        ('(integer>? 2 1)', '#t'),
+        ('(integer>? 1 2)', '#f'),
+        ('(integer>? 1 1)', '#f'),
+        ('(integer>? 3 2 1)', '#t'),  # Chain: 3 > 2 > 1
+        ('(integer>? 3 1 2)', '#f'),  # Chain fails: 1 > 2 is false
 
         # Greater than or equal
-        ('(>= 2 1)', '#t'),
-        ('(>= 1 2)', '#f'),
-        ('(>= 1 1)', '#t'),  # Equal case
-        ('(>= 2 1 1)', '#t'),
-        ('(>= 1 1 2)', '#f'),
+        ('(integer>=? 2 1)', '#t'),
+        ('(integer>=? 1 2)', '#f'),
+        ('(integer>=? 1 1)', '#t'),  # Equal case
+        ('(integer>=? 2 1 1)', '#t'),
+        ('(integer>=? 1 1 2)', '#f'),
     ])
     def test_numeric_comparison_operations(self, aifpl, expression, expected):
-        """Test numeric comparison operations."""
+        """Test integer ordered comparison operations."""
         assert aifpl.evaluate_and_format(expression) == expected
 
-    def test_comparison_operations_with_mixed_numeric_types(self, aifpl, helpers):
-        """Test comparison operations with mixed numeric types."""
-        helpers.assert_evaluates_to(aifpl, '(< 1 2.5)', '#t')
-        helpers.assert_evaluates_to(aifpl, '(> 3.14 3)', '#t')
-        helpers.assert_evaluates_to(aifpl, '(<= 2.0 2)', '#t')
-        helpers.assert_evaluates_to(aifpl, '(>= 5 4.9)', '#t')
-
     def test_comparison_operations_require_numeric_arguments(self, aifpl):
-        """Test that comparison operations require numeric arguments."""
-        # Less than with non-numeric arguments
-        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
-            aifpl.evaluate('(< "hello" "world")')
+        """Test that typed comparison operations require the correct argument types."""
+        # integer ops reject floats, strings, and booleans
+        with pytest.raises(AIFPLEvalError, match="integer<\\?.*requires integer arguments.*string"):
+            aifpl.evaluate('(integer<? "hello" 1)')
 
-        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
-            aifpl.evaluate('(< 1 #t)')
+        with pytest.raises(AIFPLEvalError, match="integer>\\?.*requires integer arguments.*boolean"):
+            aifpl.evaluate('(integer>? #t 1)')
 
-        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
-            aifpl.evaluate('(< (list 1) (list 2))')
+        with pytest.raises(AIFPLEvalError, match="integer<=\\?.*requires integer arguments.*float"):
+            aifpl.evaluate('(integer<=? 1 2.0)')
 
-        # Other comparison operators
-        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
-            aifpl.evaluate('(> "a" "b")')
+        with pytest.raises(AIFPLEvalError, match="integer>=\\?.*requires integer arguments.*list"):
+            aifpl.evaluate('(integer>=? (list 1) 2)')
 
-        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
-            aifpl.evaluate('(<= #t #f)')
+        # float ops reject integers and strings
+        with pytest.raises(AIFPLEvalError, match="float<\\?.*requires float arguments.*integer"):
+            aifpl.evaluate('(float<? 1.0 2)')
 
-        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
-            aifpl.evaluate('(>= (list 1) (list 2))')
+        with pytest.raises(AIFPLEvalError, match="float>\\?.*requires float arguments.*string"):
+            aifpl.evaluate('(float>? "a" 1.0)')
+
+        # string ops reject integers and booleans
+        with pytest.raises(AIFPLEvalError, match="string<=\\?.*requires string arguments.*integer"):
+            aifpl.evaluate('(string<=? "a" 1)')
+
+        with pytest.raises(AIFPLEvalError, match="string>=\\?.*requires string arguments.*boolean"):
+            aifpl.evaluate('(string>=? #t "a")')
 
     def test_comparison_operations_require_at_least_two_arguments(self, aifpl):
         """Test that comparison operations require at least 2 arguments."""
@@ -303,30 +303,6 @@ class TestConditionals:
 
         with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
             aifpl.evaluate('(integer!=? 1)')
-
-        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(<)')
-
-        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(< 1)')
-
-        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(>)')
-
-        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(> 5)')
-
-        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(<=)')
-
-        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(<= 1)')
-
-        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(>=)')
-
-        with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(>= 5)')
 
     def test_complex_boolean_expressions(self, aifpl, helpers):
         """Test complex combinations of boolean operations."""
@@ -505,13 +481,13 @@ class TestConditionals:
         assert result == '#t'
 
     def test_comparison_chain_evaluation(self, aifpl, helpers):
-        """Test that comparison operations evaluate as chains."""
+        """Test that typed comparison operations evaluate as variadic chains."""
         # All comparisons in chain must be true
-        helpers.assert_evaluates_to(aifpl, '(< 1 2 3 4 5)', '#t')
-        helpers.assert_evaluates_to(aifpl, '(< 1 2 5 4)', '#f')  # 5 < 4 is false
+        helpers.assert_evaluates_to(aifpl, '(integer<? 1 2 3 4 5)', '#t')
+        helpers.assert_evaluates_to(aifpl, '(integer<? 1 2 5 4)', '#f')  # 5 < 4 is false
 
-        helpers.assert_evaluates_to(aifpl, '(> 5 4 3 2 1)', '#t')
-        helpers.assert_evaluates_to(aifpl, '(> 5 4 1 3)', '#f')  # 1 > 3 is false
+        helpers.assert_evaluates_to(aifpl, '(integer>? 5 4 3 2 1)', '#t')
+        helpers.assert_evaluates_to(aifpl, '(integer>? 5 4 1 3)', '#f')  # 1 > 3 is false
 
-        helpers.assert_evaluates_to(aifpl, '(<= 1 1 2 2 3)', '#t')
-        helpers.assert_evaluates_to(aifpl, '(>= 3 2 2 1 1)', '#t')
+        helpers.assert_evaluates_to(aifpl, '(integer<=? 1 1 2 2 3)', '#t')
+        helpers.assert_evaluates_to(aifpl, '(integer>=? 3 2 2 1 1)', '#t')

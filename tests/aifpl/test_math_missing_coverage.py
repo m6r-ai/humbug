@@ -261,27 +261,15 @@ class TestMathMissingCoverage:
     # ========== Additional Edge Cases ==========
 
     def test_comparison_operators_error_handling(self, aifpl):
-        """Test comparison operators with insufficient arguments."""
-        comparison_ops = ["integer=?", "integer!=?", "<", ">", "<=", ">="]
+        """Test typed comparison operators with insufficient arguments."""
+        comparison_ops = ["integer=?", "integer!=?"]
 
         for op in comparison_ops:
-            # All comparison operators require at least 2 arguments
             with pytest.raises(AIFPLEvalError, match=f"Function '{re.escape(op)}' has wrong number of arguments"):
                 aifpl.evaluate(f"({op} 5)")
 
             with pytest.raises(AIFPLEvalError, match=f"Function '{re.escape(op)}' has wrong number of arguments"):
                 aifpl.evaluate(f"({op})")
-
-    def test_comparison_operators_with_non_numeric_arguments(self, aifpl):
-        """Test comparison operators with non-numeric arguments."""
-        numeric_comparison_ops = ["<", ">", "<=", ">="]
-
-        for op in numeric_comparison_ops:
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires real number arguments"):
-                aifpl.evaluate(f'({op} "hello" 5)')
-
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires real number arguments"):
-                aifpl.evaluate(f'({op} 5 "world")')
 
     def test_boolean_not_function_error_handling(self, aifpl):
         """Test not function with wrong argument count and type."""

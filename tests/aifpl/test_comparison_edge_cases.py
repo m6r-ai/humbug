@@ -1,4 +1,4 @@
-"""Tests for comparison operators edge cases and missing coverage."""
+"""Tests for comparison operator edge cases and missing coverage."""
 
 import pytest
 
@@ -40,7 +40,7 @@ class TestComparisonEdgeCases:
         assert result is True
 
     def test_comparison_operators_complex_rejection(self, aifpl):
-        """Test that <, >, <=, >= properly reject complex numbers."""
+        """Test that typed ordered comparison operators reject complex numbers."""
         complex_expressions = [
             "(complex 1 2)",
             "1j",
@@ -48,107 +48,126 @@ class TestComparisonEdgeCases:
             "(complex* (complex 2 0) 1j)"
         ]
 
-        comparison_ops = ["<", ">", "<=", ">="]
+        integer_ops = ["integer<?", "integer>?", "integer<=?", "integer>=?"]
+        float_ops   = ["float<?",   "float>?",   "float<=?",   "float>=?"]
 
-        for op in comparison_ops:
+        for op in integer_ops:
             for complex_expr in complex_expressions:
-                # Test complex as first argument
-                with pytest.raises(AIFPLEvalError, match=f"requires real number argument"):
+                with pytest.raises(AIFPLEvalError, match=f"{op}.*requires integer arguments.*complex"):
                     aifpl.evaluate(f"({op} {complex_expr} 5)")
 
-                # Test complex as second argument
-                with pytest.raises(AIFPLEvalError, match=f"requires real number argument"):
+                with pytest.raises(AIFPLEvalError, match=f"{op}.*requires integer arguments.*complex"):
                     aifpl.evaluate(f"({op} 5 {complex_expr})")
 
-                # Test complex in middle of chain
-                with pytest.raises(AIFPLEvalError, match=f"requires real number argument"):
-                    aifpl.evaluate(f"({op} 1 {complex_expr} 10)")
+        for op in float_ops:
+            for complex_expr in complex_expressions:
+                with pytest.raises(AIFPLEvalError, match=f"{op}.*requires float arguments.*complex"):
+                    aifpl.evaluate(f"({op} {complex_expr} 1.0)")
 
-    def test_comparison_chains_with_complex_numbers(self, aifpl):
-        """Test comparison chains that include complex numbers."""
-        # Test longer chains with complex numbers
-        with pytest.raises(AIFPLEvalError, match="requires real number argument"):
-            aifpl.evaluate("(< 1 2 (complex 3 1) 4)")
-
-        with pytest.raises(AIFPLEvalError, match="requires real number argument"):
-            aifpl.evaluate("(> 10 (complex+ (complex 5 0) 1j) 3 1)")
-
-        with pytest.raises(AIFPLEvalError, match="requires real number argument"):
-            aifpl.evaluate("(<= 1 1j 3)")
-
-        with pytest.raises(AIFPLEvalError, match="requires real number argument"):
-            aifpl.evaluate("(>= 1j 0)")
+                with pytest.raises(AIFPLEvalError, match=f"{op}.*requires float arguments.*complex"):
+                    aifpl.evaluate(f"({op} 1.0 {complex_expr})")
 
     def test_comparison_operators_type_errors(self, aifpl):
-        """Test comparison operators with non-numeric types."""
-        numeric_ops = ["<", ">", "<=", ">="]
+        """Test that typed ordered comparison operators reject wrong types."""
+        # integer ops reject floats, strings, and booleans
+        for op in ("integer<?", "integer>?", "integer<=?", "integer>=?"):
+            with pytest.raises(AIFPLEvalError, match=f"{op}.*requires integer arguments.*float"):
+                aifpl.evaluate(f"({op} 1 2.0)")
 
-        for op in numeric_ops:
-            # String arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires real number arguments"):
+            with pytest.raises(AIFPLEvalError, match=f"{op}.*requires integer arguments.*string"):
                 aifpl.evaluate(f'({op} "hello" 5)')
 
-            # Boolean arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires real number arguments"):
+            with pytest.raises(AIFPLEvalError, match=f"{op}.*requires integer arguments.*boolean"):
                 aifpl.evaluate(f"({op} #t 1)")
 
-            # List arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' requires real number arguments"):
-                aifpl.evaluate(f"({op} (list 1 2) 3)")
+        # float ops reject integers, strings, and booleans
+        for op in ("float<?", "float>?", "float<=?", "float>=?"):
+            with pytest.raises(AIFPLEvalError, match=f"{op}.*requires float arguments.*integer"):
+                aifpl.evaluate(f"({op} 1.0 2)")
+
+            with pytest.raises(AIFPLEvalError, match=f"{op}.*requires float arguments.*string"):
+                aifpl.evaluate(f'({op} "hello" 1.0)')
+
+        # string ops reject integers and booleans
+        for op in ("string<?", "string>?", "string<=?", "string>=?"):
+            with pytest.raises(AIFPLEvalError, match=f"{op}.*requires string arguments.*integer"):
+                aifpl.evaluate(f'({op} "a" 1)')
+
+            with pytest.raises(AIFPLEvalError, match=f"{op}.*requires string arguments.*boolean"):
+                aifpl.evaluate(f'({op} #t "a")')
 
     def test_comparison_operators_minimum_arguments(self, aifpl):
-        """Test that comparison operators require minimum arguments."""
-        all_comparison_ops = ["<", ">", "<=", ">="]
+        """Test that typed ordered comparison operators require at least 2 arguments."""
+        all_typed_ops = [
+            "integer<?", "integer>?", "integer<=?", "integer>=?",
+            "float<?",   "float>?",   "float<=?",   "float>=?",
+            "string<?",  "string>?",  "string<=?",  "string>=?",
+        ]
 
-        for op in all_comparison_ops:
-            # No arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' has wrong number of arguments"):
+        for op in all_typed_ops:
+            with pytest.raises(AIFPLEvalError, match=f"{op}.*has wrong number of arguments"):
                 aifpl.evaluate(f"({op})")
 
-            # One argument
-            with pytest.raises(AIFPLEvalError, match=f"Function '{op}' has wrong number of arguments"):
-                aifpl.evaluate(f"({op} 5)")
+            with pytest.raises(AIFPLEvalError, match=f"{op}.*has wrong number of arguments"):
+                aifpl.evaluate(f"({op} 1)" if op.startswith("integer") else
+                               f"({op} 1.0)" if op.startswith("float") else
+                               f'({op} "a")')
 
     def test_comparison_chains_early_termination(self, aifpl):
-        """Test that comparison chains terminate early when condition fails."""
-        # These test the early return paths in comparison functions
-
-        # Test < operator early termination
-        result = aifpl.evaluate("(< 5 3 10)")  # Should return False immediately
+        """Test that variadic comparison chains terminate early when a condition fails."""
+        # integer<? chain: first pair fails immediately
+        result = aifpl.evaluate("(integer<? 5 3 10)")
         assert result is False
 
-        result = aifpl.evaluate("(< 1 2 1)")  # Should return False at second comparison
+        # integer<? chain: second pair fails
+        result = aifpl.evaluate("(integer<? 1 2 1)")
         assert result is False
 
-        # Test > operator early termination
-        result = aifpl.evaluate("(> 3 5 1)")  # Should return False immediately
+        # integer>? chain: first pair fails immediately
+        result = aifpl.evaluate("(integer>? 3 5 1)")
         assert result is False
 
-        result = aifpl.evaluate("(> 5 4 6)")  # Should return False at second comparison
+        # integer>? chain: second pair fails
+        result = aifpl.evaluate("(integer>? 5 4 6)")
         assert result is False
 
-        # Test <= operator early termination
-        result = aifpl.evaluate("(<= 5 3 10)")  # Should return False immediately
+        # integer<=? chain: first pair fails immediately
+        result = aifpl.evaluate("(integer<=? 5 3 10)")
         assert result is False
 
-        # Test >= operator early termination
-        result = aifpl.evaluate("(>= 3 5 1)")  # Should return False immediately
+        # integer>=? chain: first pair fails immediately
+        result = aifpl.evaluate("(integer>=? 3 5 1)")
+        assert result is False
+
+        # float<? chain
+        result = aifpl.evaluate("(float<? 5.0 3.0 10.0)")
+        assert result is False
+
+        # string<? chain
+        result = aifpl.evaluate('(string<? "b" "a" "c")')
         assert result is False
 
     def test_successful_comparison_chains(self, aifpl):
-        """Test comparison chains that succeed (don't terminate early)."""
-        # These test the success paths that return True at the end
-
-        result = aifpl.evaluate("(< 1 2 3 4)")
+        """Test variadic comparison chains that succeed (return True at the end)."""
+        result = aifpl.evaluate("(integer<? 1 2 3 4)")
         assert result is True
 
-        result = aifpl.evaluate("(> 10 8 5 2)")
+        result = aifpl.evaluate("(integer>? 10 8 5 2)")
         assert result is True
 
-        result = aifpl.evaluate("(<= 1 2 2 3)")
+        result = aifpl.evaluate("(integer<=? 1 2 2 3)")
         assert result is True
 
-        result = aifpl.evaluate("(>= 10 8 8 5)")
+        result = aifpl.evaluate("(integer>=? 10 8 8 5)")
+        assert result is True
+
+        result = aifpl.evaluate("(float<? 1.0 2.0 3.0)")
+        assert result is True
+
+        result = aifpl.evaluate("(float>=? 3.0 2.0 2.0 1.0)")
+        assert result is True
+
+        result = aifpl.evaluate('(string<? "apple" "banana" "cherry")')
         assert result is True
 
         result = aifpl.evaluate("(integer=? 5 5 5 5)")
