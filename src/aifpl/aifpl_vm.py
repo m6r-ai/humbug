@@ -276,9 +276,7 @@ class AIFPLVM:
         table[Opcode.STRING_CONTAINS_P] = self._op_string_contains_p
         table[Opcode.STRING_PREFIX_P] = self._op_string_prefix_p
         table[Opcode.STRING_SUFFIX_P] = self._op_string_suffix_p
-        table[Opcode.STRING_SPLIT] = self._op_string_split
-        table[Opcode.STRING_JOIN] = self._op_string_join
-        table[Opcode.STRING_APPEND] = self._op_string_append
+        table[Opcode.STRING_CONCAT] = self._op_string_concat
         table[Opcode.STRING_SLICE] = self._op_string_slice
         table[Opcode.STRING_REPLACE] = self._op_string_replace
         table[Opcode.ALIST] = self._op_alist
@@ -1834,10 +1832,16 @@ class AIFPLVM:
     def _op_string_to_list(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """STRING_TO_LIST: Pop a string, push list of single-character strings."""
+        """STRING_TO_LIST: Pop delimiter and string, push list of parts split by delimiter."""
+        delim_val = self.stack.pop()
         a = self.stack.pop()
         s = self._ensure_string(a, 'string->list')
-        self.stack.append(AIFPLList(tuple(AIFPLString(ch) for ch in s)))
+        delim = self._ensure_string(delim_val, 'string->list')
+        if delim == "":
+            self.stack.append(AIFPLList(tuple(AIFPLString(ch) for ch in s)))
+            return None
+
+        self.stack.append(AIFPLList(tuple(AIFPLString(part) for part in s.split(delim))))
         return None
 
     def _op_string_ref(  # pylint: disable=useless-return
@@ -1887,39 +1891,6 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(s.endswith(suffix)))
         return None
 
-    def _op_string_split(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_SPLIT: Pop delimiter and string, push list of parts."""
-        delim_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string-split')
-        delim = self._ensure_string(delim_val, 'string-split')
-        if delim == "":
-            self.stack.append(AIFPLList(tuple(AIFPLString(ch) for ch in s)))
-            return None
-
-        self.stack.append(AIFPLList(tuple(AIFPLString(part) for part in s.split(delim))))
-        return None
-
-    def _op_string_join(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_JOIN: Pop separator and list of strings, push joined string."""
-        sep_val = self.stack.pop()
-        a = self.stack.pop()
-        list_val = self._ensure_list(a, 'string-join')
-        sep = self._ensure_string(sep_val, 'string-join')
-        parts = []
-        for item in list_val.elements:
-            if not isinstance(item, AIFPLString):
-                raise AIFPLEvalError(f"string-join requires list of strings, found {item.type_name()}")
-
-            parts.append(item.value)
-
-        self.stack.append(AIFPLString(sep.join(parts)))
-        return None
-
     def _op_string_slice(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1962,13 +1933,13 @@ class AIFPLVM:
         self.stack.append(AIFPLString(s.replace(old, new)))
         return None
 
-    def _op_string_append(  # pylint: disable=useless-return
+    def _op_string_concat(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """STRING_APPEND: Pop two strings, push concatenated string."""
+        """STRING_CONCAT: Pop two strings, push concatenated string."""
         b = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append(AIFPLString(self._ensure_string(a, 'string-append') + self._ensure_string(b, 'string-append')))
+        self.stack.append(AIFPLString(self._ensure_string(a, 'string-concat') + self._ensure_string(b, 'string-concat')))
         return None
 
     def _op_alist(  # pylint: disable=useless-return
@@ -2328,10 +2299,19 @@ class AIFPLVM:
     def _op_list_to_string(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """LIST_TO_STRING: Pop a list of strings, push concatenated string."""
+        """LIST_TO_STRING: Pop separator and list of strings, push joined string."""
+        sep_val = self.stack.pop()
         a = self.stack.pop()
         list_val = self._ensure_list(a, 'list->string')
-        self.stack.append(AIFPLString(''.join(str(elem.to_python()) for elem in list_val.elements)))
+        sep = self._ensure_string(sep_val, 'list->string')
+        parts = []
+        for item in list_val.elements:
+            if not isinstance(item, AIFPLString):
+                raise AIFPLEvalError(f"list->string requires list of strings, found {item.type_name()}")
+
+            parts.append(item.value)
+
+        self.stack.append(AIFPLString(sep.join(parts)))
         return None
 
     def _op_range(  # pylint: disable=useless-return

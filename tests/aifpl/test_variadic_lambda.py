@@ -153,7 +153,7 @@ class TestVariadicLambdaListOps:
         """Variadic string concatenation using fold."""
         expr = '''
         (let ((my-concat (lambda (. strs)
-                           (fold string-append "" strs))))
+                           (fold string-concat "" strs))))
           (my-concat "hello" " " "world"))
         '''
         assert aifpl.evaluate_and_format(expr) == '"hello world"'

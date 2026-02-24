@@ -491,7 +491,7 @@ class TestAIFPLLexerEdgeCases:
         # Mixed token types in expressions
         mixed_cases = [
             '(float+ 42.0 3.14)',               # Float + float
-            '(string-append "hello" " world")', # Strings with spaces
+            '(string-concat "hello" " world")', # Strings with spaces
             '(list 1 "two" #t)',               # Mixed types
             '(if #t 42 "false")',              # Boolean condition
         ]

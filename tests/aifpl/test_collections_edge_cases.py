@@ -585,39 +585,23 @@ class TestAIFPLCollectionEdgeCases:
 
     def test_string_list_conversion_arity_errors(self, aifpl):
         """Test arity errors for string-list conversion functions."""
-        # string->list requires exactly 1 argument
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             aifpl.evaluate("(string->list)")
 
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate('(string->list "hello" "world")')
+            aifpl.evaluate("(list->string)")
 
-        # list->string requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
+            aifpl.evaluate("(string->list)")
+
+        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
+            aifpl.evaluate('(string->list "hello" "," "extra")')
+
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             aifpl.evaluate("(list->string)")
 
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate('(list->string (list "a") (list "b"))')
-
-        # string-split requires exactly 2 arguments
-        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate("(string-split)")
-
-        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate('(string-split "hello")')
-
-        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate('(string-split "hello" "," "extra")')
-
-        # string-join requires exactly 2 arguments
-        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate("(string-join)")
-
-        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate('(string-join (list "a"))')
-
-        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate('(string-join (list "a") "," "extra")')
+            aifpl.evaluate('(list->string (list "a") "," "extra")')
 
     def test_type_predicate_arity_errors(self, aifpl):
         """Test arity errors for type predicate functions."""

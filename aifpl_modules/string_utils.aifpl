@@ -2,19 +2,19 @@
 ; Provides common string operations
 
 (let ((words (lambda (s)
-               (string-split s " ")))
+               (string->list s " ")))
       (lines (lambda (s)
-               (string-split s "\n")))
+               (string->list s "\n")))
       (capitalize (lambda (s)
-                    (if (= (string-length s) 0)
+                    (if (integer=? (string-length s) 0)
                         s
-                        (string-append
+                        (string-concat
                           (string-upcase (string-slice s 0 1))
                           (string-downcase (string-slice s 1))))))
       (reverse-string (lambda (s)
                         (list->string (list-reverse (string->list s)))))
       (count-words (lambda (s)
-                     (list-length (string-split s " ")))))
+                     (list-length (string->list s " ")))))
   
   ; Export public API
   (alist

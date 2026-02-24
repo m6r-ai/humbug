@@ -28,7 +28,7 @@ class TestErrors:
             aifpl.evaluate('"hello world')
 
         with pytest.raises(AIFPLTokenError, match="Unterminated string literal"):
-            aifpl.evaluate('(string-append "hello" "world)')
+            aifpl.evaluate('(string-concat "hello" "world)')
 
     def test_invalid_escape_sequence_token_error(self, aifpl):
         """Test that invalid escape sequences cause tokenization errors."""
@@ -229,7 +229,7 @@ class TestErrors:
             aifpl.evaluate("(string-length 42)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(string-append "hello" 42)')
+            aifpl.evaluate('(string-concat "hello" 42)')
 
     def test_arity_mismatch_eval_errors(self, aifpl):
         """Test that arity mismatches cause evaluation errors."""

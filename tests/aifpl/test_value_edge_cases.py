@@ -230,7 +230,7 @@ class TestAIFPLValueEdgeCases:
         assert result[999] == 1000
 
         # Large string operations - check actual format
-        result = aifpl.evaluate('(string-join (map integer->string (range 1 101)) ",")')
+        result = aifpl.evaluate('(list->string (map integer->string (range 1 101)) ",")')
         assert isinstance(result, str)
         # AIFPL returns the string without quotes in the result
         assert result.startswith('1,2,3')
@@ -294,7 +294,7 @@ class TestAIFPLValueEdgeCases:
         """Test string operations with edge case values."""
         # Empty string operations
         assert aifpl.evaluate('(string-length "")') == 0
-        assert aifpl.evaluate('(string-append "" "")') == ""
+        assert aifpl.evaluate('(string-concat "" "")') == ""
         assert aifpl.evaluate('(string-upcase "")') == ""
 
         # Single character operations

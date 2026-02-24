@@ -399,12 +399,14 @@ class AIFPL:
                                                      (loop (list-rest lst) (list-first lst))
                                                      #f)))))
                               (loop (list-rest args) (list-first args)))))""",
-        'string-append': """(lambda (. args)
+        'string-concat': """(lambda (. args)
                               (if (list-null? args) ""
                                 (letrec ((loop (lambda (lst acc)
                                                  (if (list-null? lst) acc
-                                                     (loop (list-rest lst) (string-append acc (list-first lst)))))))
+                                                     (loop (list-rest lst) (string-concat acc (list-first lst)))))))
                                   (loop (list-rest args) (list-first args)))))""",
+        'string->list': """(lambda (str . rest)
+                             (string->list str (if (list-null? rest) "" (list-first rest))))""",
         'list': """(lambda (. args) args)""",
         'list=?': """(lambda (. args)
                        (if (integer<? (list-length args) 2)
@@ -434,6 +436,8 @@ class AIFPL:
                                                (if (list-null? lst) acc
                                                    (loop (list-rest lst) (list-concat acc (list-first lst)))))))
                                 (loop (list-rest args) (list-first args)))))""",
+        'list->string': """(lambda (lst . rest)
+                             (list->string lst (if (list-null? rest) "" (list-first rest))))""",
         'alist': """(lambda (. args)
                       (letrec ((loop (lambda (pairs acc)
                                        (if (list-null? pairs) acc

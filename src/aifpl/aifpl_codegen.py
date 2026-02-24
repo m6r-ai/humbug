@@ -426,17 +426,6 @@ class AIFPLCodeGen:
             assert plan.builtin_name is not None
             builtin_name = plan.builtin_name
 
-            # Handle alist-get: synthesise missing default as #f
-            if builtin_name == 'alist-get':
-                for arg_plan in plan.arg_plans:
-                    self._generate_expr(arg_plan, ctx)
-
-                if len(plan.arg_plans) == 2:
-                    ctx.emit(Opcode.LOAD_FALSE)
-
-                ctx.emit(Opcode.ALIST_GET)
-                return
-
             # Handle range: synthesise missing step as 1
             if builtin_name == 'range':
                 for arg_plan in plan.arg_plans:
@@ -464,6 +453,28 @@ class AIFPLCodeGen:
                 ctx.emit(Opcode.STRING_SLICE)
                 return
 
+            # Handle string->list: synthesise missing delimiter as ""
+            if builtin_name == 'string->list':
+                self._generate_expr(plan.arg_plans[0], ctx)
+                if len(plan.arg_plans) == 1:
+                    const_index = ctx.add_constant(AIFPLString(""))
+                    ctx.emit(Opcode.LOAD_CONST, const_index)
+                else:
+                    self._generate_expr(plan.arg_plans[1], ctx)
+                ctx.emit(Opcode.STRING_TO_LIST)
+                return
+
+            # Handle alist-get: synthesise missing default as #f
+            if builtin_name == 'alist-get':
+                for arg_plan in plan.arg_plans:
+                    self._generate_expr(arg_plan, ctx)
+
+                if len(plan.arg_plans) == 2:
+                    ctx.emit(Opcode.LOAD_FALSE)
+
+                ctx.emit(Opcode.ALIST_GET)
+                return
+
             # Handle list-slice: synthesise missing end as (list-length lst)
             if builtin_name == 'list-slice':
                 # Push the list argument first
@@ -477,6 +488,17 @@ class AIFPLCodeGen:
                 else:
                     self._generate_expr(plan.arg_plans[2], ctx)
                 ctx.emit(Opcode.LIST_SLICE)
+                return
+
+            # Handle list->string: synthesise missing separator as ""
+            if builtin_name == 'list->string':
+                self._generate_expr(plan.arg_plans[0], ctx)
+                if len(plan.arg_plans) == 1:
+                    const_index = ctx.add_constant(AIFPLString(""))
+                    ctx.emit(Opcode.LOAD_CONST, const_index)
+                else:
+                    self._generate_expr(plan.arg_plans[1], ctx)
+                ctx.emit(Opcode.LIST_TO_STRING)
                 return
 
             # Generate arguments

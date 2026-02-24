@@ -106,7 +106,7 @@ class AIFPLDesugarer:
                 'integer-min', 'integer-max',
                 'float-min', 'float-max',
                 'list-concat',
-                'string-append',
+                'string-concat',
             ]:
                 return self._desugar_fold_variadic(expr)
 
@@ -403,7 +403,7 @@ class AIFPLDesugarer:
             if op_name == 'list-concat':
                 return self._make_list((self._make_symbol('quote', expr), self._make_list((), expr)), expr)
 
-            if op_name == 'string-append':
+            if op_name == 'string-concat':
                 return AIFPLASTString("", line=expr.line, column=expr.column, source_file=expr.source_file)
 
             # min/max with 0 args: let runtime raise the error

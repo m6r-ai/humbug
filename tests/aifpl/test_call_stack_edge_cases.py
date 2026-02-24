@@ -167,7 +167,7 @@ class TestAIFPLCallStackEdgeCases:
         """Test call stack with string operations."""
         # Nested string operations
         result = aifpl.evaluate('''
-        (string-append
+        (string-concat
           (string-upcase "hello")
           " "
           (string-downcase "WORLD"))
@@ -177,7 +177,7 @@ class TestAIFPLCallStackEdgeCases:
         # String operations with numeric conversions
         result = aifpl.evaluate('''
         (string->number
-          (string-append
+          (string-concat
             (integer->string (integer+ 2 3))
             (integer->string (integer* 2 2))))
         ''')
@@ -330,7 +330,7 @@ class TestAIFPLCallStackEdgeCases:
         mixed_expr = """
         (if (integer>? (list-length (list 1 2 3)) 2)
             (string->number
-              (string-append
+              (string-concat
                 (integer->string (integer+ 5 5))
                 (integer->string (integer* 2 3))))
             0)

@@ -337,7 +337,7 @@ class TestAIFPLEnvironmentEdgeCases:
         # String operations with closures
         result = aifpl.evaluate("""
         (let ((prefix "Hello, "))
-          (map (lambda (name) (string-append prefix name))
+          (map (lambda (name) (string-concat prefix name))
                (list "Alice" "Bob" "Charlie")))
         """)
         assert result == ["Hello, Alice", "Hello, Bob", "Hello, Charlie"]

@@ -306,15 +306,15 @@ class TestMutualRecursionPracticalExamples:
                                      acc
                                      (let ((c (list-first chars)))
                                        (if (string=? c "<")
-                                           (state-tag (list-rest chars) (string-append acc c))
-                                           (state-normal (list-rest chars) (string-append acc c)))))))
+                                           (state-tag (list-rest chars) (string-concat acc c))
+                                           (state-normal (list-rest chars) (string-concat acc c)))))))
                  (state-tag (lambda (chars acc)
                              (if (list-null? chars)
                                  acc
                                  (let ((c (list-first chars)))
                                    (if (string=? c ">")
-                                       (state-normal (list-rest chars) (string-append acc c))
-                                       (state-tag (list-rest chars) (string-append acc c))))))))
+                                       (state-normal (list-rest chars) (string-concat acc c))
+                                       (state-tag (list-rest chars) (string-concat acc c))))))))
           (state-normal (string->list "This <is> a <test> string") ""))
         '''
         result = aifpl.evaluate_and_format(state_machine)

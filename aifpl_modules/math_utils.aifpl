@@ -5,16 +5,16 @@
       (cube (lambda (x) (integer* x (integer* x x))))
       (factorial (lambda (n)
                    (letrec ((fact (lambda (n acc)
-                                    (if (<= n 1)
+                                   (if (integer<=? n 1)
                                         acc
                                         (fact (integer- n 1) (integer* acc n))))))
                      (fact n 1))))
       (abs-value (lambda (x)
-                   (if (< x 0)
-                       (integer- 0 x)
+                   (if (integer<? x 0)
+                       (integer-neg x)
                        x)))
       (pow (lambda (base exp)
-             (if (= exp 0)
+             (if (integer=? exp 0)
                  1
                  (integer* base (pow base (integer- exp 1)))))))
   

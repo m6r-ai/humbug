@@ -154,11 +154,11 @@ class TestTailCallOptimizationWithLet:
                                      (if (string=? c ",")
                                          (if in-quotes
                                              (parse-chars rest-chars in-quotes 
-                                                        (string-append current-field c) fields)
+                                                        (string-concat current-field c) fields)
                                              (parse-chars rest-chars #f "" 
                                                         (list-prepend fields current-field)))
                                          (parse-chars rest-chars in-quotes 
-                                                    (string-append current-field c) fields)))))))
+                                                    (string-concat current-field c) fields)))))))
           (parse-chars (string->list "field1,field2,field3") #f "" (list)))
         '''
         helpers.assert_evaluates_to(aifpl, simple_csv_parser, '("field1" "field2" "field3")')

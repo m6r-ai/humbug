@@ -143,7 +143,7 @@ class TestStrings:
     """Test string operations."""
 
     def test_string_append(self, aifpl):
-        assert aifpl.evaluate('(string-append "hello" " " "world")') == "hello world"
+        assert aifpl.evaluate('(string-concat "hello" " " "world")') == "hello world"
 
     def test_string_length(self, aifpl):
         assert aifpl.evaluate('(string-length "hello")') == 5

@@ -70,23 +70,23 @@ class TestStrings:
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic string append
-        ('(string-append "hello" " " "world")', '"hello world"'),
-        ('(string-append "a" "b" "c")', '"abc"'),
+        ('(string-concat "hello" " " "world")', '"hello world"'),
+        ('(string-concat "a" "b" "c")', '"abc"'),
 
         # Empty string handling
-        ('(string-append)', '""'),  # Identity case
-        ('(string-append "")', '""'),
-        ('(string-append "" "hello")', '"hello"'),
-        ('(string-append "hello" "")', '"hello"'),
+        ('(string-concat)', '""'),  # Identity case
+        ('(string-concat "")', '""'),
+        ('(string-concat "" "hello")', '"hello"'),
+        ('(string-concat "hello" "")', '"hello"'),
 
         # Many arguments
-        ('(string-append "a" "b" "c" "d" "e")', '"abcde"'),
+        ('(string-concat "a" "b" "c" "d" "e")', '"abcde"'),
 
         # Unicode strings
-        ('(string-append "Hello " "世界")', '"Hello 世界"'),
+        ('(string-concat "Hello " "世界")', '"Hello 世界"'),
     ])
     def test_string_append(self, aifpl, expression, expected):
-        """Test string-append operation."""
+        """Test string-concat operation."""
         assert aifpl.evaluate_and_format(expression) == expected
 
     @pytest.mark.parametrize("expression,expected", [
@@ -420,53 +420,53 @@ class TestStrings:
 
     @pytest.mark.parametrize("expression,expected", [
         # String split
-        ('(string-split "a,b,c" ",")', '("a" "b" "c")'),
-        ('(string-split "hello world" " ")', '("hello" "world")'),
-        ('(string-split "one::two::three" "::")', '("one" "two" "three")'),
+        ('(string->list "a,b,c" ",")', '("a" "b" "c")'),
+        ('(string->list "hello world" " ")', '("hello" "world")'),
+        ('(string->list "one::two::three" "::")', '("one" "two" "three")'),
 
         # Edge cases
-        ('(string-split "" ",")', '("")'),  # Empty string splits to list with empty string
-        ('(string-split "hello" "")', '("h" "e" "l" "l" "o")'),  # Split on empty delimiter
-        ('(string-split "no-delimiters" ",")', '("no-delimiters")'),  # No delimiter found
+        ('(string->list "" ",")', '("")'),  # Empty string splits to list with empty string
+        ('(string->list "hello" "")', '("h" "e" "l" "l" "o")'),  # Split on empty delimiter
+        ('(string->list "no-delimiters" ",")', '("no-delimiters")'),  # No delimiter found
 
         # Unicode split
-        ('(string-split "世界,你好" ",")', '("世界" "你好")'),
+        ('(string->list "世界,你好" ",")', '("世界" "你好")'),
     ])
     def test_string_split(self, aifpl, expression, expected):
-        """Test string-split function."""
+        """Test string->list function."""
         assert aifpl.evaluate_and_format(expression) == expected
 
     @pytest.mark.parametrize("expression,expected", [
         # String join
-        ('(string-join (list "hello" "world") " ")', '"hello world"'),
-        ('(string-join (list "a" "b" "c") ",")', '"a,b,c"'),
-        ('(string-join (list "one" "two" "three") "::")', '"one::two::three"'),
+        ('(list->string (list "hello" "world") " ")', '"hello world"'),
+        ('(list->string (list "a" "b" "c") ",")', '"a,b,c"'),
+        ('(list->string (list "one" "two" "three") "::")', '"one::two::three"'),
 
         # Edge cases
-        ('(string-join (list) ",")', '""'),  # Empty list
-        ('(string-join (list "hello") ",")', '"hello"'),  # Single element
-        ('(string-join (list "a" "b") "")', '"ab"'),  # Empty separator
+        ('(list->string (list) ",")', '""'),  # Empty list
+        ('(list->string (list "hello") ",")', '"hello"'),  # Single element
+        ('(list->string (list "a" "b") "")', '"ab"'),  # Empty separator
 
         # Unicode join
-        ('(string-join (list "世界" "你好") " ")', '"世界 你好"'),
+        ('(list->string (list "世界" "你好") " ")', '"世界 你好"'),
     ])
     def test_string_join(self, aifpl, expression, expected):
-        """Test string-join function."""
+        """Test list->string function."""
         assert aifpl.evaluate_and_format(expression) == expected
 
     def test_string_join_non_string_list(self, aifpl):
-        """Test string-join with non-string list elements."""
+        """Test list->string with non-string list elements."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(string-join (list 1 2 3) ",")')
+            aifpl.evaluate('(list->string (list 1 2 3) ",")')
 
     def test_string_operations_type_validation(self, aifpl):
         """Test that string operations reject non-string arguments."""
-        # string-append with non-strings
+        # string-concat with non-strings
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(string-append "hello" 42)')
+            aifpl.evaluate('(string-concat "hello" 42)')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(string-append #t "world")')
+            aifpl.evaluate('(string-concat #t "world")')
 
         # string-length with non-string
         with pytest.raises(AIFPLEvalError):
@@ -527,20 +527,20 @@ class TestStrings:
             aifpl.evaluate('(list->string "hello")')
 
     def test_string_split_join_type_validation(self, aifpl):
-        """Test that string-split and string-join validate argument types."""
-        # string-split requires strings
+        """Test that string->list and list->string validate argument types."""
+        # string->list requires strings
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(string-split 42 ",")')
+            aifpl.evaluate('(string->list 42 ",")')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(string-split "hello" 42)')
+            aifpl.evaluate('(string->list "hello" 42)')
 
-        # string-join requires list and string
+        # list->string requires list and string
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(string-join "hello" ",")')
+            aifpl.evaluate('(list->string "hello" ",")')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(string-join (list "a" "b") 42)')
+            aifpl.evaluate('(list->string (list "a" "b") 42)')
 
     def test_string_arity_validation(self, aifpl):
         """Test that string functions validate argument counts."""
@@ -582,29 +582,29 @@ class TestStrings:
         """Test complex combinations of string operations."""
         # Split, process, and rejoin
         complex_expr = '''
-        (string-join
+        (list->string
           (map (lambda (s) (string-upcase s))
-               (string-split "hello,world,test" ","))
+               (string->list "hello,world,test" ","))
           " | ")
         '''
         # This requires lambda and map to work, so it's more of an integration test
         # For now, let's test a simpler combination
         helpers.assert_evaluates_to(
             aifpl,
-            '(string-append (string-upcase "hello") " " (string-downcase "WORLD"))',
+            '(string-concat (string-upcase "hello") " " (string-downcase "WORLD"))',
             '"HELLO world"'
         )
 
         # Nested string operations
         helpers.assert_evaluates_to(
             aifpl,
-            '(string-length (string-append "hello" " " "world"))',
+            '(string-length (string-concat "hello" " " "world"))',
             '11'
         )
 
         # String operations with conversions
         helpers.assert_evaluates_to(
             aifpl,
-            '(string-append "Count: " (integer->string 42))',
+            '(string-concat "Count: " (integer->string 42))',
             '"Count: 42"'
         )

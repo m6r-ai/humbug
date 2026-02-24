@@ -129,7 +129,7 @@ class TestAIFPLCore:
             "#f",
             "(integer+ 1 2 3)",
             "(list 1 2 3)",
-            "(string-append \"hello\" \" \" \"world\")",
+            "(string-concat \"hello\" \" \" \"world\")",
         ]
 
         for expr in test_cases:

@@ -140,7 +140,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         result = aifpl.evaluate("""
         (let* ((first-name "John")
                (last-name "Doe")
-               (full-name (string-append first-name " " last-name))
+               (full-name (string-concat first-name " " last-name))
                (length-val (string-length full-name)))
           length-val)
         """)
@@ -150,7 +150,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         result = aifpl.evaluate("""
         (let* ((text "hello world")
                (upper-text (string-upcase text))
-               (words (string-split upper-text " "))
+               (words (string->list upper-text " "))
                (count (list-length words)))
           count)
         """)
@@ -350,7 +350,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         result = aifpl.evaluate("""
         (let* ((numbers (list 1 2 3))
                (strings (map integer->string numbers))
-               (joined (string-join strings ","))
+               (joined (list->string strings ","))
                (length-val (string-length joined)))
           length-val)
         """)

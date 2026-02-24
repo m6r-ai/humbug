@@ -223,13 +223,13 @@ Syntax: (operator arg1 arg2 ...)
 
 ### Complex arithmetic (all args must be complex; use (complex r i) to construct):
 
-- (complex+ (complex 1 2) (complex 3 4)) → 4+6j
-- (complex- (complex 5 3) (complex 2 1)) → 3+2j
-- (complex* (complex 1 2) (complex 3 4)) → -5+10j
-- (complex/ (complex 4 2) (complex 1 1)) → 3-1j
-- (complex/ (complex 2 0)) → 0.5+0j (reciprocal)
-- (complex-neg (complex 3 4)) → -3-4j
-- (complex-abs (complex 3 4)) → 5.0 (returns magnitue as float, not complex)
+- (complex+ (complex 1.0 2.0) (complex 3.0 4.0)) → 4+6j
+- (complex- (complex 5.0 3.0) (complex 2.0 1.0)) → 3+2j
+- (complex* (complex 1.0 2.0) (complex 3.0 4.0)) → -5+10j
+- (complex/ (complex 4.0 2.0) (complex 1.0 1.0)) → 3-1j
+- (complex/ (complex 2.0 0.0)) → 0.5+0j (reciprocal)
+- (complex-neg (complex 3.0 4.0)) → -3-4j
+- (complex-abs (complex 3.0 4.0)) → 5.0 (returns magnitude as float, not complex)
 - (complex+) → 0+0j, (complex*) → 1+0j (zero-arg identities)
 - Transcendentals: complex-sin, complex-cos, complex-tan, complex-log, complex-log10, complex-exp, complex-sqrt
 - Exponentials: complex-expt
@@ -239,16 +239,16 @@ Syntax: (operator arg1 arg2 ...)
 - Literals: 3+4j, 5j, 1j
 - Pure imaginary: 4j, -5j, 1.5e2j → 4j, -5j, 150j
 - Complex: 3+4j, 3-4j, 1e2+3e-1j → (3+4j), (3-4j), (100+0.3j)
-- (complex 3 4) → (3+4j) (construct complex number)
-- Use explicit construction: (complex+ (complex 1 0) (complex 2 3)) → 3+3j
-- (complex-real 3+4j) → 3, (complex-imag 3+4j) → 4, (complex-abs 3+4j) → 5.0
-- (complex-real 42) → 42, (complex-imag 42) → 0 (works on all numeric types)
+- (complex 3.0 4.0) → (3+4j) (construct complex from two floats)
+- Use explicit construction: (complex+ (complex 1.0 0.0) (complex 2.0 3.0)) → 3+3j
+- (complex-real 3+4j) → 3.0, (complex-imag 3+4j) → 4.0, (complex-abs 3+4j) → 5.0
+- (complex-real z) → float real part, (complex-imag z) → float imaginary part (complex args only)
 
 ## Type construction and conversion:
 
 - (float->integer x) → convert float to integer (truncates toward zero): (float->integer 3.7) → 3, (float->integer -2.9) → -2
 - (integer->float x) → convert integer to float: (integer->float 42) → 42.0, (integer->float 3) → 3.0
-- (complex real imag) → construct complex: (complex 3 4) → (3+4j)
+- (complex real imag) → construct complex from two floats: (complex 3.0 4.0) → (3+4j)
 - (integer->string 42) → "42", (float->string 3.14) → "3.14", (complex->string 3+4j) → "3+4j"
 - These are the primary way to move between numeric types; there is no automatic promotion
 
@@ -257,18 +257,18 @@ Syntax: (operator arg1 arg2 ...)
 ### Type-specific equality and inequality (strict: both args must be the same type):
 
 - integer: (integer=? 1 1), (integer!=? 1 2)
-- float:   (float=? 1.0 1.0), (float!=? 1.0 2.0)
+- float: (float=? 1.0 1.0), (float!=? 1.0 2.0)
 - complex: (complex=? 1+2j 1+2j), (complex!=? 1+2j 1+3j)
-- string:  (string=? "hi" "hi"), (string!=? "hi" "bye")
+- string: (string=? "hi" "hi"), (string!=? "hi" "bye")
 - boolean: (boolean=? #t #t), (boolean!=? #t #f)
-- list:    (list=? (list 1 2) (list 1 2)), (list!=? (list 1 2) (list 1 3))
-- alist:   (alist=? a1 a2), (alist!=? a1 a2)
+- list: (list=? (list 1 2) (list 1 2)), (list!=? (list 1 2) (list 1 3))
+- alist: (alist=? a1 a2), (alist!=? a1 a2)
 
 ### Type-specific ordered comparisons (strict: both args must be the same type):
 
 - integer: (integer<? 1 2), (integer>? 3 2), (integer<=? 1 1), (integer>=? 2 1)
-- float:   (float<? 1.0 2.0), (float>? 3.0 2.0), (float<=? 1.0 1.0), (float>=? 2.0 1.0)
-- string:  (string<? "apple" "banana"), (string>? "b" "a"), (string<=? "a" "a"), (string>=? "b" "a")
+- float: (float<? 1.0 2.0), (float>? 3.0 2.0), (float<=? 1.0 1.0), (float>=? 2.0 1.0)
+- string: (string<? "apple" "banana"), (string>? "b" "a"), (string<=? "a" "a"), (string>=? "b" "a")
 - String ordering is Unicode codepoint order (same as Python str), not locale-aware collation
 - Complex numbers have no ordering; use (complex-abs z) to compare magnitudes as floats
 
@@ -277,15 +277,15 @@ Syntax: (operator arg1 arg2 ...)
 
 ## String operations:
 
-- Basic: (string-append "hello" " " "world"), (string-length "hello")
+- Basic: (string-concat "hello" " " "world"), (string-length "hello")
 - Access: (string-ref "hello" 1) → "e" (character at 0-based index)
 - Manipulation: (string-slice "hello" 1 4), (string-slice "hello" 2) → "llo", (string-upcase "hello"), (string-downcase "HELLO")
 - Utilities: (string-trim "  hello  "), (string-replace "banana" "a" "o")
 - Equality/ordering predicates: (string=? "hi" "hi"), (string!=? "hi" "bye"), (string<? "apple" "banana"), (string>? "b" "a"), (string<=? "a" "a"), (string>=? "b" "a")
 - Search predicates: (string-contains? "hello" "ell"), (string-prefix? "hello" "he"), (string-suffix? "hello" "lo")
 - Conversion: (string->number "42"), (integer->string 42), (float->string 3.14), (complex->string 3+4j)
-- String-list: (string->list "hi") → ("h" "i"), (list->string (list "h" "i")) → "hi"
-- Split/join: (string-split "a,b,c" ",") → ("a" "b" "c"), (string-join (list "hello" "world") " ") → "hello world"
+- Split/join: (string->list "hello") → ("h" "e" "l" "l" "o"), (string->list "a,b,c" ",") → ("a" "b" "c")
+- Split/join: (list->string (list "h" "i")) → "hi", (list->string (list "a" "b" "c") ",") → "a,b,c"
 
 ## List operations:
 
@@ -411,6 +411,7 @@ Syntax: (operator arg1 arg2 ...)
 ## Important notes:
 
 - list-prepend and list-append both take list first, item second: (list-prepend lst item), (list-append lst item)
+- string-concat joins strings: (string-concat "hello" " " "world") → "hello world"
 - Strict typing: string ops need strings, boolean ops need booleans
 - float-floor, float-ceil, float-round all return float, not integer; use (float->integer (float-round x)) to get an integer
 - All comparison operators are type-specific: use integer=?, float<?, string>=? etc.

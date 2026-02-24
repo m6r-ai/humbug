@@ -189,7 +189,7 @@ class TestPatternMatching:
         # Fixed-length list patterns
         ('(match (list 1 2 3) ((a b c) (integer+ a b c)) (_ "wrong length"))', '6'),
         ('(match (list 1 2) ((a b c) (integer+ a b c)) (_ "wrong length"))', '"wrong length"'),
-        ('(match (list "x" "y") ((a b) (string-append a b)) (_ "other"))', '"xy"'),
+        ('(match (list "x" "y") ((a b) (string-concat a b)) (_ "other"))', '"xy"'),
 
         # Single element list patterns
         ('(match (list 42) ((x) (integer* x 2)) (_ "not single"))', '84'),
@@ -267,7 +267,7 @@ class TestPatternMatching:
         mixed_pattern = '''
         (match (list 42 (list "x" "y") #t)
                (((integer? n) (a b) (boolean? flag))
-                (if flag (integer+ n (string-length (string-append a b))) n))
+                (if flag (integer+ n (string-length (string-concat a b))) n))
                (_ "no match"))
         '''
         helpers.assert_evaluates_to(aifpl, mixed_pattern, '44')  # 42 + 2
@@ -561,7 +561,7 @@ class TestPatternMatching:
                         (match cmd
                                (("add" (integer? a) (integer? b)) (integer+ a b))
                                (("multiply" (integer? a) (integer? b)) (integer* a b))
-                               (("greet" (string? name)) (string-append "Hello, " name))
+                               (("greet" (string? name)) (string-concat "Hello, " name))
                                (("list-length" (string? s)) (string-length s))
                                (_ "unknown command")))))
           (list (execute (list "add" 5 3))

@@ -156,15 +156,13 @@ class Opcode(IntEnum):
     STRING_TRIM = auto()     # Trim whitespace from string
     STRING_TO_NUMBER = auto()
                              # Parse string to number
-    STRING_TO_LIST = auto()  # Convert string to list of characters
+    STRING_TO_LIST = auto()  # Split string by delimiter: (string->list str delim)
     STRING_REF = auto()      # Get character at index
     STRING_CONTAINS_P = auto()
                              # Check if string contains substring
     STRING_PREFIX_P = auto() # Check if string has prefix
     STRING_SUFFIX_P = auto() # Check if string has suffix
-    STRING_SPLIT = auto()    # Split string by delimiter
-    STRING_JOIN = auto()     # Join list of strings with separator
-    STRING_APPEND = auto()   # Concatenate two strings: (string-append a b)
+    STRING_CONCAT = auto()   # Concatenate two strings: (string-concat a b)
     STRING_SLICE = auto()    # Extract substring (string, start, end)
     STRING_REPLACE = auto()  # Replace substring (string, old, new)
 
@@ -201,7 +199,7 @@ class Opcode(IntEnum):
     LIST_SLICE = auto()      # Slice list: (list-slice lst start [end])
     LIST_REMOVE = auto()     # Remove all occurrences of item from list
     LIST_CONCAT = auto()     # Append two lists: (append a b)
-    LIST_TO_STRING = auto()  # Convert list of characters to string
+    LIST_TO_STRING = auto()  # Join list of strings with separator: (list->string lst sep)
 
     # Generate integer range list
     RANGE = auto()           # Generate integer range list: (range start end step)
@@ -316,14 +314,12 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'string-downcase': (Opcode.STRING_DOWNCASE, 1),
     'string-trim': (Opcode.STRING_TRIM, 1),
     'string->number': (Opcode.STRING_TO_NUMBER, 1),
-    'string->list': (Opcode.STRING_TO_LIST, 1),
+    'string->list': (Opcode.STRING_TO_LIST, 2),
     'string-ref': (Opcode.STRING_REF, 2),
     'string-contains?': (Opcode.STRING_CONTAINS_P, 2),
     'string-prefix?': (Opcode.STRING_PREFIX_P, 2),
     'string-suffix?': (Opcode.STRING_SUFFIX_P, 2),
-    'string-split': (Opcode.STRING_SPLIT, 2),
-    'string-join': (Opcode.STRING_JOIN, 2),
-    'string-append': (Opcode.STRING_APPEND, 2),
+    'string-concat': (Opcode.STRING_CONCAT, 2),
     'string-slice': (Opcode.STRING_SLICE, 3),
     'string-replace': (Opcode.STRING_REPLACE, 3),
     'list?': (Opcode.LIST_P, 1),
@@ -343,7 +339,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'list-slice': (Opcode.LIST_SLICE, 3),
     'list-remove': (Opcode.LIST_REMOVE, 2),
     'list-concat': (Opcode.LIST_CONCAT, 2),
-    'list->string': (Opcode.LIST_TO_STRING, 1),
+    'list->string': (Opcode.LIST_TO_STRING, 2),
     'alist?': (Opcode.ALIST_P, 1),
     'alist=?': (Opcode.ALIST_EQ_P, 2),
     'alist!=?': (Opcode.ALIST_NEQ_P, 2),
@@ -478,9 +474,7 @@ class Instruction:
             Opcode.STRING_CONTAINS_P,
             Opcode.STRING_PREFIX_P,
             Opcode.STRING_SUFFIX_P,
-            Opcode.STRING_SPLIT,
-            Opcode.STRING_JOIN,
-            Opcode.STRING_APPEND,
+            Opcode.STRING_CONCAT,
             Opcode.STRING_SLICE,
             Opcode.STRING_REPLACE,
             Opcode.LIST_P,

@@ -232,16 +232,14 @@ class BytecodeValidator:
             Opcode.STRING_DOWNCASE: (1, 1),
             Opcode.STRING_TRIM: (1, 1),
             Opcode.STRING_TO_NUMBER: (1, 1),
-            Opcode.STRING_TO_LIST: (1, 1),
+            Opcode.STRING_TO_LIST: (2, 1),
             Opcode.STRING_REF: (2, 1),
             Opcode.STRING_CONTAINS_P: (2, 1),
             Opcode.STRING_PREFIX_P: (2, 1),
             Opcode.STRING_SUFFIX_P: (2, 1),
-            Opcode.STRING_SPLIT: (2, 1),
-            Opcode.STRING_JOIN: (2, 1),
             Opcode.STRING_SLICE: (3, 1),
             Opcode.STRING_REPLACE: (3, 1),
-            Opcode.STRING_APPEND: (2, 1),
+            Opcode.STRING_CONCAT: (2, 1),
 
             # Alist
             Opcode.ALIST_P: (1, 1),
@@ -274,7 +272,7 @@ class BytecodeValidator:
             Opcode.LIST_SLICE: (3, 1),
             Opcode.LIST_REMOVE: (2, 1),
             Opcode.LIST_CONCAT: (2, 1),
-            Opcode.LIST_TO_STRING: (1, 1),
+            Opcode.LIST_TO_STRING: (2, 1),
 
             Opcode.RANGE: (3, 1),
     }

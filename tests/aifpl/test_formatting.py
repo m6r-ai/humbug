@@ -193,7 +193,7 @@ class TestFormatting:
         # String concatenation
         helpers.assert_evaluates_to(
             aifpl, 
-            '(string-append "hello" " " "world")', 
+            '(string-concat "hello" " " "world")', 
             '"hello world"'
         )
 
@@ -207,7 +207,7 @@ class TestFormatting:
         # String splitting
         helpers.assert_evaluates_to(
             aifpl, 
-            '(string-split "a,b,c" ",")', 
+            '(string->list "a,b,c" ",")', 
             '("a" "b" "c")'
         )
 
@@ -263,7 +263,7 @@ class TestFormatting:
         helpers.assert_evaluates_to(aifpl, '(let ((x 5) (y 3)) (integer+ x y))', '8')
         helpers.assert_evaluates_to(
             aifpl, 
-            '(let ((name "hello")) (string-append name " world"))', 
+            '(let ((name "hello")) (string-concat name " world"))', 
             '"hello world"'
         )
 
@@ -397,7 +397,7 @@ class TestFormatting:
             '#f',
             '(list 1 2 3)',
             '(integer+ 1 2)',
-            '(string-append "hello" " " "world")',
+            '(string-concat "hello" " " "world")',
             '(if #t "yes" "no")',
         ]
 

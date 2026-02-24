@@ -293,7 +293,7 @@ class TestStringEscaping:
         """Test line 688: Escaping double quotes in strings."""
         printer = AIFPLPrettyPrinter()
         # String containing a double quote
-        code = '(string-append "Hello" "\\"world\\"")'
+        code = '(string-concat "Hello" "\\"world\\"")'
         result = printer.format(code)
 
         # Should preserve the escaped quotes
@@ -303,7 +303,7 @@ class TestStringEscaping:
         """Test line 691: Escaping backslashes in strings."""
         printer = AIFPLPrettyPrinter()
         # String containing backslash
-        code = '(string-append "path\\\\to\\\\file")'
+        code = '(string-concat "path\\\\to\\\\file")'
         result = printer.format(code)
 
         # Should have escaped backslashes
@@ -313,7 +313,7 @@ class TestStringEscaping:
         """Test line 697: Escaping tab characters in strings."""
         printer = AIFPLPrettyPrinter()
         # String containing a tab
-        code = '(string-append "hello\\tworld")'
+        code = '(string-concat "hello\\tworld")'
         result = printer.format(code)
 
         # Should preserve the escaped tab
@@ -323,7 +323,7 @@ class TestStringEscaping:
         """Test line 700: Escaping carriage returns in strings."""
         printer = AIFPLPrettyPrinter()
         # String containing carriage return
-        code = '(string-append "line1\\rline2")'
+        code = '(string-concat "line1\\rline2")'
         result = printer.format(code)
 
         # Should preserve the escaped carriage return
@@ -334,7 +334,7 @@ class TestStringEscaping:
         printer = AIFPLPrettyPrinter()
         # String containing a control character (ASCII 7 = bell)
         # We need to construct this carefully
-        code = '(string-append "hello\\u0007world")'
+        code = '(string-concat "hello\\u0007world")'
         result = printer.format(code)
 
         # Should have unicode escape for control character
@@ -343,7 +343,7 @@ class TestStringEscaping:
     def test_escape_newlines(self):
         """Test escaping newline characters in strings."""
         printer = AIFPLPrettyPrinter()
-        code = '(string-append "hello\\nworld")'
+        code = '(string-concat "hello\\nworld")'
         result = printer.format(code)
 
         assert "\\n" in result
@@ -351,7 +351,7 @@ class TestStringEscaping:
     def test_string_with_multiple_escapes(self):
         """Test string with multiple different escape sequences."""
         printer = AIFPLPrettyPrinter()
-        code = '(string-append "tab:\\t newline:\\n quote:\\" backslash:\\\\")'
+        code = '(string-concat "tab:\\t newline:\\n quote:\\" backslash:\\\\")'
         result = printer.format(code)
 
         assert "\\t" in result
@@ -897,7 +897,7 @@ class TestEdgeCasesForFullCoverage:
         """Test string with all possible escape sequences."""
         printer = AIFPLPrettyPrinter()
         # String with various characters that need escaping
-        code = r'(string-append "quote:\" backslash:\\ newline:\n tab:\t return:\r")'
+        code = r'(string-concat "quote:\" backslash:\\ newline:\n tab:\t return:\r")'
         result = printer.format(code)
 
         # Should preserve escapes
