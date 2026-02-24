@@ -279,29 +279,11 @@ class TestFourArgStructure:
 # ---------------------------------------------------------------------------
 
 class TestNoInterferenceWithGenericOps:
-    """The generic <, >, <=, >= desugaring is unchanged."""
+    """Typed comparison operators desugar independently of each other."""
 
-    def test_generic_lt_two_arg_still_direct(self):
-        result = desugar('(< 1 2)')
-        assert sym(result) == '<'
+    def test_integer_lt_two_arg_is_direct(self):
+        """integer<? with 2 args produces a direct binary call, no wrapping."""
+        result = desugar('(integer<? 1 2)')
+        assert sym(result) == 'integer<?'
         assert len(result.elements) == 3
 
-    def test_generic_lt_three_arg_still_uses_and(self):
-        result = desugar('(< 1 2 3)')
-        bindings, body = _unwrap_let_star_bindings(result)
-        assert len(bindings) == 3
-        assert sym(body) == 'and'
-
-    def test_integer_lt_and_generic_lt_independent(self):
-        r1 = desugar('(integer<? 1 2 3)')
-        r2 = desugar('(< 1 2 3)')
-        # Both produce let* + and structures, but with different operators in the pairs
-        bindings1, body1 = _unwrap_let_star_bindings(r1)
-        bindings2, body2 = _unwrap_let_star_bindings(r2)
-        assert len(bindings1) == 3
-        assert len(bindings2) == 3
-        assert sym(body1) == 'and'
-        assert sym(body2) == 'and'
-        # The pairs inside each 'and' use the correct operator
-        assert sym(body1.elements[1]) == 'integer<?'
-        assert sym(body2.elements[1]) == '<'

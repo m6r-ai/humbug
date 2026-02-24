@@ -281,14 +281,14 @@ class TestAIFPLPatternMatchingEdgeCases:
         # Pattern matching with variable binding and expressions
         result = aifpl.evaluate('''
         (match 5
-          ((number? n) (if (> n 0) "positive" "non-positive"))
+          ((number? n) (if (integer>? n 0) "positive" "non-positive"))
           (_ "not a number"))
         ''')
         assert result == "positive"
 
         result = aifpl.evaluate('''
         (match -3
-          ((number? n) (if (> n 0) "positive" "non-positive"))
+          ((number? n) (if (integer>? n 0) "positive" "non-positive"))
           (_ "not a number"))
         ''')
         assert result == "non-positive"
@@ -333,7 +333,7 @@ class TestAIFPLPatternMatchingEdgeCases:
             result = aifpl.evaluate('''
             (filter (lambda (x)
                       (match x
-                        ((number? n) (> n 2))
+                        ((number? n) (integer>? n 2))
                         (_ #f)))
                     (list 1 2 3 4 5))
             ''')
@@ -473,7 +473,7 @@ class TestAIFPLPatternMatchingEdgeCases:
             result = aifpl.evaluate('''
             (match 5
               ((number? n)
-               (match (> n 3)
+               (match (integer>? n 3)
                  (#t "big number")
                  (#f "small number")))
               (_ "not number"))
@@ -519,7 +519,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('''
         (match (list 1 2 3)
           (() "empty")
-          ((list? l) (if (> (length l) 2) "long list" "short list"))
+          ((list? l) (if (integer>? (length l) 2) "long list" "short list"))
           (_ "not list"))
         ''')
         assert result == "long list"

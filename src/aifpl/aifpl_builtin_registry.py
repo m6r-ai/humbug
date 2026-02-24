@@ -154,17 +154,9 @@ class AIFPLBuiltinRegistry:
         'alist-merge': (2, 2),
         'alist-length': (1, 1),
         'function?': (1, 1),
-        '+': (0, None),
-        '-': (1, None),
-        '*': (0, None),
-        '/': (1, None),
         '//': (2, 2),
         '%': (2, 2),
-        '<': (2, None),
-        '>': (2, None),
         'number?': (1, 1),
-        '<=': (2, None),
-        '>=': (2, None),
         'range': (2, 3),
         'number->string': (1, 1),
         'list->string': (1, 1),
@@ -200,8 +192,6 @@ class AIFPLBuiltinRegistry:
         # their own prelude stub bodies resolve to opcodes correctly via
         # BUILTIN_OPCODE_MAP in the codegen.
         prelude_names = {
-            '+', '-', '*', '/',
-            '=', '!=', '<', '>', '<=', '>=',
             'min', 'max',
             'number=?',
             'integer<?',

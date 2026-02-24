@@ -345,7 +345,7 @@ class TestAIFPLParserEdgeCases:
         assert result == "inner-yes"
 
         # Conditionals with expressions
-        result = aifpl.evaluate("(if (> 5 3) (integer+ 1 2) (integer- 1 2))")
+        result = aifpl.evaluate("(if (integer>? 5 3) (integer+ 1 2) (integer- 1 2))")
         assert result == 3
 
     def test_parser_error_recovery(self, aifpl):

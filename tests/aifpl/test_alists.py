@@ -420,7 +420,7 @@ class TestAListWithFunctionalOperations:
         """Test filtering alist values."""
         result = tool.evaluate('''
             (let* ((data (alist (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4))))
-              (filter (lambda (v) (> v 2)) (alist-values data)))
+              (filter (lambda (v) (integer>? v 2)) (alist-values data)))
         ''')
         assert result == [3, 4]
 

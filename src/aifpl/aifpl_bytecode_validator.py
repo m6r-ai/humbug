@@ -207,13 +207,8 @@ class BytecodeValidator:
             Opcode.COMPLEX_ABS: (1, 1),
 
             # Real number operations
-            Opcode.REAL_LT: (2, 1),
-            Opcode.REAL_GT: (2, 1),
-            Opcode.REAL_LTE: (2, 1),
-            Opcode.REAL_GTE: (2, 1),
             Opcode.REAL_FLOOR_DIV: (2, 1),
             Opcode.REAL_MOD: (2, 1),
-            Opcode.REAL_EXPT: (2, 1),
             Opcode.REAL_FLOOR: (1, 1),
             Opcode.REAL_CEIL: (1, 1),
             Opcode.REAL_ROUND: (1, 1),

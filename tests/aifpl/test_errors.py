@@ -249,7 +249,7 @@ class TestErrors:
             aifpl.evaluate("(integer=?)")
 
         with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate("(<)")
+            aifpl.evaluate("(integer<?)")
 
     def test_lambda_function_arity_eval_errors(self, aifpl):
         """Test that lambda function arity mismatches cause evaluation errors."""
@@ -576,7 +576,7 @@ class TestErrors:
         complex_expr = '''
         (let ((x 10))
           (let ((f (lambda (y)
-                    (if (> y 0)
+                              (if (integer>? y 0)
                         (integer+ x (integer/ y 0))
                         y))))
             (f 5)))
@@ -589,7 +589,7 @@ class TestErrors:
         nested_functional = '''
         (fold integer+ 0
               (map (lambda (x) (integer/ x 0))
-                   (filter (lambda (x) (> x 0))
+                   (filter (lambda (x) (integer>? x 0))
                            (list 1 2 3))))
         '''
 

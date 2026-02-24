@@ -477,7 +477,7 @@ class TestModuleCompilation:
         """Test module using letrec for recursion."""
         (tmp_path / "recursive.aifpl").write_text("""
 (letrec ((factorial (lambda (n)
-                      (if (<= n 1)
+                      (if (integer<=? n 1)
                           1
                           (integer* n (factorial (integer- n 1)))))))
   (alist (list "factorial" factorial)))
@@ -496,7 +496,7 @@ class TestModuleCompilation:
         """Test module using if expressions."""
         (tmp_path / "cond_test.aifpl").write_text("""
 (let ((abs-val (lambda (x)
-                 (if (< x 0)
+                 (if (integer<? x 0)
                      (integer-negate x)
                      x))))
   (alist (list "abs" abs-val)))

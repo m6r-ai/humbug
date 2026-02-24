@@ -127,7 +127,7 @@ class TestEvaluatorMissingCoverage:
         """Test that recursive lambda call chain is properly cleaned up."""
         recursive_code = """
         (letrec ((factorial (lambda (n)
-                              (if (<= n 1)
+                              (if (integer<=? n 1)
                                   1
                                   (integer* n (factorial (integer- n 1)))))))
           (factorial 5))

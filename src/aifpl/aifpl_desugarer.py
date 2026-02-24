@@ -106,7 +106,6 @@ class AIFPLDesugarer:
 
             # Variadic comparison chains (short-circuit with 'and' is correct)
             if name in [
-                '<', '>', '<=', '>=',
                 'integer<?', 'integer>?', 'integer<=?', 'integer>=?',
                 'float<?',   'float>?',   'float<=?',   'float>=?',
                 'string<?',  'string>?',  'string<=?',  'string>=?',
@@ -1168,7 +1167,7 @@ class AIFPLDesugarer:
         ))
 
         length_test = AIFPLASTList((
-            AIFPLASTSymbol('>='),
+            AIFPLASTSymbol('integer>=?'),
             AIFPLASTList((
                 AIFPLASTSymbol('length'),
                 AIFPLASTSymbol(temp_var)

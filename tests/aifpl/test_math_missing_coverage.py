@@ -13,7 +13,7 @@ class TestMathMissingCoverage:
     # ========== Comparison Operations Error Handling ==========
 
     def test_inequality_operators_reject_complex_numbers(self, aifpl):
-        """Test that <, >, <=, >= reject complex number arguments."""
+        """Test that integer typed comparison operators reject complex number arguments."""
         complex_values = [
             "(complex 1 2)",
             "1j",
@@ -21,14 +21,14 @@ class TestMathMissingCoverage:
             "(complex -1 5)"
         ]
 
-        comparison_ops = ["<", ">", "<=", ">="]
+        comparison_ops = ["integer<?", "integer>?", "integer<=?", "integer>=?"]
 
         for op in comparison_ops:
             for complex_val in complex_values:
-                with pytest.raises(AIFPLEvalError, match=f"requires real number arguments"):
+                with pytest.raises(AIFPLEvalError, match=f"requires integer arguments"):
                     aifpl.evaluate(f"({op} 1 {complex_val})")
 
-                with pytest.raises(AIFPLEvalError, match=f"requires real number arguments"):
+                with pytest.raises(AIFPLEvalError, match=f"requires integer arguments"):
                     aifpl.evaluate(f"({op} {complex_val} 2)")
 
     def test_not_equal_all_arguments_equal_edge_case(self, aifpl):

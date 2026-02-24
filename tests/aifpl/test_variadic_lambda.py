@@ -113,7 +113,7 @@ class TestVariadicLambdaArithmetic:
         """Variadic minimum using letrec loop."""
         expr = '''
         (let ((my-min (lambda (first . rest)
-                        (fold (lambda (acc x) (if (< x acc) x acc))
+                        (fold (lambda (acc x) (if (integer<? x acc) x acc))
                               first
                               rest))))
           (my-min 5 3 8 1 4))
@@ -124,7 +124,7 @@ class TestVariadicLambdaArithmetic:
         """Variadic maximum using fold."""
         expr = '''
         (let ((my-max (lambda (first . rest)
-                        (fold (lambda (acc x) (if (> x acc) x acc))
+                        (fold (lambda (acc x) (if (integer>? x acc) x acc))
                               first
                               rest))))
           (my-max 5 3 8 1 4))

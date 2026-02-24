@@ -683,7 +683,7 @@ class AIFPLParser:
             expected=f'Add "{closing_parens}" to close all expressions',
             suggestion="Close each incomplete expression with ')', working from innermost to outermost",
             context=context_msg,
-            example="(let (\n  (x 5)\n  (y (+ x 2))\n) body)",
+            example="(let (\n  (x 5)\n  (y (integer+ x 2))\n) body)",
             source=self.expression
         )
 

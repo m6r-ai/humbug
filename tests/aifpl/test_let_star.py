@@ -141,7 +141,7 @@ class TestLetStarSemantics:
             aifpl,
             """(letrec ((factorial
                        (lambda (n)
-                         (let* ((is-base (<= n 1))
+                         (let* ((is-base (integer<=? n 1))
                                 (result (if is-base 1 (integer* n (factorial (integer- n 1))))))
                            result))))
                  (factorial 5))""",

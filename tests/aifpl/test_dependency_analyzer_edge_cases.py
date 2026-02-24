@@ -86,7 +86,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         result = aifpl.evaluate("""
         (let* ((a 5)
                (b 3)
-               (condition (> a b))
+               (condition (integer>? a b))
                (result (if condition (integer* a b) (integer+ a b))))
           result)
         """)
@@ -217,7 +217,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         result = aifpl.evaluate("""
         (let* ((threshold 2)
                (numbers (list 1 2 3 4 5))
-               (filtered (filter (lambda (x) (> x threshold)) numbers))
+               (filtered (filter (lambda (x) (integer>? x threshold)) numbers))
                (count (length filtered)))
           count)
         """)
@@ -260,7 +260,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
             # Recursive function definition
             result = aifpl.evaluate("""
             (let* ((factorial (lambda (n)
-                               (if (<= n 1)
+                               (if (integer<=? n 1)
                                    1
                                    (integer* n (factorial (integer- n 1))))))
                    (result (factorial 5)))
@@ -373,7 +373,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         result = aifpl.evaluate("""
         (let* ((x 5)
                (y 3)
-               (greater (> x y))
+               (greater (integer>? x y))
                (equal (integer=? x y))
                (result (and greater (not equal))))
           result)

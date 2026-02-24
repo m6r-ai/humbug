@@ -50,10 +50,10 @@ class TestConditionals:
         assert aifpl.evaluate("(if #f 42 99)") == 99
 
     def test_if_with_condition(self, aifpl):
-        assert aifpl.evaluate("(if (> 10 5) 1 0)") == 1
+        assert aifpl.evaluate("(if (integer>? 10 5) 1 0)") == 1
 
     def test_nested_if(self, aifpl):
-        assert aifpl.evaluate("(if (> 5 3) (if (< 2 4) 1 2) 3)") == 1
+        assert aifpl.evaluate("(if (integer>? 5 3) (if (integer<? 2 4) 1 2) 3)") == 1
 
 
 class TestLet:
@@ -131,7 +131,7 @@ class TestHigherOrder:
         assert result == [2, 4, 6]
 
     def test_filter(self, aifpl):
-        result = aifpl.evaluate("(filter (lambda (x) (> x 2)) (list 1 2 3 4))")
+        result = aifpl.evaluate("(filter (lambda (x) (integer>? x 2)) (list 1 2 3 4))")
         assert result == [3, 4]
 
     def test_fold(self, aifpl):

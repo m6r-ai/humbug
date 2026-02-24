@@ -226,13 +226,8 @@ class AIFPLVM:
         table[Opcode.FLOAT_SQRT] = self._op_float_sqrt
         table[Opcode.FLOAT_ABS] = self._op_float_abs
         table[Opcode.FLOAT_TO_INTEGER] = self._op_float_to_integer
-        table[Opcode.REAL_LT] = self._op_real_lt
-        table[Opcode.REAL_GT] = self._op_real_gt
-        table[Opcode.REAL_LTE] = self._op_real_lte
-        table[Opcode.REAL_GTE] = self._op_real_gte
         table[Opcode.REAL_FLOOR_DIV] = self._op_real_floor_div
         table[Opcode.REAL_MOD] = self._op_real_mod
-        table[Opcode.REAL_EXPT] = self._op_real_expt
         table[Opcode.REAL_FLOOR] = self._op_real_floor
         table[Opcode.REAL_CEIL] = self._op_real_ceil
         table[Opcode.REAL_ROUND] = self._op_real_round
@@ -1431,42 +1426,6 @@ class AIFPLVM:
         self.stack.append(AIFPLInteger(int(a_val)))
         return None
 
-    def _op_real_lt(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """REAL_LT: Pop two real numbers, push true if a < b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(self._ensure_real_number(a, '<') < self._ensure_real_number(b, '<')))
-        return None
-
-    def _op_real_gt(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """REAL_GT: Pop two real numbers, push true if a > b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(self._ensure_real_number(a, '>') > self._ensure_real_number(b, '>')))
-        return None
-
-    def _op_real_lte(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """REAL_LTE: Pop two real numbers, push true if a <= b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(self._ensure_real_number(a, '<=') <= self._ensure_real_number(b, '<=')))
-        return None
-
-    def _op_real_gte(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """REAL_GTE: Pop two real numbers, push true if a >= b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(self._ensure_real_number(a, '>=') >= self._ensure_real_number(b, '>=')))
-        return None
-
     def _op_real_floor_div(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1493,20 +1452,6 @@ class AIFPLVM:
             raise AIFPLEvalError("Modulo by zero")
 
         self.stack.append(self._wrap_numeric_result(a_val % b_val))
-        return None
-
-    def _op_real_expt(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """REAL_EXPT: Calculate a ** b."""
-        # Pop operands (b first, then a, so we compute a ** b)
-        b = self.stack.pop()
-        a = self.stack.pop()
-
-        a_val = self._ensure_real_number(a, 'expt')
-        b_val = self._ensure_real_number(b, 'expt')
-        result = a_val ** b_val
-        self.stack.append(self._wrap_numeric_result(result))
         return None
 
     def _op_real_floor(  # pylint: disable=useless-return

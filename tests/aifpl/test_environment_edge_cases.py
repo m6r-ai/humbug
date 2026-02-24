@@ -192,7 +192,7 @@ class TestAIFPLEnvironmentEdgeCases:
         # Filter with closure
         result = aifpl.evaluate("""
         (let ((threshold 2))
-          (filter (lambda (x) (> x threshold)) (list 1 2 3 4)))
+          (filter (lambda (x) (integer>? x threshold)) (list 1 2 3 4)))
         """)
         assert result == [3, 4]
 
@@ -234,7 +234,7 @@ class TestAIFPLEnvironmentEdgeCases:
             # Self-referential binding (might not be supported)
             result = aifpl.evaluate("""
             (let ((factorial (lambda (n)
-                              (if (<= n 1)
+                              (if (integer<=? n 1)
                                   1
                                   (integer* n (factorial (integer- n 1)))))))
               (factorial 5))

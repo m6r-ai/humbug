@@ -105,13 +105,8 @@ class Opcode(IntEnum):
     FLOAT_TO_INTEGER = auto() # Convert float to integer
 
     # Real number operations
-    REAL_LT = auto()         # a < b
-    REAL_GT = auto()         # a > b
-    REAL_LTE = auto()        # a <= b
-    REAL_GTE = auto()        # a >= b
     REAL_FLOOR_DIV = auto()  # Calculate a // b (floor division)
     REAL_MOD = auto()        # Calculate a % b (modulo)
-    REAL_EXPT = auto()       # Calculate x ** y
     REAL_FLOOR = auto()      # Calculate floor(x)
     REAL_CEIL = auto()       # Calculate ceil(x)
     REAL_ROUND = auto()      # Calculate round(x)
@@ -273,13 +268,8 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'float-exp': (Opcode.FLOAT_EXP, 1),
     'float-sqrt': (Opcode.FLOAT_SQRT, 1),
     'float-abs': (Opcode.FLOAT_ABS, 1),
-    '<': (Opcode.REAL_LT, 2),
-    '>': (Opcode.REAL_GT, 2),
-    '<=': (Opcode.REAL_LTE, 2),
-    '>=': (Opcode.REAL_GTE, 2),
     '//': (Opcode.REAL_FLOOR_DIV, 2),
     '%': (Opcode.REAL_MOD, 2),
-    'expt': (Opcode.REAL_EXPT, 2),
     'floor': (Opcode.REAL_FLOOR, 1),
     'ceil': (Opcode.REAL_CEIL, 1),
     'round': (Opcode.REAL_ROUND, 1),
@@ -385,7 +375,7 @@ class Instruction:
             Opcode.NUMBER_P, Opcode.INTEGER_P, Opcode.FLOAT_P, Opcode.COMPLEX_P,
             Opcode.STRING_P, Opcode.BOOLEAN_P, Opcode.LIST_P, Opcode.ALIST_P, Opcode.FUNCTION_P,
             Opcode.BOOLEAN_NOT, Opcode.INTEGER_BIT_NOT, Opcode.INTEGER_BIT_SHIFT_LEFT, Opcode.INTEGER_BIT_SHIFT_RIGHT,
-            Opcode.REAL_EXPT, Opcode.REAL_FLOOR, Opcode.REAL_CEIL, Opcode.REAL_ROUND,
+            Opcode.REAL_FLOOR, Opcode.REAL_CEIL, Opcode.REAL_ROUND,
             Opcode.FLOAT_TO_INTEGER, Opcode.INTEGER_TO_FLOAT, Opcode.COMPLEX_REAL, Opcode.COMPLEX_IMAG, Opcode.COMPLEX,
             Opcode.INTEGER_TO_STRING_BIN, Opcode.INTEGER_TO_STRING_HEX, Opcode.INTEGER_TO_STRING_OCT,
             Opcode.LIST_CONS, Opcode.LIST_REVERSE, Opcode.LIST_FIRST, Opcode.LIST_REST, Opcode.LIST_LAST,
@@ -400,7 +390,6 @@ class Instruction:
             Opcode.RANGE,
             Opcode.INTEGER_BIT_OR, Opcode.INTEGER_BIT_AND, Opcode.INTEGER_BIT_XOR,
             Opcode.LIST_APPEND, Opcode.STRING_APPEND, Opcode.REAL_MIN, Opcode.REAL_MAX,
-            Opcode.REAL_LT, Opcode.REAL_GT, Opcode.REAL_LTE, Opcode.REAL_GTE,
             Opcode.STRING_EQ_P,
             Opcode.NUMBER_EQ_P, Opcode.INTEGER_EQ_P, Opcode.FLOAT_EQ_P, Opcode.COMPLEX_EQ_P,
             Opcode.BOOLEAN_EQ_P, Opcode.LIST_EQ_P, Opcode.ALIST_EQ_P,

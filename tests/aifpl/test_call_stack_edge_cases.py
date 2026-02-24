@@ -44,7 +44,7 @@ class TestAIFPLCallStackEdgeCases:
         assert result == [2, 4, 6]
 
         # Filter function with predicate calls
-        result = aifpl.evaluate("(filter (lambda (x) (> x 2)) (list 1 2 3 4))")
+        result = aifpl.evaluate("(filter (lambda (x) (integer>? x 2)) (list 1 2 3 4))")
         assert result == [3, 4]
 
         # Fold function with accumulator calls
@@ -81,8 +81,8 @@ class TestAIFPLCallStackEdgeCases:
 
         # Nested conditionals
         result = aifpl.evaluate('''
-        (if (> 5 3)
-            (if (< 2 4) "both true" "first true only")
+        (if (integer>? 5 3)
+            (if (integer<? 2 4) "both true" "first true only")
             "first false")
         ''')
         assert result == "both true"
@@ -115,7 +115,7 @@ class TestAIFPLCallStackEdgeCases:
         try:
             result = aifpl.evaluate("""
             (let ((factorial (lambda (n)
-                              (if (<= n 1)
+                              (if (integer<=? n 1)
                                   1
                                   (integer* n (factorial (integer- n 1)))))))
               (factorial 5))
@@ -141,7 +141,7 @@ class TestAIFPLCallStackEdgeCases:
         functional_expr = """
         (fold integer+ 0
               (map (lambda (x) (integer* x x))
-                   (filter (lambda (x) (> x 0))
+                   (filter (lambda (x) (integer>? x 0))
                            (list -2 1 -3 2 3))))
         """
         result = aifpl.evaluate(functional_expr)
@@ -197,7 +197,7 @@ class TestAIFPLCallStackEdgeCases:
         # List operations with transformations
         result = aifpl.evaluate("""
         (length
-          (filter (lambda (x) (> x 0))
+          (filter (lambda (x) (integer>? x 0))
                   (map (lambda (x) (integer- x 2))
                        (list 1 2 3 4 5))))
         """)
@@ -209,7 +209,7 @@ class TestAIFPLCallStackEdgeCases:
         try:
             tail_recursive = """
             (let ((tail-sum (lambda (n acc)
-                             (if (<= n 0)
+                             (if (integer<=? n 0)
                                  acc
                                  (tail-sum (integer- n 1) (integer+ acc n))))))
               (tail-sum 100 0))
@@ -241,7 +241,7 @@ class TestAIFPLCallStackEdgeCases:
         try:
             result = aifpl.evaluate("""
             (match (integer+ 2 3)
-              ((number? n) (if (> n 3) "big" "small"))
+              ((number? n) (if (integer>? n 3) "big" "small"))
               (_ "not number"))
             """)
             assert result == "big"
@@ -328,7 +328,7 @@ class TestAIFPLCallStackEdgeCases:
         """Test call stack with mixed operation types."""
         # Mix of arithmetic, string, list, and boolean operations
         mixed_expr = """
-        (if (> (length (list 1 2 3)) 2)
+        (if (integer>? (length (list 1 2 3)) 2)
             (string->number
               (string-append
                 (number->string (integer+ 5 5))

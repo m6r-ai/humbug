@@ -36,7 +36,6 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
     # Builtin operations we can fold
     FOLDABLE_BUILTINS = {
         '//', '%',
-        '<', '>', '<=', '>=',
         'min', 'max',
         'round', 'floor', 'ceil',
         'number=?',
@@ -162,10 +161,6 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             '%': self._fold_modulo,
 
             # Comparison operations
-            '<': self._fold_less_than,
-            '>': self._fold_greater_than,
-            '<=': self._fold_less_equal,
-            '>=': self._fold_greater_equal,
             'min': self._fold_min,
             'max': self._fold_max,
             'round': self._fold_round,

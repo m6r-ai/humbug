@@ -92,8 +92,8 @@ class TestFormatting:
 
         # Boolean comparisons
         ("(integer=? 1 1)", "#t"),
-        ("(> 5 3)", "#t"),
-        ("(< 5 3)", "#f"),
+        ("(integer>? 5 3)", "#t"),
+        ("(integer<? 5 3)", "#f"),
     ])
     def test_boolean_formatting(self, aifpl, expression, expected_format):
         """Test boolean formatting in LISP output."""
@@ -152,7 +152,7 @@ class TestFormatting:
         # filter operation
         helpers.assert_evaluates_to(
             aifpl, 
-            '(filter (lambda (x) (> x 2)) (list 1 2 3 4))', 
+            '(filter (lambda (x) (integer>? x 2)) (list 1 2 3 4))',
             '(3 4)'
         )
 
@@ -231,7 +231,7 @@ class TestFormatting:
         # Filter results
         helpers.assert_evaluates_to(
             aifpl, 
-            '(filter (lambda (x) (> x 0)) (list -1 2 -3 4))', 
+            '(filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4))',
             '(2 4)'
         )
 
@@ -363,7 +363,7 @@ class TestFormatting:
         # Complex functional pipeline
         complex_result = '''
         (map (lambda (x) (integer+ x 1))
-             (filter (lambda (x) (> x 0))
+             (filter (lambda (x) (integer>? x 0))
                      (list -1 2 -3 4 5)))
         '''
         helpers.assert_evaluates_to(aifpl, complex_result, '(3 5 6)')
