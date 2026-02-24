@@ -45,8 +45,8 @@ class TestPatternMatching:
         """Test that pattern matching uses first-match-wins semantics."""
         helpers.assert_evaluates_to(
             aifpl,
-            '(match 42 (42 "first") (42 "second") (_ "default"))',
-            '"first"'
+            '(match 42 (42 "list-first") (42 "second") (_ "default"))',
+            '"list-first"'
         )
 
         helpers.assert_evaluates_to(
@@ -140,20 +140,20 @@ class TestPatternMatching:
         ('(match 42 ((float? f) (float-round f)) (_ "not float"))', '"not float"'),
 
         # Complex type patterns
-        ('(match (complex 1 2) ((complex? c) (real c)) (_ "not complex"))', '1.0'),
-        ('(match 42 ((complex? c) (real c)) (_ "not complex"))', '"not complex"'),
+        ('(match (complex 1 2) ((complex? c) (complex-real c)) (_ "not complex"))', '1.0'),
+        ('(match 42 ((complex? c) (complex-real c)) (_ "not complex"))', '"not complex"'),
 
         # String type patterns
         ('(match "hello" ((string? s) (string-length s)) (_ "not string"))', '5'),
         ('(match 42 ((string? s) (string-length s)) (_ "not string"))', '"not string"'),
 
         # Boolean type patterns
-        ('(match #t ((boolean? b) (not b)) (_ "not boolean"))', '#f'),
-        ('(match 42 ((boolean? b) (not b)) (_ "not boolean"))', '"not boolean"'),
+        ('(match #t ((boolean? b) (boolean-not b)) (_ "not boolean"))', '#f'),
+        ('(match 42 ((boolean? b) (boolean-not b)) (_ "not boolean"))', '"not boolean"'),
 
         # List type patterns
-        ('(match (list 1 2 3) ((list? l) (length l)) (_ "not list"))', '3'),
-        ('(match 42 ((list? l) (length l)) (_ "not list"))', '"not list"'),
+        ('(match (list 1 2 3) ((list? l) (list-length l)) (_ "not list"))', '3'),
+        ('(match 42 ((list? l) (list-length l)) (_ "not list"))', '"not list"'),
 
         # Function type patterns
         ('(match (lambda (x) x) ((function? f) "is function") (_ "not function"))', '"is function"'),
@@ -205,12 +205,12 @@ class TestPatternMatching:
     @pytest.mark.parametrize("expression,expected", [
         # Head/tail patterns
         ('(match (list 1 2 3) ((head . tail) head) (_ "not list"))', '1'),
-        ('(match (list 1 2 3) ((head . tail) (length tail)) (_ "not list"))', '2'),
-        ('(match (list 42) ((head . tail) (list head (null? tail))) (_ "other"))', '(42 #t)'),
+        ('(match (list 1 2 3) ((head . tail) (list-length tail)) (_ "not list"))', '2'),
+        ('(match (list 42) ((head . tail) (list head (list-null? tail))) (_ "other"))', '(42 #t)'),
 
         # Multiple elements with tail
-        ('(match (list 1 2 3 4) ((a b . rest) (list a b (length rest))) (_ "other"))', '(1 2 2)'),
-        ('(match (list 1 2) ((a b . rest) (list a b (null? rest))) (_ "other"))', '(1 2 #t)'),
+        ('(match (list 1 2 3 4) ((a b . rest) (list a b (list-length rest))) (_ "other"))', '(1 2 2)'),
+        ('(match (list 1 2) ((a b . rest) (list a b (list-null? rest))) (_ "other"))', '(1 2 #t)'),
 
         # Empty tail cases
         ('(match (list) ((head . tail) "non-empty") (_ "empty"))', '"empty"'),
@@ -231,7 +231,7 @@ class TestPatternMatching:
         # Head/tail binding
         helpers.assert_evaluates_to(
             aifpl,
-            '(match (list 1 2 3 4 5) ((first second . others) (list first (length others))))',
+            '(match (list 1 2 3 4 5) ((list-first second . others) (list list-first (list-length others))))',
             '(1 3)'
         )
 
@@ -242,7 +242,7 @@ class TestPatternMatching:
         # List of numbers
         helpers.assert_evaluates_to(
             aifpl,
-            '(match (list 1 2 3) ((list? l) (if (integer>? (length l) 2) "long list" "short list")))',
+            '(match (list 1 2 3) ((list? l) (if (integer>? (list-length l) 2) "long list" "short list")))',
             '"long list"'
         )
 
@@ -398,7 +398,7 @@ class TestPatternMatching:
 
     def test_invalid_pattern_syntax_errors(self, aifpl):
         """Test errors for invalid pattern syntax."""
-        # Invalid type pattern (not a proper type predicate call)
+        # Invalid type pattern (boolean-not a proper type predicate call)
         with pytest.raises(AIFPLEvalError, match="Invalid type pattern"):
             aifpl.evaluate('(match 42 ((integer?) "invalid") (_ "other"))')
 
@@ -505,7 +505,7 @@ class TestPatternMatching:
                         (match data
                                ((integer? n) (if (integer>? n 0) "positive" "non-positive"))
                                ((string? s) (if (integer>? (string-length s) 5) "long" "short"))
-                               ((list? l) (if (null? l) "empty-list" "non-empty-list"))
+                               ((list? l) (if (list-null? l) "empty-list" "non-empty-list"))
                                (_ "unknown")))))
           (list (process 42)
                 (process -5)
@@ -562,12 +562,12 @@ class TestPatternMatching:
                                (("add" (integer? a) (integer? b)) (integer+ a b))
                                (("multiply" (integer? a) (integer? b)) (integer* a b))
                                (("greet" (string? name)) (string-append "Hello, " name))
-                               (("length" (string? s)) (string-length s))
+                               (("list-length" (string? s)) (string-length s))
                                (_ "unknown command")))))
           (list (execute (list "add" 5 3))
                 (execute (list "multiply" 4 7))
                 (execute (list "greet" "World"))
-                (execute (list "length" "testing"))
+                (execute (list "list-length" "testing"))
                 (execute (list "unknown" 1 2))))
         '''
         helpers.assert_evaluates_to(
@@ -706,5 +706,5 @@ class TestPatternMatching:
         result = aifpl.evaluate_and_format('(match (list 1 2 3) ((head . tail) head))')
         assert result == '1'
 
-        result = aifpl.evaluate_and_format('(match (list 1 2 3 4) ((a b . rest) (length rest)))')
+        result = aifpl.evaluate_and_format('(match (list 1 2 3 4) ((a b . rest) (list-length rest)))')
         assert result == '2'

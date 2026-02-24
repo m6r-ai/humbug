@@ -195,18 +195,18 @@ class TestMathMissingCoverage:
     def test_complex_number_functions_wrong_argument_count(self, aifpl):
         """Test complex number functions with wrong argument count."""
         # real function
-        with pytest.raises(AIFPLEvalError, match="Function 'real' has wrong number of arguments"):
-            aifpl.evaluate("(real)")
+        with pytest.raises(AIFPLEvalError, match="Function 'complex-real' has wrong number of arguments"):
+            aifpl.evaluate("(complex-real)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'real' has wrong number of arguments"):
-            aifpl.evaluate("(real 1 2)")
+        with pytest.raises(AIFPLEvalError, match="Function 'complex-real' has wrong number of arguments"):
+            aifpl.evaluate("(complex-real 1 2)")
 
         # imag function
-        with pytest.raises(AIFPLEvalError, match="Function 'imag' has wrong number of arguments"):
-            aifpl.evaluate("(imag)")
+        with pytest.raises(AIFPLEvalError, match="Function 'complex-imag' has wrong number of arguments"):
+            aifpl.evaluate("(complex-imag)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'imag' has wrong number of arguments"):
-            aifpl.evaluate("(imag 1 2)")
+        with pytest.raises(AIFPLEvalError, match="Function 'complex-imag' has wrong number of arguments"):
+            aifpl.evaluate("(complex-imag 1 2)")
 
         # complex function
         with pytest.raises(AIFPLEvalError, match="Function 'complex' has wrong number of arguments"):
@@ -228,11 +228,11 @@ class TestMathMissingCoverage:
         """Test real/imag functions with complex numbers to hit return paths."""
         # Test real function with complex number (tests line 599 path)
         # First create a complex number with non-integer real part
-        result = aifpl.evaluate("(real (complex 3.7 4.2))")
+        result = aifpl.evaluate("(complex-real (complex 3.7 4.2))")
         assert result == 3.7
 
         # Test imag function with complex number (tests line 618 path)
-        result = aifpl.evaluate("(imag (complex 3.7 4.2))")
+        result = aifpl.evaluate("(complex-imag (complex 3.7 4.2))")
         assert result == 4.2
 
     # ========== Type Checking Helper Methods ==========
@@ -280,18 +280,18 @@ class TestMathMissingCoverage:
     def test_boolean_not_function_error_handling(self, aifpl):
         """Test not function with wrong argument count and type."""
         # Wrong argument count
-        with pytest.raises(AIFPLEvalError, match="Function 'not' has wrong number of arguments"):
-            aifpl.evaluate("(not)")
+        with pytest.raises(AIFPLEvalError, match="Function 'boolean-not' has wrong number of arguments"):
+            aifpl.evaluate("(boolean-not)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'not' has wrong number of arguments"):
-            aifpl.evaluate("(not #t #f)")
+        with pytest.raises(AIFPLEvalError, match="Function 'boolean-not' has wrong number of arguments"):
+            aifpl.evaluate("(boolean-not #t #f)")
 
         # Wrong argument type
-        with pytest.raises(AIFPLEvalError, match="Function 'not' requires boolean arguments"):
-            aifpl.evaluate("(not 5)")
+        with pytest.raises(AIFPLEvalError, match="Function 'boolean-not' requires boolean arguments"):
+            aifpl.evaluate("(boolean-not 5)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'not' requires boolean arguments"):
-            aifpl.evaluate('(not "hello")')
+        with pytest.raises(AIFPLEvalError, match="Function 'boolean-not' requires boolean arguments"):
+            aifpl.evaluate('(boolean-not "hello")')
 
     def test_floor_division_and_modulo_argument_validation(self, aifpl):
         """Test floor division and modulo argument count validation."""

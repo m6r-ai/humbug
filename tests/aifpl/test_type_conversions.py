@@ -23,7 +23,7 @@ class TestIntegerConversion:
         assert result == 5
 
     def test_integer_truncates_toward_zero(self, aifpl):
-        """Test that integer truncates toward zero (not floor)."""
+        """Test that integer truncates toward zero (boolean-not floor)."""
         # Positive: 3.7 -> 3 (same as floor)
         assert aifpl.evaluate("(integer 3.7)") == 3
         # Negative: -3.7 -> -3 (different from floor which would be -4)

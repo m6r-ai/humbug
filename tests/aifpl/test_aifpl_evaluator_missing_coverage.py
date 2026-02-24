@@ -227,11 +227,11 @@ class TestEvaluatorMissingCoverage:
     def test_list_type_checking_branches(self, aifpl):
         """Test list type checking in various contexts."""
         # Test with actual list
-        result1 = aifpl.evaluate("(first (list 1 2 3))")
+        result1 = aifpl.evaluate("(list-first (list 1 2 3))")
         assert result1 == 1
 
         # Test with empty list
-        result2 = aifpl.evaluate("(length ())")
+        result2 = aifpl.evaluate("(list-length ())")
         assert result2 == 0
 
     def test_function_type_checking_branches(self, aifpl):

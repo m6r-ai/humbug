@@ -231,8 +231,8 @@ BENCHMARKS = [
     # === BOOLEAN LOGIC ===
     Benchmark("AND Operations", "boolean", "(and #t #t #t #t #t)", iterations=5000),
     Benchmark("OR Operations", "boolean", "(or #f #f #f #f #t)", iterations=5000),
-    Benchmark("NOT Operations", "boolean", "(not (not (not #t)))", iterations=5000),
-    Benchmark("Complex Boolean", "boolean", "(and (or #t #f) (not #f) (or (and #t #t) #f))", iterations=5000),
+    Benchmark("NOT Operations", "boolean", "(boolean-not (boolean-not (boolean-not #t)))", iterations=5000),
+    Benchmark("Complex Boolean", "boolean", "(and (or #t #f) (boolean-not #f) (or (and #t #t) #f))", iterations=5000),
 
     # === CONDITIONALS ===
     Benchmark("Simple If", "conditionals", "(if (integer>? 5 3) 10 20)", iterations=5000),
@@ -304,12 +304,12 @@ BENCHMARKS = [
     Benchmark("List Creation (10)", "lists", "(list 1 2 3 4 5 6 7 8 9 10)", iterations=5000),
     Benchmark("List Creation (20)", "lists", "(list 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)", iterations=3000),
     Benchmark("List Append", "lists", "(append (list 1 2 3) (list 4 5 6))", iterations=3000),
-    Benchmark("List Reverse (10)", "lists", "(reverse (list 1 2 3 4 5 6 7 8 9 10))", iterations=3000),
-    Benchmark("List Reverse (20)", "lists", "(reverse (list 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20))", iterations=2000),
-    Benchmark("List First/Rest", "lists", "(first (rest (list 1 2 3 4 5)))", iterations=5000),
-    Benchmark("List Member", "lists", "(member? 5 (list 1 2 3 4 5 6 7 8 9 10))", iterations=3000),
-    Benchmark("List Take/Drop", "lists", "(take 5 (drop 3 (list 1 2 3 4 5 6 7 8 9 10)))", iterations=3000),
-    Benchmark("List Position", "lists", "(position 7 (list 1 2 3 4 5 6 7 8 9 10))", iterations=3000),
+    Benchmark("List Reverse (10)", "lists", "(list-reverse (list 1 2 3 4 5 6 7 8 9 10))", iterations=3000),
+    Benchmark("List Reverse (20)", "lists", "(list-reverse (list 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20))", iterations=2000),
+    Benchmark("List First/Rest", "lists", "(list-first (list-rest (list 1 2 3 4 5)))", iterations=5000),
+    Benchmark("List Member", "lists", "(list-member? 5 (list 1 2 3 4 5 6 7 8 9 10))", iterations=3000),
+    Benchmark("List Take/Drop", "lists", "(list-take 5 (list-drop 3 (list 1 2 3 4 5 6 7 8 9 10)))", iterations=3000),
+    Benchmark("List Position", "lists", "(list-position 7 (list 1 2 3 4 5 6 7 8 9 10))", iterations=3000),
 
     # === HIGHER-ORDER FUNCTIONS ===
     Benchmark("Map (10)", "higher-order", "(map (lambda (x) (integer* x x)) (list 1 2 3 4 5 6 7 8 9 10))", iterations=1000),
@@ -360,12 +360,12 @@ BENCHMARKS = [
     Benchmark("Sqrt", "math", "(float-sqrt 16.0)", iterations=5000),
     Benchmark("Sqrt Negative", "math", "(complex-sqrt -4+0j)", iterations=3000),
     Benchmark("Abs", "math", "(integer-abs -42)", iterations=5000),
-    Benchmark("Min/Max", "math", "(integer+ (min 1 2 3 4 5) (max 1 2 3 4 5))", iterations=5000),
+    Benchmark("Min/Max", "math", "(integer+ (integer-min 1 2 3 4 5) (integer-max 1 2 3 4 5))", iterations=5000),
     Benchmark("Pow", "math", "(float-expt 2.0 10.0)", iterations=5000),
     Benchmark("Trigonometry", "math", "(float+ (float-sin 0.5) (float-cos 0.5) (float-tan 0.5))", iterations=3000),
     Benchmark("Logarithms", "math", "(float+ (float-log 10.0) (float-log10 100.0))", iterations=3000),
-    Benchmark("Complex Numbers", "math", "(integer+ (real (complex 3 4)) (imag (complex 3 4)))", iterations=3000),
-    Benchmark("Rounding", "math", "(integer+ (round 3.7) (floor 3.7) (ceil 3.2))", iterations=5000),
+    Benchmark("Complex Numbers", "math", "(integer+ (complex-real (complex 3 4)) (complex-imag (complex 3 4)))", iterations=3000),
+    Benchmark("Rounding", "math", "(integer+ (integer (float-round 3.7)) (integer (float-floor 3.7)) (integer (float-ceil 3.2)))", iterations=5000),
 
     # === TYPE PREDICATES ===
     Benchmark("Type Checks", "types", "(and (integer? 42) (string? \"hi\") (boolean? #t) (list? (list 1 2)))", iterations=5000),
@@ -383,9 +383,9 @@ BENCHMARKS = [
                    (map (lambda (user) (alist-get user "age")) users))""", iterations=500),
     Benchmark("Recursive List Processing", "realistic",
               """(letrec ((sum-list (lambda (lst)
-                                     (if (null? lst)
+                                     (if (list-null? lst)
                                          0
-                                         (integer+ (first lst) (sum-list (rest lst)))))))
+                                         (integer+ (list-first lst) (sum-list (list-rest lst))))))\
                    (sum-list (list 1 2 3 4 5 6 7 8 9 10)))""", iterations=500),
     Benchmark("Pattern Match Pipeline", "realistic",
               """(map (lambda (x)

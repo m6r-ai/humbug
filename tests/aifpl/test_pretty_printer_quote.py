@@ -71,7 +71,7 @@ class TestQuotePreservationInCompactLists:
     def test_quotes_in_function_arguments(self):
         """Test quotes as function arguments."""
         printer = AIFPLPrettyPrinter()
-        code = "(cons 'first 'rest)"
+        code = "(list-cons 'first 'rest)"
         result = printer.format(code)
 
         assert "'first" in result

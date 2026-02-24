@@ -111,13 +111,13 @@ class TestMutualRecursionWithAccumulators:
         """
         list_processor = '''
         (letrec ((process-evens (lambda (lst acc)
-                                  (if (null? lst)
+                                  (if (list-null? lst)
                                       acc
-                                      (process-odds (rest lst) (cons (first lst) acc)))))
+                                      (process-odds (list-rest lst) (list-cons (list-first lst) acc)))))
                  (process-odds (lambda (lst acc)
-                                 (if (null? lst)
+                                 (if (list-null? lst)
                                      acc
-                                     (process-evens (rest lst) acc)))))
+                                     (process-evens (list-rest lst) acc)))))
           (process-evens (range 1 10001) (list)))
         '''
         result = aifpl.evaluate(list_processor)
@@ -302,19 +302,19 @@ class TestMutualRecursionPracticalExamples:
         """
         state_machine = '''
         (letrec ((state-normal (lambda (chars acc)
-                                 (if (null? chars)
+                                 (if (list-null? chars)
                                      acc
-                                     (let ((c (first chars)))
+                                     (let ((c (list-first chars)))
                                        (if (string=? c "<")
-                                           (state-tag (rest chars) (string-append acc c))
-                                           (state-normal (rest chars) (string-append acc c)))))))
+                                           (state-tag (list-rest chars) (string-append acc c))
+                                           (state-normal (list-rest chars) (string-append acc c)))))))
                  (state-tag (lambda (chars acc)
-                             (if (null? chars)
+                             (if (list-null? chars)
                                  acc
-                                 (let ((c (first chars)))
+                                 (let ((c (list-first chars)))
                                    (if (string=? c ">")
-                                       (state-normal (rest chars) (string-append acc c))
-                                       (state-tag (rest chars) (string-append acc c))))))))
+                                       (state-normal (list-rest chars) (string-append acc c))
+                                       (state-tag (list-rest chars) (string-append acc c))))))))
           (state-normal (string->list "This <is> a <test> string") ""))
         '''
         result = aifpl.evaluate_and_format(state_machine)
@@ -328,15 +328,15 @@ class TestMutualRecursionPracticalExamples:
         """
         alternating = '''
         (letrec ((process-pos (lambda (lst pos-acc neg-acc)
-                               (if (null? lst)
+                               (if (list-null? lst)
                                    (list pos-acc neg-acc)
-                                   (let ((val (first lst)))
-                                     (process-neg (rest lst) (integer+ pos-acc val) neg-acc)))))
+                                   (let ((val (list-first lst)))
+                                     (process-neg (list-rest lst) (integer+ pos-acc val) neg-acc)))))
                  (process-neg (lambda (lst pos-acc neg-acc)
-                               (if (null? lst)
+                               (if (list-null? lst)
                                    (list pos-acc neg-acc)
-                                   (let ((val (first lst)))
-                                     (process-pos (rest lst) pos-acc (integer+ neg-acc val)))))))
+                                   (let ((val (list-first lst)))
+                                     (process-pos (list-rest lst) pos-acc (integer+ neg-acc val)))))))
           (process-pos (range 1 1001) 0 0))
         '''
         result = aifpl.evaluate(alternating)

@@ -507,16 +507,16 @@ class TestPrettyPrinterCommentsInSpecialForms:
         printer = AIFPLPrettyPrinter()
         code = """(if (> x 0)
   ; Check if we've seen this task in current path (cycle!)
-  (if (member? task-id visited-in-path)
+  (if (list-member? task-id visited-in-path)
     ; Found a cycle - extract the cycle from path
-    (let ((cycle-start-pos (position task-id path)))
+    (let ((cycle-start-pos (list-position task-id path)))
       (if (!= cycle-start-pos #f)
-        (list (drop cycle-start-pos (append path (list task-id))))
+        (list (list-drop cycle-start-pos (append path (list task-id))))
         (list)))
     ; Not a cycle yet, continue DFS
     (let* ((successors (get-successors task-id dependencies))
            (new-path (append path (list task-id)))
-           (new-visited (cons task-id visited-in-path)))
+           (new-visited (list-cons task-id visited-in-path)))
       (fold append (list)
             (map (lambda (succ) (dfs-visit succ new-path new-visited))
                  successors))))
@@ -531,7 +531,7 @@ class TestPrettyPrinterCommentsInSpecialForms:
         assert "; Else branch" in result
 
         # All code should be present
-        assert "member?" in result
+        assert "list-member?" in result
         assert "get-successors" in result
         assert "dfs-visit" in result
 
@@ -668,16 +668,16 @@ class TestPrettyPrinterCommentsInSpecialForms:
         # Simplified version of the detect-cycles function structure
         code = """(lambda (task-id path visited-in-path)
   ; Check if we've seen this task in current path (cycle!)
-  (if (member? task-id visited-in-path)
+  (if (list-member? task-id visited-in-path)
     ; Found a cycle - extract the cycle from path
-    (let ((cycle-start-pos (position task-id path)))
+    (let ((cycle-start-pos (list-position task-id path)))
       (if (!= cycle-start-pos #f)
-        (list (drop cycle-start-pos (append path (list task-id))))
+        (list (list-drop cycle-start-pos (append path (list task-id))))
         (list)))
     ; Not a cycle yet, continue DFS
     (let* ((successors (get-successors task-id dependencies))
            (new-path (append path (list task-id)))
-           (new-visited (cons task-id visited-in-path)))
+           (new-visited (list-cons task-id visited-in-path)))
       (fold append (list)
             (map (lambda (succ) (dfs-visit succ new-path new-visited))
                  successors)))))"""
@@ -689,14 +689,14 @@ class TestPrettyPrinterCommentsInSpecialForms:
         assert "; Not a cycle yet, continue DFS" in result
 
         # The if expression should have both branches
-        assert "member?" in result
+        assert "list-member?" in result
         assert "get-successors" in result
         assert "dfs-visit" in result
 
         # Structure should be maintained
         lines = result.split("\n")
         # Find key lines to verify structure
-        member_idx = next(i for i, line in enumerate(lines) if "member?" in line)
+        member_idx = next(i for i, line in enumerate(lines) if "list-member?" in line)
         cycle_comment_idx = next(i for i, line in enumerate(lines) if "; Found a cycle" in line)
         dfs_comment_idx = next(i for i, line in enumerate(lines) if "; Not a cycle yet" in line)
 

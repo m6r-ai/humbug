@@ -417,16 +417,16 @@ class TestArithmetic:
         ("(complex -2 -3)", "-2-3j"),
 
         # Real part extraction
-        ("(real (complex 3 4))", "3.0"),
-        ("(real 42)", "42.0"),
-        ("(real 3.14)", "3.14"),
-        ("(real 1j)", "0.0"),
+        ("(complex-real (complex 3 4))", "3.0"),
+        ("(complex-real 42)", "42.0"),
+        ("(complex-real 3.14)", "3.14"),
+        ("(complex-real 1j)", "0.0"),
 
         # Imaginary part extraction
-        ("(imag (complex 3 4))", "4.0"),
-        ("(imag 42)", "0.0"),
-        ("(imag 3.14)", "0.0"),
-        ("(imag 1j)", "1.0"),
+        ("(complex-imag (complex 3 4))", "4.0"),
+        ("(complex-imag 42)", "0.0"),
+        ("(complex-imag 3.14)", "0.0"),
+        ("(complex-imag 1j)", "1.0"),
     ])
     def test_complex_number_functions(self, aifpl, expression, expected):
         """Test complex number construction and component extraction."""
@@ -532,10 +532,10 @@ class TestArithmetic:
     def test_real_imag_with_integer_results(self, aifpl):
         """Test real/imag functions that return integers."""
         # Test cases where real/imag parts are whole numbers
-        result = aifpl.evaluate("(real (complex 5.0 3.0))")
+        result = aifpl.evaluate("(complex-real (complex 5.0 3.0))")
         assert result == 5.0
         assert isinstance(result, float)
 
-        result = aifpl.evaluate("(imag (complex 2.0 7.0))")
+        result = aifpl.evaluate("(complex-imag (complex 2.0 7.0))")
         assert result == 7.0
         assert isinstance(result, float)

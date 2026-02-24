@@ -164,7 +164,7 @@ class TestStandaloneCommentsInSpecialForms:
     """Test standalone comments that appear after expressions."""
 
     def test_standalone_comment_after_match_clause(self):
-        """Test standalone comment after match clause (not EOL)."""
+        """Test standalone comment after match clause (boolean-not EOL)."""
         printer = AIFPLPrettyPrinter()
 
         code = """(match x

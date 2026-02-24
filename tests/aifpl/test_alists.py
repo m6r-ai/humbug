@@ -523,7 +523,7 @@ class TestAListComplexScenarios:
         result = tool.evaluate('''
             (let* ((pairs (list (list "name" "Alice") (list "age" 30) (list "city" "NYC"))))
               (fold (lambda (acc pair)
-                      (alist-set acc (first pair) (first (rest pair))))
+                      (alist-set acc (list-first pair) (list-first (list-rest pair))))
                     (alist)
                     pairs))
         ''')
@@ -559,28 +559,23 @@ class TestAListLength:
 
     def test_length_with_alist(self, tool):
         """Test that length works with alists."""
-        result = tool.evaluate('(length (alist (list "name" "Alice") (list "age" 30) (list "city" "NYC")))')
+        result = tool.evaluate('(alist-length (alist (list "name" "Alice") (list "age" 30) (list "city" "NYC")))')
         assert result == 3
 
     def test_length_empty_alist(self, tool):
         """Test length of empty alist."""
-        result = tool.evaluate('(length (alist))')
+        result = tool.evaluate('(alist-length (alist))')
         assert result == 0
 
     def test_length_single_entry_alist(self, tool):
         """Test length of alist with single entry."""
-        result = tool.evaluate('(length (alist (list "only" "one")))')
+        result = tool.evaluate('(alist-length (alist (list "only" "one")))')
         assert result == 1
-
-    def test_length_still_works_with_lists(self, tool):
-        """Test that length still works with regular lists."""
-        result = tool.evaluate('(length (list 1 2 3 4 5))')
-        assert result == 5
 
     def test_length_with_nested_alist(self, tool):
         """Test length of alist containing nested alists."""
         result = tool.evaluate('''
-            (length (alist (list "user" (alist (list "name" "Bob") (list "id" 123)))))
+            (alist-length (alist (list "user" (alist (list "name" "Bob") (list "id" 123)))))
         ''')
         assert result == 1
 
@@ -590,7 +585,7 @@ class TestAListLength:
             (let ((a1 (alist (list "a" 1))))
               (let ((a2 (alist-set a1 "b" 2)))
                 (let ((a3 (alist-set a2 "c" 3)))
-                  (length a3))))
+                  (alist-length a3))))
         ''')
         assert result == 3
 
@@ -598,7 +593,7 @@ class TestAListLength:
         """Test length after removing entries with alist-remove."""
         result = tool.evaluate('''
             (let ((a1 (alist (list "a" 1) (list "b" 2) (list "c" 3))))
-              (length (alist-remove a1 "b")))
+              (alist-length (alist-remove a1 "b")))
         ''')
         assert result == 2
 
@@ -606,7 +601,7 @@ class TestAListLength:
         """Test that length of alist equals length of its keys."""
         result = tool.evaluate('''
             (let ((my-alist (alist (list "a" 1) (list "b" 2) (list "c" 3))))
-              (integer=? (length my-alist) (length (alist-keys my-alist))))
+              (integer=? (alist-length my-alist) (list-length (alist-keys my-alist))))
         ''')
         assert result is True
 
@@ -624,14 +619,6 @@ class TestAListLengthFunction:
         result = tool.evaluate('(alist-length (alist))')
         assert result == 0
 
-    def test_alist_length_matches_length(self, tool):
-        """Test that alist-length and length return same result."""
-        result = tool.evaluate('''
-            (let ((a (alist (list "a" 1) (list "b" 2) (list "c" 3))))
-              (integer=? (length a) (alist-length a)))
-        ''')
-        assert result is True
-
     def test_alist_length_in_expression(self, tool):
         """Test using alist-length in arithmetic expression."""
         result = tool.evaluate('''
@@ -646,8 +633,8 @@ class TestAListLengthErrors:
 
     def test_length_with_invalid_type(self, tool):
         """Test that length with invalid type raises error."""
-        with pytest.raises(AIFPLEvalError, match="requires list or alist argument"):
-            tool.evaluate('(length 42)')
+        with pytest.raises(AIFPLEvalError, match="requires alist argument"):
+            tool.evaluate('(alist-length 42)')
 
     def test_alist_length_with_non_alist(self, tool):
         """Test that alist-length with non-alist raises error."""

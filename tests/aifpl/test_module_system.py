@@ -205,7 +205,7 @@ class TestModuleSearchPath:
   (alist-get mod "val"))
 ''')
 
-        # Should get value from dir1 (first in search path)
+        # Should get value from dir1 (list-first in search path)
         assert result == 1
 
     def test_subdirectory_modules(self, tmp_path):
@@ -547,7 +547,7 @@ class TestModuleEdgeCases:
         assert result == 0
 
     def test_module_returning_non_alist(self, tmp_path):
-        """Test that modules can return any value (not just alists)."""
+        """Test that modules can return any value (boolean-not just alists)."""
         (tmp_path / "number.aifpl").write_text('42')
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
@@ -570,7 +570,7 @@ class TestModuleEdgeCases:
 (let ((mod (import "complex")))
   (let ((data (alist-get mod "data"))
         (nested (alist-get mod "nested")))
-    (integer+ (first data)
+    (integer+ (list-first data)
        (alist-get nested "inner"))))
 ''')
 

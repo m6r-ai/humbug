@@ -12,9 +12,9 @@
                           (string-upcase (substring s 0 1))
                           (string-downcase (substring s 1 (string-length s)))))))
       (reverse-string (lambda (s)
-                        (list->string (reverse (string->list s)))))
+                        (list->string (list-reverse (string->list s)))))
       (count-words (lambda (s)
-                     (length (string-split s " ")))))
+                     (list-length (string-split s " ")))))
   
   ; Export public API
   (alist

@@ -51,11 +51,11 @@ class TestConditionals:
     def test_if_lazy_evaluation_with_complex_conditions(self, aifpl):
         """Test lazy evaluation with more complex scenarios."""
         # Safe list operations
-        result = aifpl.evaluate_and_format('(if (null? (list)) "empty" (first (list)))')
+        result = aifpl.evaluate_and_format('(if (list-null? (list)) "empty" (list-first (list)))')
         assert result == '"empty"'
 
         # The false branch would cause an error if evaluated
-        result = aifpl.evaluate_and_format('(if (integer>? 10 5) "big" (first (list)))')
+        result = aifpl.evaluate_and_format('(if (integer>? 10 5) "big" (list-first (list)))')
         assert result == '"big"'
 
     def test_if_requires_boolean_condition(self, aifpl):
@@ -148,8 +148,8 @@ class TestConditionals:
 
     @pytest.mark.parametrize("expression,expected", [
         # Boolean NOT
-        ('(not #t)', '#f'),
-        ('(not #f)', '#t'),
+        ('(boolean-not #t)', '#f'),
+        ('(boolean-not #f)', '#t'),
     ])
     def test_boolean_not_operation(self, aifpl, expression, expected):
         """Test boolean NOT operation."""
@@ -176,18 +176,18 @@ class TestConditionals:
 
         # NOT with non-boolean arguments
         with pytest.raises(AIFPLEvalError, match=r"requires boolean arguments"):
-            aifpl.evaluate('(not 1)')
+            aifpl.evaluate('(boolean-not 1)')
 
         with pytest.raises(AIFPLEvalError, match=r"requires boolean arguments"):
-            aifpl.evaluate('(not "hello")')
+            aifpl.evaluate('(boolean-not "hello")')
 
     def test_not_requires_exactly_one_argument(self, aifpl):
         """Test that NOT requires exactly one argument."""
         with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(not)')
+            aifpl.evaluate('(boolean-not)')
 
         with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate('(not #t #f)')
+            aifpl.evaluate('(boolean-not #t #f)')
 
     @pytest.mark.parametrize("expression,expected", [
         # Numeric equality
@@ -309,20 +309,20 @@ class TestConditionals:
         # De Morgan's laws
         helpers.assert_evaluates_to(
             aifpl,
-            '(boolean=? (not (and #t #f)) (or (not #t) (not #f)))',
+            '(boolean=? (boolean-not (and #t #f)) (or (boolean-not #t) (boolean-not #f)))',
             '#t'
         )
 
         helpers.assert_evaluates_to(
             aifpl,
-            '(boolean=? (not (or #t #f)) (and (not #t) (not #f)))',
+            '(boolean=? (boolean-not (or #t #f)) (and (boolean-not #t) (boolean-not #f)))',
             '#t'
         )
 
         # Complex nested boolean logic
         helpers.assert_evaluates_to(
             aifpl,
-            '(and (or #t #f) (not #f))',
+            '(and (or #t #f) (boolean-not #f))',
             '#t'
         )
 
@@ -365,13 +365,13 @@ class TestConditionals:
         # Safe list operations
         helpers.assert_evaluates_to(
             aifpl,
-            '(if (null? (list)) "empty" "not empty")',
+            '(if (list-null? (list)) "empty" "not empty")',
             '"empty"'
         )
 
         helpers.assert_evaluates_to(
             aifpl,
-            '(if (member? 2 (list 1 2 3)) "found" "not found")',
+            '(if (list-member? 2 (list 1 2 3)) "found" "not found")',
             '"found"'
         )
 
@@ -459,7 +459,7 @@ class TestConditionals:
         # Empty list access prevention
         helpers.assert_evaluates_to(
             aifpl,
-            '(if (null? (list)) "list is empty" (first (list)))',
+            '(if (list-null? (list)) "list is empty" (list-first (list)))',
             '"list is empty"'
         )
 

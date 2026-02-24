@@ -467,7 +467,7 @@ class TestBytecodeValidator:
                 # Else branch - doesn't initialize!
                 Instruction(Opcode.JUMP, 6),             # 5: jump to merge
                 # Merge point
-                Instruction(Opcode.LOAD_VAR, 0),      # 6: load var 0 - ERROR (not initialized on else path)
+                Instruction(Opcode.LOAD_VAR, 0),      # 6: load var 0 - ERROR (boolean-not initialized on else path)
                 Instruction(Opcode.RETURN),              # 7
             ],
             constants=[AIFPLInteger(42)],

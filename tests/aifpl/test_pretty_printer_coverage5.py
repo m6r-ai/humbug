@@ -82,7 +82,7 @@ def test_multiple_blank_lines_reduced_to_one_between_code_and_comment():
     foo_end_idx = next(i for i, line in enumerate(lines) if 'x))' in line)
     comment_idx = next(i for i, line in enumerate(lines) if '; Comment after multiple blank lines' in line)
 
-    # Should have exactly one blank line between them (not multiple)
+    # Should have exactly one blank line between them (boolean-not multiple)
     assert comment_idx - foo_end_idx == 2, f"Expected 1 blank line, got {comment_idx - foo_end_idx - 1}"
     assert lines[foo_end_idx + 1] == '', "Expected blank line after first binding"
 

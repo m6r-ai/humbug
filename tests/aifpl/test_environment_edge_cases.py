@@ -51,7 +51,7 @@ class TestAIFPLEnvironmentEdgeCases:
             assert isinstance(result, (int, float, complex))
 
         # List functions
-        list_functions = ["list", "first", "rest", "last", "length", "reverse", "append"]
+        list_functions = ["list", "list-first", "list-rest", "list-last", "list-length", "list-reverse", "append"]
 
         for func in list_functions:
             try:
@@ -346,7 +346,7 @@ class TestAIFPLEnvironmentEdgeCases:
         result = aifpl.evaluate("""
         (let ((base-list (list 1 2 3)))
           (let ((extended (append base-list (list 4 5))))
-            (length extended)))
+            (list-length extended)))
         """)
         assert result == 5
 

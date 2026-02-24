@@ -491,7 +491,7 @@ class TestQuotedExpressions:
     def test_quoted_expression_in_let(self):
         """Test quoted expression as binding value."""
         printer = AIFPLPrettyPrinter()
-        code = "(let ((x '(1 2 3))) (first x))"
+        code = "(let ((x '(1 2 3))) (list-first x))"
         result = printer.format(code)
 
         assert "'(1 2 3)" in result
@@ -703,7 +703,7 @@ class TestRemainingUncoveredLines:
         # This is the tricky case - we need a comment at the top level
         # that is on the same line as a previous token
         printer = AIFPLPrettyPrinter()
-        # The key is that the comment must be at the top level (not inside a list)
+        # The key is that the comment must be at the top level (boolean-not inside a list)
         # and must have the same line number as the previous token
         code = "42 ; comment on same line"
         result = printer.format(code)

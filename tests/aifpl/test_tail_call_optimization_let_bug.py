@@ -109,10 +109,10 @@ class TestTailCallOptimizationWithLet:
         """
         char_counter = '''
         (letrec ((count-chars (lambda (chars acc)
-                               (if (null? chars) 
+                               (if (list-null? chars) 
                                    acc 
-                                   (let ((c (first chars))
-                                         (rest-chars (rest chars)))
+                                   (let ((c (list-first chars))
+                                         (rest-chars (list-rest chars)))
                                      (count-chars rest-chars (integer+ acc 1)))))))
           (count-chars (string->list "This is a test string with many characters in it for testing purposes") 0))
         '''
@@ -127,10 +127,10 @@ class TestTailCallOptimizationWithLet:
         """
         list_sum = '''
         (letrec ((sum-list (lambda (lst acc)
-                            (if (null? lst) 
+                            (if (list-null? lst) 
                                 acc 
-                                (let ((head (first lst))
-                                      (tail (rest lst)))
+                                (let ((head (list-first lst))
+                                      (tail (list-rest lst)))
                                   (sum-list tail (integer+ acc head)))))))
           (sum-list (range 1 101) 0))
         '''
@@ -147,16 +147,16 @@ class TestTailCallOptimizationWithLet:
         """
         simple_csv_parser = '''
         (letrec ((parse-chars (lambda (chars in-quotes current-field fields)
-                               (if (null? chars)
-                                   (reverse (cons current-field fields))
-                                   (let ((c (first chars))
-                                         (rest-chars (rest chars)))
+                               (if (list-null? chars)
+                                   (list-reverse (list-cons current-field fields))
+                                   (let ((c (list-first chars))
+                                         (rest-chars (list-rest chars)))
                                      (if (string=? c ",")
                                          (if in-quotes
                                              (parse-chars rest-chars in-quotes 
                                                         (string-append current-field c) fields)
                                              (parse-chars rest-chars #f "" 
-                                                        (cons current-field fields)))
+                                                        (list-cons current-field fields)))
                                          (parse-chars rest-chars in-quotes 
                                                     (string-append current-field c) fields)))))))
           (parse-chars (string->list "field1,field2,field3") #f "" (list)))
@@ -242,11 +242,11 @@ class TestTailCallOptimizationWithLet:
         """
         string_reverse = '''
         (letrec ((reverse-chars (lambda (chars acc)
-                                 (if (null? chars) 
+                                 (if (list-null? chars) 
                                      acc 
-                                     (let ((head (first chars))
-                                           (tail (rest chars)))
-                                       (reverse-chars tail (cons head acc)))))))
+                                     (let ((head (list-first chars))
+                                           (tail (list-rest chars)))
+                                       (reverse-chars tail (list-cons head acc)))))))
           (list->string (reverse-chars (string->list "This is a reasonably long string to reverse") (list))))
         '''
         helpers.assert_evaluates_to(aifpl, string_reverse, '"esrever ot gnirts gnol ylbanosaer a si sihT"')
@@ -259,12 +259,12 @@ class TestTailCallOptimizationWithLet:
         """
         custom_filter = '''
         (letrec ((my-filter (lambda (pred lst acc)
-                             (if (null? lst) 
-                                 (reverse acc) 
-                                 (let ((head (first lst))
-                                       (tail (rest lst)))
+                             (if (list-null? lst) 
+                                 (list-reverse acc) 
+                                 (let ((head (list-first lst))
+                                       (tail (list-rest lst)))
                                    (if (pred head)
-                                       (my-filter pred tail (cons head acc))
+                                       (my-filter pred tail (list-cons head acc))
                                        (my-filter pred tail acc)))))))
           (my-filter (lambda (x) (integer>? x 5)) (range 1 11) (list)))
         '''

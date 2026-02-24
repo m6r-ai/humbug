@@ -120,7 +120,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         result = aifpl.evaluate("""
         (let* ((base-list (list 1 2 3))
               (extended (append base-list (list 4 5)))
-              (length-val (length extended)))
+              (length-val (list-length extended)))
           length-val)
         """)
         assert result == 5
@@ -151,7 +151,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         (let* ((text "hello world")
                (upper-text (string-upcase text))
                (words (string-split upper-text " "))
-               (count (length words)))
+               (count (list-length words)))
           count)
         """)
         assert result == 2
@@ -218,7 +218,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         (let* ((threshold 2)
                (numbers (list 1 2 3 4 5))
                (filtered (filter (lambda (x) (integer>? x threshold)) numbers))
-               (count (length filtered)))
+               (count (list-length filtered)))
           count)
         """)
         assert result == 3  # [3, 4, 5] has length 3
@@ -375,7 +375,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
                (y 3)
                (greater (integer>? x y))
                (equal (integer=? x y))
-               (result (and greater (not equal))))
+               (result (and greater (boolean-not equal))))
           result)
         """)
         assert result is True

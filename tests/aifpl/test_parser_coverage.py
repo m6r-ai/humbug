@@ -96,7 +96,7 @@ class TestInvalidBindingStructures:
         assert "<not a list>" in error.context
 
     def test_binding_invalid_structure(self):
-        """Test binding with invalid structure (not starting with symbol)."""
+        """Test binding with invalid structure (boolean-not starting with symbol)."""
         lexer = AIFPLLexer()
         tokens = lexer.lex("(let ((42 5)")
         parser = AIFPLParser()

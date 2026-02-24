@@ -130,10 +130,10 @@ class TestComplexNumberLiterals:
     def test_complex_with_functions(self, aifpl):
         """Test complex literals with built-in functions."""
         # Real and imaginary parts
-        assert aifpl.evaluate("(real 3+4j)") == 3
-        assert aifpl.evaluate("(imag 3+4j)") == 4
-        assert aifpl.evaluate("(real 5j)") == 0
-        assert aifpl.evaluate("(imag 5j)") == 5
+        assert aifpl.evaluate("(complex-real 3+4j)") == 3
+        assert aifpl.evaluate("(complex-imag 3+4j)") == 4
+        assert aifpl.evaluate("(complex-real 5j)") == 0
+        assert aifpl.evaluate("(complex-imag 5j)") == 5
 
         # Absolute value (magnitude)
         result = aifpl.evaluate("(complex-abs 3+4j)")
@@ -172,7 +172,7 @@ class TestComplexNumberLiterals:
 
     def test_complex_vs_symbol_disambiguation(self, aifpl):
         """Test that complex literals are correctly distinguished from symbols."""
-        # These should be complex literals (not symbols)
+        # These should be complex literals (boolean-not symbols)
         complex_cases = [
             "1j",
             "1J",

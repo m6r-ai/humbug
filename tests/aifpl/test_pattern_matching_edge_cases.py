@@ -480,7 +480,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('''
         (match (list 1 2 3)
           (() "empty")
-          ((list? l) (if (integer>? (length l) 2) "long list" "short list"))
+          ((list? l) (if (integer>? (list-length l) 2) "long list" "short list"))
           (_ "not list"))
         ''')
         assert result == "long list"
@@ -595,14 +595,14 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('(match (list 1 2 3) ((head . tail) head))')
         assert result == 1
 
-        result = aifpl.evaluate('(match (list 1 2 3 4) ((a b . rest) (length rest)))')
+        result = aifpl.evaluate('(match (list 1 2 3 4) ((a b . rest) (list-length rest)))')
         assert result == 2
 
-        result = aifpl.evaluate('(match (list 1 2 3 4 5) ((a b c . rest) (list a (length rest))))')
+        result = aifpl.evaluate('(match (list 1 2 3 4 5) ((a b c . rest) (list a (list-length rest))))')
         assert result == [1, 2]
 
         # Valid single element with tail
-        result = aifpl.evaluate('(match (list 42) ((head . tail) (null? tail)))')
+        result = aifpl.evaluate('(match (list 42) ((head . tail) (list-null? tail)))')
         assert result
 
         result = aifpl.evaluate('(match (list 1 2 3) ((1 . tail) \"matched head\") (_ \"no match\"))')

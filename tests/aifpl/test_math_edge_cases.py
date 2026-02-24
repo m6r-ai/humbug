@@ -571,14 +571,14 @@ class TestAIFPLMathEdgeCases:
         assert result == 3j
 
         # Real/imaginary part extraction edge cases
-        assert aifpl.evaluate("(real (complex 3 4))") == 3
-        assert aifpl.evaluate("(imag (complex 3 4))") == 4
-        assert aifpl.evaluate("(real 42)") == 42
-        assert aifpl.evaluate("(imag 42)") == 0
-        assert aifpl.evaluate("(real 3.14)") == 3.14
-        assert aifpl.evaluate("(imag 3.14)") == 0
-        assert aifpl.evaluate("(real 1j)") == 0
-        assert aifpl.evaluate("(imag 1j)") == 1
+        assert aifpl.evaluate("(complex-real (complex 3 4))") == 3
+        assert aifpl.evaluate("(complex-imag (complex 3 4))") == 4
+        assert aifpl.evaluate("(complex-real 42)") == 42
+        assert aifpl.evaluate("(complex-imag 42)") == 0
+        assert aifpl.evaluate("(complex-real 3.14)") == 3.14
+        assert aifpl.evaluate("(complex-imag 3.14)") == 0
+        assert aifpl.evaluate("(complex-real 1j)") == 0
+        assert aifpl.evaluate("(complex-imag 1j)") == 1
 
         # Complex arithmetic edge cases
         result = aifpl.evaluate("(complex+ (complex 1 2) (complex 3 4))")

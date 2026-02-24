@@ -36,467 +36,467 @@ class AIFPL:
     # AIFPL implementations of higher-order functions
     _PRELUDE_SOURCE = {
         'boolean=?': """(lambda (. args)
-                          (if (integer<? (length args) 2)
+                          (if (integer<? (list-length args) 2)
                             (error "Function 'boolean=?' requires at least 2 arguments")
                             (letrec ((loop (lambda (lst prev)
-                                             (if (null? lst) #t
-                                                 (if (boolean=? prev (first lst))
-                                                     (loop (rest lst) (first lst))
+                                             (if (list-null? lst) #t
+                                                 (if (boolean=? prev (list-first lst))
+                                                     (loop (list-rest lst) (list-first lst))
                                                      #f)))))
-                              (loop (rest args) (first args)))))""",
+                              (loop (list-rest args) (list-first args)))))""",
         'boolean!=?': """(lambda (. args)
-                            (if (integer<? (length args) 2)
+                            (if (integer<? (list-length args) 2)
                               (error "Function 'boolean!=?' requires at least 2 arguments")
                               (letrec ((outer (lambda (lst)
-                                                (if (null? lst) #t
+                                                (if (list-null? lst) #t
                                                     (letrec ((inner (lambda (rest-lst)
-                                                                      (if (null? rest-lst)
-                                                                          (outer (rest lst))
-                                                                          (if (boolean!=? (first lst) (first rest-lst))
-                                                                              (inner (rest rest-lst))
+                                                                      (if (list-null? rest-lst)
+                                                                          (outer (list-rest lst))
+                                                                          (if (boolean!=? (list-first lst) (list-first rest-lst))
+                                                                              (inner (list-rest rest-lst))
                                                                               #f)))))
-                                                      (inner (rest lst)))))))
+                                                      (inner (list-rest lst)))))))
                                 (outer args))))""",
         'integer=?': """(lambda (. args)
-                          (if (integer<? (length args) 2)
+                          (if (integer<? (list-length args) 2)
                             (error "Function 'integer=?' requires at least 2 arguments")
                             (letrec ((loop (lambda (lst prev)
-                                             (if (null? lst) #t
-                                                 (if (integer=? prev (first lst))
-                                                     (loop (rest lst) (first lst))
+                                             (if (list-null? lst) #t
+                                                 (if (integer=? prev (list-first lst))
+                                                     (loop (list-rest lst) (list-first lst))
                                                      #f)))))
-                              (loop (rest args) (first args)))))""",
+                              (loop (list-rest args) (list-first args)))))""",
         'integer!=?': """(lambda (. args)
-                            (if (integer<? (length args) 2)
+                            (if (integer<? (list-length args) 2)
                               (error "Function 'integer!=?' requires at least 2 arguments")
                               (letrec ((outer (lambda (lst)
-                                                (if (null? lst) #t
+                                                (if (list-null? lst) #t
                                                     (letrec ((inner (lambda (rest-lst)
-                                                                      (if (null? rest-lst)
-                                                                          (outer (rest lst))
-                                                                          (if (integer!=? (first lst) (first rest-lst))
-                                                                              (inner (rest rest-lst))
+                                                                      (if (list-null? rest-lst)
+                                                                          (outer (list-rest lst))
+                                                                          (if (integer!=? (list-first lst) (list-first rest-lst))
+                                                                              (inner (list-rest rest-lst))
                                                                               #f)))))
-                                                      (inner (rest lst)))))))
+                                                      (inner (list-rest lst)))))))
                                 (outer args))))""",
         'integer<?': """(lambda (. args)
-                          (if (integer<? (length args) 2)
+                          (if (integer<? (list-length args) 2)
                             (error "Function 'integer<?' requires at least 2 arguments")
                             (letrec ((loop (lambda (lst prev)
-                                             (if (null? lst) #t
-                                                 (if (integer<? prev (first lst))
-                                                     (loop (rest lst) (first lst))
+                                             (if (list-null? lst) #t
+                                                 (if (integer<? prev (list-first lst))
+                                                     (loop (list-rest lst) (list-first lst))
                                                      #f)))))
-                              (loop (rest args) (first args)))))""",
+                              (loop (list-rest args) (list-first args)))))""",
         'integer>?': """(lambda (. args)
-                          (if (integer<? (length args) 2)
+                          (if (integer<? (list-length args) 2)
                             (error "Function 'integer>?' requires at least 2 arguments")
                             (letrec ((loop (lambda (lst prev)
-                                             (if (null? lst) #t
-                                                 (if (integer>? prev (first lst))
-                                                     (loop (rest lst) (first lst))
+                                             (if (list-null? lst) #t
+                                                 (if (integer>? prev (list-first lst))
+                                                     (loop (list-rest lst) (list-first lst))
                                                      #f)))))
-                              (loop (rest args) (first args)))))""",
+                              (loop (list-rest args) (list-first args)))))""",
         'integer<=?': """(lambda (. args)
-                           (if (integer<? (length args) 2)
+                           (if (integer<? (list-length args) 2)
                              (error "Function 'integer<=?' requires at least 2 arguments")
                              (letrec ((loop (lambda (lst prev)
-                                              (if (null? lst) #t
-                                                  (if (integer<=? prev (first lst))
-                                                      (loop (rest lst) (first lst))
+                                              (if (list-null? lst) #t
+                                                  (if (integer<=? prev (list-first lst))
+                                                      (loop (list-rest lst) (list-first lst))
                                                       #f)))))
-                               (loop (rest args) (first args)))))""",
+                               (loop (list-rest args) (list-first args)))))""",
         'integer>=?': """(lambda (. args)
-                           (if (integer<? (length args) 2)
+                           (if (integer<? (list-length args) 2)
                              (error "Function 'integer>=?' requires at least 2 arguments")
                              (letrec ((loop (lambda (lst prev)
-                                              (if (null? lst) #t
-                                                  (if (integer>=? prev (first lst))
-                                                      (loop (rest lst) (first lst))
+                                              (if (list-null? lst) #t
+                                                  (if (integer>=? prev (list-first lst))
+                                                      (loop (list-rest lst) (list-first lst))
                                                       #f)))))
-                               (loop (rest args) (first args)))))""",
+                               (loop (list-rest args) (list-first args)))))""",
         'integer+': """(lambda (. args)
-                         (if (null? args) 0
+                         (if (list-null? args) 0
                            (letrec ((loop (lambda (lst acc)
-                                            (if (null? lst) acc
-                                                (loop (rest lst) (integer+ acc (first lst)))))))
-                             (loop (rest args) (first args)))))""",
+                                            (if (list-null? lst) acc
+                                                (loop (list-rest lst) (integer+ acc (list-first lst)))))))
+                             (loop (list-rest args) (list-first args)))))""",
         'integer-': """(lambda (. args)
-                         (if (null? args)
+                         (if (list-null? args)
                            (error "Function 'integer-' requires at least 1 argument, got 0")
-                           (if (null? (rest args))
-                             (integer-neg (first args))
+                           (if (list-null? (list-rest args))
+                             (integer-neg (list-first args))
                              (letrec ((loop (lambda (lst acc)
-                                              (if (null? lst) acc
-                                                  (loop (rest lst) (integer- acc (first lst)))))))
-                               (loop (rest args) (first args))))))""",
+                                              (if (list-null? lst) acc
+                                                  (loop (list-rest lst) (integer- acc (list-first lst)))))))
+                               (loop (list-rest args) (list-first args))))))""",
         'integer*': """(lambda (. args)
-                         (if (null? args) 1
+                         (if (list-null? args) 1
                            (letrec ((loop (lambda (lst acc)
-                                            (if (null? lst) acc
-                                                (loop (rest lst) (integer* acc (first lst)))))))
-                             (loop (rest args) (first args)))))""",
+                                            (if (list-null? lst) acc
+                                                (loop (list-rest lst) (integer* acc (list-first lst)))))))
+                             (loop (list-rest args) (list-first args)))))""",
         'integer/': """(lambda (. args)
-                         (if (integer<? (length args) 2)
+                         (if (integer<? (list-length args) 2)
                            (error "Function 'integer/' requires at least 2 arguments")
                            (letrec ((loop (lambda (lst acc)
-                                            (if (null? lst) acc
-                                                (loop (rest lst) (integer/ acc (first lst)))))))
-                             (loop (rest args) (first args)))))""",
+                                            (if (list-null? lst) acc
+                                                (loop (list-rest lst) (integer/ acc (list-first lst)))))))
+                             (loop (list-rest args) (list-first args)))))""",
         'bit-or': """(lambda (. args)
-                       (if (null? args) 0
+                       (if (list-null? args) 0
                          (letrec ((loop (lambda (lst acc)
-                                          (if (null? lst) acc
-                                              (loop (rest lst) (bit-or acc (first lst)))))))
-                           (loop (rest args) (first args)))))""",
+                                          (if (list-null? lst) acc
+                                              (loop (list-rest lst) (bit-or acc (list-first lst)))))))
+                           (loop (list-rest args) (list-first args)))))""",
         'bit-and': """(lambda (. args)
-                        (if (null? args) 0
+                        (if (list-null? args) 0
                           (letrec ((loop (lambda (lst acc)
-                                           (if (null? lst) acc
-                                               (loop (rest lst) (bit-and acc (first lst)))))))
-                            (loop (rest args) (first args)))))""",
+                                           (if (list-null? lst) acc
+                                               (loop (list-rest lst) (bit-and acc (list-first lst)))))))
+                            (loop (list-rest args) (list-first args)))))""",
         'bit-xor': """(lambda (. args)
-                        (if (null? args) 0
+                        (if (list-null? args) 0
                           (letrec ((loop (lambda (lst acc)
-                                           (if (null? lst) acc
-                                               (loop (rest lst) (bit-xor acc (first lst)))))))
-                            (loop (rest args) (first args)))))""",
+                                           (if (list-null? lst) acc
+                                               (loop (list-rest lst) (bit-xor acc (list-first lst)))))))
+                            (loop (list-rest args) (list-first args)))))""",
         'integer-min': """(lambda (. args)
-                             (if (null? args)
+                             (if (list-null? args)
                                (error "Function 'integer-min' requires at least 1 argument")
                                (letrec ((loop (lambda (lst acc)
-                                                (if (null? lst) acc
-                                                    (loop (rest lst) (integer-min acc (first lst)))))))
-                                 (loop (rest args) (first args)))))""",
+                                                (if (list-null? lst) acc
+                                                    (loop (list-rest lst) (integer-min acc (list-first lst)))))))
+                                 (loop (list-rest args) (list-first args)))))""",
         'integer-max': """(lambda (. args)
-                             (if (null? args)
+                             (if (list-null? args)
                                (error "Function 'integer-max' requires at least 1 argument")
                                (letrec ((loop (lambda (lst acc)
-                                                (if (null? lst) acc
-                                                    (loop (rest lst) (integer-max acc (first lst)))))))
-                                 (loop (rest args) (first args)))))""",
+                                                (if (list-null? lst) acc
+                                                    (loop (list-rest lst) (integer-max acc (list-first lst)))))))
+                                 (loop (list-rest args) (list-first args)))))""",
         'float=?': """(lambda (. args)
-                        (if (integer<? (length args) 2)
+                        (if (integer<? (list-length args) 2)
                           (error "Function 'float=?' requires at least 2 arguments")
                           (letrec ((loop (lambda (lst prev)
-                                           (if (null? lst) #t
-                                               (if (float=? prev (first lst))
-                                                   (loop (rest lst) (first lst))
+                                           (if (list-null? lst) #t
+                                               (if (float=? prev (list-first lst))
+                                                   (loop (list-rest lst) (list-first lst))
                                                    #f)))))
-                            (loop (rest args) (first args)))))""",
+                            (loop (list-rest args) (list-first args)))))""",
         'float!=?': """(lambda (. args)
-                            (if (integer<? (length args) 2)
+                            (if (integer<? (list-length args) 2)
                               (error "Function 'float!=?' requires at least 2 arguments")
                               (letrec ((outer (lambda (lst)
-                                                (if (null? lst) #t
+                                                (if (list-null? lst) #t
                                                     (letrec ((inner (lambda (rest-lst)
-                                                                      (if (null? rest-lst)
-                                                                          (outer (rest lst))
-                                                                          (if (float!=? (first lst) (first rest-lst))
-                                                                              (inner (rest rest-lst))
+                                                                      (if (list-null? rest-lst)
+                                                                          (outer (list-rest lst))
+                                                                          (if (float!=? (list-first lst) (list-first rest-lst))
+                                                                              (inner (list-rest rest-lst))
                                                                               #f)))))
-                                                      (inner (rest lst)))))))
+                                                      (inner (list-rest lst)))))))
                                 (outer args))))""",
         'float<?': """(lambda (. args)
-                        (if (integer<? (length args) 2)
+                        (if (integer<? (list-length args) 2)
                           (error "Function 'float<?' requires at least 2 arguments")
                           (letrec ((loop (lambda (lst prev)
-                                           (if (null? lst) #t
-                                               (if (float<? prev (first lst))
-                                                   (loop (rest lst) (first lst))
+                                           (if (list-null? lst) #t
+                                               (if (float<? prev (list-first lst))
+                                                   (loop (list-rest lst) (list-first lst))
                                                    #f)))))
-                            (loop (rest args) (first args)))))""",
+                            (loop (list-rest args) (list-first args)))))""",
         'float>?': """(lambda (. args)
-                        (if (integer<? (length args) 2)
+                        (if (integer<? (list-length args) 2)
                           (error "Function 'float>?' requires at least 2 arguments")
                           (letrec ((loop (lambda (lst prev)
-                                           (if (null? lst) #t
-                                               (if (float>? prev (first lst))
-                                                   (loop (rest lst) (first lst))
+                                           (if (list-null? lst) #t
+                                               (if (float>? prev (list-first lst))
+                                                   (loop (list-rest lst) (list-first lst))
                                                    #f)))))
-                            (loop (rest args) (first args)))))""",
+                            (loop (list-rest args) (list-first args)))))""",
         'float<=?': """(lambda (. args)
-                         (if (integer<? (length args) 2)
+                         (if (integer<? (list-length args) 2)
                            (error "Function 'float<=?' requires at least 2 arguments")
                            (letrec ((loop (lambda (lst prev)
-                                            (if (null? lst) #t
-                                                (if (float<=? prev (first lst))
-                                                    (loop (rest lst) (first lst))
+                                            (if (list-null? lst) #t
+                                                (if (float<=? prev (list-first lst))
+                                                    (loop (list-rest lst) (list-first lst))
                                                     #f)))))
-                             (loop (rest args) (first args)))))""",
+                             (loop (list-rest args) (list-first args)))))""",
         'float>=?': """(lambda (. args)
-                         (if (integer<? (length args) 2)
+                         (if (integer<? (list-length args) 2)
                            (error "Function 'float>=?' requires at least 2 arguments")
                            (letrec ((loop (lambda (lst prev)
-                                            (if (null? lst) #t
-                                                (if (float>=? prev (first lst))
-                                                    (loop (rest lst) (first lst))
+                                            (if (list-null? lst) #t
+                                                (if (float>=? prev (list-first lst))
+                                                    (loop (list-rest lst) (list-first lst))
                                                     #f)))))
-                             (loop (rest args) (first args)))))""",
+                             (loop (list-rest args) (list-first args)))))""",
         'float+': """(lambda (. args)
-                       (if (null? args) 0.0
+                       (if (list-null? args) 0.0
                          (letrec ((loop (lambda (lst acc)
-                                          (if (null? lst) acc
-                                              (loop (rest lst) (float+ acc (first lst)))))))
-                           (loop (rest args) (first args)))))""",
+                                          (if (list-null? lst) acc
+                                              (loop (list-rest lst) (float+ acc (list-first lst)))))))
+                           (loop (list-rest args) (list-first args)))))""",
         'float-': """(lambda (. args)
-                       (if (null? args)
+                       (if (list-null? args)
                          (error "Function 'float-' requires at least 1 argument, got 0")
-                         (if (null? (rest args))
-                           (float-neg (first args))
+                         (if (list-null? (list-rest args))
+                           (float-neg (list-first args))
                            (letrec ((loop (lambda (lst acc)
-                                            (if (null? lst) acc
-                                                (loop (rest lst) (float- acc (first lst)))))))
-                             (loop (rest args) (first args))))))""",
+                                            (if (list-null? lst) acc
+                                                (loop (list-rest lst) (float- acc (list-first lst)))))))
+                             (loop (list-rest args) (list-first args))))))""",
         'float*': """(lambda (. args)
-                       (if (null? args) 1.0
+                       (if (list-null? args) 1.0
                          (letrec ((loop (lambda (lst acc)
-                                          (if (null? lst) acc
-                                              (loop (rest lst) (float* acc (first lst)))))))
-                           (loop (rest args) (first args)))))""",
+                                          (if (list-null? lst) acc
+                                              (loop (list-rest lst) (float* acc (list-first lst)))))))
+                           (loop (list-rest args) (list-first args)))))""",
         'float/': """(lambda (. args)
-                       (if (integer<? (length args) 2)
+                       (if (integer<? (list-length args) 2)
                          (error "Function 'float/' requires at least 2 arguments")
                          (letrec ((loop (lambda (lst acc)
-                                          (if (null? lst) acc
-                                              (loop (rest lst) (float/ acc (first lst)))))))
-                           (loop (rest args) (first args)))))""",
+                                          (if (list-null? lst) acc
+                                              (loop (list-rest lst) (float/ acc (list-first lst)))))))
+                           (loop (list-rest args) (list-first args)))))""",
         'float-expt': """(lambda (. args)
-                           (if (integer<? (length args) 2)
+                           (if (integer<? (list-length args) 2)
                              (error "Function 'float-expt' requires at least 2 arguments")
                              (letrec ((loop (lambda (lst acc)
-                                              (if (null? lst) acc
-                                                  (loop (rest lst) (float-expt acc (first lst)))))))
-                               (loop (rest args) (first args)))))""",
+                                              (if (list-null? lst) acc
+                                                  (loop (list-rest lst) (float-expt acc (list-first lst)))))))
+                               (loop (list-rest args) (list-first args)))))""",
         'float-min': """(lambda (. args)
-                           (if (null? args)
+                           (if (list-null? args)
                              (error "Function 'float-min' requires at least 1 argument")
                              (letrec ((loop (lambda (lst acc)
-                                              (if (null? lst) acc
-                                                  (loop (rest lst) (float-min acc (first lst)))))))
-                               (loop (rest args) (first args)))))""",
+                                              (if (list-null? lst) acc
+                                                  (loop (list-rest lst) (float-min acc (list-first lst)))))))
+                               (loop (list-rest args) (list-first args)))))""",
         'float-max': """(lambda (. args)
-                           (if (null? args)
+                           (if (list-null? args)
                              (error "Function 'float-max' requires at least 1 argument")
                              (letrec ((loop (lambda (lst acc)
-                                              (if (null? lst) acc
-                                                  (loop (rest lst) (float-max acc (first lst)))))))
-                               (loop (rest args) (first args)))))""",
+                                              (if (list-null? lst) acc
+                                                  (loop (list-rest lst) (float-max acc (list-first lst)))))))
+                               (loop (list-rest args) (list-first args)))))""",
         'complex=?': """(lambda (. args)
-                          (if (integer<? (length args) 2)
+                          (if (integer<? (list-length args) 2)
                             (error "Function 'complex=?' requires at least 2 arguments")
                             (letrec ((loop (lambda (lst prev)
-                                             (if (null? lst) #t
-                                                 (if (complex=? prev (first lst))
-                                                     (loop (rest lst) (first lst))
+                                             (if (list-null? lst) #t
+                                                 (if (complex=? prev (list-first lst))
+                                                     (loop (list-rest lst) (list-first lst))
                                                      #f)))))
-                              (loop (rest args) (first args)))))""",
+                              (loop (list-rest args) (list-first args)))))""",
         'complex!=?': """(lambda (. args)
-                            (if (integer<? (length args) 2)
+                            (if (integer<? (list-length args) 2)
                               (error "Function 'complex!=?' requires at least 2 arguments")
                               (letrec ((outer (lambda (lst)
-                                                (if (null? lst) #t
+                                                (if (list-null? lst) #t
                                                     (letrec ((inner (lambda (rest-lst)
-                                                                      (if (null? rest-lst)
-                                                                          (outer (rest lst))
-                                                                          (if (complex!=? (first lst) (first rest-lst))
-                                                                              (inner (rest rest-lst))
+                                                                      (if (list-null? rest-lst)
+                                                                          (outer (list-rest lst))
+                                                                          (if (complex!=? (list-first lst) (list-first rest-lst))
+                                                                              (inner (list-rest rest-lst))
                                                                               #f)))))
-                                                      (inner (rest lst)))))))
+                                                      (inner (list-rest lst)))))))
                                 (outer args))))""",
         'complex+': """(lambda (. args)
-                         (if (null? args)
+                         (if (list-null? args)
                            (error "Function 'complex+' requires at least 1 argument, got 0")
                            (letrec ((loop (lambda (lst acc)
-                                            (if (null? lst) acc
-                                                (loop (rest lst) (complex+ acc (first lst)))))))
-                             (loop (rest args) (first args)))))""",
+                                            (if (list-null? lst) acc
+                                                (loop (list-rest lst) (complex+ acc (list-first lst)))))))
+                             (loop (list-rest args) (list-first args)))))""",
         'complex-': """(lambda (. args)
-                         (if (null? args)
+                         (if (list-null? args)
                            (error "Function 'complex-' requires at least 1 argument, got 0")
-                           (if (null? (rest args))
-                             (complex-neg (first args))
+                           (if (list-null? (list-rest args))
+                             (complex-neg (list-first args))
                              (letrec ((loop (lambda (lst acc)
-                                              (if (null? lst) acc
-                                                  (loop (rest lst) (complex- acc (first lst)))))))
-                               (loop (rest args) (first args))))))""",
+                                              (if (list-null? lst) acc
+                                                  (loop (list-rest lst) (complex- acc (list-first lst)))))))
+                               (loop (list-rest args) (list-first args))))))""",
         'complex*': """(lambda (. args)
-                         (if (null? args)
+                         (if (list-null? args)
                            (error "Function 'complex*' requires at least 1 argument, got 0")
                            (letrec ((loop (lambda (lst acc)
-                                            (if (null? lst) acc
-                                                (loop (rest lst) (complex* acc (first lst)))))))
-                             (loop (rest args) (first args)))))""",
+                                            (if (list-null? lst) acc
+                                                (loop (list-rest lst) (complex* acc (list-first lst)))))))
+                             (loop (list-rest args) (list-first args)))))""",
         'complex/': """(lambda (. args)
-                         (if (integer<? (length args) 2)
+                         (if (integer<? (list-length args) 2)
                            (error "Function 'complex/' requires at least 2 arguments")
                            (letrec ((loop (lambda (lst acc)
-                                            (if (null? lst) acc
-                                                (loop (rest lst) (complex/ acc (first lst)))))))
-                             (loop (rest args) (first args)))))""",
+                                            (if (list-null? lst) acc
+                                                (loop (list-rest lst) (complex/ acc (list-first lst)))))))
+                             (loop (list-rest args) (list-first args)))))""",
         'complex-expt': """(lambda (. args)
-                             (if (integer<? (length args) 2)
+                             (if (integer<? (list-length args) 2)
                                (error "Function 'complex-expt' requires at least 2 arguments")
                                (letrec ((loop (lambda (lst acc)
-                                                (if (null? lst) acc
-                                                    (loop (rest lst) (complex-expt acc (first lst)))))))
-                                 (loop (rest args) (first args)))))""",
+                                                (if (list-null? lst) acc
+                                                    (loop (list-rest lst) (complex-expt acc (list-first lst)))))))
+                                 (loop (list-rest args) (list-first args)))))""",
         'string=?': """(lambda (. args)
-                         (if (integer<? (length args) 2)
+                         (if (integer<? (list-length args) 2)
                            (error "Function 'string=?' requires at least 2 arguments")
                            (letrec ((loop (lambda (lst prev)
-                                            (if (null? lst) #t
-                                                (if (string=? prev (first lst))
-                                                    (loop (rest lst) (first lst))
+                                            (if (list-null? lst) #t
+                                                (if (string=? prev (list-first lst))
+                                                    (loop (list-rest lst) (list-first lst))
                                                     #f)))))
-                             (loop (rest args) (first args)))))""",
+                             (loop (list-rest args) (list-first args)))))""",
         'string!=?': """(lambda (. args)
-                            (if (integer<? (length args) 2)
+                            (if (integer<? (list-length args) 2)
                               (error "Function 'string!=?' requires at least 2 arguments")
                               (letrec ((outer (lambda (lst)
-                                                (if (null? lst) #t
+                                                (if (list-null? lst) #t
                                                     (letrec ((inner (lambda (rest-lst)
-                                                                      (if (null? rest-lst)
-                                                                          (outer (rest lst))
-                                                                          (if (string!=? (first lst) (first rest-lst))
-                                                                              (inner (rest rest-lst))
+                                                                      (if (list-null? rest-lst)
+                                                                          (outer (list-rest lst))
+                                                                          (if (string!=? (list-first lst) (list-first rest-lst))
+                                                                              (inner (list-rest rest-lst))
                                                                               #f)))))
-                                                      (inner (rest lst)))))))
+                                                      (inner (list-rest lst)))))))
                                 (outer args))))""",
         'string<?': """(lambda (. args)
-                         (if (integer<? (length args) 2)
+                         (if (integer<? (list-length args) 2)
                            (error "Function 'string<?' requires at least 2 arguments")
                            (letrec ((loop (lambda (lst prev)
-                                            (if (null? lst) #t
-                                                (if (string<? prev (first lst))
-                                                    (loop (rest lst) (first lst))
+                                            (if (list-null? lst) #t
+                                                (if (string<? prev (list-first lst))
+                                                    (loop (list-rest lst) (list-first lst))
                                                     #f)))))
-                             (loop (rest args) (first args)))))""",
+                             (loop (list-rest args) (list-first args)))))""",
         'string>?': """(lambda (. args)
-                         (if (integer<? (length args) 2)
+                         (if (integer<? (list-length args) 2)
                            (error "Function 'string>?' requires at least 2 arguments")
                            (letrec ((loop (lambda (lst prev)
-                                            (if (null? lst) #t
-                                                (if (string>? prev (first lst))
-                                                    (loop (rest lst) (first lst))
+                                            (if (list-null? lst) #t
+                                                (if (string>? prev (list-first lst))
+                                                    (loop (list-rest lst) (list-first lst))
                                                     #f)))))
-                             (loop (rest args) (first args)))))""",
+                             (loop (list-rest args) (list-first args)))))""",
         'string<=?': """(lambda (. args)
-                          (if (integer<? (length args) 2)
+                          (if (integer<? (list-length args) 2)
                             (error "Function 'string<=?' requires at least 2 arguments")
                             (letrec ((loop (lambda (lst prev)
-                                             (if (null? lst) #t
-                                                 (if (string<=? prev (first lst))
-                                                     (loop (rest lst) (first lst))
+                                             (if (list-null? lst) #t
+                                                 (if (string<=? prev (list-first lst))
+                                                     (loop (list-rest lst) (list-first lst))
                                                      #f)))))
-                              (loop (rest args) (first args)))))""",
+                              (loop (list-rest args) (list-first args)))))""",
         'string>=?': """(lambda (. args)
-                          (if (integer<? (length args) 2)
+                          (if (integer<? (list-length args) 2)
                             (error "Function 'string>=?' requires at least 2 arguments")
                             (letrec ((loop (lambda (lst prev)
-                                             (if (null? lst) #t
-                                                 (if (string>=? prev (first lst))
-                                                     (loop (rest lst) (first lst))
+                                             (if (list-null? lst) #t
+                                                 (if (string>=? prev (list-first lst))
+                                                     (loop (list-rest lst) (list-first lst))
                                                      #f)))))
-                              (loop (rest args) (first args)))))""",
+                              (loop (list-rest args) (list-first args)))))""",
         'string-append': """(lambda (. args)
-                              (if (null? args) ""
+                              (if (list-null? args) ""
                                 (letrec ((loop (lambda (lst acc)
-                                                 (if (null? lst) acc
-                                                     (loop (rest lst) (string-append acc (first lst)))))))
-                                  (loop (rest args) (first args)))))""",
+                                                 (if (list-null? lst) acc
+                                                     (loop (list-rest lst) (string-append acc (list-first lst)))))))
+                                  (loop (list-rest args) (list-first args)))))""",
         'list': """(lambda (. args) args)""",
         'list=?': """(lambda (. args)
-                       (if (integer<? (length args) 2)
+                       (if (integer<? (list-length args) 2)
                          (error "Function 'list=?' requires at least 2 arguments")
                          (letrec ((loop (lambda (lst prev)
-                                          (if (null? lst) #t
-                                              (if (list=? prev (first lst))
-                                                  (loop (rest lst) (first lst))
+                                          (if (list-null? lst) #t
+                                              (if (list=? prev (list-first lst))
+                                                  (loop (list-rest lst) (list-first lst))
                                                   #f)))))
-                           (loop (rest args) (first args)))))""",
+                           (loop (list-rest args) (list-first args)))))""",
         'list!=?': """(lambda (. args)
-                            (if (integer<? (length args) 2)
+                            (if (integer<? (list-length args) 2)
                               (error "Function 'list!=?' requires at least 2 arguments")
                               (letrec ((outer (lambda (lst)
-                                                (if (null? lst) #t
+                                                (if (list-null? lst) #t
                                                     (letrec ((inner (lambda (rest-lst)
-                                                                      (if (null? rest-lst)
-                                                                          (outer (rest lst))
-                                                                          (if (list!=? (first lst) (first rest-lst))
-                                                                              (inner (rest rest-lst))
+                                                                      (if (list-null? rest-lst)
+                                                                          (outer (list-rest lst))
+                                                                          (if (list!=? (list-first lst) (list-first rest-lst))
+                                                                              (inner (list-rest rest-lst))
                                                                               #f)))))
-                                                      (inner (rest lst)))))))
+                                                      (inner (list-rest lst)))))))
                                 (outer args))))""",
         'append': """(lambda (. args)
-                       (if (null? args) (list)
+                       (if (list-null? args) (list)
                          (letrec ((loop (lambda (lst acc)
-                                          (if (null? lst) acc
-                                              (loop (rest lst) (append acc (first lst)))))))
-                           (loop (rest args) (first args)))))""",
+                                          (if (list-null? lst) acc
+                                              (loop (list-rest lst) (append acc (list-first lst)))))))
+                           (loop (list-rest args) (list-first args)))))""",
         'alist': """(lambda (. args)
                       (letrec ((loop (lambda (pairs acc)
-                                       (if (null? pairs) acc
-                                           (if (not (list? (first pairs)))
+                                       (if (list-null? pairs) acc
+                                           (if (boolean-not (list? (list-first pairs)))
                                                (error "alist: each argument must be a 2-element list")
-                                               (if (!= (length (first pairs)) 2)
+                                               (if (!= (list-length (list-first pairs)) 2)
                                                    (error "alist: each argument must be a 2-element list")
-                                                   (loop (rest pairs)
+                                                   (loop (list-rest pairs)
                                                          (alist-set acc
-                                                                    (first (first pairs))
-                                                                    (first (rest (first pairs)))))))))))
+                                                                    (list-first (list-first pairs))
+                                                                    (list-first (list-rest (list-first pairs)))))))))))
                         (loop args (alist))))""",
         'alist=?': """(lambda (. args)
-                        (if (integer<? (length args) 2)
+                        (if (integer<? (list-length args) 2)
                           (error "Function 'alist=?' requires at least 2 arguments")
                           (letrec ((loop (lambda (lst prev)
-                                           (if (null? lst) #t
-                                               (if (alist=? prev (first lst))
-                                                   (loop (rest lst) (first lst))
+                                           (if (list-null? lst) #t
+                                               (if (alist=? prev (list-first lst))
+                                                   (loop (list-rest lst) (list-first lst))
                                                    #f)))))
-                            (loop (rest args) (first args)))))""",
+                            (loop (list-rest args) (list-first args)))))""",
         'alist!=?': """(lambda (. args)
-                            (if (integer<? (length args) 2)
+                            (if (integer<? (list-length args) 2)
                               (error "Function 'alist!=?' requires at least 2 arguments")
                               (letrec ((outer (lambda (lst)
-                                                (if (null? lst) #t
+                                                (if (list-null? lst) #t
                                                     (letrec ((inner (lambda (rest-lst)
-                                                                      (if (null? rest-lst)
-                                                                          (outer (rest lst))
-                                                                          (if (alist!=? (first lst) (first rest-lst))
-                                                                              (inner (rest rest-lst))
+                                                                      (if (list-null? rest-lst)
+                                                                          (outer (list-rest lst))
+                                                                          (if (alist!=? (list-first lst) (list-first rest-lst))
+                                                                              (inner (list-rest rest-lst))
                                                                               #f)))))
-                                                      (inner (rest lst)))))))
+                                                      (inner (list-rest lst)))))))
                                 (outer args))))""",
         'alist-get': """(lambda (a-list key . rest)
-                          (alist-get a-list key (if (null? rest) #f (first rest))))""",
+                          (alist-get a-list key (if (list-null? rest) #f (list-first rest))))""",
         'range': """(lambda (start end . rest)
-                      (range start end (if (null? rest) 1 (first rest))))""",
+                      (range start end (if (list-null? rest) 1 (list-first rest))))""",
         'map': """(lambda (f lst)
                     (letrec ((helper (lambda (f lst acc)
-                                       (if (null? lst) (reverse acc)
-                                           (helper f (rest lst) (cons (f (first lst)) acc))))))
+                                       (if (list-null? lst) (list-reverse acc)
+                                           (helper f (list-rest lst) (list-cons (f (list-first lst)) acc))))))
                     (helper f lst (list))))""",
         'filter': """(lambda (pred lst)
                     (letrec ((helper (lambda (pred lst acc)
-                                       (if (null? lst) (reverse acc)
-                                           (if (pred (first lst))
-                                               (helper pred (rest lst) (cons (first lst) acc))
-                                               (helper pred (rest lst) acc))))))
+                                       (if (list-null? lst) (list-reverse acc)
+                                           (if (pred (list-first lst))
+                                               (helper pred (list-rest lst) (list-cons (list-first lst) acc))
+                                               (helper pred (list-rest lst) acc))))))
                         (helper pred lst (list))))""",
         'fold': """(lambda (f init lst)
                     (letrec ((helper (lambda (f acc lst)
-                                       (if (null? lst) acc
-                                           (helper f (f acc (first lst)) (rest lst))))))
+                                       (if (list-null? lst) acc
+                                           (helper f (f acc (list-first lst)) (list-rest lst))))))
                     (helper f init lst)))""",
         'find': """(lambda (pred lst)
-                    (letrec ((find (lambda (pred lst) (if (null? lst) #f (if (pred (first lst)) (first lst) (find pred (rest lst)))))))
+                    (letrec ((find (lambda (pred lst) (if (list-null? lst) #f (if (pred (list-first lst)) (list-first lst) (find pred (list-rest lst)))))))
                     (find pred lst)))""",
         'any?': """(lambda (pred lst)
-                    (letrec ((any? (lambda (pred lst) (if (null? lst) #f (if (pred (first lst)) #t (any? pred (rest lst)))))))
+                    (letrec ((any? (lambda (pred lst) (if (list-null? lst) #f (if (pred (list-first lst)) #t (any? pred (list-rest lst)))))))
                     (any? pred lst)))""",
         'all?': """(lambda (pred lst)
-                    (letrec ((all? (lambda (pred lst) (if (null? lst) #t (if (pred (first lst)) (all? pred (rest lst)) #f)))))
+                    (letrec ((all? (lambda (pred lst) (if (list-null? lst) #t (if (pred (list-first lst)) (all? pred (list-rest lst)) #f)))))
                     (all? pred lst)))""",
     }
 

@@ -108,19 +108,19 @@ class TestLists:
         assert aifpl.evaluate("(list 1 2 3)") == [1, 2, 3]
 
     def test_first(self, aifpl):
-        assert aifpl.evaluate("(first (list 1 2 3))") == 1
+        assert aifpl.evaluate("(list-first (list 1 2 3))") == 1
 
     def test_rest(self, aifpl):
-        assert aifpl.evaluate("(rest (list 1 2 3))") == [2, 3]
+        assert aifpl.evaluate("(list-rest (list 1 2 3))") == [2, 3]
 
     def test_cons(self, aifpl):
-        assert aifpl.evaluate("(cons 1 (list 2 3))") == [1, 2, 3]
+        assert aifpl.evaluate("(list-cons 1 (list 2 3))") == [1, 2, 3]
 
     def test_append(self, aifpl):
         assert aifpl.evaluate("(append (list 1 2) (list 3 4))") == [1, 2, 3, 4]
 
     def test_length(self, aifpl):
-        assert aifpl.evaluate("(length (list 1 2 3))") == 3
+        assert aifpl.evaluate("(list-length (list 1 2 3))") == 3
 
 
 class TestHigherOrder:

@@ -915,7 +915,7 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """BOOLEAN_NOT: Logical NOT operation."""
         value = self.stack.pop()
-        bool_val = self._ensure_boolean(value, "not")
+        bool_val = self._ensure_boolean(value, "boolean-not")
         self.stack.append(AIFPLBoolean(not bool_val))
         return None
 
@@ -1617,7 +1617,7 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """COMPLEX_REAL: Pop a complex number, push its real part as float."""
         a = self.stack.pop()
-        a_val = self._ensure_complex(a, 'real')
+        a_val = self._ensure_complex(a, 'complex-real')
         self.stack.append(AIFPLFloat(a_val.real))
         return None
 
@@ -1626,7 +1626,7 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """COMPLEX_IMAG: Pop a complex number, push its imaginary part as float."""
         a = self.stack.pop()
-        a_val = self._ensure_complex(a, 'imag')
+        a_val = self._ensure_complex(a, 'complex-imag')
         self.stack.append(AIFPLFloat(a_val.imag))
         return None
 
@@ -2146,7 +2146,7 @@ class AIFPLVM:
         tail = self.stack.pop()
         head = self.stack.pop()
 
-        list_val = self._ensure_list(tail, 'cons')
+        list_val = self._ensure_list(tail, 'list-cons')
         self.stack.append(list_val.cons(head))
         return None
 
@@ -2155,7 +2155,7 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """REVERSE: Pop a list, push a new list with elements in reversed order."""
         value = self.stack.pop()
-        list_val = self._ensure_list(value, 'reverse')
+        list_val = self._ensure_list(value, 'list-reverse')
         self.stack.append(list_val.reverse())
         return None
 
@@ -2164,7 +2164,7 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """FIRST: Pop a list, push its first element."""
         value = self.stack.pop()
-        list_val = self._ensure_list(value, 'first')
+        list_val = self._ensure_list(value, 'list-first')
         try:
             self.stack.append(list_val.first())
 
@@ -2178,7 +2178,7 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """REST: Pop a list, push a new list of all elements except the first."""
         value = self.stack.pop()
-        list_val = self._ensure_list(value, 'rest')
+        list_val = self._ensure_list(value, 'list-rest')
         try:
             self.stack.append(list_val.rest())
 
@@ -2192,7 +2192,7 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """LAST: Pop a list, push its last element."""
         value = self.stack.pop()
-        list_val = self._ensure_list(value, 'last')
+        list_val = self._ensure_list(value, 'list-last')
         try:
             self.stack.append(list_val.last())
 
@@ -2204,14 +2204,14 @@ class AIFPLVM:
     def _op_list_length(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """LENGTH: Pop a list or alist, push its length as an integer."""
+        """LIST_LENGTH: Pop a list, push its length as an integer."""
         value = self.stack.pop()
-        if isinstance(value, (AIFPLList, AIFPLAList)):
+        if isinstance(value, AIFPLList):
             self.stack.append(AIFPLInteger(value.length()))
             return None
 
         raise AIFPLEvalError(
-            f"Function 'length' requires list or alist argument, got {value.type_name()}"
+            f"Function 'list-length' requires list argument, got {value.type_name()}"
         )
 
     def _op_list_ref(  # pylint: disable=useless-return
@@ -2243,7 +2243,7 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """NULL_P: Pop a list, push true if empty."""
         value = self.stack.pop()
-        list_val = self._ensure_list(value, 'null?')
+        list_val = self._ensure_list(value, 'list-null?')
         self.stack.append(AIFPLBoolean(list_val.is_empty()))
         return None
 
@@ -2253,7 +2253,7 @@ class AIFPLVM:
         """MEMBER_P: Pop a list and item, push true if item is in list."""
         list_val_raw = self.stack.pop()
         item = self.stack.pop()
-        list_val = self._ensure_list(list_val_raw, 'member?')
+        list_val = self._ensure_list(list_val_raw, 'list-member?')
         self.stack.append(AIFPLBoolean(list_val.contains(item)))
         return None
 
@@ -2263,7 +2263,7 @@ class AIFPLVM:
         """POSITION: Pop a list and item, push index or #f if not found."""
         list_val_raw = self.stack.pop()
         item = self.stack.pop()
-        list_val = self._ensure_list(list_val_raw, 'position')
+        list_val = self._ensure_list(list_val_raw, 'list-position')
         pos = list_val.position(item)
         self.stack.append(AIFPLInteger(pos) if pos is not None else AIFPLBoolean(False))
         return None
@@ -2274,10 +2274,10 @@ class AIFPLVM:
         """TAKE: Pop a list and count n, push first n elements."""
         list_val_raw = self.stack.pop()
         n_val = self.stack.pop()
-        n = self._ensure_integer(n_val, 'take')
-        list_val = self._ensure_list(list_val_raw, 'take')
+        n = self._ensure_integer(n_val, 'list-take')
+        list_val = self._ensure_list(list_val_raw, 'list-take')
         if n < 0:
-            raise AIFPLEvalError(f"take count cannot be negative: {n}")
+            raise AIFPLEvalError(f"list-take count cannot be negative: {n}")
 
         self.stack.append(list_val.take(n))
         return None
@@ -2288,10 +2288,10 @@ class AIFPLVM:
         """DROP: Pop a list and count n, push list without first n elements."""
         list_val_raw = self.stack.pop()
         n_val = self.stack.pop()
-        n = self._ensure_integer(n_val, 'drop')
-        list_val = self._ensure_list(list_val_raw, 'drop')
+        n = self._ensure_integer(n_val, 'list-drop')
+        list_val = self._ensure_list(list_val_raw, 'list-drop')
         if n < 0:
-            raise AIFPLEvalError(f"drop count cannot be negative: {n}")
+            raise AIFPLEvalError(f"list-drop count cannot be negative: {n}")
 
         self.stack.append(list_val.drop(n))
         return None
@@ -2302,7 +2302,7 @@ class AIFPLVM:
         """REMOVE: Pop a list and item, push list with all occurrences of item removed."""
         list_val_raw = self.stack.pop()
         item = self.stack.pop()
-        list_val = self._ensure_list(list_val_raw, 'remove')
+        list_val = self._ensure_list(list_val_raw, 'list-remove')
         self.stack.append(list_val.remove_all(item))
         return None
 

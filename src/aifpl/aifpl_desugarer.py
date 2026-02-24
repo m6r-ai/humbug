@@ -839,7 +839,7 @@ class AIFPLDesugarer:
         if pattern.is_empty():
             # Test: (null? temp_var)
             test_expr = AIFPLASTList((
-                AIFPLASTSymbol('null?'),
+                AIFPLASTSymbol('list-null?'),
                 AIFPLASTSymbol(temp_var)
             ))
             return (test_expr, [])
@@ -925,7 +925,7 @@ class AIFPLDesugarer:
         length_test = AIFPLASTList((
             AIFPLASTSymbol('integer=?'),
             AIFPLASTList((
-                AIFPLASTSymbol('length'),
+                AIFPLASTSymbol('list-length'),
                 AIFPLASTSymbol(temp_var)
             )),
             AIFPLASTInteger(num_elements)
@@ -1175,7 +1175,7 @@ class AIFPLDesugarer:
         length_test = AIFPLASTList((
             AIFPLASTSymbol('integer>=?'),
             AIFPLASTList((
-                AIFPLASTSymbol('length'),
+                AIFPLASTSymbol('list-length'),
                 AIFPLASTSymbol(temp_var)
             )),
             AIFPLASTInteger(dot_position)
@@ -1208,7 +1208,7 @@ class AIFPLDesugarer:
 
         # Extract tail: (drop dot_position temp_var)
         tail_value = AIFPLASTList((
-            AIFPLASTSymbol('drop'),
+            AIFPLASTSymbol('list-drop'),
             AIFPLASTInteger(dot_position),
             AIFPLASTSymbol(temp_var)
         ))

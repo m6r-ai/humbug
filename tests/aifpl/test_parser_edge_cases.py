@@ -377,13 +377,13 @@ class TestAIFPLParserEdgeCases:
             # Error message should contain position information
             error_msg = str(e)
             # Should mention position or the problematic character
-            assert "@" in error_msg or "position" in error_msg.lower()
+            assert "@" in error_msg or "list-position" in error_msg.lower()
 
         try:
             aifpl.evaluate("(+ 1 2")
         except (AIFPLTokenError, AIFPLParseError) as e:
             error_msg = str(e)
-            assert "parenthesis" in error_msg.lower() or "position" in error_msg.lower()
+            assert "parenthesis" in error_msg.lower() or "list-position" in error_msg.lower()
 
     def test_parser_memory_efficiency(self, aifpl):
         """Test parser memory efficiency with large expressions."""

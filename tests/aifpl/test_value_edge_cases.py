@@ -309,19 +309,19 @@ class TestAIFPLValueEdgeCases:
     def test_value_list_operations_edge_cases(self, aifpl):
         """Test list operations with edge case values."""
         # Empty list operations
-        assert aifpl.evaluate("(length ())") == 0
-        assert aifpl.evaluate("(null? ())") is True
-        assert aifpl.evaluate("(reverse ())") == []
+        assert aifpl.evaluate("(list-length ())") == 0
+        assert aifpl.evaluate("(list-null? ())") is True
+        assert aifpl.evaluate("(list-reverse ())") == []
 
         # Single element list operations
-        assert aifpl.evaluate("(length (list 1))") == 1
-        assert aifpl.evaluate("(first (list 1))") == 1
-        assert aifpl.evaluate("(rest (list 1))") == []
+        assert aifpl.evaluate("(list-length (list 1))") == 1
+        assert aifpl.evaluate("(list-first (list 1))") == 1
+        assert aifpl.evaluate("(list-rest (list 1))") == []
 
         # List operations with mixed types
         result = aifpl.evaluate('(list 1 "hello" #t)')
         assert result == [1, "hello", True]
-        assert aifpl.evaluate('(length (list 1 "hello" #t))') == 3
+        assert aifpl.evaluate('(list-length (list 1 "hello" #t))') == 3
 
     def test_alist_coverage_edge_cases(self, aifpl):
         """Test alist edge cases for full coverage."""

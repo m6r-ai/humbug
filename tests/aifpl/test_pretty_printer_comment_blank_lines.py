@@ -144,7 +144,7 @@ class TestCommentBlankLinesInBindings:
         second_comment_idx = next(i for i, line in enumerate(lines) if '; Second function' in line)
         fourth_comment_idx = next(i for i, line in enumerate(lines) if '; Fourth function' in line)
 
-        # Second comment is more indented than previous line (first binding has opening paren),
+        # Second comment is more indented than previous line (list-first binding has opening paren),
         # so no blank line. Fourth comment is at same indent as previous binding, so blank line.
         assert lines[second_comment_idx - 1].strip() == '', "Should have blank line before second comment (more indented)"
 
@@ -238,7 +238,7 @@ class TestCanonicalFormatting:
         foo_end_idx = next(i for i, line in enumerate(lines) if 'x))' in line)
         comment_idx = next(i for i, line in enumerate(lines) if '; Comment immediately after' in line)
 
-        # Comment is more indented than previous binding (first binding has opening paren at indent 2,
+        # Comment is more indented than previous binding (list-first binding has opening paren at indent 2,
         # comment is at indent 4), so NO blank line should be added
         assert comment_idx - foo_end_idx == 2, "Should add blank line (comment is more indented)"
         assert lines[comment_idx - 1].strip() == '', "Comment should not immediately follow previous binding"
@@ -262,7 +262,7 @@ class TestCanonicalFormatting:
         comment_idx = next(i for i, line in enumerate(lines) if '; Comment after blank line' in line)
 
         # Canonical formatting removes the blank line because comment is more indented
-        # (first binding at indent 2, comment at indent 4)
+        # (list-first binding at indent 2, comment at indent 4)
         # Canonical formatting is based on indent rules, not source spacing
         assert comment_idx - foo_end_idx == 2, "Should have blank line"
         assert lines[comment_idx - 1].strip() == '', "Comment should immediately follow previous binding"
@@ -358,5 +358,5 @@ class TestCommentIndentationInMatchClauses:
         assert comment_indent == result_indent, \
             f"Comment and result should have same indentation, got {comment_indent} and {result_indent}"
 
-        # Should be properly indented (not just 1 space)
+        # Should be properly indented (boolean-not just 1 space)
         assert comment_indent > 2, f"Should be properly indented, got {comment_indent} spaces"

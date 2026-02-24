@@ -184,16 +184,11 @@ Syntax: (operator arg1 arg2 ...)
 - 'expr → shortcut for (quote expr)
 - '(integer+ 1 2 3) → (integer+ 1 2 3) (as data, not evaluated)
 - (list 'hello (integer+ 1 2) 'world) → (hello 3 world)
-- Enables symbolic programming: (first '(integer+ 1 2)) → integer+
+- Enables symbolic programming: (list-first '(integer+ 1 2)) → integer+
 - Code and data have identical representation (homoiconicity)
 
 ## Arithmetic and math:
 
-- Modulo: (% 7 3) → 1
-- Other: (abs -5), (sqrt 4.0), (round 3.7) → 4, (floor 3.7) → 3, (ceil 3.2) → 4
-- Trig: (sin 0.0), (cos 0.0), (tan 0.0)
-- Logs: (log 1.0), (log10 1.0), (exp 0.0)
-- Aggregation: (min 1 5 3), (max 1 5 3)
 - Bitwise: (bit-or 5 3), (bit-and 7 3), (bit-xor 5 3), (bit-not 5)
 - Bit shifts: (bit-shift-left 1 3), (bit-shift-right 8 2)
 - Base conversion: (bin 255), (hex 255), (oct 255)
@@ -216,6 +211,9 @@ Syntax: (operator arg1 arg2 ...)
 - (float/ 4.0) → 0.25 (reciprocal), (float-neg 3.0) → -3.0
 - (float-expt 2.0 10.0) → 1024.0
 - (float+) → 0.0, (float*) → 1.0 (zero-arg identities)
+- (float// 7.0 2.0) → 3.0 (floor division), (float% 7.0 3.0) → 1.0 (modulo)
+- (float-floor 3.7) → 3.0, (float-ceil 3.2) → 4.0, (float-round 3.5) → 4.0 (all return float)
+- (float-min 1.0 2.0) → 1.0, (float-max 1.0 2.0) → 2.0
 - Transcendentals: (float-sin 0.0) → 0.0, (float-cos 0.0) → 1.0, (float-tan 0.0) → 0.0
 - (float-log 1.0) → 0.0, (float-log10 1.0) → 0.0, (float-exp 0.0) → 1.0
 - (float-sqrt 4.0) → 2.0, (float-abs -3.0) → 3.0
@@ -233,7 +231,7 @@ Syntax: (operator arg1 arg2 ...)
 - (complex-neg (complex 3 4)) → -3-4j
 - (complex-abs (complex 3 4)) → 5.0 (returns magnitue as float, not complex)
 - (complex+) → 0+0j, (complex*) → 1+0j (zero-arg identities)
-- Transcendentals: complex-sin, complex-cos, complex-tan, complex-log, complex-exp, complex-sqrt
+- Transcendentals: complex-sin, complex-cos, complex-tan, complex-log, complex-log10, complex-exp, complex-sqrt
 - Exponentials: complex-expt
 
 ## Complex numbers:
@@ -243,14 +241,15 @@ Syntax: (operator arg1 arg2 ...)
 - Complex: 3+4j, 3-4j, 1e2+3e-1j → (3+4j), (3-4j), (100+0.3j)
 - (complex 3 4) → (3+4j) (construct complex number)
 - Use explicit construction: (complex+ (complex 1 0) (complex 2 3)) → 3+3j
-- (real 3+4j) → 3, (imag 3+4j) → 4, (abs 3+4j) → 5.0
-- (real 42) → 42, (imag 42) → 0 (works on all numbers)
+- (complex-real 3+4j) → 3, (complex-imag 3+4j) → 4, (complex-abs 3+4j) → 5.0
+- (complex-real 42) → 42, (complex-imag 42) → 0 (works on all numeric types)
 
 ## Type construction and conversion:
 
 - (integer x) → convert to integer (truncates toward zero): (integer 3.7) → 3, (integer -2.9) → -2
 - (float x) → convert to float: (float 42) → 42.0, (float 3) → 3.0
 - (complex real imag) → construct complex: (complex 3 4) → (3+4j)
+- (integer->string 42) → "42", (float->string 3.14) → "3.14", (complex->string 3+4j) → "3+4j"
 - These are the primary way to move between numeric types; there is no automatic promotion
 
 ## Comparison and boolean:
@@ -273,7 +272,7 @@ Syntax: (operator arg1 arg2 ...)
 - String ordering is Unicode codepoint order (same as Python str), not locale-aware collation
 - Complex numbers have no ordering; use (complex-abs z) to compare magnitudes as floats
 
-- (and #t #f), (or #t #f), (not #t)
+- (and #t #f), (or #t #f), (boolean-not #t)
 - (if (integer>? 5 3) "yes" "no"), lazy evaluation: (if #t 42 0)
 
 ## String operations:
@@ -284,19 +283,19 @@ Syntax: (operator arg1 arg2 ...)
 - Utilities: (string-trim "  hello  "), (string-replace "banana" "a" "o")
 - Equality/ordering predicates: (string=? "hi" "hi"), (string!=? "hi" "bye"), (string<? "apple" "banana"), (string>? "b" "a"), (string<=? "a" "a"), (string>=? "b" "a")
 - Search predicates: (string-contains? "hello" "ell"), (string-prefix? "hello" "he"), (string-suffix? "hello" "lo")
-- Conversion: (string->number "42"), (number->string 42)
+- Conversion: (string->number "42"), (integer->string 42), (float->string 3.14), (complex->string 3+4j)
 - String-list: (string->list "hi") → ("h" "i"), (list->string (list "h" "i")) → "hi"
 - Split/join: (string-split "a,b,c" ",") → ("a" "b" "c"), (string-join (list "hello" "world") " ") → "hello world"
 
 ## List operations:
 
-- Uses proper lists only, not cons cells, and the cons operator requires that the second argument is a list
-- Construction: (list 1 2 3), (cons 1 (list 2 3)), (append (list 1 2) (list 3 4))
-- Access: (first (list 1 2 3)), (rest (list 1 2 3)), (last (list 1 2 3))
+- Uses proper lists only, not cons cells, and the list-cons operator requires that the second argument is a list
+- Construction: (list 1 2 3), (list-cons 1 (list 2 3)), (append (list 1 2) (list 3 4))
+- Access: (list-first (list 1 2 3)), (list-rest (list 1 2 3)), (list-last (list 1 2 3))
 - Indexed access: (list-ref (list "a" "b" "c") 1) → "b" (0-based index)
-- Properties: (length (list 1 2 3)) [also works with alists], (null? (list)), (member? 2 (list 1 2 3))
-- Utilities: (reverse (list 1 2 3)), (remove 2 (list 1 2 3 2 4)), (position 2 (list 1 2 3)) → 1 or #f
-- Slicing: (take 3 (list 1 2 3 4 5)), (drop 2 (list 1 2 3 4 5))
+- Properties: (list-length (list 1 2 3)), (list-null? (list)), (list-member? 2 (list 1 2 3))
+- Utilities: (list-reverse (list 1 2 3)), (list-remove 2 (list 1 2 3 2 4)), (list-position 2 (list 1 2 3)) → 1 or #f
+- Slicing: (list-take 3 (list 1 2 3 4 5)), (list-drop 2 (list 1 2 3 4 5))
 
 ## Association lists (alists):
 
@@ -314,7 +313,7 @@ Syntax: (operator arg1 arg2 ...)
 
 ## Type predicates:
 
-- (integer? 42) → #t, (integer? 3.14) → #f, (integer? (round 3.7)) → #t
+- (integer? 42) → #t, (integer? 3.14) → #f
 - (float? 3.14) → #t, (float? 42) → #f, (float? (float/ 1.0 2.0)) → #t
 - (complex? (complex 1 1)) → #t, (complex? 42) → #f
 - (string? "hello") → #t, (boolean? #t) → #t, (list? (list 1 2)) → #t, (alist? (alist ...)) → #t
@@ -327,7 +326,7 @@ Syntax: (operator arg1 arg2 ...)
 - (lambda (. rest) body) → fully variadic: rest receives all args as a list
 - ((lambda (x) (integer* x x)) 5) → 25
 - ((lambda (. args) (fold integer+ 0 args)) 1 2 3 4 5) → 15 (variadic sum)
-- ((lambda (x . rest) (cons x (reverse rest))) 1 2 3) → (1 3 2)
+- ((lambda (x . rest) (list-cons x (list-reverse rest))) 1 2 3) → (1 3 2)
 - Functions are first-class values with lexical scoping and closures
 - Tail recursion automatically optimized
 - Variadic functions accept any number of args beyond their fixed params; rest param is always a list (possibly empty)
@@ -354,7 +353,7 @@ Syntax: (operator arg1 arg2 ...)
 - (map func list) → (map (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
 - (filter predicate list) → (filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
 - (fold func init list) → (fold integer+ 0 (list 1 2 3 4)) → 10
-- (range start end [step]) → (range 1 5) → (1 2 3 4)
+- (range start end [step]) → (range 1 5) → (1 2 3 4), integers only
 - (find predicate list), (any? predicate list), (all? predicate list)
 
 ## Pattern matching:
@@ -365,11 +364,11 @@ Syntax: (operator arg1 arg2 ...)
 - Wildcard patterns: _ matches anything without binding
 - Type patterns: (integer? var), (string? var), (list? var), (boolean? var), (function? var)
 - Empty list: (match lst (() "empty") ((x) "singleton") (_ "multiple"))
-- List destructuring: (match lst ((a b c) (integer+ a b c)) ((head . tail) (cons head tail)))
+- List destructuring: (match lst ((a b c) (integer+ a b c)) ((head . tail) (list-cons head tail)))
 - Nested patterns: (match data (((integer? x) (string? y)) (list x y)) (_ "no match"))
 - First match wins: patterns are tested in order, use specific patterns before general ones
 - Example: (match data (42 "answer") ((integer? n) (integer* n 2)) ((string? s) (string-upcase s))
-((head . tail) (list head (length tail))) (_ \"unknown\"))
+- ((head . tail) (list head (list-length tail))) (_ \"unknown\"))
 
 ## Module system:
 
@@ -408,10 +407,10 @@ Syntax: (operator arg1 arg2 ...)
 
 ## Important notes:
 
-- cons behavior is not the same as traditional LISP: second arg must be a list
+- list-cons behavior is not the same as traditional LISP: second arg must be a list
 - Strict typing: string ops need strings, boolean ops need booleans
-- Round to integer: (round 3.7) → 4, (floor 3.7) → 3, (ceil 3.2) → 4
-- All comparison operators are type-specific: use integer=?, float<?, string>=? etc. — never the generic =, !=, <, >, <=, >=
+- float-floor, float-ceil, float-round all return float, not integer; use (integer (float-round x)) to get an integer
+- All comparison operators are type-specific: use integer=?, float<?, string>=? etc.
 - Lists and alists support =? and !=? only; they have no ordering
 - Conditions must be boolean: (if #t ...) works, (if 1 ...) doesn't
 - Use for calculations, data processing, and functional programming only

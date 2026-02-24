@@ -245,7 +245,7 @@ class TestErrors:
             aifpl.evaluate("(integer-abs 1 2)")
 
         with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
-            aifpl.evaluate("(not #t #f)")
+            aifpl.evaluate("(boolean-not #t #f)")
 
         # Minimum argument requirements
         with pytest.raises(AIFPLEvalError, match="has wrong number of arguments"):
@@ -272,17 +272,17 @@ class TestErrors:
         """Test that list operations with wrong types cause evaluation errors."""
         # List operations on non-lists
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(first "hello")')
+            aifpl.evaluate('(list-first "hello")')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(rest 42)")
+            aifpl.evaluate("(list-rest 42)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(length #t)")
+            aifpl.evaluate("(list-length #t)")
 
         # Operations requiring lists as specific arguments
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(cons 1 "hello")')  # Second arg must be list
+            aifpl.evaluate('(list-cons 1 "hello")')  # Second arg must be list
 
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(append (list 1 2) "hello")')  # All args must be lists
@@ -290,10 +290,10 @@ class TestErrors:
     def test_empty_list_access_errors(self, aifpl):
         """Test that accessing empty lists causes evaluation errors."""
         with pytest.raises(AIFPLEvalError, match="Cannot get first element of empty list"):
-            aifpl.evaluate("(first (list))")
+            aifpl.evaluate("(list-first (list))")
 
         with pytest.raises(AIFPLEvalError, match="Cannot get rest of empty list"):
-            aifpl.evaluate("(rest (list))")
+            aifpl.evaluate("(list-rest (list))")
 
     def test_index_out_of_range_errors(self, aifpl):
         """Test that index out of range causes evaluation errors."""
@@ -407,8 +407,8 @@ class TestErrors:
         assert formatted == "()"
 
         # Empty list should work with list operations
-        assert aifpl.evaluate("(length ())") == 0
-        assert aifpl.evaluate("(null? ())") is True
+        assert aifpl.evaluate("(list-length ())") == 0
+        assert aifpl.evaluate("(list-null? ())") is True
         assert aifpl.evaluate("(list? ())") is True
 
     # ========== Error Message Quality Tests ==========
@@ -419,12 +419,12 @@ class TestErrors:
         try:
             aifpl.evaluate("(integer+ 1 @)")
         except AIFPLTokenError as e:
-            assert "position" in str(e) or "@" in str(e)
+            assert "list-position" in str(e) or "@" in str(e)
 
         try:
             aifpl.evaluate("(integer+ 1 2")
         except AIFPLParseError as e:
-            assert "position" in str(e) or "parenthesis" in str(e)
+            assert "list-position" in str(e) or "parenthesis" in str(e)
 
     def test_error_message_context_information(self, aifpl):
         """Test that error messages provide helpful context."""

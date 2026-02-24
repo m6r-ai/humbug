@@ -179,8 +179,8 @@ class TestAIFPLLexerEdgeCases:
             '"hello world',     # Unterminated string
             '"hello\\q"',       # Invalid escape sequence
             '"test\\z"',        # Invalid escape sequence
-            '"\\uXYZ"',         # Invalid Unicode (not hex)
-            '"\\uGGGG"',        # Invalid Unicode (not hex)
+            '"\\uXYZ"',         # Invalid Unicode (boolean-not hex)
+            '"\\uGGGG"',        # Invalid Unicode (boolean-not hex)
             '"\\u12"',          # Incomplete Unicode (too few digits)
             '"\\u"',            # Incomplete Unicode (no digits)
             '"\\u123"',         # Incomplete Unicode (too few digits)
@@ -253,8 +253,8 @@ class TestAIFPLLexerEdgeCases:
             "string->number",   # Arrow notation
             "integer->string",  # Arrow notation
             "string=?",         # Question mark
-            "null?",            # Question mark
-            "member?",          # Question mark
+            "list-null?",            # Question mark
+            "list-member?",          # Question mark
         ]
 
         for symbol in special_symbols:
@@ -431,7 +431,7 @@ class TestAIFPLLexerEdgeCases:
             except AIFPLTokenError as e:
                 error_msg = str(e)
                 # Error should mention the problematic character or position
-                assert bad_char in error_msg or "position" in error_msg.lower()
+                assert bad_char in error_msg or "list-position" in error_msg.lower()
 
     def test_lexer_buffer_edge_cases(self, aifpl):
         """Test lexer buffer handling edge cases."""

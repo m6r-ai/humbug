@@ -64,9 +64,9 @@ class TestRecursiveNestedLambdas:
         helpers.assert_evaluates_to(
             aifpl,
             '''(letrec ((visit (lambda (id path)
-                          (if (member? id path)
+                          (if (list-member? id path)
                               (list)
-                              (let ((new-path (cons id path)))
+                              (let ((new-path (list-cons id path)))
                                 (if (integer>? id 1)
                                     (fold append (list)
                                           (map (lambda (next-id) (visit next-id new-path))
@@ -83,9 +83,9 @@ class TestRecursiveNestedLambdas:
             aifpl,
             '''(letrec ((all-ids (list 1 2 3))
                   (visit (lambda (id path)
-                          (if (member? id path)
+                          (if (list-member? id path)
                               (list id)
-                              (let ((new-path (cons id path)))
+                              (let ((new-path (list-cons id path)))
                                 (if (integer>? id 1)
                                     (visit (integer- id 1) new-path)
                                     (list id)))))))
@@ -105,11 +105,11 @@ class TestRecursiveNestedLambdas:
                                        (list))))
                   (dfs-visit
                     (lambda (task-id path visited-in-path)
-                      (if (member? task-id visited-in-path)
+                      (if (list-member? task-id visited-in-path)
                           (list (list "cycle" task-id))
                           (let ((successors (get-successors task-id)))
                             (let ((new-path (append path (list task-id)))
-                                  (new-visited (cons task-id visited-in-path)))
+                                  (new-visited (list-cons task-id visited-in-path)))
                               (fold append (list)
                                     (map (lambda (succ) (dfs-visit succ new-path new-visited))
                                          successors))))))))
@@ -224,14 +224,14 @@ class TestRecursiveNestedLambdas:
                                                (list 4)
                                                (list)))))
                   (visit-all (lambda (node visited)
-                              (if (member? node visited)
+                              (if (list-member? node visited)
                                   visited
-                                  (let ((new-visited (cons node visited)))
+                                  (let ((new-visited (list-cons node visited)))
                                     (fold (lambda (acc neighbor)
                                            (visit-all neighbor acc))
                                           new-visited
                                           (get-neighbors node)))))))
-              (length (visit-all 1 (list))))''',
+              (list-length (visit-all 1 (list))))''',
             '4'  # Visits nodes 1, 2, 3, 4
         )
 
@@ -439,7 +439,7 @@ class TestLetrecLambdasInDataStructures:
         # Extract lambda from list and call it
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list (lambda () x)))) ((first x)))',
+            '(letrec ((x (list (lambda () x)))) ((list-first x)))',
             '(<lambda ()>)'  # Calling lambda returns x (the list)
         )
 
@@ -448,16 +448,16 @@ class TestLetrecLambdasInDataStructures:
         # Call lambda, get result, extract lambda, call again
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list (lambda () x)))) (first ((first x))))',
+            '(letrec ((x (list (lambda () x)))) (list-first ((list-first x))))',
             '<lambda ()>'  # Returns the lambda itself
         )
 
     def test_lambda_in_list_deep_recursion(self, aifpl, helpers):
         """Test the original bug report case - deep recursive calls."""
-        # Original test case: ((first ((first ((first ((first x))))))))
+        # Original test case: ((list-first ((list-first ((list-first ((list-first x))))))))
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list (lambda () x)))) ((first ((first ((first ((first x)))))))))',
+            '(letrec ((x (list (lambda () x)))) ((list-first ((list-first ((list-first ((list-first x)))))))))',
             '(<lambda ()>)'  # Returns x after multiple recursive calls
         )
 
@@ -466,7 +466,7 @@ class TestLetrecLambdasInDataStructures:
         # Lambda in cons cell
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (cons (lambda () x) (list)))) (first x))',
+            '(letrec ((x (list-cons (lambda () x) (list)))) (list-first x))',
             '<lambda ()>'  # Returns the lambda
         )
 
@@ -474,7 +474,7 @@ class TestLetrecLambdasInDataStructures:
         """Test calling lambda from cons cell."""
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (cons (lambda () x) (list)))) ((first x)))',
+            '(letrec ((x (list-cons (lambda () x) (list)))) ((list-first x)))',
             '(<lambda ()>)'  # Returns x (the cons cell)
         )
 
@@ -501,7 +501,7 @@ class TestLetrecLambdasInDataStructures:
         # Lambda in nested list
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list (list (lambda () x))))) (first (first x)))',
+            '(letrec ((x (list (list (lambda () x))))) (list-first (list-first x)))',
             '<lambda ()>'  # Returns the lambda
         )
 
@@ -509,7 +509,7 @@ class TestLetrecLambdasInDataStructures:
         """Test calling lambda from nested list."""
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list (list (lambda () x))))) ((first (first x))))',
+            '(letrec ((x (list (list (lambda () x))))) ((list-first (list-first x))))',
             '((<lambda ()>))'  # Calling lambda returns x
         )
 
@@ -518,7 +518,7 @@ class TestLetrecLambdasInDataStructures:
         # Multiple lambdas in list, each referencing x
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list (lambda () x) (lambda () x)))) (length x))',
+            '(letrec ((x (list (lambda () x) (lambda () x)))) (list-length x))',
             '2'  # List has two lambdas
         )
 
@@ -527,14 +527,14 @@ class TestLetrecLambdasInDataStructures:
         # Call first lambda
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list (lambda () x) (lambda () x)))) (length ((first x))))',
+            '(letrec ((x (list (lambda () x) (lambda () x)))) (list-length ((list-first x))))',
             '2'  # First lambda returns x which has length 2
         )
 
         # Call second lambda
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list (lambda () x) (lambda () x)))) (length ((first (rest x)))))',
+            '(letrec ((x (list (lambda () x) (lambda () x)))) (list-length ((list-first (list-rest x)))))',
             '2'  # Second lambda also returns x which has length 2
         )
 
@@ -543,13 +543,13 @@ class TestLetrecLambdasInDataStructures:
         # Lambda with params that references its binding
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list (lambda (n) (if (integer<=? n 0) x (list n)))))) ((first x) 0))',
+            '(letrec ((x (list (lambda (n) (if (integer<=? n 0) x (list n)))))) ((list-first x) 0))',
             '(<lambda (param0)>)'  # Calling with 0 returns x
         )
 
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list (lambda (n) (if (integer<=? n 0) x (list n)))))) ((first x) 5))',
+            '(letrec ((x (list (lambda (n) (if (integer<=? n 0) x (list n)))))) ((list-first x) 5))',
             '(5)'  # Calling with 5 returns (list 5)
         )
 
@@ -558,9 +558,9 @@ class TestLetrecLambdasInDataStructures:
         # Two mutually recursive functions in lists
         helpers.assert_evaluates_to(
             aifpl,
-            '''(letrec ((x (list (lambda (n) (if (integer<=? n 0) 0 (integer+ 1 ((first y) (integer- n 1)))))))
-                        (y (list (lambda (n) (if (integer<=? n 0) 0 (integer+ 1 ((first x) (integer- n 1))))))))
-                  ((first x) 4))''',
+            '''(letrec ((x (list (lambda (n) (if (integer<=? n 0) 0 (integer+ 1 ((list-first y) (integer- n 1)))))))
+                        (y (list (lambda (n) (if (integer<=? n 0) 0 (integer+ 1 ((list-first x) (integer- n 1))))))))
+                  ((list-first x) 4))''',
             '4'  # Mutual recursion works
         )
     def test_lambda_in_alist(self, aifpl, helpers):
@@ -585,7 +585,7 @@ class TestLetrecLambdasInDataStructures:
         # Lambda that doesn't reference x
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list (lambda () 42)))) ((first x)))',
+            '(letrec ((x (list (lambda () 42)))) ((list-first x)))',
             '42'  # Simple lambda works
         )
 
@@ -594,7 +594,7 @@ class TestLetrecLambdasInDataStructures:
         # Lambda references y, not x
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list (lambda () y))) (y 100)) ((first x)))',
+            '(letrec ((x (list (lambda () y))) (y 100)) ((list-first x)))',
             '100'  # Lambda returns y
         )
 
@@ -614,7 +614,7 @@ class TestLetrecLambdasInDataStructuresBytecode:
         """Test bytecode execution of calling lambda from list."""
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list (lambda () x)))) ((first x)))',
+            '(letrec ((x (list (lambda () x)))) ((list-first x)))',
             '(<lambda ()>)'
         )
 
@@ -622,7 +622,7 @@ class TestLetrecLambdasInDataStructuresBytecode:
         """Test bytecode handles deep recursive calls."""
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list (lambda () x)))) ((first ((first ((first ((first x)))))))))',
+            '(letrec ((x (list (lambda () x)))) ((list-first ((list-first ((list-first ((list-first x)))))))))',
             '(<lambda ()>)'
         )
 
@@ -638,7 +638,7 @@ class TestLetrecLambdasInDataStructuresBytecode:
         """Test bytecode handles multiple lambdas in data structure."""
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (list (lambda () x) (lambda () x)))) (length ((first x))))',
+            '(letrec ((x (list (lambda () x) (lambda () x)))) (list-length ((list-first x))))',
             '2'
         )
 
@@ -646,9 +646,9 @@ class TestLetrecLambdasInDataStructuresBytecode:
         """Test bytecode compilation of mutual recursion in lists."""
         helpers.assert_evaluates_to(
             aifpl,
-            '''(letrec ((x (list (lambda (n) (if (integer<=? n 0) 0 (integer+ 1 ((first y) (integer- n 1)))))))
-                        (y (list (lambda (n) (if (integer<=? n 0) 0 (integer+ 1 ((first x) (integer- n 1))))))))
-                  ((first x) 4))''',
+            '''(letrec ((x (list (lambda (n) (if (integer<=? n 0) 0 (integer+ 1 ((list-first y) (integer- n 1)))))))
+                        (y (list (lambda (n) (if (integer<=? n 0) 0 (integer+ 1 ((list-first x) (integer- n 1))))))))
+                  ((list-first x) 4))''',
             '4'
         )
 

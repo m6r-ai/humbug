@@ -56,7 +56,7 @@ class TestFormatting:
         """Test that complex numbers with negligible imaginary parts are simplified."""
         # Very small imaginary part should be simplified
         result = aifpl.evaluate_and_format("(complex+ (complex 5 0) (complex* (complex 1e-15 0) 1j))")
-        assert result == "5+1e-15j"  # Should be simplified to float (real part of complex)
+        assert result == "5+1e-15j"  # Should be simplified to float (complex-real part of complex)
 
         # Larger imaginary part should be preserved
         result = aifpl.evaluate_and_format("(complex+ (complex 5 0) (complex* (complex 1e-5 0) 1j))")
@@ -88,7 +88,7 @@ class TestFormatting:
         # Boolean operations
         ("(and #t #t)", "#t"),
         ("(or #f #f)", "#f"),
-        ("(not #t)", "#f"),
+        ("(boolean-not #t)", "#f"),
 
         # Boolean comparisons
         ("(integer=? 1 1)", "#t"),
@@ -141,13 +141,13 @@ class TestFormatting:
     def test_list_operations_formatting(self, aifpl, helpers):
         """Test that list operations produce properly formatted results."""
         # cons operation
-        helpers.assert_evaluates_to(aifpl, '(cons 1 (list 2 3))', '(1 2 3)')
+        helpers.assert_evaluates_to(aifpl, '(list-cons 1 (list 2 3))', '(1 2 3)')
 
         # append operation
         helpers.assert_evaluates_to(aifpl, '(append (list 1 2) (list 3 4))', '(1 2 3 4)')
 
         # reverse operation
-        helpers.assert_evaluates_to(aifpl, '(reverse (list 1 2 3))', '(3 2 1)')
+        helpers.assert_evaluates_to(aifpl, '(list-reverse (list 1 2 3))', '(3 2 1)')
 
         # filter operation
         helpers.assert_evaluates_to(
@@ -290,7 +290,7 @@ class TestFormatting:
         """Test that formatting is consistent for equivalent expressions."""
         # Different ways of creating the same list should format identically
         list1 = aifpl.evaluate_and_format('(list 1 2 3)')
-        list2 = aifpl.evaluate_and_format('(cons 1 (cons 2 (cons 3 (list))))')
+        list2 = aifpl.evaluate_and_format('(list-cons 1 (list-cons 2 (list-cons 3 (list))))')
         list3 = aifpl.evaluate_and_format('(append (list 1) (list 2) (list 3))')
 
         assert list1 == list2 == list3 == '(1 2 3)'

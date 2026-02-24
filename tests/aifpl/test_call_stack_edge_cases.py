@@ -189,14 +189,14 @@ class TestAIFPLCallStackEdgeCases:
         result = aifpl.evaluate("""
         (append
           (list 1 2)
-          (reverse (list 3 4 5))
+          (list-reverse (list 3 4 5))
           (list 6))
         """)
         assert result == [1, 2, 5, 4, 3, 6]
 
         # List operations with transformations
         result = aifpl.evaluate("""
-        (length
+        (list-length
           (filter (lambda (x) (integer>? x 0))
                   (map (lambda (x) (integer- x 2))
                        (list 1 2 3 4 5))))
@@ -328,7 +328,7 @@ class TestAIFPLCallStackEdgeCases:
         """Test call stack with mixed operation types."""
         # Mix of arithmetic, string, list, and boolean operations
         mixed_expr = """
-        (if (integer>? (length (list 1 2 3)) 2)
+        (if (integer>? (list-length (list 1 2 3)) 2)
             (string->number
               (string-append
                 (integer->string (integer+ 5 5))

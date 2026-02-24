@@ -337,7 +337,7 @@ class TestDesugarerMatchList:
         body = result.elements[2]
         condition = body.elements[1]
         assert isinstance(condition, AIFPLASTList)
-        assert condition.first().name == 'null?'
+        assert condition.first().name == 'list-null?'
 
     def test_match_fixed_list_simple(self):
         """Test desugaring of simple fixed-length list pattern."""
@@ -367,7 +367,7 @@ class TestDesugarerMatchList:
         has_length_test = any(
             isinstance(t, AIFPLASTList) and 
             isinstance(t.elements[1], AIFPLASTList) and
-            t.elements[1].first().name == 'length'
+            t.elements[1].first().name == 'list-length'
             for t in tests
         )
         assert has_list_test
@@ -552,7 +552,7 @@ class TestDesugarerTempVariables:
         desugarer = AIFPLDesugarer()
 
         # Multiple match expressions should get different temp vars
-        expr1 = parse_and_analyze_expression('(match x (42 "found") (_ "not"))')
+        expr1 = parse_and_analyze_expression('(match x (42 "found") (_ "boolean-not"))')
         result1 = desugarer.desugar(expr1)
 
         expr2 = parse_and_analyze_expression('(match y (1 "one") (_ "other"))')

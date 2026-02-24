@@ -36,7 +36,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
     # Builtin operations we can fold
     FOLDABLE_BUILTINS = {
         'boolean=?',
-        'not',
+        'boolean-not',
         'integer=?',
         'integer+',
         'integer-',
@@ -91,8 +91,8 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'complex-exp',
         'complex-sqrt',
         'complex-abs',
-        'real',
-        'imag',
+        'complex-real',
+        'complex-imag',
         'string=?',
     }
 
@@ -108,7 +108,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         self._builtin_jump_table = {
             'boolean=?': self._fold_boolean_eq,
             'boolean!=?': self._fold_boolean_neq,
-            'not': self._fold_not,
+            'boolean-not': self._fold_not,
             'integer=?': self._fold_integer_eq,
             'integer!=?': self._fold_integer_neq,
             'integer+': self._fold_integer_add,
@@ -156,8 +156,8 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'complex-': self._fold_complex_sub,
             'complex*': self._fold_complex_mul,
             'complex/': self._fold_complex_div,
-            'real': self._fold_real,
-            'imag': self._fold_imag,
+            'complex-real': self._fold_real,
+            'complex-imag': self._fold_imag,
             'complex-neg': self._fold_complex_neg,
             'complex-expt': self._fold_complex_expt,
             'complex-sin': self._fold_complex_sin,

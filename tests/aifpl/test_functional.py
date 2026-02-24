@@ -222,7 +222,7 @@ class TestFunctional:
         ('(fold integer+ 10 (list 5))', '15'),
 
         # Fold for list construction (reverse)
-        ('(fold (lambda (acc x) (cons x acc)) (list) (list 1 2 3))', '(3 2 1)'),
+        ('(fold (lambda (acc x) (list-cons x acc)) (list) (list 1 2 3))', '(3 2 1)'),
     ])
     def test_fold_function(self, aifpl, expression, expected):
         """Test fold higher-order function."""
@@ -413,9 +413,9 @@ class TestFunctional:
         # Sum of list using tail recursion
         sum_list_expr = '''
         (letrec ((sum-list (lambda (lst acc)
-                            (if (null? lst) 
+                            (if (list-null? lst) 
                                 acc 
-                                (sum-list (rest lst) (integer+ acc (first lst)))))))
+                                (sum-list (list-rest lst) (integer+ acc (list-first lst)))))))
           (sum-list (list 1 2 3 4) 0))
         '''
         helpers.assert_evaluates_to(aifpl, sum_list_expr, '10')
@@ -550,7 +550,7 @@ class TestFunctional:
         (let ((funcs (list (lambda (x) (integer* x 2))
                            (lambda (x) (integer+ x 10))
                            (lambda (x) (integer* x x)))))
-          (list ((first funcs) 5)
+          (list ((list-first funcs) 5)
                 ((list-ref funcs 1) 5)
                 ((list-ref funcs 2) 5)))
         '''

@@ -210,8 +210,8 @@ class TestAIFPLAIToolParametrized:
 
         # Lists
         ("(list 1 2 3)", "(1 2 3)"),
-        ("(first (list 10 20 30))", "10"),
-        ("(length (list 1 2 3 4))", "4"),
+        ("(list-first (list 10 20 30))", "10"),
+        ("(list-length (list 1 2 3 4))", "4"),
 
         # Strings
         ('(string-length "test")', "4"),
@@ -220,7 +220,7 @@ class TestAIFPLAIToolParametrized:
         # Booleans
         ("(and #t #t)", "#t"),
         ("(or #f #t)", "#t"),
-        ("(not #f)", "#t"),
+        ("(boolean-not #f)", "#t"),
 
         # Constants
         ("true", "#t"),
