@@ -192,6 +192,7 @@ class AIFPLVM:
         table[Opcode.INTEGER_SUB] = self._op_integer_sub
         table[Opcode.INTEGER_MUL] = self._op_integer_mul
         table[Opcode.INTEGER_DIV] = self._op_integer_div
+        table[Opcode.INTEGER_MOD] = self._op_integer_mod
         table[Opcode.INTEGER_NEG] = self._op_integer_neg
         table[Opcode.INTEGER_ABS] = self._op_integer_abs
         table[Opcode.INTEGER_BIT_NOT] = self._op_integer_bit_not
@@ -1058,6 +1059,20 @@ class AIFPLVM:
             raise AIFPLEvalError("Division by zero in 'integer/'")
 
         self.stack.append(AIFPLInteger(a_val // b_val))
+        return None
+
+    def _op_integer_mod(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_MOD: Pop two integers, push modulo result as integer."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'integer%')
+        b_val = self._ensure_integer(b, 'integer%')
+        if b_val == 0:
+            raise AIFPLEvalError("Division by zero in 'integer%'")
+
+        self.stack.append(AIFPLInteger(a_val % b_val))
         return None
 
     def _op_integer_neg(  # pylint: disable=useless-return

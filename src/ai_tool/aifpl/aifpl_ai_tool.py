@@ -200,17 +200,20 @@ Syntax: (operator arg1 arg2 ...)
 
 ## Typed arithmetic operators:
 
-Integer arithmetic (all args must be integers; type error otherwise):
+### Integer arithmetic (all args must be integers; type error otherwise):
+
 - (integer+ 1 2 3) → 6, (integer- 10 3) → 7, (integer* 2 3 4) → 24
 - (integer/ 7 3) → 2 (floor division), (integer/ -7 2) → -4
-- (integer- 5) → -5 (unary negation), (integer-negate 5) → -5
+- (integer- 5) → -5 (unary negation), (integer-neg 5) → -5
 - (integer+) → 0, (integer*) → 1 (zero-arg identities)
-- Use abs for absolute value (no integer-abs)
+- (integer% 7 3) → 1 (modulo), (integer% -7 2) → 1
+- (integer-abs -5) → 5 (absolute value)
 
-Float arithmetic (all args must be floats; use (float x) to convert integers):
+### Float arithmetic (all args must be floats; use (float x) to convert integers):
+
 - (float+ 1.0 2.0 3.0) → 6.0, (float- 10.0 3.0) → 7.0
 - (float* 2.0 3.0) → 6.0, (float/ 10.0 4.0) → 2.5
-- (float/ 4.0) → 0.25 (reciprocal), (float-negate 3.0) → -3.0
+- (float/ 4.0) → 0.25 (reciprocal), (float-neg 3.0) → -3.0
 - (float-expt 2.0 10.0) → 1024.0
 - (float+) → 0.0, (float*) → 1.0 (zero-arg identities)
 - Transcendentals: (float-sin 0.0) → 0.0, (float-cos 0.0) → 1.0, (float-tan 0.0) → 0.0
@@ -218,15 +221,17 @@ Float arithmetic (all args must be floats; use (float x) to convert integers):
 - (float-sqrt 4.0) → 2.0, (float-abs -3.0) → 3.0
 - float-log/float-log10 of zero → -inf; negative arg is a runtime error
 - float-sqrt of negative → runtime error (use complex-sqrt instead)
+- (float-abs -3.0) → 3.0 (absolute value)
 
-Complex arithmetic (all args must be complex; use (complex r i) to construct):
+### Complex arithmetic (all args must be complex; use (complex r i) to construct):
+
 - (complex+ (complex 1 2) (complex 3 4)) → 4+6j
 - (complex- (complex 5 3) (complex 2 1)) → 3+2j
 - (complex* (complex 1 2) (complex 3 4)) → -5+10j
 - (complex/ (complex 4 2) (complex 1 1)) → 3-1j
 - (complex/ (complex 2 0)) → 0.5+0j (reciprocal)
-- (complex-negate (complex 3 4)) → -3-4j
-- (complex-abs (complex 3 4)) → 5.0 (returns float, not complex)
+- (complex-neg (complex 3 4)) → -3-4j
+- (complex-abs (complex 3 4)) → 5.0 (returns magnitue as float, not complex)
 - (complex+) → 0+0j, (complex*) → 1+0j (zero-arg identities)
 - Transcendentals: complex-sin, complex-cos, complex-tan, complex-log, complex-exp, complex-sqrt
 - Exponentials: complex-expt
@@ -250,7 +255,8 @@ Complex arithmetic (all args must be complex; use (complex r i) to construct):
 
 ## Comparison and boolean:
 
-Type-specific equality and inequality (strict: both args must be the same type):
+### Type-specific equality and inequality (strict: both args must be the same type):
+
 - integer: (integer=? 1 1), (integer!=? 1 2)
 - float:   (float=? 1.0 1.0), (float!=? 1.0 2.0)
 - complex: (complex=? 1+2j 1+2j), (complex!=? 1+2j 1+3j)
@@ -259,7 +265,8 @@ Type-specific equality and inequality (strict: both args must be the same type):
 - list:    (list=? (list 1 2) (list 1 2)), (list!=? (list 1 2) (list 1 3))
 - alist:   (alist=? a1 a2), (alist!=? a1 a2)
 
-Type-specific ordered comparisons (strict: both args must be the same type):
+### Type-specific ordered comparisons (strict: both args must be the same type):
+
 - integer: (integer<? 1 2), (integer>? 3 2), (integer<=? 1 1), (integer>=? 2 1)
 - float:   (float<? 1.0 2.0), (float>? 3.0 2.0), (float<=? 1.0 1.0), (float>=? 2.0 1.0)
 - string:  (string<? "apple" "banana"), (string>? "b" "a"), (string<=? "a" "a"), (string>=? "b" "a")

@@ -42,6 +42,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'integer-',
         'integer*',
         'integer/',
+        'integer%',
         'integer-neg',
         'integer-abs',
         'bit-or',
@@ -113,6 +114,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'integer-': self._fold_integer_sub,
             'integer*': self._fold_integer_mul,
             'integer/': self._fold_integer_div,
+            'integer%': self._fold_integer_mod,
             'integer-neg': self._fold_integer_neg,
             'integer-abs': self._fold_integer_abs,
             'bit-or': self._fold_bit_or,
@@ -512,6 +514,21 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
                 return None  # Division by zero — let runtime raise the error
 
             result //= divisor
+
+        return AIFPLASTInteger(result)
+
+    def _fold_integer_mod(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold integer%: all args must be integers, modulo, returns integer."""
+        if not all(isinstance(a, AIFPLASTInteger) for a in args):
+            return None
+
+        result = args[0].value  # type: ignore[union-attr]
+        for a in args[1:]:
+            divisor = a.value  # type: ignore[union-attr]
+            if divisor == 0:
+                return None  # Division by zero — let runtime raise the error
+
+            result %= divisor
 
         return AIFPLASTInteger(result)
 

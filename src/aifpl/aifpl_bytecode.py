@@ -62,6 +62,7 @@ class Opcode(IntEnum):
     INTEGER_SUB = auto()     # integer- a b
     INTEGER_MUL = auto()     # integer* a b
     INTEGER_DIV = auto()     # integer/ a b  (floor division)
+    INTEGER_MOD = auto()     # integer% a b  (modulo)
     INTEGER_NEG = auto()     # integer-neg x  (unary minus)
     INTEGER_ABS = auto()     # integer-abs x
     INTEGER_BIT_NOT = auto() # Bitwise NOT ~x
