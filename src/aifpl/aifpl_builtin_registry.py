@@ -57,6 +57,8 @@ class AIFPLBuiltinRegistry:
         'bit-not': (1, 1),
         'bit-shift-left': (2, 2),
         'bit-shift-right': (2, 2),
+        'integer-min': (1, None),
+        'integer-max': (1, None),
         'integer->string': (1, 1),
         'bin': (1, 1),
         'hex': (1, 1),
@@ -73,6 +75,8 @@ class AIFPLBuiltinRegistry:
         'float-': (1, None),
         'float*': (0, None),
         'float/': (1, None),
+        'float//': (2, 2),
+        'float%': (2, 2),
         'float-neg': (1, 1),
         'float-expt': (2, None),
         'float-sin': (1, 1),
@@ -85,6 +89,11 @@ class AIFPLBuiltinRegistry:
         'float-abs': (1, 1),
         'integer': (1, 1),
         'float->string': (1, 1),
+        'float-floor': (1, 1),
+        'float-ceil': (1, 1),
+        'float-round': (1, 1),
+        'float-min': (1, None),
+        'float-max': (1, None),
         'complex': (2, 2),
         'complex?': (1, 1),
         'complex=?': (2, None),
@@ -160,14 +169,6 @@ class AIFPLBuiltinRegistry:
         'alist-merge': (2, 2),
         'alist-length': (1, 1),
         'range': (2, 3),
-
-        '//': (2, 2),
-        '%': (2, 2),
-        'min': (1, None),
-        'max': (1, None),
-        'round': (1, 1),
-        'floor': (1, 1),
-        'ceil': (1, 1),
     }
 
     def create_builtin_function_objects(self) -> Dict[str, AIFPLFunction]:
@@ -209,6 +210,8 @@ class AIFPLBuiltinRegistry:
             'bit-or',
             'bit-and',
             'bit-xor',
+            'integer-min',
+            'integer-max',
             'float=?',
             'float!=?',
             'float<?',
@@ -220,6 +223,8 @@ class AIFPLBuiltinRegistry:
             'float*',
             'float/',
             'float-expt',
+            'float-min',
+            'float-max',
             'complex=?',
             'complex!=?',
             'complex+',
@@ -243,8 +248,6 @@ class AIFPLBuiltinRegistry:
             'alist!=?',
             'alist-get',
             'range',
-            'min',
-            'max',
         }
 
         builtins = {}

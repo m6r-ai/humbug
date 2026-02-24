@@ -101,7 +101,13 @@ class AIFPLDesugarer:
                 return self._desugar_variadic_arithmetic(expr)
 
             # Fold-reducible variadic operations
-            if name in ['bit-or', 'bit-and', 'bit-xor', 'append', 'string-append', 'min', 'max']:
+            if name in [
+                'bit-or', 'bit-and', 'bit-xor',
+                'integer-min', 'integer-max',
+                'float-min', 'float-max',
+                'append', 
+                'string-append',
+            ]:
                 return self._desugar_fold_variadic(expr)
 
             # Variadic comparison chains (short-circuit with 'and' is correct)

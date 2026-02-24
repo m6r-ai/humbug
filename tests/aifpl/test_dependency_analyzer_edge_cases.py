@@ -67,9 +67,9 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
                (sin-val (float-sin angle))
                (cos-val (float-cos angle))
                (sum (float+ sin-val cos-val)))
-          (round sum))
+          (float-round sum))
         """)
-        assert result == 1  # sin(π/2) + cos(π/2) ≈ 1 + 0 = 1
+        assert result == 1.0  # sin(π/2) + cos(π/2) ≈ 1 + 0 = 1
 
     def test_dependency_analysis_with_conditionals(self, aifpl):
         """Test dependency analysis with conditional expressions."""
@@ -401,7 +401,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
         # List processing pipeline
         result = aifpl.evaluate("""
         (let* ((numbers (range 1 6))
-               (evens (filter (lambda (x) (integer=? (% x 2) 0)) numbers))
+               (evens (filter (lambda (x) (integer=? (integer% x 2) 0)) numbers))
                (squares (map (lambda (x) (integer* x x)) evens))
                (sum (fold integer+ 0 squares)))
           sum)

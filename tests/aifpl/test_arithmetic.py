@@ -147,32 +147,15 @@ class TestArithmetic:
             aifpl.evaluate("(float/ 1.0 0.0)")
 
     @pytest.mark.parametrize("expression,expected", [
-        # Floor division (integer inputs only)
-        ("(// 7 2)", "3"),
-        ("(// 8 3)", "2"),
-        ("(// -7 2)", "-4"),  # Floor division rounds down
-        ("(// 7 -2)", "-4"),
-        ("(// -7 -2)", "3"),
-    ])
-    def test_floor_division(self, aifpl, expression, expected):
-        """Test floor division operation."""
-        assert aifpl.evaluate_and_format(expression) == expected
-
-    def test_floor_division_by_zero(self, aifpl):
-        """Test that floor division by zero raises error."""
-        with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate("(// 1 0)")
-
-    @pytest.mark.parametrize("expression,expected", [
         # Basic modulo (integer inputs only)
-        ("(% 7 3)", "1"),
-        ("(% 8 3)", "2"),
-        ("(% 9 3)", "0"),
+        ("(integer% 7 3)", "1"),
+        ("(integer% 8 3)", "2"),
+        ("(integer% 9 3)", "0"),
 
         # Negative numbers
-        ("(% -7 3)", "2"),  # Python modulo behavior
-        ("(% 7 -3)", "-2"),
-        ("(% -7 -3)", "-1"),
+        ("(integer% -7 3)", "2"),  # Python modulo behavior
+        ("(integer% 7 -3)", "-2"),
+        ("(integer% -7 -3)", "-1"),
     ])
     def test_modulo(self, aifpl, expression, expected):
         """Test modulo operation."""
@@ -181,7 +164,7 @@ class TestArithmetic:
     def test_modulo_by_zero(self, aifpl):
         """Test that modulo by zero raises error."""
         with pytest.raises(AIFPLEvalError, match="Modulo by zero"):
-            aifpl.evaluate("(% 1 0)")
+            aifpl.evaluate("(integer% 1 0)")
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic pow (integer inputs)
@@ -277,24 +260,24 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("expression,expected", [
         # Round function
-        ("(round 3.2)", "3"),
-        ("(round 3.7)", "4"),
-        ("(round 3.5)", "4"),  # Python rounds to even
-        ("(round 2.5)", "2"),  # Python rounds to even
-        ("(round -3.2)", "-3"),
-        ("(round -3.7)", "-4"),
+        ("(float-round 3.2)", "3.0"),
+        ("(float-round 3.7)", "4.0"),
+        ("(float-round 3.5)", "4.0"),  # Python rounds to even
+        ("(float-round 2.5)", "2.0"),  # Python rounds to even
+        ("(float-round -3.2)", "-3.0"),
+        ("(float-round -3.7)", "-4.0"),
 
         # Floor function
-        ("(floor 3.2)", "3"),
-        ("(floor 3.7)", "3"),
-        ("(floor -3.2)", "-4"),
-        ("(floor -3.7)", "-4"),
+        ("(float-floor 3.2)", "3.0"),
+        ("(float-floor 3.7)", "3.0"),
+        ("(float-floor -3.2)", "-4.0"),
+        ("(float-floor -3.7)", "-4.0"),
 
         # Ceiling function
-        ("(ceil 3.2)", "4"),
-        ("(ceil 3.7)", "4"),
-        ("(ceil -3.2)", "-3"),
-        ("(ceil -3.7)", "-3"),
+        ("(float-ceil 3.2)", "4.0"),
+        ("(float-ceil 3.7)", "4.0"),
+        ("(float-ceil -3.2)", "-3.0"),
+        ("(float-ceil -3.7)", "-3.0"),
     ])
     def test_rounding_functions(self, aifpl, expression, expected):
         """Test rounding functions (round, floor, ceil)."""
@@ -313,18 +296,18 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("expression,expected", [
         # Min function
-        ("(min 1)", "1"),
-        ("(min 3 1 4)", "1"),
-        ("(min 5 2 8 1 9)", "1"),
-        ("(min -3 -1 -5)", "-5"),
-        ("(min 3.14 2.71)", "2.71"),
+        ("(integer-min 1)", "1"),
+        ("(integer-min 3 1 4)", "1"),
+        ("(integer-min 5 2 8 1 9)", "1"),
+        ("(integer-min -3 -1 -5)", "-5"),
+        ("(float-min 3.14 2.71)", "2.71"),
 
         # Max function
-        ("(max 1)", "1"),
-        ("(max 3 1 4)", "4"),
-        ("(max 5 2 8 1 9)", "9"),
-        ("(max -3 -1 -5)", "-1"),
-        ("(max 3.14 2.71)", "3.14"),
+        ("(integer-max 1)", "1"),
+        ("(integer-max 3 1 4)", "4"),
+        ("(integer-max 5 2 8 1 9)", "9"),
+        ("(integer-max -3 -1 -5)", "-1"),
+        ("(float-max 3.14 2.71)", "3.14"),
     ])
     def test_min_max_functions(self, aifpl, expression, expected):
         """Test min and max functions."""
@@ -480,17 +463,17 @@ class TestArithmetic:
         """Test that operators with fixed arity reject wrong argument counts."""
         # Binary operators
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(// 1)")  # Floor division needs 2 args
+            aifpl.evaluate("(float// 1.0)")  # Floor division needs 2 args
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(% 1)")  # Modulo needs 2 args
+            aifpl.evaluate("(float% 1)")  # Modulo needs 2 args
 
         # Unary operators
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(abs)")  # abs needs 1 arg
+            aifpl.evaluate("(float-abs)")  # abs needs 1 arg
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(abs 1 2)")  # abs takes only 1 arg
+            aifpl.evaluate("(integer-abs 1 2)")  # abs takes only 1 arg
 
     def test_complex_trigonometric_edge_cases(self, aifpl):
         """Test trigonometric functions with pure imaginary numbers."""

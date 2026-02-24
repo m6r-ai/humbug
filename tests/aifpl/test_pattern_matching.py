@@ -136,8 +136,8 @@ class TestPatternMatching:
         ('(match 3.14 ((integer? i) (integer* i 2)) (_ "not integer"))', '"not integer"'),
 
         # Float type patterns
-        ('(match 3.14 ((float? f) (round f)) (_ "not float"))', '3'),
-        ('(match 42 ((float? f) (round f)) (_ "not float"))', '"not float"'),
+        ('(match 3.14 ((float? f) (float-round f)) (_ "not float"))', '3.0'),
+        ('(match 42 ((float? f) (float-round f)) (_ "not float"))', '"not float"'),
 
         # Complex type patterns
         ('(match (complex 1 2) ((complex? c) (real c)) (_ "not complex"))', '1.0'),

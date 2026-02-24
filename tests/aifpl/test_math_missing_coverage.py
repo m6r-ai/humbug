@@ -144,7 +144,7 @@ class TestMathMissingCoverage:
 
     def test_other_math_functions_wrong_argument_count(self, aifpl):
         """Test other mathematical functions with wrong argument count."""
-        single_arg_functions = ["float-sqrt", "float-abs", "round", "floor", "ceil"]
+        single_arg_functions = ["float-sqrt", "float-abs", "float-round", "float-floor", "float-ceil"]
 
         for func in single_arg_functions:
             # No arguments
@@ -152,9 +152,9 @@ class TestMathMissingCoverage:
                 aifpl.evaluate(f"({func})")
 
             # Too many arguments (except abs which already has good coverage)
-            if func != "abs":
+            if func != "float-abs":
                 with pytest.raises(AIFPLEvalError, match=f"Function '{func}' has wrong number of arguments"):
-                    aifpl.evaluate(f"({func} 1 2)")
+                    aifpl.evaluate(f"({func} 1.0 2.0)")
 
         # float-expt function requires at least 2 arguments
         with pytest.raises(AIFPLEvalError, match="Function 'float-expt' has wrong number of arguments"):
@@ -162,17 +162,17 @@ class TestMathMissingCoverage:
 
     def test_rounding_functions_with_complex_numbers(self, aifpl):
         """Test rounding functions with complex numbers (should fail)."""
-        rounding_functions = ["round", "floor", "ceil"]
+        rounding_functions = ["float-round", "float-floor", "float-ceil"]
 
         # Test with complex numbers that have non-zero imaginary parts
         for func in rounding_functions:
-            with pytest.raises(AIFPLEvalError, match=f"requires real number arguments"):
+            with pytest.raises(AIFPLEvalError, match=f"requires float arguments"):
                 aifpl.evaluate(f"({func} (complex 3.5 2.1))")
 
         # Test the edge case where complex number has very small imaginary part
         # This tests lines 476, 495, 514 which handle the tolerance check
         for func in rounding_functions:
-            with pytest.raises(AIFPLEvalError, match=f"requires real number arguments"):
+            with pytest.raises(AIFPLEvalError, match=f"requires float arguments"):
                 aifpl.evaluate(f"({func} (complex 3.5 1e-5))")
 
     # ========== Base Conversion Error Handling ==========
@@ -218,10 +218,10 @@ class TestMathMissingCoverage:
     def test_complex_function_with_complex_arguments(self, aifpl):
         """Test complex function with complex number arguments (should fail)."""
         # This tests line 632
-        with pytest.raises(AIFPLEvalError, match="requires real number argument"):
+        with pytest.raises(AIFPLEvalError, match="requires float argument"):
             aifpl.evaluate("(complex (complex 1 2) 3)")
 
-        with pytest.raises(AIFPLEvalError, match="requires real number argument"):
+        with pytest.raises(AIFPLEvalError, match="requires float argument"):
             aifpl.evaluate("(complex 1 (complex 2 3))")
 
     def test_real_imag_functions_with_complex_return_paths(self, aifpl):
@@ -242,21 +242,27 @@ class TestMathMissingCoverage:
         # This tests line 664 in _ensure_real_number
         # We can't directly test the helper method, but we can test functions that use it
         # min/max functions use _ensure_real_number
-        with pytest.raises(AIFPLEvalError, match="Function 'min' requires real number arguments"):
-            aifpl.evaluate('(min "hello" 2)')
+        with pytest.raises(AIFPLEvalError, match="Function 'integer-min' requires integer arguments"):
+            aifpl.evaluate('(integer-min "hello" 2)')
 
-        with pytest.raises(AIFPLEvalError, match="Function 'max' requires real number arguments"):
-            aifpl.evaluate('(max #t 5)')
+        with pytest.raises(AIFPLEvalError, match="Function 'integer-max' requires integer arguments"):
+            aifpl.evaluate('(integer-max #t 5)')
 
-    def test_ensure_real_number_with_complex_input(self, aifpl):
-        """Test _ensure_real_number with complex input."""
+        with pytest.raises(AIFPLEvalError, match="Function 'float-min' requires float arguments"):
+            aifpl.evaluate('(float-min "hello" 2.0)')
+
+        with pytest.raises(AIFPLEvalError, match="Function 'float-max' requires float arguments"):
+            aifpl.evaluate('(float-max #t 5.0)')
+
+    def test_ensure_float_with_complex_input(self, aifpl):
+        """Test _ensure_float with complex input."""
         # This tests line 667 in _ensure_real_number
         # min/max functions use _ensure_real_number and should reject complex numbers
-        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
-            aifpl.evaluate("(min (complex 1 2) 5)")
+        with pytest.raises(AIFPLEvalError, match="requires float arguments"):
+            aifpl.evaluate("(float-min (complex 1 2) 5.0)")
 
-        with pytest.raises(AIFPLEvalError, match="requires real number arguments"):
-            aifpl.evaluate("(max 1j 3)")
+        with pytest.raises(AIFPLEvalError, match="requires float arguments"):
+            aifpl.evaluate("(float-max 1j 3)")
 
     # ========== Additional Edge Cases ==========
 
@@ -290,15 +296,15 @@ class TestMathMissingCoverage:
     def test_floor_division_and_modulo_argument_validation(self, aifpl):
         """Test floor division and modulo argument count validation."""
         # Floor division requires exactly 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function '//' has wrong number of arguments"):
-            aifpl.evaluate("(// 5)")
+        with pytest.raises(AIFPLEvalError, match="Function 'float//' has wrong number of arguments"):
+            aifpl.evaluate("(float// 5.0)")
 
-        with pytest.raises(AIFPLEvalError, match="Function '//' has wrong number of arguments"):
-            aifpl.evaluate("(// 10 3 2)")
+        with pytest.raises(AIFPLEvalError, match="Function 'float//' has wrong number of arguments"):
+            aifpl.evaluate("(float// 10.0 3.0 2.0)")
 
         # Modulo requires exactly 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function '%' has wrong number of arguments"):
-            aifpl.evaluate("(% 5)")
+        with pytest.raises(AIFPLEvalError, match="Function 'integer%' has wrong number of arguments"):
+            aifpl.evaluate("(integer% 5)")
 
-        with pytest.raises(AIFPLEvalError, match="Function '%' has wrong number of arguments"):
-            aifpl.evaluate("(% 10 3 2)")
+        with pytest.raises(AIFPLEvalError, match="Function 'integer%' has wrong number of arguments"):
+            aifpl.evaluate("(integer% 10 3 2)")

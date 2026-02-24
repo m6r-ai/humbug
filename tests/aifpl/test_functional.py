@@ -478,7 +478,7 @@ class TestFunctional:
         (fold integer+
               0
               (filter (lambda (x) (integer>? x 10))
-                      (map (lambda (x) (if (integer=? (% x 2) 0) (integer* x x) x))
+                      (map (lambda (x) (if (integer=? (integer% x 2) 0) (integer* x x) x))
                            (list 1 2 3 4 5 6))))
         '''
         # 1->1, 2->4, 3->3, 4->16, 5->5, 6->36
@@ -510,7 +510,7 @@ class TestFunctional:
         # Filter even numbers from range and double them
         even_doubled = '''
         (map (lambda (x) (integer* x 2))
-             (filter (lambda (x) (integer=? (% x 2) 0))
+             (filter (lambda (x) (integer=? (integer% x 2) 0))
                      (range 1 11)))
         '''
         helpers.assert_evaluates_to(aifpl, even_doubled, '(4 8 12 16 20)')

@@ -35,20 +35,6 @@ class AIFPL:
 
     # AIFPL implementations of higher-order functions
     _PRELUDE_SOURCE = {
-        'min': """(lambda (. args)
-                    (if (null? args)
-                      (error "Function 'min' requires at least 1 argument")
-                      (letrec ((loop (lambda (lst acc)
-                                       (if (null? lst) acc
-                                           (loop (rest lst) (min acc (first lst)))))))
-                        (loop (rest args) (first args)))))""",
-        'max': """(lambda (. args)
-                    (if (null? args)
-                      (error "Function 'max' requires at least 1 argument")
-                      (letrec ((loop (lambda (lst acc)
-                                       (if (null? lst) acc
-                                           (loop (rest lst) (max acc (first lst)))))))
-                        (loop (rest args) (first args)))))""",
         'boolean=?': """(lambda (. args)
                           (if (integer<? (length args) 2)
                             (error "Function 'boolean=?' requires at least 2 arguments")
@@ -175,6 +161,20 @@ class AIFPL:
                                            (if (null? lst) acc
                                                (loop (rest lst) (bit-xor acc (first lst)))))))
                             (loop (rest args) (first args)))))""",
+        'integer-min': """(lambda (. args)
+                             (if (null? args)
+                               (error "Function 'integer-min' requires at least 1 argument")
+                               (letrec ((loop (lambda (lst acc)
+                                                (if (null? lst) acc
+                                                    (loop (rest lst) (integer-min acc (first lst)))))))
+                                 (loop (rest args) (first args)))))""",
+        'integer-max': """(lambda (. args)
+                             (if (null? args)
+                               (error "Function 'integer-max' requires at least 1 argument")
+                               (letrec ((loop (lambda (lst acc)
+                                                (if (null? lst) acc
+                                                    (loop (rest lst) (integer-max acc (first lst)))))))
+                                 (loop (rest args) (first args)))))""",
         'float=?': """(lambda (. args)
                         (if (integer<? (length args) 2)
                           (error "Function 'float=?' requires at least 2 arguments")
@@ -267,6 +267,20 @@ class AIFPL:
                              (letrec ((loop (lambda (lst acc)
                                               (if (null? lst) acc
                                                   (loop (rest lst) (float-expt acc (first lst)))))))
+                               (loop (rest args) (first args)))))""",
+        'float-min': """(lambda (. args)
+                           (if (null? args)
+                             (error "Function 'float-min' requires at least 1 argument")
+                             (letrec ((loop (lambda (lst acc)
+                                              (if (null? lst) acc
+                                                  (loop (rest lst) (float-min acc (first lst)))))))
+                               (loop (rest args) (first args)))))""",
+        'float-max': """(lambda (. args)
+                           (if (null? args)
+                             (error "Function 'float-max' requires at least 1 argument")
+                             (letrec ((loop (lambda (lst acc)
+                                              (if (null? lst) acc
+                                                  (loop (rest lst) (float-max acc (first lst)))))))
                                (loop (rest args) (first args)))))""",
         'complex=?': """(lambda (. args)
                           (if (integer<? (length args) 2)

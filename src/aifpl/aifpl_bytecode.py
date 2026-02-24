@@ -73,6 +73,8 @@ class Opcode(IntEnum):
     INTEGER_BIT_OR = auto()  # Bitwise OR: a | b
     INTEGER_BIT_AND = auto() # Bitwise AND: a & b
     INTEGER_BIT_XOR = auto() # Bitwise XOR: a ^ b
+    INTEGER_MIN = auto()     # integer-min a b
+    INTEGER_MAX = auto()     # integer-max a b
     INTEGER_TO_STRING = auto()
                              # Convert integer to string
     INTEGER_TO_STRING_BIN = auto()
@@ -95,6 +97,8 @@ class Opcode(IntEnum):
     FLOAT_SUB = auto()       # float- a b
     FLOAT_MUL = auto()       # float* a b
     FLOAT_DIV = auto()       # float/ a b
+    FLOAT_FLOOR_DIV = auto() # float// a b  (floor division)
+    FLOAT_MOD = auto()       # float% a b  (modulo)
     FLOAT_NEG = auto()       # float-neg x  (unary minus)
     FLOAT_EXPT = auto()      # float-expt a b
     FLOAT_SIN = auto()       # float-sin x
@@ -108,15 +112,11 @@ class Opcode(IntEnum):
     FLOAT_TO_INTEGER = auto()
                              # Convert float to integer
     FLOAT_TO_STRING = auto() # Convert float to string
-
-    # Real number operations
-    REAL_FLOOR_DIV = auto()  # Calculate a // b (floor division)
-    REAL_MOD = auto()        # Calculate a % b (modulo)
-    REAL_FLOOR = auto()      # Calculate floor(x)
-    REAL_CEIL = auto()       # Calculate ceil(x)
-    REAL_ROUND = auto()      # Calculate round(x)
-    REAL_MIN = auto()        # Minimum of two real numbers
-    REAL_MAX = auto()        # Maximum of two real numbers
+    FLOAT_FLOOR = auto()     # float-floor x  (returns float)
+    FLOAT_CEIL = auto()      # float-ceil x   (returns float)
+    FLOAT_ROUND = auto()     # float-round x  (returns float)
+    FLOAT_MIN = auto()       # float-min a b
+    FLOAT_MAX = auto()       # float-max a b
 
     # Complex operations
     COMPLEX = auto()         # Construct complex from real and imaginary parts
@@ -238,6 +238,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'integer-': (Opcode.INTEGER_SUB, 2),
     'integer*': (Opcode.INTEGER_MUL, 2),
     'integer/': (Opcode.INTEGER_DIV, 2),
+    'integer%': (Opcode.INTEGER_MOD, 2),
     'integer-neg': (Opcode.INTEGER_NEG, 1),
     'integer-abs': (Opcode.INTEGER_ABS, 1),
     'bit-not': (Opcode.INTEGER_BIT_NOT, 1),
@@ -246,6 +247,8 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'bit-or': (Opcode.INTEGER_BIT_OR, 2),
     'bit-and': (Opcode.INTEGER_BIT_AND, 2),
     'bit-xor': (Opcode.INTEGER_BIT_XOR, 2),
+    'integer-min': (Opcode.INTEGER_MIN, 2),
+    'integer-max': (Opcode.INTEGER_MAX, 2),
     'integer->string': (Opcode.INTEGER_TO_STRING, 1),
     'bin': (Opcode.INTEGER_TO_STRING_BIN, 1),
     'hex': (Opcode.INTEGER_TO_STRING_HEX, 1),
@@ -262,6 +265,8 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'float-': (Opcode.FLOAT_SUB, 2),
     'float*': (Opcode.FLOAT_MUL, 2),
     'float/': (Opcode.FLOAT_DIV, 2),
+    'float//': (Opcode.FLOAT_FLOOR_DIV, 2),
+    'float%': (Opcode.FLOAT_MOD, 2),
     'float-neg': (Opcode.FLOAT_NEG, 1),
     'float-expt': (Opcode.FLOAT_EXPT, 2),
     'float-sin': (Opcode.FLOAT_SIN, 1),
@@ -274,6 +279,11 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'float-abs': (Opcode.FLOAT_ABS, 1),
     'integer': (Opcode.FLOAT_TO_INTEGER, 1),
     'float->string': (Opcode.FLOAT_TO_STRING, 1),
+    'float-floor': (Opcode.FLOAT_FLOOR, 1),
+    'float-ceil': (Opcode.FLOAT_CEIL, 1),
+    'float-round': (Opcode.FLOAT_ROUND, 1),
+    'float-min': (Opcode.FLOAT_MIN, 2),
+    'float-max': (Opcode.FLOAT_MAX, 2),
     'complex': (Opcode.COMPLEX, 2),
     'complex?': (Opcode.COMPLEX_P, 1),
     'complex=?': (Opcode.COMPLEX_EQ_P, 2),
@@ -348,13 +358,6 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'alist-get': (Opcode.ALIST_GET, 3),
     'range': (Opcode.RANGE, 3),
 
-    '//': (Opcode.REAL_FLOOR_DIV, 2),
-    '%': (Opcode.REAL_MOD, 2),
-    'floor': (Opcode.REAL_FLOOR, 1),
-    'ceil': (Opcode.REAL_CEIL, 1),
-    'round': (Opcode.REAL_ROUND, 1),
-    'min': (Opcode.REAL_MIN, 2),
-    'max': (Opcode.REAL_MAX, 2),
 }
 
 @dataclass
@@ -402,6 +405,8 @@ class Instruction:
             Opcode.INTEGER_BIT_NOT,
             Opcode.INTEGER_BIT_SHIFT_LEFT,
             Opcode.INTEGER_BIT_SHIFT_RIGHT,
+            Opcode.INTEGER_MIN,
+            Opcode.INTEGER_MAX,
             Opcode.INTEGER_TO_STRING,
             Opcode.INTEGER_TO_STRING_BIN,
             Opcode.INTEGER_TO_STRING_HEX,
@@ -418,6 +423,8 @@ class Instruction:
             Opcode.FLOAT_SUB,
             Opcode.FLOAT_MUL,
             Opcode.FLOAT_DIV,
+            Opcode.FLOAT_FLOOR_DIV,
+            Opcode.FLOAT_MOD,
             Opcode.FLOAT_NEG,
             Opcode.FLOAT_EXPT,
             Opcode.FLOAT_SIN,
@@ -430,6 +437,11 @@ class Instruction:
             Opcode.FLOAT_ABS,
             Opcode.FLOAT_TO_INTEGER,
             Opcode.FLOAT_TO_STRING,
+            Opcode.FLOAT_FLOOR,
+            Opcode.FLOAT_CEIL,
+            Opcode.FLOAT_ROUND,
+            Opcode.FLOAT_MIN,
+            Opcode.FLOAT_MAX,
             Opcode.COMPLEX,
             Opcode.COMPLEX_P,
             Opcode.COMPLEX_EQ_P,
@@ -502,13 +514,6 @@ class Instruction:
             Opcode.ALIST_GET,
             Opcode.ALIST_SET,
             Opcode.RANGE,
-            Opcode.REAL_MIN,
-            Opcode.REAL_MAX,
-            Opcode.REAL_FLOOR_DIV,
-            Opcode.REAL_MOD,
-            Opcode.REAL_FLOOR,
-            Opcode.REAL_CEIL,
-            Opcode.REAL_ROUND,
         }
         if self.opcode in no_arg_opcodes:
             return 0

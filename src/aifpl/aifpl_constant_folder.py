@@ -51,11 +51,15 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'bit-not',
         'bit-shift-left',
         'bit-shift-right',
+        'integer-min',
+        'integer-max',
         'float=?',
         'float+',
         'float-',
         'float*',
         'float/',
+        'float//',
+        'float%',
         'float-neg',
         'float-expt',
         'float-sin',
@@ -66,6 +70,11 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'float-exp',
         'float-sqrt',
         'float-abs',
+        'float-floor',
+        'float-ceil',
+        'float-round',
+        'float-min',
+        'float-max',
         'complex',
         'complex=?',
         'complex+',
@@ -85,14 +94,6 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'real',
         'imag',
         'string=?',
-
-        '//',
-        '%',
-        'min',
-        'max',
-        'round',
-        'floor',
-        'ceil',
     }
 
     def __init__(self) -> None:
@@ -123,12 +124,16 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'bit-not': self._fold_bit_not,
             'bit-shift-left': self._fold_bit_shift_left,
             'bit-shift-right': self._fold_bit_shift_right,
+            'integer-min': self._fold_integer_min,
+            'integer-max': self._fold_integer_max,
             'float=?': self._fold_float_eq,
             'float!=?': self._fold_float_neq,
             'float+': self._fold_float_add,
             'float-': self._fold_float_sub,
             'float*': self._fold_float_mul,
             'float/': self._fold_float_div,
+            'float//': self._fold_float_floor_div,
+            'float%': self._fold_float_mod,
             'float-neg': self._fold_float_neg,
             'float-expt': self._fold_float_expt,
             'float-sin': self._fold_float_sin,
@@ -139,6 +144,11 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'float-exp': self._fold_float_exp,
             'float-sqrt': self._fold_float_sqrt,
             'float-abs': self._fold_float_abs,
+            'float-floor': self._fold_float_floor,
+            'float-ceil': self._fold_float_ceil,
+            'float-round': self._fold_float_round,
+            'float-min': self._fold_float_min,
+            'float-max': self._fold_float_max,
             'complex=?': self._fold_complex_eq,
             'complex!=?': self._fold_complex_neq,
             'complex': self._fold_complex,
@@ -160,14 +170,6 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'complex-abs': self._fold_complex_abs,
             'string=?': self._fold_string_eq,
             'string!=?': self._fold_string_neq,
-
-            '//': self._fold_floor_divide,
-            '%': self._fold_modulo,
-            'min': self._fold_min,
-            'max': self._fold_max,
-            'round': self._fold_round,
-            'floor': self._fold_floor,
-            'ceil': self._fold_ceil,
         }
 
         # Build jump table for special form optimization.  Note we don't include any special forms that were
@@ -626,9 +628,22 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         result = arg0.value >> arg1.value
         return AIFPLASTInteger(result)
 
+    def _fold_integer_min(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold integer-min: (integer-min a b) → smaller integer"""
+        if not isinstance(args[0], AIFPLASTInteger) or not isinstance(args[1], AIFPLASTInteger):
+            return None
+
+        return AIFPLASTInteger(args[0].value if args[0].value <= args[1].value else args[1].value)
+
+    def _fold_integer_max(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold integer-max: (integer-max a b) → larger integer"""
+        if not isinstance(args[0], AIFPLASTInteger) or not isinstance(args[1], AIFPLASTInteger):
+            return None
+
+        return AIFPLASTInteger(args[0].value if args[0].value >= args[1].value else args[1].value)
+
     def _fold_float_eq(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
         """Fold float=?: all args must be floats."""
-        # Check all are floats - if not, can't fold (will error at runtime)
         if not all(isinstance(arg, AIFPLASTFloat) for arg in args):
             return None
 
@@ -976,282 +991,62 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         first = args[0]
         return AIFPLASTBoolean(not all(first == arg for arg in args[1:]))
 
-    def _fold_floor_divide(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold floor division: (// a b) → floor quotient"""
-        a, b = self._to_python_number(args[0]), self._to_python_number(args[1])
+    def _fold_float_floor_div(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float// floor division: (float// a b) → float floor quotient"""
+        if not isinstance(args[0], AIFPLASTFloat) or not isinstance(args[1], AIFPLASTFloat):
+            return None
 
+        a, b = args[0].value, args[1].value
         if b == 0:
             return None  # Division by zero
 
-        # Floor division only works on real numbers
-        if isinstance(a, complex) or isinstance(b, complex):
+        return AIFPLASTFloat(float(a // b))
+
+    def _fold_float_mod(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float% modulo: (float% a b) → float remainder"""
+        if not isinstance(args[0], AIFPLASTFloat) or not isinstance(args[1], AIFPLASTFloat):
             return None
 
-        result = a // b
-        return self._from_python_number(result)
-
-    def _fold_modulo(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold modulo: (% a b) → remainder"""
-        a, b = self._to_python_number(args[0]), self._to_python_number(args[1])
-
+        a, b = args[0].value, args[1].value
         if b == 0:
             return None  # Division by zero
 
-        # Modulo only works on real numbers
-        if isinstance(a, complex) or isinstance(b, complex):
+        return AIFPLASTFloat(a % b)
+
+    def _fold_float_floor(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-floor: (float-floor a) → float floor"""
+        if not isinstance(args[0], AIFPLASTFloat):
             return None
 
-        result = a % b
-        return self._from_python_number(result)
+        return AIFPLASTFloat(float(math.floor(args[0].value)))
 
-    # Comparison operations
-
-    def _fold_less_than(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold less than: (< a b c ...) → boolean"""
-        # Check if arguments are in strictly increasing order
-        prev = self._to_python_number(args[0])
-
-        # Complex numbers don't support ordering - can't fold
-        if isinstance(prev, complex):
+    def _fold_float_ceil(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-ceil: (float-ceil a) → float ceiling"""
+        if not isinstance(args[0], AIFPLASTFloat):
             return None
 
-        for arg in args[1:]:
-            curr = self._to_python_number(arg)
-            if isinstance(curr, complex):
-                return None
+        return AIFPLASTFloat(float(math.ceil(args[0].value)))
 
-            if prev >= curr:
-                return AIFPLASTBoolean(False)
-
-            prev = curr
-
-        return AIFPLASTBoolean(True)
-
-    def _fold_greater_than(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold greater than: (> a b c ...) → boolean"""
-        # Check if arguments are in strictly decreasing order
-        prev = self._to_python_number(args[0])
-
-        # Complex numbers don't support ordering - can't fold
-        if isinstance(prev, complex):
+    def _fold_float_round(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-round: (float-round a) → float rounded"""
+        if not isinstance(args[0], AIFPLASTFloat):
             return None
 
-        for arg in args[1:]:
-            curr = self._to_python_number(arg)
-            if isinstance(curr, complex):
-                return None
+        return AIFPLASTFloat(float(round(args[0].value)))
 
-            if prev <= curr:
-                return AIFPLASTBoolean(False)
-
-            prev = curr
-
-        return AIFPLASTBoolean(True)
-
-    def _fold_less_equal(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold less than or equal: (<= a b c ...) → boolean"""
-        prev = self._to_python_number(args[0])
-
-        # Complex numbers don't support ordering - can't fold
-        if isinstance(prev, complex):
+    def _fold_float_min(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-min: (float-min a b) → smaller float"""
+        if not isinstance(args[0], AIFPLASTFloat) or not isinstance(args[1], AIFPLASTFloat):
             return None
 
-        for arg in args[1:]:
-            curr = self._to_python_number(arg)
-            if isinstance(curr, complex):
-                return None
+        return AIFPLASTFloat(args[0].value if args[0].value <= args[1].value else args[1].value)
 
-            if prev > curr:
-                return AIFPLASTBoolean(False)
-
-            prev = curr
-
-        return AIFPLASTBoolean(True)
-
-    def _fold_greater_equal(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold greater than or equal: (>= a b c ...) → boolean"""
-        prev = self._to_python_number(args[0])
-
-        # Complex numbers don't support ordering - can't fold
-        if isinstance(prev, complex):
+    def _fold_float_max(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-max: (float-max a b) → larger float"""
+        if not isinstance(args[0], AIFPLASTFloat) or not isinstance(args[1], AIFPLASTFloat):
             return None
 
-        for arg in args[1:]:
-            curr = self._to_python_number(arg)
-            if isinstance(curr, complex):
-                return None
-
-            if prev < curr:
-                return AIFPLASTBoolean(False)
-
-            prev = curr
-
-        return AIFPLASTBoolean(True)
-
-    def _fold_sqrt(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold sqrt: (sqrt a) → square root"""
-        val = self._to_python_number(args[0])
-
-        # Only fold if input is complex OR non-negative real
-        # Negative real/integer should raise error at runtime, not compile time
-        if isinstance(val, complex):
-            # Complex input: use cmath
-            result = cmath.sqrt(val)
-
-        elif val < 0:
-            # Negative real/integer: don't fold, let runtime handle error
-            return None
-
-        else:
-            # Non-negative real: use math.sqrt
-            result = math.sqrt(val)
-
-        return self._from_python_number(result)
-
-    def _fold_abs(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold abs: (abs a) → absolute value"""
-        val = self._to_python_number(args[0])
-        result = abs(val)
-
-        return self._from_python_number(result)
-
-    def _fold_min(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold min: (min a b c ...) → minimum"""
-        vals = [self._to_python_number(arg) for arg in args]
-
-        # min/max don't work with complex numbers - can't fold
-        if any(isinstance(v, complex) for v in vals):
-            return None
-
-        # Type narrowing: we've excluded complex, so only int | float remain
-        # Cast to help mypy understand this
-        real_vals = [v for v in vals if not isinstance(v, complex)]
-        result = min(real_vals)
-
-        return self._from_python_number(result)
-
-    def _fold_max(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold max: (max a b c ...) → maximum"""
-        vals = [self._to_python_number(arg) for arg in args]
-
-        # min/max don't work with complex numbers - can't fold
-        if any(isinstance(v, complex) for v in vals):
-            return None
-
-        # Type narrowing: we've excluded complex, so only int | float remain
-        # Cast to help mypy understand this
-        real_vals = [v for v in vals if not isinstance(v, complex)]
-        result = max(real_vals)
-
-        return self._from_python_number(result)
-
-    def _fold_expt(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold expt: (expt a b) → a^b"""
-        base, exponent = self._to_python_number(args[0]), self._to_python_number(args[1])
-        result = base ** exponent
-        return self._from_python_number(result)
-
-    def _fold_sin(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold sin: (sin a) → sine"""
-        val = self._to_python_number(args[0])
-
-        if isinstance(val, complex):
-            result = cmath.sin(val)
-
-        else:
-            result = math.sin(val)
-
-        return self._from_python_number(result)
-
-    def _fold_cos(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold cos: (cos a) → cosine"""
-        val = self._to_python_number(args[0])
-
-        if isinstance(val, complex):
-            result = cmath.cos(val)
-
-        else:
-            result = math.cos(val)
-
-        return self._from_python_number(result)
-
-    def _fold_tan(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold tan: (tan a) → tangent"""
-        val = self._to_python_number(args[0])
-
-        if isinstance(val, complex):
-            result = cmath.tan(val)
-
-        else:
-            result = math.tan(val)
-
-        return self._from_python_number(result)
-
-    def _fold_log(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold log: (log a) → natural logarithm"""
-        val = self._to_python_number(args[0])
-
-        if isinstance(val, complex) or val <= 0:
-            result = cmath.log(val)
-
-        else:
-            result = math.log(val)
-
-        return self._from_python_number(result)
-
-    def _fold_log10(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold log10: (log10 a) → base-10 logarithm"""
-        val = self._to_python_number(args[0])
-
-        if isinstance(val, complex) or val <= 0:
-            result = cmath.log10(val)
-
-        else:
-            result = math.log10(val)
-
-        return self._from_python_number(result)
-
-    def _fold_exp(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold exp: (exp a) → e^a"""
-        val = self._to_python_number(args[0])
-
-        if isinstance(val, complex):
-            result = cmath.exp(val)
-
-        else:
-            result = math.exp(val)
-
-        return self._from_python_number(result)
-
-    def _fold_round(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold round: (round a) → rounded integer"""
-        val = self._to_python_number(args[0])
-
-        if isinstance(val, complex):
-            return None  # Can't round complex numbers
-
-        result = round(val)
-        return AIFPLASTInteger(int(result))
-
-    def _fold_floor(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold floor: (floor a) → floor integer"""
-        val = self._to_python_number(args[0])
-
-        if isinstance(val, complex):
-            return None  # Can't floor complex numbers
-
-        result = math.floor(val)
-        return AIFPLASTInteger(int(result))
-
-    def _fold_ceil(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold ceil: (ceil a) → ceiling integer"""
-        val = self._to_python_number(args[0])
-
-        if isinstance(val, complex):
-            return None  # Can't ceil complex numbers
-
-        result = math.ceil(val)
-        return AIFPLASTInteger(int(result))
+        return AIFPLASTFloat(args[0].value if args[0].value >= args[1].value else args[1].value)
 
     def _to_python_number(self, value: AIFPLASTNode) -> int | float | complex:
         """Convert AIFPL numeric value to Python number."""

@@ -191,7 +191,7 @@ class TestTailCallOptimizationWithLet:
         (letrec ((collatz (lambda (n steps)
                            (if (integer=? n 1) 
                                steps 
-                               (let ((next-n (if (integer=? (% n 2) 0) (integer/ n 2) (integer+ (integer* n 3) 1))))
+                               (let ((next-n (if (integer=? (integer% n 2) 0) (integer/ n 2) (integer+ (integer* n 3) 1))))
                                  (collatz next-n (integer+ steps 1)))))))
           (collatz 100 0))
         '''
@@ -361,7 +361,7 @@ class TestTailCallOptimizationVerification:
         (letrec ((f (lambda (n acc)
                      (if (integer<=? n 0)
                          acc
-                         (if (integer=? (% n 2) 0)
+                         (if (integer=? (integer% n 2) 0)
                              (let ((half (integer/ n 2)))
                                (f half (integer+ acc 1)))
                              (let ((next (integer- n 1)))

@@ -15,7 +15,7 @@ class TestAIFPLParserEdgeCases:
         assert result == 10
 
         # Nested function calls
-        result = aifpl.evaluate("(integer-abs (integer- (max 1 5 3) (min 1 5 3)))")
+        result = aifpl.evaluate("(integer-abs (integer- (integer-max 1 5 3) (integer-min 1 5 3)))")
         assert result == 4
 
         # Nested lists

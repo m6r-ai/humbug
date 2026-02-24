@@ -27,20 +27,23 @@ class TestAIFPLMathEdgeCases:
         assert abs(result - 1e-6) < 1e-12
 
         # Floor division (integer inputs)
-        result = aifpl.evaluate("(// 5 2)")
-        assert result == 2
+        result = aifpl.evaluate("(float// 5.0 2.0)")
+        assert result == 2.0
 
-        result = aifpl.evaluate("(% 5 2)")
+        result = aifpl.evaluate("(integer% 5 2)")
         assert result == 1
+
+        result = aifpl.evaluate("(float% 5.0 2.0)")
+        assert result == 1.0
 
         # Negative number division
         result = aifpl.evaluate("(float/ -10.0 3.0)")
         assert abs(result - (-10/3)) < 1e-10
 
-        result = aifpl.evaluate("(// -10 3)")
-        assert result == -4  # Floor division
+        result = aifpl.evaluate("(float// -10.0 3.0)")
+        assert result == -4.0  # Floor division
 
-        result = aifpl.evaluate("(% -10 3)")
+        result = aifpl.evaluate("(integer% -10 3)")
         assert result == 2  # Python modulo behavior
 
     def test_division_by_zero_comprehensive(self, aifpl):
@@ -54,11 +57,11 @@ class TestAIFPLMathEdgeCases:
 
         # Floor division by zero
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate("(// 1 0)")
+            aifpl.evaluate("(float// 1.0 0.0)")
 
         # Modulo by zero
         with pytest.raises(AIFPLEvalError, match="Modulo by zero"):
-            aifpl.evaluate("(% 1 0)")
+            aifpl.evaluate("(integer% 1 0)")
 
         # Division by zero in complex expressions
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
@@ -320,47 +323,47 @@ class TestAIFPLMathEdgeCases:
     def test_rounding_functions_edge_cases(self, aifpl):
         """Test rounding function edge cases."""
         # Round function edge cases
-        assert aifpl.evaluate("(round 3.2)") == 3
-        assert aifpl.evaluate("(round 3.7)") == 4
-        assert aifpl.evaluate("(round 3.5)") == 4  # Python rounds to even
-        assert aifpl.evaluate("(round 2.5)") == 2  # Python rounds to even
-        assert aifpl.evaluate("(round -3.2)") == -3
-        assert aifpl.evaluate("(round -3.7)") == -4
-        assert aifpl.evaluate("(round -3.5)") == -4  # Python rounds to even
-        assert aifpl.evaluate("(round -2.5)") == -2  # Python rounds to even
+        assert aifpl.evaluate("(float-round 3.2)") == 3.0
+        assert aifpl.evaluate("(float-round 3.7)") == 4.0
+        assert aifpl.evaluate("(float-round 3.5)") == 4.0  # Python rounds to even
+        assert aifpl.evaluate("(float-round 2.5)") == 2.0  # Python rounds to even
+        assert aifpl.evaluate("(float-round -3.2)") == -3.0
+        assert aifpl.evaluate("(float-round -3.7)") == -4.0
+        assert aifpl.evaluate("(float-round -3.5)") == -4.0  # Python rounds to even
+        assert aifpl.evaluate("(float-round -2.5)") == -2.0  # Python rounds to even
 
         # Floor function edge cases
-        assert aifpl.evaluate("(floor 3.0)") == 3
-        assert aifpl.evaluate("(floor 3.2)") == 3
-        assert aifpl.evaluate("(floor 3.7)") == 3
-        assert aifpl.evaluate("(floor -3.2)") == -4
-        assert aifpl.evaluate("(floor -3.7)") == -4
-        assert aifpl.evaluate("(floor 0.0)") == 0
-        assert aifpl.evaluate("(floor -0.1)") == -1
+        assert aifpl.evaluate("(float-floor 3.0)") == 3.0
+        assert aifpl.evaluate("(float-floor 3.2)") == 3.0
+        assert aifpl.evaluate("(float-floor 3.7)") == 3.0
+        assert aifpl.evaluate("(float-floor -3.2)") == -4.0
+        assert aifpl.evaluate("(float-floor -3.7)") == -4.0
+        assert aifpl.evaluate("(float-floor 0.0)") == 0.0
+        assert aifpl.evaluate("(float-floor -0.1)") == -1.0
 
         # Ceiling function edge cases
-        assert aifpl.evaluate("(ceil 3.0)") == 3
-        assert aifpl.evaluate("(ceil 3.2)") == 4
-        assert aifpl.evaluate("(ceil 3.7)") == 4
-        assert aifpl.evaluate("(ceil -3.2)") == -3
-        assert aifpl.evaluate("(ceil -3.7)") == -3
-        assert aifpl.evaluate("(ceil 0.0)") == 0
-        assert aifpl.evaluate("(ceil 0.1)") == 1
+        assert aifpl.evaluate("(float-ceil 3.0)") == 3.0
+        assert aifpl.evaluate("(float-ceil 3.2)") == 4.0
+        assert aifpl.evaluate("(float-ceil 3.7)") == 4.0
+        assert aifpl.evaluate("(float-ceil -3.2)") == -3.0
+        assert aifpl.evaluate("(float-ceil -3.7)") == -3.0
+        assert aifpl.evaluate("(float-ceil 0.0)") == 0.0
+        assert aifpl.evaluate("(float-ceil 0.1)") == 1.0
 
         # Very small numbers
-        assert aifpl.evaluate("(round 1e-10)") == 0
-        assert aifpl.evaluate("(floor 1e-10)") == 0
-        assert aifpl.evaluate("(ceil 1e-10)") == 1
-        assert aifpl.evaluate("(ceil -1e-10)") == 0
-        assert aifpl.evaluate("(floor -1e-10)") == -1
+        assert aifpl.evaluate("(float-round 1e-10)") == 0.0
+        assert aifpl.evaluate("(float-floor 1e-10)") == 0.0
+        assert aifpl.evaluate("(float-ceil 1e-10)") == 1.0
+        assert aifpl.evaluate("(float-ceil -1e-10)") == 0.0
+        assert aifpl.evaluate("(float-floor -1e-10)") == -1.0
 
         # Complex numbers that we deem to be real
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(round (complex 2.0 0.00000000000001))")
+            aifpl.evaluate("(float-round (complex 2.0 0.00000000000001))")
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(ceil (complex 2.0 0.00000000000001))")
+            aifpl.evaluate("(float-ceil (complex 2.0 0.00000000000001))")
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(floor (complex 2.0 0.00000000000001))")
+            aifpl.evaluate("(float-floor (complex 2.0 0.00000000000001))")
 
     def test_rounding_functions_reject_complex(self, aifpl):
         """Test that rounding functions reject complex numbers."""
@@ -384,46 +387,46 @@ class TestAIFPLMathEdgeCases:
     def test_min_max_edge_cases(self, aifpl):
         """Test min/max function edge cases."""
         # Single argument
-        assert aifpl.evaluate("(min 42)") == 42
-        assert aifpl.evaluate("(max 42)") == 42
+        assert aifpl.evaluate("(integer-min 42)") == 42
+        assert aifpl.evaluate("(integer-max 42)") == 42
 
         # Multiple arguments
-        assert aifpl.evaluate("(min 3 1 4 1 5)") == 1
-        assert aifpl.evaluate("(max 3 1 4 1 5)") == 5
+        assert aifpl.evaluate("(integer-min 3 1 4 1 5)") == 1
+        assert aifpl.evaluate("(integer-max 3 1 4 1 5)") == 5
 
         # Negative numbers
-        assert aifpl.evaluate("(min -3 -1 -5)") == -5
-        assert aifpl.evaluate("(max -3 -1 -5)") == -1
+        assert aifpl.evaluate("(integer-min -3 -1 -5)") == -5
+        assert aifpl.evaluate("(integer-max -3 -1 -5)") == -1
 
         # Mixed positive/negative
-        assert aifpl.evaluate("(min -2 0 3)") == -2
-        assert aifpl.evaluate("(max -2 0 3)") == 3
+        assert aifpl.evaluate("(integer-min -2 0 3)") == -2
+        assert aifpl.evaluate("(integer-max -2 0 3)") == 3
 
         # Floating point numbers
-        result = aifpl.evaluate("(min 3.14 2.71 3.16)")
+        result = aifpl.evaluate("(float-min 3.14 2.71 3.16)")
         assert abs(result - 2.71) < 1e-10
 
-        result = aifpl.evaluate("(max 3.14 2.71 3.16)")
+        result = aifpl.evaluate("(float-max 3.14 2.71 3.16)")
         assert abs(result - 3.16) < 1e-10
 
         # Very small differences
-        result = aifpl.evaluate("(min 1.0000001 1.0000002)")
+        result = aifpl.evaluate("(float-min 1.0000001 1.0000002)")
         assert abs(result - 1.0000001) < 1e-10
 
         # Very large numbers
-        result = aifpl.evaluate("(min 1e100 2e100)")
+        result = aifpl.evaluate("(float-min 1e100 2e100)")
         assert result == 1e100
 
-        result = aifpl.evaluate("(max 1e100 2e100)")
+        result = aifpl.evaluate("(float-max 1e100 2e100)")
         assert result == 2e100
 
     def test_min_max_empty_args_error(self, aifpl):
         """Test that min/max with no arguments raises error."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(min)")
+            aifpl.evaluate("(integer-min)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(max)")
+            aifpl.evaluate("(float-max)")
 
     def test_bitwise_operations_edge_cases(self, aifpl):
         """Test bitwise operations edge cases."""

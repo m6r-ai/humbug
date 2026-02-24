@@ -197,10 +197,13 @@ class TestErrors:
             aifpl.evaluate("(integer/ 5 0)")
 
         with pytest.raises(AIFPLEvalError, match="Division by zero"):
-            aifpl.evaluate("(// 1 0)")
+            aifpl.evaluate("(float// 1.0 0.0)")
 
         with pytest.raises(AIFPLEvalError, match="Modulo by zero"):
-            aifpl.evaluate("(% 1 0)")
+            aifpl.evaluate("(integer% 1 0)")
+
+        with pytest.raises(AIFPLEvalError, match="Modulo by zero"):
+            aifpl.evaluate("(float% 1.0 0.0)")
 
     def test_type_mismatch_eval_errors(self, aifpl):
         """Test that type mismatches cause evaluation errors."""
