@@ -206,7 +206,7 @@ Syntax: (operator arg1 arg2 ...)
 - (integer/ 7 3) → 2 (floor division), (integer/ -7 2) → -4
 - (integer- 5) → -5 (unary negation), (integer-neg 5) → -5
 - (integer+) → 0, (integer*) → 1 (zero-arg identities)
-- (integer% 7 3) → 1 (modulo), (integer% -7 2) → 1
+- (integer% 7 3) → 1 (modulo), (integer% -7 2) → 1, (integer% 7 -3) → -2 (result takes sign of divisor)
 - (integer-abs -5) → 5 (absolute value)
 
 ### Float arithmetic (all args must be floats; use (float x) to convert integers):
