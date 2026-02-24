@@ -382,16 +382,6 @@ class AIFPLVM:
 
         return value
 
-    def _wrap_numeric_result(self, result: int | float | complex) -> AIFPLValue:
-        """Wrap Python numeric value in appropriate AIFPL type."""
-        if isinstance(result, int):
-            return AIFPLInteger(result)
-
-        if isinstance(result, float):
-            return AIFPLFloat(result)
-
-        return AIFPLComplex(result)
-
     def execute(
         self,
         code: CodeObject,
