@@ -216,7 +216,7 @@ class AIFPLParser:
         frame.incomplete_element_line = None
         frame.incomplete_element_column = None
 
-    def _line_col_to_char(self,source: str, line: int, column: int) -> int:
+    def _line_col_to_char(self, source: str, line: int, column: int) -> int:
         """
         Convert (line, column) to character position.
 
@@ -228,14 +228,10 @@ class AIFPLParser:
         Returns:
             Character offset (0-indexed)
         """
-        if line < 1 or column < 1:
-            return 0
-
+        assert line >= 1 and column >= 1, "Line and column numbers should be 1-indexed and positive"
         lines = source.split('\n')
 
-        # If line is beyond source, return end position
-        if line > len(lines):
-            return len(source)
+        assert line <= len(lines) + 1, "Line number exceeds total lines in source"
 
         # Calculate position: sum of all previous lines + newlines + column offset
         pos = 0
