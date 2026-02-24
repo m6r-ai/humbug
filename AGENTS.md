@@ -108,6 +108,6 @@ Development and debugging utilities:
 
 - `README.md` - Project overview
 - `CHANGELOG.md` - Version history
-- `src/aifpl/README.md` - AIFPL language reference
-- `src/aifpl/MODULE_SYSTEM.md` - AIFPL module system
+- `src/aifpl/README.md` - AIFPL implementation overview and Python API
+- `src/aifpl/AGENTS.md` - Guide for AIs working on the AIFPL implementation
 - Component-specific README.md files in subdirectories
