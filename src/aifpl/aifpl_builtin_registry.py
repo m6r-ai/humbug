@@ -32,7 +32,6 @@ class AIFPLBuiltinRegistry:
     # for early arity checking, and by create_builtin_function_objects() for
     # building AIFPLFunction metadata.
     ARITY_TABLE: Dict[str, Tuple[int, Optional[int]]] = {
-        'apply': (2, 2),
         'function?': (1, 1),
         'function-min-arity': (1, 1),
         'function-variadic?': (1, 1),
@@ -256,7 +255,6 @@ class AIFPLBuiltinRegistry:
             'list-slice',
             'string->list',
             'list->string',
-            'apply',
         }
 
         builtins = {}

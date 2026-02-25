@@ -252,6 +252,9 @@ class AIFPLIRBuilder:
             if name == 'trace':
                 return self._analyze_trace(expr, ctx, in_tail_position)
 
+            if name == 'apply':
+                return self._analyze_apply(expr, ctx, in_tail_position)
+
         # Regular function call
         return self._analyze_function_call(expr, ctx, in_tail_position)
 
@@ -284,6 +287,26 @@ class AIFPLIRBuilder:
         value_plan = self._analyze_expression(return_expr, ctx, in_tail_position)
 
         return AIFPLIRTrace(message_plans=message_plans, value_plan=value_plan)
+
+    def _analyze_apply(self, expr: AIFPLASTList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRCall:
+        """Analyze an apply expression: (apply f args)"""
+        assert len(expr.elements) == 3, "Apply expression should have exactly 3 elements"
+
+        _, func_expr, args_expr = expr.elements
+
+        func_plan = self._analyze_expression(func_expr, ctx, in_tail_position=False)
+        args_plan = self._analyze_expression(args_expr, ctx, in_tail_position=False)
+
+        # arg_plans carries [func, arglist] in the order the codegen expects:
+        # the apply codegen case iterates arg_plans to push both onto the stack.
+        return AIFPLIRCall(
+            func_plan=func_plan,  # unused for builtins but kept for IR consistency
+            arg_plans=[func_plan, args_plan],
+            is_tail_call=in_tail_position,
+            is_tail_recursive=False,
+            is_builtin=True,
+            builtin_name='apply'
+        )
 
     def _needs_return_wrapper(self, plan: AIFPLIRExpr) -> bool:
         """
@@ -620,14 +643,10 @@ class AIFPLIRBuilder:
             # Analyze arguments
             arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
 
-            # 'apply' is the only builtin that dispatches a further call, so tail
-            # position must be propagated so the codegen can emit TAIL_APPLY.
-            is_apply_tail = in_tail_position and builtin_name == 'apply'
-
             return AIFPLIRCall(
                 func_plan=AIFPLIRVariable(name=builtin_name, var_type='global', depth=0, index=0),
                 arg_plans=arg_plans,
-                is_tail_call=is_apply_tail,
+                is_tail_call=False,
                 is_tail_recursive=False,
                 is_builtin=True,
                 builtin_name=builtin_name

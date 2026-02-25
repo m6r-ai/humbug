@@ -97,6 +97,9 @@ class AIFPLSemanticAnalyzer:
             if name == 'import':
                 return self._analyze_import(expr)
 
+            if name == 'apply':
+                return self._analyze_apply(expr)
+
         # Regular function call - recursively analyze all subexpressions
         return self._analyze_call(expr)
 
@@ -810,6 +813,28 @@ class AIFPLSemanticAnalyzer:
                 column=module_name_expr.column,
                 source=self.source
             )
+
+        return expr
+
+    def _analyze_apply(self, expr: AIFPLASTList) -> AIFPLASTList:
+        """Validate apply expression: (apply f args)"""
+        if len(expr.elements) != 3:
+            raise AIFPLEvalError(
+                message="Apply expression has wrong number of arguments",
+                received=f"Got {len(expr.elements) - 1} arguments: {expr.describe()}",
+                expected="Exactly 2 arguments: (apply f args)",
+                example="(apply integer+ (list 1 2 3))",
+                suggestion="Apply needs a function and an argument list: (apply f args)",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
+            )
+
+        _, func_expr, args_expr = expr.elements
+
+        # Recursively analyse subexpressions
+        self.analyze(func_expr, self.source)
+        self.analyze(args_expr, self.source)
 
         return expr
 
