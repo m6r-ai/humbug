@@ -326,14 +326,9 @@ class TestErrors:
     def test_string_conversion_errors(self, aifpl):
         """Test that string conversion errors are detected."""
         # Invalid string to number conversion
-        with pytest.raises(AIFPLEvalError, match="Cannot convert string to number"):
-            aifpl.evaluate('(string->number "hello")')
-
-        with pytest.raises(AIFPLEvalError, match="Cannot convert string to number"):
-            aifpl.evaluate('(string->number "12.34.56")')
-
-        with pytest.raises(AIFPLEvalError, match="Cannot convert string to number"):
-            aifpl.evaluate('(string->number "")')
+        assert aifpl.evaluate('(string->number "hello")') == False
+        assert aifpl.evaluate('(string->number "12.34.56")') == False
+        assert aifpl.evaluate('(string->number "")') == False
 
     def test_complex_number_restriction_errors(self, aifpl):
         """Test that operations restricted to real numbers reject complex numbers."""

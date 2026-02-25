@@ -73,6 +73,9 @@ class TestLists:
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic list-concat operations
+        # Zero-arg and one-arg identity cases
+        ('(list-concat)', '()'),
+        ('(list-concat (list 1 2))', '(1 2)'),
         ('(list-concat (list 1 2) (list 3 4))', '(1 2 3 4)'),
         ('(list-concat (list) (list 1 2))', '(1 2)'),
         ('(list-concat (list 1 2) (list))', '(1 2)'),
@@ -103,13 +106,9 @@ class TestLists:
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(list-concat (list 1) #t (list 2))')
 
-    def test_append_minimum_arguments(self, aifpl):
-        """Test that list-concat requires at least 2 arguments."""
-        with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-concat)')
-
-        with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(list-concat (list 1 2))')
+    def test_append_zero_arg_identity(self, aifpl):
+        """Test that (list-concat) returns the empty list identity, consistent with (integer+) → 0."""
+        assert aifpl.evaluate_and_format('(list-concat)') == '()'
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic reverse operations

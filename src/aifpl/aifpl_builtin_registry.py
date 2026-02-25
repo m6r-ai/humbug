@@ -150,7 +150,7 @@ class AIFPLBuiltinRegistry:
         'list!=?': (2, None),
         'list-prepend': (2, 2),
         'list-append': (2, 2),
-        'list-concat': (2, None),
+        'list-concat': (0, None),
         'list-reverse': (1, 1),
         'list-first': (1, 1),
         'list-rest': (1, 1),

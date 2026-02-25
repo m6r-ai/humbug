@@ -353,21 +353,44 @@ class TestStrings:
         # Complex numbers
         ('(string->number "1+2j")', '1+2j'),
         ('(string->number "3j")', '3j'),
+
+        # AIFPL base-prefixed integer literals (lower case)
+        ('(string->number "#xff")', '255'),
+        ('(string->number "#b1010")', '10'),
+        ('(string->number "#o755")', '493'),
+
+        # AIFPL base-prefixed integer literals (upper case)
+        ('(string->number "#XFF")', '255'),
+        ('(string->number "#B1010")', '10'),
+        ('(string->number "#O755")', '493'),
+
+        # Negative base-prefixed literals
+        ('(string->number "-#xff")', '-255'),
+        ('(string->number "-#b1010")', '-10'),
+        ('(string->number "-#o755")', '-493'),
+
+        # Unparseable strings return #f
+        ('(string->number "hello")', '#f'),
+        ('(string->number "12.34.56")', '#f'),
+        ('(string->number "")', '#f'),
+        ('(string->number "#xZZ")', '#f'),
+        ('(string->number "#b2")', '#f'),
+        ('(string->number "#o9")', '#f'),
     ])
     def test_string_to_number(self, aifpl, expression, expected):
         """Test string->number conversion."""
         assert aifpl.evaluate_and_format(expression) == expected
 
-    def test_string_to_number_invalid(self, aifpl):
-        """Test string->number with invalid number strings."""
+    def test_string_to_number_type_error(self, aifpl):
+        """Test string->number raises on non-string argument (type error, not parse failure)."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(string->number "hello")')
+            aifpl.evaluate('(string->number 42)')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(string->number "12.34.56")')
+            aifpl.evaluate('(string->number (list 1 2))')
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(string->number "")')
+            aifpl.evaluate('(string->number #t)')
 
     @pytest.mark.parametrize("expression,expected", [
         # Number to string conversion

@@ -2014,10 +2014,36 @@ class AIFPLVM:
     def _op_string_to_number(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """STRING_TO_NUMBER: Pop a string, push parsed number."""
+        """STRING_TO_NUMBER: Pop a string, push parsed number or #f if unparseable."""
         a = self.stack.pop()
         s = self._ensure_string(a, 'string->number')
         try:
+            # Handle AIFPL-style base-prefixed integer literals.
+            # Negative form is -#xNN (minus sign before the #).
+            # Both upper and lower case prefixes are accepted.
+            working = s
+            negative = False
+            if working.startswith('-'):
+                negative = True
+                working = working[1:]
+
+            sl = working.lower()
+            if sl.startswith('#x'):
+                value = AIFPLInteger(-int(working[2:], 16) if negative else int(working[2:], 16))
+                self.stack.append(value)
+                return None
+
+            if sl.startswith('#b'):
+                value = AIFPLInteger(-int(working[2:], 2) if negative else int(working[2:], 2))
+                self.stack.append(value)
+                return None
+
+            if sl.startswith('#o'):
+                value = AIFPLInteger(-int(working[2:], 8) if negative else int(working[2:], 8))
+                self.stack.append(value)
+                return None
+
+            # Plain decimal, float, or complex — restore original string
             if '.' not in s and 'e' not in s.lower() and 'j' not in s.lower():
                 self.stack.append(AIFPLInteger(int(s)))
                 return None
@@ -2029,8 +2055,9 @@ class AIFPLVM:
             self.stack.append(AIFPLFloat(float(s)))
             return None
 
-        except ValueError as e:
-            raise AIFPLEvalError(f"Cannot convert string to number: '{s}'") from e
+        except ValueError:
+            self.stack.append(AIFPLBoolean(False))
+            return None
 
     def _op_string_to_list(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int

@@ -283,7 +283,10 @@ Syntax: (operator arg1 arg2 ...)
 - Utilities: (string-trim "  hello  "), (string-replace "banana" "a" "o")
 - Equality/ordering predicates: (string=? "hi" "hi"), (string!=? "hi" "bye"), (string<? "apple" "banana"), (string>? "b" "a"), (string<=? "a" "a"), (string>=? "b" "a")
 - Search predicates: (string-contains? "hello" "ell"), (string-prefix? "hello" "he"), (string-suffix? "hello" "lo")
-- Conversion: (string->number "42"), (integer->string 42), (float->string 3.14), (complex->string 3+4j)
+- Conversion: (string->number "42") → 42, (string->number "3.14") → 3.14, (string->number "1+2j") → 1+2j
+- (string->number "#xFF") → 255, (string->number "#b1010") → 10, (string->number "#o755") → 493, (string->number "-#xFF") → -255
+- (string->number "hello") → #f (returns #f for any unparseable string; raises a type error if argument is not a string)
+- (integer->string 42), (float->string 3.14), (complex->string 3+4j)
 - Split/join: (string->list "hello") → ("h" "e" "l" "l" "o"), (string->list "a,b,c" ",") → ("a" "b" "c")
 - Split/join: (list->string (list "h" "i")) → "hi", (list->string (list "a" "b" "c") ",") → "a,b,c"
 
@@ -291,8 +294,9 @@ Syntax: (operator arg1 arg2 ...)
 
 - Uses proper lists only, not cons cells
 - Construction: (list 1 2 3), (list-prepend lst item), (list-append lst item), (list-concat lst1 lst2)
+- Construction: (list 1 2 3), (list-prepend lst item), (list-append lst item), (list-concat lst1 lst2), (list-concat) → ()
 - (list-prepend (list 2 3) 1) → (1 2 3), (list-append (list 1 2) 3) → (1 2 3)
-- (list-concat (list 1 2) (list 3 4)) → (1 2 3 4)
+- (list-concat (list 1 2) (list 3 4)) → (1 2 3 4), (list-concat) → () (zero-arg identity)
 - Access: (list-first (list 1 2 3)), (list-rest (list 1 2 3)), (list-last (list 1 2 3))
 - Indexed access: (list-ref (list "a" "b" "c") 1) → "b" (0-based index)
 - Properties: (list-length (list 1 2 3)), (list-null? (list)), (list-member? (list 1 2 3) 2)
