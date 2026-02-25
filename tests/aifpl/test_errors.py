@@ -334,13 +334,13 @@ class TestErrors:
         """Test that operations restricted to real numbers reject complex numbers."""
         # Rounding functions don't support complex numbers
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(round (complex 1 2))")
+            aifpl.evaluate("(round (float->complex 1 2))")
 
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(floor j)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(ceil (complex 3 4))")
+            aifpl.evaluate("(ceil (float->complex 3 4))")
 
     def test_integer_only_operation_errors(self, aifpl):
         """Test that integer-only operations reject non-integers."""
@@ -352,7 +352,7 @@ class TestErrors:
             aifpl.evaluate("(bit-and 1 2.5)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(bit-xor (complex 1 2) 3)")
+            aifpl.evaluate("(bit-xor (float->complex 1 2) 3)")
 
         # Base conversion requires integers
         with pytest.raises(AIFPLEvalError):

@@ -438,6 +438,32 @@ class AIFPLCodeGen:
                 ctx.emit(Opcode.RANGE)
                 return
 
+            # Handle integer->complex: synthesise missing imaginary part as 0
+            if builtin_name == 'integer->complex':
+                self._generate_expr(plan.arg_plans[0], ctx)
+                if len(plan.arg_plans) == 1:
+                    const_index = ctx.add_constant(AIFPLInteger(0))
+                    ctx.emit(Opcode.LOAD_CONST, const_index)
+
+                else:
+                    self._generate_expr(plan.arg_plans[1], ctx)
+
+                ctx.emit(Opcode.INTEGER_TO_COMPLEX)
+                return
+
+            # Handle float->complex: synthesise missing imaginary part as 0.0
+            if builtin_name == 'float->complex':
+                self._generate_expr(plan.arg_plans[0], ctx)
+                if len(plan.arg_plans) == 1:
+                    const_index = ctx.add_constant(AIFPLFloat(0.0))
+                    ctx.emit(Opcode.LOAD_CONST, const_index)
+
+                else:
+                    self._generate_expr(plan.arg_plans[1], ctx)
+
+                ctx.emit(Opcode.FLOAT_TO_COMPLEX)
+                return
+
             # Handle string-slice: synthesise missing end as (string-length str)
             if builtin_name == 'string-slice':
                 # Push the string argument first

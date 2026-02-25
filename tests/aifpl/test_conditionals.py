@@ -213,8 +213,8 @@ class TestConditionals:
         ('(list=? (list) (list))', '#t'),
 
         # Complex number equality
-        ('(complex=? (complex 1 2) (complex 1 2))', '#t'),
-        ('(complex=? (complex 1 2) (complex 2 1))', '#f'),
+        ('(complex=? (integer->complex 1 2) (integer->complex 1 2))', '#t'),
+        ('(complex=? (integer->complex 1 2) (integer->complex 2 1))', '#f'),
     ])
     def test_equality_comparison(self, aifpl, expression, expected):
         """Test equality comparison operator."""

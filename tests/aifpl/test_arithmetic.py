@@ -37,7 +37,7 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("expression,expected", [
         # Complex addition
-        ("(complex+ (complex 1 2) (complex 3 4))", "4+6j"),
+        ("(complex+ (integer->complex 1 2) (integer->complex 3 4))", "4+6j"),
     ])
     def test_complex_addition(self, aifpl, expression, expected):
         """Test complex addition operation."""
@@ -70,7 +70,7 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("expression,expected", [
         # Complex subtraction
-        ("(complex- (complex 5 3) (complex 2 1))", "3+2j"),
+        ("(complex- (integer->complex 5 3) (integer->complex 2 1))", "3+2j"),
     ])
     def test_complex_subtraction(self, aifpl, expression, expected):
         """Test complex subtraction operation."""
@@ -105,7 +105,7 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("expression,expected", [
         # Complex multiplication
-        ("(complex* (complex 2 3) (complex 1 4))", "-10+11j"),
+        ("(complex* (integer->complex 2 3) (integer->complex 1 4))", "-10+11j"),
     ])
     def test_complex_multiplication(self, aifpl, expression, expected):
         """Test complex multiplication operation."""
@@ -289,7 +289,7 @@ class TestArithmetic:
         ("(float-abs -3.14)", "3.14"),
 
         # Complex absolute value (magnitude)
-        ("(complex-abs (complex 3 4))", "5.0"),  # |3+4i| = 5, abs of complex returns float
+        ("(complex-abs (integer->complex 3 4))", "5.0"),  # |3+4i| = 5, abs of complex returns float
         ("(complex-abs 1j)", "1.0"),  # |i| = 1, abs of complex returns float
     ])
     def test_abs_function(self, aifpl, expression, expected):
@@ -324,13 +324,13 @@ class TestArithmetic:
     def test_rounding_functions_reject_complex(self, aifpl):
         """Test that rounding functions reject complex numbers."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(round (complex 1 2))")
+            aifpl.evaluate("(round (integer->complex 1 2))")
 
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(floor 1j)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(ceil (complex 3 4))")
+            aifpl.evaluate("(ceil (integer->complex 3 4))")
 
     @pytest.mark.parametrize("expression,expected", [
         # Min function
@@ -408,7 +408,7 @@ class TestArithmetic:
             aifpl.evaluate("(bit-and 1 2.5)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(bit-xor (complex 1 2) 3)")
+            aifpl.evaluate("(bit-xor (integer->complex 1 2) 3)")
 
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(bit-not 3.14)")
@@ -445,23 +445,23 @@ class TestArithmetic:
             aifpl.evaluate("(hex 2.5)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(oct (complex 1 2))")
+            aifpl.evaluate("(oct (integer->complex 1 2))")
 
     @pytest.mark.parametrize("expression,expected", [
         # Complex number construction
-        ("(complex 3 4)", "3+4j"),
-        ("(complex 0 1)", "1j"),
-        ("(complex 5 0)", "5+0j"),
-        ("(complex -2 -3)", "-2-3j"),
+        ("(float->complex 3.0 4.0)", "3+4j"),
+        ("(float->complex 0.0 1.0)", "1j"),
+        ("(float->complex 5.0)", "5+0j"),
+        ("(float->complex -2.0 -3.0)", "-2-3j"),
 
         # Real part extraction
-        ("(complex-real (complex 3 4))", "3.0"),
+        ("(complex-real (integer->complex 3 4))", "3.0"),
         ("(complex-real 42)", "42.0"),
         ("(complex-real 3.14)", "3.14"),
         ("(complex-real 1j)", "0.0"),
 
         # Imaginary part extraction
-        ("(complex-imag (complex 3 4))", "4.0"),
+        ("(complex-imag (integer->complex 3 4))", "4.0"),
         ("(complex-imag 42)", "0.0"),
         ("(complex-imag 3.14)", "0.0"),
         ("(complex-imag 1j)", "1.0"),
@@ -539,14 +539,14 @@ class TestArithmetic:
             aifpl.evaluate("(floor-sqrt -9.0)")
 
         # Test sqrt with complex numbers
-        result = aifpl.evaluate("(complex-sqrt (complex 0 4))")
+        result = aifpl.evaluate("(complex-sqrt (integer->complex 0 4))")
         expected = cmath.sqrt(4j)
         assert abs(result - expected) < 1e-10
 
     def test_exponential_with_complex_numbers(self, aifpl):
         """Test exponential function with complex arguments."""
         # Test exp with complex numbers
-        result = aifpl.evaluate("(complex-exp (complex 1 2))")
+        result = aifpl.evaluate("(complex-exp (integer->complex 1 2))")
         expected = cmath.exp(1+2j)
         assert abs(result - expected) < 1e-10
 
@@ -559,21 +559,21 @@ class TestArithmetic:
         """Test rounding functions with complex numbers having tiny imaginary parts."""
         # Create a complex number with a very small but non-zero imaginary part
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(round (complex+ (complex 3.5 0.0) (complex* 1j (complex 1e-5 0.0))))")
+            aifpl.evaluate("(round (complex+ (float->complex 3.5 0.0) (complex* 1j (float->complex 1e-5 0.0))))")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(floor (complex+ (complex 2.7 0.0) (complex* 1j (complex 1e-8 0.0))))")
+            aifpl.evaluate("(floor (complex+ (float->complex 2.7 0.0) (complex* 1j (float->complex 1e-8 0.0))))")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(ceil (complex+ (complex 4.1 0.0) (complex* 1j (complex 1e-6 0.0))))")
+            aifpl.evaluate("(ceil (complex+ (float->complex 4.1 0.0) (complex* 1j (float->complex 1e-6 0.0))))")
 
     def test_real_imag_with_integer_results(self, aifpl):
         """Test real/imag functions that return integers."""
         # Test cases where real/imag parts are whole numbers
-        result = aifpl.evaluate("(complex-real (complex 5.0 3.0))")
+        result = aifpl.evaluate("(complex-real (float->complex 5.0 3.0))")
         assert result == 5.0
         assert isinstance(result, float)
 
-        result = aifpl.evaluate("(complex-imag (complex 2.0 7.0))")
+        result = aifpl.evaluate("(complex-imag (float->complex 2.0 7.0))")
         assert result == 7.0
         assert isinstance(result, float)

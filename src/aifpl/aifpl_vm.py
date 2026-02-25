@@ -250,7 +250,8 @@ class AIFPLVM:
         table[Opcode.FLOAT_ROUND] = self._op_float_round
         table[Opcode.FLOAT_MIN] = self._op_float_min
         table[Opcode.FLOAT_MAX] = self._op_float_max
-        table[Opcode.COMPLEX] = self._op_complex
+        table[Opcode.FLOAT_TO_COMPLEX] = self._op_float_to_complex
+        table[Opcode.INTEGER_TO_COMPLEX] = self._op_integer_to_complex
         table[Opcode.COMPLEX_P] = self._op_complex_p
         table[Opcode.COMPLEX_EQ_P] = self._op_complex_eq_p
         table[Opcode.COMPLEX_NEQ_P] = self._op_complex_neq_p
@@ -1336,6 +1337,26 @@ class AIFPLVM:
         self.stack.append(AIFPLInteger(self._ensure_integer(a, 'bit-xor') ^ self._ensure_integer(b, 'bit-xor')))
         return None
 
+    def _op_integer_to_float(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_TO_FLOAT: Pop an integer, push as float."""
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'integer->float')
+        self.stack.append(AIFPLFloat(float(a_val)))
+        return None
+
+    def _op_integer_to_complex(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_TO_COMPLEX: Pop an integer, push as complex with zero imaginary part."""
+        imag = self.stack.pop()
+        real = self.stack.pop()
+        real_val = self._ensure_integer(real, 'integer->complex')
+        imag_val = self._ensure_integer(imag, 'integer->complex')
+        self.stack.append(AIFPLComplex(complex(float(real_val), float(imag_val))))
+        return None
+
     def _op_integer_to_string(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1386,15 +1407,6 @@ class AIFPLVM:
             return None
 
         self.stack.append(AIFPLString(f"#o{oct(a_val)[2:]}"))
-        return None
-
-    def _op_integer_to_float(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """INTEGER_TO_FLOAT: Pop an integer, push as float."""
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'integer->float')
-        self.stack.append(AIFPLFloat(float(a_val)))
         return None
 
     def _op_float_p(  # pylint: disable=useless-return
@@ -1648,6 +1660,17 @@ class AIFPLVM:
         self.stack.append(AIFPLInteger(int(a_val)))
         return None
 
+    def _op_float_to_complex(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_TO_COMPLEX: Pop a float, push as complex with zero imaginary part."""
+        imag = self.stack.pop()
+        real = self.stack.pop()
+        real_val = self._ensure_float(real, 'float->complex')
+        imag_val = self._ensure_float(imag, 'float->complex')
+        self.stack.append(AIFPLComplex(complex(real_val, imag_val)))
+        return None
+
     def _op_float_to_string(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1730,17 +1753,6 @@ class AIFPLVM:
         a_val = self._ensure_integer(a, 'integer-max')
         b_val = self._ensure_integer(b, 'integer-max')
         self.stack.append(AIFPLInteger(a_val if a_val >= b_val else b_val))
-        return None
-
-    def _op_complex(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """COMPLEX: Pop imaginary and real parts, push complex number."""
-        imag = self.stack.pop()
-        real = self.stack.pop()
-        real_val = self._ensure_float(real, 'complex')
-        imag_val = self._ensure_float(imag, 'complex')
-        self.stack.append(AIFPLComplex(complex(real_val, imag_val)))
         return None
 
     def _op_complex_p(  # pylint: disable=useless-return

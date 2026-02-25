@@ -15,10 +15,10 @@ class TestMathMissingCoverage:
     def test_inequality_operators_reject_complex_numbers(self, aifpl):
         """Test that integer typed comparison operators reject complex number arguments."""
         complex_values = [
-            "(complex 1 2)",
+            "(float->complex 1.0 2.0)",
             "1j",
-            "(complex 3 1)",
-            "(complex -1 5)"
+            "(float->complex 3.0 1.0)",
+            "(integer->complex -1 5)"
         ]
 
         comparison_ops = ["integer<?", "integer>?", "integer<=?", "integer>=?"]
@@ -109,16 +109,16 @@ class TestMathMissingCoverage:
     def test_trigonometric_functions_with_complex_numbers(self, aifpl):
         """Test trigonometric functions with complex arguments (should work)."""
         # This tests the complex number branches that were missing coverage
-        result = aifpl.evaluate("(complex-sin (complex 1 2))")
+        result = aifpl.evaluate("(complex-sin (integer->complex 1 2))")
         expected = cmath.sin(1+2j)
         assert abs(result - expected) < 1e-10
 
-        result = aifpl.evaluate("(complex-cos (complex 1 2))")
+        result = aifpl.evaluate("(complex-cos (integer->complex 1 2))")
         expected = cmath.cos(1+2j)
         assert abs(result - expected) < 1e-10
 
         # tan with complex numbers - this tests line 403
-        result = aifpl.evaluate("(complex-tan (complex 0.5 0.5))")
+        result = aifpl.evaluate("(complex-tan (float->complex 0.5 0.5))")
         expected = cmath.tan(0.5+0.5j)
         assert abs(result - expected) < 1e-10
 
@@ -138,7 +138,7 @@ class TestMathMissingCoverage:
     def test_logarithmic_functions_with_complex_numbers(self, aifpl):
         """Test logarithmic functions with complex arguments."""
         # log10 with complex numbers - this tests line 429
-        result = aifpl.evaluate("(complex-log10 (complex -1 0))")
+        result = aifpl.evaluate("(complex-log10 (integer->complex -1 0))")
         expected = cmath.log10(-1+0j)
         assert abs(result - expected) < 1e-10
 
@@ -167,13 +167,13 @@ class TestMathMissingCoverage:
         # Test with complex numbers that have non-zero imaginary parts
         for func in rounding_functions:
             with pytest.raises(AIFPLEvalError, match=f"requires float arguments"):
-                aifpl.evaluate(f"({func} (complex 3.5 2.1))")
+                aifpl.evaluate(f"({func} (float->complex 3.5 2.1))")
 
         # Test the edge case where complex number has very small imaginary part
         # This tests lines 476, 495, 514 which handle the tolerance check
         for func in rounding_functions:
             with pytest.raises(AIFPLEvalError, match=f"requires float arguments"):
-                aifpl.evaluate(f"({func} (complex 3.5 1e-5))")
+                aifpl.evaluate(f"({func} (float->complex 3.5 1e-5))")
 
     # ========== Base Conversion Error Handling ==========
 
@@ -209,30 +209,30 @@ class TestMathMissingCoverage:
             aifpl.evaluate("(complex-imag 1 2)")
 
         # complex function
-        with pytest.raises(AIFPLEvalError, match="Function 'complex' has wrong number of arguments"):
-            aifpl.evaluate("(complex 5)")
+        with pytest.raises(AIFPLEvalError, match="Function 'integer->complex' has wrong number of arguments"):
+            aifpl.evaluate("(integer->complex 1 2 3)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'complex' has wrong number of arguments"):
-            aifpl.evaluate("(complex 1 2 3)")
+        with pytest.raises(AIFPLEvalError, match="Function 'float->complex' has wrong number of arguments"):
+            aifpl.evaluate("(float->complex 1.0 2.0 3.0)")
 
     def test_complex_function_with_complex_arguments(self, aifpl):
         """Test complex function with complex number arguments (should fail)."""
         # This tests line 632
         with pytest.raises(AIFPLEvalError, match="requires float argument"):
-            aifpl.evaluate("(complex (complex 1 2) 3)")
+            aifpl.evaluate("(float->complex (float->complex 1 2) 3)")
 
         with pytest.raises(AIFPLEvalError, match="requires float argument"):
-            aifpl.evaluate("(complex 1 (complex 2 3))")
+            aifpl.evaluate("(float->complex 1 (float->complex 2 3))")
 
     def test_real_imag_functions_with_complex_return_paths(self, aifpl):
         """Test real/imag functions with complex numbers to hit return paths."""
         # Test real function with complex number (tests line 599 path)
         # First create a complex number with non-integer real part
-        result = aifpl.evaluate("(complex-real (complex 3.7 4.2))")
+        result = aifpl.evaluate("(complex-real (float->complex 3.7 4.2))")
         assert result == 3.7
 
         # Test imag function with complex number (tests line 618 path)
-        result = aifpl.evaluate("(complex-imag (complex 3.7 4.2))")
+        result = aifpl.evaluate("(complex-imag (float->complex 3.7 4.2))")
         assert result == 4.2
 
     # ========== Type Checking Helper Methods ==========
@@ -259,7 +259,7 @@ class TestMathMissingCoverage:
         # This tests line 667 in _ensure_real_number
         # min/max functions use _ensure_real_number and should reject complex numbers
         with pytest.raises(AIFPLEvalError, match="requires float arguments"):
-            aifpl.evaluate("(float-min (complex 1 2) 5.0)")
+            aifpl.evaluate("(float-min (float->complex 1 2) 5.0)")
 
         with pytest.raises(AIFPLEvalError, match="requires float arguments"):
             aifpl.evaluate("(float-max 1j 3)")

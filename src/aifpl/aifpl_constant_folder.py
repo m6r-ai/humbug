@@ -151,7 +151,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'float-max': self._fold_float_max,
             'complex=?': self._fold_complex_eq,
             'complex!=?': self._fold_complex_neq,
-            'complex': self._fold_complex,
+            'float->complex': self._fold_complex,
             'complex+': self._fold_complex_add,
             'complex-': self._fold_complex_sub,
             'complex*': self._fold_complex_mul,
@@ -819,8 +819,9 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         return AIFPLASTFloat(abs(args[0].value))
 
     def _fold_complex(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold complex: (complex real imag) → complex number"""
-        real, imag = self._to_python_number(args[0]), self._to_python_number(args[1])
+        """Fold float->complex: (float->complex real [imag]) → complex number"""
+        real = self._to_python_number(args[0])
+        imag = self._to_python_number(args[1]) if len(args) > 1 else 0.0
 
         # Don't fold if arguments are complex - runtime will raise error
         if isinstance(real, complex):

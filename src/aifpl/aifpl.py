@@ -178,6 +178,8 @@ class AIFPL:
                                                 (if (list-null? lst) acc
                                                     (loop (list-rest lst) (integer-max acc (list-first lst)))))))
                                  (loop (list-rest args) (list-first args)))))""",
+        'integer->complex': """(lambda (real . rest)
+                                 (integer->complex real (if (list-null? rest) 0 (list-first rest))))""",
         'float=?': """(lambda (. args)
                         (if (integer<? (list-length args) 2)
                           (error "Function 'float=?' requires at least 2 arguments")
@@ -285,6 +287,8 @@ class AIFPL:
                                               (if (list-null? lst) acc
                                                   (loop (list-rest lst) (float-max acc (list-first lst)))))))
                                (loop (list-rest args) (list-first args)))))""",
+        'float->complex': """(lambda (real . rest)
+                               (float->complex real (if (list-null? rest) 0 (list-first rest))))""",
         'complex=?': """(lambda (. args)
                           (if (integer<? (list-length args) 2)
                             (error "Function 'complex=?' requires at least 2 arguments")

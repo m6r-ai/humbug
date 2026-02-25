@@ -110,8 +110,8 @@ class TestDesugarerOneArg:
         assert result.value == 3.5
 
     def test_complex_add_one_arg_is_identity(self):
-        result = desugar("(complex+ (complex 1 2))")
-        # The inner (complex 1 2) call is a regular function call, not a literal,
+        result = desugar("(complex+ (float->complex 1 2))")
+        # The inner (float->complex 1 2) call is a regular function call, not a literal,
         # so the desugarer returns it as-is (a list node).
         assert isinstance(result, AIFPLASTList)
 
@@ -146,7 +146,7 @@ class TestDesugarerOneArg:
         assert zero.value == 0.0
 
     def test_complex_sub_one_arg_negation(self):
-        result = desugar("(complex- (complex 1 2))")
+        result = desugar("(complex- (float->complex 1 2))")
         assert op_name(result) == "complex-"
         zero = result.elements[1]
         assert isinstance(zero, AIFPLASTComplex)
@@ -162,7 +162,7 @@ class TestDesugarerOneArg:
         assert one.value == 1.0
 
     def test_complex_div_one_arg_reciprocal(self):
-        result = desugar("(complex/ (complex 2 0))")
+        result = desugar("(complex/ (float->complex 2 0))")
         assert op_name(result) == "complex/"
         one = result.elements[1]
         assert isinstance(one, AIFPLASTComplex)
@@ -190,7 +190,7 @@ class TestDesugarerTwoArgs:
         assert len(result.elements) == 3
 
     def test_complex_mul_two_args(self):
-        result = desugar("(complex* (complex 1 2) (complex 3 4))")
+        result = desugar("(complex* (float->complex 1 2) (float->complex 3 4))")
         assert op_name(result) == "complex*"
         assert len(result.elements) == 3
 
@@ -230,7 +230,7 @@ class TestDesugarerVariadic:
         self._assert_left_fold(result, "float*", 2)
 
     def test_complex_add_three_args(self):
-        result = desugar("(complex+ (complex 1 0) (complex 2 0) (complex 3 0))")
+        result = desugar("(complex+ (float->complex 1 0) (float->complex 2 0) (float->complex 3 0))")
         self._assert_left_fold(result, "complex+", 2)
 
     def test_integer_sub_three_args(self):
@@ -249,7 +249,7 @@ class TestDesugarerVariadic:
         self._assert_left_fold(result, "integer/", 2)
 
     def test_complex_mul_three_args(self):
-        result = desugar("(complex* (complex 1 1) (complex 2 0) (complex 0 1))")
+        result = desugar("(complex* (float->complex 1 1) (float->complex 2 0) (float->complex 0 1))")
         self._assert_left_fold(result, "complex*", 2)
 
 
@@ -360,37 +360,37 @@ class TestComplexOpsEval:
         ("(complex+)", "0+0j"),
         ("(complex*)", "1+0j"),
         # one-arg identity
-        ("(complex+ (complex 3 4))", "3+4j"),
-        ("(complex* (complex 2 1))", "2+1j"),
+        ("(complex+ (integer->complex 3 4))", "3+4j"),
+        ("(complex* (integer->complex 2 1))", "2+1j"),
         # unary negation
-        ("(complex- (complex 3 4))", "-3-4j"),
-        ("(complex- (complex -1 -2))", "1+2j"),
+        ("(complex- (integer->complex 3 4))", "-3-4j"),
+        ("(complex- (integer->complex -1 -2))", "1+2j"),
         # reciprocal
-        ("(complex/ (complex 2 0))", "0.5+0j"),
+        ("(complex/ (integer->complex 2 0))", "0.5+0j"),
         # binary
-        ("(complex+ (complex 1 2) (complex 3 4))", "4+6j"),
-        ("(complex- (complex 5 3) (complex 2 1))", "3+2j"),
-        ("(complex* (complex 1 2) (complex 3 4))", "-5+10j"),
-        ("(complex/ (complex 4 2) (complex 1 1))", "3-1j"),
+        ("(complex+ (integer->complex 1 2) (integer->complex 3 4))", "4+6j"),
+        ("(complex- (integer->complex 5 3) (integer->complex 2 1))", "3+2j"),
+        ("(complex* (float->complex 1.0 2.0) (float->complex 3.0 4.0))", "-5+10j"),
+        ("(complex/ (float->complex 4.0 2.0) (float->complex 1.0 1.0))", "3-1j"),
         # variadic fold
-        ("(complex+ (complex 1 0) (complex 2 0) (complex 3 0))", "6+0j"),
-        ("(complex- (complex 10 0) (complex 3 0) (complex 2 0))", "5+0j"),
-        ("(complex* (complex 1 1) (complex 1 1) (complex 1 0))", "2j"),
+        ("(complex+ (integer->complex 1 0) (integer->complex 2 0) (integer->complex 3 0))", "6+0j"),
+        ("(complex- (integer->complex 10 0) (integer->complex 3 0) (integer->complex 2 0))", "5+0j"),
+        ("(complex* (integer->complex 1 1) (integer->complex 1 1) (integer->complex 1 0))", "2j"),
     ])
     def test_complex_ops(self, aifpl, expr, expected):
         assert aifpl.evaluate_and_format(expr) == expected
 
     def test_complex_div_by_zero(self, aifpl):
         with pytest.raises(AIFPLEvalError, match="[Dd]ivision by zero"):
-            aifpl.evaluate("(complex/ (complex 1 0) (complex 0 0))")
+            aifpl.evaluate("(complex/ (integer->complex 1) (integer->complex 0))")
 
     def test_complex_ops_reject_integer(self, aifpl):
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(complex+ (complex 1 2) 3)")
+            aifpl.evaluate("(complex+ (integer->complex 1 2) 3)")
 
     def test_complex_ops_reject_float(self, aifpl):
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(complex* (complex 1 2) 3.0)")
+            aifpl.evaluate("(complex* (integer->complex 1 2) 3.0)")
 
 
 class TestFirstClassUse:
@@ -413,7 +413,7 @@ class TestFirstClassUse:
 
     def test_fold_complex_add(self, aifpl):
         result = aifpl.evaluate_and_format(
-            "(fold complex+ (complex 0 0) (list (complex 1 0) (complex 0 1) (complex 1 1)))"
+            "(fold complex+ (integer->complex 0 0) (list (integer->complex 1 0) (integer->complex 0 1) (integer->complex 1 1)))"
         )
         assert result == "2+2j"
 
@@ -455,11 +455,11 @@ class TestTypeEnforcement:
         "(float* 1.0 1j)",
         "(float/ 4.0 2)",
         # complex ops with wrong types
-        "(complex+ (complex 1 0) 1)",
-        "(complex+ (complex 1 0) 1.0)",
-        "(complex- (complex 1 0) 1)",
-        "(complex* (complex 1 0) 1.0)",
-        "(complex/ (complex 4 0) 2)",
+        "(complex+ (integer->complex 1 0) 1)",
+        "(complex+ (integer->complex 1 0) 1.0)",
+        "(complex- (integer->complex 1 0) 1)",
+        "(complex* (integer->complex 1 0) 1.0)",
+        "(complex/ (integer->complex 4 0) 2)",
     ])
     def test_type_errors(self, aifpl, expr):
         with pytest.raises(AIFPLEvalError):

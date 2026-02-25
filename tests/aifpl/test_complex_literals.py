@@ -115,11 +115,11 @@ class TestComplexNumberLiterals:
     def test_complex_in_expressions(self, aifpl):
         """Test complex literals in arithmetic expressions."""
         test_cases = [
-            ("(complex+ (complex 1 0) 2+3j)", 3+3j),
-            ("(complex+ 2+3j (complex 1 0))", 3+3j),
+            ("(complex+ (integer->complex 1 0) 2+3j)", 3+3j),
+            ("(complex+ 2+3j (integer->complex 1 0))", 3+3j),
             ("(complex+ 1+2j 3+4j)", 4+6j),
             ("(complex- 5+7j 2+3j)", 3+4j),
-            ("(complex* (complex 2 0) 3+4j)", 6+8j),
+            ("(complex* (integer->complex 2 0) 3+4j)", 6+8j),
             ("(complex* 1+2j 3+4j)", -5+10j),  # (1+2j)(3+4j) = 3+4j+6j+8j² = 3+10j-8 = -5+10j
         ]
 
@@ -140,7 +140,7 @@ class TestComplexNumberLiterals:
         assert abs(result - 5.0) < 1e-10, f"Expected |3+4j| = 5, got {result}"
 
         # Complex constructor still works
-        assert aifpl.evaluate("(complex 3 4)") == 3+4j
+        assert aifpl.evaluate("(integer->complex 3 4)") == 3+4j
 
     def test_lexer_complex_token_types(self):
         """Test that lexer produces correct token types for complex literals."""
@@ -243,19 +243,19 @@ class TestComplexNumberLiterals:
         """Test complex literals mixed with other numeric types."""
         test_cases = [
             # Complex + integer
-            ("(complex+ 3+4j (complex 5 0))", 8+4j),
+            ("(complex+ 3+4j (float->complex 5.0))", 8+4j),
 
             # Complex + float
-            ("(complex+ 3+4j (complex 1.5 0))", 4.5+4j),
+            ("(complex+ 3+4j (float->complex 1.5 0.0))", 4.5+4j),
 
             # Complex + complex
             ("(complex+ 3+4j 1+2j)", 4+6j),
 
             # Mixed operations
-            ("(complex+ (complex+ (complex 1 0) (complex 2.5 0)) 3+4j)", 6.5+4j),
+            ("(complex+ (complex+ (integer->complex 1) (float->complex 2.5)) 3+4j)", 6.5+4j),
 
             # Division
-            ("(complex/ 6+8j (complex 2 0))", 3+4j),
+            ("(complex/ 6+8j (integer->complex 2 0))", 3+4j),
         ]
 
         for expr, expected in test_cases:
@@ -276,7 +276,7 @@ class TestComplexNumberLiterals:
         assert result[2] == 4
 
         # Map over complex numbers
-        result = aifpl.evaluate("(map (lambda (x) (complex* x (complex 2 0))) (list 1+1j 2+2j))")
+        result = aifpl.evaluate("(map (lambda (x) (complex* x (integer->complex 2 0))) (list 1+1j 2+2j))")
         assert len(result) == 2
         assert result[0] == 2+2j
         assert result[1] == 4+4j

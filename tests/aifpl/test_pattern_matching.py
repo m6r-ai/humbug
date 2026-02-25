@@ -140,7 +140,7 @@ class TestPatternMatching:
         ('(match 42 ((float? f) (float-round f)) (_ "not float"))', '"not float"'),
 
         # Complex type patterns
-        ('(match (complex 1 2) ((complex? c) (complex-real c)) (_ "not complex"))', '1.0'),
+        ('(match (integer->complex 1 2) ((complex? c) (complex-real c)) (_ "not complex"))', '1.0'),
         ('(match 42 ((complex? c) (complex-real c)) (_ "not complex"))', '"not complex"'),
 
         # String type patterns

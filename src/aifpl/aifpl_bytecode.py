@@ -120,11 +120,12 @@ class Opcode(IntEnum):
     INTEGER_BIT_XOR = _op(120, 0)       # Bitwise XOR: a ^ b
     INTEGER_MIN = _op(121, 0)           # integer-min a b
     INTEGER_MAX = _op(122, 0)           # integer-max a b
-    INTEGER_TO_STRING = _op(123, 0)     # Convert integer to string
-    INTEGER_TO_STRING_BIN = _op(124, 0) # Convert integer to binary string
-    INTEGER_TO_STRING_HEX = _op(125, 0) # Convert integer to hex string
-    INTEGER_TO_STRING_OCT = _op(126, 0) # Convert integer to octal string
-    INTEGER_TO_FLOAT = _op(127, 0)      # Convert integer to float
+    INTEGER_TO_FLOAT = _op(123, 0)      # Convert integer to float
+    INTEGER_TO_COMPLEX = _op(124, 0)    # integer->complex: construct complex from integer
+    INTEGER_TO_STRING = _op(125, 0)     # Convert integer to string
+    INTEGER_TO_STRING_BIN = _op(126, 0) # Convert integer to binary string
+    INTEGER_TO_STRING_HEX = _op(127, 0) # Convert integer to hex string
+    INTEGER_TO_STRING_OCT = _op(128, 0) # Convert integer to octal string
 
     # Floating point operations
     FLOAT_P = _op(140, 0)               # (float? x)
@@ -151,35 +152,35 @@ class Opcode(IntEnum):
     FLOAT_SQRT = _op(161, 0)            # float-sqrt x
     FLOAT_ABS = _op(162, 0)             # float-abs x
     FLOAT_TO_INTEGER = _op(163, 0)      # Convert float to integer
-    FLOAT_TO_STRING = _op(164, 0)       # Convert float to string
-    FLOAT_FLOOR = _op(165, 0)           # float-floor x  (returns float)
-    FLOAT_CEIL = _op(166, 0)            # float-ceil x   (returns float)
-    FLOAT_ROUND = _op(167, 0)           # float-round x  (returns float)
-    FLOAT_MIN = _op(168, 0)             # float-min a b
-    FLOAT_MAX = _op(169, 0)             # float-max a b
+    FLOAT_TO_COMPLEX = _op(164, 0)      # float->complex: construct complex from one or two floats
+    FLOAT_TO_STRING = _op(165, 0)       # Convert float to string
+    FLOAT_FLOOR = _op(166, 0)           # float-floor x  (returns float)
+    FLOAT_CEIL = _op(167, 0)            # float-ceil x   (returns float)
+    FLOAT_ROUND = _op(168, 0)           # float-round x  (returns float)
+    FLOAT_MIN = _op(169, 0)             # float-min a b
+    FLOAT_MAX = _op(170, 0)             # float-max a b
 
     # Complex operations
-    COMPLEX = _op(180, 0)               # Construct complex from real and imaginary parts
-    COMPLEX_P = _op(181, 0)             # (complex? x)
-    COMPLEX_EQ_P = _op(182, 0)          # complex=? a b
-    COMPLEX_NEQ_P = _op(183, 0)         # complex!=? a b
-    COMPLEX_ADD = _op(184, 0)           # complex+ a b
-    COMPLEX_SUB = _op(185, 0)           # complex- a b
-    COMPLEX_MUL = _op(186, 0)           # complex* a b
-    COMPLEX_DIV = _op(187, 0)           # complex/ a b
-    COMPLEX_NEG = _op(188, 0)           # complex-neg x  (unary minus)
-    COMPLEX_REAL = _op(189, 0)          # Extract real part
-    COMPLEX_IMAG = _op(190, 0)          # Extract imaginary part
-    COMPLEX_EXPT = _op(191, 0)          # complex-expt a b
-    COMPLEX_SIN = _op(192, 0)           # complex-sin x
-    COMPLEX_COS = _op(193, 0)           # complex-cos x
-    COMPLEX_TAN = _op(194, 0)           # complex-tan x
-    COMPLEX_LOG = _op(195, 0)           # complex-log x
-    COMPLEX_LOG10 = _op(196, 0)         # complex-log10 x
-    COMPLEX_EXP = _op(197, 0)           # complex-exp x
-    COMPLEX_SQRT = _op(198, 0)          # complex-sqrt x
-    COMPLEX_ABS = _op(199, 0)           # complex-abs x  (returns float: magnitude)
-    COMPLEX_TO_STRING = _op(200, 0)     # Convert complex to string
+    COMPLEX_P = _op(180, 0)             # (complex? x)
+    COMPLEX_EQ_P = _op(181, 0)          # complex=? a b
+    COMPLEX_NEQ_P = _op(182, 0)         # complex!=? a b
+    COMPLEX_ADD = _op(183, 0)           # complex+ a b
+    COMPLEX_SUB = _op(184, 0)           # complex- a b
+    COMPLEX_MUL = _op(185, 0)           # complex* a b
+    COMPLEX_DIV = _op(186, 0)           # complex/ a b
+    COMPLEX_NEG = _op(187, 0)           # complex-neg x  (unary minus)
+    COMPLEX_REAL = _op(188, 0)          # Extract real part
+    COMPLEX_IMAG = _op(189, 0)          # Extract imaginary part
+    COMPLEX_EXPT = _op(190, 0)          # complex-expt a b
+    COMPLEX_SIN = _op(191, 0)           # complex-sin x
+    COMPLEX_COS = _op(192, 0)           # complex-cos x
+    COMPLEX_TAN = _op(193, 0)           # complex-tan x
+    COMPLEX_LOG = _op(194, 0)           # complex-log x
+    COMPLEX_LOG10 = _op(195, 0)         # complex-log10 x
+    COMPLEX_EXP = _op(196, 0)           # complex-exp x
+    COMPLEX_SQRT = _op(197, 0)          # complex-sqrt x
+    COMPLEX_ABS = _op(198, 0)           # complex-abs x  (returns float: magnitude)
+    COMPLEX_TO_STRING = _op(199, 0)     # Convert complex to string
 
     # String operations
     STRING_P = _op(220, 0)              # (string? x)
@@ -289,11 +290,12 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'bit-xor': (Opcode.INTEGER_BIT_XOR, 2),
     'integer-min': (Opcode.INTEGER_MIN, 2),
     'integer-max': (Opcode.INTEGER_MAX, 2),
+    'integer->float': (Opcode.INTEGER_TO_FLOAT, 1),
+    'integer->complex': (Opcode.INTEGER_TO_COMPLEX, 1),
     'integer->string': (Opcode.INTEGER_TO_STRING, 1),
     'bin': (Opcode.INTEGER_TO_STRING_BIN, 1),
     'hex': (Opcode.INTEGER_TO_STRING_HEX, 1),
     'oct': (Opcode.INTEGER_TO_STRING_OCT, 1),
-    'integer->float': (Opcode.INTEGER_TO_FLOAT, 1),
     'float?': (Opcode.FLOAT_P, 1),
     'float=?': (Opcode.FLOAT_EQ_P, 2),
     'float!=?': (Opcode.FLOAT_NEQ_P, 2),
@@ -318,13 +320,13 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'float-sqrt': (Opcode.FLOAT_SQRT, 1),
     'float-abs': (Opcode.FLOAT_ABS, 1),
     'float->integer': (Opcode.FLOAT_TO_INTEGER, 1),
+    'float->complex': (Opcode.FLOAT_TO_COMPLEX, 2),
     'float->string': (Opcode.FLOAT_TO_STRING, 1),
     'float-floor': (Opcode.FLOAT_FLOOR, 1),
     'float-ceil': (Opcode.FLOAT_CEIL, 1),
     'float-round': (Opcode.FLOAT_ROUND, 1),
     'float-min': (Opcode.FLOAT_MIN, 2),
     'float-max': (Opcode.FLOAT_MAX, 2),
-    'complex': (Opcode.COMPLEX, 2),
     'complex?': (Opcode.COMPLEX_P, 1),
     'complex=?': (Opcode.COMPLEX_EQ_P, 2),
     'complex!=?': (Opcode.COMPLEX_NEQ_P, 2),

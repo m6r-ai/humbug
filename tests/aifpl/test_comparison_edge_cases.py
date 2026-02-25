@@ -42,10 +42,10 @@ class TestComparisonEdgeCases:
     def test_comparison_operators_complex_rejection(self, aifpl):
         """Test that typed ordered comparison operators reject complex numbers."""
         complex_expressions = [
-            "(complex 1 2)",
+            "(integer->complex 1 2)",
             "1j",
-            "(complex+ (complex 1 0) 1j)",
-            "(complex* (complex 2 0) 1j)"
+            "(complex+ (float->complex 1.0 0.0) 1j)",
+            "(complex* (float->complex 2.0 0.0) 1j)"
         ]
 
         integer_ops = ["integer<?", "integer>?", "integer<=?", "integer>=?"]

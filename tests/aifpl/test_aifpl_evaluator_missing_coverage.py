@@ -100,7 +100,7 @@ class TestEvaluatorMissingCoverage:
     def test_range_complex_arguments(self, aifpl):
         """Test range with complex number arguments."""
         with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(range (complex 1 2) 5)")
+            aifpl.evaluate("(range (integer->complex 1 2) 5)")
         assert "integer" in str(exc_info.value).lower()
 
     # ========== Builtin Function Display Tests ==========

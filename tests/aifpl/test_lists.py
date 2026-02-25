@@ -24,7 +24,7 @@ class TestLists:
         ('(list 1 (list 2 3) 4)', '(1 (2 3) 4)'),
 
         # Lists with complex numbers
-        ('(list (complex 1 2) 1j)', '(1+2j 1j)'),
+        ('(list (integer->complex 1 2) 1j)', '(1+2j 1j)'),
     ])
     def test_list_construction(self, aifpl, expression, expected):
         """Test list construction with various element types."""
@@ -272,7 +272,7 @@ class TestLists:
         ('(list? "hello")', '#f'),
         ('(list? 42)', '#f'),
         ('(list? #t)', '#f'),
-        ('(list? (complex 1 2))', '#f'),
+        ('(list? (integer->complex 1 2))', '#f'),
     ])
     def test_list_predicate(self, aifpl, expression, expected):
         """Test list? predicate for checking if value is a list."""
@@ -528,7 +528,7 @@ class TestLists:
         (list 
           42 
           3.14 
-          (complex 1 2) 
+          (integer->complex 1 2) 
           "hello" 
           #t 
           #f 

@@ -172,11 +172,12 @@ class BytecodeValidator:
             Opcode.INTEGER_BIT_XOR: (2, 1),
             Opcode.INTEGER_MIN: (2, 1),
             Opcode.INTEGER_MAX: (2, 1),
+            Opcode.INTEGER_TO_FLOAT: (1, 1),
+            Opcode.INTEGER_TO_COMPLEX: (1, 1),
             Opcode.INTEGER_TO_STRING: (1, 1),
             Opcode.INTEGER_TO_STRING_BIN: (1, 1),
             Opcode.INTEGER_TO_STRING_HEX: (1, 1),
             Opcode.INTEGER_TO_STRING_OCT: (1, 1),
-            Opcode.INTEGER_TO_FLOAT: (1, 1),
 
             # Floating point operations
             Opcode.FLOAT_P: (1, 1),
@@ -208,10 +209,10 @@ class BytecodeValidator:
             Opcode.FLOAT_MIN: (2, 1),
             Opcode.FLOAT_MAX: (2, 1),
             Opcode.FLOAT_TO_INTEGER: (1, 1),
+            Opcode.FLOAT_TO_COMPLEX: (2, 1),
             Opcode.FLOAT_TO_STRING: (1, 1),
 
             # Complex number operations
-            Opcode.COMPLEX: (2, 1),
             Opcode.COMPLEX_P: (1, 1),
             Opcode.COMPLEX_EQ_P: (2, 1),
             Opcode.COMPLEX_NEQ_P: (2, 1),

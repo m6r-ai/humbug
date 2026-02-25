@@ -145,7 +145,7 @@ class TestAIFPLCore:
     @pytest.mark.parametrize("expression,expected_type", [
         ("42", int),
         ("3.14", float),
-        ("(complex 1 2)", complex),
+        ("(integer->complex 1 2)", complex),
         ('"hello"', str),
         ("#t", bool),
         ("#f", bool),

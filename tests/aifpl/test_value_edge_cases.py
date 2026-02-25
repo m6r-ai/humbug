@@ -41,24 +41,24 @@ class TestAIFPLValueEdgeCases:
     def test_complex_number_edge_cases(self, aifpl):
         """Test complex number edge cases."""
         # Zero complex numbers
-        result = aifpl.evaluate("(complex 0 0)")
+        result = aifpl.evaluate("(integer->complex 0)")
         assert result == 0+0j
 
         # Pure real complex (should simplify to real)
-        result = aifpl.evaluate("(complex 5 0)")
+        result = aifpl.evaluate("(integer->complex 5)")
         assert result == 5+0j
 
         # Pure imaginary complex
-        result = aifpl.evaluate("(complex 0 3)")
+        result = aifpl.evaluate("(float->complex 0.0 3.0)")
         assert result == 3j
 
         # Very small imaginary parts (should simplify based on tolerance)
-        result = aifpl.evaluate("(complex 5 1e-15)")
+        result = aifpl.evaluate("(float->complex 5.0 1e-15)")
         # With default tolerance (1e-10), should simplify to real
         assert result == 5+1e-15j
 
         # Negative components
-        result = aifpl.evaluate("(complex -2 -3)")
+        result = aifpl.evaluate("(integer->complex -2 -3)")
         assert result == -2-3j
 
     def test_string_edge_cases(self, aifpl):
@@ -125,12 +125,12 @@ class TestAIFPLValueEdgeCases:
         assert isinstance(result, float)
 
         # Float to complex promotion via explicit conversion
-        result = aifpl.evaluate("(complex+ (complex 2.5 0) (complex 0 1))")
+        result = aifpl.evaluate("(complex+ (float->complex 2.5 0.0) (integer->complex 0 1))")
         assert result == 2.5+1j
         assert isinstance(result, complex)
 
         # Integer to complex promotion via explicit conversion
-        result = aifpl.evaluate("(complex+ (complex 1 0) (complex 0 1))")
+        result = aifpl.evaluate("(complex+ (integer->complex 1 0) (float->complex 0.0 1.0))")
         assert result == 1+1j
         assert isinstance(result, complex)
 
@@ -141,8 +141,8 @@ class TestAIFPLValueEdgeCases:
         assert aifpl.evaluate("(float=? 0.0 -0.0)") is True
 
         # Complex number comparisons
-        assert aifpl.evaluate("(complex=? (complex 1 2) (complex 1 2))") is True
-        assert aifpl.evaluate("(complex!=? (complex 1 2) (complex 1 3))") is True
+        assert aifpl.evaluate("(complex=? (integer->complex 1 2) (integer->complex 1 2))") is True
+        assert aifpl.evaluate("(complex!=? (integer->complex 1 2) (integer->complex 1 3))") is True
 
         # String comparisons
         assert aifpl.evaluate('(string=? "" "")') is True
@@ -161,10 +161,10 @@ class TestAIFPLValueEdgeCases:
         assert result in ["0", "1e-20", "1e-020"] or "e-" in result
 
         # Complex numbers with zero parts
-        result = aifpl.evaluate_and_format("(complex 5 0)")
+        result = aifpl.evaluate_and_format("(integer->complex 5 0)")
         assert result == "5+0j"  # Should format as real
 
-        result = aifpl.evaluate_and_format("(complex 0 3)")
+        result = aifpl.evaluate_and_format("(integer->complex 0 3)")
         assert result == "3j"  # Should format as pure imaginary
 
         # Empty structures
@@ -183,7 +183,7 @@ class TestAIFPLValueEdgeCases:
         assert aifpl.evaluate("(float? 5)") is False
 
         # Complex number predicates
-        assert aifpl.evaluate("(complex? (complex 1 2))") is True
+        assert aifpl.evaluate("(complex? (integer->complex 1 2))") is True
         assert aifpl.evaluate("(complex? 1j)") is True
         assert aifpl.evaluate("(complex? 5)") is False
 
@@ -252,7 +252,7 @@ class TestAIFPLValueEdgeCases:
         assert aifpl.evaluate("(integer=? -0 0)") is True
 
         # Complex number equality
-        assert aifpl.evaluate("(complex=? (complex 0 1) 1j)") is True
+        assert aifpl.evaluate("(complex=? (integer->complex 0 1) 1j)") is True
 
         # List equality
         assert aifpl.evaluate("(list=? (list 1 2) (list 1 2))") is True

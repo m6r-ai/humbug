@@ -47,7 +47,7 @@ class TestIntegerConversion:
     def test_integer_from_complex_error(self, aifpl):
         """Test that integer conversion from complex raises error (requires float argument)."""
         with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(float->integer (complex 3.0 0.0))")
+            aifpl.evaluate("(float->integer (float->complex 3.0 0.0))")
         assert "requires float argument" in str(exc_info.value).lower()
 
     def test_integer_from_string_error(self, aifpl):
@@ -119,7 +119,7 @@ class TestFloatConversion:
     def test_float_from_complex_error(self, aifpl):
         """Test that float conversion from complex raises error (requires integer argument)."""
         with pytest.raises(AIFPLEvalError) as exc_info:
-            aifpl.evaluate("(integer->float (complex 3 0))")
+            aifpl.evaluate("(integer->float (integer->complex 3 0))")
         assert "requires integer argument" in str(exc_info.value).lower()
 
     def test_float_from_string_error(self, aifpl):

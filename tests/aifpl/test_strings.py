@@ -400,7 +400,7 @@ class TestStrings:
         ('(integer->string 0)', '"0"'),
 
         # Complex numbers
-        ('(complex->string (complex 1 2))', '"1+2j"'),
+        ('(complex->string (float->complex 1.0 2.0))', '"1+2j"'),
         ('(complex->string 1j)', '"1j"'),
     ])
     def test_number_to_string(self, aifpl, expression, expected):

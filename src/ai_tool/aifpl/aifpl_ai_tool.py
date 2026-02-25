@@ -223,15 +223,15 @@ Syntax: (operator arg1 arg2 ...)
 - float-sqrt of negative → runtime error (use complex-sqrt instead)
 - (float-abs -3.0) → 3.0 (absolute value)
 
-### Complex arithmetic (all args must be complex; use (complex r i) to construct):
+### Complex arithmetic (all args must be complex; use (float->complex r i) to construct):
 
-- (complex+ (complex 1.0 2.0) (complex 3.0 4.0)) → 4+6j
-- (complex- (complex 5.0 3.0) (complex 2.0 1.0)) → 3+2j
-- (complex* (complex 1.0 2.0) (complex 3.0 4.0)) → -5+10j
-- (complex/ (complex 4.0 2.0) (complex 1.0 1.0)) → 3-1j
-- (complex/ (complex 2.0 0.0)) → 0.5+0j (reciprocal)
-- (complex-neg (complex 3.0 4.0)) → -3-4j
-- (complex-abs (complex 3.0 4.0)) → 5.0 (returns magnitude as float, not complex)
+- (complex+ (float->complex 1.0 2.0) (float->complex 3.0 4.0)) → 4+6j
+- (complex- (float->complex 5.0 3.0) (float->complex 2.0 1.0)) → 3+2j
+- (complex* (float->complex 1.0 2.0) (float->complex 3.0 4.0)) → -5+10j
+- (complex/ (float->complex 4.0 2.0) (float->complex 1.0 1.0)) → 3-1j
+- (complex/ (float->complex 2.0 0.0)) → 0.5+0j (reciprocal)
+- (complex-neg (float->complex 3.0 4.0)) → -3-4j
+- (complex-abs (float->complex 3.0 4.0)) → 5.0 (returns magnitude as float, not complex)
 - (complex+) → 0+0j, (complex*) → 1+0j (zero-arg identities)
 - Transcendentals: complex-sin, complex-cos, complex-tan, complex-log, complex-log10, complex-exp, complex-sqrt
 - Exponentials: complex-expt
@@ -241,8 +241,9 @@ Syntax: (operator arg1 arg2 ...)
 - Literals: 3+4j, 5j, 1j
 - Pure imaginary: 4j, -5j, 1.5e2j → 4j, -5j, 150j
 - Complex: 3+4j, 3-4j, 1e2+3e-1j → (3+4j), (3-4j), (100+0.3j)
-- (complex 3.0 4.0) → (3+4j) (construct complex from two floats)
-- Use explicit construction: (complex+ (complex 1.0 0.0) (complex 2.0 3.0)) → 3+3j
+- (float->complex 3.0 4.0) → 3+4j, (float->complex 3.0) → 3+0j (one or two floats)
+- (integer->complex 3) → 3+0j (convert integer to complex with zero imaginary part)
+- Use explicit construction: (complex+ (float->complex 1.0 0.0) (float->complex 2.0 3.0)) → 3+3j
 - (complex-real 3+4j) → 3.0, (complex-imag 3+4j) → 4.0, (complex-abs 3+4j) → 5.0
 - (complex-real z) → float real part, (complex-imag z) → float imaginary part (complex args only)
 
@@ -250,7 +251,8 @@ Syntax: (operator arg1 arg2 ...)
 
 - (float->integer x) → convert float to integer (truncates toward zero): (float->integer 3.7) → 3, (float->integer -2.9) → -2
 - (integer->float x) → convert integer to float: (integer->float 42) → 42.0, (integer->float 3) → 3.0
-- (complex real imag) → construct complex from two floats: (complex 3.0 4.0) → (3+4j)
+- (float->complex real [imag]) → construct complex from one or two floats: (float->complex 3.0 4.0) → 3+4j, (float->complex 3.0) → 3+0j
+- (integer->complex n) → construct complex from integer: (integer->complex 3) → 3+0j
 - (integer->string 42) → "42", (float->string 3.14) → "3.14", (complex->string 3+4j) → "3+4j"
 - These are the primary way to move between numeric types; there is no automatic promotion
 
@@ -324,7 +326,7 @@ Syntax: (operator arg1 arg2 ...)
 
 - (integer? 42) → #t, (integer? 3.14) → #f
 - (float? 3.14) → #t, (float? 42) → #f, (float? (float/ 1.0 2.0)) → #t
-- (complex? (complex 1 1)) → #t, (complex? 42) → #f
+- (complex? (float->complex 1.0 1.0)) → #t, (complex? 42) → #f
 - (string? "hello") → #t, (boolean? #t) → #t, (list? (list 1 2)) → #t, (alist? (alist ...)) → #t
 - (function? (lambda (x) x)) → #t, (function? integer+) → #t
 - (symbol? 'foo) → #t, (symbol? "foo") → #f

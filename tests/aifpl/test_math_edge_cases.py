@@ -102,7 +102,7 @@ class TestAIFPLMathEdgeCases:
         result = aifpl.evaluate("(complex-expt 1j 2+0j)")
         assert abs(result - (-1)) < 1e-10
 
-        result = aifpl.evaluate("(complex-expt (complex 1 1) 2+0j)")
+        result = aifpl.evaluate("(complex-expt (float->complex 1.0 1.0) 2+0j)")
         expected = (1+1j)**2
         assert abs(result - expected) < 1e-10
 
@@ -130,7 +130,7 @@ class TestAIFPLMathEdgeCases:
             aifpl.evaluate("(float-sqrt -1.0)")
 
         # Square root of complex numbers
-        result = aifpl.evaluate("(complex-sqrt (complex 3 4))")
+        result = aifpl.evaluate("(complex-sqrt (integer->complex 3 4))")
         expected = cmath.sqrt(3+4j)
         assert abs(result - expected) < 1e-10
 
@@ -194,8 +194,8 @@ class TestAIFPLMathEdgeCases:
         # Complex trigonometric identities
         # sin^2 + cos^2 = 1 should hold for complex numbers too
         z = 1 + 2j
-        result_sin = aifpl.evaluate("(complex-sin (complex 1.0 2.0))")
-        result_cos = aifpl.evaluate("(complex-cos (complex 1.0 2.0))")
+        result_sin = aifpl.evaluate("(complex-sin (float->complex 1.0 2.0))")
+        result_cos = aifpl.evaluate("(complex-cos (float->complex 1.0 2.0))")
         identity_result = result_sin**2 + result_cos**2
         assert abs(identity_result - 1) < 1e-10
 
@@ -245,7 +245,7 @@ class TestAIFPLMathEdgeCases:
         assert abs(result - expected) < 1e-10
 
         # log of complex number
-        result = aifpl.evaluate("(complex-log (complex 1 1))")
+        result = aifpl.evaluate("(complex-log (integer->complex 1 1))")
         expected = cmath.log(1+1j)
         assert abs(result - expected) < 1e-10
 
@@ -299,18 +299,18 @@ class TestAIFPLMathEdgeCases:
         assert abs(result - math.exp(-10)) < 1e-15
 
         # exp(i*pi) = -1 (Euler's identity)
-        result = aifpl.evaluate("(complex-exp (complex* 1j (complex pi 0.0)))")
+        result = aifpl.evaluate("(complex-exp (complex* 1j (float->complex pi 0.0)))")
         assert abs(result - (-1)) < 1e-10
 
         # exp(i*pi/2) = i
-        result = aifpl.evaluate("(complex-exp (complex* 1j (complex (float* pi 0.5) 0.0)))")
+        result = aifpl.evaluate("(complex-exp (complex* 1j (float->complex (float* pi 0.5) 0.0)))")
         assert abs(result - 1j) < 1e-10
 
     def test_absolute_value_edge_cases(self, aifpl):
         """Test absolute value edge cases."""
-        assert aifpl.evaluate("(complex-abs (complex 3.0 4.0))") == 5.0
+        assert aifpl.evaluate("(complex-abs (float->complex 3.0 4.0))") == 5.0
         assert aifpl.evaluate("(complex-abs 1j)") == 1.0
-        assert aifpl.evaluate("(complex-abs (complex -3.0 -4.0))") == 5.0
+        assert aifpl.evaluate("(complex-abs (float->complex -3.0 -4.0))") == 5.0
 
         # Very small numbers
         result = aifpl.evaluate("(float-abs -1e-100)")
@@ -359,19 +359,19 @@ class TestAIFPLMathEdgeCases:
 
         # Complex numbers that we deem to be real
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(float-round (complex 2.0 0.00000000000001))")
+            aifpl.evaluate("(float-round (float->complex 2.0 0.00000000000001))")
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(float-ceil (complex 2.0 0.00000000000001))")
+            aifpl.evaluate("(float-ceil (float->complex 2.0 0.00000000000001))")
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(float-floor (complex 2.0 0.00000000000001))")
+            aifpl.evaluate("(float-floor (float->complex 2.0 0.00000000000001))")
 
     def test_rounding_functions_reject_complex(self, aifpl):
         """Test that rounding functions reject complex numbers."""
         complex_values = [
-            "(complex 1 2)",
+            "(float->complex 1 2)",
             "1j",
-            "(complex 3 4)",
-            "(complex+ (complex 5 0) (complex 0 1))",
+            "(float->complex 3 4)",
+            "(complex+ (float->complex 5 0) (float->complex 0 1))",
         ]
 
         for value in complex_values:
@@ -488,7 +488,7 @@ class TestAIFPLMathEdgeCases:
 
     def test_bitwise_operations_require_integers(self, aifpl):
         """Test that bitwise operations require integer arguments."""
-        non_integer_values = ["1.5", "2.5", "(complex 1 2)", "3.14"]
+        non_integer_values = ["1.5", "2.5", "(float->complex 1 2)", "3.14"]
 
         for value in non_integer_values:
             with pytest.raises(AIFPLEvalError):
@@ -543,7 +543,7 @@ class TestAIFPLMathEdgeCases:
 
     def test_base_conversion_requires_integers(self, aifpl):
         """Test that base conversion functions require integer arguments."""
-        non_integer_values = ["3.14", "2.5", "(complex 1 2)", "1.0"]
+        non_integer_values = ["3.14", "2.5", "(float->complex 1 2)", "1.0"]
 
         for value in non_integer_values:
             with pytest.raises(AIFPLEvalError):
@@ -558,21 +558,21 @@ class TestAIFPLMathEdgeCases:
     def test_complex_number_operations_edge_cases(self, aifpl):
         """Test complex number operations edge cases."""
         # Complex number construction edge cases
-        result = aifpl.evaluate("(complex 0 0)")
+        result = aifpl.evaluate("(integer->complex 0 0)")
         assert result == 0+0j
 
         # Pure real complex (should simplify)
-        result = aifpl.evaluate("(complex 5 0)")
+        result = aifpl.evaluate("(integer->complex 5 0)")
         assert result == 5+0j
         assert isinstance(result, complex)
 
         # Pure imaginary complex
-        result = aifpl.evaluate("(complex 0 3)")
+        result = aifpl.evaluate("(integer->complex 0 3)")
         assert result == 3j
 
         # Real/imaginary part extraction edge cases
-        assert aifpl.evaluate("(complex-real (complex 3 4))") == 3
-        assert aifpl.evaluate("(complex-imag (complex 3 4))") == 4
+        assert aifpl.evaluate("(complex-real (integer->complex 3 4))") == 3
+        assert aifpl.evaluate("(complex-imag (integer->complex 3 4))") == 4
         assert aifpl.evaluate("(complex-real 42)") == 42
         assert aifpl.evaluate("(complex-imag 42)") == 0
         assert aifpl.evaluate("(complex-real 3.14)") == 3.14
@@ -581,13 +581,13 @@ class TestAIFPLMathEdgeCases:
         assert aifpl.evaluate("(complex-imag 1j)") == 1
 
         # Complex arithmetic edge cases
-        result = aifpl.evaluate("(complex+ (complex 1 2) (complex 3 4))")
+        result = aifpl.evaluate("(complex+ (integer->complex 1 2) (integer->complex 3 4))")
         assert result == 4+6j
 
-        result = aifpl.evaluate("(complex* (complex 1 2) (complex 3 4))")
+        result = aifpl.evaluate("(complex* (integer->complex 1 2) (integer->complex 3 4))")
         assert result == (1+2j)*(3+4j)
 
-        result = aifpl.evaluate("(complex/ (complex 4 2) (complex 1 1))")
+        result = aifpl.evaluate("(complex/ (integer->complex 4 2) (integer->complex 1 1))")
         expected = (4+2j)/(1+1j)
         assert abs(result - expected) < 1e-10
 

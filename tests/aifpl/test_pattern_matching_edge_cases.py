@@ -466,7 +466,7 @@ class TestAIFPLPatternMatchingEdgeCases:
 
         # Complex should match number but not integer or float
         result = aifpl.evaluate('''
-        (match (complex 1 2)
+        (match (integer->complex 1 2)
           ((integer? i) "integer")
           ((float? f) "float")
           ((complex? n) "complex")
