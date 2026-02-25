@@ -2500,7 +2500,7 @@ class AIFPLVM:
     def _op_list_null_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """NULL_P: Pop a list, push true if empty."""
+        """LIST_NULL_P: Pop a list, push true if empty."""
         value = self.stack.pop()
         list_val = self._ensure_list(value, 'list-null?')
         self.stack.append(AIFPLBoolean(list_val.is_empty()))
@@ -2509,7 +2509,7 @@ class AIFPLVM:
     def _op_list_member_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """MEMBER_P: Pop item and list (list first, item second on stack), push true if item is in list."""
+        """LIST_MEMBER_P: Pop item and list (list first, item second on stack), push true if item is in list."""
         item = self.stack.pop()
         list_val_raw = self.stack.pop()
         list_val = self._ensure_list(list_val_raw, 'list-member?')
@@ -2519,7 +2519,7 @@ class AIFPLVM:
     def _op_list_index(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """INDEX: Pop item and list (list first, item second on stack), push index or #f if not found."""
+        """LIST_INDEX: Pop item and list (list first, item second on stack), push index or #f if not found."""
         item = self.stack.pop()
         list_val_raw = self.stack.pop()
         list_val = self._ensure_list(list_val_raw, 'list-index')
@@ -2559,7 +2559,7 @@ class AIFPLVM:
     def _op_list_remove(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """REMOVE: Pop item and list (list first, item second on stack), push list with all occurrences removed."""
+        """LIST_REMOVE: Pop item and list (list first, item second on stack), push list with all occurrences removed."""
         item = self.stack.pop()
         list_val_raw = self.stack.pop()
         list_val = self._ensure_list(list_val_raw, 'list-remove')
@@ -2569,7 +2569,7 @@ class AIFPLVM:
     def _op_list_concat(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """APPEND: Pop two lists, push concatenated list."""
+        """LIST_CONCAT: Pop two lists, push concatenated list."""
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(self._ensure_list(a, 'list-concat').append_list(self._ensure_list(b, 'list-concat')))

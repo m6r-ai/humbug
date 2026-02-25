@@ -174,7 +174,7 @@ Syntax: (operator arg1 arg2 ...)
 - Mixed-type lists supported: (list 1 \"hi\" #t)
 - String literals support escapes: \\n, \\t, \\\", \\\\, \\uXXXX
 - Comments: use semicolon (;) for single-line comments, e.g., ; This is a comment
-- Numeric literals: 42 (integer), 3.14 (float), 3+4j (complex), 5j (pure imaginary), j (1j)
+- Numeric literals: 42 (integer), 3.14 (float), 3+4j (complex number), 5j (pure imaginary), j (1j)
 - Other literals: #xFF (hex), #b1010 (binary), #o755 (octal), \"hello\" (string), #t/#f (boolean), () (empty list)
 - Constants: pi, e
 
@@ -240,9 +240,6 @@ Syntax: (operator arg1 arg2 ...)
 - Literals: 3+4j, 5j, 1j
 - Pure imaginary: 4j, -5j, 1.5e2j → 4j, -5j, 150j
 - Complex: 3+4j, 3-4j, 1e2+3e-1j → (3+4j), (3-4j), (100+0.3j)
-- (float->complex 3.0 4.0) → 3+4j, (float->complex 3.0) → 3+0j (one or two floats)
-- (integer->complex 3) → 3+0j (convert integer to complex with zero imaginary part)
-- Use explicit construction: (complex+ (float->complex 1.0 0.0) (float->complex 2.0 3.0)) → 3+3j
 - (complex-real 3+4j) → 3.0, (complex-imag 3+4j) → 4.0, (complex-abs 3+4j) → 5.0
 - (complex-real z) → float real part, (complex-imag z) → float imaginary part (complex args only)
 
@@ -251,7 +248,7 @@ Syntax: (operator arg1 arg2 ...)
 - (float->integer x) → convert float to integer (truncates toward zero): (float->integer 3.7) → 3, (float->integer -2.9) → -2
 - (integer->float x) → convert integer to float: (integer->float 42) → 42.0, (integer->float 3) → 3.0
 - (float->complex real [imag]) → construct complex from one or two floats: (float->complex 3.0 4.0) → 3+4j, (float->complex 3.0) → 3+0j
-- (integer->complex n) → construct complex from integer: (integer->complex 3) → 3+0j
+- (integer->complex real [imag]) → construct complex from one or two integers: (integer->complex 3) → 3+0j, (integer->complex 1 -2) → 1-2j
 - (integer->string 42) → "42", (float->string 3.14) → "3.14", (complex->string 3+4j) → "3+4j"
 - These are the primary way to move between numeric types; there is no automatic promotion
 

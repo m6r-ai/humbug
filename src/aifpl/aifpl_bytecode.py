@@ -293,7 +293,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'integer-min': (Opcode.INTEGER_MIN, 2),
     'integer-max': (Opcode.INTEGER_MAX, 2),
     'integer->float': (Opcode.INTEGER_TO_FLOAT, 1),
-    'integer->complex': (Opcode.INTEGER_TO_COMPLEX, 1),
+    'integer->complex': (Opcode.INTEGER_TO_COMPLEX, 2),
     'integer->string': (Opcode.INTEGER_TO_STRING, 1),
     'bin': (Opcode.INTEGER_TO_STRING_BIN, 1),
     'hex': (Opcode.INTEGER_TO_STRING_HEX, 1),
