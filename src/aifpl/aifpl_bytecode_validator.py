@@ -137,6 +137,12 @@ class BytecodeValidator:
             Opcode.FUNCTION_EQ_P: (2, 1),
             Opcode.FUNCTION_NEQ_P: (2, 1),
 
+            # Symbol
+            Opcode.SYMBOL_P: (1, 1),
+            Opcode.SYMBOL_EQ_P: (2, 1),
+            Opcode.SYMBOL_NEQ_P: (2, 1),
+            Opcode.SYMBOL_TO_STRING: (1, 1),
+
             # Boolean operations
             Opcode.BOOLEAN_P: (1, 1),
             Opcode.BOOLEAN_EQ_P: (2, 1),

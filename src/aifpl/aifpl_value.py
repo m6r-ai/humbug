@@ -34,6 +34,61 @@ class AIFPLValue(ABC):
 
 
 @dataclass(frozen=True)
+class AIFPLSymbol(AIFPLValue):
+    """Represents symbols that require environment lookup."""
+    name: str
+
+    def to_python(self) -> str:
+        """Symbols convert to their name string."""
+        return self.name
+
+    def type_name(self) -> str:
+        return "symbol"
+
+    def describe(self) -> str:
+        return self.name
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return f'AIFPLSymbol({self.name!r})'
+
+
+@dataclass(frozen=True)
+class AIFPLFunction(AIFPLValue):
+    """
+    Represents a function (both user-defined lambdas and builtins).
+
+    This is a first-class value that can be passed around as a value.
+    """
+    parameters: Tuple[str, ...]
+    name: str | None = None
+    bytecode: Any = None  # CodeObject for bytecode-compiled functions
+    captured_values: Tuple[Any, ...] = ()  # Captured free variables for closures
+    is_variadic: bool = False  # True if function accepts variable number of args
+    parent_frame: Any = None  # Parent frame for LOAD_PARENT_VAR (lexical parent)
+
+    def to_python(self) -> 'AIFPLFunction | str':
+        """Functions return themselves (or their name for builtins as string)."""
+        return self
+
+    def type_name(self) -> str:
+        return "function"
+
+    def describe(self) -> str:
+        """Return a human-readable description of this function."""
+        param_str = ', '.join(self.parameters)
+        if self.is_variadic and len(self.parameters) > 0:
+            # Last parameter is variadic (rest parameter)
+            regular_params = ', '.join(self.parameters[:-1]) if len(self.parameters) > 1 else ''
+            rest_param = self.parameters[-1]
+            param_str = f"{regular_params} . {rest_param}".strip(' .')
+
+        return f"<lambda ({param_str})>"
+
+
+@dataclass(frozen=True)
 class AIFPLBoolean(AIFPLValue):
     """Represents boolean values."""
     value: bool
@@ -456,58 +511,3 @@ class AIFPLAList(AIFPLValue):
             example='(alist ("name" "Alice") ("age" 30))',
             suggestion="Use strings for most keys"
         )
-
-
-@dataclass(frozen=True)
-class AIFPLSymbol(AIFPLValue):
-    """Represents symbols that require environment lookup."""
-    name: str
-
-    def to_python(self) -> str:
-        """Symbols convert to their name string."""
-        return self.name
-
-    def type_name(self) -> str:
-        return "symbol"
-
-    def describe(self) -> str:
-        return self.name
-
-    def __str__(self) -> str:
-        return self.name
-
-    def __repr__(self) -> str:
-        return f'AIFPLSymbol({self.name!r})'
-
-
-@dataclass(frozen=True)
-class AIFPLFunction(AIFPLValue):
-    """
-    Represents a function (both user-defined lambdas and builtins).
-
-    This is a first-class value that can be passed around as a value.
-    """
-    parameters: Tuple[str, ...]
-    name: str | None = None
-    bytecode: Any = None  # CodeObject for bytecode-compiled functions
-    captured_values: Tuple[Any, ...] = ()  # Captured free variables for closures
-    is_variadic: bool = False  # True if function accepts variable number of args
-    parent_frame: Any = None  # Parent frame for LOAD_PARENT_VAR (lexical parent)
-
-    def to_python(self) -> 'AIFPLFunction | str':
-        """Functions return themselves (or their name for builtins as string)."""
-        return self
-
-    def type_name(self) -> str:
-        return "function"
-
-    def describe(self) -> str:
-        """Return a human-readable description of this function."""
-        param_str = ', '.join(self.parameters)
-        if self.is_variadic and len(self.parameters) > 0:
-            # Last parameter is variadic (rest parameter)
-            regular_params = ', '.join(self.parameters[:-1]) if len(self.parameters) > 1 else ''
-            rest_param = self.parameters[-1]
-            param_str = f"{regular_params} . {rest_param}".strip(' .')
-
-        return f"<lambda ({param_str})>"

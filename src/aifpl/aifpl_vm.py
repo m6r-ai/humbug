@@ -12,7 +12,7 @@ from aifpl.aifpl_bytecode_validator import validate_bytecode
 from aifpl.aifpl_error import AIFPLEvalError, AIFPLCancelledException
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLBoolean, AIFPLString, AIFPLList, AIFPLAList, AIFPLFunction,
-    AIFPLInteger, AIFPLComplex, AIFPLFloat
+    AIFPLInteger, AIFPLComplex, AIFPLFloat, AIFPLSymbol
 )
 
 
@@ -184,6 +184,10 @@ class AIFPLVM:
         table[Opcode.FUNCTION_MIN_ARITY] = self._op_function_min_arity
         table[Opcode.FUNCTION_VARIADIC_P] = self._op_function_variadic_p
         table[Opcode.FUNCTION_ACCEPTS_P] = self._op_function_accepts_p
+        table[Opcode.SYMBOL_P] = self._op_symbol_p
+        table[Opcode.SYMBOL_EQ_P] = self._op_symbol_eq_p
+        table[Opcode.SYMBOL_NEQ_P] = self._op_symbol_neq_p
+        table[Opcode.SYMBOL_TO_STRING] = self._op_symbol_to_string
         table[Opcode.BOOLEAN_P] = self._op_boolean_p
         table[Opcode.BOOLEAN_EQ_P] = self._op_boolean_eq_p
         table[Opcode.BOOLEAN_NEQ_P] = self._op_boolean_neq_p
@@ -1016,6 +1020,65 @@ class AIFPLVM:
         else:
             result = n.value == code.param_count
         self.stack.append(AIFPLBoolean(result))
+        return None
+
+    def _op_symbol_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """SYMBOL_P: Check if value is a symbol."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLSymbol)))
+        return None
+
+    def _op_symbol_eq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """SYMBOL_EQ_P: Return #t if two symbols have the same name."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        if not isinstance(a, AIFPLSymbol):
+            raise AIFPLEvalError(
+                message="symbol=?: arguments must be symbols",
+                received=f"First argument: {a.describe()} ({a.type_name()})"
+            )
+        if not isinstance(b, AIFPLSymbol):
+            raise AIFPLEvalError(
+                message="symbol=?: arguments must be symbols",
+                received=f"Second argument: {b.describe()} ({b.type_name()})"
+            )
+        self.stack.append(AIFPLBoolean(a.name == b.name))
+        return None
+
+    def _op_symbol_neq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """SYMBOL_NEQ_P: Return #t if two symbols have different names."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        if not isinstance(a, AIFPLSymbol):
+            raise AIFPLEvalError(
+                message="symbol!=?: arguments must be symbols",
+                received=f"First argument: {a.describe()} ({a.type_name()})"
+            )
+        if not isinstance(b, AIFPLSymbol):
+            raise AIFPLEvalError(
+                message="symbol!=?: arguments must be symbols",
+                received=f"Second argument: {b.describe()} ({b.type_name()})"
+            )
+        self.stack.append(AIFPLBoolean(a.name != b.name))
+        return None
+
+    def _op_symbol_to_string(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """SYMBOL_TO_STRING: Pop a symbol, push its name as a string."""
+        a = self.stack.pop()
+        if not isinstance(a, AIFPLSymbol):
+            raise AIFPLEvalError(
+                message="symbol->string: argument must be a symbol",
+                received=f"Got: {a.describe()} ({a.type_name()})"
+            )
+        self.stack.append(AIFPLString(a.name))
         return None
 
     def _op_boolean_p(  # pylint: disable=useless-return

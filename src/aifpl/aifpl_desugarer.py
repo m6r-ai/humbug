@@ -855,7 +855,7 @@ class AIFPLDesugarer:
             # Validate type predicate
             valid_predicates = {
                 'number?', 'integer?', 'float?', 'complex?',
-                'string?', 'boolean?', 'list?', 'alist?', 'function?'
+                'string?', 'boolean?', 'list?', 'alist?', 'function?', 'symbol?'
             }
 
             assert type_pred in valid_predicates, f"Unknown type predicate: {type_pred} (should be validated by semantic analyzer)"

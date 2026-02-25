@@ -615,7 +615,7 @@ class AIFPLSemanticAnalyzer:
         # Validate type predicate
         type_predicates = {
             'number?', 'integer?', 'float?', 'complex?',
-            'string?', 'boolean?', 'list?', 'alist?', 'function?'
+            'string?', 'boolean?', 'list?', 'alist?', 'function?', 'symbol?'
         }
 
         # Check for type pattern: (type? var)

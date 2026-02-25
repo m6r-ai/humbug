@@ -321,6 +321,16 @@ Syntax: (operator arg1 arg2 ...)
 - (complex? (complex 1 1)) → #t, (complex? 42) → #f
 - (string? "hello") → #t, (boolean? #t) → #t, (list? (list 1 2)) → #t, (alist? (alist ...)) → #t
 - (function? (lambda (x) x)) → #t, (function? integer+) → #t
+- (symbol? 'foo) → #t, (symbol? "foo") → #f
+
+## Symbol operations:
+
+- (symbol? x) → #t if x is a symbol (produced by quote)
+- (symbol=? a b) → #t if a and b are the same symbol
+- (symbol!=? a b) → #t if a and b are different symbols
+- (symbol->string 'foo) → "foo" (extracts the symbol name as a string)
+- Symbols are produced only by quote: 'foo, '(a b c) contains symbols a, b, c
+- Example: (map symbol->string '(foo bar baz)) → ("foo" "bar" "baz")
 
 ## Function operations:
 
@@ -425,6 +435,15 @@ Syntax: (operator arg1 arg2 ...)
 - Multiple messages: (trace \"x=\" x \"y=\" y (integer+ x y))
 - Useful for debugging recursive functions and complex algorithms
 - Trace output shows execution order, helping identify logic issues
+
+## Raising errors:
+
+- (error "message") → special form that raises a runtime error with the given message
+- The argument must be a string literal (not a variable or expression)
+- Raises immediately; no value is ever returned
+- Valid in any expression position, including inside lambda bodies, let bindings, and match arms
+- Used to signal invalid arguments or unrecoverable conditions
+- Example: (if (integer<? n 0) (error "n must be non-negative") (float-sqrt (integer->float n)))
 
 ## Important notes:
 

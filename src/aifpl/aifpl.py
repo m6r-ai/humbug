@@ -408,6 +408,10 @@ class AIFPL:
                                                  (if (list-null? lst) acc
                                                      (loop (list-rest lst) (string-concat acc (list-first lst)))))))
                                   (loop (list-rest args) (list-first args)))))""",
+        'string-slice': """(lambda (str start . rest)
+                             (if (list-null? rest)
+                                 (string-slice str start (string-length str))
+                                 (string-slice str start (list-first rest))))""",
         'string->list': """(lambda (str . rest)
                              (string->list str (if (list-null? rest) "" (list-first rest))))""",
         'list': """(lambda (. args) args)""",
@@ -439,6 +443,10 @@ class AIFPL:
                                                (if (list-null? lst) acc
                                                    (loop (list-rest lst) (list-concat acc (list-first lst)))))))
                                 (loop (list-rest args) (list-first args)))))""",
+        'list-slice': """(lambda (lst start . rest)
+                             (if (list-null? rest)
+                                 (list-slice lst start (list-length lst))
+                                 (list-slice lst start (list-first rest))))""",
         'list->string': """(lambda (lst . rest)
                              (list->string lst (if (list-null? rest) "" (list-first rest))))""",
         'alist': """(lambda (. args)
@@ -479,14 +487,6 @@ class AIFPL:
                           (alist-get a-list key (if (list-null? rest) #f (list-first rest))))""",
         'range': """(lambda (start end . rest)
                       (range start end (if (list-null? rest) 1 (list-first rest))))""",
-        'string-slice': """(lambda (str start . rest)
-                             (if (list-null? rest)
-                                 (string-slice str start (string-length str))
-                                 (string-slice str start (list-first rest))))""",
-        'list-slice': """(lambda (lst start . rest)
-                             (if (list-null? rest)
-                                 (list-slice lst start (list-length lst))
-                                 (list-slice lst start (list-first rest))))""",
         'map': """(lambda (f lst)
                     (letrec ((helper (lambda (f lst acc)
                                        (if (list-null? lst) (list-reverse acc)
@@ -516,7 +516,7 @@ class AIFPL:
     }
 
     # Mathematical constants
-    CONSTANTS = {
+    CONSTANTS: Dict[str, AIFPLValue] = {
         'pi': AIFPLFloat(math.pi),
         'e': AIFPLFloat(math.e),
     }

@@ -54,6 +54,13 @@ class Opcode(IntEnum):
     FUNCTION_ACCEPTS_P = auto()
                              # (function-accepts? f n) → boolean
 
+    # Symbol operations
+    SYMBOL_P = auto()        # Check if symbol: (symbol? x)
+    SYMBOL_EQ_P = auto()     # symbol=? a b
+    SYMBOL_NEQ_P = auto()    # symbol!=? a b
+    SYMBOL_TO_STRING = auto()
+                             # Convert symbol to string: (symbol->string sym)
+
     # Boolean operations
     BOOLEAN_P = auto()       # Check if boolean
     BOOLEAN_EQ_P = auto()    # boolean=? a b
@@ -337,6 +344,10 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'string-concat': (Opcode.STRING_CONCAT, 2),
     'string-slice': (Opcode.STRING_SLICE, 3),
     'string-replace': (Opcode.STRING_REPLACE, 3),
+    'symbol?': (Opcode.SYMBOL_P, 1),
+    'symbol=?': (Opcode.SYMBOL_EQ_P, 2),
+    'symbol!=?': (Opcode.SYMBOL_NEQ_P, 2),
+    'symbol->string': (Opcode.SYMBOL_TO_STRING, 1),
     'list?': (Opcode.LIST_P, 1),
     'list=?': (Opcode.LIST_EQ_P, 2),
     'list!=?': (Opcode.LIST_NEQ_P, 2),
