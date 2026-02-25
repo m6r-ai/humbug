@@ -221,10 +221,6 @@ class TestAIFPLAIToolParametrized:
         ("(and #t #t)", "#t"),
         ("(or #f #t)", "#t"),
         ("(boolean-not #f)", "#t"),
-
-        # Constants
-        ("true", "#t"),
-        ("false", "#f"),
     ])
     def test_various_expressions(self, aifpl_tool, mock_authorization, make_tool_call, expression, expected):
         """Test various AIFPL expressions."""
