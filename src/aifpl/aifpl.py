@@ -122,14 +122,12 @@ class AIFPL:
                                                 (loop (list-rest lst) (integer+ acc (list-first lst)))))))
                              (loop (list-rest args) (list-first args)))))""",
         'integer-': """(lambda (. args)
-                         (if (list-null? args)
-                           (error "Function 'integer-' requires at least 1 argument, got 0")
-                           (if (list-null? (list-rest args))
-                             (integer-neg (list-first args))
-                             (letrec ((loop (lambda (lst acc)
-                                              (if (list-null? lst) acc
-                                                  (loop (list-rest lst) (integer- acc (list-first lst)))))))
-                               (loop (list-rest args) (list-first args))))))""",
+                         (if (integer<? (list-length args) 2)
+                           (error "Function 'integer-' requires at least 2 arguments")
+                           (letrec ((loop (lambda (lst acc)
+                                            (if (list-null? lst) acc
+                                                (loop (list-rest lst) (integer- acc (list-first lst)))))))
+                             (loop (list-rest args) (list-first args)))))""",
         'integer*': """(lambda (. args)
                          (if (list-null? args) 1
                            (letrec ((loop (lambda (lst acc)
@@ -245,14 +243,12 @@ class AIFPL:
                                               (loop (list-rest lst) (float+ acc (list-first lst)))))))
                            (loop (list-rest args) (list-first args)))))""",
         'float-': """(lambda (. args)
-                       (if (list-null? args)
-                         (error "Function 'float-' requires at least 1 argument, got 0")
-                         (if (list-null? (list-rest args))
-                           (float-neg (list-first args))
-                           (letrec ((loop (lambda (lst acc)
-                                            (if (list-null? lst) acc
-                                                (loop (list-rest lst) (float- acc (list-first lst)))))))
-                             (loop (list-rest args) (list-first args))))))""",
+                       (if (integer<? (list-length args) 2)
+                         (error "Function 'float-' requires at least 2 arguments")
+                         (letrec ((loop (lambda (lst acc)
+                                          (if (list-null? lst) acc
+                                              (loop (list-rest lst) (float- acc (list-first lst)))))))
+                           (loop (list-rest args) (list-first args)))))""",
         'float*': """(lambda (. args)
                        (if (list-null? args) 1.0
                          (letrec ((loop (lambda (lst acc)
@@ -319,14 +315,12 @@ class AIFPL:
                                                 (loop (list-rest lst) (complex+ acc (list-first lst)))))))
                              (loop (list-rest args) (list-first args)))))""",
         'complex-': """(lambda (. args)
-                         (if (list-null? args)
-                           (error "Function 'complex-' requires at least 1 argument, got 0")
-                           (if (list-null? (list-rest args))
-                             (complex-neg (list-first args))
-                             (letrec ((loop (lambda (lst acc)
-                                              (if (list-null? lst) acc
-                                                  (loop (list-rest lst) (complex- acc (list-first lst)))))))
-                               (loop (list-rest args) (list-first args))))))""",
+                         (if (integer<? (list-length args) 2)
+                           (error "Function 'complex-' requires at least 2 arguments")
+                           (letrec ((loop (lambda (lst acc)
+                                            (if (list-null? lst) acc
+                                                (loop (list-rest lst) (complex- acc (list-first lst)))))))
+                             (loop (list-rest args) (list-first args)))))""",
         'complex*': """(lambda (. args)
                          (if (list-null? args)
                            (error "Function 'complex*' requires at least 1 argument, got 0")

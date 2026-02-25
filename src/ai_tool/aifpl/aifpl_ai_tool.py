@@ -199,7 +199,7 @@ Syntax: (operator arg1 arg2 ...)
 
 - (integer+ 1 2 3) → 6, (integer- 10 3) → 7, (integer* 2 3 4) → 24
 - (integer/ 7 3) → 2 (floor division), (integer/ -7 2) → -4
-- (integer- 5) → -5 (unary negation), (integer-neg 5) → -5
+- (integer-neg 5) → -5 (unary negation); (integer- 5) is an error (requires 2+ args)
 - (integer+) → 0, (integer*) → 1 (zero-arg identities)
 - (integer% 7 3) → 1 (modulo), (integer% -7 2) → 1, (integer% 7 -3) → -2 (result takes sign of divisor)
 - (integer-abs -5) → 5 (absolute value)
@@ -210,7 +210,7 @@ Syntax: (operator arg1 arg2 ...)
 
 - (float+ 1.0 2.0 3.0) → 6.0, (float- 10.0 3.0) → 7.0
 - (float* 2.0 3.0) → 6.0, (float/ 10.0 4.0) → 2.5
-- (float/ 4.0) → 0.25 (reciprocal), (float-neg 3.0) → -3.0
+- (float-neg 3.0) → -3.0; (float- 3.0) and (float/ 4.0) are errors (require 2+ args)
 - (float-expt 2.0 10.0) → 1024.0
 - (float+) → 0.0, (float*) → 1.0 (zero-arg identities)
 - (float// 7.0 2.0) → 3.0 (floor division), (float% 7.0 3.0) → 1.0 (modulo)
@@ -225,13 +225,12 @@ Syntax: (operator arg1 arg2 ...)
 
 ### Complex arithmetic (all args must be complex; use (float->complex r i) to construct):
 
-- (complex+ (float->complex 1.0 2.0) (float->complex 3.0 4.0)) → 4+6j
+- (complex+ (float->complex 1.0 2.0) 3+4j) → 4+6j
 - (complex- (float->complex 5.0 3.0) (float->complex 2.0 1.0)) → 3+2j
-- (complex* (float->complex 1.0 2.0) (float->complex 3.0 4.0)) → -5+10j
-- (complex/ (float->complex 4.0 2.0) (float->complex 1.0 1.0)) → 3-1j
-- (complex/ (float->complex 2.0 0.0)) → 0.5+0j (reciprocal)
-- (complex-neg (float->complex 3.0 4.0)) → -3-4j
-- (complex-abs (float->complex 3.0 4.0)) → 5.0 (returns magnitude as float, not complex)
+- (complex* 1+2j (float->complex 3.0 4.0)) → -5+10j
+- (complex/ 4.0+2.0j (float->complex 1.0 1.0)) → 3-1j
+- (complex-neg 3.0+4.0j) → -3-4j
+- (complex-abs 3.0+4.0j) → 5.0 (returns magnitude as float, not complex)
 - (complex+) → 0+0j, (complex*) → 1+0j (zero-arg identities)
 - Transcendentals: complex-sin, complex-cos, complex-tan, complex-log, complex-log10, complex-exp, complex-sqrt
 - Exponentials: complex-expt
@@ -297,7 +296,6 @@ Syntax: (operator arg1 arg2 ...)
 ## List operations:
 
 - Uses proper lists only, not cons cells
-- Construction: (list 1 2 3), (list-prepend lst item), (list-append lst item), (list-concat lst1 lst2)
 - Construction: (list 1 2 3), (list-prepend lst item), (list-append lst item), (list-concat lst1 lst2), (list-concat) → ()
 - (list-prepend (list 2 3) 1) → (1 2 3), (list-append (list 1 2) 3) → (1 2 3)
 - (list-concat (list 1 2) (list 3 4)) → (1 2 3 4), (list-concat) → () (zero-arg identity)

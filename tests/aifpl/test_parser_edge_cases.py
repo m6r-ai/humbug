@@ -286,9 +286,6 @@ class TestAIFPLParserEdgeCases:
         result = aifpl.evaluate("(integer+ 5)")
         assert result == 5
 
-        result = aifpl.evaluate("(integer- 5)")  # Unary minus
-        assert result == -5
-
         # Many argument functions
         result = aifpl.evaluate("(integer+ 1 2 3 4 5 6 7 8 9 10)")
         assert result == 55

@@ -130,48 +130,26 @@ class TestDesugarerOneArg:
     # --- subtraction: single arg desugars to (op 0 x) ---
 
     def test_integer_sub_one_arg_negation(self):
-        result = desugar("(integer- 4)")
-        assert op_name(result) == "integer-"
-        assert isinstance(result, AIFPLASTList)
-        assert len(result.elements) == 3
-        zero = result.elements[1]
-        assert isinstance(zero, AIFPLASTInteger)
-        assert zero.value == 0
+        with pytest.raises(AIFPLEvalError):
+             desugar("(integer- 4)")
 
     def test_float_sub_one_arg_negation(self):
-        result = desugar("(float- 4.0)")
-        assert op_name(result) == "float-"
-        zero = result.elements[1]
-        assert isinstance(zero, AIFPLASTFloat)
-        assert zero.value == 0.0
+        with pytest.raises(AIFPLEvalError):
+            desugar("(float- 4.0)")
 
     def test_complex_sub_one_arg_negation(self):
-        result = desugar("(complex- (float->complex 1 2))")
-        assert op_name(result) == "complex-"
-        zero = result.elements[1]
-        assert isinstance(zero, AIFPLASTComplex)
-        assert zero.value == 0+0j
+        with pytest.raises(AIFPLEvalError):
+            desugar("(complex- (float->complex 1 2))")
 
-    # --- division: reciprocal for float/, complex/; error path for integer/ ---
+    def test_float_div_one_arg_falls_through(self):
+        with pytest.raises(AIFPLEvalError):
+            desugar("(float/ 4.0)")
 
-    def test_float_div_one_arg_reciprocal(self):
-        result = desugar("(float/ 4.0)")
-        assert op_name(result) == "float/"
-        one = result.elements[1]
-        assert isinstance(one, AIFPLASTFloat)
-        assert one.value == 1.0
-
-    def test_complex_div_one_arg_reciprocal(self):
-        result = desugar("(complex/ (float->complex 2 0))")
-        assert op_name(result) == "complex/"
-        one = result.elements[1]
-        assert isinstance(one, AIFPLASTComplex)
-        assert one.value == 1+0j
+    def test_complex_div_one_arg_falls_through(self):
+        with pytest.raises(AIFPLEvalError):
+            desugar("(complex/ (float->complex 2 0))")
 
     def test_integer_div_one_arg_falls_through(self):
-        # (integer/ x) has no sensible reciprocal (floor(1/x) == 0 for x > 1).
-        # The semantic analyser enforces min_args=2 for integer/, so a 1-arg
-        # call is rejected before the desugarer is reached.
         with pytest.raises(AIFPLEvalError):
             desugar("(integer/ 4)")
 
@@ -272,9 +250,6 @@ class TestIntegerOpsEval:
         # one-arg identity
         ("(integer+ 7)", "7"),
         ("(integer* 5)", "5"),
-        # unary negation
-        ("(integer- 4)", "-4"),
-        ("(integer- -3)", "3"),
         # binary
         ("(integer+ 3 4)", "7"),
         ("(integer- 10 3)", "7"),
@@ -319,12 +294,6 @@ class TestFloatOpsEval:
         # one-arg identity
         ("(float+ 3.5)", "3.5"),
         ("(float* 2.5)", "2.5"),
-        # unary negation
-        ("(float- 4.0)", "-4.0"),
-        ("(float- -3.0)", "3.0"),
-        # reciprocal
-        ("(float/ 4.0)", "0.25"),
-        ("(float/ 2.0)", "0.5"),
         # binary
         ("(float+ 1.5 2.5)", "4.0"),
         ("(float- 5.0 2.0)", "3.0"),
@@ -362,11 +331,6 @@ class TestComplexOpsEval:
         # one-arg identity
         ("(complex+ (integer->complex 3 4))", "3+4j"),
         ("(complex* (integer->complex 2 1))", "2+1j"),
-        # unary negation
-        ("(complex- (integer->complex 3 4))", "-3-4j"),
-        ("(complex- (integer->complex -1 -2))", "1+2j"),
-        # reciprocal
-        ("(complex/ (integer->complex 2 0))", "0.5+0j"),
         # binary
         ("(complex+ (integer->complex 1 2) (integer->complex 3 4))", "4+6j"),
         ("(complex- (integer->complex 5 3) (integer->complex 2 1))", "3+2j"),
@@ -404,13 +368,6 @@ class TestFirstClassUse:
         result = aifpl.evaluate_and_format("(fold float* 1.0 (list 2.0 3.0 4.0))")
         assert result == "24.0"
 
-    def test_map_integer_negate(self, aifpl):
-        # integer- as a first-class unary negation via partial application
-        result = aifpl.evaluate_and_format(
-            "(map (lambda (x) (integer- x)) (list 1 2 3))"
-        )
-        assert result == "(-1 -2 -3)"
-
     def test_fold_complex_add(self, aifpl):
         result = aifpl.evaluate_and_format(
             "(fold complex+ (integer->complex 0 0) (list (integer->complex 1 0) (integer->complex 0 1) (integer->complex 1 1)))"
@@ -445,7 +402,6 @@ class TestTypeEnforcement:
         # integer ops with wrong types
         "(integer+ 1 1.0)",
         "(integer+ 1 1j)",
-        "(integer- 1 1.0)",
         "(integer* 1 1j)",
         "(integer/ 4 2.0)",
         # float ops with wrong types

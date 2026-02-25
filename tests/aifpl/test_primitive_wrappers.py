@@ -63,7 +63,6 @@ class TestPrimitiveWrappers:
         # Single-arg cases
         assert aifpl.evaluate("(let ((add integer+)) (add 5))") == 5   # Identity
         assert aifpl.evaluate("(let ((mul integer*)) (mul 5))") == 5   # Identity
-        assert aifpl.evaluate("(let ((sub integer-)) (sub 5))") == -5  # Negation
 
         # integer/ requires exactly 2 args — single arg should error
         with pytest.raises(AIFPLEvalError):

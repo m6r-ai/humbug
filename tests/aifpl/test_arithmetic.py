@@ -48,10 +48,6 @@ class TestArithmetic:
         ("(integer- 5 3)", "2"),
         ("(integer- 10 3 2)", "5"),  # Left associative: ((10 - 3) - 2)
 
-        # Unary minus
-        ("(integer- 5)", "-5"),
-        ("(integer- -3)", "3"),
-
         # Multiple arguments
         ("(integer- 10 1 2 3)", "4"),  # ((((10 - 1) - 2) - 3)
     ])
