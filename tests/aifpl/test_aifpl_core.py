@@ -97,8 +97,8 @@ class TestAIFPLCore:
         assert result == 1j
 
         # Test boolean constants
-        assert aifpl.evaluate("true") is True
-        assert aifpl.evaluate("false") is False
+        assert aifpl.evaluate("#t") is True
+        assert aifpl.evaluate("#f") is False
 
     def test_empty_input_error(self, aifpl):
         """Test that empty input raises appropriate error."""

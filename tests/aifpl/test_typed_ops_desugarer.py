@@ -357,7 +357,7 @@ class TestComplexOpsEval:
 
     @pytest.mark.parametrize("expr,expected", [
         # zero-arg identity
-        ("(complex+)", "0j"),
+        ("(complex+)", "0+0j"),
         ("(complex*)", "1+0j"),
         # one-arg identity
         ("(complex+ (complex 3 4))", "3+4j"),

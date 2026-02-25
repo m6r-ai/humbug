@@ -91,12 +91,6 @@ class TestAIFPLValueEdgeCases:
 
     def test_boolean_edge_cases(self, aifpl):
         """Test boolean value edge cases."""
-        # Standard booleans
-        assert aifpl.evaluate("#t") is True
-        assert aifpl.evaluate("#f") is False
-        assert aifpl.evaluate("true") is True
-        assert aifpl.evaluate("false") is False
-
         # Boolean operations with edge cases
         assert aifpl.evaluate("(and)") is True  # Identity for and
         assert aifpl.evaluate("(or)") is False  # Identity for or

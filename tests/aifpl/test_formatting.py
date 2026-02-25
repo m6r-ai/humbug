@@ -82,8 +82,6 @@ class TestFormatting:
         # Boolean formatting
         ("#t", "#t"),
         ("#f", "#f"),
-        ("true", "#t"),  # Constant should format as #t
-        ("false", "#f"),  # Constant should format as #f
 
         # Boolean operations
         ("(and #t #t)", "#t"),

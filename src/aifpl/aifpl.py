@@ -9,7 +9,7 @@ from contextlib import contextmanager
 
 from aifpl.aifpl_compiler import AIFPLCompiler
 from aifpl.aifpl_ast import AIFPLASTNode
-from aifpl.aifpl_value import AIFPLFunction, AIFPLFloat, AIFPLBoolean, AIFPLValue
+from aifpl.aifpl_value import AIFPLFunction, AIFPLFloat, AIFPLValue
 from aifpl.aifpl_vm import AIFPLVM, AIFPLTraceWatcher
 from aifpl.aifpl_error import AIFPLModuleNotFoundError, AIFPLModuleError, AIFPLCircularImportError
 
@@ -144,23 +144,26 @@ class AIFPL:
                                                 (loop (list-rest lst) (integer/ acc (list-first lst)))))))
                              (loop (list-rest args) (list-first args)))))""",
         'bit-or': """(lambda (. args)
-                       (if (list-null? args) 0
+                       (if (integer<? (list-length args) 2)
+                         (error "Function 'bit-or' requires at least 2 arguments")
                          (letrec ((loop (lambda (lst acc)
                                           (if (list-null? lst) acc
                                               (loop (list-rest lst) (bit-or acc (list-first lst)))))))
                            (loop (list-rest args) (list-first args)))))""",
         'bit-and': """(lambda (. args)
-                        (if (list-null? args) 0
-                          (letrec ((loop (lambda (lst acc)
-                                           (if (list-null? lst) acc
-                                               (loop (list-rest lst) (bit-and acc (list-first lst)))))))
-                            (loop (list-rest args) (list-first args)))))""",
+                       (if (integer<? (list-length args) 2)
+                         (error "Function 'bit-and' requires at least 2 arguments")
+                         (letrec ((loop (lambda (lst acc)
+                                          (if (list-null? lst) acc
+                                              (loop (list-rest lst) (bit-and acc (list-first lst)))))))
+                           (loop (list-rest args) (list-first args)))))""",
         'bit-xor': """(lambda (. args)
-                        (if (list-null? args) 0
-                          (letrec ((loop (lambda (lst acc)
-                                           (if (list-null? lst) acc
-                                               (loop (list-rest lst) (bit-xor acc (list-first lst)))))))
-                            (loop (list-rest args) (list-first args)))))""",
+                       (if (integer<? (list-length args) 2)
+                         (error "Function 'bit-xor' requires at least 2 arguments")
+                         (letrec ((loop (lambda (lst acc)
+                                          (if (list-null? lst) acc
+                                              (loop (list-rest lst) (bit-xor acc (list-first lst)))))))
+                           (loop (list-rest args) (list-first args)))))""",
         'integer-min': """(lambda (. args)
                              (if (list-null? args)
                                (error "Function 'integer-min' requires at least 1 argument")
@@ -516,8 +519,6 @@ class AIFPL:
     CONSTANTS = {
         'pi': AIFPLFloat(math.pi),
         'e': AIFPLFloat(math.e),
-        'true': AIFPLBoolean(True),
-        'false': AIFPLBoolean(False),
     }
 
     # Class-level cache for prelude functions

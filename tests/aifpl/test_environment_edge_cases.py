@@ -20,10 +20,6 @@ class TestAIFPLEnvironmentEdgeCases:
         j_value = aifpl.evaluate("1j")
         assert j_value == 1j
 
-        # Boolean constants
-        assert aifpl.evaluate("true") is True
-        assert aifpl.evaluate("false") is False
-
     def test_global_environment_functions(self, aifpl):
         """Test that global environment contains expected functions."""
         # Arithmetic functions should be available

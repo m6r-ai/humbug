@@ -201,8 +201,6 @@ class TestAIFPLParserEdgeCases:
         # Valid booleans
         assert aifpl.evaluate("#t") is True
         assert aifpl.evaluate("#f") is False
-        assert aifpl.evaluate("true") is True
-        assert aifpl.evaluate("false") is False
 
         # Invalid boolean literals
         invalid_booleans = [

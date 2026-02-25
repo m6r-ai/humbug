@@ -196,8 +196,6 @@ class TestAIFPLLexerEdgeCases:
         valid_booleans = [
             ("#t", True),
             ("#f", False),
-            ("true", True),
-            ("false", False),
         ]
 
         for expr, expected in valid_booleans:

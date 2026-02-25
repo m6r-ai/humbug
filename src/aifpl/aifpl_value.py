@@ -89,7 +89,30 @@ class AIFPLComplex(AIFPLValue):
         return "complex"
 
     def describe(self) -> str:
-        return str(self.value).strip('()')
+        r = self.value.real
+        i = self.value.imag
+        def _fmt_float(x: float) -> str:
+            """Format a float component: use integer notation when exact, else full float."""
+            try:
+                as_int = int(x)
+                if x == as_int:
+                    return str(as_int)
+            except (ValueError, OverflowError):
+                pass
+            return str(x)
+
+        if r == 0.0 and i == 0.0:
+            return "0+0j"
+        if r == 0.0:
+            # Pure imaginary: omit the real part entirely
+            return f"{_fmt_float(i)}j"
+        # General case: always show both parts with explicit sign on imaginary
+        real_str = _fmt_float(r)
+        if i >= 0.0:
+            imag_str = f"+{_fmt_float(i)}j"
+        else:
+            imag_str = f"{_fmt_float(i)}j"
+        return f"{real_str}{imag_str}"
 
     def __eq__(self, other: Any) -> bool:
         """Compare numeric values."""
