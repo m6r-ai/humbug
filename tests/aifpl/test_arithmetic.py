@@ -357,23 +357,23 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("expression,expected", [
         # Bitwise OR
-        ("(bit-or 5 3)", "7"),  # 101 | 011 = 111
-        ("(bit-or 1 2 4)", "7"),  # 001 | 010 | 100 = 111
-        ("(bit-or 0 0)", "0"),
+        ("(integer-bit-or 5 3)", "7"),  # 101 | 011 = 111
+        ("(integer-bit-or 1 2 4)", "7"),  # 001 | 010 | 100 = 111
+        ("(integer-bit-or 0 0)", "0"),
 
         # Bitwise AND
-        ("(bit-and 5 3)", "1"),  # 101 & 011 = 001
-        ("(bit-and 7 3 1)", "1"),  # 111 & 011 & 001 = 001
-        ("(bit-and 5 2)", "0"),  # 101 & 010 = 000
+        ("(integer-bit-and 5 3)", "1"),  # 101 & 011 = 001
+        ("(integer-bit-and 7 3 1)", "1"),  # 111 & 011 & 001 = 001
+        ("(integer-bit-and 5 2)", "0"),  # 101 & 010 = 000
 
         # Bitwise XOR
-        ("(bit-xor 5 3)", "6"),  # 101 ^ 011 = 110
-        ("(bit-xor 7 3 1)", "5"),  # ((111 ^ 011) ^ 001) = (100 ^ 001) = 101
+        ("(integer-bit-xor 5 3)", "6"),  # 101 ^ 011 = 110
+        ("(integer-bit-xor 7 3 1)", "5"),  # ((111 ^ 011) ^ 001) = (100 ^ 001) = 101
 
         # Bitwise NOT
-        ("(bit-not 0)", "-1"),  # Two's complement
-        ("(bit-not -1)", "0"),
-        ("(bit-not 5)", "-6"),  # ~101 = ...11111010 = -6
+        ("(integer-bit-not 0)", "-1"),  # Two's complement
+        ("(integer-bit-not -1)", "0"),
+        ("(integer-bit-not 5)", "-6"),  # ~101 = ...11111010 = -6
     ])
     def test_bitwise_operations(self, aifpl, expression, expected):
         """Test bitwise operations."""
@@ -381,15 +381,15 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("expression,expected", [
         # Left shift
-        ("(bit-shift-left 1 3)", "8"),  # 1 << 3 = 8
-        ("(bit-shift-left 5 2)", "20"),  # 5 << 2 = 20
-        ("(bit-shift-left 0 5)", "0"),  # 0 << 5 = 0
+        ("(integer-bit-shift-left 1 3)", "8"),  # 1 << 3 = 8
+        ("(integer-bit-shift-left 5 2)", "20"),  # 5 << 2 = 20
+        ("(integer-bit-shift-left 0 5)", "0"),  # 0 << 5 = 0
 
         # Right shift
-        ("(bit-shift-right 8 3)", "1"),  # 8 >> 3 = 1
-        ("(bit-shift-right 20 2)", "5"),  # 20 >> 2 = 5
-        ("(bit-shift-right 0 5)", "0"),  # 0 >> 5 = 0
-        ("(bit-shift-right -8 2)", "-2"),  # Arithmetic right shift
+        ("(integer-bit-shift-right 8 3)", "1"),  # 8 >> 3 = 1
+        ("(integer-bit-shift-right 20 2)", "5"),  # 20 >> 2 = 5
+        ("(integer-bit-shift-right 0 5)", "0"),  # 0 >> 5 = 0
+        ("(integer-bit-shift-right -8 2)", "-2"),  # Arithmetic right shift
     ])
     def test_bit_shift_operations(self, aifpl, expression, expected):
         """Test bit shift operations."""
@@ -398,16 +398,16 @@ class TestArithmetic:
     def test_bitwise_operations_require_integers(self, aifpl):
         """Test that bitwise operations require integer arguments."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(bit-or 1.5 2)")
+            aifpl.evaluate("(integer-bit-or 1.5 2)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(bit-and 1 2.5)")
+            aifpl.evaluate("(integer-bit-and 1 2.5)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(bit-xor (integer->complex 1 2) 3)")
+            aifpl.evaluate("(integer-bit-xor (integer->complex 1 2) 3)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(bit-not 3.14)")
+            aifpl.evaluate("(integer-bit-not 3.14)")
 
     @pytest.mark.parametrize("expression,expected", [
         # Complex number construction

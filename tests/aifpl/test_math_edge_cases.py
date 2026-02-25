@@ -431,60 +431,60 @@ class TestAIFPLMathEdgeCases:
     def test_bitwise_operations_edge_cases(self, aifpl):
         """Test bitwise operations edge cases."""
         # Basic bitwise operations
-        assert aifpl.evaluate("(bit-or 5 3)") == 7  # 101 | 011 = 111
-        assert aifpl.evaluate("(bit-and 5 3)") == 1  # 101 & 011 = 001
-        assert aifpl.evaluate("(bit-xor 5 3)") == 6  # 101 ^ 011 = 110
+        assert aifpl.evaluate("(integer-bit-or 5 3)") == 7  # 101 | 011 = 111
+        assert aifpl.evaluate("(integer-bit-and 5 3)") == 1  # 101 & 011 = 001
+        assert aifpl.evaluate("(integer-bit-xor 5 3)") == 6  # 101 ^ 011 = 110
 
         # Bitwise NOT edge cases
-        assert aifpl.evaluate("(bit-not 0)") == -1  # Two's complement
-        assert aifpl.evaluate("(bit-not -1)") == 0
-        assert aifpl.evaluate("(bit-not 5)") == -6  # ~101 = ...11111010 = -6
+        assert aifpl.evaluate("(integer-bit-not 0)") == -1  # Two's complement
+        assert aifpl.evaluate("(integer-bit-not -1)") == 0
+        assert aifpl.evaluate("(integer-bit-not 5)") == -6  # ~101 = ...11111010 = -6
 
         # Operations with zero
-        assert aifpl.evaluate("(bit-or 0 0)") == 0
-        assert aifpl.evaluate("(bit-and 0 0)") == 0
-        assert aifpl.evaluate("(bit-xor 0 0)") == 0
-        assert aifpl.evaluate("(bit-or 5 0)") == 5
-        assert aifpl.evaluate("(bit-and 5 0)") == 0
-        assert aifpl.evaluate("(bit-xor 5 0)") == 5
+        assert aifpl.evaluate("(integer-bit-or 0 0)") == 0
+        assert aifpl.evaluate("(integer-bit-and 0 0)") == 0
+        assert aifpl.evaluate("(integer-bit-xor 0 0)") == 0
+        assert aifpl.evaluate("(integer-bit-or 5 0)") == 5
+        assert aifpl.evaluate("(integer-bit-and 5 0)") == 0
+        assert aifpl.evaluate("(integer-bit-xor 5 0)") == 5
 
         # Operations with all bits set
-        assert aifpl.evaluate("(bit-and 255 255)") == 255
-        assert aifpl.evaluate("(bit-or 255 255)") == 255
-        assert aifpl.evaluate("(bit-xor 255 255)") == 0
+        assert aifpl.evaluate("(integer-bit-and 255 255)") == 255
+        assert aifpl.evaluate("(integer-bit-or 255 255)") == 255
+        assert aifpl.evaluate("(integer-bit-xor 255 255)") == 0
 
         # Multiple arguments
-        assert aifpl.evaluate("(bit-or 1 2 4)") == 7  # 001 | 010 | 100 = 111
-        assert aifpl.evaluate("(bit-and 7 3 1)") == 1  # 111 & 011 & 001 = 001
-        assert aifpl.evaluate("(bit-xor 7 3 1)") == 5  # ((111 ^ 011) ^ 001) = (100 ^ 001) = 101
+        assert aifpl.evaluate("(integer-bit-or 1 2 4)") == 7  # 001 | 010 | 100 = 111
+        assert aifpl.evaluate("(integer-bit-and 7 3 1)") == 1  # 111 & 011 & 001 = 001
+        assert aifpl.evaluate("(integer-bit-xor 7 3 1)") == 5  # ((111 ^ 011) ^ 001) = (100 ^ 001) = 101
 
         # Negative numbers (two's complement)
-        assert aifpl.evaluate("(bit-and -1 5)") == 5  # -1 has all bits set
-        assert aifpl.evaluate("(bit-or -1 5)") == -1  # -1 has all bits set
+        assert aifpl.evaluate("(integer-bit-and -1 5)") == 5  # -1 has all bits set
+        assert aifpl.evaluate("(integer-bit-or -1 5)") == -1  # -1 has all bits set
 
     def test_bit_shift_operations_edge_cases(self, aifpl):
         """Test bit shift operations edge cases."""
         # Left shift operations
-        assert aifpl.evaluate("(bit-shift-left 1 0)") == 1  # No shift
-        assert aifpl.evaluate("(bit-shift-left 1 1)") == 2  # 1 << 1 = 2
-        assert aifpl.evaluate("(bit-shift-left 1 3)") == 8  # 1 << 3 = 8
-        assert aifpl.evaluate("(bit-shift-left 5 2)") == 20  # 5 << 2 = 20
-        assert aifpl.evaluate("(bit-shift-left 0 5)") == 0  # 0 << 5 = 0
+        assert aifpl.evaluate("(integer-bit-shift-left 1 0)") == 1  # No shift
+        assert aifpl.evaluate("(integer-bit-shift-left 1 1)") == 2  # 1 << 1 = 2
+        assert aifpl.evaluate("(integer-bit-shift-left 1 3)") == 8  # 1 << 3 = 8
+        assert aifpl.evaluate("(integer-bit-shift-left 5 2)") == 20  # 5 << 2 = 20
+        assert aifpl.evaluate("(integer-bit-shift-left 0 5)") == 0  # 0 << 5 = 0
 
         # Right shift operations
-        assert aifpl.evaluate("(bit-shift-right 8 0)") == 8  # No shift
-        assert aifpl.evaluate("(bit-shift-right 8 1)") == 4  # 8 >> 1 = 4
-        assert aifpl.evaluate("(bit-shift-right 8 3)") == 1  # 8 >> 3 = 1
-        assert aifpl.evaluate("(bit-shift-right 20 2)") == 5  # 20 >> 2 = 5
-        assert aifpl.evaluate("(bit-shift-right 0 5)") == 0  # 0 >> 5 = 0
+        assert aifpl.evaluate("(integer-bit-shift-right 8 0)") == 8  # No shift
+        assert aifpl.evaluate("(integer-bit-shift-right 8 1)") == 4  # 8 >> 1 = 4
+        assert aifpl.evaluate("(integer-bit-shift-right 8 3)") == 1  # 8 >> 3 = 1
+        assert aifpl.evaluate("(integer-bit-shift-right 20 2)") == 5  # 20 >> 2 = 5
+        assert aifpl.evaluate("(integer-bit-shift-right 0 5)") == 0  # 0 >> 5 = 0
 
         # Arithmetic right shift with negative numbers
-        assert aifpl.evaluate("(bit-shift-right -8 2)") == -2  # Arithmetic right shift
-        assert aifpl.evaluate("(bit-shift-right -1 1)") == -1  # -1 >> 1 = -1
+        assert aifpl.evaluate("(integer-bit-shift-right -8 2)") == -2  # Arithmetic right shift
+        assert aifpl.evaluate("(integer-bit-shift-right -1 1)") == -1  # -1 >> 1 = -1
 
         # Large shifts
-        assert aifpl.evaluate("(bit-shift-left 1 10)") == 1024  # 1 << 10 = 1024
-        assert aifpl.evaluate("(bit-shift-right 1024 10)") == 1  # 1024 >> 10 = 1
+        assert aifpl.evaluate("(integer-bit-shift-left 1 10)") == 1024  # 1 << 10 = 1024
+        assert aifpl.evaluate("(integer-bit-shift-right 1024 10)") == 1  # 1024 >> 10 = 1
 
     def test_bitwise_operations_require_integers(self, aifpl):
         """Test that bitwise operations require integer arguments."""
@@ -492,22 +492,22 @@ class TestAIFPLMathEdgeCases:
 
         for value in non_integer_values:
             with pytest.raises(AIFPLEvalError):
-                aifpl.evaluate(f"(bit-or {value} 2)")
+                aifpl.evaluate(f"(integer-bit-or {value} 2)")
 
             with pytest.raises(AIFPLEvalError):
-                aifpl.evaluate(f"(bit-and 1 {value})")
+                aifpl.evaluate(f"(integer-bit-and 1 {value})")
 
             with pytest.raises(AIFPLEvalError):
-                aifpl.evaluate(f"(bit-xor {value} 3)")
+                aifpl.evaluate(f"(integer-bit-xor {value} 3)")
 
             with pytest.raises(AIFPLEvalError):
-                aifpl.evaluate(f"(bit-not {value})")
+                aifpl.evaluate(f"(integer-bit-not {value})")
 
             with pytest.raises(AIFPLEvalError):
-                aifpl.evaluate(f"(bit-shift-left {value} 2)")
+                aifpl.evaluate(f"(integer-bit-shift-left {value} 2)")
 
             with pytest.raises(AIFPLEvalError):
-                aifpl.evaluate(f"(bit-shift-right 8 {value})")
+                aifpl.evaluate(f"(integer-bit-shift-right 8 {value})")
 
     def test_complex_number_operations_edge_cases(self, aifpl):
         """Test complex number operations edge cases."""

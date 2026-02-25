@@ -189,8 +189,8 @@ Syntax: (operator arg1 arg2 ...)
 
 ## Arithmetic and math:
 
-- Bitwise: (bit-or 5 3), (bit-and 7 3), (bit-xor 5 3), (bit-not 5)
-- Bit shifts: (bit-shift-left 1 3), (bit-shift-right 8 2)
+- Bitwise: (integer-bit-or 5 3), (integer-bit-and 7 3), (integer-bit-xor 5 3), (integer-bit-not 5)
+- Bit shifts: (integer-bit-shift-left 1 3), (integer-bit-shift-right 8 2)
 
 ## Typed arithmetic operators:
 

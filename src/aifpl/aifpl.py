@@ -141,26 +141,26 @@ class AIFPL:
                                             (if (list-null? lst) acc
                                                 (loop (list-rest lst) (integer/ acc (list-first lst)))))))
                              (loop (list-rest args) (list-first args)))))""",
-        'bit-or': """(lambda (. args)
+        'integer-bit-or': """(lambda (. args)
                        (if (integer<? (list-length args) 2)
-                         (error "Function 'bit-or' requires at least 2 arguments")
+                         (error "Function 'integer-bit-or' requires at least 2 arguments")
                          (letrec ((loop (lambda (lst acc)
                                           (if (list-null? lst) acc
-                                              (loop (list-rest lst) (bit-or acc (list-first lst)))))))
+                                              (loop (list-rest lst) (integer-bit-or acc (list-first lst)))))))
                            (loop (list-rest args) (list-first args)))))""",
-        'bit-and': """(lambda (. args)
+        'integer-bit-and': """(lambda (. args)
                        (if (integer<? (list-length args) 2)
-                         (error "Function 'bit-and' requires at least 2 arguments")
+                         (error "Function 'integer-bit-and' requires at least 2 arguments")
                          (letrec ((loop (lambda (lst acc)
                                           (if (list-null? lst) acc
-                                              (loop (list-rest lst) (bit-and acc (list-first lst)))))))
+                                              (loop (list-rest lst) (integer-bit-and acc (list-first lst)))))))
                            (loop (list-rest args) (list-first args)))))""",
-        'bit-xor': """(lambda (. args)
+        'integer-bit-xor': """(lambda (. args)
                        (if (integer<? (list-length args) 2)
-                         (error "Function 'bit-xor' requires at least 2 arguments")
+                         (error "Function 'integer-bit-xor' requires at least 2 arguments")
                          (letrec ((loop (lambda (lst acc)
                                           (if (list-null? lst) acc
-                                              (loop (list-rest lst) (bit-xor acc (list-first lst)))))))
+                                              (loop (list-rest lst) (integer-bit-xor acc (list-first lst)))))))
                            (loop (list-rest args) (list-first args)))))""",
         'integer-min': """(lambda (. args)
                              (if (list-null? args)

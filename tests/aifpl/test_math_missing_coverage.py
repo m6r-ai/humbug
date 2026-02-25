@@ -47,49 +47,49 @@ class TestMathMissingCoverage:
 
     def test_bitwise_operations_insufficient_arguments(self, aifpl):
         """Test bitwise operations with insufficient arguments."""
-        # bit-or requires at least 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-or' has wrong number of arguments"):
-            aifpl.evaluate("(bit-or 5)")
+        # integer-bit-or requires at least 2 arguments
+        with pytest.raises(AIFPLEvalError, match="Function 'integer-bit-or' has wrong number of arguments"):
+            aifpl.evaluate("(integer-bit-or 5)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-or' has wrong number of arguments"):
-            aifpl.evaluate("(bit-or)")
+        with pytest.raises(AIFPLEvalError, match="Function 'integer-bit-or' has wrong number of arguments"):
+            aifpl.evaluate("(integer-bit-or)")
 
-        # bit-and requires at least 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-and' has wrong number of arguments"):
-            aifpl.evaluate("(bit-and 7)")
+        # integer-bit-and requires at least 2 arguments
+        with pytest.raises(AIFPLEvalError, match="Function 'integer-bit-and' has wrong number of arguments"):
+            aifpl.evaluate("(integer-bit-and 7)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-and' has wrong number of arguments"):
-            aifpl.evaluate("(bit-and)")
+        with pytest.raises(AIFPLEvalError, match="Function 'integer-bit-and' has wrong number of arguments"):
+            aifpl.evaluate("(integer-bit-and)")
 
-        # bit-xor requires at least 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-xor' has wrong number of arguments"):
-            aifpl.evaluate("(bit-xor 3)")
+        # integer-bit-xor requires at least 2 arguments
+        with pytest.raises(AIFPLEvalError, match="Function 'integer-bit-xor' has wrong number of arguments"):
+            aifpl.evaluate("(integer-bit-xor 3)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-xor' has wrong number of arguments"):
-            aifpl.evaluate("(bit-xor)")
+        with pytest.raises(AIFPLEvalError, match="Function 'integer-bit-xor' has wrong number of arguments"):
+            aifpl.evaluate("(integer-bit-xor)")
 
     def test_bitwise_operations_wrong_argument_count(self, aifpl):
         """Test bitwise operations with wrong argument count."""
-        # bit-not requires exactly 1 argument
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-not' has wrong number of arguments"):
-            aifpl.evaluate("(bit-not 5 3)")
+        # integer-bit-not requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="Function 'integer-bit-not' has wrong number of arguments"):
+            aifpl.evaluate("(integer-bit-not 5 3)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-not' has wrong number of arguments"):
-            aifpl.evaluate("(bit-not)")
+        with pytest.raises(AIFPLEvalError, match="Function 'integer-bit-not' has wrong number of arguments"):
+            aifpl.evaluate("(integer-bit-not)")
 
-        # bit-shift-left requires exactly 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-shift-left' has wrong number of arguments"):
-            aifpl.evaluate("(bit-shift-left 5)")
+        # integer-bit-shift-left requires exactly 2 arguments
+        with pytest.raises(AIFPLEvalError, match="Function 'integer-bit-shift-left' has wrong number of arguments"):
+            aifpl.evaluate("(integer-bit-shift-left 5)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-shift-left' has wrong number of arguments"):
-            aifpl.evaluate("(bit-shift-left 5 2 1)")
+        with pytest.raises(AIFPLEvalError, match="Function 'integer-bit-shift-left' has wrong number of arguments"):
+            aifpl.evaluate("(integer-bit-shift-left 5 2 1)")
 
-        # bit-shift-right requires exactly 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-shift-right' has wrong number of arguments"):
-            aifpl.evaluate("(bit-shift-right 8)")
+        # integer-bit-shift-right requires exactly 2 arguments
+        with pytest.raises(AIFPLEvalError, match="Function 'integer-bit-shift-right' has wrong number of arguments"):
+            aifpl.evaluate("(integer-bit-shift-right 8)")
 
-        with pytest.raises(AIFPLEvalError, match="Function 'bit-shift-right' has wrong number of arguments"):
-            aifpl.evaluate("(bit-shift-right 8 2 1)")
+        with pytest.raises(AIFPLEvalError, match="Function 'integer-bit-shift-right' has wrong number of arguments"):
+            aifpl.evaluate("(integer-bit-shift-right 8 2 1)")
 
     # ========== Mathematical Functions Error Handling ==========
 
