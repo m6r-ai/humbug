@@ -288,12 +288,12 @@ class AIFPLVM:
         table[Opcode.STRING_TO_NUMBER] = self._op_string_to_number
         table[Opcode.STRING_TO_LIST] = self._op_string_to_list
         table[Opcode.STRING_REF] = self._op_string_ref
-        table[Opcode.STRING_CONTAINS_P] = self._op_string_contains_p
         table[Opcode.STRING_PREFIX_P] = self._op_string_prefix_p
         table[Opcode.STRING_SUFFIX_P] = self._op_string_suffix_p
         table[Opcode.STRING_CONCAT] = self._op_string_concat
         table[Opcode.STRING_SLICE] = self._op_string_slice
         table[Opcode.STRING_REPLACE] = self._op_string_replace
+        table[Opcode.STRING_INDEX] = self._op_string_index
         table[Opcode.ALIST] = self._op_alist
         table[Opcode.ALIST_P] = self._op_alist_p
         table[Opcode.ALIST_EQ_P] = self._op_alist_eq_p
@@ -320,7 +320,7 @@ class AIFPLVM:
         table[Opcode.LIST_REF] = self._op_list_ref
         table[Opcode.LIST_NULL_P] = self._op_list_null_p
         table[Opcode.LIST_MEMBER_P] = self._op_list_member_p
-        table[Opcode.LIST_POSITION] = self._op_list_position
+        table[Opcode.LIST_INDEX] = self._op_list_index
         table[Opcode.LIST_SLICE] = self._op_list_slice
         table[Opcode.LIST_REMOVE] = self._op_list_remove
         table[Opcode.LIST_CONCAT] = self._op_list_concat
@@ -2133,17 +2133,6 @@ class AIFPLVM:
         self.stack.append(AIFPLString(s[index]))
         return None
 
-    def _op_string_contains_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_CONTAINS_P: Pop substring and string, push true if string contains substring."""
-        substr_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string-contains?')
-        substr = self._ensure_string(substr_val, 'string-contains?')
-        self.stack.append(AIFPLBoolean(substr in s))
-        return None
-
     def _op_string_prefix_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -2206,6 +2195,21 @@ class AIFPLVM:
         old = self._ensure_string(old_val, 'string-replace')
         new = self._ensure_string(new_val, 'string-replace')
         self.stack.append(AIFPLString(s.replace(old, new)))
+        return None
+
+    def _op_string_index(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_INDEX: Pop substring and string, push index or #f."""
+        substr_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string-index')
+        substr = self._ensure_string(substr_val, 'string-index')
+        idx = s.find(substr)
+        if idx == -1:
+            self.stack.append(AIFPLBoolean(False))
+        else:
+            self.stack.append(AIFPLInteger(idx))
         return None
 
     def _op_string_concat(  # pylint: disable=useless-return
@@ -2512,13 +2516,13 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(list_val.contains(item)))
         return None
 
-    def _op_list_position(  # pylint: disable=useless-return
+    def _op_list_index(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """POSITION: Pop item and list (list first, item second on stack), push index or #f if not found."""
+        """INDEX: Pop item and list (list first, item second on stack), push index or #f if not found."""
         item = self.stack.pop()
         list_val_raw = self.stack.pop()
-        list_val = self._ensure_list(list_val_raw, 'list-position')
+        list_val = self._ensure_list(list_val_raw, 'list-index')
         pos = list_val.position(item)
         self.stack.append(AIFPLInteger(pos) if pos is not None else AIFPLBoolean(False))
         return None

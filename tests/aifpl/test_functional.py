@@ -185,7 +185,7 @@ class TestFunctional:
         ('(filter (lambda (x) #t) (list 1 2 3))', '(1 2 3)'),
 
         # Filter with string predicate
-        ('(filter (lambda (s) (string-contains? s "e")) (list "hello" "world" "test"))', '("hello" "test")'),
+        ('(filter (lambda (s) (integer? (string-index s "e"))) (list "hello" "world" "test"))', '("hello" "test")'),
     ])
     def test_filter_function(self, aifpl, expression, expected):
         """Test filter higher-order function."""
@@ -301,7 +301,7 @@ class TestFunctional:
         ('(find (lambda (x) (integer>? x 2)) (list 1 3 5 7))', '3'),
 
         # Find with string predicate
-        ('(find (lambda (s) (string-contains? s "o")) (list "hello" "world" "test"))', '"hello"'),
+        ('(find (lambda (s) (integer? (string-index s "o"))) (list "hello" "world" "test"))', '"hello"'),
     ])
     def test_find_function(self, aifpl, expression, expected):
         """Test find higher-order function."""
@@ -490,7 +490,7 @@ class TestFunctional:
         string_processing = '''
         (fold (lambda (acc s) (integer+ acc (string-length s)))
               0
-              (filter (lambda (s) (string-contains? s "E"))
+              (filter (lambda (s) (integer? (string-index s "E")))
                       (map (lambda (s) (string-upcase s))
                            (list "hello" "world" "test" "code"))))
         '''

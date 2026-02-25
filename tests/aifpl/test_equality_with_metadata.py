@@ -80,10 +80,10 @@ class TestEquality:
         assert result is False
 
         # position uses __eq__ internally
-        result = aifpl.evaluate('(list-position (list "hello" "world" "test") "world")')
+        result = aifpl.evaluate('(list-index (list "hello" "world" "test") "world")')
         assert result == 1
 
-        result = aifpl.evaluate('(list-position (list "hello" "world") "missing")')
+        result = aifpl.evaluate('(list-index (list "hello" "world") "missing")')
         assert result is False
 
     def test_boolean_in_list_operations(self, aifpl):
@@ -94,5 +94,5 @@ class TestEquality:
         result = aifpl.evaluate('(list-member? (list #f #f) #t)')
         assert result is False
 
-        result = aifpl.evaluate('(list-position (list #t #f #t) #f)')
+        result = aifpl.evaluate('(list-index (list #t #f #t) #f)')
         assert result == 1

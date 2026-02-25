@@ -285,7 +285,8 @@ Syntax: (operator arg1 arg2 ...)
 - Manipulation: (string-slice "hello" 1 4), (string-slice "hello" 2) → "llo", (string-upcase "hello"), (string-downcase "HELLO")
 - Utilities: (string-trim "  hello  ") → "hello",(string-trim-left "  hello  ") → "hello  ",  (string-trim-right "  hello  ") → "  hello", (string-replace "banana" "a" "o")
 - Equality/ordering predicates: (string=? "hi" "hi"), (string!=? "hi" "bye"), (string<? "apple" "banana"), (string>? "b" "a"), (string<=? "a" "a"), (string>=? "b" "a")
-- Search predicates: (string-contains? "hello" "ell"), (string-prefix? "hello" "he"), (string-suffix? "hello" "lo")
+- Search predicates: (string-prefix? "hello" "he"), (string-suffix? "hello" "lo")
+- Search index: (string-index "hello" "l") → 2, (string-index "hello" "z") → #f (not found)
 - Conversion: (string->number "42") → 42, (string->number "3.14") → 3.14, (string->number "1+2j") → 1+2j
 - (string->number "#xFF") → 255, (string->number "#b1010") → 10, (string->number "#o755") → 493, (string->number "-#xFF") → -255
 - (string->number "hello") → #f (returns #f for any unparseable string; raises a type error if argument is not a string)
@@ -302,7 +303,7 @@ Syntax: (operator arg1 arg2 ...)
 - Access: (list-first (list 1 2 3)), (list-rest (list 1 2 3)), (list-last (list 1 2 3))
 - Indexed access: (list-ref (list "a" "b" "c") 1) → "b" (0-based index)
 - Properties: (list-length (list 1 2 3)), (list-null? (list)), (list-member? (list 1 2 3) 2)
-- Utilities: (list-reverse (list 1 2 3)), (list-remove (list 1 2 3 2 4) 2), (list-position (list 1 2 3) 2) → 1 or #f
+- Utilities: (list-reverse (list 1 2 3)), (list-remove (list 1 2 3 2 4) 2), (list-index (list 1 2 3) 2) → 1, (list-index (list 1 2 3) 42) → #f (not found)
 - Slicing: (list-slice lst start) → from start to end, (list-slice lst start end) → from start to end (exclusive)
 - (list-slice (list 1 2 3 4 5) 2) → (3 4 5), (list-slice (list 1 2 3 4 5) 1 3) → (2 3)
 
@@ -459,8 +460,7 @@ Syntax: (operator arg1 arg2 ...)
 - float-floor, float-ceil, float-round all return float, not integer; use (float->integer (float-round x)) to get an integer
 - All comparison operators are type-specific: use integer=?, float<?, string>=? etc.
 - Lists and alists support =? and !=? only; they have no ordering
-- Conditions must be boolean: (if #t ...) works, (if 1 ...) doesn't
-- Use for calculations, data processing, and functional programming only
+- Conditions must be boolean: (if #t ...) works, (if 1 ...) doesn't - there is no concept of "truthiness"
 - The user will not see the AIFPL code or AIFPL results directly; if you want to show either, you must format it as a message to the user.
 """
 

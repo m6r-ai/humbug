@@ -31,7 +31,7 @@ class TestAIFPLCollectionEdgeCases:
 
         # Empty list membership and search
         assert aifpl.evaluate("(list-member? () 1)") is False
-        assert aifpl.evaluate("(list-position () 1)") is False
+        assert aifpl.evaluate("(list-index () 1)") is False
 
         # Empty list utilities
         assert aifpl.evaluate("(list-remove () 1)") == []
@@ -71,8 +71,8 @@ class TestAIFPLCollectionEdgeCases:
         # Single element list membership
         assert aifpl.evaluate("(list-member? (list 42) 42)") is True
         assert aifpl.evaluate("(list-member? (list 42) 43)") is False
-        assert aifpl.evaluate("(list-position (list 42) 42)") == 0
-        assert aifpl.evaluate("(list-position (list 42) 43)") is False
+        assert aifpl.evaluate("(list-index (list 42) 42)") == 0
+        assert aifpl.evaluate("(list-index (list 42) 43)") is False
 
     def test_boundary_index_operations(self, aifpl):
         """Test boundary conditions for indexed operations."""
@@ -148,10 +148,10 @@ class TestAIFPLCollectionEdgeCases:
         assert aifpl.evaluate(f"(list-member? {mixed_list} 42)") is False
 
         # Position tests with mixed types
-        assert aifpl.evaluate(f"(list-position {mixed_list} 1)") == 0
-        assert aifpl.evaluate(f'(list-position {mixed_list} "hello")') == 1
-        assert aifpl.evaluate(f"(list-position {mixed_list} #t)") == 2
-        assert aifpl.evaluate(f"(list-position {mixed_list} 42)") is False
+        assert aifpl.evaluate(f"(list-index {mixed_list} 1)") == 0
+        assert aifpl.evaluate(f'(list-index {mixed_list} "hello")') == 1
+        assert aifpl.evaluate(f"(list-index {mixed_list} #t)") == 2
+        assert aifpl.evaluate(f"(list-index {mixed_list} 42)") is False
 
     def test_nested_collections(self, aifpl):
         """Test operations on nested collections."""
@@ -349,10 +349,10 @@ class TestAIFPLCollectionEdgeCases:
         test_list = "(list 1 2 3 2 4)"
 
         # Position of first occurrence
-        assert aifpl.evaluate(f"(list-position {test_list} 2)") == 1  # First occurrence
+        assert aifpl.evaluate(f"(list-index {test_list} 2)") == 1  # First occurrence
 
         # Position of non-existent element
-        assert aifpl.evaluate(f"(list-position {test_list} 99)") is False
+        assert aifpl.evaluate(f"(list-index {test_list} 99)") is False
 
         # Member tests
         assert aifpl.evaluate(f"(list-member? {test_list} 1)") is True
@@ -364,8 +364,8 @@ class TestAIFPLCollectionEdgeCases:
 
         # Search in mixed-type list
         mixed = '(list 1 "hello" #t 2)'
-        assert aifpl.evaluate(f'(list-position {mixed} "hello")') == 1
-        assert aifpl.evaluate(f"(list-position {mixed} #t)") == 2
+        assert aifpl.evaluate(f'(list-index {mixed} "hello")') == 1
+        assert aifpl.evaluate(f"(list-index {mixed} #t)") == 2
         assert aifpl.evaluate(f'(list-member? {mixed} "hello")') is True
         assert aifpl.evaluate(f"(list-member? {mixed} #f)") is False
 
@@ -577,15 +577,15 @@ class TestAIFPLCollectionEdgeCases:
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             aifpl.evaluate("(list-remove 1 (list 1 2) (list 3))")
 
-        # position requires exactly 2 arguments
+        # index requires exactly 2 arguments
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate("(list-position)")
+            aifpl.evaluate("(list-index)")
 
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate("(list-position 1)")
+            aifpl.evaluate("(list-index 1)")
 
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
-            aifpl.evaluate("(list-position 1 (list 1 2) (list 3))")
+            aifpl.evaluate("(list-index 1 (list 1 2) (list 3))")
 
         # slice requires 2 or 3 arguments
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):

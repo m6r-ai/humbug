@@ -199,12 +199,12 @@ class Opcode(IntEnum):
     STRING_TO_NUMBER = _op(233, 0)      # Parse string to number
     STRING_TO_LIST = _op(234, 0)        # Split string by delimiter: (string->list str delim)
     STRING_REF = _op(235, 0)            # Get character at index
-    STRING_CONTAINS_P = _op(236, 0)     # Check if string contains substring
     STRING_PREFIX_P = _op(237, 0)       # Check if string has prefix
     STRING_SUFFIX_P = _op(238, 0)       # Check if string has suffix
     STRING_CONCAT = _op(239, 0)         # Concatenate two strings: (string-concat a b)
     STRING_SLICE = _op(240, 0)          # Extract substring (string, start, end)
     STRING_REPLACE = _op(241, 0)        # Replace substring (string, old, new)
+    STRING_INDEX = _op(242, 0)          # Find index of substring (string, substring)
 
     # Alist operations
     ALIST = _op(260, 1)                 # ALIST n  (build alist from n pairs on stack)
@@ -235,7 +235,7 @@ class Opcode(IntEnum):
     LIST_REF = _op(311, 0)              # Get element at index from list
     LIST_NULL_P = _op(312, 0)           # Check if list is empty
     LIST_MEMBER_P = _op(313, 0)         # Check if item is in list
-    LIST_POSITION = _op(314, 0)         # Find index of item in list
+    LIST_INDEX = _op(314, 0)            # Find index of item in list
     LIST_SLICE = _op(315, 0)            # Slice list: (list-slice lst start end)
     LIST_REMOVE = _op(316, 0)           # Remove all occurrences of item from list
     LIST_CONCAT = _op(317, 0)           # Append two lists: (append a b)
@@ -365,7 +365,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'string->number': (Opcode.STRING_TO_NUMBER, 1),
     'string->list': (Opcode.STRING_TO_LIST, 2),
     'string-ref': (Opcode.STRING_REF, 2),
-    'string-contains?': (Opcode.STRING_CONTAINS_P, 2),
+    'string-index': (Opcode.STRING_INDEX, 2),
     'string-prefix?': (Opcode.STRING_PREFIX_P, 2),
     'string-suffix?': (Opcode.STRING_SUFFIX_P, 2),
     'string-concat': (Opcode.STRING_CONCAT, 2),
@@ -388,7 +388,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'list-ref': (Opcode.LIST_REF, 2),
     'list-null?': (Opcode.LIST_NULL_P, 1),
     'list-member?': (Opcode.LIST_MEMBER_P, 2),
-    'list-position': (Opcode.LIST_POSITION, 2),
+    'list-index': (Opcode.LIST_INDEX, 2),
     'list-slice': (Opcode.LIST_SLICE, 3),
     'list-remove': (Opcode.LIST_REMOVE, 2),
     'list-concat': (Opcode.LIST_CONCAT, 2),

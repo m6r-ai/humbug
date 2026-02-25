@@ -385,7 +385,7 @@ class TestConditionals:
         """Test conditionals using string predicates."""
         helpers.assert_evaluates_to(
             aifpl,
-            '(if (string-contains? "hello world" "world") "found" "not found")',
+            '(if (integer? (string-index "hello world" "world")) "found" "not found")',
             '"found"'
         )
 

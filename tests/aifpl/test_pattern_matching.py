@@ -175,7 +175,7 @@ class TestPatternMatching:
         # Type pattern with complex usage
         helpers.assert_evaluates_to(
             aifpl,
-            '(match "hello world" ((string? s) (string-contains? s "world")))',
+            '(match "hello world" ((string? s) (integer? (string-index s "world"))))',
             '#t'
         )
 

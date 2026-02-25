@@ -269,21 +269,21 @@ class TestStrings:
             aifpl.evaluate('(string-ref "hello" -1)')  # Negative index
 
     @pytest.mark.parametrize("expression,expected", [
-        # String contains predicate
-        ('(string-contains? "hello world" "world")', '#t'),
-        ('(string-contains? "hello world" "hello")', '#t'),
-        ('(string-contains? "hello world" "o w")', '#t'),
-        ('(string-contains? "hello world" "xyz")', '#f'),
-        ('(string-contains? "hello" "")', '#t'),  # Empty string is contained
-        ('(string-contains? "" "")', '#t'),  # Empty contains empty
-        ('(string-contains? "" "a")', '#f'),  # Empty doesn\'t contain non-empty
+        # String index search
+        ('(string-index "hello world" "world")', '6'),
+        ('(string-index "hello world" "hello")', '0'),
+        ('(string-index "hello world" "o w")', '4'),
+        ('(string-index "hello world" "xyz")', '#f'),
+        ('(string-index "hello" "")', '0'),  # Empty string found at start
+        ('(string-index "" "")', '0'),  # Empty found in empty at start
+        ('(string-index "" "a")', '#f'),  # Non-empty not found in empty
 
-        # Unicode contains
-        ('(string-contains? "Hello 世界" "世界")', '#t'),
-        ('(string-contains? "café" "fé")', '#t'),
+        # Unicode index
+        ('(string-index "Hello 世界" "世界")', '6'),
+        ('(string-index "café" "fé")', '2'),
     ])
-    def test_string_contains(self, aifpl, expression, expected):
-        """Test string-contains? predicate."""
+    def test_string_index(self, aifpl, expression, expected):
+        """Test string-index function."""
         assert aifpl.evaluate_and_format(expression) == expected
 
     @pytest.mark.parametrize("expression,expected", [
@@ -509,10 +509,10 @@ class TestStrings:
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-downcase #t)')
 
-    def test_string_predicates_type_validation(self, aifpl):
-        """Test that string predicates require string arguments."""
+    def test_string_index_type_validation(self, aifpl):
+        """Test that string-index requires string arguments."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(string-contains? 42 "hello")')
+            aifpl.evaluate('(string-index 42 "hello")')
 
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-prefix? "hello" 42)')
@@ -576,7 +576,7 @@ class TestStrings:
 
         # Functions requiring exactly 2 arguments
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate('(string-contains? "hello")')
+            aifpl.evaluate('(string-index "hello")')
 
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate('(string-ref "hello")')
