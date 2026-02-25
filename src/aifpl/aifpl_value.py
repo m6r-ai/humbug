@@ -34,6 +34,28 @@ class AIFPLValue(ABC):
 
 
 @dataclass(frozen=True)
+class AIFPLBoolean(AIFPLValue):
+    """Represents boolean values."""
+    value: bool
+
+    def to_python(self) -> bool:
+        return self.value
+
+    def type_name(self) -> str:
+        return "boolean"
+
+    def describe(self) -> str:
+        return "#t" if self.value else "#f"
+
+    def __eq__(self, other: Any) -> bool:
+        """Compare boolean values, ignoring metadata (line, column)."""
+        if not isinstance(other, AIFPLBoolean):
+            return False
+
+        return self.value == other.value
+
+
+@dataclass(frozen=True)
 class AIFPLInteger(AIFPLValue):
     """Represents integer values."""
     value: int
@@ -170,50 +192,6 @@ class AIFPLString(AIFPLValue):
             return False
 
         return self.value == other.value
-
-
-@dataclass(frozen=True)
-class AIFPLBoolean(AIFPLValue):
-    """Represents boolean values."""
-    value: bool
-
-    def to_python(self) -> bool:
-        return self.value
-
-    def type_name(self) -> str:
-        return "boolean"
-
-    def describe(self) -> str:
-        return "#t" if self.value else "#f"
-
-    def __eq__(self, other: Any) -> bool:
-        """Compare boolean values, ignoring metadata (line, column)."""
-        if not isinstance(other, AIFPLBoolean):
-            return False
-
-        return self.value == other.value
-
-
-@dataclass(frozen=True)
-class AIFPLSymbol(AIFPLValue):
-    """Represents symbols that require environment lookup."""
-    name: str
-
-    def to_python(self) -> str:
-        """Symbols convert to their name string."""
-        return self.name
-
-    def type_name(self) -> str:
-        return "symbol"
-
-    def describe(self) -> str:
-        return self.name
-
-    def __str__(self) -> str:
-        return self.name
-
-    def __repr__(self) -> str:
-        return f'AIFPLSymbol({self.name!r})'
 
 
 @dataclass(frozen=True)
@@ -478,6 +456,28 @@ class AIFPLAList(AIFPLValue):
             example='(alist ("name" "Alice") ("age" 30))',
             suggestion="Use strings for most keys"
         )
+
+
+@dataclass(frozen=True)
+class AIFPLSymbol(AIFPLValue):
+    """Represents symbols that require environment lookup."""
+    name: str
+
+    def to_python(self) -> str:
+        """Symbols convert to their name string."""
+        return self.name
+
+    def type_name(self) -> str:
+        return "symbol"
+
+    def describe(self) -> str:
+        return self.name
+
+    def __str__(self) -> str:
+        return self.name
+
+    def __repr__(self) -> str:
+        return f'AIFPLSymbol({self.name!r})'
 
 
 @dataclass(frozen=True)
