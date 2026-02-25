@@ -157,7 +157,7 @@ class AIFPLVM:
         This replaces the if/elif chain with direct array indexing,
         significantly improving performance in the hot execution loop.
         """
-        table: List[Any] = [None] * 256
+        table: List[Any] = [None] * 384
         table[Opcode.LOAD_CONST] = self._op_load_const
         table[Opcode.LOAD_TRUE] = self._op_load_true
         table[Opcode.LOAD_FALSE] = self._op_load_false

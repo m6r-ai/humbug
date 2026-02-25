@@ -1,225 +1,244 @@
 """Bytecode definitions for AIFPL virtual machine."""
 
 from dataclasses import dataclass, field
-from enum import IntEnum, auto
+from enum import IntEnum
 from typing import Dict, List, Tuple
 
 from aifpl.aifpl_value import AIFPLValue
 
 
+def _op(n: int, arg_count: int = 0) -> Tuple[int, int]:
+    """Helper to construct an Opcode value: (integer_value, instruction_stream_arg_count).
+
+    arg_count is the number of instruction-stream arguments the opcode encodes
+    (i.e. fields read from the bytecode stream, not operands popped from the stack):
+      0 — all operands come from the value stack (the common case for primitives)
+      1 — one immediate argument follows the opcode in the stream
+      2 — two immediate arguments follow the opcode in the stream
+    """
+    return (n, arg_count)
+
+
 class Opcode(IntEnum):
     """Bytecode operation codes.
 
-    Using IntEnum for fast dispatch and clear debugging.
+    Each member's value is a (integer_value, instruction_stream_arg_count) tuple.
+    The integer value is used for fast VM dispatch (IntEnum identity).
+    The arg_count property returns the number of instruction-stream arguments.
+
+    Encoding arg_count directly on the enum eliminates the error-prone
+    no_arg_opcodes / two_arg_opcodes sets that previously lived in
+    Instruction.arg_count().
     """
 
+    _arg_count: int  # Set in __new__; declared here so mypy knows the attribute exists
+
+    def __new__(cls, int_value: int, arg_count: int = 0) -> 'Opcode':
+        obj = int.__new__(cls, int_value,)
+        obj._value_ = int_value
+        obj._arg_count = arg_count
+        return obj
+
+    @property
+    def arg_count(self) -> int:
+        """Number of instruction-stream arguments (0, 1, or 2)."""
+        return self._arg_count
+
     # Constants
-    LOAD_CONST = auto()      # Load constant from constant pool: LOAD_CONST const_index
-    LOAD_TRUE = auto()       # Push True
-    LOAD_FALSE = auto()      # Push False
-    LOAD_EMPTY_LIST = auto() # Push empty list
+    LOAD_CONST = _op(1, 1)              # LOAD_CONST const_index
+    LOAD_TRUE = _op(2, 0)               # Push True
+    LOAD_FALSE = _op(3, 0)              # Push False
+    LOAD_EMPTY_LIST = _op(4, 0)         # Push empty list
 
     # Variables (lexically addressed)
-    LOAD_VAR = auto()        # Load variable by position: LOAD_VAR index
-    STORE_VAR = auto()       # Store variable by position: STORE_VAR index
-    LOAD_PARENT_VAR = auto() # Load variable from parent frame: LOAD_PARENT_VAR index depth
-    LOAD_NAME = auto()       # Load by name lookup: LOAD_NAME name_index
+    LOAD_VAR = _op(5, 1)                # LOAD_VAR index
+    STORE_VAR = _op(6, 1)               # STORE_VAR index
+    LOAD_PARENT_VAR = _op(7, 2)         # LOAD_PARENT_VAR index depth
+    LOAD_NAME = _op(8, 1)               # LOAD_NAME name_index
 
     # Control flow
-    JUMP = auto()            # Unconditional jump: JUMP offset
-    JUMP_IF_FALSE = auto()   # Conditional jump if false
-    JUMP_IF_TRUE = auto()    # Conditional jump if true
-    RAISE_ERROR = auto()     # Raise error with message from constant pool: RAISE_ERROR const_index
+    JUMP = _op(10, 1)                   # Unconditional jump: JUMP offset
+    JUMP_IF_FALSE = _op(11, 1)          # Conditional jump if false
+    JUMP_IF_TRUE = _op(12, 1)           # Conditional jump if true
+    RAISE_ERROR = _op(13, 1)            # RAISE_ERROR const_index
 
     # Functions
-    MAKE_CLOSURE = auto()    # Create closure: MAKE_CLOSURE code_index capture_count
-    CALL = auto()            # Call function: CALL arity
-    TAIL_CALL = auto()       # Tail call function: TAIL_CALL arity
-    APPLY = auto()           # Apply function to arg list (non-tail): (apply f args)
-    TAIL_APPLY = auto()      # Apply function to arg list (tail position)
-    ENTER = auto()           # Pop N args from stack into locals 0..N-1: ENTER n
-    RETURN = auto()          # Return from function
+    MAKE_CLOSURE = _op(14, 2)           # MAKE_CLOSURE code_index capture_count
+    CALL = _op(15, 1)                   # CALL arity
+    TAIL_CALL = _op(16, 1)              # TAIL_CALL arity
+    APPLY = _op(17, 0)                  # Apply function to arg list (non-tail)
+    TAIL_APPLY = _op(18, 0)             # Apply function to arg list (tail position)
+    ENTER = _op(19, 1)                  # ENTER n  (pop N args into locals 0..N-1)
+    RETURN = _op(20, 0)                 # Return from function
 
     # Debugging
-    EMIT_TRACE = auto()      # Emit trace: EMIT_TRACE (pops value, emits to watcher)
+    EMIT_TRACE = _op(30, 0)             # Emit trace (pops value, emits to watcher)
 
     # Function operations
-    FUNCTION_P = auto()      # Check if function
-    FUNCTION_EQ_P = auto()   # (function=? f g) → boolean
-    FUNCTION_NEQ_P = auto()  # (function!=? f g) → boolean
-    FUNCTION_MIN_ARITY = auto()
-                             # (function-min-arity f) → integer
-    FUNCTION_VARIADIC_P = auto()
-                             # (function-variadic? f) → boolean
-    FUNCTION_ACCEPTS_P = auto()
-                             # (function-accepts? f n) → boolean
+    FUNCTION_P = _op(40, 0)             # (function? x)
+    FUNCTION_EQ_P = _op(41, 0)          # (function=? f g)
+    FUNCTION_NEQ_P = _op(42, 0)         # (function!=? f g)
+    FUNCTION_MIN_ARITY = _op(43, 0)     # (function-min-arity f)
+    FUNCTION_VARIADIC_P = _op(44, 0)    # (function-variadic? f)
+    FUNCTION_ACCEPTS_P = _op(45, 0)     # (function-accepts? f n)
 
     # Symbol operations
-    SYMBOL_P = auto()        # Check if symbol: (symbol? x)
-    SYMBOL_EQ_P = auto()     # symbol=? a b
-    SYMBOL_NEQ_P = auto()    # symbol!=? a b
-    SYMBOL_TO_STRING = auto()
-                             # Convert symbol to string: (symbol->string sym)
+    SYMBOL_P = _op(60, 0)               # (symbol? x)
+    SYMBOL_EQ_P = _op(61, 0)            # symbol=? a b
+    SYMBOL_NEQ_P = _op(62, 0)           # symbol!=? a b
+    SYMBOL_TO_STRING = _op(63, 0)       # (symbol->string sym)
 
     # Boolean operations
-    BOOLEAN_P = auto()       # Check if boolean
-    BOOLEAN_EQ_P = auto()    # boolean=? a b
-    BOOLEAN_NEQ_P = auto()   # boolean!=? a b
-    BOOLEAN_NOT = auto()     # Logical NOT
+    BOOLEAN_P = _op(80, 0)              # (boolean? x)
+    BOOLEAN_EQ_P = _op(81, 0)           # boolean=? a b
+    BOOLEAN_NEQ_P = _op(82, 0)          # boolean!=? a b
+    BOOLEAN_NOT = _op(83, 0)            # Logical NOT
 
     # Integer operations
-    INTEGER_P = auto()       # Check if integer
-    INTEGER_EQ_P = auto()    # integer=? a b
-    INTEGER_NEQ_P = auto()   # integer!=? a b
-    INTEGER_LT_P = auto()    # integer<? a b
-    INTEGER_GT_P = auto()    # integer>? a b
-    INTEGER_LTE_P = auto()   # integer<=? a b
-    INTEGER_GTE_P = auto()   # integer>=? a b
-    INTEGER_ADD = auto()     # integer+ a b
-    INTEGER_SUB = auto()     # integer- a b
-    INTEGER_MUL = auto()     # integer* a b
-    INTEGER_DIV = auto()     # integer/ a b  (floor division)
-    INTEGER_MOD = auto()     # integer% a b  (modulo)
-    INTEGER_NEG = auto()     # integer-neg x  (unary minus)
-    INTEGER_ABS = auto()     # integer-abs x
-    INTEGER_BIT_NOT = auto() # Bitwise NOT ~x
-    INTEGER_BIT_SHIFT_LEFT = auto()
-                             # Bitwise left shift x << n
-    INTEGER_BIT_SHIFT_RIGHT = auto()
-                             # Bitwise right shift x >> n
-    INTEGER_BIT_OR = auto()  # Bitwise OR: a | b
-    INTEGER_BIT_AND = auto() # Bitwise AND: a & b
-    INTEGER_BIT_XOR = auto() # Bitwise XOR: a ^ b
-    INTEGER_MIN = auto()     # integer-min a b
-    INTEGER_MAX = auto()     # integer-max a b
-    INTEGER_TO_STRING = auto()
-                             # Convert integer to string
-    INTEGER_TO_STRING_BIN = auto()
-                             # Convert integer to binary string
-    INTEGER_TO_STRING_HEX = auto()
-                             # Convert integer to hex string
-    INTEGER_TO_STRING_OCT = auto()
-                             # Convert integer to octal string
-    INTEGER_TO_FLOAT = auto() # Convert integer to float
+    INTEGER_P = _op(100, 0)             # (integer? x)
+    INTEGER_EQ_P = _op(101, 0)          # integer=? a b
+    INTEGER_NEQ_P = _op(102, 0)         # integer!=? a b
+    INTEGER_LT_P = _op(103, 0)          # integer<? a b
+    INTEGER_GT_P = _op(104, 0)          # integer>? a b
+    INTEGER_LTE_P = _op(105, 0)         # integer<=? a b
+    INTEGER_GTE_P = _op(106, 0)         # integer>=? a b
+    INTEGER_ADD = _op(107, 0)           # integer+ a b
+    INTEGER_SUB = _op(108, 0)           # integer- a b
+    INTEGER_MUL = _op(109, 0)           # integer* a b
+    INTEGER_DIV = _op(110, 0)           # integer/ a b  (floor division)
+    INTEGER_MOD = _op(111, 0)           # integer% a b  (modulo)
+    INTEGER_NEG = _op(112, 0)           # integer-neg x  (unary minus)
+    INTEGER_ABS = _op(113, 0)           # integer-abs x
+    INTEGER_BIT_NOT = _op(114, 0)       # Bitwise NOT ~x
+    INTEGER_BIT_SHIFT_LEFT = _op(115, 0)
+                                        # Bitwise left shift x << n
+    INTEGER_BIT_SHIFT_RIGHT = _op(116, 0)
+                                        # Bitwise right shift x >> n
+    INTEGER_BIT_OR = _op(117, 0)        # Bitwise OR: a | b
+    INTEGER_BIT_AND = _op(118, 0)       # Bitwise AND: a & b
+    INTEGER_BIT_XOR = _op(119, 0)       # Bitwise XOR: a ^ b
+    INTEGER_MIN = _op(120, 0)           # integer-min a b
+    INTEGER_MAX = _op(121, 0)           # integer-max a b
+    INTEGER_TO_STRING = _op(122, 0)     # Convert integer to string
+    INTEGER_TO_STRING_BIN = _op(123, 0) # Convert integer to binary string
+    INTEGER_TO_STRING_HEX = _op(124, 0) # Convert integer to hex string
+    INTEGER_TO_STRING_OCT = _op(125, 0) # Convert integer to octal string
+    INTEGER_TO_FLOAT = _op(126, 0)      # Convert integer to float
 
     # Floating point operations
-    FLOAT_P = auto()         # Check if float
-    FLOAT_EQ_P = auto()      # float=? a b
-    FLOAT_NEQ_P = auto()     # float!=? a b
-    FLOAT_LT_P = auto()      # float<? a b
-    FLOAT_GT_P = auto()      # float>? a b
-    FLOAT_LTE_P = auto()     # float<=? a b
-    FLOAT_GTE_P = auto()     # float>=? a b
-    FLOAT_ADD = auto()       # float+ a b
-    FLOAT_SUB = auto()       # float- a b
-    FLOAT_MUL = auto()       # float* a b
-    FLOAT_DIV = auto()       # float/ a b
-    FLOAT_FLOOR_DIV = auto() # float// a b  (floor division)
-    FLOAT_MOD = auto()       # float% a b  (modulo)
-    FLOAT_NEG = auto()       # float-neg x  (unary minus)
-    FLOAT_EXPT = auto()      # float-expt a b
-    FLOAT_SIN = auto()       # float-sin x
-    FLOAT_COS = auto()       # float-cos x
-    FLOAT_TAN = auto()       # float-tan x
-    FLOAT_LOG = auto()       # float-log x
-    FLOAT_LOG10 = auto()     # float-log10 x
-    FLOAT_EXP = auto()       # float-exp x
-    FLOAT_SQRT = auto()      # float-sqrt x
-    FLOAT_ABS = auto()       # float-abs x
-    FLOAT_TO_INTEGER = auto()
-                             # Convert float to integer
-    FLOAT_TO_STRING = auto() # Convert float to string
-    FLOAT_FLOOR = auto()     # float-floor x  (returns float)
-    FLOAT_CEIL = auto()      # float-ceil x   (returns float)
-    FLOAT_ROUND = auto()     # float-round x  (returns float)
-    FLOAT_MIN = auto()       # float-min a b
-    FLOAT_MAX = auto()       # float-max a b
+    FLOAT_P = _op(140, 0)               # (float? x)
+    FLOAT_EQ_P = _op(141, 0)            # float=? a b
+    FLOAT_NEQ_P = _op(142, 0)           # float!=? a b
+    FLOAT_LT_P = _op(143, 0)            # float<? a b
+    FLOAT_GT_P = _op(144, 0)            # float>? a b
+    FLOAT_LTE_P = _op(145, 0)           # float<=? a b
+    FLOAT_GTE_P = _op(146, 0)           # float>=? a b
+    FLOAT_ADD = _op(147, 0)             # float+ a b
+    FLOAT_SUB = _op(148, 0)             # float- a b
+    FLOAT_MUL = _op(149, 0)             # float* a b
+    FLOAT_DIV = _op(150, 0)             # float/ a b
+    FLOAT_FLOOR_DIV = _op(151, 0)       # float// a b  (floor division)
+    FLOAT_MOD = _op(152, 0)             # float% a b  (modulo)
+    FLOAT_NEG = _op(153, 0)             # float-neg x  (unary minus)
+    FLOAT_EXPT = _op(154, 0)            # float-expt a b
+    FLOAT_SIN = _op(155, 0)             # float-sin x
+    FLOAT_COS = _op(156, 0)             # float-cos x
+    FLOAT_TAN = _op(157, 0)             # float-tan x
+    FLOAT_LOG = _op(158, 0)             # float-log x
+    FLOAT_LOG10 = _op(159, 0)           # float-log10 x
+    FLOAT_EXP = _op(160, 0)             # float-exp x
+    FLOAT_SQRT = _op(161, 0)            # float-sqrt x
+    FLOAT_ABS = _op(162, 0)             # float-abs x
+    FLOAT_TO_INTEGER = _op(163, 0)      # Convert float to integer
+    FLOAT_TO_STRING = _op(164, 0)       # Convert float to string
+    FLOAT_FLOOR = _op(165, 0)           # float-floor x  (returns float)
+    FLOAT_CEIL = _op(166, 0)            # float-ceil x   (returns float)
+    FLOAT_ROUND = _op(167, 0)           # float-round x  (returns float)
+    FLOAT_MIN = _op(168, 0)             # float-min a b
+    FLOAT_MAX = _op(169, 0)             # float-max a b
 
     # Complex operations
-    COMPLEX = auto()         # Construct complex from real and imaginary parts
-    COMPLEX_P = auto()       # Check if complex
-    COMPLEX_EQ_P = auto()    # complex=? a b
-    COMPLEX_NEQ_P = auto()   # complex!=? a b
-    COMPLEX_ADD = auto()     # complex+ a b
-    COMPLEX_SUB = auto()     # complex- a b
-    COMPLEX_MUL = auto()     # complex* a b
-    COMPLEX_DIV = auto()     # complex/ a b
-    COMPLEX_NEG = auto()     # complex-neg x  (unary minus)
-    COMPLEX_REAL = auto()    # Extract real part
-    COMPLEX_IMAG = auto()    # Extract imaginary part
-    COMPLEX_EXPT = auto()    # complex-expt a b
-    COMPLEX_SIN = auto()     # complex-sin x
-    COMPLEX_COS = auto()     # complex-cos x
-    COMPLEX_TAN = auto()     # complex-tan x
-    COMPLEX_LOG = auto()     # complex-log x
-    COMPLEX_LOG10 = auto()   # complex-log10 x
-    COMPLEX_EXP = auto()     # complex-exp x
-    COMPLEX_SQRT = auto()    # complex-sqrt x
-    COMPLEX_ABS = auto()     # complex-abs x  (returns float: magnitude)
-    COMPLEX_TO_STRING = auto()
-                             # Convert complex to string
+    COMPLEX = _op(180, 0)               # Construct complex from real and imaginary parts
+    COMPLEX_P = _op(181, 0)             # (complex? x)
+    COMPLEX_EQ_P = _op(182, 0)          # complex=? a b
+    COMPLEX_NEQ_P = _op(183, 0)         # complex!=? a b
+    COMPLEX_ADD = _op(184, 0)           # complex+ a b
+    COMPLEX_SUB = _op(185, 0)           # complex- a b
+    COMPLEX_MUL = _op(186, 0)           # complex* a b
+    COMPLEX_DIV = _op(187, 0)           # complex/ a b
+    COMPLEX_NEG = _op(188, 0)           # complex-neg x  (unary minus)
+    COMPLEX_REAL = _op(189, 0)          # Extract real part
+    COMPLEX_IMAG = _op(190, 0)          # Extract imaginary part
+    COMPLEX_EXPT = _op(191, 0)          # complex-expt a b
+    COMPLEX_SIN = _op(192, 0)           # complex-sin x
+    COMPLEX_COS = _op(193, 0)           # complex-cos x
+    COMPLEX_TAN = _op(194, 0)           # complex-tan x
+    COMPLEX_LOG = _op(195, 0)           # complex-log x
+    COMPLEX_LOG10 = _op(196, 0)         # complex-log10 x
+    COMPLEX_EXP = _op(197, 0)           # complex-exp x
+    COMPLEX_SQRT = _op(198, 0)          # complex-sqrt x
+    COMPLEX_ABS = _op(199, 0)           # complex-abs x  (returns float: magnitude)
+    COMPLEX_TO_STRING = _op(200, 0)     # Convert complex to string
 
     # String operations
-    STRING_P = auto()        # Check if string
-    STRING_EQ_P = auto()     # string=? a b
-    STRING_NEQ_P = auto()    # string!=? a b
-    STRING_LT_P = auto()     # string<? a b  (lexicographic)
-    STRING_GT_P = auto()     # string>? a b  (lexicographic)
-    STRING_LTE_P = auto()    # string<=? a b (lexicographic)
-    STRING_GTE_P = auto()    # string>=? a b (lexicographic)
-    STRING_LENGTH = auto()   # Get length of string
-    STRING_UPCASE = auto()   # Convert string to uppercase
-    STRING_DOWNCASE = auto() # Convert string to lowercase
-    STRING_TRIM = auto()     # Trim whitespace from string
-    STRING_TO_NUMBER = auto()
-                             # Parse string to number
-    STRING_TO_LIST = auto()  # Split string by delimiter: (string->list str delim)
-    STRING_REF = auto()      # Get character at index
-    STRING_CONTAINS_P = auto()
-                             # Check if string contains substring
-    STRING_PREFIX_P = auto() # Check if string has prefix
-    STRING_SUFFIX_P = auto() # Check if string has suffix
-    STRING_CONCAT = auto()   # Concatenate two strings: (string-concat a b)
-    STRING_SLICE = auto()    # Extract substring (string, start, end)
-    STRING_REPLACE = auto()  # Replace substring (string, old, new)
+    STRING_P = _op(220, 0)              # (string? x)
+    STRING_EQ_P = _op(221, 0)           # string=? a b
+    STRING_NEQ_P = _op(222, 0)          # string!=? a b
+    STRING_LT_P = _op(223, 0)           # string<? a b  (lexicographic)
+    STRING_GT_P = _op(224, 0)           # string>? a b  (lexicographic)
+    STRING_LTE_P = _op(225, 0)          # string<=? a b (lexicographic)
+    STRING_GTE_P = _op(226, 0)          # string>=? a b (lexicographic)
+    STRING_LENGTH = _op(227, 0)         # Get length of string
+    STRING_UPCASE = _op(228, 0)         # Convert string to uppercase
+    STRING_DOWNCASE = _op(229, 0)       # Convert string to lowercase
+    STRING_TRIM = _op(230, 0)           # Trim whitespace from string
+    STRING_TO_NUMBER = _op(231, 0)      # Parse string to number
+    STRING_TO_LIST = _op(232, 0)        # Split string by delimiter: (string->list str delim)
+    STRING_REF = _op(233, 0)            # Get character at index
+    STRING_CONTAINS_P = _op(234, 0)     # Check if string contains substring
+    STRING_PREFIX_P = _op(235, 0)       # Check if string has prefix
+    STRING_SUFFIX_P = _op(236, 0)       # Check if string has suffix
+    STRING_CONCAT = _op(237, 0)         # Concatenate two strings: (string-concat a b)
+    STRING_SLICE = _op(238, 0)          # Extract substring (string, start, end)
+    STRING_REPLACE = _op(239, 0)        # Replace substring (string, old, new)
 
     # Alist operations
-    ALIST = auto()           # Create an alist
-    ALIST_P = auto()         # Check if alist
-    ALIST_EQ_P = auto()      # alist=? a b
-    ALIST_NEQ_P = auto()     # alist!=? a b
-    ALIST_KEYS = auto()      # Get all keys from alist
-    ALIST_VALUES = auto()    # Get all values from alist
-    ALIST_LENGTH = auto()    # Get number of entries in alist
-    ALIST_HAS_P = auto()     # Check if alist has key
-    ALIST_REMOVE = auto()    # Remove key from alist
-    ALIST_MERGE = auto()     # Merge two alists
-    ALIST_SET = auto()       # Set key in alist (alist, key, value)
-    ALIST_GET = auto()       # Get value from alist by key with default: (alist-get alist key default)
+    ALIST = _op(260, 1)                 # ALIST n  (build alist from n pairs on stack)
+    ALIST_P = _op(261, 0)               # (alist? x)
+    ALIST_EQ_P = _op(262, 0)            # alist=? a b
+    ALIST_NEQ_P = _op(263, 0)           # alist!=? a b
+    ALIST_KEYS = _op(264, 0)            # Get all keys from alist
+    ALIST_VALUES = _op(265, 0)          # Get all values from alist
+    ALIST_LENGTH = _op(266, 0)          # Get number of entries in alist
+    ALIST_HAS_P = _op(267, 0)           # Check if alist has key
+    ALIST_REMOVE = _op(268, 0)          # Remove key from alist
+    ALIST_MERGE = _op(269, 0)           # Merge two alists
+    ALIST_SET = _op(270, 0)             # Set key in alist (alist, key, value)
+    ALIST_GET = _op(271, 0)             # Get value from alist by key with default
 
     # List operations
-    LIST = auto()            # Build list
-    LIST_P = auto()          # Check if list
-    LIST_EQ_P = auto()       # list=? a b
-    LIST_NEQ_P = auto()      # list!=? a b
-    LIST_PREPEND = auto()
-    LIST_APPEND = auto()     # Append single item to end of list: (list-append lst item)
-    LIST_REVERSE = auto()    # Reverse list on top of stack
-    LIST_FIRST = auto()      # Get first element of list
-    LIST_REST = auto()       # Get rest of list (all but first element)
-    LIST_LAST = auto()       # Get last element of list
-    LIST_LENGTH = auto()     # Get length of list
-    LIST_REF = auto()        # Get element at index from list: LIST_REF index
-    LIST_NULL_P = auto()     # Check if list is empty
-    LIST_MEMBER_P = auto()   # Check if item is in list
-    LIST_POSITION = auto()   # Find index of item in list
-    LIST_SLICE = auto()      # Slice list: (list-slice lst start [end])
-    LIST_REMOVE = auto()     # Remove all occurrences of item from list
-    LIST_CONCAT = auto()     # Append two lists: (append a b)
-    LIST_TO_STRING = auto()  # Join list of strings with separator: (list->string lst sep)
+    LIST = _op(300, 1)                  # LIST n  (build list from n elements on stack)
+    LIST_P = _op(301, 0)                # (list? x)
+    LIST_EQ_P = _op(302, 0)             # list=? a b
+    LIST_NEQ_P = _op(303, 0)            # list!=? a b
+    LIST_PREPEND = _op(304, 0)          # list-prepend item lst
+    LIST_APPEND = _op(305, 0)           # list-append lst item
+    LIST_REVERSE = _op(306, 0)          # Reverse list on top of stack
+    LIST_FIRST = _op(307, 0)            # Get first element of list
+    LIST_REST = _op(308, 0)             # Get rest of list (all but first element)
+    LIST_LAST = _op(309, 0)             # Get last element of list
+    LIST_LENGTH = _op(310, 0)           # Get length of list
+    LIST_REF = _op(311, 0)              # Get element at index from list
+    LIST_NULL_P = _op(312, 0)           # Check if list is empty
+    LIST_MEMBER_P = _op(313, 0)         # Check if item is in list
+    LIST_POSITION = _op(314, 0)         # Find index of item in list
+    LIST_SLICE = _op(315, 0)            # Slice list: (list-slice lst start end)
+    LIST_REMOVE = _op(316, 0)           # Remove all occurrences of item from list
+    LIST_CONCAT = _op(317, 0)           # Append two lists: (append a b)
+    LIST_TO_STRING = _op(318, 0)        # Join list of strings with separator
 
     # Generate integer range list
-    RANGE = auto()           # Generate integer range list: (range start end step)
+    RANGE = _op(340, 0)                 # (range start end step)
 
 
 # Maps builtin function name → (opcode, arity) for all fixed-arity builtins.
@@ -393,168 +412,8 @@ class Instruction:
     arg2: int = 0
 
     def arg_count(self) -> int:
-        """Return the number of arguments this instruction takes (0, 1, or 2)."""
-        # Opcodes with no arguments (all primitive operations that take operands
-        # from the stack rather than from the instruction stream)
-        no_arg_opcodes = {
-            Opcode.LOAD_TRUE,
-            Opcode.LOAD_FALSE,
-            Opcode.LOAD_EMPTY_LIST,
-            Opcode.TAIL_APPLY,
-            Opcode.APPLY,
-            Opcode.RETURN,
-            Opcode.EMIT_TRACE,
-            Opcode.FUNCTION_P,
-            Opcode.FUNCTION_EQ_P,
-            Opcode.FUNCTION_NEQ_P,
-            Opcode.FUNCTION_MIN_ARITY,
-            Opcode.FUNCTION_VARIADIC_P,
-            Opcode.FUNCTION_ACCEPTS_P,
-            Opcode.BOOLEAN_P,
-            Opcode.BOOLEAN_EQ_P,
-            Opcode.BOOLEAN_NEQ_P,
-            Opcode.BOOLEAN_NOT,
-            Opcode.INTEGER_P,
-            Opcode.INTEGER_EQ_P,
-            Opcode.INTEGER_NEQ_P,
-            Opcode.INTEGER_LT_P,
-            Opcode.INTEGER_GT_P,
-            Opcode.INTEGER_LTE_P,
-            Opcode.INTEGER_GTE_P,
-            Opcode.INTEGER_ADD,
-            Opcode.INTEGER_SUB,
-            Opcode.INTEGER_MUL,
-            Opcode.INTEGER_DIV,
-            Opcode.INTEGER_NEG,
-            Opcode.INTEGER_ABS,
-            Opcode.INTEGER_BIT_OR,
-            Opcode.INTEGER_BIT_AND,
-            Opcode.INTEGER_BIT_XOR,
-            Opcode.INTEGER_BIT_NOT,
-            Opcode.INTEGER_BIT_SHIFT_LEFT,
-            Opcode.INTEGER_BIT_SHIFT_RIGHT,
-            Opcode.INTEGER_MIN,
-            Opcode.INTEGER_MAX,
-            Opcode.INTEGER_TO_STRING,
-            Opcode.INTEGER_TO_STRING_BIN,
-            Opcode.INTEGER_TO_STRING_HEX,
-            Opcode.INTEGER_TO_STRING_OCT,
-            Opcode.INTEGER_TO_FLOAT,
-            Opcode.FLOAT_P,
-            Opcode.FLOAT_EQ_P,
-            Opcode.FLOAT_NEQ_P,
-            Opcode.FLOAT_LT_P,
-            Opcode.FLOAT_GT_P,
-            Opcode.FLOAT_LTE_P,
-            Opcode.FLOAT_GTE_P,
-            Opcode.FLOAT_ADD,
-            Opcode.FLOAT_SUB,
-            Opcode.FLOAT_MUL,
-            Opcode.FLOAT_DIV,
-            Opcode.FLOAT_FLOOR_DIV,
-            Opcode.FLOAT_MOD,
-            Opcode.FLOAT_NEG,
-            Opcode.FLOAT_EXPT,
-            Opcode.FLOAT_SIN,
-            Opcode.FLOAT_COS,
-            Opcode.FLOAT_TAN,
-            Opcode.FLOAT_LOG,
-            Opcode.FLOAT_LOG10,
-            Opcode.FLOAT_EXP,
-            Opcode.FLOAT_SQRT,
-            Opcode.FLOAT_ABS,
-            Opcode.FLOAT_TO_INTEGER,
-            Opcode.FLOAT_TO_STRING,
-            Opcode.FLOAT_FLOOR,
-            Opcode.FLOAT_CEIL,
-            Opcode.FLOAT_ROUND,
-            Opcode.FLOAT_MIN,
-            Opcode.FLOAT_MAX,
-            Opcode.COMPLEX,
-            Opcode.COMPLEX_P,
-            Opcode.COMPLEX_EQ_P,
-            Opcode.COMPLEX_NEQ_P,
-            Opcode.COMPLEX_ADD,
-            Opcode.COMPLEX_SUB,
-            Opcode.COMPLEX_MUL,
-            Opcode.COMPLEX_DIV,
-            Opcode.COMPLEX_NEG,
-            Opcode.COMPLEX_EXPT,
-            Opcode.COMPLEX_SIN,
-            Opcode.COMPLEX_COS,
-            Opcode.COMPLEX_TAN,
-            Opcode.COMPLEX_LOG,
-            Opcode.COMPLEX_EXP,
-            Opcode.COMPLEX_SQRT,
-            Opcode.COMPLEX_ABS,
-            Opcode.COMPLEX_REAL,
-            Opcode.COMPLEX_IMAG,
-            Opcode.COMPLEX_TO_STRING,
-            Opcode.STRING_P,
-            Opcode.STRING_EQ_P,
-            Opcode.STRING_NEQ_P,
-            Opcode.STRING_LT_P,
-            Opcode.STRING_GT_P,
-            Opcode.STRING_LTE_P,
-            Opcode.STRING_GTE_P,
-            Opcode.STRING_LENGTH,
-            Opcode.STRING_UPCASE,
-            Opcode.STRING_DOWNCASE,
-            Opcode.STRING_TRIM,
-            Opcode.STRING_TO_NUMBER,
-            Opcode.STRING_TO_LIST,
-            Opcode.STRING_REF,
-            Opcode.STRING_CONTAINS_P,
-            Opcode.STRING_PREFIX_P,
-            Opcode.STRING_SUFFIX_P,
-            Opcode.STRING_CONCAT,
-            Opcode.STRING_SLICE,
-            Opcode.STRING_REPLACE,
-            Opcode.LIST_P,
-            Opcode.LIST_EQ_P,
-            Opcode.LIST_NEQ_P,
-            Opcode.LIST_PREPEND,
-            Opcode.LIST_APPEND,
-            Opcode.LIST_REVERSE,
-            Opcode.LIST_FIRST,
-            Opcode.LIST_REST,
-            Opcode.LIST_LAST,
-            Opcode.LIST_LENGTH,
-            Opcode.LIST_REF,
-            Opcode.LIST_NULL_P,
-            Opcode.LIST_MEMBER_P,
-            Opcode.LIST_POSITION,
-            Opcode.LIST_SLICE,
-            Opcode.LIST_SLICE,
-            Opcode.LIST_REMOVE,
-            Opcode.LIST_CONCAT,
-            Opcode.LIST_TO_STRING,
-            Opcode.ALIST_P,
-            Opcode.ALIST_EQ_P,
-            Opcode.ALIST_NEQ_P,
-            Opcode.ALIST_KEYS,
-            Opcode.ALIST_VALUES,
-            Opcode.ALIST_LENGTH,
-            Opcode.ALIST_HAS_P,
-            Opcode.ALIST_REMOVE,
-            Opcode.ALIST_MERGE,
-            Opcode.ALIST_GET,
-            Opcode.ALIST_SET,
-            Opcode.RANGE,
-        }
-        if self.opcode in no_arg_opcodes:
-            return 0
-
-        # Opcodes with two instruction-stream arguments
-        two_arg_opcodes = {
-            Opcode.MAKE_CLOSURE,
-            Opcode.LOAD_PARENT_VAR,
-        }
-        if self.opcode in two_arg_opcodes:
-            return 2
-
-        # All other opcodes take one instruction-stream argument
-        return 1
+        """Return the number of instruction-stream arguments this instruction takes (0, 1, or 2)."""
+        return self.opcode.arg_count
 
     def __repr__(self) -> str:
         """Human-readable representation."""

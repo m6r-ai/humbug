@@ -171,7 +171,7 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
 
 def format_instruction(instr: Instruction, index: int) -> str:
     """Format instruction with appropriate arguments based on opcode."""
-    n = instr.arg_count()
+    n = instr.opcode.arg_count
     if n == 0:
         instr_str = f"{index:4}: {instr.opcode.name}"
 
