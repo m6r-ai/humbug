@@ -305,6 +305,7 @@ Syntax: (operator arg1 arg2 ...)
 ## Association lists (alists):
 
 - Immutable key-value mappings with O(1) lookup performance
+- Output format: alists display with curly braces: {("name" "Alice") ("age" 30)} — this is display-only; construction always uses (alist ...)
 - Construction: (alist (list "name" "Alice") (list "age" 30))
 - Access: (alist-get my-alist "key"), (alist-get my-alist "key" "default")
 - Modification: (alist-set my-alist "key" value), (alist-remove my-alist "key")
@@ -388,6 +389,10 @@ Syntax: (operator arg1 arg2 ...)
 - (fold func init list) → (fold integer+ 0 (list 1 2 3 4)) → 10
 - (range start end [step]) → (range 1 5) → (1 2 3 4), integers only
 - (find predicate list), (any? predicate list), (all? predicate list)
+- (zip lst1 lst2) → pairs corresponding elements: (zip (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6))
+- (zip lst1 lst2) stops at the shorter list: (zip (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
+- (unzip lst) → inverse of zip; splits a list of 2-element lists into a list of two lists: (unzip (list (list 1 4) (list 2 5) (list 3 6))) → ((1 2 3) (4 5 6))
+- (list-first (unzip pairs)) → first elements, (list-first (list-rest (unzip pairs))) → second elements
 
 ## Pattern matching:
 

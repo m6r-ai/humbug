@@ -515,6 +515,22 @@ class AIFPL:
         'all?': """(lambda (pred lst)
                     (letrec ((all? (lambda (pred lst) (if (list-null? lst) #t (if (pred (list-first lst)) (all? pred (list-rest lst)) #f)))))
                     (all? pred lst)))""",
+        'zip': """(lambda (lst1 lst2)
+                    (letrec ((helper (lambda (l1 l2 acc)
+                                       (if (or (list-null? l1) (list-null? l2))
+                                           (list-reverse acc)
+                                           (helper (list-rest l1) (list-rest l2)
+                                                   (list-prepend acc (list (list-first l1)
+                                                                           (list-first l2))))))))
+                      (helper lst1 lst2 (list))))""",
+        'unzip': """(lambda (lst)
+                      (letrec ((helper (lambda (lst acc1 acc2)
+                                         (if (list-null? lst)
+                                             (list (list-reverse acc1) (list-reverse acc2))
+                                             (helper (list-rest lst)
+                                                     (list-prepend acc1 (list-first (list-first lst)))
+                                                     (list-prepend acc2 (list-first (list-rest (list-first lst)))))))))
+                        (helper lst (list) (list))))""",
     }
 
     # Mathematical constants
