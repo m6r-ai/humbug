@@ -544,7 +544,7 @@ class TestLetrecLambdasInDataStructures:
         helpers.assert_evaluates_to(
             aifpl,
             '(letrec ((x (list (lambda (n) (if (integer<=? n 0) x (list n)))))) ((list-first x) 0))',
-            '(<lambda (param0)>)'  # Calling with 0 returns x
+            '(<lambda (n)>)'  # Calling with 0 returns x; param name is now correctly 'n'
         )
 
         helpers.assert_evaluates_to(

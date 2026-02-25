@@ -755,7 +755,7 @@ class AIFPLVM:
         current_frame = self.current_frame
 
         closure = AIFPLFunction(
-            parameters=tuple(f"param{i}" for i in range(closure_code.param_count)),
+            parameters=tuple(closure_code.param_names),
             name=closure_code.name,
             bytecode=closure_code,
             captured_values=tuple(captured_values),

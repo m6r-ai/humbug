@@ -115,7 +115,7 @@ class TestEvaluatorMissingCoverage:
         # Fixed-arity stubs describe as <lambda (arg0, ...)>
         cases = [
             ("float-sqrt", "<lambda (arg0)>"),  # unary fixed-arity — bytecode stub
-            ("list", "<lambda (param0)>"),      # variadic — still native
+            ("list", "<lambda (args)>"),        # variadic prelude lambda — rest param named 'args'
         ]
         for func_name, expected in cases:
             result = aifpl.evaluate_and_format(func_name)
