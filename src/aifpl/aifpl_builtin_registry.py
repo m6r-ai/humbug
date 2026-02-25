@@ -59,6 +59,7 @@ class AIFPLBuiltinRegistry:
         'integer/': (2, None),
         'integer%': (2, 2),
         'integer-neg': (1, 1),
+        'integer-expt': (2, 2),
         'integer-abs': (1, 1),
         'bit-or': (2, None),
         'bit-and': (2, None),

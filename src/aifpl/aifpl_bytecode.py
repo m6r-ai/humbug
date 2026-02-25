@@ -108,22 +108,23 @@ class Opcode(IntEnum):
     INTEGER_DIV = _op(110, 0)           # integer/ a b  (floor division)
     INTEGER_MOD = _op(111, 0)           # integer% a b  (modulo)
     INTEGER_NEG = _op(112, 0)           # integer-neg x  (unary minus)
-    INTEGER_ABS = _op(113, 0)           # integer-abs x
-    INTEGER_BIT_NOT = _op(114, 0)       # Bitwise NOT ~x
-    INTEGER_BIT_SHIFT_LEFT = _op(115, 0)
+    INTEGER_EXPT = _op(113, 0)          # integer-expt a b  (exact integer exponentiation)
+    INTEGER_ABS = _op(114, 0)           # integer-abs x
+    INTEGER_BIT_NOT = _op(115, 0)       # Bitwise NOT ~x
+    INTEGER_BIT_SHIFT_LEFT = _op(116, 0)
                                         # Bitwise left shift x << n
-    INTEGER_BIT_SHIFT_RIGHT = _op(116, 0)
+    INTEGER_BIT_SHIFT_RIGHT = _op(117, 0)
                                         # Bitwise right shift x >> n
-    INTEGER_BIT_OR = _op(117, 0)        # Bitwise OR: a | b
-    INTEGER_BIT_AND = _op(118, 0)       # Bitwise AND: a & b
-    INTEGER_BIT_XOR = _op(119, 0)       # Bitwise XOR: a ^ b
-    INTEGER_MIN = _op(120, 0)           # integer-min a b
-    INTEGER_MAX = _op(121, 0)           # integer-max a b
-    INTEGER_TO_STRING = _op(122, 0)     # Convert integer to string
-    INTEGER_TO_STRING_BIN = _op(123, 0) # Convert integer to binary string
-    INTEGER_TO_STRING_HEX = _op(124, 0) # Convert integer to hex string
-    INTEGER_TO_STRING_OCT = _op(125, 0) # Convert integer to octal string
-    INTEGER_TO_FLOAT = _op(126, 0)      # Convert integer to float
+    INTEGER_BIT_OR = _op(118, 0)        # Bitwise OR: a | b
+    INTEGER_BIT_AND = _op(119, 0)       # Bitwise AND: a & b
+    INTEGER_BIT_XOR = _op(120, 0)       # Bitwise XOR: a ^ b
+    INTEGER_MIN = _op(121, 0)           # integer-min a b
+    INTEGER_MAX = _op(122, 0)           # integer-max a b
+    INTEGER_TO_STRING = _op(123, 0)     # Convert integer to string
+    INTEGER_TO_STRING_BIN = _op(124, 0) # Convert integer to binary string
+    INTEGER_TO_STRING_HEX = _op(125, 0) # Convert integer to hex string
+    INTEGER_TO_STRING_OCT = _op(126, 0) # Convert integer to octal string
+    INTEGER_TO_FLOAT = _op(127, 0)      # Convert integer to float
 
     # Floating point operations
     FLOAT_P = _op(140, 0)               # (float? x)
@@ -278,6 +279,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'integer/': (Opcode.INTEGER_DIV, 2),
     'integer%': (Opcode.INTEGER_MOD, 2),
     'integer-neg': (Opcode.INTEGER_NEG, 1),
+    'integer-expt': (Opcode.INTEGER_EXPT, 2),
     'integer-abs': (Opcode.INTEGER_ABS, 1),
     'bit-not': (Opcode.INTEGER_BIT_NOT, 1),
     'bit-shift-left': (Opcode.INTEGER_BIT_SHIFT_LEFT, 2),

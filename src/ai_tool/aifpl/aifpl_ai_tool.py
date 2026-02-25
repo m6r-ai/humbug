@@ -203,6 +203,8 @@ Syntax: (operator arg1 arg2 ...)
 - (integer+) → 0, (integer*) → 1 (zero-arg identities)
 - (integer% 7 3) → 1 (modulo), (integer% -7 2) → 1, (integer% 7 -3) → -2 (result takes sign of divisor)
 - (integer-abs -5) → 5 (absolute value)
+- (integer-expt 2 10) → 1024, (integer-expt 3 0) → 1, (integer-expt 0 0) → 1 (exact arbitrary-precision integer exponentiation)
+- (integer-expt base exp) requires non-negative exponent; raises error for negative exponent (result would not be an integer)
 
 ### Float arithmetic (all args must be floats; use (integer->float x) to convert integers):
 

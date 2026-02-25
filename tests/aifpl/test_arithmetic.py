@@ -177,6 +177,44 @@ class TestArithmetic:
         """Test pow function."""
         assert aifpl.evaluate_and_format(expression) == expected
 
+    @pytest.mark.parametrize("expression,expected", [
+        # Basic integer exponentiation
+        ("(integer-expt 2 10)", "1024"),
+        ("(integer-expt 3 3)", "27"),
+        ("(integer-expt 5 0)", "1"),
+        ("(integer-expt 0 0)", "1"),
+        ("(integer-expt 0 5)", "0"),
+        ("(integer-expt 1 1000)", "1"),
+
+        # Negative base
+        ("(integer-expt -2 3)", "-8"),
+        ("(integer-expt -2 4)", "16"),
+        ("(integer-expt -1 0)", "1"),
+
+        # Arbitrary precision (Python int ** int stays exact)
+        ("(integer-expt 2 64)", "18446744073709551616"),
+        ("(integer-expt 10 20)", "100000000000000000000"),
+    ])
+    def test_integer_expt(self, aifpl, expression, expected):
+        """Test integer-expt function (exact arbitrary-precision integer exponentiation)."""
+        assert aifpl.evaluate_and_format(expression) == expected
+
+    def test_integer_expt_negative_exponent_error(self, aifpl):
+        """Test that integer-expt raises on negative exponent (result would not be an integer)."""
+        with pytest.raises(AIFPLEvalError, match="non-negative exponent"):
+            aifpl.evaluate("(integer-expt 2 -1)")
+
+        with pytest.raises(AIFPLEvalError, match="non-negative exponent"):
+            aifpl.evaluate("(integer-expt 10 -3)")
+
+    def test_integer_expt_type_errors(self, aifpl):
+        """Test that integer-expt rejects non-integer arguments."""
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate("(integer-expt 2.0 3)")
+
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate("(integer-expt 2 3.0)")
+
     @pytest.mark.parametrize("expression,expected_approx", [
         # Trigonometric functions
         ("(float-sin 0.0)", 0.0),

@@ -205,6 +205,7 @@ class AIFPLVM:
         table[Opcode.INTEGER_DIV] = self._op_integer_div
         table[Opcode.INTEGER_MOD] = self._op_integer_mod
         table[Opcode.INTEGER_NEG] = self._op_integer_neg
+        table[Opcode.INTEGER_EXPT] = self._op_integer_expt
         table[Opcode.INTEGER_ABS] = self._op_integer_abs
         table[Opcode.INTEGER_BIT_NOT] = self._op_integer_bit_not
         table[Opcode.INTEGER_BIT_SHIFT_LEFT] = self._op_integer_bit_shift_left
@@ -1253,6 +1254,20 @@ class AIFPLVM:
         """INTEGER_NEG: Pop an integer, push its negation."""
         a = self.stack.pop()
         self.stack.append(AIFPLInteger(-self._ensure_integer(a, 'integer-neg')))
+        return None
+
+    def _op_integer_expt(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_EXPT: Pop exponent and base integers, push base ** exponent as integer."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_integer(a, 'integer-expt')
+        b_val = self._ensure_integer(b, 'integer-expt')
+        if b_val < 0:
+            raise AIFPLEvalError("Function 'integer-expt' requires a non-negative exponent")
+
+        self.stack.append(AIFPLInteger(a_val ** b_val))
         return None
 
     def _op_integer_abs(  # pylint: disable=useless-return

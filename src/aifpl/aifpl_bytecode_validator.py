@@ -163,6 +163,7 @@ class BytecodeValidator:
             Opcode.INTEGER_DIV: (2, 1),
             Opcode.INTEGER_MOD: (2, 1),
             Opcode.INTEGER_NEG: (1, 1),
+            Opcode.INTEGER_EXPT: (2, 1),
             Opcode.INTEGER_BIT_NOT: (1, 1),
             Opcode.INTEGER_BIT_SHIFT_LEFT: (2, 1),
             Opcode.INTEGER_BIT_SHIFT_RIGHT: (2, 1),
