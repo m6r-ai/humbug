@@ -1351,7 +1351,7 @@ class AIFPLVM:
     def _op_integer_to_complex(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """INTEGER_TO_COMPLEX: Pop an integer, push as complex with zero imaginary part."""
+        """INTEGER_TO_COMPLEX: Pop two integers, push as complex with zero imaginary part."""
         imag = self.stack.pop()
         real = self.stack.pop()
         real_val = self._ensure_integer(real, 'integer->complex')
@@ -1665,7 +1665,7 @@ class AIFPLVM:
     def _op_float_to_complex(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """FLOAT_TO_COMPLEX: Pop a float, push as complex with zero imaginary part."""
+        """FLOAT_TO_COMPLEX: Pop two floats, push as complex with zero imaginary part."""
         imag = self.stack.pop()
         real = self.stack.pop()
         real_val = self._ensure_float(real, 'float->complex')
