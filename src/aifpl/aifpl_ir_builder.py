@@ -620,10 +620,14 @@ class AIFPLIRBuilder:
             # Analyze arguments
             arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
 
+            # 'apply' is the only builtin that dispatches a further call, so tail
+            # position must be propagated so the codegen can emit TAIL_APPLY.
+            is_apply_tail = in_tail_position and builtin_name == 'apply'
+
             return AIFPLIRCall(
                 func_plan=AIFPLIRVariable(name=builtin_name, var_type='global', depth=0, index=0),
                 arg_plans=arg_plans,
-                is_tail_call=False,  # Builtins are never tail-called
+                is_tail_call=is_apply_tail,
                 is_tail_recursive=False,
                 is_builtin=True,
                 builtin_name=builtin_name

@@ -320,7 +320,25 @@ Syntax: (operator arg1 arg2 ...)
 - (float? 3.14) → #t, (float? 42) → #f, (float? (float/ 1.0 2.0)) → #t
 - (complex? (complex 1 1)) → #t, (complex? 42) → #f
 - (string? "hello") → #t, (boolean? #t) → #t, (list? (list 1 2)) → #t, (alist? (alist ...)) → #t
-- (function? (lambda (x) x)) → #t
+- (function? (lambda (x) x)) → #t, (function? integer+) → #t
+
+## Function operations:
+
+- (apply f args) → call function f with elements of list args as individual arguments
+- (apply integer+ (list 1 2 3)) → 6, (apply list (list 1 2 3)) → (1 2 3)
+- (apply f (list)) → calls f with zero arguments (f must accept zero args)
+- apply respects all arity rules: fixed-arity functions are checked, variadic args are packed
+- (function-min-arity f) → integer: minimum number of arguments f requires
+- (function-min-arity integer-abs) → 1, (function-min-arity integer+) → 0, (function-min-arity (lambda (x . rest) x)) → 1
+- (function-variadic? f) → #t if f accepts more arguments than its minimum (has a rest parameter)
+- (function-variadic? integer+) → #t, (function-variadic? integer-abs) → #f
+- (function-accepts? f n) → #t if calling f with exactly n arguments satisfies its arity requirements
+- (function-accepts? integer-abs 1) → #t, (function-accepts? integer-abs 2) → #f
+- (function-accepts? integer+ 0) → #t, (function-accepts? integer+ 99) → #t
+- (function-accepts? (lambda (x . rest) x) 0) → #f, (function-accepts? (lambda (x . rest) x) 3) → #t
+- (function=? f g) → #t if f and g are the same function object (identity, not structural equality)
+- (function!=? f g) → #t if f and g are different function objects
+- (function=? integer+ integer+) → #t, (function=? integer+ integer*) → #f
 
 ## Lambda functions:
 

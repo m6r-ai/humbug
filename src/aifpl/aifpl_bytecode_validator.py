@@ -121,6 +121,8 @@ class BytecodeValidator:
             Opcode.MAKE_CLOSURE: (-1, 1),
             Opcode.CALL: (-1, 1),
             Opcode.TAIL_CALL: (-1, 0),
+            Opcode.APPLY: (2, 1),
+            Opcode.TAIL_APPLY: (2, 0),
             # ENTER effect is n-dependent; handled in _get_stack_effect
             Opcode.RETURN: (1, 0),
 
@@ -129,6 +131,11 @@ class BytecodeValidator:
 
             # Function operations
             Opcode.FUNCTION_P: (1, 1),
+            Opcode.FUNCTION_MIN_ARITY: (1, 1),
+            Opcode.FUNCTION_VARIADIC_P: (1, 1),
+            Opcode.FUNCTION_ACCEPTS_P: (2, 1),
+            Opcode.FUNCTION_EQ_P: (2, 1),
+            Opcode.FUNCTION_NEQ_P: (2, 1),
 
             # Boolean operations
             Opcode.BOOLEAN_P: (1, 1),
@@ -432,7 +439,7 @@ class BytecodeValidator:
 
             # Check if block ends properly
             ends_properly = (
-                last_instr.opcode in (Opcode.RETURN, Opcode.TAIL_CALL, Opcode.RAISE_ERROR) or
+                last_instr.opcode in (Opcode.RETURN, Opcode.TAIL_CALL, Opcode.TAIL_APPLY, Opcode.RAISE_ERROR) or
                 len(block.successors) > 0
             )
 
@@ -630,8 +637,8 @@ class BytecodeValidator:
         if opcode in (Opcode.RETURN, Opcode.RAISE_ERROR):
             return []
 
-        # Tail calls are terminal (they replace the frame)
-        if opcode == Opcode.TAIL_CALL:
+        # Tail calls/applies are terminal (they replace the frame)
+        if opcode in (Opcode.TAIL_CALL, Opcode.TAIL_APPLY):
             return []
 
         successors = []
@@ -673,7 +680,7 @@ class BytecodeValidator:
                         leaders.add(i + 1)
 
             # Instruction after RETURN/RAISE_ERROR is a leader (if exists)
-            if instr.opcode in (Opcode.RETURN, Opcode.RAISE_ERROR, Opcode.TAIL_CALL):
+            if instr.opcode in (Opcode.RETURN, Opcode.RAISE_ERROR, Opcode.TAIL_CALL, Opcode.TAIL_APPLY):
                 if i + 1 < len(code.instructions):
                     leaders.add(i + 1)
 

@@ -173,10 +173,17 @@ class AIFPLVM:
         table[Opcode.MAKE_CLOSURE] = self._op_make_closure
         table[Opcode.CALL] = self._op_call
         table[Opcode.TAIL_CALL] = self._op_tail_call
+        table[Opcode.APPLY] = self._op_apply
+        table[Opcode.TAIL_APPLY] = self._op_tail_apply
         table[Opcode.ENTER] = self._op_enter
         table[Opcode.RETURN] = self._op_return
         table[Opcode.EMIT_TRACE] = self._op_emit_trace
         table[Opcode.FUNCTION_P] = self._op_function_p
+        table[Opcode.FUNCTION_EQ_P] = self._op_function_eq_p
+        table[Opcode.FUNCTION_NEQ_P] = self._op_function_neq_p
+        table[Opcode.FUNCTION_MIN_ARITY] = self._op_function_min_arity
+        table[Opcode.FUNCTION_VARIADIC_P] = self._op_function_variadic_p
+        table[Opcode.FUNCTION_ACCEPTS_P] = self._op_function_accepts_p
         table[Opcode.BOOLEAN_P] = self._op_boolean_p
         table[Opcode.BOOLEAN_EQ_P] = self._op_boolean_eq_p
         table[Opcode.BOOLEAN_NEQ_P] = self._op_boolean_neq_p
@@ -379,6 +386,43 @@ class AIFPLVM:
             raise AIFPLEvalError(f"Function '{function_name}' requires alist arguments, got {value.type_name()}")
 
         return value
+
+    def _check_and_pack_args(self, func: AIFPLFunction, arity: int) -> None:
+        """
+        Shared arity-check and variadic-pack logic for CALL, TAIL_CALL, APPLY, TAIL_APPLY.
+
+        Verifies that `arity` satisfies `func`'s parameter requirements and, for
+        variadic functions, packs excess arguments into a list on the stack.
+        Raises AIFPLEvalError on arity mismatch.
+        """
+        expected_arity = func.bytecode.param_count
+        if func.bytecode.is_variadic:
+            # Variadic: must have at least (param_count - 1) fixed args.
+            # The last local receives all remaining args packed into a list.
+            min_arity = expected_arity - 1
+            if arity < min_arity:
+                func_name = func.name or "<lambda>"
+                raise AIFPLEvalError(
+                    message=f"Function '{func_name}' expects at least {min_arity} arguments, got {arity}",
+                    suggestion=f"Provide at least {min_arity} argument{'s' if min_arity != 1 else ''}"
+                )
+
+            rest_count = arity - min_arity
+            if rest_count == 0:
+                self.stack.append(AIFPLList(()))
+                return
+
+            rest_elements = tuple(self.stack[-rest_count:])
+            del self.stack[-rest_count:]
+            self.stack.append(AIFPLList(rest_elements))
+            return
+
+        if arity != expected_arity:
+            func_name = func.name or "<lambda>"
+            raise AIFPLEvalError(
+                message=f"Function '{func_name}' expects {expected_arity} arguments, got {arity}",
+                suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
+            )
 
     def execute(
         self,
@@ -737,38 +781,7 @@ class AIFPLVM:
                 suggestion="Only functions can be called"
             )
 
-        # Check arity for bytecode functions
-        # Must keep: arity check (runtime-dependent - depends on what function is called)
-        expected_arity = func.bytecode.param_count
-        if func.bytecode.is_variadic:
-            # Variadic: must have at least (param_count - 1) fixed args.
-            # The last local receives all remaining args packed into a list.
-            min_arity = expected_arity - 1
-            if arity < min_arity:
-                func_name = func.name or "<lambda>"
-                raise AIFPLEvalError(
-                    message=f"Function '{func_name}' expects at least {min_arity} arguments, got {arity}",
-                    suggestion=f"Provide at least {min_arity} argument{'s' if min_arity != 1 else ''}"
-                )
-
-            # Pack excess args into a list and replace them on the stack with the list.
-            # Stack currently has: [fixed_args..., rest_args...]  (arity values total)
-            rest_count = arity - min_arity
-            if rest_count == 0:
-                self.stack.append(AIFPLList(()))
-
-            else:
-                rest_elements = tuple(self.stack[-rest_count:])
-                del self.stack[-rest_count:]
-                self.stack.append(AIFPLList(rest_elements))
-
-        elif arity != expected_arity:
-            func_name = func.name or "<lambda>"
-            raise AIFPLEvalError(
-                message=f"Function '{func_name}' expects {expected_arity} arguments, got {arity}",
-                suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
-            )
-
+        self._check_and_pack_args(func, arity)
         code = func.bytecode
 
         # Create new frame
@@ -814,37 +827,73 @@ class AIFPLVM:
                 suggestion="Only functions can be called"
             )
 
-        # Check arity for bytecode functions
-        # Must keep: arity check (runtime-dependent)
-        expected_arity = func.bytecode.param_count
-        if func.bytecode.is_variadic:
-            # Variadic: must have at least (param_count - 1) fixed args.
-            # The last local receives all remaining args packed into a list.
-            min_arity = expected_arity - 1
-            if arity < min_arity:
-                func_name = func.name or "<lambda>"
-                raise AIFPLEvalError(
-                    message=f"Function '{func_name}' expects at least {min_arity} arguments, got {arity}",
-                    suggestion=f"Provide at least {min_arity} argument{'s' if min_arity != 1 else ''}"
-                )
+        self._check_and_pack_args(func, arity)
+        return TailCall(func)
 
-            # Pack excess args into a list and replace them on the stack with the list.
-            rest_count = arity - min_arity
-            if rest_count == 0:
-                self.stack.append(AIFPLList(()))
-
-            else:
-                rest_elements = tuple(self.stack[-rest_count:])
-                del self.stack[-rest_count:]
-                self.stack.append(AIFPLList(rest_elements))
-
-        elif arity != expected_arity:
-            func_name = func.name or "<lambda>"
+    def _op_apply(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """APPLY: Call function with arguments spread from a list (non-tail)."""
+        arg_list = self.stack.pop()
+        func = self.stack.pop()
+        if not isinstance(func, AIFPLFunction):
             raise AIFPLEvalError(
-                message=f"Function '{func_name}' expects {expected_arity} arguments, got {arity}",
-                suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
+                message="apply: first argument must be a function",
+                received=f"Got: {func.describe()} ({func.type_name()})",
+                suggestion="Use (apply f args) where f is a lambda or builtin"
             )
 
+        if not isinstance(arg_list, AIFPLList):
+            raise AIFPLEvalError(
+                message="apply: second argument must be a list",
+                received=f"Got: {arg_list.describe()} ({arg_list.type_name()})",
+                suggestion="Use (apply f (list arg1 arg2 ...))"
+            )
+
+        for element in arg_list.elements:
+            self.stack.append(element)
+
+        arity = len(arg_list.elements)
+        self._check_and_pack_args(func, arity)
+        code = func.bytecode
+        new_frame = Frame(code)
+        new_frame.locals = [None] * code.local_count
+        new_frame.parent_frame = func.parent_frame
+        if func.captured_values:
+            for i, captured_val in enumerate(func.captured_values):
+                new_frame.locals[code.param_count + i] = captured_val
+
+        self.frames.append(new_frame)
+        self.current_frame = new_frame
+        result = self._execute_frame(new_frame)
+        self.stack.append(result)
+        return None
+
+    def _op_tail_apply(
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> TailCall:
+        """TAIL_APPLY: Apply function to argument list in tail position."""
+        arg_list = self.stack.pop()
+        func = self.stack.pop()
+        if not isinstance(func, AIFPLFunction):
+            raise AIFPLEvalError(
+                message="apply: first argument must be a function",
+                received=f"Got: {func.describe()} ({func.type_name()})",
+                suggestion="Use (apply f args) where f is a lambda or builtin"
+            )
+
+        if not isinstance(arg_list, AIFPLList):
+            raise AIFPLEvalError(
+                message="apply: second argument must be a list",
+                received=f"Got: {arg_list.describe()} ({arg_list.type_name()})",
+                suggestion="Use (apply f (list arg1 arg2 ...))"
+            )
+
+        for element in arg_list.elements:
+            self.stack.append(element)
+
+        arity = len(arg_list.elements)
+        self._check_and_pack_args(func, arity)
         return TailCall(func)
 
     def _op_return(
@@ -876,6 +925,97 @@ class AIFPLVM:
         """FUNCTION_P: Check if value is a function."""
         value = self.stack.pop()
         self.stack.append(AIFPLBoolean(isinstance(value, AIFPLFunction)))
+        return None
+
+    def _op_function_eq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FUNCTION_EQ_P: Return #t if two function references are identical."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        if not isinstance(a, AIFPLFunction):
+            raise AIFPLEvalError(
+                message="function=?: arguments must be functions",
+                received=f"First argument: {a.describe()} ({a.type_name()})"
+            )
+        if not isinstance(b, AIFPLFunction):
+            raise AIFPLEvalError(
+                message="function=?: arguments must be functions",
+                received=f"Second argument: {b.describe()} ({b.type_name()})"
+            )
+        self.stack.append(AIFPLBoolean(a is b))
+        return None
+
+    def _op_function_neq_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FUNCTION_NEQ_P: Return #t if two function references are not identical."""
+        b = self.stack.pop()
+        a = self.stack.pop()
+        if not isinstance(a, AIFPLFunction):
+            raise AIFPLEvalError(
+                message="function!=?: arguments must be functions",
+                received=f"First argument: {a.describe()} ({a.type_name()})"
+            )
+        if not isinstance(b, AIFPLFunction):
+            raise AIFPLEvalError(
+                message="function!=?: arguments must be functions",
+                received=f"Second argument: {b.describe()} ({b.type_name()})"
+            )
+        self.stack.append(AIFPLBoolean(a is not b))
+        return None
+
+    def _op_function_min_arity(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FUNCTION_MIN_ARITY: Return minimum number of arguments a function requires."""
+        func = self.stack.pop()
+        if not isinstance(func, AIFPLFunction):
+            raise AIFPLEvalError(
+                message="function-min-arity: argument must be a function",
+                received=f"Got: {func.describe()} ({func.type_name()})"
+            )
+        code = func.bytecode
+        min_arity = (code.param_count - 1) if code.is_variadic else code.param_count
+        self.stack.append(AIFPLInteger(min_arity))
+        return None
+
+    def _op_function_variadic_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FUNCTION_VARIADIC_P: Return #t if function accepts variable number of arguments."""
+        func = self.stack.pop()
+        if not isinstance(func, AIFPLFunction):
+            raise AIFPLEvalError(
+                message="function-variadic?: argument must be a function",
+                received=f"Got: {func.describe()} ({func.type_name()})"
+            )
+        self.stack.append(AIFPLBoolean(func.bytecode.is_variadic))
+        return None
+
+    def _op_function_accepts_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FUNCTION_ACCEPTS_P: Return #t if function accepts exactly n arguments."""
+        n = self.stack.pop()
+        func = self.stack.pop()
+        if not isinstance(func, AIFPLFunction):
+            raise AIFPLEvalError(
+                message="function-accepts?: first argument must be a function",
+                received=f"Got: {func.describe()} ({func.type_name()})"
+            )
+        if not isinstance(n, AIFPLInteger):
+            raise AIFPLEvalError(
+                message="function-accepts?: second argument must be an integer",
+                received=f"Got: {n.describe()} ({n.type_name()})"
+            )
+        code = func.bytecode
+        if code.is_variadic:
+            min_arity = code.param_count - 1
+            result = n.value >= min_arity
+        else:
+            result = n.value == code.param_count
+        self.stack.append(AIFPLBoolean(result))
         return None
 
     def _op_boolean_p(  # pylint: disable=useless-return

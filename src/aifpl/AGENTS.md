@@ -72,19 +72,75 @@ optimizations are applied across module boundaries.
 
 ## The Prelude
 
-Many built-in functions that appear variadic (e.g. `integer+`, `float*`, `string-append`,
-`list`, `append`, `alist`, all typed comparison operators) are **implemented in AIFPL
-itself** as lambdas in `_PRELUDE_SOURCE` inside `aifpl.py`. They delegate to the
-fixed 2-argument opcode versions internally.
+Many built-in functions that appear variadic (e.g. `integer+`, `float*`, `string-concat`,
+`list`, `list-concat`, `alist`, all typed comparison operators) are **implemented in AIFPL
+itself** as lambdas in `_PRELUDE_SOURCE` inside `aifpl.py`. They fold over the
+fixed binary-opcode versions internally.
 
-This is the split:
+There are three categories of builtin:
+
 - **Fixed-arity builtins** → implemented as a bytecode stub in `AIFPLBuiltinRegistry`
-  using a single opcode from `BUILTIN_OPCODE_MAP` in `aifpl_bytecode.py`
+  using a single opcode from `BUILTIN_OPCODE_MAP` in `aifpl_bytecode.py`. The stub is
+  a two-instruction `CodeObject` (`<opcode>` + `RETURN`) used when the builtin is passed
+  as a first-class value.
 - **Variadic builtins** → implemented as AIFPL lambdas in `_PRELUDE_SOURCE` in `aifpl.py`,
-  which call the fixed-arity opcode versions
+  which call the fixed binary-arity opcode versions. These names are listed in
+  `prelude_names` inside `AIFPLBuiltinRegistry.create_builtin_function_objects()` and are
+  skipped by the registry so the prelude's compiled lambdas take effect instead.
+- **Optional-argument builtins** → a small set of builtins accept fewer arguments than
+  their underlying opcode requires. The codegen (`aifpl_codegen.py`) synthesises the
+  missing argument inline when emitting a direct call; the prelude supplies a wrapper
+  lambda for first-class use. The affected builtins and their synthesised defaults are:
+
+  | Builtin | Optional arg | Synthesised default |
+  |---------|-------------|---------------------|
+  | `range` | `step` | `1` (integer constant) |
+  | `string-slice` | `end` | `(string-length str)` — re-evaluates the string arg |
+  | `string->list` | `delimiter` | `""` (empty string → split into characters) |
+  | `list-slice` | `end` | `(list-length lst)` — re-evaluates the list arg |
+  | `list->string` | `separator` | `""` (empty string → concatenate without separator) |
+  | `alist-get` | `default` | `#f` |
 
 `AIFPLBuiltinRegistry.ARITY_TABLE` is the single source of truth for arity of all
 builtins and is consumed by both the semantic analyser and the registry itself.
+
+## Variable Addressing and `LOAD_NAME`
+
+The IR builder resolves all variable references to one of three addressing modes:
+
+- **`LOAD_VAR index`** — lexically-addressed local variable in the current frame.
+  Used for all user-defined bindings (`let`, `let*`, `letrec`, lambda parameters).
+- **`LOAD_PARENT_VAR index depth`** — lexically-addressed variable in an enclosing
+  frame at `depth` levels up. Used for free variables captured from outer scopes
+  (closures). Free variables are detected by the semantic analyser and captured via
+  `MAKE_CLOSURE` at the call site.
+- **`LOAD_NAME name_index`** — name-table lookup, used **only for global builtins**
+  that are referenced as first-class values (i.e. not called directly with the correct
+  fixed arity). When the codegen sees a direct call to a known builtin at the right
+  arity it emits the primitive opcode directly; `LOAD_NAME` is emitted when the
+  builtin name appears as a variable reference (e.g. passed to `map` or `fold`).
+  The name table is populated from `AIFPLBuiltinRegistry` by the VM at startup.
+
+## Design Decisions — Clarifications
+
+- **No `cond` form**: Deliberate omission. `match` covers all multi-branch conditional
+  use cases and is more expressive. Use nested `if` for simple two-branch conditions.
+- **`integer-` vs `integer-neg`**: Both perform unary negation. `integer-` is the
+  multi-arity subtraction operator that also handles the unary case (1 arg → negate);
+  `integer-neg` is the dedicated fixed-arity (1, 1) unary opcode. They are equivalent
+  for single-argument calls. Prefer `integer-neg` when unary negation is the intent.
+- **`symbol` type**: Symbols are produced only by `quote`. There is no `symbol->string`
+  or `string->symbol` conversion by design — symbols exist to support homoiconicity
+  (code-as-data), not as a general-purpose key type. Use strings for alist keys.
+- **Tail call optimization**: TCO is detected in `aifpl_ir_builder.py` (sets
+  `is_tail_call` on `AIFPLIRCall`) and implemented via the `TAIL_CALL` opcode in the
+  VM. It is correctly propagated through `let`/`let*`/`letrec` bodies, `if` branches,
+  and `match` arms — anywhere the body expression is in tail position.
+- **Self-recursive tail calls**: In addition to the general `TAIL_CALL` mechanism,
+  direct self-recursive calls (a function calling itself) are further optimised: the
+  IR builder sets `is_tail_recursive` on the `AIFPLIRCall`, and the codegen emits a
+  plain `JUMP 0` (back to the start of the function) instead of `TAIL_CALL`, avoiding
+  even the overhead of a new frame setup.
 
 ## Adding a New Built-in Function
 

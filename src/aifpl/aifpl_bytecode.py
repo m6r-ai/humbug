@@ -35,6 +35,8 @@ class Opcode(IntEnum):
     MAKE_CLOSURE = auto()    # Create closure: MAKE_CLOSURE code_index capture_count
     CALL = auto()            # Call function: CALL arity
     TAIL_CALL = auto()       # Tail call function: TAIL_CALL arity
+    APPLY = auto()           # Apply function to arg list (non-tail): (apply f args)
+    TAIL_APPLY = auto()      # Apply function to arg list (tail position)
     ENTER = auto()           # Pop N args from stack into locals 0..N-1: ENTER n
     RETURN = auto()          # Return from function
 
@@ -43,6 +45,14 @@ class Opcode(IntEnum):
 
     # Function operations
     FUNCTION_P = auto()      # Check if function
+    FUNCTION_EQ_P = auto()   # (function=? f g) → boolean
+    FUNCTION_NEQ_P = auto()  # (function!=? f g) → boolean
+    FUNCTION_MIN_ARITY = auto()
+                             # (function-min-arity f) → integer
+    FUNCTION_VARIADIC_P = auto()
+                             # (function-variadic? f) → boolean
+    FUNCTION_ACCEPTS_P = auto()
+                             # (function-accepts? f n) → boolean
 
     # Boolean operations
     BOOLEAN_P = auto()       # Check if boolean
@@ -220,6 +230,11 @@ class Opcode(IntEnum):
 # calls, and the stub will do likewise).
 BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'function?': (Opcode.FUNCTION_P, 1),
+    'function=?': (Opcode.FUNCTION_EQ_P, 2),
+    'function!=?': (Opcode.FUNCTION_NEQ_P, 2),
+    'function-min-arity': (Opcode.FUNCTION_MIN_ARITY, 1),
+    'function-variadic?': (Opcode.FUNCTION_VARIADIC_P, 1),
+    'function-accepts?': (Opcode.FUNCTION_ACCEPTS_P, 2),
     'boolean?': (Opcode.BOOLEAN_P, 1),
     'boolean=?': (Opcode.BOOLEAN_EQ_P, 2),
     'boolean!=?': (Opcode.BOOLEAN_NEQ_P, 2),
@@ -374,9 +389,16 @@ class Instruction:
             Opcode.LOAD_TRUE,
             Opcode.LOAD_FALSE,
             Opcode.LOAD_EMPTY_LIST,
+            Opcode.TAIL_APPLY,
+            Opcode.APPLY,
             Opcode.RETURN,
             Opcode.EMIT_TRACE,
             Opcode.FUNCTION_P,
+            Opcode.FUNCTION_EQ_P,
+            Opcode.FUNCTION_NEQ_P,
+            Opcode.FUNCTION_MIN_ARITY,
+            Opcode.FUNCTION_VARIADIC_P,
+            Opcode.FUNCTION_ACCEPTS_P,
             Opcode.BOOLEAN_P,
             Opcode.BOOLEAN_EQ_P,
             Opcode.BOOLEAN_NEQ_P,

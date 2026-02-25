@@ -227,7 +227,7 @@ class AIFPLCodeGen:
         then_terminates = False
         if ctx.instructions:
             last_op = ctx.instructions[-1].opcode
-            if last_op in (Opcode.RETURN, Opcode.TAIL_CALL, Opcode.JUMP, Opcode.RAISE_ERROR):
+            if last_op in (Opcode.RETURN, Opcode.TAIL_CALL, Opcode.TAIL_APPLY, Opcode.JUMP, Opcode.RAISE_ERROR):
                 then_terminates = True
 
         # Only emit jump past else if then branch doesn't terminate
@@ -442,14 +442,17 @@ class AIFPLCodeGen:
             if builtin_name == 'string-slice':
                 # Push the string argument first
                 self._generate_expr(plan.arg_plans[0], ctx)
+
                 # Push the start argument
                 self._generate_expr(plan.arg_plans[1], ctx)
                 if len(plan.arg_plans) == 2:
                     # Synthesise end = (string-length str): push str again, emit STRING_LENGTH
                     self._generate_expr(plan.arg_plans[0], ctx)
                     ctx.emit(Opcode.STRING_LENGTH)
+
                 else:
                     self._generate_expr(plan.arg_plans[2], ctx)
+
                 ctx.emit(Opcode.STRING_SLICE)
                 return
 
@@ -459,8 +462,10 @@ class AIFPLCodeGen:
                 if len(plan.arg_plans) == 1:
                     const_index = ctx.add_constant(AIFPLString(""))
                     ctx.emit(Opcode.LOAD_CONST, const_index)
+
                 else:
                     self._generate_expr(plan.arg_plans[1], ctx)
+
                 ctx.emit(Opcode.STRING_TO_LIST)
                 return
 
@@ -479,14 +484,17 @@ class AIFPLCodeGen:
             if builtin_name == 'list-slice':
                 # Push the list argument first
                 self._generate_expr(plan.arg_plans[0], ctx)
+
                 # Push the start argument
                 self._generate_expr(plan.arg_plans[1], ctx)
                 if len(plan.arg_plans) == 2:
                     # Synthesise end = (list-length lst): push lst again, emit LIST_LENGTH
                     self._generate_expr(plan.arg_plans[0], ctx)
                     ctx.emit(Opcode.LIST_LENGTH)
+
                 else:
                     self._generate_expr(plan.arg_plans[2], ctx)
+
                 ctx.emit(Opcode.LIST_SLICE)
                 return
 
@@ -496,14 +504,28 @@ class AIFPLCodeGen:
                 if len(plan.arg_plans) == 1:
                     const_index = ctx.add_constant(AIFPLString(""))
                     ctx.emit(Opcode.LOAD_CONST, const_index)
+
                 else:
                     self._generate_expr(plan.arg_plans[1], ctx)
+
                 ctx.emit(Opcode.LIST_TO_STRING)
                 return
 
             # Generate arguments
             for arg_plan in plan.arg_plans:
                 self._generate_expr(arg_plan, ctx)
+
+            # Handle apply: emit TAIL_APPLY or APPLY depending on tail position.
+            # apply is the only builtin that dispatches a further call, so it
+            # needs the tail/non-tail distinction like regular CALL/TAIL_CALL.
+            # Stack convention: function first, then arg list (both already pushed).
+            if builtin_name == 'apply':
+                if plan.is_tail_call:
+                    ctx.emit(Opcode.TAIL_APPLY)
+                    return
+
+                ctx.emit(Opcode.APPLY)
+                return
 
             # Check if this is a primitive operation with correct arity
             if builtin_name in BINARY_OPS:
