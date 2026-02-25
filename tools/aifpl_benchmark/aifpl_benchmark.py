@@ -307,7 +307,7 @@ BENCHMARKS = [
     Benchmark("List Reverse (10)", "lists", "(list-reverse (list 1 2 3 4 5 6 7 8 9 10))", iterations=3000),
     Benchmark("List Reverse (20)", "lists", "(list-reverse (list 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20))", iterations=2000),
     Benchmark("List First/Rest", "lists", "(list-first (list-rest (list 1 2 3 4 5)))", iterations=5000),
-    Benchmark("List Member", "lists", "(list-member? 5 (list 1 2 3 4 5 6 7 8 9 10))", iterations=3000),
+    Benchmark("List Member", "lists", "(list-member? (list 1 2 3 4 5 6 7 8 9 10) 5)", iterations=3000),
     Benchmark("List Position", "lists", "(list-position (list 1 2 3 4 5 6 7 8 9 10) 7)", iterations=3000),
 
     # === HIGHER-ORDER FUNCTIONS ===
@@ -328,11 +328,11 @@ BENCHMARKS = [
     Benchmark("All?", "higher-order", "(all? (lambda (x) (integer>? x 0)) (range 1 101))", iterations=500),
 
     # === STRING OPERATIONS ===
-    Benchmark("String Append", "strings", '(string-append "hello" " " "world")', iterations=5000),
-    Benchmark("String Append Many", "strings", '(string-append "a" "b" "c" "d" "e" "f" "g" "h" "i" "j")', iterations=3000),
+    Benchmark("String Concatenate", "strings", '(string-concat "hello" " " "world")', iterations=5000),
+    Benchmark("String Concatenate Many", "strings", '(string-concat "a" "b" "c" "d" "e" "f" "g" "h" "i" "j")', iterations=3000),
     Benchmark("String Upcase", "strings", '(string-upcase "hello world")', iterations=5000),
     Benchmark("String Downcase", "strings", '(string-downcase "HELLO WORLD")', iterations=5000),
-    Benchmark("String Manipulation", "strings", '(string-upcase (string-append "hello" " " "world"))', iterations=3000),
+    Benchmark("String Manipulation", "strings", '(string-upcase (string-concat "hello" " " "world"))', iterations=3000),
     Benchmark("String Contains", "strings", '(string-contains? "hello world" "wor")', iterations=5000),
     Benchmark("String Replace", "strings", '(string-replace "hello world" "world" "universe")', iterations=3000),
     Benchmark("String Slice", "strings", '(string-slice "hello world" 0 5)', iterations=5000),
