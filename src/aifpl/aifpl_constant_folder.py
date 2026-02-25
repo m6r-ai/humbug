@@ -1085,20 +1085,3 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             return value.value
 
         raise ValueError(f"Expected numeric value, got {type(value).__name__}")
-
-    def _from_python_number(self, value: int | float | complex) -> AIFPLASTNode:
-        """Convert Python number to AIFPL value with proper type."""
-        if isinstance(value, bool):
-            # bool is a subclass of int in Python, handle it first
-            return AIFPLASTBoolean(value)
-
-        if isinstance(value, int):
-            return AIFPLASTInteger(value)
-
-        if isinstance(value, float):
-            return AIFPLASTFloat(value)
-
-        if isinstance(value, complex):
-            return AIFPLASTComplex(value)
-
-        raise ValueError(f"Unsupported numeric type: {type(value)}")

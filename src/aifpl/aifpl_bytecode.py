@@ -194,15 +194,17 @@ class Opcode(IntEnum):
     STRING_UPCASE = _op(228, 0)         # Convert string to uppercase
     STRING_DOWNCASE = _op(229, 0)       # Convert string to lowercase
     STRING_TRIM = _op(230, 0)           # Trim whitespace from string
-    STRING_TO_NUMBER = _op(231, 0)      # Parse string to number
-    STRING_TO_LIST = _op(232, 0)        # Split string by delimiter: (string->list str delim)
-    STRING_REF = _op(233, 0)            # Get character at index
-    STRING_CONTAINS_P = _op(234, 0)     # Check if string contains substring
-    STRING_PREFIX_P = _op(235, 0)       # Check if string has prefix
-    STRING_SUFFIX_P = _op(236, 0)       # Check if string has suffix
-    STRING_CONCAT = _op(237, 0)         # Concatenate two strings: (string-concat a b)
-    STRING_SLICE = _op(238, 0)          # Extract substring (string, start, end)
-    STRING_REPLACE = _op(239, 0)        # Replace substring (string, old, new)
+    STRING_TRIM_LEFT = _op(231, 0)      # Trim leading whitespace
+    STRING_TRIM_RIGHT = _op(232, 0)     # Trim trailing whitespace
+    STRING_TO_NUMBER = _op(233, 0)      # Parse string to number
+    STRING_TO_LIST = _op(234, 0)        # Split string by delimiter: (string->list str delim)
+    STRING_REF = _op(235, 0)            # Get character at index
+    STRING_CONTAINS_P = _op(236, 0)     # Check if string contains substring
+    STRING_PREFIX_P = _op(237, 0)       # Check if string has prefix
+    STRING_SUFFIX_P = _op(238, 0)       # Check if string has suffix
+    STRING_CONCAT = _op(239, 0)         # Concatenate two strings: (string-concat a b)
+    STRING_SLICE = _op(240, 0)          # Extract substring (string, start, end)
+    STRING_REPLACE = _op(241, 0)        # Replace substring (string, old, new)
 
     # Alist operations
     ALIST = _op(260, 1)                 # ALIST n  (build alist from n pairs on stack)
@@ -358,6 +360,8 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'string-upcase': (Opcode.STRING_UPCASE, 1),
     'string-downcase': (Opcode.STRING_DOWNCASE, 1),
     'string-trim': (Opcode.STRING_TRIM, 1),
+    'string-trim-left': (Opcode.STRING_TRIM_LEFT, 1),
+    'string-trim-right': (Opcode.STRING_TRIM_RIGHT, 1),
     'string->number': (Opcode.STRING_TO_NUMBER, 1),
     'string->list': (Opcode.STRING_TO_LIST, 2),
     'string-ref': (Opcode.STRING_REF, 2),

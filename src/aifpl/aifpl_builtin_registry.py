@@ -139,6 +139,8 @@ class AIFPLBuiltinRegistry:
         'string-upcase': (1, 1),
         'string-downcase': (1, 1),
         'string-trim': (1, 1),
+        'string-trim-left': (1, 1),
+        'string-trim-right': (1, 1),
         'string-replace': (3, 3),
         'string-contains?': (2, 2),
         'string-prefix?': (2, 2),

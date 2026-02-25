@@ -504,6 +504,20 @@ class TestAIFPLCollectionEdgeCases:
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             aifpl.evaluate('(string-trim "  hello  " "  world  ")')
 
+        # string-trim-left requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
+            aifpl.evaluate("(string-trim-left)")
+
+        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
+            aifpl.evaluate('(string-trim-left "  hello  " "  world  ")')
+
+        # string-trim-right requires exactly 1 argument
+        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
+            aifpl.evaluate("(string-trim-right)")
+
+        with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
+            aifpl.evaluate('(string-trim-right "  hello  " "  world  ")')
+
         # string-replace requires exactly 3 arguments
         with pytest.raises(AIFPLEvalError, match="wrong number of arguments"):
             aifpl.evaluate("(string-replace)")

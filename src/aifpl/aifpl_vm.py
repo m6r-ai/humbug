@@ -283,6 +283,8 @@ class AIFPLVM:
         table[Opcode.STRING_UPCASE] = self._op_string_upcase
         table[Opcode.STRING_DOWNCASE] = self._op_string_downcase
         table[Opcode.STRING_TRIM] = self._op_string_trim
+        table[Opcode.STRING_TRIM_LEFT] = self._op_string_trim_left
+        table[Opcode.STRING_TRIM_RIGHT] = self._op_string_trim_right
         table[Opcode.STRING_TO_NUMBER] = self._op_string_to_number
         table[Opcode.STRING_TO_LIST] = self._op_string_to_list
         table[Opcode.STRING_REF] = self._op_string_ref
@@ -2036,6 +2038,22 @@ class AIFPLVM:
         """STRING_TRIM: Pop a string, push whitespace-trimmed string."""
         a = self.stack.pop()
         self.stack.append(AIFPLString(self._ensure_string(a, 'string-trim').strip()))
+        return None
+
+    def _op_string_trim_left(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_TRIM_LEFT: Pop a string, push string with leading whitespace removed."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLString(self._ensure_string(a, 'string-trim-left').lstrip()))
+        return None
+
+    def _op_string_trim_right(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_TRIM_RIGHT: Pop a string, push string with trailing whitespace removed."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLString(self._ensure_string(a, 'string-trim-right').rstrip()))
         return None
 
     def _op_string_to_number(  # pylint: disable=useless-return

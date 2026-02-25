@@ -246,6 +246,8 @@ class BytecodeValidator:
             Opcode.STRING_UPCASE: (1, 1),
             Opcode.STRING_DOWNCASE: (1, 1),
             Opcode.STRING_TRIM: (1, 1),
+            Opcode.STRING_TRIM_LEFT: (1, 1),
+            Opcode.STRING_TRIM_RIGHT: (1, 1),
             Opcode.STRING_TO_NUMBER: (1, 1),
             Opcode.STRING_TO_LIST: (2, 1),
             Opcode.STRING_REF: (2, 1),

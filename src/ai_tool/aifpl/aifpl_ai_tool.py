@@ -284,7 +284,7 @@ Syntax: (operator arg1 arg2 ...)
 - Basic: (string-concat "hello" " " "world"), (string-length "hello")
 - Access: (string-ref "hello" 1) → "e" (character at 0-based index)
 - Manipulation: (string-slice "hello" 1 4), (string-slice "hello" 2) → "llo", (string-upcase "hello"), (string-downcase "HELLO")
-- Utilities: (string-trim "  hello  "), (string-replace "banana" "a" "o")
+- Utilities: (string-trim "  hello  ") → "hello",(string-trim-left "  hello  ") → "hello  ",  (string-trim-right "  hello  ") → "  hello", (string-replace "banana" "a" "o")
 - Equality/ordering predicates: (string=? "hi" "hi"), (string!=? "hi" "bye"), (string<? "apple" "banana"), (string>? "b" "a"), (string<=? "a" "a"), (string>=? "b" "a")
 - Search predicates: (string-contains? "hello" "ell"), (string-prefix? "hello" "he"), (string-suffix? "hello" "lo")
 - Conversion: (string->number "42") → 42, (string->number "3.14") → 3.14, (string->number "1+2j") → 1+2j

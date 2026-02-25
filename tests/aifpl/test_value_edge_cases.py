@@ -299,6 +299,10 @@ class TestAIFPLValueEdgeCases:
         # Whitespace operations
         assert aifpl.evaluate('(string-trim "   ")') == ""
         assert aifpl.evaluate('(string-trim "  hello  ")') == "hello"
+        assert aifpl.evaluate('(string-trim-left "   ")') == ""
+        assert aifpl.evaluate('(string-trim-left "  hello  ")') == "hello  "
+        assert aifpl.evaluate('(string-trim-right "   ")') == ""
+        assert aifpl.evaluate('(string-trim-right "  hello  ")') == "  hello"
 
     def test_value_list_operations_edge_cases(self, aifpl):
         """Test list operations with edge case values."""
