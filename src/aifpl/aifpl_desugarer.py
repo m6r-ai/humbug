@@ -1206,7 +1206,7 @@ class AIFPLDesugarer:
         tail_pattern = pattern.elements[dot_position + 1]
         tail_temp = self._gen_temp()
 
-        # Extract tail: (drop dot_position temp_var)
+        # Extract tail: (list-slice temp-var dot_position)
         tail_value = AIFPLASTList((
             AIFPLASTSymbol('list-slice'),
             AIFPLASTSymbol(temp_var),

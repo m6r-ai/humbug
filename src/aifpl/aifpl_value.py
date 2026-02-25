@@ -334,14 +334,6 @@ class AIFPLList(AIFPLValue):
 
         return None
 
-    def take(self, n: int) -> 'AIFPLList':
-        """Take the first n elements."""
-        return AIFPLList(self.elements[:n])
-
-    def drop(self, n: int) -> 'AIFPLList':
-        """Drop the first n elements."""
-        return AIFPLList(self.elements[n:])
-
 
 @dataclass(frozen=True)
 class AIFPLAList(AIFPLValue):
