@@ -354,20 +354,20 @@ class TestStrings:
         ('(string->number "1+2j")', '1+2j'),
         ('(string->number "3j")', '3j'),
 
-        # AIFPL base-prefixed integer literals (lower case)
-        ('(string->number "#xff")', '255'),
-        ('(string->number "#b1010")', '10'),
-        ('(string->number "#o755")', '493'),
+        # Base-prefixed literals are no longer supported — return #f
+        ('(string->number "#xff")', '#f'),
+        ('(string->number "#b1010")', '#f'),
+        ('(string->number "#o755")', '#f'),
 
-        # AIFPL base-prefixed integer literals (upper case)
-        ('(string->number "#XFF")', '255'),
-        ('(string->number "#B1010")', '10'),
-        ('(string->number "#O755")', '493'),
+        # Upper case prefixes also return #f
+        ('(string->number "#XFF")', '#f'),
+        ('(string->number "#B1010")', '#f'),
+        ('(string->number "#O755")', '#f'),
 
-        # Negative base-prefixed literals
-        ('(string->number "-#xff")', '-255'),
-        ('(string->number "-#b1010")', '-10'),
-        ('(string->number "-#o755")', '-493'),
+        # Negative base-prefixed literals also return #f
+        ('(string->number "-#xff")', '#f'),
+        ('(string->number "-#b1010")', '#f'),
+        ('(string->number "-#o755")', '#f'),
 
         # Unparseable strings return #f
         ('(string->number "hello")', '#f'),

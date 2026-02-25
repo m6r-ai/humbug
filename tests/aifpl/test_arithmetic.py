@@ -410,40 +410,6 @@ class TestArithmetic:
             aifpl.evaluate("(bit-not 3.14)")
 
     @pytest.mark.parametrize("expression,expected", [
-        # Binary conversion
-        ("(bin 0)", '"#b0"'),
-        ("(bin 5)", '"#b101"'),
-        ("(bin 255)", '"#b11111111"'),
-        ("(bin -1)", '"-#b1"'),
-
-        # Hexadecimal conversion
-        ("(hex 0)", '"#x0"'),
-        ("(hex 15)", '"#xf"'),
-        ("(hex 255)", '"#xff"'),
-        ("(hex -1)", '"-#x1"'),
-
-        # Octal conversion
-        ("(oct 0)", '"#o0"'),
-        ("(oct 8)", '"#o10"'),
-        ("(oct 64)", '"#o100"'),
-        ("(oct -1)", '"-#o1"'),
-    ])
-    def test_base_conversion_functions(self, aifpl, expression, expected):
-        """Test base conversion functions (bin, hex, oct)."""
-        assert aifpl.evaluate_and_format(expression) == expected
-
-    def test_base_conversion_requires_integers(self, aifpl):
-        """Test that base conversion functions require integer arguments."""
-        with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(bin 3.14)")
-
-        with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(hex 2.5)")
-
-        with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(oct (integer->complex 1 2))")
-
-    @pytest.mark.parametrize("expression,expected", [
         # Complex number construction
         ("(float->complex 3.0 4.0)", "3+4j"),
         ("(float->complex 0.0 1.0)", "1j"),

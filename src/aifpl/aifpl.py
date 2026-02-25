@@ -178,6 +178,10 @@ class AIFPL:
                                  (loop (list-rest args) (list-first args)))))""",
         'integer->complex': """(lambda (real . rest)
                                  (integer->complex real (if (list-null? rest) 0 (list-first rest))))""",
+        'integer->string': """(lambda (n . rest)
+                                 (if (list-null? rest)
+                                   (integer->string n 10)
+                                   (integer->string n (list-first rest))))""",
         'float=?': """(lambda (. args)
                         (if (integer<? (list-length args) 2)
                           (error "Function 'float=?' requires at least 2 arguments")

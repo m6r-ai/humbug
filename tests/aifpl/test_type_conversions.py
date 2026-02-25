@@ -168,3 +168,48 @@ class TestTypePredicatesWithConversions:
         """Test that float conversion from integer is not an integer."""
         result = aifpl.evaluate("(integer? (integer->float 5))")
         assert result is False
+
+
+class TestIntegerToStringRadix:
+    """Test integer->string with optional radix parameter."""
+
+    @pytest.mark.parametrize("expression,expected", [
+        # Default (decimal)
+        ('(integer->string 255)', '"255"'),
+        ('(integer->string 0)', '"0"'),
+        ('(integer->string -255)', '"-255"'),
+        # Explicit decimal
+        ('(integer->string 255 10)', '"255"'),
+        ('(integer->string -255 10)', '"-255"'),
+        # Binary
+        ('(integer->string 255 2)', '"11111111"'),
+        ('(integer->string 0 2)', '"0"'),
+        ('(integer->string 1 2)', '"1"'),
+        ('(integer->string -255 2)', '"-11111111"'),
+        # Octal
+        ('(integer->string 255 8)', '"377"'),
+        ('(integer->string 0 8)', '"0"'),
+        ('(integer->string -255 8)', '"-377"'),
+        # Hex
+        ('(integer->string 255 16)', '"ff"'),
+        ('(integer->string 256 16)', '"100"'),
+        ('(integer->string 65535 16)', '"ffff"'),
+        ('(integer->string 0 16)', '"0"'),
+        ('(integer->string -255 16)', '"-ff"'),
+    ])
+    def test_integer_to_string_radix(self, aifpl, expression, expected):
+        """Test integer->string with various radix values."""
+        assert aifpl.evaluate_and_format(expression) == expected
+
+    def test_integer_to_string_invalid_radix(self, aifpl):
+        """Test integer->string with invalid radix raises error."""
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate('(integer->string 255 3)')
+        with pytest.raises(AIFPLEvalError):
+            aifpl.evaluate('(integer->string 255 0)')
+
+    def test_integer_to_string_first_class(self, aifpl):
+        """Test integer->string as a first-class function (uses prelude wrapper)."""
+        # Passed to map with no radix — should default to decimal
+        result = aifpl.evaluate_and_format('(map integer->string (list 1 2 3))')
+        assert result == '("1" "2" "3")'

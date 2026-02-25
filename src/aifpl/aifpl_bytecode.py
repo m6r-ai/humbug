@@ -123,9 +123,6 @@ class Opcode(IntEnum):
     INTEGER_TO_FLOAT = _op(123, 0)      # Convert integer to float
     INTEGER_TO_COMPLEX = _op(124, 0)    # integer->complex: construct complex from integer
     INTEGER_TO_STRING = _op(125, 0)     # Convert integer to string
-    INTEGER_TO_STRING_BIN = _op(126, 0) # Convert integer to binary string
-    INTEGER_TO_STRING_HEX = _op(127, 0) # Convert integer to hex string
-    INTEGER_TO_STRING_OCT = _op(128, 0) # Convert integer to octal string
 
     # Floating point operations
     FLOAT_P = _op(140, 0)               # (float? x)
@@ -294,10 +291,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'integer-max': (Opcode.INTEGER_MAX, 2),
     'integer->float': (Opcode.INTEGER_TO_FLOAT, 1),
     'integer->complex': (Opcode.INTEGER_TO_COMPLEX, 2),
-    'integer->string': (Opcode.INTEGER_TO_STRING, 1),
-    'bin': (Opcode.INTEGER_TO_STRING_BIN, 1),
-    'hex': (Opcode.INTEGER_TO_STRING_HEX, 1),
-    'oct': (Opcode.INTEGER_TO_STRING_OCT, 1),
+    'integer->string': (Opcode.INTEGER_TO_STRING, 2),
     'float?': (Opcode.FLOAT_P, 1),
     'float=?': (Opcode.FLOAT_EQ_P, 2),
     'float!=?': (Opcode.FLOAT_NEQ_P, 2),

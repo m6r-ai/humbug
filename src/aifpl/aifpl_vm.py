@@ -216,9 +216,6 @@ class AIFPLVM:
         table[Opcode.INTEGER_MIN] = self._op_integer_min
         table[Opcode.INTEGER_MAX] = self._op_integer_max
         table[Opcode.INTEGER_TO_STRING] = self._op_integer_to_string
-        table[Opcode.INTEGER_TO_STRING_BIN] = self._op_integer_to_string_bin
-        table[Opcode.INTEGER_TO_STRING_HEX] = self._op_integer_to_string_hex
-        table[Opcode.INTEGER_TO_STRING_OCT] = self._op_integer_to_string_oct
         table[Opcode.INTEGER_TO_FLOAT] = self._op_integer_to_float
         table[Opcode.FLOAT_P] = self._op_float_p
         table[Opcode.FLOAT_EQ_P] = self._op_float_eq_p
@@ -1362,53 +1359,24 @@ class AIFPLVM:
     def _op_integer_to_string(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """INTEGER_TO_STRING: Pop an integer, push string representation."""
+        """INTEGER_TO_STRING: Pop radix then integer, push string representation in given base."""
+        radix_val = self.stack.pop()
         a = self.stack.pop()
         a_val = self._ensure_integer(a, 'integer->string')
-        if isinstance(a_val, complex):
-            self.stack.append(AIFPLString(str(a_val).strip('()')))
-            return None
-
-        self.stack.append(AIFPLString(str(a_val)))
-        return None
-
-    def _op_integer_to_string_bin(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """BIN: Pop an integer, push Scheme-style binary string."""
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'bin')
-        if a_val < 0:
-            self.stack.append(AIFPLString(f"-#b{bin(-a_val)[2:]}"))
-            return None
-
-        self.stack.append(AIFPLString(f"#b{bin(a_val)[2:]}"))
-        return None
-
-    def _op_integer_to_string_hex(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """HEX: Pop an integer, push Scheme-style hex string."""
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'hex')
-        if a_val < 0:
-            self.stack.append(AIFPLString(f"-#x{hex(-a_val)[2:]}"))
-            return None
-
-        self.stack.append(AIFPLString(f"#x{hex(a_val)[2:]}"))
-        return None
-
-    def _op_integer_to_string_oct(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """OCT: Pop an integer, push Scheme-style octal string."""
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'oct')
-        if a_val < 0:
-            self.stack.append(AIFPLString(f"-#o{oct(-a_val)[2:]}"))
-            return None
-
-        self.stack.append(AIFPLString(f"#o{oct(a_val)[2:]}"))
+        radix = self._ensure_integer(radix_val, 'integer->string')
+        if radix not in (2, 8, 10, 16):
+            raise AIFPLEvalError(f"integer->string radix must be 2, 8, 10, or 16, got {radix}")
+        if radix == 10:
+            self.stack.append(AIFPLString(str(a_val)))
+        elif radix == 2:
+            sign = "-" if a_val < 0 else ""
+            self.stack.append(AIFPLString(f"{sign}{bin(abs(a_val))[2:]}"))
+        elif radix == 8:
+            sign = "-" if a_val < 0 else ""
+            self.stack.append(AIFPLString(f"{sign}{oct(abs(a_val))[2:]}"))
+        elif radix == 16:
+            sign = "-" if a_val < 0 else ""
+            self.stack.append(AIFPLString(f"{sign}{hex(abs(a_val))[2:]}"))
         return None
 
     def _op_float_p(  # pylint: disable=useless-return
@@ -2063,32 +2031,6 @@ class AIFPLVM:
         a = self.stack.pop()
         s = self._ensure_string(a, 'string->number')
         try:
-            # Handle AIFPL-style base-prefixed integer literals.
-            # Negative form is -#xNN (minus sign before the #).
-            # Both upper and lower case prefixes are accepted.
-            working = s
-            negative = False
-            if working.startswith('-'):
-                negative = True
-                working = working[1:]
-
-            sl = working.lower()
-            if sl.startswith('#x'):
-                value = AIFPLInteger(-int(working[2:], 16) if negative else int(working[2:], 16))
-                self.stack.append(value)
-                return None
-
-            if sl.startswith('#b'):
-                value = AIFPLInteger(-int(working[2:], 2) if negative else int(working[2:], 2))
-                self.stack.append(value)
-                return None
-
-            if sl.startswith('#o'):
-                value = AIFPLInteger(-int(working[2:], 8) if negative else int(working[2:], 8))
-                self.stack.append(value)
-                return None
-
-            # Plain decimal, float, or complex — restore original string
             if '.' not in s and 'e' not in s.lower() and 'j' not in s.lower():
                 self.stack.append(AIFPLInteger(int(s)))
                 return None

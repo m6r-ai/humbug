@@ -174,10 +174,7 @@ class BytecodeValidator:
             Opcode.INTEGER_MAX: (2, 1),
             Opcode.INTEGER_TO_FLOAT: (1, 1),
             Opcode.INTEGER_TO_COMPLEX: (2, 1),
-            Opcode.INTEGER_TO_STRING: (1, 1),
-            Opcode.INTEGER_TO_STRING_BIN: (1, 1),
-            Opcode.INTEGER_TO_STRING_HEX: (1, 1),
-            Opcode.INTEGER_TO_STRING_OCT: (1, 1),
+            Opcode.INTEGER_TO_STRING: (2, 1),
 
             # Floating point operations
             Opcode.FLOAT_P: (1, 1),

@@ -509,52 +509,6 @@ class TestAIFPLMathEdgeCases:
             with pytest.raises(AIFPLEvalError):
                 aifpl.evaluate(f"(bit-shift-right 8 {value})")
 
-    def test_base_conversion_edge_cases(self, aifpl):
-        """Test base conversion edge cases."""
-        # Binary conversion edge cases
-        assert aifpl.evaluate('(bin 0)') == '#b0'
-        assert aifpl.evaluate('(bin 1)') == '#b1'
-        assert aifpl.evaluate('(bin 5)') == '#b101'
-        assert aifpl.evaluate('(bin 255)') == '#b11111111'
-        assert aifpl.evaluate('(bin -1)') == '-#b1'
-        assert aifpl.evaluate('(bin -5)') == '-#b101'
-
-        # Hexadecimal conversion edge cases
-        assert aifpl.evaluate('(hex 0)') == '#x0'
-        assert aifpl.evaluate('(hex 10)') == '#xa'
-        assert aifpl.evaluate('(hex 15)') == '#xf'
-        assert aifpl.evaluate('(hex 16)') == '#x10'
-        assert aifpl.evaluate('(hex 255)') == '#xff'
-        assert aifpl.evaluate('(hex -1)') == '-#x1'
-        assert aifpl.evaluate('(hex -15)') == '-#xf'
-
-        # Octal conversion edge cases
-        assert aifpl.evaluate('(oct 0)') == '#o0'
-        assert aifpl.evaluate('(oct 7)') == '#o7'
-        assert aifpl.evaluate('(oct 8)') == '#o10'
-        assert aifpl.evaluate('(oct 64)') == '#o100'
-        assert aifpl.evaluate('(oct -1)') == '-#o1'
-        assert aifpl.evaluate('(oct -8)') == '-#o10'
-
-        # Large numbers
-        assert aifpl.evaluate('(bin 1024)') == '#b10000000000'
-        assert aifpl.evaluate('(hex 4096)') == '#x1000'
-        assert aifpl.evaluate('(oct 512)') == '#o1000'
-
-    def test_base_conversion_requires_integers(self, aifpl):
-        """Test that base conversion functions require integer arguments."""
-        non_integer_values = ["3.14", "2.5", "(float->complex 1 2)", "1.0"]
-
-        for value in non_integer_values:
-            with pytest.raises(AIFPLEvalError):
-                aifpl.evaluate(f"(bin {value})")
-
-            with pytest.raises(AIFPLEvalError):
-                aifpl.evaluate(f"(hex {value})")
-
-            with pytest.raises(AIFPLEvalError):
-                aifpl.evaluate(f"(oct {value})")
-
     def test_complex_number_operations_edge_cases(self, aifpl):
         """Test complex number operations edge cases."""
         # Complex number construction edge cases

@@ -191,7 +191,6 @@ Syntax: (operator arg1 arg2 ...)
 
 - Bitwise: (bit-or 5 3), (bit-and 7 3), (bit-xor 5 3), (bit-not 5)
 - Bit shifts: (bit-shift-left 1 3), (bit-shift-right 8 2)
-- Base conversion: (bin 255), (hex 255), (oct 255)
 
 ## Typed arithmetic operators:
 
@@ -249,7 +248,8 @@ Syntax: (operator arg1 arg2 ...)
 - (integer->float x) → convert integer to float: (integer->float 42) → 42.0, (integer->float 3) → 3.0
 - (float->complex real [imag]) → construct complex from one or two floats: (float->complex 3.0 4.0) → 3+4j, (float->complex 3.0) → 3+0j
 - (integer->complex real [imag]) → construct complex from one or two integers: (integer->complex 3) → 3+0j, (integer->complex 1 -2) → 1-2j
-- (integer->string 42) → "42", (float->string 3.14) → "3.14", (complex->string 3+4j) → "3+4j"
+- (integer->string 42) → "42", (integer->string 255 16) → "ff", (integer->string 255 2) → "11111111", (integer->string 255 8) → "377" (optional radix: 2, 8, 10, or 16; defaults to 10)
+- (float->string 3.14) → "3.14", (complex->string 3+4j) → "3+4j"
 - These are the primary way to move between numeric types; there is no automatic promotion
 
 ## Comparison and boolean:
@@ -285,9 +285,7 @@ Syntax: (operator arg1 arg2 ...)
 - Search predicates: (string-prefix? "hello" "he"), (string-suffix? "hello" "lo")
 - Search index: (string-index "hello" "l") → 2, (string-index "hello" "z") → #f (not found)
 - Conversion: (string->number "42") → 42, (string->number "3.14") → 3.14, (string->number "1+2j") → 1+2j
-- (string->number "#xFF") → 255, (string->number "#b1010") → 10, (string->number "#o755") → 493, (string->number "-#xFF") → -255
 - (string->number "hello") → #f (returns #f for any unparseable string; raises a type error if argument is not a string)
-- (integer->string 42), (float->string 3.14), (complex->string 3+4j)
 - Split/join: (string->list "hello") → ("h" "e" "l" "l" "o"), (string->list "a,b,c" ",") → ("a" "b" "c")
 - Split/join: (list->string (list "h" "i")) → "hi", (list->string (list "a" "b" "c") ",") → "a,b,c"
 

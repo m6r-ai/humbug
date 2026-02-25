@@ -177,19 +177,6 @@ class TestMathMissingCoverage:
 
     # ========== Base Conversion Error Handling ==========
 
-    def test_base_conversion_functions_wrong_argument_count(self, aifpl):
-        """Test base conversion functions with wrong argument count."""
-        base_functions = ["bin", "hex", "oct"]
-
-        for func in base_functions:
-            # No arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' has wrong number of arguments"):
-                aifpl.evaluate(f"({func})")
-
-            # Too many arguments
-            with pytest.raises(AIFPLEvalError, match=f"Function '{func}' has wrong number of arguments"):
-                aifpl.evaluate(f"({func} 15 16)")
-
     # ========== Complex Number Functions Error Handling ==========
 
     def test_complex_number_functions_wrong_argument_count(self, aifpl):
