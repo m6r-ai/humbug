@@ -5,6 +5,10 @@
 New features:
 
 - Added support for Claude Sonnet 4.6.
+- Revised the whole numeric type hierarchy in AIFPL so it is strict, and moving away from the Lisp-like numeric tower.
+- Renames all operations to follow a consistent naming pattern rather than retaining more legacy Lisp/Scheme names.
+- Added a lot of new functionality for lists and strings in AIFPL.
+- Added more operators for functions and symbols.
 
 ## v39 (2026-02-16)
 
