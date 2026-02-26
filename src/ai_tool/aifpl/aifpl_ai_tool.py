@@ -172,47 +172,61 @@ Syntax: (operator arg1 arg2 ...)
 - Tail call optimization prevents stack overflow
 - Strict type system: no implicit coercion between numeric types; use typed operators (integer+, float*, complex/) to enforce types explicitly
 - Mixed-type lists supported: (list 1 \"hi\" #t)
-- String literals support escapes: \\n, \\t, \\\", \\\\, \\uXXXX
 - Comments: use semicolon (;) for single-line comments, e.g., ; This is a comment
-- Numeric literals: 42 (integer), 3.14 (float), 3+4j (complex number), 5j (pure imaginary), j (1j)
-- Other literals: #xFF (hex), #b1010 (binary), #o755 (octal), \"hello\" (string), #t/#f (boolean), () (empty list)
-- Constants: pi, e
 
-## Quote - data literals and code as data:
+## Boolean operations
 
-- (quote expr) → returns expr without evaluation
-- 'expr → shortcut for (quote expr)
-- '(integer+ 1 2 3) → (integer+ 1 2 3) (as data, not evaluated)
-- (list 'hello (integer+ 1 2) 'world) → (hello 3 world)
-- Enables symbolic programming: (list-first '(integer+ 1 2)) → integer+
-- Code and data have identical representation (homoiconicity)
+- Boolean literals: #t, #f
+- Type predicate: (boolean? #t) → #t
+- Equality: (boolean=? #t #t), (boolean!=? #t #f)
+- (boolean-not #t) → #f (builtin function; the only boolean negation function)
 
-## Arithmetic and math:
+## Integer operations
 
-- Bitwise: (integer-bit-or 5 3), (integer-bit-and 7 3), (integer-bit-xor 5 3), (integer-bit-not 5)
-- Bit shifts: (integer-bit-shift-left 1 3), (integer-bit-shift-right 8 2)
-
-## Typed arithmetic operators:
-
-### Integer arithmetic (all args must be integers; type error otherwise):
-
-- (integer+ 1 2 3) → 6, (integer- 10 3) → 7, (integer* 2 3 4) → 24
+- All args must be integers; type error otherwise
+- Literals: 42 (decimal), #xff (hex), #o755 (octal), #b1010 (binary)
+- Type predicate: (integer? 42) → #t, (integer? 3.14) → #f
+- Inequality: (integer=? 1 1), (integer!=? 1 2)
+- Ordered comparison: (integer<? 1 2), (integer>? 3 2), (integer<=? 1 1), (integer>=? 2 1)
+- (integer+ 1 2 3) → 6
+- (integer+) → 0
+- (integer- 10 3) → 7
+- (integer* 2 3 4) → 24
+- (integer*) → 1 (zero-arg identities)
 - (integer/ 7 3) → 2 (floor division), (integer/ -7 2) → -4
 - (integer-neg 5) → -5 (unary negation); (integer- 5) is an error (requires 2+ args)
-- (integer+) → 0, (integer*) → 1 (zero-arg identities)
 - (integer% 7 3) → 1 (modulo), (integer% -7 2) → 1, (integer% 7 -3) → -2 (result takes sign of divisor)
 - (integer-abs -5) → 5 (absolute value)
-- (integer-expn 2 10) → 1024, (integer-expn 3 0) → 1, (integer-expn 0 0) → 1 (exact arbitrary-precision integer exponentiation)
 - (integer-expn base exp) requires non-negative exponent; raises error for negative exponent (result would not be an integer)
+- (integer-expn 2 10) → 1024, (integer-expn 3 0) → 1, (integer-expn 0 0) → 1 (exact arbitrary-precision integer exponentiation)
+- Bitwise: (integer-bit-or 5 3), (integer-bit-and 7 3), (integer-bit-xor 5 3), (integer-bit-not 5)
+- Bit shifts: (integer-bit-shift-left 1 3), (integer-bit-shift-right 8 2)
+- (integer-min 1 2) → 1
+- (integer-max 1 2) → 2
+- (integer->float x) → convert integer to float: (integer->float 42) → 42.0, (integer->float 3) → 3.0
+- (integer->complex real [imag]) → construct complex from one or two integers: (integer->complex 3) → 3+0j, (integer->complex 1 -2) → 1-2j
+- (integer->string 42) → "42", (integer->string 255 16) → "ff", (integer->string 255 2) → "11111111", (integer->string 255 8) → "377" (optional radix: 2, 8, 10, or 16; defaults to 10)
 
-### Float arithmetic (all args must be floats; use (integer->float x) to convert integers):
+## Floating point operations
 
-- (float+ 1.0 2.0 3.0) → 6.0, (float- 10.0 3.0) → 7.0
-- (float* 2.0 3.0) → 6.0, (float/ 10.0 4.0) → 2.5
+- All args must be floats; use (integer->float x) to convert integers
+- Constants: pi, e
+- Literals: 2.03, 43.0e9, -9.28353
+- Type predicate: (float? 3.14) → #t, (float? 42) → #f, (float? (float/ 1.0 2.0)) → #t
+- Equality: (float=? 1.0 1.0), (float!=? 1.0 2.0)
+- Ordered comparison: (float<? 1.0 2.0), (float>? 3.0 2.0), (float<=? 1.0 1.0), (float>=? 2.0 1.0)
+- (float+ 1.0 2.0 3.0) → 6.0
+- (float- 10.0 3.0) → 7.0
+- (float+) → 0.0
+- (float* 2.0 3.0) → 6.0
+- (float*) → 1.0 (zero-arg identities)
+- (float/ 10.0 4.0) → 2.5
+- (float// 7.0 2.0) → 3.0 (floor division)
+- (float% 7.0 3.0) → 1.0 (modulo)
 - (float-neg 3.0) → -3.0; (float- 3.0) and (float/ 4.0) are errors (require 2+ args)
-- (float+) → 0.0, (float*) → 1.0 (zero-arg identities)
-- (float// 7.0 2.0) → 3.0 (floor division), (float% 7.0 3.0) → 1.0 (modulo)
-- (float-floor 3.7) → 3.0, (float-ceil 3.2) → 4.0, (float-round 3.5) → 4.0 (all return float)
+- (float-floor 3.7) → 3.0
+- (float-ceil 3.2) → 4.0
+- (float-round 3.5) → 4.0 (all return float)
 - (float-exp 2.0) → e^2.0
 - (float-expn 2.0 10.0) → 1024.0
 - (float-log 1.0) → 0.0 (log base e)
@@ -221,87 +235,64 @@ Syntax: (operator arg1 arg2 ...)
 - (float-logn 8.0 2.0) → 3.0 (log base n; general case, slightly less precise than float-log2/float-log10)
 - float-log/float-log10/float-log2/float-logn of zero → -inf; negative arg is a runtime error
 - float-logn requires a positive base not equal to 1; invalid base is a runtime error
-- (float-min 1.0 2.0) → 1.0, (float-max 1.0 2.0) → 2.0
-- Transcendentals: (float-sin 0.0) → 0.0, (float-cos 0.0) → 1.0, (float-tan 0.0) → 0.0
+- (float-min 1.0 2.0) → 1.0
+- (float-max 1.0 2.0) → 2.0
 - (float-sqrt 4.0) → 2.0, (float-abs -3.0) → 3.0
 - float-sqrt of negative → runtime error (use complex-sqrt instead)
 - (float-abs -3.0) → 3.0 (absolute value)
+- Transcendentals: (float-sin 0.0) → 0.0, (float-cos 0.0) → 1.0, (float-tan 0.0) → 0.0
+- (float->integer x) → convert float to integer (truncates toward zero): (float->integer 3.7) → 3, (float->integer -2.9) → -2
+- (float->complex real [imag]) → construct complex from one or two floats: (float->complex 3.0 4.0) → 3+4j, (float->complex 3.0) → 3+0j
+- (float->string 3.14) → "3.14"
 
-### Complex arithmetic (all args must be complex; use (float->complex r i) to construct):
+## Complex number operations
 
+- All args must be complex; use (float->complex r i) to construct):
+- Literals: 3+4j, 5j, 1j, 1.5e2j, 0j
+- Type predicate: (complex? (float->complex 1.0 1.0)) → #t, (complex? 42) → #f
+- Equality: (complex=? 1+2j 1+2j), (complex!=? 1+2j 1+3j)
+- Complex numbers have no ordering; use (complex-abs z) to compare magnitudes as floats
 - (complex+ (float->complex 1.0 2.0) 3+4j) → 4+6j
+- (complex+) → 0+0j
 - (complex- (float->complex 5.0 3.0) (float->complex 2.0 1.0)) → 3+2j
 - (complex* 1+2j (float->complex 3.0 4.0)) → -5+10j
+- (complex*) → 1+0j (zero-arg identities)
 - (complex/ 4.0+2.0j (float->complex 1.0 1.0)) → 3-1j
-- (complex-neg 3.0+4.0j) → -3-4j
+- (complex-real z) → float real part, (complex-imag z) → float imaginary part (complex args only)
 - (complex-abs 3.0+4.0j) → 5.0 (returns magnitude as float, not complex)
-- (complex+) → 0+0j, (complex*) → 1+0j (zero-arg identities)
+- (complex-neg 3.0+4.0j) → -3-4j
 - (complex-exp z) → e^z
 - (complex-expn z base) → base^z
 - (complex-log z) → log base e of z
 - (complex-log10 z) → log base 10 of z
 - (complex-logn z base) → log base n of complex z (both args must be complex)
 - Transcendentals: complex-sin, complex-cos, complex-tan, complex-sqrt
-- Exponentials: complex-expn
-
-## Complex numbers:
-
-- Literals: 3+4j, 5j, 1j
-- Pure imaginary: 4j, -5j, 1.5e2j → 4j, -5j, 150j
-- Complex: 3+4j, 3-4j, 1e2+3e-1j → (3+4j), (3-4j), (100+0.3j)
-- (complex-real 3+4j) → 3.0, (complex-imag 3+4j) → 4.0, (complex-abs 3+4j) → 5.0
-- (complex-real z) → float real part, (complex-imag z) → float imaginary part (complex args only)
-
-## Type construction and conversion:
-
-- (float->integer x) → convert float to integer (truncates toward zero): (float->integer 3.7) → 3, (float->integer -2.9) → -2
-- (integer->float x) → convert integer to float: (integer->float 42) → 42.0, (integer->float 3) → 3.0
-- (float->complex real [imag]) → construct complex from one or two floats: (float->complex 3.0 4.0) → 3+4j, (float->complex 3.0) → 3+0j
-- (integer->complex real [imag]) → construct complex from one or two integers: (integer->complex 3) → 3+0j, (integer->complex 1 -2) → 1-2j
-- (integer->string 42) → "42", (integer->string 255 16) → "ff", (integer->string 255 2) → "11111111", (integer->string 255 8) → "377" (optional radix: 2, 8, 10, or 16; defaults to 10)
-- (float->string 3.14) → "3.14", (complex->string 3+4j) → "3+4j"
-- These are the primary way to move between numeric types; there is no automatic promotion
-
-## Comparison and boolean:
-
-### Type-specific equality and inequality (strict: both args must be the same type):
-
-- integer: (integer=? 1 1), (integer!=? 1 2)
-- float: (float=? 1.0 1.0), (float!=? 1.0 2.0)
-- complex: (complex=? 1+2j 1+2j), (complex!=? 1+2j 1+3j)
-- string: (string=? "hi" "hi"), (string!=? "hi" "bye")
-- boolean: (boolean=? #t #t), (boolean!=? #t #f)
-- list: (list=? (list 1 2) (list 1 2)), (list!=? (list 1 2) (list 1 3))
-- alist: (alist=? a1 a2), (alist!=? a1 a2)
-
-### Type-specific ordered comparisons (strict: both args must be the same type):
-
-- integer: (integer<? 1 2), (integer>? 3 2), (integer<=? 1 1), (integer>=? 2 1)
-- float: (float<? 1.0 2.0), (float>? 3.0 2.0), (float<=? 1.0 1.0), (float>=? 2.0 1.0)
-- string: (string<? "apple" "banana"), (string>? "b" "a"), (string<=? "a" "a"), (string>=? "b" "a")
-- String ordering is Unicode codepoint order (same as Python str), not locale-aware collation
-- Complex numbers have no ordering; use (complex-abs z) to compare magnitudes as floats
-- Special forms: (and #t #f) and (or #t #f) short-circuit and are optimized at compile time; they are not builtin functions
-- (boolean-not #t) → #f (builtin function; the only boolean negation function)
-- (if (integer>? 5 3) "yes" "no"), lazy evaluation: (if #t 42 0)
+- (complex->string 3+4j) → "3+4j"
 
 ## String operations:
 
+- String literals: \"hello\" (string)
+- String literals support escapes: \\n, \\t, \\\", \\\\, \\uXXXX
+- Type predicate: (string? "hello") → #t
+- Equality: (string=? "hi" "hi"), (string!=? "hi" "bye")
+- Ordered comparison: (string<? "apple" "banana"), (string>? "b" "a"), (string<=? "a" "a"), (string>=? "b" "a")
+- String ordering is Unicode codepoint order (same as Python str), not locale-aware collation
 - Basic: (string-concat "hello" " " "world"), (string-length "hello")
 - Access: (string-ref "hello" 1) → "e" (character at 0-based index)
 - Manipulation: (string-slice "hello" 1 4), (string-slice "hello" 2) → "llo", (string-upcase "hello"), (string-downcase "HELLO")
 - Utilities: (string-trim "  hello  ") → "hello",(string-trim-left "  hello  ") → "hello  ",  (string-trim-right "  hello  ") → "  hello", (string-replace "banana" "a" "o")
-- Equality/ordering predicates: (string=? "hi" "hi"), (string!=? "hi" "bye"), (string<? "apple" "banana"), (string>? "b" "a"), (string<=? "a" "a"), (string>=? "b" "a")
 - Search predicates: (string-prefix? "hello" "he"), (string-suffix? "hello" "lo")
 - Search index: (string-index "hello" "l") → 2, (string-index "hello" "z") → #f (not found)
-- Conversion: (string->number "42") → 42, (string->number "3.14") → 3.14, (string->number "1+2j") → 1+2j
-- (string->number "hello") → #f (returns #f for any unparseable string; raises a type error if argument is not a string)
+- Conversion: (string->number "42") → 42, (string->number "3.14") → 3.14, (string->number "1+2j") → 1+2j, (string->number "hello") → #f (returns #f for any unparseable string; raises a type error if argument is not a string)
 - Split/join: (string->list "hello") → ("h" "e" "l" "l" "o"), (string->list "a,b,c" ",") → ("a" "b" "c")
 - Split/join: (list->string (list "h" "i")) → "hi", (list->string (list "a" "b" "c") ",") → "a,b,c"
 
 ## List operations:
 
 - Uses proper lists only, not cons cells
+- List literals: () (empty list)
+- Type predicate: (list? (list 1 2)) → #t
+- Equality: (list=? (list 1 2) (list 1 2)), (list!=? (list 1 2) (list 1 3))
 - Construction: (list 1 2 3), (list-prepend lst item), (list-append lst item), (list-concat lst1 lst2), (list-concat) → ()
 - (list-prepend (list 2 3) 1) → (1 2 3), (list-append (list 1 2) 3) → (1 2 3)
 - (list-concat (list 1 2) (list 3 4)) → (1 2 3 4), (list-concat) → () (zero-arg identity)
@@ -312,9 +303,23 @@ Syntax: (operator arg1 arg2 ...)
 - Slicing: (list-slice lst start) → from start to end, (list-slice lst start end) → from start to end (exclusive)
 - (list-slice (list 1 2 3 4 5) 2) → (3 4 5), (list-slice (list 1 2 3 4 5) 1 3) → (2 3)
 
+### Higher-order list functions
+
+- (list-map func list) → (list-map (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
+- (list-filter predicate list) → (list-filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
+- (list-fold func init list) → (list-fold integer+ 0 (list 1 2 3 4)) → 10
+- (list-find predicate list) → first element satisfying predicate, or #f if none found: (list-find (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → 4, note: (list-find predicate ()) → #f
+- (list-any? predicate list) → #t if at least one element satisfies predicate, #f otherwise: (list-any? (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → #t, note: (list-any? predicate ()) → #f
+- (list-all? predicate list) → #t if all elements satisfy predicate, #f otherwise: (list-all? (lambda (x) (integer>? x 0)) (list 1 2 3 4 5)) → #t, note: (list-all? predicate ()) → #t (vacuously true)
+- (list-zip lst1 lst2) → pairs corresponding elements: (list-zip (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6)), (list-zip lst1 lst2) stops at the shorter list: (list-zip (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
+- (list-unzip lst) → inverse of list-zip; splits a list of 2-element lists into a list of two lists: (list-unzip (list (list 1 4) (list 2 5) (list 3 6))) → ((1 2 3) (4 5 6))
+- (list-first (list-unzip pairs)) → first elements, (list-first (list-rest (list-unzip pairs))) → second elements
+
 ## Association lists (alists):
 
 - Immutable key-value mappings with O(1) lookup performance
+- Type predicate: (alist? (alist ...)) → #t
+- Equality: (alist=? a1 a2), (alist!=? a1 a2)
 - Output format: alists display with curly braces: {("name" "Alice") ("age" 30)} — this is display-only; construction always uses (alist ...)
 - Construction: (alist (list "name" "Alice") (list "age" 30))
 - Access: (alist-get my-alist "key"), (alist-get my-alist "key" "default")
@@ -327,20 +332,10 @@ Syntax: (operator arg1 arg2 ...)
 - Pattern matching: (match data ((alist? a) ...) (_ ...))
 - Maintains insertion order, optimized for data processing workflows
 
-## Type predicates:
-
-- (integer? 42) → #t, (integer? 3.14) → #f
-- (float? 3.14) → #t, (float? 42) → #f, (float? (float/ 1.0 2.0)) → #t
-- (complex? (float->complex 1.0 1.0)) → #t, (complex? 42) → #f
-- (string? "hello") → #t, (boolean? #t) → #t, (list? (list 1 2)) → #t, (alist? (alist ...)) → #t
-- (function? (lambda (x) x)) → #t, (function? integer+) → #t
-- (symbol? 'foo) → #t, (symbol? "foo") → #f
-
 ## Symbol operations:
 
-- (symbol? x) → #t if x is a symbol (produced by quote)
-- (symbol=? a b) → #t if a and b are the same symbol
-- (symbol!=? a b) → #t if a and b are different symbols
+- Type predicate: (symbol? x) → #t if x is a symbol (produced by quote)
+- Equality: (symbol=? a b) → #t, (symbol!=? a b) → #t if a and b are different symbols
 - (symbol->string 'foo) → "foo" (extracts the symbol name as a string)
 - Symbols are produced only by quote: 'foo, '(a b c) contains symbols a, b, c
 - Example: (list-map symbol->string '(foo bar baz)) → ("foo" "bar" "baz")
@@ -351,19 +346,25 @@ Syntax: (operator arg1 arg2 ...)
 - (apply integer+ (list 1 2 3)) → 6, (apply list (list 1 2 3)) → (1 2 3)
 - (apply f (list)) → calls f with zero arguments (f must accept zero args)
 - apply respects all arity rules: fixed-arity functions are checked, variadic args are packed
-- (function-min-arity f) → integer: minimum number of arguments f requires
-- (function-min-arity integer-abs) → 1, (function-min-arity integer+) → 0, (function-min-arity (lambda (x . rest) x)) → 1
-- (function-variadic? f) → #t if f accepts more arguments than its minimum (has a rest parameter)
-- (function-variadic? integer+) → #t, (function-variadic? integer-abs) → #f
-- (function-accepts? f n) → #t if calling f with exactly n arguments satisfies its arity requirements
-- (function-accepts? integer-abs 1) → #t, (function-accepts? integer-abs 2) → #f
-- (function-accepts? integer+ 0) → #t, (function-accepts? integer+ 99) → #t
-- (function-accepts? (lambda (x . rest) x) 0) → #f, (function-accepts? (lambda (x . rest) x) 3) → #t
-- (function=? f g) → #t if f and g are the same function object (identity, not structural equality)
-- (function!=? f g) → #t if f and g are different function objects
-- (function=? integer+ integer+) → #t, (function=? integer+ integer*) → #f
+- Type predicate: (function? (lambda (x) x)) → #t, (function? integer+) → #t
+- Equality: (function=? f g) → #t if f and g are the same function object (identity, not structural equality), (function!=? f g) → #t if f and g are different function objects, (function=? integer+ integer+) → #t, (function=? integer+ integer*) → #f
+- (function-min-arity f) → integer: minimum number of arguments f requires, (function-min-arity integer-abs) → 1, (function-min-arity integer+) → 0, (function-min-arity (lambda (x . rest) x)) → 1
+- (function-variadic? f) → #t if f accepts more arguments than its minimum (has a rest parameter), (function-variadic? integer+) → #t, (function-variadic? integer-abs) → #f
+- (function-accepts? f n) → #t if calling f with exactly n arguments satisfies its arity requirements, (function-accepts? integer-abs 1) → #t, (function-accepts? integer-abs 2) → #f, (function-accepts? integer+ 0) → #t, (function-accepts? integer+ 99) → #t, (function-accepts? (lambda (x . rest) x) 0) → #f, (function-accepts? (lambda (x . rest) x) 3) → #t
 
-## Lambda functions:
+## Other operations:
+
+- (range start end [step]) → (range 1 5) → (1 2 3 4), integers only
+
+## Conditionals
+
+- (if (integer>? 5 3) "yes" "no"), lazy evaluation: (if #t 42 0)
+
+## And/or special forms
+
+- (and #t #f) and (or #t #f) short-circuit and are optimized at compile time; they are not builtin functions
+
+## Lambda functions
 
 - (lambda (param1 param2 ...) body) → creates anonymous function
 - (lambda (param1 . rest) body) → variadic: rest receives remaining args as a list
@@ -375,7 +376,7 @@ Syntax: (operator arg1 arg2 ...)
 - Tail recursion automatically optimized
 - Variadic functions accept any number of args beyond their fixed params; rest param is always a list (possibly empty)
 
-## Local bindings:
+## Local bindings
 
 - (let ((var1 val1) (var2 val2) ...) body) → parallel binding (bindings independent)
 - (let ((x 5) (y 10)) (integer+ x y)) → 15 (x and y don't reference each other)
@@ -385,26 +386,23 @@ Syntax: (operator arg1 arg2 ...)
 - (let* ((x 1) (x (integer+ x 10))) x) → 11 (shadowing works in let*)
 - Use let for independent bindings, let* for sequential dependencies
 
-## Recursive bindings:
+## Recursive bindings
 
 - (letrec ((var1 val1) (var2 val2) ...) body) → recursive binding
 - (letrec ((fact (lambda (n) (if (integer<=? n 1) 1 (integer* n (fact (integer- n 1))))))) (fact 5)) → 120
 - Supports self-recursion and mutual recursion
 - Use only when you need functions that reference themselves
 
-## Higher-order list functions:
+## Quote - data literals and code as data
 
-- (list-map func list) → (list-map (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
-- (list-filter predicate list) → (list-filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
-- (list-fold func init list) → (list-fold integer+ 0 (list 1 2 3 4)) → 10
-- (range start end [step]) → (range 1 5) → (1 2 3 4), integers only
-- (list-find predicate list), (list-any? predicate list), (list-all? predicate list)
-- (list-zip lst1 lst2) → pairs corresponding elements: (list-zip (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6))
-- (list-zip lst1 lst2) stops at the shorter list: (list-zip (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
-- (list-unzip lst) → inverse of list-zip; splits a list of 2-element lists into a list of two lists: (list-unzip (list (list 1 4) (list 2 5) (list 3 6))) → ((1 2 3) (4 5 6))
-- (list-first (list-unzip pairs)) → first elements, (list-first (list-rest (list-unzip pairs))) → second elements
+- (quote expr) → returns expr without evaluation
+- 'expr → shortcut for (quote expr)
+- '(integer+ 1 2 3) → (integer+ 1 2 3) (as data, not evaluated)
+- (list 'hello (integer+ 1 2) 'world) → (hello 3 world)
+- Enables symbolic programming: (list-first '(integer+ 1 2)) → integer+
+- Code and data have identical representation (homoiconicity)
 
-## Pattern matching:
+## Pattern matching
 
 - (match expression (pattern1 result1) (pattern2 result2) (_ default)) → powerful declarative dispatch
 - Literal patterns: (match x (42 "found") ("hello" "greeting") (_ "other"))
@@ -418,7 +416,7 @@ Syntax: (operator arg1 arg2 ...)
 - Example: (match data (42 "answer") ((integer? n) (integer* n 2)) ((string? s) (string-upcase s))
 - ((head . tail) (list head (list-length tail))) (_ \"unknown\"))
 
-## Module system:
+## Module system
 
 - (import \"module-name\") → load and return a module (compile-time operation)
 - Modules are just .aifpl files that return a value (typically an alist of functions)
@@ -442,7 +440,7 @@ Syntax: (operator arg1 arg2 ...)
 - Module names can include subdirectories: (e.g. import \"lib/helpers\")
 - Available modules can be found in the module search path directories
 
-## Debugging with trace:
+## Debugging with trace
 
 - (trace message1 message2 ... messageN expr) → special form for debugging
 - Emits messages BEFORE evaluating expr, then returns expr's value
@@ -453,7 +451,7 @@ Syntax: (operator arg1 arg2 ...)
 - Useful for debugging recursive functions and complex algorithms
 - Trace output shows execution order, helping identify logic issues
 
-## Raising errors:
+## Raising errors
 
 - (error "message") → special form that raises a runtime error with the given message
 - The argument must be a string literal (not a variable or expression)
@@ -462,7 +460,7 @@ Syntax: (operator arg1 arg2 ...)
 - Used to signal invalid arguments or unrecoverable conditions
 - Example: (if (integer<? n 0) (error "n must be non-negative") (float-sqrt (integer->float n)))
 
-## Important notes:
+## Important notes
 
 - list-prepend and list-append both take list first, item second: (list-prepend lst item), (list-append lst item)
 - string-concat joins strings: (string-concat "hello" " " "world") → "hello world"
