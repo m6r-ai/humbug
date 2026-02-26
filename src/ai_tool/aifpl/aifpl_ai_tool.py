@@ -318,6 +318,7 @@ Syntax: (operator arg1 arg2 ...)
 - Higher-order: (list-zip lst1 lst2) → pairs corresponding elements: (list-zip (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6)), (list-zip lst1 lst2) stops at the shorter list: (list-zip (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
 - Higher-order: (list-unzip lst) → inverse of list-zip; splits a list of 2-element lists into a list of two lists: (list-unzip (list (list 1 4) (list 2 5) (list 3 6))) → ((1 2 3) (4 5 6))
 - (list-first (list-unzip pairs)) → first elements, (list-first (list-rest (list-unzip pairs))) → second elements
+- Higher-order: (list-sort comparator lst) → returns a new list sorted by comparator; comparator is a two-argument function returning #t if first arg should come before second: (list-sort integer<? (list 3 1 4 1 5)) → (1 1 3 4 5), (list-sort string<? (list "b" "a" "c")) → ("a" "b" "c"); sort is stable and preserves insertion order of equal elements
 
 ## Association lists (alists):
 

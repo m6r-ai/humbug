@@ -497,6 +497,25 @@ class AIFPL:
                                                      (list-prepend acc1 (list-first (list-first lst)))
                                                      (list-prepend acc2 (list-first (list-rest (list-first lst)))))))))
                         (helper lst (list) (list))))""",
+        'list-sort': """(lambda (cmp lst)
+                    (letrec
+                      ((merge (lambda (cmp a b acc)
+                                (if (list-null? a)
+                                    (list-concat (list-reverse acc) b)
+                                    (if (list-null? b)
+                                        (list-concat (list-reverse acc) a)
+                                        (if (cmp (list-first b) (list-first a))
+                                            (merge cmp a (list-rest b) (list-prepend acc (list-first b)))
+                                            (merge cmp (list-rest a) b (list-prepend acc (list-first a))))))))
+                       (sort (lambda (cmp lst)
+                               (let ((n (list-length lst)))
+                                 (if (integer<=? n 1)
+                                     lst
+                                     (let* ((mid (integer/ n 2))
+                                            (left  (sort cmp (list-slice lst 0 mid)))
+                                            (right (sort cmp (list-slice lst mid))))
+                                       (merge cmp left right (list))))))))
+                      (sort cmp lst)))""",
         'alist': """(lambda (. args)
                       (letrec ((loop (lambda (pairs acc)
                                        (if (list-null? pairs) acc
