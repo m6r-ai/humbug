@@ -199,14 +199,14 @@ class AIFPLVM:
         table[Opcode.INTEGER_GT_P] = self._op_integer_gt_p
         table[Opcode.INTEGER_LTE_P] = self._op_integer_lte_p
         table[Opcode.INTEGER_GTE_P] = self._op_integer_gte_p
+        table[Opcode.INTEGER_ABS] = self._op_integer_abs
         table[Opcode.INTEGER_ADD] = self._op_integer_add
         table[Opcode.INTEGER_SUB] = self._op_integer_sub
         table[Opcode.INTEGER_MUL] = self._op_integer_mul
         table[Opcode.INTEGER_DIV] = self._op_integer_div
         table[Opcode.INTEGER_MOD] = self._op_integer_mod
         table[Opcode.INTEGER_NEG] = self._op_integer_neg
-        table[Opcode.INTEGER_EXPT] = self._op_integer_expt
-        table[Opcode.INTEGER_ABS] = self._op_integer_abs
+        table[Opcode.INTEGER_EXPN] = self._op_integer_expn
         table[Opcode.INTEGER_BIT_NOT] = self._op_integer_bit_not
         table[Opcode.INTEGER_BIT_SHIFT_LEFT] = self._op_integer_bit_shift_left
         table[Opcode.INTEGER_BIT_SHIFT_RIGHT] = self._op_integer_bit_shift_right
@@ -217,6 +217,7 @@ class AIFPLVM:
         table[Opcode.INTEGER_MAX] = self._op_integer_max
         table[Opcode.INTEGER_TO_STRING] = self._op_integer_to_string
         table[Opcode.INTEGER_TO_FLOAT] = self._op_integer_to_float
+        table[Opcode.INTEGER_TO_COMPLEX] = self._op_integer_to_complex
         table[Opcode.FLOAT_P] = self._op_float_p
         table[Opcode.FLOAT_EQ_P] = self._op_float_eq_p
         table[Opcode.FLOAT_NEQ_P] = self._op_float_neq_p
@@ -224,6 +225,7 @@ class AIFPLVM:
         table[Opcode.FLOAT_GT_P] = self._op_float_gt_p
         table[Opcode.FLOAT_LTE_P] = self._op_float_lte_p
         table[Opcode.FLOAT_GTE_P] = self._op_float_gte_p
+        table[Opcode.FLOAT_ABS] = self._op_float_abs
         table[Opcode.FLOAT_ADD] = self._op_float_add
         table[Opcode.FLOAT_SUB] = self._op_float_sub
         table[Opcode.FLOAT_MUL] = self._op_float_mul
@@ -231,15 +233,14 @@ class AIFPLVM:
         table[Opcode.FLOAT_FLOOR_DIV] = self._op_float_floor_div
         table[Opcode.FLOAT_MOD] = self._op_float_mod
         table[Opcode.FLOAT_NEG] = self._op_float_neg
-        table[Opcode.FLOAT_EXPT] = self._op_float_expt
+        table[Opcode.FLOAT_EXP] = self._op_float_exp
+        table[Opcode.FLOAT_EXPN] = self._op_float_expn
+        table[Opcode.FLOAT_LOG] = self._op_float_log
+        table[Opcode.FLOAT_LOG10] = self._op_float_log10
         table[Opcode.FLOAT_SIN] = self._op_float_sin
         table[Opcode.FLOAT_COS] = self._op_float_cos
         table[Opcode.FLOAT_TAN] = self._op_float_tan
-        table[Opcode.FLOAT_LOG] = self._op_float_log
-        table[Opcode.FLOAT_LOG10] = self._op_float_log10
-        table[Opcode.FLOAT_EXP] = self._op_float_exp
         table[Opcode.FLOAT_SQRT] = self._op_float_sqrt
-        table[Opcode.FLOAT_ABS] = self._op_float_abs
         table[Opcode.FLOAT_TO_INTEGER] = self._op_float_to_integer
         table[Opcode.FLOAT_TO_STRING] = self._op_float_to_string
         table[Opcode.FLOAT_FLOOR] = self._op_float_floor
@@ -248,26 +249,25 @@ class AIFPLVM:
         table[Opcode.FLOAT_MIN] = self._op_float_min
         table[Opcode.FLOAT_MAX] = self._op_float_max
         table[Opcode.FLOAT_TO_COMPLEX] = self._op_float_to_complex
-        table[Opcode.INTEGER_TO_COMPLEX] = self._op_integer_to_complex
         table[Opcode.COMPLEX_P] = self._op_complex_p
         table[Opcode.COMPLEX_EQ_P] = self._op_complex_eq_p
         table[Opcode.COMPLEX_NEQ_P] = self._op_complex_neq_p
+        table[Opcode.COMPLEX_REAL] = self._op_complex_real
+        table[Opcode.COMPLEX_IMAG] = self._op_complex_imag
+        table[Opcode.COMPLEX_ABS] = self._op_complex_abs
         table[Opcode.COMPLEX_ADD] = self._op_complex_add
         table[Opcode.COMPLEX_SUB] = self._op_complex_sub
         table[Opcode.COMPLEX_MUL] = self._op_complex_mul
         table[Opcode.COMPLEX_DIV] = self._op_complex_div
         table[Opcode.COMPLEX_NEG] = self._op_complex_neg
-        table[Opcode.COMPLEX_REAL] = self._op_complex_real
-        table[Opcode.COMPLEX_IMAG] = self._op_complex_imag
-        table[Opcode.COMPLEX_EXPT] = self._op_complex_expt
+        table[Opcode.COMPLEX_EXP] = self._op_complex_exp
+        table[Opcode.COMPLEX_EXPN] = self._op_complex_expn
+        table[Opcode.COMPLEX_LOG] = self._op_complex_log
+        table[Opcode.COMPLEX_LOG10] = self._op_complex_log10
         table[Opcode.COMPLEX_SIN] = self._op_complex_sin
         table[Opcode.COMPLEX_COS] = self._op_complex_cos
         table[Opcode.COMPLEX_TAN] = self._op_complex_tan
-        table[Opcode.COMPLEX_LOG] = self._op_complex_log
-        table[Opcode.COMPLEX_LOG10] = self._op_complex_log10
-        table[Opcode.COMPLEX_EXP] = self._op_complex_exp
         table[Opcode.COMPLEX_SQRT] = self._op_complex_sqrt
-        table[Opcode.COMPLEX_ABS] = self._op_complex_abs
         table[Opcode.COMPLEX_TO_STRING] = self._op_complex_to_string
         table[Opcode.STRING_P] = self._op_string_p
         table[Opcode.STRING_EQ_P] = self._op_string_eq_p
@@ -1193,6 +1193,14 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(self._ensure_integer(a, 'integer>=?') >= self._ensure_integer(b, 'integer>=?')))
         return None
 
+    def _op_integer_abs(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """INTEGER_ABS: Pop an integer, push its absolute value."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLInteger(abs(self._ensure_integer(a, 'integer-abs'))))
+        return None
+
     def _op_integer_add(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1256,26 +1264,18 @@ class AIFPLVM:
         self.stack.append(AIFPLInteger(-self._ensure_integer(a, 'integer-neg')))
         return None
 
-    def _op_integer_expt(  # pylint: disable=useless-return
+    def _op_integer_expn(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """INTEGER_EXPT: Pop exponent and base integers, push base ** exponent as integer."""
+        """INTEGER_EXPN: Pop exponent and base integers, push base ** exponent as integer."""
         b = self.stack.pop()
         a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'integer-expt')
-        b_val = self._ensure_integer(b, 'integer-expt')
+        a_val = self._ensure_integer(a, 'integer-expn')
+        b_val = self._ensure_integer(b, 'integer-expn')
         if b_val < 0:
-            raise AIFPLEvalError("Function 'integer-expt' requires a non-negative exponent")
+            raise AIFPLEvalError("Function 'integer-expn' requires a non-negative exponent")
 
         self.stack.append(AIFPLInteger(a_val ** b_val))
-        return None
-
-    def _op_integer_abs(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """INTEGER_ABS: Pop an integer, push its absolute value."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLInteger(abs(self._ensure_integer(a, 'integer-abs'))))
         return None
 
     def _op_integer_bit_not(  # pylint: disable=useless-return
@@ -1368,12 +1368,15 @@ class AIFPLVM:
             raise AIFPLEvalError(f"integer->string radix must be 2, 8, 10, or 16, got {radix}")
         if radix == 10:
             self.stack.append(AIFPLString(str(a_val)))
+
         elif radix == 2:
             sign = "-" if a_val < 0 else ""
             self.stack.append(AIFPLString(f"{sign}{bin(abs(a_val))[2:]}"))
+
         elif radix == 8:
             sign = "-" if a_val < 0 else ""
             self.stack.append(AIFPLString(f"{sign}{oct(abs(a_val))[2:]}"))
+
         elif radix == 16:
             sign = "-" if a_val < 0 else ""
             self.stack.append(AIFPLString(f"{sign}{hex(abs(a_val))[2:]}"))
@@ -1449,6 +1452,14 @@ class AIFPLVM:
         b = self.stack.pop()
         a = self.stack.pop()
         self.stack.append(AIFPLBoolean(self._ensure_float(a, 'float>=?') >= self._ensure_float(b, 'float>=?')))
+        return None
+
+    def _op_float_abs(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_ABS: Pop a float, push abs(x) as float."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLFloat(abs(self._ensure_float(a, 'float-abs'))))
         return None
 
     def _op_float_add(  # pylint: disable=useless-return
@@ -1528,37 +1539,21 @@ class AIFPLVM:
         self.stack.append(AIFPLFloat(-self._ensure_float(a, 'float-neg')))
         return None
 
-    def _op_float_expt(  # pylint: disable=useless-return
+    def _op_float_exp(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """FLOAT_EXPT: Pop two floats, push a ** b as float."""
+        """FLOAT_EXP: Pop a float, push exp(x) as float."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLFloat(math.exp(self._ensure_float(a, 'float-exp'))))
+        return None
+
+    def _op_float_expn(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_EXPN: Pop two floats, push a ** b as float."""
         b = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append(AIFPLFloat(self._ensure_float(a, 'float-expt') ** self._ensure_float(b, 'float-expt')))
-        return None
-
-    def _op_float_sin(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """FLOAT_SIN: Pop a float, push sin(x) as float."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLFloat(math.sin(self._ensure_float(a, 'float-sin'))))
-        return None
-
-    def _op_float_cos(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """FLOAT_COS: Pop a float, push cos(x) as float."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLFloat(math.cos(self._ensure_float(a, 'float-cos'))))
-        return None
-
-    def _op_float_tan(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """FLOAT_TAN: Pop a float, push tan(x) as float."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLFloat(math.tan(self._ensure_float(a, 'float-tan'))))
+        self.stack.append(AIFPLFloat(self._ensure_float(a, 'float-expn') ** self._ensure_float(b, 'float-expn')))
         return None
 
     def _op_float_log(  # pylint: disable=useless-return
@@ -1593,12 +1588,28 @@ class AIFPLVM:
         self.stack.append(AIFPLFloat(math.log10(a_val)))
         return None
 
-    def _op_float_exp(  # pylint: disable=useless-return
+    def _op_float_sin(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """FLOAT_EXP: Pop a float, push exp(x) as float."""
+        """FLOAT_SIN: Pop a float, push sin(x) as float."""
         a = self.stack.pop()
-        self.stack.append(AIFPLFloat(math.exp(self._ensure_float(a, 'float-exp'))))
+        self.stack.append(AIFPLFloat(math.sin(self._ensure_float(a, 'float-sin'))))
+        return None
+
+    def _op_float_cos(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_COS: Pop a float, push cos(x) as float."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLFloat(math.cos(self._ensure_float(a, 'float-cos'))))
+        return None
+
+    def _op_float_tan(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_TAN: Pop a float, push tan(x) as float."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLFloat(math.tan(self._ensure_float(a, 'float-tan'))))
         return None
 
     def _op_float_sqrt(  # pylint: disable=useless-return
@@ -1611,14 +1622,6 @@ class AIFPLVM:
             raise AIFPLEvalError("Function 'float-sqrt' requires a non-negative argument")
 
         self.stack.append(AIFPLFloat(math.sqrt(a_val)))
-        return None
-
-    def _op_float_abs(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """FLOAT_ABS: Pop a float, push abs(x) as float."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLFloat(abs(self._ensure_float(a, 'float-abs'))))
         return None
 
     def _op_float_to_integer(  # pylint: disable=useless-return
@@ -1761,6 +1764,32 @@ class AIFPLVM:
         self.stack.append(AIFPLBoolean(a.value != b.value))
         return None
 
+    def _op_complex_real(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX_REAL: Pop a complex number, push its real part as float."""
+        a = self.stack.pop()
+        a_val = self._ensure_complex(a, 'complex-real')
+        self.stack.append(AIFPLFloat(a_val.real))
+        return None
+
+    def _op_complex_imag(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX_IMAG: Pop a complex number, push its imaginary part as float."""
+        a = self.stack.pop()
+        a_val = self._ensure_complex(a, 'complex-imag')
+        self.stack.append(AIFPLFloat(a_val.imag))
+        return None
+
+    def _op_complex_abs(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX_ABS: Pop a complex number, push its magnitude as float."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLFloat(abs(self._ensure_complex(a, 'complex-abs'))))
+        return None
+
     def _op_complex_add(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1810,31 +1839,37 @@ class AIFPLVM:
         self.stack.append(AIFPLComplex(-self._ensure_complex(a, 'complex-neg')))
         return None
 
-    def _op_complex_real(  # pylint: disable=useless-return
+    def _op_complex_exp(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """COMPLEX_REAL: Pop a complex number, push its real part as float."""
+        """COMPLEX_EXP: Pop a complex number, push exp(x)."""
         a = self.stack.pop()
-        a_val = self._ensure_complex(a, 'complex-real')
-        self.stack.append(AIFPLFloat(a_val.real))
+        self.stack.append(AIFPLComplex(cmath.exp(self._ensure_complex(a, 'complex-exp'))))
         return None
 
-    def _op_complex_imag(  # pylint: disable=useless-return
+    def _op_complex_expn(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """COMPLEX_IMAG: Pop a complex number, push its imaginary part as float."""
-        a = self.stack.pop()
-        a_val = self._ensure_complex(a, 'complex-imag')
-        self.stack.append(AIFPLFloat(a_val.imag))
-        return None
-
-    def _op_complex_expt(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """COMPLEX_EXPT: Pop two complex numbers, push a ** b."""
+        """COMPLEX_EXPN: Pop two complex numbers, push a ** b."""
         b = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append(AIFPLComplex(self._ensure_complex(a, 'complex-expt') ** self._ensure_complex(b, 'complex-expt')))
+        self.stack.append(AIFPLComplex(self._ensure_complex(a, 'complex-expn') ** self._ensure_complex(b, 'complex-expn')))
+        return None
+
+    def _op_complex_log(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX_LOG: Pop a complex number, push natural log(x)."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLComplex(cmath.log(self._ensure_complex(a, 'complex-log'))))
+        return None
+
+    def _op_complex_log10(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX_LOG10: Pop a complex number, push log10(x)."""
+        a = self.stack.pop()
+        self.stack.append(AIFPLComplex(cmath.log10(self._ensure_complex(a, 'complex-log10'))))
         return None
 
     def _op_complex_sin(  # pylint: disable=useless-return
@@ -1861,44 +1896,12 @@ class AIFPLVM:
         self.stack.append(AIFPLComplex(cmath.tan(self._ensure_complex(a, 'complex-tan'))))
         return None
 
-    def _op_complex_log(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """COMPLEX_LOG: Pop a complex number, push natural log(x)."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLComplex(cmath.log(self._ensure_complex(a, 'complex-log'))))
-        return None
-
-    def _op_complex_log10(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """COMPLEX_LOG10: Pop a complex number, push log10(x)."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLComplex(cmath.log10(self._ensure_complex(a, 'complex-log10'))))
-        return None
-
-    def _op_complex_exp(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """COMPLEX_EXP: Pop a complex number, push exp(x)."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLComplex(cmath.exp(self._ensure_complex(a, 'complex-exp'))))
-        return None
-
     def _op_complex_sqrt(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
         """COMPLEX_SQRT: Pop a complex number, push sqrt(x)."""
         a = self.stack.pop()
         self.stack.append(AIFPLComplex(cmath.sqrt(self._ensure_complex(a, 'complex-sqrt'))))
-        return None
-
-    def _op_complex_abs(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """COMPLEX_ABS: Pop a complex number, push its magnitude as float."""
-        a = self.stack.pop()
-        self.stack.append(AIFPLFloat(abs(self._ensure_complex(a, 'complex-abs'))))
         return None
 
     def _op_complex_to_string(  # pylint: disable=useless-return

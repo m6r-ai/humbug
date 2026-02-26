@@ -303,7 +303,7 @@ class TestFormatting:
     def test_edge_case_formatting(self, aifpl, helpers):
         """Test formatting of edge cases and boundary values."""
         # Very large numbers
-        helpers.assert_evaluates_to(aifpl, '(float-expt 2.0 20.0)', '1048576.0')
+        helpers.assert_evaluates_to(aifpl, '(float-expn 2.0 20.0)', '1048576.0')
 
         # Very small numbers (close to zero)
         result = aifpl.evaluate_and_format('(float/ 1.0 1000000.0)')

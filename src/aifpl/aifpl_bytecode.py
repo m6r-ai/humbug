@@ -102,14 +102,14 @@ class Opcode(IntEnum):
     INTEGER_GT_P = _op(104, 0)          # integer>? a b
     INTEGER_LTE_P = _op(105, 0)         # integer<=? a b
     INTEGER_GTE_P = _op(106, 0)         # integer>=? a b
-    INTEGER_ADD = _op(107, 0)           # integer+ a b
-    INTEGER_SUB = _op(108, 0)           # integer- a b
-    INTEGER_MUL = _op(109, 0)           # integer* a b
-    INTEGER_DIV = _op(110, 0)           # integer/ a b  (floor division)
-    INTEGER_MOD = _op(111, 0)           # integer% a b  (modulo)
-    INTEGER_NEG = _op(112, 0)           # integer-neg x  (unary minus)
-    INTEGER_EXPT = _op(113, 0)          # integer-expt a b  (exact integer exponentiation)
-    INTEGER_ABS = _op(114, 0)           # integer-abs x
+    INTEGER_ABS = _op(107, 0)           # integer-abs x
+    INTEGER_ADD = _op(108, 0)           # integer+ a b
+    INTEGER_SUB = _op(109, 0)           # integer- a b
+    INTEGER_MUL = _op(110, 0)           # integer* a b
+    INTEGER_DIV = _op(111, 0)           # integer/ a b  (floor division)
+    INTEGER_MOD = _op(112, 0)           # integer% a b  (modulo)
+    INTEGER_NEG = _op(113, 0)           # integer-neg x  (unary minus)
+    INTEGER_EXPN = _op(114, 0)          # integer-expn a b  (exact integer exponentiation)
     INTEGER_BIT_NOT = _op(115, 0)       # Bitwise NOT ~x
     INTEGER_BIT_SHIFT_LEFT = _op(116, 0)
                                         # Bitwise left shift x << n
@@ -132,52 +132,52 @@ class Opcode(IntEnum):
     FLOAT_GT_P = _op(144, 0)            # float>? a b
     FLOAT_LTE_P = _op(145, 0)           # float<=? a b
     FLOAT_GTE_P = _op(146, 0)           # float>=? a b
-    FLOAT_ADD = _op(147, 0)             # float+ a b
-    FLOAT_SUB = _op(148, 0)             # float- a b
-    FLOAT_MUL = _op(149, 0)             # float* a b
-    FLOAT_DIV = _op(150, 0)             # float/ a b
-    FLOAT_FLOOR_DIV = _op(151, 0)       # float// a b  (floor division)
-    FLOAT_MOD = _op(152, 0)             # float% a b  (modulo)
-    FLOAT_NEG = _op(153, 0)             # float-neg x  (unary minus)
-    FLOAT_EXPT = _op(154, 0)            # float-expt a b
-    FLOAT_SIN = _op(155, 0)             # float-sin x
-    FLOAT_COS = _op(156, 0)             # float-cos x
-    FLOAT_TAN = _op(157, 0)             # float-tan x
+    FLOAT_NEG = _op(147, 0)             # float-neg x  (unary minus)
+    FLOAT_ADD = _op(148, 0)             # float+ a b
+    FLOAT_SUB = _op(149, 0)             # float- a b
+    FLOAT_MUL = _op(150, 0)             # float* a b
+    FLOAT_DIV = _op(151, 0)             # float/ a b
+    FLOAT_FLOOR_DIV = _op(152, 0)       # float// a b  (floor division)
+    FLOAT_MOD = _op(153, 0)             # float% a b  (modulo)
+    FLOAT_EXP = _op(154, 0)             # float-exp x
+    FLOAT_EXPN = _op(155, 0)            # float-expn a b
     FLOAT_LOG = _op(158, 0)             # float-log x
     FLOAT_LOG10 = _op(159, 0)           # float-log10 x
-    FLOAT_EXP = _op(160, 0)             # float-exp x
-    FLOAT_SQRT = _op(161, 0)            # float-sqrt x
-    FLOAT_ABS = _op(162, 0)             # float-abs x
-    FLOAT_TO_INTEGER = _op(163, 0)      # Convert float to integer
-    FLOAT_TO_COMPLEX = _op(164, 0)      # float->complex: construct complex from one or two floats
-    FLOAT_TO_STRING = _op(165, 0)       # Convert float to string
-    FLOAT_FLOOR = _op(166, 0)           # float-floor x  (returns float)
-    FLOAT_CEIL = _op(167, 0)            # float-ceil x   (returns float)
-    FLOAT_ROUND = _op(168, 0)           # float-round x  (returns float)
-    FLOAT_MIN = _op(169, 0)             # float-min a b
-    FLOAT_MAX = _op(170, 0)             # float-max a b
+    FLOAT_SIN = _op(160, 0)             # float-sin x
+    FLOAT_COS = _op(161, 0)             # float-cos x
+    FLOAT_TAN = _op(162, 0)             # float-tan x
+    FLOAT_SQRT = _op(163, 0)            # float-sqrt x
+    FLOAT_ABS = _op(164, 0)             # float-abs x
+    FLOAT_TO_INTEGER = _op(165, 0)      # Convert float to integer
+    FLOAT_TO_COMPLEX = _op(166, 0)      # float->complex: construct complex from one or two floats
+    FLOAT_TO_STRING = _op(167, 0)       # Convert float to string
+    FLOAT_FLOOR = _op(168, 0)           # float-floor x  (returns float)
+    FLOAT_CEIL = _op(169, 0)            # float-ceil x   (returns float)
+    FLOAT_ROUND = _op(170, 0)           # float-round x  (returns float)
+    FLOAT_MIN = _op(171, 0)             # float-min a b
+    FLOAT_MAX = _op(172, 0)             # float-max a b
 
     # Complex operations
     COMPLEX_P = _op(180, 0)             # (complex? x)
     COMPLEX_EQ_P = _op(181, 0)          # complex=? a b
     COMPLEX_NEQ_P = _op(182, 0)         # complex!=? a b
-    COMPLEX_ADD = _op(183, 0)           # complex+ a b
-    COMPLEX_SUB = _op(184, 0)           # complex- a b
-    COMPLEX_MUL = _op(185, 0)           # complex* a b
-    COMPLEX_DIV = _op(186, 0)           # complex/ a b
-    COMPLEX_NEG = _op(187, 0)           # complex-neg x  (unary minus)
-    COMPLEX_REAL = _op(188, 0)          # Extract real part
-    COMPLEX_IMAG = _op(189, 0)          # Extract imaginary part
-    COMPLEX_EXPT = _op(190, 0)          # complex-expt a b
-    COMPLEX_SIN = _op(191, 0)           # complex-sin x
-    COMPLEX_COS = _op(192, 0)           # complex-cos x
-    COMPLEX_TAN = _op(193, 0)           # complex-tan x
-    COMPLEX_LOG = _op(194, 0)           # complex-log x
-    COMPLEX_LOG10 = _op(195, 0)         # complex-log10 x
-    COMPLEX_EXP = _op(196, 0)           # complex-exp x
-    COMPLEX_SQRT = _op(197, 0)          # complex-sqrt x
-    COMPLEX_ABS = _op(198, 0)           # complex-abs x  (returns float: magnitude)
-    COMPLEX_TO_STRING = _op(199, 0)     # Convert complex to string
+    COMPLEX_REAL = _op(183, 0)          # Extract real part
+    COMPLEX_IMAG = _op(184, 0)          # Extract imaginary part
+    COMPLEX_ABS = _op(185, 0)           # complex-abs x  (returns float: magnitude)
+    COMPLEX_ADD = _op(186, 0)           # complex+ a b
+    COMPLEX_SUB = _op(187, 0)           # complex- a b
+    COMPLEX_MUL = _op(188, 0)           # complex* a b
+    COMPLEX_DIV = _op(189, 0)           # complex/ a b
+    COMPLEX_NEG = _op(190, 0)           # complex-neg x  (unary minus)
+    COMPLEX_EXP = _op(191, 0)           # complex-exp x
+    COMPLEX_EXPN = _op(192, 0)          # complex-expn a b
+    COMPLEX_LOG = _op(193, 0)           # complex-log x
+    COMPLEX_LOG10 = _op(194, 0)         # complex-log10 x
+    COMPLEX_SIN = _op(195, 0)           # complex-sin x
+    COMPLEX_COS = _op(196, 0)           # complex-cos x
+    COMPLEX_TAN = _op(197, 0)           # complex-tan x
+    COMPLEX_SQRT = _op(198, 0)          # complex-sqrt x
+    COMPLEX_TO_STRING = _op(200, 0)     # Convert complex to string
 
     # String operations
     STRING_P = _op(220, 0)              # (string? x)
@@ -273,14 +273,14 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'integer>?': (Opcode.INTEGER_GT_P, 2),
     'integer<=?': (Opcode.INTEGER_LTE_P, 2),
     'integer>=?': (Opcode.INTEGER_GTE_P, 2),
+    'integer-abs': (Opcode.INTEGER_ABS, 1),
     'integer+': (Opcode.INTEGER_ADD, 2),
     'integer-': (Opcode.INTEGER_SUB, 2),
     'integer*': (Opcode.INTEGER_MUL, 2),
     'integer/': (Opcode.INTEGER_DIV, 2),
     'integer%': (Opcode.INTEGER_MOD, 2),
     'integer-neg': (Opcode.INTEGER_NEG, 1),
-    'integer-expt': (Opcode.INTEGER_EXPT, 2),
-    'integer-abs': (Opcode.INTEGER_ABS, 1),
+    'integer-expn': (Opcode.INTEGER_EXPN, 2),
     'integer-bit-not': (Opcode.INTEGER_BIT_NOT, 1),
     'integer-bit-shift-left': (Opcode.INTEGER_BIT_SHIFT_LEFT, 2),
     'integer-bit-shift-right': (Opcode.INTEGER_BIT_SHIFT_RIGHT, 2),
@@ -299,6 +299,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'float>?': (Opcode.FLOAT_GT_P, 2),
     'float<=?': (Opcode.FLOAT_LTE_P, 2),
     'float>=?': (Opcode.FLOAT_GTE_P, 2),
+    'float-abs': (Opcode.FLOAT_ABS, 1),
     'float+': (Opcode.FLOAT_ADD, 2),
     'float-': (Opcode.FLOAT_SUB, 2),
     'float*': (Opcode.FLOAT_MUL, 2),
@@ -306,15 +307,14 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'float//': (Opcode.FLOAT_FLOOR_DIV, 2),
     'float%': (Opcode.FLOAT_MOD, 2),
     'float-neg': (Opcode.FLOAT_NEG, 1),
-    'float-expt': (Opcode.FLOAT_EXPT, 2),
+    'float-exp': (Opcode.FLOAT_EXP, 1),
+    'float-expn': (Opcode.FLOAT_EXPN, 2),
+    'float-log': (Opcode.FLOAT_LOG, 1),
+    'float-log10': (Opcode.FLOAT_LOG10, 1),
     'float-sin': (Opcode.FLOAT_SIN, 1),
     'float-cos': (Opcode.FLOAT_COS, 1),
     'float-tan': (Opcode.FLOAT_TAN, 1),
-    'float-log': (Opcode.FLOAT_LOG, 1),
-    'float-log10': (Opcode.FLOAT_LOG10, 1),
-    'float-exp': (Opcode.FLOAT_EXP, 1),
     'float-sqrt': (Opcode.FLOAT_SQRT, 1),
-    'float-abs': (Opcode.FLOAT_ABS, 1),
     'float->integer': (Opcode.FLOAT_TO_INTEGER, 1),
     'float->complex': (Opcode.FLOAT_TO_COMPLEX, 2),
     'float->string': (Opcode.FLOAT_TO_STRING, 1),
@@ -326,20 +326,20 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'complex?': (Opcode.COMPLEX_P, 1),
     'complex=?': (Opcode.COMPLEX_EQ_P, 2),
     'complex!=?': (Opcode.COMPLEX_NEQ_P, 2),
+    'complex-abs': (Opcode.COMPLEX_ABS, 1),
     'complex+': (Opcode.COMPLEX_ADD, 2),
     'complex-': (Opcode.COMPLEX_SUB, 2),
     'complex*': (Opcode.COMPLEX_MUL, 2),
     'complex/': (Opcode.COMPLEX_DIV, 2),
     'complex-neg': (Opcode.COMPLEX_NEG, 1),
-    'complex-expt': (Opcode.COMPLEX_EXPT, 2),
+    'complex-exp': (Opcode.COMPLEX_EXP, 1),
+    'complex-expn': (Opcode.COMPLEX_EXPN, 2),
+    'complex-log': (Opcode.COMPLEX_LOG, 1),
+    'complex-log10': (Opcode.COMPLEX_LOG10, 1),
     'complex-sin': (Opcode.COMPLEX_SIN, 1),
     'complex-cos': (Opcode.COMPLEX_COS, 1),
     'complex-tan': (Opcode.COMPLEX_TAN, 1),
-    'complex-log': (Opcode.COMPLEX_LOG, 1),
-    'complex-log10': (Opcode.COMPLEX_LOG10, 1),
-    'complex-exp': (Opcode.COMPLEX_EXP, 1),
     'complex-sqrt': (Opcode.COMPLEX_SQRT, 1),
-    'complex-abs': (Opcode.COMPLEX_ABS, 1),
     'complex->string': (Opcode.COMPLEX_TO_STRING, 1),
     'complex-real': (Opcode.COMPLEX_REAL, 1),
     'complex-imag': (Opcode.COMPLEX_IMAG, 1),

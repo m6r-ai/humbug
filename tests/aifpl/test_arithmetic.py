@@ -164,10 +164,10 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic pow (float->integer inputs)
-        ("(float-expt 2.0 3.0)", "8.0"),
-        ("(float-expt 3.0 2.0)", "9.0"),
-        ("(float-expt 5.0 0.0)", "1.0"),
-        ("(float-expt 0.0 5.0)", "0.0"),
+        ("(float-expn 2.0 3.0)", "8.0"),
+        ("(float-expn 3.0 2.0)", "9.0"),
+        ("(float-expn 5.0 0.0)", "1.0"),
+        ("(float-expn 0.0 5.0)", "0.0"),
     ])
     def test_pow_function(self, aifpl, expression, expected):
         """Test pow function."""
@@ -175,41 +175,41 @@ class TestArithmetic:
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic integer exponentiation
-        ("(integer-expt 2 10)", "1024"),
-        ("(integer-expt 3 3)", "27"),
-        ("(integer-expt 5 0)", "1"),
-        ("(integer-expt 0 0)", "1"),
-        ("(integer-expt 0 5)", "0"),
-        ("(integer-expt 1 1000)", "1"),
+        ("(integer-expn 2 10)", "1024"),
+        ("(integer-expn 3 3)", "27"),
+        ("(integer-expn 5 0)", "1"),
+        ("(integer-expn 0 0)", "1"),
+        ("(integer-expn 0 5)", "0"),
+        ("(integer-expn 1 1000)", "1"),
 
         # Negative base
-        ("(integer-expt -2 3)", "-8"),
-        ("(integer-expt -2 4)", "16"),
-        ("(integer-expt -1 0)", "1"),
+        ("(integer-expn -2 3)", "-8"),
+        ("(integer-expn -2 4)", "16"),
+        ("(integer-expn -1 0)", "1"),
 
         # Arbitrary precision (Python int ** int stays exact)
-        ("(integer-expt 2 64)", "18446744073709551616"),
-        ("(integer-expt 10 20)", "100000000000000000000"),
+        ("(integer-expn 2 64)", "18446744073709551616"),
+        ("(integer-expn 10 20)", "100000000000000000000"),
     ])
     def test_integer_expt(self, aifpl, expression, expected):
-        """Test integer-expt function (exact arbitrary-precision integer exponentiation)."""
+        """Test integer-expn function (exact arbitrary-precision integer exponentiation)."""
         assert aifpl.evaluate_and_format(expression) == expected
 
     def test_integer_expt_negative_exponent_error(self, aifpl):
-        """Test that integer-expt raises on negative exponent (result would not be an integer)."""
+        """Test that integer-expn raises on negative exponent (result would not be an integer)."""
         with pytest.raises(AIFPLEvalError, match="non-negative exponent"):
-            aifpl.evaluate("(integer-expt 2 -1)")
+            aifpl.evaluate("(integer-expn 2 -1)")
 
         with pytest.raises(AIFPLEvalError, match="non-negative exponent"):
-            aifpl.evaluate("(integer-expt 10 -3)")
+            aifpl.evaluate("(integer-expn 10 -3)")
 
     def test_integer_expt_type_errors(self, aifpl):
-        """Test that integer-expt rejects non-integer arguments."""
+        """Test that integer-expn rejects non-integer arguments."""
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(integer-expt 2.0 3)")
+            aifpl.evaluate("(integer-expn 2.0 3)")
 
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(integer-expt 2 3.0)")
+            aifpl.evaluate("(integer-expn 2 3.0)")
 
     @pytest.mark.parametrize("expression,expected_approx", [
         # Trigonometric functions
@@ -418,14 +418,10 @@ class TestArithmetic:
 
         # Real part extraction
         ("(complex-real (integer->complex 3 4))", "3.0"),
-        ("(complex-real 42)", "42.0"),
-        ("(complex-real 3.14)", "3.14"),
         ("(complex-real 1j)", "0.0"),
 
         # Imaginary part extraction
         ("(complex-imag (integer->complex 3 4))", "4.0"),
-        ("(complex-imag 42)", "0.0"),
-        ("(complex-imag 3.14)", "0.0"),
         ("(complex-imag 1j)", "1.0"),
     ])
     def test_complex_number_functions(self, aifpl, expression, expected):

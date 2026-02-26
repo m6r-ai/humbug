@@ -74,35 +74,35 @@ class TestAIFPLMathEdgeCases:
     def test_power_and_exponentiation_edge_cases(self, aifpl):
         """Test power and exponentiation edge cases."""
         # Special power cases using expt
-        assert aifpl.evaluate("(float-expt 0.0 0.0)") == 1.0  # 0^0 = 1 by convention
-        assert aifpl.evaluate("(float-expt 1.0 1000.0)") == 1.0  # 1^anything = 1
-        assert aifpl.evaluate("(float-expt 2.0 0.0)") == 1.0  # anything^0 = 1
-        assert aifpl.evaluate("(float-expt -1.0 2.0)") == 1.0  # (-1)^even = 1
-        assert aifpl.evaluate("(float-expt -1.0 3.0)") == -1.0  # (-1)^odd = -1
+        assert aifpl.evaluate("(float-expn 0.0 0.0)") == 1.0  # 0^0 = 1 by convention
+        assert aifpl.evaluate("(float-expn 1.0 1000.0)") == 1.0  # 1^anything = 1
+        assert aifpl.evaluate("(float-expn 2.0 0.0)") == 1.0  # anything^0 = 1
+        assert aifpl.evaluate("(float-expn -1.0 2.0)") == 1.0  # (-1)^even = 1
+        assert aifpl.evaluate("(float-expn -1.0 3.0)") == -1.0  # (-1)^odd = -1
 
         # Negative exponents
-        result = aifpl.evaluate("(float-expt 2.0 -1.0)")
+        result = aifpl.evaluate("(float-expn 2.0 -1.0)")
         assert abs(result - 0.5) < 1e-10
 
-        result = aifpl.evaluate("(float-expt 4.0 -2.0)")
+        result = aifpl.evaluate("(float-expn 4.0 -2.0)")
         assert abs(result - 0.0625) < 1e-10
 
         # Fractional exponents (roots)
-        result = aifpl.evaluate("(float-expt 4.0 0.5)")
+        result = aifpl.evaluate("(float-expn 4.0 0.5)")
         assert abs(result - 2.0) < 1e-10
 
-        result = aifpl.evaluate("(float-expt 8.0 0.3333333333333333)")
+        result = aifpl.evaluate("(float-expn 8.0 0.3333333333333333)")
         assert abs(result - 2.0) < 0.1  # Cube root approximation
 
         # Large exponents
-        result = aifpl.evaluate("(float-expt 10.0 10.0)")
+        result = aifpl.evaluate("(float-expn 10.0 10.0)")
         assert result == 10000000000.0
 
         # Complex exponentiation via expt
-        result = aifpl.evaluate("(complex-expt 1j 2+0j)")
+        result = aifpl.evaluate("(complex-expn 1j 2+0j)")
         assert abs(result - (-1)) < 1e-10
 
-        result = aifpl.evaluate("(complex-expt (float->complex 1.0 1.0) 2+0j)")
+        result = aifpl.evaluate("(complex-expn (float->complex 1.0 1.0) 2+0j)")
         expected = (1+1j)**2
         assert abs(result - expected) < 1e-10
 
@@ -527,10 +527,6 @@ class TestAIFPLMathEdgeCases:
         # Real/imaginary part extraction edge cases
         assert aifpl.evaluate("(complex-real (integer->complex 3 4))") == 3
         assert aifpl.evaluate("(complex-imag (integer->complex 3 4))") == 4
-        assert aifpl.evaluate("(complex-real 42)") == 42
-        assert aifpl.evaluate("(complex-imag 42)") == 0
-        assert aifpl.evaluate("(complex-real 3.14)") == 3.14
-        assert aifpl.evaluate("(complex-imag 3.14)") == 0
         assert aifpl.evaluate("(complex-real 1j)") == 0
         assert aifpl.evaluate("(complex-imag 1j)") == 1
 
@@ -563,7 +559,7 @@ class TestAIFPLMathEdgeCases:
         result = aifpl.evaluate("(float* 2.0 pi)")
         assert abs(result - (2 * math.pi)) < 1e-10
 
-        result = aifpl.evaluate("(float-expt e 2.0)")
+        result = aifpl.evaluate("(float-expn e 2.0)")
         assert abs(result - (math.e ** 2)) < 1e-10
 
         result = aifpl.evaluate("(complex* 1j 1j)")
@@ -574,7 +570,7 @@ class TestAIFPLMathEdgeCases:
         # Test operations that might produce infinity
         try:
             # Very large exponentiation
-            result = aifpl.evaluate("(float-expt 10.0 1000.0)")
+            result = aifpl.evaluate("(float-expn 10.0 1000.0)")
             # This might be infinity or a very large number
             if math.isinf(result):
                 assert result > 0  # Should be positive infinity
@@ -637,10 +633,10 @@ class TestAIFPLMathEdgeCases:
         assert aifpl.evaluate("(integer* 5 0)") == 0
         assert aifpl.evaluate("(integer* 0 5)") == 0
 
-        # Exponentiation identities (using float-expt)
-        assert aifpl.evaluate("(float-expt 5.0 1.0)") == 5.0
-        assert aifpl.evaluate("(float-expt 1.0 5.0)") == 1.0
-        assert aifpl.evaluate("(float-expt 5.0 0.0)") == 1.0
+        # Exponentiation identities (using float-expn)
+        assert aifpl.evaluate("(float-expn 5.0 1.0)") == 5.0
+        assert aifpl.evaluate("(float-expn 1.0 5.0)") == 1.0
+        assert aifpl.evaluate("(float-expn 5.0 0.0)") == 1.0
 
         # Logarithm identities (approximately)
         result = aifpl.evaluate("(float-log (float-exp 5.0))")

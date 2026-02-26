@@ -156,9 +156,9 @@ class TestMathMissingCoverage:
                 with pytest.raises(AIFPLEvalError, match=f"Function '{func}' has wrong number of arguments"):
                     aifpl.evaluate(f"({func} 1.0 2.0)")
 
-        # float-expt function requires at least 2 arguments
-        with pytest.raises(AIFPLEvalError, match="Function 'float-expt' has wrong number of arguments"):
-            aifpl.evaluate("(float-expt 2.0)")
+        # float-expn function requires at least 2 arguments
+        with pytest.raises(AIFPLEvalError, match="Function 'float-expn' has wrong number of arguments"):
+            aifpl.evaluate("(float-expn 2.0)")
 
     def test_rounding_functions_with_complex_numbers(self, aifpl):
         """Test rounding functions with complex numbers (should fail)."""
@@ -174,8 +174,6 @@ class TestMathMissingCoverage:
         for func in rounding_functions:
             with pytest.raises(AIFPLEvalError, match=f"requires float arguments"):
                 aifpl.evaluate(f"({func} (float->complex 3.5 1e-5))")
-
-    # ========== Base Conversion Error Handling ==========
 
     # ========== Complex Number Functions Error Handling ==========
 

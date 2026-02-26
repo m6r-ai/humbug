@@ -470,8 +470,10 @@ class AIFPLCodeGen:
                 if len(plan.arg_plans) == 1:
                     const_index = ctx.add_constant(AIFPLInteger(10))
                     ctx.emit(Opcode.LOAD_CONST, const_index)
+
                 else:
                     self._generate_expr(plan.arg_plans[1], ctx)
+
                 ctx.emit(Opcode.INTEGER_TO_STRING)
                 return
 
