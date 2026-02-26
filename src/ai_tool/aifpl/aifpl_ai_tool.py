@@ -202,23 +202,28 @@ Syntax: (operator arg1 arg2 ...)
 - (integer+) → 0, (integer*) → 1 (zero-arg identities)
 - (integer% 7 3) → 1 (modulo), (integer% -7 2) → 1, (integer% 7 -3) → -2 (result takes sign of divisor)
 - (integer-abs -5) → 5 (absolute value)
-- (integer-expt 2 10) → 1024, (integer-expt 3 0) → 1, (integer-expt 0 0) → 1 (exact arbitrary-precision integer exponentiation)
-- (integer-expt base exp) requires non-negative exponent; raises error for negative exponent (result would not be an integer)
+- (integer-expn 2 10) → 1024, (integer-expn 3 0) → 1, (integer-expn 0 0) → 1 (exact arbitrary-precision integer exponentiation)
+- (integer-expn base exp) requires non-negative exponent; raises error for negative exponent (result would not be an integer)
 
 ### Float arithmetic (all args must be floats; use (integer->float x) to convert integers):
 
 - (float+ 1.0 2.0 3.0) → 6.0, (float- 10.0 3.0) → 7.0
 - (float* 2.0 3.0) → 6.0, (float/ 10.0 4.0) → 2.5
 - (float-neg 3.0) → -3.0; (float- 3.0) and (float/ 4.0) are errors (require 2+ args)
-- (float-expt 2.0 10.0) → 1024.0
 - (float+) → 0.0, (float*) → 1.0 (zero-arg identities)
 - (float// 7.0 2.0) → 3.0 (floor division), (float% 7.0 3.0) → 1.0 (modulo)
 - (float-floor 3.7) → 3.0, (float-ceil 3.2) → 4.0, (float-round 3.5) → 4.0 (all return float)
+- (float-exp 2.0) → e^2.0
+- (float-expn 2.0 10.0) → 1024.0
+- (float-log 1.0) → 0.0 (log base e)
+- (float-log2 8.0) → 3.0 (log base 2, correctly rounded via math.log2)
+- (float-log10 100.0) → 2.0 (log base 10)
+- (float-logn 8.0 2.0) → 3.0 (log base n; general case, slightly less precise than float-log2/float-log10)
+- float-log/float-log10/float-log2/float-logn of zero → -inf; negative arg is a runtime error
+- float-logn requires a positive base not equal to 1; invalid base is a runtime error
 - (float-min 1.0 2.0) → 1.0, (float-max 1.0 2.0) → 2.0
 - Transcendentals: (float-sin 0.0) → 0.0, (float-cos 0.0) → 1.0, (float-tan 0.0) → 0.0
-- (float-log 1.0) → 0.0, (float-log10 1.0) → 0.0, (float-exp 0.0) → 1.0
 - (float-sqrt 4.0) → 2.0, (float-abs -3.0) → 3.0
-- float-log/float-log10 of zero → -inf; negative arg is a runtime error
 - float-sqrt of negative → runtime error (use complex-sqrt instead)
 - (float-abs -3.0) → 3.0 (absolute value)
 
@@ -231,8 +236,13 @@ Syntax: (operator arg1 arg2 ...)
 - (complex-neg 3.0+4.0j) → -3-4j
 - (complex-abs 3.0+4.0j) → 5.0 (returns magnitude as float, not complex)
 - (complex+) → 0+0j, (complex*) → 1+0j (zero-arg identities)
-- Transcendentals: complex-sin, complex-cos, complex-tan, complex-log, complex-log10, complex-exp, complex-sqrt
-- Exponentials: complex-expt
+- (complex-exp z) → e^z
+- (complex-expn z base) → base^z
+- (complex-log z) → log base e of z
+- (complex-log10 z) → log base 10 of z
+- (complex-logn z base) → log base n of complex z (both args must be complex)
+- Transcendentals: complex-sin, complex-cos, complex-tan, complex-sqrt
+- Exponentials: complex-expn
 
 ## Complex numbers:
 

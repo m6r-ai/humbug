@@ -237,6 +237,8 @@ class AIFPLVM:
         table[Opcode.FLOAT_EXPN] = self._op_float_expn
         table[Opcode.FLOAT_LOG] = self._op_float_log
         table[Opcode.FLOAT_LOG10] = self._op_float_log10
+        table[Opcode.FLOAT_LOG2] = self._op_float_log2
+        table[Opcode.FLOAT_LOGN] = self._op_float_logn
         table[Opcode.FLOAT_SIN] = self._op_float_sin
         table[Opcode.FLOAT_COS] = self._op_float_cos
         table[Opcode.FLOAT_TAN] = self._op_float_tan
@@ -264,6 +266,7 @@ class AIFPLVM:
         table[Opcode.COMPLEX_EXPN] = self._op_complex_expn
         table[Opcode.COMPLEX_LOG] = self._op_complex_log
         table[Opcode.COMPLEX_LOG10] = self._op_complex_log10
+        table[Opcode.COMPLEX_LOGN] = self._op_complex_logn
         table[Opcode.COMPLEX_SIN] = self._op_complex_sin
         table[Opcode.COMPLEX_COS] = self._op_complex_cos
         table[Opcode.COMPLEX_TAN] = self._op_complex_tan
@@ -1588,6 +1591,43 @@ class AIFPLVM:
         self.stack.append(AIFPLFloat(math.log10(a_val)))
         return None
 
+    def _op_float_log2(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_LOG2: Pop a float, push log2(x) as float (correctly rounded via math.log2)."""
+        a = self.stack.pop()
+        a_val = self._ensure_float(a, 'float-log2')
+        if a_val == 0.0:
+            self.stack.append(AIFPLFloat(float('-inf')))
+            return None
+
+        if a_val < 0.0:
+            raise AIFPLEvalError("Function 'float-log2' requires a non-negative argument")
+
+        self.stack.append(AIFPLFloat(math.log2(a_val)))
+        return None
+
+    def _op_float_logn(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """FLOAT_LOGN: Pop base and x floats, push log_base(x) as float."""
+        base = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_float(a, 'float-logn')
+        base_val = self._ensure_float(base, 'float-logn')
+        if base_val <= 0.0 or base_val == 1.0:
+            raise AIFPLEvalError("Function 'float-logn' requires a positive base not equal to 1")
+
+        if a_val == 0.0:
+            self.stack.append(AIFPLFloat(float('-inf')))
+            return None
+
+        if a_val < 0.0:
+            raise AIFPLEvalError("Function 'float-logn' requires a non-negative argument")
+
+        self.stack.append(AIFPLFloat(math.log(a_val, base_val)))
+        return None
+
     def _op_float_sin(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -1870,6 +1910,20 @@ class AIFPLVM:
         """COMPLEX_LOG10: Pop a complex number, push log10(x)."""
         a = self.stack.pop()
         self.stack.append(AIFPLComplex(cmath.log10(self._ensure_complex(a, 'complex-log10'))))
+        return None
+
+    def _op_complex_logn(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """COMPLEX_LOGN: Pop base and x complex numbers, push log_base(x) as complex."""
+        base = self.stack.pop()
+        a = self.stack.pop()
+        a_val = self._ensure_complex(a, 'complex-logn')
+        base_val = self._ensure_complex(base, 'complex-logn')
+        if base_val == 0j:
+            raise AIFPLEvalError("Function 'complex-logn' requires a non-zero base")
+
+        self.stack.append(AIFPLComplex(cmath.log(a_val, base_val)))
         return None
 
     def _op_complex_sin(  # pylint: disable=useless-return

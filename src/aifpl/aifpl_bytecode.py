@@ -141,8 +141,10 @@ class Opcode(IntEnum):
     FLOAT_MOD = _op(153, 0)             # float% a b  (modulo)
     FLOAT_EXP = _op(154, 0)             # float-exp x
     FLOAT_EXPN = _op(155, 0)            # float-expn a b
-    FLOAT_LOG = _op(158, 0)             # float-log x
-    FLOAT_LOG10 = _op(159, 0)           # float-log10 x
+    FLOAT_LOG = _op(156, 0)             # float-log x
+    FLOAT_LOG10 = _op(157, 0)           # float-log10 x
+    FLOAT_LOG2 = _op(158, 0)            # float-log2 x  (log base 2, correctly rounded)
+    FLOAT_LOGN = _op(159, 0)            # float-logn x base  (log base n)
     FLOAT_SIN = _op(160, 0)             # float-sin x
     FLOAT_COS = _op(161, 0)             # float-cos x
     FLOAT_TAN = _op(162, 0)             # float-tan x
@@ -173,10 +175,11 @@ class Opcode(IntEnum):
     COMPLEX_EXPN = _op(192, 0)          # complex-expn a b
     COMPLEX_LOG = _op(193, 0)           # complex-log x
     COMPLEX_LOG10 = _op(194, 0)         # complex-log10 x
-    COMPLEX_SIN = _op(195, 0)           # complex-sin x
-    COMPLEX_COS = _op(196, 0)           # complex-cos x
-    COMPLEX_TAN = _op(197, 0)           # complex-tan x
-    COMPLEX_SQRT = _op(198, 0)          # complex-sqrt x
+    COMPLEX_LOGN = _op(195, 0)          # complex-logn x base  (log base n)
+    COMPLEX_SIN = _op(196, 0)           # complex-sin x
+    COMPLEX_COS = _op(197, 0)           # complex-cos x
+    COMPLEX_TAN = _op(198, 0)           # complex-tan x
+    COMPLEX_SQRT = _op(199, 0)          # complex-sqrt x
     COMPLEX_TO_STRING = _op(200, 0)     # Convert complex to string
 
     # String operations
@@ -311,6 +314,8 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'float-expn': (Opcode.FLOAT_EXPN, 2),
     'float-log': (Opcode.FLOAT_LOG, 1),
     'float-log10': (Opcode.FLOAT_LOG10, 1),
+    'float-log2': (Opcode.FLOAT_LOG2, 1),
+    'float-logn': (Opcode.FLOAT_LOGN, 2),
     'float-sin': (Opcode.FLOAT_SIN, 1),
     'float-cos': (Opcode.FLOAT_COS, 1),
     'float-tan': (Opcode.FLOAT_TAN, 1),
@@ -336,6 +341,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'complex-expn': (Opcode.COMPLEX_EXPN, 2),
     'complex-log': (Opcode.COMPLEX_LOG, 1),
     'complex-log10': (Opcode.COMPLEX_LOG10, 1),
+    'complex-logn': (Opcode.COMPLEX_LOGN, 2),
     'complex-sin': (Opcode.COMPLEX_SIN, 1),
     'complex-cos': (Opcode.COMPLEX_COS, 1),
     'complex-tan': (Opcode.COMPLEX_TAN, 1),

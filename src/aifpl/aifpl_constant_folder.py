@@ -68,6 +68,8 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'float-expn',
         'float-log',
         'float-log10',
+        'float-log2',
+        'float-logn',
         'float-sin',
         'float-cos',
         'float-tan',
@@ -91,6 +93,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         'complex-expn',
         'complex-log',
         'complex-log10',
+        'complex-logn',
         'complex-sin',
         'complex-cos',
         'complex-tan',
@@ -144,6 +147,8 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'float-expn': self._fold_float_expn,
             'float-log': self._fold_float_log,
             'float-log10': self._fold_float_log10,
+            'float-log2': self._fold_float_log2,
+            'float-logn': self._fold_float_logn,
             'float-sin': self._fold_float_sin,
             'float-cos': self._fold_float_cos,
             'float-tan': self._fold_float_tan,
@@ -168,6 +173,7 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             'complex-expn': self._fold_complex_expn,
             'complex-log': self._fold_complex_log,
             'complex-log10': self._fold_complex_log10,
+            'complex-logn': self._fold_complex_logn,
             'complex-sin': self._fold_complex_sin,
             'complex-cos': self._fold_complex_cos,
             'complex-tan': self._fold_complex_tan,
@@ -821,6 +827,39 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
 
         return AIFPLASTFloat(math.log10(val))
 
+    def _fold_float_log2(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-log2: arg must be float, returns float. Zero → -inf, negative → don't fold."""
+        if not isinstance(args[0], AIFPLASTFloat):
+            return None
+
+        val = args[0].value
+        if val < 0.0:
+            return None  # Negative arg is a runtime error — don't fold
+
+        if val == 0.0:
+            return AIFPLASTFloat(float('-inf'))
+
+        return AIFPLASTFloat(math.log2(val))
+
+    def _fold_float_logn(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold float-logn: (float-logn x base) → float. Zero x → -inf, invalid base → don't fold."""
+        if not isinstance(args[0], AIFPLASTFloat) or not isinstance(args[1], AIFPLASTFloat):
+            return None
+
+        val = args[0].value
+        base = args[1].value
+
+        if base <= 0.0 or base == 1.0:
+            return None  # Invalid base is a runtime error — don't fold
+
+        if val < 0.0:
+            return None  # Negative arg is a runtime error — don't fold
+
+        if val == 0.0:
+            return AIFPLASTFloat(float('-inf'))
+
+        return AIFPLASTFloat(math.log(val, base))
+
     def _fold_float_sin(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
         """Fold float-sin: arg must be float, returns float."""
         if not isinstance(args[0], AIFPLASTFloat):
@@ -1006,6 +1045,17 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             return None
 
         return AIFPLASTComplex(cmath.log10(args[0].value))
+
+    def _fold_complex_logn(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
+        """Fold complex-logn: (complex-logn x base) → complex. Zero base → don't fold."""
+        if not isinstance(args[0], AIFPLASTComplex) or not isinstance(args[1], AIFPLASTComplex):
+            return None
+
+        base = args[1].value
+        if base == 0j:
+            return None  # Zero base is a runtime error — don't fold
+
+        return AIFPLASTComplex(cmath.log(args[0].value, base))
 
     def _fold_complex_sin(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
         """Fold complex-sin: arg must be complex, returns complex."""
