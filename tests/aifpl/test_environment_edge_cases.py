@@ -181,21 +181,21 @@ class TestAIFPLEnvironmentEdgeCases:
         # Lambda passed to map captures environment
         result = aifpl.evaluate("""
         (let ((multiplier 3))
-          (map (lambda (x) (integer* x multiplier)) (list 1 2 3)))
+          (list-map (lambda (x) (integer* x multiplier)) (list 1 2 3)))
         """)
         assert result == [3, 6, 9]
 
         # Filter with closure
         result = aifpl.evaluate("""
         (let ((threshold 2))
-          (filter (lambda (x) (integer>? x threshold)) (list 1 2 3 4)))
+          (list-filter (lambda (x) (integer>? x threshold)) (list 1 2 3 4)))
         """)
         assert result == [3, 4]
 
         # Fold with closure
         result = aifpl.evaluate("""
         (let ((base 10))
-          (fold (lambda (acc x) (integer+ acc x base)) 0 (list 1 2 3)))
+          (list-fold (lambda (acc x) (integer+ acc x base)) 0 (list 1 2 3)))
         """)
         assert result == 36  # 0 + (1+10) + (2+10) + (3+10) = 36
 
@@ -333,7 +333,7 @@ class TestAIFPLEnvironmentEdgeCases:
         # String operations with closures
         result = aifpl.evaluate("""
         (let ((prefix "Hello, "))
-          (map (lambda (name) (string-concat prefix name))
+          (list-map (lambda (name) (string-concat prefix name))
                (list "Alice" "Bob" "Charlie")))
         """)
         assert result == ["Hello, Alice", "Hello, Bob", "Hello, Charlie"]

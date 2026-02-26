@@ -451,6 +451,48 @@ class AIFPL:
                                  (list-slice lst start (list-first rest))))""",
         'list->string': """(lambda (lst . rest)
                              (list->string lst (if (list-null? rest) "" (list-first rest))))""",
+        'list-map': """(lambda (f lst)
+                    (letrec ((helper (lambda (f lst acc)
+                                       (if (list-null? lst) (list-reverse acc)
+                                           (helper f (list-rest lst) (list-prepend acc (f (list-first lst))))))))
+                    (helper f lst (list))))""",
+        'list-filter': """(lambda (pred lst)
+                    (letrec ((helper (lambda (pred lst acc)
+                                       (if (list-null? lst) (list-reverse acc)
+                                           (if (pred (list-first lst))
+                                               (helper pred (list-rest lst) (list-prepend acc (list-first lst)))
+                                               (helper pred (list-rest lst) acc))))))
+                        (helper pred lst (list))))""",
+        'list-fold': """(lambda (f init lst)
+                    (letrec ((helper (lambda (f acc lst)
+                                       (if (list-null? lst) acc
+                                           (helper f (f acc (list-first lst)) (list-rest lst))))))
+                    (helper f init lst)))""",
+        'list-find': """(lambda (pred lst)
+                    (letrec ((list-find (lambda (pred lst) (if (list-null? lst) #f (if (pred (list-first lst)) (list-first lst) (list-find pred (list-rest lst)))))))
+                    (list-find pred lst)))""",
+        'list-any?': """(lambda (pred lst)
+                    (letrec ((list-any? (lambda (pred lst) (if (list-null? lst) #f (if (pred (list-first lst)) #t (list-any? pred (list-rest lst)))))))
+                    (list-any? pred lst)))""",
+        'list-all?': """(lambda (pred lst)
+                    (letrec ((list-all? (lambda (pred lst) (if (list-null? lst) #t (if (pred (list-first lst)) (list-all? pred (list-rest lst)) #f)))))
+                    (list-all? pred lst)))""",
+        'list-zip': """(lambda (lst1 lst2)
+                    (letrec ((helper (lambda (l1 l2 acc)
+                                       (if (or (list-null? l1) (list-null? l2))
+                                           (list-reverse acc)
+                                           (helper (list-rest l1) (list-rest l2)
+                                                   (list-prepend acc (list (list-first l1)
+                                                                           (list-first l2))))))))
+                      (helper lst1 lst2 (list))))""",
+        'list-unzip': """(lambda (lst)
+                      (letrec ((helper (lambda (lst acc1 acc2)
+                                         (if (list-null? lst)
+                                             (list (list-reverse acc1) (list-reverse acc2))
+                                             (helper (list-rest lst)
+                                                     (list-prepend acc1 (list-first (list-first lst)))
+                                                     (list-prepend acc2 (list-first (list-rest (list-first lst)))))))))
+                        (helper lst (list) (list))))""",
         'alist': """(lambda (. args)
                       (letrec ((loop (lambda (pairs acc)
                                        (if (list-null? pairs) acc
@@ -489,48 +531,6 @@ class AIFPL:
                           (alist-get a-list key (if (list-null? rest) #f (list-first rest))))""",
         'range': """(lambda (start end . rest)
                       (range start end (if (list-null? rest) 1 (list-first rest))))""",
-        'map': """(lambda (f lst)
-                    (letrec ((helper (lambda (f lst acc)
-                                       (if (list-null? lst) (list-reverse acc)
-                                           (helper f (list-rest lst) (list-prepend acc (f (list-first lst))))))))
-                    (helper f lst (list))))""",
-        'filter': """(lambda (pred lst)
-                    (letrec ((helper (lambda (pred lst acc)
-                                       (if (list-null? lst) (list-reverse acc)
-                                           (if (pred (list-first lst))
-                                               (helper pred (list-rest lst) (list-prepend acc (list-first lst)))
-                                               (helper pred (list-rest lst) acc))))))
-                        (helper pred lst (list))))""",
-        'fold': """(lambda (f init lst)
-                    (letrec ((helper (lambda (f acc lst)
-                                       (if (list-null? lst) acc
-                                           (helper f (f acc (list-first lst)) (list-rest lst))))))
-                    (helper f init lst)))""",
-        'find': """(lambda (pred lst)
-                    (letrec ((find (lambda (pred lst) (if (list-null? lst) #f (if (pred (list-first lst)) (list-first lst) (find pred (list-rest lst)))))))
-                    (find pred lst)))""",
-        'any?': """(lambda (pred lst)
-                    (letrec ((any? (lambda (pred lst) (if (list-null? lst) #f (if (pred (list-first lst)) #t (any? pred (list-rest lst)))))))
-                    (any? pred lst)))""",
-        'all?': """(lambda (pred lst)
-                    (letrec ((all? (lambda (pred lst) (if (list-null? lst) #t (if (pred (list-first lst)) (all? pred (list-rest lst)) #f)))))
-                    (all? pred lst)))""",
-        'zip': """(lambda (lst1 lst2)
-                    (letrec ((helper (lambda (l1 l2 acc)
-                                       (if (or (list-null? l1) (list-null? l2))
-                                           (list-reverse acc)
-                                           (helper (list-rest l1) (list-rest l2)
-                                                   (list-prepend acc (list (list-first l1)
-                                                                           (list-first l2))))))))
-                      (helper lst1 lst2 (list))))""",
-        'unzip': """(lambda (lst)
-                      (letrec ((helper (lambda (lst acc1 acc2)
-                                         (if (list-null? lst)
-                                             (list (list-reverse acc1) (list-reverse acc2))
-                                             (helper (list-rest lst)
-                                                     (list-prepend acc1 (list-first (list-first lst)))
-                                                     (list-prepend acc2 (list-first (list-rest (list-first lst)))))))))
-                        (helper lst (list) (list))))""",
     }
 
     # Mathematical constants

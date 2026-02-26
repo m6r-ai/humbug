@@ -515,7 +515,7 @@ class TestModuleCompilation:
         """Test module using map, filter, fold."""
         (tmp_path / "hof.aifpl").write_text("""
 (let ((sum-squares (lambda (lst)
-                     (fold integer+ 0 (map (lambda (x) (integer* x x)) lst)))))
+                     (list-fold integer+ 0 (list-map (lambda (x) (integer* x x)) lst)))))
   (alist (list "sum-squares" sum-squares)))
 """)
 

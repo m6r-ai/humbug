@@ -276,7 +276,7 @@ class TestComplexNumberLiterals:
         assert result[2] == 4
 
         # Map over complex numbers
-        result = aifpl.evaluate("(map (lambda (x) (complex* x (integer->complex 2 0))) (list 1+1j 2+2j))")
+        result = aifpl.evaluate("(list-map (lambda (x) (complex* x (integer->complex 2 0))) (list 1+1j 2+2j))")
         assert len(result) == 2
         assert result[0] == 2+2j
         assert result[1] == 4+4j

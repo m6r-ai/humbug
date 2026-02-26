@@ -103,8 +103,8 @@ There are three categories of builtin:
 
 `AIFPLBuiltinRegistry.BUILTIN_OPCODE_ARITIES` is the arity table for **opcode-backed
 builtins only** and is consumed by both the semantic analyser and the registry itself.
-Pure-AIFPL prelude functions (`map`, `filter`, `fold`, `zip`, `unzip`, `find`, `any?`,
-`all?`, etc.) are **not** in this table and must **not** be added — the registry asserts
+Pure-AIFPL prelude functions (`list-map`, `list-filter`, `list-fold`, `list-zip`, `list-unzip`, `list-find`, `list-any?`,
+`list-all?`, etc.) are **not** in this table and must **not** be added — the registry asserts
 that every entry has a corresponding `BUILTIN_OPCODE_MAP` entry, so adding a prelude-only
 name will cause an assertion failure at startup. Prelude-only functions have their arity
 enforced at runtime by the lambda itself, exactly like any user-defined function.
@@ -123,7 +123,7 @@ The IR builder resolves all variable references to one of three addressing modes
   that are referenced as first-class values (i.e. not called directly with the correct
   fixed arity). When the codegen sees a direct call to a known builtin at the right
   arity it emits the primitive opcode directly; `LOAD_NAME` is emitted when the
-  builtin name appears as a variable reference (e.g. passed to `map` or `fold`).
+  builtin name appears as a variable reference (e.g. passed to `list-map` or `list-fold`).
   The name table is populated from `AIFPLBuiltinRegistry` by the VM at startup.
 
 ## Design Decisions — Clarifications

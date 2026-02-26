@@ -211,5 +211,5 @@ class TestIntegerToStringRadix:
     def test_integer_to_string_first_class(self, aifpl):
         """Test integer->string as a first-class function (uses prelude wrapper)."""
         # Passed to map with no radix — should default to decimal
-        result = aifpl.evaluate_and_format('(map integer->string (list 1 2 3))')
+        result = aifpl.evaluate_and_format('(list-map integer->string (list 1 2 3))')
         assert result == '("1" "2" "3")'

@@ -224,7 +224,7 @@ class TestAIFPLValueEdgeCases:
         assert result[999] == 1000
 
         # Large string operations - check actual format
-        result = aifpl.evaluate('(list->string (map integer->string (range 1 101)) ",")')
+        result = aifpl.evaluate('(list->string (list-map integer->string (range 1 101)) ",")')
         assert isinstance(result, str)
         # AIFPL returns the string without quotes in the result
         assert result.startswith('1,2,3')

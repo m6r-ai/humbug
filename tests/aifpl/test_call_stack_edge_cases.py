@@ -40,15 +40,15 @@ class TestAIFPLCallStackEdgeCases:
     def test_call_stack_with_higher_order_functions(self, aifpl):
         """Test call stack with higher-order functions."""
         # Map function creates nested calls
-        result = aifpl.evaluate("(map (lambda (x) (integer* x 2)) (list 1 2 3))")
+        result = aifpl.evaluate("(list-map (lambda (x) (integer* x 2)) (list 1 2 3))")
         assert result == [2, 4, 6]
 
         # Filter function with predicate calls
-        result = aifpl.evaluate("(filter (lambda (x) (integer>? x 2)) (list 1 2 3 4))")
+        result = aifpl.evaluate("(list-filter (lambda (x) (integer>? x 2)) (list 1 2 3 4))")
         assert result == [3, 4]
 
         # Fold function with accumulator calls
-        result = aifpl.evaluate("(fold integer+ 0 (list 1 2 3 4))")
+        result = aifpl.evaluate("(list-fold integer+ 0 (list 1 2 3 4))")
         assert result == 10
 
     def test_call_stack_with_let_bindings(self, aifpl):
@@ -107,7 +107,7 @@ class TestAIFPLCallStackEdgeCases:
 
         # Error in higher-order function
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(map (lambda (x) (integer/ x 0)) (list 1 2 3))")
+            aifpl.evaluate("(list-map (lambda (x) (integer/ x 0)) (list 1 2 3))")
 
     def test_call_stack_with_recursive_functions(self, aifpl):
         """Test call stack with recursive functions (if supported)."""
@@ -139,9 +139,9 @@ class TestAIFPLCallStackEdgeCases:
 
         # Complex functional expression
         functional_expr = """
-        (fold integer+ 0
-              (map (lambda (x) (integer* x x))
-                   (filter (lambda (x) (integer>? x 0))
+        (list-fold integer+ 0
+              (list-map (lambda (x) (integer* x x))
+                   (list-filter (lambda (x) (integer>? x 0))
                            (list -2 1 -3 2 3))))
         """
         result = aifpl.evaluate(functional_expr)
@@ -197,8 +197,8 @@ class TestAIFPLCallStackEdgeCases:
         # List operations with transformations
         result = aifpl.evaluate("""
         (list-length
-          (filter (lambda (x) (integer>? x 0))
-                  (map (lambda (x) (integer- x 2))
+          (list-filter (lambda (x) (integer>? x 0))
+                  (list-map (lambda (x) (integer- x 2))
                        (list 1 2 3 4 5))))
         """)
         assert result == 3  # [-1, 0, 1, 2, 3] -> [1, 2, 3] -> length 3

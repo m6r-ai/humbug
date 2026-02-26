@@ -142,17 +142,17 @@ class TestFunctional:
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic map operations
-        ('(map (lambda (x) (integer* x 2)) (list 1 2 3))', '(2 4 6)'),
-        ('(map (lambda (x) (integer+ x 1)) (list 0 1 2))', '(1 2 3)'),
+        ('(list-map (lambda (x) (integer* x 2)) (list 1 2 3))', '(2 4 6)'),
+        ('(list-map (lambda (x) (integer+ x 1)) (list 0 1 2))', '(1 2 3)'),
 
         # Map with empty list
-        ('(map (lambda (x) (integer* x 2)) (list))', '()'),
+        ('(list-map (lambda (x) (integer* x 2)) (list))', '()'),
 
         # Map with single element
-        ('(map (lambda (x) x) (list 42))', '(42)'),
+        ('(list-map (lambda (x) x) (list 42))', '(42)'),
 
         # Map with string transformation
-        ('(map (lambda (s) (string-upcase s)) (list "hello" "world"))', '("HELLO" "WORLD")'),
+        ('(list-map (lambda (s) (string-upcase s)) (list "hello" "world"))', '("HELLO" "WORLD")'),
     ])
     def test_map_function(self, aifpl, expression, expected):
         """Test map higher-order function."""
@@ -161,31 +161,31 @@ class TestFunctional:
     def test_map_requires_function_and_list(self, aifpl):
         """Test that map requires exactly 2 arguments: function and list."""
         with pytest.raises(AIFPLEvalError, match=r"expects 2 arguments, got 1"):
-            aifpl.evaluate('(map (lambda (x) x))')
+            aifpl.evaluate('(list-map (lambda (x) x))')
 
         with pytest.raises(AIFPLEvalError, match=r"expects 2 arguments, got 3"):
-            aifpl.evaluate('(map (lambda (x) x) (list 1 2) (list 3 4))')
+            aifpl.evaluate('(list-map (lambda (x) x) (list 1 2) (list 3 4))')
 
         # Second argument must be list
         with pytest.raises(AIFPLEvalError, match=r"requires list argument"):
-            aifpl.evaluate('(map (lambda (x) x) 42)')
+            aifpl.evaluate('(list-map (lambda (x) x) 42)')
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic filter operations
-        ('(filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4))', '(2 4)'),
-        ('(filter (lambda (x) (integer=? x 0)) (list 1 0 2 0 3))', '(0 0)'),
+        ('(list-filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4))', '(2 4)'),
+        ('(list-filter (lambda (x) (integer=? x 0)) (list 1 0 2 0 3))', '(0 0)'),
 
         # Filter with empty list
-        ('(filter (lambda (x) #t) (list))', '()'),
+        ('(list-filter (lambda (x) #t) (list))', '()'),
 
         # Filter that matches nothing
-        ('(filter (lambda (x) #f) (list 1 2 3))', '()'),
+        ('(list-filter (lambda (x) #f) (list 1 2 3))', '()'),
 
         # Filter that matches everything
-        ('(filter (lambda (x) #t) (list 1 2 3))', '(1 2 3)'),
+        ('(list-filter (lambda (x) #t) (list 1 2 3))', '(1 2 3)'),
 
         # Filter with string predicate
-        ('(filter (lambda (s) (integer? (string-index s "e"))) (list "hello" "world" "test"))', '("hello" "test")'),
+        ('(list-filter (lambda (s) (integer? (string-index s "e"))) (list "hello" "world" "test"))', '("hello" "test")'),
     ])
     def test_filter_function(self, aifpl, expression, expected):
         """Test filter higher-order function."""
@@ -194,35 +194,35 @@ class TestFunctional:
     def test_filter_requires_function_and_list(self, aifpl):
         """Test that filter requires exactly 2 arguments: function and list."""
         with pytest.raises(AIFPLEvalError, match=r"expects 2 arguments, got 1"):
-            aifpl.evaluate('(filter (lambda (x) #t))')
+            aifpl.evaluate('(list-filter (lambda (x) #t))')
 
         # Second argument must be list
         with pytest.raises(AIFPLEvalError, match=r"requires list argument"):
-            aifpl.evaluate('(filter (lambda (x) #t) 42)')
+            aifpl.evaluate('(list-filter (lambda (x) #t) 42)')
 
     def test_filter_predicate_must_return_boolean(self, aifpl):
         """Test that filter predicate must return boolean."""
         with pytest.raises(AIFPLEvalError, match="condition must be boolean"):
-            aifpl.evaluate('(filter (lambda (x) x) (list 1 2 3))')
+            aifpl.evaluate('(list-filter (lambda (x) x) (list 1 2 3))')
 
         with pytest.raises(AIFPLEvalError, match="condition must be boolean"):
-            aifpl.evaluate('(filter (lambda (x) "hello") (list 1 2 3))')
+            aifpl.evaluate('(list-filter (lambda (x) "hello") (list 1 2 3))')
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic fold operations (left fold)
-        ('(fold integer+ 0 (list 1 2 3 4))', '10'),  # Sum
-        ('(fold integer* 1 (list 1 2 3 4))', '24'),  # Product
-        ('(fold integer- 0 (list 1 2 3))', '-6'),  # ((0-1)-2)-3 = -6
+        ('(list-fold integer+ 0 (list 1 2 3 4))', '10'),  # Sum
+        ('(list-fold integer* 1 (list 1 2 3 4))', '24'),  # Product
+        ('(list-fold integer- 0 (list 1 2 3))', '-6'),  # ((0-1)-2)-3 = -6
 
         # Fold with empty list returns initial value
-        ('(fold integer+ 0 (list))', '0'),
-        ('(fold integer* 1 (list))', '1'),
+        ('(list-fold integer+ 0 (list))', '0'),
+        ('(list-fold integer* 1 (list))', '1'),
 
         # Fold with single element
-        ('(fold integer+ 10 (list 5))', '15'),
+        ('(list-fold integer+ 10 (list 5))', '15'),
 
         # Fold for list construction (reverse)
-        ('(fold (lambda (acc x) (list-prepend acc x)) (list) (list 1 2 3))', '(3 2 1)'),
+        ('(list-fold (lambda (acc x) (list-prepend acc x)) (list) (list 1 2 3))', '(3 2 1)'),
     ])
     def test_fold_function(self, aifpl, expression, expected):
         """Test fold higher-order function."""
@@ -231,14 +231,14 @@ class TestFunctional:
     def test_fold_requires_three_arguments(self, aifpl):
         """Test that fold requires exactly 3 arguments: function, initial, list."""
         with pytest.raises(AIFPLEvalError, match=r"expects 3 arguments, got 2"):
-            aifpl.evaluate('(fold integer+ 0)')
+            aifpl.evaluate('(list-fold integer+ 0)')
 
         with pytest.raises(AIFPLEvalError, match=r"expects 3 arguments, got 4"):
-            aifpl.evaluate('(fold integer+ 0 (list 1 2) 99)')
+            aifpl.evaluate('(list-fold integer+ 0 (list 1 2) 99)')
 
         # Third argument must be list
         with pytest.raises(AIFPLEvalError, match=r"requires list argument"):
-            aifpl.evaluate('(fold integer+ 0 42)')
+            aifpl.evaluate('(list-fold integer+ 0 42)')
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic range generation
@@ -288,20 +288,20 @@ class TestFunctional:
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic find operations
-        ('(find (lambda (x) (integer>? x 5)) (list 1 3 7 2))', '7'),
-        ('(find (lambda (x) (integer=? x 0)) (list 1 2 0 3))', '0'),
+        ('(list-find (lambda (x) (integer>? x 5)) (list 1 3 7 2))', '7'),
+        ('(list-find (lambda (x) (integer=? x 0)) (list 1 2 0 3))', '0'),
 
         # Find with no match returns #f
-        ('(find (lambda (x) (integer>? x 10)) (list 1 2 3))', '#f'),
+        ('(list-find (lambda (x) (integer>? x 10)) (list 1 2 3))', '#f'),
 
         # Find in empty list returns #f
-        ('(find (lambda (x) #t) (list))', '#f'),
+        ('(list-find (lambda (x) #t) (list))', '#f'),
 
         # Find first match (short-circuit)
-        ('(find (lambda (x) (integer>? x 2)) (list 1 3 5 7))', '3'),
+        ('(list-find (lambda (x) (integer>? x 2)) (list 1 3 5 7))', '3'),
 
         # Find with string predicate
-        ('(find (lambda (s) (integer? (string-index s "o"))) (list "hello" "world" "test"))', '"hello"'),
+        ('(list-find (lambda (s) (integer? (string-index s "o"))) (list "hello" "world" "test"))', '"hello"'),
     ])
     def test_find_function(self, aifpl, expression, expected):
         """Test find higher-order function."""
@@ -310,27 +310,27 @@ class TestFunctional:
     def test_find_requires_function_and_list(self, aifpl):
         """Test that find requires exactly 2 arguments."""
         with pytest.raises(AIFPLEvalError, match=r"expects 2 arguments, got 1"):
-            aifpl.evaluate('(find (lambda (x) #t))')
+            aifpl.evaluate('(list-find (lambda (x) #t))')
 
         # Second argument must be list
         with pytest.raises(AIFPLEvalError, match=r"requires list argument"):
-            aifpl.evaluate('(find (lambda (x) #t) 42)')
+            aifpl.evaluate('(list-find (lambda (x) #t) 42)')
 
     def test_find_predicate_must_return_boolean(self, aifpl):
         """Test that find predicate must return boolean."""
         with pytest.raises(AIFPLEvalError, match="condition must be boolean"):
-            aifpl.evaluate('(find (lambda (x) x) (list 1 2 3))')
+            aifpl.evaluate('(list-find (lambda (x) x) (list 1 2 3))')
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic any? operations
-        ('(any? (lambda (x) (integer>? x 5)) (list 1 3 7))', '#t'),
-        ('(any? (lambda (x) (integer>? x 10)) (list 1 3 7))', '#f'),
+        ('(list-any? (lambda (x) (integer>? x 5)) (list 1 3 7))', '#t'),
+        ('(list-any? (lambda (x) (integer>? x 10)) (list 1 3 7))', '#f'),
 
         # any? with empty list returns #f
-        ('(any? (lambda (x) #t) (list))', '#f'),
+        ('(list-any? (lambda (x) #t) (list))', '#f'),
 
         # any? short-circuits on first true
-        ('(any? (lambda (x) (integer=? x 2)) (list 1 2 3))', '#t'),
+        ('(list-any? (lambda (x) (integer=? x 2)) (list 1 2 3))', '#t'),
     ])
     def test_any_predicate_function(self, aifpl, expression, expected):
         """Test any? higher-order predicate function."""
@@ -338,14 +338,14 @@ class TestFunctional:
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic all? operations
-        ('(all? (lambda (x) (integer>? x 0)) (list 1 3 7))', '#t'),
-        ('(all? (lambda (x) (integer>? x 5)) (list 1 3 7))', '#f'),
+        ('(list-all? (lambda (x) (integer>? x 0)) (list 1 3 7))', '#t'),
+        ('(list-all? (lambda (x) (integer>? x 5)) (list 1 3 7))', '#f'),
 
         # all? with empty list returns #t (vacuous truth)
-        ('(all? (lambda (x) #f) (list))', '#t'),
+        ('(list-all? (lambda (x) #f) (list))', '#t'),
 
         # all? short-circuits on first false
-        ('(all? (lambda (x) (integer<? x 5)) (list 1 2 6 3))', '#f'),
+        ('(list-all? (lambda (x) (integer<? x 5)) (list 1 2 6 3))', '#f'),
     ])
     def test_all_predicate_function(self, aifpl, expression, expected):
         """Test all? higher-order predicate function."""
@@ -354,48 +354,48 @@ class TestFunctional:
     def test_any_all_require_function_and_list(self, aifpl):
         """Test that any? and all? require function and list arguments."""
         with pytest.raises(AIFPLEvalError, match=r"expects 2 arguments, got 1"):
-            aifpl.evaluate('(any? (lambda (x) #t))')
+            aifpl.evaluate('(list-any? (lambda (x) #t))')
 
         with pytest.raises(AIFPLEvalError, match=r"expects 2 arguments, got 1"):
-            aifpl.evaluate('(all? (lambda (x) #t))')
+            aifpl.evaluate('(list-all? (lambda (x) #t))')
 
         # Second argument must be list
         with pytest.raises(AIFPLEvalError, match=r"requires list argument"):
-            aifpl.evaluate('(any? (lambda (x) #t) 42)')
+            aifpl.evaluate('(list-any? (lambda (x) #t) 42)')
 
         with pytest.raises(AIFPLEvalError, match=r"requires list argument"):
-            aifpl.evaluate('(all? (lambda (x) #t) "hello")')
+            aifpl.evaluate('(list-all? (lambda (x) #t) "hello")')
 
     def test_any_all_predicates_must_return_boolean(self, aifpl):
         """Test that any? and all? predicates must return boolean."""
         with pytest.raises(AIFPLEvalError, match="condition must be boolean"):
-            aifpl.evaluate('(any? (lambda (x) x) (list 1 2 3))')
+            aifpl.evaluate('(list-any? (lambda (x) x) (list 1 2 3))')
 
         with pytest.raises(AIFPLEvalError, match="condition must be boolean"):
-            aifpl.evaluate('(all? (lambda (x) "hello") (list 1 2 3))')
+            aifpl.evaluate('(list-all? (lambda (x) "hello") (list 1 2 3))')
 
     def test_complex_functional_compositions(self, aifpl, helpers):
         """Test complex combinations of functional operations."""
         # Map followed by filter
         pipeline1 = '''
-        (filter (lambda (x) (integer>? x 5))
-                (map (lambda (x) (integer* x 2)) (list 1 2 3 4 5)))
+        (list-filter (lambda (x) (integer>? x 5))
+                (list-map (lambda (x) (integer* x 2)) (list 1 2 3 4 5)))
         '''
         helpers.assert_evaluates_to(aifpl, pipeline1, '(6 8 10)')
 
         # Filter followed by fold
         pipeline2 = '''
-        (fold integer+ 0
-              (filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4 5)))
+        (list-fold integer+ 0
+              (list-filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4 5)))
         '''
         helpers.assert_evaluates_to(aifpl, pipeline2, '11')  # 2 + 4 + 5
 
         # Map, filter, and fold together
         pipeline3 = '''
-        (fold integer*
+        (list-fold integer*
               1
-              (filter (lambda (x) (integer>? x 1))
-                      (map (lambda (x) (integer* x x))
+              (list-filter (lambda (x) (integer>? x 1))
+                      (list-map (lambda (x) (integer* x x))
                            (list 1 2 3 4))))
         '''
         helpers.assert_evaluates_to(aifpl, pipeline3, '576')  # 4 * 9 * 16 = 576
@@ -475,10 +475,10 @@ class TestFunctional:
         """Test common functional programming patterns for data processing."""
         # Process list of numbers: square evens, filter > 10, sum
         data_processing = '''
-        (fold integer+
+        (list-fold integer+
               0
-              (filter (lambda (x) (integer>? x 10))
-                      (map (lambda (x) (if (integer=? (integer% x 2) 0) (integer* x x) x))
+              (list-filter (lambda (x) (integer>? x 10))
+                      (list-map (lambda (x) (if (integer=? (integer% x 2) 0) (integer* x x) x))
                            (list 1 2 3 4 5 6))))
         '''
         # 1->1, 2->4, 3->3, 4->16, 5->5, 6->36
@@ -488,10 +488,10 @@ class TestFunctional:
 
         # String processing pipeline
         string_processing = '''
-        (fold (lambda (acc s) (integer+ acc (string-length s)))
+        (list-fold (lambda (acc s) (integer+ acc (string-length s)))
               0
-              (filter (lambda (s) (integer? (string-index s "E")))
-                      (map (lambda (s) (string-upcase s))
+              (list-filter (lambda (s) (integer? (string-index s "E")))
+                      (list-map (lambda (s) (string-upcase s))
                            (list "hello" "world" "test" "code"))))
         '''
         # Map to uppercase: "HELLO", "WORLD", "TEST", "CODE"
@@ -503,14 +503,14 @@ class TestFunctional:
         """Test range generation combined with functional operations."""
         # Sum of squares from 1 to 5
         sum_of_squares = '''
-        (fold integer+ 0 (map (lambda (x) (integer* x x)) (range 1 6)))
+        (list-fold integer+ 0 (list-map (lambda (x) (integer* x x)) (range 1 6)))
         '''
         helpers.assert_evaluates_to(aifpl, sum_of_squares, '55')  # 1+4+9+16+25
 
         # Filter even numbers from range and double them
         even_doubled = '''
-        (map (lambda (x) (integer* x 2))
-             (filter (lambda (x) (integer=? (integer% x 2) 0))
+        (list-map (lambda (x) (integer* x 2))
+             (list-filter (lambda (x) (integer=? (integer% x 2) 0))
                      (range 1 11)))
         '''
         helpers.assert_evaluates_to(aifpl, even_doubled, '(4 8 12 16 20)')
@@ -605,14 +605,14 @@ class TestFunctional:
         # Simple case: map with nested lambda
         helpers.assert_evaluates_to(
             aifpl,
-            '(map (lambda (x) ((lambda (y) (integer* y 2)) x)) (list 1 2 3))',
+            '(list-map (lambda (x) ((lambda (y) (integer* y 2)) x)) (list 1 2 3))',
             '(2 4 6)'
         )
 
         # Filter with nested lambda
         helpers.assert_evaluates_to(
             aifpl,
-            '(filter (lambda (x) ((lambda (y) (integer>? y 0)) x)) (list -1 2 -3 4))',
+            '(list-filter (lambda (x) ((lambda (y) (integer>? y 0)) x)) (list -1 2 -3 4))',
             '(2 4)'
         )
 
@@ -620,7 +620,7 @@ class TestFunctional:
         helpers.assert_evaluates_to(
             aifpl,
             '''(let* ((process-list (lambda (lst)
-                                     (map (lambda (x) 
+                                     (list-map (lambda (x) 
                                             (if (integer>? x 0)
                                                 ((lambda (y) (integer* y y)) x)
                                                 ((lambda (z) (integer-neg z)) x)))
@@ -632,35 +632,35 @@ class TestFunctional:
         # Fold with nested lambda
         helpers.assert_evaluates_to(
             aifpl,
-            '(fold (lambda (acc x) ((lambda (y) (integer+ acc y)) (integer* x 2))) 0 (list 1 2 3))',
+            '(list-fold (lambda (acc x) ((lambda (y) (integer+ acc y)) (integer* x 2))) 0 (list 1 2 3))',
             '12'  # (0 + 2) + 4 + 6 = 12
         )
 
         # any? with nested lambda
         helpers.assert_evaluates_to(
             aifpl,
-            '(any? (lambda (x) ((lambda (y) (integer>? y 5)) x)) (list 1 3 7))',
+            '(list-any? (lambda (x) ((lambda (y) (integer>? y 5)) x)) (list 1 3 7))',
             '#t'
         )
 
         # all? with nested lambda
         helpers.assert_evaluates_to(
             aifpl,
-            '(all? (lambda (x) ((lambda (y) (integer>? y 0)) x)) (list 1 3 7))',
+            '(list-all? (lambda (x) ((lambda (y) (integer>? y 0)) x)) (list 1 3 7))',
             '#t'
         )
 
         # find with nested lambda
         helpers.assert_evaluates_to(
             aifpl,
-            '(find (lambda (x) ((lambda (y) (integer=? y 3)) x)) (list 1 3 7))',
+            '(list-find (lambda (x) ((lambda (y) (integer=? y 3)) x)) (list 1 3 7))',
             '3'
         )
 
         # Complex nested structure with multiple levels
         helpers.assert_evaluates_to(
             aifpl,
-            '''(map (lambda (x) 
+            '''(list-map (lambda (x) 
                        (let ((helper (lambda (z) (integer* z 2))))
                          ((lambda (w) (integer+ (helper w) 1)) x)))
                    (list 1 2 3))''',
@@ -689,7 +689,7 @@ class TestFunctional:
         # Three levels of nesting
         helpers.assert_evaluates_to(
             aifpl,
-            '''(map (lambda (x) 
+            '''(list-map (lambda (x) 
                        ((lambda (y) 
                           ((lambda (z) (integer+ z 1)) (integer* y 2))) x))
                    (list 1 2 3))''',
@@ -700,7 +700,7 @@ class TestFunctional:
         helpers.assert_evaluates_to(
             aifpl,
             '''(let ((named-func (lambda (x) (integer* x 3))))
-                 (map (lambda (x) 
+                 (list-map (lambda (x) 
                         ((lambda (y) (integer+ y 1)) (named-func x)))
                       (list 1 2 3)))''',
             '(4 7 10)'  # For each x: (x*3) + 1
@@ -710,21 +710,21 @@ class TestFunctional:
         helpers.assert_evaluates_to(
             aifpl,
             '''(let ((data (list 1 2 3 4 5)))
-                 (fold integer+ 0 
-                       (filter (lambda (x) ((lambda (y) (integer>? y 2)) x))
-                               (map (lambda (x) ((lambda (y) (integer* y 2)) x)) 
+                 (list-fold integer+ 0 
+                       (list-filter (lambda (x) ((lambda (y) (integer>? y 2)) x))
+                               (list-map (lambda (x) ((lambda (y) (integer* y 2)) x)) 
                                     data))))''',
             '28'  # map: (2 4 6 8 10), filter: (4 6 8 10), fold: 4+6+8+10 = 28
         )
 
     @pytest.mark.parametrize("expression,expected", [
         # These are the core failing cases that expose the bug
-        ('(map (lambda (x) ((lambda (y) (integer* y 2)) x)) (list 1 2 3))', '(2 4 6)'),
-        ('(filter (lambda (x) ((lambda (y) (integer>? y 0)) x)) (list -1 2 -3 4))', '(2 4)'),
-        ('(any? (lambda (x) ((lambda (y) (integer>? y 5)) x)) (list 1 3 7))', '#t'),
-        ('(all? (lambda (x) ((lambda (y) (integer>? y 0)) x)) (list 1 3 7))', '#t'),
-        ('(find (lambda (x) ((lambda (y) (integer=? y 3)) x)) (list 1 3 7))', '3'),
-        ('(fold (lambda (acc x) ((lambda (y) (integer+ acc y)) (integer* x 2))) 0 (list 1 2 3))', '12'),
+        ('(list-map (lambda (x) ((lambda (y) (integer* y 2)) x)) (list 1 2 3))', '(2 4 6)'),
+        ('(list-filter (lambda (x) ((lambda (y) (integer>? y 0)) x)) (list -1 2 -3 4))', '(2 4)'),
+        ('(list-any? (lambda (x) ((lambda (y) (integer>? y 5)) x)) (list 1 3 7))', '#t'),
+        ('(list-all? (lambda (x) ((lambda (y) (integer>? y 0)) x)) (list 1 3 7))', '#t'),
+        ('(list-find (lambda (x) ((lambda (y) (integer=? y 3)) x)) (list 1 3 7))', '3'),
+        ('(list-fold (lambda (acc x) ((lambda (y) (integer+ acc y)) (integer* x 2))) 0 (list 1 2 3))', '12'),
     ])
     def test_nested_lambda_bug_cases(self, aifpl, expression, expected):
         """

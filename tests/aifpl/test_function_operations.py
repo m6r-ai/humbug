@@ -377,7 +377,7 @@ class TestApplyWithIntrospection:
         # Use apply to call a binary function on each pair in a list of pairs
         result = aifpl.evaluate("""
             (let ((pairs (list (list 1 2) (list 3 4) (list 5 6))))
-              (map (lambda (pair) (apply integer+ pair)) pairs))
+              (list-map (lambda (pair) (apply integer+ pair)) pairs))
         """)
         assert result == [3, 7, 11]
 
@@ -390,7 +390,7 @@ class TestApplyWithIntrospection:
               (letrec ((dedup (lambda (lst seen acc)
                                 (if (list-null? lst)
                                     (list-reverse acc)
-                                    (if (any? (lambda (s) (function=? s (list-first lst))) seen)
+                                    (if (list-any? (lambda (s) (function=? s (list-first lst))) seen)
                                         (dedup (list-rest lst) seen acc)
                                         (dedup (list-rest lst)
                                                (list-prepend seen (list-first lst))

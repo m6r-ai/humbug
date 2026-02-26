@@ -127,15 +127,15 @@ class TestHigherOrder:
     """Test higher-order function operations."""
 
     def test_map(self, aifpl):
-        result = aifpl.evaluate("(map (lambda (x) (integer* x 2)) (list 1 2 3))")
+        result = aifpl.evaluate("(list-map (lambda (x) (integer* x 2)) (list 1 2 3))")
         assert result == [2, 4, 6]
 
     def test_filter(self, aifpl):
-        result = aifpl.evaluate("(filter (lambda (x) (integer>? x 2)) (list 1 2 3 4))")
+        result = aifpl.evaluate("(list-filter (lambda (x) (integer>? x 2)) (list 1 2 3 4))")
         assert result == [3, 4]
 
     def test_fold(self, aifpl):
-        result = aifpl.evaluate("(fold integer+ 0 (list 1 2 3 4))")
+        result = aifpl.evaluate("(list-fold integer+ 0 (list 1 2 3 4))")
         assert result == 10
 
 

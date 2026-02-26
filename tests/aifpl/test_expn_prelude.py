@@ -56,14 +56,14 @@ class TestFloatExpnPrelude:
         """float-expn used as a first-class value inside map (partial via lambda)."""
         # Square each element: map (lambda (x) (float-expn x 2.0)) over list
         result = aifpl.evaluate(
-            "(map (lambda (x) (float-expn x 2.0)) (list 1.0 2.0 3.0 4.0))"
+            "(list-map (lambda (x) (float-expn x 2.0)) (list 1.0 2.0 3.0 4.0))"
         )
         assert result == [1.0, 4.0, 9.0, 16.0]
 
     def test_fold_with_float_expn(self, aifpl):
         """float-expn used as a first-class value inside fold."""
         # fold float-expn 2.0 (list 3.0) → (float-expn 2.0 3.0) = 8.0
-        result = aifpl.evaluate("(fold float-expn 2.0 (list 3.0))")
+        result = aifpl.evaluate("(list-fold float-expn 2.0 (list 3.0))")
         assert result == pytest.approx(8.0)
 
     def test_function_predicate_on_float_expn(self, aifpl):
@@ -118,7 +118,7 @@ class TestComplexExpnPrelude:
         """complex-expn used as a first-class value inside map (partial via lambda)."""
         # Square each element: map (lambda (z) (complex-expn z 2+0j)) over list
         result = aifpl.evaluate(
-            "(map (lambda (z) (complex-expn z 2+0j)) (list 1+0j 2+0j 3+0j))"
+            "(list-map (lambda (z) (complex-expn z 2+0j)) (list 1+0j 2+0j 3+0j))"
         )
         assert len(result) == 3
         assert abs(result[0] - 1 + 0j) < 1e-9

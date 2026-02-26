@@ -283,6 +283,6 @@ class TestEvaluatorMissingCoverage:
         result2 = aifpl.evaluate("(or #f #t)")
         assert result2 is True
 
-        result3 = aifpl.evaluate("(map (lambda (x) (integer* x 2)) (list 1 2 3))")
+        result3 = aifpl.evaluate("(list-map (lambda (x) (integer* x 2)) (list 1 2 3))")
         expected = [2, 4, 6]
         assert result3 == expected

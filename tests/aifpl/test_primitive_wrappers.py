@@ -46,13 +46,13 @@ class TestPrimitiveWrappers:
     def test_wrapper_with_higher_order_functions(self, aifpl):
         """Test that primitive wrappers work with higher-order functions."""
         # fold with integer+
-        assert aifpl.evaluate("(fold integer+ 0 (list 1 2 3 4))") == 10
+        assert aifpl.evaluate("(list-fold integer+ 0 (list 1 2 3 4))") == 10
 
         # fold with integer*
-        assert aifpl.evaluate("(fold integer* 1 (list 2 3 4))") == 24
+        assert aifpl.evaluate("(list-fold integer* 1 (list 2 3 4))") == 24
 
         # map with lambda that uses integer+
-        assert aifpl.evaluate("(map (lambda (x) (integer+ x 10)) (list 1 2 3))") == [11, 12, 13]
+        assert aifpl.evaluate("(list-map (lambda (x) (integer+ x 10)) (list 1 2 3))") == [11, 12, 13]
 
     def test_wrapper_special_cases(self, aifpl):
         """Test special cases like zero-arg and single-arg."""
@@ -106,6 +106,6 @@ class TestPrimitiveWrappers:
         # Multiple integer wrappers (float/ excluded due to type mismatch with integers)
         result = aifpl.evaluate("""
             (let ((ops (list integer+ integer- integer*)))
-              (map (lambda (op) (op 10 2)) ops))
+              (list-map (lambda (op) (op 10 2)) ops))
         """)
         assert result == [12, 8, 20]

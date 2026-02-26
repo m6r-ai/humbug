@@ -412,7 +412,7 @@ class TestAListWithFunctionalOperations:
         """Test mapping over alist keys."""
         result = tool.evaluate('''
             (let ((data (alist (list "name" "Alice") (list "age" 30))))
-              (map string-upcase (alist-keys data)))
+              (list-map string-upcase (alist-keys data)))
         ''')
         assert result == ["NAME", "AGE"]
 
@@ -420,7 +420,7 @@ class TestAListWithFunctionalOperations:
         """Test filtering alist values."""
         result = tool.evaluate('''
             (let* ((data (alist (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4))))
-              (filter (lambda (v) (integer>? v 2)) (alist-values data)))
+              (list-filter (lambda (v) (integer>? v 2)) (alist-values data)))
         ''')
         assert result == [3, 4]
 
@@ -428,7 +428,7 @@ class TestAListWithFunctionalOperations:
         """Test folding over alist values."""
         result = tool.evaluate('''
             (let ((data (alist (list "a" 1) (list "b" 2) (list "c" 3))))
-              (fold integer+ 0 (alist-values data)))
+              (list-fold integer+ 0 (alist-values data)))
         ''')
         assert result == 6
 
@@ -439,7 +439,7 @@ class TestAListWithFunctionalOperations:
                            (alist (list "name" "Alice") (list "age" 30))
                            (alist (list "name" "Bob") (list "age" 25))
                            (alist (list "name" "Carol") (list "age" 35)))))
-              (map (lambda (p) (alist-get p "name")) people))
+              (list-map (lambda (p) (alist-get p "name")) people))
         ''')
         assert result == ["Alice", "Bob", "Carol"]
 
@@ -522,7 +522,7 @@ class TestAListComplexScenarios:
         """Test building alist from list data."""
         result = tool.evaluate('''
             (let* ((pairs (list (list "name" "Alice") (list "age" 30) (list "city" "NYC"))))
-              (fold (lambda (acc pair)
+              (list-fold (lambda (acc pair)
                       (alist-set acc (list-first pair) (list-first (list-rest pair))))
                     (alist)
                     pairs))

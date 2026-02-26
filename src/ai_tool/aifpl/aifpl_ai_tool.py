@@ -323,7 +323,7 @@ Syntax: (operator arg1 arg2 ...)
 - Merging: (alist-merge alist1 alist2) - second wins on conflicts
 - Type checking: (alist? value)
 - Nested alists: (alist (list "user" (alist (list "name" "Bob") (list "id" 123))))
-- Works with functional operations: (map f (alist-keys data)), (filter pred (alist-values data))
+- Works with functional operations: (list-map f (alist-keys data)), (list-filter pred (alist-values data))
 - Pattern matching: (match data ((alist? a) ...) (_ ...))
 - Maintains insertion order, optimized for data processing workflows
 
@@ -343,7 +343,7 @@ Syntax: (operator arg1 arg2 ...)
 - (symbol!=? a b) → #t if a and b are different symbols
 - (symbol->string 'foo) → "foo" (extracts the symbol name as a string)
 - Symbols are produced only by quote: 'foo, '(a b c) contains symbols a, b, c
-- Example: (map symbol->string '(foo bar baz)) → ("foo" "bar" "baz")
+- Example: (list-map symbol->string '(foo bar baz)) → ("foo" "bar" "baz")
 
 ## Function operations:
 
@@ -369,7 +369,7 @@ Syntax: (operator arg1 arg2 ...)
 - (lambda (param1 . rest) body) → variadic: rest receives remaining args as a list
 - (lambda (. rest) body) → fully variadic: rest receives all args as a list
 - ((lambda (x) (integer* x x)) 5) → 25
-- ((lambda (. args) (fold integer+ 0 args)) 1 2 3 4 5) → 15 (variadic sum)
+- ((lambda (. args) (list-fold integer+ 0 args)) 1 2 3 4 5) → 15 (variadic sum)
 - ((lambda (x . rest) (list-prepend (list-reverse rest) x)) 1 2 3) → (1 3 2)
 - Functions are first-class values with lexical scoping and closures
 - Tail recursion automatically optimized
@@ -392,17 +392,17 @@ Syntax: (operator arg1 arg2 ...)
 - Supports self-recursion and mutual recursion
 - Use only when you need functions that reference themselves
 
-## Higher-order functions:
+## Higher-order list functions:
 
-- (map func list) → (map (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
-- (filter predicate list) → (filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
-- (fold func init list) → (fold integer+ 0 (list 1 2 3 4)) → 10
+- (list-map func list) → (list-map (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
+- (list-filter predicate list) → (list-filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
+- (list-fold func init list) → (list-fold integer+ 0 (list 1 2 3 4)) → 10
 - (range start end [step]) → (range 1 5) → (1 2 3 4), integers only
-- (find predicate list), (any? predicate list), (all? predicate list)
-- (zip lst1 lst2) → pairs corresponding elements: (zip (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6))
-- (zip lst1 lst2) stops at the shorter list: (zip (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
-- (unzip lst) → inverse of zip; splits a list of 2-element lists into a list of two lists: (unzip (list (list 1 4) (list 2 5) (list 3 6))) → ((1 2 3) (4 5 6))
-- (list-first (unzip pairs)) → first elements, (list-first (list-rest (unzip pairs))) → second elements
+- (list-find predicate list), (list-any? predicate list), (list-all? predicate list)
+- (list-zip lst1 lst2) → pairs corresponding elements: (list-zip (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6))
+- (list-zip lst1 lst2) stops at the shorter list: (list-zip (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
+- (list-unzip lst) → inverse of list-zip; splits a list of 2-element lists into a list of two lists: (list-unzip (list (list 1 4) (list 2 5) (list 3 6))) → ((1 2 3) (4 5 6))
+- (list-first (list-unzip pairs)) → first elements, (list-first (list-rest (list-unzip pairs))) → second elements
 
 ## Pattern matching:
 

@@ -63,7 +63,7 @@ class TestAIFPLAIToolExecution:
             ("(integer-abs -5)", "5"),
             ("(integer-min 1 5 3)", "1"),
             ("(integer-max 1 5 3)", "5"),
-            ("(float-expt 2.0 3.0)", "8.0"),
+            ("(float-expn 2.0 3.0)", "8.0"),
             ("(float-round 3.7)", "4.0"),
             ("(float-floor 3.7)", "3.0"),
             ("(float-ceil 3.2)", "4.0"),

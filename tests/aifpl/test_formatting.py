@@ -150,7 +150,7 @@ class TestFormatting:
         # filter operation
         helpers.assert_evaluates_to(
             aifpl, 
-            '(filter (lambda (x) (integer>? x 2)) (list 1 2 3 4))',
+            '(list-filter (lambda (x) (integer>? x 2)) (list 1 2 3 4))',
             '(3 4)'
         )
 
@@ -222,21 +222,21 @@ class TestFormatting:
         # Map results
         helpers.assert_evaluates_to(
             aifpl, 
-            '(map (lambda (x) (integer* x 2)) (list 1 2 3))', 
+            '(list-map (lambda (x) (integer* x 2)) (list 1 2 3))', 
             '(2 4 6)'
         )
 
         # Filter results
         helpers.assert_evaluates_to(
             aifpl, 
-            '(filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4))',
+            '(list-filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4))',
             '(2 4)'
         )
 
         # Fold results
         helpers.assert_evaluates_to(
             aifpl, 
-            '(fold integer+ 0 (list 1 2 3 4))', 
+            '(list-fold integer+ 0 (list 1 2 3 4))', 
             '10'
         )
 
@@ -360,8 +360,8 @@ class TestFormatting:
         """Test formatting of results from complex expressions."""
         # Complex functional pipeline
         complex_result = '''
-        (map (lambda (x) (integer+ x 1))
-             (filter (lambda (x) (integer>? x 0))
+        (list-map (lambda (x) (integer+ x 1))
+             (list-filter (lambda (x) (integer>? x 0))
                      (list -1 2 -3 4 5)))
         '''
         helpers.assert_evaluates_to(aifpl, complex_result, '(3 5 6)')

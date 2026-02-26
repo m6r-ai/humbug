@@ -311,21 +311,21 @@ BENCHMARKS = [
     Benchmark("List Position", "lists", "(list-index (list 1 2 3 4 5 6 7 8 9 10) 7)", iterations=3000),
 
     # === HIGHER-ORDER FUNCTIONS ===
-    Benchmark("Map (10)", "higher-order", "(map (lambda (x) (integer* x x)) (list 1 2 3 4 5 6 7 8 9 10))", iterations=1000),
-    Benchmark("Map (50)", "higher-order", "(map (lambda (x) (integer* x x)) (range 1 51))", iterations=200),
-    Benchmark("Map (100)", "higher-order", "(map (lambda (x) (integer* x x)) (range 1 101))", iterations=100),
-    Benchmark("Filter (50)", "higher-order", "(filter (lambda (x) (integer>? x 25)) (range 1 51))", iterations=200),
-    Benchmark("Filter (100)", "higher-order", "(filter (lambda (x) (integer>? x 50)) (range 1 101))", iterations=100),
-    Benchmark("Fold (50)", "higher-order", "(fold integer+ 0 (range 1 51))", iterations=200),
-    Benchmark("Fold (100)", "higher-order", "(fold integer+ 0 (range 1 101))", iterations=100),
+    Benchmark("Map (10)", "higher-order", "(list-map (lambda (x) (integer* x x)) (list 1 2 3 4 5 6 7 8 9 10))", iterations=1000),
+    Benchmark("Map (50)", "higher-order", "(list-map (lambda (x) (integer* x x)) (range 1 51))", iterations=200),
+    Benchmark("Map (100)", "higher-order", "(list-map (lambda (x) (integer* x x)) (range 1 101))", iterations=100),
+    Benchmark("Filter (50)", "higher-order", "(list-filter (lambda (x) (integer>? x 25)) (range 1 51))", iterations=200),
+    Benchmark("Filter (100)", "higher-order", "(list-filter (lambda (x) (integer>? x 50)) (range 1 101))", iterations=100),
+    Benchmark("Fold (50)", "higher-order", "(list-fold integer+ 0 (range 1 51))", iterations=200),
+    Benchmark("Fold (100)", "higher-order", "(list-fold integer+ 0 (range 1 101))", iterations=100),
     Benchmark(
-        "Map+Filter Pipeline", "higher-order", "(filter (lambda (x) (integer>? x 50)) (map (lambda (x) (integer* x 2)) (range 1 51)))",
+        "Map+Filter Pipeline", "higher-order", "(list-filter (lambda (x) (integer>? x 50)) (list-map (lambda (x) (integer* x 2)) (range 1 51)))",
         iterations=100
     ),
-    Benchmark("Map+Fold Pipeline", "higher-order", "(fold integer+ 0 (map (lambda (x) (integer* x x)) (range 1 51)))", iterations=100),
-    Benchmark("Find", "higher-order", "(find (lambda (x) (integer>? x 50)) (range 1 101))", iterations=500),
-    Benchmark("Any?", "higher-order", "(any? (lambda (x) (integer>? x 90)) (range 1 101))", iterations=500),
-    Benchmark("All?", "higher-order", "(all? (lambda (x) (integer>? x 0)) (range 1 101))", iterations=500),
+    Benchmark("Map+Fold Pipeline", "higher-order", "(list-fold integer+ 0 (list-map (lambda (x) (integer* x x)) (range 1 51)))", iterations=100),
+    Benchmark("Find", "higher-order", "(list-find (lambda (x) (integer>? x 50)) (range 1 101))", iterations=500),
+    Benchmark("Any?", "higher-order", "(list-any? (lambda (x) (integer>? x 90)) (range 1 101))", iterations=500),
+    Benchmark("All?", "higher-order", "(list-all? (lambda (x) (integer>? x 0)) (range 1 101))", iterations=500),
 
     # === STRING OPERATIONS ===
     Benchmark("String Concatenate", "strings", '(string-concat "hello" " " "world")', iterations=5000),
@@ -360,7 +360,7 @@ BENCHMARKS = [
     Benchmark("Sqrt Negative", "math", "(complex-sqrt -4+0j)", iterations=3000),
     Benchmark("Abs", "math", "(integer-abs -42)", iterations=5000),
     Benchmark("Min/Max", "math", "(integer+ (integer-min 1 2 3 4 5) (integer-max 1 2 3 4 5))", iterations=5000),
-    Benchmark("Pow", "math", "(float-expt 2.0 10.0)", iterations=5000),
+    Benchmark("Pow", "math", "(float-expn 2.0 10.0)", iterations=5000),
     Benchmark("Trigonometry", "math", "(float+ (float-sin 0.5) (float-cos 0.5) (float-tan 0.5))", iterations=3000),
     Benchmark("Logarithms", "math", "(float+ (float-log 10.0) (float-log10 100.0))", iterations=3000),
     Benchmark("Complex Numbers", "math", "(float+ (complex-real (integer->complex 3 4)) (complex-imag (integer->complex 3 4)))", iterations=3000),
@@ -373,13 +373,13 @@ BENCHMARKS = [
     # === REALISTIC WORKLOADS ===
     Benchmark("Data Processing", "realistic",
               """(let ((data (range 1 21)))
-                   (fold integer+ 0 (map (lambda (x) (integer* x x)) (filter (lambda (x) (integer>? x 10)) data))))""", iterations=200),
+                   (list-fold integer+ 0 (list-map (lambda (x) (integer* x x)) (list-filter (lambda (x) (integer>? x 10)) data))))""", iterations=200),
     Benchmark("Nested Data Structure", "realistic",
               """(let ((users (list
                               (alist (list "name" "Alice") (list "age" 30))
                               (alist (list "name" "Bob") (list "age" 25))
                               (alist (list "name" "Charlie") (list "age" 35)))))
-                   (map (lambda (user) (alist-get user "age")) users))""", iterations=500),
+                   (list-map (lambda (user) (alist-get user "age")) users))""", iterations=500),
     Benchmark("Recursive List Processing", "realistic",
               """(letrec ((sum-list (lambda (lst)
                                      (if (list-null? lst)
@@ -387,12 +387,12 @@ BENCHMARKS = [
                                          (integer+ (list-first lst) (sum-list (list-rest lst)))))))
                    (sum-list (list 1 2 3 4 5 6 7 8 9 10)))""", iterations=500),
     Benchmark("Pattern Match Pipeline", "realistic",
-              """(map (lambda (x)
-                          (match x
-                            ((integer? i) (integer* i 2))
-                            ((string? s) (string-length s))
-                            (_ 0)))
-                        (list 1 2 "hello" 3 "world" 4))""", iterations=500),
+              """(list-map (lambda (x)
+                               (match x
+                                 ((integer? i) (integer* i 2))
+                                 ((string? s) (string-length s))
+                                 (_ 0)))
+                             (list 1 2 "hello" 3 "world" 4))""", iterations=500),
     Benchmark("Closure-based Counter", "realistic",
               """(let ((make-counter (lambda (start)
                                       (lambda (inc) (integer+ start inc)))))

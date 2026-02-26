@@ -365,17 +365,17 @@ class TestErrors:
         """Test that higher-order function errors are detected."""
         # Map/filter/fold predicates must return appropriate types
         with pytest.raises(AIFPLEvalError, match="condition must be boolean"):
-            aifpl.evaluate('(filter (lambda (x) x) (list 1 2 3))')
+            aifpl.evaluate('(list-filter (lambda (x) x) (list 1 2 3))')
 
         with pytest.raises(AIFPLEvalError, match="condition must be boolean"):
-            aifpl.evaluate('(any? (lambda (x) "hello") (list 1 2 3))')
+            aifpl.evaluate('(list-any? (lambda (x) "hello") (list 1 2 3))')
 
         # Higher-order functions require list arguments
         with pytest.raises(AIFPLEvalError, match="requires list argument"):
-            aifpl.evaluate('(map (lambda (x) x) 42)')
+            aifpl.evaluate('(list-map (lambda (x) x) 42)')
 
         with pytest.raises(AIFPLEvalError, match="requires list argument"):
-            aifpl.evaluate('(filter (lambda (x) #t) "hello")')
+            aifpl.evaluate('(list-filter (lambda (x) #t) "hello")')
 
     def test_non_function_call_error(self, aifpl):
         """Test that trying to call non-functions causes evaluation errors."""
@@ -476,15 +476,15 @@ class TestErrors:
         """Test error handling in higher-order function contexts."""
         # Error in map function
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(map (lambda (x) (integer/ x 0)) (list 1 2 3))")
+            aifpl.evaluate("(list-map (lambda (x) (integer/ x 0)) (list 1 2 3))")
 
         # Error in filter predicate
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(filter (lambda (x) (integer+ x \"hello\")) (list 1 2 3))")
+            aifpl.evaluate("(list-filter (lambda (x) (integer+ x \"hello\")) (list 1 2 3))")
 
         # Error in fold function
         with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("(fold (lambda (acc x) (integer/ acc x)) 1 (list 1 0 2))")
+            aifpl.evaluate("(list-fold (lambda (acc x) (integer/ acc x)) 1 (list 1 0 2))")
 
     def test_error_in_let_binding_evaluation(self, aifpl):
         """Test error handling in let binding evaluation."""
@@ -585,9 +585,9 @@ class TestErrors:
 
         # Error in deeply nested functional composition
         nested_functional = '''
-        (fold integer+ 0
-              (map (lambda (x) (integer/ x 0))
-                   (filter (lambda (x) (integer>? x 0))
+        (list-fold integer+ 0
+              (list-map (lambda (x) (integer/ x 0))
+                   (list-filter (lambda (x) (integer>? x 0))
                            (list 1 2 3))))
         '''
 
