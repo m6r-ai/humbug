@@ -250,7 +250,7 @@ Benchmark(
 ),
 ```
 
-Categories: arithmetic, functions, recursion, lists, higher-order, let, strings, alists, complex
+Categories: arithmetic, functions, recursion, lists, higher-order, let, strings, dicts, complex
 
 ## Tips
 

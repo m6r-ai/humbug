@@ -320,23 +320,23 @@ Syntax: (operator arg1 arg2 ...)
 - list-unzip returns a 2-element list: (list-first result) → first elements, (list-ref result 1) → second elements
 - Higher-order: (list-sort comparator lst) → returns a new list sorted by comparator; comparator is a two-argument function returning #t if first arg should come before second: (list-sort integer<? (list 3 1 4 1 5)) → (1 1 3 4 5), (list-sort string<? (list "b" "a" "c")) → ("a" "b" "c"); sort is stable and preserves insertion order of equal elements
 
-## Association lists (alists):
+## Dictionaries (dicts):
 
 - Immutable key-value mappings with O(1) lookup performance
-- Type predicate: (alist? (alist ...)) → #t
-- Equality: (alist=? a1 a2), (alist!=? a1 a2)
-- Output format: alists display with curly braces: {("name" "Alice") ("age" 30)} — this is display-only; construction always uses (alist ...)
-- Construction: (alist (list "name" "Alice") (list "age" 30))
-- Access: (alist-get my-alist "key"), (alist-get my-alist "key" "default")
-- Modification: (alist-set my-alist "key" value), (alist-remove my-alist "key")
-- Queries: (alist-has? my-alist "key"), (alist-keys my-alist), (alist-values my-alist), (alist-length my-alist)
-- Merging: (alist-merge alist1 alist2) - second wins on conflicts
-- Type checking: (alist? value)
-- Nested alists: (alist (list "user" (alist (list "name" "Bob") (list "id" 123))))
-- Higher-order: (alist-map func alist) → applies func to each (key value) pair, returning a new alist with transformed values; func receives key and value as separate arguments: (alist-map (lambda (k v) (integer* v 2)) (alist (list "a" 1) (list "b" 2))) → {("a" 2) ("b" 4)}
-- Higher-order: (alist-filter pred alist) → returns a new alist containing only entries where pred returns #t; pred receives key and value as separate arguments: (alist-filter (lambda (k v) (integer>? v 1)) (alist (list "a" 1) (list "b" 2))) → {("b" 2)}
-- Works with functional operations: (list-map f (alist-keys data)), (list-filter pred (alist-values data))
-- Pattern matching: (match data ((? alist? a) ...) (_ ...))
+- Type predicate: (dict? (dict ...)) → #t
+- Equality: (dict=? a1 a2), (dict!=? a1 a2)
+- Output format: dicts display with curly braces: {("name" "Alice") ("age" 30)} — this is display-only; construction always uses (dict ...)
+- Construction: (dict (list "name" "Alice") (list "age" 30))
+- Access: (dict-get my-dict "key"), (dict-get my-dict "key" "default")
+- Modification: (dict-set my-dict "key" value), (dict-remove my-dict "key")
+- Queries: (dict-has? my-dict "key"), (dict-keys my-dict), (dict-values my-dict), (dict-length my-dict)
+- Merging: (dict-merge dict1 dict2) - second wins on conflicts
+- Type checking: (dict? value)
+- Nested dicts: (dict (list "user" (dict (list "name" "Bob") (list "id" 123))))
+- Higher-order: (dict-map func dict) → applies func to each (key value) pair, returning a new dict with transformed values; func receives key and value as separate arguments: (dict-map (lambda (k v) (integer* v 2)) (dict (list "a" 1) (list "b" 2))) → {("a" 2) ("b" 4)}
+- Higher-order: (dict-filter pred dict) → returns a new dict containing only entries where pred returns #t; pred receives key and value as separate arguments: (dict-filter (lambda (k v) (integer>? v 1)) (dict (list "a" 1) (list "b" 2))) → {("b" 2)}
+- Works with functional operations: (list-map f (dict-keys data)), (list-filter pred (dict-values data))
+- Pattern matching: (match data ((? dict? a) ...) (_ ...))
 - Maintains insertion order, optimized for data processing workflows
 
 ## Symbol operations:
@@ -427,24 +427,24 @@ Syntax: (operator arg1 arg2 ...)
 ## Module system
 
 - (import \"module-name\") → load and return a module (compile-time operation)
-- Modules are just .aifpl files that return a value (typically an alist of functions)
+- Modules are just .aifpl files that return a value (typically an dict of functions)
 - Modules are cached after first load for performance
 - Circular imports are detected and prevented with clear error messages
 - Example module (math_utils.aifpl):
   ```aifpl
   (let ((square (lambda (x) (integer* x x)))
         (cube (lambda (x) (integer* x (integer* x x)))))
-    (alist
+    (dict
       (list \"square\" square)
       (list \"cube\" cube)))
   ```
 - Using a module:
   ```aifpl
   (let ((math (import \"math_utils\")))
-    ((alist-get math \"square\") 5))  → 25
+    ((dict-get math \"square\") 5))  → 25
   ```
 - Modules can import other modules (transitive dependencies)
-- Private functions: functions not in the exported alist are private to the module
+- Private functions: functions not in the exported dict are private to the module
 - Module names can include subdirectories: (e.g. import \"lib/helpers\")
 - Available modules can be found in the module search path directories
 
@@ -473,7 +473,7 @@ Syntax: (operator arg1 arg2 ...)
 - Strict typing: string ops need strings, boolean ops need booleans
 - float-floor, float-ceil, float-round all return float, not integer; use (float->integer (float-round x)) to get an integer
 - All comparison operators are type-specific: use integer=?, float<?, string>=? etc.
-- Lists and alists support =? and !=? only; they have no ordering
+- Lists and dicts support =? and !=? only; they have no ordering
 - Conditions must be boolean: (if #t ...) works, (if 1 ...) doesn't - there is no concept of "truthiness"
 - The user will not see the AIFPL code or AIFPL results directly; if you want to show either, you must format it as a message to the user.
 """

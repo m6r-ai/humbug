@@ -261,17 +261,17 @@ class BytecodeValidator:
             Opcode.STRING_CONCAT: (2, 1),
 
             # Alist
-            Opcode.ALIST_P: (1, 1),
-            Opcode.ALIST_EQ_P: (2, 1),
-            Opcode.ALIST_NEQ_P: (2, 1),
-            Opcode.ALIST_KEYS: (1, 1),
-            Opcode.ALIST_VALUES: (1, 1),
-            Opcode.ALIST_LENGTH: (1, 1),
-            Opcode.ALIST_HAS_P: (2, 1),
-            Opcode.ALIST_REMOVE: (2, 1),
-            Opcode.ALIST_MERGE: (2, 1),
-            Opcode.ALIST_SET: (3, 1),
-            Opcode.ALIST_GET: (3, 1),
+            Opcode.DICT_P: (1, 1),
+            Opcode.DICT_EQ_P: (2, 1),
+            Opcode.DICT_NEQ_P: (2, 1),
+            Opcode.DICT_KEYS: (1, 1),
+            Opcode.DICT_VALUES: (1, 1),
+            Opcode.DICT_LENGTH: (1, 1),
+            Opcode.DICT_HAS_P: (2, 1),
+            Opcode.DICT_REMOVE: (2, 1),
+            Opcode.DICT_MERGE: (2, 1),
+            Opcode.DICT_SET: (3, 1),
+            Opcode.DICT_GET: (3, 1),
 
             # List operations
             Opcode.LIST_P: (1, 1),
@@ -634,9 +634,9 @@ class BytecodeValidator:
             n = instr.arg1
             return (n, 1)  # Pop n elements, push list
 
-        if opcode == Opcode.ALIST:
+        if opcode == Opcode.DICT:
             n = instr.arg1
-            return (n, 1)  # Pop n pair-lists, push alist
+            return (n, 1)  # Pop n pair-lists, push dict
 
         # Default case
         return self.stack_effects.get(opcode, (0, 0))

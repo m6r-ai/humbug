@@ -18,7 +18,7 @@ from aifpl.aifpl_ast import (
 # Value types
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
-    AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLAList, AIFPLFunction
+    AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLDict, AIFPLFunction
 )
 
 # Lower-level components (for advanced usage)
@@ -45,7 +45,7 @@ __all__ = [
 
     # Value types
     "AIFPLValue", "AIFPLInteger", "AIFPLFloat", "AIFPLComplex",
-    "AIFPLString", "AIFPLBoolean", "AIFPLSymbol", "AIFPLList", "AIFPLAList", "AIFPLFunction",
+    "AIFPLString", "AIFPLBoolean", "AIFPLSymbol", "AIFPLList", "AIFPLDict", "AIFPLFunction",
 
     # Lower-level components
     "AIFPLToken", "AIFPLTokenType", "AIFPLLexer", "AIFPLParser",

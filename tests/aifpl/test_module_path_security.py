@@ -134,7 +134,7 @@ class TestValidPaths:
     def test_simple_module_name(self, tmp_path):
         """Test that simple module names work."""
         module_file = tmp_path / "calendar.aifpl"
-        module_file.write_text("(alist (list \"value\" 42))")
+        module_file.write_text("(dict (list \"value\" 42))")
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
@@ -148,7 +148,7 @@ class TestValidPaths:
         lib_dir.mkdir()
 
         module_file = lib_dir / "utils.aifpl"
-        module_file.write_text("(alist (list \"value\" 42))")
+        module_file.write_text("(dict (list \"value\" 42))")
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
@@ -162,7 +162,7 @@ class TestValidPaths:
         nested_dir.mkdir(parents=True)
 
         module_file = nested_dir / "validation.aifpl"
-        module_file.write_text("(alist (list \"value\" 42))")
+        module_file.write_text("(dict (list \"value\" 42))")
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
@@ -173,7 +173,7 @@ class TestValidPaths:
     def test_module_name_with_hyphens(self, tmp_path):
         """Test that module names with hyphens work."""
         module_file = tmp_path / "my-module.aifpl"
-        module_file.write_text("(alist (list \"value\" 42))")
+        module_file.write_text("(dict (list \"value\" 42))")
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
@@ -184,7 +184,7 @@ class TestValidPaths:
     def test_module_name_with_underscores(self, tmp_path):
         """Test that module names with underscores work."""
         module_file = tmp_path / "my_module.aifpl"
-        module_file.write_text("(alist (list \"value\" 42))")
+        module_file.write_text("(dict (list \"value\" 42))")
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
@@ -198,13 +198,13 @@ class TestValidPaths:
         lib_dir.mkdir()
 
         module_file = lib_dir / "utils.aifpl"
-        module_file.write_text("(alist (list \"square\" (lambda (x) (integer* x x))))")
+        module_file.write_text("(dict (list \"square\" (lambda (x) (integer* x x))))")
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
         result = aifpl.evaluate('''
 (let ((utils (import "lib/utils")))
-  ((alist-get utils "square") 5))
+  ((dict-get utils "square") 5))
 ''')
 
         assert result == 25
@@ -225,7 +225,7 @@ class TestModulePathUpdate:
         """Test that set_module_path clears the module cache."""
         # Create a module
         module_file = tmp_path / "test.aifpl"
-        module_file.write_text("(alist (list \"value\" 42))")
+        module_file.write_text("(dict (list \"value\" 42))")
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
@@ -262,15 +262,15 @@ class TestModulePathUpdate:
         dir2.mkdir()
 
         # Same module name, different content
-        (dir1 / "test.aifpl").write_text("(alist (list \"value\" 1))")
-        (dir2 / "test.aifpl").write_text("(alist (list \"value\" 2))")
+        (dir1 / "test.aifpl").write_text("(dict (list \"value\" 1))")
+        (dir2 / "test.aifpl").write_text("(dict (list \"value\" 2))")
 
         aifpl = AIFPL(module_path=[str(dir1)])
 
         # Load from first directory
         result1 = aifpl.evaluate('''
 (let ((mod (import "test")))
-  (alist-get mod "value"))
+  (dict-get mod "value"))
 ''')
         assert result1 == 1
 
@@ -280,7 +280,7 @@ class TestModulePathUpdate:
         # Load again - should get module from second directory
         result2 = aifpl.evaluate('''
 (let ((mod (import "test")))
-  (alist-get mod "value"))
+  (dict-get mod "value"))
 ''')
         assert result2 == 2
 
@@ -315,9 +315,9 @@ class TestCacheClearingBehavior:
     def test_clear_module_cache_removes_all_modules(self, tmp_path):
         """Test that clear_module_cache removes all cached modules."""
         # Create multiple modules
-        (tmp_path / "mod1.aifpl").write_text("(alist (list \"x\" 1))")
-        (tmp_path / "mod2.aifpl").write_text("(alist (list \"x\" 2))")
-        (tmp_path / "mod3.aifpl").write_text("(alist (list \"x\" 3))")
+        (tmp_path / "mod1.aifpl").write_text("(dict (list \"x\" 1))")
+        (tmp_path / "mod2.aifpl").write_text("(dict (list \"x\" 2))")
+        (tmp_path / "mod3.aifpl").write_text("(dict (list \"x\" 3))")
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
@@ -336,7 +336,7 @@ class TestCacheClearingBehavior:
     def test_cache_persists_across_evaluations(self, tmp_path):
         """Test that cache persists across multiple evaluations."""
         module_file = tmp_path / "persistent.aifpl"
-        module_file.write_text("(alist (list \"value\" 42))")
+        module_file.write_text("(dict (list \"value\" 42))")
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
@@ -351,7 +351,7 @@ class TestCacheClearingBehavior:
         # Third evaluation using the module
         result = aifpl.evaluate('''
 (let ((mod (import "persistent")))
-  (alist-get mod "value"))
+  (dict-get mod "value"))
 ''')
         assert result == 42
         assert "persistent" in aifpl.module_cache
@@ -359,7 +359,7 @@ class TestCacheClearingBehavior:
     def test_cache_not_shared_between_instances(self, tmp_path):
         """Test that different AIFPL instances don't share cache."""
         module_file = tmp_path / "test.aifpl"
-        module_file.write_text("(alist (list \"value\" 42))")
+        module_file.write_text("(dict (list \"value\" 42))")
 
         aifpl1 = AIFPL(module_path=[str(tmp_path)])
         aifpl2 = AIFPL(module_path=[str(tmp_path)])
@@ -389,7 +389,7 @@ class TestSecurityScenarios:
         # Create a module in the allowed directory
         allowed_dir = tmp_path / "allowed"
         allowed_dir.mkdir()
-        (allowed_dir / "safe.aifpl").write_text("(alist (list \"x\" 1))")
+        (allowed_dir / "safe.aifpl").write_text("(dict (list \"x\" 1))")
 
         aifpl = AIFPL(module_path=[str(allowed_dir)])
 
@@ -407,7 +407,7 @@ class TestSecurityScenarios:
         allowed_dir.mkdir()
         forbidden_dir.mkdir()
 
-        (forbidden_dir / "secret.aifpl").write_text("(alist (list \"secret\" 42))")
+        (forbidden_dir / "secret.aifpl").write_text("(dict (list \"secret\" 42))")
 
         aifpl = AIFPL(module_path=[str(allowed_dir)])
 
@@ -426,7 +426,7 @@ class TestSecurityScenarios:
         utils_dir.mkdir(parents=True)
 
         module_file = utils_dir / "helper.aifpl"
-        module_file.write_text("(alist (list \"value\" 42))")
+        module_file.write_text("(dict (list \"value\" 42))")
 
         aifpl = AIFPL(module_path=[str(base_dir)])
 
@@ -485,7 +485,7 @@ class TestEdgeCases:
         """Test that module names with spaces work if file exists."""
         # Create module with space in name
         module_file = tmp_path / "my module.aifpl"
-        module_file.write_text("(alist (list \"x\" 1))")
+        module_file.write_text("(dict (list \"x\" 1))")
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
@@ -497,7 +497,7 @@ class TestEdgeCases:
         """Test that module names with unicode characters work."""
         # Create module with unicode name
         module_file = tmp_path / "日本語.aifpl"
-        module_file.write_text("(alist (list \"x\" 1))")
+        module_file.write_text("(dict (list \"x\" 1))")
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 

@@ -1,7 +1,7 @@
 """AIFPL Module Resolver Pass - resolves import expressions at compile-time.
 
 This pass walks the AST looking for (import "module-name") expressions and
-replaces them with the loaded module's alist value. It uses a ModuleLoader
+replaces them with the loaded module's dict value. It uses a ModuleLoader
 interface to delegate the actual module loading logic.
 """
 
@@ -72,7 +72,7 @@ class AIFPLModuleResolver:
     This pass transforms:
         (import "calendar")
     Into:
-        (alist (list "add-days" <function>) (list "working-days" <function>) ...)
+        (dict (list "add-days" <function>) (list "working-days" <function>) ...)
 
     The actual module loading is delegated to a ModuleLoader interface.
     """
@@ -125,7 +125,7 @@ class AIFPLModuleResolver:
             expr: Import expression (validated by semantic analyzer)
 
         Returns:
-            The loaded module's alist value
+            The loaded module's dict value
 
         Raises:
             AIFPLModuleError: If module cannot be loaded

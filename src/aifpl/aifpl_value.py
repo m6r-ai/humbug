@@ -336,9 +336,9 @@ class AIFPLList(AIFPLValue):
 
 
 @dataclass(frozen=True)
-class AIFPLAList(AIFPLValue):
+class AIFPLDict(AIFPLValue):
     """
-    Represents association lists (alists) - immutable key-value mappings.
+    Represents dictionaries - immutable key-value mappings.
 
     Internally uses a dict for O(1) lookups while maintaining insertion order.
     Keys must be hashable (strings, numbers, booleans, symbols).
@@ -375,10 +375,10 @@ class AIFPLAList(AIFPLValue):
 
     def type_name(self) -> str:
         """Return type name for error messages."""
-        return "alist"
+        return "dict"
 
     def describe(self) -> str:
-        # Format alist with curly braces: {(key1 val1) (key2 val2) ...}
+        # Format dict with curly braces: {(key1 val1) (key2 val2) ...}
         if self.is_empty():
             return "{}"
 
@@ -405,8 +405,8 @@ class AIFPLAList(AIFPLValue):
         hashable_key = self._to_hashable_key(key)
         return hashable_key in self._lookup
 
-    def set(self, key: AIFPLValue, value: AIFPLValue) -> 'AIFPLAList':
-        """Return new alist with key set (immutable update)."""
+    def set(self, key: AIFPLValue, value: AIFPLValue) -> 'AIFPLDict':
+        """Return new dict with key set (immutable update)."""
         hashable_key = self._to_hashable_key(key)
 
         # Build new pairs list, replacing or appending
@@ -424,16 +424,16 @@ class AIFPLAList(AIFPLValue):
         if not found:
             new_pairs.append((key, value))  # Append new pair
 
-        return AIFPLAList(tuple(new_pairs))
+        return AIFPLDict(tuple(new_pairs))
 
-    def remove(self, key: AIFPLValue) -> 'AIFPLAList':
-        """Return new alist without key."""
+    def remove(self, key: AIFPLValue) -> 'AIFPLDict':
+        """Return new dict without key."""
         hashable_key = self._to_hashable_key(key)
         new_pairs = tuple(
             (k, v) for k, v in self.pairs
             if self._to_hashable_key(k) != hashable_key
         )
-        return AIFPLAList(new_pairs)
+        return AIFPLDict(new_pairs)
 
     def keys(self) -> Tuple[AIFPLValue, ...]:
         """Get all keys in insertion order."""
@@ -443,8 +443,8 @@ class AIFPLAList(AIFPLValue):
         """Get all values in insertion order."""
         return tuple(v for _, v in self.pairs)
 
-    def merge(self, other: 'AIFPLAList') -> 'AIFPLAList':
-        """Merge with another alist (other's values win on conflicts)."""
+    def merge(self, other: 'AIFPLDict') -> 'AIFPLDict':
+        """Merge with another dict (other's values win on conflicts)."""
         # Start with self's pairs
         result_dict = {}
         for k, v in self.pairs:
@@ -472,14 +472,14 @@ class AIFPLAList(AIFPLValue):
             if hashable_key not in seen:
                 new_pairs.append((k, v))
 
-        return AIFPLAList(tuple(new_pairs))
+        return AIFPLDict(tuple(new_pairs))
 
     def length(self) -> int:
         """Number of key-value pairs."""
         return len(self.pairs)
 
     def is_empty(self) -> bool:
-        """Check if alist is empty."""
+        """Check if dict is empty."""
         return len(self.pairs) == 0
 
     @staticmethod
@@ -498,8 +498,8 @@ class AIFPLAList(AIFPLValue):
             return ('sym', key.name)
 
         raise AIFPLEvalError(
-            message="AList keys must be strings, numbers, booleans, or symbols",
+            message="Dict keys must be strings, numbers, booleans, or symbols",
             received=f"Key type: {key.type_name()}",
-            example='(alist ("name" "Alice") ("age" 30))',
+            example='(dict ("name" "Alice") ("age" 30))',
             suggestion="Use strings for most keys"
         )

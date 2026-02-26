@@ -74,13 +74,13 @@ class TestZip:
             '(5 7 9)'
         )
 
-    def test_zip_to_build_alist(self, aifpl, helpers):
-        """Test using zip to build an alist from keys and values."""
+    def test_zip_to_build_dict(self, aifpl, helpers):
+        """Test using zip to build an dict from keys and values."""
         helpers.assert_evaluates_to(
             aifpl,
             '''(list-fold (lambda (acc pair)
-                            (alist-set acc (list-first pair) (list-first (list-rest pair))))
-                          (alist)
+                            (dict-set acc (list-first pair) (list-first (list-rest pair))))
+                          (dict)
                           (list-zip (list "a" "b" "c") (list 1 2 3)))''',
             '{("a" 1) ("b" 2) ("c" 3)}'
         )

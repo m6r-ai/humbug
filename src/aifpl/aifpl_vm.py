@@ -11,7 +11,7 @@ from aifpl.aifpl_bytecode import CodeObject, Opcode
 from aifpl.aifpl_bytecode_validator import validate_bytecode
 from aifpl.aifpl_error import AIFPLEvalError, AIFPLCancelledException
 from aifpl.aifpl_value import (
-    AIFPLValue, AIFPLBoolean, AIFPLString, AIFPLList, AIFPLAList, AIFPLFunction,
+    AIFPLValue, AIFPLBoolean, AIFPLString, AIFPLList, AIFPLDict, AIFPLFunction,
     AIFPLInteger, AIFPLComplex, AIFPLFloat, AIFPLSymbol
 )
 
@@ -295,18 +295,18 @@ class AIFPLVM:
         table[Opcode.STRING_SLICE] = self._op_string_slice
         table[Opcode.STRING_REPLACE] = self._op_string_replace
         table[Opcode.STRING_INDEX] = self._op_string_index
-        table[Opcode.ALIST] = self._op_alist
-        table[Opcode.ALIST_P] = self._op_alist_p
-        table[Opcode.ALIST_EQ_P] = self._op_alist_eq_p
-        table[Opcode.ALIST_NEQ_P] = self._op_alist_neq_p
-        table[Opcode.ALIST_KEYS] = self._op_alist_keys
-        table[Opcode.ALIST_VALUES] = self._op_alist_values
-        table[Opcode.ALIST_LENGTH] = self._op_alist_length
-        table[Opcode.ALIST_HAS_P] = self._op_alist_has_p
-        table[Opcode.ALIST_REMOVE] = self._op_alist_remove
-        table[Opcode.ALIST_MERGE] = self._op_alist_merge
-        table[Opcode.ALIST_SET] = self._op_alist_set
-        table[Opcode.ALIST_GET] = self._op_alist_get
+        table[Opcode.DICT] = self._op_dict
+        table[Opcode.DICT_P] = self._op_dict_p
+        table[Opcode.DICT_EQ_P] = self._op_dict_eq_p
+        table[Opcode.DICT_NEQ_P] = self._op_dict_neq_p
+        table[Opcode.DICT_KEYS] = self._op_dict_keys
+        table[Opcode.DICT_VALUES] = self._op_dict_values
+        table[Opcode.DICT_LENGTH] = self._op_dict_length
+        table[Opcode.DICT_HAS_P] = self._op_dict_has_p
+        table[Opcode.DICT_REMOVE] = self._op_dict_remove
+        table[Opcode.DICT_MERGE] = self._op_dict_merge
+        table[Opcode.DICT_SET] = self._op_dict_set
+        table[Opcode.DICT_GET] = self._op_dict_get
         table[Opcode.LIST] = self._op_list
         table[Opcode.LIST_P] = self._op_list_p
         table[Opcode.LIST_EQ_P] = self._op_list_eq_p
@@ -389,10 +389,10 @@ class AIFPLVM:
 
         return value.value
 
-    def _ensure_alist(self, value: AIFPLValue, function_name: str) -> AIFPLAList:
-        """Ensure value is an alist, raise error if not."""
-        if not isinstance(value, AIFPLAList):
-            raise AIFPLEvalError(f"Function '{function_name}' requires alist arguments, got {value.type_name()}")
+    def _ensure_dict(self, value: AIFPLValue, function_name: str) -> AIFPLDict:
+        """Ensure value is an dict, raise error if not."""
+        if not isinstance(value, AIFPLDict):
+            raise AIFPLEvalError(f"Function '{function_name}' requires dict arguments, got {value.type_name()}")
 
         return value
 
@@ -2242,16 +2242,16 @@ class AIFPLVM:
         self.stack.append(AIFPLString(self._ensure_string(a, 'string-concat') + self._ensure_string(b, 'string-concat')))
         return None
 
-    def _op_alist(  # pylint: disable=useless-return
+    def _op_dict(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, n: int, _arg2: int
     ) -> AIFPLValue | None:
-        """ALIST n: Pop n 2-element AIFPLList pair objects, push AIFPLAList.
+        """DICT n: Pop n 2-element AIFPLList pair objects, push AIFPLDict.
 
         Each pair on the stack is a 2-element list (list key value), matching the
-        existing (alist (list k1 v1) (list k2 v2) ...) calling convention.
+        existing (dict (list k1 v1) (list k2 v2) ...) calling convention.
         """
         if n == 0:
-            self.stack.append(AIFPLAList(()))
+            self.stack.append(AIFPLDict(()))
             return None
 
         pair_lists = self.stack[-n:]
@@ -2260,114 +2260,114 @@ class AIFPLVM:
         for i, pair_list in enumerate(pair_lists):
             if not isinstance(pair_list, AIFPLList):
                 raise AIFPLEvalError(
-                    f"AList pair {i + 1} must be a list"
+                    f"Dict pair {i + 1} must be a list"
                 )
 
             if len(pair_list.elements) != 2:
                 raise AIFPLEvalError(
-                    f"AList pair {i + 1} must have exactly 2 elements"
+                    f"Dict pair {i + 1} must have exactly 2 elements"
                 )
 
             pairs.append((pair_list.elements[0], pair_list.elements[1]))
 
-        self.stack.append(AIFPLAList(tuple(pairs)))
+        self.stack.append(AIFPLDict(tuple(pairs)))
         return None
 
-    def _op_alist_p(  # pylint: disable=useless-return
+    def _op_dict_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """ALIST_P: Check if value is an alist."""
+        """DICT_P: Check if value is an dict."""
         value = self.stack.pop()
-        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLAList)))
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLDict)))
         return None
 
-    def _op_alist_eq_p(  # pylint: disable=useless-return
+    def _op_dict_eq_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """ALIST_EQ_P: Pop two values, push true if both are alists and equal."""
+        """DICT_EQ_P: Pop two values, push true if both are dicts and equal."""
         b = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(self._ensure_alist(a, 'alist=?') == self._ensure_alist(b, 'alist=?')))
+        self.stack.append(AIFPLBoolean(self._ensure_dict(a, 'dict=?') == self._ensure_dict(b, 'dict=?')))
         return None
 
-    def _op_alist_neq_p(  # pylint: disable=useless-return
+    def _op_dict_neq_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """ALIST_NEQ_P: Pop two values, push true if both are alists and not equal."""
+        """DICT_NEQ_P: Pop two values, push true if both are dicts and not equal."""
         b = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(self._ensure_alist(a, 'alist!=?') != self._ensure_alist(b, 'alist!=?')))
+        self.stack.append(AIFPLBoolean(self._ensure_dict(a, 'dict!=?') != self._ensure_dict(b, 'dict!=?')))
         return None
 
-    def _op_alist_keys(  # pylint: disable=useless-return
+    def _op_dict_keys(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """ALIST_KEYS: Pop an alist, push list of its keys."""
+        """DICT_KEYS: Pop an dict, push list of its keys."""
         a = self.stack.pop()
-        self.stack.append(AIFPLList(self._ensure_alist(a, 'alist-keys').keys()))
+        self.stack.append(AIFPLList(self._ensure_dict(a, 'dict-keys').keys()))
         return None
 
-    def _op_alist_values(  # pylint: disable=useless-return
+    def _op_dict_values(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """ALIST_VALUES: Pop an alist, push list of its values."""
+        """DICT_VALUES: Pop an dict, push list of its values."""
         a = self.stack.pop()
-        self.stack.append(AIFPLList(self._ensure_alist(a, 'alist-values').values()))
+        self.stack.append(AIFPLList(self._ensure_dict(a, 'dict-values').values()))
         return None
 
-    def _op_alist_length(  # pylint: disable=useless-return
+    def _op_dict_length(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """ALIST_LENGTH: Pop an alist, push its length."""
+        """DICT_LENGTH: Pop an dict, push its length."""
         a = self.stack.pop()
-        self.stack.append(AIFPLInteger(self._ensure_alist(a, 'alist-length').length()))
+        self.stack.append(AIFPLInteger(self._ensure_dict(a, 'dict-length').length()))
         return None
 
-    def _op_alist_has_p(  # pylint: disable=useless-return
+    def _op_dict_has_p(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """ALIST_HAS_P: Pop a key and alist, push true if alist contains key."""
+        """DICT_HAS_P: Pop a key and dict, push true if dict contains key."""
         key = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append(AIFPLBoolean(self._ensure_alist(a, 'alist-has?').has_key(key)))
+        self.stack.append(AIFPLBoolean(self._ensure_dict(a, 'dict-has?').has_key(key)))
         return None
 
-    def _op_alist_remove(  # pylint: disable=useless-return
+    def _op_dict_remove(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """ALIST_REMOVE: Pop a key and alist, push new alist without that key."""
+        """DICT_REMOVE: Pop a key and dict, push new dict without that key."""
         key = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append(self._ensure_alist(a, 'alist-remove').remove(key))
+        self.stack.append(self._ensure_dict(a, 'dict-remove').remove(key))
         return None
 
-    def _op_alist_merge(  # pylint: disable=useless-return
+    def _op_dict_merge(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """ALIST_MERGE: Pop two alists, push merged alist (second wins on conflicts)."""
+        """DICT_MERGE: Pop two dicts, push merged dict (second wins on conflicts)."""
         b = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append(self._ensure_alist(a, 'alist-merge').merge(self._ensure_alist(b, 'alist-merge')))
+        self.stack.append(self._ensure_dict(a, 'dict-merge').merge(self._ensure_dict(b, 'dict-merge')))
         return None
 
-    def _op_alist_set(  # pylint: disable=useless-return
+    def _op_dict_set(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """ALIST_SET: Pop value, key, and alist, push new alist with key set to value."""
+        """DICT_SET: Pop value, key, and dict, push new dict with key set to value."""
         value = self.stack.pop()
         key = self.stack.pop()
         a = self.stack.pop()
-        self.stack.append(self._ensure_alist(a, 'alist-set').set(key, value))
+        self.stack.append(self._ensure_dict(a, 'dict-set').set(key, value))
         return None
 
-    def _op_alist_get(  # pylint: disable=useless-return
+    def _op_dict_get(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """ALIST_GET: Pop default, key, and alist, push value or default if not found."""
+        """DICT_GET: Pop default, key, and dict, push value or default if not found."""
         default = self.stack.pop()
         key = self.stack.pop()
         a = self.stack.pop()
-        result = self._ensure_alist(a, 'alist-get').get(key)
+        result = self._ensure_dict(a, 'dict-get').get(key)
         self.stack.append(result if result is not None else default)
         return None
 

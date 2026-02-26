@@ -73,7 +73,7 @@ optimizations are applied across module boundaries.
 ## The Prelude
 
 Many built-in functions that appear variadic (e.g. `integer+`, `float*`, `string-concat`,
-`list`, `list-concat`, `alist`, all typed comparison operators) are **implemented in AIFPL
+`list`, `list-concat`, `dict`, all typed comparison operators) are **implemented in AIFPL
 itself** as lambdas in `_PRELUDE_SOURCE` inside `aifpl.py`. They fold over the
 fixed binary-opcode versions internally.
 
@@ -99,7 +99,7 @@ There are three categories of builtin:
   | `string->list` | `delimiter` | `""` (empty string → split into characters) |
   | `list-slice` | `end` | `(list-length lst)` — re-evaluates the list arg |
   | `list->string` | `separator` | `""` (empty string → concatenate without separator) |
-  | `alist-get` | `default` | `#f` |
+  | `dict-get` | `default` | `#f` |
 
 `AIFPLBuiltinRegistry.BUILTIN_OPCODE_ARITIES` is the arity table for **opcode-backed
 builtins only** and is consumed by both the semantic analyser and the registry itself.
@@ -136,7 +136,7 @@ The IR builder resolves all variable references to one of three addressing modes
   for single-argument calls. Prefer `integer-neg` when unary negation is the intent.
 - **`symbol` type**: Symbols are produced only by `quote`. There is no `symbol->string`
   or `string->symbol` conversion by design — symbols exist to support homoiconicity
-  (code-as-data), not as a general-purpose key type. Use strings for alist keys.
+  (code-as-data), not as a general-purpose key type. Use strings for dict keys.
 - **Tail call optimization**: TCO is detected in `aifpl_ir_builder.py` (sets
   `is_tail_call` on `AIFPLIRCall`) and implemented via the `TAIL_CALL` opcode in the
   VM. It is correctly propagated through `let`/`let*`/`letrec` bodies, `if` branches,
@@ -183,7 +183,7 @@ in `aifpl_value.py`. The full hierarchy:
 - `AIFPLBoolean` — Python `bool`
 - `AIFPLSymbol` — interned name (used for quoted symbols)
 - `AIFPLList` — backed by a Python `tuple` (proper lists only, no cons cells)
-- `AIFPLAList` — tuple of `(key, value)` pairs + hash-backed dict for O(1) lookup
+- `AIFPLDict` — tuple of `(key, value)` pairs + hash-backed dict for O(1) lookup
 - `AIFPLFunction` — compiled lambda or builtin stub; carries `CodeObject`, captured
   values, and variadic flag
 

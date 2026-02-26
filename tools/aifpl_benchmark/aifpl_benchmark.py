@@ -337,14 +337,14 @@ BENCHMARKS = [
     Benchmark("String Replace", "strings", '(string-replace "hello world" "world" "universe")', iterations=3000),
     Benchmark("String Slice", "strings", '(string-slice "hello world" 0 5)', iterations=5000),
 
-    # === ALIST OPERATIONS ===
-    Benchmark("Alist Creation (5)", "alists", '(alist (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4) (list "e" 5))', iterations=3000),
-    Benchmark("Alist Creation (10)", "alists", '(alist (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4) (list "e" 5) (list "f" 6) (list "g" 7) (list "h" 8) (list "i" 9) (list "j" 10))', iterations=2000),
-    Benchmark("Alist Get", "alists", '(alist-get (alist (list "name" "Alice") (list "age" 30) (list "city" "NYC")) "age")', iterations=3000),
-    Benchmark("Alist Set", "alists", '(alist-set (alist (list "name" "Alice") (list "age" 30)) "age" 31)', iterations=2000),
-    Benchmark("Alist Has", "alists", '(alist-has? (alist (list "name" "Alice") (list "age" 30)) "name")', iterations=3000),
-    Benchmark("Alist Keys", "alists", '(alist-keys (alist (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4) (list "e" 5)))', iterations=2000),
-    Benchmark("Alist Merge", "alists", '(alist-merge (alist (list "a" 1) (list "b" 2)) (alist (list "c" 3) (list "d" 4)))', iterations=2000),
+    # === DICT OPERATIONS ===
+    Benchmark("Alist Creation (5)", "dicts", '(dict (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4) (list "e" 5))', iterations=3000),
+    Benchmark("Alist Creation (10)", "dicts", '(dict (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4) (list "e" 5) (list "f" 6) (list "g" 7) (list "h" 8) (list "i" 9) (list "j" 10))', iterations=2000),
+    Benchmark("Alist Get", "dicts", '(dict-get (dict (list "name" "Alice") (list "age" 30) (list "city" "NYC")) "age")', iterations=3000),
+    Benchmark("Alist Set", "dicts", '(dict-set (dict (list "name" "Alice") (list "age" 30)) "age" 31)', iterations=2000),
+    Benchmark("Alist Has", "dicts", '(dict-has? (dict (list "name" "Alice") (list "age" 30)) "name")', iterations=3000),
+    Benchmark("Alist Keys", "dicts", '(dict-keys (dict (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4) (list "e" 5)))', iterations=2000),
+    Benchmark("Alist Merge", "dicts", '(dict-merge (dict (list "a" 1) (list "b" 2)) (dict (list "c" 3) (list "d" 4)))', iterations=2000),
 
     # === PATTERN MATCHING ===
     Benchmark("Pattern Match Literal", "match", "(match 42 (42 \"found\") (_ \"not found\"))", iterations=3000),
@@ -370,30 +370,30 @@ BENCHMARKS = [
     Benchmark("Type Checks", "types", "(and (integer? 42) (string? \"hi\") (boolean? #t) (list? (list 1 2)))", iterations=5000),
     Benchmark("Integer/Float/Complex", "types", "(and (integer? 42) (float? 3.14) (complex? (integer->complex 1 2)))", iterations=3000),
 
-    # === REALISTIC WORKLOADS ===
-    Benchmark("Data Processing", "realistic",
+    # === REDICTIC WORKLOADS ===
+    Benchmark("Data Processing", "redictic",
               """(let ((data (range 1 21)))
                    (list-fold integer+ 0 (list-map (lambda (x) (integer* x x)) (list-filter (lambda (x) (integer>? x 10)) data))))""", iterations=200),
-    Benchmark("Nested Data Structure", "realistic",
+    Benchmark("Nested Data Structure", "redictic",
               """(let ((users (list
-                              (alist (list "name" "Alice") (list "age" 30))
-                              (alist (list "name" "Bob") (list "age" 25))
-                              (alist (list "name" "Charlie") (list "age" 35)))))
-                   (list-map (lambda (user) (alist-get user "age")) users))""", iterations=500),
-    Benchmark("Recursive List Processing", "realistic",
+                              (dict (list "name" "Alice") (list "age" 30))
+                              (dict (list "name" "Bob") (list "age" 25))
+                              (dict (list "name" "Charlie") (list "age" 35)))))
+                   (list-map (lambda (user) (dict-get user "age")) users))""", iterations=500),
+    Benchmark("Recursive List Processing", "redictic",
               """(letrec ((sum-list (lambda (lst)
                                      (if (list-null? lst)
                                          0
                                          (integer+ (list-first lst) (sum-list (list-rest lst)))))))
                    (sum-list (list 1 2 3 4 5 6 7 8 9 10)))""", iterations=500),
-    Benchmark("Pattern Match Pipeline", "realistic",
+    Benchmark("Pattern Match Pipeline", "redictic",
               """(list-map (lambda (x)
                                (match x
                                  ((integer? i) (integer* i 2))
                                  ((string? s) (string-length s))
                                  (_ 0)))
                              (list 1 2 "hello" 3 "world" 4))""", iterations=500),
-    Benchmark("Closure-based Counter", "realistic",
+    Benchmark("Closure-based Counter", "redictic",
               """(let ((make-counter (lambda (start)
                                       (lambda (inc) (integer+ start inc)))))
                    (let ((counter (make-counter 10)))

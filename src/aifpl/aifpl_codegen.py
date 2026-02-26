@@ -26,7 +26,7 @@ TERNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if a
 # count of elements is encoded directly in the instruction argument.
 BUILD_OPS = {
     'list': Opcode.LIST,
-    'alist': Opcode.ALIST,
+    'dict': Opcode.DICT,
 }
 
 
@@ -59,7 +59,7 @@ class AIFPLCodeGenContext:
             key: Any = (type(value).__name__, value.value)
 
         else:
-            # For other types (lists, alists, functions, symbols), use the value itself as key
+            # For other types (lists, dicts, functions, symbols), use the value itself as key
             # These types don't have problematic cross-type equality
             key = value
 
@@ -552,15 +552,15 @@ class AIFPLCodeGen:
                 ctx.emit(Opcode.LIST_TO_STRING)
                 return
 
-            # Handle alist-get: synthesise missing default as #f
-            if builtin_name == 'alist-get':
+            # Handle dict-get: synthesise missing default as #f
+            if builtin_name == 'dict-get':
                 for arg_plan in plan.arg_plans:
                     self._generate_expr(arg_plan, ctx)
 
                 if len(plan.arg_plans) == 2:
                     ctx.emit(Opcode.LOAD_FALSE)
 
-                ctx.emit(Opcode.ALIST_GET)
+                ctx.emit(Opcode.DICT_GET)
                 return
 
             # Generate arguments

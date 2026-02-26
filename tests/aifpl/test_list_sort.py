@@ -83,15 +83,15 @@ class TestListSortStability:
 
     def test_sort_stable_by_key(self, tool):
         """Test that sort is stable: equal keys preserve original order."""
-        # Sort alists by a numeric field; equal values should stay in original order
+        # Sort dicts by a numeric field; equal values should stay in original order
         result = tool.evaluate("""
             (list-sort
-              (lambda (a b) (integer<? (alist-get a "key") (alist-get b "key")))
+              (lambda (a b) (integer<? (dict-get a "key") (dict-get b "key")))
               (list
-                (alist (list "key" 2) (list "id" "first"))
-                (alist (list "key" 1) (list "id" "second"))
-                (alist (list "key" 2) (list "id" "third"))
-                (alist (list "key" 1) (list "id" "fourth"))))
+                (dict (list "key" 2) (list "id" "first"))
+                (dict (list "key" 1) (list "id" "second"))
+                (dict (list "key" 2) (list "id" "third"))
+                (dict (list "key" 1) (list "id" "fourth"))))
         """)
         ids = [entry["id"] for entry in result]
         assert ids == ["second", "fourth", "first", "third"]
@@ -118,15 +118,15 @@ class TestListSortCustomComparator:
         """)
         assert result == ["fig", "kiwi", "date", "apple", "banana"]
 
-    def test_sort_alists_by_field(self, tool):
-        """Test sorting alists by a specific field."""
+    def test_sort_dicts_by_field(self, tool):
+        """Test sorting dicts by a specific field."""
         result = tool.evaluate("""
             (list-sort
-              (lambda (a b) (integer<? (alist-get a "age") (alist-get b "age")))
+              (lambda (a b) (integer<? (dict-get a "age") (dict-get b "age")))
               (list
-                (alist (list "name" "Charlie") (list "age" 30))
-                (alist (list "name" "Alice") (list "age" 25))
-                (alist (list "name" "Bob") (list "age" 35))))
+                (dict (list "name" "Charlie") (list "age" 30))
+                (dict (list "name" "Alice") (list "age" 25))
+                (dict (list "name" "Bob") (list "age" 35))))
         """)
         names = [entry["name"] for entry in result]
         assert names == ["Alice", "Charlie", "Bob"]

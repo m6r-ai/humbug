@@ -516,59 +516,59 @@ class AIFPL:
                                             (right (sort cmp (list-slice lst mid))))
                                        (merge cmp left right (list))))))))
                       (sort cmp lst)))""",
-        'alist': """(lambda (. args)
+        'dict': """(lambda (. args)
                       (letrec ((loop (lambda (pairs acc)
                                        (if (list-null? pairs) acc
                                            (if (boolean-not (list? (list-first pairs)))
-                                               (error "alist: each argument must be a 2-element list")
+                                               (error "dict: each argument must be a 2-element list")
                                                (if (!= (list-length (list-first pairs)) 2)
-                                                   (error "alist: each argument must be a 2-element list")
+                                                   (error "dict: each argument must be a 2-element list")
                                                    (loop (list-rest pairs)
-                                                         (alist-set acc
+                                                         (dict-set acc
                                                                     (list-first (list-first pairs))
                                                                     (list-first (list-rest (list-first pairs)))))))))))
-                        (loop args (alist))))""",
-        'alist=?': """(lambda (. args)
+                        (loop args (dict))))""",
+        'dict=?': """(lambda (. args)
                         (if (integer<? (list-length args) 2)
-                          (error "Function 'alist=?' requires at least 2 arguments")
+                          (error "Function 'dict=?' requires at least 2 arguments")
                           (letrec ((loop (lambda (lst prev)
                                            (if (list-null? lst) #t
-                                               (if (alist=? prev (list-first lst))
+                                               (if (dict=? prev (list-first lst))
                                                    (loop (list-rest lst) (list-first lst))
                                                    #f)))))
                             (loop (list-rest args) (list-first args)))))""",
-        'alist!=?': """(lambda (. args)
+        'dict!=?': """(lambda (. args)
                             (if (integer<? (list-length args) 2)
-                              (error "Function 'alist!=?' requires at least 2 arguments")
+                              (error "Function 'dict!=?' requires at least 2 arguments")
                               (letrec ((outer (lambda (lst)
                                                 (if (list-null? lst) #t
                                                     (letrec ((inner (lambda (rest-lst)
                                                                       (if (list-null? rest-lst)
                                                                           (outer (list-rest lst))
-                                                                          (if (alist!=? (list-first lst) (list-first rest-lst))
+                                                                          (if (dict!=? (list-first lst) (list-first rest-lst))
                                                                               (inner (list-rest rest-lst))
                                                                               #f)))))
                                                       (inner (list-rest lst)))))))
                                 (outer args))))""",
-        'alist-get': """(lambda (a-list key . rest)
-                          (alist-get a-list key (if (list-null? rest) #f (list-first rest))))""",
-        'alist-map': """(lambda (f al)
+        'dict-get': """(lambda (a-list key . rest)
+                          (dict-get a-list key (if (list-null? rest) #f (list-first rest))))""",
+        'dict-map': """(lambda (f al)
                     (letrec ((loop (lambda (keys acc)
                                      (if (list-null? keys) acc
                                          (let* ((k (list-first keys))
-                                                (v (alist-get al k)))
+                                                (v (dict-get al k)))
                                            (loop (list-rest keys)
-                                                 (alist-set acc k (f k v))))))))
-                      (loop (alist-keys al) (alist))))""",
-        'alist-filter': """(lambda (pred al)
+                                                 (dict-set acc k (f k v))))))))
+                      (loop (dict-keys al) (dict))))""",
+        'dict-filter': """(lambda (pred al)
                     (letrec ((loop (lambda (keys acc)
                                      (if (list-null? keys) acc
                                          (let* ((k (list-first keys))
-                                                (v (alist-get al k)))
+                                                (v (dict-get al k)))
                                            (if (pred k v)
-                                               (loop (list-rest keys) (alist-set acc k v))
+                                               (loop (list-rest keys) (dict-set acc k v))
                                                (loop (list-rest keys) acc)))))))
-                      (loop (alist-keys al) (alist))))""",
+                      (loop (dict-keys al) (dict))))""",
         'range': """(lambda (start end . rest)
                       (range start end (if (list-null? rest) 1 (list-first rest))))""",
     }
@@ -612,7 +612,7 @@ class AIFPL:
         self._module_path = module_path or ["."]
 
         # Module system state
-        self.module_cache: Dict[str, AIFPLASTNode] = {}  # module_name -> alist
+        self.module_cache: Dict[str, AIFPLASTNode] = {}  # module_name -> dict
         self.module_hashes: Dict[str, str] = {}  # module_name -> sha256 hex digest
         self.loading_stack: List[str] = []  # Track currently-loading modules for circular detection
 

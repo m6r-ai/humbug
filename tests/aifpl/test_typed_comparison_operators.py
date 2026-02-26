@@ -2,7 +2,7 @@
 
 This module tests:
 - Type-specific not-equals predicates (!=?) for all typed equality types:
-    boolean!=?, integer!=?, float!=?, complex!=?, string!=?, list!=?, alist!=?
+    boolean!=?, integer!=?, float!=?, complex!=?, string!=?, list!=?, dict!=?
 - Type-specific ordered comparison predicates for integer, float, and string:
     integer<?, integer>?, integer<=?, integer>=?
     float<?,   float>?,   float<=?,   float>=?
@@ -203,29 +203,29 @@ class TestListNeqP:
 
 
 class TestAlistNeqP:
-    """Tests for alist!=?"""
+    """Tests for dict!=?"""
 
-    def test_unequal_alists(self, aifpl):
-        assert aifpl.evaluate('(alist!=? (alist (list "a" 1)) (alist (list "a" 2)))') is True
-        assert aifpl.evaluate('(alist!=? (alist) (alist (list "a" 1)))') is True
+    def test_unequal_dicts(self, aifpl):
+        assert aifpl.evaluate('(dict!=? (dict (list "a" 1)) (dict (list "a" 2)))') is True
+        assert aifpl.evaluate('(dict!=? (dict) (dict (list "a" 1)))') is True
 
-    def test_equal_alists(self, aifpl):
-        assert aifpl.evaluate('(alist!=? (alist) (alist))') is False
-        assert aifpl.evaluate('(alist!=? (alist (list "a" 1)) (alist (list "a" 1)))') is False
+    def test_equal_dicts(self, aifpl):
+        assert aifpl.evaluate('(dict!=? (dict) (dict))') is False
+        assert aifpl.evaluate('(dict!=? (dict (list "a" 1)) (dict (list "a" 1)))') is False
 
-    def test_rejects_non_alist(self, aifpl):
-        with pytest.raises(AIFPLEvalError, match="alist!=.*requires alist arguments.*list"):
-            aifpl.evaluate('(alist!=? (alist) (list 1 2))')
+    def test_rejects_non_dict(self, aifpl):
+        with pytest.raises(AIFPLEvalError, match="dict!=.*requires dict arguments.*list"):
+            aifpl.evaluate('(dict!=? (dict) (list 1 2))')
 
-        with pytest.raises(AIFPLEvalError, match="alist!=.*requires alist arguments.*integer"):
-            aifpl.evaluate('(alist!=? (alist) 42)')
+        with pytest.raises(AIFPLEvalError, match="dict!=.*requires dict arguments.*integer"):
+            aifpl.evaluate('(dict!=? (dict) 42)')
 
     def test_wrong_arity(self, aifpl):
-        with pytest.raises(AIFPLEvalError, match="alist!=.*has wrong number of arguments"):
-            aifpl.evaluate('(alist!=?)')
+        with pytest.raises(AIFPLEvalError, match="dict!=.*has wrong number of arguments"):
+            aifpl.evaluate('(dict!=?)')
 
-        with pytest.raises(AIFPLEvalError, match="alist!=.*has wrong number of arguments"):
-            aifpl.evaluate('(alist!=? (alist))')
+        with pytest.raises(AIFPLEvalError, match="dict!=.*has wrong number of arguments"):
+            aifpl.evaluate('(dict!=? (dict))')
 
 
 # ---------------------------------------------------------------------------
@@ -543,15 +543,15 @@ class TestNeqPConsistencyWithEqP:
             neq = aifpl.evaluate(f'(list!=? {a} {b})')
             assert eq != neq, f"list=? and list!=? agree on ({a}, {b})"
 
-    def test_alist_neq_is_negation_of_eq(self, aifpl):
+    def test_dict_neq_is_negation_of_eq(self, aifpl):
         cases = [
-            ('(alist)', '(alist)'),
-            ('(alist (list "k" 1))', '(alist (list "k" 2))'),
+            ('(dict)', '(dict)'),
+            ('(dict (list "k" 1))', '(dict (list "k" 2))'),
         ]
         for a, b in cases:
-            eq = aifpl.evaluate(f'(alist=? {a} {b})')
-            neq = aifpl.evaluate(f'(alist!=? {a} {b})')
-            assert eq != neq, f"alist=? and alist!=? agree on ({a}, {b})"
+            eq = aifpl.evaluate(f'(dict=? {a} {b})')
+            neq = aifpl.evaluate(f'(dict!=? {a} {b})')
+            assert eq != neq, f"dict=? and dict!=? agree on ({a}, {b})"
 
 
 class TestOrderedComparisonConsistency:

@@ -563,21 +563,21 @@ class TestLetrecLambdasInDataStructures:
                   ((list-first x) 4))''',
             '4'  # Mutual recursion works
         )
-    def test_lambda_in_alist(self, aifpl, helpers):
-        """Test lambda nested in alist."""
-        # Lambda as value in alist
+    def test_lambda_in_dict(self, aifpl, helpers):
+        """Test lambda nested in dict."""
+        # Lambda as value in dict
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (alist (list "func" (lambda () x))))) (alist-get x "func"))',
+            '(letrec ((x (dict (list "func" (lambda () x))))) (dict-get x "func"))',
             '<lambda ()>'  # Returns the lambda
         )
 
-    def test_lambda_in_alist_called(self, aifpl, helpers):
-        """Test calling lambda from alist."""
+    def test_lambda_in_dict_called(self, aifpl, helpers):
+        """Test calling lambda from dict."""
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (alist (list "func" (lambda () x))))) ((alist-get x "func")))',
-            '{("func" <lambda ()>)}'  # Calling lambda returns x (the alist)
+            '(letrec ((x (dict (list "func" (lambda () x))))) ((dict-get x "func")))',
+            '{("func" <lambda ()>)}'  # Calling lambda returns x (the dict)
         )
 
     def test_non_self_referential_lambda_in_list(self, aifpl, helpers):
@@ -652,10 +652,10 @@ class TestLetrecLambdasInDataStructuresBytecode:
             '4'
         )
 
-    def test_bytecode_lambda_in_alist(self, aifpl, helpers):
-        """Test bytecode compilation of lambda in alist."""
+    def test_bytecode_lambda_in_dict(self, aifpl, helpers):
+        """Test bytecode compilation of lambda in dict."""
         helpers.assert_evaluates_to(
             aifpl,
-            '(letrec ((x (alist (list "func" (lambda () x))))) ((alist-get x "func")))',
+            '(letrec ((x (dict (list "func" (lambda () x))))) ((dict-get x "func")))',
             '{("func" <lambda ()>)}'
         )

@@ -19,7 +19,7 @@
                  (integer* base (pow base (integer- exp 1)))))))
   
   ; Export public API
-  (alist
+  (dict
     (list "square" square)
     (list "cube" cube)
     (list "factorial" factorial)

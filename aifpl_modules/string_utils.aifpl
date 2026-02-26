@@ -17,7 +17,7 @@
                      (list-length (string->list s " ")))))
   
   ; Export public API
-  (alist
+  (dict
     (list "words" words)
     (list "lines" lines)
     (list "capitalize" capitalize)

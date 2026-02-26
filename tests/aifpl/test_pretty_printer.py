@@ -391,7 +391,7 @@ class TestPrettyPrinterNestedLambdaIndentation:
 
         # This pattern from validation.aifpl exposed a bug where the inner lambda
         # body was indented relative to the wrong base position
-        code = '(map (lambda (dep) (alist-get dep "to-task")) (filter (lambda (dep) (string=? (alist-get dep "from-task") task-id)) dependencies))'
+        code = '(map (lambda (dep) (dict-get dep "to-task")) (filter (lambda (dep) (string=? (dict-get dep "from-task") task-id)) dependencies))'
         result = printer.format(code)
 
         lines = result.split('\n')

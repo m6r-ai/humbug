@@ -4,7 +4,7 @@ This module tests the strict equality predicates that require all arguments
 to be of a specific type and raise errors on type mismatches:
 - integer=?, float=?, complex=?
 - string=? (already existed, but tested here for completeness)
-- boolean=?, list=?, alist=?
+- boolean=?, list=?, dict=?
 """
 
 import pytest
@@ -185,49 +185,49 @@ class TestStrictEqualityPredicates:
         with pytest.raises(AIFPLEvalError, match="list=.*has wrong number of arguments"):
             aifpl.evaluate('(list=? (list 1 2))')
 
-    # ========== alist=? tests ==========
+    # ========== dict=? tests ==========
 
-    def test_alist_eq_with_alists(self, aifpl):
-        """Test alist=? with alist arguments."""
-        # Empty alists
-        assert aifpl.evaluate('(alist=? (alist) (alist))') is True
+    def test_dict_eq_with_dicts(self, aifpl):
+        """Test dict=? with dict arguments."""
+        # Empty dicts
+        assert aifpl.evaluate('(dict=? (dict) (dict))') is True
 
         # Same key-value pairs
-        assert aifpl.evaluate('(alist=? (alist (list "a" 1)) (alist (list "a" 1)))') is True
+        assert aifpl.evaluate('(dict=? (dict (list "a" 1)) (dict (list "a" 1)))') is True
 
         # Different values
-        assert aifpl.evaluate('(alist=? (alist (list "a" 1)) (alist (list "a" 2)))') is False
+        assert aifpl.evaluate('(dict=? (dict (list "a" 1)) (dict (list "a" 2)))') is False
 
         # Multiple pairs
-        code = '''(alist=?
-            (alist (list "name" "Alice") (list "age" 30))
-            (alist (list "name" "Alice") (list "age" 30)))'''
+        code = '''(dict=?
+            (dict (list "name" "Alice") (list "age" 30))
+            (dict (list "name" "Alice") (list "age" 30)))'''
         assert aifpl.evaluate(code) is True
 
-    def test_alist_eq_order_matters(self, aifpl):
-        """Test alist=? is sensitive to order (structural equality)."""
+    def test_dict_eq_order_matters(self, aifpl):
+        """Test dict=? is sensitive to order (structural equality)."""
         # Different order should be different (structural comparison)
         # Note: This tests the current implementation behavior
-        code1 = '(alist=? (alist (list "a" 1) (list "b" 2)) (alist (list "b" 2) (list "a" 1)))'
+        code1 = '(dict=? (dict (list "a" 1) (list "b" 2)) (dict (list "b" 2) (list "a" 1)))'
         result = aifpl.evaluate(code1)
-        # This will be False because alists compare structurally (order matters)
+        # This will be False because dicts compare structurally (order matters)
         assert result is False
 
-    def test_alist_eq_rejects_non_alists(self, aifpl):
-        """Test alist=? raises error on non-alist arguments."""
-        with pytest.raises(AIFPLEvalError, match="alist=.*requires alist arguments.*list"):
-            aifpl.evaluate('(alist=? (alist) (list 1 2))')
+    def test_dict_eq_rejects_non_dicts(self, aifpl):
+        """Test dict=? raises error on non-dict arguments."""
+        with pytest.raises(AIFPLEvalError, match="dict=.*requires dict arguments.*list"):
+            aifpl.evaluate('(dict=? (dict) (list 1 2))')
 
-        with pytest.raises(AIFPLEvalError, match="alist=.*requires alist arguments.*integer"):
-            aifpl.evaluate('(alist=? (alist) 42)')
+        with pytest.raises(AIFPLEvalError, match="dict=.*requires dict arguments.*integer"):
+            aifpl.evaluate('(dict=? (dict) 42)')
 
-    def test_alist_eq_requires_minimum_args(self, aifpl):
-        """Test alist=? requires at least 2 arguments."""
-        with pytest.raises(AIFPLEvalError, match="alist=.*has wrong number of arguments"):
-            aifpl.evaluate('(alist=?)')
+    def test_dict_eq_requires_minimum_args(self, aifpl):
+        """Test dict=? requires at least 2 arguments."""
+        with pytest.raises(AIFPLEvalError, match="dict=.*has wrong number of arguments"):
+            aifpl.evaluate('(dict=?)')
 
-        with pytest.raises(AIFPLEvalError, match="alist=.*has wrong number of arguments"):
-            aifpl.evaluate('(alist=? (alist))')
+        with pytest.raises(AIFPLEvalError, match="dict=.*has wrong number of arguments"):
+            aifpl.evaluate('(dict=? (dict))')
 
     def test_strict_predicates_provide_type_checking(self, aifpl):
         """Test that strict predicates serve as type assertions."""
@@ -265,4 +265,4 @@ class TestStrictEqualityPredicates:
         assert aifpl.evaluate('(string=? "a" "a" "a" "a")') is True
         assert aifpl.evaluate('(boolean=? #t #t #t)') is True
         assert aifpl.evaluate('(list=? (list) (list) (list))') is True
-        assert aifpl.evaluate('(alist=? (alist) (alist) (alist))') is True
+        assert aifpl.evaluate('(dict=? (dict) (dict) (dict))') is True

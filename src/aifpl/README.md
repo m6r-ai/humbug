@@ -17,7 +17,7 @@ making it safe for AI tool integration.
 - Proper lists only (no cons cells or improper lists)
 - Tail call optimization for recursive functions
 - Pattern matching
-- Association lists (alists) with O(1) lookup
+- Dictionaries with O(1) lookup
 - Module system
 - Trace debugging support
 
@@ -136,13 +136,13 @@ Runtime values are instances of the `AIFPLValue` hierarchy:
 | `AIFPLBoolean`  | `boolean`   |
 | `AIFPLSymbol`   | `symbol`    |
 | `AIFPLList`     | `list`      |
-| `AIFPLAList`    | `alist`     |
+| `AIFPLDict`    | `dict`     |
 | `AIFPLFunction` | `function`  |
 
 ## Module system
 
 Modules are `.aifpl` files containing a single expression that evaluates to a value
-(typically an alist of exported functions). They are imported with `(import "module-name")`.
+(typically an dict of exported functions). They are imported with `(import "module-name")`.
 
 ## Development tools
 

@@ -152,18 +152,18 @@ class TestStrings:
         assert aifpl.evaluate('(string-upcase "hello")') == "HELLO"
 
 
-class TestALists:
-    """Test alist operations."""
+class TestDicts:
+    """Test dict operations."""
 
-    def test_alist_creation(self, aifpl):
-        result = aifpl.evaluate('(alist (list "name" "Alice") (list "age" 30))')
-        # Result is an alist, check it's dict-like
+    def test_dict_creation(self, aifpl):
+        result = aifpl.evaluate('(dict (list "name" "Alice") (list "age" 30))')
+        # Result is an dict, check it's dict-like
         assert isinstance(result, dict)
         assert result["name"] == "Alice"
         assert result["age"] == 30
 
-    def test_alist_get(self, aifpl):
-        result = aifpl.evaluate('(alist-get (alist (list "name" "Alice")) "name")')
+    def test_dict_get(self, aifpl):
+        result = aifpl.evaluate('(dict-get (dict (list "name" "Alice")) "name")')
         assert result == "Alice"
 
 

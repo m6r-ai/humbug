@@ -30,14 +30,14 @@ class TestModuleSystemBasics:
         module_file = tmp_path / "math_utils.aifpl"
         module_file.write_text("""
 (let ((square (lambda (x) (integer* x x))))
-  (alist (list "square" square)))
+  (dict (list "square" square)))
 """)
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
         result = aifpl.evaluate('''
 (let ((math (import "math_utils")))
-  ((alist-get math "square") 5))
+  ((dict-get math "square") 5))
 ''')
 
         assert result == 25
@@ -49,7 +49,7 @@ class TestModuleSystemBasics:
 (let ((add-one (lambda (x) (integer+ x 1)))
       (double (lambda (x) (integer* x 2)))
       (negate (lambda (x) (integer-neg x))))
-  (alist
+  (dict
     (list "add-one" add-one)
     (list "double" double)
     (list "negate" negate)))
@@ -59,9 +59,9 @@ class TestModuleSystemBasics:
 
         result = aifpl.evaluate('''
 (let ((utils (import "utils")))
-  (integer+ ((alist-get utils "add-one") 10)
-     ((alist-get utils "double") 5)
-     ((alist-get utils "negate") 3)))
+  (integer+ ((dict-get utils "add-one") 10)
+     ((dict-get utils "double") 5)
+     ((dict-get utils "negate") 3)))
 ''')
 
         # add-one(10) = 11, double(5) = 10, negate(3) = -3
@@ -69,12 +69,12 @@ class TestModuleSystemBasics:
         assert result == 18
 
     def test_module_with_private_functions(self, tmp_path):
-        """Test that functions not in alist are private."""
+        """Test that functions not in dict are private."""
         module_file = tmp_path / "private_test.aifpl"
         module_file.write_text("""
 (letrec ((helper (lambda (x) (integer* x 2)))
          (public-fn (lambda (x) (helper x))))
-  (alist
+  (dict
     (list "public" public-fn)
     (list "also-public" (lambda (x) (integer+ x 1)))))
 """)
@@ -84,14 +84,14 @@ class TestModuleSystemBasics:
         # Can call public function
         result = aifpl.evaluate('''
 (let ((mod (import "private_test")))
-  ((alist-get mod "public") 5))
+  ((dict-get mod "public") 5))
 ''')
         assert result == 10
 
-        # Cannot access helper directly (it's not in the alist)
+        # Cannot access helper directly (it's not in the dict)
         result = aifpl.evaluate('''
 (let ((mod (import "private_test")))
-  (alist-has? mod "helper"))
+  (dict-has? mod "helper"))
 ''')
         assert result is False
 
@@ -103,7 +103,7 @@ class TestModuleCaching:
         """Test that modules are cached after first load."""
         module_file = tmp_path / "cached.aifpl"
         module_file.write_text("""
-(alist (list "value" 42))
+(dict (list "value" 42))
 """)
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
@@ -119,7 +119,7 @@ class TestModuleCaching:
         module_file = tmp_path / "multi.aifpl"
         module_file.write_text("""
 (let ((fn (lambda (x) (integer* x x))))
-  (alist (list "square" fn)))
+  (dict (list "square" fn)))
 """)
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
@@ -127,8 +127,8 @@ class TestModuleCaching:
         result = aifpl.evaluate('''
 (let ((m1 (import "multi"))
       (m2 (import "multi")))
-  (integer+ ((alist-get m1 "square") 3)
-     ((alist-get m2 "square") 4)))
+  (integer+ ((dict-get m1 "square") 3)
+     ((dict-get m2 "square") 4)))
 ''')
 
         # Should work correctly: 9 + 16 = 25
@@ -141,7 +141,7 @@ class TestModuleCaching:
         """Test clearing the module cache."""
         module_file = tmp_path / "clearable.aifpl"
         module_file.write_text("""
-(alist (list "x" 1))
+(dict (list "x" 1))
 """)
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
@@ -159,7 +159,7 @@ class TestModuleSearchPath:
     def test_single_directory_search_path(self, tmp_path):
         """Test module resolution with single directory."""
         module_file = tmp_path / "single.aifpl"
-        module_file.write_text('(alist (list "val" 1))')
+        module_file.write_text('(dict (list "val" 1))')
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
         result = aifpl.evaluate('(import "single")')
@@ -175,10 +175,10 @@ class TestModuleSearchPath:
         dir2.mkdir()
 
         # Module in first directory
-        (dir1 / "first.aifpl").write_text('(alist (list "val" 1))')
+        (dir1 / "first.aifpl").write_text('(dict (list "val" 1))')
 
         # Module in second directory
-        (dir2 / "second.aifpl").write_text('(alist (list "val" 2))')
+        (dir2 / "second.aifpl").write_text('(dict (list "val" 2))')
 
         aifpl = AIFPL(module_path=[str(dir1), str(dir2)])
 
@@ -194,15 +194,15 @@ class TestModuleSearchPath:
         dir2.mkdir()
 
         # Same module name in both directories with different values
-        (dir1 / "duplicate.aifpl").write_text('(alist (list "val" 1))')
-        (dir2 / "duplicate.aifpl").write_text('(alist (list "val" 2))')
+        (dir1 / "duplicate.aifpl").write_text('(dict (list "val" 1))')
+        (dir2 / "duplicate.aifpl").write_text('(dict (list "val" 2))')
 
         # dir1 is first in search path
         aifpl = AIFPL(module_path=[str(dir1), str(dir2)])
 
         result = aifpl.evaluate('''
 (let ((mod (import "duplicate")))
-  (alist-get mod "val"))
+  (dict-get mod "val"))
 ''')
 
         # Should get value from dir1 (list-first in search path)
@@ -213,13 +213,13 @@ class TestModuleSearchPath:
         subdir = tmp_path / "lib"
         subdir.mkdir()
 
-        (subdir / "helper.aifpl").write_text('(alist (list "val" 42))')
+        (subdir / "helper.aifpl").write_text('(dict (list "val" 42))')
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
         result = aifpl.evaluate('''
 (let ((mod (import "lib/helper")))
-  (alist-get mod "val"))
+  (dict-get mod "val"))
 ''')
 
         assert result == 42
@@ -365,21 +365,21 @@ class TestTransitiveImports:
         # Base module
         (tmp_path / "base.aifpl").write_text("""
 (let ((add (lambda (x y) (integer+ x y))))
-  (alist (list "add" add)))
+  (dict (list "add" add)))
 """)
 
         # Module that uses base
         (tmp_path / "wrapper.aifpl").write_text("""
 (let ((base (import "base")))
-  (let ((add-ten (lambda (x) ((alist-get base "add") x 10))))
-    (alist (list "add-ten" add-ten))))
+  (let ((add-ten (lambda (x) ((dict-get base "add") x 10))))
+    (dict (list "add-ten" add-ten))))
 """)
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
         result = aifpl.evaluate('''
 (let ((w (import "wrapper")))
-  ((alist-get w "add-ten") 5))
+  ((dict-get w "add-ten") 5))
 ''')
 
         assert result == 15
@@ -388,26 +388,26 @@ class TestTransitiveImports:
         """Test three-level import chain (A imports B imports C)."""
         # Level 3 (deepest)
         (tmp_path / "level3.aifpl").write_text("""
-(alist (list "value" 1))
+(dict (list "value" 1))
 """)
 
         # Level 2
         (tmp_path / "level2.aifpl").write_text("""
 (let ((l3 (import "level3")))
-  (alist (list "get-value" (lambda () (alist-get l3 "value")))))
+  (dict (list "get-value" (lambda () (dict-get l3 "value")))))
 """)
 
         # Level 1
         (tmp_path / "level1.aifpl").write_text("""
 (let ((l2 (import "level2")))
-  (alist (list "get-nested" (lambda () ((alist-get l2 "get-value"))))))
+  (dict (list "get-nested" (lambda () ((dict-get l2 "get-value"))))))
 """)
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
         result = aifpl.evaluate('''
 (let ((l1 (import "level1")))
-  ((alist-get l1 "get-nested")))
+  ((dict-get l1 "get-nested")))
 ''')
 
         assert result == 1
@@ -416,36 +416,36 @@ class TestTransitiveImports:
         """Test diamond dependency pattern (A imports B and C, both import D)."""
         # Base module (D)
         (tmp_path / "base.aifpl").write_text("""
-(alist (list "value" 10))
+(dict (list "value" 10))
 """)
 
         # B imports base
         (tmp_path / "left.aifpl").write_text("""
 (let ((base (import "base")))
-  (alist (list "get-left" (lambda () (alist-get base "value")))))
+  (dict (list "get-left" (lambda () (dict-get base "value")))))
 """)
 
         # C imports base
         (tmp_path / "right.aifpl").write_text("""
 (let ((base (import "base")))
-  (alist (list "get-right" (lambda () (alist-get base "value")))))
+  (dict (list "get-right" (lambda () (dict-get base "value")))))
 """)
 
         # A imports both B and C
         (tmp_path / "top.aifpl").write_text("""
 (let ((left (import "left"))
       (right (import "right")))
-  (alist
+  (dict
     (list "sum" (lambda ()
-      (integer+ ((alist-get left "get-left"))
-         ((alist-get right "get-right")))))))
+      (integer+ ((dict-get left "get-left"))
+         ((dict-get right "get-right")))))))
 """)
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
         result = aifpl.evaluate('''
 (let ((top (import "top")))
-  ((alist-get top "sum")))
+  ((dict-get top "sum")))
 ''')
 
         # Should get 10 + 10 = 20 (base module cached and reused)
@@ -461,14 +461,14 @@ class TestModuleCompilation:
 (let ((x 10)
       (y 20))
   (let ((sum (lambda () (integer+ x y))))
-    (alist (list "sum" sum))))
+    (dict (list "sum" sum))))
 """)
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
         result = aifpl.evaluate('''
 (let ((mod (import "let_test")))
-  ((alist-get mod "sum")))
+  ((dict-get mod "sum")))
 ''')
 
         assert result == 30
@@ -480,14 +480,14 @@ class TestModuleCompilation:
                       (if (integer<=? n 1)
                           1
                           (integer* n (factorial (integer- n 1)))))))
-  (alist (list "factorial" factorial)))
+  (dict (list "factorial" factorial)))
 """)
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
         result = aifpl.evaluate('''
 (let ((mod (import "recursive")))
-  ((alist-get mod "factorial") 5))
+  ((dict-get mod "factorial") 5))
 ''')
 
         assert result == 120
@@ -499,14 +499,14 @@ class TestModuleCompilation:
                  (if (integer<? x 0)
                      (integer-neg x)
                      x))))
-  (alist (list "abs" abs-val)))
+  (dict (list "abs" abs-val)))
 """)
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
         result = aifpl.evaluate('''
 (let ((mod (import "cond_test")))
-  ((alist-get mod "abs") -42))
+  ((dict-get mod "abs") -42))
 ''')
 
         assert result == 42
@@ -516,14 +516,14 @@ class TestModuleCompilation:
         (tmp_path / "hof.aifpl").write_text("""
 (let ((sum-squares (lambda (lst)
                      (list-fold integer+ 0 (list-map (lambda (x) (integer* x x)) lst)))))
-  (alist (list "sum-squares" sum-squares)))
+  (dict (list "sum-squares" sum-squares)))
 """)
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
         result = aifpl.evaluate('''
 (let ((mod (import "hof")))
-  ((alist-get mod "sum-squares") (list 1 2 3 4)))
+  ((dict-get mod "sum-squares") (list 1 2 3 4)))
 ''')
 
         # 1^2 + 2^2 + 3^2 + 4^2 = 1 + 4 + 9 + 16 = 30
@@ -534,20 +534,20 @@ class TestModuleEdgeCases:
     """Test edge cases and unusual module scenarios."""
 
     def test_empty_module(self, tmp_path):
-        """Test module that exports empty alist."""
-        (tmp_path / "empty.aifpl").write_text('(alist)')
+        """Test module that exports empty dict."""
+        (tmp_path / "empty.aifpl").write_text('(dict)')
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
         result = aifpl.evaluate('''
 (let ((mod (import "empty")))
-  (alist-length mod))
+  (dict-length mod))
 ''')
 
         assert result == 0
 
-    def test_module_returning_non_alist(self, tmp_path):
-        """Test that modules can return any value (boolean-not just alists)."""
+    def test_module_returning_non_dict(self, tmp_path):
+        """Test that modules can return any value (boolean-not just dicts)."""
         (tmp_path / "number.aifpl").write_text('42')
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
@@ -557,21 +557,21 @@ class TestModuleEdgeCases:
         assert result == 42
 
     def test_module_with_complex_data_structures(self, tmp_path):
-        """Test module with nested alists and lists."""
+        """Test module with nested dicts and lists."""
         (tmp_path / "complex.aifpl").write_text("""
-(alist
+(dict
   (list "data" (list 1 2 3))
-  (list "nested" (alist (list "inner" 42))))
+  (list "nested" (dict (list "inner" 42))))
 """)
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 
         result = aifpl.evaluate('''
 (let ((mod (import "complex")))
-  (let ((data (alist-get mod "data"))
-        (nested (alist-get mod "nested")))
+  (let ((data (dict-get mod "data"))
+        (nested (dict-get mod "nested")))
     (integer+ (list-first data)
-       (alist-get nested "inner"))))
+       (dict-get nested "inner"))))
 ''')
 
         # 1 + 42 = 43
@@ -579,7 +579,7 @@ class TestModuleEdgeCases:
 
     def test_multiple_aifpl_instances_separate_caches(self, tmp_path):
         """Test that different AIFPL instances have separate module caches."""
-        (tmp_path / "test.aifpl").write_text('(alist (list "val" 1))')
+        (tmp_path / "test.aifpl").write_text('(dict (list "val" 1))')
 
         aifpl1 = AIFPL(module_path=[str(tmp_path)])
         aifpl2 = AIFPL(module_path=[str(tmp_path)])
@@ -594,7 +594,7 @@ class TestModuleEdgeCases:
 
     def test_module_name_with_special_characters(self, tmp_path):
         """Test module names with underscores and hyphens."""
-        (tmp_path / "my_module-v2.aifpl").write_text('(alist (list "x" 1))')
+        (tmp_path / "my_module-v2.aifpl").write_text('(dict (list "x" 1))')
 
         aifpl = AIFPL(module_path=[str(tmp_path)])
 

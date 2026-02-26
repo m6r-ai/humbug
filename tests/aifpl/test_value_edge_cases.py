@@ -3,7 +3,7 @@
 import math
 import pytest
 
-from aifpl import AIFPLEvalError, AIFPLAList, AIFPLString, AIFPLSymbol
+from aifpl import AIFPLEvalError, AIFPLDict, AIFPLString, AIFPLSymbol
 
 
 class TestAIFPLValueEdgeCases:
@@ -321,32 +321,32 @@ class TestAIFPLValueEdgeCases:
         assert result == [1, "hello", True]
         assert aifpl.evaluate('(list-length (list 1 "hello" #t))') == 3
 
-    def test_alist_coverage_edge_cases(self, aifpl):
-        """Test alist edge cases for full coverage."""
-        # Test symbol keys in alist (line 212 coverage)
-        # We need to construct this manually since 'alist' special form evaluates keys
+    def test_dict_coverage_edge_cases(self, aifpl):
+        """Test dict edge cases for full coverage."""
+        # Test symbol keys in dict (line 212 coverage)
+        # We need to construct this manually since 'dict' special form evaluates keys
         # and symbols evaluate to variable lookups
 
-        # Create an alist with a symbol key manually
+        # Create an dict with a symbol key manually
         sym_key = AIFPLSymbol("my-symbol")
         val = AIFPLString("value")
-        alist = AIFPLAList(((sym_key, val),))
+        dict = AIFPLDict(((sym_key, val),))
 
         # Test to_python conversion
-        py_dict = alist.to_python()
+        py_dict = dict.to_python()
         assert py_dict == {"my-symbol": "value"}
 
         # Test type_name
-        assert alist.type_name() == "alist"
+        assert dict.type_name() == "dict"
 
         # Test length method directly
-        assert alist.length() == 1
+        assert dict.length() == 1
 
         # Test is_empty method directly
-        assert not alist.is_empty()
-        assert AIFPLAList().is_empty()
+        assert not dict.is_empty()
+        assert AIFPLDict().is_empty()
 
         # Test invalid key type error
         # Using a list as a key should fail
-        with pytest.raises(AIFPLEvalError, match="AList keys must be strings, numbers, booleans, or symbols"):
-            AIFPLAList._to_hashable_key(AIFPLAList())
+        with pytest.raises(AIFPLEvalError, match="Dict keys must be strings, numbers, booleans, or symbols"):
+            AIFPLDict._to_hashable_key(AIFPLDict())

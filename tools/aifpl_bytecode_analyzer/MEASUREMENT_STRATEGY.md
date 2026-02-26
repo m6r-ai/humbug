@@ -316,7 +316,7 @@ Consider tracking:
 ## Best Practices
 
 1. **Always measure before and after** - No guessing
-2. **Use realistic test cases** - Synthetic benchmarks can be misleading
+2. **Use redictic test cases** - Synthetic benchmarks can be misleading
 3. **Test on multiple machines** - Performance can vary
 4. **Run multiple iterations** - Reduce noise in measurements
 5. **Document everything** - Future you will thank present you

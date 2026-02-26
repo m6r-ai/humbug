@@ -208,18 +208,18 @@ class Opcode(IntEnum):
     STRING_INDEX = _op(242, 0)          # Find index of substring (string, substring)
 
     # Alist operations
-    ALIST = _op(260, 1)                 # ALIST n  (build alist from n pairs on stack)
-    ALIST_P = _op(261, 0)               # (alist? x)
-    ALIST_EQ_P = _op(262, 0)            # alist=? a b
-    ALIST_NEQ_P = _op(263, 0)           # alist!=? a b
-    ALIST_KEYS = _op(264, 0)            # Get all keys from alist
-    ALIST_VALUES = _op(265, 0)          # Get all values from alist
-    ALIST_LENGTH = _op(266, 0)          # Get number of entries in alist
-    ALIST_HAS_P = _op(267, 0)           # Check if alist has key
-    ALIST_REMOVE = _op(268, 0)          # Remove key from alist
-    ALIST_MERGE = _op(269, 0)           # Merge two alists
-    ALIST_SET = _op(270, 0)             # Set key in alist (alist, key, value)
-    ALIST_GET = _op(271, 0)             # Get value from alist by key with default
+    DICT = _op(260, 1)                 # DICT n  (build dict from n pairs on stack)
+    DICT_P = _op(261, 0)               # (dict? x)
+    DICT_EQ_P = _op(262, 0)            # dict=? a b
+    DICT_NEQ_P = _op(263, 0)           # dict!=? a b
+    DICT_KEYS = _op(264, 0)            # Get all keys from dict
+    DICT_VALUES = _op(265, 0)          # Get all values from dict
+    DICT_LENGTH = _op(266, 0)          # Get number of entries in dict
+    DICT_HAS_P = _op(267, 0)           # Check if dict has key
+    DICT_REMOVE = _op(268, 0)          # Remove key from dict
+    DICT_MERGE = _op(269, 0)           # Merge two dicts
+    DICT_SET = _op(270, 0)             # Set key in dict (dict, key, value)
+    DICT_GET = _op(271, 0)             # Get value from dict by key with default
 
     # List operations
     LIST = _op(300, 1)                  # LIST n  (build list from n elements on stack)
@@ -256,7 +256,7 @@ class Opcode(IntEnum):
 # arity=2 (their binary form), since that is the only arity a first-class call
 # will ever present to the stub.
 #
-# 'alist-get' and 'range' have optional arguments; their stubs always use the
+# 'dict-get' and 'range' have optional arguments; their stubs always use the
 # 3-argument opcode form (the codegen synthesises the missing default for direct
 # calls, and the stub will do likewise).
 BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
@@ -395,17 +395,17 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'list-remove': (Opcode.LIST_REMOVE, 2),
     'list-concat': (Opcode.LIST_CONCAT, 2),
     'list->string': (Opcode.LIST_TO_STRING, 2),
-    'alist?': (Opcode.ALIST_P, 1),
-    'alist=?': (Opcode.ALIST_EQ_P, 2),
-    'alist!=?': (Opcode.ALIST_NEQ_P, 2),
-    'alist-keys': (Opcode.ALIST_KEYS, 1),
-    'alist-values': (Opcode.ALIST_VALUES, 1),
-    'alist-length': (Opcode.ALIST_LENGTH, 1),
-    'alist-has?': (Opcode.ALIST_HAS_P, 2),
-    'alist-remove': (Opcode.ALIST_REMOVE, 2),
-    'alist-merge': (Opcode.ALIST_MERGE, 2),
-    'alist-set': (Opcode.ALIST_SET, 3),
-    'alist-get': (Opcode.ALIST_GET, 3),
+    'dict?': (Opcode.DICT_P, 1),
+    'dict=?': (Opcode.DICT_EQ_P, 2),
+    'dict!=?': (Opcode.DICT_NEQ_P, 2),
+    'dict-keys': (Opcode.DICT_KEYS, 1),
+    'dict-values': (Opcode.DICT_VALUES, 1),
+    'dict-length': (Opcode.DICT_LENGTH, 1),
+    'dict-has?': (Opcode.DICT_HAS_P, 2),
+    'dict-remove': (Opcode.DICT_REMOVE, 2),
+    'dict-merge': (Opcode.DICT_MERGE, 2),
+    'dict-set': (Opcode.DICT_SET, 3),
+    'dict-get': (Opcode.DICT_GET, 3),
     'range': (Opcode.RANGE, 3),
 
 }

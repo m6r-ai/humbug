@@ -270,17 +270,17 @@ class TestSymbolIntegration:
         )
         assert result == 3
 
-    def test_symbol_as_alist_key(self, aifpl):
-        # Symbols can be used as alist keys
+    def test_symbol_as_dict_key(self, aifpl):
+        # Symbols can be used as dict keys
         assert aifpl.evaluate(
-            "(let ((a (alist (list 'foo 1) (list 'bar 2))))"
-            "  (alist-get a 'foo))"
+            "(let ((a (dict (list 'foo 1) (list 'bar 2))))"
+            "  (dict-get a 'foo))"
         ) == 1
 
-    def test_symbol_alist_key_lookup_miss(self, aifpl):
+    def test_symbol_dict_key_lookup_miss(self, aifpl):
         assert aifpl.evaluate(
-            "(let ((a (alist (list 'foo 1))))"
-            "  (alist-get a 'bar \"missing\"))"
+            "(let ((a (dict (list 'foo 1))))"
+            "  (dict-get a 'bar \"missing\"))"
         ) == "missing"
 
     def test_collect_symbol_names_from_quoted_expr(self, aifpl):

@@ -127,7 +127,7 @@ Overall:
 
 ## Test Cases
 
-The `test_cases.aifpl` file contains realistic examples of code patterns where constant folding provides benefits:
+The `test_cases.aifpl` file contains redictic examples of code patterns where constant folding provides benefits:
 
 1. Simple arithmetic constants
 2. Nested arithmetic

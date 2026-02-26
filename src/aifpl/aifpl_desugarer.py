@@ -120,13 +120,13 @@ class AIFPLDesugarer:
 
             # Strict equality predicates
             if name in [
-                'boolean=?', 'integer=?', 'float=?', 'complex=?', 'string=?', 'list=?', 'alist=?'
+                'boolean=?', 'integer=?', 'float=?', 'complex=?', 'string=?', 'list=?', 'dict=?'
             ]:
                 return self._desugar_strict_equality(expr)
 
             # Strict inequality predicates
             if name in [
-                'boolean!=?', 'integer!=?', 'float!=?', 'complex!=?', 'string!=?', 'list!=?', 'alist!=?'
+                'boolean!=?', 'integer!=?', 'float!=?', 'complex!=?', 'string!=?', 'list!=?', 'dict!=?'
             ]:
                 return self._desugar_strict_inequality(expr)
 
