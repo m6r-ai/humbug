@@ -182,6 +182,10 @@ class AIFPL:
                                  (if (list-null? rest)
                                    (integer->string n 10)
                                    (integer->string n (list-first rest))))""",
+        'string->integer': """(lambda (s . rest)
+                                 (if (list-null? rest)
+                                   (string->integer s 10)
+                                   (string->integer s (list-first rest))))""",
         'float=?': """(lambda (. args)
                         (if (integer<? (list-length args) 2)
                           (error "Function 'float=?' requires at least 2 arguments")

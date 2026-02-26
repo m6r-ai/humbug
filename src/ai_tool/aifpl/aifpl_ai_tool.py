@@ -284,8 +284,11 @@ Syntax: (operator arg1 arg2 ...)
 - Search predicates: (string-prefix? "hello" "he"), (string-suffix? "hello" "lo")
 - Search index: (string-index "hello" "l") → 2, (string-index "hello" "z") → #f (not found)
 - Conversion: (string->number "42") → 42, (string->number "3.14") → 3.14, (string->number "1+2j") → 1+2j, (string->number "hello") → #f (returns #f for any unparseable string; raises a type error if argument is not a string)
-- Split/join: (string->list "hello") → ("h" "e" "l" "l" "o"), (string->list "a,b,c" ",") → ("a" "b" "c")
-- Split/join: (list->string (list "h" "i")) → "hi", (list->string (list "a" "b" "c") ",") → "a,b,c"
+- (string->integer "ff" 16) → 255, (string->integer "1010" 2) → 10, (string->integer "377" 8) → 255, (string->integer "42") → 42 (optional radix: 2, 8, 10, or 16; defaults to 10; returns #f for unparseable strings; invalid radix raises an error)
+- Note: (string->integer "ff" 16) and (string->integer "FF" 16) both → 255 (case-insensitive); surrounding whitespace is accepted
+- (string->list "hello") → ("h" "e" "l" "l" "o") (no delimiter: splits into individual characters)
+- (string->list "a,b,c" ",") → ("a" "b" "c") (delimiter splits on every occurrence; consecutive delimiters produce empty strings: (string->list "a,,b" ",") → ("a" "" "b"))
+- (string->list "one::two" "::") → ("one" "two") (delimiter may be multi-character)
 
 ## List operations:
 
@@ -302,6 +305,8 @@ Syntax: (operator arg1 arg2 ...)
 - Utilities: (list-reverse (list 1 2 3)), (list-remove (list 1 2 3 2 4) 2), (list-index (list 1 2 3) 2) → 1, (list-index (list 1 2 3) 42) → #f (not found)
 - Slicing: (list-slice lst start) → from start to end, (list-slice lst start end) → from start to end (exclusive)
 - (list-slice (list 1 2 3 4 5) 2) → (3 4 5), (list-slice (list 1 2 3 4 5) 1 3) → (2 3)
+- (list->string (list "h" "e" "l" "l" "o")) → "hello" (no separator: concatenates directly; all elements must be strings)
+- (list->string (list "a" "b" "c") ",") → "a,b,c" (separator inserted between elements; separator may be multi-character)
 
 ### Higher-order list functions
 

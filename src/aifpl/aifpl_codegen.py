@@ -477,6 +477,19 @@ class AIFPLCodeGen:
                 ctx.emit(Opcode.INTEGER_TO_STRING)
                 return
 
+            # Handle string->integer: synthesise missing radix as 10
+            if builtin_name == 'string->integer':
+                self._generate_expr(plan.arg_plans[0], ctx)
+                if len(plan.arg_plans) == 1:
+                    const_index = ctx.add_constant(AIFPLInteger(10))
+                    ctx.emit(Opcode.LOAD_CONST, const_index)
+
+                else:
+                    self._generate_expr(plan.arg_plans[1], ctx)
+
+                ctx.emit(Opcode.STRING_TO_INTEGER)
+                return
+
             # Handle string-slice: synthesise missing end as (string-length str)
             if builtin_name == 'string-slice':
                 # Push the string argument first
