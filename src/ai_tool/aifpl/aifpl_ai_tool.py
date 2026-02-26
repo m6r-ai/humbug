@@ -209,7 +209,7 @@ Syntax: (operator arg1 arg2 ...)
 
 ## Floating point operations
 
-- All args must be floats; use (integer->float x) to convert integers
+- All args must be floats; type error otherwise
 - Constants: pi, e
 - Literals: 2.03, 43.0e9, -9.28353
 - Type predicate: (float? 3.14) → #t, (float? 42) → #f, (float? (float/ 1.0 2.0)) → #t
@@ -224,11 +224,12 @@ Syntax: (operator arg1 arg2 ...)
 - (float// 7.0 2.0) → 3.0 (floor division)
 - (float% 7.0 3.0) → 1.0 (modulo)
 - (float-neg 3.0) → -3.0; (float- 3.0) and (float/ 4.0) are errors (require 2+ args)
+- (float-abs -3.0) → 3.0 (absolute value)
 - (float-floor 3.7) → 3.0
 - (float-ceil 3.2) → 4.0
 - (float-round 3.5) → 4.0 (all return float)
 - (float-exp 2.0) → e^2.0
-- (float-expn 2.0 10.0) → 1024.0
+- (float-expn base exp) → base^exp: (float-expn 2.0 10.0) → 1024.0
 - (float-log 1.0) → 0.0 (log base e)
 - (float-log2 8.0) → 3.0 (log base 2, correctly rounded via math.log2)
 - (float-log10 100.0) → 2.0 (log base 10)
@@ -237,9 +238,8 @@ Syntax: (operator arg1 arg2 ...)
 - float-logn requires a positive base not equal to 1; invalid base is a runtime error
 - (float-min 1.0 2.0) → 1.0
 - (float-max 1.0 2.0) → 2.0
-- (float-sqrt 4.0) → 2.0, (float-abs -3.0) → 3.0
+- (float-sqrt 4.0) → 2.0
 - float-sqrt of negative → runtime error (use complex-sqrt instead)
-- (float-abs -3.0) → 3.0 (absolute value)
 - Transcendentals: (float-sin 0.0) → 0.0, (float-cos 0.0) → 1.0, (float-tan 0.0) → 0.0
 - (float->integer x) → convert float to integer (truncates toward zero): (float->integer 3.7) → 3, (float->integer -2.9) → -2
 - (float->complex real [imag]) → construct complex from one or two floats: (float->complex 3.0 4.0) → 3+4j, (float->complex 3.0) → 3+0j
@@ -247,7 +247,7 @@ Syntax: (operator arg1 arg2 ...)
 
 ## Complex number operations
 
-- All args must be complex; use (float->complex r i) to construct):
+- All args must be complex; type error otherwise
 - Literals: 3+4j, 5j, 1j, 1.5e2j, 0j
 - Type predicate: (complex? (float->complex 1.0 1.0)) → #t, (complex? 42) → #f
 - Equality: (complex=? 1+2j 1+2j), (complex!=? 1+2j 1+3j)
@@ -257,12 +257,12 @@ Syntax: (operator arg1 arg2 ...)
 - (complex- (float->complex 5.0 3.0) (float->complex 2.0 1.0)) → 3+2j
 - (complex* 1+2j (float->complex 3.0 4.0)) → -5+10j
 - (complex*) → 1+0j (zero-arg identities)
-- (complex/ 4.0+2.0j (float->complex 1.0 1.0)) → 3-1j
+- (complex/ (float->complex 4.0 2.0) (float->complex 1.0 1.0)) → 3-1j
 - (complex-real z) → float real part, (complex-imag z) → float imaginary part (complex args only)
-- (complex-abs 3.0+4.0j) → 5.0 (returns magnitude as float, not complex)
+- (complex-abs (float->complex 3.0 4.0)) → 5.0 (returns magnitude as float, not complex)
 - (complex-neg 3.0+4.0j) → -3-4j
 - (complex-exp z) → e^z
-- (complex-expn z base) → base^z
+- (complex-expn base exp) → base^exp: (complex-expn 2+0j 10+0j) → 1024+0j
 - (complex-log z) → log base e of z
 - (complex-log10 z) → log base 10 of z
 - (complex-logn z base) → log base n of complex z (both args must be complex)
@@ -311,13 +311,13 @@ Syntax: (operator arg1 arg2 ...)
 - (list->string (list "a" "b" "c") ",") → "a,b,c" (separator inserted between elements; separator may be multi-character)
 - Higher-order: (list-map func list) → (list-map (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
 - Higher-order: (list-filter predicate list) → (list-filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
-- Higher-order: (list-fold func init list) → (list-fold integer+ 0 (list 1 2 3 4)) → 10
+- Higher-order: (list-fold func init list) → left fold (tail-recursive); processes list left-to-right, accumulating into init: (list-fold integer+ 0 (list 1 2 3 4)) → 10, (list-fold integer- 0 (list 1 2 3)) → -6
 - Higher-order: (list-find predicate list) → first element satisfying predicate, or #f if none found: (list-find (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → 4, note: (list-find predicate ()) → #f
 - Higher-order: (list-any? predicate list) → #t if at least one element satisfies predicate, #f otherwise: (list-any? (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → #t, note: (list-any? predicate ()) → #f
 - Higher-order: (list-all? predicate list) → #t if all elements satisfy predicate, #f otherwise: (list-all? (lambda (x) (integer>? x 0)) (list 1 2 3 4 5)) → #t, note: (list-all? predicate ()) → #t (vacuously true)
 - Higher-order: (list-zip lst1 lst2) → pairs corresponding elements: (list-zip (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6)), (list-zip lst1 lst2) stops at the shorter list: (list-zip (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
 - Higher-order: (list-unzip lst) → inverse of list-zip; splits a list of 2-element lists into a list of two lists: (list-unzip (list (list 1 4) (list 2 5) (list 3 6))) → ((1 2 3) (4 5 6))
-- (list-first (list-unzip pairs)) → first elements, (list-first (list-rest (list-unzip pairs))) → second elements
+- list-unzip returns a 2-element list: (list-first result) → first elements, (list-ref result 1) → second elements
 - Higher-order: (list-sort comparator lst) → returns a new list sorted by comparator; comparator is a two-argument function returning #t if first arg should come before second: (list-sort integer<? (list 3 1 4 1 5)) → (1 1 3 4 5), (list-sort string<? (list "b" "a" "c")) → ("a" "b" "c"); sort is stable and preserves insertion order of equal elements
 
 ## Association lists (alists):
@@ -374,7 +374,8 @@ Syntax: (operator arg1 arg2 ...)
 ## Lambda functions
 
 - (lambda (param1 param2 ...) body) → creates anonymous function
-- (lambda (param1 . rest) body) → variadic: rest receives remaining args as a list
+- The dot in a parameter list means "collect all remaining arguments into a list": (lambda (a b . rest) ...) binds a and b to the first two args and rest to a list of any remaining args; with nothing before the dot, (lambda (. rest) ...) collects all args
+- (lambda (param1 . rest) body) → variadic: rest receives remaining args as a list (possibly empty)
 - (lambda (. rest) body) → fully variadic: rest receives all args as a list
 - ((lambda (x) (integer* x x)) 5) → 25
 - ((lambda (. args) (list-fold integer+ 0 args)) 1 2 3 4 5) → 15 (variadic sum)
@@ -469,8 +470,6 @@ Syntax: (operator arg1 arg2 ...)
 
 ## Important notes
 
-- list-prepend and list-append both take list first, item second: (list-prepend lst item), (list-append lst item)
-- string-concat joins strings: (string-concat "hello" " " "world") → "hello world"
 - Strict typing: string ops need strings, boolean ops need booleans
 - float-floor, float-ceil, float-round all return float, not integer; use (float->integer (float-round x)) to get an integer
 - All comparison operators are type-specific: use integer=?, float<?, string>=? etc.
