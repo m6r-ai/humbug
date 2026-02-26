@@ -22,16 +22,21 @@ class AIFPLBuiltinRegistry:
     are skipped here so the prelude lambdas take effect instead.
     """
 
-    # Authoritative arity table for all builtins.
+    # Arity table for all opcode-backed builtins ONLY.
     #
     # Each entry is (min_args, max_args) where max_args is None for truly
     # variadic functions (no upper bound).  Functions with fixed arity
     # have min_args == max_args.
     #
-    # This is the single source of truth consumed by the semantic analyzer
-    # for early arity checking, and by create_builtin_function_objects() for
-    # building AIFPLFunction metadata.
-    ARITY_TABLE: Dict[str, Tuple[int, Optional[int]]] = {
+    # This table covers ONLY builtins that are backed by a VM opcode in
+    # BUILTIN_OPCODE_MAP.  Pure-AIFPL prelude functions (map, filter, fold,
+    # zip, unzip, find, any?, all?, etc.) are NOT in this table and must NOT
+    # be added — the registry asserts every entry has a BUILTIN_OPCODE_MAP
+    # entry, so adding a prelude-only name will cause an assertion failure.
+    #
+    # Consumed by: the semantic analyser (early arity checking) and
+    # create_builtin_function_objects() (building AIFPLFunction stubs).
+    BUILTIN_OPCODE_ARITIES: Dict[str, Tuple[int, Optional[int]]] = {
         'function?': (1, 1),
         'function-min-arity': (1, 1),
         'function-variadic?': (1, 1),
@@ -202,7 +207,7 @@ class AIFPLBuiltinRegistry:
         """
         # Names provided by the AIFPL prelude — the registry skips these so the
         # prelude's compiled function objects take effect in the global environment.
-        # These names are still kept in ARITY_TABLE so that 2-arg calls inside
+        # These names are still kept in BUILTIN_OPCODE_ARITIES so that 2-arg calls inside
         # their own prelude stub bodies resolve to opcodes correctly via
         # BUILTIN_OPCODE_MAP in the codegen.
         prelude_names = {
@@ -269,7 +274,7 @@ class AIFPLBuiltinRegistry:
         }
 
         builtins = {}
-        for name, (min_args, max_args) in self.ARITY_TABLE.items():
+        for name, (min_args, max_args) in self.BUILTIN_OPCODE_ARITIES.items():
             if name in prelude_names:
                 # Prelude supplies the function object for this name
                 continue

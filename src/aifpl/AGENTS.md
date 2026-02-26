@@ -101,8 +101,13 @@ There are three categories of builtin:
   | `list->string` | `separator` | `""` (empty string → concatenate without separator) |
   | `alist-get` | `default` | `#f` |
 
-`AIFPLBuiltinRegistry.ARITY_TABLE` is the single source of truth for arity of all
-builtins and is consumed by both the semantic analyser and the registry itself.
+`AIFPLBuiltinRegistry.BUILTIN_OPCODE_ARITIES` is the arity table for **opcode-backed
+builtins only** and is consumed by both the semantic analyser and the registry itself.
+Pure-AIFPL prelude functions (`map`, `filter`, `fold`, `zip`, `unzip`, `find`, `any?`,
+`all?`, etc.) are **not** in this table and must **not** be added — the registry asserts
+that every entry has a corresponding `BUILTIN_OPCODE_MAP` entry, so adding a prelude-only
+name will cause an assertion failure at startup. Prelude-only functions have their arity
+enforced at runtime by the lambda itself, exactly like any user-defined function.
 
 ## Variable Addressing and `LOAD_NAME`
 
@@ -147,7 +152,7 @@ The IR builder resolves all variable references to one of three addressing modes
 1. Add an opcode to the `Opcode` enum in `aifpl_bytecode.py`
 2. Add the opcode → arity mapping to `BUILTIN_OPCODE_MAP` in `aifpl_bytecode.py`
 3. Implement the opcode in `aifpl_vm.py`
-4. Add the arity entry to `ARITY_TABLE` in `aifpl_builtin_registry.py`
+4. Add the arity entry to `BUILTIN_OPCODE_ARITIES` in `aifpl_builtin_registry.py`
 5. If variadic: add a prelude lambda to `_PRELUDE_SOURCE` in `aifpl.py` and add the
    name to `prelude_names` in `AIFPLBuiltinRegistry.create_builtin_function_objects()`
 6. Update the tool description to document the new function

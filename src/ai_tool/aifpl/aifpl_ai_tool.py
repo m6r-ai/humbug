@@ -281,8 +281,8 @@ Syntax: (operator arg1 arg2 ...)
 - string: (string<? "apple" "banana"), (string>? "b" "a"), (string<=? "a" "a"), (string>=? "b" "a")
 - String ordering is Unicode codepoint order (same as Python str), not locale-aware collation
 - Complex numbers have no ordering; use (complex-abs z) to compare magnitudes as floats
-
-- (and #t #f), (or #t #f), (boolean-not #t)
+- Special forms: (and #t #f) and (or #t #f) short-circuit and are optimized at compile time; they are not builtin functions
+- (boolean-not #t) → #f (builtin function; the only boolean negation function)
 - (if (integer>? 5 3) "yes" "no"), lazy evaluation: (if #t 42 0)
 
 ## String operations:

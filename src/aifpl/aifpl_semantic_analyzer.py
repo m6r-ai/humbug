@@ -843,8 +843,8 @@ class AIFPLSemanticAnalyzer:
         first = expr.first()
         if isinstance(first, AIFPLASTSymbol):
             name = first.name
-            if name in AIFPLBuiltinRegistry.ARITY_TABLE:
-                min_args, max_args = AIFPLBuiltinRegistry.ARITY_TABLE[name]
+            if name in AIFPLBuiltinRegistry.BUILTIN_OPCODE_ARITIES:
+                min_args, max_args = AIFPLBuiltinRegistry.BUILTIN_OPCODE_ARITIES[name]
                 n_args = len(expr.elements) - 1
 
                 if n_args < min_args:

@@ -792,11 +792,20 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         return AIFPLASTFloat(math.exp(args[0].value))
 
     def _fold_float_expn(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold float-expn: both args must be floats, returns float."""
-        if not isinstance(args[0], AIFPLASTFloat) or not isinstance(args[1], AIFPLASTFloat):
+        """Fold float-expn: all args must be floats, left-associative reduction, returns float."""
+        if len(args) < 2:
             return None
 
-        result = args[0].value ** args[1].value
+        if not isinstance(args[0], AIFPLASTFloat):
+            return None
+
+        result = args[0].value
+        for a in args[1:]:
+            if not isinstance(a, AIFPLASTFloat):
+                return None
+
+            result = result ** a.value
+
         return AIFPLASTFloat(result)
 
     def _fold_float_log(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
@@ -1025,11 +1034,20 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         return AIFPLASTComplex(cmath.exp(args[0].value))
 
     def _fold_complex_expn(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:
-        """Fold complex-expn: both args must be complex, returns complex."""
-        if not isinstance(args[0], AIFPLASTComplex) or not isinstance(args[1], AIFPLASTComplex):
+        """Fold complex-expn: all args must be complex, left-associative reduction, returns complex."""
+        if len(args) < 2:
             return None
 
-        result = args[0].value ** args[1].value
+        if not isinstance(args[0], AIFPLASTComplex):
+            return None
+
+        result = args[0].value
+        for a in args[1:]:
+            if not isinstance(a, AIFPLASTComplex):
+                return None
+
+            result = result ** a.value
+
         return AIFPLASTComplex(result)
 
     def _fold_complex_log(self, args: List[AIFPLASTNode]) -> AIFPLASTNode | None:

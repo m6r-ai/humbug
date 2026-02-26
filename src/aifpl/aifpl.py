@@ -266,12 +266,12 @@ class AIFPL:
                                           (if (list-null? lst) acc
                                               (loop (list-rest lst) (float/ acc (list-first lst)))))))
                            (loop (list-rest args) (list-first args)))))""",
-        'float-expt': """(lambda (. args)
+        'float-expn': """(lambda (. args)
                            (if (integer<? (list-length args) 2)
                              (error "Function 'float-expt' requires at least 2 arguments")
                              (letrec ((loop (lambda (lst acc)
                                               (if (list-null? lst) acc
-                                                  (loop (list-rest lst) (float-expt acc (list-first lst)))))))
+                                                 (loop (list-rest lst) (float-expn acc (list-first lst)))))))
                                (loop (list-rest args) (list-first args)))))""",
         'float-min': """(lambda (. args)
                            (if (list-null? args)
@@ -313,7 +313,7 @@ class AIFPL:
                                 (outer args))))""",
         'complex+': """(lambda (. args)
                          (if (list-null? args)
-                           (error "Function 'complex+' requires at least 1 argument, got 0")
+                           (float->complex 0.0 0.0)
                            (letrec ((loop (lambda (lst acc)
                                             (if (list-null? lst) acc
                                                 (loop (list-rest lst) (complex+ acc (list-first lst)))))))
@@ -327,7 +327,7 @@ class AIFPL:
                              (loop (list-rest args) (list-first args)))))""",
         'complex*': """(lambda (. args)
                          (if (list-null? args)
-                           (error "Function 'complex*' requires at least 1 argument, got 0")
+                           (float->complex 1.0 0.0)
                            (letrec ((loop (lambda (lst acc)
                                             (if (list-null? lst) acc
                                                 (loop (list-rest lst) (complex* acc (list-first lst)))))))
@@ -339,12 +339,12 @@ class AIFPL:
                                             (if (list-null? lst) acc
                                                 (loop (list-rest lst) (complex/ acc (list-first lst)))))))
                              (loop (list-rest args) (list-first args)))))""",
-        'complex-expt': """(lambda (. args)
+        'complex-expn': """(lambda (. args)
                              (if (integer<? (list-length args) 2)
                                (error "Function 'complex-expt' requires at least 2 arguments")
                                (letrec ((loop (lambda (lst acc)
                                                 (if (list-null? lst) acc
-                                                    (loop (list-rest lst) (complex-expt acc (list-first lst)))))))
+                                                   (loop (list-rest lst) (complex-expn acc (list-first lst)))))))
                                  (loop (list-rest args) (list-first args)))))""",
         'string=?': """(lambda (. args)
                          (if (integer<? (list-length args) 2)
