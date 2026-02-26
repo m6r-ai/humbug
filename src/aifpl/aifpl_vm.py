@@ -285,10 +285,10 @@ class AIFPLVM:
         table[Opcode.STRING_TRIM] = self._op_string_trim
         table[Opcode.STRING_TRIM_LEFT] = self._op_string_trim_left
         table[Opcode.STRING_TRIM_RIGHT] = self._op_string_trim_right
+        table[Opcode.STRING_TO_INTEGER] = self._op_string_to_integer
         table[Opcode.STRING_TO_NUMBER] = self._op_string_to_number
         table[Opcode.STRING_TO_LIST] = self._op_string_to_list
         table[Opcode.STRING_REF] = self._op_string_ref
-        table[Opcode.STRING_TO_INTEGER] = self._op_string_to_integer
         table[Opcode.STRING_PREFIX_P] = self._op_string_prefix_p
         table[Opcode.STRING_SUFFIX_P] = self._op_string_suffix_p
         table[Opcode.STRING_CONCAT] = self._op_string_concat
@@ -2087,6 +2087,25 @@ class AIFPLVM:
         self.stack.append(AIFPLString(self._ensure_string(a, 'string-trim-right').rstrip()))
         return None
 
+    def _op_string_to_integer(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """STRING_TO_INTEGER: Pop radix then string, push parsed integer or #f if unparseable."""
+        radix_val = self.stack.pop()
+        a = self.stack.pop()
+        s = self._ensure_string(a, 'string->integer')
+        radix = self._ensure_integer(radix_val, 'string->integer')
+        if radix not in (2, 8, 10, 16):
+            raise AIFPLEvalError(f"string->integer radix must be 2, 8, 10, or 16, got {radix}")
+
+        try:
+            self.stack.append(AIFPLInteger(int(s, radix)))
+            return None
+
+        except ValueError:
+            self.stack.append(AIFPLBoolean(False))
+            return None
+
     def _op_string_to_number(  # pylint: disable=useless-return
         self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
@@ -2103,25 +2122,6 @@ class AIFPLVM:
                 return None
 
             self.stack.append(AIFPLFloat(float(s)))
-            return None
-
-        except ValueError:
-            self.stack.append(AIFPLBoolean(False))
-            return None
-
-    def _op_string_to_integer(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
-    ) -> AIFPLValue | None:
-        """STRING_TO_INTEGER: Pop radix then string, push parsed integer or #f if unparseable."""
-        radix_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string->integer')
-        radix = self._ensure_integer(radix_val, 'string->integer')
-        if radix not in (2, 8, 10, 16):
-            raise AIFPLEvalError(f"string->integer radix must be 2, 8, 10, or 16, got {radix}")
-
-        try:
-            self.stack.append(AIFPLInteger(int(s, radix)))
             return None
 
         except ValueError:

@@ -196,10 +196,10 @@ class Opcode(IntEnum):
     STRING_TRIM = _op(230, 0)           # Trim whitespace from string
     STRING_TRIM_LEFT = _op(231, 0)      # Trim leading whitespace
     STRING_TRIM_RIGHT = _op(232, 0)     # Trim trailing whitespace
-    STRING_TO_NUMBER = _op(233, 0)      # Parse string to number
-    STRING_TO_LIST = _op(234, 0)        # Split string by delimiter: (string->list str delim)
-    STRING_REF = _op(235, 0)            # Get character at index
-    STRING_TO_INTEGER = _op(236, 0)     # Parse string to integer with radix: (string->integer str radix)
+    STRING_TO_INTEGER = _op(233, 0)     # Parse string to integer with radix
+    STRING_TO_NUMBER = _op(234, 0)      # Parse string to number
+    STRING_TO_LIST = _op(235, 0)        # Split string by delimiter: (string->list str delim)
+    STRING_REF = _op(236, 0)            # Get character at index
     STRING_PREFIX_P = _op(237, 0)       # Check if string has prefix
     STRING_SUFFIX_P = _op(238, 0)       # Check if string has suffix
     STRING_CONCAT = _op(239, 0)         # Concatenate two strings: (string-concat a b)
@@ -363,10 +363,10 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'string-trim': (Opcode.STRING_TRIM, 1),
     'string-trim-left': (Opcode.STRING_TRIM_LEFT, 1),
     'string-trim-right': (Opcode.STRING_TRIM_RIGHT, 1),
+    'string->integer': (Opcode.STRING_TO_INTEGER, 2),
     'string->number': (Opcode.STRING_TO_NUMBER, 1),
     'string->list': (Opcode.STRING_TO_LIST, 2),
     'string-ref': (Opcode.STRING_REF, 2),
-    'string->integer': (Opcode.STRING_TO_INTEGER, 2),
     'string-index': (Opcode.STRING_INDEX, 2),
     'string-prefix?': (Opcode.STRING_PREFIX_P, 2),
     'string-suffix?': (Opcode.STRING_SUFFIX_P, 2),
