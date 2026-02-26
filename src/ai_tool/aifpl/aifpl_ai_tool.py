@@ -299,7 +299,9 @@ Syntax: (operator arg1 arg2 ...)
 - Construction: (list 1 2 3), (list-prepend lst item), (list-append lst item), (list-concat lst1 lst2), (list-concat) → ()
 - (list-prepend (list 2 3) 1) → (1 2 3), (list-append (list 1 2) 3) → (1 2 3)
 - (list-concat (list 1 2) (list 3 4)) → (1 2 3 4), (list-concat) → () (zero-arg identity)
-- Access: (list-first (list 1 2 3)), (list-rest (list 1 2 3)), (list-last (list 1 2 3))
+- Access: (list-first (list 1 2 3)) → 1
+- Access: (list-rest (list 1 2 3)) → (2 3)
+- Access: (list-last (list 1 2 3)) → 3
 - Indexed access: (list-ref (list "a" "b" "c") 1) → "b" (0-based index)
 - Properties: (list-length (list 1 2 3)), (list-null? (list)), (list-member? (list 1 2 3) 2)
 - Utilities: (list-reverse (list 1 2 3)), (list-remove (list 1 2 3 2 4) 2), (list-index (list 1 2 3) 2) → 1, (list-index (list 1 2 3) 42) → #f (not found)
@@ -307,17 +309,14 @@ Syntax: (operator arg1 arg2 ...)
 - (list-slice (list 1 2 3 4 5) 2) → (3 4 5), (list-slice (list 1 2 3 4 5) 1 3) → (2 3)
 - (list->string (list "h" "e" "l" "l" "o")) → "hello" (no separator: concatenates directly; all elements must be strings)
 - (list->string (list "a" "b" "c") ",") → "a,b,c" (separator inserted between elements; separator may be multi-character)
-
-### Higher-order list functions
-
-- (list-map func list) → (list-map (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
-- (list-filter predicate list) → (list-filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
-- (list-fold func init list) → (list-fold integer+ 0 (list 1 2 3 4)) → 10
-- (list-find predicate list) → first element satisfying predicate, or #f if none found: (list-find (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → 4, note: (list-find predicate ()) → #f
-- (list-any? predicate list) → #t if at least one element satisfies predicate, #f otherwise: (list-any? (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → #t, note: (list-any? predicate ()) → #f
-- (list-all? predicate list) → #t if all elements satisfy predicate, #f otherwise: (list-all? (lambda (x) (integer>? x 0)) (list 1 2 3 4 5)) → #t, note: (list-all? predicate ()) → #t (vacuously true)
-- (list-zip lst1 lst2) → pairs corresponding elements: (list-zip (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6)), (list-zip lst1 lst2) stops at the shorter list: (list-zip (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
-- (list-unzip lst) → inverse of list-zip; splits a list of 2-element lists into a list of two lists: (list-unzip (list (list 1 4) (list 2 5) (list 3 6))) → ((1 2 3) (4 5 6))
+- Higher-order: (list-map func list) → (list-map (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
+- Higher-order: (list-filter predicate list) → (list-filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
+- Higher-order: (list-fold func init list) → (list-fold integer+ 0 (list 1 2 3 4)) → 10
+- Higher-order: (list-find predicate list) → first element satisfying predicate, or #f if none found: (list-find (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → 4, note: (list-find predicate ()) → #f
+- Higher-order: (list-any? predicate list) → #t if at least one element satisfies predicate, #f otherwise: (list-any? (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → #t, note: (list-any? predicate ()) → #f
+- Higher-order: (list-all? predicate list) → #t if all elements satisfy predicate, #f otherwise: (list-all? (lambda (x) (integer>? x 0)) (list 1 2 3 4 5)) → #t, note: (list-all? predicate ()) → #t (vacuously true)
+- Higher-order: (list-zip lst1 lst2) → pairs corresponding elements: (list-zip (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6)), (list-zip lst1 lst2) stops at the shorter list: (list-zip (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
+- Higher-order: (list-unzip lst) → inverse of list-zip; splits a list of 2-element lists into a list of two lists: (list-unzip (list (list 1 4) (list 2 5) (list 3 6))) → ((1 2 3) (4 5 6))
 - (list-first (list-unzip pairs)) → first elements, (list-first (list-rest (list-unzip pairs))) → second elements
 
 ## Association lists (alists):
@@ -333,6 +332,8 @@ Syntax: (operator arg1 arg2 ...)
 - Merging: (alist-merge alist1 alist2) - second wins on conflicts
 - Type checking: (alist? value)
 - Nested alists: (alist (list "user" (alist (list "name" "Bob") (list "id" 123))))
+- Higher-order: (alist-map func alist) → applies func to each (key value) pair, returning a new alist with transformed values; func receives key and value as separate arguments: (alist-map (lambda (k v) (integer* v 2)) (alist (list "a" 1) (list "b" 2))) → {("a" 2) ("b" 4)}
+- Higher-order: (alist-filter pred alist) → returns a new alist containing only entries where pred returns #t; pred receives key and value as separate arguments: (alist-filter (lambda (k v) (integer>? v 1)) (alist (list "a" 1) (list "b" 2))) → {("b" 2)}
 - Works with functional operations: (list-map f (alist-keys data)), (list-filter pred (alist-values data))
 - Pattern matching: (match data ((alist? a) ...) (_ ...))
 - Maintains insertion order, optimized for data processing workflows

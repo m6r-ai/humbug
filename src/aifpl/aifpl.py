@@ -533,6 +533,23 @@ class AIFPL:
                                 (outer args))))""",
         'alist-get': """(lambda (a-list key . rest)
                           (alist-get a-list key (if (list-null? rest) #f (list-first rest))))""",
+        'alist-map': """(lambda (f al)
+                    (letrec ((loop (lambda (keys acc)
+                                     (if (list-null? keys) acc
+                                         (let* ((k (list-first keys))
+                                                (v (alist-get al k)))
+                                           (loop (list-rest keys)
+                                                 (alist-set acc k (f k v))))))))
+                      (loop (alist-keys al) (alist))))""",
+        'alist-filter': """(lambda (pred al)
+                    (letrec ((loop (lambda (keys acc)
+                                     (if (list-null? keys) acc
+                                         (let* ((k (list-first keys))
+                                                (v (alist-get al k)))
+                                           (if (pred k v)
+                                               (loop (list-rest keys) (alist-set acc k v))
+                                               (loop (list-rest keys) acc)))))))
+                      (loop (alist-keys al) (alist))))""",
         'range': """(lambda (start end . rest)
                       (range start end (if (list-null? rest) 1 (list-first rest))))""",
     }
