@@ -1113,10 +1113,3 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
             return None
 
         return AIFPLASTFloat(args[0].value if args[0].value >= args[1].value else args[1].value)
-
-    def _to_python_number(self, value: AIFPLASTNode) -> int | float | complex:
-        """Convert AIFPL numeric value to Python number."""
-        if isinstance(value, (AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex)):
-            return value.value
-
-        raise ValueError(f"Expected numeric value, got {type(value).__name__}")
