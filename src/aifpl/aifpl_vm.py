@@ -599,26 +599,25 @@ class AIFPLVM:
         return None
 
     def _op_load_var(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, index: int, _arg2: int
+        self, frame: Frame, _code: CodeObject, index: int, _arg2: int
     ) -> AIFPLValue | None:
         """LOAD_VAR: Load variable from current frame at index."""
         # Validator guarantees index is in bounds AND variable is initialized
-        current_frame = self.current_frame
-        value = current_frame.locals[index]
+        value = frame.locals[index]
         self.stack.append(cast(AIFPLValue, value))
         return None
 
     def _op_store_var(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, index: int, _arg2: int
+        self, frame: Frame, _code: CodeObject, index: int, _arg2: int
     ) -> AIFPLValue | None:
         """STORE_VAR: Store top of stack to variable in current frame at index."""
         # Validator guarantees index is in bounds and stack has value
         value = self.stack.pop()
-        self.current_frame.locals[index] = value
+        frame.locals[index] = value
         return None
 
     def _op_enter(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, n: int, _arg2: int
+        self, frame: Frame, _code: CodeObject, n: int, _arg2: int
     ) -> AIFPLValue | None:
         """
         ENTER n: Pop n arguments from stack into locals 0..n-1.
@@ -628,14 +627,13 @@ class AIFPLVM:
         in locals[0], param 1 in locals[1], etc.
         """
         # Validator guarantees n >= 1 and stack has at least n values
-        current_frame = self.current_frame
         for i in range(n - 1, -1, -1):
-            current_frame.locals[i] = self.stack.pop()
+            frame.locals[i] = self.stack.pop()
 
         return None
 
     def _op_load_parent_var(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, index: int, depth: int
+        self, frame: Frame, _code: CodeObject, index: int, depth: int
     ) -> AIFPLValue | None:
         """
         LOAD_PARENT_VAR: Load variable from parent frame.
@@ -649,8 +647,7 @@ class AIFPLVM:
         """
         # Validator guarantees depth >= 1
         # Walk up parent frame chain by depth
-        current_frame = self.current_frame
-        parent_frame = current_frame.parent_frame
+        parent_frame = frame.parent_frame
 
         # Walk up the chain (validator guarantees this won't be None)
         for _ in range(depth - 1):
