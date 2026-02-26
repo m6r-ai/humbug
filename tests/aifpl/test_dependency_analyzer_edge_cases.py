@@ -278,7 +278,7 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
             result = aifpl.evaluate("""
             (let* ((value 42)
                    (result (match value
-                             ((number? n) (integer+ n 10))
+                             ((? number? n) (integer+ n 10))
                              (_ 0))))
               result)
             """)

@@ -274,8 +274,8 @@ class TestDesugarerMatchType:
         """Test desugaring of type pattern."""
         desugarer = AIFPLDesugarer()
 
-        # (match x ((number? n) n) (_ "not a number"))
-        expr = parse_and_analyze_expression('(match x ((number? n) n) (_ "not a number"))')
+        # (match x ((? number? n) n) (_ "not a number"))
+        expr = parse_and_analyze_expression('(match x ((? number? n) n) (_ "not a number"))')
         result = desugarer.desugar(expr)
 
         # Should be: (let ((#:tmp x)) (if (number? #:tmp) (let ((n #:tmp)) n) ...))
@@ -300,8 +300,8 @@ class TestDesugarerMatchType:
         """Test desugaring of type pattern with wildcard."""
         desugarer = AIFPLDesugarer()
 
-        # (match x ((string? _) "is string") (_ "not string"))
-        expr = parse_and_analyze_expression('(match x ((string? _) "is string") (_ "not string"))')
+        # (match x ((? string? _) "is string") (_ "not string"))
+        expr = parse_and_analyze_expression('(match x ((? string? _) "is string") (_ "not string"))')
         result = desugarer.desugar(expr)
 
         # Should test type but not bind variable
@@ -440,8 +440,8 @@ class TestDesugarerMatchNested:
         """Test desugaring of nested type pattern."""
         desugarer = AIFPLDesugarer()
 
-        # (match x (((number? n)) n) (_ "not list with number"))
-        expr = parse_and_analyze_expression('(match x (((number? n)) n) (_ "not list with number"))')
+        # (match x (((? number? n)) n) (_ "not list with number"))
+        expr = parse_and_analyze_expression('(match x (((? number? n)) n) (_ "not list with number"))')
         result = desugarer.desugar(expr)
 
         # Should desugar to nested tests
@@ -477,8 +477,8 @@ class TestDesugarerMatchMultipleClauses:
         """Test desugaring of match with complex multiple clauses."""
         desugarer = AIFPLDesugarer()
 
-        # (match x ((number? n) n) ((string? s) s) (() "empty") (_ "other"))
-        expr = parse_and_analyze_expression('(match x ((number? n) n) ((string? s) s) (() "empty") (_ "other"))')
+        # (match x ((? number? n) n) ((? string? s) s) (() "empty") (_ "other"))
+        expr = parse_and_analyze_expression('(match x ((? number? n) n) ((? string? s) s) (() "empty") (_ "other"))')
         result = desugarer.desugar(expr)
 
         # Should be nested if expressions
@@ -577,8 +577,8 @@ class TestDesugarerTempVariables:
         """Test that nested matches get unique temp variables."""
         desugarer = AIFPLDesugarer()
 
-        # (match x ((number? n) (match n (42 "found") (_ "not 42"))) (_ "not number"))
-        expr = parse_and_analyze_expression('(match x ((number? n) (match n (42 "found") (_ "not 42"))) (_ "not number"))')
+        # (match x ((? number? n) (match n (42 "found") (_ "not 42"))) (_ "not number"))
+        expr = parse_and_analyze_expression('(match x ((? number? n) (match n (42 "found") (_ "not 42"))) (_ "not number"))')
         result = desugarer.desugar(expr)
 
         # Both matches should have different temp variables

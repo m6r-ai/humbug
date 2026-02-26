@@ -548,7 +548,7 @@ class AIFPLSemanticAnalyzer:
                 message="Match expression has wrong number of arguments",
                 received=f"Got {len(expr.elements) - 1} arguments",
                 expected="At least 2 arguments: (match value (pattern1 result1) ...)",
-                example="(match x ((number? n) (* n 2)) (_ \"not a number\"))",
+                example="(match x ((? integer? n) (* n 2)) (_ \"not a number\"))",
                 suggestion="Match needs a value and at least one pattern clause",
                 line=expr.line,
                 column=expr.column,
@@ -568,7 +568,7 @@ class AIFPLSemanticAnalyzer:
                     message=f"Match clause {i+1} must be a list",
                     received=f"Clause {i+1}: {clause.type_name()}",
                     expected="Each clause: (pattern result-expression)",
-                    example="((number? n) (* n 2))",
+                    example="((? integer? n) (* n 2))",
                     suggestion="Wrap each clause in parentheses: (pattern result)",
                     line=clause.line,
                     column=clause.column,
@@ -580,7 +580,7 @@ class AIFPLSemanticAnalyzer:
                     message=f"Match clause {i+1} has wrong number of elements",
                     received=f"Clause {i+1}: {clause}",
                     expected="Each clause needs exactly 2 elements: (pattern result)",
-                    example="Correct: ((number? n) (* n 2))\nIncorrect: ((number? n)) or ((number? n) result1 result2)",
+                    example="Correct: ((? integer? n) (* n 2))\nIncorrect: ((? integer? n)) or ((? integer? n) result1 result2)",
                     suggestion="Each clause: (pattern result-expression)",
                     line=clause.line,
                     column=clause.column,
@@ -612,76 +612,40 @@ class AIFPLSemanticAnalyzer:
         if pattern.is_empty():
             return
 
-        # Validate type predicate
-        type_predicates = {
-            'number?', 'integer?', 'float?', 'complex?',
-            'string?', 'boolean?', 'list?', 'alist?', 'function?', 'symbol?'
-        }
-
-        # Check for type pattern: (type? var)
-        if (len(pattern.elements) == 2 and
-            isinstance(pattern.elements[0], AIFPLASTSymbol) and
-            pattern.elements[0].name.endswith('?')):
-
-            type_pred = pattern.elements[0].name
-            var_pattern = pattern.elements[1]
-            if type_pred in type_predicates:
-                # Validate variable pattern
-                if not isinstance(var_pattern, AIFPLASTSymbol):
-                    raise AIFPLEvalError(
-                        message=f"Pattern variable must be a symbol in clause {clause_num}",
-                        received=f"Variable in type pattern: {var_pattern}",
-                        expected="Symbol (variable name)",
-                        example="(number? x) not (number? 42)",
-                        suggestion="Use unquoted variable names in type patterns",
-                        line=var_pattern.line,
-                        column=var_pattern.column,
-                        source=self.source
-                    )
-                return
-
-            # Unknown type predicate but looks like one
-            raise AIFPLEvalError(
-                message=f"Invalid type pattern in clause {clause_num}",
-                received=f"Type pattern: ({type_pred} {var_pattern})",
-                expected="Valid type predicate like number?, string?, list?, etc.",
-                example="(number? x) or (string? s)",
-                suggestion="Use a valid type predicate ending with ?",
-                line=pattern.line,
-                column=pattern.column,
-                source=self.source
-            )
-
-        # Check for malformed type patterns (wrong arity)
+        # Check for predicate test pattern: (? pred var)
         if (len(pattern.elements) >= 1 and
             isinstance(pattern.elements[0], AIFPLASTSymbol) and
-            pattern.elements[0].name.endswith('?')):
+            pattern.elements[0].name == '?'):
 
-            type_pred = pattern.elements[0].name
-            if type_pred in type_predicates:
-                # Type predicate but wrong number of arguments
-                if len(pattern.elements) == 1:
-                    raise AIFPLEvalError(
-                        message=f"Invalid type pattern in clause {clause_num}",
-                        received=f"Type pattern: ({type_pred}) - missing variable",
-                        expected="Type pattern with variable: (type? var)",
-                        example="(number? x) not (number?)",
-                        suggestion="Add a variable name after the type predicate",
-                        line=pattern.line,
-                        column=pattern.column,
-                        source=self.source
-                    )
-
+            if len(pattern.elements) != 3:
                 raise AIFPLEvalError(
-                    message=f"Invalid type pattern in clause {clause_num}",
-                    received=f"Type pattern: {pattern} - too many variables",
-                    expected="Type pattern with one variable: (type? var)",
-                    example="(number? x) not (number? x y)",
-                    suggestion="Use only one variable in type patterns",
+                    message=f"Invalid predicate pattern in clause {clause_num}",
+                    received=f"Pattern: {pattern}",
+                    expected="Exactly 3 elements: (? predicate variable)",
+                    example="(? integer? n) or (? my-pred? x)",
+                    suggestion="Use (? predicate variable) for predicate test patterns",
                     line=pattern.line,
                     column=pattern.column,
                     source=self.source
                 )
+
+            pred_expr = pattern.elements[1]
+            var_pattern = pattern.elements[2]
+            if not isinstance(var_pattern, AIFPLASTSymbol):
+                raise AIFPLEvalError(
+                    message=f"Pattern variable must be a symbol in clause {clause_num}",
+                    received=f"Variable in predicate pattern: {var_pattern}",
+                    expected="Symbol (variable name)",
+                    example="(? integer? x) not (? integer? 42)",
+                    suggestion="Use an unquoted variable name as the third element of a predicate pattern",
+                    line=var_pattern.line,
+                    column=var_pattern.column,
+                    source=self.source
+                )
+
+            # Analyze the predicate expression — can be any valid expression
+            self.analyze(pred_expr, self.source)
+            return
 
         # Check for cons pattern: (head . tail) or (a b . rest)
         dot_positions = []

@@ -56,7 +56,7 @@ class AIFPLLexer:
             self._jump_table[code] = self._handle_symbol
 
         # Other symbol-starting characters
-        for char in '*/%<>=!&|^~_':
+        for char in '*/%<>=!&|^~_?':
             self._jump_table[ord(char)] = self._handle_symbol
 
     def lex(self, expression: str, preserve_comments: bool = False) -> List[AIFPLToken]:

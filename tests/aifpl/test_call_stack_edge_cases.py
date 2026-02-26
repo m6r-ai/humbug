@@ -241,7 +241,7 @@ class TestAIFPLCallStackEdgeCases:
         try:
             result = aifpl.evaluate("""
             (match (integer+ 2 3)
-              ((number? n) (if (integer>? n 3) "big" "small"))
+              ((? number? n) (if (integer>? n 3) "big" "small"))
               (_ "not number"))
             """)
             assert result == "big"

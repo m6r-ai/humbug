@@ -160,9 +160,9 @@ class TestCommentBlankLinesInMatch:
         printer = AIFPLPrettyPrinter()
         code = """(match x
   ; Handle numbers
-  ((number? n) (if (> n 0) 'positive 'negative))
+  ((? number? n) (if (> n 0) 'positive 'negative))
   ; Handle strings
-  ((string? s) (if (string=? s "") 'empty 'non-empty))
+  ((? string? s) (if (string=? s "") 'empty 'non-empty))
   ; Default case
   (_ 'unknown))"""
         result = printer.format(code)
@@ -185,7 +185,7 @@ class TestCommentBlankLinesInMatch:
     def test_match_without_comments_no_blank_lines(self):
         """Test that match without comments has no blank lines between clauses."""
         printer = AIFPLPrettyPrinter()
-        code = "(match x ((number? n) (if (> n 0) 'positive 'negative)) ((string? s) (if (string=? s \"\") 'empty 'non-empty)) (_ 'unknown))"
+        code = "(match x ((? number? n) (if (> n 0) 'positive 'negative)) ((? string? s) (if (string=? s \"\") 'empty 'non-empty)) (_ 'unknown))"
         result = printer.format(code)
 
         lines = result.split('\n')
@@ -199,10 +199,10 @@ class TestCommentBlankLinesInMatch:
         """Test match with some clauses having comments and some not."""
         printer = AIFPLPrettyPrinter()
         code = """(match x
-  ((number? n) 'number)
+  ((? number? n) 'number)
   ; String case
-  ((string? s) 'string)
-  ((boolean? b) 'boolean)
+  ((? string? s) 'string)
+  ((? boolean? b) 'boolean)
   ; Default
   (_ 'other))"""
         result = printer.format(code)
@@ -341,7 +341,7 @@ class TestCommentIndentationInMatchClauses:
         """Test comment between pattern and result in match clause has correct indentation."""
         printer = AIFPLPrettyPrinter()
         code = """(match x
-  ((number? n)
+  ((? number? n)
    ; This is a number
    (* n 2))
   (_ 'unknown))"""

@@ -215,17 +215,17 @@ class TestSymbolToString:
 class TestSymbolMatchPattern:
     def test_match_symbol_type_pattern(self, aifpl):
         assert aifpl.evaluate(
-            "(match 'hello ((symbol? s) \"got a symbol\") (_ \"other\"))"
+            "(match 'hello ((? symbol? s) \"got a symbol\") (_ \"other\"))"
         ) == "got a symbol"
 
     def test_match_non_symbol_falls_through(self, aifpl):
         assert aifpl.evaluate(
-            '(match "hello" ((symbol? s) "got a symbol") (_ "other"))'
+            '(match "hello" ((? symbol? s) "got a symbol") (_ "other"))'
         ) == "other"
 
     def test_match_symbol_binds_variable(self, aifpl):
         assert aifpl.evaluate(
-            "(match 'foo ((symbol? s) (symbol->string s)) (_ \"none\"))"
+            "(match 'foo ((? symbol? s) (symbol->string s)) (_ \"none\"))"
         ) == "foo"
 
     def test_match_symbol_in_list_processing(self, aifpl):
@@ -234,9 +234,9 @@ class TestSymbolMatchPattern:
         result = aifpl.evaluate("""
             (list-map (lambda (x)
                    (match x
-                     ((symbol? s) (string-concat "sym:" (symbol->string s)))
-                     ((integer? n) (string-concat "int:" (integer->string n)))
-                     ((string? s) (string-concat "str:" s))
+                     ((? symbol? s) (string-concat "sym:" (symbol->string s)))
+                     ((? integer? n) (string-concat "int:" (integer->string n)))
+                     ((? string? s) (string-concat "str:" s))
                      (_ "other")))
                  (list 'foo 42 "hello" 'bar))
         """)

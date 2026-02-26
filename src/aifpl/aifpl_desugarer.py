@@ -736,9 +736,9 @@ class AIFPLDesugarer:
             (test_expression, [(var_name, value_expr), ...])
 
         Example:
-            Pattern: (number? n)
+            Pattern: (? number? n)
             Temp: "#:match-tmp-1"
-            Returns: ((number? #:match-tmp-1), [("n", #:match-tmp-1)])
+            Returns: ((number? #:match-tmp-1), [("n", #:match-tmp-1)])  ; pred called directly
         """
         # Literal patterns: numbers, strings, booleans
         # Phase 1: Accept both old and new numeric types as literals
@@ -830,39 +830,29 @@ class AIFPLDesugarer:
             ))
             return (test_expr, [])
 
-        # Check for type pattern: (type? var)
-        if (len(pattern.elements) == 2 and
+        # Check for predicate test pattern: (? pred var)
+        if (len(pattern.elements) == 3 and
             isinstance(pattern.elements[0], AIFPLASTSymbol) and
-            pattern.elements[0].name.endswith('?')):
+            pattern.elements[0].name == '?'):
 
-            type_pred = pattern.elements[0].name
-            var_pattern = pattern.elements[1]
+            pred_expr = pattern.elements[1]
+            var_pattern = pattern.elements[2]
 
-            # Validate type predicate
-            valid_predicates = {
-                'number?', 'integer?', 'float?', 'complex?',
-                'string?', 'boolean?', 'list?', 'alist?', 'function?', 'symbol?'
-            }
-
-            assert type_pred in valid_predicates, f"Unknown type predicate: {type_pred} (should be validated by semantic analyzer)"
             assert isinstance(var_pattern, AIFPLASTSymbol), \
-                "Type pattern variable should be a symbol (validated by semantic analyzer)"
+                "Predicate pattern variable should be a symbol (validated by semantic analyzer)"
 
-            # Test: (type? temp_var)
+            # Test: (pred temp_var) — pred can be any expression
             test_expr = AIFPLASTList((
-                AIFPLASTSymbol(type_pred),
+                pred_expr,
                 AIFPLASTSymbol(temp_var)
             ))
 
-            # Binding: if var_pattern is a variable, bind it
+            # Binding: bind the variable to temp_var (unless wildcard)
             bindings: List[Tuple[str, AIFPLASTNode]] = []
-            if isinstance(var_pattern, AIFPLASTSymbol) and var_pattern.name != '_':
+            if var_pattern.name != '_':
                 bindings.append((var_pattern.name, AIFPLASTSymbol(temp_var)))
 
             return (test_expr, bindings)
-
-        # Malformed type patterns should have been caught by semantic analyzer
-        # Continue with other pattern types
 
         # Check for cons pattern: (head . tail) or (a b . rest)
         dot_positions = []

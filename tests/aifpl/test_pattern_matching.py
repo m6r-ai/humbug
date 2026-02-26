@@ -132,32 +132,32 @@ class TestPatternMatching:
 
     @pytest.mark.parametrize("expression,expected", [
         # Integer type patterns
-        ('(match 42 ((integer? i) (integer* i 2)) (_ "not integer"))', '84'),
-        ('(match 3.14 ((integer? i) (integer* i 2)) (_ "not integer"))', '"not integer"'),
+        ('(match 42 ((? integer? i) (integer* i 2)) (_ "not integer"))', '84'),
+        ('(match 3.14 ((? integer? i) (integer* i 2)) (_ "not integer"))', '"not integer"'),
 
         # Float type patterns
-        ('(match 3.14 ((float? f) (float-round f)) (_ "not float"))', '3.0'),
-        ('(match 42 ((float? f) (float-round f)) (_ "not float"))', '"not float"'),
+        ('(match 3.14 ((? float? f) (float-round f)) (_ "not float"))', '3.0'),
+        ('(match 42 ((? float? f) (float-round f)) (_ "not float"))', '"not float"'),
 
         # Complex type patterns
-        ('(match (integer->complex 1 2) ((complex? c) (complex-real c)) (_ "not complex"))', '1.0'),
-        ('(match 42 ((complex? c) (complex-real c)) (_ "not complex"))', '"not complex"'),
+        ('(match (integer->complex 1 2) ((? complex? c) (complex-real c)) (_ "not complex"))', '1.0'),
+        ('(match 42 ((? complex? c) (complex-real c)) (_ "not complex"))', '"not complex"'),
 
         # String type patterns
-        ('(match "hello" ((string? s) (string-length s)) (_ "not string"))', '5'),
-        ('(match 42 ((string? s) (string-length s)) (_ "not string"))', '"not string"'),
+        ('(match "hello" ((? string? s) (string-length s)) (_ "not string"))', '5'),
+        ('(match 42 ((? string? s) (string-length s)) (_ "not string"))', '"not string"'),
 
         # Boolean type patterns
-        ('(match #t ((boolean? b) (boolean-not b)) (_ "not boolean"))', '#f'),
-        ('(match 42 ((boolean? b) (boolean-not b)) (_ "not boolean"))', '"not boolean"'),
+        ('(match #t ((? boolean? b) (boolean-not b)) (_ "not boolean"))', '#f'),
+        ('(match 42 ((? boolean? b) (boolean-not b)) (_ "not boolean"))', '"not boolean"'),
 
         # List type patterns
-        ('(match (list 1 2 3) ((list? l) (list-length l)) (_ "not list"))', '3'),
-        ('(match 42 ((list? l) (list-length l)) (_ "not list"))', '"not list"'),
+        ('(match (list 1 2 3) ((? list? l) (list-length l)) (_ "not list"))', '3'),
+        ('(match 42 ((? list? l) (list-length l)) (_ "not list"))', '"not list"'),
 
         # Function type patterns
-        ('(match (lambda (x) x) ((function? f) "is function") (_ "not function"))', '"is function"'),
-        ('(match 42 ((function? f) "is function") (_ "not function"))', '"not function"'),
+        ('(match (lambda (x) x) ((? function? f) "is function") (_ "not function"))', '"is function"'),
+        ('(match 42 ((? function? f) "is function") (_ "not function"))', '"not function"'),
     ])
     def test_type_pattern_matching(self, aifpl, expression, expected):
         """Test type-based pattern matching."""
@@ -168,15 +168,72 @@ class TestPatternMatching:
         # Variable should be bound and usable in the body
         helpers.assert_evaluates_to(
             aifpl,
-            '(match 42 ((integer? n) (let ((doubled (integer* n 2))) doubled)))',
+            '(match 42 ((? integer? n) (let ((doubled (integer* n 2))) doubled)))',
             '84'
         )
 
         # Type pattern with complex usage
         helpers.assert_evaluates_to(
             aifpl,
-            '(match "hello world" ((string? s) (integer? (string-index s "world"))))',
+            '(match "hello world" ((? string? s) (integer? (string-index s "world"))))',
             '#t'
+        )
+
+    def test_user_defined_predicate_pattern(self, aifpl, helpers):
+        """Test that user-defined predicates work in (? pred var) patterns."""
+        # Basic matching and non-matching cases
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(let ((positive? (lambda (x) (and (integer? x) (integer>? x 0))))) (match 5 ((? positive? n) "positive") (_ "other")))',
+            '"positive"'
+        )
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(let ((positive? (lambda (x) (and (integer? x) (integer>? x 0))))) (match -3 ((? positive? n) "positive") (_ "other")))',
+            '"other"'
+        )
+
+        # Bound variable is usable in the result expression
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(let ((positive? (lambda (x) (and (integer? x) (integer>? x 0))))) (match 7 ((? positive? n) (integer* n 2)) (_ 0)))',
+            '14'
+        )
+
+        # Inline lambda as predicate (no named binding needed)
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(match 10 ((? (lambda (x) (integer>? x 5)) n) "big") (_ "small"))',
+            '"big"'
+        )
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(match 3 ((? (lambda (x) (integer>? x 5)) n) "big") (_ "small"))',
+            '"small"'
+        )
+
+        # User-defined predicate in a nested position inside a list destructure
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(let ((even? (lambda (x) (integer=? (integer% x 2) 0)))) (match (list 4 "hello") (((? even? n) (? string? s)) (list n (string-length s))) (_ "no match")))',
+            '(4 5)'
+        )
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(let ((even? (lambda (x) (integer=? (integer% x 2) 0)))) (match (list 3 "hello") (((? even? n) (? string? s)) (list n (string-length s))) (_ "no match")))',
+            '"no match"'
+        )
+
+        # Multiple different user-defined predicates in the same match
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(let ((big? (lambda (x) (and (integer? x) (integer>? x 100)))) (short? (lambda (x) (and (string? x) (integer<? (string-length x) 4))))) (match 200 ((? big? n) "big integer") ((? short? s) "short string") (_ "other")))',
+            '"big integer"'
+        )
+        helpers.assert_evaluates_to(
+            aifpl,
+            '(let ((big? (lambda (x) (and (integer? x) (integer>? x 100)))) (short? (lambda (x) (and (string? x) (integer<? (string-length x) 4))))) (match "hi" ((? big? n) "big integer") ((? short? s) "short string") (_ "other")))',
+            '"short string"'
         )
 
     # ========== List Structure Pattern Matching ==========
@@ -242,14 +299,14 @@ class TestPatternMatching:
         # List of numbers
         helpers.assert_evaluates_to(
             aifpl,
-            '(match (list 1 2 3) ((list? l) (if (integer>? (list-length l) 2) "long list" "short list")))',
+            '(match (list 1 2 3) ((? list? l) (if (integer>? (list-length l) 2) "long list" "short list")))',
             '"long list"'
         )
 
         # Number in specific position
         helpers.assert_evaluates_to(
             aifpl,
-            '(match (list 10 "hello" #t) ((a (string? s) c) (list a (string-length s) c)))',
+            '(match (list 10 "hello" #t) ((a (? string? s) c) (list a (string-length s) c)))',
             '(10 5 #t)'
         )
 
@@ -258,7 +315,7 @@ class TestPatternMatching:
         # Nested list with type patterns
         complex_pattern = '''
         (match (list (list 1 2) "test" (list 3 4))
-               (((a b) (string? s) (c d)) (list (integer+ a b c d) (string-length s)))
+               (((a b) (? string? s) (c d)) (list (integer+ a b c d) (string-length s)))
                (_ "no match"))
         '''
         helpers.assert_evaluates_to(aifpl, complex_pattern, '(10 4)')
@@ -266,7 +323,7 @@ class TestPatternMatching:
         # Mixed patterns with multiple levels
         mixed_pattern = '''
         (match (list 42 (list "x" "y") #t)
-               (((integer? n) (a b) (boolean? flag))
+               (((? integer? n) (a b) (? boolean? flag))
                 (if flag (integer+ n (string-length (string-concat a b))) n))
                (_ "no match"))
         '''
@@ -277,14 +334,14 @@ class TestPatternMatching:
         # Pattern matching with additional conditions
         guarded_pattern = '''
         (match 15
-               ((integer? n) (if (integer>? n 10) (integer* n 2) n))
+               ((? integer? n) (if (integer>? n 10) (integer* n 2) n))
                (_ "not number"))
         '''
         helpers.assert_evaluates_to(aifpl, guarded_pattern, '30')
 
         guarded_pattern_2 = '''
         (match 5
-               ((integer? n) (if (integer>? n 10) (integer* n 2) n))
+               ((? integer? n) (if (integer>? n 10) (integer* n 2) n))
                (_ "not number"))
         '''
         helpers.assert_evaluates_to(aifpl, guarded_pattern_2, '5')
@@ -325,8 +382,8 @@ class TestPatternMatching:
         pattern_function = '''
         (let ((matcher (lambda (val)
                         (match val
-                               ((integer? n) (integer* n 2))
-                               ((string? s) (string-length s))
+                               ((? integer? n) (integer* n 2))
+                               ((? string? s) (string-length s))
                                (_ 0)))))
           (list (matcher 21) (matcher "hello") (matcher #t)))
         '''
@@ -338,8 +395,8 @@ class TestPatternMatching:
         map_with_match = '''
         (list-map (lambda (item)
                (match item
-                      ((integer? n) (integer* n 2))
-                      ((string? s) (string-length s))
+                      ((? integer? n) (integer* n 2))
+                      ((? string? s) (string-length s))
                       (_ 0)))
              (list 5 "hello" #t 10))
         '''
@@ -349,7 +406,7 @@ class TestPatternMatching:
         filter_with_match = '''
         (list-filter (lambda (item)
                   (match item
-                         ((integer? n) (integer>? n 5))
+                         ((? integer? n) (integer>? n 5))
                          (_ #f)))
                 (list 1 10 "hello" 7 3))
         '''
@@ -359,7 +416,7 @@ class TestPatternMatching:
         """Test nested match expressions."""
         nested_match = '''
         (match (list 1 (list 2 3))
-               ((a (list? inner))
+               ((a (? list? inner))
                 (match inner
                        ((b c) (integer+ a b c))
                        (_ a)))
@@ -398,13 +455,9 @@ class TestPatternMatching:
 
     def test_invalid_pattern_syntax_errors(self, aifpl):
         """Test errors for invalid pattern syntax."""
-        # Invalid type pattern (boolean-not a proper type predicate call)
-        with pytest.raises(AIFPLEvalError, match="Invalid type pattern"):
-            aifpl.evaluate('(match 42 ((integer?) "invalid") (_ "other"))')
-
-        # Invalid type pattern (wrong number of arguments)
-        with pytest.raises(AIFPLEvalError, match="Invalid type pattern"):
-            aifpl.evaluate('(match 42 ((integer? x y) "invalid") (_ "other"))')
+        # Invalid predicate pattern (wrong number of arguments — 4 elements instead of 3)
+        with pytest.raises(AIFPLEvalError, match="Invalid predicate pattern"):
+            aifpl.evaluate('(match 42 ((? integer? x y) "invalid") (_ "other"))')
 
         # Invalid cons pattern (more than one dot)
         with pytest.raises(AIFPLEvalError, match="Invalid pattern"):
@@ -414,14 +467,14 @@ class TestPatternMatching:
         with pytest.raises(AIFPLEvalError, match="Invalid pattern"):
             aifpl.evaluate('(match (list 1 2 3) ((. a b) "invalid") (_ "other"))')
 
-        with pytest.raises(AIFPLEvalError, match="Invalid type pattern"):
-            aifpl.evaluate('(match (3) ((number2? x) "invalid") (_ "other"))')
-
+        # Invalid predicate pattern (only 2 elements — missing variable)
+        with pytest.raises(AIFPLEvalError, match="Invalid predicate pattern"):
+            aifpl.evaluate('(match 42 ((? integer?) "invalid") (_ "other"))')
     def test_invalid_variable_patterns(self, aifpl):
         """Test errors for invalid variable patterns."""
         # String as variable pattern in type pattern - this should fail validation
         with pytest.raises(AIFPLEvalError, match="Pattern variable must be a symbol"):
-            aifpl.evaluate('(match 42 ((integer? "x") "invalid") (_ "other"))')
+            aifpl.evaluate('(match 42 ((? integer? "x") "invalid") (_ "other"))')
 
     def test_list_pattern_length_mismatch(self, aifpl):
         """Test that list patterns with wrong length fall through to wildcard."""
@@ -440,12 +493,12 @@ class TestPatternMatching:
     def test_type_pattern_with_wrong_type(self, aifpl):
         """Test type patterns with wrong types fall through correctly."""
         # String doesn't match integer? pattern, should match string? pattern
-        result = aifpl.evaluate_and_format('(match "hello" ((integer? n) "number") ((string? s) "string"))')
+        result = aifpl.evaluate_and_format('(match "hello" ((? integer? n) "number") ((? string? s) "string"))')
         assert result == '"string"'
 
         # Test actual no-match error (no matching patterns)
         with pytest.raises(AIFPLEvalError, match="No patterns matched"):
-            aifpl.evaluate('(match "hello" ((integer? n) "number"))')
+            aifpl.evaluate('(match "hello" ((? integer? n) "number"))')
 
     def test_cons_pattern_with_non_list(self, aifpl):
         """Test cons patterns with non-list values fall through to wildcard."""
@@ -503,9 +556,9 @@ class TestPatternMatching:
         data_processor = '''
         (let ((process (lambda (data)
                         (match data
-                               ((integer? n) (if (integer>? n 0) "positive" "non-positive"))
-                               ((string? s) (if (integer>? (string-length s) 5) "long" "short"))
-                               ((list? l) (if (list-null? l) "empty-list" "non-empty-list"))
+                               ((? integer? n) (if (integer>? n 0) "positive" "non-positive"))
+                               ((? string? s) (if (integer>? (string-length s) 5) "long" "short"))
+                               ((? list? l) (if (list-null? l) "empty-list" "non-empty-list"))
                                (_ "unknown")))))
           (list (process 42)
                 (process -5)
@@ -527,7 +580,7 @@ class TestPatternMatching:
         tree_sum = '''
         (letrec ((sum-tree (lambda (tree)
                             (match tree
-                                   ((integer? n) n)
+                                   ((? integer? n) n)
                                    ((left right) (integer+ (sum-tree left) (sum-tree right)))
                                    (_ 0)))))
           (sum-tree (list (list 1 2) (list 3 4))))
@@ -559,10 +612,10 @@ class TestPatternMatching:
         command_processor = '''
         (let ((execute (lambda (cmd)
                         (match cmd
-                               (("add" (integer? a) (integer? b)) (integer+ a b))
-                               (("multiply" (integer? a) (integer? b)) (integer* a b))
-                               (("greet" (string? name)) (string-concat "Hello, " name))
-                               (("list-length" (string? s)) (string-length s))
+                               (("add" (? integer? a) (? integer? b)) (integer+ a b))
+                               (("multiply" (? integer? a) (? integer? b)) (integer* a b))
+                               (("greet" (? string? name)) (string-concat "Hello, " name))
+                               (("list-length" (? string? s)) (string-length s))
                                (_ "unknown command")))))
           (list (execute (list "add" 5 3))
                 (execute (list "multiply" 4 7))
@@ -583,7 +636,7 @@ class TestPatternMatching:
         (match 50
                (1 "one") (2 "two") (3 "three") (4 "four") (5 "five")
                (10 "ten") (20 "twenty") (30 "thirty") (40 "forty")
-               ((integer? n) (if (integer>? n 45) "big number" "medium number"))
+               ((? integer? n) (if (integer>? n 45) "big number" "medium number"))
                (_ "unknown"))
         '''
         helpers.assert_evaluates_to(aifpl, many_patterns, '"big number"')
@@ -602,8 +655,8 @@ class TestPatternMatching:
         complex_fold = '''
         (list-fold (lambda (acc item)
                 (match item
-                       ((integer? n) (integer+ acc n))
-                       ((string? s) (integer+ acc (string-length s)))
+                       ((? integer? n) (integer+ acc n))
+                       ((? string? s) (integer+ acc (string-length s)))
                        (_ acc)))
               0
               (list 10 "hello" #t 20 "world" (list 1 2)))
@@ -614,9 +667,9 @@ class TestPatternMatching:
         recursive_pattern = '''
         (letrec ((process-nested (lambda (data)
                                   (match data
-                                         ((integer? n) n)
-                                         ((string? s) (string-length s))
-                                         ((list? l) (list-fold integer+ 0 (list-map process-nested l)))
+                                         ((? integer? n) n)
+                                         ((? string? s) (string-length s))
+                                         ((? list? l) (list-fold integer+ 0 (list-map process-nested l)))
                                          (_ 0)))))
           (process-nested (list 10 "test" (list 5 "hi") 20)))
         '''

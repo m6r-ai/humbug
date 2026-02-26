@@ -451,7 +451,7 @@ class TestAListPatternMatching:
         """Test matching alist type."""
         result = tool.evaluate('''
             (match (alist (list "name" "Alice"))
-              ((alist? a) "is-alist")
+              ((? alist? a) "is-alist")
               (_ "not-alist"))
         ''')
         assert result == "is-alist"
@@ -461,8 +461,8 @@ class TestAListPatternMatching:
         result = tool.evaluate('''
             (let ((process (lambda (data)
                              (match data
-                               ((alist? a) "alist")
-                               ((list? l) "list")
+                               ((? alist? a) "alist")
+                               ((? list? l) "list")
                                (_ "other")))))
               (list (process (alist (list "a" 1)))
                     (process (list 1 2 3))))
@@ -473,7 +473,7 @@ class TestAListPatternMatching:
         """Test pattern matching combined with alist operations."""
         result = tool.evaluate('''
             (match (alist (list "type" "user") (list "name" "Alice"))
-              ((alist? data)
+              ((? alist? data)
                (if (string=? (alist-get data "type") "user")
                    (alist-get data "name")
                    "unknown"))

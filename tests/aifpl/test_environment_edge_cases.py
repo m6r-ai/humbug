@@ -297,7 +297,7 @@ class TestAIFPLEnvironmentEdgeCases:
             # Pattern matching with variable binding
             result = aifpl.evaluate("""
             (match 42
-              ((number? n) (integer+ n 10))
+              ((? number? n) (integer+ n 10))
               (_ 0))
             """)
             assert result == 52

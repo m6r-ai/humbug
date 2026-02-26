@@ -53,44 +53,44 @@ class TestAIFPLPatternMatchingEdgeCases:
     def test_type_pattern_edge_cases(self, aifpl):
         """Test type pattern edge cases."""
         # String type patterns
-        result = aifpl.evaluate('(match "hello" ((string? s) "string") (_ "other"))')
+        result = aifpl.evaluate('(match "hello" ((? string? s) "string") (_ "other"))')
         assert result == "string"
 
-        result = aifpl.evaluate('(match 42 ((string? s) "string") (_ "other"))')
+        result = aifpl.evaluate('(match 42 ((? string? s) "string") (_ "other"))')
         assert result == "other"
 
         # Boolean type patterns
-        result = aifpl.evaluate('(match #t ((boolean? b) "boolean") (_ "other"))')
+        result = aifpl.evaluate('(match #t ((? boolean? b) "boolean") (_ "other"))')
         assert result == "boolean"
 
-        result = aifpl.evaluate('(match #f ((boolean? b) "boolean") (_ "other"))')
+        result = aifpl.evaluate('(match #f ((? boolean? b) "boolean") (_ "other"))')
         assert result == "boolean"
 
-        result = aifpl.evaluate('(match 42 ((boolean? b) "boolean") (_ "other"))')
+        result = aifpl.evaluate('(match 42 ((? boolean? b) "boolean") (_ "other"))')
         assert result == "other"
 
         # List type patterns
-        result = aifpl.evaluate('(match (list 1 2 3) ((list? l) "list") (_ "other"))')
+        result = aifpl.evaluate('(match (list 1 2 3) ((? list? l) "list") (_ "other"))')
         assert result == "list"
 
-        result = aifpl.evaluate('(match () ((list? l) "list") (_ "other"))')
+        result = aifpl.evaluate('(match () ((? list? l) "list") (_ "other"))')
         assert result == "list"
 
-        result = aifpl.evaluate('(match 42 ((list? l) "list") (_ "other"))')
+        result = aifpl.evaluate('(match 42 ((? list? l) "list") (_ "other"))')
         assert result == "other"
 
     def test_variable_binding_pattern_edge_cases(self, aifpl):
         """Test variable binding pattern edge cases."""
         # Simple variable binding
-        result = aifpl.evaluate('(match 42 ((integer? n) n) (_ 0))')
+        result = aifpl.evaluate('(match 42 ((? integer? n) n) (_ 0))')
         assert result == 42
 
         # Variable binding with transformation
-        result = aifpl.evaluate('(match 5 ((integer? n) (integer* n 2)) (_ 0))')
+        result = aifpl.evaluate('(match 5 ((? integer? n) (integer* n 2)) (_ 0))')
         assert result == 10
 
         # String variable binding
-        result = aifpl.evaluate('(match "hello" ((string? s) (string-upcase s)) (_ ""))')
+        result = aifpl.evaluate('(match "hello" ((? string? s) (string-upcase s)) (_ ""))')
         assert result == "HELLO"
 
         # Multiple variable bindings (if supported)
@@ -148,7 +148,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         try:
             result = aifpl.evaluate('''
             (match (list 1 "hello")
-              (((integer? n) (string? s)) (list n (string-length s)))
+              (((? integer? n) (? string? s)) (list n (string-length s)))
               (_ (list 0 0)))
             ''')
             assert result == [1, 5]
@@ -161,7 +161,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         # Match nested lists
         result = aifpl.evaluate('''
         (match (list (list 1) (list 2))
-          ((list? l) "list")
+          ((? list? l) "list")
           (_ "other"))
         ''')
         assert result == "list"
@@ -169,7 +169,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         # Match mixed-type lists
         result = aifpl.evaluate('''
         (match (list 1 "hello" #t)
-          ((list? l) "mixed list")
+          ((? list? l) "mixed list")
           (_ "other"))
         ''')
         assert result == "mixed list"
@@ -201,7 +201,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         # Match function type
         result = aifpl.evaluate('''
         (match (lambda (x) x)
-          ((function? f) "function")
+          ((? function? f) "function")
           (_ "other"))
         ''')
         assert result == "function"
@@ -209,7 +209,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         # Match non-function
         result = aifpl.evaluate('''
         (match 42
-          ((function? f) "function")
+          ((? function? f) "function")
           (_ "other"))
         ''')
         assert result == "other"
@@ -242,14 +242,14 @@ class TestAIFPLPatternMatchingEdgeCases:
         # Pattern matching with variable binding and expressions
         result = aifpl.evaluate('''
         (match 5
-          ((integer? n) (if (integer>? n 0) "positive" "non-positive"))
+          ((? integer? n) (if (integer>? n 0) "positive" "non-positive"))
           (_ "not a number"))
         ''')
         assert result == "positive"
 
         result = aifpl.evaluate('''
         (match -3
-          ((integer? n) (if (integer>? n 0) "positive" "non-positive"))
+          ((? integer? n) (if (integer>? n 0) "positive" "non-positive"))
           (_ "not a number"))
         ''')
         assert result == "non-positive"
@@ -260,7 +260,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('''
         (let ((x 42))
           (match x
-            ((integer? n) (integer* n 2))
+            ((? integer? n) (integer* n 2))
             (_ 0)))
         ''')
         assert result == 84
@@ -268,7 +268,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         # Let bindings in pattern match results
         result = aifpl.evaluate('''
         (match 5
-          ((integer? n) (let ((doubled (integer* n 2))) (integer+ doubled 1)))
+          ((? integer? n) (let ((doubled (integer* n 2))) (integer+ doubled 1)))
           (_ 0))
         ''')
         assert result == 11
@@ -280,7 +280,7 @@ class TestAIFPLPatternMatchingEdgeCases:
             result = aifpl.evaluate('''
             (map (lambda (x)
                    (match x
-                     ((integer? n) (integer* n 2))
+                     ((? integer? n) (integer* n 2))
                      (_ 0)))
                  (list 1 2 3))
             ''')
@@ -294,7 +294,7 @@ class TestAIFPLPatternMatchingEdgeCases:
             result = aifpl.evaluate('''
             (filter (lambda (x)
                       (match x
-                        ((integer? n) (integer>? n 2))
+                        ((? integer? n) (integer>? n 2))
                         (_ #f)))
                     (list 1 2 3 4 5))
             ''')
@@ -309,7 +309,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('''
         (match 0
           (0 "zero")
-          ((integer? n) "non-zero integer")
+          ((? integer? n) "non-zero integer")
           (_ "other"))
         ''')
         assert result == "zero"
@@ -318,7 +318,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('''
         (match ""
           ("" "empty string")
-          ((string? s) "non-empty string")
+          ((? string? s) "non-empty string")
           (_ "other"))
         ''')
         assert result == "empty string"
@@ -327,7 +327,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('''
         (match #f
           (#f "false")
-          ((boolean? b) "true")
+          ((? boolean? b) "true")
           (_ "other"))
         ''')
         assert result == "false"
@@ -338,7 +338,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('''
         (match (integer+ 2 3)
           (5 "five")
-          ((integer? n) "other integer")
+          ((? integer? n) "other integer")
           (_ "not a number"))
         ''')
         assert result == "five"
@@ -347,7 +347,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('''
         (match (integer* (integer+ 1 2) (integer- 5 3))
           (6 "six")
-          ((integer? n) "other integer")
+          ((? integer? n) "other integer")
           (_ "not a number"))
         ''')
         assert result == "six"
@@ -384,7 +384,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('''
         (match (integer-abs -5)
           (5 "five")
-          ((integer? n) "other")
+          ((? integer? n) "other")
           (_ "not integer"))
         ''')
         assert result == "five"
@@ -393,7 +393,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('''
         (match (string-length "hello")
           (5 "five chars")
-          ((integer? n) "other length")
+          ((? integer? n) "other length")
           (_ "not integer"))
         ''')
         assert result == "five chars"
@@ -404,14 +404,14 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('''
         (let ((n 100))
           (match 42
-            ((integer? n) n) ; This n should shadow the outer n
+            ((? integer? n) n) ; This n should shadow the outer n
             (_ n)))          ; This n should refer to outer n
         ''')
         assert result == 42  # Should use the pattern-bound n, not outer n
 
         # Test that pattern variables don't leak
         result = aifpl.evaluate('''
-        (let ((result (match 42 ((integer? n) n) (_ 0))))
+        (let ((result (match 42 ((? integer? n) n) (_ 0))))
           result)
         ''')
         assert result == 42
@@ -421,7 +421,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         # Complex expression in result
         result = aifpl.evaluate('''
         (match 3
-          ((integer? n)
+          ((? integer? n)
            (let ((squared (integer* n n))
                  (doubled (integer* n 2)))
              (integer+ squared doubled)))
@@ -433,7 +433,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         try:
             result = aifpl.evaluate('''
             (match 5
-              ((integer? n)
+              ((? integer? n)
                (match (integer>? n 3)
                  (#t "big number")
                  (#f "small number")))
@@ -449,8 +449,8 @@ class TestAIFPLPatternMatchingEdgeCases:
         # Integer should match number pattern
         result = aifpl.evaluate('''
         (match 42
-          ((integer? i) "integer")
-          ((float? n) "float")
+          ((? integer? i) "integer")
+          ((? float? n) "float")
           (_ "other"))
         ''')
         assert result == "integer"  # More specific pattern should match first
@@ -458,8 +458,8 @@ class TestAIFPLPatternMatchingEdgeCases:
         # Float should match number but not integer
         result = aifpl.evaluate('''
         (match 3.14
-          ((integer? i) "integer")
-          ((float? n) "float")
+          ((? integer? i) "integer")
+          ((? float? n) "float")
           (_ "other"))
         ''')
         assert result == "float"
@@ -467,9 +467,9 @@ class TestAIFPLPatternMatchingEdgeCases:
         # Complex should match number but not integer or float
         result = aifpl.evaluate('''
         (match (integer->complex 1 2)
-          ((integer? i) "integer")
-          ((float? f) "float")
-          ((complex? n) "complex")
+          ((? integer? i) "integer")
+          ((? float? f) "float")
+          ((? complex? n) "complex")
           (_ "other"))
         ''')
         assert result == "complex"
@@ -480,7 +480,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('''
         (match (list 1 2 3)
           (() "empty")
-          ((list? l) (if (integer>? (list-length l) 2) "long list" "short list"))
+          ((? list? l) (if (integer>? (list-length l) 2) "long list" "short list"))
           (_ "not list"))
         ''')
         assert result == "long list"
@@ -488,7 +488,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         # Pattern matching with arithmetic in guards
         result = aifpl.evaluate('''
         (match 10
-          ((integer? n) (if (integer=? (integer% n 2) 0) "even" "odd"))
+          ((? integer? n) (if (integer=? (integer% n 2) 0) "even" "odd"))
           (_ "not number"))
         ''')
         assert result == "even"
@@ -611,7 +611,7 @@ class TestAIFPLPatternMatchingEdgeCases:
         result = aifpl.evaluate('(match (list 1 2 3) ((42 . tail) \"matched head\") (_ \"no match\"))')
         assert result == "no match"
 
-        result = aifpl.evaluate('(match (list 1 \"hello\" \"world\") ((1 . (string? tail)) \"matched\") (_ \"no match\"))')
+        result = aifpl.evaluate('(match (list 1 \"hello\" \"world\") ((1 . (? string? tail)) \"matched\") (_ \"no match\"))')
         assert result == "no match"
 
     def test_adot_pattern_failures(self, aifpl):

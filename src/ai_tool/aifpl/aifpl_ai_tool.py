@@ -336,7 +336,7 @@ Syntax: (operator arg1 arg2 ...)
 - Higher-order: (alist-map func alist) → applies func to each (key value) pair, returning a new alist with transformed values; func receives key and value as separate arguments: (alist-map (lambda (k v) (integer* v 2)) (alist (list "a" 1) (list "b" 2))) → {("a" 2) ("b" 4)}
 - Higher-order: (alist-filter pred alist) → returns a new alist containing only entries where pred returns #t; pred receives key and value as separate arguments: (alist-filter (lambda (k v) (integer>? v 1)) (alist (list "a" 1) (list "b" 2))) → {("b" 2)}
 - Works with functional operations: (list-map f (alist-keys data)), (list-filter pred (alist-values data))
-- Pattern matching: (match data ((alist? a) ...) (_ ...))
+- Pattern matching: (match data ((? alist? a) ...) (_ ...))
 - Maintains insertion order, optimized for data processing workflows
 
 ## Symbol operations:
@@ -414,14 +414,14 @@ Syntax: (operator arg1 arg2 ...)
 
 - (match expression (pattern1 result1) (pattern2 result2) (_ default)) → powerful declarative dispatch
 - Literal patterns: (match x (42 "found") ("hello" "greeting") (_ "other"))
-- Variable binding: (match x ((integer? n) (integer* n 2)) ((string? s) (string-upcase s)))
+- Variable binding: (match x ((? integer? n) (integer* n 2)) ((? string? s) (string-upcase s)))
 - Wildcard patterns: _ matches anything without binding
-- Type patterns: (integer? var), (string? var), (list? var), (boolean? var), (function? var)
+- Predicate patterns: (? pred var) — pred can be any expression, including user-defined predicates: (? integer? n), (? string? s), (? my-pred? x)
 - Empty list: (match lst (() "empty") ((x) "singleton") (_ "multiple"))
 - List destructuring: (match lst ((a b c) (integer+ a b c)) ((head . tail) (list-prepend tail head)))
-- Nested patterns: (match data (((integer? x) (string? y)) (list x y)) (_ "no match"))
+- Nested patterns: (match data (((? integer? x) (? string? y)) (list x y)) (_ "no match"))
 - First match wins: patterns are tested in order, use specific patterns before general ones
-- Example: (match data (42 "answer") ((integer? n) (integer* n 2)) ((string? s) (string-upcase s))
+- Example: (match data (42 "answer") ((? integer? n) (integer* n 2)) ((? string? s) (string-upcase s))
 - ((head . tail) (list head (list-length tail))) (_ \"unknown\"))
 
 ## Module system
