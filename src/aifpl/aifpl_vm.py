@@ -1369,20 +1369,25 @@ class AIFPLVM:
         radix = self._ensure_integer(radix_val, 'integer->string')
         if radix not in (2, 8, 10, 16):
             raise AIFPLEvalError(f"integer->string radix must be 2, 8, 10, or 16, got {radix}")
+
         if radix == 10:
             self.stack.append(AIFPLString(str(a_val)))
+            return None
 
-        elif radix == 2:
+        if radix == 2:
             sign = "-" if a_val < 0 else ""
             self.stack.append(AIFPLString(f"{sign}{bin(abs(a_val))[2:]}"))
+            return None
 
-        elif radix == 8:
+        if radix == 8:
             sign = "-" if a_val < 0 else ""
             self.stack.append(AIFPLString(f"{sign}{oct(abs(a_val))[2:]}"))
+            return None
 
-        elif radix == 16:
+        if radix == 16:
             sign = "-" if a_val < 0 else ""
             self.stack.append(AIFPLString(f"{sign}{hex(abs(a_val))[2:]}"))
+
         return None
 
     def _op_float_p(  # pylint: disable=useless-return
