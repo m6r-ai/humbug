@@ -7,8 +7,8 @@ Verifies the AST shape produced by AIFPLDesugarer for:
 
 The desugarer routes all twelve through _desugar_comparison_chain, which:
   - 2-arg: emits a direct binary call (no let*, no and)
-  - 3-arg: let*-binds all three args, builds (and (op t0 t1) (op t1 t2))
-  - 4-arg: let*-binds all four args, builds (and (op t0 t1) (op t1 t2) (op t2 t3))
+  - 3-arg: let*-binds all three args, builds (if (op t0 t1) (op t1 t2) #f)
+  - 4-arg: let*-binds all four args, builds (if (op t0 t1) (if (op t1 t2) (op t2 t3) #f) #f)
 
 Each argument appears in the desugared AST as a temp-variable reference
 (i.e. evaluated exactly once by the let* binding).
@@ -20,6 +20,7 @@ from aifpl.aifpl_ast import (
     AIFPLASTList,
     AIFPLASTNode,
     AIFPLASTSymbol,
+    AIFPLASTBoolean,
 )
 from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_lexer import AIFPLLexer
@@ -146,7 +147,7 @@ def _unwrap_let_star_bindings(node: AIFPLASTNode):
 
 
 class TestThreeArgStructure:
-    """3-arg calls produce let*-bound temps chained with (and ...)."""
+    """3-arg calls produce let*-bound temps chained with an if-chain."""
 
     # After full desugaring, let* is reduced to let; accept either.
     @pytest.mark.parametrize("op", ALL_OPS)
@@ -171,27 +172,24 @@ class TestThreeArgStructure:
             )
 
     @pytest.mark.parametrize("op", ALL_OPS)
-    def test_three_arg_body_is_and(self, op):
+    def test_three_arg_body_is_if_chain(self, op):
         result = desugar(_three_arg_expr(op))
         _, body = _unwrap_let_star_bindings(result)
-        assert sym(body) == 'and', (
-            f"Expected 'and' body for {op!r}, got {sym(body)!r}"
+        # (and A B) lowered to (if A B #f)
+        assert sym(body) == 'if', (
+            f"Expected 'if' body for {op!r}, got {sym(body)!r}"
         )
-
-    @pytest.mark.parametrize("op", ALL_OPS)
-    def test_three_arg_and_has_two_pairs(self, op):
-        result = desugar(_three_arg_expr(op))
-        _, body = _unwrap_let_star_bindings(result)
-        # (and pair0 pair1)
-        assert len(body.elements) == 3, (
-            f"Expected (and p0 p1) for {op!r}, got {len(body.elements)} elements"
-        )
+        # else-branch must be #f
+        assert isinstance(body.elements[3], AIFPLASTBoolean)
+        assert body.elements[3].value is False
 
     @pytest.mark.parametrize("op", ALL_OPS)
     def test_three_arg_pairs_use_correct_operator(self, op):
         result = desugar(_three_arg_expr(op))
         _, body = _unwrap_let_star_bindings(result)
-        pair0, pair1 = body.elements[1], body.elements[2]
+        # body = (if pair0 pair1 #f)
+        pair0 = body.elements[1]
+        pair1 = body.elements[2]
         assert sym(pair0) == op, f"pair0 operator: expected {op!r}, got {sym(pair0)!r}"
         assert sym(pair1) == op, f"pair1 operator: expected {op!r}, got {sym(pair1)!r}"
 
@@ -202,8 +200,9 @@ class TestThreeArgStructure:
         bindings, body = _unwrap_let_star_bindings(result)
         t0_name, t1_name, t2_name = [name for name, _ in bindings]
 
-        pair0 = body.elements[1]
-        pair1 = body.elements[2]
+        # body = (if pair0 pair1 #f)
+        pair0 = body.elements[1]   # condition
+        pair1 = body.elements[2]   # then-branch
 
         # pair0 = (op t0 t1)
         assert isinstance(pair0, AIFPLASTList) and len(pair0.elements) == 3
@@ -221,11 +220,11 @@ class TestThreeArgStructure:
 
 
 # ---------------------------------------------------------------------------
-# 4-arg: let*-bound temps + (and (op t0 t1) (op t1 t2) (op t2 t3))
+# 4-arg: let*-bound temps + (if (op t0 t1) (if (op t1 t2) (op t2 t3) #f) #f)
 # ---------------------------------------------------------------------------
 
 class TestFourArgStructure:
-    """4-arg calls produce let*-bound temps chained with (and ...) of 3 pairs."""
+    """4-arg calls produce let*-bound temps chained with a nested if-chain."""
 
     @pytest.mark.parametrize("op", ALL_OPS)
     def test_four_arg_has_four_temp_bindings(self, op):
@@ -236,23 +235,27 @@ class TestFourArgStructure:
         )
 
     @pytest.mark.parametrize("op", ALL_OPS)
-    def test_four_arg_body_is_and_with_three_pairs(self, op):
+    def test_four_arg_body_is_nested_if_chain(self, op):
         result = desugar(_four_arg_expr(op))
         _, body = _unwrap_let_star_bindings(result)
-        assert sym(body) == 'and'
-        # (and p0 p1 p2)
-        assert len(body.elements) == 4, (
-            f"Expected (and p0 p1 p2) for {op!r}, got {len(body.elements)} elements"
-        )
+        # (if p0 (if p1 p2 #f) #f)
+        assert sym(body) == 'if', f"Expected 'if', got {sym(body)!r}"
+        assert isinstance(body.elements[3], AIFPLASTBoolean) and not body.elements[3].value
+        inner = body.elements[2]
+        assert sym(inner) == 'if', f"Expected inner 'if', got {sym(inner)!r}"
+        assert isinstance(inner.elements[3], AIFPLASTBoolean) and not inner.elements[3].value
 
     @pytest.mark.parametrize("op", ALL_OPS)
     def test_four_arg_all_pairs_use_correct_operator(self, op):
         result = desugar(_four_arg_expr(op))
         _, body = _unwrap_let_star_bindings(result)
-        for i, pair in enumerate(body.elements[1:]):
-            assert sym(pair) == op, (
-                f"pair{i} operator: expected {op!r}, got {sym(pair)!r}"
-            )
+        # body = (if p0 (if p1 p2 #f) #f)
+        p0 = body.elements[1]
+        inner = body.elements[2]
+        p1 = inner.elements[1]
+        p2 = inner.elements[2]
+        for i, pair in enumerate([p0, p1, p2]):
+            assert sym(pair) == op, f"pair{i}: expected {op!r}, got {sym(pair)!r}"
 
     @pytest.mark.parametrize("op", ALL_OPS)
     def test_four_arg_adjacent_pairs_share_temps(self, op):
@@ -261,7 +264,9 @@ class TestFourArgStructure:
         bindings, body = _unwrap_let_star_bindings(result)
         names = [name for name, _ in bindings]
 
-        pairs = body.elements[1:]  # [pair0, pair1, pair2]
+        # body = (if p0 (if p1 p2 #f) #f)
+        inner = body.elements[2]
+        pairs = [body.elements[1], inner.elements[1], inner.elements[2]]
         for i, pair in enumerate(pairs):
             assert isinstance(pair, AIFPLASTList) and len(pair.elements) == 3
             lhs = pair.elements[1]

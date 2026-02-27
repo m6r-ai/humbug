@@ -45,6 +45,124 @@ class AIFPLDesugarer:
             source_file=source_node.source_file
         )
 
+    def _make_and(self, exprs: List[AIFPLASTNode], source_node: AIFPLASTNode) -> AIFPLASTNode:
+        """
+        Construct (and exprs...) as a lowered if-chain without going through desugar().
+
+        Used internally when building AST nodes that must already be in desugared
+        form (e.g. inside _desugar_pattern, _desugar_fixed_list_pattern).
+
+        (and)      -> #t
+        (and A)    -> A
+        (and A B+) -> (if A (and B+) #f)
+        """
+        if not exprs:
+            return AIFPLASTBoolean(
+                True,
+                line=source_node.line,
+                column=source_node.column,
+                source_file=source_node.source_file
+            )
+
+        if len(exprs) == 1:
+            return exprs[0]
+
+        return self._make_list((
+            self._make_symbol('if', source_node),
+            exprs[0],
+            self._make_and(exprs[1:], source_node),
+            AIFPLASTBoolean(
+                False,
+                line=source_node.line,
+                column=source_node.column,
+                source_file=source_node.source_file
+            ),
+        ), source_node)
+
+    def _make_or(self, exprs: List[AIFPLASTNode], source_node: AIFPLASTNode) -> AIFPLASTNode:
+        """
+        Construct (or exprs...) as a lowered if-chain without going through desugar().
+
+        Used internally when building AST nodes that must already be in desugared
+        form (e.g. inside _desugar_strict_equality_chain).
+
+        (or)      -> #f
+        (or A)    -> A
+        (or A B+) -> (if A #t (or B+))
+        """
+        if not exprs:
+            return AIFPLASTBoolean(
+                False,
+                line=source_node.line,
+                column=source_node.column,
+                source_file=source_node.source_file
+            )
+
+        if len(exprs) == 1:
+            return exprs[0]
+
+        return self._make_list((
+            self._make_symbol('if', source_node),
+            exprs[0],
+            AIFPLASTBoolean(
+                True,
+                line=source_node.line,
+                column=source_node.column,
+                source_file=source_node.source_file
+            ),
+            self._make_or(exprs[1:], source_node),
+        ), source_node)
+
+    def _desugar_and(self, expr: AIFPLASTList) -> AIFPLASTNode:
+        """
+        Desugar (and A B ...) to a right-folded if-chain.
+
+        (and)      -> #t
+        (and A)    -> (desugar A)
+        (and A B+) -> (if (desugar A) (desugar (and B+)) #f)
+        """
+        args = list(expr.elements[1:])
+        if not args:
+            return AIFPLASTBoolean(True, line=expr.line, column=expr.column, source_file=expr.source_file)
+
+        if len(args) == 1:
+            return self.desugar(args[0])
+
+        desugared_first = self.desugar(args[0])
+        rest_expr = self._make_list((self._make_symbol('and', expr),) + tuple(args[1:]), expr)
+        desugared_rest = self._desugar_and(rest_expr)
+        return self._make_list((
+            self._make_symbol('if', expr),
+            desugared_first,
+            desugared_rest,
+            AIFPLASTBoolean(False, line=expr.line, column=expr.column, source_file=expr.source_file),
+        ), expr)
+
+    def _desugar_or(self, expr: AIFPLASTList) -> AIFPLASTNode:
+        """
+        Desugar (or A B ...) to a right-folded if-chain.
+
+        (or)      -> #f
+        (or A)    -> (desugar A)
+        (or A B+) -> (if (desugar A) #t (desugar (or B+)))
+        """
+        args = list(expr.elements[1:])
+        if not args:
+            return AIFPLASTBoolean(False, line=expr.line, column=expr.column, source_file=expr.source_file)
+
+        if len(args) == 1:
+            return self.desugar(args[0])
+
+        desugared_first = self.desugar(args[0])
+        rest_expr = self._make_list((self._make_symbol('or', expr),) + tuple(args[1:]), expr)
+        desugared_rest = self._desugar_or(rest_expr)
+        return self._make_list((
+            self._make_symbol('if', expr),
+            desugared_first,
+            AIFPLASTBoolean(True, line=expr.line, column=expr.column, source_file=expr.source_file),
+            desugared_rest,
+        ), expr)
+
     def desugar(self, expr: AIFPLASTNode) -> AIFPLASTNode:
         """
         Desugar an expression recursively.
@@ -91,6 +209,12 @@ class AIFPLDesugarer:
             if name == 'trace':
                 # Trace is a special form - handle it
                 return self._desugar_trace(expr)
+
+            if name == 'and':
+                return self._desugar_and(expr)
+
+            if name == 'or':
+                return self._desugar_or(expr)
 
             # Check for typed variadic arithmetic operations
             if name in [
@@ -449,7 +573,7 @@ class AIFPLDesugarer:
         temps = [self._gen_temp() for _ in args]
 
         # Build pairwise comparisons
-        pairs = [
+        pairs: List[AIFPLASTNode] = [
             self._make_list((self._make_symbol(op_name, expr),
                              self._make_symbol(temps[i], expr),
                              self._make_symbol(temps[i + 1], expr)), expr)
@@ -457,9 +581,7 @@ class AIFPLDesugarer:
         ]
 
         # Chain with 'and' for ordered comparisons
-        body: AIFPLASTNode = self._make_list(
-            tuple([self._make_symbol('and', expr)] + pairs), expr
-        )
+        body: AIFPLASTNode = self._make_and(pairs, expr)
 
         # Wrap in let* bindings from innermost outward
         for temp, desugared_arg in reversed(list(zip(temps, desugared_args))):
@@ -522,12 +644,11 @@ class AIFPLDesugarer:
                 for i in range(len(args) - 1)
             ]
 
-            # Body: (and pair_temp0 pair_temp1 ...)
+            # Body: and/or of pair temps, lowered to if-chain
             connector = 'and' if check_eq else 'or'
-            body: AIFPLASTNode = self._make_list(
-                tuple([self._make_symbol(connector, expr)] + [self._make_symbol(pt, expr) for pt in pair_temps]),
-                expr
-            )
+            pair_temp_syms: List[AIFPLASTNode] = [self._make_symbol(pt, expr) for pt in pair_temps]
+            body: AIFPLASTNode = (self._make_and(pair_temp_syms, expr) if connector == 'and'
+                                  else self._make_or(pair_temp_syms, expr))
 
             # Wrap pair results in let* bindings (innermost first)
             for pt, pair in reversed(list(zip(pair_temps, pairs))):
@@ -764,47 +885,42 @@ class AIFPLDesugarer:
 
         if isinstance(pattern, AIFPLASTBoolean):
             # (and (boolean? tmp) (boolean=? tmp literal))
-            test_expr = AIFPLASTList((
-                AIFPLASTSymbol('and'),
+            test_expr = self._make_and([
                 AIFPLASTList((AIFPLASTSymbol('boolean?'), AIFPLASTSymbol(temp_var))),
                 AIFPLASTList((AIFPLASTSymbol('boolean=?'), AIFPLASTSymbol(temp_var), pattern)),
-            ))
+            ], pattern)
             return (test_expr, [])
 
         if isinstance(pattern, AIFPLASTInteger):
             # (and (integer? tmp) (integer=? tmp literal))
-            test_expr = AIFPLASTList((
-                AIFPLASTSymbol('and'),
+            test_expr = self._make_and([
                 AIFPLASTList((AIFPLASTSymbol('integer?'), AIFPLASTSymbol(temp_var))),
                 AIFPLASTList((AIFPLASTSymbol('integer=?'), AIFPLASTSymbol(temp_var), pattern)),
-            ))
+            ], pattern)
             return (test_expr, [])
 
         if isinstance(pattern, AIFPLASTFloat):
             # (and (float? tmp) (float=? tmp literal))
-            test_expr = AIFPLASTList((
-                AIFPLASTSymbol('and'),
+            test_expr = self._make_and([
                 AIFPLASTList((AIFPLASTSymbol('float?'), AIFPLASTSymbol(temp_var))),
                 AIFPLASTList((AIFPLASTSymbol('float=?'), AIFPLASTSymbol(temp_var), pattern)),
-            ))
+            ], pattern)
             return (test_expr, [])
 
         if isinstance(pattern, AIFPLASTComplex):
             # (and (complex? tmp) (complex=? tmp literal))
-            test_expr = AIFPLASTList((
-                AIFPLASTSymbol('and'),
+            test_expr = self._make_and([
                 AIFPLASTList((AIFPLASTSymbol('complex?'), AIFPLASTSymbol(temp_var))),
                 AIFPLASTList((AIFPLASTSymbol('complex=?'), AIFPLASTSymbol(temp_var), pattern)),
-            ))
+            ], pattern)
             return (test_expr, [])
 
         if isinstance(pattern, AIFPLASTString):
             # (and (string? tmp) (string=? tmp literal))
-            test_expr = AIFPLASTList((
-                AIFPLASTSymbol('and'),
+            test_expr = self._make_and([
                 AIFPLASTList((AIFPLASTSymbol('string?'), AIFPLASTSymbol(temp_var))),
                 AIFPLASTList((AIFPLASTSymbol('string=?'), AIFPLASTSymbol(temp_var), pattern)),
-            ))
+            ], pattern)
             return (test_expr, [])
 
         # Variable pattern: binds the value
@@ -927,12 +1043,8 @@ class AIFPLDesugarer:
             AIFPLASTInteger(num_elements)
         ))
 
-        # Combine with and
-        combined_test = AIFPLASTList((
-            AIFPLASTSymbol('and'),
-            list_test,
-            length_test
-        ))
+        # Combine with and (lowered to if-chain)
+        combined_test = self._make_and([list_test, length_test], AIFPLASTList(()))
 
         # For fixed-length list patterns, we need a special structure:
         # (and (list? x) (= (length x) n))  <- basic test
@@ -1086,9 +1198,7 @@ class AIFPLDesugarer:
         # Build the inner structure (after element extraction)
         if element_tests:
             # We have element tests - need nested if
-            elem_test_combined = (
-                AIFPLASTList((AIFPLASTSymbol('and'),) + tuple(element_tests)) if len(element_tests) > 1 else element_tests[0]
-            )
+            elem_test_combined = self._make_and(element_tests, AIFPLASTList(()))
 
             # Build pattern bindings let
             if pattern_bindings:
@@ -1176,11 +1286,7 @@ class AIFPLDesugarer:
             )),
             AIFPLASTInteger(dot_position)
         ))
-        combined_test = AIFPLASTList((
-            AIFPLASTSymbol('and'),
-            list_test,
-            length_test
-        ))
+        combined_test = self._make_and([list_test, length_test], AIFPLASTList(()))
 
         # Collect head element info
         head_elements: List[Tuple[AIFPLASTNode, str, AIFPLASTNode]] = []

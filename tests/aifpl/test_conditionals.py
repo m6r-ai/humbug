@@ -156,25 +156,21 @@ class TestConditionals:
         assert aifpl.evaluate_and_format(expression) == expected
 
     def test_boolean_operations_require_boolean_arguments(self, aifpl):
-        """Test that boolean operations require boolean arguments."""
-        # AND with non-boolean arguments
-        with pytest.raises(AIFPLEvalError, match=r"must be boolean"):
-            aifpl.evaluate('(and #t 1)')
+        """Test that boolean operations require boolean condition arguments.
 
+        Since and/or are lowered to if-chains, only the condition arguments
+        (all but the last) are type-checked as booleans by JUMP_IF_FALSE/TRUE.
+        Non-boolean conditions always error. The last argument (the value
+        returned when all conditions are true/false) is not type-checked.
+        """
+        # Non-boolean used as condition always errors
         with pytest.raises(AIFPLEvalError, match=r"must be boolean"):
             aifpl.evaluate('(and "hello" #t)')
 
         with pytest.raises(AIFPLEvalError, match=r"must be boolean"):
-            aifpl.evaluate('(and #t (list 1 2))')
+            aifpl.evaluate('(or 1 #f)')
 
-        # OR with non-boolean arguments
-        with pytest.raises(AIFPLEvalError, match=r"must be boolean"):
-            aifpl.evaluate('(or #f 1)')
-
-        with pytest.raises(AIFPLEvalError, match=r"must be boolean"):
-            aifpl.evaluate('(or "hello" #f)')
-
-        # NOT with non-boolean arguments
+        # NOT with non-boolean arguments (boolean-not is still a typed opcode)
         with pytest.raises(AIFPLEvalError, match=r"requires boolean arguments"):
             aifpl.evaluate('(boolean-not 1)')
 

@@ -217,10 +217,8 @@ class TestErrors:
         with pytest.raises(AIFPLEvalError):
             aifpl.evaluate("(integer- 5 (list 1 2))")
 
-        # Boolean operations with non-booleans
-        with pytest.raises(AIFPLEvalError, match="must be boolean"):
-            aifpl.evaluate("(and #t 1)")
-
+        # Boolean operations with non-boolean conditions
+        # (and/or are lowered to if-chains; only condition args are type-checked)
         with pytest.raises(AIFPLEvalError, match="must be boolean"):
             aifpl.evaluate('(or "hello" #f)')
 
@@ -451,9 +449,9 @@ class TestErrors:
             error_msg = str(e)
             assert "string" in error_msg.lower()
 
-        # Boolean operation with wrong type
+        # Boolean operation with non-boolean condition
         try:
-            aifpl.evaluate("(and #t 1)")
+            aifpl.evaluate('(and "hello" #t)')
         except AIFPLEvalError as e:
             error_msg = str(e)
             assert "boolean" in error_msg.lower()

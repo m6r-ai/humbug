@@ -39,18 +39,6 @@ class AIFPLIRIf:
 
 
 @dataclass
-class AIFPLIRAnd:
-    """Plan for compiling an and expression with short-circuit evaluation."""
-    arg_plans: List['AIFPLIRExpr']
-
-
-@dataclass
-class AIFPLIROr:
-    """Plan for compiling an or expression with short-circuit evaluation."""
-    arg_plans: List['AIFPLIRExpr']
-
-
-@dataclass
 class AIFPLIRQuote:
     """Plan for compiling a quote expression."""
     quoted_value: AIFPLValue
@@ -132,8 +120,6 @@ AIFPLIRExpr = Union[
     AIFPLIRConstant,
     AIFPLIRVariable,
     AIFPLIRIf,
-    AIFPLIRAnd,
-    AIFPLIROr,
     AIFPLIRQuote,
     AIFPLIRError,
     AIFPLIRLet,

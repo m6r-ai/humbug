@@ -354,24 +354,20 @@ class TestDesugarerMatchList:
         body = result.elements[2]
         condition = body.elements[1]
 
-        # Condition should be an and expression
+        # Condition should be an if-chain (and lowered to if)
         assert isinstance(condition, AIFPLASTList)
-        assert condition.first().name == 'and'
+        assert condition.first().name == 'if'
 
-        # Should contain list? and length checks
-        tests = condition.elements[1:]
-        has_list_test = any(
-            isinstance(t, AIFPLASTList) and t.first().name == 'list?'
-            for t in tests
-        )
-        has_length_test = any(
-            isinstance(t, AIFPLASTList) and 
-            isinstance(t.elements[1], AIFPLASTList) and
-            t.elements[1].first().name == 'list-length'
-            for t in tests
-        )
-        assert has_list_test
-        assert has_length_test
+        # First condition is (list? x), then-branch tests length
+        list_test = condition.elements[1]
+        assert isinstance(list_test, AIFPLASTList)
+        assert list_test.first().name == 'list?'
+
+        # Then-branch is the length test directly (two-arg and folds to single if)
+        then_branch = condition.elements[2]
+        assert isinstance(then_branch, AIFPLASTList)
+        assert isinstance(then_branch.elements[1], AIFPLASTList)
+        assert then_branch.elements[1].first().name == 'list-length'
 
     def test_match_fixed_list_with_literals(self):
         """Test desugaring of fixed-length list with literal patterns."""
@@ -404,9 +400,10 @@ class TestDesugarerMatchCons:
         body = result.elements[2]
         condition = body.elements[1]
 
-        # Condition should be an and expression
+        # Condition should be an if-chain (and lowered to if)
         assert isinstance(condition, AIFPLASTList)
-        assert condition.first().name == 'and'
+        assert condition.first().name == 'if'
+        assert condition.elements[1].first().name == 'list?'
 
     def test_match_cons_multiple_heads(self):
         """Test desugaring of cons pattern with multiple head elements."""

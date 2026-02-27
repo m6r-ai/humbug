@@ -185,8 +185,6 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         # Build jump table for special form optimization.  Note we don't include any special forms that were
         # removed by desugaring.
         self._special_form_jump_table = {
-            'and': self._optimize_and,
-            'or': self._optimize_or,
             'if': self._optimize_if,
             'let': self._optimize_let,
             'letrec': self._optimize_let,
@@ -240,86 +238,6 @@ class AIFPLConstantFolder(AIFPLOptimizationPass):
         """
         optimized_elements = [self.optimize(elem) for elem in expr.elements]
         return AIFPLASTList(tuple(optimized_elements))
-
-    def _optimize_and(self, expr: AIFPLASTList) -> AIFPLASTNode:
-        """
-        Optimize 'and' special form with short-circuit evaluation.
-
-        (and) → #t
-        (and #f anything) → #f (short-circuit - don't optimize 'anything')
-        (and #t #t #t) → #t
-        (and #t x) → (and x) (remove constant, keep wrapper for type checking)
-        (and #t #t x y) → (and x y) (remove all true constants)
-        """
-        if expr.is_empty() or len(expr.elements) == 1:
-            # (and) → #t
-            return AIFPLASTBoolean(True)
-
-        # Get arguments (skip the 'and' symbol)
-        args = expr.elements[1:]
-
-        # Optimize arguments one at a time, short-circuiting when possible
-        folded_args = []
-        for arg in args:
-            opt_arg = self.optimize(arg)
-
-            # If we hit a false constant, short-circuit immediately
-            if isinstance(opt_arg, AIFPLASTBoolean) and not opt_arg.value:
-                return AIFPLASTBoolean(False)
-
-            # If it's a true constant, we can skip it (doesn't affect result)
-            if isinstance(opt_arg, AIFPLASTBoolean) and opt_arg.value:
-                continue
-
-            # Non-constant argument - keep it
-            folded_args.append(opt_arg)
-
-        # If all args were true constants, result is true
-        if len(folded_args) == 0:
-            return AIFPLASTBoolean(True)
-
-        # One or more non-constant args remain - keep 'and' wrapper for runtime type checking
-        return AIFPLASTList((AIFPLASTSymbol('and'),) + tuple(folded_args))
-
-    def _optimize_or(self, expr: AIFPLASTList) -> AIFPLASTNode:
-        """
-        Optimize 'or' special form with short-circuit evaluation.
-
-        (or) → #f
-        (or #t anything) → #t (short-circuit - don't optimize 'anything')
-        (or #f #f #f) → #f
-        (or #f x) → (or x) (remove constant, keep wrapper for type checking)
-        (or #f #f x y) → (or x y) (remove all false constants)
-        """
-        if expr.is_empty() or len(expr.elements) == 1:
-            # (or) → #f
-            return AIFPLASTBoolean(False)
-
-        # Get arguments (skip the 'or' symbol)
-        args = expr.elements[1:]
-
-        # Optimize arguments one at a time, short-circuiting when possible
-        folded_args = []
-        for arg in args:
-            opt_arg = self.optimize(arg)
-
-            # If we hit a true constant, short-circuit immediately
-            if isinstance(opt_arg, AIFPLASTBoolean) and opt_arg.value:
-                return AIFPLASTBoolean(True)
-
-            # If it's a false constant, we can skip it (doesn't affect result)
-            if isinstance(opt_arg, AIFPLASTBoolean) and not opt_arg.value:
-                continue
-
-            # Non-constant argument - keep it
-            folded_args.append(opt_arg)
-
-        # If all args were false constants, result is false
-        if len(folded_args) == 0:
-            return AIFPLASTBoolean(False)
-
-        # One or more non-constant args remain - keep 'or' wrapper for runtime type checking
-        return AIFPLASTList((AIFPLASTSymbol('or'),) + tuple(folded_args))
 
     def _optimize_if(self, expr: AIFPLASTList) -> AIFPLASTNode:
         """

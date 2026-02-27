@@ -7,7 +7,7 @@ from typing import List, Dict, Any
 
 from aifpl.aifpl_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Instruction, Opcode
 from aifpl.aifpl_ir import (
-    AIFPLIRExpr, AIFPLIRConstant, AIFPLIRVariable, AIFPLIRIf, AIFPLIRAnd, AIFPLIROr,
+    AIFPLIRExpr, AIFPLIRConstant, AIFPLIRVariable, AIFPLIRIf,
     AIFPLIRQuote, AIFPLIRError, AIFPLIRLet, AIFPLIRLetrec, AIFPLIRLambda, AIFPLIRCall,
     AIFPLIREmptyList, AIFPLIRReturn, AIFPLIRTrace
 )
@@ -155,12 +155,6 @@ class AIFPLCodeGen:
         elif isinstance(plan, AIFPLIRIf):
             self._generate_if(plan, ctx)
 
-        elif isinstance(plan, AIFPLIRAnd):
-            self._generate_and(plan, ctx)
-
-        elif isinstance(plan, AIFPLIROr):
-            self._generate_or(plan, ctx)
-
         elif isinstance(plan, AIFPLIRQuote):
             self._generate_quote(plan, ctx)
 
@@ -249,72 +243,6 @@ class AIFPLCodeGen:
             # Patch to the next instruction after the else branch
             after_else = ctx.current_instruction_index()
             ctx.patch_jump(jump_past_else, after_else)
-
-    def _generate_and(self, plan: AIFPLIRAnd, ctx: AIFPLCodeGenContext) -> None:
-        """Generate code for an and expression with short-circuit evaluation."""
-        if len(plan.arg_plans) == 0:
-            # (and) -> #t
-            ctx.emit(Opcode.LOAD_TRUE)
-            return
-
-        # Multiple arguments: short-circuit evaluation
-        jump_to_false = []
-
-        for arg_plan in plan.arg_plans:
-            # Generate argument
-            self._generate_expr(arg_plan, ctx)
-
-            # If false, jump to "return false" section
-            jump = ctx.emit(Opcode.JUMP_IF_FALSE, 0)
-            jump_to_false.append(jump)
-
-        # All arguments were true - return #t
-        ctx.emit(Opcode.LOAD_TRUE)
-        jump_to_end = ctx.emit(Opcode.JUMP, 0)
-
-        # Return false section
-        false_section = ctx.current_instruction_index()
-        for jump in jump_to_false:
-            ctx.patch_jump(jump, false_section)
-
-        ctx.emit(Opcode.LOAD_FALSE)
-
-        # Patch jump to end
-        end = ctx.current_instruction_index()
-        ctx.patch_jump(jump_to_end, end)
-
-    def _generate_or(self, plan: AIFPLIROr, ctx: AIFPLCodeGenContext) -> None:
-        """Generate code for an or expression with short-circuit evaluation."""
-        if len(plan.arg_plans) == 0:
-            # (or) -> #f
-            ctx.emit(Opcode.LOAD_FALSE)
-            return
-
-        # Multiple arguments: short-circuit evaluation
-        jump_to_true = []
-
-        for arg_plan in plan.arg_plans:
-            # Generate argument
-            self._generate_expr(arg_plan, ctx)
-
-            # If true, jump to "return true" section
-            jump = ctx.emit(Opcode.JUMP_IF_TRUE, 0)
-            jump_to_true.append(jump)
-
-        # All arguments were false - return #f
-        ctx.emit(Opcode.LOAD_FALSE)
-        jump_to_end = ctx.emit(Opcode.JUMP, 0)
-
-        # Return true section
-        true_section = ctx.current_instruction_index()
-        for jump in jump_to_true:
-            ctx.patch_jump(jump, true_section)
-
-        ctx.emit(Opcode.LOAD_TRUE)
-
-        # Patch jump to end
-        end = ctx.current_instruction_index()
-        ctx.patch_jump(jump_to_end, end)
 
     def _generate_quote(self, plan: AIFPLIRQuote, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for a quote expression."""

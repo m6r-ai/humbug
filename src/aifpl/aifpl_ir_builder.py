@@ -8,7 +8,7 @@ from aifpl.aifpl_error import AIFPLEvalError
 from aifpl.aifpl_ir import (
     AIFPLIRExpr, AIFPLIRConstant, AIFPLIRVariable, AIFPLIRIf, AIFPLIRLet, AIFPLIRLetrec,
     AIFPLIRLambda, AIFPLIRCall, AIFPLIRQuote, AIFPLIRError, AIFPLIREmptyList,
-    AIFPLIRAnd, AIFPLIROr, AIFPLIRReturn, AIFPLIRTrace
+    AIFPLIRReturn, AIFPLIRTrace
 )
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer
 from aifpl.aifpl_ast import (
@@ -240,12 +240,6 @@ class AIFPLIRBuilder:
             if name == 'lambda':
                 return self._analyze_lambda(expr, ctx)
 
-            if name == 'and':
-                return self._analyze_and(expr, ctx)
-
-            if name == 'or':
-                return self._analyze_or(expr, ctx)
-
             if name == 'quote':
                 return self._analyze_quote(expr)
 
@@ -354,18 +348,6 @@ class AIFPLIRBuilder:
             else_plan=else_plan,
             in_tail_position=in_tail_position
         )
-
-    def _analyze_and(self, expr: AIFPLASTList, ctx: AnalysisContext) -> AIFPLIRAnd:
-        """Analyze an and expression."""
-        args = list(expr.elements[1:])
-        arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in args]
-        return AIFPLIRAnd(arg_plans=arg_plans)
-
-    def _analyze_or(self, expr: AIFPLASTList, ctx: AnalysisContext) -> AIFPLIROr:
-        """Analyze an or expression."""
-        args = list(expr.elements[1:])
-        arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in args]
-        return AIFPLIROr(arg_plans=arg_plans)
 
     def _analyze_let(self, expr: AIFPLASTList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRLet:
         """
