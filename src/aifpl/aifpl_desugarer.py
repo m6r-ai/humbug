@@ -737,45 +737,133 @@ class AIFPLDesugarer:
         Returns:
             Nested if/let AST
         """
-        # Process clauses in reverse order to build nested structure
-        result: AIFPLASTNode | None = None
+        # Partition clauses into groups.  A group is either:
+        #   - A maximal contiguous run of literal arms sharing the same type
+        #     (integer, float, complex, boolean, string).  These can share a
+        #     single hoisted type guard, with bare equality checks per arm.
+        #   - A single non-literal arm (wildcard, variable binding, predicate
+        #     pattern, list/cons pattern) processed individually as before.
+        #
+        # We build the result right-to-left so each group's else branch is the
+        # already-built remainder.
 
-        for i in range(len(clauses) - 1, -1, -1):
+        no_match_error: AIFPLASTNode = AIFPLASTList((
+            AIFPLASTSymbol('error'),
+            AIFPLASTString("No patterns matched in match expression")
+        ))
+
+        # Partition into groups: list of (group_type, [clause, ...])
+        # group_type is the Python AST class for literal groups, or None for singles.
+        groups: List[Tuple[Any, List[AIFPLASTNode]]] = []
+        i = 0
+        while i < len(clauses):
             clause = clauses[i]
-            assert isinstance(clause, AIFPLASTList), "Clause must be a list (validated by semantic analyzer)"
+            assert isinstance(clause, AIFPLASTList)
             pattern = clause.elements[0]
-            result_expr = clause.elements[1]
+            lit_type = self._literal_pattern_type(pattern)
 
-            # Desugar the result expression
-            desugared_result = self.desugar(result_expr)
+            if lit_type is not None:
+                # Start or extend a literal group of this type
+                group: List[AIFPLASTNode] = [clause]
+                j = i + 1
+                while j < len(clauses):
+                    next_clause = clauses[j]
+                    assert isinstance(next_clause, AIFPLASTList)
+                    if not self._literal_pattern_type(next_clause.elements[0]) is lit_type:
+                        break
 
-            # Desugar the pattern into (test_expr, bindings)
-            # All patterns are validated by semantic analyzer, so this cannot raise
-            test_expr, bindings = self._desugar_pattern(pattern, temp_var)
+                    group.append(next_clause)
+                    j += 1
 
-            # If this is the last clause, the else branch is the no-match error
-            if i == len(clauses) - 1:
-                no_match_error = AIFPLASTList((
-                    AIFPLASTSymbol('error'),
-                    AIFPLASTString("No patterns matched in match expression")
-                ))
+                groups.append((lit_type, group))
+                i = j
+
+            else:
+                groups.append((None, [clause]))
+                i += 1
+
+        # Build right-to-left: start with the no-match error as the base.
+        result: AIFPLASTNode = no_match_error
+
+        for group_type, group_clauses in reversed(groups):
+            if group_type is not None:
+                # Literal group: hoist a single type guard over all arms.
+                result = self._build_literal_group(temp_var, group_type, group_clauses, result)
+
+            else:
+                # Single non-literal clause: use the original per-arm path.
+                clause = group_clauses[0]
+                assert isinstance(clause, AIFPLASTList)
+                pattern = clause.elements[0]
+                desugared_result = self.desugar(clause.elements[1])
+                test_expr, bindings = self._desugar_pattern(pattern, temp_var)
                 result = self._build_clause_with_bindings(
-                    test_expr,
-                    bindings,
-                    desugared_result,
-                    no_match_error
+                    test_expr, bindings, desugared_result, result
                 )
-                continue
 
-            result = self._build_clause_with_bindings(
-                test_expr,
-                bindings,
-                desugared_result,
-                cast(AIFPLASTNode, result)
-            )
-
-        assert result is not None
         return result
+
+    def _literal_pattern_type(self, pattern: AIFPLASTNode) -> type | None:
+        """
+        Return the Python AST class for a literal pattern, or None if the
+        pattern is not a simple literal (i.e. it is a wildcard, variable,
+        predicate pattern, or list/cons pattern).
+
+        Only the types that have a safe typed equality operator are included:
+        boolean, integer, float, complex, string.  AIFPLASTNone is excluded
+        because (none? tmp) is already a singleton predicate with no equality
+        check needed — grouping adds no benefit there.
+        """
+        if isinstance(pattern, (AIFPLASTBoolean, AIFPLASTInteger,
+                                AIFPLASTFloat, AIFPLASTComplex, AIFPLASTString)):
+            return type(pattern)
+
+        return None
+
+    def _build_literal_group(
+        self,
+        temp_var: str,
+        lit_type: type,
+        clauses: List[AIFPLASTNode],
+        else_expr: AIFPLASTNode,
+    ) -> AIFPLASTNode:
+        """
+        Build a type-guarded block for a run of same-type literal arms.
+
+        Emits:
+            (if (type? tmp)
+                (if (type=? tmp lit0) result0
+                (if (type=? tmp lit1) result1
+                    ...
+                    else_expr))
+                else_expr)
+
+        The type guard is emitted once.  Each arm uses only the bare equality
+        check, with no per-arm type predicate.
+        """
+        # Map AST literal class → (type-predicate name, equality-op name)
+        _type_info: dict[type, Tuple[str, str]] = {
+            AIFPLASTBoolean: ('boolean?', 'boolean=?'),
+            AIFPLASTInteger: ('integer?', 'integer=?'),
+            AIFPLASTFloat:   ('float?',   'float=?'),
+            AIFPLASTComplex: ('complex?', 'complex=?'),
+            AIFPLASTString:  ('string?',  'string=?'),
+        }
+        type_pred, eq_op = _type_info[lit_type]
+        tmp_sym = AIFPLASTSymbol(temp_var)
+
+        # Build the inner equality chain right-to-left, falling through to else_expr.
+        inner: AIFPLASTNode = else_expr
+        for clause in reversed(clauses):
+            assert isinstance(clause, AIFPLASTList)
+            pattern = clause.elements[0]
+            desugared_result = self.desugar(clause.elements[1])
+            eq_test = AIFPLASTList((AIFPLASTSymbol(eq_op), tmp_sym, pattern))
+            inner = AIFPLASTList((AIFPLASTSymbol('if'), eq_test, desugared_result, inner))
+
+        # Wrap in the single type guard.
+        type_test = AIFPLASTList((AIFPLASTSymbol(type_pred), tmp_sym))
+        return AIFPLASTList((AIFPLASTSymbol('if'), type_test, inner, else_expr))
 
     def _build_clause_with_bindings(
         self,

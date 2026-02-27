@@ -12,7 +12,6 @@ from aifpl.aifpl_codegen import AIFPLCodeGen
 from aifpl.aifpl_constant_folder import AIFPLConstantFolder
 from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_ir_builder import AIFPLIRBuilder
-from aifpl.aifpl_type_flow_analyzer import AIFPLTypeFlowAnalyzer
 from aifpl.aifpl_lexer import AIFPLLexer
 from aifpl.aifpl_module_resolver import AIFPLModuleResolver, ModuleLoader
 from aifpl.aifpl_optimization_pass import AIFPLOptimizationPass
@@ -48,7 +47,6 @@ class AIFPLCompiler:
         if optimize:
             self.ast_passes = [
                 AIFPLConstantFolder(),
-                AIFPLTypeFlowAnalyzer(),
             ]
 
         self.ir_builder = AIFPLIRBuilder()
