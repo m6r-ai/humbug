@@ -336,6 +336,19 @@ class AIFPLIRBuilder:
 
         _, condition, then_expr, else_expr = expr.elements
 
+        # Negation elimination: (if (boolean-not cond) then else) → (if cond else then)
+        #
+        # If the condition is a call to boolean-not, we can drop the negation and
+        # swap the branches instead, saving one BOOLEAN_NOT opcode per such branch.
+        # We detect this at the AST level before analysis so the transformation is
+        # free and requires no IR changes.
+        if (isinstance(condition, AIFPLASTList)
+                and len(condition.elements) == 2
+                and isinstance(condition.elements[0], AIFPLASTSymbol)
+                and condition.elements[0].name == 'boolean-not'):
+            condition = condition.elements[1]
+            then_expr, else_expr = else_expr, then_expr
+
         # Analyze all three sub-expressions
         condition_plan = self._analyze_expression(condition, ctx, in_tail_position=False)
         then_plan = self._analyze_expression(then_expr, ctx, in_tail_position=in_tail_position)

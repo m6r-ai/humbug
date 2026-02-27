@@ -192,6 +192,11 @@ class AIFPLCodeGen:
             ctx.emit(Opcode.LOAD_NONE)
             return
 
+        # Optimise #t / #f: use dedicated opcodes instead of constant pool entries
+        if isinstance(plan.value, AIFPLBoolean):
+            ctx.emit(Opcode.LOAD_TRUE if plan.value.value else Opcode.LOAD_FALSE)
+            return
+
         const_index = ctx.add_constant(plan.value)
         ctx.emit(Opcode.LOAD_CONST, const_index)
 
