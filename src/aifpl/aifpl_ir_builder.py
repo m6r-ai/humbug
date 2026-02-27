@@ -320,6 +320,14 @@ class AIFPLIRBuilder:
         if isinstance(plan, AIFPLIRIf) and plan.in_tail_position:
             return False
 
+        # Let/letrec: the body is what actually returns, so defer to the body
+        if isinstance(plan, (AIFPLIRLet, AIFPLIRLetrec)):
+            return self._needs_return_wrapper(plan.body_plan)
+
+        # AIFPLIRReturn already has a return
+        if isinstance(plan, AIFPLIRReturn):
+            return False
+
         return True
 
     def _analyze_if(self, expr: AIFPLASTList, ctx: AnalysisContext, in_tail_position: bool) -> AIFPLIRIf:
