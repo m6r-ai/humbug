@@ -98,10 +98,11 @@ class BytecodeValidator:
         # Format: (pop_count, push_count)
         self.stack_effects: Dict[Opcode, Tuple[int, int]] = {
             # Constants - push 1
-            Opcode.LOAD_CONST: (0, 1),
+            Opcode.LOAD_NONE: (0, 1),
             Opcode.LOAD_TRUE: (0, 1),
             Opcode.LOAD_FALSE: (0, 1),
             Opcode.LOAD_EMPTY_LIST: (0, 1),
+            Opcode.LOAD_CONST: (0, 1),
 
             # Variables - load pushes 1, store pops 1
             Opcode.LOAD_VAR: (0, 1),
@@ -142,6 +143,9 @@ class BytecodeValidator:
             Opcode.SYMBOL_EQ_P: (2, 1),
             Opcode.SYMBOL_NEQ_P: (2, 1),
             Opcode.SYMBOL_TO_STRING: (1, 1),
+
+            # None operations
+            Opcode.NONE_P: (1, 1),
 
             # Boolean operations
             Opcode.BOOLEAN_P: (1, 1),

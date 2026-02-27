@@ -103,8 +103,8 @@ class TestStringToInteger:
         '(string->integer "hello")',       # default radix, unparseable
     ])
     def test_returns_false_on_failure(self, aifpl, expression):
-        """Test that unparseable strings return #f rather than raising an error."""
-        assert aifpl.evaluate_and_format(expression) == '#f'
+        """Test that unparseable strings return #none rather than raising an error."""
+        assert aifpl.evaluate_and_format(expression) == '#none'
 
     @pytest.mark.parametrize("expression,expected", [
         # Python's int() strips surrounding whitespace, so these succeed
@@ -167,8 +167,8 @@ class TestStringToInteger:
         assert aifpl.evaluate_and_format('(integer? (string->integer "1010" 2))') == '#t'
 
     def test_failure_result_is_boolean(self, aifpl):
-        """Test that parse failures return a boolean (#f), not some other type."""
-        assert aifpl.evaluate_and_format('(boolean? (string->integer "hello" 10))') == '#t'
+        """Test that parse failures return a none (#none), not some other type."""
+        assert aifpl.evaluate_and_format('(none? (string->integer "hello" 10))') == '#t'
 
     # --- First-class use ---
 

@@ -12,7 +12,7 @@ from aifpl.aifpl_bytecode_validator import validate_bytecode
 from aifpl.aifpl_error import AIFPLEvalError, AIFPLCancelledException
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLBoolean, AIFPLString, AIFPLList, AIFPLDict, AIFPLFunction,
-    AIFPLInteger, AIFPLComplex, AIFPLFloat, AIFPLSymbol
+    AIFPLInteger, AIFPLComplex, AIFPLFloat, AIFPLSymbol, AIFPLNone, AIFPL_NONE
 )
 
 
@@ -158,10 +158,11 @@ class AIFPLVM:
         significantly improving performance in the hot execution loop.
         """
         table: List[Any] = [None] * 384
-        table[Opcode.LOAD_CONST] = self._op_load_const
+        table[Opcode.LOAD_NONE] = self._op_load_none
         table[Opcode.LOAD_TRUE] = self._op_load_true
         table[Opcode.LOAD_FALSE] = self._op_load_false
         table[Opcode.LOAD_EMPTY_LIST] = self._op_load_empty_list
+        table[Opcode.LOAD_CONST] = self._op_load_const
         table[Opcode.LOAD_VAR] = self._op_load_var
         table[Opcode.STORE_VAR] = self._op_store_var
         table[Opcode.LOAD_NAME] = self._op_load_name
@@ -188,6 +189,7 @@ class AIFPLVM:
         table[Opcode.SYMBOL_EQ_P] = self._op_symbol_eq_p
         table[Opcode.SYMBOL_NEQ_P] = self._op_symbol_neq_p
         table[Opcode.SYMBOL_TO_STRING] = self._op_symbol_to_string
+        table[Opcode.NONE_P] = self._op_none_p
         table[Opcode.BOOLEAN_P] = self._op_boolean_p
         table[Opcode.BOOLEAN_EQ_P] = self._op_boolean_eq_p
         table[Opcode.BOOLEAN_NEQ_P] = self._op_boolean_neq_p
@@ -568,13 +570,11 @@ class AIFPLVM:
         # Frame finished without explicit return
         raise AIFPLEvalError("Frame execution ended without RETURN instruction")
 
-    def _op_load_const(  # pylint: disable=useless-return
-        self, _frame: Frame, code: CodeObject, arg1: int, _arg2: int
+    def _op_load_none(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
     ) -> AIFPLValue | None:
-        """LOAD_CONST: Push constant from pool onto stack."""
-        # Validator guarantees arg1 is in bounds
-        # No bounds check needed - direct access for maximum performance
-        self.stack.append(code.constants[arg1])
+        """LOAD_NONE: Push #none onto stack."""
+        self.stack.append(AIFPL_NONE)
         return None
 
     def _op_load_true(  # pylint: disable=useless-return
@@ -596,6 +596,15 @@ class AIFPLVM:
     ) -> AIFPLValue | None:
         """LOAD_EMPTY_LIST: Push empty list onto stack."""
         self.stack.append(AIFPLList(()))
+        return None
+
+    def _op_load_const(  # pylint: disable=useless-return
+        self, _frame: Frame, code: CodeObject, arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """LOAD_CONST: Push constant from pool onto stack."""
+        # Validator guarantees arg1 is in bounds
+        # No bounds check needed - direct access for maximum performance
+        self.stack.append(code.constants[arg1])
         return None
 
     def _op_load_var(  # pylint: disable=useless-return
@@ -1081,6 +1090,14 @@ class AIFPLVM:
                 received=f"Got: {a.describe()} ({a.type_name()})"
             )
         self.stack.append(AIFPLString(a.name))
+        return None
+
+    def _op_none_p(  # pylint: disable=useless-return
+        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+    ) -> AIFPLValue | None:
+        """NONE_P: Check if value is #none."""
+        value = self.stack.pop()
+        self.stack.append(AIFPLBoolean(isinstance(value, AIFPLNone)))
         return None
 
     def _op_boolean_p(  # pylint: disable=useless-return
@@ -2100,7 +2117,7 @@ class AIFPLVM:
             return None
 
         except ValueError:
-            self.stack.append(AIFPLBoolean(False))
+            self.stack.append(AIFPL_NONE)
             return None
 
     def _op_string_to_number(  # pylint: disable=useless-return
@@ -2122,7 +2139,7 @@ class AIFPLVM:
             return None
 
         except ValueError:
-            self.stack.append(AIFPLBoolean(False))
+            self.stack.append(AIFPL_NONE)
             return None
 
     def _op_string_to_list(  # pylint: disable=useless-return
@@ -2228,7 +2245,7 @@ class AIFPLVM:
         substr = self._ensure_string(substr_val, 'string-index')
         idx = s.find(substr)
         if idx == -1:
-            self.stack.append(AIFPLBoolean(False))
+            self.stack.append(AIFPL_NONE)
         else:
             self.stack.append(AIFPLInteger(idx))
         return None
@@ -2545,7 +2562,7 @@ class AIFPLVM:
         list_val_raw = self.stack.pop()
         list_val = self._ensure_list(list_val_raw, 'list-index')
         pos = list_val.position(item)
-        self.stack.append(AIFPLInteger(pos) if pos is not None else AIFPLBoolean(False))
+        self.stack.append(AIFPLInteger(pos) if pos is not None else AIFPL_NONE)
         return None
 
     def _op_list_slice(  # pylint: disable=useless-return

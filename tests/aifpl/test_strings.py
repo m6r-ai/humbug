@@ -273,10 +273,10 @@ class TestStrings:
         ('(string-index "hello world" "world")', '6'),
         ('(string-index "hello world" "hello")', '0'),
         ('(string-index "hello world" "o w")', '4'),
-        ('(string-index "hello world" "xyz")', '#f'),
+        ('(string-index "hello world" "xyz")', '#none'),
         ('(string-index "hello" "")', '0'),  # Empty string found at start
         ('(string-index "" "")', '0'),  # Empty found in empty at start
-        ('(string-index "" "a")', '#f'),  # Non-empty not found in empty
+        ('(string-index "" "a")', '#none'),  # Non-empty not found in empty
 
         # Unicode index
         ('(string-index "Hello 世界" "世界")', '6'),
@@ -354,28 +354,28 @@ class TestStrings:
         ('(string->number "1+2j")', '1+2j'),
         ('(string->number "3j")', '3j'),
 
-        # Base-prefixed literals are no longer supported — return #f
-        ('(string->number "#xff")', '#f'),
-        ('(string->number "#b1010")', '#f'),
-        ('(string->number "#o755")', '#f'),
+        # Base-prefixed literals are no longer supported — return #none
+        ('(string->number "#xff")', '#none'),
+        ('(string->number "#b1010")', '#none'),
+        ('(string->number "#o755")', '#none'),
 
-        # Upper case prefixes also return #f
-        ('(string->number "#XFF")', '#f'),
-        ('(string->number "#B1010")', '#f'),
-        ('(string->number "#O755")', '#f'),
+        # Upper case prefixes also return #none
+        ('(string->number "#XFF")', '#none'),
+        ('(string->number "#B1010")', '#none'),
+        ('(string->number "#O755")', '#none'),
 
-        # Negative base-prefixed literals also return #f
-        ('(string->number "-#xff")', '#f'),
-        ('(string->number "-#b1010")', '#f'),
-        ('(string->number "-#o755")', '#f'),
+        # Negative base-prefixed literals also return #none
+        ('(string->number "-#xff")', '#none'),
+        ('(string->number "-#b1010")', '#none'),
+        ('(string->number "-#o755")', '#none'),
 
         # Unparseable strings return #f
-        ('(string->number "hello")', '#f'),
-        ('(string->number "12.34.56")', '#f'),
-        ('(string->number "")', '#f'),
-        ('(string->number "#xZZ")', '#f'),
-        ('(string->number "#b2")', '#f'),
-        ('(string->number "#o9")', '#f'),
+        ('(string->number "hello")', '#none'),
+        ('(string->number "12.34.56")', '#none'),
+        ('(string->number "")', '#none'),
+        ('(string->number "#xZZ")', '#none'),
+        ('(string->number "#b2")', '#none'),
+        ('(string->number "#o9")', '#none'),
     ])
     def test_string_to_number(self, aifpl, expression, expected):
         """Test string->number conversion."""

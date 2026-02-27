@@ -174,6 +174,16 @@ Syntax: (operator arg1 arg2 ...)
 - Mixed-type lists supported: (list 1 \"hi\" #t)
 - Comments: use semicolon (;) for single-line comments, e.g., ; This is a comment
 
+## None type:
+
+- Represents the absence of a value — distinct from #f (boolean false)
+- Literal: #none
+- Type predicate: (none? x) → #t if x is #none, #f otherwise
+- Returned by: dict-get (missing key, no default), list-find (not found), list-index (not found), string-index (not found), string->number (unparseable), string->integer (unparseable)
+- Pattern matching: (match x (#none "absent") (_ "present"))
+- #none is not a boolean; (if #none ...) is a type error
+- Can be stored in lists and dicts as a value
+
 ## Boolean operations
 
 - Boolean literals: #t, #f
@@ -282,9 +292,9 @@ Syntax: (operator arg1 arg2 ...)
 - Manipulation: (string-slice "hello" 1 4), (string-slice "hello" 2) → "llo", (string-upcase "hello"), (string-downcase "HELLO")
 - Utilities: (string-trim "  hello  ") → "hello",(string-trim-left "  hello  ") → "hello  ",  (string-trim-right "  hello  ") → "  hello", (string-replace "banana" "a" "o")
 - Search predicates: (string-prefix? "hello" "he"), (string-suffix? "hello" "lo")
-- Search index: (string-index "hello" "l") → 2, (string-index "hello" "z") → #f (not found)
-- Conversion: (string->number "42") → 42, (string->number "3.14") → 3.14, (string->number "1+2j") → 1+2j, (string->number "hello") → #f (returns #f for any unparseable string; raises a type error if argument is not a string)
-- (string->integer "ff" 16) → 255, (string->integer "1010" 2) → 10, (string->integer "377" 8) → 255, (string->integer "42") → 42 (optional radix: 2, 8, 10, or 16; defaults to 10; returns #f for unparseable strings; invalid radix raises an error)
+- Search index: (string-index "hello" "l") → 2, (string-index "hello" "z") → #none (not found)
+- Conversion: (string->number "42") → 42, (string->number "3.14") → 3.14, (string->number "1+2j") → 1+2j, (string->number "hello") → #none (returns #none for any unparseable string; raises a type error if argument is not a string)
+- (string->integer "ff" 16) → 255, (string->integer "1010" 2) → 10, (string->integer "377" 8) → 255, (string->integer "42") → 42 (optional radix: 2, 8, 10, or 16; defaults to 10; returns #none for unparseable strings; invalid radix raises an error)
 - Note: (string->integer "ff" 16) and (string->integer "FF" 16) both → 255 (case-insensitive); surrounding whitespace is accepted
 - (string->list "hello") → ("h" "e" "l" "l" "o") (no delimiter: splits into individual characters)
 - (string->list "a,b,c" ",") → ("a" "b" "c") (delimiter splits on every occurrence; consecutive delimiters produce empty strings: (string->list "a,,b" ",") → ("a" "" "b"))
@@ -304,7 +314,7 @@ Syntax: (operator arg1 arg2 ...)
 - Access: (list-last (list 1 2 3)) → 3
 - Indexed access: (list-ref (list "a" "b" "c") 1) → "b" (0-based index)
 - Properties: (list-length (list 1 2 3)), (list-null? (list)), (list-member? (list 1 2 3) 2)
-- Utilities: (list-reverse (list 1 2 3)), (list-remove (list 1 2 3 2 4) 2), (list-index (list 1 2 3) 2) → 1, (list-index (list 1 2 3) 42) → #f (not found)
+- Utilities: (list-reverse (list 1 2 3)), (list-remove (list 1 2 3 2 4) 2), (list-index (list 1 2 3) 2) → 1, (list-index (list 1 2 3) 42) → #none (not found)
 - Slicing: (list-slice lst start) → from start to end, (list-slice lst start end) → from start to end (exclusive)
 - (list-slice (list 1 2 3 4 5) 2) → (3 4 5), (list-slice (list 1 2 3 4 5) 1 3) → (2 3)
 - (list->string (list "h" "e" "l" "l" "o")) → "hello" (no separator: concatenates directly; all elements must be strings)
@@ -312,7 +322,7 @@ Syntax: (operator arg1 arg2 ...)
 - Higher-order: (list-map func list) → (list-map (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
 - Higher-order: (list-filter predicate list) → (list-filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
 - Higher-order: (list-fold func init list) → left fold (tail-recursive); processes list left-to-right, accumulating into init: (list-fold integer+ 0 (list 1 2 3 4)) → 10, (list-fold integer- 0 (list 1 2 3)) → -6
-- Higher-order: (list-find predicate list) → first element satisfying predicate, or #f if none found: (list-find (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → 4, note: (list-find predicate ()) → #f
+- Higher-order: (list-find predicate list) → first element satisfying predicate, or #none if none found: (list-find (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → 4, note: (list-find predicate ()) → #none
 - Higher-order: (list-any? predicate list) → #t if at least one element satisfies predicate, #f otherwise: (list-any? (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → #t, note: (list-any? predicate ()) → #f
 - Higher-order: (list-all? predicate list) → #t if all elements satisfy predicate, #f otherwise: (list-all? (lambda (x) (integer>? x 0)) (list 1 2 3 4 5)) → #t, note: (list-all? predicate ()) → #t (vacuously true)
 - Higher-order: (list-zip lst1 lst2) → pairs corresponding elements: (list-zip (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6)), (list-zip lst1 lst2) stops at the shorter list: (list-zip (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
@@ -327,7 +337,7 @@ Syntax: (operator arg1 arg2 ...)
 - Equality: (dict=? a1 a2), (dict!=? a1 a2)
 - Output format: dicts display with curly braces: {("name" "Alice") ("age" 30)} — this is display-only; construction always uses (dict ...)
 - Construction: (dict (list "name" "Alice") (list "age" 30))
-- Access: (dict-get my-dict "key"), (dict-get my-dict "key" "default")
+- Access: (dict-get my-dict "key") → value or #none if missing, (dict-get my-dict "key" "default") → value or "default" if missing
 - Modification: (dict-set my-dict "key" value), (dict-remove my-dict "key")
 - Queries: (dict-has? my-dict "key"), (dict-keys my-dict), (dict-values my-dict), (dict-length my-dict)
 - Merging: (dict-merge dict1 dict2) - second wins on conflicts
@@ -475,6 +485,7 @@ Syntax: (operator arg1 arg2 ...)
 - All comparison operators are type-specific: use integer=?, float<?, string>=? etc.
 - Lists and dicts support =? and !=? only; they have no ordering
 - Conditions must be boolean: (if #t ...) works, (if 1 ...) doesn't - there is no concept of "truthiness"
+- #none is not a boolean and cannot be used as a condition; use (none? x) to test for absence
 - The user will not see the AIFPL code or AIFPL results directly; if you want to show either, you must format it as a message to the user.
 """
 

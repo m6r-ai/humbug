@@ -85,7 +85,7 @@ class TestDictGet:
     def test_dict_get_missing_key_default_false(self, tool):
         """Test getting a missing key returns #f by default."""
         result = tool.evaluate('(dict-get (dict (list "name" "Alice")) "age")')
-        assert result is False
+        assert result is None
 
     def test_dict_get_with_default(self, tool):
         """Test getting a missing key with custom default."""

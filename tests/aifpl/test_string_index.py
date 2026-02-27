@@ -18,13 +18,13 @@ def test_string_index_basic():
     assert aifpl.evaluate_and_format('(string-index "hello" "o")') == "4"
     
     # Not found
-    assert aifpl.evaluate_and_format('(string-index "hello" "z")') == "#f"
+    assert aifpl.evaluate_and_format('(string-index "hello" "z")') == "#none"
     
     # Empty substring
     assert aifpl.evaluate_and_format('(string-index "hello" "")') == "0"
     
     # Empty string
-    assert aifpl.evaluate_and_format('(string-index "" "a")') == "#f"
+    assert aifpl.evaluate_and_format('(string-index "" "a")') == "#none"
     assert aifpl.evaluate_and_format('(string-index "" "")') == "0"
 
 def test_string_index_types():

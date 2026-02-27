@@ -11,7 +11,7 @@ from aifpl.aifpl_ir import (
     AIFPLIRQuote, AIFPLIRError, AIFPLIRLet, AIFPLIRLetrec, AIFPLIRLambda, AIFPLIRCall,
     AIFPLIREmptyList, AIFPLIRReturn, AIFPLIRTrace
 )
-from aifpl.aifpl_value import AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLBoolean, AIFPLString
+from aifpl.aifpl_value import AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex, AIFPLBoolean, AIFPLNone, AIFPLString
 
 
 # Derived opcode maps for the codegen — built from the single source of truth
@@ -193,6 +193,11 @@ class AIFPLCodeGen:
 
     def _generate_constant(self, plan: AIFPLIRConstant, ctx: AIFPLCodeGenContext) -> None:
         """Generate code for a constant."""
+        # Optimise #none: use dedicated opcode instead of constant pool entry
+        if isinstance(plan.value, AIFPLNone):
+            ctx.emit(Opcode.LOAD_NONE)
+            return
+
         const_index = ctx.add_constant(plan.value)
         ctx.emit(Opcode.LOAD_CONST, const_index)
 
@@ -558,7 +563,7 @@ class AIFPLCodeGen:
                     self._generate_expr(arg_plan, ctx)
 
                 if len(plan.arg_plans) == 2:
-                    ctx.emit(Opcode.LOAD_FALSE)
+                    ctx.emit(Opcode.LOAD_NONE)
 
                 ctx.emit(Opcode.DICT_GET)
                 return

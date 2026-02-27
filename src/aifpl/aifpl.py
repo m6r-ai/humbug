@@ -473,7 +473,7 @@ class AIFPL:
                                            (helper f (f acc (list-first lst)) (list-rest lst))))))
                     (helper f init lst)))""",
         'list-find': """(lambda (pred lst)
-                    (letrec ((list-find (lambda (pred lst) (if (list-null? lst) #f (if (pred (list-first lst)) (list-first lst) (list-find pred (list-rest lst)))))))
+                    (letrec ((list-find (lambda (pred lst) (if (list-null? lst) #none (if (pred (list-first lst)) (list-first lst) (list-find pred (list-rest lst)))))))
                     (list-find pred lst)))""",
         'list-any?': """(lambda (pred lst)
                     (letrec ((list-any? (lambda (pred lst) (if (list-null? lst) #f (if (pred (list-first lst)) #t (list-any? pred (list-rest lst)))))))
@@ -551,7 +551,7 @@ class AIFPL:
                                                       (inner (list-rest lst)))))))
                                 (outer args))))""",
         'dict-get': """(lambda (a-list key . rest)
-                          (dict-get a-list key (if (list-null? rest) #f (list-first rest))))""",
+                          (dict-get a-list key (if (list-null? rest) #none (list-first rest))))""",
         'dict-map': """(lambda (f al)
                     (letrec ((loop (lambda (keys acc)
                                      (if (list-null? keys) acc

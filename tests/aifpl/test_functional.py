@@ -292,10 +292,10 @@ class TestFunctional:
         ('(list-find (lambda (x) (integer=? x 0)) (list 1 2 0 3))', '0'),
 
         # Find with no match returns #f
-        ('(list-find (lambda (x) (integer>? x 10)) (list 1 2 3))', '#f'),
+        ('(list-find (lambda (x) (integer>? x 10)) (list 1 2 3))', '#none'),
 
         # Find in empty list returns #f
-        ('(list-find (lambda (x) #t) (list))', '#f'),
+        ('(list-find (lambda (x) #t) (list))', '#none'),
 
         # Find first match (short-circuit)
         ('(list-find (lambda (x) (integer>? x 2)) (list 1 3 5 7))', '3'),

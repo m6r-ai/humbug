@@ -47,6 +47,7 @@ class AIFPLBuiltinRegistry:
         'symbol=?': (2, 2),
         'symbol!=?': (2, 2),
         'symbol->string': (1, 1),
+        'none?': (1, 1),
         'boolean?': (1, 1),
         'boolean=?': (2, None),
         'boolean!=?': (2, None),

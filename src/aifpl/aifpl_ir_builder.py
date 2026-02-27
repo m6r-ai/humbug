@@ -13,7 +13,7 @@ from aifpl.aifpl_ir import (
 from aifpl.aifpl_dependency_analyzer import AIFPLDependencyAnalyzer
 from aifpl.aifpl_ast import (
     AIFPLASTNode, AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex,
-    AIFPLASTString, AIFPLASTBoolean, AIFPLASTSymbol, AIFPLASTList
+    AIFPLASTString, AIFPLASTBoolean, AIFPLASTNone, AIFPLASTSymbol, AIFPLASTList
 )
 
 
@@ -184,6 +184,9 @@ class AIFPLIRBuilder:
             return AIFPLIRConstant(value=expr.to_runtime_value())
 
         if expr_type is AIFPLASTBoolean:
+            return AIFPLIRConstant(value=expr.to_runtime_value())
+
+        if expr_type is AIFPLASTNone:
             return AIFPLIRConstant(value=expr.to_runtime_value())
 
         # Symbol (variable reference)

@@ -45,10 +45,11 @@ class Opcode(IntEnum):
         return self._arg_count
 
     # Constants
-    LOAD_CONST = _op(1, 1)              # LOAD_CONST const_index
-    LOAD_TRUE = _op(2, 0)               # Push True
-    LOAD_FALSE = _op(3, 0)              # Push False
-    LOAD_EMPTY_LIST = _op(4, 0)         # Push empty list
+    LOAD_NONE = _op(0, 0)               # Push #none
+    LOAD_TRUE = _op(1, 0)               # Push True
+    LOAD_FALSE = _op(2, 0)              # Push False
+    LOAD_EMPTY_LIST = _op(3, 0)         # Push empty list
+    LOAD_CONST = _op(4, 1)              # LOAD_CONST const_index
 
     # Variables (lexically addressed)
     LOAD_VAR = _op(5, 1)                # LOAD_VAR index
@@ -57,193 +58,196 @@ class Opcode(IntEnum):
     LOAD_NAME = _op(8, 1)               # LOAD_NAME name_index
 
     # Control flow
-    JUMP = _op(10, 1)                   # Unconditional jump: JUMP offset
-    JUMP_IF_FALSE = _op(11, 1)          # Conditional jump if false
-    JUMP_IF_TRUE = _op(12, 1)           # Conditional jump if true
-    RAISE_ERROR = _op(13, 1)            # RAISE_ERROR const_index
+    JUMP = _op(20, 1)                   # Unconditional jump: JUMP offset
+    JUMP_IF_FALSE = _op(21, 1)          # Conditional jump if false
+    JUMP_IF_TRUE = _op(22, 1)           # Conditional jump if true
+    RAISE_ERROR = _op(23, 1)            # RAISE_ERROR const_index
 
     # Functions
-    MAKE_CLOSURE = _op(14, 2)           # MAKE_CLOSURE code_index capture_count
-    CALL = _op(15, 1)                   # CALL arity
-    TAIL_CALL = _op(16, 1)              # TAIL_CALL arity
-    APPLY = _op(17, 0)                  # Apply function to arg list (non-tail)
-    TAIL_APPLY = _op(18, 0)             # Apply function to arg list (tail position)
-    ENTER = _op(19, 1)                  # ENTER n  (pop N args into locals 0..N-1)
-    RETURN = _op(20, 0)                 # Return from function
+    MAKE_CLOSURE = _op(30, 2)           # MAKE_CLOSURE code_index capture_count
+    CALL = _op(31, 1)                   # CALL arity
+    TAIL_CALL = _op(32, 1)              # TAIL_CALL arity
+    APPLY = _op(33, 0)                  # Apply function to arg list (non-tail)
+    TAIL_APPLY = _op(34, 0)             # Apply function to arg list (tail position)
+    ENTER = _op(35, 1)                  # ENTER n  (pop N args into locals 0..N-1)
+    RETURN = _op(36, 0)                 # Return from function
 
     # Debugging
-    EMIT_TRACE = _op(30, 0)             # Emit trace (pops value, emits to watcher)
+    EMIT_TRACE = _op(40, 0)             # Emit trace (pops value, emits to watcher)
+
+    # None operations
+    NONE_P = _op(50, 0)                 # (none? x)
 
     # Function operations
-    FUNCTION_P = _op(40, 0)             # (function? x)
-    FUNCTION_EQ_P = _op(41, 0)          # (function=? f g)
-    FUNCTION_NEQ_P = _op(42, 0)         # (function!=? f g)
-    FUNCTION_MIN_ARITY = _op(43, 0)     # (function-min-arity f)
-    FUNCTION_VARIADIC_P = _op(44, 0)    # (function-variadic? f)
-    FUNCTION_ACCEPTS_P = _op(45, 0)     # (function-accepts? f n)
+    FUNCTION_P = _op(60, 0)             # (function? x)
+    FUNCTION_EQ_P = _op(61, 0)          # (function=? f g)
+    FUNCTION_NEQ_P = _op(62, 0)         # (function!=? f g)
+    FUNCTION_MIN_ARITY = _op(63, 0)     # (function-min-arity f)
+    FUNCTION_VARIADIC_P = _op(64, 0)    # (function-variadic? f)
+    FUNCTION_ACCEPTS_P = _op(65, 0)     # (function-accepts? f n)
 
     # Symbol operations
-    SYMBOL_P = _op(60, 0)               # (symbol? x)
-    SYMBOL_EQ_P = _op(61, 0)            # symbol=? a b
-    SYMBOL_NEQ_P = _op(62, 0)           # symbol!=? a b
-    SYMBOL_TO_STRING = _op(63, 0)       # (symbol->string sym)
+    SYMBOL_P = _op(80, 0)               # (symbol? x)
+    SYMBOL_EQ_P = _op(81, 0)            # symbol=? a b
+    SYMBOL_NEQ_P = _op(82, 0)           # symbol!=? a b
+    SYMBOL_TO_STRING = _op(83, 0)       # (symbol->string sym)
 
     # Boolean operations
-    BOOLEAN_P = _op(80, 0)              # (boolean? x)
-    BOOLEAN_EQ_P = _op(81, 0)           # boolean=? a b
-    BOOLEAN_NEQ_P = _op(82, 0)          # boolean!=? a b
-    BOOLEAN_NOT = _op(83, 0)            # Logical NOT
+    BOOLEAN_P = _op(100, 0)              # (boolean? x)
+    BOOLEAN_EQ_P = _op(101, 0)           # boolean=? a b
+    BOOLEAN_NEQ_P = _op(102, 0)          # boolean!=? a b
+    BOOLEAN_NOT = _op(103, 0)            # Logical NOT
 
     # Integer operations
-    INTEGER_P = _op(100, 0)             # (integer? x)
-    INTEGER_EQ_P = _op(101, 0)          # integer=? a b
-    INTEGER_NEQ_P = _op(102, 0)         # integer!=? a b
-    INTEGER_LT_P = _op(103, 0)          # integer<? a b
-    INTEGER_GT_P = _op(104, 0)          # integer>? a b
-    INTEGER_LTE_P = _op(105, 0)         # integer<=? a b
-    INTEGER_GTE_P = _op(106, 0)         # integer>=? a b
-    INTEGER_ABS = _op(107, 0)           # integer-abs x
-    INTEGER_ADD = _op(108, 0)           # integer+ a b
-    INTEGER_SUB = _op(109, 0)           # integer- a b
-    INTEGER_MUL = _op(110, 0)           # integer* a b
-    INTEGER_DIV = _op(111, 0)           # integer/ a b  (floor division)
-    INTEGER_MOD = _op(112, 0)           # integer% a b  (modulo)
-    INTEGER_NEG = _op(113, 0)           # integer-neg x  (unary minus)
-    INTEGER_EXPN = _op(114, 0)          # integer-expn a b  (exact integer exponentiation)
-    INTEGER_BIT_NOT = _op(115, 0)       # Bitwise NOT ~x
-    INTEGER_BIT_SHIFT_LEFT = _op(116, 0)
+    INTEGER_P = _op(120, 0)             # (integer? x)
+    INTEGER_EQ_P = _op(121, 0)          # integer=? a b
+    INTEGER_NEQ_P = _op(122, 0)         # integer!=? a b
+    INTEGER_LT_P = _op(123, 0)          # integer<? a b
+    INTEGER_GT_P = _op(124, 0)          # integer>? a b
+    INTEGER_LTE_P = _op(125, 0)         # integer<=? a b
+    INTEGER_GTE_P = _op(126, 0)         # integer>=? a b
+    INTEGER_ABS = _op(127, 0)           # integer-abs x
+    INTEGER_ADD = _op(128, 0)           # integer+ a b
+    INTEGER_SUB = _op(129, 0)           # integer- a b
+    INTEGER_MUL = _op(130, 0)           # integer* a b
+    INTEGER_DIV = _op(131, 0)           # integer/ a b  (floor division)
+    INTEGER_MOD = _op(132, 0)           # integer% a b  (modulo)
+    INTEGER_NEG = _op(133, 0)           # integer-neg x  (unary minus)
+    INTEGER_EXPN = _op(134, 0)          # integer-expn a b  (exact integer exponentiation)
+    INTEGER_BIT_NOT = _op(135, 0)       # Bitwise NOT ~x
+    INTEGER_BIT_SHIFT_LEFT = _op(136, 0)
                                         # Bitwise left shift x << n
-    INTEGER_BIT_SHIFT_RIGHT = _op(117, 0)
+    INTEGER_BIT_SHIFT_RIGHT = _op(137, 0)
                                         # Bitwise right shift x >> n
-    INTEGER_BIT_OR = _op(118, 0)        # Bitwise OR: a | b
-    INTEGER_BIT_AND = _op(119, 0)       # Bitwise AND: a & b
-    INTEGER_BIT_XOR = _op(120, 0)       # Bitwise XOR: a ^ b
-    INTEGER_MIN = _op(121, 0)           # integer-min a b
-    INTEGER_MAX = _op(122, 0)           # integer-max a b
-    INTEGER_TO_FLOAT = _op(123, 0)      # Convert integer to float
-    INTEGER_TO_COMPLEX = _op(124, 0)    # integer->complex: construct complex from integer
-    INTEGER_TO_STRING = _op(125, 0)     # Convert integer to string
+    INTEGER_BIT_OR = _op(138, 0)        # Bitwise OR: a | b
+    INTEGER_BIT_AND = _op(139, 0)       # Bitwise AND: a & b
+    INTEGER_BIT_XOR = _op(140, 0)       # Bitwise XOR: a ^ b
+    INTEGER_MIN = _op(141, 0)           # integer-min a b
+    INTEGER_MAX = _op(142, 0)           # integer-max a b
+    INTEGER_TO_FLOAT = _op(143, 0)      # Convert integer to float
+    INTEGER_TO_COMPLEX = _op(144, 0)    # integer->complex: construct complex from integer
+    INTEGER_TO_STRING = _op(145, 0)     # Convert integer to string
 
     # Floating point operations
-    FLOAT_P = _op(140, 0)               # (float? x)
-    FLOAT_EQ_P = _op(141, 0)            # float=? a b
-    FLOAT_NEQ_P = _op(142, 0)           # float!=? a b
-    FLOAT_LT_P = _op(143, 0)            # float<? a b
-    FLOAT_GT_P = _op(144, 0)            # float>? a b
-    FLOAT_LTE_P = _op(145, 0)           # float<=? a b
-    FLOAT_GTE_P = _op(146, 0)           # float>=? a b
-    FLOAT_NEG = _op(147, 0)             # float-neg x  (unary minus)
-    FLOAT_ADD = _op(148, 0)             # float+ a b
-    FLOAT_SUB = _op(149, 0)             # float- a b
-    FLOAT_MUL = _op(150, 0)             # float* a b
-    FLOAT_DIV = _op(151, 0)             # float/ a b
-    FLOAT_FLOOR_DIV = _op(152, 0)       # float// a b  (floor division)
-    FLOAT_MOD = _op(153, 0)             # float% a b  (modulo)
-    FLOAT_EXP = _op(154, 0)             # float-exp x
-    FLOAT_EXPN = _op(155, 0)            # float-expn a b
-    FLOAT_LOG = _op(156, 0)             # float-log x
-    FLOAT_LOG10 = _op(157, 0)           # float-log10 x
-    FLOAT_LOG2 = _op(158, 0)            # float-log2 x  (log base 2, correctly rounded)
-    FLOAT_LOGN = _op(159, 0)            # float-logn x base  (log base n)
-    FLOAT_SIN = _op(160, 0)             # float-sin x
-    FLOAT_COS = _op(161, 0)             # float-cos x
-    FLOAT_TAN = _op(162, 0)             # float-tan x
-    FLOAT_SQRT = _op(163, 0)            # float-sqrt x
-    FLOAT_ABS = _op(164, 0)             # float-abs x
-    FLOAT_TO_INTEGER = _op(165, 0)      # Convert float to integer
-    FLOAT_TO_COMPLEX = _op(166, 0)      # float->complex: construct complex from one or two floats
-    FLOAT_TO_STRING = _op(167, 0)       # Convert float to string
-    FLOAT_FLOOR = _op(168, 0)           # float-floor x  (returns float)
-    FLOAT_CEIL = _op(169, 0)            # float-ceil x   (returns float)
-    FLOAT_ROUND = _op(170, 0)           # float-round x  (returns float)
-    FLOAT_MIN = _op(171, 0)             # float-min a b
-    FLOAT_MAX = _op(172, 0)             # float-max a b
+    FLOAT_P = _op(160, 0)               # (float? x)
+    FLOAT_EQ_P = _op(161, 0)            # float=? a b
+    FLOAT_NEQ_P = _op(162, 0)           # float!=? a b
+    FLOAT_LT_P = _op(163, 0)            # float<? a b
+    FLOAT_GT_P = _op(164, 0)            # float>? a b
+    FLOAT_LTE_P = _op(165, 0)           # float<=? a b
+    FLOAT_GTE_P = _op(166, 0)           # float>=? a b
+    FLOAT_NEG = _op(167, 0)             # float-neg x  (unary minus)
+    FLOAT_ADD = _op(168, 0)             # float+ a b
+    FLOAT_SUB = _op(169, 0)             # float- a b
+    FLOAT_MUL = _op(170, 0)             # float* a b
+    FLOAT_DIV = _op(171, 0)             # float/ a b
+    FLOAT_FLOOR_DIV = _op(172, 0)       # float// a b  (floor division)
+    FLOAT_MOD = _op(173, 0)             # float% a b  (modulo)
+    FLOAT_EXP = _op(174, 0)             # float-exp x
+    FLOAT_EXPN = _op(175, 0)            # float-expn a b
+    FLOAT_LOG = _op(176, 0)             # float-log x
+    FLOAT_LOG10 = _op(177, 0)           # float-log10 x
+    FLOAT_LOG2 = _op(178, 0)            # float-log2 x  (log base 2, correctly rounded)
+    FLOAT_LOGN = _op(179, 0)            # float-logn x base  (log base n)
+    FLOAT_SIN = _op(180, 0)             # float-sin x
+    FLOAT_COS = _op(181, 0)             # float-cos x
+    FLOAT_TAN = _op(182, 0)             # float-tan x
+    FLOAT_SQRT = _op(183, 0)            # float-sqrt x
+    FLOAT_ABS = _op(184, 0)             # float-abs x
+    FLOAT_TO_INTEGER = _op(185, 0)      # Convert float to integer
+    FLOAT_TO_COMPLEX = _op(186, 0)      # float->complex: construct complex from one or two floats
+    FLOAT_TO_STRING = _op(187, 0)       # Convert float to string
+    FLOAT_FLOOR = _op(188, 0)           # float-floor x  (returns float)
+    FLOAT_CEIL = _op(189, 0)            # float-ceil x   (returns float)
+    FLOAT_ROUND = _op(190, 0)           # float-round x  (returns float)
+    FLOAT_MIN = _op(191, 0)             # float-min a b
+    FLOAT_MAX = _op(192, 0)             # float-max a b
 
     # Complex operations
-    COMPLEX_P = _op(180, 0)             # (complex? x)
-    COMPLEX_EQ_P = _op(181, 0)          # complex=? a b
-    COMPLEX_NEQ_P = _op(182, 0)         # complex!=? a b
-    COMPLEX_REAL = _op(183, 0)          # Extract real part
-    COMPLEX_IMAG = _op(184, 0)          # Extract imaginary part
-    COMPLEX_ABS = _op(185, 0)           # complex-abs x  (returns float: magnitude)
-    COMPLEX_ADD = _op(186, 0)           # complex+ a b
-    COMPLEX_SUB = _op(187, 0)           # complex- a b
-    COMPLEX_MUL = _op(188, 0)           # complex* a b
-    COMPLEX_DIV = _op(189, 0)           # complex/ a b
-    COMPLEX_NEG = _op(190, 0)           # complex-neg x  (unary minus)
-    COMPLEX_EXP = _op(191, 0)           # complex-exp x
-    COMPLEX_EXPN = _op(192, 0)          # complex-expn a b
-    COMPLEX_LOG = _op(193, 0)           # complex-log x
-    COMPLEX_LOG10 = _op(194, 0)         # complex-log10 x
-    COMPLEX_LOGN = _op(195, 0)          # complex-logn x base  (log base n)
-    COMPLEX_SIN = _op(196, 0)           # complex-sin x
-    COMPLEX_COS = _op(197, 0)           # complex-cos x
-    COMPLEX_TAN = _op(198, 0)           # complex-tan x
-    COMPLEX_SQRT = _op(199, 0)          # complex-sqrt x
-    COMPLEX_TO_STRING = _op(200, 0)     # Convert complex to string
+    COMPLEX_P = _op(200, 0)             # (complex? x)
+    COMPLEX_EQ_P = _op(201, 0)          # complex=? a b
+    COMPLEX_NEQ_P = _op(202, 0)         # complex!=? a b
+    COMPLEX_REAL = _op(203, 0)          # Extract real part
+    COMPLEX_IMAG = _op(204, 0)          # Extract imaginary part
+    COMPLEX_ABS = _op(205, 0)           # complex-abs x  (returns float: magnitude)
+    COMPLEX_ADD = _op(206, 0)           # complex+ a b
+    COMPLEX_SUB = _op(207, 0)           # complex- a b
+    COMPLEX_MUL = _op(208, 0)           # complex* a b
+    COMPLEX_DIV = _op(209, 0)           # complex/ a b
+    COMPLEX_NEG = _op(210, 0)           # complex-neg x  (unary minus)
+    COMPLEX_EXP = _op(211, 0)           # complex-exp x
+    COMPLEX_EXPN = _op(212, 0)          # complex-expn a b
+    COMPLEX_LOG = _op(213, 0)           # complex-log x
+    COMPLEX_LOG10 = _op(214, 0)         # complex-log10 x
+    COMPLEX_LOGN = _op(215, 0)          # complex-logn x base  (log base n)
+    COMPLEX_SIN = _op(216, 0)           # complex-sin x
+    COMPLEX_COS = _op(217, 0)           # complex-cos x
+    COMPLEX_TAN = _op(218, 0)           # complex-tan x
+    COMPLEX_SQRT = _op(219, 0)          # complex-sqrt x
+    COMPLEX_TO_STRING = _op(220, 0)     # Convert complex to string
 
     # String operations
-    STRING_P = _op(220, 0)              # (string? x)
-    STRING_EQ_P = _op(221, 0)           # string=? a b
-    STRING_NEQ_P = _op(222, 0)          # string!=? a b
-    STRING_LT_P = _op(223, 0)           # string<? a b  (lexicographic)
-    STRING_GT_P = _op(224, 0)           # string>? a b  (lexicographic)
-    STRING_LTE_P = _op(225, 0)          # string<=? a b (lexicographic)
-    STRING_GTE_P = _op(226, 0)          # string>=? a b (lexicographic)
-    STRING_LENGTH = _op(227, 0)         # Get length of string
-    STRING_UPCASE = _op(228, 0)         # Convert string to uppercase
-    STRING_DOWNCASE = _op(229, 0)       # Convert string to lowercase
-    STRING_TRIM = _op(230, 0)           # Trim whitespace from string
-    STRING_TRIM_LEFT = _op(231, 0)      # Trim leading whitespace
-    STRING_TRIM_RIGHT = _op(232, 0)     # Trim trailing whitespace
-    STRING_TO_INTEGER = _op(233, 0)     # Parse string to integer with radix
-    STRING_TO_NUMBER = _op(234, 0)      # Parse string to number
-    STRING_TO_LIST = _op(235, 0)        # Split string by delimiter: (string->list str delim)
-    STRING_REF = _op(236, 0)            # Get character at index
-    STRING_PREFIX_P = _op(237, 0)       # Check if string has prefix
-    STRING_SUFFIX_P = _op(238, 0)       # Check if string has suffix
-    STRING_CONCAT = _op(239, 0)         # Concatenate two strings: (string-concat a b)
-    STRING_SLICE = _op(240, 0)          # Extract substring (string, start, end)
-    STRING_REPLACE = _op(241, 0)        # Replace substring (string, old, new)
-    STRING_INDEX = _op(242, 0)          # Find index of substring (string, substring)
+    STRING_P = _op(240, 0)              # (string? x)
+    STRING_EQ_P = _op(241, 0)           # string=? a b
+    STRING_NEQ_P = _op(242, 0)          # string!=? a b
+    STRING_LT_P = _op(243, 0)           # string<? a b  (lexicographic)
+    STRING_GT_P = _op(244, 0)           # string>? a b  (lexicographic)
+    STRING_LTE_P = _op(245, 0)          # string<=? a b (lexicographic)
+    STRING_GTE_P = _op(246, 0)          # string>=? a b (lexicographic)
+    STRING_LENGTH = _op(247, 0)         # Get length of string
+    STRING_UPCASE = _op(248, 0)         # Convert string to uppercase
+    STRING_DOWNCASE = _op(249, 0)       # Convert string to lowercase
+    STRING_TRIM = _op(250, 0)           # Trim whitespace from string
+    STRING_TRIM_LEFT = _op(251, 0)      # Trim leading whitespace
+    STRING_TRIM_RIGHT = _op(252, 0)     # Trim trailing whitespace
+    STRING_TO_INTEGER = _op(253, 0)     # Parse string to integer with radix
+    STRING_TO_NUMBER = _op(254, 0)      # Parse string to number
+    STRING_TO_LIST = _op(255, 0)        # Split string by delimiter: (string->list str delim)
+    STRING_REF = _op(256, 0)            # Get character at index
+    STRING_PREFIX_P = _op(257, 0)       # Check if string has prefix
+    STRING_SUFFIX_P = _op(258, 0)       # Check if string has suffix
+    STRING_CONCAT = _op(259, 0)         # Concatenate two strings: (string-concat a b)
+    STRING_SLICE = _op(260, 0)          # Extract substring (string, start, end)
+    STRING_REPLACE = _op(261, 0)        # Replace substring (string, old, new)
+    STRING_INDEX = _op(262, 0)          # Find index of substring (string, substring)
 
     # Alist operations
-    DICT = _op(260, 1)                 # DICT n  (build dict from n pairs on stack)
-    DICT_P = _op(261, 0)               # (dict? x)
-    DICT_EQ_P = _op(262, 0)            # dict=? a b
-    DICT_NEQ_P = _op(263, 0)           # dict!=? a b
-    DICT_KEYS = _op(264, 0)            # Get all keys from dict
-    DICT_VALUES = _op(265, 0)          # Get all values from dict
-    DICT_LENGTH = _op(266, 0)          # Get number of entries in dict
-    DICT_HAS_P = _op(267, 0)           # Check if dict has key
-    DICT_REMOVE = _op(268, 0)          # Remove key from dict
-    DICT_MERGE = _op(269, 0)           # Merge two dicts
-    DICT_SET = _op(270, 0)             # Set key in dict (dict, key, value)
-    DICT_GET = _op(271, 0)             # Get value from dict by key with default
+    DICT = _op(280, 1)                 # DICT n  (build dict from n pairs on stack)
+    DICT_P = _op(281, 0)               # (dict? x)
+    DICT_EQ_P = _op(282, 0)            # dict=? a b
+    DICT_NEQ_P = _op(283, 0)           # dict!=? a b
+    DICT_KEYS = _op(284, 0)            # Get all keys from dict
+    DICT_VALUES = _op(285, 0)          # Get all values from dict
+    DICT_LENGTH = _op(286, 0)          # Get number of entries in dict
+    DICT_HAS_P = _op(287, 0)           # Check if dict has key
+    DICT_REMOVE = _op(288, 0)          # Remove key from dict
+    DICT_MERGE = _op(289, 0)           # Merge two dicts
+    DICT_SET = _op(290, 0)             # Set key in dict (dict, key, value)
+    DICT_GET = _op(291, 0)             # Get value from dict by key with default
 
     # List operations
-    LIST = _op(300, 1)                  # LIST n  (build list from n elements on stack)
-    LIST_P = _op(301, 0)                # (list? x)
-    LIST_EQ_P = _op(302, 0)             # list=? a b
-    LIST_NEQ_P = _op(303, 0)            # list!=? a b
-    LIST_PREPEND = _op(304, 0)          # list-prepend item lst
-    LIST_APPEND = _op(305, 0)           # list-append lst item
-    LIST_REVERSE = _op(306, 0)          # Reverse list on top of stack
-    LIST_FIRST = _op(307, 0)            # Get first element of list
-    LIST_REST = _op(308, 0)             # Get rest of list (all but first element)
-    LIST_LAST = _op(309, 0)             # Get last element of list
-    LIST_LENGTH = _op(310, 0)           # Get length of list
-    LIST_REF = _op(311, 0)              # Get element at index from list
-    LIST_NULL_P = _op(312, 0)           # Check if list is empty
-    LIST_MEMBER_P = _op(313, 0)         # Check if item is in list
-    LIST_INDEX = _op(314, 0)            # Find index of item in list
-    LIST_SLICE = _op(315, 0)            # Slice list: (list-slice lst start end)
-    LIST_REMOVE = _op(316, 0)           # Remove all occurrences of item from list
-    LIST_CONCAT = _op(317, 0)           # Append two lists: (append a b)
-    LIST_TO_STRING = _op(318, 0)        # Join list of strings with separator
+    LIST = _op(320, 1)                  # LIST n  (build list from n elements on stack)
+    LIST_P = _op(321, 0)                # (list? x)
+    LIST_EQ_P = _op(322, 0)             # list=? a b
+    LIST_NEQ_P = _op(323, 0)            # list!=? a b
+    LIST_PREPEND = _op(324, 0)          # list-prepend item lst
+    LIST_APPEND = _op(325, 0)           # list-append lst item
+    LIST_REVERSE = _op(326, 0)          # Reverse list on top of stack
+    LIST_FIRST = _op(327, 0)            # Get first element of list
+    LIST_REST = _op(328, 0)             # Get rest of list (all but first element)
+    LIST_LAST = _op(329, 0)             # Get last element of list
+    LIST_LENGTH = _op(330, 0)           # Get length of list
+    LIST_REF = _op(331, 0)              # Get element at index from list
+    LIST_NULL_P = _op(332, 0)           # Check if list is empty
+    LIST_MEMBER_P = _op(333, 0)         # Check if item is in list
+    LIST_INDEX = _op(334, 0)            # Find index of item in list
+    LIST_SLICE = _op(335, 0)            # Slice list: (list-slice lst start end)
+    LIST_REMOVE = _op(336, 0)           # Remove all occurrences of item from list
+    LIST_CONCAT = _op(337, 0)           # Append two lists: (append a b)
+    LIST_TO_STRING = _op(338, 0)        # Join list of strings with separator
 
     # Generate integer range list
-    RANGE = _op(340, 0)                 # (range start end step)
+    RANGE = _op(360, 0)                 # (range start end step)
 
 
 # Maps builtin function name → (opcode, arity) for all fixed-arity builtins.
@@ -266,6 +270,11 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'function-min-arity': (Opcode.FUNCTION_MIN_ARITY, 1),
     'function-variadic?': (Opcode.FUNCTION_VARIADIC_P, 1),
     'function-accepts?': (Opcode.FUNCTION_ACCEPTS_P, 2),
+    'symbol?': (Opcode.SYMBOL_P, 1),
+    'symbol=?': (Opcode.SYMBOL_EQ_P, 2),
+    'symbol!=?': (Opcode.SYMBOL_NEQ_P, 2),
+    'symbol->string': (Opcode.SYMBOL_TO_STRING, 1),
+    'none?': (Opcode.NONE_P, 1),
     'boolean?': (Opcode.BOOLEAN_P, 1),
     'boolean=?': (Opcode.BOOLEAN_EQ_P, 2),
     'boolean!=?': (Opcode.BOOLEAN_NEQ_P, 2),
@@ -373,10 +382,6 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'string-concat': (Opcode.STRING_CONCAT, 2),
     'string-slice': (Opcode.STRING_SLICE, 3),
     'string-replace': (Opcode.STRING_REPLACE, 3),
-    'symbol?': (Opcode.SYMBOL_P, 1),
-    'symbol=?': (Opcode.SYMBOL_EQ_P, 2),
-    'symbol!=?': (Opcode.SYMBOL_NEQ_P, 2),
-    'symbol->string': (Opcode.SYMBOL_TO_STRING, 1),
     'list?': (Opcode.LIST_P, 1),
     'list=?': (Opcode.LIST_EQ_P, 2),
     'list!=?': (Opcode.LIST_NEQ_P, 2),
@@ -407,7 +412,6 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'dict-set': (Opcode.DICT_SET, 3),
     'dict-get': (Opcode.DICT_GET, 3),
     'range': (Opcode.RANGE, 3),
-
 }
 
 @dataclass

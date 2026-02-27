@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from aifpl.aifpl_error import AIFPLParseError
 from aifpl.aifpl_token import AIFPLToken, AIFPLTokenType
 from aifpl.aifpl_ast import (
-    AIFPLASTNode, AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex, AIFPLASTString, AIFPLASTBoolean, AIFPLASTSymbol, AIFPLASTList
+    AIFPLASTNode, AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex, AIFPLASTString, AIFPLASTBoolean, AIFPLASTNone, AIFPLASTSymbol, AIFPLASTList
 )
 
 
@@ -126,6 +126,10 @@ class AIFPLParser:
         if token.type == AIFPLTokenType.SYMBOL:
             self._advance()
             return AIFPLASTSymbol(token.value, line=token.line, column=token.column, source_file=self.source_file)
+
+        if token.type == AIFPLTokenType.NONE:
+            self._advance()
+            return AIFPLASTNone(line=token.line, column=token.column, source_file=self.source_file)
 
         if token.type == AIFPLTokenType.BOOLEAN:
             self._advance()

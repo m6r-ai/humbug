@@ -16,7 +16,7 @@ from typing import List, Tuple, Any, cast
 
 from aifpl.aifpl_ast import (
     AIFPLASTNode, AIFPLASTSymbol, AIFPLASTList, AIFPLASTInteger,
-    AIFPLASTFloat, AIFPLASTComplex, AIFPLASTString, AIFPLASTBoolean
+    AIFPLASTFloat, AIFPLASTComplex, AIFPLASTString, AIFPLASTBoolean, AIFPLASTNone
 )
 from aifpl.aifpl_error import AIFPLEvalError
 
@@ -740,50 +740,70 @@ class AIFPLDesugarer:
             Temp: "#:match-tmp-1"
             Returns: ((number? #:match-tmp-1), [("n", #:match-tmp-1)])  ; pred called directly
         """
-        # Literal patterns: numbers, strings, booleans
-        # Phase 1: Accept both old and new numeric types as literals
-        if isinstance(pattern, AIFPLASTBoolean):
-            # Test: (= temp_var literal)
+        # Literal patterns: #none, booleans, numbers, strings
+        #
+        # Each literal pattern is compiled as:
+        #   (and (type? tmp) (type=? tmp literal))
+        #
+        # The type-guard is essential for correctness: without it, presenting a
+        # value of the wrong type to the equality operator raises a type error
+        # instead of simply not matching.  The guard short-circuits via `and`
+        # so the equality check is only reached when the type is known correct.
+        #
+        # #none is the sole exception — (none? tmp) is already a safe predicate
+        # that returns #f for any non-none value, so no separate equality check
+        # is needed.
+
+        if isinstance(pattern, AIFPLASTNone):
+            # (none? tmp) — singleton predicate, inherently type-safe
             test_expr = AIFPLASTList((
-                AIFPLASTSymbol('boolean=?'),
+                AIFPLASTSymbol('none?'),
                 AIFPLASTSymbol(temp_var),
-                pattern
+            ))
+            return (test_expr, [])
+
+        if isinstance(pattern, AIFPLASTBoolean):
+            # (and (boolean? tmp) (boolean=? tmp literal))
+            test_expr = AIFPLASTList((
+                AIFPLASTSymbol('and'),
+                AIFPLASTList((AIFPLASTSymbol('boolean?'), AIFPLASTSymbol(temp_var))),
+                AIFPLASTList((AIFPLASTSymbol('boolean=?'), AIFPLASTSymbol(temp_var), pattern)),
             ))
             return (test_expr, [])
 
         if isinstance(pattern, AIFPLASTInteger):
-            # Test: (= temp_var literal)
+            # (and (integer? tmp) (integer=? tmp literal))
             test_expr = AIFPLASTList((
-                AIFPLASTSymbol('integer=?'),
-                AIFPLASTSymbol(temp_var),
-                pattern
+                AIFPLASTSymbol('and'),
+                AIFPLASTList((AIFPLASTSymbol('integer?'), AIFPLASTSymbol(temp_var))),
+                AIFPLASTList((AIFPLASTSymbol('integer=?'), AIFPLASTSymbol(temp_var), pattern)),
             ))
             return (test_expr, [])
 
         if isinstance(pattern, AIFPLASTFloat):
-            # Test: (= temp_var literal)
+            # (and (float? tmp) (float=? tmp literal))
             test_expr = AIFPLASTList((
-                AIFPLASTSymbol('float=?'),
-                AIFPLASTSymbol(temp_var),
-                pattern
+                AIFPLASTSymbol('and'),
+                AIFPLASTList((AIFPLASTSymbol('float?'), AIFPLASTSymbol(temp_var))),
+                AIFPLASTList((AIFPLASTSymbol('float=?'), AIFPLASTSymbol(temp_var), pattern)),
             ))
             return (test_expr, [])
 
         if isinstance(pattern, AIFPLASTComplex):
-            # Test: (= temp_var literal)
+            # (and (complex? tmp) (complex=? tmp literal))
             test_expr = AIFPLASTList((
-                AIFPLASTSymbol('complex=?'),
-                AIFPLASTSymbol(temp_var),
-                pattern
+                AIFPLASTSymbol('and'),
+                AIFPLASTList((AIFPLASTSymbol('complex?'), AIFPLASTSymbol(temp_var))),
+                AIFPLASTList((AIFPLASTSymbol('complex=?'), AIFPLASTSymbol(temp_var), pattern)),
             ))
             return (test_expr, [])
 
         if isinstance(pattern, AIFPLASTString):
-            # Test: (= temp_var literal)
+            # (and (string? tmp) (string=? tmp literal))
             test_expr = AIFPLASTList((
-                AIFPLASTSymbol('string=?'),
-                AIFPLASTSymbol(temp_var),
-                pattern
+                AIFPLASTSymbol('and'),
+                AIFPLASTList((AIFPLASTSymbol('string?'), AIFPLASTSymbol(temp_var))),
+                AIFPLASTList((AIFPLASTSymbol('string=?'), AIFPLASTSymbol(temp_var), pattern)),
             ))
             return (test_expr, [])
 

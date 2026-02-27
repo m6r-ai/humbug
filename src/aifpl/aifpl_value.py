@@ -89,6 +89,30 @@ class AIFPLFunction(AIFPLValue):
 
 
 @dataclass(frozen=True)
+class AIFPLNone(AIFPLValue):
+    """Represents the absence of a value (#none).
+
+    This is a distinct type from boolean false (#f).  It is returned by
+    operations that produce no meaningful result (missing dict key, item not
+    found, unparseable string, etc.) so that callers can distinguish between
+    a stored #f value and a genuinely absent one.
+    """
+
+    def to_python(self) -> None:
+        return None
+
+    def type_name(self) -> str:
+        return "none"
+
+    def describe(self) -> str:
+        return "#none"
+
+
+# Module-level singleton — there is only one #none value.
+AIFPL_NONE = AIFPLNone()
+
+
+@dataclass(frozen=True)
 class AIFPLBoolean(AIFPLValue):
     """Represents boolean values."""
     value: bool

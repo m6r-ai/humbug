@@ -326,9 +326,9 @@ class TestErrors:
     def test_string_conversion_errors(self, aifpl):
         """Test that string conversion errors are detected."""
         # Invalid string to number conversion
-        assert aifpl.evaluate('(string->number "hello")') == False
-        assert aifpl.evaluate('(string->number "12.34.56")') == False
-        assert aifpl.evaluate('(string->number "")') == False
+        assert aifpl.evaluate('(string->number "hello")') == None
+        assert aifpl.evaluate('(string->number "12.34.56")') == None
+        assert aifpl.evaluate('(string->number "")') == None
 
     def test_complex_number_restriction_errors(self, aifpl):
         """Test that operations restricted to real numbers reject complex numbers."""

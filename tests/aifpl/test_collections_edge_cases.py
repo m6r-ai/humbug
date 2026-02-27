@@ -31,7 +31,7 @@ class TestAIFPLCollectionEdgeCases:
 
         # Empty list membership and search
         assert aifpl.evaluate("(list-member? () 1)") is False
-        assert aifpl.evaluate("(list-index () 1)") is False
+        assert aifpl.evaluate("(list-index () 1)") is None
 
         # Empty list utilities
         assert aifpl.evaluate("(list-remove () 1)") == []
@@ -72,7 +72,7 @@ class TestAIFPLCollectionEdgeCases:
         assert aifpl.evaluate("(list-member? (list 42) 42)") is True
         assert aifpl.evaluate("(list-member? (list 42) 43)") is False
         assert aifpl.evaluate("(list-index (list 42) 42)") == 0
-        assert aifpl.evaluate("(list-index (list 42) 43)") is False
+        assert aifpl.evaluate("(list-index (list 42) 43)") is None
 
     def test_boundary_index_operations(self, aifpl):
         """Test boundary conditions for indexed operations."""
@@ -151,7 +151,7 @@ class TestAIFPLCollectionEdgeCases:
         assert aifpl.evaluate(f"(list-index {mixed_list} 1)") == 0
         assert aifpl.evaluate(f'(list-index {mixed_list} "hello")') == 1
         assert aifpl.evaluate(f"(list-index {mixed_list} #t)") == 2
-        assert aifpl.evaluate(f"(list-index {mixed_list} 42)") is False
+        assert aifpl.evaluate(f"(list-index {mixed_list} 42)") is None
 
     def test_nested_collections(self, aifpl):
         """Test operations on nested collections."""
@@ -352,7 +352,7 @@ class TestAIFPLCollectionEdgeCases:
         assert aifpl.evaluate(f"(list-index {test_list} 2)") == 1  # First occurrence
 
         # Position of non-existent element
-        assert aifpl.evaluate(f"(list-index {test_list} 99)") is False
+        assert aifpl.evaluate(f"(list-index {test_list} 99)") is None
 
         # Member tests
         assert aifpl.evaluate(f"(list-member? {test_list} 1)") is True

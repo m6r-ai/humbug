@@ -19,7 +19,7 @@ from typing import Any, Tuple
 
 from aifpl.aifpl_value import (
     AIFPLValue, AIFPLInteger, AIFPLFloat, AIFPLComplex,
-    AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList
+    AIFPLString, AIFPLBoolean, AIFPLSymbol, AIFPLList, AIFPLNone, AIFPL_NONE
 )
 
 
@@ -50,6 +50,43 @@ class AIFPLASTNode(ABC):
     @abstractmethod
     def describe(self) -> str:
         """Describe the value."""
+
+
+@dataclass(frozen=True)
+class AIFPLASTNone(AIFPLASTNode):
+    """Represents the #none literal in the AST."""
+
+    def to_runtime_value(self) -> AIFPLNone:
+        """Convert to the runtime #none singleton."""
+        return AIFPL_NONE
+
+    def type_name(self) -> str:
+        return "none"
+
+    def describe(self) -> str:
+        return "#none"
+
+    def __eq__(self, other: Any) -> bool:
+        return isinstance(other, AIFPLASTNone)
+
+
+@dataclass(frozen=True)
+class AIFPLASTBoolean(AIFPLASTNode):
+    """Represents boolean values in AST."""
+    value: bool
+
+    def to_runtime_value(self) -> AIFPLBoolean:
+        """Convert to runtime boolean (no metadata)."""
+        return AIFPLBoolean(self.value)
+
+    def type_name(self) -> str:
+        return "boolean"
+
+    def describe(self) -> str:
+        return "#t" if self.value else "#f"
+
+    def __eq__(self, other: Any) -> bool:
+        return self.value == other.value
 
 
 @dataclass(frozen=True)
@@ -150,25 +187,6 @@ class AIFPLASTString(AIFPLASTNode):
     def describe(self) -> str:
         escaped_content = self._escape_string(self.value)
         return f'"{escaped_content}"'
-
-    def __eq__(self, other: Any) -> bool:
-        return self.value == other.value
-
-
-@dataclass(frozen=True)
-class AIFPLASTBoolean(AIFPLASTNode):
-    """Represents boolean values in AST."""
-    value: bool
-
-    def to_runtime_value(self) -> AIFPLBoolean:
-        """Convert to runtime boolean (no metadata)."""
-        return AIFPLBoolean(self.value)
-
-    def type_name(self) -> str:
-        return "boolean"
-
-    def describe(self) -> str:
-        return "#t" if self.value else "#f"
 
     def __eq__(self, other: Any) -> bool:
         return self.value == other.value

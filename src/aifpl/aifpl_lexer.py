@@ -269,13 +269,25 @@ class AIFPLLexer:
             raise  # Re-raise if not handled
 
     def _handle_hash(self) -> None:
-        """Handle hash literals: booleans (#t, #f) or based numbers (#xFF, #b1010, #o755)."""
+        """Handle hash literals: #none, booleans (#t, #f), or based numbers (#xFF, #b1010, #o755)."""
         if self._position + 1 >= len(self._expression):
             # Lone # at end of input - invalid
             self._handle_invalid_hash_sequence()
             return
 
         next_char = self._expression[self._position + 1]
+
+        # #none literal — check for exactly 'none' followed by a delimiter
+        if next_char == 'n':
+            expr = self._expression
+            pos = self._position
+            if (pos + 5 <= len(expr)
+                    and expr[pos:pos + 5] == '#none'
+                    and (pos + 5 == len(expr) or self._is_delimiter(expr[pos + 5]))):
+                self._tokens.append(AIFPLToken(AIFPLTokenType.NONE, None, 5, self._line, self._column))
+                self._column += 5
+                self._position += 5
+                return
 
         # Boolean literals
         if next_char in 'tf':
@@ -346,10 +358,10 @@ class AIFPLLexer:
             line=self._line,
             column=self._column,
             received=f"Found: #{invalid_char}",
-            expected="Valid # literal: #t, #f, #xFF, #b1010, #o755",
-            example="Correct: #t, #f, #xFF, #b1010, #o755\nIncorrect: #true, #1, 0xFF",
+            expected="Valid # literal: #t, #f, #none, #xFF, #b1010, #o755",
+            example="Correct: #t, #f, #none, #xFF, #b1010, #o755\nIncorrect: #true, #1, 0xFF",
             suggestion=suggestion,
-            context="# must be followed by: 't'/'f' (boolean), 'x'/'X' (hex), 'b'/'B' (binary), or 'o'/'O' (octal)"
+            context="# must be followed by: 't'/'f' (boolean), 'none', 'x'/'X' (hex), 'b'/'B' (binary), or 'o'/'O' (octal)"
         )
 
     def _handle_number(self) -> None:

@@ -17,6 +17,7 @@ class AIFPLTokenType(Enum):
     STRING = "STRING"
     BOOLEAN = "BOOLEAN"
     COMMENT = "COMMENT"
+    NONE = "NONE"
 
 
 @dataclass

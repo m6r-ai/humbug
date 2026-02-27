@@ -155,6 +155,9 @@ class TreeBuilder:
         if token.type == AIFPLTokenType.BOOLEAN:
             return '#t' if token.value else '#f'
 
+        if token.type == AIFPLTokenType.NONE:
+            return '#none'
+
         return str(token.value)
 
     def _escape_string(self, s: str) -> str:

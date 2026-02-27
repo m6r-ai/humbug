@@ -84,7 +84,7 @@ class TestEquality:
         assert result == 1
 
         result = aifpl.evaluate('(list-index (list "hello" "world") "missing")')
-        assert result is False
+        assert result is None
 
     def test_boolean_in_list_operations(self, aifpl):
         """Test that booleans work correctly in list operations."""
