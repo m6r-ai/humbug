@@ -513,7 +513,7 @@ class AIFPL:
                                      lst
                                      (let* ((mid (integer/ n 2))
                                             (left  (sort cmp (list-slice lst 0 mid)))
-                                            (right (sort cmp (list-slice lst mid))))
+                                            (right (sort cmp (list-slice lst mid n))))
                                        (merge cmp left right (list))))))))
                       (sort cmp lst)))""",
         'dict': """(lambda (. args)
