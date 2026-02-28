@@ -601,16 +601,15 @@ class MenaiDesugarer:
 
         The 2-arg case is desugared to a binary opcode directly.
 
-        The 3+-arg case is desugared to a let*-bound sequence of pairwise binary
-        opcode calls, combined with 'and'. Crucially all pair evaluations are
-        bound in let* before the 'and' is evaluated, so no short-circuiting
-        occurs — every consecutive pair is always checked, and a type mismatch
-        on any argument raises an error regardless of position.
+        The 3+-arg case binds each argument to a temp (to avoid double-evaluation)
+        then chains pairwise binary calls with 'and' (for equality) or 'or' (for
+        inequality), which short-circuits left-to-right — consistent with the
+        prelude lambda and with _desugar_comparison_chain.
 
         For example, (integer=? a b c) becomes:
-            (let* ((t0 (integer=? a b))
-                   (t1 (integer=? b c)))
-              (and t0 t1))
+            (let* ((t0 a) (t1 b) (t2 c))
+              (and (integer=? t0 t1)
+                   (integer=? t1 t2)))
 
         The 0-arg and 1-arg cases fall through to a regular call, which
         resolves to the prelude lambda that raises the arity error.
@@ -633,32 +632,18 @@ class MenaiDesugarer:
             # Generate temps for each arg to avoid double-evaluation
             temps = [self._gen_temp() for _ in args]
 
-            # Generate temps for each pairwise result
-            pair_temps = [self._gen_temp() for _ in range(len(args) - 1)]
-
-            # Build pairwise binary calls: (op ti ti+1)
-            pairs = [
+            # Build pairwise binary calls directly: (op ti ti+1)
+            pairs: List[MenaiASTNode] = [
                 self._make_list((self._make_symbol(op_name, expr),
                                  self._make_symbol(temps[i], expr),
                                  self._make_symbol(temps[i + 1], expr)), expr)
                 for i in range(len(args) - 1)
             ]
 
-            # Body: and/or of pair temps, lowered to if-chain
-            connector = 'and' if check_eq else 'or'
-            pair_temp_syms: List[MenaiASTNode] = [self._make_symbol(pt, expr) for pt in pair_temps]
-            body: MenaiASTNode = (self._make_and(pair_temp_syms, expr) if connector == 'and'
-                                  else self._make_or(pair_temp_syms, expr))
-
-            # Wrap pair results in let* bindings (innermost first)
-            for pt, pair in reversed(list(zip(pair_temps, pairs))):
-                body = self._make_list((
-                    self._make_symbol('let*', expr),
-                    self._make_list((
-                        self._make_list((self._make_symbol(pt, expr), pair), expr),
-                    ), expr),
-                    body
-                ), expr)
+            # Body: and/or of the pair calls directly — short-circuits left-to-right,
+            # consistent with the prelude lambda and _desugar_comparison_chain.
+            body: MenaiASTNode = (self._make_and(pairs, expr) if check_eq
+                                  else self._make_or(pairs, expr))
 
             # Wrap arg values in let* bindings (innermost first)
             for temp, desugared_arg in reversed(list(zip(temps, desugared_args))):
