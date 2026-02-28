@@ -953,11 +953,13 @@ class MenaiVM:
                 message="function=?: arguments must be functions",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
+
         if not isinstance(b, MenaiFunction):
             raise MenaiEvalError(
                 message="function=?: arguments must be functions",
                 received=f"Second argument: {b.describe()} ({b.type_name()})"
             )
+
         self.stack.append(MenaiBoolean(a is b))
         return None
 
@@ -972,11 +974,13 @@ class MenaiVM:
                 message="function!=?: arguments must be functions",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
+
         if not isinstance(b, MenaiFunction):
             raise MenaiEvalError(
                 message="function!=?: arguments must be functions",
                 received=f"Second argument: {b.describe()} ({b.type_name()})"
             )
+
         self.stack.append(MenaiBoolean(a is not b))
         return None
 
@@ -990,6 +994,7 @@ class MenaiVM:
                 message="function-min-arity: argument must be a function",
                 received=f"Got: {func.describe()} ({func.type_name()})"
             )
+
         code = func.bytecode
         min_arity = (code.param_count - 1) if code.is_variadic else code.param_count
         self.stack.append(MenaiInteger(min_arity))
@@ -1005,6 +1010,7 @@ class MenaiVM:
                 message="function-variadic?: argument must be a function",
                 received=f"Got: {func.describe()} ({func.type_name()})"
             )
+
         self.stack.append(MenaiBoolean(func.bytecode.is_variadic))
         return None
 
@@ -1019,17 +1025,21 @@ class MenaiVM:
                 message="function-accepts?: first argument must be a function",
                 received=f"Got: {func.describe()} ({func.type_name()})"
             )
+
         if not isinstance(n, MenaiInteger):
             raise MenaiEvalError(
                 message="function-accepts?: second argument must be an integer",
                 received=f"Got: {n.describe()} ({n.type_name()})"
             )
+
         code = func.bytecode
         if code.is_variadic:
             min_arity = code.param_count - 1
             result = n.value >= min_arity
+
         else:
             result = n.value == code.param_count
+
         self.stack.append(MenaiBoolean(result))
         return None
 
@@ -1052,6 +1062,7 @@ class MenaiVM:
                 message="symbol=?: arguments must be symbols",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
+
         if not isinstance(b, MenaiSymbol):
             raise MenaiEvalError(
                 message="symbol=?: arguments must be symbols",
@@ -1071,11 +1082,13 @@ class MenaiVM:
                 message="symbol!=?: arguments must be symbols",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
+
         if not isinstance(b, MenaiSymbol):
             raise MenaiEvalError(
                 message="symbol!=?: arguments must be symbols",
                 received=f"Second argument: {b.describe()} ({b.type_name()})"
             )
+
         self.stack.append(MenaiBoolean(a.name != b.name))
         return None
 
@@ -1089,6 +1102,7 @@ class MenaiVM:
                 message="symbol->string: argument must be a symbol",
                 received=f"Got: {a.describe()} ({a.type_name()})"
             )
+
         self.stack.append(MenaiString(a.name))
         return None
 
@@ -1170,8 +1184,10 @@ class MenaiVM:
         a = self.stack.pop()
         if not isinstance(a, MenaiInteger):
             raise MenaiEvalError(f"Function 'integer!=?' requires integer arguments, got {a.type_name()}")
+
         if not isinstance(b, MenaiInteger):
             raise MenaiEvalError(f"Function 'integer!=?' requires integer arguments, got {b.type_name()}")
+
         self.stack.append(MenaiBoolean(a.value != b.value))
         return None
 

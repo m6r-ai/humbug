@@ -16,6 +16,7 @@ from menai.menai_ir_builder import MenaiIRBuilder
 from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
 from menai.menai_ir_copy_propagator import MenaiIRCopyPropagator
 from menai.menai_ir_optimizer import MenaiIROptimizer
+from menai.menai_ir_inline_once import MenaiIRInlineOnce
 from menai.menai_lexer import MenaiLexer
 from menai.menai_module_resolver import MenaiModuleResolver, ModuleLoader
 from menai.menai_parser import MenaiParser
@@ -54,6 +55,7 @@ class MenaiCompiler:
             ]
             self.ir_passes = [
                 MenaiIRCopyPropagator(),
+                MenaiIRInlineOnce(),
                 MenaiIROptimizer(),
             ]
 

@@ -62,6 +62,7 @@ optimizations are applied across module boundaries.
 | `menai_ir_optimization_pass.py` | Base class for IR optimization passes | Tiny |
 | `menai_ir_use_counter.py` | Pure analysis pass: counts all variable uses per frame; produces `IRUseCounts` | Medium |
 | `menai_ir_copy_propagator.py` | IR-level copy propagation pass; inlines trivially-copyable let bindings | Medium |
+| `menai_ir_inline_once.py` | IR-level single-use inliner; inlines any let binding with exactly one use | Medium |
 | `menai_ir_optimizer.py` | IR-level dead binding elimination pass; consumes `IRUseCounts` | Medium |
 | `menai_codegen.py` | Lowers IR → `CodeObject` bytecode | Medium |
 | `menai_bytecode.py` | `Opcode` enum, `Instruction`, `CodeObject`, `BUILTIN_OPCODE_MAP` | Medium |
@@ -88,11 +89,14 @@ reported a change the whole sequence is repeated until a full round produces no 
 The IR passes run in this order per iteration:
 
 1. `MenaiIRCopyPropagator` — inlines trivially-copyable `let` bindings, exposing dead bindings
-2. `MenaiIROptimizer` — eliminates dead `let`/`letrec` bindings left behind by propagation
+2. `MenaiIRInlineOnce` — inlines any `let` binding with exactly one use (and no frame-depth hazard), exposing more dead bindings
+3. `MenaiIROptimizer` — eliminates dead `let`/`letrec` bindings left behind by propagation and inlining
 
-The two passes compose naturally: copy propagation creates zero-use bindings that the dead
-binding eliminator then removes.  Multi-step chains (e.g. `x=1, y=x, z=y`) are fully
-collapsed by the fixed-point loop in two iterations.
+The three passes compose naturally: copy propagation inlines trivially-cheap values and
+creates zero-use bindings; inline-once inlines the remaining single-use bindings (including
+calls and other compound values that copy propagation cannot touch); the dead-binding
+eliminator then removes all zero-use slots.  Multi-step chains (e.g. `a=1, b=(f a), c=(g b)`)
+are fully collapsed by the fixed-point loop across iterations.
 
 ### Pass infrastructure
 
@@ -130,6 +134,32 @@ value is substituted at every use site in the body and the binding is dropped.
 `letrec` bindings are never propagated (they may be mutually recursive and are almost
 always lambdas).  The pass still recurses into `letrec` bodies to optimize inner `let`
 nodes.
+
+### Current optimizations (`MenaiIRInlineOnce`)
+
+**Single-use inlining** — for each `let` binding with `total_count == 1`, the value
+expression is substituted at the single use site in the body and the binding is dropped.
+Unlike copy propagation, the value does not need to be trivially copyable — calls,
+if-expressions, and any other compound node are eligible.  Because Menai is pure and
+there is exactly one use, no work is duplicated.
+
+**Lambda boundary rule** (split by value plan type):
+- `MenaiIRVariable(var_type='local', depth=0)`: requires `external_count == 0`.
+  A depth=0 local reference is frame-relative; substituting it inside a child lambda
+  would produce a reference with the wrong depth.
+- All other value plan types (calls, if-exprs, constants, quotes, globals, etc.):
+  `external_count` is irrelevant.  These types contain no frame-relative addresses
+  and can be safely substituted anywhere in the tree, including inside `free_var_plans`.
+  This means a single-use call binding that is captured by a lambda *is* inlined —
+  the call is placed directly in `free_var_plans`, eliminating the `STORE_VAR`/`LOAD_VAR`
+  pair and the slot capture.
+
+`letrec` bindings are never inlined (same rationale as copy propagation).  The pass
+still recurses into `letrec` bodies to optimize inner `let` nodes.
+
+The primary sources of single-use call bindings in practice are `let*` chains with
+computed values, `match` temp variables for non-constant scrutinees, and variadic
+comparison chains desugared by the desugarer.
 
 **Lambda boundary rule**: the substitution walk replaces depth=0 references in the
 current frame only.  When it encounters a `MenaiIRLambda` it substitutes into

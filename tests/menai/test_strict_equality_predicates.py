@@ -27,11 +27,16 @@ class TestStrictEqualityPredicates:
 
     def test_integer_eq_rejects_floats(self, menai):
         """Test integer=? raises error on float arguments."""
+        # 2-arg: always evaluated — always raises.
         with pytest.raises(MenaiEvalError, match="integer=.*requires integer arguments.*float"):
             menai.evaluate('(integer=? 1 1.0)')
 
+        # 3-arg: bad type in second pair, first pair is true → second pair is reached → raises.
         with pytest.raises(MenaiEvalError, match="integer=.*requires integer arguments.*float"):
-            menai.evaluate('(integer=? 1 2 3.0)')
+            menai.evaluate('(integer=? 1 1 3.0)')
+
+        # 3-arg: bad type in second pair, first pair is false → short-circuits → no error.
+        assert menai.evaluate('(integer=? 1 2 3.0)') is False
 
     def test_integer_eq_rejects_complex(self, menai):
         """Test integer=? raises error on complex arguments."""
@@ -62,11 +67,17 @@ class TestStrictEqualityPredicates:
 
     def test_float_eq_rejects_integers(self, menai):
         """Test float=? raises error on integer arguments."""
+        # 2-arg: always evaluated — always raises.
         with pytest.raises(MenaiEvalError, match="float=.*requires float arguments.*integer"):
             menai.evaluate('(float=? 1.0 1)')
 
+        # 3-arg: bad type in second pair, first pair is true → second pair is reached → raises.
         with pytest.raises(MenaiEvalError, match="float=.*requires float arguments.*integer"):
-            menai.evaluate('(float=? 1.0 2.0 3)')
+            menai.evaluate('(float=? 1.0 1.0 3)')
+
+        # 3-arg: bad type in second pair, first pair is false → short-circuits → no error.
+        assert menai.evaluate('(float=? 1.0 2.0 3)') is False
+
 
     def test_float_eq_rejects_complex(self, menai):
         """Test float=? raises error on complex arguments."""
