@@ -17,6 +17,17 @@ Current optimizations
    considered dead from the outside — the recursive group can never be reached
    and is dropped.
 
+2. Boolean identity elimination
+   An if-expression whose then-branch is #t and else-branch is #f is replaced
+   by its condition expression directly:
+       (if <cond> #t #f)  →  <cond>
+   The negated form is also handled:
+       (if <cond> #f #t)  →  (boolean-not <cond>)
+   Both patterns arise from desugared match guard forms and explicit boolean
+   coercions in source code.  The check is performed after recursively
+   optimising the children, so any inlining that exposes the pattern within
+   the same fixed-point iteration is caught immediately.
+
 The optimizer produces a new IR tree; the original is never mutated.  The
 IRUseCounts annotation is consumed read-only and is not updated — callers that
 want fixed-point iteration should re-run MenaiIRUseCounter on the new tree.
@@ -42,6 +53,7 @@ from menai.menai_ir import (
     MenaiIRTrace,
     MenaiIRVariable,
 )
+from menai.menai_value import MenaiBoolean
 from menai.menai_ir_use_counter import MenaiIRUseCounter, IRUseCounts
 from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
 
@@ -139,6 +151,7 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
                 # Dead binding — drop it.
                 self._eliminations += 1
                 continue
+
             live.append((name, self._opt(value_plan, frame_stack), var_index))
 
         opt_body = self._opt(ir.body_plan, frame_stack)
@@ -267,11 +280,45 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
 
         return count
 
-    def _opt_if(self, ir: MenaiIRIf, frame_stack: List[int]) -> MenaiIRIf:
+    def _opt_if(self, ir: MenaiIRIf, frame_stack: List[int]) -> MenaiIRExpr:
+        opt_condition = self._opt(ir.condition_plan, frame_stack)
+        opt_then = self._opt(ir.then_plan, frame_stack)
+        opt_else = self._opt(ir.else_plan, frame_stack)
+
+        # Boolean identity elimination:
+        #   (if <cond> #t #f)  →  <cond>
+        #   (if <cond> #f #t)  →  (boolean-not <cond>)
+        #
+        # Both forms arise from desugared match guard patterns and explicit
+        # boolean coercions in source.  After optimisation the children are
+        # in their most-reduced form, so this is the right moment to check.
+        if (isinstance(opt_then, MenaiIRConstant)
+                and isinstance(opt_then.value, MenaiBoolean)
+                and isinstance(opt_else, MenaiIRConstant)
+                and isinstance(opt_else.value, MenaiBoolean)):
+            if opt_then.value.value and not opt_else.value.value:
+                # (if cond #t #f) → cond
+                self._eliminations += 1
+                return opt_condition
+
+            if not opt_then.value.value and opt_else.value.value:
+                # (if cond #f #t) → (boolean-not cond)
+                self._eliminations += 1
+                return MenaiIRCall(
+                    func_plan=MenaiIRVariable(
+                        name='boolean-not', var_type='global', depth=0, index=0
+                    ),
+                    arg_plans=[opt_condition],
+                    is_tail_call=ir.in_tail_position,
+                    is_tail_recursive=False,
+                    is_builtin=True,
+                    builtin_name='boolean-not',
+                )
+
         return MenaiIRIf(
-            condition_plan=self._opt(ir.condition_plan, frame_stack),
-            then_plan=self._opt(ir.then_plan, frame_stack),
-            else_plan=self._opt(ir.else_plan, frame_stack),
+            condition_plan=opt_condition,
+            then_plan=opt_then,
+            else_plan=opt_else,
             in_tail_position=ir.in_tail_position,
         )
 
