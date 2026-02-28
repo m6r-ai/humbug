@@ -440,14 +440,18 @@ class TestAIFPLDependencyAnalyzerEdgeCases:
               c)
             """)
 
-        # Error should not affect independent variables
-        with pytest.raises(AIFPLEvalError):
-            aifpl.evaluate("""
-            (let* ((good 42)
-                   (bad (integer/ 1 0))
-                   (dependent (integer+ bad 1)))
-              good)
-            """)
+        # Dead binding elimination: `bad` and `dependent` are never used by the
+        # body expression (which returns `good`).  AIFPL is a pure functional
+        # language — dead bindings have no observable effect and are eliminated
+        # by the IR optimizer.  The division-by-zero in `bad` therefore never
+        # executes, and the expression correctly returns 42.
+        result = aifpl.evaluate("""
+        (let* ((good 42)
+               (bad (integer/ 1 0))
+               (dependent (integer+ bad 1)))
+          good)
+        """)
+        assert result == 42
 
     def test_dependency_analysis_memory_efficiency(self, aifpl):
         """Test dependency analysis memory efficiency."""

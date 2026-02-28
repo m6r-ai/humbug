@@ -12,6 +12,8 @@ from aifpl.aifpl_codegen import AIFPLCodeGen
 from aifpl.aifpl_constant_folder import AIFPLConstantFolder
 from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_ir_builder import AIFPLIRBuilder
+from aifpl.aifpl_ir_optimizer import AIFPLIROptimizer
+from aifpl.aifpl_ir_use_counter import AIFPLIRUseCounter
 from aifpl.aifpl_lexer import AIFPLLexer
 from aifpl.aifpl_module_resolver import AIFPLModuleResolver, ModuleLoader
 from aifpl.aifpl_optimization_pass import AIFPLOptimizationPass
@@ -99,6 +101,17 @@ class AIFPLCompiler:
             desugared_ast = ast_pass.optimize(desugared_ast)
 
         ir = self.ir_builder.build(desugared_ast)
+
+        # IR-level optimization: iterate until the tree stabilises (fixed-point).
+        # In practice this converges in one or two passes; we stop as soon as a
+        # pass eliminates nothing, which is the correct fixed-point condition.
+        if self.optimize:
+            while True:
+                use_counts = AIFPLIRUseCounter().count(ir)
+                optimizer = AIFPLIROptimizer(use_counts)
+                ir = optimizer.optimize(ir)
+                if optimizer.eliminations == 0:
+                    break
 
         bytecode = self.codegen.generate(ir, name)
 
