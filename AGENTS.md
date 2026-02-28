@@ -4,6 +4,16 @@
 
 Humbug is a platform for human-AI collaboration, written in Python. This document describes the directory structure to help AI agents navigate the codebase.
 
+## Tool use
+
+- If you want to use the terminal you will require user authorization every time you send keystrokes.  If you load files into
+  an editor tab, however, you don't, so if you just want to do a simple search of a file then consider using the editor
+  tabs.  They can get pretty cluttered though so if you don't need the tab again then close it.
+- If you open a terminal it will automatically be in the root of the mindspace directory.  Don't change directory unless
+  you want to be somewhere else.
+- Terminals will not open with a python virtual environment by default.  If you want a venv then you have to do that yourself.
+
+
 ## Top-Level Structure
 
 ```
