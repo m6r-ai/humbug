@@ -7,6 +7,7 @@ It chains together all compilation passes in the correct order.
 from typing import List, Optional
 
 from aifpl.aifpl_ast import AIFPLASTNode
+from aifpl.aifpl_ast_optimization_pass import AIFPLASTOptimizationPass
 from aifpl.aifpl_bytecode import CodeObject
 from aifpl.aifpl_codegen import AIFPLCodeGen
 from aifpl.aifpl_constant_folder import AIFPLConstantFolder
@@ -16,7 +17,6 @@ from aifpl.aifpl_ir_optimization_pass import AIFPLIROptimizationPass
 from aifpl.aifpl_ir_optimizer import AIFPLIROptimizer
 from aifpl.aifpl_lexer import AIFPLLexer
 from aifpl.aifpl_module_resolver import AIFPLModuleResolver, ModuleLoader
-from aifpl.aifpl_optimization_pass import AIFPLOptimizationPass
 from aifpl.aifpl_parser import AIFPLParser
 from aifpl.aifpl_semantic_analyzer import AIFPLSemanticAnalyzer
 
@@ -45,7 +45,7 @@ class AIFPLCompiler:
         self.desugarer = AIFPLDesugarer()
 
         # AST optimization passes
-        self.ast_passes: List[AIFPLOptimizationPass] = []
+        self.ast_passes: List[AIFPLASTOptimizationPass] = []
         self.ir_passes: List[AIFPLIROptimizationPass] = []
         if optimize:
             self.ast_passes = [

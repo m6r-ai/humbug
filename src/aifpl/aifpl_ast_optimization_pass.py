@@ -5,7 +5,7 @@ AIFPL AST optimization pass
 from aifpl.aifpl_ast import (AIFPLASTNode)
 
 
-class AIFPLOptimizationPass:
+class AIFPLASTOptimizationPass:
     """Base class for AST optimization passes."""
 
     def optimize(self, expr: AIFPLASTNode) -> AIFPLASTNode:

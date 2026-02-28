@@ -14,10 +14,10 @@ from aifpl.aifpl_ast import (
     AIFPLASTNode, AIFPLASTInteger, AIFPLASTFloat, AIFPLASTComplex,
     AIFPLASTBoolean, AIFPLASTSymbol, AIFPLASTList, AIFPLASTString
 )
-from aifpl.aifpl_optimization_pass import AIFPLOptimizationPass
+from aifpl.aifpl_ast_optimization_pass import AIFPLASTOptimizationPass
 
 
-class AIFPLConstantFolder(AIFPLOptimizationPass):
+class AIFPLConstantFolder(AIFPLASTOptimizationPass):
     """
     Fold constant expressions at compile time.
 
