@@ -5,7 +5,7 @@
 New features:
 
 - Added support for Claude Sonnet 4.6.
-- Renamed AIFPL to Menai.
+- Renamed AIFPL to Menai (it's about time it had a real name).
 - Revised the whole numeric type hierarchy in Menai so it is strict, and moving away from the Lisp-like numeric tower.
 - Renamed all operations to follow a consistent naming pattern rather than retaining more legacy Lisp/Scheme names.
 - Added a lot of new functionality for lists and strings in Menai.
@@ -23,7 +23,7 @@ New features:
 
 Internal structure changes:
 
-- Reworked a lot of the internals of AIFPL to make the code easier to read and to allow AIs to update it more reliably.
+- Reworked a lot of the internals of Menai to make the code easier to read and to allow AIs to update it more reliably.
 
 ## v39 (2026-02-16)
 
