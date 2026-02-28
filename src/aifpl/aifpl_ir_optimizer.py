@@ -25,9 +25,7 @@ Implements AIFPLIROptimizationPass so it can be managed by the IR pass manager
 in AIFPLCompiler.
 """
 
-from __future__ import annotations
-
-from typing import List, Tuple
+from typing import List, Tuple, cast
 
 from aifpl.aifpl_ir import (
     AIFPLIRExpr,
@@ -135,8 +133,9 @@ class AIFPLIROptimizer(AIFPLIROptimizationPass):
         current_frame = frame_stack[-1]
 
         live: List[Tuple[str, AIFPLIRExpr, int]] = []
+        counts = cast(IRUseCounts, self._counts)
         for name, value_plan, var_index in ir.bindings:
-            if self._counts.total_count(current_frame, var_index) == 0:
+            if counts.total_count(current_frame, var_index) == 0:
                 # Dead binding — drop it.
                 self._eliminations += 1
                 continue
@@ -178,8 +177,9 @@ class AIFPLIROptimizer(AIFPLIROptimizationPass):
 
         live: List[Tuple[str, AIFPLIRExpr, int]] = []
         dead_names = set()
+        counts = cast(IRUseCounts, self._counts)
         for name, value_plan, var_index in ir.bindings:
-            total = self._counts.total_count(current_frame, var_index)
+            total = counts.total_count(current_frame, var_index)
             self_refs = self_ref_counts.get(var_index, 0)
 
             if total == 0 or (name in ir.recursive_bindings and total == self_refs):
@@ -282,7 +282,8 @@ class AIFPLIROptimizer(AIFPLIROptimizationPass):
         The lambda body is optimized in the lambda's own frame (looked up from
         the lambda_frame_ids map populated by the counter).
         """
-        lambda_frame_id = self._counts.lambda_frame_ids.get(id(ir))
+        counts = cast(IRUseCounts, self._counts)
+        lambda_frame_id = counts.lambda_frame_ids.get(id(ir))
         if lambda_frame_id is None:
             # The counter didn't visit this node (shouldn't happen in normal
             # use, but be defensive).  Optimize body in the current frame.
