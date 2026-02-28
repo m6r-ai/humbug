@@ -47,6 +47,7 @@ optimizations are applied across module boundaries.
 | File | Role | Size |
 |------|------|------|
 | `aifpl.py` | Public API (`AIFPL` class). Also contains `_PRELUDE_SOURCE` — AIFPL source for variadic built-ins | Large |
+| `aifpl_ast_optimization_pass.py` | Base class for AST optimization passes | Tiny |
 | `aifpl_compiler.py` | Pipeline orchestrator — read this first to understand the flow | Small |
 | `aifpl_lexer.py` | Tokenizer | Medium |
 | `aifpl_parser.py` | S-expression parser → `AIFPLASTNode` tree | Medium |
@@ -54,9 +55,9 @@ optimizations are applied across module boundaries.
 | `aifpl_module_resolver.py` | Resolves `import` forms, detects circular dependencies | Small |
 | `aifpl_desugarer.py` | Expands all syntactic sugar: `let`, `let*`, `letrec`, `quote`, `match`, etc. → canonical form | Very large |
 | `aifpl_constant_folder.py` | AST-level constant folding optimization pass | Very large |
-| `aifpl_optimization_pass.py` | Base class for AST optimization passes | Tiny |
 | `aifpl_ir.py` | IR dataclasses (`AIFPLIRExpr` union type) — the compilation plan | Small |
 | `aifpl_ir_builder.py` | Lowers desugared AST → IR. Resolves variable addressing, tail call detection | Large |
+| `aifpl_ir_optimization_pass.py` | Base class for IR optimization passes | Tiny |
 | `aifpl_codegen.py` | Lowers IR → `CodeObject` bytecode | Medium |
 | `aifpl_bytecode.py` | `Opcode` enum, `Instruction`, `CodeObject`, `BUILTIN_OPCODE_MAP` | Medium |
 | `aifpl_bytecode_validator.py` | Validates bytecode correctness | Large |
