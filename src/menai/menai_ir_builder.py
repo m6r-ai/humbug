@@ -552,9 +552,9 @@ class MenaiIRBuilder:
 
         # Separate free variables into captured (from outer scopes) and parent references (recursive bindings)
         captured_vars = []
-        free_var_plans = []
+        free_var_plans: List[MenaiIRExpr] = []
         parent_refs = []
-        parent_ref_plans = []
+        parent_ref_plans: List[MenaiIRExpr] = []
 
         current_binding = ctx.current_binding_name
         current_siblings = ctx.sibling_bindings

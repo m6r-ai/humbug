@@ -148,10 +148,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
         new_ir = self._prop(ir, frame_stack=[0])
         return new_ir, self._substitutions > 0
 
-    # ------------------------------------------------------------------
-    # Main recursive walk
-    # ------------------------------------------------------------------
-
     def _prop(self, ir: MenaiIRExpr, frame_stack: List[int]) -> MenaiIRExpr:
         """Recursively copy-propagate *ir* in the context of *frame_stack*."""
         if isinstance(ir, MenaiIRLet):
@@ -186,10 +182,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
         raise TypeError(
             f"MenaiIRCopyPropagator: unhandled IR node type {type(ir).__name__}"
         )
-
-    # ------------------------------------------------------------------
-    # Let: the core of copy propagation
-    # ------------------------------------------------------------------
 
     def _prop_let(self, ir: MenaiIRLet, frame_stack: List[int]) -> MenaiIRExpr:
         """
@@ -245,10 +237,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
             in_tail_position=ir.in_tail_position,
         )
 
-    # ------------------------------------------------------------------
-    # Letrec: descend but do not propagate
-    # ------------------------------------------------------------------
-
     def _prop_letrec(self, ir: MenaiIRLetrec, frame_stack: List[int]) -> MenaiIRExpr:
         """
         Optimize a letrec node.
@@ -270,10 +258,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
             recursive_bindings=ir.recursive_bindings,
             in_tail_position=ir.in_tail_position,
         )
-
-    # ------------------------------------------------------------------
-    # Structural recursion for non-let nodes
-    # ------------------------------------------------------------------
 
     def _prop_if(self, ir: MenaiIRIf, frame_stack: List[int]) -> MenaiIRIf:
         return MenaiIRIf(
@@ -306,6 +290,7 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
             # Defensive: counter didn't visit this node.  Optimize body in
             # the current frame (safe but conservative).
             child_stack = frame_stack
+
         else:
             child_stack = frame_stack + [lambda_frame_id]
 
@@ -348,10 +333,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
             builtin_name=ir.builtin_name,
         )
 
-    # ------------------------------------------------------------------
-    # Substitution walk
-    # ------------------------------------------------------------------
-
     def _substitute(
         self,
         ir: MenaiIRExpr,
@@ -388,6 +369,7 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
                     and not ir.is_parent_ref
                     and ir.index in replacements):
                 return replacements[ir.index]
+
             return ir
 
         if isinstance(ir, MenaiIRLet):
@@ -615,10 +597,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
             is_builtin=ir.is_builtin,
             builtin_name=ir.builtin_name,
         )
-
-    # ------------------------------------------------------------------
-    # Inlineability predicates
-    # ------------------------------------------------------------------
 
     @staticmethod
     def _is_trivially_copyable(value_plan: MenaiIRExpr) -> bool:
