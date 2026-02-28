@@ -12,8 +12,8 @@ from aifpl.aifpl_codegen import AIFPLCodeGen
 from aifpl.aifpl_constant_folder import AIFPLConstantFolder
 from aifpl.aifpl_desugarer import AIFPLDesugarer
 from aifpl.aifpl_ir_builder import AIFPLIRBuilder
+from aifpl.aifpl_ir_optimization_pass import AIFPLIROptimizationPass
 from aifpl.aifpl_ir_optimizer import AIFPLIROptimizer
-from aifpl.aifpl_ir_use_counter import AIFPLIRUseCounter
 from aifpl.aifpl_lexer import AIFPLLexer
 from aifpl.aifpl_module_resolver import AIFPLModuleResolver, ModuleLoader
 from aifpl.aifpl_optimization_pass import AIFPLOptimizationPass
@@ -46,9 +46,13 @@ class AIFPLCompiler:
 
         # AST optimization passes
         self.ast_passes: List[AIFPLOptimizationPass] = []
+        self.ir_passes: List[AIFPLIROptimizationPass] = []
         if optimize:
             self.ast_passes = [
                 AIFPLConstantFolder(),
+            ]
+            self.ir_passes = [
+                AIFPLIROptimizer(),
             ]
 
         self.ir_builder = AIFPLIRBuilder()
@@ -102,16 +106,15 @@ class AIFPLCompiler:
 
         ir = self.ir_builder.build(desugared_ast)
 
-        # IR-level optimization: iterate until the tree stabilises (fixed-point).
-        # In practice this converges in one or two passes; we stop as soon as a
-        # pass eliminates nothing, which is the correct fixed-point condition.
-        if self.optimize:
-            while True:
-                use_counts = AIFPLIRUseCounter().count(ir)
-                optimizer = AIFPLIROptimizer(use_counts)
-                ir = optimizer.optimize(ir)
-                if optimizer.eliminations == 0:
-                    break
+        # IR-level optimization: run each pass to fixed point, then repeat the
+        # full sequence until no pass makes any further changes.
+        if self.ir_passes:
+            changed = True
+            while changed:
+                changed = False
+                for ir_pass in self.ir_passes:
+                    ir, pass_changed = ir_pass.optimize(ir)
+                    changed = changed or pass_changed
 
         bytecode = self.codegen.generate(ir, name)
 

@@ -20,6 +20,9 @@ Current optimizations
 The optimizer produces a new IR tree; the original is never mutated.  The
 IRUseCounts annotation is consumed read-only and is not updated — callers that
 want fixed-point iteration should re-run AIFPLIRUseCounter on the new tree.
+
+Implements AIFPLIROptimizationPass so it can be managed by the IR pass manager
+in AIFPLCompiler.
 """
 
 from __future__ import annotations
@@ -41,47 +44,53 @@ from aifpl.aifpl_ir import (
     AIFPLIRTrace,
     AIFPLIRVariable,
 )
-from aifpl.aifpl_ir_use_counter import IRUseCounts
+from aifpl.aifpl_ir_use_counter import AIFPLIRUseCounter, IRUseCounts
+from aifpl.aifpl_ir_optimization_pass import AIFPLIROptimizationPass
 
 
-class AIFPLIROptimizer:
+class AIFPLIROptimizer(AIFPLIROptimizationPass):
     """
     IR-level optimization pass.
 
-    Instantiate with a pre-computed IRUseCounts, then call optimize() on the
-    root IR node.  The optimizer is stateless with respect to the IR tree —
-    all mutable state (the frame stack) is passed explicitly through the
-    recursive walk.
+    Implements AIFPLIROptimizationPass: call optimize(ir) to get back a
+    transformed IR tree and a boolean indicating whether any changes were made.
+    Use counts are computed internally so callers do not need to manage them.
+
+    The optimizer is stateless with respect to the IR tree — all mutable state
+    (the frame stack) is passed explicitly through the recursive walk.
 
     Usage::
 
-        counts = AIFPLIRUseCounter().count(ir)
-        ir = AIFPLIROptimizer(counts).optimize(ir)
+        new_ir, changed = AIFPLIROptimizer().optimize(ir)
     """
 
-    def __init__(self, counts: IRUseCounts) -> None:
-        self._counts = counts
+    def __init__(self) -> None:
         self._eliminations = 0
+        self._counts: IRUseCounts | None = None
 
     @property
     def eliminations(self) -> int:
         """Number of dead bindings eliminated during the last optimize() call."""
         return self._eliminations
 
-    def optimize(self, ir: AIFPLIRExpr) -> AIFPLIRExpr:
+    def optimize(self, ir: AIFPLIRExpr) -> tuple[AIFPLIRExpr, bool]:
         """
-        Return an optimized copy of *ir*.
+        Return an optimized copy of *ir* and a flag indicating whether any
+        changes were made.
+
+        Use counts are computed internally before the transformation pass.
 
         Args:
             ir: Root IR node to optimize (output of AIFPLIRBuilder.build()).
 
         Returns:
-            New IR tree with optimizations applied.  May be structurally
-            identical to the input if no optimizations fired.
+            Tuple of (new_ir, changed).  changed is True if at least one dead
+            binding was eliminated.
         """
-        # Frame 0 is always the top-level module frame, matching the counter.
         self._eliminations = 0
-        return self._opt(ir, frame_stack=[0])
+        self._counts = AIFPLIRUseCounter().count(ir)
+        new_ir = self._opt(ir, frame_stack=[0])
+        return new_ir, self._eliminations > 0
 
     def _opt(self, ir: AIFPLIRExpr, frame_stack: List[int]) -> AIFPLIRExpr:
         """Recursively optimize *ir* in the context of *frame_stack*."""

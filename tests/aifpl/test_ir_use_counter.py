@@ -344,8 +344,8 @@ class TestIROptimizerDeadBindingElimination:
     """Dead binding elimination via the optimizer."""
 
     def _run(self, ir):
-        counts = AIFPLIRUseCounter().count(ir)
-        return AIFPLIROptimizer(counts).optimize(ir)
+        result, _ = AIFPLIROptimizer().optimize(ir)
+        return result
 
     def test_live_binding_preserved(self):
         """A binding that is used must not be removed."""
@@ -427,11 +427,10 @@ class TestIROptimizerDeadBindingElimination:
         # Single pass: inner dead binding gone, outer still has x (used by y's
         # value expression — even though y itself is dead, x's use in y's value
         # was already counted before y was eliminated).
-        result1 = self._run(ir)
+        result1, _ = AIFPLIROptimizer().optimize(ir)
 
         # Second pass: now x is dead too.
-        counts2 = AIFPLIRUseCounter().count(result1)
-        result2 = AIFPLIROptimizer(counts2).optimize(result1)
+        result2, _ = AIFPLIROptimizer().optimize(result1)
 
         assert isinstance(result2, AIFPLIRReturn)
         inner = result2.value_plan
@@ -455,8 +454,8 @@ class TestIROptimizerLetrec:
     """Dead binding elimination for letrec nodes."""
 
     def _run(self, ir):
-        counts = AIFPLIRUseCounter().count(ir)
-        return AIFPLIROptimizer(counts).optimize(ir)
+        result, _ = AIFPLIROptimizer().optimize(ir)
+        return result
 
     def test_live_letrec_binding_preserved(self):
         """A letrec binding used in the body is kept."""
@@ -501,8 +500,8 @@ class TestIROptimizerLambda:
     """Optimizer correctly descends into lambda bodies."""
 
     def _run(self, ir):
-        counts = AIFPLIRUseCounter().count(ir)
-        return AIFPLIROptimizer(counts).optimize(ir)
+        result, _ = AIFPLIROptimizer().optimize(ir)
+        return result
 
     def test_dead_binding_inside_lambda_removed(self):
         """Dead let binding inside a lambda body is eliminated."""
