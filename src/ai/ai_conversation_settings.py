@@ -114,17 +114,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "gemini-2.0-flash": AIModel(
-            name="gemini-2.0-flash",
-            provider="google",
-            context_window=1048576,
-            max_output_tokens=8192,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "gemini-3-pro-preview (Google)": AIModel(
-            name="gemini-3-pro-preview",
+        "gemini-3.1-pro-preview (Google)": AIModel(
+            name="gemini-3.1-pro-preview",
             provider="google",
             context_window=1048576,
             max_output_tokens=65536,
@@ -181,24 +172,6 @@ class AIConversationSettings:
         ),
 
         # Ollama models
-        "gemma3:4b-it-qat": AIModel(
-            name="gemma3:4b-it-qat",
-            provider="ollama",
-            context_window=131072,
-            max_output_tokens=2048,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
-        ),
-        "gemini-3-pro-preview (Ollama)": AIModel(
-            name="gemini-3-pro-preview:latest",
-            provider="ollama",
-            context_window=1048576,
-            max_output_tokens=65536,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
         "glm-5 (Ollama)": AIModel(
             name="glm-5:cloud",
             provider="ollama",
@@ -262,8 +235,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.NO_TOOLS
         ),
-        "kimi-k2": AIModel(
-            name="kimi-k2:1t-cloud",
+        "kimi-k2.5": AIModel(
+            name="kimi-k2.5:cloud",
             provider="ollama",
             context_window=262144,
             max_output_tokens=32768,
@@ -271,8 +244,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "kimi-k2 (thinking)": AIModel(
-            name="kimi-k2-thinking:cloud",
+        "kimi-k2.5 (thinking)": AIModel(
+            name="kimi-k2.5:cloud",
             provider="ollama",
             context_window=262144,
             max_output_tokens=32768,
@@ -280,22 +253,13 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "minimax-m2": AIModel(
-            name="minimax-m2:cloud",
+        "minimax-m2.5 (thinking)": AIModel(
+            name="minimax-m2.5:cloud",
             provider="ollama",
             context_window=200000,
             max_output_tokens=32768,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "ministral-3:14b-cloud": AIModel(
-            name="ministral-3:14b-cloud",
-            provider="ollama",
-            context_window=262144,
-            max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
         "mistral-large-3 (Ollama)": AIModel(
@@ -307,46 +271,19 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "phi4": AIModel(
-            name="phi4",
+        "qwen3.5": AIModel(
+            name="qwen3.5:397b-cloud",
             provider="ollama",
-            context_window=16384,
-            max_output_tokens=2048,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.NO_TOOLS
-        ),
-        "qwen3:4b": AIModel(
-            name="qwen3:4b",
-            provider="ollama",
-            context_window=40960,
+            context_window=256000,
             max_output_tokens=2048,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "qwen3:4b (thinking)": AIModel(
-            name="qwen3:4b",
+        "qwen3.5 (thinking)": AIModel(
+            name="qwen3.5:397b-cloud",
             provider="ollama",
-            context_window=40960,
-            max_output_tokens=2048,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "qwen3:8b": AIModel(
-            name="qwen3:8b",
-            provider="ollama",
-            context_window=40960,
-            max_output_tokens=2048,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "qwen3:8b (thinking)": AIModel(
-            name="qwen3:8b",
-            provider="ollama",
-            context_window=40960,
+            context_window=256000,
             max_output_tokens=2048,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,

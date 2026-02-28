@@ -11,6 +11,15 @@ New features:
 - Added a lot of new functionality for lists and strings in Menai.
 - Added more operators for functions and symbols.
 - Added a new IR optimization pass manager for Menai.
+- Added support for Gemini Pro 3.1 preview and removed 3.0.
+- Removed support for Gemini 3.0 Pro Preview (no longer available).
+- Removed support for Gemma3:4b (obsolete).
+- Removed support for Ministral-3 (obsolete).
+- Added support or Qwen 3.5.
+- Removed support for Qwen 3 (obsolete).
+- Removed support for Phi4 (obsolete).
+- Added support for MiniMax M2.5 and removed MiniMax M2.
+- Added support for Kimi k2.5 and removed Kimi k2.
 
 Internal structure changes:
 
