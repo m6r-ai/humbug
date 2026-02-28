@@ -28,7 +28,7 @@ class ProgrammingLanguageUtils:
 
     # Mapping from lowercase language names to enum members
     _NAME_TO_LANGUAGE: Dict[str, ProgrammingLanguage] = {
-        "aifpl": ProgrammingLanguage.AIFPL,
+        "aifpl": ProgrammingLanguage.MENAI,
         "c": ProgrammingLanguage.C,
         "c++": ProgrammingLanguage.CPP,
         "cpp": ProgrammingLanguage.CPP,
@@ -47,6 +47,7 @@ class ProgrammingLanguageUtils:
         "kt": ProgrammingLanguage.KOTLIN,
         "markdown": ProgrammingLanguage.MARKDOWN,
         "md": ProgrammingLanguage.MARKDOWN,
+        "menai": ProgrammingLanguage.MENAI,
         "metaphor": ProgrammingLanguage.METAPHOR,
         "m6r": ProgrammingLanguage.METAPHOR,
         "move": ProgrammingLanguage.MOVE,
@@ -73,7 +74,6 @@ class ProgrammingLanguageUtils:
 
     # Mapping from enum members to lowercase language names
     _LANGUAGE_TO_NAME: Dict[ProgrammingLanguage, str] = {
-        ProgrammingLanguage.AIFPL: "aifpl",
         ProgrammingLanguage.C: "c",
         ProgrammingLanguage.CPP: "cpp",
         ProgrammingLanguage.CSHARP: "csharp",
@@ -87,6 +87,7 @@ class ProgrammingLanguageUtils:
         ProgrammingLanguage.KOTLIN: "kotlin",
         ProgrammingLanguage.LUA: "lua",
         ProgrammingLanguage.MARKDOWN: "markdown",
+        ProgrammingLanguage.MENAI: "menai",
         ProgrammingLanguage.METAPHOR: "metaphor",
         ProgrammingLanguage.MOVE: "move",
         ProgrammingLanguage.PYTHON: "python",
@@ -102,7 +103,7 @@ class ProgrammingLanguageUtils:
 
     # Mapping from file extensions to programming languages
     _EXTENSION_TO_LANGUAGE: Dict[str, ProgrammingLanguage] = {
-        '.aifpl': ProgrammingLanguage.AIFPL,
+        '.aifpl': ProgrammingLanguage.MENAI,
         '.c': ProgrammingLanguage.C,
         '.cc': ProgrammingLanguage.CPP,
         '.conv': ProgrammingLanguage.JSON,
@@ -127,6 +128,7 @@ class ProgrammingLanguageUtils:
         '.lua': ProgrammingLanguage.LUA,
         '.m6r': ProgrammingLanguage.METAPHOR,
         '.md': ProgrammingLanguage.MARKDOWN,
+        '.menai': ProgrammingLanguage.MENAI,
         '.move': ProgrammingLanguage.MOVE,
         '.patch': ProgrammingLanguage.DIFF,
         '.py': ProgrammingLanguage.PYTHON,
@@ -144,7 +146,6 @@ class ProgrammingLanguageUtils:
 
     # Mapping from programming languages to display names
     _LANGUAGE_TO_DISPLAY_NAME: Dict[ProgrammingLanguage, str] = {
-        ProgrammingLanguage.AIFPL: "AIFPL",
         ProgrammingLanguage.C: "C",
         ProgrammingLanguage.CPP: "C++",
         ProgrammingLanguage.CSHARP: "C#",
@@ -158,6 +159,7 @@ class ProgrammingLanguageUtils:
         ProgrammingLanguage.KOTLIN: "Kotlin",
         ProgrammingLanguage.LUA: "Lua",
         ProgrammingLanguage.MARKDOWN: "Markdown",
+        ProgrammingLanguage.MENAI: "Menai",
         ProgrammingLanguage.METAPHOR: "Metaphor",
         ProgrammingLanguage.MOVE: "Move",
         ProgrammingLanguage.PYTHON: "Python",
@@ -173,7 +175,6 @@ class ProgrammingLanguageUtils:
 
     # Mapping from programming languages to file extensions (with leading dot)
     _LANGUAGE_TO_EXTENSION: Dict[ProgrammingLanguage, str] = {
-        ProgrammingLanguage.AIFPL: ".aifpl",
         ProgrammingLanguage.C: ".c",
         ProgrammingLanguage.CPP: ".cpp",
         ProgrammingLanguage.CSHARP: ".cs",
@@ -187,6 +188,7 @@ class ProgrammingLanguageUtils:
         ProgrammingLanguage.KOTLIN: ".kt",
         ProgrammingLanguage.LUA: ".lua",
         ProgrammingLanguage.MARKDOWN: ".md",
+        ProgrammingLanguage.MENAI: ".menai",
         ProgrammingLanguage.METAPHOR: ".m6r",
         ProgrammingLanguage.MOVE: ".move",
         ProgrammingLanguage.PYTHON: ".py",

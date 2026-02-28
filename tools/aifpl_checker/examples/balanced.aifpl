@@ -1,4 +1,0 @@
-; Example of a balanced AIFPL file
-(let ((x 5)
-      (y 10))
-  (+ x y))

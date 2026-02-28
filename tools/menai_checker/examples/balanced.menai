@@ -1,0 +1,4 @@
+; Example of a balanced Menai file
+(let ((x 5)
+      (y 10))
+  (+ x y))

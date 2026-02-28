@@ -1,0 +1,488 @@
+"""Bytecode definitions for Menai virtual machine."""
+
+from dataclasses import dataclass, field
+from enum import IntEnum
+from typing import Dict, List, Tuple
+
+from menai.menai_value import MenaiValue
+
+
+def _op(n: int, arg_count: int = 0) -> Tuple[int, int]:
+    """Helper to construct an Opcode value: (integer_value, instruction_stream_arg_count).
+
+    arg_count is the number of instruction-stream arguments the opcode encodes
+    (i.e. fields read from the bytecode stream, not operands popped from the stack):
+      0 — all operands come from the value stack (the common case for primitives)
+      1 — one immediate argument follows the opcode in the stream
+      2 — two immediate arguments follow the opcode in the stream
+    """
+    return (n, arg_count)
+
+
+class Opcode(IntEnum):
+    """Bytecode operation codes.
+
+    Each member's value is a (integer_value, instruction_stream_arg_count) tuple.
+    The integer value is used for fast VM dispatch (IntEnum identity).
+    The arg_count property returns the number of instruction-stream arguments.
+
+    Encoding arg_count directly on the enum eliminates the error-prone
+    no_arg_opcodes / two_arg_opcodes sets that previously lived in
+    Instruction.arg_count().
+    """
+
+    _arg_count: int  # Set in __new__; declared here so mypy knows the attribute exists
+
+    def __new__(cls, int_value: int, arg_count: int = 0) -> 'Opcode':
+        obj = int.__new__(cls, int_value,)
+        obj._value_ = int_value
+        obj._arg_count = arg_count
+        return obj
+
+    @property
+    def arg_count(self) -> int:
+        """Number of instruction-stream arguments (0, 1, or 2)."""
+        return self._arg_count
+
+    # Constants
+    LOAD_NONE = _op(0, 0)               # Push #none
+    LOAD_TRUE = _op(1, 0)               # Push True
+    LOAD_FALSE = _op(2, 0)              # Push False
+    LOAD_EMPTY_LIST = _op(3, 0)         # Push empty list
+    LOAD_CONST = _op(4, 1)              # LOAD_CONST const_index
+
+    # Variables (lexically addressed)
+    LOAD_VAR = _op(5, 1)                # LOAD_VAR index
+    STORE_VAR = _op(6, 1)               # STORE_VAR index
+    LOAD_PARENT_VAR = _op(7, 2)         # LOAD_PARENT_VAR index depth
+    LOAD_NAME = _op(8, 1)               # LOAD_NAME name_index
+
+    # Control flow
+    JUMP = _op(20, 1)                   # Unconditional jump: JUMP offset
+    JUMP_IF_FALSE = _op(21, 1)          # Conditional jump if false
+    JUMP_IF_TRUE = _op(22, 1)           # Conditional jump if true
+    RAISE_ERROR = _op(23, 1)            # RAISE_ERROR const_index
+
+    # Functions
+    MAKE_CLOSURE = _op(30, 2)           # MAKE_CLOSURE code_index capture_count
+    CALL = _op(31, 1)                   # CALL arity
+    TAIL_CALL = _op(32, 1)              # TAIL_CALL arity
+    APPLY = _op(33, 0)                  # Apply function to arg list (non-tail)
+    TAIL_APPLY = _op(34, 0)             # Apply function to arg list (tail position)
+    ENTER = _op(35, 1)                  # ENTER n  (pop N args into locals 0..N-1)
+    RETURN = _op(36, 0)                 # Return from function
+
+    # Debugging
+    EMIT_TRACE = _op(40, 0)             # Emit trace (pops value, emits to watcher)
+
+    # None operations
+    NONE_P = _op(50, 0)                 # (none? x)
+
+    # Function operations
+    FUNCTION_P = _op(60, 0)             # (function? x)
+    FUNCTION_EQ_P = _op(61, 0)          # (function=? f g)
+    FUNCTION_NEQ_P = _op(62, 0)         # (function!=? f g)
+    FUNCTION_MIN_ARITY = _op(63, 0)     # (function-min-arity f)
+    FUNCTION_VARIADIC_P = _op(64, 0)    # (function-variadic? f)
+    FUNCTION_ACCEPTS_P = _op(65, 0)     # (function-accepts? f n)
+
+    # Symbol operations
+    SYMBOL_P = _op(80, 0)               # (symbol? x)
+    SYMBOL_EQ_P = _op(81, 0)            # symbol=? a b
+    SYMBOL_NEQ_P = _op(82, 0)           # symbol!=? a b
+    SYMBOL_TO_STRING = _op(83, 0)       # (symbol->string sym)
+
+    # Boolean operations
+    BOOLEAN_P = _op(100, 0)              # (boolean? x)
+    BOOLEAN_EQ_P = _op(101, 0)           # boolean=? a b
+    BOOLEAN_NEQ_P = _op(102, 0)          # boolean!=? a b
+    BOOLEAN_NOT = _op(103, 0)            # Logical NOT
+
+    # Integer operations
+    INTEGER_P = _op(120, 0)             # (integer? x)
+    INTEGER_EQ_P = _op(121, 0)          # integer=? a b
+    INTEGER_NEQ_P = _op(122, 0)         # integer!=? a b
+    INTEGER_LT_P = _op(123, 0)          # integer<? a b
+    INTEGER_GT_P = _op(124, 0)          # integer>? a b
+    INTEGER_LTE_P = _op(125, 0)         # integer<=? a b
+    INTEGER_GTE_P = _op(126, 0)         # integer>=? a b
+    INTEGER_ABS = _op(127, 0)           # integer-abs x
+    INTEGER_ADD = _op(128, 0)           # integer+ a b
+    INTEGER_SUB = _op(129, 0)           # integer- a b
+    INTEGER_MUL = _op(130, 0)           # integer* a b
+    INTEGER_DIV = _op(131, 0)           # integer/ a b  (floor division)
+    INTEGER_MOD = _op(132, 0)           # integer% a b  (modulo)
+    INTEGER_NEG = _op(133, 0)           # integer-neg x  (unary minus)
+    INTEGER_EXPN = _op(134, 0)          # integer-expn a b  (exact integer exponentiation)
+    INTEGER_BIT_NOT = _op(135, 0)       # Bitwise NOT ~x
+    INTEGER_BIT_SHIFT_LEFT = _op(136, 0)
+                                        # Bitwise left shift x << n
+    INTEGER_BIT_SHIFT_RIGHT = _op(137, 0)
+                                        # Bitwise right shift x >> n
+    INTEGER_BIT_OR = _op(138, 0)        # Bitwise OR: a | b
+    INTEGER_BIT_AND = _op(139, 0)       # Bitwise AND: a & b
+    INTEGER_BIT_XOR = _op(140, 0)       # Bitwise XOR: a ^ b
+    INTEGER_MIN = _op(141, 0)           # integer-min a b
+    INTEGER_MAX = _op(142, 0)           # integer-max a b
+    INTEGER_TO_FLOAT = _op(143, 0)      # Convert integer to float
+    INTEGER_TO_COMPLEX = _op(144, 0)    # integer->complex: construct complex from integer
+    INTEGER_TO_STRING = _op(145, 0)     # Convert integer to string
+
+    # Floating point operations
+    FLOAT_P = _op(160, 0)               # (float? x)
+    FLOAT_EQ_P = _op(161, 0)            # float=? a b
+    FLOAT_NEQ_P = _op(162, 0)           # float!=? a b
+    FLOAT_LT_P = _op(163, 0)            # float<? a b
+    FLOAT_GT_P = _op(164, 0)            # float>? a b
+    FLOAT_LTE_P = _op(165, 0)           # float<=? a b
+    FLOAT_GTE_P = _op(166, 0)           # float>=? a b
+    FLOAT_NEG = _op(167, 0)             # float-neg x  (unary minus)
+    FLOAT_ADD = _op(168, 0)             # float+ a b
+    FLOAT_SUB = _op(169, 0)             # float- a b
+    FLOAT_MUL = _op(170, 0)             # float* a b
+    FLOAT_DIV = _op(171, 0)             # float/ a b
+    FLOAT_FLOOR_DIV = _op(172, 0)       # float// a b  (floor division)
+    FLOAT_MOD = _op(173, 0)             # float% a b  (modulo)
+    FLOAT_EXP = _op(174, 0)             # float-exp x
+    FLOAT_EXPN = _op(175, 0)            # float-expn a b
+    FLOAT_LOG = _op(176, 0)             # float-log x
+    FLOAT_LOG10 = _op(177, 0)           # float-log10 x
+    FLOAT_LOG2 = _op(178, 0)            # float-log2 x  (log base 2, correctly rounded)
+    FLOAT_LOGN = _op(179, 0)            # float-logn x base  (log base n)
+    FLOAT_SIN = _op(180, 0)             # float-sin x
+    FLOAT_COS = _op(181, 0)             # float-cos x
+    FLOAT_TAN = _op(182, 0)             # float-tan x
+    FLOAT_SQRT = _op(183, 0)            # float-sqrt x
+    FLOAT_ABS = _op(184, 0)             # float-abs x
+    FLOAT_TO_INTEGER = _op(185, 0)      # Convert float to integer
+    FLOAT_TO_COMPLEX = _op(186, 0)      # float->complex: construct complex from one or two floats
+    FLOAT_TO_STRING = _op(187, 0)       # Convert float to string
+    FLOAT_FLOOR = _op(188, 0)           # float-floor x  (returns float)
+    FLOAT_CEIL = _op(189, 0)            # float-ceil x   (returns float)
+    FLOAT_ROUND = _op(190, 0)           # float-round x  (returns float)
+    FLOAT_MIN = _op(191, 0)             # float-min a b
+    FLOAT_MAX = _op(192, 0)             # float-max a b
+
+    # Complex operations
+    COMPLEX_P = _op(200, 0)             # (complex? x)
+    COMPLEX_EQ_P = _op(201, 0)          # complex=? a b
+    COMPLEX_NEQ_P = _op(202, 0)         # complex!=? a b
+    COMPLEX_REAL = _op(203, 0)          # Extract real part
+    COMPLEX_IMAG = _op(204, 0)          # Extract imaginary part
+    COMPLEX_ABS = _op(205, 0)           # complex-abs x  (returns float: magnitude)
+    COMPLEX_ADD = _op(206, 0)           # complex+ a b
+    COMPLEX_SUB = _op(207, 0)           # complex- a b
+    COMPLEX_MUL = _op(208, 0)           # complex* a b
+    COMPLEX_DIV = _op(209, 0)           # complex/ a b
+    COMPLEX_NEG = _op(210, 0)           # complex-neg x  (unary minus)
+    COMPLEX_EXP = _op(211, 0)           # complex-exp x
+    COMPLEX_EXPN = _op(212, 0)          # complex-expn a b
+    COMPLEX_LOG = _op(213, 0)           # complex-log x
+    COMPLEX_LOG10 = _op(214, 0)         # complex-log10 x
+    COMPLEX_LOGN = _op(215, 0)          # complex-logn x base  (log base n)
+    COMPLEX_SIN = _op(216, 0)           # complex-sin x
+    COMPLEX_COS = _op(217, 0)           # complex-cos x
+    COMPLEX_TAN = _op(218, 0)           # complex-tan x
+    COMPLEX_SQRT = _op(219, 0)          # complex-sqrt x
+    COMPLEX_TO_STRING = _op(220, 0)     # Convert complex to string
+
+    # String operations
+    STRING_P = _op(240, 0)              # (string? x)
+    STRING_EQ_P = _op(241, 0)           # string=? a b
+    STRING_NEQ_P = _op(242, 0)          # string!=? a b
+    STRING_LT_P = _op(243, 0)           # string<? a b  (lexicographic)
+    STRING_GT_P = _op(244, 0)           # string>? a b  (lexicographic)
+    STRING_LTE_P = _op(245, 0)          # string<=? a b (lexicographic)
+    STRING_GTE_P = _op(246, 0)          # string>=? a b (lexicographic)
+    STRING_LENGTH = _op(247, 0)         # Get length of string
+    STRING_UPCASE = _op(248, 0)         # Convert string to uppercase
+    STRING_DOWNCASE = _op(249, 0)       # Convert string to lowercase
+    STRING_TRIM = _op(250, 0)           # Trim whitespace from string
+    STRING_TRIM_LEFT = _op(251, 0)      # Trim leading whitespace
+    STRING_TRIM_RIGHT = _op(252, 0)     # Trim trailing whitespace
+    STRING_TO_INTEGER = _op(253, 0)     # Parse string to integer with radix
+    STRING_TO_NUMBER = _op(254, 0)      # Parse string to number
+    STRING_TO_LIST = _op(255, 0)        # Split string by delimiter: (string->list str delim)
+    STRING_REF = _op(256, 0)            # Get character at index
+    STRING_PREFIX_P = _op(257, 0)       # Check if string has prefix
+    STRING_SUFFIX_P = _op(258, 0)       # Check if string has suffix
+    STRING_CONCAT = _op(259, 0)         # Concatenate two strings: (string-concat a b)
+    STRING_SLICE = _op(260, 0)          # Extract substring (string, start, end)
+    STRING_REPLACE = _op(261, 0)        # Replace substring (string, old, new)
+    STRING_INDEX = _op(262, 0)          # Find index of substring (string, substring)
+
+    # Alist operations
+    DICT = _op(280, 1)                 # DICT n  (build dict from n pairs on stack)
+    DICT_P = _op(281, 0)               # (dict? x)
+    DICT_EQ_P = _op(282, 0)            # dict=? a b
+    DICT_NEQ_P = _op(283, 0)           # dict!=? a b
+    DICT_KEYS = _op(284, 0)            # Get all keys from dict
+    DICT_VALUES = _op(285, 0)          # Get all values from dict
+    DICT_LENGTH = _op(286, 0)          # Get number of entries in dict
+    DICT_HAS_P = _op(287, 0)           # Check if dict has key
+    DICT_REMOVE = _op(288, 0)          # Remove key from dict
+    DICT_MERGE = _op(289, 0)           # Merge two dicts
+    DICT_SET = _op(290, 0)             # Set key in dict (dict, key, value)
+    DICT_GET = _op(291, 0)             # Get value from dict by key with default
+
+    # List operations
+    LIST = _op(320, 1)                  # LIST n  (build list from n elements on stack)
+    LIST_P = _op(321, 0)                # (list? x)
+    LIST_EQ_P = _op(322, 0)             # list=? a b
+    LIST_NEQ_P = _op(323, 0)            # list!=? a b
+    LIST_PREPEND = _op(324, 0)          # list-prepend item lst
+    LIST_APPEND = _op(325, 0)           # list-append lst item
+    LIST_REVERSE = _op(326, 0)          # Reverse list on top of stack
+    LIST_FIRST = _op(327, 0)            # Get first element of list
+    LIST_REST = _op(328, 0)             # Get rest of list (all but first element)
+    LIST_LAST = _op(329, 0)             # Get last element of list
+    LIST_LENGTH = _op(330, 0)           # Get length of list
+    LIST_REF = _op(331, 0)              # Get element at index from list
+    LIST_NULL_P = _op(332, 0)           # Check if list is empty
+    LIST_MEMBER_P = _op(333, 0)         # Check if item is in list
+    LIST_INDEX = _op(334, 0)            # Find index of item in list
+    LIST_SLICE = _op(335, 0)            # Slice list: (list-slice lst start end)
+    LIST_REMOVE = _op(336, 0)           # Remove all occurrences of item from list
+    LIST_CONCAT = _op(337, 0)           # Append two lists: (append a b)
+    LIST_TO_STRING = _op(338, 0)        # Join list of strings with separator
+
+    # Generate integer range list
+    RANGE = _op(360, 0)                 # (range start end step)
+
+
+# Maps builtin function name → (opcode, arity) for all fixed-arity builtins.
+#
+# This is the single source of truth consumed by:
+#   - menai_codegen.py: to derive UNARY_OPS / BINARY_OPS / TERNARY_OPS for direct call optimisation
+#   - menai_builtin_registry.py: to generate bytecode stubs for first-class function use
+#
+# Variadic builtins that are fold-reduced by the desugarer appear here with
+# arity=2 (their binary form), since that is the only arity a first-class call
+# will ever present to the stub.
+#
+# 'dict-get' and 'range' have optional arguments; their stubs always use the
+# 3-argument opcode form (the codegen synthesises the missing default for direct
+# calls, and the stub will do likewise).
+BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
+    'function?': (Opcode.FUNCTION_P, 1),
+    'function=?': (Opcode.FUNCTION_EQ_P, 2),
+    'function!=?': (Opcode.FUNCTION_NEQ_P, 2),
+    'function-min-arity': (Opcode.FUNCTION_MIN_ARITY, 1),
+    'function-variadic?': (Opcode.FUNCTION_VARIADIC_P, 1),
+    'function-accepts?': (Opcode.FUNCTION_ACCEPTS_P, 2),
+    'symbol?': (Opcode.SYMBOL_P, 1),
+    'symbol=?': (Opcode.SYMBOL_EQ_P, 2),
+    'symbol!=?': (Opcode.SYMBOL_NEQ_P, 2),
+    'symbol->string': (Opcode.SYMBOL_TO_STRING, 1),
+    'none?': (Opcode.NONE_P, 1),
+    'boolean?': (Opcode.BOOLEAN_P, 1),
+    'boolean=?': (Opcode.BOOLEAN_EQ_P, 2),
+    'boolean!=?': (Opcode.BOOLEAN_NEQ_P, 2),
+    'boolean-not': (Opcode.BOOLEAN_NOT, 1),
+    'integer?': (Opcode.INTEGER_P, 1),
+    'integer=?': (Opcode.INTEGER_EQ_P, 2),
+    'integer!=?': (Opcode.INTEGER_NEQ_P, 2),
+    'integer<?': (Opcode.INTEGER_LT_P, 2),
+    'integer>?': (Opcode.INTEGER_GT_P, 2),
+    'integer<=?': (Opcode.INTEGER_LTE_P, 2),
+    'integer>=?': (Opcode.INTEGER_GTE_P, 2),
+    'integer-abs': (Opcode.INTEGER_ABS, 1),
+    'integer+': (Opcode.INTEGER_ADD, 2),
+    'integer-': (Opcode.INTEGER_SUB, 2),
+    'integer*': (Opcode.INTEGER_MUL, 2),
+    'integer/': (Opcode.INTEGER_DIV, 2),
+    'integer%': (Opcode.INTEGER_MOD, 2),
+    'integer-neg': (Opcode.INTEGER_NEG, 1),
+    'integer-expn': (Opcode.INTEGER_EXPN, 2),
+    'integer-bit-not': (Opcode.INTEGER_BIT_NOT, 1),
+    'integer-bit-shift-left': (Opcode.INTEGER_BIT_SHIFT_LEFT, 2),
+    'integer-bit-shift-right': (Opcode.INTEGER_BIT_SHIFT_RIGHT, 2),
+    'integer-bit-or': (Opcode.INTEGER_BIT_OR, 2),
+    'integer-bit-and': (Opcode.INTEGER_BIT_AND, 2),
+    'integer-bit-xor': (Opcode.INTEGER_BIT_XOR, 2),
+    'integer-min': (Opcode.INTEGER_MIN, 2),
+    'integer-max': (Opcode.INTEGER_MAX, 2),
+    'integer->float': (Opcode.INTEGER_TO_FLOAT, 1),
+    'integer->complex': (Opcode.INTEGER_TO_COMPLEX, 2),
+    'integer->string': (Opcode.INTEGER_TO_STRING, 2),
+    'float?': (Opcode.FLOAT_P, 1),
+    'float=?': (Opcode.FLOAT_EQ_P, 2),
+    'float!=?': (Opcode.FLOAT_NEQ_P, 2),
+    'float<?': (Opcode.FLOAT_LT_P, 2),
+    'float>?': (Opcode.FLOAT_GT_P, 2),
+    'float<=?': (Opcode.FLOAT_LTE_P, 2),
+    'float>=?': (Opcode.FLOAT_GTE_P, 2),
+    'float-abs': (Opcode.FLOAT_ABS, 1),
+    'float+': (Opcode.FLOAT_ADD, 2),
+    'float-': (Opcode.FLOAT_SUB, 2),
+    'float*': (Opcode.FLOAT_MUL, 2),
+    'float/': (Opcode.FLOAT_DIV, 2),
+    'float//': (Opcode.FLOAT_FLOOR_DIV, 2),
+    'float%': (Opcode.FLOAT_MOD, 2),
+    'float-neg': (Opcode.FLOAT_NEG, 1),
+    'float-exp': (Opcode.FLOAT_EXP, 1),
+    'float-expn': (Opcode.FLOAT_EXPN, 2),
+    'float-log': (Opcode.FLOAT_LOG, 1),
+    'float-log10': (Opcode.FLOAT_LOG10, 1),
+    'float-log2': (Opcode.FLOAT_LOG2, 1),
+    'float-logn': (Opcode.FLOAT_LOGN, 2),
+    'float-sin': (Opcode.FLOAT_SIN, 1),
+    'float-cos': (Opcode.FLOAT_COS, 1),
+    'float-tan': (Opcode.FLOAT_TAN, 1),
+    'float-sqrt': (Opcode.FLOAT_SQRT, 1),
+    'float->integer': (Opcode.FLOAT_TO_INTEGER, 1),
+    'float->complex': (Opcode.FLOAT_TO_COMPLEX, 2),
+    'float->string': (Opcode.FLOAT_TO_STRING, 1),
+    'float-floor': (Opcode.FLOAT_FLOOR, 1),
+    'float-ceil': (Opcode.FLOAT_CEIL, 1),
+    'float-round': (Opcode.FLOAT_ROUND, 1),
+    'float-min': (Opcode.FLOAT_MIN, 2),
+    'float-max': (Opcode.FLOAT_MAX, 2),
+    'complex?': (Opcode.COMPLEX_P, 1),
+    'complex=?': (Opcode.COMPLEX_EQ_P, 2),
+    'complex!=?': (Opcode.COMPLEX_NEQ_P, 2),
+    'complex-abs': (Opcode.COMPLEX_ABS, 1),
+    'complex+': (Opcode.COMPLEX_ADD, 2),
+    'complex-': (Opcode.COMPLEX_SUB, 2),
+    'complex*': (Opcode.COMPLEX_MUL, 2),
+    'complex/': (Opcode.COMPLEX_DIV, 2),
+    'complex-neg': (Opcode.COMPLEX_NEG, 1),
+    'complex-exp': (Opcode.COMPLEX_EXP, 1),
+    'complex-expn': (Opcode.COMPLEX_EXPN, 2),
+    'complex-log': (Opcode.COMPLEX_LOG, 1),
+    'complex-log10': (Opcode.COMPLEX_LOG10, 1),
+    'complex-logn': (Opcode.COMPLEX_LOGN, 2),
+    'complex-sin': (Opcode.COMPLEX_SIN, 1),
+    'complex-cos': (Opcode.COMPLEX_COS, 1),
+    'complex-tan': (Opcode.COMPLEX_TAN, 1),
+    'complex-sqrt': (Opcode.COMPLEX_SQRT, 1),
+    'complex->string': (Opcode.COMPLEX_TO_STRING, 1),
+    'complex-real': (Opcode.COMPLEX_REAL, 1),
+    'complex-imag': (Opcode.COMPLEX_IMAG, 1),
+    'string?': (Opcode.STRING_P, 1),
+    'string=?': (Opcode.STRING_EQ_P, 2),
+    'string!=?': (Opcode.STRING_NEQ_P, 2),
+    'string<?': (Opcode.STRING_LT_P, 2),
+    'string>?': (Opcode.STRING_GT_P, 2),
+    'string<=?': (Opcode.STRING_LTE_P, 2),
+    'string>=?': (Opcode.STRING_GTE_P, 2),
+    'string-length': (Opcode.STRING_LENGTH, 1),
+    'string-upcase': (Opcode.STRING_UPCASE, 1),
+    'string-downcase': (Opcode.STRING_DOWNCASE, 1),
+    'string-trim': (Opcode.STRING_TRIM, 1),
+    'string-trim-left': (Opcode.STRING_TRIM_LEFT, 1),
+    'string-trim-right': (Opcode.STRING_TRIM_RIGHT, 1),
+    'string->integer': (Opcode.STRING_TO_INTEGER, 2),
+    'string->number': (Opcode.STRING_TO_NUMBER, 1),
+    'string->list': (Opcode.STRING_TO_LIST, 2),
+    'string-ref': (Opcode.STRING_REF, 2),
+    'string-index': (Opcode.STRING_INDEX, 2),
+    'string-prefix?': (Opcode.STRING_PREFIX_P, 2),
+    'string-suffix?': (Opcode.STRING_SUFFIX_P, 2),
+    'string-concat': (Opcode.STRING_CONCAT, 2),
+    'string-slice': (Opcode.STRING_SLICE, 3),
+    'string-replace': (Opcode.STRING_REPLACE, 3),
+    'list?': (Opcode.LIST_P, 1),
+    'list=?': (Opcode.LIST_EQ_P, 2),
+    'list!=?': (Opcode.LIST_NEQ_P, 2),
+    'list-prepend': (Opcode.LIST_PREPEND, 2),
+    'list-append': (Opcode.LIST_APPEND, 2),
+    'list-reverse': (Opcode.LIST_REVERSE, 1),
+    'list-first': (Opcode.LIST_FIRST, 1),
+    'list-rest': (Opcode.LIST_REST, 1),
+    'list-last': (Opcode.LIST_LAST, 1),
+    'list-length': (Opcode.LIST_LENGTH, 1),
+    'list-ref': (Opcode.LIST_REF, 2),
+    'list-null?': (Opcode.LIST_NULL_P, 1),
+    'list-member?': (Opcode.LIST_MEMBER_P, 2),
+    'list-index': (Opcode.LIST_INDEX, 2),
+    'list-slice': (Opcode.LIST_SLICE, 3),
+    'list-remove': (Opcode.LIST_REMOVE, 2),
+    'list-concat': (Opcode.LIST_CONCAT, 2),
+    'list->string': (Opcode.LIST_TO_STRING, 2),
+    'dict?': (Opcode.DICT_P, 1),
+    'dict=?': (Opcode.DICT_EQ_P, 2),
+    'dict!=?': (Opcode.DICT_NEQ_P, 2),
+    'dict-keys': (Opcode.DICT_KEYS, 1),
+    'dict-values': (Opcode.DICT_VALUES, 1),
+    'dict-length': (Opcode.DICT_LENGTH, 1),
+    'dict-has?': (Opcode.DICT_HAS_P, 2),
+    'dict-remove': (Opcode.DICT_REMOVE, 2),
+    'dict-merge': (Opcode.DICT_MERGE, 2),
+    'dict-set': (Opcode.DICT_SET, 3),
+    'dict-get': (Opcode.DICT_GET, 3),
+    'range': (Opcode.RANGE, 3),
+}
+
+@dataclass
+class Instruction:
+    """Single bytecode instruction.
+
+    Stores opcode and arguments for easier debugging and manipulation.
+    In the VM, we'll use a more compact representation.
+    """
+    opcode: Opcode
+    arg1: int = 0
+    arg2: int = 0
+
+    def arg_count(self) -> int:
+        """Return the number of instruction-stream arguments this instruction takes (0, 1, or 2)."""
+        return self.opcode.arg_count
+
+    def __repr__(self) -> str:
+        """Human-readable representation."""
+        n = self.arg_count()
+        if n == 0:
+            return f"{self.opcode.name}"
+
+        if n == 2:
+            return f"{self.opcode.name} {self.arg1} {self.arg2}"
+
+        return f"{self.opcode.name} {self.arg1}"
+
+
+@dataclass
+class CodeObject:
+    """Compiled code object containing bytecode and metadata.
+
+    This represents a compiled Menai expression or function body.
+    """
+
+    # Bytecode instructions
+    instructions: List[Instruction]
+
+    # Constant pool (for LOAD_CONST)
+    constants: List[MenaiValue]
+
+    # Name pool (for LOAD_GLOBAL)
+    names: List[str]
+
+    # Nested code objects (for lambdas/closures)
+    code_objects: List['CodeObject']
+
+    # Function metadata
+    free_vars: List[str] = field(default_factory=list)  # Free variables to capture
+    param_names: List[str] = field(default_factory=list)  # Parameter names (in order, parallel to param_count)
+    param_count: int = 0  # Number of parameters (for functions)
+    local_count: int = 0  # Number of local variables
+    is_variadic: bool = False  # True if last param is a rest parameter (packs excess args into a list)
+    name: str = "<module>"  # Name for debugging
+    source_line: int = 0  # Line number in source code where this function is defined
+    source_file: str = ""  # Source file name (if available)
+
+    def __repr__(self) -> str:
+        """Human-readable representation."""
+        lines = [f"CodeObject: {self.name}"]
+        lines.append(f"  Parameters: {self.param_count}")
+        lines.append(f"  Locals: {self.local_count}")
+        lines.append(f"  Constants: {len(self.constants)}")
+        lines.append(f"  Names: {self.names}")
+        lines.append("  Instructions:")
+        for i, instr in enumerate(self.instructions):
+            lines.append(f"    {i:3d}: {instr}")
+
+        return "\n".join(lines)
+
+    def disassemble(self) -> str:
+        """Return disassembled bytecode for debugging."""
+        return repr(self)

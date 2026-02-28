@@ -1,0 +1,763 @@
+"""Tests for pattern matching functionality in Menai.
+
+This module provides comprehensive tests for the new pattern matching feature,
+including literal patterns, variable binding, wildcard patterns, type patterns,
+list structure patterns, nested patterns, and error cases.
+"""
+
+import pytest
+
+from menai import MenaiEvalError
+
+
+class TestPatternMatching:
+    """Test pattern matching functionality."""
+
+    # ========== Basic Literal Pattern Matching ==========
+
+    @pytest.mark.parametrize("expression,expected", [
+        # Number literal patterns
+        ('(match 42 (42 "found") (_ "not found"))', '"found"'),
+        ('(match 42 (41 "wrong") (42 "correct"))', '"correct"'),
+        ('(match 3.14 (3.14 "pi") (_ "not pi"))', '"pi"'),
+        ('(match 0 (0 "zero") (_ "non-zero"))', '"zero"'),
+        ('(match -5 (-5 "negative five") (_ "other"))', '"negative five"'),
+
+        # String literal patterns
+        ('(match "hello" ("hello" "greeting") (_ "other"))', '"greeting"'),
+        ('(match "world" ("hello" "greeting") ("world" "planet"))', '"planet"'),
+        ('(match "" ("" "empty") (_ "non-empty"))', '"empty"'),
+        ('(match "test" ("TEST" "upper") ("test" "lower"))', '"lower"'),
+
+        # Boolean literal patterns
+        ('(match #t (#t "true") (#f "false"))', '"true"'),
+        ('(match #f (#t "true") (#f "false"))', '"false"'),
+        ('(match #t (#f "wrong") (#t "right"))', '"right"'),
+
+        # Complex number literal patterns
+        ('(match 1j (1j "imaginary unit") (_ "other"))', '"imaginary unit"'),
+    ])
+    def test_literal_pattern_matching(self, menai, expression, expected):
+        """Test basic literal pattern matching for all Menai types."""
+        assert menai.evaluate_and_format(expression) == expected
+
+    def test_literal_pattern_first_match_wins(self, menai, helpers):
+        """Test that pattern matching uses first-match-wins semantics."""
+        helpers.assert_evaluates_to(
+            menai,
+            '(match 42 (42 "list-first") (42 "second") (_ "default"))',
+            '"list-first"'
+        )
+
+        helpers.assert_evaluates_to(
+            menai,
+            '(match "test" ("test" "first match") (_ "wildcard") ("test" "never reached"))',
+            '"first match"'
+        )
+
+    # ========== Variable Binding Patterns ==========
+
+    @pytest.mark.parametrize("expression,expected", [
+        # Simple variable binding
+        ('(match 42 (x (integer* x 2)))', '84'),
+        ('(match "hello" (s (string-length s)))', '5'),
+        ('(match #t (b (if b "yes" "no")))', '"yes"'),
+
+        # Variable binding with multiple patterns
+        ('(match 10 (5 "five") (x (integer+ x 1)))', '11'),
+        ('(match "world" ("hello" "greeting") (s (string-upcase s)))', '"WORLD"'),
+
+        # Variable binding in complex expressions
+        ('(match 7 (n (if (integer>? n 5) "big" "small")))', '"big"'),
+        ('(match 3 (n (if (integer>? n 5) "big" "small")))', '"small"'),
+    ])
+    def test_variable_binding_patterns(self, menai, expression, expected):
+        """Test variable binding in patterns."""
+        assert menai.evaluate_and_format(expression) == expected
+
+    def test_variable_binding_environment_isolation(self, menai, helpers):
+        """Test that pattern variables don't leak outside match expressions."""
+        # Variable bound in pattern should not be available outside
+        helpers.assert_evaluates_to(
+            menai,
+            '(let ((result (match 42 (x (integer* x 2))))) result)',
+            '84'
+        )
+
+        # Variable x should not be defined outside the match
+        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+            menai.evaluate('(let ((result (match 42 (x (integer* x 2))))) (integer+ result x))')
+
+    def test_variable_binding_shadowing(self, menai, helpers):
+        """Test that pattern variables can shadow outer bindings."""
+        helpers.assert_evaluates_to(
+            menai,
+            '(let ((x 10)) (match 5 (x (integer* x 3))))',
+            '15'  # Inner x (5) shadows outer x (10)
+        )
+
+        # Outer x should still be accessible after match
+        helpers.assert_evaluates_to(
+            menai,
+            '(let ((x 10)) (let ((result (match 5 (x (integer* x 3))))) (integer+ result x)))',
+            '25'  # 15 + 10
+        )
+
+    # ========== Wildcard Patterns ==========
+
+    @pytest.mark.parametrize("expression,expected", [
+        # Basic wildcard patterns
+        ('(match 42 (100 "hundred") (_ "other"))', '"other"'),
+        ('(match "test" ("hello" "greeting") (_ "unknown"))', '"unknown"'),
+        ('(match #f (#t "true") (_ "not true"))', '"not true"'),
+
+        # Wildcard as catch-all
+        ('(match (list 1 2 3) ((list 1 2) "short") (_ "other"))', '"other"'),
+        ('(match 3.14 (2.71 "e") (_ "not e"))', '"not e"'),
+
+        # Multiple wildcards (should all match but first wins)
+        ('(match 42 (_ "first wildcard") (_ "second wildcard"))', '"first wildcard"'),
+    ])
+    def test_wildcard_patterns(self, menai, expression, expected):
+        """Test wildcard pattern matching."""
+        assert menai.evaluate_and_format(expression) == expected
+
+    def test_wildcard_no_binding(self, menai):
+        """Test that wildcard patterns don't create variable bindings."""
+        # Wildcard should not create a binding for _
+        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+            menai.evaluate('(match 42 (_ (integer+ _ 1)))')
+
+    # ========== Type Pattern Matching ==========
+
+    @pytest.mark.parametrize("expression,expected", [
+        # Integer type patterns
+        ('(match 42 ((? integer? i) (integer* i 2)) (_ "not integer"))', '84'),
+        ('(match 3.14 ((? integer? i) (integer* i 2)) (_ "not integer"))', '"not integer"'),
+
+        # Float type patterns
+        ('(match 3.14 ((? float? f) (float-round f)) (_ "not float"))', '3.0'),
+        ('(match 42 ((? float? f) (float-round f)) (_ "not float"))', '"not float"'),
+
+        # Complex type patterns
+        ('(match (integer->complex 1 2) ((? complex? c) (complex-real c)) (_ "not complex"))', '1.0'),
+        ('(match 42 ((? complex? c) (complex-real c)) (_ "not complex"))', '"not complex"'),
+
+        # String type patterns
+        ('(match "hello" ((? string? s) (string-length s)) (_ "not string"))', '5'),
+        ('(match 42 ((? string? s) (string-length s)) (_ "not string"))', '"not string"'),
+
+        # Boolean type patterns
+        ('(match #t ((? boolean? b) (boolean-not b)) (_ "not boolean"))', '#f'),
+        ('(match 42 ((? boolean? b) (boolean-not b)) (_ "not boolean"))', '"not boolean"'),
+
+        # List type patterns
+        ('(match (list 1 2 3) ((? list? l) (list-length l)) (_ "not list"))', '3'),
+        ('(match 42 ((? list? l) (list-length l)) (_ "not list"))', '"not list"'),
+
+        # Function type patterns
+        ('(match (lambda (x) x) ((? function? f) "is function") (_ "not function"))', '"is function"'),
+        ('(match 42 ((? function? f) "is function") (_ "not function"))', '"not function"'),
+    ])
+    def test_type_pattern_matching(self, menai, expression, expected):
+        """Test type-based pattern matching."""
+        assert menai.evaluate_and_format(expression) == expected
+
+    def test_type_pattern_binding(self, menai, helpers):
+        """Test that type patterns bind variables correctly."""
+        # Variable should be bound and usable in the body
+        helpers.assert_evaluates_to(
+            menai,
+            '(match 42 ((? integer? n) (let ((doubled (integer* n 2))) doubled)))',
+            '84'
+        )
+
+        # Type pattern with complex usage
+        helpers.assert_evaluates_to(
+            menai,
+            '(match "hello world" ((? string? s) (integer? (string-index s "world"))))',
+            '#t'
+        )
+
+    def test_user_defined_predicate_pattern(self, menai, helpers):
+        """Test that user-defined predicates work in (? pred var) patterns."""
+        # Basic matching and non-matching cases
+        helpers.assert_evaluates_to(
+            menai,
+            '(let ((positive? (lambda (x) (and (integer? x) (integer>? x 0))))) (match 5 ((? positive? n) "positive") (_ "other")))',
+            '"positive"'
+        )
+        helpers.assert_evaluates_to(
+            menai,
+            '(let ((positive? (lambda (x) (and (integer? x) (integer>? x 0))))) (match -3 ((? positive? n) "positive") (_ "other")))',
+            '"other"'
+        )
+
+        # Bound variable is usable in the result expression
+        helpers.assert_evaluates_to(
+            menai,
+            '(let ((positive? (lambda (x) (and (integer? x) (integer>? x 0))))) (match 7 ((? positive? n) (integer* n 2)) (_ 0)))',
+            '14'
+        )
+
+        # Inline lambda as predicate (no named binding needed)
+        helpers.assert_evaluates_to(
+            menai,
+            '(match 10 ((? (lambda (x) (integer>? x 5)) n) "big") (_ "small"))',
+            '"big"'
+        )
+        helpers.assert_evaluates_to(
+            menai,
+            '(match 3 ((? (lambda (x) (integer>? x 5)) n) "big") (_ "small"))',
+            '"small"'
+        )
+
+        # User-defined predicate in a nested position inside a list destructure
+        helpers.assert_evaluates_to(
+            menai,
+            '(let ((even? (lambda (x) (integer=? (integer% x 2) 0)))) (match (list 4 "hello") (((? even? n) (? string? s)) (list n (string-length s))) (_ "no match")))',
+            '(4 5)'
+        )
+        helpers.assert_evaluates_to(
+            menai,
+            '(let ((even? (lambda (x) (integer=? (integer% x 2) 0)))) (match (list 3 "hello") (((? even? n) (? string? s)) (list n (string-length s))) (_ "no match")))',
+            '"no match"'
+        )
+
+        # Multiple different user-defined predicates in the same match
+        helpers.assert_evaluates_to(
+            menai,
+            '(let ((big? (lambda (x) (and (integer? x) (integer>? x 100)))) (short? (lambda (x) (and (string? x) (integer<? (string-length x) 4))))) (match 200 ((? big? n) "big integer") ((? short? s) "short string") (_ "other")))',
+            '"big integer"'
+        )
+        helpers.assert_evaluates_to(
+            menai,
+            '(let ((big? (lambda (x) (and (integer? x) (integer>? x 100)))) (short? (lambda (x) (and (string? x) (integer<? (string-length x) 4))))) (match "hi" ((? big? n) "big integer") ((? short? s) "short string") (_ "other")))',
+            '"short string"'
+        )
+
+    # ========== List Structure Pattern Matching ==========
+
+    @pytest.mark.parametrize("expression,expected", [
+        # Empty list pattern
+        ('(match (list) (() "empty") (_ "non-empty"))', '"empty"'),
+        ('(match (list 1) (() "empty") (_ "non-empty"))', '"non-empty"'),
+
+        # Fixed-length list patterns
+        ('(match (list 1 2 3) ((a b c) (integer+ a b c)) (_ "wrong length"))', '6'),
+        ('(match (list 1 2) ((a b c) (integer+ a b c)) (_ "wrong length"))', '"wrong length"'),
+        ('(match (list "x" "y") ((a b) (string-concat a b)) (_ "other"))', '"xy"'),
+
+        # Single element list patterns
+        ('(match (list 42) ((x) (integer* x 2)) (_ "not single"))', '84'),
+        ('(match (list 1 2) ((x) (integer* x 2)) (_ "not single"))', '"not single"'),
+
+        # Nested list patterns
+        ('(match (list (list 1 2) (list 3 4)) (((a b) (c d)) (integer+ a b c d)) (_ "other"))', '10'),
+    ])
+    def test_list_structure_patterns(self, menai, expression, expected):
+        """Test list structure pattern matching."""
+        assert menai.evaluate_and_format(expression) == expected
+
+    @pytest.mark.parametrize("expression,expected", [
+        # Head/tail patterns
+        ('(match (list 1 2 3) ((head . tail) head) (_ "not list"))', '1'),
+        ('(match (list 1 2 3) ((head . tail) (list-length tail)) (_ "not list"))', '2'),
+        ('(match (list 42) ((head . tail) (list head (list-null? tail))) (_ "other"))', '(42 #t)'),
+
+        # Multiple elements with tail
+        ('(match (list 1 2 3 4) ((a b . rest) (list a b (list-length rest))) (_ "other"))', '(1 2 2)'),
+        ('(match (list 1 2) ((a b . rest) (list a b (list-null? rest))) (_ "other"))', '(1 2 #t)'),
+
+        # Empty tail cases
+        ('(match (list) ((head . tail) "non-empty") (_ "empty"))', '"empty"'),
+    ])
+    def test_head_tail_patterns(self, menai, expression, expected):
+        """Test head/tail (cons) pattern matching."""
+        assert menai.evaluate_and_format(expression) == expected
+
+    def test_list_pattern_variable_binding(self, menai, helpers):
+        """Test variable binding in list patterns."""
+        # All variables should be bound
+        helpers.assert_evaluates_to(
+            menai,
+            '(match (list 10 20 30) ((x y z) (list z y x)))',
+            '(30 20 10)'
+        )
+
+        # Head/tail binding
+        helpers.assert_evaluates_to(
+            menai,
+            '(match (list 1 2 3 4 5) ((list-first second . others) (list list-first (list-length others))))',
+            '(1 3)'
+        )
+
+    # ========== Nested Pattern Combinations ==========
+
+    def test_nested_type_and_structure_patterns(self, menai, helpers):
+        """Test combinations of type patterns and structure patterns."""
+        # List of numbers
+        helpers.assert_evaluates_to(
+            menai,
+            '(match (list 1 2 3) ((? list? l) (if (integer>? (list-length l) 2) "long list" "short list")))',
+            '"long list"'
+        )
+
+        # Number in specific position
+        helpers.assert_evaluates_to(
+            menai,
+            '(match (list 10 "hello" #t) ((a (? string? s) c) (list a (string-length s) c)))',
+            '(10 5 #t)'
+        )
+
+    def test_deeply_nested_patterns(self, menai, helpers):
+        """Test deeply nested pattern combinations."""
+        # Nested list with type patterns
+        complex_pattern = '''
+        (match (list (list 1 2) "test" (list 3 4))
+               (((a b) (? string? s) (c d)) (list (integer+ a b c d) (string-length s)))
+               (_ "no match"))
+        '''
+        helpers.assert_evaluates_to(menai, complex_pattern, '(10 4)')
+
+        # Mixed patterns with multiple levels
+        mixed_pattern = '''
+        (match (list 42 (list "x" "y") #t)
+               (((? integer? n) (a b) (? boolean? flag))
+                (if flag (integer+ n (string-length (string-concat a b))) n))
+               (_ "no match"))
+        '''
+        helpers.assert_evaluates_to(menai, mixed_pattern, '44')  # 42 + 2
+
+    def test_pattern_with_guards(self, menai, helpers):
+        """Test patterns combined with conditional logic."""
+        # Pattern matching with additional conditions
+        guarded_pattern = '''
+        (match 15
+               ((? integer? n) (if (integer>? n 10) (integer* n 2) n))
+               (_ "not number"))
+        '''
+        helpers.assert_evaluates_to(menai, guarded_pattern, '30')
+
+        guarded_pattern_2 = '''
+        (match 5
+               ((? integer? n) (if (integer>? n 10) (integer* n 2) n))
+               (_ "not number"))
+        '''
+        helpers.assert_evaluates_to(menai, guarded_pattern_2, '5')
+
+    # ========== Integration with Other Menai Constructs ==========
+
+    def test_pattern_matching_with_let(self, menai, helpers):
+        """Test pattern matching integration with let bindings."""
+        let_with_match = '''
+        (let ((data (list 1 2 3)))
+          (match data
+                 ((a b c) (integer+ a b c))
+                 (_ 0)))
+        '''
+        helpers.assert_evaluates_to(menai, let_with_match, '6')
+
+        # Let binding used in pattern result
+        let_in_result = '''
+        (match 42
+               (x (let ((doubled (integer* x 2))
+                        (tripled (integer* x 3)))
+                    (integer+ doubled tripled)))
+               (_ 0))
+        '''
+        helpers.assert_evaluates_to(menai, let_in_result, '210')  # 84 + 126
+
+    def test_pattern_matching_with_lambda(self, menai, helpers):
+        """Test pattern matching with lambda expressions."""
+        # Lambda in pattern result
+        lambda_result = '''
+        (match 5
+               (x ((lambda (n) (integer* n n)) x))
+               (_ 0))
+        '''
+        helpers.assert_evaluates_to(menai, lambda_result, '25')
+
+        # Pattern matching function
+        pattern_function = '''
+        (let ((matcher (lambda (val)
+                        (match val
+                               ((? integer? n) (integer* n 2))
+                               ((? string? s) (string-length s))
+                               (_ 0)))))
+          (list (matcher 21) (matcher "hello") (matcher #t)))
+        '''
+        helpers.assert_evaluates_to(menai, pattern_function, '(42 5 0)')
+
+    def test_pattern_matching_with_higher_order_functions(self, menai, helpers):
+        """Test pattern matching with map, filter, fold."""
+        # Map with pattern matching
+        map_with_match = '''
+        (list-map (lambda (item)
+               (match item
+                      ((? integer? n) (integer* n 2))
+                      ((? string? s) (string-length s))
+                      (_ 0)))
+             (list 5 "hello" #t 10))
+        '''
+        helpers.assert_evaluates_to(menai, map_with_match, '(10 5 0 20)')
+
+        # Filter with pattern matching
+        filter_with_match = '''
+        (list-filter (lambda (item)
+                  (match item
+                         ((? integer? n) (integer>? n 5))
+                         (_ #f)))
+                (list 1 10 "hello" 7 3))
+        '''
+        helpers.assert_evaluates_to(menai, filter_with_match, '(10 7)')
+
+    def test_nested_match_expressions(self, menai, helpers):
+        """Test nested match expressions."""
+        nested_match = '''
+        (match (list 1 (list 2 3))
+               ((a (? list? inner))
+                (match inner
+                       ((b c) (integer+ a b c))
+                       (_ a)))
+               (_ 0))
+        '''
+        helpers.assert_evaluates_to(menai, nested_match, '6')  # 1 + 2 + 3
+
+    # ========== Error Cases ==========
+
+    def test_match_requires_minimum_arguments(self, menai):
+        """Test that match requires at least a value and one pattern."""
+        # No arguments
+        with pytest.raises(MenaiEvalError, match="Match expression has wrong number of arguments"):
+            menai.evaluate('(match)')
+
+        # Only value, no patterns
+        with pytest.raises(MenaiEvalError, match="Match expression has wrong number of arguments"):
+            menai.evaluate('(match 42)')
+
+    def test_match_requires_pattern_value_pairs(self, menai):
+        """Test that match requires pattern-value pairs."""
+        # Odd number of pattern arguments (missing result for last pattern)
+        with pytest.raises(MenaiEvalError, match="Match clause 2 has wrong number of elements"):
+            menai.evaluate('(match 42 (42 "found") (43))')
+
+        with pytest.raises(MenaiEvalError, match="Match clause 1 has wrong number of elements"):
+            menai.evaluate('(match 42 (x))')
+
+    def test_no_matching_pattern_error(self, menai):
+        """Test error when no pattern matches."""
+        with pytest.raises(MenaiEvalError, match="No patterns matched in match expression"):
+            menai.evaluate('(match 42 (43 "wrong") (44 "also wrong"))')
+
+        with pytest.raises(MenaiEvalError, match="No patterns matched in match expression"):
+            menai.evaluate('(match "hello" ("world" "wrong") ("test" "also wrong"))')
+
+    def test_invalid_pattern_syntax_errors(self, menai):
+        """Test errors for invalid pattern syntax."""
+        # Invalid predicate pattern (wrong number of arguments — 4 elements instead of 3)
+        with pytest.raises(MenaiEvalError, match="Invalid predicate pattern"):
+            menai.evaluate('(match 42 ((? integer? x y) "invalid") (_ "other"))')
+
+        # Invalid cons pattern (more than one dot)
+        with pytest.raises(MenaiEvalError, match="Invalid pattern"):
+            menai.evaluate('(match (list 1 2 3) ((a . b . c) "invalid") (_ "other"))')
+
+        # Invalid cons pattern (dot at beginning)
+        with pytest.raises(MenaiEvalError, match="Invalid pattern"):
+            menai.evaluate('(match (list 1 2 3) ((. a b) "invalid") (_ "other"))')
+
+        # Invalid predicate pattern (only 2 elements — missing variable)
+        with pytest.raises(MenaiEvalError, match="Invalid predicate pattern"):
+            menai.evaluate('(match 42 ((? integer?) "invalid") (_ "other"))')
+    def test_invalid_variable_patterns(self, menai):
+        """Test errors for invalid variable patterns."""
+        # String as variable pattern in type pattern - this should fail validation
+        with pytest.raises(MenaiEvalError, match="Pattern variable must be a symbol"):
+            menai.evaluate('(match 42 ((? integer? "x") "invalid") (_ "other"))')
+
+    def test_list_pattern_length_mismatch(self, menai):
+        """Test that list patterns with wrong length fall through to wildcard."""
+        # Pattern expects 3 elements, value has 2 - should match wildcard
+        result = menai.evaluate_and_format('(match (list 1 2) ((a b c) "three") (_ "other"))')
+        assert result == '"other"'
+
+        # Pattern expects 2 elements, value has 3 - should match wildcard
+        result = menai.evaluate_and_format('(match (list 1 2 3) ((a b) "two") (_ "other"))')
+        assert result == '"other"'
+
+        # Test actual no-match error (no wildcard)
+        with pytest.raises(MenaiEvalError, match="No patterns matched"):
+            menai.evaluate('(match (list 1 2) ((a b c) "three"))')
+
+    def test_type_pattern_with_wrong_type(self, menai):
+        """Test type patterns with wrong types fall through correctly."""
+        # String doesn't match integer? pattern, should match string? pattern
+        result = menai.evaluate_and_format('(match "hello" ((? integer? n) "number") ((? string? s) "string"))')
+        assert result == '"string"'
+
+        # Test actual no-match error (no matching patterns)
+        with pytest.raises(MenaiEvalError, match="No patterns matched"):
+            menai.evaluate('(match "hello" ((? integer? n) "number"))')
+
+    def test_cons_pattern_with_non_list(self, menai):
+        """Test cons patterns with non-list values fall through to wildcard."""
+        # Number doesn't match cons pattern, should match wildcard
+        result = menai.evaluate_and_format('(match 42 ((head . tail) "list") (_ "other"))')
+        assert result == '"other"'
+
+        # Test actual no-match error (no wildcard)
+        with pytest.raises(MenaiEvalError, match="No patterns matched"):
+            menai.evaluate('(match 42 ((head . tail) "list"))')
+
+    def test_error_in_pattern_result_evaluation(self, menai):
+        """Test error handling in pattern result evaluation."""
+        # Division by zero in pattern result
+        with pytest.raises(MenaiEvalError, match="Division by zero"):
+            menai.evaluate('(match 42 (x (float/ (integer->float x) 0.0)) (_ "other"))')
+
+        # Type error in pattern result
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate('(match 42 (x (integer+ x "hello")) (_ "other"))')
+
+    def test_undefined_variable_in_pattern_result(self, menai):
+        """Test undefined variable errors in pattern results."""
+        with pytest.raises(MenaiEvalError, match="Undefined variable"):
+            menai.evaluate('(match 42 (x (integer+ x undefined-var)) (_ "other"))')
+
+    # ========== Practical Examples and Real-World Usage ==========
+
+    def test_list_processing_examples(self, menai, helpers):
+        """Test practical list processing with pattern matching."""
+        # Safe list operations
+        safe_head = '''
+        (letrec ((safe-first (lambda (lst)
+                              (match lst
+                                     (() "empty")
+                                     ((head . tail) head)))))
+          (list (safe-first (list 1 2 3))
+                (safe-first (list))))
+        '''
+        helpers.assert_evaluates_to(menai, safe_head, '(1 "empty")')
+
+        # List length calculation
+        list_length = '''
+        (letrec ((my-length (lambda (lst)
+                             (match lst
+                                    (() 0)
+                                    ((head . tail) (integer+ 1 (my-length tail)))))))
+          (my-length (list 1 2 3 4 5)))
+        '''
+        helpers.assert_evaluates_to(menai, list_length, '5')
+
+    def test_data_structure_processing(self, menai, helpers):
+        """Test pattern matching for data structure processing."""
+        # Processing different data types
+        data_processor = '''
+        (let ((process (lambda (data)
+                        (match data
+                               ((? integer? n) (if (integer>? n 0) "positive" "non-positive"))
+                               ((? string? s) (if (integer>? (string-length s) 5) "long" "short"))
+                               ((? list? l) (if (list-null? l) "empty-list" "non-empty-list"))
+                               (_ "unknown")))))
+          (list (process 42)
+                (process -5)
+                (process "hello world")
+                (process "hi")
+                (process (list 1 2))
+                (process (list))
+                (process #t)))
+        '''
+        helpers.assert_evaluates_to(
+            menai,
+            data_processor,
+            '("positive" "non-positive" "long" "short" "non-empty-list" "empty-list" "unknown")'
+        )
+
+    def test_tree_like_structure_processing(self, menai, helpers):
+        """Test pattern matching with tree-like structures."""
+        # Simple binary tree sum (represented as nested lists)
+        tree_sum = '''
+        (letrec ((sum-tree (lambda (tree)
+                            (match tree
+                                   ((? integer? n) n)
+                                   ((left right) (integer+ (sum-tree left) (sum-tree right)))
+                                   (_ 0)))))
+          (sum-tree (list (list 1 2) (list 3 4))))
+        '''
+        helpers.assert_evaluates_to(menai, tree_sum, '10')
+
+    def test_option_type_simulation(self, menai, helpers):
+        """Test simulating option types with pattern matching."""
+        # Simulating Maybe/Option type with lists
+        option_example = '''
+        (let ((safe-divide (lambda (a b)
+                            (if (integer=? b 0)
+                                (list "none")
+                                (list "some" (float/ (integer->float a) (integer->float b)))))
+              )
+              (get-value (lambda (option)
+                          (match option
+                                 (("none") "no value")
+                                 (("some" value) value)
+                                 (_ "invalid option")))))
+          (list (get-value (safe-divide 10 2))
+                (get-value (safe-divide 10 0))))
+        '''
+        helpers.assert_evaluates_to(menai, option_example, '(5.0 "no value")')
+
+    def test_command_pattern_matching(self, menai, helpers):
+        """Test pattern matching for command-like structures."""
+        # Simple command processor
+        command_processor = '''
+        (let ((execute (lambda (cmd)
+                        (match cmd
+                               (("add" (? integer? a) (? integer? b)) (integer+ a b))
+                               (("multiply" (? integer? a) (? integer? b)) (integer* a b))
+                               (("greet" (? string? name)) (string-concat "Hello, " name))
+                               (("list-length" (? string? s)) (string-length s))
+                               (_ "unknown command")))))
+          (list (execute (list "add" 5 3))
+                (execute (list "multiply" 4 7))
+                (execute (list "greet" "World"))
+                (execute (list "list-length" "testing"))
+                (execute (list "unknown" 1 2))))
+        '''
+        helpers.assert_evaluates_to(
+            menai,
+            command_processor,
+            '(8 28 "Hello, World" 7 "unknown command")'
+        )
+
+    def test_pattern_matching_performance_edge_cases(self, menai, helpers):
+        """Test pattern matching with edge cases and performance considerations."""
+        # Many patterns (should still use first-match-wins)
+        many_patterns = '''
+        (match 50
+               (1 "one") (2 "two") (3 "three") (4 "four") (5 "five")
+               (10 "ten") (20 "twenty") (30 "thirty") (40 "forty")
+               ((? integer? n) (if (integer>? n 45) "big number" "medium number"))
+               (_ "unknown"))
+        '''
+        helpers.assert_evaluates_to(menai, many_patterns, '"big number"')
+
+        # Deeply nested list patterns
+        deep_nesting = '''
+        (match (list (list (list 1 2) (list 3 4)) (list (list 5 6) (list 7 8)))
+               ((((a b) (c d)) ((e f) (g h))) (integer+ a b c d e f g h))
+               (_ "no match"))
+        '''
+        helpers.assert_evaluates_to(menai, deep_nesting, '36')  # 1+2+3+4+5+6+7+8
+
+    def test_pattern_matching_with_complex_expressions(self, menai, helpers):
+        """Test pattern matching integrated with complex Menai expressions."""
+        # Pattern matching in fold operation
+        complex_fold = '''
+        (list-fold (lambda (acc item)
+                (match item
+                       ((? integer? n) (integer+ acc n))
+                       ((? string? s) (integer+ acc (string-length s)))
+                       (_ acc)))
+              0
+              (list 10 "hello" #t 20 "world" (list 1 2)))
+        '''
+        helpers.assert_evaluates_to(menai, complex_fold, '40')  # 10 + 5 + 20 + 5
+
+        # Pattern matching with recursive function
+        recursive_pattern = '''
+        (letrec ((process-nested (lambda (data)
+                                  (match data
+                                         ((? integer? n) n)
+                                         ((? string? s) (string-length s))
+                                         ((? list? l) (list-fold integer+ 0 (list-map process-nested l)))
+                                         (_ 0)))))
+          (process-nested (list 10 "test" (list 5 "hi") 20)))
+        '''
+        helpers.assert_evaluates_to(menai, recursive_pattern, '41')  # 10 + 4 + (5 + 2) + 20
+
+    # ========== CORRECTED DOT PATTERN VALIDATION TESTS ==========
+
+    def test_dot_pattern_validation_comprehensive_fixed(self, menai):
+        """Comprehensive tests for dot pattern validation edge cases - updated for refactored code."""
+
+        # These tests target the validation logic that now happens entirely upfront
+        # in _validate_list_pattern_syntax (after refactoring)
+
+        # Test cases that should be caught by early validation
+        with pytest.raises(MenaiEvalError, match="Invalid pattern in clause 1"):
+            menai.evaluate('(match (list 1 2 3) ((. a b) "invalid"))')
+
+        with pytest.raises(MenaiEvalError, match="Invalid pattern in clause 1"):
+            menai.evaluate('(match (list 1 2 3) ((a . b . c) "invalid"))')
+
+        # Test cases that are now also caught by early validation (after refactoring)
+        with pytest.raises(MenaiEvalError, match="Invalid pattern in clause 1"):
+            menai.evaluate('(match (list 1 2) ((a .) "invalid"))')
+
+        with pytest.raises(MenaiEvalError, match="Invalid pattern in clause 1"):
+            menai.evaluate('(match (list 1 2 3) ((a . b c) "invalid"))')
+
+    def test_dot_pattern_error_specificity_fixed(self, menai):
+        """Test that dot pattern errors provide specific and helpful messages."""
+
+        # Test specific error message content for dot at end
+        with pytest.raises(MenaiEvalError) as exc_info:
+            menai.evaluate('(match (list 1 2) ((head .) "test"))')
+
+        error = str(exc_info.value)
+        assert "Invalid pattern in clause 1" in error
+        assert "dot at end" in error
+
+        # Test specific error message content for multiple elements after dot
+        with pytest.raises(MenaiEvalError) as exc_info:
+            menai.evaluate('(match (list 1 2 3) ((head . tail extra) "test"))')
+
+        error = str(exc_info.value)
+        assert "Invalid pattern in clause 1" in error
+        assert "multiple elements after dot" in error
+
+    def test_dot_pattern_validation_vs_matching_separation_fixed(self, menai):
+        """Test that validation errors are clearly separated from matching failures."""
+
+        # These should be validation errors (syntax problems)
+        with pytest.raises(MenaiEvalError, match="Invalid pattern in clause 1"):
+            menai.evaluate('(match (list 1 2) ((a .) "invalid"))')
+
+        with pytest.raises(MenaiEvalError, match="Invalid pattern in clause 1"):
+            menai.evaluate('(match (list 1 2 3) ((a . b c) "invalid"))')
+
+        # This should be a matching failure (semantic problem - not enough elements)
+        result = menai.evaluate_and_format('(match (list 1) ((a b . rest) "matched") (_ "no match"))')
+        assert result == '"no match"'
+
+        # This should be a no-patterns-matched error (semantic problem)
+        with pytest.raises(MenaiEvalError, match="No patterns matched"):
+            menai.evaluate('(match (list 1) ((a b . rest) "matched"))')
+
+    def test_all_dot_validation_paths_covered_fixed(self, menai):
+        """Ensure all validation paths in dot pattern handling are tested."""
+
+        # All paths now go through early validation (after refactoring)
+
+        # Path 1: Early validation catches multiple dots
+        with pytest.raises(MenaiEvalError, match="Invalid pattern in clause 1"):
+            menai.evaluate('(match (list 1 2 3) ((a . b . c) "invalid"))')
+
+        # Path 2: Early validation catches dot at beginning
+        with pytest.raises(MenaiEvalError, match="Invalid pattern in clause 1"):
+            menai.evaluate('(match (list 1 2) ((. a) "invalid"))')
+
+        # Path 3: Early validation now catches dot at end (refactored!)
+        with pytest.raises(MenaiEvalError, match="Invalid pattern in clause 1"):
+            menai.evaluate('(match (list 1) ((a .) "invalid"))')
+
+        # Path 4: Early validation now catches multiple elements after dot (refactored!)
+        with pytest.raises(MenaiEvalError, match="Invalid pattern in clause 1"):
+            menai.evaluate('(match (list 1 2 3) ((a . b c) "invalid"))')
+
+        # Path 5: Valid dot patterns should work
+        result = menai.evaluate_and_format('(match (list 1 2 3) ((head . tail) head))')
+        assert result == '1'
+
+        result = menai.evaluate_and_format('(match (list 1 2 3 4) ((a b . rest) (list-length rest)))')
+        assert result == '2'

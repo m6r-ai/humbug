@@ -19,7 +19,7 @@ from metaphor import (
 )
 
 from ai_tool import AIToolManager
-from ai_tool.aifpl.aifpl_ai_tool import AIFPLAITool
+from ai_tool.menai.menai_ai_tool import MenaiAITool
 from ai_tool.clock.clock_ai_tool import ClockAITool
 from ai_tool.filesystem.filesystem_ai_tool import FileSystemAITool
 from ai_tool.filesystem.filesystem_access_settings import FilesystemAccessSettings
@@ -408,10 +408,11 @@ class MainWindow(QMainWindow):
         self._command_registry.register_command(ShellCommandHelp(self._command_registry))
 
         self._ai_tool_manager = AIToolManager()
-        # Store AIFPL tool instance so we can update its module path when mindspace changes
-        self._aifpl_tool = AIFPLAITool()
+
+        # Store Menai tool instance so we can update its module path when mindspace changes
+        self._menai_tool = MenaiAITool()
         self._ai_tool_manager.register_tool(
-            self._aifpl_tool, "AIFPL: evaluates expressions using AI Functional Programming Language syntax"
+            self._menai_tool, "Menai: evaluates expressions using AI Functional Programming Language syntax"
         )
         self._ai_tool_manager.register_tool(ClockAITool(), "Clock: gets the current time and date")
         self._ai_tool_manager.register_tool(
@@ -800,8 +801,8 @@ class MainWindow(QMainWindow):
 
         self._mindspace_view.set_mindspace("")
 
-        # Clear AIFPL module path and cache when closing mindspace
-        self._aifpl_tool.set_module_path([])
+        # Clear Menai module path and cache when closing mindspace
+        self._menai_tool.set_module_path([])
         self._mindspace_manager.close_mindspace()
 
     def _save_mindspace_state(self) -> None:
@@ -844,9 +845,9 @@ class MainWindow(QMainWindow):
                 strings.error_restoring_mindspace.format(str(e))
             )
 
-        # Update AIFPL module path to use the new mindspace's aifpl_modules directory
+        # Update Menai module path to use the new mindspace's menai_modules directory
         mindspace_path = self._mindspace_manager.mindspace_path()
-        self._aifpl_tool.set_module_path([mindspace_path])
+        self._menai_tool.set_module_path([mindspace_path])
 
     def _close_all_tabs(self) -> bool:
         return self._column_manager.close_all_tabs()

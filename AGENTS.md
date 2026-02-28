@@ -22,7 +22,7 @@ humbug/
 ├── tests/                  # Test suite
 ├── tools/                  # Development and analysis tools
 ├── docs/                   # Documentation
-├── aifpl_modules/          # AIFPL standard library modules
+├── menai_modules/          # Menai standard library modules
 ├── conversations/          # Example AI conversations
 ├── icons/                  # Application icons
 ├── metaphor/               # Metaphor prompt examples
@@ -59,12 +59,12 @@ Multi-backend AI conversation system.
 Framework for AI tools and capabilities.
 
 **Tool subdirectories:**
-- `aifpl/` - AIFPL language execution
+- `menai/` - Menai language execution
 - `clock/` - Date/time operations
 - `filesystem/` - File operations
 - `help/` - Tool documentation
 
-### `src/aifpl/`
+### `src/menai/`
 Pure functional programming language designed for AI use. Includes lexer, parser, compiler, and virtual machine.
 
 ### `src/ai_conversation_transcript/`
@@ -86,7 +86,7 @@ Dependency AST for analyzing module dependencies.
 Language-specific syntax highlighting system.
 
 **Language subdirectories:**
-- `aifpl/`, `c/`, `cpp/`, `csharp/`, `css/`, `diff/`, `go/`, `html/`, `java/`
+- `menai/`, `c/`, `cpp/`, `csharp/`, `css/`, `diff/`, `go/`, `html/`, `java/`
 - `javascript/`, `json/`, `kotlin/`, `lua/`, `markdown/`, `metaphor/`, `move/`
 - `python/`, `rust/`, `scheme/`, `solidity/`, `swift/`, `text/`, `typescript/`, `xml/`
 
@@ -97,7 +97,7 @@ Cross-platform terminal emulator with Unix and Windows implementations.
 
 Test structure mirrors `src/` organization:
 - `ai_tool/` - AI tool tests
-- `aifpl/` - AIFPL language tests
+- `menai/` - Menai language tests
 - `diff/` - Diff system tests
 - `dmarkdown/` - Markdown parser tests
 - `metaphor/` - Metaphor language tests
@@ -106,11 +106,11 @@ Test structure mirrors `src/` organization:
 ## `tools/` Directory
 
 Development and debugging utilities:
-- `aifpl_benchmark/` - AIFPL performance benchmarking
-- `aifpl_bytecode_analyzer/` - Bytecode inspection
-- `aifpl_checker/` - Static analysis
-- `aifpl_disassembler/` - Bytecode disassembly
-- `aifpl_pretty_print/` - Code formatting
+- `menai_benchmark/` - Menai performance benchmarking
+- `menai_bytecode_analyzer/` - Bytecode inspection
+- `menai_checker/` - Static analysis
+- `menai_disassembler/` - Bytecode disassembly
+- `menai_pretty_print/` - Code formatting
 - `dependency_checker/` - Module dependency validation
 - `planner/` - Project planning
 
@@ -118,6 +118,6 @@ Development and debugging utilities:
 
 - `README.md` - Project overview
 - `CHANGELOG.md` - Version history
-- `src/aifpl/README.md` - AIFPL implementation overview and Python API
-- `src/aifpl/AGENTS.md` - Guide for AIs working on the AIFPL implementation
+- `src/menai/README.md` - Menai implementation overview and Python API
+- `src/menai/AGENTS.md` - Guide for AIs working on the Menai implementation
 - Component-specific README.md files in subdirectories

@@ -1,7 +1,7 @@
 """Imports all parsers to ensure they are registered in the ParserRegistry."""
 
 # pylint: disable=unused-import
-from syntax.aifpl.aifpl_parser import AIFPLParser
+from syntax.menai.menai_parser import MenaiParser
 from syntax.c.c_parser import CParser
 from syntax.cpp.cpp_parser import CppParser
 from syntax.csharp.csharp_parser import CSharpParser

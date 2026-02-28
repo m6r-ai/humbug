@@ -19,13 +19,9 @@ modules:
 
   ai_tool:
     internal_dependencies:
-      - aifpl
+      - menai
       - diff
       - syntax
-    external_dependencies:
-      - "standard_library"
-
-  aifpl:
     external_dependencies:
       - "standard_library"
 
@@ -61,6 +57,10 @@ modules:
       - "standard_library"
       - "PySide6"
       - "qasync"
+
+  menai:
+    external_dependencies:
+      - "standard_library"
 
   metaphor:
     internal_dependencies:

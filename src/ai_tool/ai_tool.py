@@ -341,7 +341,7 @@ class AITool(ABC):
         - For full tool help: All operations with parameters
         - For operation help: Specific operation with detailed parameters
 
-        Tools with complex documentation (like AIFPL) can override this
+        Tools with complex documentation (like Menai) can override this
         to provide custom formatting, examples, or additional guidance.
 
         Args:

@@ -1,0 +1,422 @@
+"""Tests for typed arithmetic operator desugaring.
+
+Covers the variadic desugaring of:
+    integer+  integer-  integer*  integer/
+    float+    float-    float*    float/
+    complex+  complex-  complex*  complex/
+
+Tests are organised into three layers:
+  1. Desugarer structure — verify the AST shape produced by the desugarer.
+  2. End-to-end evaluation — verify correct results via menai.evaluate_and_format.
+  3. Error cases — verify that ill-formed calls are rejected appropriately.
+"""
+
+import cmath
+import math
+
+import pytest
+
+from menai import Menai, MenaiEvalError
+from menai.menai_ast import (
+    MenaiASTBoolean,
+    MenaiASTComplex,
+    MenaiASTFloat,
+    MenaiASTInteger,
+    MenaiASTList,
+    MenaiASTNode,
+    MenaiASTSymbol,
+)
+from menai.menai_desugarer import MenaiDesugarer
+from menai.menai_lexer import MenaiLexer
+from menai.menai_parser import MenaiParser
+from menai.menai_semantic_analyzer import MenaiSemanticAnalyzer
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def parse(source: str) -> MenaiASTNode:
+    """Lex, parse, and semantically-analyse *source*, returning the AST."""
+    tokens = MenaiLexer().lex(source)
+    ast = MenaiParser().parse(tokens, source)
+    return MenaiSemanticAnalyzer().analyze(ast)
+
+
+def desugar(source: str) -> MenaiASTNode:
+    """Parse and desugar *source*, returning the desugared AST."""
+    return MenaiDesugarer().desugar(parse(source))
+
+
+def op_name(node: MenaiASTNode) -> str:
+    """Return the operator name of a list node."""
+    assert isinstance(node, MenaiASTList)
+    first = node.first()
+    assert isinstance(first, MenaiASTSymbol)
+    return first.name
+
+
+# ---------------------------------------------------------------------------
+# 1. Desugarer structure tests
+# ---------------------------------------------------------------------------
+
+class TestDesugarerZeroArgs:
+    """Zero-argument cases produce the correct identity literal."""
+
+    def test_integer_add_zero_args(self):
+        result = desugar("(integer+)")
+        assert isinstance(result, MenaiASTInteger)
+        assert result.value == 0
+
+    def test_integer_mul_zero_args(self):
+        result = desugar("(integer*)")
+        assert isinstance(result, MenaiASTInteger)
+        assert result.value == 1
+
+    def test_float_add_zero_args(self):
+        result = desugar("(float+)")
+        assert isinstance(result, MenaiASTFloat)
+        assert result.value == 0.0
+
+    def test_float_mul_zero_args(self):
+        result = desugar("(float*)")
+        assert isinstance(result, MenaiASTFloat)
+        assert result.value == 1.0
+
+    def test_complex_add_zero_args(self):
+        result = desugar("(complex+)")
+        assert isinstance(result, MenaiASTComplex)
+        assert result.value == 0+0j
+
+    def test_complex_mul_zero_args(self):
+        result = desugar("(complex*)")
+        assert isinstance(result, MenaiASTComplex)
+        assert result.value == 1+0j
+
+
+class TestDesugarerOneArg:
+    """Single-argument cases: identity for +/*, negation for -, reciprocal for /."""
+
+    # --- addition: single arg is the identity, return arg unchanged ---
+
+    def test_integer_add_one_arg_is_identity(self):
+        result = desugar("(integer+ 7)")
+        assert isinstance(result, MenaiASTInteger)
+        assert result.value == 7
+
+    def test_float_add_one_arg_is_identity(self):
+        result = desugar("(float+ 3.5)")
+        assert isinstance(result, MenaiASTFloat)
+        assert result.value == 3.5
+
+    def test_complex_add_one_arg_is_identity(self):
+        result = desugar("(complex+ (float->complex 1 2))")
+        # The inner (float->complex 1 2) call is a regular function call, not a literal,
+        # so the desugarer returns it as-is (a list node).
+        assert isinstance(result, MenaiASTList)
+
+    # --- multiplication: single arg is the identity, return arg unchanged ---
+
+    def test_integer_mul_one_arg_is_identity(self):
+        result = desugar("(integer* 5)")
+        assert isinstance(result, MenaiASTInteger)
+        assert result.value == 5
+
+    def test_float_mul_one_arg_is_identity(self):
+        result = desugar("(float* 2.5)")
+        assert isinstance(result, MenaiASTFloat)
+        assert result.value == 2.5
+
+    # --- subtraction: single arg desugars to (op 0 x) ---
+
+    def test_integer_sub_one_arg_negation(self):
+        with pytest.raises(MenaiEvalError):
+             desugar("(integer- 4)")
+
+    def test_float_sub_one_arg_negation(self):
+        with pytest.raises(MenaiEvalError):
+            desugar("(float- 4.0)")
+
+    def test_complex_sub_one_arg_negation(self):
+        with pytest.raises(MenaiEvalError):
+            desugar("(complex- (float->complex 1 2))")
+
+    def test_float_div_one_arg_falls_through(self):
+        with pytest.raises(MenaiEvalError):
+            desugar("(float/ 4.0)")
+
+    def test_complex_div_one_arg_falls_through(self):
+        with pytest.raises(MenaiEvalError):
+            desugar("(complex/ (float->complex 2 0))")
+
+    def test_integer_div_one_arg_falls_through(self):
+        with pytest.raises(MenaiEvalError):
+            desugar("(integer/ 4)")
+
+
+class TestDesugarerTwoArgs:
+    """Binary calls pass through as-is (already optimal)."""
+
+    def test_integer_add_two_args(self):
+        result = desugar("(integer+ 3 4)")
+        assert op_name(result) == "integer+"
+        assert len(result.elements) == 3
+
+    def test_float_sub_two_args(self):
+        result = desugar("(float- 5.0 2.0)")
+        assert op_name(result) == "float-"
+        assert len(result.elements) == 3
+
+    def test_complex_mul_two_args(self):
+        result = desugar("(complex* (float->complex 1 2) (float->complex 3 4))")
+        assert op_name(result) == "complex*"
+        assert len(result.elements) == 3
+
+    def test_integer_div_two_args(self):
+        result = desugar("(integer/ 10 3)")
+        assert op_name(result) == "integer/"
+        assert len(result.elements) == 3
+
+    def test_float_div_two_args(self):
+        result = desugar("(float/ 10.0 4.0)")
+        assert op_name(result) == "float/"
+        assert len(result.elements) == 3
+
+
+class TestDesugarerVariadic:
+    """Three-or-more arguments fold left to right."""
+
+    def _assert_left_fold(self, node: MenaiASTNode, op: str, depth: int) -> None:
+        """Recursively assert that *node* is a left-fold of *op* with *depth* levels."""
+        assert op_name(node) == op
+        assert isinstance(node, MenaiASTList)
+        if depth > 1:
+            self._assert_left_fold(node.elements[1], op, depth - 1)
+
+    def test_integer_add_three_args(self):
+        result = desugar("(integer+ 1 2 3)")
+        # (integer+ (integer+ 1 2) 3)
+        self._assert_left_fold(result, "integer+", 2)
+
+    def test_integer_add_four_args(self):
+        result = desugar("(integer+ 1 2 3 4)")
+        # (integer+ (integer+ (integer+ 1 2) 3) 4)
+        self._assert_left_fold(result, "integer+", 3)
+
+    def test_float_mul_three_args(self):
+        result = desugar("(float* 2.0 3.0 4.0)")
+        self._assert_left_fold(result, "float*", 2)
+
+    def test_complex_add_three_args(self):
+        result = desugar("(complex+ (float->complex 1 0) (float->complex 2 0) (float->complex 3 0))")
+        self._assert_left_fold(result, "complex+", 2)
+
+    def test_integer_sub_three_args(self):
+        # (integer- 10 3 2) → (integer- (integer- 10 3) 2)
+        result = desugar("(integer- 10 3 2)")
+        self._assert_left_fold(result, "integer-", 2)
+
+    def test_float_div_three_args(self):
+        # (float/ 24.0 4.0 3.0) → (float/ (float/ 24.0 4.0) 3.0)
+        result = desugar("(float/ 24.0 4.0 3.0)")
+        self._assert_left_fold(result, "float/", 2)
+
+    def test_integer_div_three_args(self):
+        # (integer/ 24 4 3) → (integer/ (integer/ 24 4) 3)
+        result = desugar("(integer/ 24 4 3)")
+        self._assert_left_fold(result, "integer/", 2)
+
+    def test_complex_mul_three_args(self):
+        result = desugar("(complex* (float->complex 1 1) (float->complex 2 0) (float->complex 0 1))")
+        self._assert_left_fold(result, "complex*", 2)
+
+
+# ---------------------------------------------------------------------------
+# 2. End-to-end evaluation tests
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def menai():
+    return Menai()
+
+
+class TestIntegerOpsEval:
+    """integer+  integer-  integer*  integer/  evaluated end-to-end."""
+
+    @pytest.mark.parametrize("expr,expected", [
+        # zero-arg identity
+        ("(integer+)", "0"),
+        ("(integer*)", "1"),
+        # one-arg identity
+        ("(integer+ 7)", "7"),
+        ("(integer* 5)", "5"),
+        # binary
+        ("(integer+ 3 4)", "7"),
+        ("(integer- 10 3)", "7"),
+        ("(integer* 6 7)", "42"),
+        ("(integer/ 10 3)", "3"),   # floor division
+        ("(integer/ -7 2)", "-4"),  # floor towards negative infinity
+        # variadic fold
+        ("(integer+ 1 2 3)", "6"),
+        ("(integer+ 1 2 3 4)", "10"),
+        ("(integer- 10 3 2)", "5"),
+        ("(integer* 2 3 4)", "24"),
+        ("(integer/ 24 4 3)", "2"),
+    ])
+    def test_integer_ops(self, menai, expr, expected):
+        assert menai.evaluate_and_format(expr) == expected
+
+    def test_integer_div_by_zero(self, menai):
+        with pytest.raises(MenaiEvalError, match="[Dd]ivision by zero"):
+            menai.evaluate("(integer/ 10 0)")
+
+    def test_integer_ops_reject_float(self, menai):
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate("(integer+ 1 2.0)")
+
+    def test_integer_ops_reject_complex(self, menai):
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate("(integer* 2 1j)")
+
+    def test_integer_div_one_arg_is_error(self, menai):
+        """(integer/ x) should be a runtime arity error, not a reciprocal."""
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate("(integer/ 4)")
+
+
+class TestFloatOpsEval:
+    """float+  float-  float*  float/  evaluated end-to-end."""
+
+    @pytest.mark.parametrize("expr,expected", [
+        # zero-arg identity
+        ("(float+)", "0.0"),
+        ("(float*)", "1.0"),
+        # one-arg identity
+        ("(float+ 3.5)", "3.5"),
+        ("(float* 2.5)", "2.5"),
+        # binary
+        ("(float+ 1.5 2.5)", "4.0"),
+        ("(float- 5.0 2.0)", "3.0"),
+        ("(float* 2.0 3.5)", "7.0"),
+        ("(float/ 10.0 4.0)", "2.5"),
+        # variadic fold
+        ("(float+ 1.0 2.0 3.0)", "6.0"),
+        ("(float- 10.0 3.0 2.0)", "5.0"),
+        ("(float* 2.0 3.0 4.0)", "24.0"),
+        ("(float/ 24.0 4.0 3.0)", "2.0"),
+    ])
+    def test_float_ops(self, menai, expr, expected):
+        assert menai.evaluate_and_format(expr) == expected
+
+    def test_float_div_by_zero(self, menai):
+        with pytest.raises(MenaiEvalError, match="[Dd]ivision by zero"):
+            menai.evaluate("(float/ 1.0 0.0)")
+
+    def test_float_ops_reject_integer(self, menai):
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate("(float+ 1.0 2)")
+
+    def test_float_ops_reject_complex(self, menai):
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate("(float* 2.0 1j)")
+
+
+class TestComplexOpsEval:
+    """complex+  complex-  complex*  complex/  evaluated end-to-end."""
+
+    @pytest.mark.parametrize("expr,expected", [
+        # zero-arg identity
+        ("(complex+)", "0+0j"),
+        ("(complex*)", "1+0j"),
+        # one-arg identity
+        ("(complex+ (integer->complex 3 4))", "3+4j"),
+        ("(complex* (integer->complex 2 1))", "2+1j"),
+        # binary
+        ("(complex+ (integer->complex 1 2) (integer->complex 3 4))", "4+6j"),
+        ("(complex- (integer->complex 5 3) (integer->complex 2 1))", "3+2j"),
+        ("(complex* (float->complex 1.0 2.0) (float->complex 3.0 4.0))", "-5+10j"),
+        ("(complex/ (float->complex 4.0 2.0) (float->complex 1.0 1.0))", "3-1j"),
+        # variadic fold
+        ("(complex+ (integer->complex 1 0) (integer->complex 2 0) (integer->complex 3 0))", "6+0j"),
+        ("(complex- (integer->complex 10 0) (integer->complex 3 0) (integer->complex 2 0))", "5+0j"),
+        ("(complex* (integer->complex 1 1) (integer->complex 1 1) (integer->complex 1 0))", "2j"),
+    ])
+    def test_complex_ops(self, menai, expr, expected):
+        assert menai.evaluate_and_format(expr) == expected
+
+    def test_complex_div_by_zero(self, menai):
+        with pytest.raises(MenaiEvalError, match="[Dd]ivision by zero"):
+            menai.evaluate("(complex/ (integer->complex 1) (integer->complex 0))")
+
+    def test_complex_ops_reject_integer(self, menai):
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate("(complex+ (integer->complex 1 2) 3)")
+
+    def test_complex_ops_reject_float(self, menai):
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate("(complex* (integer->complex 1 2) 3.0)")
+
+
+class TestFirstClassUse:
+    """Typed operators work as first-class values (list-fold, map, etc.)."""
+
+    def test_fold_integer_add(self, menai):
+        result = menai.evaluate_and_format("(list-fold integer+ 0 (list 1 2 3 4 5))")
+        assert result == "15"
+
+    def test_fold_float_mul(self, menai):
+        result = menai.evaluate_and_format("(list-fold float* 1.0 (list 2.0 3.0 4.0))")
+        assert result == "24.0"
+
+    def test_fold_complex_add(self, menai):
+        result = menai.evaluate_and_format(
+            "(list-fold complex+ (integer->complex 0 0) (list (integer->complex 1 0) (integer->complex 0 1) (integer->complex 1 1)))"
+        )
+        assert result == "2+2j"
+
+
+# ---------------------------------------------------------------------------
+# 3. Error cases
+# ---------------------------------------------------------------------------
+
+class TestZeroArgErrors:
+    """Zero-arg subtraction and division are runtime errors."""
+
+    @pytest.mark.parametrize("expr", [
+        "(integer-)",
+        "(integer/)",
+        "(float-)",
+        "(float/)",
+        "(complex-)",
+        "(complex/)",
+    ])
+    def test_zero_arg_sub_div_errors(self, menai, expr):
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate(expr)
+
+
+class TestTypeEnforcement:
+    """Typed operators enforce strict type homogeneity."""
+
+    @pytest.mark.parametrize("expr", [
+        # integer ops with wrong types
+        "(integer+ 1 1.0)",
+        "(integer+ 1 1j)",
+        "(integer* 1 1j)",
+        "(integer/ 4 2.0)",
+        # float ops with wrong types
+        "(float+ 1.0 1)",
+        "(float+ 1.0 1j)",
+        "(float- 1.0 1)",
+        "(float* 1.0 1j)",
+        "(float/ 4.0 2)",
+        # complex ops with wrong types
+        "(complex+ (integer->complex 1 0) 1)",
+        "(complex+ (integer->complex 1 0) 1.0)",
+        "(complex- (integer->complex 1 0) 1)",
+        "(complex* (integer->complex 1 0) 1.0)",
+        "(complex/ (integer->complex 4 0) 2)",
+    ])
+    def test_type_errors(self, menai, expr):
+        with pytest.raises(MenaiEvalError):
+            menai.evaluate(expr)

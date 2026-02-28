@@ -317,7 +317,7 @@ class SimpleTool(AITool):
 
 ## Tool Directory
 
-The subdirectories (`aifpl/`, `clock/`, `filesystem/`, etc.) contain concrete implementations of AI tools that follow the operation-based pattern. These serve as reference implementations demonstrating best practices for:
+The subdirectories (`menai/`, `clock/`, `filesystem/`, etc.) contain concrete implementations of AI tools that follow the operation-based pattern. These serve as reference implementations demonstrating best practices for:
 
 - Operation definition and routing
 - Parameter validation

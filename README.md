@@ -38,25 +38,25 @@ Think of it as an operating system for human-AI collaboration.
 
   We designed computers to give humans better, faster, and more reliable tools.
   Humbug's tool framework sets out to do the same for AIs.
-  Extends your LLMs with task delegation, dynamic filesystem operations, a clock, a custom pure functional programming language (AIFPL), and UI orchestration.
+  Extends your LLMs with task delegation, dynamic filesystem operations, a clock, a custom pure functional programming language (Menai), and UI orchestration.
   Humbug’s tool system is flexible, secure, and designed to make it easy to add new capabilities.
   Task delegation allows one LLM to make use of one or more other LLMs.
-  AIFPL (AI Functional Programming Language) is a pure functional language designed for AIs to use for calculations, string processing, or other algorithmic tasks.
+  Menai (AI Functional Programming Language) is a pure functional language designed for AIs to use for calculations, string processing, or other algorithmic tasks.
   The UI supports simultaneous conversations, file editing with syntax highlights, markdown preview pages, terminal emulators, a system shell, and a system log.
   UI orchestration means your AI can help you work and visualize things using any of these tools too.
   LLMs can check the status of terminal tabs and issue commands to them (subject to user approval).
   LLMs can also control and edit files using editor tabs.
   LLMs can search and query the contents of conversation tabs.
 
-- **AIFPL: a programming language designed for AIs**  
+- **Menai: a programming language designed for AIs**  
 
   Previously, programming languages were designed to meet the needs of human developers.
   While AIs are proficient with most of these languages, they risk being unsafe because they support potentially dangerous I/O operations.
-  AIFPL is an experimental, Lisp-inspired language designed to suit the needs of AIs for algorithmic processing operations.
+  Menai is an experimental, Lisp-inspired language designed to suit the needs of AIs for algorithmic processing operations.
   It supports higher-order functions and tail-call optimizations.
   It supports simple calculations and string processing, all the way through to highly complex algorithmic tasks.
-  Being side-effect free, AIFPL is intrinsically safe for AIs to use and does not require any user approvals.
-  The AIFPL implementation offers detailed exception handling to allow AIs to debug any issues in their own code.
+  Being side-effect free, Menai is intrinsically safe for AIs to use and does not require any user approvals.
+  The Menai implementation offers detailed exception handling to allow AIs to debug any issues in their own code.
 
 - **Open and extensible**  
 
@@ -97,9 +97,9 @@ The `conversations` directory in the Humbug git repository includes a lot of dis
 - **What's new:** [Latest updates](./CHANGELOG.md)
 - **Dive deeper:** [Getting started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor)
 - **Download:** [Download Humbug](https://github.com/m6r-ai/humbug/releases)
-- **Blog posts:** [Dave's blog posts about Humbug, Metaphor, and AIFPL](https://davehudson.io/blog)
+- **Blog posts:** [Dave's blog posts about Humbug, Metaphor, and Menai](https://davehudson.io/blog)
 - **Developer notes:** [Dave's project notes](https://davehudson.io/notes)
-- **AIFPL summary:** [AIFPL project page](https://davehudson.io/projects/aifpl)
+- **Menai summary:** [Menai project page](https://davehudson.io/projects/menai)
 - **Discord:** [Discord](https://discord.gg/GZhJ7ZtgwN)
 - **YouTube:** [@m6rai on YouTube](https://youtube.com/@m6rai)
 
