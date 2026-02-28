@@ -47,6 +47,9 @@ MenaiASTConstantFolder – constant folding optimization pass
 MenaiIRBuilder         – lower AST to IR (MenaiIRNode)
     │
     ▼
+MenaiIROptimizer       – IR-level dead binding elimination (fixed-point loop)
+    │
+    ▼
 MenaiCodegen           – generate bytecode (MenaiBytecode / CodeObject)
     │
     ▼

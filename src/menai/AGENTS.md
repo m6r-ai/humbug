@@ -33,6 +33,8 @@ MenaiASTConstantFolder      menai_ast_constant_folder.py   (AST optimization pas
     ↓
 MenaiIRBuilder              menai_ir_builder.py
     ↓
+MenaiIROptimizer            menai_ir_optimizer.py          (IR optimization pass — fixed-point loop)
+    ↓
 MenaiCodeGen                menai_codegen.py
     ↓
 MenaiVM                     menai_vm.py
@@ -54,10 +56,12 @@ optimizations are applied across module boundaries.
 | `menai_semantic_analyzer.py` | Scope analysis, arity checking, free variable detection | Large |
 | `menai_module_resolver.py` | Resolves `import` forms, detects circular dependencies | Small |
 | `menai_desugarer.py` | Expands all syntactic sugar: `let`, `let*`, `letrec`, `quote`, `match`, etc. → canonical form | Very large |
-| `menai_constant_folder.py` | AST-level constant folding optimization pass | Very large |
+| `menai_ast_constant_folder.py` | AST-level constant folding optimization pass | Very large |
 | `menai_ir.py` | IR dataclasses (`MenaiIRExpr` union type) — the compilation plan | Small |
 | `menai_ir_builder.py` | Lowers desugared AST → IR. Resolves variable addressing, tail call detection | Large |
 | `menai_ir_optimization_pass.py` | Base class for IR optimization passes | Tiny |
+| `menai_ir_use_counter.py` | Pure analysis pass: counts all variable uses per frame; produces `IRUseCounts` | Medium |
+| `menai_ir_optimizer.py` | IR-level dead binding elimination pass; consumes `IRUseCounts` | Medium |
 | `menai_codegen.py` | Lowers IR → `CodeObject` bytecode | Medium |
 | `menai_bytecode.py` | `Opcode` enum, `Instruction`, `CodeObject`, `BUILTIN_OPCODE_MAP` | Medium |
 | `menai_bytecode_validator.py` | Validates bytecode correctness | Large |
@@ -70,6 +74,51 @@ optimizations are applied across module boundaries.
 | `menai_trace.py` | Trace watcher implementations | Small |
 | `menai_pretty_printer.py` | AST pretty printer | Medium |
 | `menai_dependency_analyzer.py` | Analyses binding group dependencies for `letrec` ordering | Small |
+
+## IR Optimization
+
+IR-level optimization sits between `MenaiIRBuilder` and `MenaiCodeGen` and is managed
+by the pass manager loop in `MenaiCompiler.compile()`.  The pass manager runs each IR
+pass to **fixed point**: after every pass in the list has been applied, if any pass
+reported a change the whole sequence is repeated until a full round produces no changes.
+
+### Pass infrastructure
+
+- **`MenaiIROptimizationPass`** (`menai_ir_optimization_pass.py`) — base class.
+  Each pass implements `optimize(ir) -> (new_ir, changed)`.  The pass must not mutate
+  the input tree; it returns a new tree and a boolean flag.
+- **`MenaiIRUseCounter`** (`menai_ir_use_counter.py`) — pure analysis pass.  Walks the
+  IR tree and produces an `IRUseCounts` annotation that records, for every lambda frame,
+  how many times each local variable slot is used.  Uses are split into two buckets:
+  - `local` — references within the same frame (including `is_parent_ref` back-references
+    from recursive lambdas inside the frame).
+  - `external` — references that cross a lambda boundary (i.e. the slot is captured as a
+    free variable by a nested lambda).
+  `IRUseCounts.total_count(frame_id, var_index)` is the primary query used by the
+  optimizer.  `lambda_frame_ids` maps `id(MenaiIRLambda)` → frame ID so each lambda's
+  counts can be looked up directly.
+
+### Current optimizations (`MenaiIROptimizer`)
+
+1. **Dead binding elimination** — any `let` or `letrec` binding whose `total_count` is
+   zero is dropped.  Because Menai is pure, the value expression can never have side
+   effects, so removing it is always safe.  When *all* bindings in a `let`/`letrec` are
+   dead the entire form collapses to its body.
+
+   For `letrec`, a binding is also considered dead when every use is an `is_parent_ref`
+   self-call — the binding is unreachable from outside its own recursive group.
+   `MenaiIROptimizer._count_parent_refs()` performs a lightweight local scan of the
+   binding's value plan to determine the self-reference count.
+
+### Adding a new IR optimization pass
+
+1. Create a new file (e.g. `menai_ir_my_pass.py`) with a class that extends
+   `MenaiIROptimizationPass` and implements `optimize(ir) -> (new_ir, changed)`.
+2. Instantiate the pass and append it to `self.ir_passes` in `MenaiCompiler.__init__()`.
+3. The pass manager will automatically run it to fixed point alongside the existing passes.
+4. If your pass needs use-count information, instantiate `MenaiIRUseCounter` inside
+   `optimize()` and call `.count(ir)` — do not cache counts across calls, as the tree
+   changes between iterations.
 
 ## The Prelude
 
