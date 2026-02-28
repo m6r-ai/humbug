@@ -455,33 +455,33 @@ class Menai:
                                  (list-slice lst start (list-first rest))))""",
         'list->string': """(lambda (lst . rest)
                              (list->string lst (if (list-null? rest) "" (list-first rest))))""",
-        'list-map': """(lambda (f lst)
+        'map-list': """(lambda (f lst)
                     (letrec ((helper (lambda (f lst acc)
                                        (if (list-null? lst) (list-reverse acc)
                                            (helper f (list-rest lst) (list-prepend acc (f (list-first lst))))))))
                     (helper f lst (list))))""",
-        'list-filter': """(lambda (pred lst)
+        'filter-list': """(lambda (pred lst)
                     (letrec ((helper (lambda (pred lst acc)
                                        (if (list-null? lst) (list-reverse acc)
                                            (if (pred (list-first lst))
                                                (helper pred (list-rest lst) (list-prepend acc (list-first lst)))
                                                (helper pred (list-rest lst) acc))))))
                         (helper pred lst (list))))""",
-        'list-fold': """(lambda (f init lst)
+        'fold-list': """(lambda (f init lst)
                     (letrec ((helper (lambda (f acc lst)
                                        (if (list-null? lst) acc
                                            (helper f (f acc (list-first lst)) (list-rest lst))))))
                     (helper f init lst)))""",
-        'list-find': """(lambda (pred lst)
-                    (letrec ((list-find (lambda (pred lst) (if (list-null? lst) #none (if (pred (list-first lst)) (list-first lst) (list-find pred (list-rest lst)))))))
-                    (list-find pred lst)))""",
-        'list-any?': """(lambda (pred lst)
-                    (letrec ((list-any? (lambda (pred lst) (if (list-null? lst) #f (if (pred (list-first lst)) #t (list-any? pred (list-rest lst)))))))
-                    (list-any? pred lst)))""",
-        'list-all?': """(lambda (pred lst)
-                    (letrec ((list-all? (lambda (pred lst) (if (list-null? lst) #t (if (pred (list-first lst)) (list-all? pred (list-rest lst)) #f)))))
-                    (list-all? pred lst)))""",
-        'list-zip': """(lambda (lst1 lst2)
+        'find-list': """(lambda (pred lst)
+                    (letrec ((find-list (lambda (pred lst) (if (list-null? lst) #none (if (pred (list-first lst)) (list-first lst) (find-list pred (list-rest lst)))))))
+                    (find-list pred lst)))""",
+        'any-list?': """(lambda (pred lst)
+                    (letrec ((any-list? (lambda (pred lst) (if (list-null? lst) #f (if (pred (list-first lst)) #t (any-list? pred (list-rest lst)))))))
+                    (any-list? pred lst)))""",
+        'all-list?': """(lambda (pred lst)
+                    (letrec ((all-list? (lambda (pred lst) (if (list-null? lst) #t (if (pred (list-first lst)) (all-list? pred (list-rest lst)) #f)))))
+                    (all-list? pred lst)))""",
+        'zip-list': """(lambda (lst1 lst2)
                     (letrec ((helper (lambda (l1 l2 acc)
                                        (if (or (list-null? l1) (list-null? l2))
                                            (list-reverse acc)
@@ -489,15 +489,7 @@ class Menai:
                                                    (list-prepend acc (list (list-first l1)
                                                                            (list-first l2))))))))
                       (helper lst1 lst2 (list))))""",
-        'list-unzip': """(lambda (lst)
-                      (letrec ((helper (lambda (lst acc1 acc2)
-                                         (if (list-null? lst)
-                                             (list (list-reverse acc1) (list-reverse acc2))
-                                             (helper (list-rest lst)
-                                                     (list-prepend acc1 (list-first (list-first lst)))
-                                                     (list-prepend acc2 (list-first (list-rest (list-first lst)))))))))
-                        (helper lst (list) (list))))""",
-        'list-sort': """(lambda (cmp lst)
+        'sort-list': """(lambda (cmp lst)
                     (letrec
                       ((merge (lambda (cmp a b acc)
                                 (if (list-null? a)
@@ -552,7 +544,7 @@ class Menai:
                                 (outer args))))""",
         'dict-get': """(lambda (a-list key . rest)
                           (dict-get a-list key (if (list-null? rest) #none (list-first rest))))""",
-        'dict-map': """(lambda (f al)
+        'map-dict': """(lambda (f al)
                     (letrec ((loop (lambda (keys acc)
                                      (if (list-null? keys) acc
                                          (let* ((k (list-first keys))
@@ -560,7 +552,7 @@ class Menai:
                                            (loop (list-rest keys)
                                                  (dict-set acc k (f k v))))))))
                       (loop (dict-keys al) (dict))))""",
-        'dict-filter': """(lambda (pred al)
+        'filter-dict': """(lambda (pred al)
                     (letrec ((loop (lambda (keys acc)
                                      (if (list-null? keys) acc
                                          (let* ((k (list-first keys))

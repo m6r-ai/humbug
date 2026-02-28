@@ -412,7 +412,7 @@ class TestDictWithFunctionalOperations:
         """Test mapping over dict keys."""
         result = tool.evaluate('''
             (let ((data (dict (list "name" "Alice") (list "age" 30))))
-              (list-map string-upcase (dict-keys data)))
+              (map-list string-upcase (dict-keys data)))
         ''')
         assert result == ["NAME", "AGE"]
 
@@ -420,7 +420,7 @@ class TestDictWithFunctionalOperations:
         """Test filtering dict values."""
         result = tool.evaluate('''
             (let* ((data (dict (list "a" 1) (list "b" 2) (list "c" 3) (list "d" 4))))
-              (list-filter (lambda (v) (integer>? v 2)) (dict-values data)))
+              (filter-list (lambda (v) (integer>? v 2)) (dict-values data)))
         ''')
         assert result == [3, 4]
 
@@ -428,7 +428,7 @@ class TestDictWithFunctionalOperations:
         """Test folding over dict values."""
         result = tool.evaluate('''
             (let ((data (dict (list "a" 1) (list "b" 2) (list "c" 3))))
-              (list-fold integer+ 0 (dict-values data)))
+              (fold-list integer+ 0 (dict-values data)))
         ''')
         assert result == 6
 
@@ -439,7 +439,7 @@ class TestDictWithFunctionalOperations:
                            (dict (list "name" "Alice") (list "age" 30))
                            (dict (list "name" "Bob") (list "age" 25))
                            (dict (list "name" "Carol") (list "age" 35)))))
-              (list-map (lambda (p) (dict-get p "name")) people))
+              (map-list (lambda (p) (dict-get p "name")) people))
         ''')
         assert result == ["Alice", "Bob", "Carol"]
 
@@ -522,7 +522,7 @@ class TestDictComplexScenarios:
         """Test building dict from list data."""
         result = tool.evaluate('''
             (let* ((pairs (list (list "name" "Alice") (list "age" 30) (list "city" "NYC"))))
-              (list-fold (lambda (acc pair)
+              (fold-list (lambda (acc pair)
                       (dict-set acc (list-first pair) (list-first (list-rest pair))))
                     (dict)
                     pairs))

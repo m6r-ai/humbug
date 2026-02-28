@@ -323,25 +323,25 @@ class TestMenaiCollectionEdgeCases:
     def test_collection_higher_order_edge_cases(self, menai):
         """Test higher-order function edge cases with collections."""
         # Map with empty list
-        assert menai.evaluate("(list-map (lambda (x) (integer* x 2)) ())") == []
+        assert menai.evaluate("(map-list (lambda (x) (integer* x 2)) ())") == []
 
         # Filter with empty list
-        assert menai.evaluate("(list-filter (lambda (x) #t) ())") == []
+        assert menai.evaluate("(filter-list (lambda (x) #t) ())") == []
 
         # Fold with empty list
-        assert menai.evaluate("(list-fold integer+ 0 ())") == 0
+        assert menai.evaluate("(fold-list integer+ 0 ())") == 0
 
         # Map with single element
-        assert menai.evaluate("(list-map (lambda (x) (integer* x 2)) (list 5))") == [10]
+        assert menai.evaluate("(map-list (lambda (x) (integer* x 2)) (list 5))") == [10]
 
         # Filter that removes all elements
-        assert menai.evaluate("(list-filter (lambda (x) #f) (list 1 2 3))") == []
+        assert menai.evaluate("(filter-list (lambda (x) #f) (list 1 2 3))") == []
 
         # Filter that keeps all elements
-        assert menai.evaluate("(list-filter (lambda (x) #t) (list 1 2 3))") == [1, 2, 3]
+        assert menai.evaluate("(filter-list (lambda (x) #t) (list 1 2 3))") == [1, 2, 3]
 
         # Map with complex transformation
-        result = menai.evaluate("(list-map (lambda (x) (list x (integer* x 2))) (list 1 2 3))")
+        result = menai.evaluate("(map-list (lambda (x) (list x (integer* x 2))) (list 1 2 3))")
         assert result == [[1, 2], [2, 4], [3, 6]]
 
     def test_collection_search_edge_cases(self, menai):

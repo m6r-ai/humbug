@@ -68,8 +68,8 @@ class TestRecursiveNestedLambdas:
                               (list)
                               (let ((new-path (list-prepend path id)))
                                 (if (integer>? id 1)
-                                    (list-fold list-concat (list)
-                                          (list-map (lambda (next-id) (visit next-id new-path))
+                                    (fold-list list-concat (list)
+                                          (map-list (lambda (next-id) (visit next-id new-path))
                                                (list (integer- id 1))))
                                     (list id)))))))
               (visit 3 (list)))''',
@@ -110,11 +110,11 @@ class TestRecursiveNestedLambdas:
                           (let ((successors (get-successors task-id)))
                             (let ((new-path (list-concat path (list task-id)))
                                   (new-visited (list-prepend visited-in-path task-id)))
-                              (list-fold list-concat (list)
-                                    (list-map (lambda (succ) (dfs-visit succ new-path new-visited))
+                              (fold-list list-concat (list)
+                                    (map-list (lambda (succ) (dfs-visit succ new-path new-visited))
                                          successors))))))))
-              (list-fold list-concat (list)
-                    (list-map (lambda (task-id) (dfs-visit task-id (list) (list)))
+              (fold-list list-concat (list)
+                    (map-list (lambda (task-id) (dfs-visit task-id (list) (list)))
                          all-task-ids)))''',
             '()'  # No cycles detected
         )
@@ -128,7 +128,7 @@ class TestRecursiveNestedLambdas:
                                  (if (integer<=? n 1)
                                      #t
                                      (and (integer>? n 0) (is-valid (integer- n 1)))))))
-              (list-filter (lambda (x) (is-valid x)) (list 1 2 3)))''',
+              (filter-list (lambda (x) (is-valid x)) (list 1 2 3)))''',
             '(1 2 3)'
         )
 
@@ -141,8 +141,8 @@ class TestRecursiveNestedLambdas:
                                (if (integer<=? n 0)
                                    0
                                    (integer+ n (sum-to (integer- n 1)))))))
-              (list-fold integer+ 0
-                    (list-map (lambda (x) (sum-to x)) (list 1 2 3))))''',
+              (fold-list integer+ 0
+                    (map-list (lambda (x) (sum-to x)) (list 1 2 3))))''',
             '10'  # sum-to(1)=1, sum-to(2)=3, sum-to(3)=6, total=10
         )
 
@@ -153,7 +153,7 @@ class TestRecursiveNestedLambdas:
             menai,
             '''(letrec ((is-even (lambda (n) (if (integer=? n 0) #t (is-odd (integer- n 1)))))
                   (is-odd (lambda (n) (if (integer=? n 0) #f (is-even (integer- n 1))))))
-              (list-map (lambda (x) (is-even x)) (list 0 1 2 3 4)))''',
+              (map-list (lambda (x) (is-even x)) (list 0 1 2 3 4)))''',
             '(#t #f #t #f #t)'
         )
 
@@ -165,9 +165,9 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((process (lambda (n)
                                (if (integer<=? n 0)
                                    (list)
-                                   (list-fold list-concat
+                                   (fold-list list-concat
                                          (list n)
-                                         (list-map (lambda (x) (process (integer- x 1)))
+                                         (map-list (lambda (x) (process (integer- x 1)))
                                               (list n)))))))
               (process 3))''',
             '(3 2 1)'
@@ -182,7 +182,7 @@ class TestRecursiveNestedLambdas:
                                  (if (integer<=? n 1)
                                      #t
                                      (has-path (integer- n 1))))))
-              (list-any? (lambda (x) (has-path x)) (list 1 2 3)))''',
+              (any-list? (lambda (x) (has-path x)) (list 1 2 3)))''',
             '#t'
         )
 
@@ -193,7 +193,7 @@ class TestRecursiveNestedLambdas:
                                            (if (integer<=? n 1)
                                                #t
                                                (and (integer>? n 0) (is-positive-chain (integer- n 1)))))))
-              (list-all? (lambda (x) (is-positive-chain x)) (list 1 2 3)))''',
+              (all-list? (lambda (x) (is-positive-chain x)) (list 1 2 3)))''',
             '#t'
         )
 
@@ -208,7 +208,7 @@ class TestRecursiveNestedLambdas:
                                            (if (integer<? n target)
                                                #f
                                                (reaches-target (integer- n 1) target))))))
-              (list-find (lambda (x) (reaches-target x 5)) (list 3 5 7)))''',
+              (find-list (lambda (x) (reaches-target x 5)) (list 3 5 7)))''',
             '5'
         )
 
@@ -227,7 +227,7 @@ class TestRecursiveNestedLambdas:
                               (if (list-member? visited node)
                                   visited
                                   (let ((new-visited (list-prepend visited node)))
-                                    (list-fold (lambda (acc neighbor)
+                                    (fold-list (lambda (acc neighbor)
                                            (visit-all neighbor acc))
                                           new-visited
                                           (get-neighbors node)))))))
@@ -243,9 +243,9 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((compute (lambda (n)
                                (if (integer<=? n 1)
                                    (list n)
-                                   (list-fold list-concat
+                                   (fold-list list-concat
                                          (list n)
-                                         (list-map (lambda (x)
+                                         (map-list (lambda (x)
                                                (let ((result (compute (integer- x 1))))
                                                  result))
                                               (list n)))))))
@@ -261,9 +261,9 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((process (lambda (n)
                                (if (integer<=? n 0)
                                    0
-                                   (list-fold integer+
+                                   (fold-list integer+
                                          n
-                                         (list-map (lambda (x)
+                                         (map-list (lambda (x)
                                                (if (integer>? x 1)
                                                    (process (integer- x 1))
                                                    0))
@@ -280,12 +280,12 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((outer (lambda (n)
                              (if (integer<=? n 0)
                                  0
-                                 (list-fold integer+
+                                 (fold-list integer+
                                        0
-                                       (list-map (lambda (a)
-                                             (list-fold integer+
+                                       (map-list (lambda (a)
+                                             (fold-list integer+
                                                    0
-                                                   (list-map (lambda (b)
+                                                   (map-list (lambda (b)
                                                          (if (integer>? b 0)
                                                              (outer (integer- b 1))
                                                              b))
@@ -303,9 +303,9 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((fib (lambda (n)
                            (if (integer<=? n 1)
                                n
-                               (list-fold integer+
+                               (fold-list integer+
                                      0
-                                     (list-map (lambda (x) (fib x))
+                                     (map-list (lambda (x) (fib x))
                                           (list (integer- n 1) (integer- n 2))))))))
               (fib 6))''',
             '8'  # Fibonacci(6) = 8
@@ -320,9 +320,9 @@ class TestRecursiveNestedLambdas:
                   (compute (lambda (n)
                             (if (integer<=? n 0)
                                 base
-                                (list-fold integer+
+                                (fold-list integer+
                                       0
-                                      (list-map (lambda (x) (compute (integer- x 1)))
+                                      (map-list (lambda (x) (compute (integer- x 1)))
                                            (list n)))))))
               (compute 2))''',
             '10'  # compute(2) -> map over (list 2) -> compute(1) -> base = 10
@@ -336,9 +336,9 @@ class TestRecursiveNestedLambdas:
             '''(letrec ((count-down (lambda (n acc)
                                    (if (integer<=? n 0)
                                        acc
-                                       (list-fold integer+
+                                       (fold-list integer+
                                              0
-                                             (list-map (lambda (x) (count-down (integer- x 1) (integer+ acc 1)))
+                                             (map-list (lambda (x) (count-down (integer- x 1) (integer+ acc 1)))
                                                    (list n)))))))
               (count-down 10 0))''',
             '10'
@@ -355,9 +355,9 @@ class TestRecursiveNestedLambdasBytecode:
             '''(letrec ((visit (lambda (n)
                              (if (integer<=? n 1)
                                  (list n)
-                                 (list-fold list-concat
+                                 (fold-list list-concat
                                        (list n)
-                                       (list-map (lambda (x) (visit (integer- x 1)))
+                                       (map-list (lambda (x) (visit (integer- x 1)))
                                             (list n)))))))
               (visit 4))''',
             '(4 3 2 1)'
@@ -383,7 +383,7 @@ class TestRecursiveNestedLambdasBytecode:
             menai,
             '''(letrec ((ping (lambda (n) (if (integer<=? n 0) 0 (integer+ 1 (pong (integer- n 1))))))
                   (pong (lambda (n) (if (integer<=? n 0) 0 (integer+ 1 (ping (integer- n 1)))))))
-              (list-map (lambda (x) (ping x)) (list 1 2 3)))''',
+              (map-list (lambda (x) (ping x)) (list 1 2 3)))''',
             '(1 2 3)'
         )
 
@@ -395,9 +395,9 @@ class TestRecursiveNestedLambdasBytecode:
                   (recurse (lambda (n)
                             (if (integer<=? n 0)
                                 outer
-                                (list-fold integer+
+                                (fold-list integer+
                                       0
-                                      (list-map (lambda (x) (recurse (integer- x 1)))
+                                      (map-list (lambda (x) (recurse (integer- x 1)))
                                            (list n)))))))
               (recurse 3))''',
             '100'  # recurse(3) -> map over (list 3) -> recurse(2) -> ... -> recurse(0) -> outer = 100

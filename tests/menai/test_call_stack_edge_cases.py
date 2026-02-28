@@ -40,15 +40,15 @@ class TestMenaiCallStackEdgeCases:
     def test_call_stack_with_higher_order_functions(self, menai):
         """Test call stack with higher-order functions."""
         # Map function creates nested calls
-        result = menai.evaluate("(list-map (lambda (x) (integer* x 2)) (list 1 2 3))")
+        result = menai.evaluate("(map-list (lambda (x) (integer* x 2)) (list 1 2 3))")
         assert result == [2, 4, 6]
 
         # Filter function with predicate calls
-        result = menai.evaluate("(list-filter (lambda (x) (integer>? x 2)) (list 1 2 3 4))")
+        result = menai.evaluate("(filter-list (lambda (x) (integer>? x 2)) (list 1 2 3 4))")
         assert result == [3, 4]
 
         # Fold function with accumulator calls
-        result = menai.evaluate("(list-fold integer+ 0 (list 1 2 3 4))")
+        result = menai.evaluate("(fold-list integer+ 0 (list 1 2 3 4))")
         assert result == 10
 
     def test_call_stack_with_let_bindings(self, menai):
@@ -107,7 +107,7 @@ class TestMenaiCallStackEdgeCases:
 
         # Error in higher-order function
         with pytest.raises(MenaiEvalError):
-            menai.evaluate("(list-map (lambda (x) (integer/ x 0)) (list 1 2 3))")
+            menai.evaluate("(map-list (lambda (x) (integer/ x 0)) (list 1 2 3))")
 
     def test_call_stack_with_recursive_functions(self, menai):
         """Test call stack with recursive functions (if supported)."""
@@ -139,9 +139,9 @@ class TestMenaiCallStackEdgeCases:
 
         # Complex functional expression
         functional_expr = """
-        (list-fold integer+ 0
-              (list-map (lambda (x) (integer* x x))
-                   (list-filter (lambda (x) (integer>? x 0))
+        (fold-list integer+ 0
+              (map-list (lambda (x) (integer* x x))
+                   (filter-list (lambda (x) (integer>? x 0))
                            (list -2 1 -3 2 3))))
         """
         result = menai.evaluate(functional_expr)
@@ -197,8 +197,8 @@ class TestMenaiCallStackEdgeCases:
         # List operations with transformations
         result = menai.evaluate("""
         (list-length
-          (list-filter (lambda (x) (integer>? x 0))
-                  (list-map (lambda (x) (integer- x 2))
+          (filter-list (lambda (x) (integer>? x 0))
+                  (map-list (lambda (x) (integer- x 2))
                        (list 1 2 3 4 5))))
         """)
         assert result == 3  # [-1, 0, 1, 2, 3] -> [1, 2, 3] -> length 3

@@ -515,7 +515,7 @@ class TestModuleCompilation:
         """Test module using map, filter, fold."""
         (tmp_path / "hof.menai").write_text("""
 (let ((sum-squares (lambda (lst)
-                     (list-fold integer+ 0 (list-map (lambda (x) (integer* x x)) lst)))))
+                     (fold-list integer+ 0 (map-list (lambda (x) (integer* x x)) lst)))))
   (dict (list "sum-squares" sum-squares)))
 """)
 

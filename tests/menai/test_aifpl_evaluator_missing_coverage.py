@@ -283,6 +283,6 @@ class TestEvaluatorMissingCoverage:
         result2 = menai.evaluate("(or #f #t)")
         assert result2 is True
 
-        result3 = menai.evaluate("(list-map (lambda (x) (integer* x 2)) (list 1 2 3))")
+        result3 = menai.evaluate("(map-list (lambda (x) (integer* x 2)) (list 1 2 3))")
         expected = [2, 4, 6]
         assert result3 == expected

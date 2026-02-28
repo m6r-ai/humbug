@@ -96,23 +96,23 @@ def test_dict_get_existing_key_with_default(menai):
 
 
 # ---------------------------------------------------------------------------
-# list-find returns #none when not found
+# find-list returns #none when not found
 # ---------------------------------------------------------------------------
 
 def test_list_find_not_found_returns_none(menai):
-    assert evaluate(menai, "(list-find (lambda (x) (integer>? x 10)) (list 1 2 3))") == "#none"
+    assert evaluate(menai, "(find-list (lambda (x) (integer>? x 10)) (list 1 2 3))") == "#none"
 
 
 def test_list_find_empty_list_returns_none(menai):
-    assert evaluate(menai, "(list-find (lambda (x) #t) (list))") == "#none"
+    assert evaluate(menai, "(find-list (lambda (x) #t) (list))") == "#none"
 
 
 def test_list_find_found_returns_element(menai):
-    assert evaluate(menai, "(list-find (lambda (x) (integer>? x 3)) (list 1 2 3 4 5))") == "4"
+    assert evaluate(menai, "(find-list (lambda (x) (integer>? x 3)) (list 1 2 3 4 5))") == "4"
 
 
 def test_list_find_none_predicate(menai):
-    assert evaluate(menai, "(none? (list-find (lambda (x) (integer>? x 10)) (list 1 2 3)))") == "#t"
+    assert evaluate(menai, "(none? (find-list (lambda (x) (integer>? x 10)) (list 1 2 3)))") == "#t"
 
 
 # ---------------------------------------------------------------------------

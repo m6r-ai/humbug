@@ -46,7 +46,7 @@ class TestSymbolP:
         assert menai.evaluate("(boolean? (symbol? 'x))") is True
 
     def test_all_elements_of_quoted_list_are_symbols(self, menai):
-        assert menai.evaluate("(list-all? symbol? '(a b c))") is True
+        assert menai.evaluate("(all-list? symbol? '(a b c))") is True
 
     def test_quoted_list_itself_is_not_symbol(self, menai):
         # The list '(a b) is a list, not a symbol
@@ -184,7 +184,7 @@ class TestSymbolToString:
 
     def test_map_over_quoted_list(self, menai):
         assert menai.evaluate(
-            "(list-map symbol->string '(foo bar baz))"
+            "(map-list symbol->string '(foo bar baz))"
         ) == ["foo", "bar", "baz"]
 
     def test_non_symbol_raises(self, menai):
@@ -232,7 +232,7 @@ class TestSymbolMatchPattern:
         # Classify elements of a mixed quoted list
         # Build with explicit list/quote to avoid parser issues with mixed quoted lists
         result = menai.evaluate("""
-            (list-map (lambda (x)
+            (map-list (lambda (x)
                    (match x
                      ((? symbol? s) (string-concat "sym:" (symbol->string s)))
                      ((? integer? n) (string-concat "int:" (integer->string n)))
@@ -256,17 +256,17 @@ class TestSymbolIntegration:
 
     def test_filter_symbols_from_mixed_list(self, menai):
         result = menai.evaluate(
-            "(list-filter symbol? '(foo 1 bar 2 baz))"
+            "(filter-list symbol? '(foo 1 bar 2 baz))"
         )
         # Result is a list of symbols — check their string names
         assert menai.evaluate(
-            "(list-map symbol->string (list-filter symbol? '(foo 1 bar 2 baz)))"
+            "(map-list symbol->string (filter-list symbol? '(foo 1 bar 2 baz)))"
         ) == ["foo", "bar", "baz"]
 
     def test_symbol_equality_in_filter(self, menai):
         # Keep only elements equal to 'x
         result = menai.evaluate(
-            "(list-length (list-filter (lambda (s) (symbol=? s 'x)) '(x y x z x)))"
+            "(list-length (filter-list (lambda (s) (symbol=? s 'x)) '(x y x z x)))"
         )
         assert result == 3
 
@@ -286,7 +286,7 @@ class TestSymbolIntegration:
     def test_collect_symbol_names_from_quoted_expr(self, menai):
         # Extract symbol names — avoid reserved keywords like 'let' in quoted list
         result = menai.evaluate("""
-            (list-map symbol->string
-                 (list-filter symbol? (list 'alpha 1 'beta 2)))
+            (map-list symbol->string
+                 (filter-list symbol? (list 'alpha 1 'beta 2)))
         """)
         assert result == ["alpha", "beta"]

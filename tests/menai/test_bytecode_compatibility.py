@@ -127,15 +127,15 @@ class TestHigherOrder:
     """Test higher-order function operations."""
 
     def test_map(self, menai):
-        result = menai.evaluate("(list-map (lambda (x) (integer* x 2)) (list 1 2 3))")
+        result = menai.evaluate("(map-list (lambda (x) (integer* x 2)) (list 1 2 3))")
         assert result == [2, 4, 6]
 
     def test_filter(self, menai):
-        result = menai.evaluate("(list-filter (lambda (x) (integer>? x 2)) (list 1 2 3 4))")
+        result = menai.evaluate("(filter-list (lambda (x) (integer>? x 2)) (list 1 2 3 4))")
         assert result == [3, 4]
 
     def test_fold(self, menai):
-        result = menai.evaluate("(list-fold integer+ 0 (list 1 2 3 4))")
+        result = menai.evaluate("(fold-list integer+ 0 (list 1 2 3 4))")
         assert result == 10
 
 

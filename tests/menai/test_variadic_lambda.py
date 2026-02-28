@@ -77,7 +77,7 @@ class TestVariadicLambdaArithmetic:
         """Variadic sum with zero arguments returns identity 0."""
         expr = '''
         (let ((my-sum (lambda (. args)
-                        (list-fold integer+ 0 args))))
+                        (fold-list integer+ 0 args))))
           (my-sum))
         '''
         assert menai.evaluate_and_format(expr) == '0'
@@ -86,7 +86,7 @@ class TestVariadicLambdaArithmetic:
         """Variadic sum with one argument returns that argument."""
         expr = '''
         (let ((my-sum (lambda (. args)
-                        (list-fold integer+ 0 args))))
+                        (fold-list integer+ 0 args))))
           (my-sum 7))
         '''
         assert menai.evaluate_and_format(expr) == '7'
@@ -95,7 +95,7 @@ class TestVariadicLambdaArithmetic:
         """Variadic sum with multiple arguments folds correctly."""
         expr = '''
         (let ((my-sum (lambda (. args)
-                        (list-fold integer+ 0 args))))
+                        (fold-list integer+ 0 args))))
           (my-sum 1 2 3 4 5))
         '''
         assert menai.evaluate_and_format(expr) == '15'
@@ -104,7 +104,7 @@ class TestVariadicLambdaArithmetic:
         """Variadic product using fold."""
         expr = '''
         (let ((my-product (lambda (. args)
-                            (list-fold integer* 1 args))))
+                            (fold-list integer* 1 args))))
           (my-product 2 3 4))
         '''
         assert menai.evaluate_and_format(expr) == '24'
@@ -113,7 +113,7 @@ class TestVariadicLambdaArithmetic:
         """Variadic minimum using letrec loop."""
         expr = '''
         (let ((my-min (lambda (first . rest)
-                        (list-fold (lambda (acc x) (if (integer<? x acc) x acc))
+                        (fold-list (lambda (acc x) (if (integer<? x acc) x acc))
                                    first
                                    rest))))
           (my-min 5 3 8 1 4))
@@ -124,7 +124,7 @@ class TestVariadicLambdaArithmetic:
         """Variadic maximum using fold."""
         expr = '''
         (let ((my-max (lambda (first . rest)
-                        (list-fold (lambda (acc x) (if (integer>? x acc) x acc))
+                        (fold-list (lambda (acc x) (if (integer>? x acc) x acc))
                                    first
                                    rest))))
           (my-max 5 3 8 1 4))
@@ -144,7 +144,7 @@ class TestVariadicLambdaListOps:
         """Variadic list-concat using fold."""
         expr = '''
         (let ((my-list-concat (lambda (. lists)
-                           (list-fold list-concat (list) lists))))
+                           (fold-list list-concat (list) lists))))
           (my-list-concat (list 1 2) (list 3 4) (list 5)))
         '''
         assert menai.evaluate_and_format(expr) == '(1 2 3 4 5)'
@@ -153,7 +153,7 @@ class TestVariadicLambdaListOps:
         """Variadic string concatenation using fold."""
         expr = '''
         (let ((my-concat (lambda (. strs)
-                           (list-fold string-concat "" strs))))
+                           (fold-list string-concat "" strs))))
           (my-concat "hello" " " "world"))
         '''
         assert menai.evaluate_and_format(expr) == '"hello world"'
@@ -172,7 +172,7 @@ class TestVariadicLambdaHigherOrder:
         # map calls (f element) with exactly 1 arg, so rest is empty
         expr = '''
         (let ((wrap (lambda (x . rest) (list-prepend rest x))))
-          (list-map wrap (list 1 2 3)))
+          (map-list wrap (list 1 2 3)))
         '''
         assert menai.evaluate_and_format(expr) == '((1) (2) (3))'
 
@@ -181,8 +181,8 @@ class TestVariadicLambdaHigherOrder:
         # fold calls (f acc element) with exactly 2 args
         expr = '''
         (let ((my-add (lambda (a . rest)
-                        (list-fold integer+ a rest))))
-          (list-fold my-add 0 (list 1 2 3 4)))
+                        (fold-list integer+ a rest))))
+          (fold-list my-add 0 (list 1 2 3 4)))
         '''
         assert menai.evaluate_and_format(expr) == '10'
 
@@ -191,7 +191,7 @@ class TestVariadicLambdaHigherOrder:
         expr = '''
         (let ((make-adder (lambda (base)
                             (lambda (. args)
-                              (list-fold integer+ base args)))))
+                              (fold-list integer+ base args)))))
           (let ((add-from-10 (make-adder 10)))
             (add-from-10 1 2 3)))
         '''
@@ -212,8 +212,8 @@ class TestVariadicLambdaHigherOrder:
     def test_variadic_stored_in_list(self, menai):
         """Variadic functions stored in a list and retrieved by index."""
         expr = '''
-        (let ((ops (list (lambda (. args) (list-fold integer+ 0 args))
-                         (lambda (. args) (list-fold integer* 1 args)))))
+        (let ((ops (list (lambda (. args) (fold-list integer+ 0 args))
+                         (lambda (. args) (fold-list integer* 1 args)))))
           (list ((list-first ops) 1 2 3)
                 ((list-ref ops 1) 2 3 4)))
         '''
@@ -244,7 +244,7 @@ class TestVariadicLambdaTailCalls:
                                           (if (list-null? lst) acc
                                               (loop (list-rest lst) (integer+ acc (list-first lst)))))))
                            (loop args 0)))))
-          (list-fold (lambda (f x) (f x))
+          (fold-list (lambda (f x) (f x))
                      sum-all
                      (list (lambda (f) (f 1 2 3 4 5 6 7 8 9 10
                                           11 12 13 14 15 16 17 18 19 20)))))
@@ -307,7 +307,7 @@ class TestVariadicLambdaClosures:
         """Rest-parameter lambda can close over an outer binding."""
         expr = '''
         (let ((base 100))
-          ((lambda (. args) (list-fold integer+ base args)) 1 2 3))
+          ((lambda (. args) (fold-list integer+ base args)) 1 2 3))
         '''
         assert menai.evaluate_and_format(expr) == '106'
 
@@ -316,7 +316,7 @@ class TestVariadicLambdaClosures:
         expr = '''
         (let ((scale 3))
           (let ((scale-and-sum (lambda (. args)
-                                 (list-fold integer+ 0 (list-map (lambda (x) (integer* x scale)) args)))))
+                                 (fold-list integer+ 0 (map-list (lambda (x) (integer* x scale)) args)))))
             (scale-and-sum 1 2 3 4)))
         '''
         # (1+2+3+4)*3 = 30
@@ -327,7 +327,7 @@ class TestVariadicLambdaClosures:
         expr = '''
         (let ((make-accumulator (lambda (init)
                                   (lambda (. args)
-                                    (list-fold integer+ init args)))))
+                                    (fold-list integer+ init args)))))
           (let ((acc (make-accumulator 1000)))
             (acc 1 2 3)))
         '''

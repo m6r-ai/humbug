@@ -311,21 +311,21 @@ BENCHMARKS = [
     Benchmark("List Position", "lists", "(list-index (list 1 2 3 4 5 6 7 8 9 10) 7)", iterations=3000),
 
     # === HIGHER-ORDER FUNCTIONS ===
-    Benchmark("Map (10)", "higher-order", "(list-map (lambda (x) (integer* x x)) (list 1 2 3 4 5 6 7 8 9 10))", iterations=1000),
-    Benchmark("Map (50)", "higher-order", "(list-map (lambda (x) (integer* x x)) (range 1 51))", iterations=200),
-    Benchmark("Map (100)", "higher-order", "(list-map (lambda (x) (integer* x x)) (range 1 101))", iterations=100),
-    Benchmark("Filter (50)", "higher-order", "(list-filter (lambda (x) (integer>? x 25)) (range 1 51))", iterations=200),
-    Benchmark("Filter (100)", "higher-order", "(list-filter (lambda (x) (integer>? x 50)) (range 1 101))", iterations=100),
-    Benchmark("Fold (50)", "higher-order", "(list-fold integer+ 0 (range 1 51))", iterations=200),
-    Benchmark("Fold (100)", "higher-order", "(list-fold integer+ 0 (range 1 101))", iterations=100),
+    Benchmark("Map (10)", "higher-order", "(map-list (lambda (x) (integer* x x)) (list 1 2 3 4 5 6 7 8 9 10))", iterations=1000),
+    Benchmark("Map (50)", "higher-order", "(map-list (lambda (x) (integer* x x)) (range 1 51))", iterations=200),
+    Benchmark("Map (100)", "higher-order", "(map-list (lambda (x) (integer* x x)) (range 1 101))", iterations=100),
+    Benchmark("Filter (50)", "higher-order", "(filter-list (lambda (x) (integer>? x 25)) (range 1 51))", iterations=200),
+    Benchmark("Filter (100)", "higher-order", "(filter-list (lambda (x) (integer>? x 50)) (range 1 101))", iterations=100),
+    Benchmark("Fold (50)", "higher-order", "(fold-list integer+ 0 (range 1 51))", iterations=200),
+    Benchmark("Fold (100)", "higher-order", "(fold-list integer+ 0 (range 1 101))", iterations=100),
     Benchmark(
-        "Map+Filter Pipeline", "higher-order", "(list-filter (lambda (x) (integer>? x 50)) (list-map (lambda (x) (integer* x 2)) (range 1 51)))",
+        "Map+Filter Pipeline", "higher-order", "(filter-list (lambda (x) (integer>? x 50)) (map-list (lambda (x) (integer* x 2)) (range 1 51)))",
         iterations=100
     ),
-    Benchmark("Map+Fold Pipeline", "higher-order", "(list-fold integer+ 0 (list-map (lambda (x) (integer* x x)) (range 1 51)))", iterations=100),
-    Benchmark("Find", "higher-order", "(list-find (lambda (x) (integer>? x 50)) (range 1 101))", iterations=500),
-    Benchmark("Any?", "higher-order", "(list-any? (lambda (x) (integer>? x 90)) (range 1 101))", iterations=500),
-    Benchmark("All?", "higher-order", "(list-all? (lambda (x) (integer>? x 0)) (range 1 101))", iterations=500),
+    Benchmark("Map+Fold Pipeline", "higher-order", "(fold-list integer+ 0 (map-list (lambda (x) (integer* x x)) (range 1 51)))", iterations=100),
+    Benchmark("Find", "higher-order", "(find-list (lambda (x) (integer>? x 50)) (range 1 101))", iterations=500),
+    Benchmark("Any?", "higher-order", "(any-list? (lambda (x) (integer>? x 90)) (range 1 101))", iterations=500),
+    Benchmark("All?", "higher-order", "(all-list? (lambda (x) (integer>? x 0)) (range 1 101))", iterations=500),
 
     # === STRING OPERATIONS ===
     Benchmark("String Concatenate", "strings", '(string-concat "hello" " " "world")', iterations=5000),
@@ -373,13 +373,13 @@ BENCHMARKS = [
     # === REDICTIC WORKLOADS ===
     Benchmark("Data Processing", "redictic",
               """(let ((data (range 1 21)))
-                   (list-fold integer+ 0 (list-map (lambda (x) (integer* x x)) (list-filter (lambda (x) (integer>? x 10)) data))))""", iterations=200),
+                   (fold-list integer+ 0 (map-list (lambda (x) (integer* x x)) (filter-list (lambda (x) (integer>? x 10)) data))))""", iterations=200),
     Benchmark("Nested Data Structure", "redictic",
               """(let ((users (list
                               (dict (list "name" "Alice") (list "age" 30))
                               (dict (list "name" "Bob") (list "age" 25))
                               (dict (list "name" "Charlie") (list "age" 35)))))
-                   (list-map (lambda (user) (dict-get user "age")) users))""", iterations=500),
+                   (map-list (lambda (user) (dict-get user "age")) users))""", iterations=500),
     Benchmark("Recursive List Processing", "redictic",
               """(letrec ((sum-list (lambda (lst)
                                      (if (list-null? lst)
@@ -387,7 +387,7 @@ BENCHMARKS = [
                                          (integer+ (list-first lst) (sum-list (list-rest lst)))))))
                    (sum-list (list 1 2 3 4 5 6 7 8 9 10)))""", iterations=500),
     Benchmark("Pattern Match Pipeline", "redictic",
-              """(list-map (lambda (x)
+              """(map-list (lambda (x)
                                (match x
                                  ((integer? i) (integer* i 2))
                                  ((string? s) (string-length s))

@@ -181,21 +181,21 @@ class TestMenaiEnvironmentEdgeCases:
         # Lambda passed to map captures environment
         result = menai.evaluate("""
         (let ((multiplier 3))
-          (list-map (lambda (x) (integer* x multiplier)) (list 1 2 3)))
+          (map-list (lambda (x) (integer* x multiplier)) (list 1 2 3)))
         """)
         assert result == [3, 6, 9]
 
         # Filter with closure
         result = menai.evaluate("""
         (let ((threshold 2))
-          (list-filter (lambda (x) (integer>? x threshold)) (list 1 2 3 4)))
+          (filter-list (lambda (x) (integer>? x threshold)) (list 1 2 3 4)))
         """)
         assert result == [3, 4]
 
         # Fold with closure
         result = menai.evaluate("""
         (let ((base 10))
-          (list-fold (lambda (acc x) (integer+ acc x base)) 0 (list 1 2 3)))
+          (fold-list (lambda (acc x) (integer+ acc x base)) 0 (list 1 2 3)))
         """)
         assert result == 36  # 0 + (1+10) + (2+10) + (3+10) = 36
 
@@ -333,7 +333,7 @@ class TestMenaiEnvironmentEdgeCases:
         # String operations with closures
         result = menai.evaluate("""
         (let ((prefix "Hello, "))
-          (list-map (lambda (name) (string-concat prefix name))
+          (map-list (lambda (name) (string-concat prefix name))
                (list "Alice" "Bob" "Charlie")))
         """)
         assert result == ["Hello, Alice", "Hello, Bob", "Hello, Charlie"]

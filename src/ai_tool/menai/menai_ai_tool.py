@@ -179,7 +179,7 @@ Syntax: (operator arg1 arg2 ...)
 - Represents the absence of a value — distinct from #f (boolean false)
 - Literal: #none
 - Type predicate: (none? x) → #t if x is #none, #f otherwise
-- Returned by: dict-get (missing key, no default), list-find (not found), list-index (not found), string-index (not found), string->number (unparseable), string->integer (unparseable)
+- Returned by: dict-get (missing key, no default), find-list (not found), list-index (not found), string-index (not found), string->number (unparseable), string->integer (unparseable)
 - Pattern matching: (match x (#none "absent") (_ "present"))
 - #none is not a boolean; (if #none ...) is a type error
 - Can be stored in lists and dicts as a value
@@ -319,16 +319,6 @@ Syntax: (operator arg1 arg2 ...)
 - (list-slice (list 1 2 3 4 5) 2) → (3 4 5), (list-slice (list 1 2 3 4 5) 1 3) → (2 3)
 - (list->string (list "h" "e" "l" "l" "o")) → "hello" (no separator: concatenates directly; all elements must be strings)
 - (list->string (list "a" "b" "c") ",") → "a,b,c" (separator inserted between elements; separator may be multi-character)
-- Higher-order: (list-map func list) → (list-map (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
-- Higher-order: (list-filter predicate list) → (list-filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
-- Higher-order: (list-fold func init list) → left fold (tail-recursive); processes list left-to-right, accumulating into init: (list-fold integer+ 0 (list 1 2 3 4)) → 10, (list-fold integer- 0 (list 1 2 3)) → -6
-- Higher-order: (list-find predicate list) → first element satisfying predicate, or #none if none found: (list-find (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → 4, note: (list-find predicate ()) → #none
-- Higher-order: (list-any? predicate list) → #t if at least one element satisfies predicate, #f otherwise: (list-any? (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → #t, note: (list-any? predicate ()) → #f
-- Higher-order: (list-all? predicate list) → #t if all elements satisfy predicate, #f otherwise: (list-all? (lambda (x) (integer>? x 0)) (list 1 2 3 4 5)) → #t, note: (list-all? predicate ()) → #t (vacuously true)
-- Higher-order: (list-zip lst1 lst2) → pairs corresponding elements: (list-zip (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6)), (list-zip lst1 lst2) stops at the shorter list: (list-zip (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
-- Higher-order: (list-unzip lst) → inverse of list-zip; splits a list of 2-element lists into a list of two lists: (list-unzip (list (list 1 4) (list 2 5) (list 3 6))) → ((1 2 3) (4 5 6))
-- list-unzip returns a 2-element list: (list-first result) → first elements, (list-ref result 1) → second elements
-- Higher-order: (list-sort comparator lst) → returns a new list sorted by comparator; comparator is a two-argument function returning #t if first arg should come before second: (list-sort integer<? (list 3 1 4 1 5)) → (1 1 3 4 5), (list-sort string<? (list "b" "a" "c")) → ("a" "b" "c"); sort is stable and preserves insertion order of equal elements
 
 ## Dictionaries (dicts):
 
@@ -343,9 +333,6 @@ Syntax: (operator arg1 arg2 ...)
 - Merging: (dict-merge dict1 dict2) - second wins on conflicts
 - Type checking: (dict? value)
 - Nested dicts: (dict (list "user" (dict (list "name" "Bob") (list "id" 123))))
-- Higher-order: (dict-map func dict) → applies func to each (key value) pair, returning a new dict with transformed values; func receives key and value as separate arguments: (dict-map (lambda (k v) (integer* v 2)) (dict (list "a" 1) (list "b" 2))) → {("a" 2) ("b" 4)}
-- Higher-order: (dict-filter pred dict) → returns a new dict containing only entries where pred returns #t; pred receives key and value as separate arguments: (dict-filter (lambda (k v) (integer>? v 1)) (dict (list "a" 1) (list "b" 2))) → {("b" 2)}
-- Works with functional operations: (list-map f (dict-keys data)), (list-filter pred (dict-values data))
 - Pattern matching: (match data ((? dict? a) ...) (_ ...))
 - Maintains insertion order, optimized for data processing workflows
 
@@ -355,7 +342,7 @@ Syntax: (operator arg1 arg2 ...)
 - Equality: (symbol=? a b) → #t, (symbol!=? a b) → #t if a and b are different symbols
 - (symbol->string 'foo) → "foo" (extracts the symbol name as a string)
 - Symbols are produced only by quote: 'foo, '(a b c) contains symbols a, b, c
-- Example: (list-map symbol->string '(foo bar baz)) → ("foo" "bar" "baz")
+- Example: (map-list symbol->string '(foo bar baz)) → ("foo" "bar" "baz")
 
 ## Function operations:
 
@@ -369,9 +356,19 @@ Syntax: (operator arg1 arg2 ...)
 - (function-variadic? f) → #t if f accepts more arguments than its minimum (has a rest parameter), (function-variadic? integer+) → #t, (function-variadic? integer-abs) → #f
 - (function-accepts? f n) → #t if calling f with exactly n arguments satisfies its arity requirements, (function-accepts? integer-abs 1) → #t, (function-accepts? integer-abs 2) → #f, (function-accepts? integer+ 0) → #t, (function-accepts? integer+ 99) → #t, (function-accepts? (lambda (x . rest) x) 0) → #f, (function-accepts? (lambda (x . rest) x) 3) → #t
 
-## Other operations:
+## Higher-order and other operations:
 
 - (range start end [step]) → (range 1 5) → (1 2 3 4), integers only
+- (map-list func list) → (map-list (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
+- (map-dict func dict) → applies func to each (key value) pair, returning a new dict with transformed values; func receives key and value as separate arguments: (map-dict (lambda (k v) (integer* v 2)) (dict (list "a" 1) (list "b" 2))) → {("a" 2) ("b" 4)}
+- (filter-list predicate list) → (filter-list (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
+- (filter-dict pred dict) → returns a new dict containing only entries where pred returns #t; pred receives key and value as separate arguments: (filter-dict (lambda (k v) (integer>? v 1)) (dict (list "a" 1) (list "b" 2))) → {("b" 2)}
+- (fold-list func init list) → left fold (tail-recursive); processes list left-to-right, accumulating into init: (fold-list integer+ 0 (list 1 2 3 4)) → 10, (fold-list integer- 0 (list 1 2 3)) → -6
+- (find-list predicate list) → first element satisfying predicate, or #none if none found: (find-list (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → 4, note: (find-list predicate ()) → #none
+- (any-list? predicate list) → #t if at least one element satisfies predicate, #f otherwise: (any-list? (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → #t, note: (any-list? predicate ()) → #f
+- (all-list? predicate list) → #t if all elements satisfy predicate, #f otherwise: (all-list? (lambda (x) (integer>? x 0)) (list 1 2 3 4 5)) → #t, note: (all-list? predicate ()) → #t (vacuously true)
+- (zip-list lst1 lst2) → pairs corresponding elements: (zip-list (list 1 2 3) (list 4 5 6)) → ((1 4) (2 5) (3 6)), (zip-list lst1 lst2) stops at the shorter list: (zip-list (list 1 2 3) (list 4 5)) → ((1 4) (2 5))
+- (sort-list comparator lst) → returns a new list sorted by comparator; comparator is a two-argument function returning #t if first arg should come before second: (sort-list integer<? (list 3 1 4 1 5)) → (1 1 3 4 5), (sort-list string<? (list "b" "a" "c")) → ("a" "b" "c"); sort is stable and preserves insertion order of equal elements
 
 ## Conditionals
 
@@ -388,7 +385,7 @@ Syntax: (operator arg1 arg2 ...)
 - (lambda (param1 . rest) body) → variadic: rest receives remaining args as a list (possibly empty)
 - (lambda (. rest) body) → fully variadic: rest receives all args as a list
 - ((lambda (x) (integer* x x)) 5) → 25
-- ((lambda (. args) (list-fold integer+ 0 args)) 1 2 3 4 5) → 15 (variadic sum)
+- ((lambda (. args) (fold-list integer+ 0 args)) 1 2 3 4 5) → 15 (variadic sum)
 - ((lambda (x . rest) (list-prepend (list-reverse rest) x)) 1 2 3) → (1 3 2)
 - Functions are first-class values with lexical scoping and closures
 - Tail recursion automatically optimized
@@ -483,10 +480,11 @@ Syntax: (operator arg1 arg2 ...)
 - Strict typing: string ops need strings, boolean ops need booleans
 - float-floor, float-ceil, float-round all return float, not integer; use (float->integer (float-round x)) to get an integer
 - All comparison operators are type-specific: use integer=?, float<?, string>=? etc.
-- Lists and dicts support =? and !=? only; they have no ordering
 - Conditions must be boolean: (if #t ...) works, (if 1 ...) doesn't - there is no concept of "truthiness"
 - #none is not a boolean and cannot be used as a condition; use (none? x) to test for absence
-- The user will not see the Menai code or Menai results directly; if you want to show either, you must format it as a message to the user.
+- The user CANNOT see Menai expressions or Menai results used with this tool directly; if you want to show either, you must format it as a message to the user.
+- Naming convention: direct operations are named, say, `list-X` with the list as the first argument; higher-order operations are named `X-list` with the function/predicate first and the list last. The same convention applies to dicts: `dict-X` for direct operations, `X-dict` for higher-order operations.
+
 """
 
     def _extract_evaluate_context(self, arguments: Dict[str, Any]) -> str | None:

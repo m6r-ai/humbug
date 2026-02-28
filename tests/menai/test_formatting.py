@@ -150,7 +150,7 @@ class TestFormatting:
         # filter operation
         helpers.assert_evaluates_to(
             menai, 
-            '(list-filter (lambda (x) (integer>? x 2)) (list 1 2 3 4))',
+            '(filter-list (lambda (x) (integer>? x 2)) (list 1 2 3 4))',
             '(3 4)'
         )
 
@@ -222,21 +222,21 @@ class TestFormatting:
         # Map results
         helpers.assert_evaluates_to(
             menai, 
-            '(list-map (lambda (x) (integer* x 2)) (list 1 2 3))', 
+            '(map-list (lambda (x) (integer* x 2)) (list 1 2 3))', 
             '(2 4 6)'
         )
 
         # Filter results
         helpers.assert_evaluates_to(
             menai, 
-            '(list-filter (lambda (x) (integer>? x 0)) (list -1 2 -3 4))',
+            '(filter-list (lambda (x) (integer>? x 0)) (list -1 2 -3 4))',
             '(2 4)'
         )
 
         # Fold results
         helpers.assert_evaluates_to(
             menai, 
-            '(list-fold integer+ 0 (list 1 2 3 4))', 
+            '(fold-list integer+ 0 (list 1 2 3 4))', 
             '10'
         )
 
@@ -360,8 +360,8 @@ class TestFormatting:
         """Test formatting of results from complex expressions."""
         # Complex functional pipeline
         complex_result = '''
-        (list-map (lambda (x) (integer+ x 1))
-             (list-filter (lambda (x) (integer>? x 0))
+        (map-list (lambda (x) (integer+ x 1))
+             (filter-list (lambda (x) (integer>? x 0))
                      (list -1 2 -3 4 5)))
         '''
         helpers.assert_evaluates_to(menai, complex_result, '(3 5 6)')

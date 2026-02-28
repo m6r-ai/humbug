@@ -129,8 +129,8 @@ class TestLetStarSemantics:
         helpers.assert_evaluates_to(
             menai,
             """(let* ((nums (list 1 2 3 4 5))
-                      (doubled (list-map (lambda (x) (integer* x 2)) nums))
-                      (sum (list-fold integer+ 0 doubled)))
+                      (doubled (map-list (lambda (x) (integer* x 2)) nums))
+                      (sum (fold-list integer+ 0 doubled)))
                 sum)""",
             "30"
         )

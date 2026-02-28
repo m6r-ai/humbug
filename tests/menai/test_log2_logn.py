@@ -67,7 +67,7 @@ class TestFloatLog2:
 
     def test_log2_first_class(self, menai):
         """float-log2 can be used as a first-class function."""
-        result = menai.evaluate("(list-map float-log2 (list 1.0 2.0 4.0 8.0))")
+        result = menai.evaluate("(map-list float-log2 (list 1.0 2.0 4.0 8.0))")
         assert result == [0.0, 1.0, 2.0, 3.0]
 
     def test_log2_identity(self, menai):
@@ -150,7 +150,7 @@ class TestFloatLogn:
     def test_logn_first_class(self, menai):
         """float-logn can be used as a first-class function."""
         result = menai.evaluate(
-            "(list-map (lambda (x) (float-logn x 10.0)) (list 1.0 10.0 100.0))"
+            "(map-list (lambda (x) (float-logn x 10.0)) (list 1.0 10.0 100.0))"
         )
         assert len(result) == 3
         assert abs(result[0] - 0.0) < 1e-13
@@ -216,7 +216,7 @@ class TestComplexLogn:
     def test_complex_logn_first_class(self, menai):
         """complex-logn can be used as a first-class function."""
         result = menai.evaluate(
-            "(list-map (lambda (z) (complex-logn z 10+0j)) (list 1+0j 10+0j 100+0j))"
+            "(map-list (lambda (z) (complex-logn z 10+0j)) (list 1+0j 10+0j 100+0j))"
         )
         assert len(result) == 3
         assert abs(result[0] - cmath.log(1+0j, 10+0j)) < 1e-14

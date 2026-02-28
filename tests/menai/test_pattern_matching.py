@@ -393,7 +393,7 @@ class TestPatternMatching:
         """Test pattern matching with map, filter, fold."""
         # Map with pattern matching
         map_with_match = '''
-        (list-map (lambda (item)
+        (map-list (lambda (item)
                (match item
                       ((? integer? n) (integer* n 2))
                       ((? string? s) (string-length s))
@@ -404,7 +404,7 @@ class TestPatternMatching:
 
         # Filter with pattern matching
         filter_with_match = '''
-        (list-filter (lambda (item)
+        (filter-list (lambda (item)
                   (match item
                          ((? integer? n) (integer>? n 5))
                          (_ #f)))
@@ -653,7 +653,7 @@ class TestPatternMatching:
         """Test pattern matching integrated with complex Menai expressions."""
         # Pattern matching in fold operation
         complex_fold = '''
-        (list-fold (lambda (acc item)
+        (fold-list (lambda (acc item)
                 (match item
                        ((? integer? n) (integer+ acc n))
                        ((? string? s) (integer+ acc (string-length s)))
@@ -669,7 +669,7 @@ class TestPatternMatching:
                                   (match data
                                          ((? integer? n) n)
                                          ((? string? s) (string-length s))
-                                         ((? list? l) (list-fold integer+ 0 (list-map process-nested l)))
+                                         ((? list? l) (fold-list integer+ 0 (map-list process-nested l)))
                                          (_ 0)))))
           (process-nested (list 10 "test" (list 5 "hi") 20)))
         '''

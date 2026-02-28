@@ -363,17 +363,17 @@ class TestErrors:
         """Test that higher-order function errors are detected."""
         # Map/filter/fold predicates must return appropriate types
         with pytest.raises(MenaiEvalError, match="condition must be boolean"):
-            menai.evaluate('(list-filter (lambda (x) x) (list 1 2 3))')
+            menai.evaluate('(filter-list (lambda (x) x) (list 1 2 3))')
 
         with pytest.raises(MenaiEvalError, match="condition must be boolean"):
-            menai.evaluate('(list-any? (lambda (x) "hello") (list 1 2 3))')
+            menai.evaluate('(any-list? (lambda (x) "hello") (list 1 2 3))')
 
         # Higher-order functions require list arguments
         with pytest.raises(MenaiEvalError, match="requires list argument"):
-            menai.evaluate('(list-map (lambda (x) x) 42)')
+            menai.evaluate('(map-list (lambda (x) x) 42)')
 
         with pytest.raises(MenaiEvalError, match="requires list argument"):
-            menai.evaluate('(list-filter (lambda (x) #t) "hello")')
+            menai.evaluate('(filter-list (lambda (x) #t) "hello")')
 
     def test_non_function_call_error(self, menai):
         """Test that trying to call non-functions causes evaluation errors."""
@@ -474,15 +474,15 @@ class TestErrors:
         """Test error handling in higher-order function contexts."""
         # Error in map function
         with pytest.raises(MenaiEvalError):
-            menai.evaluate("(list-map (lambda (x) (integer/ x 0)) (list 1 2 3))")
+            menai.evaluate("(map-list (lambda (x) (integer/ x 0)) (list 1 2 3))")
 
         # Error in filter predicate
         with pytest.raises(MenaiEvalError):
-            menai.evaluate("(list-filter (lambda (x) (integer+ x \"hello\")) (list 1 2 3))")
+            menai.evaluate("(filter-list (lambda (x) (integer+ x \"hello\")) (list 1 2 3))")
 
         # Error in fold function
         with pytest.raises(MenaiEvalError):
-            menai.evaluate("(list-fold (lambda (acc x) (integer/ acc x)) 1 (list 1 0 2))")
+            menai.evaluate("(fold-list (lambda (acc x) (integer/ acc x)) 1 (list 1 0 2))")
 
     def test_error_in_let_binding_evaluation(self, menai):
         """Test error handling in let binding evaluation."""
@@ -583,9 +583,9 @@ class TestErrors:
 
         # Error in deeply nested functional composition
         nested_functional = '''
-        (list-fold integer+ 0
-              (list-map (lambda (x) (integer/ x 0))
-                   (list-filter (lambda (x) (integer>? x 0))
+        (fold-list integer+ 0
+              (map-list (lambda (x) (integer/ x 0))
+                   (filter-list (lambda (x) (integer>? x 0))
                            (list 1 2 3))))
         '''
 

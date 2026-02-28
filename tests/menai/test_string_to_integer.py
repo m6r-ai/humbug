@@ -174,15 +174,15 @@ class TestStringToInteger:
 
     def test_used_as_first_class_function(self, menai):
         """Test that string->integer can be passed as a first-class value."""
-        expr = '(list-map (lambda (s) (string->integer s 16)) (list "ff" "10" "a"))'
+        expr = '(map-list (lambda (s) (string->integer s 16)) (list "ff" "10" "a"))'
         assert menai.evaluate_and_format(expr) == '(255 16 10)'
 
     def test_used_with_list_filter(self, menai):
-        """Test string->integer used with list-filter to discard unparseable values."""
+        """Test string->integer used with filter-list to discard unparseable values."""
         expr = '''
-        (list-filter
+        (filter-list
           (lambda (x) (integer? x))
-          (list-map
+          (map-list
             (lambda (s) (string->integer s 10))
             (list "1" "two" "3" "four" "5")))
         '''

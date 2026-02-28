@@ -128,8 +128,8 @@ class TestMenaiDependencyAnalyzerEdgeCases:
         # Complex list processing
         result = menai.evaluate("""
         (let* ((numbers (list 1 2 3 4 5))
-               (doubled (list-map (lambda (x) (integer* x 2)) numbers))
-               (sum (list-fold integer+ 0 doubled)))
+               (doubled (map-list (lambda (x) (integer* x 2)) numbers))
+               (sum (fold-list integer+ 0 doubled)))
           sum)
         """)
         assert result == 30  # (2+4+6+8+10) = 30
@@ -208,7 +208,7 @@ class TestMenaiDependencyAnalyzerEdgeCases:
         (let* ((base 5)
                (numbers (list 1 2 3))
                (add-base (lambda (x) (integer+ x base)))
-               (results (list-map add-base numbers)))
+               (results (map-list add-base numbers)))
           results)
         """)
         assert result == [6, 7, 8]
@@ -217,7 +217,7 @@ class TestMenaiDependencyAnalyzerEdgeCases:
         result = menai.evaluate("""
         (let* ((threshold 2)
                (numbers (list 1 2 3 4 5))
-               (filtered (list-filter (lambda (x) (integer>? x threshold)) numbers))
+               (filtered (filter-list (lambda (x) (integer>? x threshold)) numbers))
                (count (list-length filtered)))
           count)
         """)
@@ -349,7 +349,7 @@ class TestMenaiDependencyAnalyzerEdgeCases:
         # Complex type conversion chain
         result = menai.evaluate("""
         (let* ((numbers (list 1 2 3))
-               (strings (list-map integer->string numbers))
+               (strings (map-list integer->string numbers))
                (joined (list->string strings ","))
                (length-val (string-length joined)))
           length-val)
@@ -401,9 +401,9 @@ class TestMenaiDependencyAnalyzerEdgeCases:
         # List processing pipeline
         result = menai.evaluate("""
         (let* ((numbers (range 1 6))
-               (evens (list-filter (lambda (x) (integer=? (integer% x 2) 0)) numbers))
-               (squares (list-map (lambda (x) (integer* x x)) evens))
-               (sum (list-fold integer+ 0 squares)))
+               (evens (filter-list (lambda (x) (integer=? (integer% x 2) 0)) numbers))
+               (squares (map-list (lambda (x) (integer* x x)) evens))
+               (sum (fold-list integer+ 0 squares)))
           sum)
         """)
         assert result == 20  # evens=[2,4], squares=[4,16], sum=20

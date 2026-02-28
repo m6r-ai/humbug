@@ -224,7 +224,7 @@ class TestMenaiValueEdgeCases:
         assert result[999] == 1000
 
         # Large string operations - check actual format
-        result = menai.evaluate('(list->string (list-map integer->string (range 1 101)) ",")')
+        result = menai.evaluate('(list->string (map-list integer->string (range 1 101)) ",")')
         assert isinstance(result, str)
         # Menai returns the string without quotes in the result
         assert result.startswith('1,2,3')

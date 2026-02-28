@@ -1,4 +1,4 @@
-"""Tests for zip and unzip higher-order functions."""
+"""Tests for zip higher-order function."""
 
 import pytest
 
@@ -10,31 +10,31 @@ class TestZip:
 
     @pytest.mark.parametrize("expression,expected", [
         # Basic zip
-        ('(list-zip (list 1 2 3) (list 4 5 6))', '((1 4) (2 5) (3 6))'),
+        ('(zip-list (list 1 2 3) (list 4 5 6))', '((1 4) (2 5) (3 6))'),
 
         # Zip with strings
-        ('(list-zip (list "a" "b" "c") (list 1 2 3))', '(("a" 1) ("b" 2) ("c" 3))'),
+        ('(zip-list (list "a" "b" "c") (list 1 2 3))', '(("a" 1) ("b" 2) ("c" 3))'),
 
         # Zip with booleans
-        ('(list-zip (list #t #f) (list 1 2))', '((#t 1) (#f 2))'),
+        ('(zip-list (list #t #f) (list 1 2))', '((#t 1) (#f 2))'),
 
         # Zip stops at shorter first list
-        ('(list-zip (list 1 2) (list 4 5 6))', '((1 4) (2 5))'),
+        ('(zip-list (list 1 2) (list 4 5 6))', '((1 4) (2 5))'),
 
         # Zip stops at shorter second list
-        ('(list-zip (list 1 2 3) (list 4 5))', '((1 4) (2 5))'),
+        ('(zip-list (list 1 2 3) (list 4 5))', '((1 4) (2 5))'),
 
         # Zip with empty first list
-        ('(list-zip (list) (list 1 2 3))', '()'),
+        ('(zip-list (list) (list 1 2 3))', '()'),
 
         # Zip with empty second list
-        ('(list-zip (list 1 2 3) (list))', '()'),
+        ('(zip-list (list 1 2 3) (list))', '()'),
 
         # Zip with both empty
-        ('(list-zip (list) (list))', '()'),
+        ('(zip-list (list) (list))', '()'),
 
         # Zip with single element lists
-        ('(list-zip (list 1) (list 2))', '((1 2))'),
+        ('(zip-list (list 1) (list 2))', '((1 2))'),
     ])
     def test_zip_basic(self, menai, expression, expected):
         """Test basic zip behaviour."""
@@ -43,22 +43,22 @@ class TestZip:
     def test_zip_arity(self, menai):
         """Test that zip requires exactly 2 arguments."""
         with pytest.raises(MenaiEvalError, match=r"expects 2 arguments, got 1"):
-            menai.evaluate('(list-zip (list 1 2 3))')
+            menai.evaluate('(zip-list (list 1 2 3))')
 
         with pytest.raises(MenaiEvalError, match=r"expects 2 arguments, got 3"):
-            menai.evaluate('(list-zip (list 1 2) (list 3 4) (list 5 6))')
+            menai.evaluate('(zip-list (list 1 2) (list 3 4) (list 5 6))')
 
     def test_zip_requires_list_arguments(self, menai):
         """Test that zip requires list arguments."""
         with pytest.raises(MenaiEvalError):
-            menai.evaluate('(list-zip 42 (list 1 2))')
+            menai.evaluate('(zip-list 42 (list 1 2))')
 
         with pytest.raises(MenaiEvalError):
-            menai.evaluate('(list-zip (list 1 2) 42)')
+            menai.evaluate('(zip-list (list 1 2) 42)')
 
     def test_zip_result_is_list_of_pairs(self, menai):
         """Test that each element of the result is a 2-element list."""
-        result = menai.evaluate('(list-zip (list 1 2 3) (list 4 5 6))')
+        result = menai.evaluate('(zip-list (list 1 2 3) (list 4 5 6))')
         assert isinstance(result, list)
         assert len(result) == 3
         for pair in result:
@@ -70,18 +70,18 @@ class TestZip:
         # Sum each pair
         helpers.assert_evaluates_to(
             menai,
-            '(list-map (lambda (pair) (integer+ (list-first pair) (list-first (list-rest pair)))) (list-zip (list 1 2 3) (list 4 5 6)))',
+            '(map-list (lambda (pair) (integer+ (list-first pair) (list-first (list-rest pair)))) (zip-list (list 1 2 3) (list 4 5 6)))',
             '(5 7 9)'
         )
 
     def test_zip_to_build_dict(self, menai, helpers):
-        """Test using zip to build an dict from keys and values."""
+        """Test using zip to build a dict from keys and values."""
         helpers.assert_evaluates_to(
             menai,
-            '''(list-fold (lambda (acc pair)
+            '''(fold-list (lambda (acc pair)
                             (dict-set acc (list-first pair) (list-first (list-rest pair))))
                           (dict)
-                          (list-zip (list "a" "b" "c") (list 1 2 3)))''',
+                          (zip-list (list "a" "b" "c") (list 1 2 3)))''',
             '{("a" 1) ("b" 2) ("c" 3)}'
         )
 
@@ -89,109 +89,31 @@ class TestZip:
         """Test that zip can be passed as a first-class value."""
         helpers.assert_evaluates_to(
             menai,
-            '(function? list-zip)',
+            '(function? zip-list)',
             '#t'
         )
 
-
-class TestUnzip:
-    """Tests for the unzip function."""
-
-    @pytest.mark.parametrize("expression,expected", [
-        # Basic unzip
-        ('(list-unzip (list (list 1 4) (list 2 5) (list 3 6)))', '((1 2 3) (4 5 6))'),
-
-        # Unzip with strings
-        ('(list-unzip (list (list "a" 1) (list "b" 2) (list "c" 3)))', '(("a" "b" "c") (1 2 3))'),
-
-        # Unzip empty list
-        ('(list-unzip (list))', '(() ())'),
-
-        # Unzip single pair
-        ('(list-unzip (list (list 1 2)))', '((1) (2))'),
-    ])
-    def test_unzip_basic(self, menai, expression, expected):
-        """Test basic unzip behaviour."""
-        assert menai.evaluate_and_format(expression) == expected
-
-    def test_unzip_arity(self, menai):
-        """Test that unzip requires exactly 1 argument."""
-        with pytest.raises(MenaiEvalError, match=r"expects 1 arguments, got 0"):
-            menai.evaluate('(list-unzip)')
-
-        with pytest.raises(MenaiEvalError, match=r"expects 1 arguments, got 2"):
-            menai.evaluate('(list-unzip (list (list 1 2)) (list (list 3 4)))')
-
-    def test_unzip_requires_list_argument(self, menai):
-        """Test that unzip requires a list argument."""
-        with pytest.raises(MenaiEvalError):
-            menai.evaluate('(list-unzip 42)')
-
-    def test_unzip_result_structure(self, menai):
-        """Test that unzip returns a list of exactly two lists."""
-        result = menai.evaluate('(list-unzip (list (list 1 4) (list 2 5) (list 3 6)))')
-        assert isinstance(result, list)
-        assert len(result) == 2
-        assert result[0] == [1, 2, 3]
-        assert result[1] == [4, 5, 6]
-
-    def test_unzip_first_and_rest_access(self, menai, helpers):
-        """Test accessing the two result lists via list-first and list-rest."""
+    def test_zip_dot_product(self, menai, helpers):
+        """Test using zip and fold to compute a dot product."""
         helpers.assert_evaluates_to(
             menai,
-            '(list-first (list-unzip (list (list 1 4) (list 2 5) (list 3 6))))',
+            '''(fold-list integer+
+                        0
+                        (map-list (lambda (pair)
+                                    (integer* (list-first pair) (list-first (list-rest pair))))
+                                  (zip-list (list 1 2 3) (list 4 5 6))))''',
+            '32'  # 1*4 + 2*5 + 3*6 = 4 + 10 + 18 = 32
+        )
+
+    def test_zip_extract_firsts_and_lasts(self, menai, helpers):
+        """Test extracting elements from zipped pairs using map-list."""
+        helpers.assert_evaluates_to(
+            menai,
+            '(map-list list-first (zip-list (list 1 2 3) (list 4 5 6)))',
             '(1 2 3)'
         )
         helpers.assert_evaluates_to(
             menai,
-            '(list-first (list-rest (list-unzip (list (list 1 4) (list 2 5) (list 3 6)))))',
+            '(map-list list-last (zip-list (list 1 2 3) (list 4 5 6)))',
             '(4 5 6)'
-        )
-
-    def test_unzip_is_first_class(self, menai, helpers):
-        """Test that unzip can be passed as a first-class value."""
-        helpers.assert_evaluates_to(
-            menai,
-            '(function? list-unzip)',
-            '#t'
-        )
-
-
-class TestZipUnzipRoundtrip:
-    """Tests for zip/unzip roundtrip properties."""
-
-    def test_unzip_zip_roundtrip(self, menai, helpers):
-        """Test that unzip(list-zip(a, b)) recovers the original lists."""
-        helpers.assert_evaluates_to(
-            menai,
-            '''(let* ((a (list 1 2 3))
-                      (b (list 4 5 6))
-                      (result (list-unzip (list-zip a b))))
-                 (list (list=? (list-first result) a)
-                       (list=? (list-first (list-rest result)) b)))''',
-            '(#t #t)'
-        )
-
-    def test_zip_unzip_roundtrip(self, menai, helpers):
-        """Test that zip(list-unzip(pairs)) recovers the original pairs."""
-        helpers.assert_evaluates_to(
-            menai,
-            '''(let* ((pairs (list (list 1 4) (list 2 5) (list 3 6)))
-                      (result (list-unzip pairs))
-                      (rezipped (list-zip (list-first result) (list-first (list-rest result)))))
-                 (list=? rezipped pairs))''',
-            '#t'
-        )
-
-    def test_zip_unzip_with_fold(self, menai, helpers):
-        """Test using zip and unzip together in a data processing pipeline."""
-        # Compute dot product of two vectors using zip + fold
-        helpers.assert_evaluates_to(
-            menai,
-            '''(list-fold integer+
-                        0
-                        (list-map (lambda (pair)
-                                    (integer* (list-first pair) (list-first (list-rest pair))))
-                                  (list-zip (list 1 2 3) (list 4 5 6))))''',
-            '32'  # 1*4 + 2*5 + 3*6 = 4 + 10 + 18 = 32
         )

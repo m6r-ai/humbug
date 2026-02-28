@@ -358,19 +358,19 @@ class TestComplexOpsEval:
 
 
 class TestFirstClassUse:
-    """Typed operators work as first-class values (list-fold, map, etc.)."""
+    """Typed operators work as first-class values (fold-list, map, etc.)."""
 
     def test_fold_integer_add(self, menai):
-        result = menai.evaluate_and_format("(list-fold integer+ 0 (list 1 2 3 4 5))")
+        result = menai.evaluate_and_format("(fold-list integer+ 0 (list 1 2 3 4 5))")
         assert result == "15"
 
     def test_fold_float_mul(self, menai):
-        result = menai.evaluate_and_format("(list-fold float* 1.0 (list 2.0 3.0 4.0))")
+        result = menai.evaluate_and_format("(fold-list float* 1.0 (list 2.0 3.0 4.0))")
         assert result == "24.0"
 
     def test_fold_complex_add(self, menai):
         result = menai.evaluate_and_format(
-            "(list-fold complex+ (integer->complex 0 0) (list (integer->complex 1 0) (integer->complex 0 1) (integer->complex 1 1)))"
+            "(fold-list complex+ (integer->complex 0 0) (list (integer->complex 1 0) (integer->complex 0 1) (integer->complex 1 1)))"
         )
         assert result == "2+2j"
 

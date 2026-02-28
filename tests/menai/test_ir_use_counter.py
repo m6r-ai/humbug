@@ -608,10 +608,10 @@ class TestIROptimizerIntegration:
         assert result == [True, True]
 
     def test_higher_order_with_dead_binding(self, menai):
-        """list-map with a closure that has a dead binding."""
+        """map-list with a closure that has a dead binding."""
         result = menai.evaluate("""
             (let ((factor 3))
-              (list-map
+              (map-list
                 (lambda (x)
                   (let ((dead "ignored"))
                     (integer* x factor)))
@@ -668,6 +668,6 @@ class TestIROptimizerIntegration:
                                 n
                                 (integer+ (fib (integer- n 1))
                                           (fib (integer- n 2)))))))
-              (list-map fib (list 0 1 2 3 4 5 6 7)))
+              (map-list fib (list 0 1 2 3 4 5 6 7)))
         """)
         assert result == [0, 1, 1, 2, 3, 5, 8, 13]
