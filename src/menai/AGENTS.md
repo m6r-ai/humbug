@@ -61,6 +61,7 @@ optimizations are applied across module boundaries.
 | `menai_ir_builder.py` | Lowers desugared AST → IR. Resolves variable addressing, tail call detection | Large |
 | `menai_ir_optimization_pass.py` | Base class for IR optimization passes | Tiny |
 | `menai_ir_use_counter.py` | Pure analysis pass: counts all variable uses per frame; produces `IRUseCounts` | Medium |
+| `menai_ir_copy_propagator.py` | IR-level copy propagation pass; inlines trivially-copyable let bindings | Medium |
 | `menai_ir_optimizer.py` | IR-level dead binding elimination pass; consumes `IRUseCounts` | Medium |
 | `menai_codegen.py` | Lowers IR → `CodeObject` bytecode | Medium |
 | `menai_bytecode.py` | `Opcode` enum, `Instruction`, `CodeObject`, `BUILTIN_OPCODE_MAP` | Medium |
@@ -82,6 +83,17 @@ by the pass manager loop in `MenaiCompiler.compile()`.  The pass manager runs ea
 pass to **fixed point**: after every pass in the list has been applied, if any pass
 reported a change the whole sequence is repeated until a full round produces no changes.
 
+### Pass order
+
+The IR passes run in this order per iteration:
+
+1. `MenaiIRCopyPropagator` — inlines trivially-copyable `let` bindings, exposing dead bindings
+2. `MenaiIROptimizer` — eliminates dead `let`/`letrec` bindings left behind by propagation
+
+The two passes compose naturally: copy propagation creates zero-use bindings that the dead
+binding eliminator then removes.  Multi-step chains (e.g. `x=1, y=x, z=y`) are fully
+collapsed by the fixed-point loop in two iterations.
+
 ### Pass infrastructure
 
 - **`MenaiIROptimizationPass`** (`menai_ir_optimization_pass.py`) — base class.
@@ -99,6 +111,32 @@ reported a change the whole sequence is repeated until a full round produces no 
   counts can be looked up directly.
 
 ### Current optimizations (`MenaiIROptimizer`)
+
+### Current optimizations (`MenaiIRCopyPropagator`)
+
+**Copy propagation** — for each `let` binding whose value is *trivially copyable*, the
+value is substituted at every use site in the body and the binding is dropped.
+
+**Trivially copyable** means the value plan is one of:
+- `MenaiIRConstant` — always inlineable (no frame-relative addresses)
+- `MenaiIREmptyList` — always inlineable
+- `MenaiIRQuote` — always inlineable
+- `MenaiIRVariable(var_type='global')` — always inlineable (name-table lookup)
+- `MenaiIRVariable(var_type='local', depth=0)` — inlineable **only when
+  `external_count(frame, slot) == 0`**, i.e. the binding is not captured by any
+  child lambda.  If captured, the depth arithmetic inside the lambda body would be
+  wrong after substitution.
+
+`letrec` bindings are never propagated (they may be mutually recursive and are almost
+always lambdas).  The pass still recurses into `letrec` bodies to optimize inner `let`
+nodes.
+
+**Lambda boundary rule**: the substitution walk replaces depth=0 references in the
+current frame only.  When it encounters a `MenaiIRLambda` it substitutes into
+`free_var_plans` and `parent_ref_plans` (evaluated in the enclosing frame) but does
+NOT descend into `body_plan` (child frame).  As a result, the codegen's
+`_generate_lambda` uses `_generate_expr` (not `_generate_variable`) for `free_var_plans`,
+since after propagation they may be any trivially-copyable IR node.
 
 1. **Dead binding elimination** — any `let` or `letrec` binding whose `total_count` is
    zero is dropped.  Because Menai is pure, the value expression can never have side

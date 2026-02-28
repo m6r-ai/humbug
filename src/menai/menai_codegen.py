@@ -293,10 +293,11 @@ class MenaiCodeGen:
 
     def _generate_lambda(self, plan: MenaiIRLambda, ctx: MenaiCodeGenContext) -> None:
         """Generate code for a lambda expression."""
-        # Emit LOAD_VAR for each free variable (for capture)
+        # Emit code to load each free variable value (for capture).
+        # After copy propagation these may be any trivially-copyable IR node,
+        # not necessarily a MenaiIRVariable, so we use the general dispatcher.
         for free_var_plan in plan.free_var_plans:
-            # Generate code to load the free variable from parent scope
-            self._generate_variable(free_var_plan, ctx)
+            self._generate_expr(free_var_plan, ctx)
 
         # Create nested context for lambda body
         lambda_ctx = MenaiCodeGenContext()

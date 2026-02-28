@@ -14,6 +14,7 @@ from menai.menai_codegen import MenaiCodeGen
 from menai.menai_desugarer import MenaiDesugarer
 from menai.menai_ir_builder import MenaiIRBuilder
 from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
+from menai.menai_ir_copy_propagator import MenaiIRCopyPropagator
 from menai.menai_ir_optimizer import MenaiIROptimizer
 from menai.menai_lexer import MenaiLexer
 from menai.menai_module_resolver import MenaiModuleResolver, ModuleLoader
@@ -52,6 +53,7 @@ class MenaiCompiler:
                 MenaiASTConstantFolder(),
             ]
             self.ir_passes = [
+                MenaiIRCopyPropagator(),
                 MenaiIROptimizer(),
             ]
 
