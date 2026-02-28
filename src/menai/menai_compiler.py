@@ -7,10 +7,10 @@ It chains together all compilation passes in the correct order.
 from typing import List, Optional
 
 from menai.menai_ast import MenaiASTNode
+from menai.menai_ast_constant_folder import MenaiASTConstantFolder
 from menai.menai_ast_optimization_pass import MenaiASTOptimizationPass
 from menai.menai_bytecode import CodeObject
 from menai.menai_codegen import MenaiCodeGen
-from menai.menai_constant_folder import MenaiConstantFolder
 from menai.menai_desugarer import MenaiDesugarer
 from menai.menai_ir_builder import MenaiIRBuilder
 from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
@@ -49,7 +49,7 @@ class MenaiCompiler:
         self.ir_passes: List[MenaiIROptimizationPass] = []
         if optimize:
             self.ast_passes = [
-                MenaiConstantFolder(),
+                MenaiASTConstantFolder(),
             ]
             self.ir_passes = [
                 MenaiIROptimizer(),

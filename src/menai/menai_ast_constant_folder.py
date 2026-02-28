@@ -17,7 +17,7 @@ from menai.menai_ast import (
 from menai.menai_ast_optimization_pass import MenaiASTOptimizationPass
 
 
-class MenaiConstantFolder(MenaiASTOptimizationPass):
+class MenaiASTConstantFolder(MenaiASTOptimizationPass):
     """
     Fold constant expressions at compile time.
 

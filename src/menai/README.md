@@ -29,28 +29,28 @@ Menai uses an optimizing compiler pipeline feeding into a bytecode VM:
 Source code
     │
     ▼
-MenaiLexer          – tokenization
+MenaiLexer             – tokenization
     │
     ▼
-MenaiParser         – S-expression parsing to AST (MenaiASTNode)
+MenaiParser            – S-expression parsing to AST (MenaiASTNode)
     │
     ▼
-MenaiSemanticAnalyzer – type checking, scope analysis, free variable detection
+MenaiSemanticAnalyzer  – type checking, scope analysis, free variable detection
     │
     ▼
-MenaiDesugarer      – expand syntactic sugar (let, let*, letrec, quote, etc.)
+MenaiDesugarer         – expand syntactic sugar (let, let*, letrec, quote, etc.)
     │
     ▼
-MenaiConstantFolder – constant folding optimization pass
+MenaiASTConstantFolder – constant folding optimization pass
     │
     ▼
-MenaiIRBuilder      – lower AST to IR (MenaiIRNode)
+MenaiIRBuilder         – lower AST to IR (MenaiIRNode)
     │
     ▼
-MenaiCodegen        – generate bytecode (MenaiBytecode / CodeObject)
+MenaiCodegen           – generate bytecode (MenaiBytecode / CodeObject)
     │
     ▼
-MenaiVM             – stack-based bytecode virtual machine
+MenaiVM                – stack-based bytecode virtual machine
 ```
 
 Modules are resolved and cached before optimization passes run, allowing

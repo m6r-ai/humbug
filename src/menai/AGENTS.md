@@ -29,7 +29,7 @@ MenaiModuleResolver         menai_module_resolver.py
     ↓  ← module ASTs are cached here (before optimization)
 MenaiDesugarer              menai_desugarer.py
     ↓
-MenaiConstantFolder         menai_constant_folder.py   (AST optimization pass)
+MenaiASTConstantFolder      menai_ast_constant_folder.py   (AST optimization pass)
     ↓
 MenaiIRBuilder              menai_ir_builder.py
     ↓
