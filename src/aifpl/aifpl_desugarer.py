@@ -965,7 +965,7 @@ class AIFPLDesugarer:
 
         if isinstance(pattern, AIFPLASTNone):
             # (none? tmp) — singleton predicate, inherently type-safe
-            test_expr = AIFPLASTList((
+            test_expr: AIFPLASTNode = AIFPLASTList((
                 AIFPLASTSymbol('none?'),
                 AIFPLASTSymbol(temp_var),
             ))
