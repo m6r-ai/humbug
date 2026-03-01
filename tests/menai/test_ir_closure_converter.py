@@ -390,7 +390,6 @@ class TestClosureConverterRecursion:
             func_plan=_global('map-list'),
             arg_plans=[lam, MenaiIREmptyList()],
             is_tail_call=False,
-            is_tail_recursive=False,
             is_builtin=False,
             builtin_name=None,
         )
@@ -400,24 +399,6 @@ class TestClosureConverterRecursion:
         out_lam = out_call.arg_plans[0]
         assert isinstance(out_lam, MenaiIRLambda)
         assert out_lam.free_vars == ['cap']   # preserved
-
-    def test_tail_recursive_sentinel_not_walked(self):
-        """The tail-recursive sentinel func_plan is left unchanged by identity."""
-        sentinel = MenaiIRVariable(
-            name='<tail-recursive>', var_type='local', depth=0, index=0
-        )
-        call = MenaiIRCall(
-            func_plan=sentinel,
-            arg_plans=[_const(1)],
-            is_tail_call=True,
-            is_tail_recursive=True,
-            is_builtin=False,
-            builtin_name=None,
-        )
-        result = _convert(MenaiIRReturn(value_plan=call))
-        out_call = result.value_plan  # type: ignore[union-attr]
-        assert isinstance(out_call, MenaiIRCall)
-        assert out_call.func_plan is sentinel   # identity preserved
 
     def test_trace_node_recursed(self):
         """Lambdas inside a trace node are visited."""

@@ -250,7 +250,6 @@ class MenaiIRClosureConverter:
             func_plan=self._walk(ir.func_plan),
             arg_plans=new_args,
             is_tail_call=ir.is_tail_call,
-            is_tail_recursive=ir.is_tail_recursive,
             is_builtin=ir.is_builtin,
             builtin_name=ir.builtin_name,
         )

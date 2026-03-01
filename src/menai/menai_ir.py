@@ -97,7 +97,6 @@ class MenaiIRCall:
     func_plan: 'MenaiIRExpr'
     arg_plans: List['MenaiIRExpr']
     is_tail_call: bool
-    is_tail_recursive: bool  # True if this is a tail-recursive self-call
     is_builtin: bool
     builtin_name: Optional[str]  # Builtin name if is_builtin=True, else None
 

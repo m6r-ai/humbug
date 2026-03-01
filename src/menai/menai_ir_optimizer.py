@@ -291,7 +291,6 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
                     ),
                     arg_plans=[opt_condition],
                     is_tail_call=ir.in_tail_position,
-                    is_tail_recursive=False,
                     is_builtin=True,
                     builtin_name='boolean-not',
                 )
@@ -343,7 +342,6 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
             func_plan=self._opt(ir.func_plan, frame_stack),
             arg_plans=opt_args,
             is_tail_call=ir.is_tail_call,
-            is_tail_recursive=ir.is_tail_recursive,
             is_builtin=ir.is_builtin,
             builtin_name=ir.builtin_name,
         )

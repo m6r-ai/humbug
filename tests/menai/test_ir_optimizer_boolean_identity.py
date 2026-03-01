@@ -55,7 +55,6 @@ def _bool_p_call(arg: MenaiIRVariable) -> MenaiIRCall:
         func_plan=_global('boolean?'),
         arg_plans=[arg],
         is_tail_call=False,
-        is_tail_recursive=False,
         is_builtin=True,
         builtin_name='boolean?',
     )

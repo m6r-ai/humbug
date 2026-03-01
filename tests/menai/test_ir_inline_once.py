@@ -89,7 +89,6 @@ def _add_call(a, b) -> MenaiIRCall:
         func_plan=_global('integer+'),
         arg_plans=[a, b],
         is_tail_call=False,
-        is_tail_recursive=False,
         is_builtin=True,
         builtin_name='integer+',
     )
@@ -101,7 +100,6 @@ def _mul_call(a, b) -> MenaiIRCall:
         func_plan=_global('integer*'),
         arg_plans=[a, b],
         is_tail_call=False,
-        is_tail_recursive=False,
         is_builtin=True,
         builtin_name='integer*',
     )
@@ -533,35 +531,24 @@ class TestLetrecNotInlined:
 # ---------------------------------------------------------------------------
 
 class TestTailRecursiveSentinel:
-    """Verify that the tail-recursive sentinel func_plan is never substituted."""
+    """Verify that single-use bindings in tail call args are inlined correctly."""
 
-    def test_tail_recursive_sentinel_not_substituted(self):
+    def test_tail_call_arg_inlined(self):
         """
-        The sentinel MenaiIRVariable(name='<tail-recursive>') used as the
-        func_plan of a tail-recursive call must never be replaced.
-
-        We use a separate single-use binding at slot 1 (a call) as the arg to
-        the tail-recursive call.  The pass inlines slot 1, collapsing the let.
-        The sentinel at slot 0 in func_plan must be untouched throughout.
+        A single-use let binding used as an argument to a tail call is inlined.
+        The func_plan (a real variable reference) is also walked and substituted
+        normally.
         """
-        sentinel = MenaiIRVariable(
-            name='<tail-recursive>',
-            var_type='local',
-            depth=0,
-            index=0,
-            is_parent_ref=False,
-        )
         inner_call = _add_call(_const(1), _const(2))  # value for slot 1
         tail_call = MenaiIRCall(
-            func_plan=sentinel,
-            arg_plans=[_local(1)],   # uses slot 1 once
+            func_plan=_local(0),                 # real callee reference at slot 0
+            arg_plans=[_local(1)],               # uses slot 1 once
             is_tail_call=True,
-            is_tail_recursive=True,
             is_builtin=False,
             builtin_name=None,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", inner_call, 1)],   # slot 1, single-use
+            bindings=[("x", inner_call, 1)],     # slot 1, single-use
             body_plan=tail_call,
             in_tail_position=True,
         ))
@@ -570,10 +557,7 @@ class TestTailRecursiveSentinel:
         # Slot 1 inlined: let collapsed, body is the tail_call with slot 1 replaced.
         call = result.value_plan
         assert isinstance(call, MenaiIRCall)
-        assert call.is_tail_recursive
-        # Sentinel func_plan must be unchanged.
-        assert isinstance(call.func_plan, MenaiIRVariable)
-        assert call.func_plan.name == '<tail-recursive>'
+        assert call.is_tail_call
         # The arg should now be the inlined call expression.
         assert isinstance(call.arg_plans[0], MenaiIRCall)
         assert call.arg_plans[0].builtin_name == 'integer+'

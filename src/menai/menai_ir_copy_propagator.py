@@ -67,9 +67,6 @@ encounters a MenaiIRLambda it does NOT descend into the lambda's body_plan
 However, it DOES substitute in the lambda's free_var_plans and
 parent_ref_plans, because those are evaluated in the enclosing frame.
 
-The walk also skips the sentinel func_plan of tail-recursive calls
-(is_tail_recursive=True), exactly as MenaiIROptimizer does.
-
 Interaction with MenaiIROptimizer
 ----------------------------------
 After copy propagation, the eliminated bindings have zero uses.  The
@@ -315,7 +312,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
             func_plan=self._prop(ir.func_plan, frame_stack),
             arg_plans=opt_args,
             is_tail_call=ir.is_tail_call,
-            is_tail_recursive=ir.is_tail_recursive,
             is_builtin=ir.is_builtin,
             builtin_name=ir.builtin_name,
         )
@@ -567,7 +563,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
             func_plan=self._substitute(ir.func_plan, replacements, frame_stack),
             arg_plans=opt_args,
             is_tail_call=ir.is_tail_call,
-            is_tail_recursive=ir.is_tail_recursive,
             is_builtin=ir.is_builtin,
             builtin_name=ir.builtin_name,
         )

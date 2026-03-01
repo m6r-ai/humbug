@@ -85,7 +85,6 @@ def _add_call(a, b) -> MenaiIRCall:
         func_plan=_global('integer+'),
         arg_plans=[a, b],
         is_tail_call=False,
-        is_tail_recursive=False,
         is_builtin=True,
         builtin_name='integer+',
     )
@@ -553,7 +552,6 @@ class TestTailRecursiveCalls:
             func_plan=_local(index=0, depth=0),
             arg_plans=[_local(index=1, depth=0)],
             is_tail_call=True,
-            is_tail_recursive=True,
             is_builtin=False,
             builtin_name=None,
         )

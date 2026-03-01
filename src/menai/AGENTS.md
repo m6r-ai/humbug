@@ -280,10 +280,10 @@ The three final addressing modes emitted by the codegen are:
   VM. It is correctly propagated through `let`/`let*`/`letrec` bodies, `if` branches,
   and `match` arms — anywhere the body expression is in tail position.
 - **Self-recursive tail calls**: In addition to the general `TAIL_CALL` mechanism,
-  direct self-recursive calls (a function calling itself) are further optimised: the
-  IR builder sets `is_tail_recursive` on the `MenaiIRCall`, and the codegen emits a
-  plain `JUMP 0` (back to the start of the function) instead of `TAIL_CALL`, avoiding
-  even the overhead of a new frame setup.
+  direct self-recursive calls (a function calling itself by name) are further optimised:
+  the codegen detects when a `TAIL_CALL`'s callee is a variable whose name matches the
+  current `CodeObject`'s name and emits a plain `JUMP 0` (back to the start of the
+  function) instead of `TAIL_CALL`, avoiding even the overhead of a new frame setup.
 
 ## Adding a New Built-in Function
 

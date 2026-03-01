@@ -293,7 +293,6 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
             func_plan=self._inline(ir.func_plan, frame_stack),
             arg_plans=opt_args,
             is_tail_call=ir.is_tail_call,
-            is_tail_recursive=ir.is_tail_recursive,
             is_builtin=ir.is_builtin,
             builtin_name=ir.builtin_name,
         )
@@ -517,7 +516,6 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
             func_plan=self._substitute(ir.func_plan, replacements, frame_stack),
             arg_plans=opt_args,
             is_tail_call=ir.is_tail_call,
-            is_tail_recursive=ir.is_tail_recursive,
             is_builtin=ir.is_builtin,
             builtin_name=ir.builtin_name,
         )

@@ -297,7 +297,6 @@ class MenaiIRBuilder:
             func_plan=func_plan,  # unused for builtins but kept for IR consistency
             arg_plans=[func_plan, args_plan],
             is_tail_call=in_tail_position,
-            is_tail_recursive=False,
             is_builtin=True,
             builtin_name='apply'
         )
@@ -605,7 +604,6 @@ class MenaiIRBuilder:
                 func_plan=MenaiIRVariable(name=builtin_name, var_type='global', depth=0, index=0),
                 arg_plans=arg_plans,
                 is_tail_call=False,
-                is_tail_recursive=False,
                 is_builtin=True,
                 builtin_name=builtin_name
             )
@@ -620,7 +618,6 @@ class MenaiIRBuilder:
             func_plan=func_plan,
             arg_plans=arg_plans,
             is_tail_call=in_tail_position,
-            is_tail_recursive=False,
             is_builtin=False,
             builtin_name=None
         )

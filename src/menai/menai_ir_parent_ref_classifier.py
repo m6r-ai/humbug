@@ -352,7 +352,6 @@ class MenaiIRParentRefClassifier:
             func_plan=self._walk(ir.func_plan, letrec_bound, parent_ref_names),
             arg_plans=new_args,
             is_tail_call=ir.is_tail_call,
-            is_tail_recursive=ir.is_tail_recursive,
             is_builtin=ir.is_builtin,
             builtin_name=ir.builtin_name,
         )

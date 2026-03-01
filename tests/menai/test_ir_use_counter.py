@@ -70,7 +70,6 @@ def _add_call(a: MenaiIRVariable, b: MenaiIRVariable) -> MenaiIRCall:
         func_plan=_global('integer+'),
         arg_plans=[a, b],
         is_tail_call=False,
-        is_tail_recursive=False,
         is_builtin=True,
         builtin_name='integer+',
     )
