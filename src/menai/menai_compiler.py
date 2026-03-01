@@ -16,6 +16,7 @@ from menai.menai_ir_builder import MenaiIRBuilder
 from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
 from menai.menai_ir_copy_propagator import MenaiIRCopyPropagator
 from menai.menai_free_var_analyzer import MenaiFreeVarAnalyzer
+from menai.menai_ir_closure_converter import MenaiIRClosureConverter
 from menai.menai_ir_addresser import MenaiIRAddresser
 from menai.menai_ir_parent_ref_classifier import MenaiIRParentRefClassifier
 from menai.menai_ir_optimizer import MenaiIROptimizer
@@ -53,6 +54,7 @@ class MenaiCompiler:
         self.ir_addresser = MenaiIRAddresser()
         self.free_var_analyzer = MenaiFreeVarAnalyzer()
         self.parent_ref_classifier = MenaiIRParentRefClassifier()
+        self.closure_converter = MenaiIRClosureConverter()
         self.ast_passes: List[MenaiASTOptimizationPass] = []
         self.ir_passes: List[MenaiIROptimizationPass] = []
         if optimize:
@@ -129,6 +131,14 @@ class MenaiCompiler:
         # Resolve variable names to frame-relative addresses.
         # This must run after the IR builder (which leaves depth=-1, index=-1)
         # and before any IR optimization passes (which read depth and index).
+        ir = self.ir_addresser.address(ir)
+
+        # Closure conversion: promote free variables to explicit extra parameters
+        # on each lambda, making every lambda a closed term (free_vars == []).
+        # Runs after the first addresser pass so free_var_plans have resolved
+        # addresses.  The addresser must be re-run afterwards because the slot
+        # layout of every converted lambda changes (new params were added).
+        ir = self.closure_converter.convert(ir)
         ir = self.ir_addresser.address(ir)
 
         # IR-level optimization: run each pass to fixed point, then repeat the
