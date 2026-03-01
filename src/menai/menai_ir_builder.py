@@ -10,7 +10,6 @@ from menai.menai_ir import (
     MenaiIRLambda, MenaiIRCall, MenaiIRQuote, MenaiIRError, MenaiIREmptyList,
     MenaiIRReturn, MenaiIRTrace
 )
-from menai.menai_dependency_analyzer import MenaiDependencyAnalyzer
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex,
     MenaiASTString, MenaiASTBoolean, MenaiASTNone, MenaiASTSymbol, MenaiASTList
@@ -447,7 +446,13 @@ class MenaiIRBuilder:
         )
 
     def _analyze_letrec(self, expr: MenaiASTList, ctx: AnalysisContext, in_tail_position: bool) -> MenaiIRLetrec:
-        """Analyze a letrec expression."""
+        """Analyze a letrec expression.
+
+        After letrec splitting in the desugarer, every letrec arriving here is
+        a single fully-mutually-recursive group of lambdas.  All bindings are
+        therefore recursive siblings of each other — no dependency analysis is
+        needed.
+        """
         assert len(expr.elements) == 3, "Letrec expression should have exactly 3 elements"
 
         _, bindings_list, body = expr.elements
@@ -456,7 +461,8 @@ class MenaiIRBuilder:
         # Push new scope
         ctx.push_scope()
 
-        # First pass: Add all binding names to scope (for recursive references)
+        # First pass: allocate slots and add all names to scope so that
+        # recursive references within binding values resolve correctly.
         binding_pairs = []
         for binding in bindings_list.elements:
             assert isinstance(binding, MenaiASTList) and len(binding.elements) == 2
@@ -470,48 +476,27 @@ class MenaiIRBuilder:
 
         ctx.update_max_locals()
 
-        # Analyze dependencies
-        analyzer = MenaiDependencyAnalyzer()
-        binding_info = [(name, value_expr) for name, value_expr, _ in binding_pairs]
-        binding_groups = analyzer.analyze_letrec_bindings(binding_info)
+        # All bindings are mutually recursive siblings.  Register them all as
+        # parent_ref_names so nested lambdas resolve sibling references via
+        # LOAD_PARENT_VAR rather than as free-variable captures.
+        all_names = [name for name, _, _ in binding_pairs]
+        ctx.parent_ref_names.update(all_names)
 
-        # Determine which bindings are recursive
-        recursive_bindings = set()
-        for group in binding_groups:
-            if group.is_recursive:
-                recursive_bindings.update(group.names)
-
-        # Add recursive bindings to parent_ref_names so nested lambdas know about them
-        ctx.parent_ref_names.update(recursive_bindings)
-
-        # Second pass: Analyze binding values in topological order
-        # The binding_groups are already in topological order from the analyzer
+        # Second pass: analyze each binding value with full sibling context.
         binding_plans = []
+        for name, value_expr, var_index in binding_pairs:
+            old_binding_name = ctx.current_binding_name
+            old_sibling_bindings = ctx.sibling_bindings
 
-        # Create a map from name to (value_expr, var_index)
-        binding_map = {name: (value_expr, var_index) for name, value_expr, var_index in binding_pairs}
+            ctx.current_binding_name = name
+            ctx.sibling_bindings = all_names
 
-        # Process groups in topological order
-        for group in binding_groups:
-            for name in group.names:
-                value_expr, var_index = binding_map[name]
+            value_plan = self._analyze_expression(value_expr, ctx, in_tail_position=False)
 
-                # Set context for recursive bindings
-                # Always set binding name for better debugging/disassembly
-                old_binding_name = ctx.current_binding_name
-                old_sibling_bindings = ctx.sibling_bindings
+            ctx.current_binding_name = old_binding_name
+            ctx.sibling_bindings = old_sibling_bindings
 
-                ctx.current_binding_name = name
-                if name in recursive_bindings:
-                    ctx.sibling_bindings = list(group.names)
-
-                value_plan = self._analyze_expression(value_expr, ctx, in_tail_position=False)
-
-                # Restore context
-                ctx.current_binding_name = old_binding_name
-                ctx.sibling_bindings = old_sibling_bindings
-
-                binding_plans.append((name, value_plan, var_index))
+            binding_plans.append((name, value_plan, var_index))
 
         # Analyze body
         body_plan = self._analyze_expression(body, ctx, in_tail_position=in_tail_position)
@@ -522,8 +507,6 @@ class MenaiIRBuilder:
         return MenaiIRLetrec(
             bindings=binding_plans,
             body_plan=body_plan,
-            binding_groups=binding_groups,
-            recursive_bindings=recursive_bindings,
             in_tail_position=in_tail_position
         )
 

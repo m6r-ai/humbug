@@ -173,20 +173,15 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
         A binding is dead when its total use count is zero, OR when every use
         is an is_parent_ref self-call (the binding is unreachable from outside
         its own recursive group).
-
-        We compute the self-reference count for each binding by inspecting the
-        binding_groups metadata that the IR builder already attached.
         """
         current_frame = frame_stack[-1]
 
-        # Count the number of is_parent_ref uses per slot by walking the
-        # binding value plans.  We do a lightweight local scan here rather
-        # than threading extra data through the counter, because this is a
-        # letrec-specific concern.
+        # After letrec splitting, every binding in a letrec is part of the
+        # mutually-recursive group.  Count is_parent_ref uses per slot to
+        # detect bindings that are only ever called by their own group.
         self_ref_counts: dict[int, int] = {}
         for name, value_plan, var_index in ir.bindings:
-            if name in ir.recursive_bindings:
-                self_ref_counts[var_index] = self._count_parent_refs(value_plan, var_index)
+            self_ref_counts[var_index] = self._count_parent_refs(value_plan, var_index)
 
         live: List[Tuple[str, MenaiIRExpr, int]] = []
         dead_names = set()
@@ -195,7 +190,7 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
             total = counts.total_count(current_frame, var_index)
             self_refs = self_ref_counts.get(var_index, 0)
 
-            if total == 0 or (name in ir.recursive_bindings and total == self_refs):
+            if total == 0 or total == self_refs:
                 # Dead — entirely unreachable from outside.
                 dead_names.add(name)
                 self._eliminations += 1
@@ -208,21 +203,9 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
         if not live:
             return opt_body
 
-        # Strip dead names from recursive_bindings.
-        new_recursive = ir.recursive_bindings - dead_names
-
-        # Keep binding_groups as-is.  The groups carry AST-level metadata
-        # (bindings: List[Tuple[str, MenaiASTNode]]) that we cannot reconstruct
-        # at the IR level, and the codegen only uses them for topological
-        # ordering — which remains valid even if some names have been dropped
-        # from ir.bindings, because the codegen iterates ir.bindings directly
-        # and the groups are only consulted for the is_recursive flag.
-        # Passing the original groups through is therefore safe.
         return MenaiIRLetrec(
             bindings=live,
             body_plan=opt_body,
-            binding_groups=ir.binding_groups,
-            recursive_bindings=new_recursive,
             in_tail_position=ir.in_tail_position,
         )
 

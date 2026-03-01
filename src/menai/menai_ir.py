@@ -7,10 +7,9 @@ requiring any further analysis.
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Union, Set
+from typing import List, Optional, Union
 
 from menai.menai_value import MenaiValue
-from menai.menai_dependency_analyzer import MenaiBindingGroup
 
 
 @dataclass
@@ -60,11 +59,14 @@ class MenaiIRLet:
 
 @dataclass
 class MenaiIRLetrec:
-    """Plan for compiling a letrec expression with recursive bindings."""
+    """Plan for compiling a letrec expression.
+
+    After letrec splitting in the desugarer, every letrec reaching this point
+    is guaranteed to be a single fully-mutually-recursive group of lambdas.
+    All non-recursive and non-lambda bindings have been hoisted to let forms.
+    """
     bindings: List[tuple[str, 'MenaiIRExpr', int]]  # (name, value_plan, var_index)
     body_plan: 'MenaiIRExpr'
-    binding_groups: List[MenaiBindingGroup]
-    recursive_bindings: Set[str]  # Names of bindings that are recursive
     in_tail_position: bool
 
 

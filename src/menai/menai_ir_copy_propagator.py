@@ -254,8 +254,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
         return MenaiIRLetrec(
             bindings=live,
             body_plan=opt_body,
-            binding_groups=ir.binding_groups,
-            recursive_bindings=ir.recursive_bindings,
             in_tail_position=ir.in_tail_position,
         )
 
@@ -497,8 +495,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
         new_letrec = MenaiIRLetrec(
             bindings=new_bindings,
             body_plan=new_body,
-            binding_groups=ir.binding_groups,
-            recursive_bindings=ir.recursive_bindings,
             in_tail_position=ir.in_tail_position,
         )
 

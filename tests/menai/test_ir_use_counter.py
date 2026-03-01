@@ -285,15 +285,9 @@ class TestIRUseCounterLetrec:
 
     def test_letrec_live_binding_counted(self):
         """A letrec binding used in the body has non-zero count."""
-        from menai.menai_dependency_analyzer import MenaiBindingGroup
-        from menai.menai_ast import MenaiASTInteger as ASTInt
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
             bindings=[("f", _const(1), 0)],
             body_plan=_local(0),
-            binding_groups=[MenaiBindingGroup(
-                names={"f"}, bindings=[("f", ASTInt(1))],
-                is_recursive=False, depends_on=set())],
-            recursive_bindings=set(),
             in_tail_position=True,
         ))
         counts = MenaiIRUseCounter().count(ir)
@@ -301,15 +295,9 @@ class TestIRUseCounterLetrec:
 
     def test_letrec_dead_binding_zero_count(self):
         """A letrec binding never used has count == 0."""
-        from menai.menai_dependency_analyzer import MenaiBindingGroup
-        from menai.menai_ast import MenaiASTInteger as ASTInt
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
             bindings=[("f", _const(1), 0)],
             body_plan=_const(99),
-            binding_groups=[MenaiBindingGroup(
-                names={"f"}, bindings=[("f", ASTInt(1))],
-                is_recursive=False, depends_on=set())],
-            recursive_bindings=set(),
             in_tail_position=True,
         ))
         counts = MenaiIRUseCounter().count(ir)
@@ -459,15 +447,9 @@ class TestIROptimizerLetrec:
 
     def test_live_letrec_binding_preserved(self):
         """A letrec binding used in the body is kept."""
-        from menai.menai_dependency_analyzer import MenaiBindingGroup
-        from menai.menai_ast import MenaiASTInteger as ASTInt
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
             bindings=[("f", _const(1), 0)],
             body_plan=_local(0),
-            binding_groups=[MenaiBindingGroup(
-                names={"f"}, bindings=[("f", ASTInt(1))],
-                is_recursive=False, depends_on=set())],
-            recursive_bindings=set(),
             in_tail_position=True,
         ))
         result = self._run(ir)
@@ -478,15 +460,9 @@ class TestIROptimizerLetrec:
 
     def test_dead_letrec_binding_removed(self):
         """A letrec binding with zero uses is dropped."""
-        from menai.menai_dependency_analyzer import MenaiBindingGroup
-        from menai.menai_ast import MenaiASTInteger as ASTInt
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
             bindings=[("f", _const(1), 0)],
             body_plan=_const(99),
-            binding_groups=[MenaiBindingGroup(
-                names={"f"}, bindings=[("f", ASTInt(1))],
-                is_recursive=False, depends_on=set())],
-            recursive_bindings=set(),
             in_tail_position=True,
         ))
         result = self._run(ir)

@@ -483,15 +483,9 @@ class TestLetrecNotInlined:
         """
         Even a single-use constant binding inside letrec is not inlined.
         """
-        from menai.menai_dependency_analyzer import MenaiBindingGroup
-        from menai.menai_ast import MenaiASTInteger as ASTInt
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
             bindings=[("k", _const(42), 0)],
             body_plan=_local(0),
-            binding_groups=[MenaiBindingGroup(
-                names={"k"}, bindings=[("k", ASTInt(42))],
-                is_recursive=False, depends_on=set())],
-            recursive_bindings=set(),
             in_tail_position=True,
         ))
         _, changed = _run(ir)
@@ -501,15 +495,9 @@ class TestLetrecNotInlined:
         """
         A single-use call binding inside letrec is not inlined.
         """
-        from menai.menai_dependency_analyzer import MenaiBindingGroup
-        from menai.menai_ast import MenaiASTInteger as ASTInt
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
             bindings=[("r", _add_call(_const(1), _const(2)), 0)],
             body_plan=_local(0),
-            binding_groups=[MenaiBindingGroup(
-                names={"r"}, bindings=[("r", ASTInt(0))],
-                is_recursive=False, depends_on=set())],
-            recursive_bindings=set(),
             in_tail_position=True,
         ))
         _, changed = _run(ir)
@@ -520,8 +508,6 @@ class TestLetrecNotInlined:
         Even though letrec bindings are not inlined, inner let nodes inside
         the letrec body ARE still optimized.
         """
-        from menai.menai_dependency_analyzer import MenaiBindingGroup
-        from menai.menai_ast import MenaiASTInteger as ASTInt
         inner_let = MenaiIRLet(
             bindings=[("r", _add_call(_const(3), _const(4)), 1)],
             body_plan=_local(1),
@@ -530,10 +516,6 @@ class TestLetrecNotInlined:
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
             bindings=[("f", _const(0), 0)],
             body_plan=inner_let,
-            binding_groups=[MenaiBindingGroup(
-                names={"f"}, bindings=[("f", ASTInt(0))],
-                is_recursive=False, depends_on=set())],
-            recursive_bindings=set(),
             in_tail_position=True,
         ))
         result, changed = _run(ir)

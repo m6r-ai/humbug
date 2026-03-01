@@ -18,6 +18,7 @@ from menai.menai_ast import (
     MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTInteger,
     MenaiASTFloat, MenaiASTComplex, MenaiASTString, MenaiASTBoolean, MenaiASTNone
 )
+from menai.menai_dependency_analyzer import MenaiDependencyAnalyzer
 from menai.menai_error import MenaiEvalError
 
 
@@ -195,6 +196,9 @@ class MenaiDesugarer:
             if name == 'let':
                 return self._desugar_let(expr)
 
+            if name == 'letrec':
+                return self._desugar_letrec(expr)
+
             if name == 'let*':
                 # Let* desugars to nested lets
                 return self._desugar_let_star(expr)
@@ -301,6 +305,90 @@ class MenaiDesugarer:
         return self._make_list((
             let_symbol, self._make_list(tuple(desugared_bindings), bindings_list), desugared_body
         ), expr)
+
+    def _desugar_letrec(self, expr: MenaiASTList) -> MenaiASTNode:
+        """
+        Desugar letrec by splitting mixed bindings into nested let/letrec forms.
+
+        A letrec with mixed lambda and non-lambda bindings is transformed into a
+        sequence of let/letrec forms in topological order:
+
+          - Non-recursive binding (lambda or non-lambda) -> let
+          - Recursive group (always lambdas after splitting) -> letrec
+
+        For example:
+
+          (letrec ((a (list 1 2 3))
+                   (f (lambda (x) ... a ...))
+                   (g (lambda (x) ... f ...)))
+            body)
+
+        becomes:
+
+          (let ((a (list 1 2 3)))
+            (letrec ((f (lambda (x) ... a ...))
+                     (g (lambda (x) ... f ...)))
+              body))
+
+        After splitting, every remaining letrec contains only a genuine mutually-
+        recursive group of lambdas, and all non-lambda values live in let bindings
+        where they belong.
+
+        Desugaring of binding values and body happens as the split nodes are built,
+        so no separate desugaring pass over the result is needed.
+        """
+        assert len(expr.elements) == 3, "Letrec expression should have exactly 3 elements (validated by semantic analyzer)"
+
+        bindings_list = expr.elements[1]
+        body = expr.elements[2]
+
+        assert isinstance(bindings_list, MenaiASTList), "Binding list should be a list (validated by semantic analyzer)"
+
+        # Extract raw (name, value_expr) pairs for dependency analysis.
+        # The analyzer only inspects symbol names, so raw (pre-desugared) AST is correct here.
+        raw_pairs: List[Tuple[str, MenaiASTNode]] = []
+        for binding in bindings_list.elements:
+            assert isinstance(binding, MenaiASTList) and len(binding.elements) == 2
+            name_expr, value_expr = binding.elements
+            assert isinstance(name_expr, MenaiASTSymbol)
+            raw_pairs.append((name_expr.name, value_expr))
+
+        raw_dict = dict(raw_pairs)
+
+        # Compute topological binding groups (already in dependency order).
+        binding_groups = MenaiDependencyAnalyzer().analyze_letrec_bindings(raw_pairs)
+
+        # Desugar the body, then wrap it in binding forms from innermost outward
+        # (i.e. process groups in reverse topological order so each group's body
+        # is the already-built inner expression).
+        result: MenaiASTNode = self.desugar(body)
+
+        for group in reversed(binding_groups):
+            # Build the desugared binding list for this group.
+            group_bindings: List[MenaiASTNode] = []
+            for name in group.names:
+                name_sym = self._make_symbol(name, expr)
+                desugared_value = self.desugar(raw_dict[name])
+                group_bindings.append(self._make_list((name_sym, desugared_value), expr))
+
+            binding_list_node = self._make_list(tuple(group_bindings), expr)
+
+            if group.is_recursive:
+                # Genuine recursive group -> letrec
+                result = self._make_list((
+                    self._make_symbol('letrec', expr),
+                    binding_list_node,
+                    result,
+                ), expr)
+            else:
+                # Non-recursive singleton -> let
+                result = self._make_list((
+                    self._make_symbol('let', expr),
+                    binding_list_node,
+                    result,
+                ), expr)
+
+        return result
 
     def _desugar_let_star(self, expr: MenaiASTList) -> MenaiASTNode:
         """

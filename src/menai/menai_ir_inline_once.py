@@ -240,8 +240,6 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
         return MenaiIRLetrec(
             bindings=live,
             body_plan=opt_body,
-            binding_groups=ir.binding_groups,
-            recursive_bindings=ir.recursive_bindings,
             in_tail_position=ir.in_tail_position,
         )
 
@@ -451,8 +449,6 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
         new_letrec = MenaiIRLetrec(
             bindings=new_bindings,
             body_plan=new_body,
-            binding_groups=ir.binding_groups,
-            recursive_bindings=ir.recursive_bindings,
             in_tail_position=ir.in_tail_position,
         )
 
@@ -571,6 +567,14 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
               frame-relative; substituting it inside a child lambda would
               produce a reference with the wrong depth.
 
+          MenaiIRLambda:
+              Never inlined.  A lambda is a closure definition that may be
+              called many times even if its binding slot is captured only once.
+              Inlining it would duplicate the closure creation and — in a
+              cascade — all of its own free-variable loads, causing code
+              explosion rather than reduction.  Dead lambdas (total_count == 0)
+              are handled by MenaiIROptimizer instead.
+
           All other value plan types:
               external_count is irrelevant.  These types contain no
               frame-relative addresses and can be substituted anywhere in the
@@ -580,6 +584,9 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
         calling this method.  Dead bindings (total_count == 0) are left for
         MenaiIROptimizer.
         """
+        if isinstance(value_plan, MenaiIRLambda):
+            return False
+
         if isinstance(value_plan, MenaiIRVariable):
             if (value_plan.var_type == 'local'
                     and value_plan.depth == 0
@@ -590,6 +597,6 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
             # Global variable or parent-ref: no frame-relative address concern.
             return True
 
-        # All other node types (constants, calls, if-exprs, quotes, lambdas,
+        # All other node types (constants, calls, if-exprs, quotes,
         # empty lists, errors, etc.) contain no frame-relative addresses.
         return True

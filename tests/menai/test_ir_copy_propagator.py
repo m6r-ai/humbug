@@ -502,15 +502,9 @@ class TestLetrecNotPropagated:
         Even a constant binding inside letrec is not copy-propagated
         (we skip letrec entirely for propagation).
         """
-        from menai.menai_dependency_analyzer import MenaiBindingGroup
-        from menai.menai_ast import MenaiASTInteger as ASTInt
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
             bindings=[("k", _const(42), 0)],
             body_plan=_local(0),
-            binding_groups=[MenaiBindingGroup(
-                names={"k"}, bindings=[("k", ASTInt(42))],
-                is_recursive=False, depends_on=set())],
-            recursive_bindings=set(),
             in_tail_position=True,
         ))
         _, changed = _run(ir)
@@ -521,8 +515,6 @@ class TestLetrecNotPropagated:
         Even though letrec bindings are not propagated, inner let nodes
         inside the letrec body ARE still optimized.
         """
-        from menai.menai_dependency_analyzer import MenaiBindingGroup
-        from menai.menai_ast import MenaiASTInteger as ASTInt
         inner_let = MenaiIRLet(
             bindings=[("x", _const(7), 1)],
             body_plan=_local(1),
@@ -531,10 +523,6 @@ class TestLetrecNotPropagated:
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
             bindings=[("f", _const(0), 0)],
             body_plan=inner_let,
-            binding_groups=[MenaiBindingGroup(
-                names={"f"}, bindings=[("f", ASTInt(0))],
-                is_recursive=False, depends_on=set())],
-            recursive_bindings=set(),
             in_tail_position=True,
         ))
         result, changed = _run(ir)
