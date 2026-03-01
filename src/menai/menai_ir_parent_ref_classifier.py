@@ -343,20 +343,10 @@ class MenaiIRParentRefClassifier:
         letrec_bound: FrozenSet[str],
         parent_ref_names: FrozenSet[str],
     ) -> MenaiIRCall:
-        """Walk a call node, skipping the tail-recursive sentinel func_plan."""
+        """Walk a call node."""
         new_args = [
             self._walk(a, letrec_bound, parent_ref_names) for a in ir.arg_plans
         ]
-
-        if ir.is_tail_recursive:
-            return MenaiIRCall(
-                func_plan=ir.func_plan,
-                arg_plans=new_args,
-                is_tail_call=ir.is_tail_call,
-                is_tail_recursive=ir.is_tail_recursive,
-                is_builtin=ir.is_builtin,
-                builtin_name=ir.builtin_name,
-            )
 
         return MenaiIRCall(
             func_plan=self._walk(ir.func_plan, letrec_bound, parent_ref_names),

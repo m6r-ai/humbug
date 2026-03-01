@@ -175,10 +175,6 @@ class MenaiIRAddresser:
             # Global — no frame-relative address needed.
             return ir
 
-        # Tail-recursive sentinel — leave it as-is.
-        if ir.name == '<tail-recursive>':
-            return ir
-
         depth, index = self._resolve_local(ir.name, frame_stack)
 
         if depth == -1:
@@ -338,19 +334,8 @@ class MenaiIRAddresser:
         )
 
     def _walk_call(self, ir: MenaiIRCall, frame_stack: FrameStack) -> MenaiIRCall:
-        """Walk a call node, skipping the tail-recursive sentinel func_plan."""
+        """Walk a call node."""
         new_args = [self._walk(a, frame_stack) for a in ir.arg_plans]
-
-        if ir.is_tail_recursive:
-            # func_plan is a sentinel ('<tail-recursive>') — leave it unchanged.
-            return MenaiIRCall(
-                func_plan=ir.func_plan,
-                arg_plans=new_args,
-                is_tail_call=ir.is_tail_call,
-                is_tail_recursive=ir.is_tail_recursive,
-                is_builtin=ir.is_builtin,
-                builtin_name=ir.builtin_name,
-            )
 
         return MenaiIRCall(
             func_plan=self._walk(ir.func_plan, frame_stack),

@@ -537,36 +537,28 @@ class TestLetrecNotPropagated:
 
 
 # ---------------------------------------------------------------------------
-# Unit tests: tail-recursive sentinel
+# Unit tests: tail-recursive calls
 # ---------------------------------------------------------------------------
 
-class TestTailRecursiveSentinel:
-    """Verify that the tail-recursive sentinel func_plan is never substituted."""
+class TestTailRecursiveCalls:
+    """Verify that tail-recursive calls are handled correctly by the propagator."""
 
-    def test_tail_recursive_sentinel_not_substituted(self):
+    def test_tail_recursive_call_args_propagated(self):
         """
-        The sentinel MenaiIRVariable(name='<tail-recursive>') used as the
-        func_plan of a tail-recursive call must never be replaced.
+        The arguments of a tail-recursive call are copy-propagated normally.
+        The func_plan is a real variable reference (no sentinel) and is
+        walked like any other variable.
         """
-        # Simulate a tail-recursive call where slot 0 happens to be the
-        # sentinel index.  The propagator must not replace the sentinel.
-        sentinel = MenaiIRVariable(
-            name='<tail-recursive>',
-            var_type='local',
-            depth=0,
-            index=0,
-            is_parent_ref=False,
-        )
         tail_call = MenaiIRCall(
-            func_plan=sentinel,
-            arg_plans=[_const(1)],
+            func_plan=_local(index=0, depth=0),
+            arg_plans=[_local(index=1, depth=0)],
             is_tail_call=True,
             is_tail_recursive=True,
             is_builtin=False,
             builtin_name=None,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(99), 0)],
+            bindings=[("arg", _const(42), 1)],
             body_plan=tail_call,
             in_tail_position=True,
         ))
@@ -574,10 +566,9 @@ class TestTailRecursiveSentinel:
         assert isinstance(result, MenaiIRReturn)
         call = result.value_plan
         assert isinstance(call, MenaiIRCall)
-        assert call.is_tail_recursive
-        # The sentinel must be unchanged.
-        assert isinstance(call.func_plan, MenaiIRVariable)
-        assert call.func_plan.name == '<tail-recursive>'
+        # The constant arg should have been propagated into arg_plans.
+        assert isinstance(call.arg_plans[0], MenaiIRConstant)
+        assert call.arg_plans[0].value == MenaiInteger(42)
 
 
 # ---------------------------------------------------------------------------

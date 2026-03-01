@@ -243,19 +243,8 @@ class MenaiIRClosureConverter:
         )
 
     def _walk_call(self, ir: MenaiIRCall) -> MenaiIRCall:
-        """Walk a call node, skipping the tail-recursive sentinel func_plan."""
+        """Walk a call node."""
         new_args = [self._walk(a) for a in ir.arg_plans]
-
-        if ir.is_tail_recursive:
-            # func_plan is a sentinel ('<tail-recursive>') — leave it unchanged.
-            return MenaiIRCall(
-                func_plan=ir.func_plan,
-                arg_plans=new_args,
-                is_tail_call=ir.is_tail_call,
-                is_tail_recursive=ir.is_tail_recursive,
-                is_builtin=ir.is_builtin,
-                builtin_name=ir.builtin_name,
-            )
 
         return MenaiIRCall(
             func_plan=self._walk(ir.func_plan),

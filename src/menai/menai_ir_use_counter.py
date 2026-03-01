@@ -283,12 +283,6 @@ class MenaiIRUseCounter:
     def _walk_call(self, ir: MenaiIRCall, result: IRUseCounts,
                    frame_stack: List[int]) -> None:
         """Walk a call node."""
-        # For tail-recursive self-calls the func_plan is a sentinel variable
-        # with name '<tail-recursive>' — it has var_type='local' and index=0
-        # but does NOT represent a real binding.  We skip it here; the actual
-        # argument expressions are what matter for use counting.
-        if not ir.is_tail_recursive:
-            self._walk(ir.func_plan, result, frame_stack)
-
+        self._walk(ir.func_plan, result, frame_stack)
         for arg_plan in ir.arg_plans:
             self._walk(arg_plan, result, frame_stack)

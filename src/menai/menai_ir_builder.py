@@ -55,10 +55,8 @@ class AnalysisContext:
     parent_ctx: 'AnalysisContext | None' = None
     next_local_index: int = 0
     max_locals: int = 0
-    current_function_name: str | None = None
     current_binding_name: str | None = None  # Name of the binding currently being analysed.
-                                              # Used for: (1) lambda binding_name for debuggability,
-                                              #           (2) tail-recursive self-call detection.
+                                              # Used for lambda binding_name (debuggability).
     letrec_bound_names: Set[str] = field(default_factory=set)  # Names bound by any enclosing letrec
     # Track names for global resolution (we need to know what's a global vs local)
     # but we don't assign indices — that's for codegen.
@@ -562,11 +560,6 @@ class MenaiIRBuilder:
             free_var_index = lambda_ctx.allocate_local_index()
             lambda_ctx.current_scope().add_binding(free_var, free_var_index)
 
-        # Set function name for tail recursion detection.
-        # current_function_name is set to the binding name (from current_binding_name)
-        # so that _analyze_function_call can detect direct self-recursive tail calls
-        # and emit JUMP 0 instead of TAIL_CALL.
-        lambda_ctx.current_function_name = ctx.current_binding_name
         lambda_ctx.update_max_locals()
 
         # Analyze lambda body (in tail position)
@@ -617,29 +610,17 @@ class MenaiIRBuilder:
                 builtin_name=builtin_name
             )
 
-        # Check for tail-recursive call
-        is_tail_recursive = (
-            in_tail_position and
-            ctx.current_function_name is not None and
-            func_type is MenaiASTSymbol and
-            cast(MenaiASTSymbol, func_expr).name == ctx.current_function_name
-        )
-
-        # Analyze function and arguments
-        func_plan: MenaiIRExpr
-        if is_tail_recursive:
-            func_plan = MenaiIRVariable(name='<tail-recursive>', var_type='local', depth=0, index=0)
-
-        else:
-            func_plan = self._analyze_expression(func_expr, ctx, in_tail_position=False)
-
+        # Analyze function and arguments — always use the real callee reference.
+        # Self-recursive tail call optimisation (JUMP 0) is detected later in
+        # the codegen, after all structural IR transformations are complete.
+        func_plan: MenaiIRExpr = self._analyze_expression(func_expr, ctx, in_tail_position=False)
         arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
 
         return MenaiIRCall(
             func_plan=func_plan,
             arg_plans=arg_plans,
             is_tail_call=in_tail_position,
-            is_tail_recursive=is_tail_recursive,
+            is_tail_recursive=False,
             is_builtin=False,
             builtin_name=None
         )

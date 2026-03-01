@@ -311,17 +311,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
     def _prop_call(self, ir: MenaiIRCall, frame_stack: List[int]) -> MenaiIRCall:
         opt_args = [self._prop(a, frame_stack) for a in ir.arg_plans]
 
-        if ir.is_tail_recursive:
-            # func_plan is a sentinel ('<tail-recursive>') — do not optimize it.
-            return MenaiIRCall(
-                func_plan=ir.func_plan,
-                arg_plans=opt_args,
-                is_tail_call=ir.is_tail_call,
-                is_tail_recursive=ir.is_tail_recursive,
-                is_builtin=ir.is_builtin,
-                builtin_name=ir.builtin_name,
-            )
-
         return MenaiIRCall(
             func_plan=self._prop(ir.func_plan, frame_stack),
             arg_plans=opt_args,
@@ -569,21 +558,10 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
         replacements: Dict[int, MenaiIRExpr],
         frame_stack: List[int],
     ) -> MenaiIRCall:
-        """Substitute into a call node, skipping the tail-recursive sentinel."""
+        """Substitute into a call node."""
         opt_args = [
             self._substitute(a, replacements, frame_stack) for a in ir.arg_plans
         ]
-
-        if ir.is_tail_recursive:
-            # func_plan is a sentinel — never substitute into it.
-            return MenaiIRCall(
-                func_plan=ir.func_plan,
-                arg_plans=opt_args,
-                is_tail_call=ir.is_tail_call,
-                is_tail_recursive=ir.is_tail_recursive,
-                is_builtin=ir.is_builtin,
-                builtin_name=ir.builtin_name,
-            )
 
         return MenaiIRCall(
             func_plan=self._substitute(ir.func_plan, replacements, frame_stack),

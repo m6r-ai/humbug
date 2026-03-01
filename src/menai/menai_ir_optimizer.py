@@ -242,9 +242,7 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
                 stack.extend([node.condition_plan, node.then_plan, node.else_plan])
 
             elif isinstance(node, MenaiIRCall):
-                if not node.is_tail_recursive:
-                    stack.append(node.func_plan)
-
+                stack.append(node.func_plan)
                 stack.extend(node.arg_plans)
 
             elif isinstance(node, MenaiIRReturn):
@@ -340,17 +338,6 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
 
     def _opt_call(self, ir: MenaiIRCall, frame_stack: List[int]) -> MenaiIRCall:
         opt_args = [self._opt(a, frame_stack) for a in ir.arg_plans]
-
-        if ir.is_tail_recursive:
-            # func_plan is a sentinel — don't optimize it.
-            return MenaiIRCall(
-                func_plan=ir.func_plan,
-                arg_plans=opt_args,
-                is_tail_call=ir.is_tail_call,
-                is_tail_recursive=ir.is_tail_recursive,
-                is_builtin=ir.is_builtin,
-                builtin_name=ir.builtin_name,
-            )
 
         return MenaiIRCall(
             func_plan=self._opt(ir.func_plan, frame_stack),

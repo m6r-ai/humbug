@@ -45,6 +45,9 @@ class MenaiCodeGenContext:
     name_map: Dict[str, int] = field(default_factory=dict)
     code_objects: List[CodeObject] = field(default_factory=list)
     max_locals: int = 0
+    current_lambda_name: str | None = None  # Name of the lambda currently being compiled.
+                                             # Used by _generate_call to detect direct
+                                             # self-recursive tail calls and emit JUMP 0.
 
     def add_constant(self, value: MenaiValue) -> int:
         """
@@ -302,6 +305,10 @@ class MenaiCodeGen:
         # Create nested context for lambda body
         lambda_ctx = MenaiCodeGenContext()
 
+        # Record this lambda's name so _generate_call can detect self-recursive
+        # tail calls and emit JUMP 0 instead of TAIL_CALL.
+        lambda_ctx.current_lambda_name = plan.binding_name
+
         # Generate function prologue: pop all N arguments from stack into locals 0..N-1
         if plan.params:
             lambda_ctx.emit(Opcode.ENTER, len(plan.params))
@@ -350,16 +357,22 @@ class MenaiCodeGen:
 
     def _generate_call(self, plan: MenaiIRCall, ctx: MenaiCodeGenContext) -> None:
         """Generate code for a function call."""
-        # Check for tail-recursive call (jump to start)
-        if plan.is_tail_recursive:
-            # Generate arguments
+        # Detect direct self-recursive tail calls and emit JUMP 0.
+        # A call is a self-recursive tail call when:
+        #   - it is in tail position
+        #   - the callee is a local variable whose name matches the current lambda
+        #   - the argument count matches the current lambda's param_count exactly
+        #     (ensured by the IR builder: self-calls always pass the same arity)
+        if (plan.is_tail_call
+                and not plan.is_builtin
+                and ctx.current_lambda_name is not None
+                and isinstance(plan.func_plan, MenaiIRVariable)
+                and plan.func_plan.var_type == 'local'
+                and plan.func_plan.name == ctx.current_lambda_name):
             for arg_plan in plan.arg_plans:
                 self._generate_expr(arg_plan, ctx)
-
-            # Jump to instruction 0 (start of function)
             ctx.emit(Opcode.JUMP, 0)
             return
-
         # Check for builtin call
         if plan.is_builtin:
             assert plan.builtin_name is not None
