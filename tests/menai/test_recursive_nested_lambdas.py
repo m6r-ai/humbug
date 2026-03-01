@@ -374,7 +374,7 @@ class TestRecursiveNestedLambdasBytecode:
                                start
                                ((make-counter (integer+ start 1)) (integer- n 1)))))))
               ((make-counter 0) 5))''',
-            '0'  # Returns start value after 5 recursive calls
+            '5'  # Each recursive call increments start; after 5 calls start=5
         )
 
     def test_bytecode_mutual_recursion_in_map(self, menai, helpers):

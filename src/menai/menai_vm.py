@@ -538,6 +538,17 @@ class MenaiVM:
                 # Optimization: reuse frame for self-recursion
                 if result.func.bytecode == frame.code:
                     frame.ip = 0
+
+                    # Update captured values and parent frame in case this is a
+                    # different closure instance with the same bytecode (e.g. a
+                    # lambda factory returning a new closure on each call).
+                    # Without this, reused frames would retain stale captured
+                    # values from the original closure.
+                    if result.func.captured_values:
+                        for i, captured_val in enumerate(result.func.captured_values):
+                            frame.locals[frame.code.param_count + i] = captured_val
+
+                    frame.parent_frame = result.func.parent_frame
                     continue
 
                 # Replace frame for general tail call
