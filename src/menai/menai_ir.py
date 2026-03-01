@@ -23,8 +23,11 @@ class MenaiIRVariable:
     """Plan for compiling a variable reference."""
     name: str
     var_type: str       # 'local' or 'global'
-    depth: int          # Scope depth (0 for current frame, 1+ for parent frames)
-    index: int          # Variable index (local index or name index)
+    depth: int = -1     # Scope depth (0 for current frame, 1+ for parent frames).
+                        # -1 means unresolved — set by MenaiIRAddresser before codegen.
+    index: int = -1     # Variable index (local slot index for locals; unused for globals
+                        # until codegen assigns name-table indices).
+                        # -1 means unresolved — set by MenaiIRAddresser before codegen.
     is_parent_ref: bool = False  # True if this loads from parent frame (for recursive bindings)
 
 

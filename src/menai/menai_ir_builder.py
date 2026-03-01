@@ -203,15 +203,15 @@ class MenaiIRBuilder:
 
     def _analyze_variable(self, name: str, ctx: AnalysisContext) -> MenaiIRVariable:
         """Analyze a variable reference."""
-        var_type, depth, index = ctx.resolve_variable(name)
-        # Check if this is a parent reference (recursive binding)
-        # Only use parent ref if it's from a parent context (depth > 0) and is a recursive binding
+        # resolve_variable() is called only to determine var_type and whether
+        # the name crosses a lambda boundary (depth > 0).  depth and index are
+        # NOT stored here — MenaiIRAddresser fills them in before codegen.
+        var_type, depth, _index = ctx.resolve_variable(name)
+        # is_parent_ref: crosses a lambda boundary AND is a registered recursive binding.
         is_parent_ref = (depth > 0) and (name in ctx.parent_ref_names)
         return MenaiIRVariable(
             name=name,
             var_type=var_type,
-            depth=depth,
-            index=index,
             is_parent_ref=is_parent_ref
         )
 
@@ -543,33 +543,28 @@ class MenaiIRBuilder:
         current_siblings = ctx.sibling_bindings
 
         for free_var in free_vars:
-            # Create a plan for loading this free variable from parent scope
-            var_type, depth, index = ctx.resolve_variable(free_var)
-
-            # Check if this is a self-reference or sibling (parent reference)
+            # Classify as parent_ref (recursive back-edge) or captured free var.
+            # depth/index are deferred to MenaiIRAddresser; we only need var_type
+            # here to know whether this is a global (shouldn't happen for a free
+            # var, but be defensive) or a local.
+            var_type, depth, _index = ctx.resolve_variable(free_var)
             is_parent_ref = False
             if current_binding and free_var == current_binding:
                 is_parent_ref = True
-
             elif current_siblings and free_var in current_siblings:
                 is_parent_ref = True
-
             elif free_var in ctx.parent_ref_names:
-                # Also check if it's a recursive binding from a parent letrec
                 is_parent_ref = True
 
             if is_parent_ref:
-                # Parent reference - will use LOAD_PARENT_VAR
                 parent_refs.append(free_var)
                 parent_ref_plans.append(MenaiIRVariable(
-                    name=free_var, var_type=var_type, depth=depth, index=index, is_parent_ref=True
+                    name=free_var, var_type=var_type, is_parent_ref=True
                 ))
-
             else:
-                # Regular free variable - will be captured
                 captured_vars.append(free_var)
                 free_var_plans.append(MenaiIRVariable(
-                    name=free_var, var_type=var_type, depth=depth, index=index, is_parent_ref=False
+                    name=free_var, var_type=var_type, is_parent_ref=False
                 ))
 
         # Create child context for lambda body analysis
