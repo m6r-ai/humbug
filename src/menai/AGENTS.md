@@ -31,7 +31,13 @@ MenaiDesugarer              menai_desugarer.py
     ↓
 MenaiASTConstantFolder      menai_ast_constant_folder.py   (AST optimization pass)
     ↓
+MenaiFreeVarAnalyzer        menai_free_var_analyzer.py     (free variable annotation — result available for Step 4)
+    ↓
 MenaiIRBuilder              menai_ir_builder.py
+    ↓
+MenaiIRParentRefClassifier  menai_ir_parent_ref_classifier.py  (reclassifies free_vars vs parent_refs from IR structure)
+    ↓
+MenaiIRAddresser            menai_ir_addresser.py          (resolves MenaiIRVariable depth/index — deferred from IR builder)
     ↓
 MenaiIROptimizer            menai_ir_optimizer.py          (IR optimization pass — fixed-point loop)
     ↓
@@ -57,8 +63,11 @@ optimizations are applied across module boundaries.
 | `menai_module_resolver.py` | Resolves `import` forms, detects circular dependencies | Small |
 | `menai_desugarer.py` | Expands all syntactic sugar: `let`, `let*`, `letrec`, `quote`, `match`, etc. → canonical form | Very large |
 | `menai_ast_constant_folder.py` | AST-level constant folding optimization pass | Very large |
+| `menai_free_var_analyzer.py` | Standalone free variable analysis pass. Annotates every lambda in the post-fold AST with its free variable names (`FreeVarInfo`). Runs after AST folding, before IR builder. Result will be consumed by closure conversion (Step 4). | Medium |
 | `menai_ir.py` | IR dataclasses (`MenaiIRExpr` union type) — the compilation plan | Small |
-| `menai_ir_builder.py` | Lowers desugared AST → IR. Resolves variable addressing, tail call detection | Large |
+| `menai_ir_builder.py` | Lowers desugared AST → IR. Emits `MenaiIRVariable` with `depth=-1, index=-1` (unresolved). Slot allocation and `free_vars`/`parent_refs` split are done here; depth/index resolution is deferred to `MenaiIRAddresser`. | Large |
+| `menai_ir_parent_ref_classifier.py` | Reclassifies `free_vars` vs `parent_refs` on every `MenaiIRLambda` based purely on the IR tree structure (enclosing `MenaiIRLetrec` nodes). Runs after IR builder, before addresser. | Small |
+| `menai_ir_addresser.py` | Resolves all `MenaiIRVariable(depth=-1, index=-1)` nodes to their correct frame-relative `(depth, index)`. Runs after classifier, before IR optimization passes. | Medium |
 | `menai_ir_optimization_pass.py` | Base class for IR optimization passes | Tiny |
 | `menai_ir_use_counter.py` | Pure analysis pass: counts all variable uses per frame; produces `IRUseCounts` | Medium |
 | `menai_ir_copy_propagator.py` | IR-level copy propagation pass; inlines trivially-copyable let bindings | Medium |
@@ -229,14 +238,20 @@ enforced at runtime by the lambda itself, exactly like any user-defined function
 
 ## Variable Addressing and `LOAD_NAME`
 
-The IR builder resolves all variable references to one of three addressing modes:
+Variable references go through a two-phase resolution:
+
+1. **`MenaiIRBuilder`** emits `MenaiIRVariable` nodes with `depth=-1, index=-1` (unresolved sentinels).
+   It determines `var_type` ('local' or 'global') and `is_parent_ref` at this stage.
+2. **`MenaiIRAddresser`** (runs after `MenaiIRParentRefClassifier`) resolves every local variable
+   to its correct `(depth, index)` by walking the IR tree's scope structure.
+
+The three final addressing modes emitted by the codegen are:
 
 - **`LOAD_VAR index`** — lexically-addressed local variable in the current frame.
   Used for all user-defined bindings (`let`, `let*`, `letrec`, lambda parameters).
 - **`LOAD_PARENT_VAR index depth`** — lexically-addressed variable in an enclosing
-  frame at `depth` levels up. Used for free variables captured from outer scopes
-  (closures). Free variables are detected by the semantic analyser and captured via
-  `MAKE_CLOSURE` at the call site.
+  frame at `depth` levels up. Used for recursive back-edges to enclosing `letrec` bindings
+  (`parent_refs`). Classified by `MenaiIRParentRefClassifier`; addressed by `MenaiIRAddresser`.
 - **`LOAD_NAME name_index`** — name-table lookup, used **only for global builtins**
   that are referenced as first-class values (i.e. not called directly with the correct
   fixed arity). When the codegen sees a direct call to a known builtin at the right

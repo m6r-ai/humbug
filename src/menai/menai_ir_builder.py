@@ -56,12 +56,13 @@ class AnalysisContext:
     next_local_index: int = 0
     max_locals: int = 0
     current_function_name: str | None = None
-    current_binding_name: str | None = None  # Name of the binding being analyzed (for lambda naming)
-    sibling_bindings: List[str] = field(default_factory=list)
+    current_binding_name: str | None = None  # Name of the binding currently being analysed.
+                                              # Used for: (1) lambda binding_name for debuggability,
+                                              #           (2) tail-recursive self-call detection.
+    letrec_bound_names: Set[str] = field(default_factory=set)  # Names bound by any enclosing letrec
     # Track names for global resolution (we need to know what's a global vs local)
-    # But we don't assign indices - that's for codegen
+    # but we don't assign indices — that's for codegen.
     names: Set[str] = field(default_factory=set)
-    parent_ref_names: Set[str] = field(default_factory=set)  # Names that are parent references (recursive bindings)
 
     def push_scope(self) -> None:
         """Enter a new lexical scope."""
@@ -130,8 +131,7 @@ class AnalysisContext:
         """Create a child context for nested lambda analysis."""
         child = AnalysisContext()
         child.parent_ctx = self
-        child.sibling_bindings = []
-        child.parent_ref_names = self.parent_ref_names.copy()  # Inherit parent refs
+        child.letrec_bound_names = self.letrec_bound_names.copy()  # Inherit enclosing letrec names
         return child
 
 
@@ -203,16 +203,16 @@ class MenaiIRBuilder:
 
     def _analyze_variable(self, name: str, ctx: AnalysisContext) -> MenaiIRVariable:
         """Analyze a variable reference."""
-        # resolve_variable() is called only to determine var_type and whether
-        # the name crosses a lambda boundary (depth > 0).  depth and index are
-        # NOT stored here — MenaiIRAddresser fills them in before codegen.
+        # resolve_variable() determines var_type and whether the name crosses
+        # a lambda boundary (depth > 0).  depth and index are left as -1 —
+        # MenaiIRAddresser fills them in before codegen.
+        # is_parent_ref: crosses a lambda boundary AND is bound by an enclosing letrec.
         var_type, depth, _index = ctx.resolve_variable(name)
-        # is_parent_ref: crosses a lambda boundary AND is a registered recursive binding.
-        is_parent_ref = (depth > 0) and (name in ctx.parent_ref_names)
+        is_parent_ref = (depth > 0) and (name in ctx.letrec_bound_names)
         return MenaiIRVariable(
             name=name,
             var_type=var_type,
-            is_parent_ref=is_parent_ref
+            is_parent_ref=is_parent_ref,
         )
 
     def _analyze_list(self, expr: MenaiASTList, ctx: AnalysisContext, in_tail_position: bool) -> MenaiIRExpr:
@@ -406,7 +406,8 @@ class MenaiIRBuilder:
             # Also reset max_locals to allow nested expressions to allocate from binding_start_index
             ctx.max_locals = binding_start_index
 
-            # Set binding name for better debugging/disassembly
+            # Set binding name so nested lambdas get a meaningful name for
+            # debuggability and tail-recursion detection.
             old_binding_name = ctx.current_binding_name
             ctx.current_binding_name = name
             value_plan = self._analyze_expression(value_expr, ctx, in_tail_position=False)
@@ -476,26 +477,18 @@ class MenaiIRBuilder:
 
         ctx.update_max_locals()
 
-        # All bindings are mutually recursive siblings.  Register them all as
-        # parent_ref_names so nested lambdas resolve sibling references via
-        # LOAD_PARENT_VAR rather than as free-variable captures.
+        # Register all binding names as letrec-bound so that nested lambdas
+        # can identify recursive back-edges via letrec_bound_names.
         all_names = [name for name, _, _ in binding_pairs]
-        ctx.parent_ref_names.update(all_names)
+        ctx.letrec_bound_names.update(all_names)
 
-        # Second pass: analyze each binding value with full sibling context.
+        # Second pass: analyze each binding value with full letrec context.
         binding_plans = []
         for name, value_expr, var_index in binding_pairs:
             old_binding_name = ctx.current_binding_name
-            old_sibling_bindings = ctx.sibling_bindings
-
             ctx.current_binding_name = name
-            ctx.sibling_bindings = all_names
-
             value_plan = self._analyze_expression(value_expr, ctx, in_tail_position=False)
-
             ctx.current_binding_name = old_binding_name
-            ctx.sibling_bindings = old_sibling_bindings
-
             binding_plans.append((name, value_plan, var_index))
 
         # Analyze body
@@ -533,38 +526,26 @@ class MenaiIRBuilder:
         bound_vars = set(param_names)
         free_vars = self._find_free_variables(body, bound_vars, ctx)
 
-        # Separate free variables into captured (from outer scopes) and parent references (recursive bindings)
-        captured_vars = []
+        # Classify free variables: names bound by an enclosing letrec are
+        # parent_refs (accessed via LOAD_PARENT_VAR at runtime); everything
+        # else is a captured free var (stored in a local closure slot).
+        # This classification must happen before slot allocation so that
+        # parent_refs are excluded from the lambda's local frame.
+        captured_vars: List[str] = []
         free_var_plans: List[MenaiIRExpr] = []
-        parent_refs = []
+        parent_refs: List[str] = []
         parent_ref_plans: List[MenaiIRExpr] = []
 
-        current_binding = ctx.current_binding_name
-        current_siblings = ctx.sibling_bindings
-
-        for free_var in free_vars:
-            # Classify as parent_ref (recursive back-edge) or captured free var.
-            # depth/index are deferred to MenaiIRAddresser; we only need var_type
-            # here to know whether this is a global (shouldn't happen for a free
-            # var, but be defensive) or a local.
-            var_type, depth, _index = ctx.resolve_variable(free_var)
-            is_parent_ref = False
-            if current_binding and free_var == current_binding:
-                is_parent_ref = True
-            elif current_siblings and free_var in current_siblings:
-                is_parent_ref = True
-            elif free_var in ctx.parent_ref_names:
-                is_parent_ref = True
-
-            if is_parent_ref:
-                parent_refs.append(free_var)
+        for fv in free_vars:
+            if fv in ctx.letrec_bound_names:
+                parent_refs.append(fv)
                 parent_ref_plans.append(MenaiIRVariable(
-                    name=free_var, var_type=var_type, is_parent_ref=True
+                    name=fv, var_type='local', is_parent_ref=True
                 ))
             else:
-                captured_vars.append(free_var)
+                captured_vars.append(fv)
                 free_var_plans.append(MenaiIRVariable(
-                    name=free_var, var_type=var_type, is_parent_ref=False
+                    name=fv, var_type='local', is_parent_ref=False
                 ))
 
         # Create child context for lambda body analysis
@@ -576,16 +557,16 @@ class MenaiIRBuilder:
             param_index = lambda_ctx.allocate_local_index()
             lambda_ctx.current_scope().add_binding(param_name, param_index)
 
-        # Add captured free variables to lambda scope
+        # Add captured free vars to lambda scope (parent_refs are NOT local slots)
         for free_var in captured_vars:
             free_var_index = lambda_ctx.allocate_local_index()
             lambda_ctx.current_scope().add_binding(free_var, free_var_index)
 
-        # Set function name for tail recursion detection
+        # Set function name for tail recursion detection.
+        # current_function_name is set to the binding name (from current_binding_name)
+        # so that _analyze_function_call can detect direct self-recursive tail calls
+        # and emit JUMP 0 instead of TAIL_CALL.
         lambda_ctx.current_function_name = ctx.current_binding_name
-
-        # Mark parent refs so they can be identified during body analysis
-        lambda_ctx.parent_ref_names = set(parent_refs)
         lambda_ctx.update_max_locals()
 
         # Analyze lambda body (in tail position)
@@ -607,7 +588,7 @@ class MenaiIRBuilder:
             param_count=len(param_names),
             is_variadic=is_variadic,
             binding_name=ctx.current_binding_name,
-            sibling_bindings=ctx.sibling_bindings,
+            sibling_bindings=[],  # no longer needed; classifier uses letrec structure
             max_locals=lambda_ctx.max_locals,
             source_line=expr.line if (hasattr(expr, 'line') and expr.line is not None) else 0,
             source_file=expr.source_file if (hasattr(expr, 'source_file') and expr.source_file) else ""
