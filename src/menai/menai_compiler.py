@@ -17,6 +17,7 @@ from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
 from menai.menai_ir_copy_propagator import MenaiIRCopyPropagator
 from menai.menai_free_var_analyzer import MenaiFreeVarAnalyzer
 from menai.menai_ir_addresser import MenaiIRAddresser
+from menai.menai_ir_parent_ref_classifier import MenaiIRParentRefClassifier
 from menai.menai_ir_optimizer import MenaiIROptimizer
 from menai.menai_ir_inline_once import MenaiIRInlineOnce
 from menai.menai_lexer import MenaiLexer
@@ -51,6 +52,7 @@ class MenaiCompiler:
         # AST optimization passes
         self.ir_addresser = MenaiIRAddresser()
         self.free_var_analyzer = MenaiFreeVarAnalyzer()
+        self.parent_ref_classifier = MenaiIRParentRefClassifier()
         self.ast_passes: List[MenaiASTOptimizationPass] = []
         self.ir_passes: List[MenaiIROptimizationPass] = []
         if optimize:
@@ -114,10 +116,15 @@ class MenaiCompiler:
 
         # Analyze free variables on the final post-optimization AST.
         # Must run after AST constant folding (which may eliminate lambda nodes)
-        # and before the IR builder.  Result unused for now — Step 3 will consume it.
+        # and before the IR builder.  Result unused for now — Step 4 (closure conversion) will consume it.
         _free_var_info = self.free_var_analyzer.analyze(desugared_ast)
 
         ir = self.ir_builder.build(desugared_ast)
+
+        # Reclassify free_vars vs parent_refs on every lambda based purely on
+        # the IR tree structure (enclosing MenaiIRLetrec nodes), replacing the
+        # inline classification the IR builder does via letrec_bound_names.
+        ir = self.parent_ref_classifier.classify(ir)
 
         # Resolve variable names to frame-relative addresses.
         # This must run after the IR builder (which leaves depth=-1, index=-1)
