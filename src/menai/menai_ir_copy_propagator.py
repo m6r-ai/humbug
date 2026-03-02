@@ -292,12 +292,13 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
         return MenaiIRLambda(
             params=ir.params,
             body_plan=self._prop(ir.body_plan, child_stack),
-            free_vars=ir.free_vars,
-            free_var_plans=ir.free_var_plans,   # leaf nodes; no substitution needed
+            sibling_free_vars=ir.sibling_free_vars,
+            sibling_free_var_plans=ir.sibling_free_var_plans,   # leaf nodes; no substitution needed
+            outer_free_vars=ir.outer_free_vars,
+            outer_free_var_plans=ir.outer_free_var_plans,
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,
-            sibling_bindings=ir.sibling_bindings,
             max_locals=ir.max_locals,
             source_line=ir.source_line,
             source_file=ir.source_file,
@@ -514,9 +515,13 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
             child_stack = frame_stack + [lambda_frame_id]
 
         # Substitute into free_var_plans (evaluated in enclosing frame).
-        new_free_var_plans = [
+        new_sibling_free_var_plans = [
             self._substitute(fvp, replacements, frame_stack)
-            for fvp in ir.free_var_plans
+            for fvp in ir.sibling_free_var_plans
+        ]
+        new_outer_free_var_plans = [
+            self._substitute(fvp, replacements, frame_stack)
+            for fvp in ir.outer_free_var_plans
         ]
 
         # The body is in the child frame — propagate there but do NOT
@@ -526,12 +531,13 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
         return MenaiIRLambda(
             params=ir.params,
             body_plan=new_body,
-            free_vars=ir.free_vars,
-            free_var_plans=new_free_var_plans,
+            sibling_free_vars=ir.sibling_free_vars,
+            sibling_free_var_plans=new_sibling_free_var_plans,
+            outer_free_vars=ir.outer_free_vars,
+            outer_free_var_plans=new_outer_free_var_plans,
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,
-            sibling_bindings=ir.sibling_bindings,
             max_locals=ir.max_locals,
             source_line=ir.source_line,
             source_file=ir.source_file,

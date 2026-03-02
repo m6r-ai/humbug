@@ -239,8 +239,8 @@ class MenaiIRUseCounter:
         lambda_frame_id = self._push_frame(result)
         result.lambda_frame_ids[id(ir)] = lambda_frame_id
 
-        # Free variable loads happen in the *enclosing* frame.
-        for fv_plan in ir.free_var_plans:
+        # Free variable loads (sibling and outer) happen in the *enclosing* frame.
+        for fv_plan in ir.sibling_free_var_plans + ir.outer_free_var_plans:
             self._walk(fv_plan, result, frame_stack)
 
         # Walk the body in the new frame.

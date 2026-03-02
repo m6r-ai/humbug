@@ -231,24 +231,28 @@ class MenaiIRLambdaLifter:
         """
         # Always recurse into free_var_plans — evaluated in the enclosing
         # frame and may contain nested lambdas.
-        new_free_var_plans: List[MenaiIRExpr] = [
-            self._walk(p) for p in ir.free_var_plans
+        new_sibling_free_var_plans: List[MenaiIRExpr] = [
+            self._walk(p) for p in ir.sibling_free_var_plans
+        ]
+        new_outer_free_var_plans: List[MenaiIRExpr] = [
+            self._walk(p) for p in ir.outer_free_var_plans
         ]
 
         # Recurse into the body — lifts any nested capturing lambdas.
         new_body = self._walk(ir.body_plan)
 
-        if not ir.free_vars:
+        if not ir.sibling_free_vars and not ir.outer_free_vars:
             # Already closed — return structurally unchanged.
             return MenaiIRLambda(
                 params=ir.params,
                 body_plan=new_body,
-                free_vars=[],
-                free_var_plans=[],
+                sibling_free_vars=[],
+                sibling_free_var_plans=[],
+                outer_free_vars=[],
+                outer_free_var_plans=[],
                 param_count=ir.param_count,
                 is_variadic=ir.is_variadic,
                 binding_name=ir.binding_name,
-                sibling_bindings=ir.sibling_bindings,
                 max_locals=ir.max_locals,
                 source_line=ir.source_line,
                 source_file=ir.source_file,
@@ -257,11 +261,12 @@ class MenaiIRLambdaLifter:
         # ------------------------------------------------------------------
         # Build all_captured: (name, free_var_plan) for every value the
         # original lambda needed from outside its own frame.
-        # Letrec siblings are now regular free_vars (no parent_refs).
+        # Siblings and outer captures are both lifted into helper params.
         # ------------------------------------------------------------------
         all_captured: List[Tuple[str, MenaiIRExpr]] = []
 
-        for name, plan in zip(ir.free_vars, new_free_var_plans):
+        for name, plan in zip(ir.sibling_free_vars + ir.outer_free_vars,
+                              new_sibling_free_var_plans + new_outer_free_var_plans):
             all_captured.append((name, plan))
 
         captured_names: List[str] = [name for name, _ in all_captured]
@@ -297,12 +302,13 @@ class MenaiIRLambdaLifter:
         helper_lambda = MenaiIRLambda(
             params=helper_params,
             body_plan=self._reset_vars(new_body),
-            free_vars=[],
-            free_var_plans=[],
+            sibling_free_vars=[],
+            sibling_free_var_plans=[],
+            outer_free_vars=[],
+            outer_free_var_plans=[],
             param_count=helper_param_count,
             is_variadic=False,   # helper always takes a plain list; see comment above
             binding_name=helper_name,
-            sibling_bindings=[],
             max_locals=max(ir.max_locals, helper_param_count),
             source_line=ir.source_line,
             source_file=ir.source_file,
@@ -313,18 +319,29 @@ class MenaiIRLambdaLifter:
         # ------------------------------------------------------------------
         # params    = original params (arity unchanged — correct for
         #             first-class uses: map-list, fold-list, apply, etc.)
-        # free_vars = [helper] + captured_names
+        # sibling_free_vars = original sibling captures (still letrec siblings
+        #             from the wrapper's perspective — the enclosing letrec
+        #             frame is the same; these still need PATCH_CLOSURE)
+        # outer_free_vars   = [helper] + original outer captures
         # Body: tail-call helper(p0..pN-1, cap0..capM-1).
         # All variable references use depth=-1, index=-1 (unresolved);
         # the second addresser run fills them in from the wrapper's scope dict.
         #
         # Slot layout inside the wrapper frame:
         #   0 .. N-1    original params  (ENTER)
-        #   N           helper           (MAKE_CLOSURE slot 0)
-        #   N+1 .. N+M  captured values  (MAKE_CLOSURE slots 1..M)
+        #   N .. N+S-1  sibling captures (MAKE_CLOSURE / PATCH_CLOSURE slots 0..S-1)
+        #   N+S         helper           (MAKE_CLOSURE slot S)
+        #   N+S+1..N+M  outer captures   (MAKE_CLOSURE slots S+1..M)
 
-        wrapper_free_vars = [helper_name] + captured_names
-        wrapper_free_var_plans: List[MenaiIRExpr] = [
+        n_siblings = len(ir.sibling_free_vars)
+
+        # Sibling portion: the original sibling free vars and their plans.
+        wrapper_sibling_free_vars: List[str] = list(ir.sibling_free_vars)
+        wrapper_sibling_free_var_plans: List[MenaiIRExpr] = list(new_sibling_free_var_plans)
+
+        # Outer portion: helper first, then original outer captures.
+        wrapper_outer_free_vars: List[str] = [helper_name] + list(ir.outer_free_vars)
+        wrapper_outer_free_var_plans: List[MenaiIRExpr] = [
             MenaiIRVariable(
                 name=helper_name,
                 var_type='local',
@@ -332,9 +349,10 @@ class MenaiIRLambdaLifter:
                 index=-1,
                 is_parent_ref=False,
             )
-        ] + captured_plans
+        ] + list(new_outer_free_var_plans)
 
         # Arguments passed to the helper: original params then captured names.
+        # Order must match helper params: original params, then siblings, then outers.
         wrapper_arg_plans: List[MenaiIRExpr] = [
             MenaiIRVariable(
                 name=pname,
@@ -346,7 +364,7 @@ class MenaiIRLambdaLifter:
             for pname in ir.params
         ] + [
             MenaiIRVariable(
-                name=cname,
+                name=cname,  # captured_names = sibling_names + outer_names in order
                 var_type='local',
                 depth=-1,
                 index=-1,
@@ -372,14 +390,15 @@ class MenaiIRLambdaLifter:
                     builtin_name=None,
                 )
             ),
-            free_vars=wrapper_free_vars,
-            free_var_plans=wrapper_free_var_plans,
+            sibling_free_vars=wrapper_sibling_free_vars,
+            sibling_free_var_plans=wrapper_sibling_free_var_plans,
+            outer_free_vars=wrapper_outer_free_vars,
+            outer_free_var_plans=wrapper_outer_free_var_plans,
             param_count=orig_param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,
-            sibling_bindings=[],
             # N params + 1 helper slot + M captured slots
-            max_locals=orig_param_count + 1 + n_captured,
+            max_locals=orig_param_count + n_siblings + 1 + len(ir.outer_free_vars),
             source_line=ir.source_line,
             source_file=ir.source_file,
         )
@@ -439,12 +458,13 @@ class MenaiIRLambdaLifter:
             return MenaiIRLambda(
                 params=ir.params,
                 body_plan=ir.body_plan,  # body left as-is; addresser handles it
-                free_vars=ir.free_vars,
-                free_var_plans=[self._reset_vars(p) for p in ir.free_var_plans],
+                sibling_free_vars=ir.sibling_free_vars,
+                sibling_free_var_plans=[self._reset_vars(p) for p in ir.sibling_free_var_plans],
+                outer_free_vars=ir.outer_free_vars,
+                outer_free_var_plans=[self._reset_vars(p) for p in ir.outer_free_var_plans],
                 param_count=ir.param_count,
                 is_variadic=ir.is_variadic,
                 binding_name=ir.binding_name,
-                sibling_bindings=ir.sibling_bindings,
                 max_locals=ir.max_locals,
                 source_line=ir.source_line,
                 source_file=ir.source_file,

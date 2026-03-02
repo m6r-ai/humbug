@@ -78,13 +78,14 @@ class MenaiIRLambda:
     """Plan for compiling a lambda expression."""
     params: List[str]
     body_plan: 'MenaiIRExpr'
-    free_vars: List[str]  # Names of variables to capture
-    free_var_plans: List['MenaiIRExpr']  # Plans for loading free variables
+    sibling_free_vars: List[str]       # Names captured from the immediately enclosing letrec group
+    sibling_free_var_plans: List['MenaiIRExpr']  # Plans for loading sibling captures
+    outer_free_vars: List[str]         # Names captured from outside the enclosing letrec group
+    outer_free_var_plans: List['MenaiIRExpr']    # Plans for loading outer captures
     param_count: int
     is_variadic: bool  # True if last param is a rest parameter
     max_locals: int  # Maximum locals needed in lambda body
     binding_name: Optional[str] = None  # Name if bound in let/letrec (for recursion)
-    sibling_bindings: List[str] = field(default_factory=list)  # Sibling bindings for mutual recursion
     source_line: int = 0  # Line number in source where this lambda is defined
     source_file: str = ""  # Source file name where this lambda is defined
 

@@ -182,7 +182,7 @@ class MenaiIRClosureConverter:
         enclosing frame and may contain nested lambdas that need converting).
         (parent_ref_plans removed — letrec siblings are now regular free_vars)
 
-        The lambda's params, free_vars, free_var_plans, param_count, and
+        The lambda's params, sibling_free_vars, outer_free_vars, param_count, and
         max_locals are preserved: the MAKE_CLOSURE mechanism already makes
         capture explicit at the bytecode level, and param_count must not
         change (it controls how many arguments ENTER pops from the call
@@ -190,21 +190,25 @@ class MenaiIRClosureConverter:
         """
         new_body = self._walk(ir.body_plan)
 
-        # Recurse into free_var_plans: evaluated in the enclosing frame and
+        # Recurse into sibling/outer free_var_plans: evaluated in the enclosing frame and
         # may themselves contain lambdas.
-        new_free_var_plans: List[MenaiIRExpr] = [
-            self._walk(p) for p in ir.free_var_plans
+        new_sibling_free_var_plans: List[MenaiIRExpr] = [
+            self._walk(p) for p in ir.sibling_free_var_plans
+        ]
+        new_outer_free_var_plans: List[MenaiIRExpr] = [
+            self._walk(p) for p in ir.outer_free_var_plans
         ]
 
         return MenaiIRLambda(
             params=ir.params,
             body_plan=new_body,
-            free_vars=ir.free_vars,
-            free_var_plans=new_free_var_plans,
+            sibling_free_vars=ir.sibling_free_vars,
+            sibling_free_var_plans=new_sibling_free_var_plans,
+            outer_free_vars=ir.outer_free_vars,
+            outer_free_var_plans=new_outer_free_var_plans,
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,
-            sibling_bindings=ir.sibling_bindings,
             max_locals=ir.max_locals,
             source_line=ir.source_line,
             source_file=ir.source_file,

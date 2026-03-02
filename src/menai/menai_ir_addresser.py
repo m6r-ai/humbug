@@ -361,7 +361,8 @@ class MenaiIRAddresser:
         """
         # Walk free_var_plans in the enclosing frame.
         # (parent_ref_plans removed — letrec siblings are now regular free_vars)
-        new_free_var_plans = [self._walk(p, frame_stack) for p in ir.free_var_plans]
+        new_sibling_free_var_plans = [self._walk(p, frame_stack) for p in ir.sibling_free_var_plans]
+        new_outer_free_var_plans = [self._walk(p, frame_stack) for p in ir.outer_free_var_plans]
 
         # Build the lambda's own scope dict.
         # Parameters occupy slots 0..N-1; captured free vars occupy N..N+M-1.
@@ -370,7 +371,7 @@ class MenaiIRAddresser:
             lambda_scope[param] = i
 
         param_count = len(ir.params)
-        for i, free_var in enumerate(ir.free_vars):
+        for i, free_var in enumerate(ir.sibling_free_vars + ir.outer_free_vars):
             lambda_scope[free_var] = param_count + i
 
         # Push a new lambda frame containing just the lambda's scope dict.
@@ -381,12 +382,13 @@ class MenaiIRAddresser:
         return MenaiIRLambda(
             params=ir.params,
             body_plan=new_body,
-            free_vars=ir.free_vars,
-            free_var_plans=new_free_var_plans,
+            sibling_free_vars=ir.sibling_free_vars,
+            sibling_free_var_plans=new_sibling_free_var_plans,
+            outer_free_vars=ir.outer_free_vars,
+            outer_free_var_plans=new_outer_free_var_plans,
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,
-            sibling_bindings=ir.sibling_bindings,
             max_locals=ir.max_locals,
             source_line=ir.source_line,
             source_file=ir.source_file,

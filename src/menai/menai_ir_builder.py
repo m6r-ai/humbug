@@ -58,6 +58,9 @@ class AnalysisContext:
     current_binding_name: str | None = None  # Name of the binding currently being analysed.
                                               # Used for lambda binding_name (debuggability).
     letrec_bound_names: Set[str] = field(default_factory=set)  # Names bound by any enclosing letrec
+    current_letrec_names: Set[str] = field(default_factory=set)  # Names in the *immediately* enclosing
+                                                                  # letrec group only (not accumulated).
+                                                                  # Used to partition sibling vs outer captures.
     # Track names for global resolution (we need to know what's a global vs local)
     # but we don't assign indices — that's for codegen.
     names: Set[str] = field(default_factory=set)
@@ -130,6 +133,7 @@ class AnalysisContext:
         child = AnalysisContext()
         child.parent_ctx = self
         child.letrec_bound_names = self.letrec_bound_names.copy()  # Inherit enclosing letrec names
+        # current_letrec_names is NOT inherited — it is specific to the immediately enclosing letrec.
         return child
 
 
@@ -479,6 +483,9 @@ class MenaiIRBuilder:
         all_names = [name for name, _, _ in binding_pairs]
         ctx.letrec_bound_names.update(all_names)
 
+        # Record the immediate letrec group so lambdas can partition sibling vs outer captures.
+        ctx.current_letrec_names = set(all_names)
+
         # Second pass: analyze each binding value with full letrec context.
         binding_plans = []
         for name, value_expr, var_index in binding_pairs:
@@ -490,6 +497,9 @@ class MenaiIRBuilder:
 
         # Analyze body
         body_plan = self._analyze_expression(body, ctx, in_tail_position=in_tail_position)
+
+        # Clear current_letrec_names — we have left the immediate letrec scope.
+        ctx.current_letrec_names = set()
 
         # Pop scope
         ctx.pop_scope()
@@ -523,15 +533,22 @@ class MenaiIRBuilder:
         bound_vars = set(param_names)
         free_vars = self._find_free_variables(body, bound_vars, ctx)
 
-        # All free variables are captured into closure slots.
-        # Letrec siblings are handled by the two-phase PATCH_CLOSURE mechanism
-        # in the codegen, not by LOAD_PARENT_VAR.
-        free_var_plans: List[MenaiIRExpr] = []
+        # Partition free variables into sibling captures (from the immediately
+        # enclosing letrec group) and outer captures (everything else).
+        # This distinction is used by the lambda lifter to implement the
+        # known-call optimisation for letrec groups.
+        sibling_names = ctx.current_letrec_names
+        sibling_free_vars: List[str] = [fv for fv in free_vars if fv in sibling_names]
+        outer_free_vars:   List[str] = [fv for fv in free_vars if fv not in sibling_names]
 
-        for fv in free_vars:
-            free_var_plans.append(MenaiIRVariable(
-                name=fv, var_type='local', is_parent_ref=False
-            ))
+        sibling_free_var_plans: List[MenaiIRExpr] = [
+            MenaiIRVariable(name=fv, var_type='local', is_parent_ref=False)
+            for fv in sibling_free_vars
+        ]
+        outer_free_var_plans: List[MenaiIRExpr] = [
+            MenaiIRVariable(name=fv, var_type='local', is_parent_ref=False)
+            for fv in outer_free_vars
+        ]
 
         # Create child context for lambda body analysis
         lambda_ctx = ctx.create_child_context()
@@ -543,7 +560,8 @@ class MenaiIRBuilder:
             lambda_ctx.current_scope().add_binding(param_name, param_index)
 
         # Add all free vars to lambda scope as captured closure slots
-        for free_var in free_vars:
+        # Sibling captures first (slots N..N+S-1), then outer (slots N+S..N+S+O-1).
+        for free_var in sibling_free_vars + outer_free_vars:
             free_var_index = lambda_ctx.allocate_local_index()
             lambda_ctx.current_scope().add_binding(free_var, free_var_index)
 
@@ -561,12 +579,13 @@ class MenaiIRBuilder:
         return MenaiIRLambda(
             params=param_names,
             body_plan=body_plan,
-            free_vars=list(free_vars),
-            free_var_plans=free_var_plans,
+            sibling_free_vars=sibling_free_vars,
+            sibling_free_var_plans=sibling_free_var_plans,
+            outer_free_vars=outer_free_vars,
+            outer_free_var_plans=outer_free_var_plans,
             param_count=len(param_names),
             is_variadic=is_variadic,
             binding_name=ctx.current_binding_name,
-            sibling_bindings=[],  # no longer needed; classifier uses letrec structure
             max_locals=lambda_ctx.max_locals,
             source_line=expr.line if (hasattr(expr, 'line') and expr.line is not None) else 0,
             source_file=expr.source_file if (hasattr(expr, 'source_file') and expr.source_file) else ""

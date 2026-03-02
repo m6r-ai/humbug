@@ -84,21 +84,23 @@ def _global(name: str) -> MenaiIRVariable:
 def _make_lambda(
     params: list[str],
     body: 'MenaiIRReturn',
-    free_vars: list[str] | None = None,
-    free_var_plans: list | None = None,
+    outer_free_vars: list[str] | None = None,
+    outer_free_var_plans: list | None = None,
     param_count: int | None = None,
     max_locals: int | None = None,
 ) -> MenaiIRLambda:
     """Convenience constructor for MenaiIRLambda in tests."""
-    fv = free_vars or []
-    fvp = free_var_plans or []
+    fv = outer_free_vars or []
+    fvp = outer_free_var_plans or []
     pc = param_count if param_count is not None else len(params)
     ml = max_locals if max_locals is not None else pc + len(fv)
     return MenaiIRLambda(
         params=params,
         body_plan=body,
-        free_vars=fv,
-        free_var_plans=fvp,
+        sibling_free_vars=[],
+        sibling_free_var_plans=[],
+        outer_free_vars=fv,
+        outer_free_var_plans=fvp,
         param_count=pc,
         is_variadic=False,
         max_locals=ml,
@@ -132,23 +134,23 @@ class TestClosureConverterPreservesLambdaStructure:
         lam = _make_lambda(
             params=['x'],
             body=MenaiIRReturn(value_plan=_local('x', 0)),
-            free_vars=['captured'],
-            free_var_plans=[_local('captured', 0, depth=1)],
+            outer_free_vars=['captured'],
+            outer_free_var_plans=[_local('captured', 0, depth=1)],
             param_count=1,
             max_locals=2,
         )
         result = _convert(MenaiIRReturn(value_plan=lam))
         out_lam = result.value_plan  # type: ignore[union-attr]
-        assert out_lam.free_vars == ['captured']
-        assert len(out_lam.free_var_plans) == 1
+        assert out_lam.outer_free_vars == ['captured']
+        assert len(out_lam.outer_free_var_plans) == 1
 
     def test_param_count_unchanged(self):
         """param_count is not altered (controls ENTER instruction)."""
         lam = _make_lambda(
             params=['x'],
             body=MenaiIRReturn(value_plan=_local('x', 0)),
-            free_vars=['cap'],
-            free_var_plans=[_local('cap', 0, depth=1)],
+            outer_free_vars=['cap'],
+            outer_free_var_plans=[_local('cap', 0, depth=1)],
             param_count=1,
             max_locals=2,
         )
@@ -161,8 +163,8 @@ class TestClosureConverterPreservesLambdaStructure:
         lam = _make_lambda(
             params=['a', 'b'],
             body=MenaiIRReturn(value_plan=_local('a', 0)),
-            free_vars=['c'],
-            free_var_plans=[_local('c', 0, depth=1)],
+            outer_free_vars=['c'],
+            outer_free_var_plans=[_local('c', 0, depth=1)],
             param_count=2,
             max_locals=10,
         )
@@ -175,23 +177,23 @@ class TestClosureConverterPreservesLambdaStructure:
         lam = _make_lambda(
             params=['x'],
             body=MenaiIRReturn(value_plan=_local('x', 0)),
-            free_vars=['sibling'],
-            free_var_plans=[_local('sibling', 1, depth=0)],
+            outer_free_vars=['sibling'],
+            outer_free_var_plans=[_local('sibling', 1, depth=0)],
             param_count=1,
             max_locals=2,
         )
         result = _convert(MenaiIRReturn(value_plan=lam))
         out_lam = result.value_plan  # type: ignore[union-attr]
-        assert out_lam.free_vars == ['sibling']
-        assert len(out_lam.free_var_plans) == 1
+        assert out_lam.outer_free_vars == ['sibling']
+        assert len(out_lam.outer_free_var_plans) == 1
 
     def test_binding_name_preserved(self):
         """binding_name metadata is preserved."""
         lam = MenaiIRLambda(
             params=['x'],
             body_plan=MenaiIRReturn(value_plan=_local('x', 0)),
-            free_vars=[],
-            free_var_plans=[],
+            sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=[],
+            outer_free_var_plans=[],
             param_count=1,
             is_variadic=False,
             max_locals=1,
@@ -206,8 +208,8 @@ class TestClosureConverterPreservesLambdaStructure:
         lam = MenaiIRLambda(
             params=['x', 'rest'],
             body_plan=MenaiIRReturn(value_plan=_local('x', 0)),
-            free_vars=[],
-            free_var_plans=[],
+            sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=[],
+            outer_free_var_plans=[],
             param_count=2,
             is_variadic=True,
             max_locals=2,
@@ -221,8 +223,8 @@ class TestClosureConverterPreservesLambdaStructure:
         lam = MenaiIRLambda(
             params=['x'],
             body_plan=MenaiIRReturn(value_plan=_local('x', 0)),
-            free_vars=[],
-            free_var_plans=[],
+            sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=[],
+            outer_free_var_plans=[],
             param_count=1,
             is_variadic=False,
             max_locals=1,
@@ -265,8 +267,8 @@ class TestClosureConverterRecursion:
         outer = MenaiIRLambda(
             params=['x'],
             body_plan=MenaiIRReturn(value_plan=_local('x', 0)),
-            free_vars=['f'],
-            free_var_plans=[nested_in_plan],
+            sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=['f'],
+            outer_free_var_plans=[nested_in_plan],
             param_count=1,
             is_variadic=False,
             max_locals=2,
@@ -274,7 +276,7 @@ class TestClosureConverterRecursion:
         result = _convert(MenaiIRReturn(value_plan=outer))
         out_lam = result.value_plan  # type: ignore[union-attr]
         # The free_var_plan was recursed into (still a lambda)
-        assert isinstance(out_lam.free_var_plans[0], MenaiIRLambda)
+        assert isinstance(out_lam.outer_free_var_plans[0], MenaiIRLambda)
 
     def test_sibling_free_var_plans_recursed(self):
         """free_var_plans for letrec siblings are walked (no parent_ref_plans after refactor)."""
@@ -282,23 +284,23 @@ class TestClosureConverterRecursion:
         lam = _make_lambda(
             params=['x'],
             body=MenaiIRReturn(value_plan=_local('x', 0)),
-            free_vars=['sibling'],
-            free_var_plans=[plan_var],
+            outer_free_vars=['sibling'],
+            outer_free_var_plans=[plan_var],
             param_count=1,
             max_locals=2,
         )
         result = _convert(MenaiIRReturn(value_plan=lam))
         out_lam = result.value_plan  # type: ignore[union-attr]
         # free_var_plans was walked; variable is unchanged (leaf node)
-        assert isinstance(out_lam.free_var_plans[0], MenaiIRVariable)
+        assert isinstance(out_lam.outer_free_var_plans[0], MenaiIRVariable)
 
     def test_let_binding_values_recursed(self):
         """Lambdas in let binding values are visited."""
         inner_lam = _make_lambda(
             params=['x'],
             body=MenaiIRReturn(value_plan=_local('x', 0)),
-            free_vars=['cap'],
-            free_var_plans=[_local('cap', 0, depth=1)],
+            outer_free_vars=['cap'],
+            outer_free_var_plans=[_local('cap', 0, depth=1)],
             param_count=1,
             max_locals=2,
         )
@@ -313,15 +315,15 @@ class TestClosureConverterRecursion:
         out_lam = inner_let.bindings[0][1]
         # The lambda was visited and returned (free_vars still intact)
         assert isinstance(out_lam, MenaiIRLambda)
-        assert out_lam.free_vars == ['cap']
+        assert out_lam.outer_free_vars == ['cap']
 
     def test_letrec_binding_values_recursed(self):
         """Lambdas in letrec binding values are visited."""
         inner_lam = _make_lambda(
             params=['n'],
             body=MenaiIRReturn(value_plan=_local('n', 0)),
-            free_vars=['base'],
-            free_var_plans=[_local('base', 0, depth=1)],
+            outer_free_vars=['base'],
+            outer_free_var_plans=[_local('base', 0, depth=1)],
             param_count=1,
             max_locals=2,
         )
@@ -335,15 +337,15 @@ class TestClosureConverterRecursion:
         assert isinstance(inner_letrec, MenaiIRLetrec)
         out_lam = inner_letrec.bindings[0][1]
         assert isinstance(out_lam, MenaiIRLambda)
-        assert out_lam.free_vars == ['base']
+        assert out_lam.outer_free_vars == ['base']
 
     def test_if_branches_recursed(self):
         """Lambdas inside if branches are visited."""
         lam = _make_lambda(
             params=['x'],
             body=MenaiIRReturn(value_plan=_local('x', 0)),
-            free_vars=['cap'],
-            free_var_plans=[_local('cap', 0, depth=1)],
+            outer_free_vars=['cap'],
+            outer_free_var_plans=[_local('cap', 0, depth=1)],
             param_count=1,
             max_locals=2,
         )
@@ -358,15 +360,15 @@ class TestClosureConverterRecursion:
         assert isinstance(out_if, MenaiIRIf)
         out_lam = out_if.then_plan.value_plan  # type: ignore[union-attr]
         assert isinstance(out_lam, MenaiIRLambda)
-        assert out_lam.free_vars == ['cap']   # preserved
+        assert out_lam.outer_free_vars == ['cap']   # preserved
 
     def test_call_args_recursed(self):
         """Lambdas passed as call arguments are visited."""
         lam = _make_lambda(
             params=['x'],
             body=MenaiIRReturn(value_plan=_local('x', 0)),
-            free_vars=['cap'],
-            free_var_plans=[_local('cap', 0, depth=1)],
+            outer_free_vars=['cap'],
+            outer_free_var_plans=[_local('cap', 0, depth=1)],
             param_count=1,
             max_locals=2,
         )
@@ -382,15 +384,15 @@ class TestClosureConverterRecursion:
         assert isinstance(out_call, MenaiIRCall)
         out_lam = out_call.arg_plans[0]
         assert isinstance(out_lam, MenaiIRLambda)
-        assert out_lam.free_vars == ['cap']   # preserved
+        assert out_lam.outer_free_vars == ['cap']   # preserved
 
     def test_trace_node_recursed(self):
         """Lambdas inside a trace node are visited."""
         lam = _make_lambda(
             params=['x'],
             body=MenaiIRReturn(value_plan=_local('x', 0)),
-            free_vars=['cap'],
-            free_var_plans=[_local('cap', 0, depth=1)],
+            outer_free_vars=['cap'],
+            outer_free_var_plans=[_local('cap', 0, depth=1)],
             param_count=1,
             max_locals=2,
         )
@@ -403,7 +405,7 @@ class TestClosureConverterRecursion:
         assert isinstance(out_trace, MenaiIRTrace)
         out_lam = out_trace.value_plan
         assert isinstance(out_lam, MenaiIRLambda)
-        assert out_lam.free_vars == ['cap']   # preserved
+        assert out_lam.outer_free_vars == ['cap']   # preserved
 
     def test_leaf_nodes_returned_unchanged(self):
         """Leaf nodes (constants, globals, empty list) pass through untouched."""

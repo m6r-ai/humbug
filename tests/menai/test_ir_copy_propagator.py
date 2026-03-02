@@ -196,8 +196,8 @@ class TestTriviallyInlineable:
         lam = MenaiIRLambda(
             params=["p"],
             body_plan=MenaiIRReturn(value_plan=_local(0)),
-            free_vars=[],
-            free_var_plans=[],
+            sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=[],
+            outer_free_var_plans=[],
             param_count=1,
             is_variadic=False,
             max_locals=1,
@@ -242,8 +242,8 @@ class TestLambdaBoundaryRule:
         lam = MenaiIRLambda(
             params=[],
             body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
-            free_vars=["x"],
-            free_var_plans=[free_var_plan],
+            sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=["x"],
+            outer_free_var_plans=[free_var_plan],
             param_count=0,
             is_variadic=False,
             max_locals=1,
@@ -269,8 +269,8 @@ class TestLambdaBoundaryRule:
         lam = MenaiIRLambda(
             params=[],
             body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
-            free_vars=["k"],
-            free_var_plans=[free_var_plan],
+            sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=["k"],
+            outer_free_var_plans=[free_var_plan],
             param_count=0,
             is_variadic=False,
             max_locals=1,
@@ -293,8 +293,8 @@ class TestLambdaBoundaryRule:
         lam = MenaiIRLambda(
             params=[],
             body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
-            free_vars=["g"],
-            free_var_plans=[free_var_plan],
+            sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=["g"],
+            outer_free_var_plans=[free_var_plan],
             param_count=0,
             is_variadic=False,
             max_locals=1,
@@ -385,8 +385,8 @@ class TestSubstitutionCorrectness:
         lam = MenaiIRLambda(
             params=["x"],
             body_plan=MenaiIRReturn(value_plan=_local(0)),  # lambda's own param
-            free_vars=[],
-            free_var_plans=[],
+            sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=[],
+            outer_free_var_plans=[],
             param_count=1,
             is_variadic=False,
             max_locals=1,
@@ -421,8 +421,8 @@ class TestSubstitutionCorrectness:
         lam = MenaiIRLambda(
             params=[],
             body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
-            free_vars=["k"],
-            free_var_plans=[free_var_plan],
+            sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=["k"],
+            outer_free_var_plans=[free_var_plan],
             param_count=0,
             is_variadic=False,
             max_locals=1,
@@ -437,9 +437,9 @@ class TestSubstitutionCorrectness:
         opt_lam = result.value_plan
         assert isinstance(opt_lam, MenaiIRLambda)
         # free_var_plans[0] should now be the constant 42.
-        assert len(opt_lam.free_var_plans) == 1
-        assert isinstance(opt_lam.free_var_plans[0], MenaiIRConstant)
-        assert opt_lam.free_var_plans[0].value == MenaiInteger(42)
+        assert len(opt_lam.outer_free_var_plans) == 1
+        assert isinstance(opt_lam.outer_free_var_plans[0], MenaiIRConstant)
+        assert opt_lam.outer_free_var_plans[0].value == MenaiInteger(42)
 
 
 # ---------------------------------------------------------------------------
@@ -569,8 +569,8 @@ class TestSubstitutionsProperty:
         lam = MenaiIRLambda(
             params=["p"],
             body_plan=MenaiIRReturn(value_plan=_local(0)),
-            free_vars=[],
-            free_var_plans=[],
+            sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=[],
+            outer_free_var_plans=[],
             param_count=1,
             is_variadic=False,
             max_locals=1,
@@ -653,13 +653,14 @@ class TestFlagsPreserved:
         lam = MenaiIRLambda(
             params=["a", "b"],
             body_plan=MenaiIRReturn(value_plan=_local(0)),
-            free_vars=["outer"],
-            free_var_plans=[_local(index=2, depth=0)],
+            sibling_free_vars=["sibling"],
+            sibling_free_var_plans=[_local(index=2, depth=0)],
+            outer_free_vars=["outer"],
+            outer_free_var_plans=[],
             param_count=2,
             is_variadic=False,
             max_locals=5,
             binding_name="my_func",
-            sibling_bindings=["sibling"],
             source_line=42,
             source_file="test.menai",
         )
@@ -675,7 +676,7 @@ class TestFlagsPreserved:
         assert opt_lam.params == ["a", "b"]
         assert opt_lam.max_locals == 5
         assert opt_lam.binding_name == "my_func"
-        assert opt_lam.sibling_bindings == ["sibling"]
+        assert opt_lam.sibling_free_vars == ["sibling"]
         assert opt_lam.source_line == 42
         assert opt_lam.source_file == "test.menai"
         assert opt_lam.param_count == 2

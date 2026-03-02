@@ -309,8 +309,10 @@ class TestLambdaBoundaryRule:
             params=[],
             # depth=1 reference: this is the external use of slot 0
             body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
-            free_vars=["x"],
-            free_var_plans=[],   # omit to keep total_count=1 (one external use only)
+            sibling_free_vars=[],
+            sibling_free_var_plans=[],
+            outer_free_vars=["x"],
+            outer_free_var_plans=[],
             param_count=0,
             is_variadic=False,
             max_locals=1,
@@ -342,8 +344,10 @@ class TestLambdaBoundaryRule:
             params=[],
             # depth=1 reference: the external use of slot 0
             body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
-            free_vars=["result"],
-            free_var_plans=[],   # omit to keep total_count=1
+            sibling_free_vars=[],
+            sibling_free_var_plans=[],
+            outer_free_vars=["result"],
+            outer_free_var_plans=[],
             param_count=0,
             is_variadic=False,
             max_locals=1,
@@ -377,8 +381,10 @@ class TestLambdaBoundaryRule:
         lam = MenaiIRLambda(
             params=[],
             body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
-            free_vars=["k"],
-            free_var_plans=[],   # omit to keep total_count=1
+            sibling_free_vars=[],
+            sibling_free_var_plans=[],
+            outer_free_vars=["k"],
+            outer_free_var_plans=[],
             param_count=0,
             is_variadic=False,
             max_locals=1,
@@ -395,7 +401,7 @@ class TestLambdaBoundaryRule:
         opt_lam = result.value_plan
         assert isinstance(opt_lam, MenaiIRLambda)
         # Let collapsed; body still has depth-1 ref (child frame, not substituted).
-        assert len(opt_lam.free_var_plans) == 0
+        assert len(opt_lam.outer_free_var_plans) == 0
         body = opt_lam.body_plan
         assert isinstance(body, MenaiIRReturn)
         assert isinstance(body.value_plan, MenaiIRVariable)
@@ -435,8 +441,8 @@ class TestLambdaBoundaryRule:
         lam = MenaiIRLambda(
             params=["p"],
             body_plan=MenaiIRReturn(value_plan=_local(0)),  # lambda's own param slot 0
-            free_vars=[],
-            free_var_plans=[],
+            sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=[],
+            outer_free_var_plans=[],
             param_count=1,
             is_variadic=False,
             max_locals=1,
@@ -678,13 +684,14 @@ class TestFlagsPreserved:
         lam = MenaiIRLambda(
             params=["a", "b"],
             body_plan=MenaiIRReturn(value_plan=_local(0)),
-            free_vars=["outer"],
-            free_var_plans=[],
+            sibling_free_vars=["sibling"],
+            sibling_free_var_plans=[],
+            outer_free_vars=[],
+            outer_free_var_plans=[],
             param_count=2,
             is_variadic=False,
             max_locals=5,
             binding_name="my_func",
-            sibling_bindings=["sibling"],
             source_line=42,
             source_file="test.menai",
         )
@@ -703,7 +710,7 @@ class TestFlagsPreserved:
         assert opt_lam.params == ["a", "b"]
         assert opt_lam.max_locals == 5
         assert opt_lam.binding_name == "my_func"
-        assert opt_lam.sibling_bindings == ["sibling"]
+        assert opt_lam.sibling_free_vars == ["sibling"]
         assert opt_lam.source_line == 42
         assert opt_lam.source_file == "test.menai"
         assert opt_lam.param_count == 2

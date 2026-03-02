@@ -347,8 +347,8 @@ class MenaiCodeGen:
         # local slot holding the closure (either a letrec slot or a temp slot
         # allocated during Phase 1).
         for closure_slot, lambda_plan in deferred:
-            for capture_slot, _ in enumerate(lambda_plan.free_vars):
-                fvp = lambda_plan.free_var_plans[capture_slot]
+            all_plans = lambda_plan.sibling_free_var_plans + lambda_plan.outer_free_var_plans
+            for capture_slot, fvp in enumerate(all_plans):
                 self._generate_expr(fvp, ctx)
                 ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, capture_slot)
 
@@ -378,7 +378,8 @@ class MenaiCodeGen:
         if isinstance(plan, MenaiIRLambda):
             # Do NOT recurse into body — separate frame.
             # Do recurse into free_var_plans (evaluated in enclosing frame).
-            return max((self._max_let_slot(p) for p in plan.free_var_plans), default=-1)
+            all_fvp = plan.sibling_free_var_plans + plan.outer_free_var_plans
+            return max((self._max_let_slot(p) for p in all_fvp), default=-1)
         if isinstance(plan, MenaiIRIf):
             return max(self._max_let_slot(plan.condition_plan),
                        self._max_let_slot(plan.then_plan),
@@ -458,7 +459,7 @@ class MenaiCodeGen:
         # store the closure in a fresh temp slot, record it for Phase 2, then
         # load it back so the surrounding expression (e.g. LIST) gets the value.
         if (ctx.letrec_sibling_names is not None
-                and any(fv in ctx.letrec_sibling_names for fv in plan.free_vars)):
+                and len(plan.sibling_free_vars) > 0):
             # Allocate a temp slot for this closure.
             # letrec_next_temp_slot is pre-initialised in _generate_letrec to
             # sit above all letrec and let-binding slots in this group.
@@ -482,7 +483,7 @@ class MenaiCodeGen:
         # Emit code to load each free variable value (for capture).
         # After copy propagation these may be any trivially-copyable IR node,
         # not necessarily a MenaiIRVariable, so we use the general dispatcher.
-        for free_var_plan in plan.free_var_plans:
+        for free_var_plan in plan.sibling_free_var_plans + plan.outer_free_var_plans:
             self._generate_expr(free_var_plan, ctx)
 
         # Create nested context for lambda body
@@ -522,7 +523,7 @@ class MenaiCodeGen:
             constants=lambda_ctx.constants,
             names=lambda_ctx.names,
             code_objects=lambda_ctx.code_objects,
-            free_vars=plan.free_vars,
+            free_vars=plan.sibling_free_vars + plan.outer_free_vars,
             param_names=plan.params,
             param_count=plan.param_count,
             local_count=lambda_ctx.max_locals,
@@ -536,9 +537,9 @@ class MenaiCodeGen:
         # disassembler walk code_objects; MAKE_CLOSURE also references it by index.
         code_index = ctx.add_code_object(lambda_code)
 
-        if len(plan.free_vars) != 0:
+        if len(plan.sibling_free_vars) + len(plan.outer_free_vars) != 0:
             # Has free vars — must capture values at runtime via MAKE_CLOSURE.
-            ctx.emit(Opcode.MAKE_CLOSURE, code_index, len(plan.free_vars))
+            ctx.emit(Opcode.MAKE_CLOSURE, code_index, len(plan.sibling_free_vars) + len(plan.outer_free_vars))
             return
 
         # No captures needed — pre-build the MenaiFunction and store it in
@@ -600,7 +601,7 @@ class MenaiCodeGen:
             constants=lambda_ctx.constants,
             names=lambda_ctx.names,
             code_objects=lambda_ctx.code_objects,
-            free_vars=plan.free_vars,
+            free_vars=plan.sibling_free_vars + plan.outer_free_vars,
             param_names=plan.params,
             param_count=plan.param_count,
             local_count=lambda_ctx.max_locals,

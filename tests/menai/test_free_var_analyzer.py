@@ -111,7 +111,7 @@ def _collect_ir_lambdas_rec(ir: MenaiIRExpr, result: list[MenaiIRLambda]) -> Non
     if isinstance(ir, MenaiIRLambda):
         result.append(ir)
         _collect_ir_lambdas_rec(ir.body_plan, result)
-        for plan in ir.free_var_plans:
+        for plan in ir.sibling_free_var_plans + ir.outer_free_var_plans:
             _collect_ir_lambdas_rec(plan, result)
 
     elif isinstance(ir, (MenaiIRLet, MenaiIRLetrec)):
@@ -555,7 +555,7 @@ class TestFreeVarAnalyzerAgreement:
     After the PATCH_CLOSURE refactor, letrec siblings are regular free_vars
     (no parent_refs distinction).  The agreement invariant is simply:
 
-        analyzer_free_vars(lambda) == frozenset(ir_lambda.free_vars)
+        analyzer_free_vars(lambda) == frozenset(ir_lambda.sibling_free_vars + ir_lambda.outer_free_vars)
 
     We check this for every MenaiIRLambda in the IR tree.
     """
@@ -588,7 +588,7 @@ class TestFreeVarAnalyzerAgreement:
             key=lambda s: sorted(s)
         )
         ir_sets = sorted(
-            [frozenset(lam.free_vars) for lam in ir_lambdas],
+            [frozenset(lam.sibling_free_vars + lam.outer_free_vars) for lam in ir_lambdas],
             key=lambda s: sorted(s)
         )
         assert analyzer_sets == ir_sets, (
