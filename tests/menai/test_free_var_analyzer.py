@@ -113,8 +113,6 @@ def _collect_ir_lambdas_rec(ir: MenaiIRExpr, result: list[MenaiIRLambda]) -> Non
         _collect_ir_lambdas_rec(ir.body_plan, result)
         for plan in ir.free_var_plans:
             _collect_ir_lambdas_rec(plan, result)
-        for plan in ir.parent_ref_plans:
-            _collect_ir_lambdas_rec(plan, result)
 
     elif isinstance(ir, (MenaiIRLet, MenaiIRLetrec)):
         for _, val_plan, _ in ir.bindings:
@@ -554,16 +552,10 @@ class TestFreeVarAnalyzerAgreement:
     consistent with the IR builder's free_vars + parent_refs for every
     lambda in the compiled IR.
 
-    The IR builder splits free variables into two lists:
-      - free_vars: captured variables (closed over from an enclosing scope)
-      - parent_refs: recursive back-references (self or sibling in letrec)
-
-    The FreeVarAnalyzer produces the union of both sets (it does not yet
-    distinguish the two categories — that is Step 3).  So the agreement
-    invariant is:
+    After the PATCH_CLOSURE refactor, letrec siblings are regular free_vars
+    (no parent_refs distinction).  The agreement invariant is simply:
 
         analyzer_free_vars(lambda) == frozenset(ir_lambda.free_vars)
-                                      | frozenset(ir_lambda.parent_refs)
 
     We check this for every MenaiIRLambda in the IR tree.
     """
@@ -596,7 +588,7 @@ class TestFreeVarAnalyzerAgreement:
             key=lambda s: sorted(s)
         )
         ir_sets = sorted(
-            [frozenset(lam.free_vars) | frozenset(lam.parent_refs) for lam in ir_lambdas],
+            [frozenset(lam.free_vars) for lam in ir_lambdas],
             key=lambda s: sorted(s)
         )
         assert analyzer_sets == ir_sets, (

@@ -178,28 +178,22 @@ class MenaiIRClosureConverter:
         """
         Convert a lambda node.
 
-        Recurses into the body and into free_var_plans / parent_ref_plans
-        (both are evaluated in the enclosing frame and may contain nested
-        lambdas that need converting).
+        Recurses into the body and into free_var_plans (evaluated in the
+        enclosing frame and may contain nested lambdas that need converting).
+        (parent_ref_plans removed — letrec siblings are now regular free_vars)
 
         The lambda's params, free_vars, free_var_plans, param_count, and
         max_locals are preserved: the MAKE_CLOSURE mechanism already makes
         capture explicit at the bytecode level, and param_count must not
         change (it controls how many arguments ENTER pops from the call
         stack).
-
-        Future lambda-lifting work (Step 5) will extend this method to
-        rewrite params, free_vars, and all call sites.
         """
         new_body = self._walk(ir.body_plan)
 
-        # Recurse into free_var_plans and parent_ref_plans: these are
-        # evaluated in the enclosing frame and may themselves contain lambdas.
+        # Recurse into free_var_plans: evaluated in the enclosing frame and
+        # may themselves contain lambdas.
         new_free_var_plans: List[MenaiIRExpr] = [
             self._walk(p) for p in ir.free_var_plans
-        ]
-        new_parent_ref_plans: List[MenaiIRExpr] = [
-            self._walk(p) for p in ir.parent_ref_plans
         ]
 
         return MenaiIRLambda(
@@ -207,8 +201,6 @@ class MenaiIRClosureConverter:
             body_plan=new_body,
             free_vars=ir.free_vars,
             free_var_plans=new_free_var_plans,
-            parent_refs=ir.parent_refs,
-            parent_ref_plans=new_parent_ref_plans,
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,

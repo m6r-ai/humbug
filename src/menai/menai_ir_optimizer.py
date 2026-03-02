@@ -173,26 +173,17 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
         A binding is dead when its total use count is zero, OR when every use
         is an is_parent_ref self-call (the binding is unreachable from outside
         its own recursive group).
+        A binding is dead when its total use code is zero.
         """
         current_frame = frame_stack[-1]
 
-        # After letrec splitting, every binding in a letrec is part of the
-        # mutually-recursive group.  Count is_parent_ref uses per slot to
-        # detect bindings that are only ever called by their own group.
-        self_ref_counts: dict[int, int] = {}
-        for name, value_plan, var_index in ir.bindings:
-            self_ref_counts[var_index] = self._count_parent_refs(value_plan, var_index)
-
         live: List[Tuple[str, MenaiIRExpr, int]] = []
-        dead_names = set()
         counts = cast(IRUseCounts, self._counts)
         for name, value_plan, var_index in ir.bindings:
             total = counts.total_count(current_frame, var_index)
-            self_refs = self_ref_counts.get(var_index, 0)
 
-            if total == 0 or total == self_refs:
-                # Dead — entirely unreachable from outside.
-                dead_names.add(name)
+            if total == 0:
+                # Dead — unreachable.
                 self._eliminations += 1
                 continue
 
@@ -208,58 +199,6 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
             body_plan=opt_body,
             in_tail_position=ir.in_tail_position,
         )
-
-    def _count_parent_refs(self, ir: MenaiIRExpr, var_index: int) -> int:
-        """
-        Count the number of MenaiIRVariable nodes in *ir* that are
-        is_parent_ref references to *var_index* in *frame_id*.
-
-        This is a lightweight local scan used only by _opt_letrec.
-        """
-        count = 0
-        stack: List[MenaiIRExpr] = [ir]
-        while stack:
-            node = stack.pop()
-
-            if isinstance(node, MenaiIRVariable):
-                if (node.is_parent_ref and node.var_type == 'local'
-                        and node.index == var_index):
-                    count += 1
-
-            elif isinstance(node, MenaiIRLet):
-                for _, vp, _ in node.bindings:
-                    stack.append(vp)
-
-                stack.append(node.body_plan)
-
-            elif isinstance(node, MenaiIRLetrec):
-                for _, vp, _ in node.bindings:
-                    stack.append(vp)
-
-                stack.append(node.body_plan)
-
-            elif isinstance(node, MenaiIRIf):
-                stack.extend([node.condition_plan, node.then_plan, node.else_plan])
-
-            elif isinstance(node, MenaiIRCall):
-                stack.append(node.func_plan)
-                stack.extend(node.arg_plans)
-
-            elif isinstance(node, MenaiIRReturn):
-                stack.append(node.value_plan)
-
-            elif isinstance(node, MenaiIRTrace):
-                stack.extend(node.message_plans)
-                stack.append(node.value_plan)
-
-            elif isinstance(node, MenaiIRLambda):
-                # Don't descend into nested lambdas — their is_parent_ref
-                # nodes refer to their own enclosing frame, not ours.
-                pass
-
-            # Leaf nodes (Constant, Quote, EmptyList, Error) — nothing to do.
-
-        return count
 
     def _opt_if(self, ir: MenaiIRIf, frame_stack: List[int]) -> MenaiIRExpr:
         opt_condition = self._opt(ir.condition_plan, frame_stack)
@@ -324,8 +263,6 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
             body_plan=self._opt(ir.body_plan, child_stack),
             free_vars=ir.free_vars,
             free_var_plans=ir.free_var_plans,
-            parent_refs=ir.parent_refs,
-            parent_ref_plans=ir.parent_ref_plans,
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,

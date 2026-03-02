@@ -25,15 +25,15 @@ Background
 ----------
 MenaiIRClosureConverter is currently a tree-rewriting identity pass.
 It recurses into every IR node and returns a structurally equivalent tree,
-including into free_var_plans and parent_ref_plans (which are evaluated in
-the enclosing frame and may contain nested lambdas).
+including into free_var_plans (which are evaluated in the enclosing frame
+and may contain nested lambdas).
 
 The MAKE_CLOSURE mechanism already makes closure capture explicit at the
 bytecode level.  param_count must not change (it controls ENTER), and
 free_vars must not be cleared (MAKE_CLOSURE reads them).
 
-The pass is the pipeline insertion point for future lambda-lifting work
-(Step 5).
+After the PATCH_CLOSURE refactor, letrec siblings are regular free_vars;
+parent_refs and parent_ref_plans no longer exist on MenaiIRLambda.
 """
 
 from __future__ import annotations
@@ -86,16 +86,12 @@ def _make_lambda(
     body: 'MenaiIRReturn',
     free_vars: list[str] | None = None,
     free_var_plans: list | None = None,
-    parent_refs: list[str] | None = None,
-    parent_ref_plans: list | None = None,
     param_count: int | None = None,
     max_locals: int | None = None,
 ) -> MenaiIRLambda:
     """Convenience constructor for MenaiIRLambda in tests."""
     fv = free_vars or []
     fvp = free_var_plans or []
-    pr = parent_refs or []
-    prp = parent_ref_plans or []
     pc = param_count if param_count is not None else len(params)
     ml = max_locals if max_locals is not None else pc + len(fv)
     return MenaiIRLambda(
@@ -103,8 +99,6 @@ def _make_lambda(
         body_plan=body,
         free_vars=fv,
         free_var_plans=fvp,
-        parent_refs=pr,
-        parent_ref_plans=prp,
         param_count=pc,
         is_variadic=False,
         max_locals=ml,
@@ -176,18 +170,20 @@ class TestClosureConverterPreservesLambdaStructure:
         out_lam = result.value_plan  # type: ignore[union-attr]
         assert out_lam.max_locals == 10
 
-    def test_parent_refs_preserved(self):
-        """parent_refs and parent_ref_plans are not altered."""
+    def test_letrec_sibling_free_vars_preserved(self):
+        """free_vars containing letrec siblings are preserved (no parent_refs after refactor)."""
         lam = _make_lambda(
             params=['x'],
-            body=MenaiIRReturn(value_plan=_local('rec', 0, is_parent_ref=True)),
-            parent_refs=['rec'],
-            parent_ref_plans=[_local('rec', 5, depth=1, is_parent_ref=True)],
+            body=MenaiIRReturn(value_plan=_local('x', 0)),
+            free_vars=['sibling'],
+            free_var_plans=[_local('sibling', 1, depth=0)],
+            param_count=1,
+            max_locals=2,
         )
         result = _convert(MenaiIRReturn(value_plan=lam))
         out_lam = result.value_plan  # type: ignore[union-attr]
-        assert out_lam.parent_refs == ['rec']
-        assert len(out_lam.parent_ref_plans) == 1
+        assert out_lam.free_vars == ['sibling']
+        assert len(out_lam.free_var_plans) == 1
 
     def test_binding_name_preserved(self):
         """binding_name metadata is preserved."""
@@ -196,8 +192,6 @@ class TestClosureConverterPreservesLambdaStructure:
             body_plan=MenaiIRReturn(value_plan=_local('x', 0)),
             free_vars=[],
             free_var_plans=[],
-            parent_refs=[],
-            parent_ref_plans=[],
             param_count=1,
             is_variadic=False,
             max_locals=1,
@@ -214,8 +208,6 @@ class TestClosureConverterPreservesLambdaStructure:
             body_plan=MenaiIRReturn(value_plan=_local('x', 0)),
             free_vars=[],
             free_var_plans=[],
-            parent_refs=[],
-            parent_ref_plans=[],
             param_count=2,
             is_variadic=True,
             max_locals=2,
@@ -231,8 +223,6 @@ class TestClosureConverterPreservesLambdaStructure:
             body_plan=MenaiIRReturn(value_plan=_local('x', 0)),
             free_vars=[],
             free_var_plans=[],
-            parent_refs=[],
-            parent_ref_plans=[],
             param_count=1,
             is_variadic=False,
             max_locals=1,
@@ -277,8 +267,6 @@ class TestClosureConverterRecursion:
             body_plan=MenaiIRReturn(value_plan=_local('x', 0)),
             free_vars=['f'],
             free_var_plans=[nested_in_plan],
-            parent_refs=[],
-            parent_ref_plans=[],
             param_count=1,
             is_variadic=False,
             max_locals=2,
@@ -288,25 +276,21 @@ class TestClosureConverterRecursion:
         # The free_var_plan was recursed into (still a lambda)
         assert isinstance(out_lam.free_var_plans[0], MenaiIRLambda)
 
-    def test_parent_ref_plans_recursed(self):
-        """parent_ref_plans are walked."""
-        # A variable reference inside a parent_ref_plan
-        plan_var = _local('rec', 5, depth=2, is_parent_ref=True)
-        lam = MenaiIRLambda(
+    def test_sibling_free_var_plans_recursed(self):
+        """free_var_plans for letrec siblings are walked (no parent_ref_plans after refactor)."""
+        plan_var = _local('sibling', 1, depth=0)
+        lam = _make_lambda(
             params=['x'],
-            body_plan=MenaiIRReturn(value_plan=_local('x', 0)),
-            free_vars=[],
-            free_var_plans=[],
-            parent_refs=['rec'],
-            parent_ref_plans=[plan_var],
+            body=MenaiIRReturn(value_plan=_local('x', 0)),
+            free_vars=['sibling'],
+            free_var_plans=[plan_var],
             param_count=1,
-            is_variadic=False,
-            max_locals=1,
+            max_locals=2,
         )
         result = _convert(MenaiIRReturn(value_plan=lam))
         out_lam = result.value_plan  # type: ignore[union-attr]
-        # parent_ref_plans was walked; variable is unchanged (leaf node)
-        assert isinstance(out_lam.parent_ref_plans[0], MenaiIRVariable)
+        # free_var_plans was walked; variable is unchanged (leaf node)
+        assert isinstance(out_lam.free_var_plans[0], MenaiIRVariable)
 
     def test_let_binding_values_recursed(self):
         """Lambdas in let binding values are visited."""

@@ -269,8 +269,8 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
         The lambda body is optimized in the lambda's own frame (looked up from
         the lambda_frame_ids map populated by the use counter).
 
-        free_var_plans and parent_ref_plans are evaluated in the *enclosing*
-        frame, so they are walked with the current frame_stack.  However,
+        free_var_plans are evaluated in the *enclosing* frame, so they are
+        walked with the current frame_stack.  However,
         these are always MenaiIRVariable leaf nodes — the use counter already
         counted them as uses in the enclosing frame — so there is nothing to
         substitute into them here (substitution happens in _substitute, which
@@ -294,8 +294,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
             body_plan=self._prop(ir.body_plan, child_stack),
             free_vars=ir.free_vars,
             free_var_plans=ir.free_var_plans,   # leaf nodes; no substitution needed
-            parent_refs=ir.parent_refs,
-            parent_ref_plans=ir.parent_ref_plans,  # leaf nodes; no substitution needed
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,
@@ -349,7 +347,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
         if isinstance(ir, MenaiIRVariable):
             if (ir.var_type == 'local'
                     and ir.depth == 0
-                    and not ir.is_parent_ref
                     and ir.index in replacements):
                 return replacements[ir.index]
 
@@ -500,12 +497,12 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
         the lambda's own locals, not the enclosing let's slots — so we do NOT
         descend into it for substitution.
 
-        The lambda's free_var_plans and parent_ref_plans ARE evaluated in the
-        enclosing frame, so we substitute into them.  In practice these are
+        The lambda's free_var_plans ARE evaluated in the enclosing frame, so
+        we substitute into them.  In practice these are
         always MenaiIRVariable leaf nodes, so _substitute will either replace
         them (if their index is in replacements) or return them unchanged.
 
-        After substituting into free_var_plans / parent_ref_plans we run
+        After substituting into free_var_plans we run
         _prop_lambda on the result so that the lambda body is still optimized
         by the main propagation walk.
         """
@@ -522,12 +519,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
             for fvp in ir.free_var_plans
         ]
 
-        # Substitute into parent_ref_plans (evaluated in enclosing frame).
-        new_parent_ref_plans = [
-            self._substitute(prp, replacements, frame_stack)
-            for prp in ir.parent_ref_plans
-        ]
-
         # The body is in the child frame — propagate there but do NOT
         # substitute the enclosing frame's replacements.
         new_body = self._prop(ir.body_plan, child_stack)
@@ -537,8 +528,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
             body_plan=new_body,
             free_vars=ir.free_vars,
             free_var_plans=new_free_var_plans,
-            parent_refs=ir.parent_refs,
-            parent_ref_plans=new_parent_ref_plans,
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,
@@ -631,7 +620,7 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
 
             if (value_plan.var_type == 'local'
                     and value_plan.depth == 0
-                    and not value_plan.is_parent_ref):
+                    ):
                 # Local variable load — safe only if not captured by any child
                 # lambda (external_count == 0).
                 return counts.external_count(frame_id, var_index) == 0

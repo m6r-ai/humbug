@@ -311,8 +311,6 @@ class TestLambdaBoundaryRule:
             body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
             free_vars=["x"],
             free_var_plans=[],   # omit to keep total_count=1 (one external use only)
-            parent_refs=[],
-            parent_ref_plans=[],
             param_count=0,
             is_variadic=False,
             max_locals=1,
@@ -346,8 +344,6 @@ class TestLambdaBoundaryRule:
             body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
             free_vars=["result"],
             free_var_plans=[],   # omit to keep total_count=1
-            parent_refs=[],
-            parent_ref_plans=[],
             param_count=0,
             is_variadic=False,
             max_locals=1,
@@ -383,8 +379,6 @@ class TestLambdaBoundaryRule:
             body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
             free_vars=["k"],
             free_var_plans=[],   # omit to keep total_count=1
-            parent_refs=[],
-            parent_ref_plans=[],
             param_count=0,
             is_variadic=False,
             max_locals=1,
@@ -443,8 +437,6 @@ class TestLambdaBoundaryRule:
             body_plan=MenaiIRReturn(value_plan=_local(0)),  # lambda's own param slot 0
             free_vars=[],
             free_var_plans=[],
-            parent_refs=[],
-            parent_ref_plans=[],
             param_count=1,
             is_variadic=False,
             max_locals=1,
@@ -688,8 +680,6 @@ class TestFlagsPreserved:
             body_plan=MenaiIRReturn(value_plan=_local(0)),
             free_vars=["outer"],
             free_var_plans=[],
-            parent_refs=[],
-            parent_ref_plans=[],
             param_count=2,
             is_variadic=False,
             max_locals=5,

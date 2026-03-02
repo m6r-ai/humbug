@@ -46,8 +46,26 @@ class MenaiCodeGenContext:
     code_objects: List[CodeObject] = field(default_factory=list)
     max_locals: int = 0
     current_lambda_name: str | None = None  # Name of the lambda currently being compiled.
-                                             # Used by _generate_call to detect direct
-                                             # self-recursive tail calls and emit JUMP 0.
+                                            # Used by _generate_call to detect direct
+                                            # self-recursive tail calls and emit JUMP 0.
+
+    # Letrec two-phase support: when non-None, _generate_lambda intercepts any
+    # lambda whose free_vars intersect this set and defers all captures to Phase 2.
+    # Set by _generate_letrec for the duration of binding-value generation.
+    letrec_sibling_names: 'set | None' = None
+
+    # List of (var_index, lambda_plan) tuples for closures that were deferred
+    # during letrec binding-value generation.  Each entry records the local slot
+    # where the closure was stored (via a temp STORE_VAR) and the lambda IR node
+    # so Phase 2 can emit PATCH_CLOSURE for every free_var slot.
+    #
+    # Entry format: (var_index: int, lambda_plan: MenaiIRLambda)
+    letrec_deferred_patches: 'List[tuple] | None' = None
+
+    # Counter for allocating temp slots for deferred lambdas inside letrec
+    # binding values.  Incremented each time a new temp slot is needed.
+    # Reset to None when letrec binding-value generation ends.
+    letrec_next_temp_slot: 'int | None' = None
 
     def add_constant(self, value: MenaiValue) -> int:
         """
@@ -206,13 +224,7 @@ class MenaiCodeGen:
     def _generate_variable(self, plan: MenaiIRVariable, ctx: MenaiCodeGenContext) -> None:
         """Generate code for a variable reference."""
         if plan.var_type == 'local':
-            if plan.is_parent_ref:
-                # Load from parent frame (for recursive bindings)
-                ctx.emit(Opcode.LOAD_PARENT_VAR, plan.index, plan.depth)
-
-            else:
-                ctx.emit(Opcode.LOAD_VAR, plan.index)
-
+            ctx.emit(Opcode.LOAD_VAR, plan.index)
         else:  # global
             # For globals, we need to assign the name index during codegen
             name_index = ctx.add_name(plan.name)
@@ -280,22 +292,150 @@ class MenaiCodeGen:
 
     def _generate_letrec(self, plan: MenaiIRLetrec, ctx: MenaiCodeGenContext) -> None:
         """Generate code for a letrec expression."""
-        # Generate and store each binding
+        # Collect the set of binding names for this letrec group so we can
+        # identify sibling references in free_vars.  Set on the context
+        # so that _generate_lambda can intercept ANY lambda with sibling captures,
+        # even when nested inside a call expression (e.g. (list (lambda () x))).
+        binding_names = {name for name, _, _ in plan.bindings}
+
+        # Pre-scan all binding value plans to find the highest let-binding slot
+        # index used anywhere within them.  Temp slots for deferred closures
+        # must be allocated above this high-water mark to avoid colliding with
+        # slots pre-assigned by the IR addresser to lambda-lifter let bindings
+        # in later binding values.
+        #
+        # We scan MenaiIRLet chains only (not lambda bodies — those are a
+        # separate frame).  The letrec's own binding slots are accounted for
+        # separately via ctx.max_locals updates during the loop below.
+        max_let_slot = -1
+        for _, value_plan, _ in plan.bindings:
+            node = value_plan
+            while isinstance(node, MenaiIRLet):
+                for _, _, vi in node.bindings:
+                    if vi > max_let_slot:
+                        max_let_slot = vi
+                node = node.body_plan
+
+        # Phase 1: create all closures / binding values.  Any lambda that
+        # captures a letrec sibling is intercepted by _generate_lambda and
+        # deferred to Phase 2 via PATCH_CLOSURE.
+
+        # Activate the interception context.  letrec_next_temp_slot is
+        # initialised to one above the highest let-binding slot found in any
+        # binding value plan (pre-scanned above), so temp slots never collide
+        # with slots pre-assigned by the IR addresser to lambda-lifter helpers.
+        ctx.letrec_sibling_names = binding_names
+        ctx.letrec_deferred_patches = []
+        # Temp slots start above the highest let-binding slot pre-scanned above,
+        # and also above the current max_locals (letrec binding slots).  This
+        # guarantees no collision with any slot already in use in this frame.
+        ctx.letrec_next_temp_slot = max(ctx.max_locals, max_let_slot + 1)
+
         for _, value_plan, var_index in plan.bindings:
-            # Generate value
             self._generate_expr(value_plan, ctx)
-
-            # Store in local variable
             ctx.emit(Opcode.STORE_VAR, var_index)
-
-            # Update max locals
             ctx.max_locals = max(ctx.max_locals, var_index + 1)
+
+        # Deactivate the interception context before Phase 2.
+        deferred = ctx.letrec_deferred_patches
+        ctx.letrec_sibling_names = None
+        ctx.letrec_deferred_patches = None
+        ctx.letrec_next_temp_slot = None
+
+        # Phase 2: patch all deferred closures.
+        # Each entry is (closure_slot, lambda_plan) where closure_slot is the
+        # local slot holding the closure (either a letrec slot or a temp slot
+        # allocated during Phase 1).
+        for closure_slot, lambda_plan in deferred:
+            for capture_slot, _ in enumerate(lambda_plan.free_vars):
+                fvp = lambda_plan.free_var_plans[capture_slot]
+                self._generate_expr(fvp, ctx)
+                ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, capture_slot)
 
         # Generate body
         self._generate_expr(plan.body_plan, ctx)
 
+    def _find_effective_lambda(self, plan: MenaiIRExpr) -> 'MenaiIRLambda | None':
+        """
+        Find the lambda that produces the closure stored in a letrec slot.
+
+        For a plain MenaiIRLambda, returns it directly.
+        For a MenaiIRLet chain (as produced by the lambda lifter), follows the
+        let body chain until it finds the wrapper MenaiIRLambda.
+        Returns None if no lambda is found (e.g. non-lambda binding).
+        """
+        node = plan
+        while isinstance(node, MenaiIRLet):
+            node = node.body_plan
+        if isinstance(node, MenaiIRLambda):
+            return node
+        return None
+
+    def _generate_expr_with_full_deferral(
+        self,
+        plan: MenaiIRExpr,
+        effective_lambda: MenaiIRLambda,
+        ctx: MenaiCodeGenContext,
+    ) -> None:
+        """
+        Generate code for a letrec binding value whose effective lambda has
+        sibling free_vars.  ALL free_var captures are deferred to Phase 2 via
+        PATCH_CLOSURE — capture_count=0 is emitted so the VM pre-allocates all
+        slots as None.  This avoids ordering issues between sibling and
+        non-sibling free_vars in the captured_values list.
+
+        Walks any MenaiIRLet chain normally (the helper is fully closed and
+        needs no special treatment).  When it reaches the effective lambda
+        (the wrapper), emits no free_var_plans and calls _generate_letrec_lambda
+        with capture_count=0.
+        """
+        if isinstance(plan, MenaiIRLet):
+            # Generate the let's binding values and store them normally.
+            for name, val_plan, var_index in plan.bindings:
+                self._generate_expr(val_plan, ctx)
+                ctx.emit(Opcode.STORE_VAR, var_index)
+                ctx.max_locals = max(ctx.max_locals, var_index + 1)
+            # Recurse into the body.
+            self._generate_expr_with_full_deferral(plan.body_plan, effective_lambda, ctx)
+        elif isinstance(plan, MenaiIRLambda) and plan is effective_lambda:
+            # This is the wrapper lambda — emit NO free_var_plans; all slots
+            # will be patched in Phase 2.
+            self._generate_letrec_lambda(plan, 0, ctx)
+        else:
+            # Fallback: shouldn't happen but generate normally.
+            self._generate_expr(plan, ctx)
+
     def _generate_lambda(self, plan: MenaiIRLambda, ctx: MenaiCodeGenContext) -> None:
         """Generate code for a lambda expression."""
+        # Letrec interception: if we are currently generating a letrec binding
+        # value AND this lambda captures any letrec sibling, defer ALL captures
+        # to Phase 2 via PATCH_CLOSURE.
+        #
+        # We emit MAKE_CLOSURE with capture_count=0 (VM pre-allocates None slots),
+        # store the closure in a fresh temp slot, record it for Phase 2, then
+        # load it back so the surrounding expression (e.g. LIST) gets the value.
+        if (ctx.letrec_sibling_names is not None
+                and any(fv in ctx.letrec_sibling_names for fv in plan.free_vars)):
+            # Allocate a temp slot for this closure.
+            # letrec_next_temp_slot is pre-initialised in _generate_letrec to
+            # sit above all letrec and let-binding slots in this group.
+            assert ctx.letrec_next_temp_slot is not None
+            temp_slot = ctx.letrec_next_temp_slot
+            ctx.letrec_next_temp_slot += 1
+            ctx.max_locals = max(ctx.max_locals, temp_slot + 1)
+
+            # Emit the closure with capture_count=0; VM pre-allocates None slots.
+            self._generate_letrec_lambda(plan, 0, ctx)
+
+            # Store in temp slot and record for Phase 2.
+            ctx.emit(Opcode.STORE_VAR, temp_slot)
+            assert ctx.letrec_deferred_patches is not None
+            ctx.letrec_deferred_patches.append((temp_slot, plan))
+
+            # Load back so the surrounding expression receives the closure.
+            ctx.emit(Opcode.LOAD_VAR, temp_slot)
+            return
+
         # Emit code to load each free variable value (for capture).
         # After copy propagation these may be any trivially-copyable IR node,
         # not necessarily a MenaiIRVariable, so we use the general dispatcher.
@@ -354,6 +494,61 @@ class MenaiCodeGen:
 
         # Emit MAKE_CLOSURE instruction
         ctx.emit(Opcode.MAKE_CLOSURE, code_index, len(plan.free_vars))
+
+    def _generate_letrec_lambda(
+        self, plan: MenaiIRLambda, non_sibling_count: int, ctx: MenaiCodeGenContext
+    ) -> None:
+        """
+        Emit the CodeObject and MAKE_CLOSURE instruction for a letrec lambda
+        that has sibling free_vars requiring two-phase initialisation.
+
+        The caller has already pushed `non_sibling_count` values onto the stack
+        (the non-sibling free_var_plans).  This method emits the CodeObject and
+        a MAKE_CLOSURE instruction with capture_count=non_sibling_count.
+
+        The VM's _op_make_closure detects that capture_count < len(code.free_vars)
+        and pre-allocates None slots for the remaining (sibling) entries, which
+        PATCH_CLOSURE will fill in Phase 2.
+        """
+        # Build the nested CodeObject (body only — no free_var_plan emission here,
+        # that was done by the caller for non-sibling vars).
+        lambda_ctx = MenaiCodeGenContext()
+        lambda_ctx.current_lambda_name = plan.binding_name
+
+        if plan.params:
+            lambda_ctx.emit(Opcode.ENTER, len(plan.params))
+
+        lambda_ctx.max_locals = plan.max_locals
+        self._generate_expr(plan.body_plan, lambda_ctx)
+
+        if plan.binding_name:
+            lambda_name = plan.binding_name
+        else:
+            lambda_name = f"<lambda-{self.lambda_counter}>"
+            self.lambda_counter += 1
+
+        param_word = "param" if len(plan.params) == 1 else "params"
+        lambda_name = f"{lambda_name}({len(plan.params)} {param_word})"
+
+        lambda_code = CodeObject(
+            instructions=lambda_ctx.instructions,
+            constants=lambda_ctx.constants,
+            names=lambda_ctx.names,
+            code_objects=lambda_ctx.code_objects,
+            free_vars=plan.free_vars,
+            param_names=plan.params,
+            param_count=plan.param_count,
+            local_count=lambda_ctx.max_locals,
+            is_variadic=plan.is_variadic,
+            name=lambda_name,
+            source_line=plan.source_line,
+            source_file=plan.source_file,
+        )
+
+        code_index = ctx.add_code_object(lambda_code)
+        # capture_count = non_sibling_count < len(free_vars): VM pre-allocates
+        # None slots for the remaining sibling entries.
+        ctx.emit(Opcode.MAKE_CLOSURE, code_index, non_sibling_count)
 
     def _generate_call(self, plan: MenaiIRCall, ctx: MenaiCodeGenContext) -> None:
         """Generate code for a function call."""

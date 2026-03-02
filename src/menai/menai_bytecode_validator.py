@@ -107,7 +107,8 @@ class BytecodeValidator:
             # Variables - load pushes 1, store pops 1
             Opcode.LOAD_VAR: (0, 1),
             Opcode.STORE_VAR: (1, 0),
-            Opcode.LOAD_PARENT_VAR: (0, 1),
+            # LOAD_PARENT_VAR removed — replaced by PATCH_CLOSURE
+            Opcode.PATCH_CLOSURE: (1, 0),  # pops 1 value, mutates existing closure slot
             Opcode.LOAD_NAME: (0, 1),
 
             # Control flow - jumps don't affect stack, conditionals pop 1
@@ -405,24 +406,13 @@ class BytecodeValidator:
                         opcode=opcode
                     )
 
-            # Validate LOAD_PARENT_VAR indices
-            if opcode == Opcode.LOAD_PARENT_VAR:
+            # Validate PATCH_CLOSURE: var_index must be a valid local slot
+            if opcode == Opcode.PATCH_CLOSURE:
                 var_index = instr.arg1
-                depth = instr.arg2
-                # Depth must be at least 1 (parent frame)
-                if depth < 1:
+                if var_index < 0 or var_index >= code.local_count:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"LOAD_PARENT_VAR depth must be >= 1, got {depth}",
-                        instruction_index=i,
-                        opcode=opcode
-                    )
-                # We can't validate the exact depth without runtime context,
-                # but we can check the index is reasonable
-                if var_index < 0:
-                    raise ValidationError(
-                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"LOAD_PARENT_VAR index must be >= 0, got {var_index}",
+                        f"PATCH_CLOSURE var_index {var_index} out of bounds (local_count: {code.local_count})",
                         instruction_index=i,
                         opcode=opcode
                     )
@@ -549,9 +539,17 @@ class BytecodeValidator:
         # Initial state: captured variables are pre-initialized by MAKE_CLOSURE before the frame runs.
         # Parameters are no longer pre-seeded here; ENTER at instruction 0 initializes them,
         # and the dataflow analysis tracks that naturally.
+        #
+        # Captured-value slots (param_count .. param_count+len(free_vars)-1) are frame
+        # invariants: the VM copies them from MenaiFunction.captured_values into
+        # frame.locals before the first instruction runs.  Only exactly len(free_vars)
+        # slots are pre-populated — plain locals above that range must be initialised
+        # by the code itself.  These slots must survive back-edge merges (e.g. JUMP 0
+        # self-recursion), so we restore them into new_initialized on every step below.
         initial_initialized: Set[int] = set()
-        if code.free_vars:
-            initial_initialized.update(range(code.param_count, code.param_count + len(code.free_vars)))
+        n_captured = len(code.free_vars)
+        if n_captured > 0:
+            initial_initialized.update(range(code.param_count, code.param_count + n_captured))
 
         # Worklist algorithm
         worklist: List[int] = [0]
@@ -591,6 +589,9 @@ class BytecodeValidator:
             # ENTER marks locals 0..n-1 as initialized
             if opcode == Opcode.ENTER:
                 new_initialized.update(range(instr.arg1))
+
+            # Re-apply frame invariants: free-var slots are always initialized.
+            new_initialized |= initial_initialized
 
             # Get successors
             successors = self._get_successors(instr_idx, instr, code)

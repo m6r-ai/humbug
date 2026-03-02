@@ -85,8 +85,6 @@ class MenaiIRLambda:
     max_locals: int  # Maximum locals needed in lambda body
     binding_name: Optional[str] = None  # Name if bound in let/letrec (for recursion)
     sibling_bindings: List[str] = field(default_factory=list)  # Sibling bindings for mutual recursion
-    parent_refs: List[str] = field(default_factory=list)  # Names of parent frame references (recursive bindings)
-    parent_ref_plans: List['MenaiIRExpr'] = field(default_factory=list)  # Plans for loading parent references
     source_line: int = 0  # Line number in source where this lambda is defined
     source_file: str = ""  # Source file name where this lambda is defined
 

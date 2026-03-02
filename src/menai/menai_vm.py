@@ -49,7 +49,6 @@ class Frame:
     code: CodeObject
     ip: int = 0  # Instruction pointer
     locals: List[MenaiValue | None] = field(init=False)  # Local variables
-    parent_frame: 'Frame | None' = None  # Parent frame for LOAD_PARENT_VAR (lexical parent)
 
 
 class MenaiVM:
@@ -62,7 +61,7 @@ class MenaiVM:
     def __init__(self, validate: bool = True) -> None:
         self.stack: List[MenaiValue] = []
 
-        # We operate with a sentinel frame so there's always a current frame, simplifying LOAD_PARENT_VAR logic.
+        # Sentinel frame so there's always a current frame.
         main_frame = Frame(CodeObject(
             name="<main>", instructions=[], constants=[], names=[], code_objects=[], local_count=0, param_count=0, is_variadic=False
         ))
@@ -166,7 +165,7 @@ class MenaiVM:
         table[Opcode.LOAD_VAR] = self._op_load_var
         table[Opcode.STORE_VAR] = self._op_store_var
         table[Opcode.LOAD_NAME] = self._op_load_name
-        table[Opcode.LOAD_PARENT_VAR] = self._op_load_parent_var
+        table[Opcode.PATCH_CLOSURE] = self._op_patch_closure
         table[Opcode.JUMP] = self._op_jump
         table[Opcode.JUMP_IF_FALSE] = self._op_jump_if_false
         table[Opcode.JUMP_IF_TRUE] = self._op_jump_if_true
@@ -469,7 +468,6 @@ class MenaiVM:
         self.frames = self.frames[:1]  # Keep only the main sentinel frame
         frame = Frame(code)
         frame.locals = [None] * code.local_count
-        frame.parent_frame = self.current_frame
         self.frames.append(frame)
         self.current_frame = frame
 
@@ -548,7 +546,6 @@ class MenaiVM:
                         for i, captured_val in enumerate(result.func.captured_values):
                             frame.locals[frame.code.param_count + i] = captured_val
 
-                    frame.parent_frame = result.func.parent_frame
                     continue
 
                 # Replace frame for general tail call
@@ -560,7 +557,6 @@ class MenaiVM:
                 # Create new frame
                 new_frame = Frame(code)
                 new_frame.locals = [None] * code.local_count
-                new_frame.parent_frame = func.parent_frame  # Set parent frame for LOAD_PARENT_VAR
 
                 # Store captured values in locals (after parameters)
                 if func.captured_values:
@@ -652,33 +648,24 @@ class MenaiVM:
 
         return None
 
-    def _op_load_parent_var(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, index: int, depth: int
+    def _op_patch_closure(  # pylint: disable=useless-return
+        self, frame: Frame, _code: CodeObject, var_index: int, capture_slot: int
     ) -> MenaiValue | None:
         """
-        LOAD_PARENT_VAR: Load variable from parent frame.
+        PATCH_CLOSURE: Fill in a captured-value slot on an existing closure.
 
-        This is used for recursive closures in letrec - the closure references
-        a binding from its parent frame rather than capturing it.
+        Used in Phase 2 of letrec two-phase initialisation to wire sibling
+        closures together after all have been created in Phase 1.
 
         Args:
-            index - variable index in the target parent frame
-            depth - how many parent frames to walk up
+            var_index    - local slot holding the closure to patch
+            capture_slot - which captured-values slot to fill in
         """
-        # Validator guarantees depth >= 1
-        # Walk up parent frame chain by depth
-        parent_frame = frame.parent_frame
-
-        # Walk up the chain (validator guarantees this won't be None)
-        for _ in range(depth - 1):
-            assert parent_frame is not None  # Validator guarantees
-            parent_frame = parent_frame.parent_frame
-
-        assert parent_frame is not None  # Validator guarantees
-
-        # Validator guarantees index is in bounds AND variable is initialized
-        value = parent_frame.locals[index]
-        self.stack.append(cast(MenaiValue, value))
+        value = self.stack.pop()
+        closure = frame.locals[var_index]
+        assert isinstance(closure, MenaiFunction)
+        assert isinstance(closure.captured_values, list), "PATCH_CLOSURE: captured_values must be a list (set by MAKE_CLOSURE)"
+        closure.captured_values[capture_slot] = value
         return None
 
     def _op_load_name(  # pylint: disable=useless-return
@@ -687,7 +674,7 @@ class MenaiVM:
         """LOAD_NAME: Load global variable by name."""
         name = code.names[arg1]
 
-        # Load from globals (LOAD_PARENT_VAR handles parent scope access)
+        # Load from globals
         if name in self.globals:
             self.stack.append(self.globals[name])
             return None
@@ -765,29 +752,33 @@ class MenaiVM:
     ) -> MenaiValue | None:
         """MAKE_CLOSURE: Create closure from code object and captured values."""
         # Validator guarantees arg1 is in bounds and stack has enough values
-        # Direct access without bounds checking
         closure_code = code.code_objects[arg1]
 
         # Pop captured values from stack (in reverse order)
         if capture_count == 0:
             captured_values = []
-
         else:
             captured_values = self.stack[-capture_count:]
             del self.stack[-capture_count:]
-
-        # Create closure with captured values and parent frame reference
-        # Parent frame is used by LOAD_PARENT_VAR for recursive bindings
-        current_frame = self.current_frame
 
         closure = MenaiFunction(
             parameters=tuple(closure_code.param_names),
             name=closure_code.name,
             bytecode=closure_code,
-            captured_values=tuple(captured_values),
             is_variadic=closure_code.is_variadic,
-            parent_frame=current_frame  # Store parent frame for LOAD_PARENT_VAR
         )
+        # Build captured_values list.
+        # For letrec Phase 1, capture_count may be less than len(free_vars):
+        # the non-sibling free_vars were already popped from the stack, but the
+        # sibling slots need None placeholders for PATCH_CLOSURE to fill in Phase 2.
+        n_free = len(closure_code.free_vars)
+        if capture_count < n_free:
+            # Letrec Phase 1: fill captured non-sibling slots, then append Nones
+            # for the sibling slots that PATCH_CLOSURE will populate.
+            cv: list = list(captured_values) + [None] * (n_free - capture_count)
+        else:
+            cv = list(captured_values)
+        object.__setattr__(closure, 'captured_values', cv)
         self.stack.append(closure)
         return None
 
@@ -810,10 +801,8 @@ class MenaiVM:
         self._check_and_pack_args(func, arity)
         code = func.bytecode
 
-        # Create new frame
         new_frame = Frame(code)
         new_frame.locals = [None] * code.local_count
-        new_frame.parent_frame = func.parent_frame  # Set parent frame for LOAD_PARENT_VAR
 
         # Store captured values in locals (after parameters)
         if func.captured_values:
@@ -884,7 +873,6 @@ class MenaiVM:
         code = func.bytecode
         new_frame = Frame(code)
         new_frame.locals = [None] * code.local_count
-        new_frame.parent_frame = func.parent_frame
         if func.captured_values:
             for i, captured_val in enumerate(func.captured_values):
                 new_frame.locals[code.param_count + i] = captured_val

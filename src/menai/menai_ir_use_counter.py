@@ -229,9 +229,9 @@ class MenaiIRUseCounter:
         """
         Walk a lambda node.
 
-        free_var_plans and parent_ref_plans load variables from the *current*
-        frame (they are evaluated in the enclosing scope to build the closure),
-        so they are walked with the current frame_stack.
+        free_var_plans load variables from the *current* frame (they are
+        evaluated in the enclosing scope to build the closure), so they are
+        walked with the current frame_stack.
 
         The lambda body is walked in a new frame pushed onto the stack.
         """
@@ -242,11 +242,6 @@ class MenaiIRUseCounter:
         # Free variable loads happen in the *enclosing* frame.
         for fv_plan in ir.free_var_plans:
             self._walk(fv_plan, result, frame_stack)
-
-        # Parent-ref loads also happen in the enclosing frame (LOAD_PARENT_VAR
-        # is emitted by the parent, not inside the lambda body).
-        for pr_plan in ir.parent_ref_plans:
-            self._walk(pr_plan, result, frame_stack)
 
         # Walk the body in the new frame.
         self._walk(ir.body_plan, result, frame_stack + [lambda_frame_id])

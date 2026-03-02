@@ -523,27 +523,15 @@ class MenaiIRBuilder:
         bound_vars = set(param_names)
         free_vars = self._find_free_variables(body, bound_vars, ctx)
 
-        # Classify free variables: names bound by an enclosing letrec are
-        # parent_refs (accessed via LOAD_PARENT_VAR at runtime); everything
-        # else is a captured free var (stored in a local closure slot).
-        # This classification must happen before slot allocation so that
-        # parent_refs are excluded from the lambda's local frame.
-        captured_vars: List[str] = []
+        # All free variables are captured into closure slots.
+        # Letrec siblings are handled by the two-phase PATCH_CLOSURE mechanism
+        # in the codegen, not by LOAD_PARENT_VAR.
         free_var_plans: List[MenaiIRExpr] = []
-        parent_refs: List[str] = []
-        parent_ref_plans: List[MenaiIRExpr] = []
 
         for fv in free_vars:
-            if fv in ctx.letrec_bound_names:
-                parent_refs.append(fv)
-                parent_ref_plans.append(MenaiIRVariable(
-                    name=fv, var_type='local', is_parent_ref=True
-                ))
-            else:
-                captured_vars.append(fv)
-                free_var_plans.append(MenaiIRVariable(
-                    name=fv, var_type='local', is_parent_ref=False
-                ))
+            free_var_plans.append(MenaiIRVariable(
+                name=fv, var_type='local', is_parent_ref=False
+            ))
 
         # Create child context for lambda body analysis
         lambda_ctx = ctx.create_child_context()
@@ -554,8 +542,8 @@ class MenaiIRBuilder:
             param_index = lambda_ctx.allocate_local_index()
             lambda_ctx.current_scope().add_binding(param_name, param_index)
 
-        # Add captured free vars to lambda scope (parent_refs are NOT local slots)
-        for free_var in captured_vars:
+        # Add all free vars to lambda scope as captured closure slots
+        for free_var in free_vars:
             free_var_index = lambda_ctx.allocate_local_index()
             lambda_ctx.current_scope().add_binding(free_var, free_var_index)
 
@@ -573,10 +561,8 @@ class MenaiIRBuilder:
         return MenaiIRLambda(
             params=param_names,
             body_plan=body_plan,
-            free_vars=captured_vars,
+            free_vars=list(free_vars),
             free_var_plans=free_var_plans,
-            parent_refs=parent_refs,
-            parent_ref_plans=parent_ref_plans,
             param_count=len(param_names),
             is_variadic=is_variadic,
             binding_name=ctx.current_binding_name,

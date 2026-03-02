@@ -48,8 +48,14 @@ each enclosing lambda frame (depth=1, 2, ...).
 
 Slot indices on MenaiIRLet and MenaiIRLetrec bindings are already correct
 (set by the IR builder) and are used directly to populate scope dicts.
-The addresser does not re-allocate slots; it only resolves names to the
-already-allocated slots.
+Normally the addresser does not re-allocate slots.
+
+Exception — sentinel var_index=-1:
+MenaiIRLet bindings emitted by the lambda lifter (Step 5) use var_index=-1
+as a sentinel meaning "allocate the next free slot in the current lambda
+frame".  The addresser detects this and assigns one past the highest slot
+index already in use across all scope dicts in the current lambda frame
+(including the lambda's own parameter/free-var scope dict).
 
 Usage
 -----
@@ -224,11 +230,17 @@ class MenaiIRAddresser:
         containing the let's bindings.  This correctly handles shadowing:
         the new scope dict sits on top of any existing scope dicts in the
         same lambda frame, and the old scope dicts are unaffected.
+
+        Special case: a binding with var_index==-1 is a sentinel from the
+        lambda lifter.  The addresser allocates the next free slot in the
+        current lambda frame before building the scope dict.
         """
         # Walk binding values in the current scope (names not yet visible).
         new_bindings: List[tuple] = []
         for name, value_plan, var_index in ir.bindings:
             new_value = self._walk(value_plan, frame_stack)
+            if var_index == -1:
+                var_index = self._next_free_slot(frame_stack)
             new_bindings.append((name, new_value, var_index))
 
         # Build a new scope dict for the let's bindings.
@@ -249,6 +261,25 @@ class MenaiIRAddresser:
             in_tail_position=ir.in_tail_position,
         )
 
+    def _next_free_slot(self, frame_stack: FrameStack) -> int:
+        """
+        Return the next free slot index in the current (innermost) lambda frame.
+
+        Scans all scope dicts in the current lambda frame — including the
+        lambda's own parameter/free-var scope dict — and returns one past the
+        highest slot index in use.  Returns 0 if the frame has no bindings.
+
+        Used to allocate slots for sentinel var_index==-1 let bindings
+        introduced by the lambda lifter.
+        """
+        current_lambda_frame = frame_stack[-1]
+        max_slot = -1
+        for scope_dict in current_lambda_frame:
+            for slot in scope_dict.values():
+                if slot > max_slot:
+                    max_slot = slot
+        return max_slot + 1
+
     def _walk_letrec(self, ir: MenaiIRLetrec, frame_stack: FrameStack) -> MenaiIRLetrec:
         """
         Walk a letrec node.
@@ -266,12 +297,29 @@ class MenaiIRAddresser:
         inner_lambda_frame = current_lambda_frame + [letrec_scope]
         inner_frame_stack = frame_stack[:-1] + [inner_lambda_frame]
 
+        # Helper slots allocated by _walk_let (var_index==-1 sentinels from the
+        # lambda lifter) must be tracked across binding iterations so that each
+        # successive binding sees previously-allocated helper slots and doesn't
+        # reuse the same slot number.  We maintain a running "allocated helpers"
+        # scope dict and append it to the inner lambda frame before each binding.
+        allocated_helpers: ScopeDict = {}
+
         new_bindings: List[tuple] = []
         for name, value_plan, var_index in ir.bindings:
-            new_value = self._walk(value_plan, inner_frame_stack)
+            # Include any helpers allocated by previous bindings so _next_free_slot
+            # returns a fresh slot rather than reusing an already-taken one.
+            current_inner_frame = inner_lambda_frame + ([allocated_helpers] if allocated_helpers else [])
+            current_inner_stack = frame_stack[:-1] + [current_inner_frame]
+            new_value = self._walk(value_plan, current_inner_stack)
+            # Collect any newly-allocated helper slots from the walked value.
+            new_slots = self._collect_helper_slots(new_value, letrec_scope)
+            allocated_helpers.update(new_slots)
             new_bindings.append((name, new_value, var_index))
 
-        new_body = self._walk(ir.body_plan, inner_frame_stack)
+        # Body sees all letrec bindings plus all helper slots.
+        body_inner_frame = inner_lambda_frame + ([allocated_helpers] if allocated_helpers else [])
+        body_inner_stack = frame_stack[:-1] + [body_inner_frame]
+        new_body = self._walk(ir.body_plan, body_inner_stack)
 
         return MenaiIRLetrec(
             bindings=new_bindings,
@@ -279,25 +327,41 @@ class MenaiIRAddresser:
             in_tail_position=ir.in_tail_position,
         )
 
+    def _collect_helper_slots(self, ir: MenaiIRExpr, letrec_scope: ScopeDict) -> ScopeDict:
+        """
+        Collect all var_index values from MenaiIRLet bindings in *ir* that are
+        NOT already in letrec_scope.  These are the helper slots allocated by
+        the lambda lifter (var_index==-1 sentinels, now resolved) within a
+        single letrec binding value.
+
+        Only descends into MenaiIRLet chains — does not recurse into lambda
+        bodies (those have their own frame).
+        """
+        result: ScopeDict = {}
+        node = ir
+        while isinstance(node, MenaiIRLet):
+            for name, _, var_index in node.bindings:
+                if name not in letrec_scope:
+                    result[name] = var_index
+            node = node.body_plan
+        return result
+
     def _walk_lambda(self, ir: MenaiIRLambda, frame_stack: FrameStack) -> MenaiIRLambda:
         """
         Walk a lambda node.
 
-        free_var_plans and parent_ref_plans are evaluated in the *enclosing*
-        frame (they load values from the enclosing scope to build the closure),
-        so they are walked with the current frame_stack.
+        free_var_plans are evaluated in the *enclosing* frame (they load values
+        from the enclosing scope to build the closure), so they are walked with
+        the current frame_stack.
 
         The lambda body is walked with a new lambda frame pushed onto the
         frame_stack.  This new frame contains a single scope dict with the
         lambda's parameters and captured free variables.  Any reference that
         crosses this boundary increments depth by 1.
-
-        Parent refs are NOT added to the lambda frame — they are accessed
-        via LOAD_PARENT_VAR from the enclosing frame (depth > 0).
         """
-        # Walk free_var_plans and parent_ref_plans in the enclosing frame.
+        # Walk free_var_plans in the enclosing frame.
+        # (parent_ref_plans removed — letrec siblings are now regular free_vars)
         new_free_var_plans = [self._walk(p, frame_stack) for p in ir.free_var_plans]
-        new_parent_ref_plans = [self._walk(p, frame_stack) for p in ir.parent_ref_plans]
 
         # Build the lambda's own scope dict.
         # Parameters occupy slots 0..N-1; captured free vars occupy N..N+M-1.
@@ -309,9 +373,6 @@ class MenaiIRAddresser:
         for i, free_var in enumerate(ir.free_vars):
             lambda_scope[free_var] = param_count + i
 
-        # Parent refs are NOT in the lambda scope — they resolve to the
-        # enclosing frame (depth > 0) via LOAD_PARENT_VAR.
-
         # Push a new lambda frame containing just the lambda's scope dict.
         child_frame_stack = frame_stack + [[lambda_scope]]
 
@@ -322,8 +383,6 @@ class MenaiIRAddresser:
             body_plan=new_body,
             free_vars=ir.free_vars,
             free_var_plans=new_free_var_plans,
-            parent_refs=ir.parent_refs,
-            parent_ref_plans=new_parent_ref_plans,
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,

@@ -258,8 +258,8 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
         Optimize a lambda node.
 
         The lambda body is optimized in the lambda's own frame.
-        free_var_plans and parent_ref_plans are evaluated in the enclosing
-        frame and are walked with the current frame_stack.
+        free_var_plans are evaluated in the enclosing frame and are walked
+        with the current frame_stack.
         """
         counts = cast(IRUseCounts, self._counts)
         lambda_frame_id = counts.lambda_frame_ids.get(id(ir))
@@ -275,8 +275,6 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
             body_plan=self._inline(ir.body_plan, child_stack),
             free_vars=ir.free_vars,
             free_var_plans=ir.free_var_plans,   # leaf nodes; no substitution needed here
-            parent_refs=ir.parent_refs,
-            parent_ref_plans=ir.parent_ref_plans,  # leaf nodes; no substitution needed here
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,
@@ -319,7 +317,6 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
         if isinstance(ir, MenaiIRVariable):
             if (ir.var_type == 'local'
                     and ir.depth == 0
-                    and not ir.is_parent_ref
                     and ir.index in replacements):
                 return replacements[ir.index]
 
@@ -456,12 +453,12 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
         The lambda's body_plan is in a child frame — depth=0 there refers to
         the lambda's own locals — so we do NOT descend into it for substitution.
 
-        The lambda's free_var_plans and parent_ref_plans ARE evaluated in the
-        enclosing frame, so we substitute into them.  This is the key path
+        The lambda's free_var_plans ARE evaluated in the enclosing frame, so
+        we substitute into them.  This is the key path
         that allows inlining captured single-use call bindings (the motivating
         example in the module docstring).
 
-        After substituting into free_var_plans / parent_ref_plans we run
+        After substituting into free_var_plans we run
         _inline_lambda on the result so that the lambda body is still optimized.
         """
         counts = cast(IRUseCounts, self._counts)
@@ -476,10 +473,6 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
             self._substitute(fvp, replacements, frame_stack)
             for fvp in ir.free_var_plans
         ]
-        new_parent_ref_plans = [
-            self._substitute(prp, replacements, frame_stack)
-            for prp in ir.parent_ref_plans
-        ]
 
         # Body is in the child frame — optimize but do not substitute the
         # enclosing frame's replacements.
@@ -490,8 +483,6 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
             body_plan=new_body,
             free_vars=ir.free_vars,
             free_var_plans=new_free_var_plans,
-            parent_refs=ir.parent_refs,
-            parent_ref_plans=new_parent_ref_plans,
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,
@@ -566,11 +557,11 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
         if isinstance(value_plan, MenaiIRVariable):
             if (value_plan.var_type == 'local'
                     and value_plan.depth == 0
-                    and not value_plan.is_parent_ref):
+                    ):
                 # Frame-relative reference — safe only when not captured.
                 return counts.external_count(frame_id, var_index) == 0
 
-            # Global variable or parent-ref: no frame-relative address concern.
+            # Global variable: no frame-relative address concern.
             return True
 
         # All other node types (constants, calls, if-exprs, quotes,

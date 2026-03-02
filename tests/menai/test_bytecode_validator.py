@@ -323,25 +323,6 @@ class TestBytecodeValidator:
         # Should not raise
         validate_bytecode(code)
 
-    def test_invalid_parent_var_depth(self):
-        """Test that LOAD_PARENT_VAR with depth 0 is caught."""
-        code = CodeObject(
-            instructions=[
-                Instruction(Opcode.LOAD_PARENT_VAR, 0, 0),  # Depth must be >= 1
-                Instruction(Opcode.RETURN),
-            ],
-            constants=[],
-            names=[],
-            code_objects=[],
-            local_count=0
-        )
-
-        with pytest.raises(ValidationError) as exc_info:
-            validate_bytecode(code)
-
-        assert exc_info.value.error_type == ValidationErrorType.INVALID_VARIABLE_ACCESS
-        assert "depth must be >= 1" in exc_info.value.message
-
     def test_nested_code_validation(self):
         """Test that nested code objects are validated recursively."""
         # Create invalid nested code

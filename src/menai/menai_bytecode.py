@@ -54,8 +54,9 @@ class Opcode(IntEnum):
     # Variables (lexically addressed)
     LOAD_VAR = _op(5, 1)                # LOAD_VAR index
     STORE_VAR = _op(6, 1)               # STORE_VAR index
-    LOAD_PARENT_VAR = _op(7, 2)         # LOAD_PARENT_VAR index depth
+    LOAD_PARENT_VAR = _op(7, 2)         # LOAD_PARENT_VAR index depth  [DEPRECATED — removed by PATCH_CLOSURE refactor]
     LOAD_NAME = _op(8, 1)               # LOAD_NAME name_index
+    PATCH_CLOSURE = _op(9, 2)           # PATCH_CLOSURE var_index capture_slot
 
     # Control flow
     JUMP = _op(20, 1)                   # Unconditional jump: JUMP offset

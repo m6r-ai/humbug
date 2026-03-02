@@ -7,7 +7,7 @@ This separation keeps runtime values fast and memory-efficient.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Optional
 
 from menai.menai_error import MenaiEvalError
 
@@ -61,13 +61,17 @@ class MenaiFunction(MenaiValue):
     Represents a function (both user-defined lambdas and builtins).
 
     This is a first-class value that can be passed around as a value.
+
+    captured_values is a list so that PATCH_CLOSURE can fill in letrec sibling
+    slots after all closures in a mutual-recursion group have been created.
+    The dataclass remains frozen; mutation is done via object.__setattr__ in
+    the VM (the same pattern used by MenaiDict for its _lookup field).
     """
     parameters: Tuple[str, ...]
     name: str | None = None
     bytecode: Any = None  # CodeObject for bytecode-compiled functions
-    captured_values: Tuple[Any, ...] = ()  # Captured free variables for closures
+    captured_values: List[Any] = field(default_factory=list)  # Captured free variables for closures
     is_variadic: bool = False  # True if function accepts variable number of args
-    parent_frame: Any = None  # Parent frame for LOAD_PARENT_VAR (lexical parent)
 
     def to_python(self) -> 'MenaiFunction | str':
         """Functions return themselves (or their name for builtins as string)."""
