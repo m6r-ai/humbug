@@ -35,11 +35,11 @@ MenaiFreeVarAnalyzer        menai_free_var_analyzer.py     (free variable annota
     ↓
 MenaiIRBuilder              menai_ir_builder.py
     ↓
-MenaiIRParentRefClassifier  menai_ir_parent_ref_classifier.py  (reclassifies free_vars vs parent_refs from IR structure)
-    ↓
 MenaiIRAddresser            menai_ir_addresser.py          (first run — resolves MenaiIRVariable depth/index)
     ↓
 MenaiIRClosureConverter     menai_ir_closure_converter.py  (Step 4 — makes closure capture explicit; pipeline insertion point for lambda lifting)
+    ↓
+MenaiIRLambdaLifter         menai_ir_lambda_lifter.py      (A′ worker/wrapper transformation — every lambda exits with free_vars==[])
     ↓
 MenaiIRAddresser            menai_ir_addresser.py          (second run — re-resolves after closure conversion)
     ↓
@@ -70,9 +70,9 @@ optimizations are applied across module boundaries.
 | `menai_free_var_analyzer.py` | Standalone free variable analysis pass. Annotates every lambda in the post-fold AST with its free variable names (`FreeVarInfo`). Runs after AST folding, before IR builder. | Medium |
 | `menai_ir.py` | IR dataclasses (`MenaiIRExpr` union type) — the compilation plan | Small |
 | `menai_ir_builder.py` | Lowers desugared AST → IR. Emits `MenaiIRVariable` with `depth=-1, index=-1` (unresolved). Slot allocation and `free_vars`/`parent_refs` split are done here; depth/index resolution is deferred to `MenaiIRAddresser`. | Large |
-| `menai_ir_parent_ref_classifier.py` | Reclassifies `free_vars` vs `parent_refs` on every `MenaiIRLambda` based purely on the IR tree structure (enclosing `MenaiIRLetrec` nodes). Runs after IR builder, before addresser. | Small |
-| `menai_ir_addresser.py` | Resolves all `MenaiIRVariable(depth=-1, index=-1)` nodes to their correct frame-relative `(depth, index)`. Runs twice: once after the classifier, and again after the closure converter. | Medium |
-| `menai_ir_closure_converter.py` | Step 4 — makes closure capture explicit in the IR tree. Currently a tree-rewriting identity pass; serves as the pipeline insertion point for lambda lifting (Step 5). Runs between the two addresser passes. | Small |
+| `menai_ir_addresser.py` | Resolves all `MenaiIRVariable(depth=-1, index=-1)` nodes to their correct frame-relative `(depth, index)`. Runs twice: once after the IR builder (before the closure converter), and again after the lambda lifter. | Medium |
+| `menai_ir_closure_converter.py` | Makes closure capture explicit in the IR tree. Currently a tree-rewriting identity pass; serves as the pipeline insertion point for lambda lifting. Runs between the two addresser passes. | Small |
+| `menai_ir_lambda_lifter.py` | A′ worker/wrapper transformation. Replaces every capturing lambda with a closed helper function plus a thin wrapper that passes captured values as explicit arguments. After this pass, every `MenaiIRLambda` in the tree has `free_vars == []` and `parent_refs == []`. Runs after the closure converter, before the second addresser pass. | Medium |
 | `menai_ir_optimization_pass.py` | Base class for IR optimization passes | Tiny |
 | `menai_ir_use_counter.py` | Pure analysis pass: counts all variable uses per frame; produces `IRUseCounts` | Medium |
 | `menai_ir_copy_propagator.py` | IR-level copy propagation pass; inlines trivially-copyable let bindings | Medium |
@@ -247,8 +247,9 @@ Variable references go through a two-phase resolution:
 
 1. **`MenaiIRBuilder`** emits `MenaiIRVariable` nodes with `depth=-1, index=-1` (unresolved sentinels).
    It determines `var_type` ('local' or 'global') and `is_parent_ref` at this stage.
-2. **`MenaiIRAddresser`** (runs after `MenaiIRParentRefClassifier`) resolves every local variable
-   to its correct `(depth, index)` by walking the IR tree's scope structure.
+2. **`MenaiIRAddresser`** resolves every local variable to its correct `(depth, index)` by walking
+   the IR tree's scope structure. It runs twice: once after the IR builder, and again after the
+   lambda lifter (which introduces new `let`-bound helper lambdas with fresh sentinel addresses).
 
 The three final addressing modes emitted by the codegen are:
 
@@ -256,7 +257,7 @@ The three final addressing modes emitted by the codegen are:
   Used for all user-defined bindings (`let`, `let*`, `letrec`, lambda parameters).
 - **`LOAD_PARENT_VAR index depth`** — lexically-addressed variable in an enclosing
   frame at `depth` levels up. Used for recursive back-edges to enclosing `letrec` bindings
-  (`parent_refs`). Classified by `MenaiIRParentRefClassifier`; addressed by `MenaiIRAddresser`.
+  (`parent_refs`). Classified by the IR builder; addressed by `MenaiIRAddresser`.
 - **`LOAD_NAME name_index`** — name-table lookup, used **only for global builtins**
   that are referenced as first-class values (i.e. not called directly with the correct
   fixed arity). When the codegen sees a direct call to a known builtin at the right

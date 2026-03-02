@@ -272,11 +272,19 @@ class MenaiIRLambdaLifter:
         # ------------------------------------------------------------------
         # Helper lambda
         # ------------------------------------------------------------------
-        # params  = original params + all captured names
-        # body    = original body with ALL local variable references reset to
-        #           unresolved sentinels (depth=-1, index=-1, is_parent_ref=False).
-        #           The second addresser run re-resolves them against the helper's
-        #           new scope dict (params 0..N-1, captured N..N+M-1).
+        # params       = original params + all captured names
+        # is_variadic  = False — the helper always receives a plain (already-packed)
+        #                list for the rest parameter.  For a non-variadic original
+        #                lambda this makes no difference.  For a variadic original
+        #                lambda the wrapper packs the rest args via ENTER (is_variadic
+        #                stays True on the wrapper) and passes the resulting list as
+        #                an ordinary argument to the helper.  Making the helper
+        #                non-variadic prevents _check_and_pack_args from re-packing
+        #                the captured slots into a new rest list.
+        # body         = original body with ALL local variable references reset to
+        #                unresolved sentinels (depth=-1, index=-1, is_parent_ref=False).
+        #                The second addresser run re-resolves them against the helper's
+        #                new scope dict (params 0..N-1, captured N..N+M-1).
         #
         # JUMP 0 suppression is automatic: the helper's binding_name is
         # "<lifted-N-foo>", which never matches the original function name
@@ -292,7 +300,7 @@ class MenaiIRLambdaLifter:
             free_vars=[],
             free_var_plans=[],
             param_count=helper_param_count,
-            is_variadic=ir.is_variadic,
+            is_variadic=False,   # helper always takes a plain list; see comment above
             binding_name=helper_name,
             sibling_bindings=[],
             max_locals=max(ir.max_locals, helper_param_count),

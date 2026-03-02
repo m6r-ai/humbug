@@ -11,7 +11,10 @@ from menai.menai_ir import (
     MenaiIRQuote, MenaiIRError, MenaiIRLet, MenaiIRLetrec, MenaiIRLambda, MenaiIRCall,
     MenaiIREmptyList, MenaiIRReturn, MenaiIRTrace
 )
-from menai.menai_value import MenaiValue, MenaiInteger, MenaiFloat, MenaiComplex, MenaiBoolean, MenaiNone, MenaiString
+from menai.menai_value import (
+    MenaiValue, MenaiInteger, MenaiFloat, MenaiComplex,
+    MenaiBoolean, MenaiString, MenaiFunction, MenaiNone
+)
 
 
 # Derived opcode maps for the codegen — built from the single source of truth
@@ -301,20 +304,17 @@ class MenaiCodeGen:
         # Pre-scan all binding value plans to find the highest let-binding slot
         # index used anywhere within them.  Temp slots for deferred closures
         # must be allocated above this high-water mark to avoid colliding with
-        # slots pre-assigned by the IR addresser to lambda-lifter let bindings
-        # in later binding values.
+        # slots pre-assigned by the IR addresser to lambda-lifter let bindings.
+        # The scan must be fully recursive because the lambda lifter can produce
+        # MenaiIRLet nodes nested inside calls, ifs, or other expressions
+        # (e.g. (list (lambda () x)) lifts to a MenaiIRLet inside the LIST
+        # call's argument list, not at the top level of the binding value).
         #
-        # We scan MenaiIRLet chains only (not lambda bodies — those are a
-        # separate frame).  The letrec's own binding slots are accounted for
-        # separately via ctx.max_locals updates during the loop below.
+        # Lambda bodies are NOT descended into — those are separate frames.
+        # The letrec's own binding slots are accounted for via ctx.max_locals.
         max_let_slot = -1
         for _, value_plan, _ in plan.bindings:
-            node = value_plan
-            while isinstance(node, MenaiIRLet):
-                for _, _, vi in node.bindings:
-                    if vi > max_let_slot:
-                        max_let_slot = vi
-                node = node.body_plan
+            max_let_slot = max(max_let_slot, self._max_let_slot(value_plan))
 
         # Phase 1: create all closures / binding values.  Any lambda that
         # captures a letrec sibling is intercepted by _generate_lambda and
@@ -355,6 +355,46 @@ class MenaiCodeGen:
         # Generate body
         self._generate_expr(plan.body_plan, ctx)
 
+    def _max_let_slot(self, plan: MenaiIRExpr) -> int:
+        """
+        Return the highest var_index found in any MenaiIRLet binding within
+        *plan*, recursing into all node types but NOT into MenaiIRLambda bodies
+        (those are a separate frame and have their own slot namespace).
+
+        Used by _generate_letrec to pre-compute a safe base for temp slot
+        allocation so that deferred-closure temp slots never collide with
+        lambda-lifter helper slots pre-assigned by the IR addresser.
+        """
+        if isinstance(plan, MenaiIRLet):
+            hi = max((vi for _, _, vi in plan.bindings), default=-1)
+            hi = max(hi, self._max_let_slot(plan.body_plan))
+            for _, vp, _ in plan.bindings:
+                hi = max(hi, self._max_let_slot(vp))
+            return hi
+        if isinstance(plan, MenaiIRLetrec):
+            hi = max((self._max_let_slot(vp) for _, vp, _ in plan.bindings), default=-1)
+            hi = max(hi, self._max_let_slot(plan.body_plan))
+            return hi
+        if isinstance(plan, MenaiIRLambda):
+            # Do NOT recurse into body — separate frame.
+            # Do recurse into free_var_plans (evaluated in enclosing frame).
+            return max((self._max_let_slot(p) for p in plan.free_var_plans), default=-1)
+        if isinstance(plan, MenaiIRIf):
+            return max(self._max_let_slot(plan.condition_plan),
+                       self._max_let_slot(plan.then_plan),
+                       self._max_let_slot(plan.else_plan))
+        if isinstance(plan, MenaiIRCall):
+            return max(self._max_let_slot(plan.func_plan),
+                       max((self._max_let_slot(a) for a in plan.arg_plans), default=-1))
+        if isinstance(plan, MenaiIRReturn):
+            return self._max_let_slot(plan.value_plan)
+        if isinstance(plan, MenaiIRTrace):
+            return max(self._max_let_slot(plan.value_plan),
+                       max((self._max_let_slot(m) for m in plan.message_plans), default=-1))
+        # Leaf nodes: MenaiIRConstant, MenaiIRVariable, MenaiIRQuote,
+        #             MenaiIREmptyList, MenaiIRError
+        return -1
+
     def _find_effective_lambda(self, plan: MenaiIRExpr) -> 'MenaiIRLambda | None':
         """
         Find the lambda that produces the closure stored in a letrec slot.
@@ -391,16 +431,19 @@ class MenaiCodeGen:
         """
         if isinstance(plan, MenaiIRLet):
             # Generate the let's binding values and store them normally.
-            for name, val_plan, var_index in plan.bindings:
+            for _, val_plan, var_index in plan.bindings:
                 self._generate_expr(val_plan, ctx)
                 ctx.emit(Opcode.STORE_VAR, var_index)
                 ctx.max_locals = max(ctx.max_locals, var_index + 1)
+
             # Recurse into the body.
             self._generate_expr_with_full_deferral(plan.body_plan, effective_lambda, ctx)
+
         elif isinstance(plan, MenaiIRLambda) and plan is effective_lambda:
             # This is the wrapper lambda — emit NO free_var_plans; all slots
             # will be patched in Phase 2.
             self._generate_letrec_lambda(plan, 0, ctx)
+
         else:
             # Fallback: shouldn't happen but generate normally.
             self._generate_expr(plan, ctx)
@@ -489,11 +532,33 @@ class MenaiCodeGen:
             source_file=plan.source_file
         )
 
-        # Add to parent's code objects
+        # Add to parent's code objects list.  Always needed: the validator and
+        # disassembler walk code_objects; MAKE_CLOSURE also references it by index.
         code_index = ctx.add_code_object(lambda_code)
 
-        # Emit MAKE_CLOSURE instruction
-        ctx.emit(Opcode.MAKE_CLOSURE, code_index, len(plan.free_vars))
+        if len(plan.free_vars) != 0:
+            # Has free vars — must capture values at runtime via MAKE_CLOSURE.
+            ctx.emit(Opcode.MAKE_CLOSURE, code_index, len(plan.free_vars))
+            return
+
+        # No captures needed — pre-build the MenaiFunction and store it in
+        # the constant pool.  Replaces a Python object allocation on every
+        # execution of the enclosing code with a single constant-pool lookup.
+        # MenaiFunction is not hashable (bytecode contains lists), so we
+        # bypass add_constant and key by id(lambda_code) instead.
+        func = MenaiFunction(
+            parameters=tuple(lambda_code.param_names),
+            name=lambda_code.name,
+            bytecode=lambda_code,
+            is_variadic=lambda_code.is_variadic,
+        )
+        key = ('function', id(lambda_code))
+        if key not in ctx.constant_map:
+            ctx.constant_map[key] = len(ctx.constants)
+            ctx.constants.append(func)
+
+        const_index = ctx.constant_map[key]
+        ctx.emit(Opcode.LOAD_CONST, const_index)
 
     def _generate_letrec_lambda(
         self, plan: MenaiIRLambda, non_sibling_count: int, ctx: MenaiCodeGenContext
@@ -566,8 +631,10 @@ class MenaiCodeGen:
                 and plan.func_plan.name == ctx.current_lambda_name):
             for arg_plan in plan.arg_plans:
                 self._generate_expr(arg_plan, ctx)
+
             ctx.emit(Opcode.JUMP, 0)
             return
+
         # Check for builtin call
         if plan.is_builtin:
             assert plan.builtin_name is not None
