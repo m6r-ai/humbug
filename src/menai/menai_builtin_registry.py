@@ -5,7 +5,7 @@ This module provides builtin function metadata and first-class function objects
 for all builtins, used by the VM to populate the global environment.
 """
 
-from typing import Dict, Optional, Tuple
+from typing import Dict, Tuple
 
 from menai.menai_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Instruction, Opcode
 from menai.menai_value import MenaiFunction
@@ -36,7 +36,7 @@ class MenaiBuiltinRegistry:
     #
     # Consumed by: the semantic analyser (early arity checking) and
     # create_builtin_function_objects() (building MenaiFunction stubs).
-    BUILTIN_OPCODE_ARITIES: Dict[str, Tuple[int, Optional[int]]] = {
+    BUILTIN_OPCODE_ARITIES: Dict[str, Tuple[int, int | None]] = {
         'function?': (1, 1),
         'function-min-arity': (1, 1),
         'function-variadic?': (1, 1),

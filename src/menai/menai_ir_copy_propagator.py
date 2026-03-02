@@ -51,7 +51,7 @@ Implements MenaiIROptimizationPass so it can be managed by the IR pass manager
 in MenaiCompiler.
 """
 
-from typing import Dict, List, Optional, Tuple, cast
+from typing import Dict, List, Tuple, cast
 
 from menai.menai_ir import (
     MenaiIRCall,
@@ -83,9 +83,10 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
 
     def __init__(self) -> None:
         self._substitutions: int = 0
-        self._counts: Optional[IRUseCounts] = None
+        self._counts: IRUseCounts | None = None
 
     def substitutions(self) -> int:
+        """Return the number of substitutions performed by the last optimize() call."""
         return self._substitutions
 
     def optimize(self, ir: MenaiIRExpr) -> Tuple[MenaiIRExpr, bool]:

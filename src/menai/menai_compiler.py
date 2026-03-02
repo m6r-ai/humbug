@@ -4,7 +4,7 @@ This is the main entry point for compiling Menai source code to bytecode.
 It chains together all compilation passes in the correct order.
 """
 
-from typing import List, Optional
+from typing import List
 
 from menai.menai_ast import MenaiASTNode
 from menai.menai_ast_constant_folder import MenaiASTConstantFolder
@@ -32,7 +32,7 @@ class MenaiCompiler:
     Main compiler pass manager.
     """
 
-    def __init__(self, optimize: bool = True, module_loader: Optional[ModuleLoader] = None):
+    def __init__(self, optimize: bool = True, module_loader: ModuleLoader | None = None):
         """
         Initialize compiler with all passes.
 

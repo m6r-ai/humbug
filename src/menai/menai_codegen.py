@@ -486,12 +486,13 @@ class MenaiCodeGen:
     def _generate_call(self, plan: MenaiIRCall, ctx: MenaiCodeGenContext) -> None:
         """Generate code for a function call."""
         # Detect direct self-recursive tail calls and emit JUMP 0.
-        if (plan.is_tail_call
-                and not plan.is_builtin
-                and ctx.current_lambda_name is not None
-                and isinstance(plan.func_plan, MenaiIRVariable)
-                and plan.func_plan.var_type == 'local'
-                and plan.func_plan.name == ctx.current_lambda_name):
+        jump_to_self = (plan.is_tail_call  # type: ignore[too-many-boolean-expressions]
+                        and not plan.is_builtin
+                        and ctx.current_lambda_name is not None
+                        and isinstance(plan.func_plan, MenaiIRVariable)
+                        and plan.func_plan.var_type == 'local'
+                        and plan.func_plan.name == ctx.current_lambda_name)
+        if jump_to_self:
             for arg_plan in plan.arg_plans:
                 self._generate_expr(arg_plan, ctx)
 

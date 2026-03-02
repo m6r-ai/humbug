@@ -22,7 +22,7 @@ pass.  max_locals on MenaiIRLambda is also computed and set by the addresser.
 """
 
 from dataclasses import dataclass
-from typing import List, Optional, Union
+from typing import List
 
 from menai.menai_value import MenaiValue
 
@@ -112,7 +112,7 @@ class MenaiIRLambda:
     param_count: int
     is_variadic: bool  # True if last param is a rest parameter
     max_locals: int = 0  # Set by MenaiIRAddresser; 0 until then
-    binding_name: Optional[str] = None  # Name if bound in let/letrec (for recursion detection)
+    binding_name: str | None = None  # Name if bound in let/letrec (for recursion detection)
     source_line: int = 0  # Line number in source where this lambda is defined
     source_file: str = ""  # Source file name where this lambda is defined
 
@@ -124,7 +124,7 @@ class MenaiIRCall:
     arg_plans: List['MenaiIRExpr']
     is_tail_call: bool
     is_builtin: bool
-    builtin_name: Optional[str]  # Builtin name if is_builtin=True, else None
+    builtin_name: str | None  # Builtin name if is_builtin=True, else None
 
 
 @dataclass
@@ -146,17 +146,17 @@ class MenaiIRTrace:
 
 
 # Union type for all expression plans
-MenaiIRExpr = Union[
-    MenaiIRConstant,
-    MenaiIRVariable,
-    MenaiIRIf,
-    MenaiIRQuote,
-    MenaiIRError,
-    MenaiIRLet,
-    MenaiIRLetrec,
-    MenaiIRLambda,
-    MenaiIRCall,
-    MenaiIREmptyList,
-    MenaiIRReturn,
-    MenaiIRTrace,
-]
+MenaiIRExpr = (
+    MenaiIRConstant |
+    MenaiIRVariable |
+    MenaiIRIf |
+    MenaiIRQuote |
+    MenaiIRError |
+    MenaiIRLet |
+    MenaiIRLetrec |
+    MenaiIRLambda |
+    MenaiIRCall |
+    MenaiIREmptyList |
+    MenaiIRReturn |
+    MenaiIRTrace
+)

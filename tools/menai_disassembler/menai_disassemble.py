@@ -158,9 +158,6 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
             name = code.names[arg1]
             annotation = f"  ; Load name: {name}"
 
-    elif opcode == Opcode.LOAD_PARENT_VAR:
-        annotation = f"  ; Load parent var[{arg1}] ({arg2} frame{'s' if arg2 != 1 else ''} up)"
-
     elif opcode == Opcode.RAISE_ERROR:
         if arg1 < len(code.constants):
             msg = code.constants[arg1]

@@ -47,7 +47,7 @@ Implements MenaiIROptimizationPass so it can be managed by the IR pass manager
 in MenaiCompiler.
 """
 
-from typing import Dict, List, Optional, Tuple, cast
+from typing import Dict, List, Tuple, cast
 
 from menai.menai_ir import (
     MenaiIRCall,
@@ -79,9 +79,10 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
 
     def __init__(self) -> None:
         self._inlinings: int = 0
-        self._counts: Optional[IRUseCounts] = None
+        self._counts: IRUseCounts | None = None
 
     def inlinings(self) -> int:
+        """Return the number of inlinings performed by the most recent optimize() call."""
         return self._inlinings
 
     def optimize(self, ir: MenaiIRExpr) -> Tuple[MenaiIRExpr, bool]:

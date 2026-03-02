@@ -4,7 +4,7 @@ import cmath
 import difflib
 from dataclasses import dataclass, field
 import math
-from typing import List, Dict, Any, cast, Optional, Protocol
+from typing import List, Dict, Any, cast, Protocol
 
 from menai.menai_builtin_registry import MenaiBuiltinRegistry
 from menai.menai_bytecode import CodeObject, Opcode
@@ -71,7 +71,7 @@ class MenaiVM:
         self.validate_bytecode = validate  # Whether to validate bytecode before execution
 
         # Trace watcher for debugging support
-        self.trace_watcher: Optional[MenaiTraceWatcher] = None
+        self.trace_watcher: MenaiTraceWatcher | None = None
 
         # Cancellation support for non-blocking execution
         self._cancelled: bool = False
@@ -89,7 +89,7 @@ class MenaiVM:
         # Build dispatch table for fast opcode execution
         self._dispatch_table = self._build_dispatch_table()
 
-    def set_trace_watcher(self, watcher: Optional[MenaiTraceWatcher]) -> None:
+    def set_trace_watcher(self, watcher: MenaiTraceWatcher | None) -> None:
         """
         Set the trace watcher (replaces any existing watcher).
 

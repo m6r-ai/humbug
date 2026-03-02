@@ -229,7 +229,7 @@ class MenaiIRAddresser:
             allocated.append((name, slot))
 
         # Build scope dict for the body.
-        let_scope: ScopeDict = {name: slot for name, slot in allocated}
+        let_scope: ScopeDict = dict(allocated)
 
         current_lambda_frame = frame_stack[-1]
         body_lambda_frame = current_lambda_frame + [let_scope]
@@ -289,7 +289,7 @@ class MenaiIRAddresser:
             slot = self._alloc_slot(counters)
             allocated.append((name, slot))
 
-        letrec_scope: ScopeDict = {name: slot for name, slot in allocated}
+        letrec_scope: ScopeDict = dict(allocated)
 
         current_lambda_frame = frame_stack[-1]
         inner_lambda_frame = current_lambda_frame + [letrec_scope]

@@ -14,7 +14,7 @@ The validator checks:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple, Set
+from typing import List, Dict, Tuple, Set
 from enum import Enum
 
 from menai.menai_bytecode import CodeObject, Instruction, Opcode
@@ -38,9 +38,9 @@ class ValidationError(Exception):
     """Bytecode validation error with detailed context."""
     error_type: ValidationErrorType
     message: str
-    instruction_index: Optional[int] = None
-    opcode: Optional[Opcode] = None
-    context: Optional[str] = None
+    instruction_index: int | None = None
+    opcode: Opcode | None = None
+    context: str | None = None
 
     def __str__(self) -> str:
         parts = [f"Bytecode validation error: {self.message}"]
@@ -74,8 +74,8 @@ class BasicBlock:
     end_index: int  # Inclusive
     successors: List[int] = field(default_factory=list)  # Instruction indices
     predecessors: List[int] = field(default_factory=list)  # Instruction indices
-    stack_depth_in: Optional[int] = None  # Stack depth on entry
-    stack_depth_out: Optional[int] = None  # Stack depth on exit
+    stack_depth_in: int | None = None  # Stack depth on entry
+    stack_depth_out: int | None = None  # Stack depth on exit
     visited: bool = False
 
 

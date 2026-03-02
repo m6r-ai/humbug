@@ -56,7 +56,7 @@ class FreeVarInfo:
         """Return the free variable set for a lambda node."""
         return self._data.get(id(lambda_node), frozenset())
 
-    def _record(self, lambda_node: MenaiASTList, free_vars: FrozenSet[str]) -> None:
+    def record(self, lambda_node: MenaiASTList, free_vars: FrozenSet[str]) -> None:
         """Record the free variable set for a lambda node (internal use)."""
         self._data[id(lambda_node)] = free_vars
 
@@ -188,7 +188,7 @@ class MenaiFreeVarAnalyzer:
         # Compute the set of names referenced in the body that are not bound
         # by param_names or any inner binding, but ARE in scope_stack.
         free_vars = self._collect_free(body, bound=param_names, scope_stack=scope_stack)
-        info._record(expr, free_vars)
+        info.record(expr, free_vars)
 
         # Recurse into the body with params added as a new scope frame so
         # that nested lambdas see the correct local bindings.
