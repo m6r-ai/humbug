@@ -85,7 +85,6 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
         self._substitutions: int = 0
         self._counts: Optional[IRUseCounts] = None
 
-    @property
     def substitutions(self) -> int:
         return self._substitutions
 

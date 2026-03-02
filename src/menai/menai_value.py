@@ -7,7 +7,7 @@ This separation keeps runtime values fast and memory-efficient.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, List, Tuple, Optional
+from typing import Any, List, Tuple
 
 from menai.menai_error import MenaiEvalError
 

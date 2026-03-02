@@ -627,7 +627,7 @@ class TestInliningsProperty:
         inliner = MenaiIRInlineOnce()
         _, changed = inliner.optimize(ir)
         assert not changed
-        assert inliner.inlinings == 0
+        assert inliner.inlinings() == 0
 
     def test_one_inlining_changed_true(self):
         """When one binding is inlined, changed is True and inlinings == 1."""
@@ -639,7 +639,7 @@ class TestInliningsProperty:
         inliner = MenaiIRInlineOnce()
         _, changed = inliner.optimize(ir)
         assert changed
-        assert inliner.inlinings == 1
+        assert inliner.inlinings() == 1
 
     def test_inlinings_reset_between_calls(self):
         """The inlinings counter is reset on each call to optimize()."""
@@ -650,11 +650,11 @@ class TestInliningsProperty:
         ))
         inliner = MenaiIRInlineOnce()
         inliner.optimize(ir)
-        assert inliner.inlinings == 1
+        assert inliner.inlinings() == 1
         # Second call on a tree with no inlinable bindings.
         ir2 = MenaiIRReturn(value_plan=_const(42))
         inliner.optimize(ir2)
-        assert inliner.inlinings == 0
+        assert inliner.inlinings() == 0
 
 
 # ---------------------------------------------------------------------------

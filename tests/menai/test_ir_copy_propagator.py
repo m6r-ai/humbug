@@ -25,7 +25,7 @@ For the unit tests we build minimal IR trees that exercise specific cases:
   - shadowing: inner let binding with same slot index is not clobbered
   - letrec bindings are never propagated
   - tail-recursive sentinel is never substituted
-  - substitutions property tracks count correctly
+  - substitutions tracks count correctly
   - changed flag is True iff at least one substitution occurred
   - integration with MenaiIROptimizer (dead-binding elimination cleans up)
 """
@@ -583,7 +583,7 @@ class TestSubstitutionsProperty:
         prop = MenaiIRCopyPropagator()
         _, changed = prop.optimize(ir)
         assert not changed
-        assert prop.substitutions == 0
+        assert prop.substitutions() == 0
 
     def test_one_propagation_changed_true(self):
         """When one binding is propagated, changed is True and substitutions == 1."""
@@ -595,7 +595,7 @@ class TestSubstitutionsProperty:
         prop = MenaiIRCopyPropagator()
         _, changed = prop.optimize(ir)
         assert changed
-        assert prop.substitutions == 1
+        assert prop.substitutions() == 1
 
     def test_two_propagations_counted(self):
         """Two propagated bindings are both counted."""
@@ -607,7 +607,7 @@ class TestSubstitutionsProperty:
         prop = MenaiIRCopyPropagator()
         _, changed = prop.optimize(ir)
         assert changed
-        assert prop.substitutions == 2
+        assert prop.substitutions() == 2
 
     def test_substitutions_reset_between_calls(self):
         """The substitutions counter is reset on each call to optimize()."""
@@ -618,11 +618,11 @@ class TestSubstitutionsProperty:
         ))
         prop = MenaiIRCopyPropagator()
         prop.optimize(ir)
-        assert prop.substitutions == 1
+        assert prop.substitutions() == 1
         # Second call on a tree with no propagatable bindings.
         ir2 = MenaiIRReturn(value_plan=_const(42))
         prop.optimize(ir2)
-        assert prop.substitutions == 0
+        assert prop.substitutions() == 0
 
 
 # ---------------------------------------------------------------------------

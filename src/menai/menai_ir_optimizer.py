@@ -69,11 +69,6 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
         self._eliminations = 0
         self._counts: IRUseCounts | None = None
 
-    @property
-    def eliminations(self) -> int:
-        """Number of dead bindings eliminated during the last optimize() call."""
-        return self._eliminations
-
     def optimize(self, ir: MenaiIRExpr) -> tuple[MenaiIRExpr, bool]:
         """Return an optimized IR tree and a boolean indicating whether any changes were made."""
         self._eliminations = 0

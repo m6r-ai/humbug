@@ -81,7 +81,6 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
         self._inlinings: int = 0
         self._counts: Optional[IRUseCounts] = None
 
-    @property
     def inlinings(self) -> int:
         return self._inlinings
 

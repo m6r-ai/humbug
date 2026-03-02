@@ -39,7 +39,6 @@ class Opcode(IntEnum):
         obj._arg_count = arg_count
         return obj
 
-    @property
     def arg_count(self) -> int:
         """Number of instruction-stream arguments (0, 1, or 2)."""
         return self._arg_count
@@ -427,7 +426,7 @@ class Instruction:
 
     def arg_count(self) -> int:
         """Return the number of instruction-stream arguments this instruction takes (0, 1, or 2)."""
-        return self.opcode.arg_count
+        return self.opcode.arg_count()
 
     def __repr__(self) -> str:
         """Human-readable representation."""

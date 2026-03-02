@@ -21,7 +21,7 @@ Slot indices are assigned entirely by MenaiIRAddresser in its single final
 pass.  max_locals on MenaiIRLambda is also computed and set by the addresser.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional, Union
 
 from menai.menai_value import MenaiValue
