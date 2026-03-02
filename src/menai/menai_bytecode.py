@@ -54,9 +54,7 @@ class Opcode(IntEnum):
     # Variables (lexically addressed)
     LOAD_VAR = _op(5, 1)                # LOAD_VAR index
     STORE_VAR = _op(6, 1)               # STORE_VAR index
-    LOAD_PARENT_VAR = _op(7, 2)         # LOAD_PARENT_VAR index depth  [DEPRECATED — removed by PATCH_CLOSURE refactor]
-    LOAD_NAME = _op(8, 1)               # LOAD_NAME name_index
-    PATCH_CLOSURE = _op(9, 2)           # PATCH_CLOSURE var_index capture_slot
+    LOAD_NAME = _op(7, 1)               # LOAD_NAME name_index
 
     # Control flow
     JUMP = _op(20, 1)                   # Unconditional jump: JUMP offset
@@ -66,12 +64,13 @@ class Opcode(IntEnum):
 
     # Functions
     MAKE_CLOSURE = _op(30, 2)           # MAKE_CLOSURE code_index capture_count
-    CALL = _op(31, 1)                   # CALL arity
-    TAIL_CALL = _op(32, 1)              # TAIL_CALL arity
-    APPLY = _op(33, 0)                  # Apply function to arg list (non-tail)
-    TAIL_APPLY = _op(34, 0)             # Apply function to arg list (tail position)
-    ENTER = _op(35, 1)                  # ENTER n  (pop N args into locals 0..N-1)
-    RETURN = _op(36, 0)                 # Return from function
+    PATCH_CLOSURE = _op(31, 2)           # PATCH_CLOSURE var_index capture_slot
+    CALL = _op(32, 1)                   # CALL arity
+    TAIL_CALL = _op(33, 1)              # TAIL_CALL arity
+    APPLY = _op(34, 0)                  # Apply function to arg list (non-tail)
+    TAIL_APPLY = _op(35, 0)             # Apply function to arg list (tail position)
+    ENTER = _op(36, 1)                  # ENTER n  (pop N args into locals 0..N-1)
+    RETURN = _op(37, 0)                 # Return from function
 
     # Debugging
     EMIT_TRACE = _op(40, 0)             # Emit trace (pops value, emits to watcher)
