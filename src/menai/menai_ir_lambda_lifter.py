@@ -237,11 +237,8 @@ class MenaiIRLambdaLifter:
 
         # Arguments to the helper: original params then all captured names.
         wrapper_arg_plans: List[MenaiIRExpr] = [
-            MenaiIRVariable(name=pname, var_type='local', is_parent_ref=False)
-            for pname in ir.params
-        ] + [
-            MenaiIRVariable(name=cname, var_type='local', is_parent_ref=False)
-            for cname in captured_names
+            MenaiIRVariable(name=n, var_type='local', is_parent_ref=False)
+            for n in list(ir.params) + captured_names
         ]
 
         wrapper_lambda = MenaiIRLambda(
@@ -274,10 +271,6 @@ class MenaiIRLambdaLifter:
             body_plan=wrapper_lambda,
             in_tail_position=False,
         )
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
 
     def _next_lifted_name(self, binding_name: str | None) -> str:
         """Generate a unique name for a lifted helper lambda."""

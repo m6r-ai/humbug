@@ -443,7 +443,7 @@ class MenaiCodeGen:
         already assigned by the addresser to inner let/letrec bindings.
         """
         if isinstance(plan, MenaiIRLet):
-            hi = max((t[2] for t in plan.bindings), default=-1)  # type: ignore[index]
+            hi = max((t[2] for t in plan.bindings), default=-1)  # type: ignore[index, misc]
             hi = max(hi, self._max_addressed_slot(plan.body_plan))
             for _, vp, *_ in plan.bindings:
                 hi = max(hi, self._max_addressed_slot(vp))
@@ -451,7 +451,7 @@ class MenaiCodeGen:
             return hi
 
         if isinstance(plan, MenaiIRLetrec):
-            hi = max((t[2] for t in plan.bindings), default=-1)  # type: ignore[index]
+            hi = max((t[2] for t in plan.bindings), default=-1)  # type: ignore[index, misc]
             hi = max(hi, self._max_addressed_slot(plan.body_plan))
             for _, vp, *_ in plan.bindings:
                 hi = max(hi, self._max_addressed_slot(vp))
