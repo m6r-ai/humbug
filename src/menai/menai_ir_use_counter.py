@@ -23,11 +23,9 @@ letrec / recursive bindings
 ---------------------------
 MenaiIRVariable.is_parent_ref marks back-references that implement recursion
 (LOAD_PARENT_VAR in the VM).  These are counted in the 'local' bucket of the
-*defining* frame (depth tells us which frame owns the slot), but callers can
+*defining* frame (depth tells us which frame owns the slot).  Callers can
 inspect is_parent_ref on individual variable nodes when they need to distinguish
-self-calls from external uses.  The IRUseCounts.is_only_self_referencing()
-helper encapsulates the common "is this binding unreachable from outside its
-own recursive group?" query.
+self-calls from external uses.
 """
 
 from __future__ import annotations
@@ -97,20 +95,6 @@ class IRUseCounts:
     def total_count(self, frame_id: int, var_index: int) -> int:
         """Total uses: local + external captures."""
         return self.local_count(frame_id, var_index) + self.external_count(frame_id, var_index)
-
-    def is_only_self_referencing(self, frame_id: int, var_index: int,
-                                 self_ref_count: int) -> bool:
-        """
-        Return True when the *only* uses of var_index in frame_id are the
-        self_ref_count recursive back-references (is_parent_ref), i.e. the
-        binding is unreachable from outside its own recursive group.
-
-        self_ref_count is the number of is_parent_ref uses that the caller
-        already knows about (typically 1 for a singly-recursive function).
-        A total_count equal to self_ref_count means every reference is a
-        self-call — nothing from outside the group reaches the binding.
-        """
-        return self.total_count(frame_id, var_index) == self_ref_count
 
 
 class MenaiIRUseCounter:

@@ -768,13 +768,13 @@ class MenaiVM:
             is_variadic=closure_code.is_variadic,
         )
         # Build captured_values list.
-        # For letrec Phase 1, capture_count may be less than len(free_vars):
-        # the non-sibling free_vars were already popped from the stack, but the
-        # sibling slots need None placeholders for PATCH_CLOSURE to fill in Phase 2.
+        # For letrec Phase 1, capture_count=0 is passed so that ALL free_var
+        # slots (both sibling and outer captures) are pre-allocated as None.
+        # PATCH_CLOSURE fills every slot in Phase 2.
         n_free = len(closure_code.free_vars)
         if capture_count < n_free:
-            # Letrec Phase 1: fill captured non-sibling slots, then append Nones
-            # for the sibling slots that PATCH_CLOSURE will populate.
+            # Letrec Phase 1: captured_values holds whatever was pre-pushed
+            # (currently always zero items), then Nones for the remaining slots.
             cv: list = list(captured_values) + [None] * (n_free - capture_count)
         else:
             cv = list(captured_values)

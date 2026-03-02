@@ -170,10 +170,7 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
         """
         Optimize a letrec node.
 
-        A binding is dead when its total use count is zero, OR when every use
-        is an is_parent_ref self-call (the binding is unreachable from outside
-        its own recursive group).
-        A binding is dead when its total use code is zero.
+        A binding is dead when its total use count is zero.
         """
         current_frame = frame_stack[-1]
 

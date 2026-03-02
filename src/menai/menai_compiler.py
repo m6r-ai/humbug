@@ -134,7 +134,7 @@ class MenaiCompiler:
         # addresses.
         ir = self.closure_converter.convert(ir)
 
-        # Lambda lifting (A′ worker/wrapper): replace every capturing lambda
+        # Lambda lifting: replace every capturing lambda
         # with a let-bound closed helper plus a thin wrapper that captures
         # everything via MAKE_CLOSURE and delegates to the helper.  After this
         # pass every MenaiIRLambda has free_vars==[] and parent_refs==[].

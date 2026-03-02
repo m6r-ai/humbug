@@ -291,26 +291,6 @@ class TestIRUseCounterLetrec:
         assert counts.total_count(0, 0) == 0
 
 
-class TestIsOnlySelfReferencing:
-    """Tests for IRUseCounts.is_only_self_referencing helper."""
-
-    def test_zero_uses_is_only_self_referencing_with_zero_self_refs(self):
-        ir = MenaiIRReturn(value_plan=_const(1))
-        counts = MenaiIRUseCounter().count(ir)
-        # Slot 5 was never seen — total == 0, self_ref_count == 0 → True
-        assert counts.is_only_self_referencing(0, 5, 0)
-
-    def test_one_external_use_not_only_self_referencing(self):
-        ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0)],
-            body_plan=_local(0),
-            in_tail_position=True,
-        ))
-        counts = MenaiIRUseCounter().count(ir)
-        # total == 1, self_ref_count == 0 → False (there is an external use)
-        assert not counts.is_only_self_referencing(0, 0, 0)
-
-
 # ---------------------------------------------------------------------------
 # Unit tests: MenaiIROptimizer
 # ---------------------------------------------------------------------------
