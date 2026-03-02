@@ -125,10 +125,6 @@ class MenaiIRClosureConverter:
         """
         return self._walk(ir)
 
-    # ------------------------------------------------------------------
-    # Main recursive walk
-    # ------------------------------------------------------------------
-
     def _walk(self, ir: MenaiIRExpr) -> MenaiIRExpr:
         """Recursively walk and rewrite *ir*."""
 
@@ -209,17 +205,13 @@ class MenaiIRClosureConverter:
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,
-            max_locals=ir.max_locals,
             source_line=ir.source_line,
             source_file=ir.source_file,
         )
 
     def _walk_let(self, ir: MenaiIRLet) -> MenaiIRLet:
         """Walk a let node, recursing into binding values and body."""
-        new_bindings: List[tuple] = [
-            (name, self._walk(value_plan), var_index)
-            for name, value_plan, var_index in ir.bindings
-        ]
+        new_bindings = [(name, self._walk(value_plan)) for name, value_plan in ir.bindings]
         return MenaiIRLet(
             bindings=new_bindings,
             body_plan=self._walk(ir.body_plan),
@@ -228,10 +220,7 @@ class MenaiIRClosureConverter:
 
     def _walk_letrec(self, ir: MenaiIRLetrec) -> MenaiIRLetrec:
         """Walk a letrec node, recursing into binding values and body."""
-        new_bindings: List[tuple] = [
-            (name, self._walk(value_plan), var_index)
-            for name, value_plan, var_index in ir.bindings
-        ]
+        new_bindings = [(name, self._walk(value_plan)) for name, value_plan in ir.bindings]
         return MenaiIRLetrec(
             bindings=new_bindings,
             body_plan=self._walk(ir.body_plan),

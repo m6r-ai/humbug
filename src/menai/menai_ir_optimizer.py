@@ -13,10 +13,6 @@ Current optimizations
    removing it is always safe.  When *all* bindings in a let/letrec are dead the
    entire form collapses to its body.
 
-   letrec note: a binding whose only uses are is_parent_ref self-calls is also
-   considered dead from the outside — the recursive group can never be reached
-   and is dropped.
-
 2. Boolean identity elimination
    An if-expression whose then-branch is #t and else-branch is #f is replaced
    by its condition expression directly:
@@ -24,13 +20,11 @@ Current optimizations
    The negated form is also handled:
        (if <cond> #f #t)  →  (boolean-not <cond>)
    Both patterns arise from desugared match guard forms and explicit boolean
-   coercions in source code.  The check is performed after recursively
-   optimising the children, so any inlining that exposes the pattern within
-   the same fixed-point iteration is caught immediately.
+   coercions in source code.
 
-The optimizer produces a new IR tree; the original is never mutated.  The
-IRUseCounts annotation is consumed read-only and is not updated — callers that
-want fixed-point iteration should re-run MenaiIRUseCounter on the new tree.
+Use counts are keyed by (frame_id, name) — no slot indices are involved.
+Variables remain symbolic (depth=-1, index=-1) throughout; MenaiIRAddresser
+resolves them in a single pass after all optimisation is complete.
 
 Implements MenaiIROptimizationPass so it can be managed by the IR pass manager
 in MenaiCompiler.
@@ -66,9 +60,6 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
     transformed IR tree and a boolean indicating whether any changes were made.
     Use counts are computed internally so callers do not need to manage them.
 
-    The optimizer is stateless with respect to the IR tree — all mutable state
-    (the frame stack) is passed explicitly through the recursive walk.
-
     Usage::
 
         new_ir, changed = MenaiIROptimizer().optimize(ir)
@@ -84,26 +75,14 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
         return self._eliminations
 
     def optimize(self, ir: MenaiIRExpr) -> tuple[MenaiIRExpr, bool]:
-        """
-        Return an optimized copy of *ir* and a flag indicating whether any
-        changes were made.
-
-        Use counts are computed internally before the transformation pass.
-
-        Args:
-            ir: Root IR node to optimize (output of MenaiIRBuilder.build()).
-
-        Returns:
-            Tuple of (new_ir, changed).  changed is True if at least one dead
-            binding was eliminated.
-        """
+        """Return an optimized IR tree and a boolean indicating whether any changes were made."""
         self._eliminations = 0
         self._counts = MenaiIRUseCounter().count(ir)
         new_ir = self._opt(ir, frame_stack=[0])
         return new_ir, self._eliminations > 0
 
     def _opt(self, ir: MenaiIRExpr, frame_stack: List[int]) -> MenaiIRExpr:
-        """Recursively optimize *ir* in the context of *frame_stack*."""
+        """Recursively walk the IR tree and apply optimizations."""
         if isinstance(ir, MenaiIRLet):
             return self._opt_let(ir, frame_stack)
 
@@ -128,36 +107,27 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
                 value_plan=self._opt(ir.value_plan, frame_stack),
             )
 
-        if isinstance(ir, (MenaiIRConstant, MenaiIRVariable,
-                            MenaiIRQuote, MenaiIREmptyList, MenaiIRError)):
-            # Leaf nodes — nothing to optimize.
+        if isinstance(ir, (MenaiIRConstant, MenaiIRVariable, MenaiIRQuote, MenaiIREmptyList, MenaiIRError)):
             return ir
 
         raise TypeError(f"MenaiIROptimizer: unhandled IR node type {type(ir).__name__}")
 
     def _opt_let(self, ir: MenaiIRLet, frame_stack: List[int]) -> MenaiIRExpr:
-        """
-        Optimize a let node.
-
-        Dead bindings (total use count == 0) are dropped.  If all bindings are
-        dead the let collapses to its (optimized) body.
-        """
+        """Drop dead let bindings (total use count == 0)."""
         current_frame = frame_stack[-1]
-
-        live: List[Tuple[str, MenaiIRExpr, int]] = []
         counts = cast(IRUseCounts, self._counts)
-        for name, value_plan, var_index in ir.bindings:
-            if counts.total_count(current_frame, var_index) == 0:
-                # Dead binding — drop it.
+
+        live: List[Tuple[str, MenaiIRExpr]] = []
+        for binding in ir.bindings:
+            name, value_plan, *_ = binding
+            if counts.total_count(current_frame, id(binding)) == 0:
                 self._eliminations += 1
                 continue
-
-            live.append((name, self._opt(value_plan, frame_stack), var_index))
+            live.append((name, self._opt(value_plan, frame_stack)))
 
         opt_body = self._opt(ir.body_plan, frame_stack)
 
         if not live:
-            # All bindings were dead — the let form itself is gone.
             return opt_body
 
         return MenaiIRLet(
@@ -167,24 +137,18 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
         )
 
     def _opt_letrec(self, ir: MenaiIRLetrec, frame_stack: List[int]) -> MenaiIRExpr:
-        """
-        Optimize a letrec node.
-
-        A binding is dead when its total use count is zero.
-        """
+        """Drop dead letrec bindings (total use count == 0)."""
         current_frame = frame_stack[-1]
-
-        live: List[Tuple[str, MenaiIRExpr, int]] = []
         counts = cast(IRUseCounts, self._counts)
-        for name, value_plan, var_index in ir.bindings:
-            total = counts.total_count(current_frame, var_index)
 
-            if total == 0:
-                # Dead — unreachable.
+        live: List[Tuple[str, MenaiIRExpr]] = []
+        for binding in ir.bindings:
+            name, value_plan, *_ = binding
+            if counts.total_count(current_frame, id(binding)) == 0:
                 self._eliminations += 1
                 continue
 
-            live.append((name, self._opt(value_plan, frame_stack), var_index))
+            live.append((name, self._opt(value_plan, frame_stack)))
 
         opt_body = self._opt(ir.body_plan, frame_stack)
 
@@ -205,16 +169,12 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
         # Boolean identity elimination:
         #   (if <cond> #t #f)  →  <cond>
         #   (if <cond> #f #t)  →  (boolean-not <cond>)
-        #
-        # Both forms arise from desugared match guard patterns and explicit
-        # boolean coercions in source.  After optimisation the children are
-        # in their most-reduced form, so this is the right moment to check.
         if (isinstance(opt_then, MenaiIRConstant)
                 and isinstance(opt_then.value, MenaiBoolean)
                 and isinstance(opt_else, MenaiIRConstant)
                 and isinstance(opt_else.value, MenaiBoolean)):
             if opt_then.value.value and not opt_else.value.value:
-                # (if cond #t #f) → cond
+                # (if cond #t #f) →  cond
                 self._eliminations += 1
                 return opt_condition
 
@@ -239,21 +199,10 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
         )
 
     def _opt_lambda(self, ir: MenaiIRLambda, frame_stack: List[int]) -> MenaiIRLambda:
-        """
-        Optimize a lambda node.
-
-        The lambda body is optimized in the lambda's own frame (looked up from
-        the lambda_frame_ids map populated by the counter).
-        """
+        """Optimize the body of a lambda."""
         counts = cast(IRUseCounts, self._counts)
         lambda_frame_id = counts.lambda_frame_ids.get(id(ir))
-        if lambda_frame_id is None:
-            # The counter didn't visit this node (shouldn't happen in normal
-            # use, but be defensive).  Optimize body in the current frame.
-            child_stack = frame_stack
-
-        else:
-            child_stack = frame_stack + [lambda_frame_id]
+        child_stack = frame_stack if lambda_frame_id is None else frame_stack + [lambda_frame_id]
 
         return MenaiIRLambda(
             params=ir.params,
@@ -265,17 +214,15 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,
-            max_locals=ir.max_locals,
             source_line=ir.source_line,
             source_file=ir.source_file,
         )
 
     def _opt_call(self, ir: MenaiIRCall, frame_stack: List[int]) -> MenaiIRCall:
-        opt_args = [self._opt(a, frame_stack) for a in ir.arg_plans]
-
+        """Optimize the function and argument plans of a call."""
         return MenaiIRCall(
             func_plan=self._opt(ir.func_plan, frame_stack),
-            arg_plans=opt_args,
+            arg_plans=[self._opt(a, frame_stack) for a in ir.arg_plans],
             is_tail_call=ir.is_tail_call,
             is_builtin=ir.is_builtin,
             builtin_name=ir.builtin_name,

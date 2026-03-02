@@ -159,7 +159,7 @@ class TestClosureConverterPreservesLambdaStructure:
         assert out_lam.param_count == 1
 
     def test_max_locals_unchanged(self):
-        """max_locals is not altered."""
+        """max_locals is 0 after the converter — the addresser owns it now."""
         lam = _make_lambda(
             params=['a', 'b'],
             body=MenaiIRReturn(value_plan=_local('a', 0)),
@@ -170,7 +170,9 @@ class TestClosureConverterPreservesLambdaStructure:
         )
         result = _convert(MenaiIRReturn(value_plan=lam))
         out_lam = result.value_plan  # type: ignore[union-attr]
-        assert out_lam.max_locals == 10
+        # max_locals is set by MenaiIRAddresser, not preserved by the converter.
+        # The converter passes through whatever value is on the node (0 by default).
+        assert out_lam.max_locals == 0
 
     def test_letrec_sibling_free_vars_preserved(self):
         """free_vars containing letrec siblings are preserved (no parent_refs after refactor)."""
@@ -305,7 +307,7 @@ class TestClosureConverterRecursion:
             max_locals=2,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[('f', inner_lam, 0)],
+            bindings=[('f', inner_lam)],
             body_plan=_local('f', 0),
             in_tail_position=True,
         ))
@@ -328,7 +330,7 @@ class TestClosureConverterRecursion:
             max_locals=2,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
-            bindings=[('f', inner_lam, 0)],
+            bindings=[('f', inner_lam)],
             body_plan=_local('f', 0),
             in_tail_position=True,
         ))

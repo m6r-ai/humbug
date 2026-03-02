@@ -60,6 +60,16 @@ def _local(index: int, depth: int = 0, is_parent_ref: bool = False) -> MenaiIRVa
     )
 
 
+def _local_named(name: str, depth: int = 0, is_parent_ref: bool = False) -> MenaiIRVariable:
+    return MenaiIRVariable(
+        name=name,
+        var_type='local',
+        depth=depth,
+        index=-1,
+        is_parent_ref=is_parent_ref,
+    )
+
+
 def _global(name: str) -> MenaiIRVariable:
     return MenaiIRVariable(name=name, var_type='global', depth=0, index=0)
 
@@ -93,62 +103,63 @@ class TestIRUseCounterBasic:
         counts = MenaiIRUseCounter().count(ir)
         # Frame 0 exists; no slots used.
         assert len(counts.frames) == 1
-        assert counts.frames[0].local == {}
-        assert counts.frames[0].external == {}
+        assert counts.frames[0].counts == {}
 
     def test_single_local_use_counted(self):
         """A single reference to a local variable is counted once."""
         # (let ((x 1)) x)  — slot 0 used once in body
+        b_x = ("x", _const(1))
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0)],
-            body_plan=_local(0),
+            bindings=[b_x],
+            body_plan=_local_named("x"),
             in_tail_position=True,
         ))
         counts = MenaiIRUseCounter().count(ir)
-        assert counts.local_count(0, 0) == 1
-        assert counts.external_count(0, 0) == 0
-        assert counts.total_count(0, 0) == 1
+        assert counts.total_count(0, id(b_x)) == 1
 
     def test_double_use_counted(self):
         """Two references to the same local variable sum correctly."""
         # (let ((x 1)) (integer+ x x))
+        b_x = ("x", _const(1))
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0)],
-            body_plan=_add_call(_local(0), _local(0)),
+            bindings=[b_x],
+            body_plan=_add_call(_local_named("x"), _local_named("x")),
             in_tail_position=True,
         ))
         counts = MenaiIRUseCounter().count(ir)
-        assert counts.total_count(0, 0) == 2
+        assert counts.total_count(0, id(b_x)) == 2
 
     def test_dead_binding_has_zero_count(self):
         """A binding never referenced has total count == 0."""
         # (let ((x 1)) 99)  — x is never used
+        b_x = ("x", _const(1))
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0)],
+            bindings=[b_x],
             body_plan=_const(99),
             in_tail_position=True,
         ))
         counts = MenaiIRUseCounter().count(ir)
-        assert counts.total_count(0, 0) == 0
+        assert counts.total_count(0, id(b_x)) == 0
 
     def test_two_bindings_independent_counts(self):
         """Two bindings at different slots are counted independently."""
         # (let ((x 1) (y 2)) (integer+ x x))  — y is dead
+        b_x = ("x", _const(1))
+        b_y = ("y", _const(2))
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0), ("y", _const(2), 1)],
-            body_plan=_add_call(_local(0), _local(0)),
+            bindings=[b_x, b_y],
+            body_plan=_add_call(_local_named("x"), _local_named("x")),
             in_tail_position=True,
         ))
         counts = MenaiIRUseCounter().count(ir)
-        assert counts.total_count(0, 0) == 2   # x used twice
-        assert counts.total_count(0, 1) == 0   # y never used
+        assert counts.total_count(0, id(b_x)) == 2   # x used twice
+        assert counts.total_count(0, id(b_y)) == 0   # y never used
 
     def test_global_not_counted(self):
         """Global / builtin variable references are not counted."""
         ir = MenaiIRReturn(value_plan=_global('integer+'))
         counts = MenaiIRUseCounter().count(ir)
-        assert counts.frames[0].local == {}
-        assert counts.frames[0].external == {}
+        assert counts.frames[0].counts == {}
 
 
 class TestIRUseCounterLambda:
@@ -176,7 +187,7 @@ class TestIRUseCounterLambda:
         """A parameter use inside a lambda body is counted in the lambda's frame."""
         lam = MenaiIRLambda(
             params=["x"],
-            body_plan=MenaiIRReturn(value_plan=_local(0)),
+            body_plan=MenaiIRReturn(value_plan=_local_named("x")),
             sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=[],
             outer_free_var_plans=[],
             param_count=1,
@@ -186,59 +197,59 @@ class TestIRUseCounterLambda:
         ir = MenaiIRReturn(value_plan=lam)
         counts = MenaiIRUseCounter().count(ir)
         lam_fid = counts.lambda_frame_ids[id(lam)]
-        assert counts.local_count(lam_fid, 0) == 1
+        # Params use synthetic binding ids — just verify count is non-zero.
+        assert sum(counts.frames[lam_fid].counts.values()) == 1
 
     def test_free_variable_counted_as_external_on_enclosing_frame(self):
         """
-        A free variable captured by a lambda is counted as 'external' on the
-        enclosing (defining) frame, not as 'local'.
+        A free variable captured by a lambda is counted on the enclosing
+        (defining) frame.
         """
-        # Outer let binds slot 0; lambda captures it via free_var_plans.
-        # Inside the lambda the free var is loaded as depth=1 (one frame up).
-        free_var_plan = _local(index=0, depth=0)  # loaded in enclosing frame
+        # Outer let binds "outer_x"; lambda captures it via free_var_plans.
+        free_var_plan = _local_named("outer_x")  # loaded in enclosing frame
         lam = MenaiIRLambda(
             params=[],
-            body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
+            body_plan=MenaiIRReturn(value_plan=_local_named("outer_x")),
             sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=["outer_x"],
             outer_free_var_plans=[free_var_plan],
             param_count=0,
             is_variadic=False,
             max_locals=1,
         )
+        b_outer_x = ("outer_x", _const(5))
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("outer_x", _const(5), 0)],
+            bindings=[b_outer_x],
             body_plan=lam,
             in_tail_position=True,
         ))
         counts = MenaiIRUseCounter().count(ir)
-        # The free_var_plan (depth=0 in the enclosing frame) increments local
-        # count for slot 0 in frame 0.
-        assert counts.local_count(0, 0) == 1
+        # The free_var_plan loads "outer_x" from the enclosing frame (frame 0).
+        assert counts.total_count(0, id(b_outer_x)) == 1
 
     def test_cross_frame_reference_counted_as_external(self):
         """
-        A variable reference with depth > 0 (cross-frame) is counted as
-        'external' on the defining frame.
+        A free variable reference inside a lambda body is counted on the
+        defining (enclosing) frame, not the lambda's own frame.
         """
         lam = MenaiIRLambda(
             params=[],
-            # Directly references slot 0 at depth=1 (one frame up) in body
-            body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
+            body_plan=MenaiIRReturn(value_plan=_local_named("x")),
             sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=[],
             outer_free_var_plans=[],
             param_count=0,
             is_variadic=False,
             max_locals=0,
         )
+        b_x = ("x", _const(1))
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0)],
+            bindings=[b_x],
             body_plan=lam,
             in_tail_position=True,
         ))
         counts = MenaiIRUseCounter().count(ir)
-        # depth=1 reference → external count on frame 0
-        assert counts.external_count(0, 0) == 1
-        assert counts.local_count(0, 0) == 0
+        # "x" is defined in frame 0 (the let).  The lambda body references it —
+        # the use counter resolves it to frame 0 via scope-chain lookup.
+        assert counts.total_count(0, id(b_x)) == 1
 
     def test_nested_lambdas_have_separate_frames(self):
         """Two nested lambdas each get their own frame."""
@@ -272,23 +283,25 @@ class TestIRUseCounterLetrec:
 
     def test_letrec_live_binding_counted(self):
         """A letrec binding used in the body has non-zero count."""
+        b_f = ("f", _const(1))
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
-            bindings=[("f", _const(1), 0)],
-            body_plan=_local(0),
+            bindings=[b_f],
+            body_plan=_local_named("f"),
             in_tail_position=True,
         ))
         counts = MenaiIRUseCounter().count(ir)
-        assert counts.total_count(0, 0) == 1
+        assert counts.total_count(0, id(b_f)) == 1
 
     def test_letrec_dead_binding_zero_count(self):
         """A letrec binding never used has count == 0."""
+        b_f = ("f", _const(1))
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
-            bindings=[("f", _const(1), 0)],
+            bindings=[b_f],
             body_plan=_const(99),
             in_tail_position=True,
         ))
         counts = MenaiIRUseCounter().count(ir)
-        assert counts.total_count(0, 0) == 0
+        assert counts.total_count(0, id(b_f)) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -305,8 +318,8 @@ class TestIROptimizerDeadBindingElimination:
     def test_live_binding_preserved(self):
         """A binding that is used must not be removed."""
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0)],
-            body_plan=_local(0),
+            bindings=[("x", _const(1))],
+            body_plan=_local_named("x"),
             in_tail_position=True,
         ))
         result = self._run(ir)
@@ -318,7 +331,7 @@ class TestIROptimizerDeadBindingElimination:
     def test_dead_binding_removed(self):
         """A binding with zero uses is dropped; the let collapses to its body."""
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0)],
+            bindings=[("x", _const(1))],
             body_plan=_const(99),
             in_tail_position=True,
         ))
@@ -332,8 +345,8 @@ class TestIROptimizerDeadBindingElimination:
     def test_one_dead_one_live_binding(self):
         """Only the dead binding is removed; the live one is kept."""
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0), ("y", _const(2), 1)],
-            body_plan=_local(0),   # only x used
+            bindings=[("x", _const(1)), ("y", _const(2))],
+            body_plan=_local_named("x"),   # only x used
             in_tail_position=True,
         ))
         result = self._run(ir)
@@ -346,7 +359,7 @@ class TestIROptimizerDeadBindingElimination:
     def test_all_dead_bindings_collapses_let(self):
         """When every binding is dead the entire let node is replaced by its body."""
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0), ("y", _const(2), 1)],
+            bindings=[("x", _const(1)), ("y", _const(2))],
             body_plan=_const(42),
             in_tail_position=True,
         ))
@@ -368,12 +381,12 @@ class TestIROptimizerDeadBindingElimination:
         #               Now x is dead too.
         # After pass 2: x is dead → outer let collapses to 42.
         inner_let = MenaiIRLet(
-            bindings=[("y", _local(0), 1)],  # y = x (slot 0)
+            bindings=[("y", _local_named("x"))],  # y = x
             body_plan=_const(42),
             in_tail_position=True,
         )
         outer_let = MenaiIRLet(
-            bindings=[("x", _const(1), 0)],
+            bindings=[("x", _const(1))],
             body_plan=inner_let,
             in_tail_position=True,
         )
@@ -395,8 +408,8 @@ class TestIROptimizerDeadBindingElimination:
     def test_tail_position_preserved_after_optimization(self):
         """in_tail_position flag is carried through to the optimized let."""
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0), ("dead", _const(2), 1)],
-            body_plan=_local(0),
+            bindings=[("x", _const(1)), ("dead", _const(2))],
+            body_plan=_local_named("x"),
             in_tail_position=True,
         ))
         result = self._run(ir)
@@ -415,8 +428,8 @@ class TestIROptimizerLetrec:
     def test_live_letrec_binding_preserved(self):
         """A letrec binding used in the body is kept."""
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
-            bindings=[("f", _const(1), 0)],
-            body_plan=_local(0),
+            bindings=[("f", _const(1))],
+            body_plan=_local_named("f"),
             in_tail_position=True,
         ))
         result = self._run(ir)
@@ -428,7 +441,7 @@ class TestIROptimizerLetrec:
     def test_dead_letrec_binding_removed(self):
         """A letrec binding with zero uses is dropped."""
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
-            bindings=[("f", _const(1), 0)],
+            bindings=[("f", _const(1))],
             body_plan=_const(99),
             in_tail_position=True,
         ))
@@ -451,8 +464,8 @@ class TestIROptimizerLambda:
         lam = MenaiIRLambda(
             params=["p"],
             body_plan=MenaiIRReturn(value_plan=MenaiIRLet(
-                bindings=[("dead", _const(99), 1)],  # slot 1 (slot 0 is param)
-                body_plan=_local(0),                 # returns param, not dead
+                bindings=[("dead", _const(99))],
+                body_plan=_local_named("p"),         # returns param, not dead
                 in_tail_position=True,
             )),
             sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=[],
@@ -471,7 +484,7 @@ class TestIROptimizerLambda:
         body = opt_lam.body_plan
         assert isinstance(body, MenaiIRReturn)
         assert isinstance(body.value_plan, MenaiIRVariable)
-        assert body.value_plan.index == 0
+        assert body.value_plan.name == "p"
 
 
 # ---------------------------------------------------------------------------

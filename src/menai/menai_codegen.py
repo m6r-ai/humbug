@@ -1,5 +1,9 @@
 """
 Menai code generator - generates bytecode from IR.
+
+Receives fully-addressed IR from MenaiIRAddresser.  All MenaiIRVariable nodes
+have resolved depth/index; all MenaiIRLet/MenaiIRLetrec binding tuples carry
+(name, value_plan, slot) as produced by the addresser.
 """
 
 from dataclasses import dataclass, field
@@ -25,8 +29,6 @@ BINARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if ar
 TERNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 3}
 
 # Variadic collection-building opcodes.
-# Unlike fold-reducible ops these are NOT desugared to binary form; instead the
-# count of elements is encoded directly in the instruction argument.
 BUILD_OPS = {
     'list': Opcode.LIST,
     'dict': Opcode.DICT,
@@ -44,47 +46,26 @@ class MenaiCodeGenContext:
     instructions: List[Instruction] = field(default_factory=list)
     constants: List[MenaiValue] = field(default_factory=list)
     names: List[str] = field(default_factory=list)
-    constant_map: Dict[tuple, int] = field(default_factory=dict)  # Key is (type, value)
+    constant_map: Dict[tuple, int] = field(default_factory=dict)
     name_map: Dict[str, int] = field(default_factory=dict)
     code_objects: List[CodeObject] = field(default_factory=list)
     max_locals: int = 0
-    current_lambda_name: str | None = None  # Name of the lambda currently being compiled.
-                                            # Used by _generate_call to detect direct
-                                            # self-recursive tail calls and emit JUMP 0.
+    current_lambda_name: str | None = None  # Used by _generate_call to detect
+                                            # self-recursive tail calls (JUMP 0).
 
     # Letrec two-phase support: when non-None, _generate_lambda intercepts any
-    # lambda whose free_vars intersect this set and defers all captures to Phase 2.
-    # Set by _generate_letrec for the duration of binding-value generation.
+    # lambda whose sibling_free_vars intersect this set and defers all captures
+    # to Phase 2 via PATCH_CLOSURE.
     letrec_sibling_names: 'set | None' = None
 
-    # List of (var_index, lambda_plan) tuples for closures that were deferred
-    # during letrec binding-value generation.  Each entry records the local slot
-    # where the closure was stored (via a temp STORE_VAR) and the lambda IR node
-    # so Phase 2 can emit PATCH_CLOSURE for every free_var slot.
-    #
-    # Entry format: (var_index: int, lambda_plan: MenaiIRLambda)
+    # List of (closure_slot, lambda_plan) for closures deferred to Phase 2.
     letrec_deferred_patches: 'List[tuple] | None' = None
 
-    # Counter for allocating temp slots for deferred lambdas inside letrec
-    # binding values.  Incremented each time a new temp slot is needed.
-    # Reset to None when letrec binding-value generation ends.
-    letrec_next_temp_slot: 'int | None' = None
-
     def add_constant(self, value: MenaiValue) -> int:
-        """
-        Add constant to pool and return its index.
-
-        Uses (type_name, python_value) as key to ensure 1 and 1.0 are treated as different constants,
-        since MenaiInteger(1) == MenaiFloat(1.0) due to cross-type numeric equality.
-        """
-        # For numeric types, booleans, and strings that have cross-type equality,
-        # use (type, value) as key to prevent incorrect deduplication
+        """Add constant to pool and return its index."""
         if isinstance(value, (MenaiInteger, MenaiFloat, MenaiComplex, MenaiBoolean, MenaiString)):
             key: Any = (type(value).__name__, value.value)
-
         else:
-            # For other types (lists, dicts, functions, symbols), use the value itself as key
-            # These types don't have problematic cross-type equality
             key = value
 
         if key in self.constant_map:
@@ -131,32 +112,18 @@ class MenaiCodeGen:
     """
     Generates bytecode from compilation plans.
 
-    This is a "dumb" code generator - it just follows the plan
-    without performing any analysis.
+    This is a "dumb" code generator — it just follows the plan without
+    performing any analysis.  All slot indices and max_locals values are
+    pre-computed by MenaiIRAddresser before this pass runs.
     """
 
     def __init__(self) -> None:
-        self.lambda_counter = 0  # Counter for anonymous lambdas
+        self.lambda_counter = 0
 
     def generate(self, plan: MenaiIRExpr, name: str = "<module>") -> CodeObject:
-        """
-        Generate bytecode from a compilation plan.
-
-        Args:
-            plan: The compilation plan to generate code from
-            name: Name for the code object (for debugging)
-
-        Returns:
-            Compiled code object
-        """
+        """Generate bytecode from a compilation plan."""
         ctx = MenaiCodeGenContext()
-
-        # Generate code for the expression
         self._generate_expr(plan, ctx)
-
-        # No automatic RETURN - the plan must explicitly include MenaiIRReturn
-
-        # Build code object
         return CodeObject(
             instructions=ctx.instructions,
             constants=ctx.constants,
@@ -169,7 +136,6 @@ class MenaiCodeGen:
 
     def _generate_expr(self, plan: MenaiIRExpr, ctx: MenaiCodeGenContext) -> None:
         """Generate code for an expression plan."""
-        # Dispatch based on plan type
         if isinstance(plan, MenaiIRConstant):
             self._generate_constant(plan, ctx)
 
@@ -211,12 +177,10 @@ class MenaiCodeGen:
 
     def _generate_constant(self, plan: MenaiIRConstant, ctx: MenaiCodeGenContext) -> None:
         """Generate code for a constant."""
-        # Optimise #none: use dedicated opcode instead of constant pool entry
         if isinstance(plan.value, MenaiNone):
             ctx.emit(Opcode.LOAD_NONE)
             return
 
-        # Optimise #t / #f: use dedicated opcodes instead of constant pool entries
         if isinstance(plan.value, MenaiBoolean):
             ctx.emit(Opcode.LOAD_TRUE if plan.value.value else Opcode.LOAD_FALSE)
             return
@@ -228,44 +192,30 @@ class MenaiCodeGen:
         """Generate code for a variable reference."""
         if plan.var_type == 'local':
             ctx.emit(Opcode.LOAD_VAR, plan.index)
+
         else:  # global
-            # For globals, we need to assign the name index during codegen
             name_index = ctx.add_name(plan.name)
             ctx.emit(Opcode.LOAD_NAME, name_index)
 
     def _generate_if(self, plan: MenaiIRIf, ctx: MenaiCodeGenContext) -> None:
         """Generate code for an if expression."""
-        # Generate condition
         self._generate_expr(plan.condition_plan, ctx)
-
-        # Jump to else if condition is false
         jump_to_else = ctx.emit(Opcode.JUMP_IF_FALSE, 0)
-
-        # Generate then branch
         self._generate_expr(plan.then_plan, ctx)
 
-        # Check if then branch terminates (ends with RETURN, TAIL_CALL, or unconditional JUMP)
-        # If it terminates, we don't need to emit a jump past the else branch
         then_terminates = False
         if ctx.instructions:
             last_op = ctx.instructions[-1].opcode
             if last_op in (Opcode.RETURN, Opcode.TAIL_CALL, Opcode.TAIL_APPLY, Opcode.JUMP, Opcode.RAISE_ERROR):
                 then_terminates = True
 
-        # Only emit jump past else if then branch doesn't terminate
         jump_past_else = None if then_terminates else ctx.emit(Opcode.JUMP, 0)
-
         else_start = ctx.current_instruction_index()
         ctx.patch_jump(jump_to_else, else_start)
-
-        # Generate else branch
         self._generate_expr(plan.else_plan, ctx)
 
-        # Patch jump past else (if we emitted one)
         if jump_past_else is not None:
-            # Patch to the next instruction after the else branch
-            after_else = ctx.current_instruction_index()
-            ctx.patch_jump(jump_past_else, after_else)
+            ctx.patch_jump(jump_past_else, ctx.current_instruction_index())
 
     def _generate_quote(self, plan: MenaiIRQuote, ctx: MenaiCodeGenContext) -> None:
         """Generate code for a quote expression."""
@@ -278,123 +228,68 @@ class MenaiCodeGen:
         ctx.emit(Opcode.RAISE_ERROR, const_index)
 
     def _generate_let(self, plan: MenaiIRLet, ctx: MenaiCodeGenContext) -> None:
-        """Generate code for a let expression."""
-        # Generate and store each binding
-        for _, value_plan, var_index in plan.bindings:
-            # Generate value
+        """
+        Generate code for a let expression.
+
+        Binding tuples are (name, value_plan, slot) after MenaiIRAddresser.
+        """
+        for binding in plan.bindings:
+            _, value_plan, var_index = binding  # type: ignore[misc]
             self._generate_expr(value_plan, ctx)
-
-            # Store in local variable
             ctx.emit(Opcode.STORE_VAR, var_index)
-
-            # Update max locals
             ctx.max_locals = max(ctx.max_locals, var_index + 1)
 
-        # Generate body
         self._generate_expr(plan.body_plan, ctx)
 
     def _generate_letrec(self, plan: MenaiIRLetrec, ctx: MenaiCodeGenContext) -> None:
-        """Generate code for a letrec expression."""
-        # Collect the set of binding names for this letrec group so we can
-        # identify sibling references in free_vars.  Set on the context
-        # so that _generate_lambda can intercept ANY lambda with sibling captures,
-        # even when nested inside a call expression (e.g. (list (lambda () x))).
-        binding_names = {name for name, _, _ in plan.bindings}
+        """
+        Generate code for a letrec expression.
 
-        # Pre-scan all binding value plans to find the highest let-binding slot
-        # index used anywhere within them.  Temp slots for deferred closures
-        # must be allocated above this high-water mark to avoid colliding with
-        # slots pre-assigned by the IR addresser to lambda-lifter let bindings.
-        # The scan must be fully recursive because the lambda lifter can produce
-        # MenaiIRLet nodes nested inside calls, ifs, or other expressions
-        # (e.g. (list (lambda () x)) lifts to a MenaiIRLet inside the LIST
-        # call's argument list, not at the top level of the binding value).
-        #
-        # Lambda bodies are NOT descended into — those are separate frames.
-        # The letrec's own binding slots are accounted for via ctx.max_locals.
-        max_let_slot = -1
-        for _, value_plan, _ in plan.bindings:
-            max_let_slot = max(max_let_slot, self._max_let_slot(value_plan))
+        Binding tuples are (name, value_plan, slot) after MenaiIRAddresser.
+
+        Two-phase approach for mutual recursion:
+        Phase 1 — emit each closure skeleton with MAKE_CLOSURE(count=0) and
+                   STORE_VAR.  Any lambda capturing a letrec sibling is deferred.
+        Phase 2 — PATCH_CLOSURE fills in the captured values.
+        """
+        # Collect binding names for sibling-capture interception.
+        binding_names = {name for name, *_ in plan.bindings}
+
+        # Pre-scan all slot indices in this letrec (including inner let slots
+        # embedded by the addresser) and prime ctx.max_locals to the high-water
+        # mark before Phase 1 starts.  This ensures that when _generate_lambda
+        # allocates a temp slot for a deferred closure (temp_slot = ctx.max_locals),
+        # it lands above every slot the addresser has already assigned in this
+        # frame — including helper-let slots inside binding value expressions that
+        # haven't been emitted yet.
+        max_slot = self._max_addressed_slot(plan)
+        ctx.max_locals = max(ctx.max_locals, max_slot + 1)
 
         # Phase 1: create all closures / binding values.  Any lambda that
         # captures a letrec sibling is intercepted by _generate_lambda and
         # deferred to Phase 2 via PATCH_CLOSURE.
-
-        # Activate the interception context.  letrec_next_temp_slot is
-        # initialised to one above the highest let-binding slot found in any
-        # binding value plan (pre-scanned above), so temp slots never collide
-        # with slots pre-assigned by the IR addresser to lambda-lifter helpers.
         ctx.letrec_sibling_names = binding_names
         ctx.letrec_deferred_patches = []
-        # Temp slots start above the highest let-binding slot pre-scanned above,
-        # and also above the current max_locals (letrec binding slots).  This
-        # guarantees no collision with any slot already in use in this frame.
-        ctx.letrec_next_temp_slot = max(ctx.max_locals, max_let_slot + 1)
 
-        for _, value_plan, var_index in plan.bindings:
+        for binding in plan.bindings:
+            _, value_plan, var_index = binding  # type: ignore[misc]
             self._generate_expr(value_plan, ctx)
             ctx.emit(Opcode.STORE_VAR, var_index)
             ctx.max_locals = max(ctx.max_locals, var_index + 1)
 
-        # Deactivate the interception context before Phase 2.
+        # Deactivate interception before Phase 2.
         deferred = ctx.letrec_deferred_patches
         ctx.letrec_sibling_names = None
         ctx.letrec_deferred_patches = None
-        ctx.letrec_next_temp_slot = None
 
         # Phase 2: patch all deferred closures.
-        # Each entry is (closure_slot, lambda_plan) where closure_slot is the
-        # local slot holding the closure (either a letrec slot or a temp slot
-        # allocated during Phase 1).
         for closure_slot, lambda_plan in deferred:
             all_plans = lambda_plan.sibling_free_var_plans + lambda_plan.outer_free_var_plans
             for capture_slot, fvp in enumerate(all_plans):
                 self._generate_expr(fvp, ctx)
                 ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, capture_slot)
 
-        # Generate body
         self._generate_expr(plan.body_plan, ctx)
-
-    def _max_let_slot(self, plan: MenaiIRExpr) -> int:
-        """
-        Return the highest var_index found in any MenaiIRLet binding within
-        *plan*, recursing into all node types but NOT into MenaiIRLambda bodies
-        (those are a separate frame and have their own slot namespace).
-
-        Used by _generate_letrec to pre-compute a safe base for temp slot
-        allocation so that deferred-closure temp slots never collide with
-        lambda-lifter helper slots pre-assigned by the IR addresser.
-        """
-        if isinstance(plan, MenaiIRLet):
-            hi = max((vi for _, _, vi in plan.bindings), default=-1)
-            hi = max(hi, self._max_let_slot(plan.body_plan))
-            for _, vp, _ in plan.bindings:
-                hi = max(hi, self._max_let_slot(vp))
-            return hi
-        if isinstance(plan, MenaiIRLetrec):
-            hi = max((self._max_let_slot(vp) for _, vp, _ in plan.bindings), default=-1)
-            hi = max(hi, self._max_let_slot(plan.body_plan))
-            return hi
-        if isinstance(plan, MenaiIRLambda):
-            # Do NOT recurse into body — separate frame.
-            # Do recurse into free_var_plans (evaluated in enclosing frame).
-            all_fvp = plan.sibling_free_var_plans + plan.outer_free_var_plans
-            return max((self._max_let_slot(p) for p in all_fvp), default=-1)
-        if isinstance(plan, MenaiIRIf):
-            return max(self._max_let_slot(plan.condition_plan),
-                       self._max_let_slot(plan.then_plan),
-                       self._max_let_slot(plan.else_plan))
-        if isinstance(plan, MenaiIRCall):
-            return max(self._max_let_slot(plan.func_plan),
-                       max((self._max_let_slot(a) for a in plan.arg_plans), default=-1))
-        if isinstance(plan, MenaiIRReturn):
-            return self._max_let_slot(plan.value_plan)
-        if isinstance(plan, MenaiIRTrace):
-            return max(self._max_let_slot(plan.value_plan),
-                       max((self._max_let_slot(m) for m in plan.message_plans), default=-1))
-        # Leaf nodes: MenaiIRConstant, MenaiIRVariable, MenaiIRQuote,
-        #             MenaiIREmptyList, MenaiIRError
-        return -1
 
     def _generate_lambda(self, plan: MenaiIRLambda, ctx: MenaiCodeGenContext) -> None:
         """Generate code for a lambda expression."""
@@ -403,22 +298,17 @@ class MenaiCodeGen:
         # to Phase 2 via PATCH_CLOSURE.
         #
         # We emit MAKE_CLOSURE with capture_count=0 (VM pre-allocates None slots),
-        # store the closure in a fresh temp slot, record it for Phase 2, then
-        # load it back so the surrounding expression (e.g. LIST) gets the value.
+        # store the closure in a fresh temp slot above max_locals, record it for
+        # Phase 2, then load it back so the surrounding expression gets the value.
         if (ctx.letrec_sibling_names is not None
                 and len(plan.sibling_free_vars) > 0):
-            # Allocate a temp slot for this closure.
-            # letrec_next_temp_slot is pre-initialised in _generate_letrec to
-            # sit above all letrec and let-binding slots in this group.
-            assert ctx.letrec_next_temp_slot is not None
-            temp_slot = ctx.letrec_next_temp_slot
-            ctx.letrec_next_temp_slot += 1
-            ctx.max_locals = max(ctx.max_locals, temp_slot + 1)
+            # Allocate a temp slot above all currently-known slots in this frame.
+            temp_slot = ctx.max_locals
+            ctx.max_locals = temp_slot + 1
 
-            # Emit the closure with capture_count=0; VM pre-allocates None slots.
+            # Emit the closure skeleton; VM pre-allocates None capture slots.
             self._generate_letrec_lambda(plan, 0, ctx)
 
-            # Store in temp slot and record for Phase 2.
             ctx.emit(Opcode.STORE_VAR, temp_slot)
             assert ctx.letrec_deferred_patches is not None
             ctx.letrec_deferred_patches.append((temp_slot, plan))
@@ -433,38 +323,28 @@ class MenaiCodeGen:
         for free_var_plan in plan.sibling_free_var_plans + plan.outer_free_var_plans:
             self._generate_expr(free_var_plan, ctx)
 
-        # Create nested context for lambda body
+        # Create nested context for lambda body.
         lambda_ctx = MenaiCodeGenContext()
-
-        # Record this lambda's name so _generate_call can detect self-recursive
-        # tail calls and emit JUMP 0 instead of TAIL_CALL.
         lambda_ctx.current_lambda_name = plan.binding_name
 
-        # Generate function prologue: pop all N arguments from stack into locals 0..N-1
         if plan.params:
             lambda_ctx.emit(Opcode.ENTER, len(plan.params))
 
-        # Set max locals from plan
+        # max_locals is set by MenaiIRAddresser.
         lambda_ctx.max_locals = plan.max_locals
 
-        # Generate body
         self._generate_expr(plan.body_plan, lambda_ctx)
 
-        # Generate a descriptive name for the lambda
         if plan.binding_name:
-            # Use the binding name if available (from let/letrec)
             lambda_name = plan.binding_name
 
         else:
-            # Generate a unique name for anonymous lambdas
             lambda_name = f"<lambda-{self.lambda_counter}>"
             self.lambda_counter += 1
 
-        # Add parameter info to the name for better debugging
         param_word = "param" if len(plan.params) == 1 else "params"
         lambda_name = f"{lambda_name}({len(plan.params)} {param_word})"
 
-        # Create code object for lambda
         lambda_code = CodeObject(
             instructions=lambda_ctx.instructions,
             constants=lambda_ctx.constants,
@@ -480,20 +360,14 @@ class MenaiCodeGen:
             source_file=plan.source_file
         )
 
-        # Add to parent's code objects list.  Always needed: the validator and
-        # disassembler walk code_objects; MAKE_CLOSURE also references it by index.
         code_index = ctx.add_code_object(lambda_code)
 
+        # If we have free variables to capture, emit MAKE_CLOSURE with the code index and capture count.
         if len(plan.sibling_free_vars) + len(plan.outer_free_vars) != 0:
-            # Has free vars — must capture values at runtime via MAKE_CLOSURE.
             ctx.emit(Opcode.MAKE_CLOSURE, code_index, len(plan.sibling_free_vars) + len(plan.outer_free_vars))
             return
 
-        # No captures needed — pre-build the MenaiFunction and store it in
-        # the constant pool.  Replaces a Python object allocation on every
-        # execution of the enclosing code with a single constant-pool lookup.
-        # MenaiFunction is not hashable (bytecode contains lists), so we
-        # bypass add_constant and key by id(lambda_code) instead.
+        # No captures — pre-build MenaiFunction and store in constant pool.
         func = MenaiFunction(
             parameters=tuple(lambda_code.param_names),
             name=lambda_code.name,
@@ -505,8 +379,7 @@ class MenaiCodeGen:
             ctx.constant_map[key] = len(ctx.constants)
             ctx.constants.append(func)
 
-        const_index = ctx.constant_map[key]
-        ctx.emit(Opcode.LOAD_CONST, const_index)
+        ctx.emit(Opcode.LOAD_CONST, ctx.constant_map[key])
 
     def _generate_letrec_lambda(
         self, plan: MenaiIRLambda, pre_captured_count: int, ctx: MenaiCodeGenContext
@@ -515,17 +388,10 @@ class MenaiCodeGen:
         Emit the CodeObject and MAKE_CLOSURE instruction for a letrec lambda
         that has sibling free_vars requiring two-phase initialisation.
 
-        The caller has already pushed `pre_captured_count` values onto the stack.
-        This method emits the CodeObject and a MAKE_CLOSURE instruction with
-        capture_count=pre_captured_count.  In the current deferred path this is
-        always 0 — all captures (sibling and outer) are deferred to Phase 2.
-
-        The VM's _op_make_closure detects that capture_count < len(code.free_vars)
-        and pre-allocates None slots for every remaining entry, which
-        PATCH_CLOSURE fills in Phase 2.
+        pre_captured_count is always 0 in the current deferred path — all
+        captures are deferred to Phase 2.  The VM pre-allocates None slots for
+        the remaining free_vars entries, which PATCH_CLOSURE fills in.
         """
-        # Build the nested CodeObject (body only — no free_var_plan emission here,
-        # that was done by the caller for any pre-pushed captures).
         lambda_ctx = MenaiCodeGenContext()
         lambda_ctx.current_lambda_name = plan.binding_name
 
@@ -537,6 +403,7 @@ class MenaiCodeGen:
 
         if plan.binding_name:
             lambda_name = plan.binding_name
+
         else:
             lambda_name = f"<lambda-{self.lambda_counter}>"
             self.lambda_counter += 1
@@ -560,18 +427,65 @@ class MenaiCodeGen:
         )
 
         code_index = ctx.add_code_object(lambda_code)
-        # capture_count = pre_captured_count < len(free_vars): VM pre-allocates
-        # None slots for all remaining entries (PATCH_CLOSURE fills them in Phase 2).
         ctx.emit(Opcode.MAKE_CLOSURE, code_index, pre_captured_count)
+
+    def _max_addressed_slot(self, plan: 'MenaiIRExpr') -> int:
+        """
+        Return the highest slot index found in any MenaiIRLet or MenaiIRLetrec
+        binding within *plan*, recursing into all node types but NOT into
+        MenaiIRLambda bodies (those are separate frames with their own slots).
+
+        After MenaiIRAddresser, binding tuples are (name, value_plan, slot).
+        This method reads the slot from index 2 of each tuple.
+
+        Used by _generate_letrec to pre-prime ctx.max_locals before Phase 1
+        so that temp slots for deferred closures never collide with slots
+        already assigned by the addresser to inner let/letrec bindings.
+        """
+        if isinstance(plan, MenaiIRLet):
+            hi = max((t[2] for t in plan.bindings), default=-1)  # type: ignore[index]
+            hi = max(hi, self._max_addressed_slot(plan.body_plan))
+            for _, vp, *_ in plan.bindings:
+                hi = max(hi, self._max_addressed_slot(vp))
+
+            return hi
+
+        if isinstance(plan, MenaiIRLetrec):
+            hi = max((t[2] for t in plan.bindings), default=-1)  # type: ignore[index]
+            hi = max(hi, self._max_addressed_slot(plan.body_plan))
+            for _, vp, *_ in plan.bindings:
+                hi = max(hi, self._max_addressed_slot(vp))
+
+            return hi
+
+        if isinstance(plan, MenaiIRLambda):
+            # Do NOT recurse into body — separate frame.
+            # Do recurse into free_var_plans (evaluated in enclosing frame).
+            all_fvp = plan.sibling_free_var_plans + plan.outer_free_var_plans
+            return max((self._max_addressed_slot(p) for p in all_fvp), default=-1)
+
+        if isinstance(plan, MenaiIRIf):
+            return max(self._max_addressed_slot(plan.condition_plan),
+                       self._max_addressed_slot(plan.then_plan),
+                       self._max_addressed_slot(plan.else_plan))
+
+        if isinstance(plan, MenaiIRCall):
+            return max(self._max_addressed_slot(plan.func_plan),
+                       max((self._max_addressed_slot(a) for a in plan.arg_plans), default=-1))
+
+        if isinstance(plan, MenaiIRReturn):
+            return self._max_addressed_slot(plan.value_plan)
+
+        if isinstance(plan, MenaiIRTrace):
+            return max(self._max_addressed_slot(plan.value_plan),
+                       max((self._max_addressed_slot(m) for m in plan.message_plans), default=-1))
+
+        # Leaf nodes: MenaiIRConstant, MenaiIRVariable, MenaiIRQuote, MenaiIREmptyList, MenaiIRError
+        return -1
 
     def _generate_call(self, plan: MenaiIRCall, ctx: MenaiCodeGenContext) -> None:
         """Generate code for a function call."""
         # Detect direct self-recursive tail calls and emit JUMP 0.
-        # A call is a self-recursive tail call when:
-        #   - it is in tail position
-        #   - the callee is a local variable whose name matches the current lambda
-        #   - the argument count matches the current lambda's param_count exactly
-        #     (ensured by the IR builder: self-calls always pass the same arity)
         if (plan.is_tail_call
                 and not plan.is_builtin
                 and ctx.current_lambda_name is not None
@@ -584,29 +498,24 @@ class MenaiCodeGen:
             ctx.emit(Opcode.JUMP, 0)
             return
 
-        # Check for builtin call
         if plan.is_builtin:
             assert plan.builtin_name is not None
             builtin_name = plan.builtin_name
 
-            # Handle range: synthesise missing step as 1
             if builtin_name == 'range':
                 for arg_plan in plan.arg_plans:
                     self._generate_expr(arg_plan, ctx)
 
                 if len(plan.arg_plans) == 2:
-                    const_index = ctx.add_constant(MenaiInteger(1))
-                    ctx.emit(Opcode.LOAD_CONST, const_index)
+                    ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(MenaiInteger(1)))
 
                 ctx.emit(Opcode.RANGE)
                 return
 
-            # Handle integer->complex: synthesise missing imaginary part as 0
             if builtin_name == 'integer->complex':
                 self._generate_expr(plan.arg_plans[0], ctx)
                 if len(plan.arg_plans) == 1:
-                    const_index = ctx.add_constant(MenaiInteger(0))
-                    ctx.emit(Opcode.LOAD_CONST, const_index)
+                    ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(MenaiInteger(0)))
 
                 else:
                     self._generate_expr(plan.arg_plans[1], ctx)
@@ -614,12 +523,10 @@ class MenaiCodeGen:
                 ctx.emit(Opcode.INTEGER_TO_COMPLEX)
                 return
 
-            # Handle integer->string: synthesise missing radix as 10
             if builtin_name == 'integer->string':
                 self._generate_expr(plan.arg_plans[0], ctx)
                 if len(plan.arg_plans) == 1:
-                    const_index = ctx.add_constant(MenaiInteger(10))
-                    ctx.emit(Opcode.LOAD_CONST, const_index)
+                    ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(MenaiInteger(10)))
 
                 else:
                     self._generate_expr(plan.arg_plans[1], ctx)
@@ -627,12 +534,10 @@ class MenaiCodeGen:
                 ctx.emit(Opcode.INTEGER_TO_STRING)
                 return
 
-            # Handle float->complex: synthesise missing imaginary part as 0.0
             if builtin_name == 'float->complex':
                 self._generate_expr(plan.arg_plans[0], ctx)
                 if len(plan.arg_plans) == 1:
-                    const_index = ctx.add_constant(MenaiFloat(0.0))
-                    ctx.emit(Opcode.LOAD_CONST, const_index)
+                    ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(MenaiFloat(0.0)))
 
                 else:
                     self._generate_expr(plan.arg_plans[1], ctx)
@@ -640,12 +545,10 @@ class MenaiCodeGen:
                 ctx.emit(Opcode.FLOAT_TO_COMPLEX)
                 return
 
-            # Handle string->integer: synthesise missing radix as 10
             if builtin_name == 'string->integer':
                 self._generate_expr(plan.arg_plans[0], ctx)
                 if len(plan.arg_plans) == 1:
-                    const_index = ctx.add_constant(MenaiInteger(10))
-                    ctx.emit(Opcode.LOAD_CONST, const_index)
+                    ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(MenaiInteger(10)))
 
                 else:
                     self._generate_expr(plan.arg_plans[1], ctx)
@@ -653,15 +556,10 @@ class MenaiCodeGen:
                 ctx.emit(Opcode.STRING_TO_INTEGER)
                 return
 
-            # Handle string-slice: synthesise missing end as (string-length str)
             if builtin_name == 'string-slice':
-                # Push the string argument first
                 self._generate_expr(plan.arg_plans[0], ctx)
-
-                # Push the start argument
                 self._generate_expr(plan.arg_plans[1], ctx)
                 if len(plan.arg_plans) == 2:
-                    # Synthesise end = (string-length str): push str again, emit STRING_LENGTH
                     self._generate_expr(plan.arg_plans[0], ctx)
                     ctx.emit(Opcode.STRING_LENGTH)
 
@@ -671,12 +569,10 @@ class MenaiCodeGen:
                 ctx.emit(Opcode.STRING_SLICE)
                 return
 
-            # Handle string->list: synthesise missing delimiter as ""
             if builtin_name == 'string->list':
                 self._generate_expr(plan.arg_plans[0], ctx)
                 if len(plan.arg_plans) == 1:
-                    const_index = ctx.add_constant(MenaiString(""))
-                    ctx.emit(Opcode.LOAD_CONST, const_index)
+                    ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(MenaiString("")))
 
                 else:
                     self._generate_expr(plan.arg_plans[1], ctx)
@@ -684,15 +580,10 @@ class MenaiCodeGen:
                 ctx.emit(Opcode.STRING_TO_LIST)
                 return
 
-            # Handle list-slice: synthesise missing end as (list-length lst)
             if builtin_name == 'list-slice':
-                # Push the list argument first
                 self._generate_expr(plan.arg_plans[0], ctx)
-
-                # Push the start argument
                 self._generate_expr(plan.arg_plans[1], ctx)
                 if len(plan.arg_plans) == 2:
-                    # Synthesise end = (list-length lst): push lst again, emit LIST_LENGTH
                     self._generate_expr(plan.arg_plans[0], ctx)
                     ctx.emit(Opcode.LIST_LENGTH)
 
@@ -702,12 +593,10 @@ class MenaiCodeGen:
                 ctx.emit(Opcode.LIST_SLICE)
                 return
 
-            # Handle list->string: synthesise missing separator as ""
             if builtin_name == 'list->string':
                 self._generate_expr(plan.arg_plans[0], ctx)
                 if len(plan.arg_plans) == 1:
-                    const_index = ctx.add_constant(MenaiString(""))
-                    ctx.emit(Opcode.LOAD_CONST, const_index)
+                    ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(MenaiString("")))
 
                 else:
                     self._generate_expr(plan.arg_plans[1], ctx)
@@ -715,7 +604,6 @@ class MenaiCodeGen:
                 ctx.emit(Opcode.LIST_TO_STRING)
                 return
 
-            # Handle dict-get: synthesise missing default as #f
             if builtin_name == 'dict-get':
                 for arg_plan in plan.arg_plans:
                     self._generate_expr(arg_plan, ctx)
@@ -726,51 +614,35 @@ class MenaiCodeGen:
                 ctx.emit(Opcode.DICT_GET)
                 return
 
-            # Generate arguments
             for arg_plan in plan.arg_plans:
                 self._generate_expr(arg_plan, ctx)
 
-            # Handle apply: emit TAIL_APPLY or APPLY depending on tail position.
-            # apply is the only builtin that dispatches a further call, so it
-            # needs the tail/non-tail distinction like regular CALL/TAIL_CALL.
-            # Stack convention: function first, then arg list (both already pushed).
             if builtin_name == 'apply':
-                if plan.is_tail_call:
-                    ctx.emit(Opcode.TAIL_APPLY)
-                    return
-
-                ctx.emit(Opcode.APPLY)
+                ctx.emit(Opcode.TAIL_APPLY if plan.is_tail_call else Opcode.APPLY)
                 return
 
-            # Check if this is a primitive operation with correct arity
             if builtin_name in BINARY_OPS:
-                primitive_opcode = BINARY_OPS[builtin_name]
-                ctx.emit(primitive_opcode)
+                ctx.emit(BINARY_OPS[builtin_name])
                 return
 
             if builtin_name in UNARY_OPS:
-                primitive_opcode = UNARY_OPS[builtin_name]
-                ctx.emit(primitive_opcode)
+                ctx.emit(UNARY_OPS[builtin_name])
                 return
 
             if builtin_name in TERNARY_OPS:
-                primitive_opcode = TERNARY_OPS[builtin_name]
-                ctx.emit(primitive_opcode)
+                ctx.emit(TERNARY_OPS[builtin_name])
                 return
 
             assert builtin_name in BUILD_OPS, f"No opcode for '{builtin_name}' with {len(plan.arg_plans)} args"
-            build_opcode = BUILD_OPS[builtin_name]
-            ctx.emit(build_opcode, len(plan.arg_plans))
+            ctx.emit(BUILD_OPS[builtin_name], len(plan.arg_plans))
             return
 
-        # Regular function call
-        # Convention: args are pushed first (bottom of frame), function on top.
+        # Regular function call: args first, function on top.
         for arg_plan in plan.arg_plans:
             self._generate_expr(arg_plan, ctx)
 
         self._generate_expr(plan.func_plan, ctx)
 
-        # Emit call
         if plan.is_tail_call:
             ctx.emit(Opcode.TAIL_CALL, len(plan.arg_plans))
 
@@ -783,25 +655,13 @@ class MenaiCodeGen:
 
     def _generate_return(self, plan: MenaiIRReturn, ctx: MenaiCodeGenContext) -> None:
         """Generate code for a return statement."""
-        # Generate the value to return
         self._generate_expr(plan.value_plan, ctx)
-        # Emit RETURN instruction
         ctx.emit(Opcode.RETURN)
 
     def _generate_trace(self, plan: MenaiIRTrace, ctx: MenaiCodeGenContext) -> None:
-        """
-        Generate code for a trace expression.
-
-        Emits each message via EMIT_TRACE, then generates code for the value expression.
-        The value expression's result is left on the stack.
-        """
-        # Generate and emit each message
+        """Generate code for a trace expression."""
         for message_plan in plan.message_plans:
-            # Generate code to evaluate the message
             self._generate_expr(message_plan, ctx)
-
-            # Emit EMIT_TRACE (pops value, emits to watcher)
             ctx.emit(Opcode.EMIT_TRACE)
 
-        # Generate code for the return value (leaves result on stack)
         self._generate_expr(plan.value_plan, ctx)

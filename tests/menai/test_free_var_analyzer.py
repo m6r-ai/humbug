@@ -115,7 +115,7 @@ def _collect_ir_lambdas_rec(ir: MenaiIRExpr, result: list[MenaiIRLambda]) -> Non
             _collect_ir_lambdas_rec(plan, result)
 
     elif isinstance(ir, (MenaiIRLet, MenaiIRLetrec)):
-        for _, val_plan, _ in ir.bindings:
+        for _, val_plan in ir.bindings:
             _collect_ir_lambdas_rec(val_plan, result)
         _collect_ir_lambdas_rec(ir.body_plan, result)
 

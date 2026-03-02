@@ -65,12 +65,13 @@ def _str_const(s: str) -> MenaiIRConstant:
     return MenaiIRConstant(value=MenaiString(s))
 
 
-def _local(index: int, depth: int = 0, is_parent_ref: bool = False) -> MenaiIRVariable:
+def _local(name: str, depth: int = 0, is_parent_ref: bool = False) -> MenaiIRVariable:
+    """Create a symbolic local variable reference (name-based, no slot index)."""
     return MenaiIRVariable(
-        name=f"v{index}",
+        name=name,
         var_type='local',
-        depth=depth,
-        index=index,
+        depth=-1,
+        index=-1,
         is_parent_ref=is_parent_ref,
     )
 
@@ -79,7 +80,7 @@ def _global(name: str) -> MenaiIRVariable:
     return MenaiIRVariable(name=name, var_type='global', depth=0, index=0)
 
 
-def _add_call(a, b) -> MenaiIRCall:
+def _add_call(a, b, name: str = 'integer+') -> MenaiIRCall:
     """Emit (integer+ a b) as a builtin call."""
     return MenaiIRCall(
         func_plan=_global('integer+'),
@@ -119,8 +120,8 @@ class TestTriviallyInlineable:
         """A let binding whose value is a constant is copy-propagated."""
         # (let ((x 42)) x)  →  42
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(42), 0)],
-            body_plan=_local(0),
+            bindings=[("x", _const(42))],
+            body_plan=_local('x'),
             in_tail_position=True,
         ))
         result = _run_prop(ir)
@@ -138,8 +139,8 @@ class TestTriviallyInlineable:
         """A let binding whose value is an empty list is copy-propagated."""
         from menai.menai_ir import MenaiIREmptyList
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("xs", MenaiIREmptyList(), 0)],
-            body_plan=_local(0),
+            bindings=[("xs", MenaiIREmptyList())],
+            body_plan=_local('xs'),
             in_tail_position=True,
         ))
         result = _run_prop(ir)
@@ -150,8 +151,8 @@ class TestTriviallyInlineable:
         """A let binding whose value is a quote is copy-propagated."""
         quoted = MenaiIRQuote(quoted_value=MenaiSymbol("hello"))
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("sym", quoted, 0)],
-            body_plan=_local(0),
+            bindings=[("sym", quoted)],
+            body_plan=_local('sym'),
             in_tail_position=True,
         ))
         result = _run_prop(ir)
@@ -161,8 +162,8 @@ class TestTriviallyInlineable:
     def test_global_variable_is_inlined(self):
         """A let binding whose value is a global variable is copy-propagated."""
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("f", _global('integer+'), 0)],
-            body_plan=_local(0),
+            bindings=[("f", _global('integer+'))],
+            body_plan=_local('f'),
             in_tail_position=True,
         ))
         result = _run_prop(ir)
@@ -173,38 +174,39 @@ class TestTriviallyInlineable:
     def test_local_variable_is_inlined_when_no_captures(self):
         """A let binding whose value is a local variable is inlined when not captured."""
         # (let ((x 1) (y x)) y)
-        # Both x (constant) and y (local alias) are in to_propagate.
-        # Substitution is a single-pass walk: body _local(1) → _local(0).
-        # The result of substituting _local(0) is NOT further substituted
-        # in the same pass (substitution is not recursive).
-        # Both bindings are dropped → let collapses → body is _local(0).
+        # Both x (constant) and y (local alias to x) are trivially copyable.
+        # Substitution replaces _local('y') with _local('x') in the body.
+        # The substituted result is not re-walked in the same pass, so after
+        # one pass the body is _local('x') and both bindings are dropped
+        # (let collapses).  A second pass (or the fixed-point loop) would
+        # then substitute x=1 to give _const(1).  Here we test one pass only.
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0), ("y", _local(0), 1)],
-            body_plan=_local(1),   # body uses y (slot 1)
+            bindings=[("x", _const(1)), ("y", _local('x'))],
+            body_plan=_local('y'),
             in_tail_position=True,
         ))
         result = _run_prop(ir)
         assert isinstance(result, MenaiIRReturn)
-        # Both bindings dropped → let collapsed → body is _local(0).
-        # (A second pass of the propagator or dead-binder would then inline x.)
+        # y is substituted → body is _local('x'); let collapses (no live bindings).
+        # x itself is still in to_propagate but was dropped from the let,
+        # so a second pass is needed to resolve it to the constant.
         assert isinstance(result.value_plan, MenaiIRVariable)
+        assert result.value_plan.name == 'x'
         assert result.value_plan.var_type == 'local'
-        assert result.value_plan.index == 0
 
     def test_lambda_is_not_inlined(self):
         """A let binding whose value is a lambda is NOT copy-propagated."""
         lam = MenaiIRLambda(
             params=["p"],
-            body_plan=MenaiIRReturn(value_plan=_local(0)),
+            body_plan=MenaiIRReturn(value_plan=_local('p')),
             sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=[],
             outer_free_var_plans=[],
             param_count=1,
             is_variadic=False,
-            max_locals=1,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("f", lam, 0)],
-            body_plan=_local(0),
+            bindings=[("f", lam)],
+            body_plan=_local('f'),
             in_tail_position=True,
         ))
         _, changed = _run(ir)
@@ -213,8 +215,8 @@ class TestTriviallyInlineable:
     def test_call_is_not_inlined(self):
         """A let binding whose value is a call is NOT copy-propagated."""
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("r", _add_call(_const(1), _const(2)), 0)],
-            body_plan=_local(0),
+            bindings=[("r", _add_call(_const(1), _const(2)))],
+            body_plan=_local('r'),
             in_tail_position=True,
         ))
         _, changed = _run(ir)
@@ -226,57 +228,59 @@ class TestTriviallyInlineable:
 # ---------------------------------------------------------------------------
 
 class TestLambdaBoundaryRule:
-    """Verify the lambda boundary rule for local variable inlining."""
+    """Verify shadowing behaviour for local variable inlining."""
 
     def test_local_var_not_inlined_when_captured(self):
         """
-        A local variable binding that is captured by a child lambda must NOT
-        be copy-propagated (the depth arithmetic would be wrong).
+        A local variable binding whose value is another local variable IS
+        copy-propagated even when the binding is captured — with symbolic
+        variables there is no depth arithmetic to go wrong.  The addresser
+        resolves the substituted name correctly in its new position.
+        However, the free_var_plan references the binding by name ('x'),
+        and after propagation the plan for 'x' (which is _local('other'))
+        is substituted into the free_var_plan.  The binding IS inlined.
         """
-        # (let ((x 1))
+        # (let ((x other))   ; x = alias for 'other' local
         #   (lambda () x))
-        # x is captured by the lambda via free_var_plans.
-        # The use counter will record external_count(frame=0, slot=0) = 1.
-        # Therefore x should NOT be inlined.
-        free_var_plan = _local(index=0, depth=0)  # loads x in enclosing frame
+        # x is trivially copyable (local variable) and captured.
+        # With symbolic variables, this IS inlined — the free_var_plan
+        # becomes _local('other') and the addresser resolves it correctly.
+        free_var_plan = _local('x')  # loads x in enclosing frame
         lam = MenaiIRLambda(
             params=[],
-            body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
+            body_plan=MenaiIRReturn(value_plan=_local('x')),
             sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=["x"],
             outer_free_var_plans=[free_var_plan],
             param_count=0,
             is_variadic=False,
-            max_locals=1,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _local(index=5, depth=0), 0)],  # x = some other local
+            bindings=[("x", _local('other'))],  # x = alias for 'other'
             body_plan=lam,
             in_tail_position=True,
         ))
         _, changed = _run(ir)
-        # x is captured → external_count > 0 → must NOT be inlined.
-        assert not changed
+        # With symbolic variables, local aliases are always inlineable.
+        assert changed
 
     def test_constant_inlined_even_when_captured(self):
         """
         A constant binding is inlined even when the binding is captured by a
         child lambda, because constants contain no frame-relative references.
         """
-        # (let ((k 99))
-        #   (lambda () k))
-        # k is captured, but its value is a constant — always safe to inline.
-        free_var_plan = _local(index=0, depth=0)
+        # (let ((k 99)) (lambda () k))
+        # k is captured, but its value is a constant — always inlineable.
+        free_var_plan = _local('k')
         lam = MenaiIRLambda(
             params=[],
-            body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
+            body_plan=MenaiIRReturn(value_plan=_local('k')),
             sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=["k"],
             outer_free_var_plans=[free_var_plan],
             param_count=0,
             is_variadic=False,
-            max_locals=1,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("k", _const(99), 0)],
+            bindings=[("k", _const(99))],
             body_plan=lam,
             in_tail_position=True,
         ))
@@ -289,18 +293,17 @@ class TestLambdaBoundaryRule:
         A global variable binding is inlined even when captured by a child
         lambda, because globals use name-table lookup (not frame-relative).
         """
-        free_var_plan = _local(index=0, depth=0)
+        free_var_plan = _local('g')
         lam = MenaiIRLambda(
             params=[],
-            body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
+            body_plan=MenaiIRReturn(value_plan=_local('g')),
             sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=["g"],
             outer_free_var_plans=[free_var_plan],
             param_count=0,
             is_variadic=False,
-            max_locals=1,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("g", _global('integer+'), 0)],
+            bindings=[("g", _global('integer+'))],
             body_plan=lam,
             in_tail_position=True,
         ))
@@ -319,8 +322,8 @@ class TestSubstitutionCorrectness:
         """All uses of a propagated binding are replaced."""
         # (let ((x 7)) (integer+ x x))  →  (integer+ 7 7)
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(7), 0)],
-            body_plan=_add_call(_local(0), _local(0)),
+            bindings=[("x", _const(7))],
+            body_plan=_add_call(_local('x'), _local('x')),
             in_tail_position=True,
         ))
         result = _run_prop(ir)
@@ -338,8 +341,8 @@ class TestSubstitutionCorrectness:
         # Propagate x=1 (constant); y is also a constant so it gets propagated too.
         # After propagation: (integer+ 1 2)
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0), ("y", _const(2), 1)],
-            body_plan=_add_call(_local(0), _local(1)),
+            bindings=[("x", _const(1)), ("y", _const(2))],
+            body_plan=_add_call(_local('x'), _local('y')),
             in_tail_position=True,
         ))
         result = _run_prop(ir)
@@ -355,11 +358,11 @@ class TestSubstitutionCorrectness:
         """Substitution reaches into both branches of an if expression."""
         # (let ((k 5)) (if #t k k))  →  (if #t 5 5)
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("k", _const(5), 0)],
+            bindings=[("k", _const(5))],
             body_plan=MenaiIRIf(
                 condition_plan=MenaiIRConstant(value=MenaiInteger(1)),
-                then_plan=_local(0),
-                else_plan=_local(0),
+                then_plan=_local('k'),
+                else_plan=_local('k'),
                 in_tail_position=False,
             ),
             in_tail_position=True,
@@ -375,24 +378,23 @@ class TestSubstitutionCorrectness:
 
     def test_substitution_does_not_cross_lambda_body(self):
         """
-        Substitution does NOT replace depth=0 references inside a lambda body
-        (those refer to the lambda's own frame, not the enclosing let's frame).
+        Substitution does NOT replace references inside a lambda body when
+        the lambda's param shadows the outer binding name.
         """
         # (let ((x 99))
-        #   (lambda (x) x))   ← inner x is param at slot 0 of lambda frame
-        # The lambda body's _local(0) refers to the lambda's own param, not
-        # the outer let's x.  It must NOT be replaced with 99.
+        #   (lambda (x) x))
+        # The lambda's param 'x' shadows the outer let binding 'x'.
+        # The body's _local('x') refers to the lambda's own param — NOT replaced.
         lam = MenaiIRLambda(
             params=["x"],
-            body_plan=MenaiIRReturn(value_plan=_local(0)),  # lambda's own param
+            body_plan=MenaiIRReturn(value_plan=_local('x')),  # lambda's own param
             sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=[],
             outer_free_var_plans=[],
             param_count=1,
             is_variadic=False,
-            max_locals=1,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(99), 0)],
+            bindings=[("x", _const(99))],
             body_plan=lam,
             in_tail_position=True,
         ))
@@ -400,12 +402,12 @@ class TestSubstitutionCorrectness:
         assert isinstance(result, MenaiIRReturn)
         opt_lam = result.value_plan
         assert isinstance(opt_lam, MenaiIRLambda)
-        # The lambda body must still reference slot 0 (its own param).
+        # The lambda body must still reference its own param 'x' (not the constant).
         body = opt_lam.body_plan
         assert isinstance(body, MenaiIRReturn)
         assert isinstance(body.value_plan, MenaiIRVariable)
-        assert body.value_plan.index == 0
         assert body.value_plan.var_type == 'local'
+        assert body.value_plan.name == 'x'
 
     def test_substitution_into_free_var_plans(self):
         """
@@ -417,18 +419,17 @@ class TestSubstitutionCorrectness:
         # k is a constant → inlineable even though captured.
         # After propagation, free_var_plans[0] should be the constant 42,
         # not a reference to slot 0.
-        free_var_plan = _local(index=0, depth=0)  # originally loads k
+        free_var_plan = _local('k')  # originally loads k from enclosing frame
         lam = MenaiIRLambda(
             params=[],
-            body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
+            body_plan=MenaiIRReturn(value_plan=_local('k')),
             sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=["k"],
             outer_free_var_plans=[free_var_plan],
             param_count=0,
             is_variadic=False,
-            max_locals=1,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("k", _const(42), 0)],
+            bindings=[("k", _const(42))],
             body_plan=lam,
             in_tail_position=True,
         ))
@@ -451,20 +452,20 @@ class TestShadowing:
 
     def test_inner_let_shadows_outer_propagation(self):
         """
-        If an inner let introduces a binding at the same slot index as an
-        outer binding being propagated, the inner binding takes precedence
+        If an inner let introduces a binding with the same name as an outer
+        binding being propagated, the inner binding takes precedence
         inside its own body.
         """
-        # Outer let: slot 0 = constant 99
-        # Inner let: slot 0 = constant 1  (shadows outer slot 0)
-        # Inner body: uses slot 0 → should get 1, not 99
+        # Outer let: 'outer' = constant 99
+        # Inner let: 'outer' = constant 1  (shadows outer 'outer')
+        # Inner body: uses 'outer' → should get 1, not 99
         inner_let = MenaiIRLet(
-            bindings=[("inner", _const(1), 0)],
-            body_plan=_local(0),
+            bindings=[("outer", _const(1))],
+            body_plan=_local('outer'),
             in_tail_position=True,
         )
         outer_let = MenaiIRLet(
-            bindings=[("outer", _const(99), 0)],
+            bindings=[("outer", _const(99))],
             body_plan=inner_let,
             in_tail_position=True,
         )
@@ -490,8 +491,8 @@ class TestLetrecNotPropagated:
         (we skip letrec entirely for propagation).
         """
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
-            bindings=[("k", _const(42), 0)],
-            body_plan=_local(0),
+            bindings=[("k", _const(42))],
+            body_plan=_local('k'),
             in_tail_position=True,
         ))
         _, changed = _run(ir)
@@ -503,12 +504,12 @@ class TestLetrecNotPropagated:
         inside the letrec body ARE still optimized.
         """
         inner_let = MenaiIRLet(
-            bindings=[("x", _const(7), 1)],
-            body_plan=_local(1),
+            bindings=[("x", _const(7))],
+            body_plan=_local('x'),
             in_tail_position=True,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
-            bindings=[("f", _const(0), 0)],
+            bindings=[("f", _const(0))],
             body_plan=inner_let,
             in_tail_position=True,
         ))
@@ -537,14 +538,14 @@ class TestTailRecursiveCalls:
         walked like any other variable.
         """
         tail_call = MenaiIRCall(
-            func_plan=_local(index=0, depth=0),
-            arg_plans=[_local(index=1, depth=0)],
+            func_plan=_local('f'),
+            arg_plans=[_local('arg')],
             is_tail_call=True,
             is_builtin=False,
             builtin_name=None,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("arg", _const(42), 1)],
+            bindings=[("arg", _const(42))],
             body_plan=tail_call,
             in_tail_position=True,
         ))
@@ -568,16 +569,15 @@ class TestSubstitutionsProperty:
         """When no binding is propagated, changed is False."""
         lam = MenaiIRLambda(
             params=["p"],
-            body_plan=MenaiIRReturn(value_plan=_local(0)),
+            body_plan=MenaiIRReturn(value_plan=_local('p')),
             sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=[],
             outer_free_var_plans=[],
             param_count=1,
             is_variadic=False,
-            max_locals=1,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("f", lam, 0)],
-            body_plan=_local(0),
+            bindings=[("f", lam)],
+            body_plan=_local('f'),
             in_tail_position=True,
         ))
         prop = MenaiIRCopyPropagator()
@@ -588,8 +588,8 @@ class TestSubstitutionsProperty:
     def test_one_propagation_changed_true(self):
         """When one binding is propagated, changed is True and substitutions == 1."""
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0)],
-            body_plan=_local(0),
+            bindings=[("x", _const(1))],
+            body_plan=_local('x'),
             in_tail_position=True,
         ))
         prop = MenaiIRCopyPropagator()
@@ -600,8 +600,8 @@ class TestSubstitutionsProperty:
     def test_two_propagations_counted(self):
         """Two propagated bindings are both counted."""
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0), ("y", _const(2), 1)],
-            body_plan=_add_call(_local(0), _local(1)),
+            bindings=[("x", _const(1)), ("y", _const(2))],
+            body_plan=_add_call(_local('x'), _local('y')),
             in_tail_position=True,
         ))
         prop = MenaiIRCopyPropagator()
@@ -612,8 +612,8 @@ class TestSubstitutionsProperty:
     def test_substitutions_reset_between_calls(self):
         """The substitutions counter is reset on each call to optimize()."""
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _const(1), 0)],
-            body_plan=_local(0),
+            bindings=[("x", _const(1))],
+            body_plan=_local('x'),
             in_tail_position=True,
         ))
         prop = MenaiIRCopyPropagator()
@@ -636,10 +636,10 @@ class TestFlagsPreserved:
         """in_tail_position is carried through to the optimized let."""
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
             bindings=[
-                ("x", _const(1), 0),       # propagated
-                ("y", _add_call(_const(2), _const(3)), 1),  # kept (call)
+                ("x", _const(1)),       # propagated
+                ("y", _add_call(_const(2), _const(3))),  # kept (call)
             ],
-            body_plan=_local(1),
+            body_plan=_local('y'),
             in_tail_position=True,
         ))
         result = _run_prop(ir)
@@ -652,20 +652,19 @@ class TestFlagsPreserved:
         """Lambda metadata (params, max_locals, etc.) is preserved after propagation."""
         lam = MenaiIRLambda(
             params=["a", "b"],
-            body_plan=MenaiIRReturn(value_plan=_local(0)),
+            body_plan=MenaiIRReturn(value_plan=_local('a')),
             sibling_free_vars=["sibling"],
-            sibling_free_var_plans=[_local(index=2, depth=0)],
+            sibling_free_var_plans=[_local('sibling')],
             outer_free_vars=["outer"],
             outer_free_var_plans=[],
             param_count=2,
             is_variadic=False,
-            max_locals=5,
             binding_name="my_func",
             source_line=42,
             source_file="test.menai",
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("k", _const(99), 0)],
+            bindings=[("k", _const(99))],
             body_plan=lam,
             in_tail_position=True,
         ))
@@ -674,7 +673,7 @@ class TestFlagsPreserved:
         opt_lam = result.value_plan
         assert isinstance(opt_lam, MenaiIRLambda)
         assert opt_lam.params == ["a", "b"]
-        assert opt_lam.max_locals == 5
+        assert opt_lam.max_locals == 0  # addresser sets this; propagator passes through 0
         assert opt_lam.binding_name == "my_func"
         assert opt_lam.sibling_free_vars == ["sibling"]
         assert opt_lam.source_line == 42

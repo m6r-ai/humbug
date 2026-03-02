@@ -3,7 +3,7 @@ Menai IR Inline-Once Pass - single-use let binding inliner.
 
 Consumes an IRUseCounts annotation (produced by MenaiIRUseCounter) and inlines
 any MenaiIRLet binding that has exactly one total use, subject to the lambda
-boundary rule described below.
+exclusion rule described below.
 
 Why this is different from MenaiIRCopyPropagator
 -------------------------------------------------
@@ -14,58 +14,34 @@ if-expressions, and other compound nodes — but only when the use count is
 exactly 1.  With a single use and no work duplication, inlining is always
 profitable in a pure language.
 
-The two passes compose naturally:
-  - Copy propagation may reduce multi-use bindings to single-use (by
-    eliminating uses inside value expressions of other propagated bindings).
-  - Inline-once then eliminates the remaining single-use bindings.
-  - The dead-binding eliminator cleans up zero-use slots left by both.
+Lambda exclusion rule
+---------------------
+MenaiIRLambda values are never inlined, even when use count is 1.  A lambda
+is a closure definition that may be called many times even if its binding slot
+is referenced only once.  Inlining it would duplicate the closure creation and
+all of its free-variable loads, causing code explosion.  Dead lambdas
+(total_count == 0) are handled by MenaiIROptimizer instead.
 
-Lambda boundary rule
---------------------
-Substituting a value plan at a use site inside a child lambda is only
-problematic when the value plan itself contains frame-relative variable
-references that would need their depth adjusted.  The rule therefore depends
-on the *type* of the value plan, not just whether the binding is captured:
+No lambda boundary rule
+-----------------------
+Variables are symbolic throughout the optimisation pipeline (depth=-1,
+index=-1 until MenaiIRAddresser runs).  Substituting any value plan — including
+calls and other compound nodes — at any position in the tree is safe: the
+addresser will resolve all names correctly in their new positions.  The
+lambda boundary rule from the old index-based implementation is gone.
 
-  MenaiIRVariable(var_type='local', depth=0):
-      Requires external_count(frame_id, var_index) == 0.
-      A depth=0 local reference is frame-relative.  Substituting it inside
-      a child lambda would produce a reference with the wrong depth.
-
-  All other value plan types (MenaiIRCall, MenaiIRIf, MenaiIRConstant,
-  MenaiIRQuote, MenaiIREmptyList, MenaiIRVariable(global), etc.):
-      external_count is irrelevant.  These node types contain no
-      frame-relative addresses, so they can be safely substituted anywhere
-      in the tree — including inside lambda bodies and free_var_plans.
-
-Motivating example for the permissive case:
-
-    (let ((result (integer+ x 1)))
-      (lambda () result))
-
-Here result has total_count=1 and external_count=1 (captured).  The brief's
-original uniform rule would block inlining.  The corrected rule allows it:
-(integer+ x 1) is a MenaiIRCall with no frame-relative addresses, so it is
-safe to substitute directly into the lambda's free_var_plans.  This eliminates
-the STORE_VAR/LOAD_VAR pair and the closure captures the computed value
-directly rather than a slot reference.
+Shadowing
+---------
+When the substitution walk descends into an inner let/letrec that binds the
+same name as a pending substitution, that name is removed from the map for
+the inner body so the inner binding is not incorrectly replaced.  For lambdas,
+params and free_vars shadow the enclosing substitutions.
 
 Scope of the pass: let only, not letrec
 ----------------------------------------
 Inline-once is applied only to MenaiIRLet bindings.  MenaiIRLetrec bindings
-are skipped for the same reasons as in copy propagation:
-  - They may be mutually recursive.
-  - Their values are almost always lambdas, which may be called many times.
-  - The dead-binding eliminator handles the main letrec dead-code case.
-
-The pass still recurses into letrec bodies to optimize inner let nodes.
-
-Interaction with MenaiIROptimizer
-----------------------------------
-After inlining, the eliminated bindings have zero uses.  The existing
-dead-binding eliminator will clean them up on the next pass.  The pass manager
-runs all passes to fixed point, so multi-step chains are fully resolved across
-iterations.
+are skipped (same rationale as copy propagation).  The pass still recurses
+into letrec bodies to optimise inner let nodes.
 
 Implements MenaiIROptimizationPass so it can be managed by the IR pass manager
 in MenaiCompiler.
@@ -96,14 +72,6 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
     """
     IR-level single-use let binding inliner.
 
-    Implements MenaiIROptimizationPass: call optimize(ir) to get back a
-    transformed IR tree and a boolean indicating whether any changes were made.
-    Use counts are computed internally so callers do not need to manage them.
-
-    The pass is stateless between calls — all mutable state (the frame stack)
-    is passed explicitly through the recursive walk, and the use-count
-    annotation is recomputed fresh on every call to optimize().
-
     Usage::
 
         new_ir, changed = MenaiIRInlineOnce().optimize(ir)
@@ -115,31 +83,16 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
 
     @property
     def inlinings(self) -> int:
-        """Number of bindings inlined during the last optimize() call."""
         return self._inlinings
 
     def optimize(self, ir: MenaiIRExpr) -> Tuple[MenaiIRExpr, bool]:
-        """
-        Return an inline-once-optimized copy of *ir* and a flag indicating
-        whether any changes were made.
-
-        Use counts are computed internally before the transformation pass.
-
-        Args:
-            ir: Root IR node to optimize (output of MenaiIRBuilder.build() or
-                a previous optimization pass).
-
-        Returns:
-            Tuple of (new_ir, changed).  changed is True if at least one
-            binding was inlined.
-        """
         self._inlinings = 0
         self._counts = MenaiIRUseCounter().count(ir)
         new_ir = self._inline(ir, frame_stack=[0])
         return new_ir, self._inlinings > 0
 
     def _inline(self, ir: MenaiIRExpr, frame_stack: List[int]) -> MenaiIRExpr:
-        """Recursively inline single-use bindings in *ir*."""
+        """Recursively inline single-use let bindings in ir."""
         if isinstance(ir, MenaiIRLet):
             return self._inline_let(ir, frame_stack)
 
@@ -147,13 +100,24 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
             return self._inline_letrec(ir, frame_stack)
 
         if isinstance(ir, MenaiIRIf):
-            return self._inline_if(ir, frame_stack)
+            return MenaiIRIf(
+                condition_plan=self._inline(ir.condition_plan, frame_stack),
+                then_plan=self._inline(ir.then_plan, frame_stack),
+                else_plan=self._inline(ir.else_plan, frame_stack),
+                in_tail_position=ir.in_tail_position,
+            )
 
         if isinstance(ir, MenaiIRLambda):
             return self._inline_lambda(ir, frame_stack)
 
         if isinstance(ir, MenaiIRCall):
-            return self._inline_call(ir, frame_stack)
+            return MenaiIRCall(
+                func_plan=self._inline(ir.func_plan, frame_stack),
+                arg_plans=[self._inline(a, frame_stack) for a in ir.arg_plans],
+                is_tail_call=ir.is_tail_call,
+                is_builtin=ir.is_builtin,
+                builtin_name=ir.builtin_name,
+            )
 
         if isinstance(ir, MenaiIRReturn):
             return MenaiIRReturn(value_plan=self._inline(ir.value_plan, frame_stack))
@@ -164,9 +128,7 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
                 value_plan=self._inline(ir.value_plan, frame_stack),
             )
 
-        if isinstance(ir, (MenaiIRConstant, MenaiIRVariable,
-                            MenaiIRQuote, MenaiIREmptyList, MenaiIRError)):
-            # Leaf nodes — nothing to inline into.
+        if isinstance(ir, (MenaiIRConstant, MenaiIRVariable, MenaiIRQuote, MenaiIREmptyList, MenaiIRError)):
             return ir
 
         raise TypeError(
@@ -175,46 +137,36 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
 
     def _inline_let(self, ir: MenaiIRLet, frame_stack: List[int]) -> MenaiIRExpr:
         """
-        Optimize a let node by inlining single-use bindings.
+        Inline single-use let bindings.
 
-        For each binding (name, value_plan, var_index):
-          - If total_count == 1 and _can_inline() passes, substitute value_plan
-            at the single use site in body_plan and drop the binding.
-          - Otherwise, keep the binding and recursively optimize its value.
-
-        If all bindings are inlined away, collapse the let to its body.
-
-        Note: binding values are evaluated in the outer scope (parallel let
-        semantics), so we never substitute one binding's value into another
-        binding's value expression within the same let — only into body_plan.
+        For each binding (name, value_plan):
+          - If total_count == 1 and value_plan is not a lambda, substitute
+            value_plan at the single use site in body_plan and drop the binding.
+          - Otherwise keep the binding and recursively optimise its value.
         """
         current_frame = frame_stack[-1]
         counts = cast(IRUseCounts, self._counts)
 
-        # Determine which bindings to inline: {var_index: value_plan}.
-        to_inline: Dict[int, MenaiIRExpr] = {}
-        for name, value_plan, var_index in ir.bindings:
-            if counts.total_count(current_frame, var_index) == 1:
-                if self._can_inline(value_plan, counts, current_frame, var_index):
-                    to_inline[var_index] = value_plan
+        to_inline: Dict[str, MenaiIRExpr] = {}
+        for binding in ir.bindings:
+            name, value_plan, *_ = binding
+            if counts.total_count(current_frame, id(binding)) == 1:
+                if not isinstance(value_plan, MenaiIRLambda):
+                    to_inline[name] = value_plan
 
-        # Build the new binding list.  For bindings we are NOT inlining,
-        # recursively optimize their value plans (they may contain inner lets).
-        live: List[Tuple[str, MenaiIRExpr, int]] = []
-        for name, value_plan, var_index in ir.bindings:
-            if var_index in to_inline:
-                # This binding will be substituted away — drop it.
+        live: List[Tuple[str, MenaiIRExpr]] = []
+        for name, value_plan, *_ in ir.bindings:
+            if name in to_inline:
                 self._inlinings += 1
                 continue
-            live.append((name, self._inline(value_plan, frame_stack), var_index))
 
-        # Recursively optimize the body, then substitute inlined bindings.
+            live.append((name, self._inline(value_plan, frame_stack)))
+
         opt_body = self._inline(ir.body_plan, frame_stack)
         if to_inline:
             opt_body = self._substitute(opt_body, to_inline, frame_stack)
 
         if not live:
-            # All bindings were inlined — the let form itself is gone.
             return opt_body
 
         return MenaiIRLet(
@@ -224,102 +176,58 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
         )
 
     def _inline_letrec(self, ir: MenaiIRLetrec, frame_stack: List[int]) -> MenaiIRExpr:
-        """
-        Optimize a letrec node.
-
-        Inline-once is NOT applied to letrec bindings (see module docstring).
-        We still recurse into binding value plans and the body so that inner
-        let nodes are optimized.
-        """
-        live: List[Tuple[str, MenaiIRExpr, int]] = []
-        for name, value_plan, var_index in ir.bindings:
-            live.append((name, self._inline(value_plan, frame_stack), var_index))
-
-        opt_body = self._inline(ir.body_plan, frame_stack)
+        """Recurse into letrec without inlining its bindings."""
+        live: List[Tuple[str, MenaiIRExpr]] = []
+        for name, value_plan, *_ in ir.bindings:
+            live.append((name, self._inline(value_plan, frame_stack)))
 
         return MenaiIRLetrec(
             bindings=live,
-            body_plan=opt_body,
+            body_plan=self._inline(ir.body_plan, frame_stack),
             in_tail_position=ir.in_tail_position,
         )
 
-    def _inline_if(self, ir: MenaiIRIf, frame_stack: List[int]) -> MenaiIRIf:
-        return MenaiIRIf(
-            condition_plan=self._inline(ir.condition_plan, frame_stack),
-            then_plan=self._inline(ir.then_plan, frame_stack),
-            else_plan=self._inline(ir.else_plan, frame_stack),
-            in_tail_position=ir.in_tail_position,
-        )
-
-    def _inline_lambda(
-        self, ir: MenaiIRLambda, frame_stack: List[int]
-    ) -> MenaiIRLambda:
-        """
-        Optimize a lambda node.
-
-        The lambda body is optimized in the lambda's own frame.
-        free_var_plans are evaluated in the enclosing frame and are walked
-        with the current frame_stack.
-        """
+    def _inline_lambda(self, ir: MenaiIRLambda, frame_stack: List[int]) -> MenaiIRLambda:
+        """Optimize a lambda node."""
         counts = cast(IRUseCounts, self._counts)
         lambda_frame_id = counts.lambda_frame_ids.get(id(ir))
-        if lambda_frame_id is None:
-            # Defensive: counter didn't visit this node.
-            child_stack = frame_stack
-
-        else:
-            child_stack = frame_stack + [lambda_frame_id]
+        child_stack = frame_stack if lambda_frame_id is None else frame_stack + [lambda_frame_id]
 
         return MenaiIRLambda(
             params=ir.params,
             body_plan=self._inline(ir.body_plan, child_stack),
             sibling_free_vars=ir.sibling_free_vars,
-            sibling_free_var_plans=ir.sibling_free_var_plans,   # leaf nodes; no substitution needed here
+            sibling_free_var_plans=ir.sibling_free_var_plans,
             outer_free_vars=ir.outer_free_vars,
             outer_free_var_plans=ir.outer_free_var_plans,
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,
-            max_locals=ir.max_locals,
             source_line=ir.source_line,
             source_file=ir.source_file,
         )
 
-    def _inline_call(self, ir: MenaiIRCall, frame_stack: List[int]) -> MenaiIRCall:
-        opt_args = [self._inline(a, frame_stack) for a in ir.arg_plans]
-
-        return MenaiIRCall(
-            func_plan=self._inline(ir.func_plan, frame_stack),
-            arg_plans=opt_args,
-            is_tail_call=ir.is_tail_call,
-            is_builtin=ir.is_builtin,
-            builtin_name=ir.builtin_name,
-        )
+    # ------------------------------------------------------------------
+    # Substitution walk
+    # ------------------------------------------------------------------
 
     def _substitute(
         self,
         ir: MenaiIRExpr,
-        replacements: Dict[int, MenaiIRExpr],
+        replacements: Dict[str, MenaiIRExpr],
         frame_stack: List[int],
     ) -> MenaiIRExpr:
         """
-        Walk *ir* and replace every MenaiIRVariable(var_type='local',
-        depth=0, index=k) with replacements[k], for each k in *replacements*.
+        Walk ir and replace every MenaiIRVariable(var_type='local', name=n)
+        with replacements[n] for each n in replacements.
 
-        This walk operates strictly within the current frame.  When it
-        encounters a MenaiIRLambda it does NOT descend into the lambda's
-        body_plan (that is a child frame where depth=0 refers to the lambda's
-        own locals, not the enclosing let's slots).  It DOES substitute in
-        the lambda's free_var_plans and parent_ref_plans, because those are
-        evaluated in the enclosing frame.
-
-        The tail-recursive sentinel func_plan is never substituted.
+        Shadowing: inner let/letrec bindings and lambda params/free_vars that
+        share a name with a pending substitution are removed from the map
+        before descending into the inner scope.
         """
         if isinstance(ir, MenaiIRVariable):
-            if (ir.var_type == 'local'
-                    and ir.depth == 0
-                    and ir.index in replacements):
-                return replacements[ir.index]
+            if ir.var_type == 'local' and ir.name in replacements:
+                return replacements[ir.name]
 
             return ir
 
@@ -341,7 +249,13 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
             return self._substitute_lambda(ir, replacements, frame_stack)
 
         if isinstance(ir, MenaiIRCall):
-            return self._substitute_call(ir, replacements, frame_stack)
+            return MenaiIRCall(
+                func_plan=self._substitute(ir.func_plan, replacements, frame_stack),
+                arg_plans=[self._substitute(a, replacements, frame_stack) for a in ir.arg_plans],
+                is_tail_call=ir.is_tail_call,
+                is_builtin=ir.is_builtin,
+                builtin_name=ir.builtin_name,
+            )
 
         if isinstance(ir, MenaiIRReturn):
             return MenaiIRReturn(
@@ -350,51 +264,32 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
 
         if isinstance(ir, MenaiIRTrace):
             return MenaiIRTrace(
-                message_plans=[
-                    self._substitute(m, replacements, frame_stack)
-                    for m in ir.message_plans
-                ],
+                message_plans=[self._substitute(m, replacements, frame_stack) for m in ir.message_plans],
                 value_plan=self._substitute(ir.value_plan, replacements, frame_stack),
             )
 
         if isinstance(ir, (MenaiIRConstant, MenaiIRQuote, MenaiIREmptyList, MenaiIRError)):
-            # Leaf nodes with no variable references — nothing to substitute.
             return ir
 
         raise TypeError(
-            f"MenaiIRInlineOnce._substitute: unhandled IR node type "
-            f"{type(ir).__name__}"
+            f"MenaiIRInlineOnce._substitute: unhandled IR node type {type(ir).__name__}"
         )
 
     def _substitute_let(
         self,
         ir: MenaiIRLet,
-        replacements: Dict[int, MenaiIRExpr],
+        replacements: Dict[str, MenaiIRExpr],
         frame_stack: List[int],
     ) -> MenaiIRExpr:
-        """
-        Substitute into a let node encountered during the substitution walk.
+        """Substitute into a let node."""
+        # Binding values are in the outer scope — substitute into them.
+        new_bindings: List[Tuple[str, MenaiIRExpr]] = []
+        for name, value_plan, *_ in ir.bindings:
+            new_bindings.append((name, self._substitute(value_plan, replacements, frame_stack)))
 
-        Binding values are in the outer scope (parallel let semantics), so we
-        substitute into them.  The let's own bindings shadow any outer slots
-        with the same index inside the body — we remove those from the
-        replacements map before descending into body_plan.
-
-        After substitution we also run _inline on the result so that any
-        newly eligible single-use bindings are inlined in the same pass.
-        """
-        inner_indices = {var_index for _, _, var_index in ir.bindings}
-
-        # Substitute into binding value expressions (outer scope — no shadowing).
-        new_bindings: List[Tuple[str, MenaiIRExpr, int]] = []
-        for name, value_plan, var_index in ir.bindings:
-            new_value = self._substitute(value_plan, replacements, frame_stack)
-            new_bindings.append((name, new_value, var_index))
-
-        # Remove shadowed slots for the body.
-        body_replacements = {
-            k: v for k, v in replacements.items() if k not in inner_indices
-        }
+        # Remove shadowed names for the body.
+        inner_names = {name for name, *_ in ir.bindings}
+        body_replacements = {k: v for k, v in replacements.items() if k not in inner_names}
         new_body = self._substitute(ir.body_plan, body_replacements, frame_stack)
 
         new_let = MenaiIRLet(
@@ -402,33 +297,21 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
             body_plan=new_body,
             in_tail_position=ir.in_tail_position,
         )
-
-        # Run _inline on the reconstructed let so that opportunities exposed
-        # by substitution are taken in this same pass.
         return self._inline(new_let, frame_stack)
 
     def _substitute_letrec(
         self,
         ir: MenaiIRLetrec,
-        replacements: Dict[int, MenaiIRExpr],
+        replacements: Dict[str, MenaiIRExpr],
         frame_stack: List[int],
     ) -> MenaiIRExpr:
-        """
-        Substitute into a letrec node encountered during the substitution walk.
+        """Substitute into a letrec node."""
+        inner_names = {name for name, *_ in ir.bindings}
+        inner_replacements = {k: v for k, v in replacements.items() if k not in inner_names}
 
-        letrec bindings are in scope for their own value expressions (unlike
-        let), so the inner indices shadow the outer replacements for both
-        binding values and the body.
-        """
-        inner_indices = {var_index for _, _, var_index in ir.bindings}
-        inner_replacements = {
-            k: v for k, v in replacements.items() if k not in inner_indices
-        }
-
-        new_bindings: List[Tuple[str, MenaiIRExpr, int]] = []
-        for name, value_plan, var_index in ir.bindings:
-            new_value = self._substitute(value_plan, inner_replacements, frame_stack)
-            new_bindings.append((name, new_value, var_index))
+        new_bindings: List[Tuple[str, MenaiIRExpr]] = []
+        for name, value_plan, *_ in ir.bindings:
+            new_bindings.append((name, self._substitute(value_plan, inner_replacements, frame_stack)))
 
         new_body = self._substitute(ir.body_plan, inner_replacements, frame_stack)
 
@@ -437,139 +320,43 @@ class MenaiIRInlineOnce(MenaiIROptimizationPass):
             body_plan=new_body,
             in_tail_position=ir.in_tail_position,
         )
-
-        # Run _inline on the reconstructed letrec so that inner lets are
-        # optimized in this same pass.
         return self._inline(new_letrec, frame_stack)
 
     def _substitute_lambda(
         self,
         ir: MenaiIRLambda,
-        replacements: Dict[int, MenaiIRExpr],
+        replacements: Dict[str, MenaiIRExpr],
         frame_stack: List[int],
     ) -> MenaiIRLambda:
         """
-        Substitute into a lambda node encountered during the substitution walk.
+        Substitute into a lambda node.
 
-        The lambda's body_plan is in a child frame — depth=0 there refers to
-        the lambda's own locals — so we do NOT descend into it for substitution.
-
-        The lambda's free_var_plans ARE evaluated in the enclosing frame, so
-        we substitute into them.  This is the key path
-        that allows inlining captured single-use call bindings (the motivating
-        example in the module docstring).
-
-        After substituting into free_var_plans we run
-        _inline_lambda on the result so that the lambda body is still optimized.
+        free_var_plans are evaluated in the enclosing frame — substitute freely.
+        The body is descended into with params and free_vars removed from
+        replacements (they shadow the outer bindings).
         """
         counts = cast(IRUseCounts, self._counts)
         lambda_frame_id = counts.lambda_frame_ids.get(id(ir))
-        if lambda_frame_id is None:
-            child_stack = frame_stack
+        child_stack = frame_stack if lambda_frame_id is None else frame_stack + [lambda_frame_id]
 
-        else:
-            child_stack = frame_stack + [lambda_frame_id]
+        new_sibling_fvp = [self._substitute(p, replacements, frame_stack) for p in ir.sibling_free_var_plans]
+        new_outer_fvp = [self._substitute(p, replacements, frame_stack) for p in ir.outer_free_var_plans]
 
-        new_sibling_free_var_plans = [
-            self._substitute(fvp, replacements, frame_stack)
-            for fvp in ir.sibling_free_var_plans
-        ]
-        new_outer_free_var_plans = [
-            self._substitute(fvp, replacements, frame_stack)
-            for fvp in ir.outer_free_var_plans
-        ]
-
-        # Body is in the child frame — optimize but do not substitute the
-        # enclosing frame's replacements.
-        new_body = self._inline(ir.body_plan, child_stack)
+        shadow = set(ir.params) | set(ir.sibling_free_vars) | set(ir.outer_free_vars)
+        body_replacements = {k: v for k, v in replacements.items() if k not in shadow}
+        new_body = self._substitute(ir.body_plan, body_replacements, child_stack)
+        new_body = self._inline(new_body, child_stack)
 
         return MenaiIRLambda(
             params=ir.params,
             body_plan=new_body,
             sibling_free_vars=ir.sibling_free_vars,
-            sibling_free_var_plans=new_sibling_free_var_plans,
+            sibling_free_var_plans=new_sibling_fvp,
             outer_free_vars=ir.outer_free_vars,
-            outer_free_var_plans=new_outer_free_var_plans,
+            outer_free_var_plans=new_outer_fvp,
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
             binding_name=ir.binding_name,
-            max_locals=ir.max_locals,
             source_line=ir.source_line,
             source_file=ir.source_file,
         )
-
-    def _substitute_call(
-        self,
-        ir: MenaiIRCall,
-        replacements: Dict[int, MenaiIRExpr],
-        frame_stack: List[int],
-    ) -> MenaiIRCall:
-        """Substitute into a call node."""
-        opt_args = [
-            self._substitute(a, replacements, frame_stack) for a in ir.arg_plans
-        ]
-
-        return MenaiIRCall(
-            func_plan=self._substitute(ir.func_plan, replacements, frame_stack),
-            arg_plans=opt_args,
-            is_tail_call=ir.is_tail_call,
-            is_builtin=ir.is_builtin,
-            builtin_name=ir.builtin_name,
-        )
-
-    # ------------------------------------------------------------------
-    # Eligibility check
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _can_inline(
-        value_plan: MenaiIRExpr,
-        counts: IRUseCounts,
-        frame_id: int,
-        var_index: int,
-    ) -> bool:
-        """
-        Return True if *value_plan* can be safely inlined at its single use
-        site of *var_index* in *frame_id*.
-
-        The check depends on whether value_plan is a depth=0 local variable
-        reference:
-
-          MenaiIRVariable(var_type='local', depth=0):
-              Requires external_count == 0.  A depth=0 local reference is
-              frame-relative; substituting it inside a child lambda would
-              produce a reference with the wrong depth.
-
-          MenaiIRLambda:
-              Never inlined.  A lambda is a closure definition that may be
-              called many times even if its binding slot is captured only once.
-              Inlining it would duplicate the closure creation and — in a
-              cascade — all of its own free-variable loads, causing code
-              explosion rather than reduction.  Dead lambdas (total_count == 0)
-              are handled by MenaiIROptimizer instead.
-
-          All other value plan types:
-              external_count is irrelevant.  These types contain no
-              frame-relative addresses and can be substituted anywhere in the
-              tree, including inside lambda bodies and free_var_plans.
-
-        Note: total_count == 1 is checked by the caller (_inline_let) before
-        calling this method.  Dead bindings (total_count == 0) are left for
-        MenaiIROptimizer.
-        """
-        if isinstance(value_plan, MenaiIRLambda):
-            return False
-
-        if isinstance(value_plan, MenaiIRVariable):
-            if (value_plan.var_type == 'local'
-                    and value_plan.depth == 0
-                    ):
-                # Frame-relative reference — safe only when not captured.
-                return counts.external_count(frame_id, var_index) == 0
-
-            # Global variable: no frame-relative address concern.
-            return True
-
-        # All other node types (constants, calls, if-exprs, quotes,
-        # empty lists, errors, etc.) contain no frame-relative addresses.
-        return True

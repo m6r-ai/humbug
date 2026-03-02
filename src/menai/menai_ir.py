@@ -4,6 +4,21 @@ Compilation plan data structures for Menai two-phase compiler.
 The compilation plan represents the result of the analysis phase.
 It contains all the information needed for code generation without
 requiring any further analysis.
+
+Variable addressing
+-------------------
+MenaiIRVariable nodes are emitted with depth=-1, index=-1 (unresolved) by
+the IR builder and all IR transformation passes (closure converter, lambda
+lifter, optimisers).  MenaiIRAddresser runs once, as the final step before
+code generation, and fills in the correct depth and index for every local
+variable reference.  No pass upstream of MenaiIRAddresser should read or
+depend on depth or index.
+
+Slot allocation
+---------------
+MenaiIRLet and MenaiIRLetrec binding tuples carry only (name, value_plan).
+Slot indices are assigned entirely by MenaiIRAddresser in its single final
+pass.  max_locals on MenaiIRLambda is also computed and set by the addresser.
 """
 
 from dataclasses import dataclass, field
@@ -24,11 +39,12 @@ class MenaiIRVariable:
     name: str
     var_type: str       # 'local' or 'global'
     depth: int = -1     # Scope depth (0 for current frame, 1+ for parent frames).
-                        # -1 means unresolved — set by MenaiIRAddresser before codegen.
-    index: int = -1     # Variable index (local slot index for locals; unused for globals
-                        # until codegen assigns name-table indices).
-                        # -1 means unresolved — set by MenaiIRAddresser before codegen.
-    is_parent_ref: bool = False  # True if this loads from parent frame (for recursive bindings)
+                        # -1 means unresolved — filled in by MenaiIRAddresser.
+    index: int = -1     # Local slot index within the frame at 'depth'.
+                        # -1 means unresolved — filled in by MenaiIRAddresser.
+    is_parent_ref: bool = False
+                        # True if this is a recursive back-reference through
+                        # a lambda boundary to a letrec-bound name.
 
 
 @dataclass
@@ -54,8 +70,12 @@ class MenaiIRError:
 
 @dataclass
 class MenaiIRLet:
-    """Plan for compiling a let expression."""
-    bindings: List[tuple[str, 'MenaiIRExpr', int]]  # (name, value_plan, var_index)
+    """Plan for compiling a let expression.
+
+    Bindings are (name, value_plan) pairs.  Slot indices are assigned by
+    MenaiIRAddresser — no var_index is stored here.
+    """
+    bindings: List[tuple[str, 'MenaiIRExpr']]  # (name, value_plan)
     body_plan: 'MenaiIRExpr'
     in_tail_position: bool
 
@@ -67,15 +87,22 @@ class MenaiIRLetrec:
     After letrec splitting in the desugarer, every letrec reaching this point
     is guaranteed to be a single fully-mutually-recursive group of lambdas.
     All non-recursive and non-lambda bindings have been hoisted to let forms.
+
+    Bindings are (name, value_plan) pairs.  Slot indices are assigned by
+    MenaiIRAddresser — no var_index is stored here.
     """
-    bindings: List[tuple[str, 'MenaiIRExpr', int]]  # (name, value_plan, var_index)
+    bindings: List[tuple[str, 'MenaiIRExpr']]  # (name, value_plan)
     body_plan: 'MenaiIRExpr'
     in_tail_position: bool
 
 
 @dataclass
 class MenaiIRLambda:
-    """Plan for compiling a lambda expression."""
+    """Plan for compiling a lambda expression.
+
+    max_locals is computed and set by MenaiIRAddresser during its single
+    final pass.  All passes upstream of the addresser leave it as 0.
+    """
     params: List[str]
     body_plan: 'MenaiIRExpr'
     sibling_free_vars: List[str]       # Names captured from the immediately enclosing letrec group
@@ -84,8 +111,8 @@ class MenaiIRLambda:
     outer_free_var_plans: List['MenaiIRExpr']    # Plans for loading outer captures
     param_count: int
     is_variadic: bool  # True if last param is a rest parameter
-    max_locals: int  # Maximum locals needed in lambda body
-    binding_name: Optional[str] = None  # Name if bound in let/letrec (for recursion)
+    max_locals: int = 0  # Set by MenaiIRAddresser; 0 until then
+    binding_name: Optional[str] = None  # Name if bound in let/letrec (for recursion detection)
     source_line: int = 0  # Line number in source where this lambda is defined
     source_file: str = ""  # Source file name where this lambda is defined
 

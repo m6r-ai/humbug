@@ -17,21 +17,19 @@ Key distinctions from MenaiIRCopyPropagator tests
 --------------------------------------------------
 - The central case that copy propagation CANNOT handle but inline-once CAN:
   a single-use binding whose value is a call expression.
-- The lambda boundary rule is split:
-  - depth=0 local variable value: external_count == 0 required.
-  - all other value types (including calls): external_count irrelevant.
+- There is no lambda boundary rule: name-based substitution is always safe
+  across lambda boundaries because variables are symbolic until the addresser
+  runs.
 - Multi-use bindings (total_count > 1) are NOT inlined, regardless of value type.
 - Dead bindings (total_count == 0) are left for MenaiIROptimizer.
 - letrec bindings are never inlined.
 
 Notes on constructing test IR for lambda capture tests
 ------------------------------------------------------
-The use counter counts a free_var_plans entry _local(0, depth=0) as a *local*
-use of slot 0 in the enclosing frame, and a lambda body _local(0, depth=1) as
-an *external* use.  Having both would give total_count=2, making the binding
-ineligible.  Tests that want to exercise the external_count path with
-total_count=1 therefore omit free_var_plans and rely solely on the depth-1
-body reference to produce one external use.
+The use counter works by name.  A MenaiIRVariable(name='x', var_type='local',
+depth=-1, index=-1) in the lambda body is resolved to the enclosing let's
+binding of 'x' and counted as one use.  Tests that want exactly one use
+therefore place exactly one _named("x") reference in the tree.
 """
 
 from __future__ import annotations
@@ -77,6 +75,11 @@ def _local(index: int, depth: int = 0, is_parent_ref: bool = False) -> MenaiIRVa
         index=index,
         is_parent_ref=is_parent_ref,
     )
+
+
+def _named(name: str) -> MenaiIRVariable:
+    """Symbolic local variable reference (pre-addresser form)."""
+    return MenaiIRVariable(name=name, var_type='local', depth=-1, index=-1)
 
 
 def _global(name: str) -> MenaiIRVariable:
@@ -139,8 +142,8 @@ class TestSingleUseCallInlined:
         """
         call = _add_call(_const(3), _const(4))
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("r", call, 0)],
-            body_plan=_local(0),
+            bindings=[("r", call)],
+            body_plan=_named("r"),
             in_tail_position=True,
         ))
         result, changed = _run(ir)
@@ -163,8 +166,8 @@ class TestSingleUseCallInlined:
             in_tail_position=False,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("v", if_expr, 0)],
-            body_plan=_local(0),
+            bindings=[("v", if_expr)],
+            body_plan=_named("v"),
             in_tail_position=True,
         ))
         result, changed = _run(ir)
@@ -179,8 +182,8 @@ class TestSingleUseCallInlined:
         independently when tested in isolation.)
         """
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("k", _const(99), 0)],
-            body_plan=_local(0),
+            bindings=[("k", _const(99))],
+            body_plan=_named("k"),
             in_tail_position=True,
         ))
         result, changed = _run(ir)
@@ -204,12 +207,12 @@ class TestSingleUseCallInlined:
         total_count=1 → inlined.  Both collapse in one optimize() call.
         """
         inner_let = MenaiIRLet(
-            bindings=[("c", _mul_call(_local(0), _const(2)), 1)],
-            body_plan=_local(1),
+            bindings=[("c", _mul_call(_named("b"), _const(2)))],
+            body_plan=_named("c"),
             in_tail_position=True,
         )
         outer_let = MenaiIRLet(
-            bindings=[("b", _add_call(_const(1), _const(5)), 0)],
+            bindings=[("b", _add_call(_const(1), _const(5)))],
             body_plan=inner_let,
             in_tail_position=True,
         )
@@ -242,8 +245,8 @@ class TestMultiUseNotInlined:
         """
         call = _add_call(_const(3), _const(4))
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("r", call, 0)],
-            body_plan=_add_call(_local(0), _local(0)),
+            bindings=[("r", call)],
+            body_plan=_add_call(_named("r"), _named("r")),
             in_tail_position=True,
         ))
         _, changed = _run(ir)
@@ -256,8 +259,8 @@ class TestMultiUseNotInlined:
         inline-once must not, since its contract is total_count == 1.
         """
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("k", _const(7), 0)],
-            body_plan=_add_call(_local(0), _local(0)),
+            bindings=[("k", _const(7))],
+            body_plan=_add_call(_named("k"), _named("k")),
             in_tail_position=True,
         ))
         _, changed = _run(ir)
@@ -278,7 +281,7 @@ class TestDeadBindingNotTouched:
         """
         call = _add_call(_const(1), _const(2))
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("unused", call, 0)],
+            bindings=[("unused", call)],
             body_plan=_const(42),
             in_tail_position=True,
         ))
@@ -291,164 +294,160 @@ class TestDeadBindingNotTouched:
 # ---------------------------------------------------------------------------
 
 class TestLambdaBoundaryRule:
-    """Verify the split lambda boundary rule."""
+    """Verify that inlining works correctly across lambda boundaries."""
 
-    def test_local_var_value_not_inlined_when_captured(self):
+    def test_local_var_value_inlined_when_captured(self):
         """
-        A binding whose value is a depth=0 local variable reference is NOT
-        inlined when external_count > 0 (the depth would be wrong inside the
-        lambda body).
+        A binding whose value is a local variable reference IS inlined even
+        when captured by a child lambda.  With symbolic (name-based) variables,
+        there is no lambda boundary restriction.
 
-        The lambda body holds a depth-1 reference to slot 0 in the enclosing
-        frame (one external use, total_count=1).  free_var_plans is omitted so
-        the use counter sees exactly one use.  The binding is eligible by count
-        but blocked because its value is a local variable reference and
-        external_count == 1.
+        (let ((x other)) (lambda () x))
+        x is used once via outer_free_var_plans.  Its value is a symbolic
+        local var ref _named("other").  The binding should be inlined.
         """
         lam = MenaiIRLambda(
             params=[],
-            # depth=1 reference: this is the external use of slot 0
-            body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
+            body_plan=MenaiIRReturn(value_plan=_const(0)),  # body irrelevant here
             sibling_free_vars=[],
             sibling_free_var_plans=[],
             outer_free_vars=["x"],
-            outer_free_var_plans=[],
+            outer_free_var_plans=[_named("x")],  # one use of "x" in enclosing frame
             param_count=0,
             is_variadic=False,
-            max_locals=1,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", _local(index=5, depth=0), 0)],  # value is a local var ref
+            bindings=[("x", _named("other"))],  # value is a symbolic local var ref
             body_plan=lam,
             in_tail_position=True,
         ))
-        _, changed = _run(ir)
-        # external_count=1 and value is a local variable → NOT inlined.
-        assert not changed
+        result, changed = _run(ir)
+        # Symbolic local var ref + single use → IS inlined (no lambda boundary rule).
+        assert changed
+        assert isinstance(result, MenaiIRReturn)
+        opt_lam = result.value_plan
+        assert isinstance(opt_lam, MenaiIRLambda)
+        # The let collapsed; outer_free_var_plans now holds the inlined value.
+        assert len(opt_lam.outer_free_var_plans) == 1
+        assert isinstance(opt_lam.outer_free_var_plans[0], MenaiIRVariable)
+        assert opt_lam.outer_free_var_plans[0].name == "other"
 
     def test_call_value_inlined_even_when_captured(self):
         """
         A binding whose value is a call expression IS inlined even when
-        external_count > 0 (captured by a child lambda).  Call expressions
-        contain no frame-relative addresses.
+        captured by a child lambda.  With symbolic variables there is no
+        lambda boundary restriction.
 
-        The lambda body holds a depth-1 reference to slot 0 (one external use,
-        total_count=1).  free_var_plans is omitted to keep total_count=1.
-        The corrected rule allows inlining because the value is a call, not a
-        local variable reference.
+        (let ((result (integer+ x 1))) (lambda () result))
+        result is used once via outer_free_var_plans.  Its value is a call.
+        The binding should be inlined into outer_free_var_plans.
         """
-        x_ref = _local(index=5, depth=0)
+        x_ref = _named("x")
         call = _add_call(x_ref, _const(1))
 
         lam = MenaiIRLambda(
             params=[],
-            # depth=1 reference: the external use of slot 0
-            body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
+            body_plan=MenaiIRReturn(value_plan=_const(0)),  # body irrelevant here
             sibling_free_vars=[],
             sibling_free_var_plans=[],
             outer_free_vars=["result"],
-            outer_free_var_plans=[],
+            outer_free_var_plans=[_named("result")],  # one use of "result"
             param_count=0,
             is_variadic=False,
-            max_locals=1,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("result", call, 0)],
+            bindings=[("result", call)],
             body_plan=lam,
             in_tail_position=True,
         ))
         result, changed = _run(ir)
-        # Call value + external_count=1 → inlined (external_count irrelevant for calls).
+        # Call value + single use → inlined.
         assert changed
         assert isinstance(result, MenaiIRReturn)
         opt_lam = result.value_plan
         assert isinstance(opt_lam, MenaiIRLambda)
-        # The let collapsed.  The lambda body still holds its depth-1 reference
-        # (the substitution walk does not descend into child frame bodies).
-        body = opt_lam.body_plan
-        assert isinstance(body, MenaiIRReturn)
-        assert isinstance(body.value_plan, MenaiIRVariable)
-        assert body.value_plan.depth == 1
+        # The let collapsed; outer_free_var_plans now holds the inlined call.
+        assert len(opt_lam.outer_free_var_plans) == 1
+        assert isinstance(opt_lam.outer_free_var_plans[0], MenaiIRCall)
+        assert opt_lam.outer_free_var_plans[0].builtin_name == 'integer+'
 
     def test_constant_value_inlined_when_captured(self):
         """
         A single-use constant binding is inlined even when captured.
-        Constants contain no frame-relative addresses.
+        With symbolic variables there is no lambda boundary restriction.
 
-        The lambda body holds a depth-1 reference to slot 0 (one external use,
-        total_count=1).  free_var_plans is omitted to keep total_count=1.
+        (let ((k 42)) (lambda () k))
+        k is used once via outer_free_var_plans.  Its value is a constant.
+        The binding should be inlined into outer_free_var_plans.
         """
         lam = MenaiIRLambda(
             params=[],
-            body_plan=MenaiIRReturn(value_plan=_local(index=0, depth=1)),
+            body_plan=MenaiIRReturn(value_plan=_const(0)),  # body irrelevant here
             sibling_free_vars=[],
             sibling_free_var_plans=[],
             outer_free_vars=["k"],
-            outer_free_var_plans=[],
+            outer_free_var_plans=[_named("k")],  # one use of "k"
             param_count=0,
             is_variadic=False,
-            max_locals=1,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("k", _const(42), 0)],
+            bindings=[("k", _const(42))],
             body_plan=lam,
             in_tail_position=True,
         ))
         result, changed = _run(ir)
-        # Constant + external_count=1 → inlined.
+        # Constant + single use → inlined.
         assert changed
         assert isinstance(result, MenaiIRReturn)
         opt_lam = result.value_plan
         assert isinstance(opt_lam, MenaiIRLambda)
-        # Let collapsed; body still has depth-1 ref (child frame, not substituted).
-        assert len(opt_lam.outer_free_var_plans) == 0
-        body = opt_lam.body_plan
-        assert isinstance(body, MenaiIRReturn)
-        assert isinstance(body.value_plan, MenaiIRVariable)
-        assert body.value_plan.depth == 1
+        # Let collapsed; outer_free_var_plans now holds the inlined constant.
+        assert len(opt_lam.outer_free_var_plans) == 1
+        assert isinstance(opt_lam.outer_free_var_plans[0], MenaiIRConstant)
+        assert opt_lam.outer_free_var_plans[0].value == MenaiInteger(42)
 
     def test_local_var_value_inlined_when_not_captured(self):
         """
-        A single-use depth=0 local variable binding IS inlined when
-        external_count == 0.
+        A single-use local variable binding is inlined (no lambda capture
+        involved — the use is directly in the let body).
         """
-        # (let ((y x)) y)  where x is slot 5, y is slot 0, body uses y once.
+        # (let ((y other)) y)  where other is some other binding, body uses y once.
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("y", _local(index=5, depth=0), 0)],
-            body_plan=_local(0),
+            bindings=[("y", _named("other"))],
+            body_plan=_named("y"),
             in_tail_position=True,
         ))
         result, changed = _run(ir)
         assert changed
         assert isinstance(result, MenaiIRReturn)
-        # Body should now be _local(5) directly.
+        # Body should now be _named("other") directly.
         assert isinstance(result.value_plan, MenaiIRVariable)
-        assert result.value_plan.index == 5
+        assert result.value_plan.name == "other"
 
     def test_substitution_does_not_cross_lambda_body(self):
         """
-        Substitution does NOT replace depth=0 references inside a lambda body
-        (those refer to the lambda's own frame, not the enclosing let's frame).
+        Substitution does NOT replace a lambda param reference inside the
+        lambda body, even if the param name matches a pending substitution
+        in the enclosing scope.
 
-        (let ((r (integer+ 1 2)))   ; r at slot 0, no uses (lambda has no free_var_plans)
-          (lambda (p) p))           ; lambda param p at slot 0 in child frame
+        (let ((r (integer+ 1 2)))   ; r has no uses → dead
+          (lambda (p) p))           ; lambda param p shadows any outer "p"
 
-        The lambda has no free_var_plans referencing slot 0 of the enclosing
-        frame, so total_count(frame=0, slot=0) = 0.  The binding is dead —
+        The lambda has no outer_free_var_plans referencing "r" in the enclosing
+        frame, so total_count(frame=0, "r") = 0.  The binding is dead —
         inline-once does not touch it (left for MenaiIROptimizer).  The
-        lambda body's _local(0) is the lambda's own param and is never touched.
+        lambda body's _named("p") refers to the lambda's own param.
         """
         lam = MenaiIRLambda(
             params=["p"],
-            body_plan=MenaiIRReturn(value_plan=_local(0)),  # lambda's own param slot 0
+            body_plan=MenaiIRReturn(value_plan=_named("p")),  # lambda's own param
             sibling_free_vars=[], sibling_free_var_plans=[], outer_free_vars=[],
             outer_free_var_plans=[],
             param_count=1,
             is_variadic=False,
-            max_locals=1,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("r", _add_call(_const(1), _const(2)), 0)],  # dead: total_count=0
+            bindings=[("r", _add_call(_const(1), _const(2)))],  # dead: total_count=0
             body_plan=lam,
             in_tail_position=True,
         ))
@@ -460,11 +459,11 @@ class TestLambdaBoundaryRule:
         assert isinstance(let_node, MenaiIRLet)
         opt_lam = let_node.body_plan
         assert isinstance(opt_lam, MenaiIRLambda)
-        # The lambda body must still reference slot 0 (its own param).
+        # The lambda body must still reference "p" (its own param).
         body = opt_lam.body_plan
         assert isinstance(body, MenaiIRReturn)
         assert isinstance(body.value_plan, MenaiIRVariable)
-        assert body.value_plan.index == 0
+        assert body.value_plan.name == "p"
         assert body.value_plan.var_type == 'local'
 
 
@@ -480,8 +479,8 @@ class TestLetrecNotInlined:
         Even a single-use constant binding inside letrec is not inlined.
         """
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
-            bindings=[("k", _const(42), 0)],
-            body_plan=_local(0),
+            bindings=[("k", _const(42))],
+            body_plan=_named("k"),
             in_tail_position=True,
         ))
         _, changed = _run(ir)
@@ -492,8 +491,8 @@ class TestLetrecNotInlined:
         A single-use call binding inside letrec is not inlined.
         """
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
-            bindings=[("r", _add_call(_const(1), _const(2)), 0)],
-            body_plan=_local(0),
+            bindings=[("r", _add_call(_const(1), _const(2)))],
+            body_plan=_named("r"),
             in_tail_position=True,
         ))
         _, changed = _run(ir)
@@ -505,12 +504,12 @@ class TestLetrecNotInlined:
         the letrec body ARE still optimized.
         """
         inner_let = MenaiIRLet(
-            bindings=[("r", _add_call(_const(3), _const(4)), 1)],
-            body_plan=_local(1),
+            bindings=[("r", _add_call(_const(3), _const(4)))],
+            body_plan=_named("r"),
             in_tail_position=True,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLetrec(
-            bindings=[("f", _const(0), 0)],
+            bindings=[("f", _const(0))],
             body_plan=inner_let,
             in_tail_position=True,
         ))
@@ -539,20 +538,20 @@ class TestTailRecursiveSentinel:
         """
         inner_call = _add_call(_const(1), _const(2))  # value for slot 1
         tail_call = MenaiIRCall(
-            func_plan=_local(0),                 # real callee reference at slot 0
-            arg_plans=[_local(1)],               # uses slot 1 once
+            func_plan=_named("f"),               # callee reference by name
+            arg_plans=[_named("x")],             # uses "x" once
             is_tail_call=True,
             is_builtin=False,
             builtin_name=None,
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("x", inner_call, 1)],     # slot 1, single-use
+            bindings=[("x", inner_call)],        # single-use
             body_plan=tail_call,
             in_tail_position=True,
         ))
         result = _run_inline(ir)
         assert isinstance(result, MenaiIRReturn)
-        # Slot 1 inlined: let collapsed, body is the tail_call with slot 1 replaced.
+        # "x" inlined: let collapsed, body is the tail_call with "x" replaced.
         call = result.value_plan
         assert isinstance(call, MenaiIRCall)
         assert call.is_tail_call
@@ -566,25 +565,29 @@ class TestTailRecursiveSentinel:
 # ---------------------------------------------------------------------------
 
 class TestShadowing:
-    """Verify that inner let bindings with the same slot index are not clobbered."""
+    """Verify that inner let bindings with the same name shadow outer substitutions."""
 
     def test_inner_let_shadows_outer_inlining(self):
         """
-        If an inner let introduces a binding at the same slot index as an
-        outer binding being inlined, the inner binding takes precedence inside
-        its own body.
+        If an inner let introduces a binding with the same name as an outer
+        binding being inlined, the inner binding shadows the outer substitution
+        inside the inner body.
 
-        Outer: slot 0 = (integer+ 3 4)  (single-use call)
-        Inner: slot 0 = (integer+ 1 2)  (single-use call, shadows outer)
-        Inner body: uses slot 0 → should get (integer+ 1 2), not (integer+ 3 4).
+        Outer: "x" = (integer+ 3 4)  — used once in inner binding value
+        Inner: "x" = (integer+ x 0)  — uses outer "x" in value, inner "x" in body
+        Inner body: _named("x") → should get inner (integer+ x 0) value,
+                    not outer (integer+ 3 4).
+
+        After inlining outer "x" into inner value: inner value = (integer+ (integer+ 3 4) 0)
+        After inlining inner "x" into inner body: result = (integer+ (integer+ 3 4) 0)
         """
         inner_let = MenaiIRLet(
-            bindings=[("inner", _add_call(_const(1), _const(2)), 0)],
-            body_plan=_local(0),
+            bindings=[("x", _add_call(_named("x"), _const(0)))],  # value uses outer "x"
+            body_plan=_named("x"),                                 # body uses inner "x"
             in_tail_position=True,
         )
         outer_let = MenaiIRLet(
-            bindings=[("outer", _add_call(_const(3), _const(4)), 0)],
+            bindings=[("x", _add_call(_const(3), _const(4)))],    # outer "x"
             body_plan=inner_let,
             in_tail_position=True,
         )
@@ -592,15 +595,18 @@ class TestShadowing:
         result, changed = _run(ir)
         assert changed
         assert isinstance(result, MenaiIRReturn)
-        # Both lets should have collapsed; the final value is the inner call.
+        # Both lets collapsed; the final value is the inlined inner call.
         final = result.value_plan
         assert isinstance(final, MenaiIRCall)
         assert final.builtin_name == 'integer+'
-        # The inner call's args are (1, 2), not (3, 4).
-        assert isinstance(final.arg_plans[0], MenaiIRConstant)
-        assert final.arg_plans[0].value == MenaiInteger(1)
+        # First arg is the inlined outer "x" = (integer+ 3 4).
+        assert isinstance(final.arg_plans[0], MenaiIRCall)
+        assert final.arg_plans[0].builtin_name == 'integer+'
+        assert isinstance(final.arg_plans[0].arg_plans[0], MenaiIRConstant)
+        assert final.arg_plans[0].arg_plans[0].value == MenaiInteger(3)
+        # Second arg is the constant 0.
         assert isinstance(final.arg_plans[1], MenaiIRConstant)
-        assert final.arg_plans[1].value == MenaiInteger(2)
+        assert final.arg_plans[1].value == MenaiInteger(0)
 
 
 # ---------------------------------------------------------------------------
@@ -614,8 +620,8 @@ class TestInliningsProperty:
         """When no binding is inlined, changed is False."""
         # Two-use binding — not eligible.
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("r", _add_call(_const(1), _const(2)), 0)],
-            body_plan=_add_call(_local(0), _local(0)),
+            bindings=[("r", _add_call(_const(1), _const(2)))],
+            body_plan=_add_call(_named("r"), _named("r")),
             in_tail_position=True,
         ))
         inliner = MenaiIRInlineOnce()
@@ -626,8 +632,8 @@ class TestInliningsProperty:
     def test_one_inlining_changed_true(self):
         """When one binding is inlined, changed is True and inlinings == 1."""
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("r", _add_call(_const(1), _const(2)), 0)],
-            body_plan=_local(0),
+            bindings=[("r", _add_call(_const(1), _const(2)))],
+            body_plan=_named("r"),
             in_tail_position=True,
         ))
         inliner = MenaiIRInlineOnce()
@@ -638,8 +644,8 @@ class TestInliningsProperty:
     def test_inlinings_reset_between_calls(self):
         """The inlinings counter is reset on each call to optimize()."""
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("r", _add_call(_const(1), _const(2)), 0)],
-            body_plan=_local(0),
+            bindings=[("r", _add_call(_const(1), _const(2)))],
+            body_plan=_named("r"),
             in_tail_position=True,
         ))
         inliner = MenaiIRInlineOnce()
@@ -660,13 +666,13 @@ class TestFlagsPreserved:
 
     def test_in_tail_position_preserved_on_remaining_let(self):
         """in_tail_position is carried through to the optimized let."""
-        # slot 0: single-use call (inlined), slot 1: two-use (kept).
+        # "r": single-use call (inlined), "s": two-use (kept).
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
             bindings=[
-                ("r", _add_call(_const(1), _const(2)), 0),  # inlined (single-use)
-                ("s", _const(5), 1),                        # kept (two uses in body)
+                ("r", _add_call(_const(1), _const(2))),  # inlined (single-use)
+                ("s", _const(5)),                         # kept (two uses in body)
             ],
-            body_plan=_add_call(_local(1), _local(1)),
+            body_plan=_add_call(_named("s"), _named("s")),
             in_tail_position=True,
         ))
         result = _run_inline(ir)
@@ -677,26 +683,26 @@ class TestFlagsPreserved:
 
     def test_lambda_metadata_preserved(self):
         """Lambda metadata (params, max_locals, etc.) is preserved after inlining."""
-        # The lambda has no free_var_plans referencing slot 0 of the enclosing
+        # The lambda has no outer_free_var_plans referencing "r" in the enclosing
         # frame, so the binding is dead (total_count=0) — not inlined, let kept.
         # We verify the lambda's metadata passes through the optimization walk
         # unchanged.
         lam = MenaiIRLambda(
             params=["a", "b"],
-            body_plan=MenaiIRReturn(value_plan=_local(0)),
+            body_plan=MenaiIRReturn(value_plan=_named("a")),
             sibling_free_vars=["sibling"],
             sibling_free_var_plans=[],
             outer_free_vars=[],
             outer_free_var_plans=[],
             param_count=2,
             is_variadic=False,
-            max_locals=5,
+            max_locals=0,
             binding_name="my_func",
             source_line=42,
             source_file="test.menai",
         )
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
-            bindings=[("r", _add_call(_const(1), _const(2)), 0)],  # dead: total_count=0
+            bindings=[("r", _add_call(_const(1), _const(2)))],  # dead: total_count=0
             body_plan=lam,
             in_tail_position=True,
         ))
@@ -708,7 +714,7 @@ class TestFlagsPreserved:
         opt_lam = let_node.body_plan
         assert isinstance(opt_lam, MenaiIRLambda)
         assert opt_lam.params == ["a", "b"]
-        assert opt_lam.max_locals == 5
+        assert opt_lam.max_locals == 0
         assert opt_lam.binding_name == "my_func"
         assert opt_lam.sibling_free_vars == ["sibling"]
         assert opt_lam.source_line == 42

@@ -116,35 +116,19 @@ class MenaiCompiler:
         for ast_pass in self.ast_passes:
             desugared_ast = ast_pass.optimize(desugared_ast)
 
-        # Analyze free variables on the final post-optimization AST.
-        # Must run after AST constant folding (which may eliminate lambda nodes)
-        # and before the IR builder.  Result unused for now — Step 4 (closure conversion) will consume it.
+        # Analyze free variables (result currently unused — kept for future use).
         _free_var_info = self.free_var_analyzer.analyze(desugared_ast)
 
         ir = self.ir_builder.build(desugared_ast)
 
-        # Resolve variable names to frame-relative addresses.
-        # This must run after the IR builder (which leaves depth=-1, index=-1)
-        # and before any IR optimization passes (which read depth and index).
-        ir = self.ir_addresser.address(ir)
-
-        # Closure conversion: promote free variables to explicit extra parameters
-        # on each lambda, making every lambda a closed term (free_vars == []).
-        # Runs after the first addresser pass so free_var_plans have resolved
-        # addresses.
+        # Closure conversion (currently an identity pass / insertion point).
         ir = self.closure_converter.convert(ir)
 
-        # Lambda lifting: replace every capturing lambda
-        # with a let-bound closed helper plus a thin wrapper that captures
-        # everything via MAKE_CLOSURE and delegates to the helper.  After this
-        # pass every MenaiIRLambda has free_vars==[] and parent_refs==[].
+        # Lambda lifting: replace every capturing lambda with a closed helper
+        # plus a thin wrapper.  Variables remain symbolic throughout.
         ir = self.lambda_lifter.lift(ir)
 
-        # Re-resolve all variable addresses after the structural changes.
-        ir = self.ir_addresser.address(ir)
-
-        # IR-level optimization: run each pass to fixed point, then repeat the
-        # full sequence until no pass makes any further changes.
+        # IR-level optimization passes (all work on symbolic variables).
         if self.ir_passes:
             changed = True
             while changed:
@@ -152,6 +136,10 @@ class MenaiCompiler:
                 for ir_pass in self.ir_passes:
                     ir, pass_changed = ir_pass.optimize(ir)
                     changed = changed or pass_changed
+
+        # Single final address resolution: allocate all slots, resolve all
+        # variable references, and set max_locals on every lambda.
+        ir = self.ir_addresser.address(ir)
 
         bytecode = self.codegen.generate(ir, name)
 

@@ -1,37 +1,50 @@
 """
 Menai IR Use Counter - pure analysis pass over the IR tree.
 
-Walks an MenaiIRExpr tree and counts every reference to every locally-bound
-variable, producing an IRUseCounts annotation that downstream passes (e.g.
-MenaiIROptimizer) can consume without re-deriving the same information.
+Walks a MenaiIRExpr tree and counts every reference to every locally-bound
+variable, producing an IRUseCounts annotation that downstream passes
+(MenaiIRCopyPropagator, MenaiIRInlineOnce, MenaiIROptimizer) can consume.
 
-Key concepts
-------------
-- A *frame* corresponds to a single lambda (or the top-level module scope).
-  Each frame owns a contiguous set of local variable slots (indexed by int).
-- An *MenaiIRVariable* with var_type='local' and depth=0 refers to a slot in
-  the *current* frame; depth=1 refers to the immediately enclosing lambda's
-  frame, and so on.
-- Uses are split into two buckets per frame:
-    local    — references that occur *within* the frame itself
-    external — references that cross at least one lambda boundary (i.e. the
-               variable is captured by a child lambda).  These are recorded on
-               the *defining* frame so the optimizer can tell whether a binding
-               is reachable from outside its own lambda.
+Design
+------
+Variables in the IR are symbolic — MenaiIRVariable nodes carry a name and
+var_type but depth=-1 and index=-1 until MenaiIRAddresser runs (after all
+optimisation passes).  The use counter therefore works entirely on names,
+maintaining its own scope chain to resolve each variable reference to the
+frame that owns it.
 
-letrec / recursive bindings
----------------------------
-MenaiIRVariable.is_parent_ref marks back-references that implement recursion
-(LOAD_PARENT_VAR in the VM).  These are counted in the 'local' bucket of the
-*defining* frame (depth tells us which frame owns the slot).  Callers can
-inspect is_parent_ref on individual variable nodes when they need to distinguish
-self-calls from external uses.
+A *frame* corresponds to a single lambda (or the top-level module scope).
+Each frame owns a set of variable names (its parameters and any let/letrec
+bindings within it).  Use counts are keyed by (frame_id, name).
+
+There is no local/external split.  A use is simply a use of a name — the
+frame_id tells us which frame's binding is being referenced, regardless of
+whether the reference crosses lambda boundaries.
+
+Scope chain
+-----------
+The counter maintains a scope_stack: List[Dict[str, int]] where each entry
+maps name → frame_id.  When a MenaiIRLambda is entered, a new scope level
+is pushed with the lambda's params and free_vars mapped to the lambda's own
+frame_id.  When a MenaiIRLet or MenaiIRLetrec is encountered, its binding
+names are pushed onto the *current* lambda's scope level (they share the
+same frame_id as the enclosing lambda).
+
+Resolution: to find the defining frame for a name, search the scope_stack
+from innermost to outermost.  The first match gives the frame_id.
+
+is_parent_ref
+-------------
+MenaiIRVariable.is_parent_ref marks recursive back-references through a
+lambda boundary to a letrec-bound name.  These are counted normally — they
+are uses of the defining frame's binding.  Callers that need to distinguish
+self-calls can inspect is_parent_ref on individual variable nodes.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from menai.menai_ir import (
     MenaiIRExpr,
@@ -53,16 +66,14 @@ from menai.menai_ir import (
 @dataclass
 class FrameUseCounts:
     """
-    Use counts for all local variable slots within a single lambda frame.
+    Use counts for bindings within a single lambda frame.
 
-    local    — uses that occur within this frame (including is_parent_ref
-               back-references from recursive lambdas *inside* this frame).
-    external — uses that cross at least one lambda boundary outward from this
-               frame (i.e. the slot is captured as a free variable by a nested
-               lambda).  A slot can appear in both buckets simultaneously.
+    Keyed by binding_id — the id() of the binding tuple (name, value_plan)
+    from the MenaiIRLet or MenaiIRLetrec node, or a synthetic id for lambda
+    params/free-vars.  Using id() of the tuple object gives each binding a
+    unique identity even when two bindings share the same name (shadowing).
     """
-    local: Dict[int, int] = field(default_factory=dict)     # slot → count
-    external: Dict[int, int] = field(default_factory=dict)  # slot → count
+    counts: Dict[int, int] = field(default_factory=dict)  # binding_id → use count
 
 
 @dataclass
@@ -77,24 +88,16 @@ class IRUseCounts:
     lambda_frame_ids
         Maps id(MenaiIRLambda) → frame_id so callers can look up the
         FrameUseCounts for a specific lambda node directly.
-        Using id() is safe because IRUseCounts must not outlive the IR tree
-        it was built from (the IR is immutable; no node is ever replaced in
-        place).
     """
     frames: List[FrameUseCounts] = field(default_factory=list)
     lambda_frame_ids: Dict[int, int] = field(default_factory=dict)
 
-    def local_count(self, frame_id: int, var_index: int) -> int:
-        """Uses of var_index that occur *within* frame frame_id."""
-        return self.frames[frame_id].local.get(var_index, 0)
+    def total_count(self, frame_id: int, binding_id: int) -> int:
+        """Total uses of the binding identified by *binding_id* within *frame_id*."""
+        if frame_id >= len(self.frames):
 
-    def external_count(self, frame_id: int, var_index: int) -> int:
-        """Uses of var_index from frame frame_id captured by child lambdas."""
-        return self.frames[frame_id].external.get(var_index, 0)
-
-    def total_count(self, frame_id: int, var_index: int) -> int:
-        """Total uses: local + external captures."""
-        return self.local_count(frame_id, var_index) + self.external_count(frame_id, var_index)
+            return 0
+        return self.frames[frame_id].counts.get(binding_id, 0)
 
 
 class MenaiIRUseCounter:
@@ -106,7 +109,7 @@ class MenaiIRUseCounter:
     Usage::
 
         counts = MenaiIRUseCounter().count(ir)
-        n = counts.total_count(frame_id=0, var_index=3)
+        n = counts.total_count(frame_id=0, name='x')
     """
 
     def count(self, ir: MenaiIRExpr) -> IRUseCounts:
@@ -114,154 +117,185 @@ class MenaiIRUseCounter:
         Walk *ir* and return a fully populated IRUseCounts.
 
         Args:
-            ir: Root of the IR tree (output of MenaiIRBuilder.build()).
+            ir: Root of the IR tree.
 
         Returns:
             IRUseCounts annotation for the entire tree.
         """
         result = IRUseCounts()
         module_frame_id = self._push_frame(result)
-        self._walk(ir, result, frame_stack=[module_frame_id])
+
+        # scope_stack: list of dicts mapping name → frame_id.
+        # Each dict corresponds to one scope level; multiple levels can share
+        # the same frame_id (let/letrec within a lambda do not create a new frame).
+        scope_stack: List[Dict[str, int]] = [{}]
+        self._walk(ir, result, scope_stack, module_frame_id)
         return result
 
     def _push_frame(self, result: IRUseCounts) -> int:
-        """Append a fresh FrameUseCounts and return its index."""
+        """Append a fresh FrameUseCounts and return its frame_id."""
         frame_id = len(result.frames)
         result.frames.append(FrameUseCounts())
         return frame_id
 
-    def _inc_local(self, result: IRUseCounts, frame_id: int, var_index: int) -> None:
-        counts = result.frames[frame_id].local
-        counts[var_index] = counts.get(var_index, 0) + 1
+    def _inc(self, result: IRUseCounts, frame_id: int, binding_id: int) -> None:
+        """Increment the use count for the given binding."""
+        counts = result.frames[frame_id].counts
+        counts[binding_id] = counts.get(binding_id, 0) + 1
 
-    def _inc_external(self, result: IRUseCounts, frame_id: int, var_index: int) -> None:
-        counts = result.frames[frame_id].external
-        counts[var_index] = counts.get(var_index, 0) + 1
-
-    def _walk(self, ir: MenaiIRExpr, result: IRUseCounts,
-              frame_stack: List[int]) -> None:
+    def _resolve_name(self, name: str, scope_stack: List[Dict[str, int]]) -> Optional[tuple]:
         """
-        Recursively walk *ir*, updating *result* in place.
-
-        frame_stack is a list of frame IDs from outermost (index 0) to
-        current (index -1).  It is never mutated; child calls receive a
-        new list extended by one element when crossing a lambda boundary.
+        Search scope_stack (innermost first) for *name*.
+        Returns (frame_id, binding_id) of the defining binding, or None if not found.
         """
+        for scope in reversed(scope_stack):
+            if name in scope:
+                return scope[name]
+        return None
+
+    def _walk(
+        self,
+        ir: MenaiIRExpr,
+        result: IRUseCounts,
+        scope_stack: List[Dict[str, int]],
+        current_frame_id: int,
+    ) -> None:
+        """Recursively walk *ir*, updating *result* in place."""
+
         if isinstance(ir, MenaiIRVariable):
-            self._walk_variable(ir, result, frame_stack)
+            self._walk_variable(ir, result, scope_stack)
 
         elif isinstance(ir, MenaiIRLambda):
-            self._walk_lambda(ir, result, frame_stack)
+            self._walk_lambda(ir, result, scope_stack, current_frame_id)
 
         elif isinstance(ir, MenaiIRLet):
-            self._walk_let(ir, result, frame_stack)
+            self._walk_let(ir, result, scope_stack, current_frame_id)
 
         elif isinstance(ir, MenaiIRLetrec):
-            self._walk_letrec(ir, result, frame_stack)
+            self._walk_letrec(ir, result, scope_stack, current_frame_id)
 
         elif isinstance(ir, MenaiIRIf):
-            self._walk(ir.condition_plan, result, frame_stack)
-            self._walk(ir.then_plan, result, frame_stack)
-            self._walk(ir.else_plan, result, frame_stack)
+            self._walk(ir.condition_plan, result, scope_stack, current_frame_id)
+            self._walk(ir.then_plan, result, scope_stack, current_frame_id)
+            self._walk(ir.else_plan, result, scope_stack, current_frame_id)
 
         elif isinstance(ir, MenaiIRCall):
-            self._walk_call(ir, result, frame_stack)
+            self._walk(ir.func_plan, result, scope_stack, current_frame_id)
+            for arg in ir.arg_plans:
+                self._walk(arg, result, scope_stack, current_frame_id)
 
         elif isinstance(ir, MenaiIRReturn):
-            self._walk(ir.value_plan, result, frame_stack)
+            self._walk(ir.value_plan, result, scope_stack, current_frame_id)
 
         elif isinstance(ir, MenaiIRTrace):
             for msg in ir.message_plans:
-                self._walk(msg, result, frame_stack)
-            self._walk(ir.value_plan, result, frame_stack)
+                self._walk(msg, result, scope_stack, current_frame_id)
+            self._walk(ir.value_plan, result, scope_stack, current_frame_id)
 
         elif isinstance(ir, (MenaiIRConstant, MenaiIRQuote, MenaiIREmptyList, MenaiIRError)):
-            # Leaf nodes with no variable references — nothing to count.
-            pass
+            pass  # Leaf nodes — nothing to count.
 
         else:
             raise TypeError(f"MenaiIRUseCounter: unhandled IR node type {type(ir).__name__}")
 
-    def _walk_variable(self, ir: MenaiIRVariable, result: IRUseCounts,
-                       frame_stack: List[int]) -> None:
+    def _walk_variable(
+        self,
+        ir: MenaiIRVariable,
+        result: IRUseCounts,
+        scope_stack: List[Dict[str, int]],
+    ) -> None:
         """Count a variable reference."""
         if ir.var_type != 'local':
-            # Global / builtin — no binding to count.
-            return
+            return  # Globals have no binding to count.
 
-        depth = ir.depth
-        if depth >= len(frame_stack):
-            # Defensive: depth exceeds frame stack depth — skip rather than crash.
-            return
+        resolved = self._resolve_name(ir.name, scope_stack)
+        if resolved is not None:
+            frame_id, binding_id = resolved
+            self._inc(result, frame_id, binding_id)
 
-        # Resolve to the defining frame.
-        # frame_stack[-1] is current frame, frame_stack[-(1+depth)] is the
-        # frame 'depth' lambda boundaries above the current one.
-        defining_frame_id = frame_stack[-(1 + depth)]
-
-        if depth == 0:
-            # Same frame — local use.
-            self._inc_local(result, defining_frame_id, ir.index)
-
-        else:
-            # Cross-frame reference — this is a capture (free variable use).
-            # Count it as 'external' on the defining frame.
-            self._inc_external(result, defining_frame_id, ir.index)
-
-    def _walk_lambda(self, ir: MenaiIRLambda, result: IRUseCounts,
-                     frame_stack: List[int]) -> None:
+    def _walk_lambda(
+        self,
+        ir: MenaiIRLambda,
+        result: IRUseCounts,
+        scope_stack: List[Dict[str, int]],
+        current_frame_id: int,
+    ) -> None:
         """
         Walk a lambda node.
 
-        free_var_plans load variables from the *current* frame (they are
-        evaluated in the enclosing scope to build the closure), so they are
-        walked with the current frame_stack.
+        free_var_plans are evaluated in the enclosing frame — walk them with
+        the current scope_stack.
 
-        The lambda body is walked in a new frame pushed onto the stack.
+        The lambda body is walked in a new frame with a new scope level
+        containing the lambda's params and captured free vars.
         """
         # Assign a new frame to this lambda.
         lambda_frame_id = self._push_frame(result)
         result.lambda_frame_ids[id(ir)] = lambda_frame_id
 
-        # Free variable loads (sibling and outer) happen in the *enclosing* frame.
+        # Walk free_var_plans in the enclosing scope (they load from there).
         for fv_plan in ir.sibling_free_var_plans + ir.outer_free_var_plans:
-            self._walk(fv_plan, result, frame_stack)
+            self._walk(fv_plan, result, scope_stack, current_frame_id)
 
-        # Walk the body in the new frame.
-        self._walk(ir.body_plan, result, frame_stack + [lambda_frame_id])
+        # Build the lambda's own scope: params + captured free vars → lambda_frame_id.
+        # Each param/free-var gets a synthetic binding_id (a fresh negative integer
+        # to avoid colliding with id() values from binding tuples).
+        lambda_scope: Dict[str, tuple] = {}
+        for name in ir.params + ir.sibling_free_vars + ir.outer_free_vars:
+            synthetic_id = -id(ir) - hash(name)  # unique per (lambda, name)
+            lambda_scope[name] = (lambda_frame_id, synthetic_id)
 
-    def _walk_let(self, ir: MenaiIRLet, result: IRUseCounts,
-                  frame_stack: List[int]) -> None:
+        child_stack = scope_stack + [lambda_scope]
+        self._walk(ir.body_plan, result, child_stack, lambda_frame_id)
+
+    def _walk_let(
+        self,
+        ir: MenaiIRLet,
+        result: IRUseCounts,
+        scope_stack: List[Dict[str, int]],
+        current_frame_id: int,
+    ) -> None:
         """
         Walk a let node.
 
-        Binding value expressions and the body all live in the same frame —
-        let does not introduce a new lambda boundary.
+        Binding values are walked in the current scope (parallel let semantics).
+        The body is walked with a new scope level containing the let's bindings,
+        all mapped to the current frame_id (let does not create a new frame).
         """
-        for _name, value_plan, _idx in ir.bindings:
-            self._walk(value_plan, result, frame_stack)
+        for _name, value_plan, *_ in ir.bindings:
+            self._walk(value_plan, result, scope_stack, current_frame_id)
 
-        self._walk(ir.body_plan, result, frame_stack)
+        # Each binding tuple gets a unique binding_id via id().
+        # The scope maps name → (frame_id, binding_id) so shadowed names are distinct.
+        let_scope: Dict[str, tuple] = {
+            name: (current_frame_id, id(binding))
+            for binding in ir.bindings
+            for name, *_ in [binding]
+        }
+        body_stack = scope_stack + [let_scope]
+        self._walk(ir.body_plan, result, body_stack, current_frame_id)
 
-    def _walk_letrec(self, ir: MenaiIRLetrec, result: IRUseCounts,
-                     frame_stack: List[int]) -> None:
+    def _walk_letrec(
+        self,
+        ir: MenaiIRLetrec,
+        result: IRUseCounts,
+        scope_stack: List[Dict[str, int]],
+        current_frame_id: int,
+    ) -> None:
         """
         Walk a letrec node.
 
-        Same frame rules as let.  Recursive back-references (is_parent_ref)
-        will be counted as local uses of the defining frame's slot, which is
-        correct — they are references within the same frame even though they
-        cross a lambda boundary textually.  The is_parent_ref flag on the
-        variable node allows callers to distinguish them if needed.
+        All binding names are in scope for both binding values and the body
+        (mutual recursion).  Like let, letrec does not create a new frame.
         """
-        for _name, value_plan, _idx in ir.bindings:
-            self._walk(value_plan, result, frame_stack)
+        letrec_scope: Dict[str, tuple] = {
+            name: (current_frame_id, id(binding))
+            for binding in ir.bindings
+            for name, *_ in [binding]
+        }
+        inner_stack = scope_stack + [letrec_scope]
 
-        self._walk(ir.body_plan, result, frame_stack)
+        for _name, value_plan, *_ in ir.bindings:
+            self._walk(value_plan, result, inner_stack, current_frame_id)
 
-    def _walk_call(self, ir: MenaiIRCall, result: IRUseCounts,
-                   frame_stack: List[int]) -> None:
-        """Walk a call node."""
-        self._walk(ir.func_plan, result, frame_stack)
-        for arg_plan in ir.arg_plans:
-            self._walk(arg_plan, result, frame_stack)
+        self._walk(ir.body_plan, result, inner_stack, current_frame_id)

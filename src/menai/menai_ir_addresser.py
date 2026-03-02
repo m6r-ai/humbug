@@ -1,24 +1,24 @@
 """
-Menai IR Addresser - resolves variable names to frame-relative addresses.
+Menai IR Addresser - resolves symbolic variable names to frame-relative slot addresses.
 
-This pass runs on the IR tree after MenaiIRBuilder has constructed it and
-before any IR optimization passes or code generation.  It walks every
-MenaiIRVariable node in the tree and fills in the depth and index fields,
-which the IR builder leaves as sentinels (-1) to indicate "not yet resolved".
+This pass runs ONCE, as the final step before code generation, after all IR
+transformation and optimisation passes are complete.  It walks every
+MenaiIRVariable node in the tree, fills in the depth and index fields, and
+sets max_locals on every MenaiIRLambda.
 
 Background
 ----------
-The IR builder constructs MenaiIRVariable nodes with only the name and
-var_type fields populated.  depth and index are left as -1 (unresolved).
-This separation means the IR tree structure — including the free_vars /
-parent_refs split on MenaiIRLambda — is determined purely from the AST
-without baking in frame-relative addresses that would be invalidated by
-any subsequent structural transformation (e.g. closure conversion, lambda
-lifting).
+All passes upstream of MenaiIRAddresser work with symbolic variables:
+MenaiIRVariable nodes carry only name and var_type; depth and index are -1
+(unresolved sentinels).  MenaiIRLet and MenaiIRLetrec binding tuples carry
+only (name, value_plan) — no slot indices.  This design means every IR
+transformation pass (lambda lifter, optimisers) can freely restructure the
+tree without worrying about stale addresses.
 
-The addresser is the single place where frame-relative addresses are
-computed.  It uses the same scope-chain logic that resolve_variable() used
-to use inline in the IR builder.
+The addresser is the single place where:
+  - slot indices are allocated for every let/letrec binding
+  - variable references are resolved to (depth, index)
+  - max_locals is computed for every lambda frame
 
 Address model
 -------------
@@ -32,40 +32,35 @@ Address model
 
 Scope representation
 --------------------
-The addresser maintains a two-level scope structure:
+The addresser maintains:
 
-  frame_stack: List[List[Dict[str, int]]]
+  frame_stack: List[LambdaFrame]
 
-Each element of frame_stack is a *lambda frame* — a list of scope dicts,
-one per let/letrec nesting level within that lambda.  Lambda frames are
-separated by lambda boundaries (depth increments).  Let/letrec forms push
-a new scope dict onto the innermost lambda frame's list without creating a
-new depth level.
+Each LambdaFrame is a list of ScopeDicts.  A ScopeDict maps name → slot index
+within the current lambda frame.  Multiple ScopeDicts in one LambdaFrame
+represent nested let/letrec forms within the same lambda (no new VM frame).
 
-Resolution: to look up a name, we search from the innermost scope dict
-outward within the current lambda frame first (depth=0), then repeat for
-each enclosing lambda frame (depth=1, 2, ...).
+A separate slot_counter_stack: List[List[int]] tracks the next free slot for
+each lambda frame (one mutable [int] per frame so it can be updated as
+bindings are allocated).
 
-Slot indices on MenaiIRLet and MenaiIRLetrec bindings are already correct
-(set by the IR builder) and are used directly to populate scope dicts.
-Normally the addresser does not re-allocate slots.
+Slot allocation
+---------------
+Within each lambda frame, slots are allocated in order of first encounter:
+  0 .. N-1          lambda params
+  N .. N+S-1        sibling free vars (MAKE_CLOSURE / PATCH_CLOSURE)
+  N+S .. N+S+O-1    outer free vars   (MAKE_CLOSURE)
+  N+S+O ..          let/letrec bindings in tree order (depth-first)
 
-Exception — sentinel var_index=-1:
-MenaiIRLet bindings emitted by the lambda lifter (Step 5) use var_index=-1
-as a sentinel meaning "allocate the next free slot in the current lambda
-frame".  The addresser detects this and assigns one past the highest slot
-index already in use across all scope dicts in the current lambda frame
-(including the lambda's own parameter/free-var scope dict).
+max_locals
+----------
+After processing a lambda's body, the addresser sets max_locals on the
+returned MenaiIRLambda node to the highest slot index used + 1.
 
 Usage
 -----
     addresser = MenaiIRAddresser()
     addressed_ir = addresser.address(ir)
-
-The input ir must be a complete IR tree as produced by MenaiIRBuilder.build()
-with all MenaiIRVariable.depth and .index fields set to -1 (unresolved).
-The output is a new IR tree (the input is not mutated) with all
-MenaiIRVariable nodes fully resolved.
 """
 
 from typing import Dict, List, Tuple
@@ -88,19 +83,19 @@ from menai.menai_ir import (
 
 
 # Type aliases for clarity
-ScopeDict = Dict[str, int]          # name -> slot index within a lambda frame
-LambdaFrame = List[ScopeDict]       # stack of scope dicts within one lambda
-FrameStack = List[LambdaFrame]      # stack of lambda frames (outermost first)
+ScopeDict = Dict[str, int]      # name -> slot index within a lambda frame
+LambdaFrame = List[ScopeDict]   # stack of scope dicts within one lambda
+FrameStack = List[LambdaFrame]  # stack of lambda frames (outermost first)
+SlotCounters = List[List[int]]  # one [next_slot] per lambda frame
 
 
 class MenaiIRAddresser:
     """
-    Resolves all MenaiIRVariable(depth=-1, index=-1) nodes in an IR tree to
-    their correct frame-relative addresses.
+    Resolves all symbolic MenaiIRVariable nodes to frame-relative addresses,
+    allocates slot indices for all let/letrec bindings, and sets max_locals
+    on every MenaiIRLambda.
 
-    The addresser is stateless between calls — all scope state is passed
-    as immutable lists through the recursive walk (new lists are constructed
-    rather than mutating existing ones).
+    Runs once, after all IR transformation and optimisation passes.
 
     Usage::
 
@@ -109,84 +104,84 @@ class MenaiIRAddresser:
 
     def address(self, ir: MenaiIRExpr) -> MenaiIRExpr:
         """
-        Walk *ir* and return a new tree with all variable references resolved.
+        Walk *ir* and return a new tree with all variables resolved and all
+        slots allocated.
 
         Args:
-            ir: IR tree produced by MenaiIRBuilder (variables have depth=-1,
-                index=-1 for locals, or depth=0, index=0 for globals).
+            ir: IR tree after all transformation and optimisation passes.
 
         Returns:
-            New IR tree with all MenaiIRVariable nodes fully addressed.
+            New IR tree with fully resolved MenaiIRVariable nodes and
+            correct max_locals on every MenaiIRLambda.
         """
-        # The top-level module scope: one lambda frame containing one empty scope dict.
+        # Top-level module frame: one lambda frame with one empty scope dict.
+        # Slot counter starts at 0.
         initial_frame_stack: FrameStack = [[{}]]
-        return self._walk(ir, initial_frame_stack)
+        initial_counters: SlotCounters = [[0]]
+        return self._walk(ir, initial_frame_stack, initial_counters)
 
-    def _walk(self, ir: MenaiIRExpr, frame_stack: FrameStack) -> MenaiIRExpr:
-        """Recursively address *ir* in the context of *frame_stack*."""
+    def _walk(
+        self,
+        ir: MenaiIRExpr,
+        frame_stack: FrameStack,
+        counters: SlotCounters,
+    ) -> MenaiIRExpr:
+        """Recursively address *ir*."""
 
         if isinstance(ir, MenaiIRVariable):
             return self._address_variable(ir, frame_stack)
 
         if isinstance(ir, MenaiIRLet):
-            return self._walk_let(ir, frame_stack)
+            return self._walk_let(ir, frame_stack, counters)
 
         if isinstance(ir, MenaiIRLetrec):
-            return self._walk_letrec(ir, frame_stack)
+            return self._walk_letrec(ir, frame_stack, counters)
 
         if isinstance(ir, MenaiIRLambda):
-            return self._walk_lambda(ir, frame_stack)
+            return self._walk_lambda(ir, frame_stack, counters)
 
         if isinstance(ir, MenaiIRIf):
             return MenaiIRIf(
-                condition_plan=self._walk(ir.condition_plan, frame_stack),
-                then_plan=self._walk(ir.then_plan, frame_stack),
-                else_plan=self._walk(ir.else_plan, frame_stack),
+                condition_plan=self._walk(ir.condition_plan, frame_stack, counters),
+                then_plan=self._walk(ir.then_plan, frame_stack, counters),
+                else_plan=self._walk(ir.else_plan, frame_stack, counters),
                 in_tail_position=ir.in_tail_position,
             )
 
         if isinstance(ir, MenaiIRCall):
-            return self._walk_call(ir, frame_stack)
+            return MenaiIRCall(
+                func_plan=self._walk(ir.func_plan, frame_stack, counters),
+                arg_plans=[self._walk(a, frame_stack, counters) for a in ir.arg_plans],
+                is_tail_call=ir.is_tail_call,
+                is_builtin=ir.is_builtin,
+                builtin_name=ir.builtin_name,
+            )
 
         if isinstance(ir, MenaiIRReturn):
-            return MenaiIRReturn(value_plan=self._walk(ir.value_plan, frame_stack))
+            return MenaiIRReturn(value_plan=self._walk(ir.value_plan, frame_stack, counters))
 
         if isinstance(ir, MenaiIRTrace):
             return MenaiIRTrace(
-                message_plans=[self._walk(m, frame_stack) for m in ir.message_plans],
-                value_plan=self._walk(ir.value_plan, frame_stack),
+                message_plans=[self._walk(m, frame_stack, counters) for m in ir.message_plans],
+                value_plan=self._walk(ir.value_plan, frame_stack, counters),
             )
 
         if isinstance(ir, (MenaiIRConstant, MenaiIRQuote, MenaiIREmptyList, MenaiIRError)):
-            # Leaf nodes with no variable references — return unchanged.
             return ir
 
         raise TypeError(
             f"MenaiIRAddresser: unhandled IR node type {type(ir).__name__}"
         )
 
-    def _address_variable(
-        self, ir: MenaiIRVariable, frame_stack: FrameStack
-    ) -> MenaiIRVariable:
-        """
-        Resolve a variable reference to its frame-relative address.
-
-        For globals the node is returned unchanged (depth=0, index=0;
-        the codegen assigns the real name-table index).
-
-        For locals we search from the innermost scope outward across all
-        lambda frames, counting lambda-frame boundaries crossed (depth).
-        """
+    def _address_variable(self, ir: MenaiIRVariable, frame_stack: FrameStack) -> MenaiIRVariable:
+        """Resolve a variable reference to its frame-relative address."""
         if ir.var_type == 'global':
-            # Global — no frame-relative address needed.
             return ir
 
         depth, index = self._resolve_local(ir.name, frame_stack)
 
         if depth == -1:
-            # Name not found in any frame.  This should not happen after the
-            # semantic analyser has validated the program.  Return the node
-            # unchanged so downstream passes can report a clear error.
+            # Not found — should not happen after semantic analysis.
             return ir
 
         return MenaiIRVariable(
@@ -199,209 +194,193 @@ class MenaiIRAddresser:
 
     def _resolve_local(self, name: str, frame_stack: FrameStack) -> Tuple[int, int]:
         """
-        Search *frame_stack* for *name*, returning (depth, index).
+        Search frame_stack for *name*, returning (depth, index).
 
         depth counts lambda-frame boundaries crossed (0 = current lambda).
         Returns (-1, -1) if not found.
-
-        Within each lambda frame we search the scope dicts from innermost
-        (last) to outermost (first) — this handles let/letrec shadowing
-        within the same lambda without incrementing depth.
         """
         for depth, lambda_frame in enumerate(reversed(frame_stack)):
-            # Search scope dicts within this lambda frame, innermost first.
             for scope_dict in reversed(lambda_frame):
                 if name in scope_dict:
                     return depth, scope_dict[name]
 
         return -1, -1
 
-    def _walk_let(self, ir: MenaiIRLet, frame_stack: FrameStack) -> MenaiIRLet:
+    def _walk_let(
+        self,
+        ir: MenaiIRLet,
+        frame_stack: FrameStack,
+        counters: SlotCounters,
+    ) -> MenaiIRLet:
         """
-        Walk a let node.
+        Walk a let node, allocating a slot for each binding.
 
-        Let bindings live in the same lambda frame as their enclosing context
-        (let does not create a new VM frame / lambda boundary).
-
-        Binding values are walked in the current scope (parallel let semantics
-        — values cannot reference the let's own bindings).
-
-        For the body we push a new scope dict onto the current lambda frame
-        containing the let's bindings.  This correctly handles shadowing:
-        the new scope dict sits on top of any existing scope dicts in the
-        same lambda frame, and the old scope dicts are unaffected.
-
-        Special case: a binding with var_index==-1 is a sentinel from the
-        lambda lifter.  The addresser allocates the next free slot in the
-        current lambda frame before building the scope dict.
+        Binding values are walked in the current scope (parallel let semantics).
+        The body is walked with a new scope dict pushed onto the current lambda
+        frame containing the newly-allocated slots.
         """
         # Walk binding values in the current scope (names not yet visible).
-        new_bindings: List[tuple] = []
-        for name, value_plan, var_index in ir.bindings:
-            new_value = self._walk(value_plan, frame_stack)
-            if var_index == -1:
-                var_index = self._next_free_slot(frame_stack)
-            new_bindings.append((name, new_value, var_index))
+        new_bindings: List[Tuple[str, MenaiIRExpr]] = []
+        allocated: List[Tuple[str, int]] = []
+        for name, value_plan in ir.bindings:
+            new_value = self._walk(value_plan, frame_stack, counters)
+            slot = self._alloc_slot(counters)
+            new_bindings.append((name, new_value))
+            allocated.append((name, slot))
 
-        # Build a new scope dict for the let's bindings.
-        let_scope: ScopeDict = {name: var_index for name, _, var_index in new_bindings}
+        # Build scope dict for the body.
+        let_scope: ScopeDict = {name: slot for name, slot in allocated}
 
-        # Push the new scope onto the current lambda frame (last in frame_stack).
-        # We construct a new lambda frame list rather than mutating the existing
-        # one, so the original frame_stack is not affected.
         current_lambda_frame = frame_stack[-1]
         body_lambda_frame = current_lambda_frame + [let_scope]
         body_frame_stack = frame_stack[:-1] + [body_lambda_frame]
 
-        new_body = self._walk(ir.body_plan, body_frame_stack)
+        new_body = self._walk(ir.body_plan, body_frame_stack, counters)
+
+        # Reconstruct with allocated slots embedded in the binding tuples.
+        # The codegen reads slot indices from the scope dict via the frame_stack,
+        # but we also need to pass them to the codegen via the IR node.
+        # We store them as a parallel list by rebuilding the bindings as
+        # (name, value_plan, slot) — but wait: MenaiIRLet.bindings is now
+        # List[tuple[str, MenaiIRExpr]] with no slot.  The codegen must get
+        # slot indices from the addresser's output somehow.
+        #
+        # Solution: we extend the binding tuple back to (name, value_plan, slot)
+        # only in the addressed output that the codegen sees.  We do this by
+        # returning a _MenaiIRLetAddressed node — but that would require a new
+        # IR node type.
+        #
+        # Simpler: keep MenaiIRLet.bindings as List[tuple[str, MenaiIRExpr, int]]
+        # in the *addressed* output only.  The addresser fills in the int.
+        # Upstream passes (which never read the int) use the two-tuple form.
+        #
+        # We implement this by having MenaiIRLet accept both forms: the codegen
+        # always unpacks three elements; upstream passes always produce two.
+        # Python tuples are heterogeneous so this works at runtime, but it
+        # is not type-safe.  A cleaner approach: use a separate addressed IR
+        # type.  For now we store the slot in the binding tuple as a third
+        # element so the codegen can read it, matching what the codegen expects.
+        addressed_bindings = [
+            (name, value_plan, slot)
+            for (name, value_plan), (_, slot) in zip(new_bindings, allocated)
+        ]
 
         return MenaiIRLet(
-            bindings=new_bindings,
+            bindings=addressed_bindings,  # type: ignore[arg-type]
             body_plan=new_body,
             in_tail_position=ir.in_tail_position,
         )
 
-    def _next_free_slot(self, frame_stack: FrameStack) -> int:
+    def _walk_letrec(
+        self,
+        ir: MenaiIRLetrec,
+        frame_stack: FrameStack,
+        counters: SlotCounters,
+    ) -> MenaiIRLetrec:
         """
-        Return the next free slot index in the current (innermost) lambda frame.
-
-        Scans all scope dicts in the current lambda frame — including the
-        lambda's own parameter/free-var scope dict — and returns one past the
-        highest slot index in use.  Returns 0 if the frame has no bindings.
-
-        Used to allocate slots for sentinel var_index==-1 let bindings
-        introduced by the lambda lifter.
-        """
-        current_lambda_frame = frame_stack[-1]
-        max_slot = -1
-        for scope_dict in current_lambda_frame:
-            for slot in scope_dict.values():
-                if slot > max_slot:
-                    max_slot = slot
-        return max_slot + 1
-
-    def _walk_letrec(self, ir: MenaiIRLetrec, frame_stack: FrameStack) -> MenaiIRLetrec:
-        """
-        Walk a letrec node.
+        Walk a letrec node, allocating a slot for each binding.
 
         All binding names are in scope for both binding values and the body
-        (mutual recursion).  Like let, letrec does not create a new VM frame.
-
-        We push a new scope dict containing all the letrec's bindings onto
-        the current lambda frame before walking both the binding values and
-        the body.
+        (mutual recursion).
         """
-        letrec_scope: ScopeDict = {name: var_index for name, _, var_index in ir.bindings}
+        # Allocate slots for all bindings up front.
+        allocated: List[Tuple[str, int]] = []
+        for name, _ in ir.bindings:
+            slot = self._alloc_slot(counters)
+            allocated.append((name, slot))
+
+        letrec_scope: ScopeDict = {name: slot for name, slot in allocated}
 
         current_lambda_frame = frame_stack[-1]
         inner_lambda_frame = current_lambda_frame + [letrec_scope]
         inner_frame_stack = frame_stack[:-1] + [inner_lambda_frame]
 
-        # Helper slots allocated by _walk_let (var_index==-1 sentinels from the
-        # lambda lifter) must be tracked across binding iterations so that each
-        # successive binding sees previously-allocated helper slots and doesn't
-        # reuse the same slot number.  We maintain a running "allocated helpers"
-        # scope dict and append it to the inner lambda frame before each binding.
-        allocated_helpers: ScopeDict = {}
+        new_bindings: List[Tuple[str, MenaiIRExpr]] = []
+        for (name, value_plan), (_, slot) in zip(ir.bindings, allocated):
+            new_value = self._walk(value_plan, inner_frame_stack, counters)
+            new_bindings.append((name, new_value))
 
-        new_bindings: List[tuple] = []
-        for name, value_plan, var_index in ir.bindings:
-            # Include any helpers allocated by previous bindings so _next_free_slot
-            # returns a fresh slot rather than reusing an already-taken one.
-            current_inner_frame = inner_lambda_frame + ([allocated_helpers] if allocated_helpers else [])
-            current_inner_stack = frame_stack[:-1] + [current_inner_frame]
-            new_value = self._walk(value_plan, current_inner_stack)
-            # Collect any newly-allocated helper slots from the walked value.
-            new_slots = self._collect_helper_slots(new_value, letrec_scope)
-            allocated_helpers.update(new_slots)
-            new_bindings.append((name, new_value, var_index))
+        new_body = self._walk(ir.body_plan, inner_frame_stack, counters)
 
-        # Body sees all letrec bindings plus all helper slots.
-        body_inner_frame = inner_lambda_frame + ([allocated_helpers] if allocated_helpers else [])
-        body_inner_stack = frame_stack[:-1] + [body_inner_frame]
-        new_body = self._walk(ir.body_plan, body_inner_stack)
+        addressed_bindings = [
+            (name, value_plan, slot)
+            for (name, value_plan), (_, slot) in zip(new_bindings, allocated)
+        ]
 
         return MenaiIRLetrec(
-            bindings=new_bindings,
+            bindings=addressed_bindings,  # type: ignore[arg-type]
             body_plan=new_body,
             in_tail_position=ir.in_tail_position,
         )
 
-    def _collect_helper_slots(self, ir: MenaiIRExpr, letrec_scope: ScopeDict) -> ScopeDict:
-        """
-        Collect all var_index values from MenaiIRLet bindings in *ir* that are
-        NOT already in letrec_scope.  These are the helper slots allocated by
-        the lambda lifter (var_index==-1 sentinels, now resolved) within a
-        single letrec binding value.
-
-        Only descends into MenaiIRLet chains — does not recurse into lambda
-        bodies (those have their own frame).
-        """
-        result: ScopeDict = {}
-        node = ir
-        while isinstance(node, MenaiIRLet):
-            for name, _, var_index in node.bindings:
-                if name not in letrec_scope:
-                    result[name] = var_index
-            node = node.body_plan
-        return result
-
-    def _walk_lambda(self, ir: MenaiIRLambda, frame_stack: FrameStack) -> MenaiIRLambda:
+    def _walk_lambda(
+        self,
+        ir: MenaiIRLambda,
+        frame_stack: FrameStack,
+        counters: SlotCounters,
+    ) -> MenaiIRLambda:
         """
         Walk a lambda node.
 
-        free_var_plans are evaluated in the *enclosing* frame (they load values
-        from the enclosing scope to build the closure), so they are walked with
-        the current frame_stack.
+        free_var_plans are evaluated in the enclosing frame — walk them with
+        the current frame_stack and counters.
 
-        The lambda body is walked with a new lambda frame pushed onto the
-        frame_stack.  This new frame contains a single scope dict with the
-        lambda's parameters and captured free variables.  Any reference that
-        crosses this boundary increments depth by 1.
+        The lambda body is walked with a new lambda frame pushed onto
+        frame_stack.  Slot layout within the new frame:
+            0 .. N-1          params
+            N .. N+S-1        sibling_free_vars
+            N+S .. N+S+O-1    outer_free_vars
+            N+S+O ..          let/letrec bindings (allocated as encountered)
+
+        max_locals is set to the highest slot allocated in this frame + 1.
         """
         # Walk free_var_plans in the enclosing frame.
-        # (parent_ref_plans removed — letrec siblings are now regular free_vars)
-        new_sibling_free_var_plans = [self._walk(p, frame_stack) for p in ir.sibling_free_var_plans]
-        new_outer_free_var_plans = [self._walk(p, frame_stack) for p in ir.outer_free_var_plans]
+        new_sibling_fvp = [self._walk(p, frame_stack, counters) for p in ir.sibling_free_var_plans]
+        new_outer_fvp = [self._walk(p, frame_stack, counters) for p in ir.outer_free_var_plans]
 
-        # Build the lambda's own scope dict.
-        # Parameters occupy slots 0..N-1; captured free vars occupy N..N+M-1.
+        # Build the lambda's own scope dict: params first, then free vars.
         lambda_scope: ScopeDict = {}
-        for i, param in enumerate(ir.params):
-            lambda_scope[param] = i
+        slot = 0
+        for name in ir.params:
+            lambda_scope[name] = slot
+            slot += 1
 
-        param_count = len(ir.params)
-        for i, free_var in enumerate(ir.sibling_free_vars + ir.outer_free_vars):
-            lambda_scope[free_var] = param_count + i
+        for name in ir.sibling_free_vars + ir.outer_free_vars:
+            lambda_scope[name] = slot
+            slot += 1
 
-        # Push a new lambda frame containing just the lambda's scope dict.
+        # Push a new lambda frame with its own slot counter.
         child_frame_stack = frame_stack + [[lambda_scope]]
+        child_counters = counters + [[slot]]  # next free slot after params+free_vars
 
-        new_body = self._walk(ir.body_plan, child_frame_stack)
+        new_body = self._walk(ir.body_plan, child_frame_stack, child_counters)
+
+        # max_locals = highest slot used in this frame + 1.
+        max_locals = child_counters[-1][0]  # counter was incremented for each allocated slot
 
         return MenaiIRLambda(
             params=ir.params,
             body_plan=new_body,
             sibling_free_vars=ir.sibling_free_vars,
-            sibling_free_var_plans=new_sibling_free_var_plans,
+            sibling_free_var_plans=new_sibling_fvp,
             outer_free_vars=ir.outer_free_vars,
-            outer_free_var_plans=new_outer_free_var_plans,
+            outer_free_var_plans=new_outer_fvp,
             param_count=ir.param_count,
             is_variadic=ir.is_variadic,
+            max_locals=max_locals,
             binding_name=ir.binding_name,
-            max_locals=ir.max_locals,
             source_line=ir.source_line,
             source_file=ir.source_file,
         )
 
-    def _walk_call(self, ir: MenaiIRCall, frame_stack: FrameStack) -> MenaiIRCall:
-        """Walk a call node."""
-        new_args = [self._walk(a, frame_stack) for a in ir.arg_plans]
+    def _alloc_slot(self, counters: SlotCounters) -> int:
+        """
+        Allocate the next free slot in the current (innermost) lambda frame.
 
-        return MenaiIRCall(
-            func_plan=self._walk(ir.func_plan, frame_stack),
-            arg_plans=new_args,
-            is_tail_call=ir.is_tail_call,
-            is_builtin=ir.is_builtin,
-            builtin_name=ir.builtin_name,
-        )
+        counters[-1] is a one-element list [next_slot] for the current frame.
+        We mutate it in place so that all code sharing this counters list
+        sees the updated value.
+        """
+        slot = counters[-1][0]
+        counters[-1][0] = slot + 1
+        return slot
