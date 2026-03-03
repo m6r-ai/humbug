@@ -26,9 +26,10 @@ Design notes
 - Scope is tracked as a stack of frozensets of bound names.  A name is
   "local" if it appears in any frame of the stack; otherwise it is global.
 - The pass does NOT distinguish captured free variables from parent
-  references (recursive back-edges).  That classification is Step 3 and
-  depends on letrec structure.  Here we simply report all names that are
-  free in the lambda body and resolve to a local in some enclosing scope.
+  references (recursive back-edges); that classification depends on letrec
+  structure and is handled by the IR builder.  Here we simply report all
+  names that are free in the lambda body and resolve to a local in some
+  enclosing scope.
 - The pass is purely analytical: it does not modify the AST.
 """
 

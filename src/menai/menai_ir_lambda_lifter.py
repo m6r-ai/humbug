@@ -27,28 +27,8 @@ Variables remain symbolic
 --------------------------
 All MenaiIRVariable nodes emitted by this pass carry depth=-1, index=-1
 (unresolved sentinels), exactly as the IR builder emits them.  MenaiIRAddresser
-runs once after all transformation and optimisation passes and resolves
-everything in a single final pass.  The _reset_vars step from the old
-index-based implementation is no longer needed.
-
-Pipeline position
------------------
-    MenaiIRBuilder
-        ↓
-    MenaiIRClosureConverter
-        ↓
-    MenaiIRLambdaLifter          ← THIS PASS
-        ↓
-    IR optimization passes
-        ↓
-    MenaiIRAddresser             (single final run)
-        ↓
-    MenaiCodeGen
-
-Usage
------
-    lifter = MenaiIRLambdaLifter()
-    new_ir = lifter.lift(ir)
+resolves everything in a single pass after all transformation and optimisation
+passes are complete.
 """
 
 from __future__ import annotations

@@ -1,10 +1,8 @@
 """
 Menai IR Addresser - resolves symbolic variable names to frame-relative slot addresses.
 
-This pass runs ONCE, as the final step before code generation, after all IR
-transformation and optimisation passes are complete.  It walks every
-MenaiIRVariable node in the tree, fills in the depth and index fields, and
-sets max_locals on every MenaiIRLambda.
+Walks every MenaiIRVariable node in the tree, fills in the depth and index
+fields, and sets max_locals on every MenaiIRLambda.
 
 Background
 ----------
@@ -28,7 +26,8 @@ Address model
   the slot number within that frame.
 - var_type='local', depth>0: slot in an ancestor frame.  depth is the
   number of lambda-frame boundaries to cross; index is the slot in that
-  ancestor frame.  Emitted as LOAD_PARENT_VAR index depth.
+  ancestor frame.  (depth>0 references do not currently arise after lambda
+  lifting, since all captures are flattened into frame locals by that pass.)
 
 Scope representation
 --------------------
@@ -56,11 +55,6 @@ max_locals
 ----------
 After processing a lambda's body, the addresser sets max_locals on the
 returned MenaiIRLambda node to the highest slot index used + 1.
-
-Usage
------
-    addresser = MenaiIRAddresser()
-    addressed_ir = addresser.address(ir)
 """
 
 from typing import Dict, List, Tuple

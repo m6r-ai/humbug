@@ -1,77 +1,13 @@
 """
-Menai IR Closure Converter — Step 4.
+Menai IR Closure Converter.
 
-This pass walks a fully-classified and addressed IR tree and makes closure
-capture explicit in the IR representation, preparing for lambda lifting
-(Step 5).
+Currently a pure tree-rewriting identity pass: recurses into every IR node
+type — including sibling_free_var_plans and outer_free_var_plans, which are
+evaluated in the enclosing frame and may themselves contain nested lambdas —
+but returns a structurally identical tree without making any changes.
 
-VM slot layout
---------------
-The Menai VM separates call-site arguments from captured values:
-
-    ENTER n        — pops n args from the call stack into locals[0..n-1]
-    MAKE_CLOSURE   — pops M captured values from the stack and stores them
-                     into locals[param_count..param_count+M-1] at call time
-
-So for a lambda with param_count=N and len(free_vars)=M:
-
-    locals[0..N-1]     — call-site arguments  (populated by ENTER)
-    locals[N..N+M-1]   — captured free vars   (populated by MAKE_CLOSURE)
-
-param_count on the CodeObject controls ENTER and must equal the number of
-explicit call-site arguments.  It must NOT be changed by this pass.
-
-MenaiIRLambda.params vs param_count
--------------------------------------
-MenaiIRLambda.params is the list of named parameters used by the addresser
-to build the lambda's scope dict:
-
-    params[i]       → slot i      (call-site args, populated by ENTER)
-    free_vars[j]    → slot N+j    (captured values, populated by MAKE_CLOSURE)
-
-After the first addresser run, body references to free vars are already
-resolved to depth=0, index=N+j — they are in the lambda's own frame.
-The free_var_plans (which load the values from the enclosing frame before
-MAKE_CLOSURE) have depth>0.
-
-What this pass does
--------------------
-The pass is a pure tree rewrite that recurses into every IR node and
-returns a structurally identical tree.  It does NOT change free_vars,
-params, param_count, or max_locals on any lambda — the MAKE_CLOSURE
-mechanism already makes capture explicit at the IR level, and changing
-param_count would break the ENTER instruction.
-
-The pass serves as:
-  1. The insertion point in the pipeline for future lambda-lifting logic
-     (Step 5), which will rewrite params, free_vars, and call sites.
-  2. A tree-rewriting skeleton that recurses into all node types
-     (including free_var_plans and parent_ref_plans, which are evaluated
-     in the enclosing frame and may themselves contain lambdas).
-  3. A verified no-op: the re-run of MenaiIRAddresser after this pass
-     confirms that all body references are correctly resolved to depth=0.
-
-parent_refs are not touched — they are recursive back-edges handled
-separately by LOAD_PARENT_VAR.
-
-Pipeline position
------------------
-    MenaiIRParentRefClassifier
-        ↓
-    MenaiIRAddresser             (first run — resolves addresses)
-        ↓
-    MenaiIRClosureConverter      ← THIS PASS
-        ↓
-    MenaiIRAddresser             (second run — re-verifies after conversion)
-        ↓
-    IR optimization passes
-        ↓
-    MenaiCodeGen
-
-Usage
------
-    converter = MenaiIRClosureConverter()
-    new_ir = converter.convert(ir)
+Serves as the insertion point for any pre-lifting transformation that needs
+to run after free-variable classification and before lambda lifting.
 """
 
 from __future__ import annotations
