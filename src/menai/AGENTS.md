@@ -35,15 +35,13 @@ MenaiFreeVarAnalyzer        menai_free_var_analyzer.py     (free variable annota
     ↓
 MenaiIRBuilder              menai_ir_builder.py
     ↓
-MenaiIRAddresser            menai_ir_addresser.py          (first run — resolves MenaiIRVariable depth/index)
+MenaiIRClosureConverter     menai_ir_closure_converter.py  (makes closure capture explicit; pipeline insertion point for lambda lifting)
     ↓
-MenaiIRClosureConverter     menai_ir_closure_converter.py  (Step 4 — makes closure capture explicit; pipeline insertion point for lambda lifting)
-    ↓
-MenaiIRLambdaLifter         menai_ir_lambda_lifter.py      (A′ worker/wrapper transformation — every lambda exits with free_vars==[])
-    ↓
-MenaiIRAddresser            menai_ir_addresser.py          (second run — re-resolves after closure conversion)
+MenaiIRLambdaLifter         menai_ir_lambda_lifter.py      (worker/wrapper transformation)
     ↓
 MenaiIROptimizer            menai_ir_optimizer.py          (IR optimization pass — fixed-point loop)
+    ↓
+MenaiIRAddresser            menai_ir_addresser.py          (single run — resolves MenaiIRVariable depth/index)
     ↓
 MenaiCodeGen                menai_codegen.py
     ↓
@@ -70,9 +68,9 @@ optimizations are applied across module boundaries.
 | `menai_free_var_analyzer.py` | Standalone free variable analysis pass. Annotates every lambda in the post-fold AST with its free variable names (`FreeVarInfo`). Runs after AST folding, before IR builder. | Medium |
 | `menai_ir.py` | IR dataclasses (`MenaiIRExpr` union type) — the compilation plan | Small |
 | `menai_ir_builder.py` | Lowers desugared AST → IR. Emits `MenaiIRVariable` with `depth=-1, index=-1` (unresolved). Slot allocation and `free_vars`/`parent_refs` split are done here; depth/index resolution is deferred to `MenaiIRAddresser`. | Large |
-| `menai_ir_addresser.py` | Resolves all `MenaiIRVariable(depth=-1, index=-1)` nodes to their correct frame-relative `(depth, index)`. Runs twice: once after the IR builder (before the closure converter), and again after the lambda lifter. | Medium |
-| `menai_ir_closure_converter.py` | Makes closure capture explicit in the IR tree. Currently a tree-rewriting identity pass; serves as the pipeline insertion point for lambda lifting. Runs between the two addresser passes. | Small |
-| `menai_ir_lambda_lifter.py` | A′ worker/wrapper transformation. Replaces every capturing lambda with a closed helper function plus a thin wrapper that passes captured values as explicit arguments. After this pass, every `MenaiIRLambda` in the tree has `free_vars == []` and `parent_refs == []`. Runs after the closure converter, before the second addresser pass. | Medium |
+| `menai_ir_addresser.py` | Resolves all `MenaiIRVariable(depth=-1, index=-1)` nodes to their correct frame-relative `(depth, index)`. Runs once, as the final step before code generation. | Medium |
+| `menai_ir_closure_converter.py` | Makes closure capture explicit in the IR tree. Currently a tree-rewriting identity pass; serves as the pipeline insertion point for lambda lifting. | Small |
+| `menai_ir_lambda_lifter.py` | A′ worker/wrapper transformation. Replaces every capturing lambda with a closed helper function plus a thin wrapper that passes captured values as explicit arguments. Runs after the closure converter, before the IR optimization passes. | Medium |
 | `menai_ir_optimization_pass.py` | Base class for IR optimization passes | Tiny |
 | `menai_ir_use_counter.py` | Pure analysis pass: counts all variable uses per frame; produces `IRUseCounts` | Medium |
 | `menai_ir_copy_propagator.py` | IR-level copy propagation pass; inlines trivially-copyable let bindings | Medium |
