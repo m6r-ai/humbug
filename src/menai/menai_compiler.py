@@ -10,6 +10,7 @@ from menai.menai_ast import MenaiASTNode
 from menai.menai_ast_constant_folder import MenaiASTConstantFolder
 from menai.menai_ast_optimization_pass import MenaiASTOptimizationPass
 from menai.menai_bytecode import CodeObject
+from menai.menai_cfg_builder import MenaiCFGBuilder
 from menai.menai_codegen import MenaiCodeGen
 from menai.menai_desugarer import MenaiDesugarer
 from menai.menai_ir_builder import MenaiIRBuilder
@@ -22,6 +23,7 @@ from menai.menai_lexer import MenaiLexer
 from menai.menai_module_resolver import MenaiModuleResolver, ModuleLoader
 from menai.menai_parser import MenaiParser
 from menai.menai_semantic_analyzer import MenaiSemanticAnalyzer
+from menai.menai_vm_codegen import MenaiVMCodeGen
 
 
 class MenaiCompiler:
@@ -29,16 +31,26 @@ class MenaiCompiler:
     Main compiler pass manager.
     """
 
-    def __init__(self, optimize: bool = True, module_loader: ModuleLoader | None = None):
+    def __init__(
+        self,
+        optimize: bool = True,
+        module_loader: ModuleLoader | None = None,
+        use_cfg: bool = False,
+    ):
         """
         Initialize compiler with all passes.
 
         Args:
-            optimize: Enable optimization passes (AST and IR level)
-            module_loader: Optional module loader for resolving imports
+            optimize:    Enable optimization passes (AST and IR level).
+            module_loader: Optional module loader for resolving imports.
+            use_cfg:     Use the new CFG-based pipeline (MenaiCFGBuilder +
+                         MenaiVMCodeGen) instead of the legacy MenaiIRAddresser
+                         + MenaiCodeGen path.  Default False while the new
+                         path is being validated against the test suite.
         """
         self.optimize = optimize
         self.module_loader = module_loader
+        self.use_cfg = use_cfg
 
         # Initialize all passes
         self.lexer = MenaiLexer()
@@ -60,9 +72,14 @@ class MenaiCompiler:
                 MenaiIROptimizer(),
             ]
 
+        # Legacy backend
         self.ir_addresser = MenaiIRAddresser()
         self.ir_builder = MenaiIRBuilder()
         self.codegen = MenaiCodeGen()
+
+        # New CFG backend
+        self.cfg_builder = MenaiCFGBuilder()
+        self.vm_codegen = MenaiVMCodeGen()
 
     def compile_to_resolved_ast(self, source: str, source_file: str = "") -> MenaiASTNode:
         """
@@ -103,17 +120,16 @@ class MenaiCompiler:
         Returns:
             Compiled bytecode ready for execution
         """
-        # Use the partial compilation to get resolved AST
+        # Front-end: lex, parse, semantic analysis, module resolution.
         resolved_ast = self.compile_to_resolved_ast(source, name)
         desugared_ast = self.desugarer.desugar(resolved_ast)
 
         for ast_pass in self.ast_passes:
             desugared_ast = ast_pass.optimize(desugared_ast)
 
-
+        # IR construction and optimisation (shared by both backends).
         ir = self.ir_builder.build(desugared_ast)
 
-        # IR-level optimization passes (all work on symbolic variables).
         if self.ir_passes:
             changed = True
             while changed:
@@ -122,10 +138,13 @@ class MenaiCompiler:
                     ir, pass_changed = ir_pass.optimize(ir)
                     changed = changed or pass_changed
 
-        # Single final address resolution: allocate all slots, resolve all
-        # variable references, and set max_locals on every lambda.
-        ir = self.ir_addresser.address(ir)
-
-        bytecode = self.codegen.generate(ir, name)
+        if self.use_cfg:
+            # New CFG-based backend: build SSA CFG then emit via VM codegen.
+            cfg = self.cfg_builder.build(ir)
+            bytecode = self.vm_codegen.generate(cfg, name)
+        else:
+            # Legacy backend: address the IR tree then emit via old codegen.
+            ir = self.ir_addresser.address(ir)
+            bytecode = self.codegen.generate(ir, name)
 
         return bytecode

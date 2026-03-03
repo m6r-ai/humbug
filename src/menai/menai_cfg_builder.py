@@ -1,0 +1,791 @@
+"""
+CFG builder for the Menai compiler.
+
+Translates a symbolic (unaddressed) MenaiIR tree into a MenaiCFGFunction in
+SSA form.  This pass replaces both MenaiIRAddresser and MenaiCodeGen in the
+new pipeline.
+
+Position in the pipeline
+------------------------
+    IR tree (optimised, symbolic)  →  MenaiCFGBuilder  →  MenaiCFGFunction
+                                                        ↓
+                                              MenaiVMCodeGen / future native backend
+
+The builder is called once per top-level expression.  Nested lambdas are
+compiled recursively; each produces its own MenaiCFGFunction, referenced
+directly from the parent's MenaiCFGMakeClosureInstr.
+
+Scope model
+-----------
+Variable resolution uses a MenaiCFGScope chain — a linked list of scope
+frames, one per lexical scope level.  Each frame maps a variable name to the
+MenaiCFGValue that holds its current binding.  The chain is searched
+innermost-first.
+
+Within a single lambda, let/letrec bindings add entries to the current scope
+frame (or a new child frame pushed for the body).  Crossing a lambda boundary
+creates a new scope chain rooted at the lambda's parameter and free-variable
+values; the parent chain is not accessible (all captures are explicit in
+MenaiIRLambda.sibling_free_vars / outer_free_vars).
+
+SSA value allocation
+--------------------
+A single integer counter (`_value_counter`) is incremented for each new
+MenaiCFGValue within a function.  The counter is reset when starting a new
+MenaiCFGFunction (i.e. per lambda).
+
+Block allocation
+----------------
+A single integer counter (`_block_counter`) is incremented for each new
+MenaiCFGBlock within a function.  Also reset per lambda.
+
+letrec handling
+---------------
+letrec is processed in three phases within the current block:
+
+  Phase 1 — Allocate SSA values for all binding names (so recursive
+            references can resolve during Phase 2).  Emit
+            MenaiCFGMakeClosureInstr for each lambda binding with an empty
+            captures list (to be filled in Phase 3).
+
+  Phase 2 — Walk each binding value expression with all binding names in
+            scope.  For lambda bindings this re-uses the already-emitted
+            closure value.  For non-lambda bindings (which the desugarer
+            guarantees are absent from letrec after desugaring, but we
+            handle defensively) we emit the value expression normally.
+
+  Phase 3 — Emit MenaiCFGPatchClosureInstr for each sibling capture of
+            each lambda binding, appended to the current block's
+            patch_instrs list.
+
+if handling
+-----------
+An `if` expression creates three new blocks: then_block, else_block, and
+join_block.  The current block gets a MenaiCFGBranchTerm.  Both branch blocks
+get a MenaiCFGJumpTerm to join_block.  join_block starts with a
+MenaiCFGPhiInstr merging the two branch results.
+
+Tail position
+-------------
+The builder tracks whether the current expression is in tail position via the
+`tail` parameter on _build_expr.  In tail position:
+  - A call becomes a MenaiCFGTailCallTerm / MenaiCFGSelfLoopTerm terminator.
+  - An if expression propagates tail position to both branches.
+  - let/letrec bodies propagate tail position.
+  - The result value is wrapped in a MenaiCFGReturnTerm if it is not already
+    a terminator.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional, Tuple
+
+from menai.menai_cfg import (
+    MenaiCFGApplyInstr,
+    MenaiCFGBlock,
+    MenaiCFGBranchTerm,
+    MenaiCFGBuiltinInstr,
+    MenaiCFGCallInstr,
+    MenaiCFGConstInstr,
+    MenaiCFGFreeVarInstr,
+    MenaiCFGFunction,
+    MenaiCFGGlobalInstr,
+    MenaiCFGJumpTerm,
+    MenaiCFGMakeClosureInstr,
+    MenaiCFGPatchClosureInstr,
+    MenaiCFGParamInstr,
+    MenaiCFGPhiInstr,
+    MenaiCFGRaiseTerm,
+    MenaiCFGReturnTerm,
+    MenaiCFGSelfLoopTerm,
+    MenaiCFGTailApplyTerm,
+    MenaiCFGTailCallTerm,
+    MenaiCFGTraceInstr,
+    MenaiCFGValue,
+)
+from menai.menai_ir import (
+    MenaiIRCall,
+    MenaiIRConstant,
+    MenaiIREmptyList,
+    MenaiIRError,
+    MenaiIRExpr,
+    MenaiIRIf,
+    MenaiIRLambda,
+    MenaiIRLet,
+    MenaiIRLetrec,
+    MenaiIRQuote,
+    MenaiIRReturn,
+    MenaiIRTrace,
+    MenaiIRVariable,
+)
+from menai.menai_value import MenaiList
+
+
+# ---------------------------------------------------------------------------
+# Scope
+# ---------------------------------------------------------------------------
+
+@dataclass
+class MenaiCFGScope:
+    """
+    A single lexical scope frame mapping variable names to SSA values.
+
+    Frames are chained via `parent`; lookup walks innermost-first.
+    """
+    bindings: Dict[str, MenaiCFGValue] = field(default_factory=dict)
+    parent: Optional['MenaiCFGScope'] = None
+
+    def lookup(self, name: str) -> Optional[MenaiCFGValue]:
+        """Search this frame and all ancestors for `name`."""
+        frame: Optional[MenaiCFGScope] = self
+        while frame is not None:
+            if name in frame.bindings:
+                return frame.bindings[name]
+            frame = frame.parent
+        return None
+
+    def bind(self, name: str, value: MenaiCFGValue) -> None:
+        """Add a binding to this (innermost) frame."""
+        self.bindings[name] = value
+
+    def child(self) -> 'MenaiCFGScope':
+        """Return a new child scope whose parent is this frame."""
+        return MenaiCFGScope(parent=self)
+
+
+# ---------------------------------------------------------------------------
+# Per-function build state
+# ---------------------------------------------------------------------------
+
+@dataclass
+class _FunctionState:
+    """
+    Mutable state threaded through the build of a single MenaiCFGFunction.
+
+    Isolated per lambda so that nested lambdas get their own counters and
+    block lists.
+    """
+    function: MenaiCFGFunction
+    value_counter: int = 0
+    block_counter: int = 0
+
+    def new_value(self, hint: str = "") -> MenaiCFGValue:
+        v = MenaiCFGValue(id=self.value_counter, hint=hint)
+        self.value_counter += 1
+        return v
+
+    def new_block(self, label: str) -> MenaiCFGBlock:
+        b = MenaiCFGBlock(id=self.block_counter, label=label)
+        self.block_counter += 1
+        self.function.blocks.append(b)
+        return b
+
+
+# ---------------------------------------------------------------------------
+# Builder
+# ---------------------------------------------------------------------------
+
+class MenaiCFGBuilder:
+    """
+    Builds a MenaiCFGFunction from a (symbolic, unaddressed) MenaiIR tree.
+
+    Usage::
+
+        cfg = MenaiCFGBuilder().build(ir_expr)
+    """
+
+    def build(self, ir: MenaiIRExpr) -> MenaiCFGFunction:
+        """
+        Build the top-level MenaiCFGFunction from an IR expression.
+
+        Args:
+            ir: Root of the optimised, symbolic IR tree (output of the IR
+                optimisation passes, before MenaiIRAddresser).
+
+        Returns:
+            MenaiCFGFunction for the top-level module body.
+        """
+        func = MenaiCFGFunction(
+            params=[],
+            free_vars=[],
+            is_variadic=False,
+            binding_name=None,
+        )
+        state = _FunctionState(function=func)
+        entry = state.new_block("entry")
+        scope = MenaiCFGScope()
+
+        result_val, current_block = self._build_expr(
+            ir, entry, scope, state, tail=True
+        )
+
+        # If the expression returned a value rather than terminating the block,
+        # wrap it in a return.
+        if current_block.terminator is None:
+            current_block.terminator = MenaiCFGReturnTerm(value=result_val)
+
+        self._link_predecessors(func)
+        return func
+
+    # ------------------------------------------------------------------
+    # Core expression builder
+    # ------------------------------------------------------------------
+
+    def _build_expr(
+        self,
+        ir: MenaiIRExpr,
+        block: MenaiCFGBlock,
+        scope: MenaiCFGScope,
+        state: _FunctionState,
+        tail: bool,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """
+        Emit instructions for `ir` into `block` (and successor blocks as
+        needed), returning the SSA value that holds the result and the
+        (possibly new) current block after emission.
+
+        When `tail` is True the expression is in tail position: calls become
+        tail-call terminators and the caller will not emit a further return.
+
+        Args:
+            ir:    IR node to lower.
+            block: Current basic block to emit into.
+            scope: Current lexical scope.
+            state: Per-function mutable state (counters, block list).
+            tail:  True if this expression is in tail position.
+
+        Returns:
+            (result_value, current_block) — the SSA value produced and the
+            block that is "current" after emission (may differ from `block`
+            if new blocks were created, e.g. for if-expressions).
+        """
+        if isinstance(ir, MenaiIRConstant):
+            return self._build_constant(ir, block, state)
+
+        if isinstance(ir, MenaiIREmptyList):
+            return self._build_empty_list(block, state)
+
+        if isinstance(ir, MenaiIRQuote):
+            return self._build_quote(ir, block, state)
+
+        if isinstance(ir, MenaiIRVariable):
+            return self._build_variable(ir, block, scope, state)
+
+        if isinstance(ir, MenaiIRIf):
+            return self._build_if(ir, block, scope, state, tail)
+
+        if isinstance(ir, MenaiIRLet):
+            return self._build_let(ir, block, scope, state, tail)
+
+        if isinstance(ir, MenaiIRLetrec):
+            return self._build_letrec(ir, block, scope, state, tail)
+
+        if isinstance(ir, MenaiIRLambda):
+            return self._build_lambda_expr(ir, block, scope, state)
+
+        if isinstance(ir, MenaiIRCall):
+            return self._build_call(ir, block, scope, state, tail)
+
+        if isinstance(ir, MenaiIRReturn):
+            # MenaiIRReturn is the IR tree's explicit return wrapper.
+            # We honour tail=True here since the IR already marked this.
+            return self._build_expr(ir.value_plan, block, scope, state, tail=True)
+
+        if isinstance(ir, MenaiIRTrace):
+            return self._build_trace(ir, block, scope, state, tail)
+
+        if isinstance(ir, MenaiIRError):
+            return self._build_error(ir, block, state)
+
+        raise TypeError(f"MenaiCFGBuilder: unhandled IR node {type(ir).__name__}")
+
+    # ------------------------------------------------------------------
+    # Leaf nodes
+    # ------------------------------------------------------------------
+
+    def _build_constant(
+        self,
+        ir: MenaiIRConstant,
+        block: MenaiCFGBlock,
+        state: _FunctionState,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        result = state.new_value("const")
+        block.instrs.append(MenaiCFGConstInstr(result=result, value=ir.value))
+        return result, block
+
+    def _build_empty_list(
+        self,
+        block: MenaiCFGBlock,
+        state: _FunctionState,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        result = state.new_value("empty_list")
+        block.instrs.append(MenaiCFGConstInstr(result=result, value=MenaiList()))
+        return result, block
+
+    def _build_quote(
+        self,
+        ir: MenaiIRQuote,
+        block: MenaiCFGBlock,
+        state: _FunctionState,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        result = state.new_value("quoted")
+        block.instrs.append(MenaiCFGConstInstr(result=result, value=ir.quoted_value))
+        return result, block
+
+    def _build_variable(
+        self,
+        ir: MenaiIRVariable,
+        block: MenaiCFGBlock,
+        scope: MenaiCFGScope,
+        state: _FunctionState,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        if ir.var_type == 'global':
+            result = state.new_value(ir.name)
+            block.instrs.append(MenaiCFGGlobalInstr(result=result, name=ir.name))
+            return result, block
+
+        # Local variable — must be in scope.
+        val = scope.lookup(ir.name)
+        assert val is not None, (
+            f"MenaiCFGBuilder: unresolved local variable {ir.name!r}"
+        )
+        return val, block
+
+    def _build_error(
+        self,
+        ir: MenaiIRError,
+        block: MenaiCFGBlock,
+        state: _FunctionState,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        # error terminates the block; the returned value is a placeholder
+        # that will never be used (the block has no successors).
+        block.terminator = MenaiCFGRaiseTerm(message=ir.message)
+        placeholder = state.new_value("error")
+        return placeholder, block
+
+    # ------------------------------------------------------------------
+    # if expression
+    # ------------------------------------------------------------------
+
+    def _build_if(
+        self,
+        ir: MenaiIRIf,
+        block: MenaiCFGBlock,
+        scope: MenaiCFGScope,
+        state: _FunctionState,
+        tail: bool,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        # Emit condition into the current block.
+        cond_val, block = self._build_expr(
+            ir.condition_plan, block, scope, state, tail=False
+        )
+
+        # Create the three successor blocks.
+        then_block = state.new_block("then")
+        else_block = state.new_block("else")
+        join_block = state.new_block("join")
+
+        block.terminator = MenaiCFGBranchTerm(
+            cond=cond_val,
+            true_block=then_block,
+            false_block=else_block,
+        )
+
+        # Build then branch.
+        then_val, then_exit = self._build_expr(
+            ir.then_plan, then_block, scope, state, tail=tail
+        )
+        # If the then branch didn't terminate (e.g. it's not a tail call),
+        # jump to the join block.
+        if then_exit.terminator is None:
+            then_exit.terminator = MenaiCFGJumpTerm(target=join_block)
+
+        # Build else branch.
+        else_val, else_exit = self._build_expr(
+            ir.else_plan, else_block, scope, state, tail=tail
+        )
+        if else_exit.terminator is None:
+            else_exit.terminator = MenaiCFGJumpTerm(target=join_block)
+
+        # Determine whether the join block is reachable.  It is reachable iff
+        # at least one branch has a JumpTerm pointing to it (i.e. the branch
+        # did not terminate with a tail-call/return/self-loop).
+        then_jumps_to_join = isinstance(then_exit.terminator, MenaiCFGJumpTerm) and then_exit.terminator.target is join_block
+        else_jumps_to_join = isinstance(else_exit.terminator, MenaiCFGJumpTerm) and else_exit.terminator.target is join_block
+        join_reachable = then_jumps_to_join or else_jumps_to_join
+
+        if not join_reachable:
+            # Both branches are tail-terminated; join is unreachable.
+            # Return a placeholder — the caller will not emit a further return.
+            placeholder = state.new_value("if_result")
+            return placeholder, join_block
+
+        # Join block is reachable — add a phi node for the branches that jump to it.
+        phi_result = state.new_value("if_result")
+        incoming = []
+        if then_jumps_to_join:
+            incoming.append((then_val, then_exit))
+        if else_jumps_to_join:
+            incoming.append((else_val, else_exit))
+        join_block.instrs.append(MenaiCFGPhiInstr(
+            result=phi_result,
+            incoming=incoming,
+        ))
+        return phi_result, join_block
+
+    # ------------------------------------------------------------------
+    # let
+    # ------------------------------------------------------------------
+
+    def _build_let(
+        self,
+        ir: MenaiIRLet,
+        block: MenaiCFGBlock,
+        scope: MenaiCFGScope,
+        state: _FunctionState,
+        tail: bool,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        # Binding values are evaluated in the outer scope (parallel let).
+        binding_vals: List[Tuple[str, MenaiCFGValue]] = []
+        for name, value_plan in ir.bindings:
+            val, block = self._build_expr(value_plan, block, scope, state, tail=False)
+            binding_vals.append((name, val))
+
+        # Body is evaluated in a child scope that contains all binding names.
+        body_scope = scope.child()
+        for name, val in binding_vals:
+            body_scope.bind(name, val)
+
+        return self._build_expr(ir.body_plan, block, body_scope, state, tail=tail)
+
+    # ------------------------------------------------------------------
+    # letrec
+    # ------------------------------------------------------------------
+
+    def _build_letrec(
+        self,
+        ir: MenaiIRLetrec,
+        block: MenaiCFGBlock,
+        scope: MenaiCFGScope,
+        state: _FunctionState,
+        tail: bool,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """
+        Build a letrec in three phases.
+
+        Phase 1: Build child CFGs and emit MenaiCFGMakeClosureInstr for each
+                 lambda with only its OUTER (non-sibling) captures.  Sibling
+                 captures cannot be loaded yet because the sibling closures
+                 haven't been created.  The VM pre-allocates None slots for
+                 the full free_vars list; PATCH_CLOSURE fills in siblings.
+
+        Phase 2: Register all closure SSA values in letrec_scope so that
+                 sibling references resolve.
+
+        Phase 3: Emit MenaiCFGPatchClosureInstr for every sibling capture of
+                 every lambda binding, using the full capture_index from the
+                 child function's free_vars list.
+        """
+        sibling_names = {name for name, _ in ir.bindings}
+        # Build a child scope for letrec-bound names (populated in Phase 2).
+        letrec_scope = scope.child()
+
+        # Phase 1: build each lambda's CFG and emit MAKE_CLOSURE with only
+        # outer captures (those not in sibling_names).
+        binding_vals: Dict[str, MenaiCFGValue] = {}
+
+        for name, value_plan in ir.bindings:
+            assert isinstance(value_plan, MenaiIRLambda), (
+                "MenaiCFGBuilder: letrec binding is not a lambda — "
+                "desugarer invariant violated"
+            )
+            child_func = self._build_lambda_function(value_plan, scope)
+
+            # Collect outer captures only — evaluate them in the current scope.
+            # Sibling captures are deferred to Phase 3 (PATCH_CLOSURE).
+            outer_captures: List[MenaiCFGValue] = []
+            for fv_plan, fv_name in zip(
+                value_plan.sibling_free_var_plans + value_plan.outer_free_var_plans,
+                value_plan.sibling_free_vars + value_plan.outer_free_vars,
+            ):
+                if fv_name not in sibling_names:
+                    fv_val, block = self._build_expr(fv_plan, block, scope, state, tail=False)
+                    outer_captures.append(fv_val)
+
+            has_sibling_captures = bool(value_plan.sibling_free_vars)
+            closure_val = state.new_value(name)
+            make_instr = MenaiCFGMakeClosureInstr(
+                result=closure_val,
+                function=child_func,
+                captures=outer_captures,
+                needs_patching=has_sibling_captures,
+            )
+            block.instrs.append(make_instr)
+            binding_vals[name] = closure_val
+
+        # Phase 2: register all closure values in letrec_scope so sibling
+        # references resolve during Phase 3.
+        for name, closure_val in binding_vals.items():
+            letrec_scope.bind(name, closure_val)
+
+        # Phase 3: emit PATCH_CLOSURE for every sibling capture of every lambda.
+        # capture_index is the position in the child function's full free_vars
+        # list (sibling_free_vars + outer_free_vars), which is what the VM uses.
+        for name, value_plan in ir.bindings:
+            assert isinstance(value_plan, MenaiIRLambda)
+            closure_val = binding_vals[name]
+
+            for capture_index, fv_name in enumerate(
+                value_plan.sibling_free_vars + value_plan.outer_free_vars
+            ):
+                if fv_name in {n for n, _ in ir.bindings}:
+                    # Sibling capture — patch after all closures are created.
+                    # This is a sibling capture — needs patching.
+                    fv_val = letrec_scope.lookup(fv_name)
+                    assert fv_val is not None
+                    block.patch_instrs.append(MenaiCFGPatchClosureInstr(
+                        closure=closure_val,
+                        capture_index=capture_index,
+                        value=fv_val,
+                    ))
+
+        # Build the body with all letrec names in scope.
+        return self._build_expr(ir.body_plan, block, letrec_scope, state, tail=tail)
+
+    # ------------------------------------------------------------------
+    # Lambda (as an expression in the parent)
+    # ------------------------------------------------------------------
+
+    def _build_lambda_expr(
+        self,
+        ir: MenaiIRLambda,
+        block: MenaiCFGBlock,
+        scope: MenaiCFGScope,
+        state: _FunctionState,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """
+        Build a lambda that appears as a value expression (not inside letrec).
+
+        Recursively builds the child MenaiCFGFunction, then emits a
+        MenaiCFGMakeClosureInstr in the parent block.
+
+        Captures are loaded by evaluating each free_var_plan as an IR
+        expression.  After copy propagation these may be constants or other
+        non-variable expressions, not necessarily MenaiIRVariable nodes, so
+        we dispatch through _build_expr rather than doing a scope lookup by name.
+        """
+        child_func = self._build_lambda_function(ir, scope)
+
+        # Evaluate each capture plan in the current block and scope.
+        captures: List[MenaiCFGValue] = []
+        for fv_plan in ir.sibling_free_var_plans + ir.outer_free_var_plans:
+            fv_val, block = self._build_expr(fv_plan, block, scope, state, tail=False)
+            captures.append(fv_val)
+
+        result = state.new_value(ir.binding_name or "lambda")
+        block.instrs.append(MenaiCFGMakeClosureInstr(
+            result=result,
+            function=child_func,
+            captures=captures,
+        ))
+        return result, block
+
+    def _build_lambda_function(
+        self,
+        ir: MenaiIRLambda,
+        enclosing_scope: MenaiCFGScope,
+    ) -> MenaiCFGFunction:
+        """
+        Recursively build a MenaiCFGFunction for a MenaiIRLambda node.
+
+        The child function has its own block list, value counter, and block
+        counter.  The enclosing scope is NOT accessible from within the child
+        (all captures are explicit in ir.sibling_free_vars / outer_free_vars).
+
+        Args:
+            ir:             The lambda IR node.
+            enclosing_scope: The parent scope (used only to verify captures
+                             exist — the child does not inherit it).
+
+        Returns:
+            A fully-built MenaiCFGFunction for this lambda.
+        """
+        func = MenaiCFGFunction(
+            params=list(ir.params),
+            free_vars=list(ir.sibling_free_vars + ir.outer_free_vars),
+            is_variadic=ir.is_variadic,
+            binding_name=ir.binding_name,
+            source_line=ir.source_line,
+            source_file=ir.source_file,
+        )
+        state = _FunctionState(function=func)
+        entry = state.new_block("entry")
+
+        # Build the lambda's own scope: params first, then captured free vars.
+        lambda_scope = MenaiCFGScope()
+
+        for idx, param_name in enumerate(ir.params):
+            param_val = state.new_value(param_name)
+            entry.instrs.append(MenaiCFGParamInstr(
+                result=param_val,
+                index=idx,
+                param_name=param_name,
+            ))
+            lambda_scope.bind(param_name, param_val)
+
+        free_var_names = ir.sibling_free_vars + ir.outer_free_vars
+        for idx, fv_name in enumerate(free_var_names):
+            fv_val = state.new_value(fv_name)
+            entry.instrs.append(MenaiCFGFreeVarInstr(
+                result=fv_val,
+                index=idx,
+                var_name=fv_name,
+            ))
+            lambda_scope.bind(fv_name, fv_val)
+
+        # Build the body.
+        result_val, current_block = self._build_expr(
+            ir.body_plan, entry, lambda_scope, state, tail=True
+        )
+
+        if current_block.terminator is None:
+            current_block.terminator = MenaiCFGReturnTerm(value=result_val)
+
+        self._link_predecessors(func)
+        return func
+
+    # ------------------------------------------------------------------
+    # Call
+    # ------------------------------------------------------------------
+
+    def _build_call(
+        self,
+        ir: MenaiIRCall,
+        block: MenaiCFGBlock,
+        scope: MenaiCFGScope,
+        state: _FunctionState,
+        tail: bool,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        if ir.is_builtin:
+            return self._build_builtin_call(ir, block, scope, state)
+
+        # Evaluate arguments.
+        arg_vals: List[MenaiCFGValue] = []
+        for arg_plan in ir.arg_plans:
+            arg_val, block = self._build_expr(arg_plan, block, scope, state, tail=False)
+            arg_vals.append(arg_val)
+
+        # Evaluate the function expression.
+        func_val, block = self._build_expr(ir.func_plan, block, scope, state, tail=False)
+
+        if tail:
+            # Detect direct self-recursive tail call.
+            if (isinstance(ir.func_plan, MenaiIRVariable)
+                    and ir.func_plan.var_type == 'local'
+                    and ir.func_plan.name == state.function.binding_name
+                    and state.function.binding_name is not None):
+                block.terminator = MenaiCFGSelfLoopTerm(args=arg_vals)
+                placeholder = state.new_value("self_loop")
+                return placeholder, block
+
+            block.terminator = MenaiCFGTailCallTerm(func=func_val, args=arg_vals)
+            placeholder = state.new_value("tail_call")
+            return placeholder, block
+
+        result = state.new_value("call_result")
+        block.instrs.append(MenaiCFGCallInstr(
+            result=result,
+            func=func_val,
+            args=arg_vals,
+        ))
+        return result, block
+
+    def _build_builtin_call(
+        self,
+        ir: MenaiIRCall,
+        block: MenaiCFGBlock,
+        scope: MenaiCFGScope,
+        state: _FunctionState,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """
+        Emit a builtin call.  Builtins are never in tail position (they are
+        opcode-backed primitives that return a value inline).
+
+        The 'apply' builtin is special-cased to MenaiCFGApplyInstr since it
+        has different VM semantics (APPLY / TAIL_APPLY).
+        """
+        assert ir.builtin_name is not None
+
+        # Evaluate all argument plans.
+        arg_vals: List[MenaiCFGValue] = []
+        for arg_plan in ir.arg_plans:
+            arg_val, block = self._build_expr(arg_plan, block, scope, state, tail=False)
+            arg_vals.append(arg_val)
+
+        if ir.builtin_name == 'apply':
+            # apply is always (apply func arg-list) — two args.
+            assert len(arg_vals) == 2
+            result = state.new_value("apply_result")
+            block.instrs.append(MenaiCFGApplyInstr(
+                result=result,
+                func=arg_vals[0],
+                arg_list=arg_vals[1],
+            ))
+            return result, block
+
+        result = state.new_value(ir.builtin_name)
+        block.instrs.append(MenaiCFGBuiltinInstr(
+            result=result,
+            op=ir.builtin_name,
+            args=arg_vals,
+        ))
+        return result, block
+
+    # ------------------------------------------------------------------
+    # Trace
+    # ------------------------------------------------------------------
+
+    def _build_trace(
+        self,
+        ir: MenaiIRTrace,
+        block: MenaiCFGBlock,
+        scope: MenaiCFGScope,
+        state: _FunctionState,
+        tail: bool,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        msg_vals: List[MenaiCFGValue] = []
+        for msg_plan in ir.message_plans:
+            msg_val, block = self._build_expr(msg_plan, block, scope, state, tail=False)
+            msg_vals.append(msg_val)
+
+        value_val, block = self._build_expr(ir.value_plan, block, scope, state, tail=False)
+
+        result = state.new_value("trace_result")
+        block.instrs.append(MenaiCFGTraceInstr(
+            result=result,
+            messages=msg_vals,
+            value=value_val,
+        ))
+        return result, block
+
+    # ------------------------------------------------------------------
+    # Predecessor linking
+    # ------------------------------------------------------------------
+
+    def _link_predecessors(self, func: MenaiCFGFunction) -> None:
+        """
+        Populate the `predecessors` list on every block in `func`.
+
+        Called once after all blocks in a function have been created and
+        their terminators set.
+        """
+        for block in func.blocks:
+            term = block.terminator
+            if isinstance(term, MenaiCFGJumpTerm):
+                term.target.predecessors.append(block)
+            elif isinstance(term, MenaiCFGBranchTerm):
+                term.true_block.predecessors.append(block)
+                term.false_block.predecessors.append(block)
+            # ReturnTerm, TailCallTerm, TailApplyTerm, SelfLoopTerm,
+            # RaiseTerm have no successors.

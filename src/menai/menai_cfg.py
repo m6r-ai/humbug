@@ -1,0 +1,524 @@
+"""
+Control Flow Graph (CFG) data structures for the Menai compiler.
+
+This module defines the SSA-form CFG IR that sits between the IR tree
+(menai_ir.py) and the backend code generators.  The VM codegen
+(menai_vm_codegen.py) and any future native backend both consume this
+representation.
+
+Overview
+--------
+Each lambda in the IR tree is compiled independently to a MenaiCFGFunction.
+A MenaiCFGFunction is a list of MenaiCFGBlock objects connected by explicit
+control-flow edges.  Every MenaiCFGBlock ends with exactly one
+MenaiCFGTerminator.  Non-terminator instructions inside a block each produce
+exactly one MenaiCFGValue (SSA value).
+
+SSA invariant
+-------------
+Every MenaiCFGValue is defined exactly once (by the instruction whose
+`result` field it is).  Uses are references to already-defined values.
+Because Menai is a pure functional language with no mutation, every binding
+site is a single static assignment by construction.  The only place a
+MenaiCFGPhiInstr is required is at the join point of an `if` expression,
+where the then-branch and else-branch each produce a value that must be
+unified.
+
+Value naming
+------------
+MenaiCFGValue carries an integer `id` (globally unique within a function,
+assigned by a counter in the builder) and a `hint` string (the source name
+or a descriptive label) for debugging and disassembly.  The string
+representation is `%<id>` optionally followed by `(<hint>)`.
+
+Block naming
+------------
+MenaiCFGBlock carries an integer `id` and a `label` string.  The entry block
+always has id=0 and label="entry".
+
+Instruction taxonomy
+--------------------
+All non-terminator instructions are subclasses of MenaiCFGInstr and carry a
+`result: MenaiCFGValue` field.  Terminators are subclasses of
+MenaiCFGTerminator and carry no result (they end the block).
+
+Nested lambdas
+--------------
+When the builder encounters a MenaiIRLambda it recursively builds a child
+MenaiCFGFunction.  The parent block emits a MenaiCFGMakeClosureInstr whose
+`function` field holds the child MenaiCFGFunction directly (not an index).
+The VM codegen then assigns code-object indices during its own pass.
+
+letrec / mutual recursion
+--------------------------
+The two-phase PATCH_CLOSURE scheme used by the old codegen is replaced by
+explicit MenaiCFGPatchClosureInstr instructions emitted after all closures in
+a letrec group have been created.  Each patch instruction names the closure
+SSA value to patch and the capture SSA value to install.  The VM codegen
+lowers these to PATCH_CLOSURE opcodes; a native backend can implement the
+same semantics differently.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import List, Optional, Tuple
+
+from menai.menai_value import MenaiValue
+
+
+# ---------------------------------------------------------------------------
+# SSA values
+# ---------------------------------------------------------------------------
+
+@dataclass
+class MenaiCFGValue:
+    """
+    An SSA value — the result of exactly one instruction.
+
+    `id` is unique within the enclosing MenaiCFGFunction.
+    `hint` is a human-readable label for debugging (source name, "if_result",
+    "call_result", etc.).  It carries no semantic weight.
+    """
+    id: int
+    hint: str = ""
+
+    def __str__(self) -> str:
+        if self.hint:
+            return f"%{self.id}({self.hint})"
+        return f"%{self.id}"
+
+    def __repr__(self) -> str:
+        return str(self)
+
+    # MenaiCFGValue objects are used as dict keys (e.g. in phi nodes).
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, MenaiCFGValue):
+            return self.id == other.id
+        return NotImplemented
+
+
+# ---------------------------------------------------------------------------
+# Non-terminator instructions
+# ---------------------------------------------------------------------------
+
+@dataclass
+class MenaiCFGConstInstr:
+    """
+    %result = <literal value>
+
+    Covers all constant types: integer, float, complex, string, boolean,
+    none, empty list, and quoted values.
+    """
+    result: MenaiCFGValue
+    value: MenaiValue
+
+
+@dataclass
+class MenaiCFGGlobalInstr:
+    """
+    %result = load_global <name>
+
+    Loads a global name (builtin, prelude function, or module-level binding
+    looked up at runtime via LOAD_NAME).
+    """
+    result: MenaiCFGValue
+    name: str
+
+
+@dataclass
+class MenaiCFGParamInstr:
+    """
+    %result = param <index>
+
+    Represents a lambda parameter.  `index` is the 0-based position in the
+    parameter list.  The VM codegen lowers this to ENTER + LOAD_VAR.
+    """
+    result: MenaiCFGValue
+    index: int
+    param_name: str
+
+
+@dataclass
+class MenaiCFGFreeVarInstr:
+    """
+    %result = free_var <index>
+
+    Loads a captured free variable from the closure's capture list.
+    `index` is the position in the combined (sibling + outer) free_vars list
+    on the enclosing MenaiCFGFunction.  The VM codegen lowers this to
+    LOAD_VAR with the appropriate slot offset.
+    """
+    result: MenaiCFGValue
+    index: int
+    var_name: str
+
+
+@dataclass
+class MenaiCFGBuiltinInstr:
+    """
+    %result = <builtin_op> [%arg, ...]
+
+    A direct builtin operation (opcode-backed).  `op` is the builtin name as
+    it appears in BUILTIN_OPCODE_MAP (e.g. 'integer+', 'list-first').
+    The VM codegen maps `op` to the corresponding Opcode.
+
+    Also covers the variadic BUILD_OPS ('list', 'dict') and the special-cased
+    builtins with optional arguments ('range', 'integer->complex', etc.).
+    """
+    result: MenaiCFGValue
+    op: str
+    args: List[MenaiCFGValue]
+
+
+@dataclass
+class MenaiCFGCallInstr:
+    """
+    %result = call %func [%arg, ...]
+
+    A non-tail function call.  `func` is the SSA value holding the callable.
+    """
+    result: MenaiCFGValue
+    func: MenaiCFGValue
+    args: List[MenaiCFGValue]
+
+
+@dataclass
+class MenaiCFGApplyInstr:
+    """
+    %result = apply %func %arg_list
+
+    A non-tail apply (calls func with arg_list as a Menai list of arguments).
+    Lowered to the APPLY opcode by the VM codegen.
+    """
+    result: MenaiCFGValue
+    func: MenaiCFGValue
+    arg_list: MenaiCFGValue
+
+
+@dataclass
+class MenaiCFGMakeClosureInstr:
+    """
+    %result = make_closure <function> [%capture, ...]
+
+    Creates a closure from a nested MenaiCFGFunction and a list of captured
+    SSA values.  `captures` is ordered: sibling free vars first, then outer
+    free vars, matching the free_vars list on `function`.
+
+    If `captures` is empty the VM codegen may emit LOAD_CONST with a
+    pre-built MenaiFunction instead of MAKE_CLOSURE.
+    """
+    result: MenaiCFGValue
+    function: 'MenaiCFGFunction'
+    captures: List[MenaiCFGValue]
+    needs_patching: bool = False
+    # When True, the VM must create a mutable closure object (MAKE_CLOSURE)
+    # even if `captures` is empty, because PATCH_CLOSURE instructions will
+    # fill in sibling captures after all closures in the letrec are created.
+    # The total capture slot count is len(function.free_vars).
+
+
+@dataclass
+class MenaiCFGPatchClosureInstr:
+    """
+    patch_closure %closure, capture_index, %value
+
+    Installs `value` into capture slot `capture_index` of `closure`.
+    Used exclusively during letrec initialisation to break mutual-recursion
+    cycles.  The VM codegen lowers this to PATCH_CLOSURE.
+
+    This instruction has no result (it is a side-effecting mutation of the
+    closure object).  It is the only instruction in the CFG that does not
+    produce an SSA value, but because Menai closures are the only mutable
+    objects (and only during initialisation), this does not violate the
+    SSA invariant for values.
+    """
+    closure: MenaiCFGValue
+    capture_index: int
+    value: MenaiCFGValue
+
+
+@dataclass
+class MenaiCFGPhiInstr:
+    """
+    %result = phi [(%value_from_block, block), ...]
+
+    Standard SSA phi node.  Each entry pairs an incoming SSA value with the
+    predecessor block it comes from.  For Menai, phi nodes appear only at
+    `if` join points (one phi per if expression).
+
+    VM codegen: both predecessor blocks leave their value on the stack, so
+    the phi emits no instructions — the join block simply continues.
+
+    Native codegen: maps directly to an LLVM phi instruction.
+    """
+    result: MenaiCFGValue
+    incoming: List[Tuple[MenaiCFGValue, 'MenaiCFGBlock']]
+
+
+@dataclass
+class MenaiCFGTraceInstr:
+    """
+    %result = trace [%msg, ...] %value
+
+    Emits each message via EMIT_TRACE then passes `value` through as the
+    result.  The VM codegen emits EMIT_TRACE for each message then leaves
+    `value` on the stack.
+    """
+    result: MenaiCFGValue
+    messages: List[MenaiCFGValue]
+    value: MenaiCFGValue
+
+
+# Union of all non-terminator instruction types.
+# MenaiCFGPatchClosureInstr is intentionally excluded — it has no result and
+# is stored in MenaiCFGBlock.patch_instrs rather than MenaiCFGBlock.instrs.
+MenaiCFGInstr = (
+    MenaiCFGConstInstr
+    | MenaiCFGGlobalInstr
+    | MenaiCFGParamInstr
+    | MenaiCFGFreeVarInstr
+    | MenaiCFGBuiltinInstr
+    | MenaiCFGCallInstr
+    | MenaiCFGApplyInstr
+    | MenaiCFGMakeClosureInstr
+    | MenaiCFGPhiInstr
+    | MenaiCFGTraceInstr
+)
+
+
+# ---------------------------------------------------------------------------
+# Terminator instructions
+# ---------------------------------------------------------------------------
+
+@dataclass
+class MenaiCFGJumpTerm:
+    """Unconditional jump to `target`."""
+    target: 'MenaiCFGBlock'
+
+
+@dataclass
+class MenaiCFGBranchTerm:
+    """
+    Conditional branch on `cond`.
+
+    Jumps to `true_block` if cond is truthy, `false_block` otherwise.
+    Lowered to JUMP_IF_FALSE by the VM codegen.
+    """
+    cond: MenaiCFGValue
+    true_block: 'MenaiCFGBlock'
+    false_block: 'MenaiCFGBlock'
+
+
+@dataclass
+class MenaiCFGReturnTerm:
+    """Return `value` from the current function."""
+    value: MenaiCFGValue
+
+
+@dataclass
+class MenaiCFGTailCallTerm:
+    """
+    Tail call to `func` with `args`.
+
+    Lowered to TAIL_CALL by the VM codegen.
+    """
+    func: MenaiCFGValue
+    args: List[MenaiCFGValue]
+
+
+@dataclass
+class MenaiCFGTailApplyTerm:
+    """
+    Tail apply: call `func` with `arg_list` as a Menai list.
+
+    Lowered to TAIL_APPLY by the VM codegen.
+    """
+    func: MenaiCFGValue
+    arg_list: MenaiCFGValue
+
+
+@dataclass
+class MenaiCFGSelfLoopTerm:
+    """
+    Direct self-recursive tail call.
+
+    The callee is the enclosing function itself.  `args` are the new
+    argument values, in parameter order.  The VM codegen lowers this to
+    JUMP 0 (after storing args into the parameter slots).
+    """
+    args: List[MenaiCFGValue]
+
+
+@dataclass
+class MenaiCFGRaiseTerm:
+    """
+    Raise a runtime error with a constant message string.
+
+    Lowered to RAISE_ERROR by the VM codegen.
+    """
+    message: MenaiValue
+
+
+# Union of all terminator types.
+MenaiCFGTerminator = (
+    MenaiCFGJumpTerm
+    | MenaiCFGBranchTerm
+    | MenaiCFGReturnTerm
+    | MenaiCFGTailCallTerm
+    | MenaiCFGTailApplyTerm
+    | MenaiCFGSelfLoopTerm
+    | MenaiCFGRaiseTerm
+)
+
+
+# ---------------------------------------------------------------------------
+# Basic block
+# ---------------------------------------------------------------------------
+
+@dataclass
+class MenaiCFGBlock:
+    """
+    A basic block: a maximal straight-line sequence of instructions with a
+    single entry point and a single exit (the terminator).
+
+    Fields
+    ------
+    id          : unique integer within the enclosing MenaiCFGFunction (0 = entry)
+    label       : human-readable name for debugging ("entry", "then_0", etc.)
+    instrs      : non-terminator instructions, in emission order
+    patch_instrs: MenaiCFGPatchClosureInstr instructions for letrec fixup,
+                  emitted after `instrs` but before the terminator
+    terminator  : the block's single exit instruction (set by the builder)
+    predecessors: blocks that have an edge to this block (filled in by the
+                  builder after all blocks are created)
+    """
+    id: int
+    label: str
+    instrs: List[MenaiCFGInstr] = field(default_factory=list)
+    patch_instrs: List[MenaiCFGPatchClosureInstr] = field(default_factory=list)
+    terminator: Optional[MenaiCFGTerminator] = None
+    predecessors: List['MenaiCFGBlock'] = field(default_factory=list)
+
+    def __repr__(self) -> str:
+        lines = [f"block {self.id} ({self.label}):"]
+        for instr in self.instrs:
+            lines.append(f"  {_fmt_instr(instr)}")
+        for patch in self.patch_instrs:
+            lines.append(f"  patch_closure {patch.closure} [{patch.capture_index}] = {patch.value}")
+        if self.terminator is not None:
+            lines.append(f"  {_fmt_term(self.terminator)}")
+        return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# CFG function
+# ---------------------------------------------------------------------------
+
+@dataclass
+class MenaiCFGFunction:
+    """
+    The CFG for a single lambda (or the top-level module body).
+
+    `blocks` is ordered with the entry block first.  The builder appends
+    blocks in construction order; the VM codegen performs its own traversal.
+
+    Fields
+    ------
+    blocks       : all basic blocks, entry block at index 0
+    params       : parameter names, in order (parallel to param_count)
+    free_vars    : captured variable names, sibling free vars first then outer
+                   free vars, matching the capture order in MakeClosureInstr
+    is_variadic  : True if the last parameter is a rest parameter
+    binding_name : the name this lambda is bound to, if any (for self-loop
+                   detection and debug names)
+    source_line  : source line where the lambda is defined
+    source_file  : source file where the lambda is defined
+    """
+    blocks: List[MenaiCFGBlock] = field(default_factory=list)
+    params: List[str] = field(default_factory=list)
+    free_vars: List[str] = field(default_factory=list)
+    is_variadic: bool = False
+    binding_name: Optional[str] = None
+    source_line: int = 0
+    source_file: str = ""
+
+    @property
+    def entry(self) -> MenaiCFGBlock:
+        """The entry block (always the first block)."""
+        return self.blocks[0]
+
+    @property
+    def param_count(self) -> int:
+        return len(self.params)
+
+    def __repr__(self) -> str:
+        name = self.binding_name or "<lambda>"
+        lines = [f"MenaiCFGFunction {name}({', '.join(self.params)}):"]
+        if self.free_vars:
+            lines.append(f"  free_vars: {self.free_vars}")
+        for block in self.blocks:
+            lines.append(repr(block))
+        return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Formatting helpers (used by __repr__ methods above)
+# ---------------------------------------------------------------------------
+
+def _fmt_value(v: MenaiCFGValue) -> str:
+    return str(v)
+
+
+def _fmt_values(vs: List[MenaiCFGValue]) -> str:
+    return "[" + ", ".join(str(v) for v in vs) + "]"
+
+
+def _fmt_instr(instr: MenaiCFGInstr) -> str:
+    """One-line human-readable representation of a non-terminator instruction."""
+    if isinstance(instr, MenaiCFGConstInstr):
+        return f"{instr.result} = const {instr.value!r}"
+    if isinstance(instr, MenaiCFGGlobalInstr):
+        return f"{instr.result} = global {instr.name!r}"
+    if isinstance(instr, MenaiCFGParamInstr):
+        return f"{instr.result} = param {instr.index} ({instr.param_name!r})"
+    if isinstance(instr, MenaiCFGFreeVarInstr):
+        return f"{instr.result} = free_var {instr.index} ({instr.var_name!r})"
+    if isinstance(instr, MenaiCFGBuiltinInstr):
+        return f"{instr.result} = builtin {instr.op!r} {_fmt_values(instr.args)}"
+    if isinstance(instr, MenaiCFGCallInstr):
+        return f"{instr.result} = call {instr.func} {_fmt_values(instr.args)}"
+    if isinstance(instr, MenaiCFGApplyInstr):
+        return f"{instr.result} = apply {instr.func} {instr.arg_list}"
+    if isinstance(instr, MenaiCFGMakeClosureInstr):
+        name = instr.function.binding_name or "<lambda>"
+        return f"{instr.result} = make_closure {name!r} {_fmt_values(instr.captures)}"
+    if isinstance(instr, MenaiCFGPhiInstr):
+        parts = ", ".join(f"{v} <- block{b.id}" for v, b in instr.incoming)
+        return f"{instr.result} = phi [{parts}]"
+    if isinstance(instr, MenaiCFGTraceInstr):
+        return f"{instr.result} = trace {_fmt_values(instr.messages)} {instr.value}"
+    return f"<unknown instr {type(instr).__name__}>"
+
+
+def _fmt_term(term: MenaiCFGTerminator) -> str:
+    """One-line human-readable representation of a terminator."""
+    if isinstance(term, MenaiCFGJumpTerm):
+        return f"jump block{term.target.id}"
+    if isinstance(term, MenaiCFGBranchTerm):
+        return (f"branch {term.cond} → block{term.true_block.id} / "
+                f"block{term.false_block.id}")
+    if isinstance(term, MenaiCFGReturnTerm):
+        return f"return {term.value}"
+    if isinstance(term, MenaiCFGTailCallTerm):
+        return f"tail_call {term.func} {_fmt_values(term.args)}"
+    if isinstance(term, MenaiCFGTailApplyTerm):
+        return f"tail_apply {term.func} {term.arg_list}"
+    if isinstance(term, MenaiCFGSelfLoopTerm):
+        return f"self_loop {_fmt_values(term.args)}"
+    if isinstance(term, MenaiCFGRaiseTerm):
+        return f"raise {term.message!r}"
+    return f"<unknown term {type(term).__name__}>"
