@@ -16,7 +16,6 @@ from menai.menai_ir_builder import MenaiIRBuilder
 from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
 from menai.menai_ir_copy_propagator import MenaiIRCopyPropagator
 from menai.menai_free_var_analyzer import MenaiFreeVarAnalyzer
-from menai.menai_ir_closure_converter import MenaiIRClosureConverter
 from menai.menai_ir_lambda_lifter import MenaiIRLambdaLifter
 from menai.menai_ir_addresser import MenaiIRAddresser
 from menai.menai_ir_optimizer import MenaiIROptimizer
@@ -53,7 +52,6 @@ class MenaiCompiler:
         # AST optimization passes
         self.ir_addresser = MenaiIRAddresser()
         self.free_var_analyzer = MenaiFreeVarAnalyzer()
-        self.closure_converter = MenaiIRClosureConverter()
         self.lambda_lifter = MenaiIRLambdaLifter()
         self.ast_passes: List[MenaiASTOptimizationPass] = []
         self.ir_passes: List[MenaiIROptimizationPass] = []
@@ -120,9 +118,6 @@ class MenaiCompiler:
         _free_var_info = self.free_var_analyzer.analyze(desugared_ast)
 
         ir = self.ir_builder.build(desugared_ast)
-
-        # Closure conversion (currently an identity pass / insertion point).
-        ir = self.closure_converter.convert(ir)
 
         # Lambda lifting: replace every capturing lambda with a closed helper
         # plus a thin wrapper.  Variables remain symbolic throughout.
