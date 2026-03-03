@@ -107,8 +107,6 @@ class BytecodeValidator:
             # Variables - load pushes 1, store pops 1
             Opcode.LOAD_VAR: (0, 1),
             Opcode.STORE_VAR: (1, 0),
-            # LOAD_PARENT_VAR removed — replaced by PATCH_CLOSURE
-            Opcode.PATCH_CLOSURE: (1, 0),  # pops 1 value, mutates existing closure slot
             Opcode.LOAD_NAME: (0, 1),
 
             # Control flow - jumps don't affect stack, conditionals pop 1
@@ -121,6 +119,7 @@ class BytecodeValidator:
             # CALL_* effects depend on arity (handled specially)
             # RETURN pops 1 (handled specially as it exits)
             Opcode.MAKE_CLOSURE: (-1, 1),
+            Opcode.PATCH_CLOSURE: (1, 0),  # pops 1 value, mutates existing closure slot
             Opcode.CALL: (-1, 1),
             Opcode.TAIL_CALL: (-1, 0),
             Opcode.APPLY: (2, 1),
@@ -531,10 +530,27 @@ class BytecodeValidator:
 
         This performs definite assignment analysis to track which variables
         are guaranteed to be initialized at each program point.
+
+        In addition to the initialized-slot set, we track a *closure map*:
+        a mapping from slot index to code_object index for slots that are
+        definitively known to hold a closure created by MAKE_CLOSURE.  This
+        is needed to validate PATCH_CLOSURE, which has three requirements:
+
+          1. arg1 (var_index) must refer to an initialized slot.
+          2. That slot must definitively hold a closure (not an arbitrary value).
+          3. arg2 (capture_slot) must be < len(code_objects[code_index].free_vars)
+             for the closure stored in that slot.
+
+        At merge points the closure map is intersected conservatively: a slot
+        is only kept in the map if both incoming paths agree on the same
+        code_object index.  If the paths disagree (or one path doesn't have a
+        closure there), the slot is dropped from the map, making any subsequent
+        PATCH_CLOSURE against it a validation error.
         """
         # Track which variables are definitely initialized at each instruction
-        # Maps instruction index -> set of initialized variable indices
-        initialized_at: Dict[int, Set[int]] = {}
+        # Maps instruction index -> (set of initialized variable indices,
+        #                            dict of slot -> code_object_index for closure slots)
+        initialized_at: Dict[int, Tuple[Set[int], Dict[int, int]]] = {}
 
         # Initial state: captured variables are pre-initialized by MAKE_CLOSURE before the frame runs.
         # Parameters are no longer pre-seeded here; ENTER at instruction 0 initializes them,
@@ -553,7 +569,9 @@ class BytecodeValidator:
 
         # Worklist algorithm
         worklist: List[int] = [0]
-        initialized_at[0] = initial_initialized.copy()
+        # Captured-value slots are never closures created in this frame, so the
+        # initial closure map is empty.
+        initialized_at[0] = (initial_initialized.copy(), {})
 
         while worklist:
             instr_idx = worklist.pop(0)
@@ -562,7 +580,7 @@ class BytecodeValidator:
                 # Unreachable
                 continue
 
-            current_initialized = initialized_at[instr_idx]
+            current_initialized, current_closures = initialized_at[instr_idx]
             instr = code.instructions[instr_idx]
             opcode = instr.opcode
 
@@ -578,13 +596,67 @@ class BytecodeValidator:
                         context=f"Initialized variables: {sorted(current_initialized)}"
                     )
 
+            # Check PATCH_CLOSURE:
+            #   1. var_index (arg1) must be initialized.
+            #   2. That slot must definitively hold a closure.
+            #   3. capture_slot (arg2) must be in range for that closure's free_vars.
+            if opcode == Opcode.PATCH_CLOSURE:
+                var_index = instr.arg1
+                capture_slot = instr.arg2
+
+                if var_index not in current_initialized:
+                    raise ValidationError(
+                        ValidationErrorType.UNINITIALIZED_VARIABLE,
+                        f"PATCH_CLOSURE target slot {var_index} may be uninitialized",
+                        instruction_index=instr_idx,
+                        opcode=opcode,
+                        context=f"Initialized variables: {sorted(current_initialized)}"
+                    )
+
+                if var_index not in current_closures:
+                    raise ValidationError(
+                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
+                        f"PATCH_CLOSURE target slot {var_index} is not known to hold a closure",
+                        instruction_index=instr_idx,
+                        opcode=opcode,
+                        context=(
+                            f"Slots known to hold closures: {sorted(current_closures.keys())}"
+                        )
+                    )
+
+                code_obj_index = current_closures[var_index]
+                target_code = code.code_objects[code_obj_index]
+                n_free = len(target_code.free_vars)
+                if capture_slot < 0 or capture_slot >= n_free:
+                    raise ValidationError(
+                        ValidationErrorType.INDEX_OUT_OF_BOUNDS,
+                        f"PATCH_CLOSURE capture_slot {capture_slot} out of range "
+                        f"for closure with {n_free} free variable(s)",
+                        instruction_index=instr_idx,
+                        opcode=opcode,
+                        context=f"Closure is code_objects[{code_obj_index}] ({target_code.name!r})"
+                    )
+
             # Calculate new initialized set after this instruction
             new_initialized = current_initialized.copy()
+            new_closures = current_closures.copy()
 
             # STORE_VAR marks variable as initialized
             if opcode == Opcode.STORE_VAR:
                 var_index = instr.arg1
                 new_initialized.add(var_index)
+                # If the immediately preceding instruction was MAKE_CLOSURE,
+                # record the closure identity for this slot so PATCH_CLOSURE
+                # can be validated.  Otherwise the slot holds a non-closure
+                # value, so any prior closure identity is invalidated.
+                if instr_idx > 0:
+                    prev_instr = code.instructions[instr_idx - 1]
+                    if prev_instr.opcode == Opcode.MAKE_CLOSURE:
+                        new_closures[var_index] = prev_instr.arg1  # code_object index
+                    else:
+                        new_closures.pop(var_index, None)
+                else:
+                    new_closures.pop(var_index, None)
 
             # ENTER marks locals 0..n-1 as initialized
             if opcode == Opcode.ENTER:
@@ -600,13 +672,21 @@ class BytecodeValidator:
             for succ_idx in successors:
                 if succ_idx in initialized_at:
                     # Merge: only keep variables initialized on ALL paths
-                    merged = initialized_at[succ_idx] & new_initialized
-                    if merged != initialized_at[succ_idx]:
-                        initialized_at[succ_idx] = merged
+                    existing_init, existing_closures = initialized_at[succ_idx]
+                    merged_init = existing_init & new_initialized
+                    # Closure map: keep only slots where both paths agree on the
+                    # same code_object index.
+                    merged_closures = {
+                        slot: cidx
+                        for slot, cidx in existing_closures.items()
+                        if new_closures.get(slot) == cidx
+                    }
+                    if merged_init != existing_init or merged_closures != existing_closures:
+                        initialized_at[succ_idx] = (merged_init, merged_closures)
                         worklist.append(succ_idx)
                 else:
                     # First time visiting
-                    initialized_at[succ_idx] = new_initialized.copy()
+                    initialized_at[succ_idx] = (new_initialized.copy(), new_closures.copy())
                     worklist.append(succ_idx)
 
     def _get_stack_effect(self, instr: Instruction) -> Tuple[int, int]:

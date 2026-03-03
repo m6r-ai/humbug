@@ -488,5 +488,276 @@ class TestBytecodeValidator:
         validate_bytecode(code)
 
 
+
+
+class TestPatchClosureValidation:
+    """
+    Tests for the three PATCH_CLOSURE validation checks added to
+    _validate_initialization:
+
+      1. The target slot (arg1) must be initialised.
+      2. The target slot must definitively hold a closure (created by MAKE_CLOSURE).
+      3. The capture_slot (arg2) must be within the free_vars range of that closure.
+    """
+
+    # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _make_closure_code(n_free_vars: int, name: str = "<inner>") -> CodeObject:
+        """Return a minimal closed CodeObject with n_free_vars free variable slots."""
+        return CodeObject(
+            instructions=[
+                Instruction(Opcode.ENTER, 1),
+                Instruction(Opcode.LOAD_VAR, 0),
+                Instruction(Opcode.RETURN),
+            ],
+            constants=[],
+            names=[],
+            code_objects=[],
+            param_count=1,
+            local_count=1 + n_free_vars,
+            free_vars=[f"fv{i}" for i in range(n_free_vars)],
+            name=name,
+        )
+
+    # ------------------------------------------------------------------
+    # Valid cases
+    # ------------------------------------------------------------------
+
+    def test_valid_patch_closure(self):
+        """PATCH_CLOSURE against a known closure slot with a valid capture_slot passes."""
+        inner = self._make_closure_code(2)
+        # Outer frame:
+        #   0: MAKE_CLOSURE 0 0   (create skeleton with 0 pre-captured values)
+        #   1: STORE_VAR 0        (slot 0 now holds the closure)
+        #   2: LOAD_CONST 0       (value to patch in)
+        #   3: PATCH_CLOSURE 0 0  (patch capture slot 0 — valid: inner has 2 free vars)
+        #   4: LOAD_CONST 0
+        #   5: PATCH_CLOSURE 0 1  (patch capture slot 1 — valid)
+        #   6: LOAD_VAR 0
+        #   7: RETURN
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.MAKE_CLOSURE, 0, 0),
+                Instruction(Opcode.STORE_VAR, 0),
+                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.PATCH_CLOSURE, 0, 0),
+                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.PATCH_CLOSURE, 0, 1),
+                Instruction(Opcode.LOAD_VAR, 0),
+                Instruction(Opcode.RETURN),
+            ],
+            constants=[MenaiInteger(42)],
+            names=[],
+            code_objects=[inner],
+            local_count=1,
+        )
+        validate_bytecode(code)  # must not raise
+
+    def test_valid_patch_closure_single_free_var(self):
+        """PATCH_CLOSURE with exactly one free var and capture_slot=0 passes."""
+        inner = self._make_closure_code(1)
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.MAKE_CLOSURE, 0, 0),
+                Instruction(Opcode.STORE_VAR, 0),
+                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.PATCH_CLOSURE, 0, 0),
+                Instruction(Opcode.LOAD_VAR, 0),
+                Instruction(Opcode.RETURN),
+            ],
+            constants=[MenaiInteger(1)],
+            names=[],
+            code_objects=[inner],
+            local_count=1,
+        )
+        validate_bytecode(code)  # must not raise
+
+    # ------------------------------------------------------------------
+    # Gap 1: target slot is uninitialised
+    # ------------------------------------------------------------------
+
+    def test_patch_closure_uninitialized_slot(self):
+        """PATCH_CLOSURE against an uninitialised slot is rejected."""
+        inner = self._make_closure_code(1)
+        # slot 0 is never written — PATCH_CLOSURE reads it without a prior STORE_VAR
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.PATCH_CLOSURE, 0, 0),   # slot 0 never initialised
+                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.RETURN),
+            ],
+            constants=[MenaiInteger(1)],
+            names=[],
+            code_objects=[inner],
+            local_count=1,
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            validate_bytecode(code)
+        assert exc_info.value.error_type == ValidationErrorType.UNINITIALIZED_VARIABLE
+        assert "PATCH_CLOSURE" in exc_info.value.message
+
+    def test_patch_closure_slot_initialized_only_on_one_branch(self):
+        """PATCH_CLOSURE is rejected when the slot is only initialised on one branch."""
+        inner = self._make_closure_code(1)
+        # Branch A (instr 2-4): creates closure, stores to slot 0
+        # Branch B (instr 5):   skips creation
+        # Merge (instr 6):      PATCH_CLOSURE — slot 0 may be uninitialised
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_TRUE),            # 0
+                Instruction(Opcode.JUMP_IF_FALSE, 5),     # 1: branch to 5
+                Instruction(Opcode.MAKE_CLOSURE, 0, 0),   # 2
+                Instruction(Opcode.STORE_VAR, 0),         # 3
+                Instruction(Opcode.JUMP, 6),              # 4
+                Instruction(Opcode.JUMP, 6),              # 5: no STORE_VAR
+                Instruction(Opcode.LOAD_CONST, 0),        # 6
+                Instruction(Opcode.PATCH_CLOSURE, 0, 0),  # 7: slot 0 may be uninit
+                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.RETURN),
+            ],
+            constants=[MenaiInteger(1)],
+            names=[],
+            code_objects=[inner],
+            local_count=1,
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            validate_bytecode(code)
+        assert exc_info.value.error_type == ValidationErrorType.UNINITIALIZED_VARIABLE
+
+    # ------------------------------------------------------------------
+    # Gap 2: target slot does not hold a closure
+    # ------------------------------------------------------------------
+
+    def test_patch_closure_slot_holds_constant_not_closure(self):
+        """PATCH_CLOSURE against a slot holding a plain constant is rejected."""
+        inner = self._make_closure_code(1)
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_CONST, 0),        # push a plain integer
+                Instruction(Opcode.STORE_VAR, 0),         # slot 0 = integer (not a closure)
+                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.PATCH_CLOSURE, 0, 0),  # slot 0 is not a closure
+                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.RETURN),
+            ],
+            constants=[MenaiInteger(42)],
+            names=[],
+            code_objects=[inner],
+            local_count=1,
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            validate_bytecode(code)
+        assert exc_info.value.error_type == ValidationErrorType.INVALID_VARIABLE_ACCESS
+        assert "not known to hold a closure" in exc_info.value.message
+
+    def test_patch_closure_slot_overwritten_after_make_closure(self):
+        """PATCH_CLOSURE is rejected when a second STORE_VAR overwrites the closure slot."""
+        inner = self._make_closure_code(1)
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.MAKE_CLOSURE, 0, 0),   # create closure
+                Instruction(Opcode.STORE_VAR, 0),         # slot 0 = closure
+                Instruction(Opcode.LOAD_CONST, 0),        # push integer
+                Instruction(Opcode.STORE_VAR, 0),         # slot 0 = integer (overwrites closure)
+                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.PATCH_CLOSURE, 0, 0),  # slot 0 no longer a closure
+                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.RETURN),
+            ],
+            constants=[MenaiInteger(42)],
+            names=[],
+            code_objects=[inner],
+            local_count=1,
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            validate_bytecode(code)
+        assert exc_info.value.error_type == ValidationErrorType.INVALID_VARIABLE_ACCESS
+        assert "not known to hold a closure" in exc_info.value.message
+
+    def test_patch_closure_slot_holds_different_closures_on_branches(self):
+        """PATCH_CLOSURE is rejected when two branches store different closures in the slot."""
+        inner_a = self._make_closure_code(1, name="<inner-a>")
+        inner_b = self._make_closure_code(1, name="<inner-b>")
+        # Branch A stores code_objects[0], branch B stores code_objects[1].
+        # At the merge point the validator cannot determine which closure is in
+        # slot 0, so PATCH_CLOSURE must be rejected.
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_TRUE),            # 0
+                Instruction(Opcode.JUMP_IF_FALSE, 5),     # 1: branch to 5
+                Instruction(Opcode.MAKE_CLOSURE, 0, 0),   # 2: closure from code_objects[0]
+                Instruction(Opcode.STORE_VAR, 0),         # 3
+                Instruction(Opcode.JUMP, 7),              # 4
+                Instruction(Opcode.MAKE_CLOSURE, 1, 0),   # 5: closure from code_objects[1]
+                Instruction(Opcode.STORE_VAR, 0),         # 6
+                Instruction(Opcode.LOAD_CONST, 0),        # 7 (merge)
+                Instruction(Opcode.PATCH_CLOSURE, 0, 0),  # 8: ambiguous — which closure?
+                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.RETURN),
+            ],
+            constants=[MenaiInteger(1)],
+            names=[],
+            code_objects=[inner_a, inner_b],
+            local_count=1,
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            validate_bytecode(code)
+        assert exc_info.value.error_type == ValidationErrorType.INVALID_VARIABLE_ACCESS
+        assert "not known to hold a closure" in exc_info.value.message
+
+    # ------------------------------------------------------------------
+    # Gap 3: capture_slot out of range
+    # ------------------------------------------------------------------
+
+    def test_patch_closure_capture_slot_too_large(self):
+        """PATCH_CLOSURE with capture_slot >= n_free_vars is rejected."""
+        inner = self._make_closure_code(2)  # free_vars has 2 entries (slots 0 and 1)
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.MAKE_CLOSURE, 0, 0),
+                Instruction(Opcode.STORE_VAR, 0),
+                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.PATCH_CLOSURE, 0, 2),  # capture_slot=2, but only 0 and 1 exist
+                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.RETURN),
+            ],
+            constants=[MenaiInteger(1)],
+            names=[],
+            code_objects=[inner],
+            local_count=1,
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            validate_bytecode(code)
+        assert exc_info.value.error_type == ValidationErrorType.INDEX_OUT_OF_BOUNDS
+        assert "capture_slot" in exc_info.value.message
+        assert "out of range" in exc_info.value.message
+
+    def test_patch_closure_capture_slot_zero_free_vars(self):
+        """PATCH_CLOSURE against a closure with no free vars is always out of range."""
+        inner = self._make_closure_code(0)  # no free vars at all
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.MAKE_CLOSURE, 0, 0),
+                Instruction(Opcode.STORE_VAR, 0),
+                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.PATCH_CLOSURE, 0, 0),  # capture_slot=0, but n_free=0
+                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.RETURN),
+            ],
+            constants=[MenaiInteger(1)],
+            names=[],
+            code_objects=[inner],
+            local_count=1,
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            validate_bytecode(code)
+        assert exc_info.value.error_type == ValidationErrorType.INDEX_OUT_OF_BOUNDS
+        assert "capture_slot" in exc_info.value.message
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
