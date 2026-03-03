@@ -67,12 +67,22 @@ Because Menai has no side effects, any expression whose result is never used can
 discarded unconditionally.  Optimisation passes may rely on this without checking for
 side effects.
 
-### `letrec` reaching the IR builder is always a genuine mutually-recursive lambda group
+### `letrec` reaching the IR builder is always a genuine mutually-recursive group
 
 The desugarer guarantees that by the time `letrec` reaches the IR builder, every
-`letrec` is a single fully-mutually-recursive group of lambdas.  Non-recursive bindings
-and non-lambda bindings have been hoisted to `let` forms.  IR passes may rely on this
-invariant.
+`letrec` is a single strongly-connected component of mutually-recursive bindings.
+Non-recursive bindings are hoisted to `let` forms.
+
+**However, not every binding in a `letrec` group is necessarily a lambda.**  A
+non-lambda binding (e.g. `(letrec ((x (list (lambda () x)))) x)`) can appear in a
+`letrec` group when its RHS contains a nested lambda that closes over the binding
+name — the dependency analyzer sees a cycle and correctly keeps it in `letrec`.
+The IR builder and both codegens handle this.  The CFG builder handles it via a
+dedicated Phase 2b / Phase 3b in `_build_letrec`: non-lambda binding values are
+evaluated after all sibling lambda closures exist (so nested lambdas can capture
+them), and any nested lambdas with sibling captures are patched afterward.
+
+IR passes downstream of the IR builder may **not** assume all `letrec` bindings are lambdas.
 
 ### The prelude and the builtin registry must stay consistent
 

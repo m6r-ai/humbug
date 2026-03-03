@@ -761,7 +761,7 @@ class MenaiCFGBuilder:
         tail: bool,
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         if ir.is_builtin:
-            return self._build_builtin_call(ir, block, scope, state)
+            return self._build_builtin_call(ir, block, scope, state, tail)
 
         # Evaluate arguments.
         arg_vals: List[MenaiCFGValue] = []
@@ -800,13 +800,16 @@ class MenaiCFGBuilder:
         block: MenaiCFGBlock,
         scope: MenaiCFGScope,
         state: _FunctionState,
+        tail: bool = False,
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         """
-        Emit a builtin call.  Builtins are never in tail position (they are
-        opcode-backed primitives that return a value inline).
+        Emit a builtin call.  Most builtins are never in tail position (they
+        are opcode-backed primitives that return a value inline).
 
-        The 'apply' builtin is special-cased to MenaiCFGApplyInstr since it
-        has different VM semantics (APPLY / TAIL_APPLY).
+        The 'apply' builtin is special-cased: in non-tail position it emits
+        MenaiCFGApplyInstr (lowered to APPLY); in tail position it emits a
+        MenaiCFGTailApplyTerm (lowered to TAIL_APPLY), which is essential for
+        tail-recursive functions that recurse via apply.
         """
         assert ir.builtin_name is not None
 
@@ -819,13 +822,21 @@ class MenaiCFGBuilder:
         if ir.builtin_name == 'apply':
             # apply is always (apply func arg-list) — two args.
             assert len(arg_vals) == 2
-            result = state.new_value("apply_result")
-            block.instrs.append(MenaiCFGApplyInstr(
-                result=result,
-                func=arg_vals[0],
-                arg_list=arg_vals[1],
-            ))
-            return result, block
+            if tail:
+                block.terminator = MenaiCFGTailApplyTerm(
+                    func=arg_vals[0],
+                    arg_list=arg_vals[1],
+                )
+                placeholder = state.new_value("tail_apply")
+                return placeholder, block
+            else:
+                result = state.new_value("apply_result")
+                block.instrs.append(MenaiCFGApplyInstr(
+                    result=result,
+                    func=arg_vals[0],
+                    arg_list=arg_vals[1],
+                ))
+                return result, block
 
         result = state.new_value(ir.builtin_name)
         block.instrs.append(MenaiCFGBuiltinInstr(
