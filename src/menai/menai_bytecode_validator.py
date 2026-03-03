@@ -569,6 +569,7 @@ class BytecodeValidator:
 
         # Worklist algorithm
         worklist: List[int] = [0]
+
         # Captured-value slots are never closures created in this frame, so the
         # initial closure map is empty.
         initialized_at[0] = (initial_initialized.copy(), {})
@@ -653,8 +654,10 @@ class BytecodeValidator:
                     prev_instr = code.instructions[instr_idx - 1]
                     if prev_instr.opcode == Opcode.MAKE_CLOSURE:
                         new_closures[var_index] = prev_instr.arg1  # code_object index
+
                     else:
                         new_closures.pop(var_index, None)
+
                 else:
                     new_closures.pop(var_index, None)
 
@@ -684,6 +687,7 @@ class BytecodeValidator:
                     if merged_init != existing_init or merged_closures != existing_closures:
                         initialized_at[succ_idx] = (merged_init, merged_closures)
                         worklist.append(succ_idx)
+
                 else:
                     # First time visiting
                     initialized_at[succ_idx] = (new_initialized.copy(), new_closures.copy())
