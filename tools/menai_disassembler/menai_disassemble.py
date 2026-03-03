@@ -387,8 +387,18 @@ def main() -> int:
 
     # Compile
     print(f"Compiling: {args.file}", file=sys.stderr)
+
+    # Build a deduplicated module search path:
+    #   1. The file's own directory (for bare imports like "calendar" when
+    #      the source file lives alongside its modules)
+    #   2. The current working directory (so that import paths written
+    #      relative to the project root, e.g. "tools/planner/calendar",
+    #      resolve correctly when the tool is run from the root)
     file_dir = str(source_path.parent.absolute())
-    menai = Menai(module_path=[file_dir])
+    cwd = str(Path.cwd())
+    seen = set()
+    module_path = [d for d in [file_dir, cwd] if not (d in seen or seen.add(d))]
+    menai = Menai(module_path=module_path)
 
     try:
         compiler = MenaiCompiler(
