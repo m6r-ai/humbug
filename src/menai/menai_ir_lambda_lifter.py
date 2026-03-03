@@ -2,11 +2,22 @@
 Menai IR Lambda Lifter — worker/wrapper transformation.
 
 This pass walks the IR tree and replaces every MenaiIRLambda that has free
-variables or parent references with:
+variables with a fully-closed helper and a thin wrapper.
 
-    (let ((helper (lambda (p0..pN fv0..fvM) <original body>)))
+For a standalone capturing lambda (inside a let or as a plain expression):
+
+    (let ((<lifted-N-f> (lambda (p0..pN fv0..fvM) <original body>)))
       (lambda (p0..pN)
-        <tail-calls helper with p0..pN + captured fv0..fvM>))
+        (tail-call <lifted-N-f> p0..pN fv0..fvM)))
+
+For a letrec group, all helpers from all capturing bindings are hoisted into
+a single enclosing let, and the letrec retains only the wrappers:
+
+    (let ((<lifted-N-f> (lambda (p0..pN fvs-of-f...) <body-of-f>))
+          (<lifted-M-g> (lambda (q0..qM fvs-of-g...) <body-of-g>)))
+      (letrec ((f (lambda (p0..pN) (tail-call <lifted-N-f> p0..pN fvs-of-f...)))
+               (g (lambda (q0..qM) (tail-call <lifted-M-g> q0..qM fvs-of-g...))))
+        <body>))
 
 Terminology
 -----------
@@ -16,7 +27,14 @@ Terminology
 - *wrapper* — thin lambda with the original arity.  Captures the helper plus
               all formerly-captured values via MAKE_CLOSURE, then tail-calls
               the helper passing everything through.  Correct for first-class
-              uses (map-list, fold-list, return values, etc.).
+              uses (map-list, fold-list, return values, etc.).  For the letrec
+              case the wrapper still captures its sibling wrappers via
+              PATCH_CLOSURE, but the helper is an outer (let-bound) capture
+              that is available at MAKE_CLOSURE time.
+
+Hoisting helpers out of the letrec makes them co-visible with all sibling
+wrappers in the enclosing let scope, which allows the inliner to see through
+wrapper call sites inside sibling helpers.
 
 After this pass every MenaiIRLambda in the tree has sibling_free_vars==[] and
 outer_free_vars==[].
@@ -33,7 +51,7 @@ passes are complete.
 
 from __future__ import annotations
 
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 from menai.menai_ir import (
     MenaiIRCall,
@@ -60,6 +78,10 @@ class MenaiIRLambdaLifter:
     replaced by a let-bound helper (fully closed) and a thin wrapper (original
     arity, captures everything via MAKE_CLOSURE, tail-calls the helper).
 
+    For letrec groups all helpers are hoisted into a single enclosing let so
+    that they are co-visible with their sibling wrappers, enabling the inliner
+    to see through wrapper call sites inside sibling helpers.
+
     Usage::
 
         new_ir = MenaiIRLambdaLifter().lift(ir)
@@ -85,11 +107,7 @@ class MenaiIRLambdaLifter:
             )
 
         if isinstance(ir, MenaiIRLetrec):
-            return MenaiIRLetrec(
-                bindings=[(name, self._walk(value_plan)) for name, value_plan, *_ in ir.bindings],
-                body_plan=self._walk(ir.body_plan),
-                in_tail_position=ir.in_tail_position,
-            )
+            return self._walk_letrec(ir)
 
         if isinstance(ir, MenaiIRIf):
             return MenaiIRIf(
@@ -125,6 +143,58 @@ class MenaiIRLambdaLifter:
             f"MenaiIRLambdaLifter: unhandled IR node type {type(ir).__name__}"
         )
 
+    def _walk_letrec(self, ir: MenaiIRLetrec) -> MenaiIRExpr:
+        """
+        Walk a letrec group, hoisting all helpers into an enclosing let.
+
+        For each binding whose value is a capturing lambda, _lift_lambda_parts
+        returns the (helper, wrapper) pair.  All helpers are collected and
+        emitted as a single let that wraps the reconstructed letrec, making
+        them co-visible with all sibling wrappers.
+
+        Bindings whose values are already-closed lambdas or any other
+        expression are walked normally and kept in the letrec unchanged.
+
+        If no binding produces a helper the letrec is returned as-is (with
+        walked binding values and body).
+        """
+        hoisted_helpers: List[Tuple[str, MenaiIRExpr]] = []
+        new_bindings: List[Tuple[str, MenaiIRExpr]] = []
+
+        for name, value_plan, *_ in ir.bindings:
+            if isinstance(value_plan, MenaiIRLambda):
+                helper, wrapper = self._lift_lambda_parts(value_plan)
+                if helper is not None:
+                    # Capturing lambda: hoist helper, keep wrapper in letrec.
+                    assert helper.binding_name is not None
+                    hoisted_helpers.append((helper.binding_name, helper))
+                    new_bindings.append((name, wrapper))
+
+                else:
+                    # Already-closed lambda: keep as-is (wrapper is the closed lambda).
+                    new_bindings.append((name, wrapper))
+
+            else:
+                new_bindings.append((name, self._walk(value_plan)))
+
+        new_body = self._walk(ir.body_plan)
+
+        new_letrec = MenaiIRLetrec(
+            bindings=new_bindings,
+            body_plan=new_body,
+            in_tail_position=ir.in_tail_position,
+        )
+
+        if not hoisted_helpers:
+            return new_letrec
+
+        # Wrap the letrec in a let that binds all helpers first.
+        return MenaiIRLet(
+            bindings=hoisted_helpers,
+            body_plan=new_letrec,
+            in_tail_position=False,
+        )
+
     # ------------------------------------------------------------------
     # Lambda lifting
     # ------------------------------------------------------------------
@@ -133,11 +203,40 @@ class MenaiIRLambdaLifter:
         """
         Lift a capturing lambda into a (let (helper) wrapper) pair.
 
-        Recurses into free_var_plans and the body first so that nested
-        capturing lambdas are lifted before we process the outer one.
+        Delegates to _lift_lambda_parts for the core split, then wraps the
+        result in a let for the standalone (non-letrec) case.
 
-        If the lambda is already closed (no free vars), only recurse into
-        the body and return a structurally identical node.
+        If the lambda is already closed, returns the closed lambda unchanged.
+        """
+        helper, wrapper = self._lift_lambda_parts(ir)
+        if helper is None:
+            # Already closed — wrapper is the unchanged closed lambda.
+            return wrapper
+
+        # Standalone case: wrap helper and wrapper in a local let.
+        assert helper.binding_name is not None
+        return MenaiIRLet(
+            bindings=[(helper.binding_name, helper)],
+            body_plan=wrapper,
+            in_tail_position=False,
+        )
+
+    def _lift_lambda_parts(
+        self, ir: MenaiIRLambda
+    ) -> Tuple[Optional[MenaiIRLambda], MenaiIRExpr]:
+        """
+        Core of the worker/wrapper split.
+
+        Returns (helper, wrapper) when the lambda captures anything, or
+        (None, closed_lambda) when it is already fully closed.
+
+        The helper is always a MenaiIRLambda with no free vars.
+        The wrapper is a MenaiIRLambda with the original arity that tail-calls
+        the helper.
+
+        Called by both _lift_lambda (standalone case) and _walk_letrec (letrec
+        group case).  Recurses into free_var_plans and the body before
+        performing the split so that nested capturing lambdas are lifted first.
         """
         # Always recurse into free_var_plans — they may contain nested lambdas.
         new_sibling_free_var_plans: List[MenaiIRExpr] = [
@@ -151,8 +250,8 @@ class MenaiIRLambdaLifter:
         new_body = self._walk(ir.body_plan)
 
         if not ir.sibling_free_vars and not ir.outer_free_vars:
-            # Already closed — return structurally unchanged.
-            return MenaiIRLambda(
+            # Already closed — return (None, closed_lambda).
+            return None, MenaiIRLambda(
                 params=ir.params,
                 body_plan=new_body,
                 sibling_free_vars=[],
@@ -245,12 +344,7 @@ class MenaiIRLambdaLifter:
             source_file=ir.source_file,
         )
 
-        # Wrap in a let that binds the helper.
-        return MenaiIRLet(
-            bindings=[(helper_name, helper_lambda)],
-            body_plan=wrapper_lambda,
-            in_tail_position=False,
-        )
+        return helper_lambda, wrapper_lambda
 
     def _next_lifted_name(self, binding_name: str | None) -> str:
         """Generate a unique name for a lifted helper lambda."""
