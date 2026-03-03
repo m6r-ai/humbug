@@ -25,10 +25,9 @@ all of its free-variable loads, causing code explosion.  Dead lambdas
 No lambda boundary rule
 -----------------------
 Variables are symbolic throughout the optimisation pipeline (depth=-1,
-index=-1 until MenaiIRAddresser runs).  Substituting any value plan — including
-calls and other compound nodes — at any position in the tree is safe: the
-addresser will resolve all names correctly in their new positions.  The
-lambda boundary rule from the old index-based implementation is gone.
+index=-1) throughout.  Substituting any value plan — including calls and other
+compound nodes — at any position in the tree is safe: MenaiCFGBuilder will
+resolve all names correctly in their new positions.
 
 Shadowing
 ---------

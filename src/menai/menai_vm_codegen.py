@@ -8,8 +8,6 @@ Position in the pipeline
 ------------------------
     MenaiCFGFunction  →  MenaiVMCodeGen  →  CodeObject
 
-This pass replaces MenaiCodeGen and MenaiCodeGenContext entirely.
-
 SSA-to-stack mapping
 --------------------
 The VM is a stack machine, but the CFG uses explicit SSA values.  We bridge
@@ -21,8 +19,8 @@ This is deliberately naive — it produces correct code and gives the existing
 test suite something to run against.  A future peephole pass or smarter
 slot allocator can eliminate redundant STORE/LOAD pairs.
 
-Slot layout (mirrors MenaiIRAddresser)
---------------------------------------
+Slot layout
+-----------
 Within each lambda frame:
     0 .. P-1          parameters          (MenaiCFGParamInstr)
     P .. P+F-1        captured free vars  (MenaiCFGFreeVarInstr)
@@ -125,7 +123,7 @@ from menai.menai_value import (
 )
 
 
-# Derived opcode maps — same as in the old MenaiCodeGen.
+# Derived opcode maps built from the single source of truth in BUILTIN_OPCODE_MAP.
 UNARY_OPS  = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 1}
 BINARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 2}
 TERNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 3}
@@ -534,8 +532,8 @@ class MenaiVMCodeGen:
 
     def _emit_builtin(self, instr: MenaiCFGBuiltinInstr, ctx: _EmitContext) -> None:
         """
-        Emit a builtin operation.  Mirrors the special-case logic from the
-        old MenaiCodeGen._generate_call for builtin names.
+        Emit a builtin operation, including special-case handling for
+        optional-argument builtins (range, string-slice, dict-get, etc.).
         """
         op = instr.op
         args = instr.args

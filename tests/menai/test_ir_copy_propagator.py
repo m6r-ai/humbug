@@ -649,7 +649,7 @@ class TestFlagsPreserved:
         assert inner.in_tail_position is True
 
     def test_lambda_metadata_preserved(self):
-        """Lambda metadata (params, max_locals, etc.) is preserved after propagation."""
+        """Lambda metadata (params, etc.) is preserved after propagation."""
         lam = MenaiIRLambda(
             params=["a", "b"],
             body_plan=MenaiIRReturn(value_plan=_local('a')),
@@ -673,7 +673,6 @@ class TestFlagsPreserved:
         opt_lam = result.value_plan
         assert isinstance(opt_lam, MenaiIRLambda)
         assert opt_lam.params == ["a", "b"]
-        assert opt_lam.max_locals == 0  # addresser sets this; propagator passes through 0
         assert opt_lam.binding_name == "my_func"
         assert opt_lam.sibling_free_vars == ["sibling"]
         assert opt_lam.source_line == 42

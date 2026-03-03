@@ -68,8 +68,7 @@ class AnalysisContext:
         """
         Add a name to the current scope with a placeholder index of 0.
 
-        The actual slot index is assigned by MenaiIRAddresser.  We only need
-        the name to be present so that resolve_variable() can classify it as
+        We only need the name to be present so that resolve_variable() can classify it as
         'local' rather than 'global'.
         """
         self.scopes[-1].add_binding(name, 0)
@@ -79,7 +78,7 @@ class AnalysisContext:
         Resolve variable to (type, depth, index).
 
         depth is the number of lambda-frame boundaries crossed.
-        index is a placeholder (0) — the real slot is assigned by the addresser.
+        index is always 0 (a placeholder) — slot allocation is done by MenaiCFGBuilder.
 
         Returns:
             ('local', depth, 0) for local variables
@@ -111,9 +110,8 @@ class MenaiIRBuilder:
     """
     Builds intermediate representation (IR) from AST.
 
-    Emits MenaiIRVariable nodes with depth=-1, index=-1 (unresolved sentinels).
-    Slot allocation and max_locals computation are deferred entirely to
-    MenaiIRAddresser, which runs once as the final pre-codegen step.
+    Emits MenaiIRVariable nodes with depth=-1, index=-1 (symbolic sentinels).
+    Slot allocation is handled downstream by MenaiCFGBuilder.
     """
 
     def __init__(self) -> None:
@@ -304,7 +302,6 @@ class MenaiIRBuilder:
         """
         Analyze a let expression with parallel binding semantics.
 
-        Slot indices are not allocated here — MenaiIRAddresser handles that.
         We only add names to the scope so that resolve_variable() can classify
         them as 'local' for the body.
         """

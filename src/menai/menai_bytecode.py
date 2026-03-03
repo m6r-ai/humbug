@@ -252,7 +252,7 @@ class Opcode(IntEnum):
 # Maps builtin function name → (opcode, arity) for all fixed-arity builtins.
 #
 # This is the single source of truth consumed by:
-#   - menai_codegen.py: to derive UNARY_OPS / BINARY_OPS / TERNARY_OPS for direct call optimisation
+#   - menai_vm_codegen.py: to derive UNARY_OPS / BINARY_OPS / TERNARY_OPS for direct call optimisation
 #   - menai_builtin_registry.py: to generate bytecode stubs for first-class function use
 #
 # Variadic builtins that are fold-reduced by the desugarer appear here with

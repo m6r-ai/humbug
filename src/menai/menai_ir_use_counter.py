@@ -8,8 +8,7 @@ variable, producing an IRUseCounts annotation that downstream passes
 Design
 ------
 Variables in the IR are symbolic — MenaiIRVariable nodes carry a name and
-var_type but depth=-1 and index=-1 until MenaiIRAddresser runs (after all
-optimisation passes).  The use counter therefore works entirely on names,
+var_type but depth=-1 and index=-1 throughout.  The use counter therefore works entirely on names,
 maintaining its own scope chain to resolve each variable reference to the
 frame that owns it.
 

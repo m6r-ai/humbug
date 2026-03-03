@@ -11,12 +11,10 @@ from menai.menai_ast_constant_folder import MenaiASTConstantFolder
 from menai.menai_ast_optimization_pass import MenaiASTOptimizationPass
 from menai.menai_bytecode import CodeObject
 from menai.menai_cfg_builder import MenaiCFGBuilder
-from menai.menai_codegen import MenaiCodeGen
 from menai.menai_desugarer import MenaiDesugarer
 from menai.menai_ir_builder import MenaiIRBuilder
 from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
 from menai.menai_ir_copy_propagator import MenaiIRCopyPropagator
-from menai.menai_ir_addresser import MenaiIRAddresser
 from menai.menai_ir_optimizer import MenaiIROptimizer
 from menai.menai_ir_inline_once import MenaiIRInlineOnce
 from menai.menai_lexer import MenaiLexer
@@ -35,7 +33,6 @@ class MenaiCompiler:
         self,
         optimize: bool = True,
         module_loader: ModuleLoader | None = None,
-        use_cfg: bool = False,
     ):
         """
         Initialize compiler with all passes.
@@ -43,14 +40,9 @@ class MenaiCompiler:
         Args:
             optimize:    Enable optimization passes (AST and IR level).
             module_loader: Optional module loader for resolving imports.
-            use_cfg:     Use the new CFG-based pipeline (MenaiCFGBuilder +
-                         MenaiVMCodeGen) instead of the legacy MenaiIRAddresser
-                         + MenaiCodeGen path.  Default False while the new
-                         path is being validated against the test suite.
         """
         self.optimize = optimize
         self.module_loader = module_loader
-        self.use_cfg = use_cfg
 
         # Initialize all passes
         self.lexer = MenaiLexer()
@@ -72,12 +64,7 @@ class MenaiCompiler:
                 MenaiIROptimizer(),
             ]
 
-        # Legacy backend
-        self.ir_addresser = MenaiIRAddresser()
         self.ir_builder = MenaiIRBuilder()
-        self.codegen = MenaiCodeGen()
-
-        # New CFG backend
         self.cfg_builder = MenaiCFGBuilder()
         self.vm_codegen = MenaiVMCodeGen()
 
@@ -138,13 +125,6 @@ class MenaiCompiler:
                     ir, pass_changed = ir_pass.optimize(ir)
                     changed = changed or pass_changed
 
-        if self.use_cfg:
-            # New CFG-based backend: build SSA CFG then emit via VM codegen.
-            cfg = self.cfg_builder.build(ir)
-            bytecode = self.vm_codegen.generate(cfg, name)
-        else:
-            # Legacy backend: address the IR tree then emit via old codegen.
-            ir = self.ir_addresser.address(ir)
-            bytecode = self.codegen.generate(ir, name)
-
+        cfg = self.cfg_builder.build(ir)
+        bytecode = self.vm_codegen.generate(cfg, name)
         return bytecode

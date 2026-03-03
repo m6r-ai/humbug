@@ -1,9 +1,8 @@
 """
 CFG builder for the Menai compiler.
 
-Translates a symbolic (unaddressed) MenaiIR tree into a MenaiCFGFunction in
-SSA form.  This pass replaces both MenaiIRAddresser and MenaiCodeGen in the
-new pipeline.
+Translates a symbolic MenaiIR tree into a MenaiCFGFunction in SSA form.
+Handles slot allocation for all local variables.
 
 Position in the pipeline
 ------------------------
@@ -213,7 +212,7 @@ class MenaiCFGBuilder:
 
         Args:
             ir: Root of the optimised, symbolic IR tree (output of the IR
-                optimisation passes, before MenaiIRAddresser).
+                optimisation passes).
 
         Returns:
             MenaiCFGFunction for the top-level module body.

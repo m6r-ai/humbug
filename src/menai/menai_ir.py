@@ -1,9 +1,10 @@
 """
-Compilation plan data structures for Menai two-phase compiler.
+Compilation plan data structures for the Menai compiler.
 
-The compilation plan represents the result of the analysis phase.
-It contains all the information needed for code generation without
-requiring any further analysis.
+These IR nodes are produced by MenaiIRBuilder from a desugared AST and
+consumed by the CFG backend (MenaiCFGBuilder).  All variable references
+remain symbolic (depth=-1, index=-1) throughout — slot allocation is
+handled by MenaiCFGBuilder, not by a separate addressing pass.
 """
 
 from dataclasses import dataclass
@@ -23,10 +24,8 @@ class MenaiIRVariable:
     """Plan for compiling a variable reference."""
     name: str
     var_type: str       # 'local' or 'global'
-    depth: int = -1     # Scope depth (0 for current frame, 1+ for parent frames).
-                        # -1 means unresolved — filled in by MenaiIRAddresser.
-    index: int = -1     # Local slot index within the frame at 'depth'.
-                        # -1 means unresolved — filled in by MenaiIRAddresser.
+    depth: int = -1     # Scope depth; always -1 (symbolic) in the CFG pipeline.
+    index: int = -1     # Slot index; always -1 (symbolic) in the CFG pipeline.
     is_parent_ref: bool = False
                         # True if this is a recursive back-reference through
                         # a lambda boundary to a letrec-bound name.
@@ -57,8 +56,7 @@ class MenaiIRError:
 class MenaiIRLet:
     """Plan for compiling a let expression.
 
-    Bindings are (name, value_plan) pairs.  Slot indices are assigned by
-    MenaiIRAddresser — no var_index is stored here.
+    Bindings are (name, value_plan) pairs.
     """
     bindings: List[tuple[str, 'MenaiIRExpr']]  # (name, value_plan)
     body_plan: 'MenaiIRExpr'
@@ -72,9 +70,6 @@ class MenaiIRLetrec:
     After letrec splitting in the desugarer, every letrec reaching this point
     is guaranteed to be a single fully-mutually-recursive group of lambdas.
     All non-recursive and non-lambda bindings have been hoisted to let forms.
-
-    Bindings are (name, value_plan) pairs.  Slot indices are assigned by
-    MenaiIRAddresser — no var_index is stored here.
     """
     bindings: List[tuple[str, 'MenaiIRExpr']]  # (name, value_plan)
     body_plan: 'MenaiIRExpr'
@@ -85,8 +80,6 @@ class MenaiIRLetrec:
 class MenaiIRLambda:
     """Plan for compiling a lambda expression.
 
-    max_locals is computed and set by MenaiIRAddresser during its single
-    final pass.  All passes upstream of the addresser leave it as 0.
     """
     params: List[str]
     body_plan: 'MenaiIRExpr'
@@ -96,7 +89,6 @@ class MenaiIRLambda:
     outer_free_var_plans: List['MenaiIRExpr']    # Plans for loading outer captures
     param_count: int
     is_variadic: bool  # True if last param is a rest parameter
-    max_locals: int = 0  # Set by MenaiIRAddresser; 0 until then
     binding_name: str | None = None  # Name if bound in let/letrec (for recursion detection)
     source_line: int = 0  # Line number in source where this lambda is defined
     source_file: str = ""  # Source file name where this lambda is defined

@@ -682,7 +682,7 @@ class TestFlagsPreserved:
         assert inner.in_tail_position is True
 
     def test_lambda_metadata_preserved(self):
-        """Lambda metadata (params, max_locals, etc.) is preserved after inlining."""
+        """Lambda metadata (params, etc.) is preserved after inlining."""
         # The lambda has no outer_free_var_plans referencing "r" in the enclosing
         # frame, so the binding is dead (total_count=0) — not inlined, let kept.
         # We verify the lambda's metadata passes through the optimization walk
@@ -696,7 +696,6 @@ class TestFlagsPreserved:
             outer_free_var_plans=[],
             param_count=2,
             is_variadic=False,
-            max_locals=0,
             binding_name="my_func",
             source_line=42,
             source_file="test.menai",
@@ -714,7 +713,6 @@ class TestFlagsPreserved:
         opt_lam = let_node.body_plan
         assert isinstance(opt_lam, MenaiIRLambda)
         assert opt_lam.params == ["a", "b"]
-        assert opt_lam.max_locals == 0
         assert opt_lam.binding_name == "my_func"
         assert opt_lam.sibling_free_vars == ["sibling"]
         assert opt_lam.source_line == 42

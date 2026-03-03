@@ -618,13 +618,12 @@ class Menai:
         cls._prelude_cache = bytecode_prelude
         return bytecode_prelude
 
-    def __init__(self, module_path: List[str] | None = None, use_cfg: bool = False):
+    def __init__(self, module_path: List[str] | None = None):
         """
         Initialize Menai calculator.
 
         Args:
             module_path: List of directories to search for modules (default: ["."])
-            use_cfg: Use the new CFG-based compilation pipeline.
         """
         self._module_path = module_path or ["."]
 
@@ -634,7 +633,7 @@ class Menai:
         self.loading_stack: List[str] = []  # Track currently-loading modules for circular detection
 
         # Compiler and VM
-        self.compiler = MenaiCompiler(module_loader=self, use_cfg=use_cfg)
+        self.compiler = MenaiCompiler(module_loader=self)
         self.vm = MenaiVM()
 
         # Load prelude once at initialization

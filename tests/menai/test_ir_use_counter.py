@@ -174,7 +174,6 @@ class TestIRUseCounterLambda:
             outer_free_var_plans=[],
             param_count=1,
             is_variadic=False,
-            max_locals=1,
         )
         ir = MenaiIRReturn(value_plan=lam)
         counts = MenaiIRUseCounter().count(ir)
@@ -192,7 +191,6 @@ class TestIRUseCounterLambda:
             outer_free_var_plans=[],
             param_count=1,
             is_variadic=False,
-            max_locals=1,
         )
         ir = MenaiIRReturn(value_plan=lam)
         counts = MenaiIRUseCounter().count(ir)
@@ -214,7 +212,6 @@ class TestIRUseCounterLambda:
             outer_free_var_plans=[free_var_plan],
             param_count=0,
             is_variadic=False,
-            max_locals=1,
         )
         b_outer_x = ("outer_x", _const(5))
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
@@ -238,7 +235,6 @@ class TestIRUseCounterLambda:
             outer_free_var_plans=[],
             param_count=0,
             is_variadic=False,
-            max_locals=0,
         )
         b_x = ("x", _const(1))
         ir = MenaiIRReturn(value_plan=MenaiIRLet(
@@ -260,7 +256,6 @@ class TestIRUseCounterLambda:
             outer_free_var_plans=[],
             param_count=1,
             is_variadic=False,
-            max_locals=1,
         )
         outer = MenaiIRLambda(
             params=["x"],
@@ -269,7 +264,6 @@ class TestIRUseCounterLambda:
             outer_free_var_plans=[],
             param_count=1,
             is_variadic=False,
-            max_locals=1,
         )
         ir = MenaiIRReturn(value_plan=outer)
         counts = MenaiIRUseCounter().count(ir)
@@ -472,7 +466,6 @@ class TestIROptimizerLambda:
             outer_free_var_plans=[],
             param_count=1,
             is_variadic=False,
-            max_locals=2,
         )
         ir = MenaiIRReturn(value_plan=lam)
         result = self._run(ir)

@@ -23,8 +23,8 @@ Current optimizations
    coercions in source code.
 
 Use counts are keyed by (frame_id, name) — no slot indices are involved.
-Variables remain symbolic (depth=-1, index=-1) throughout; MenaiIRAddresser
-resolves them in a single pass after all optimisation is complete.
+Variables remain symbolic (depth=-1, index=-1) throughout all optimisation
+passes; MenaiCFGBuilder handles slot allocation after optimisation is complete.
 
 Implements MenaiIROptimizationPass so it can be managed by the IR pass manager
 in MenaiCompiler.
