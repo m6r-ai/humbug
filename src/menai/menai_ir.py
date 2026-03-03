@@ -4,21 +4,6 @@ Compilation plan data structures for Menai two-phase compiler.
 The compilation plan represents the result of the analysis phase.
 It contains all the information needed for code generation without
 requiring any further analysis.
-
-Variable addressing
--------------------
-MenaiIRVariable nodes are emitted with depth=-1, index=-1 (unresolved) by
-the IR builder and all IR transformation passes (closure converter, lambda
-lifter, optimisers).  MenaiIRAddresser runs once, as the final step before
-code generation, and fills in the correct depth and index for every local
-variable reference.  No pass upstream of MenaiIRAddresser should read or
-depend on depth or index.
-
-Slot allocation
----------------
-MenaiIRLet and MenaiIRLetrec binding tuples carry only (name, value_plan).
-Slot indices are assigned entirely by MenaiIRAddresser in its single final
-pass.  max_locals on MenaiIRLambda is also computed and set by the addresser.
 """
 
 from dataclasses import dataclass
@@ -115,13 +100,6 @@ class MenaiIRLambda:
     binding_name: str | None = None  # Name if bound in let/letrec (for recursion detection)
     source_line: int = 0  # Line number in source where this lambda is defined
     source_file: str = ""  # Source file name where this lambda is defined
-    is_wrapper: bool = False  # True if this lambda is a worker/wrapper wrapper produced
-                              # by MenaiIRLambdaLifter.  A wrapper has original arity and
-                              # body that is a single tail-call to its helper.
-    lifted_helper_name: str | None = None  # binding_name of the helper this wrapper
-                                           # delegates to.  Set iff is_wrapper is True.
-                                           # Used by devirtualization and inlining passes
-                                           # to locate the helper without searching.
 
 
 @dataclass

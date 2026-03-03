@@ -38,8 +38,7 @@ because they span multiple files and are easy to violate accidentally.
 
 ### Variables are symbolic until the final addressing pass
 
-All IR transformation passes — including the closure converter, lambda lifter, and all
-optimisation passes — work exclusively with **symbolic** `MenaiIRVariable` nodes
+All IR transformation passes — work exclusively with **symbolic** `MenaiIRVariable` nodes
 (`depth=-1, index=-1`).  The single final addressing pass resolves all variables and
 allocates all slots immediately before code generation.
 

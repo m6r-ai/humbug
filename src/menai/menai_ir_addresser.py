@@ -10,8 +10,8 @@ All passes upstream of MenaiIRAddresser work with symbolic variables:
 MenaiIRVariable nodes carry only name and var_type; depth and index are -1
 (unresolved sentinels).  MenaiIRLet and MenaiIRLetrec binding tuples carry
 only (name, value_plan) — no slot indices.  This design means every IR
-transformation pass (lambda lifter, optimisers) can freely restructure the
-tree without worrying about stale addresses.
+transformation pass can freely restructure the tree without worrying about
+stale addresses.
 
 The addresser is the single place where:
   - slot indices are allocated for every let/letrec binding
@@ -365,8 +365,6 @@ class MenaiIRAddresser:
             binding_name=ir.binding_name,
             source_line=ir.source_line,
             source_file=ir.source_file,
-            is_wrapper=ir.is_wrapper,
-            lifted_helper_name=ir.lifted_helper_name,
         )
 
     def _alloc_slot(self, counters: SlotCounters) -> int:
