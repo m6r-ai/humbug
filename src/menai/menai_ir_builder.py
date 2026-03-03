@@ -40,14 +40,12 @@ class AnalysisContext:
     """
     Analysis context for IR building — tracks scopes for variable resolution.
 
-    Slot indices are no longer allocated here; that is the addresser's job.
     The scope chain is used only to determine var_type ('local' vs 'global')
-    and is_parent_ref for each variable reference.
+    for each variable reference.
     """
     scopes: List[CompilationScope] = field(default_factory=list)
     parent_ctx: 'AnalysisContext | None' = None
     current_binding_name: str | None = None  # Name of the binding currently being analysed.
-    letrec_bound_names: Set[str] = field(default_factory=set)  # Names bound by any enclosing letrec
     current_letrec_names: Set[str] = field(default_factory=set)  # Names in the immediately enclosing
                                                                    # letrec group only.
     names: Set[str] = field(default_factory=set)
@@ -73,36 +71,28 @@ class AnalysisContext:
         """
         self.scopes[-1].add_binding(name, 0)
 
-    def resolve_variable(self, name: str) -> Tuple[str, int, int]:
+    def resolve_variable(self, name: str) -> str:
         """
-        Resolve variable to (type, depth, index).
-
-        depth is the number of lambda-frame boundaries crossed.
-        index is always 0 (a placeholder) — slot allocation is done by MenaiCFGBuilder.
+        Resolve variable name to its type: 'local' or 'global'.
 
         Returns:
-            ('local', depth, 0) for local variables
-            ('global', 0, 0) for global variables
+            'local' if the name is bound in any enclosing scope.
+            'global' if not found locally (resolved at runtime from the environment).
         """
         for scope in reversed(self.scopes):
             if scope.get_binding(name) is not None:
-                return ('local', 0, 0)
+                return 'local'
 
         if self.parent_ctx is not None:
-            var_type, parent_depth, index = self.parent_ctx.resolve_variable(name)
-            if var_type == 'local':
-                return ('local', parent_depth + 1, 0)
-
-            return (var_type, parent_depth, index)
+            return self.parent_ctx.resolve_variable(name)
 
         self.names.add(name)
-        return ('global', 0, 0)
+        return 'global'
 
     def create_child_context(self) -> 'AnalysisContext':
         """Create a child context for nested lambda analysis."""
         child = AnalysisContext()
         child.parent_ctx = self
-        child.letrec_bound_names = self.letrec_bound_names.copy()
         return child
 
 
@@ -110,8 +100,8 @@ class MenaiIRBuilder:
     """
     Builds intermediate representation (IR) from AST.
 
-    Emits MenaiIRVariable nodes with depth=-1, index=-1 (symbolic sentinels).
-    Slot allocation is handled downstream by MenaiCFGBuilder.
+    Emits MenaiIRVariable nodes carrying only name and var_type ('local' or
+    'global').  Slot allocation is handled downstream by MenaiCFGBuilder.
     """
 
     def __init__(self) -> None:
@@ -170,13 +160,7 @@ class MenaiIRBuilder:
 
     def _analyze_variable(self, name: str, ctx: AnalysisContext) -> MenaiIRVariable:
         """Analyze a variable reference."""
-        var_type, depth, _index = ctx.resolve_variable(name)
-        is_parent_ref = (depth > 0) and (name in ctx.letrec_bound_names)
-        return MenaiIRVariable(
-            name=name,
-            var_type=var_type,
-            is_parent_ref=is_parent_ref,
-        )
+        return MenaiIRVariable(name=name, var_type=ctx.resolve_variable(name))
 
     def _analyze_list(self, expr: MenaiASTList, ctx: AnalysisContext, in_tail_position: bool) -> MenaiIRExpr:
         """Analyze a list expression (function call or special form)."""
@@ -367,7 +351,6 @@ class MenaiIRBuilder:
 
         # Register all binding names as letrec-bound.
         all_names = [name for name, _ in binding_pairs]
-        ctx.letrec_bound_names.update(all_names)
         ctx.current_letrec_names = set(all_names)
 
         # Second pass: analyze each binding value with full letrec context.
@@ -414,11 +397,11 @@ class MenaiIRBuilder:
         outer_free_vars:   List[str] = [fv for fv in free_vars if fv not in sibling_names]
 
         sibling_free_var_plans: List[MenaiIRExpr] = [
-            MenaiIRVariable(name=fv, var_type='local', is_parent_ref=False)
+            MenaiIRVariable(name=fv, var_type='local')
             for fv in sibling_free_vars
         ]
         outer_free_var_plans: List[MenaiIRExpr] = [
-            MenaiIRVariable(name=fv, var_type='local', is_parent_ref=False)
+            MenaiIRVariable(name=fv, var_type='local')
             for fv in outer_free_vars
         ]
 
@@ -467,7 +450,7 @@ class MenaiIRBuilder:
             builtin_name = dollar_name[1:] if dollar_name.startswith('$') else dollar_name
             arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
             return MenaiIRCall(
-                func_plan=MenaiIRVariable(name=dollar_name, var_type='global', depth=0, index=0),
+                func_plan=MenaiIRVariable(name=dollar_name, var_type='global'),
                 arg_plans=arg_plans,
                 is_tail_call=False,
                 is_builtin=True,
@@ -511,7 +494,7 @@ class MenaiIRBuilder:
             if name.startswith('$'):
                 return
 
-            var_type, _, _ = parent_ctx.resolve_variable(name)
+            var_type = parent_ctx.resolve_variable(name)
             if var_type == 'local' and name not in seen:
                 free.append(name)
                 seen.add(name)

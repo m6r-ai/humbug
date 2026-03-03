@@ -23,8 +23,8 @@ Current optimizations
    coercions in source code.
 
 Use counts are keyed by (frame_id, name) — no slot indices are involved.
-Variables remain symbolic (depth=-1, index=-1) throughout all optimisation
-passes; MenaiCFGBuilder handles slot allocation after optimisation is complete.
+Variables remain symbolic throughout all optimisation passes; MenaiCFGBuilder
+handles slot allocation after optimisation is complete.
 
 Implements MenaiIROptimizationPass so it can be managed by the IR pass manager
 in MenaiCompiler.
@@ -178,7 +178,7 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
                 self._eliminations += 1
                 return MenaiIRCall(
                     func_plan=MenaiIRVariable(
-                        name='boolean-not', var_type='global', depth=0, index=0
+                            name='boolean-not', var_type='global'
                     ),
                     arg_plans=[opt_condition],
                     is_tail_call=ir.in_tail_position,

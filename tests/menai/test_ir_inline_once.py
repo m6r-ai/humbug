@@ -23,13 +23,6 @@ Key distinctions from MenaiIRCopyPropagator tests
 - Multi-use bindings (total_count > 1) are NOT inlined, regardless of value type.
 - Dead bindings (total_count == 0) are left for MenaiIROptimizer.
 - letrec bindings are never inlined.
-
-Notes on constructing test IR for lambda capture tests
-------------------------------------------------------
-The use counter works by name.  A MenaiIRVariable(name='x', var_type='local',
-depth=-1, index=-1) in the lambda body is resolved to the enclosing let's
-binding of 'x' and counted as one use.  Tests that want exactly one use
-therefore place exactly one _named("x") reference in the tree.
 """
 
 from __future__ import annotations
@@ -67,23 +60,13 @@ def _str_const(s: str) -> MenaiIRConstant:
     return MenaiIRConstant(value=MenaiString(s))
 
 
-def _local(index: int, depth: int = 0, is_parent_ref: bool = False) -> MenaiIRVariable:
-    return MenaiIRVariable(
-        name=f"v{index}",
-        var_type='local',
-        depth=depth,
-        index=index,
-        is_parent_ref=is_parent_ref,
-    )
-
-
 def _named(name: str) -> MenaiIRVariable:
     """Symbolic local variable reference (pre-addresser form)."""
-    return MenaiIRVariable(name=name, var_type='local', depth=-1, index=-1)
+    return MenaiIRVariable(name=name, var_type='local')
 
 
 def _global(name: str) -> MenaiIRVariable:
-    return MenaiIRVariable(name=name, var_type='global', depth=0, index=0)
+    return MenaiIRVariable(name=name, var_type='global')
 
 
 def _add_call(a, b) -> MenaiIRCall:

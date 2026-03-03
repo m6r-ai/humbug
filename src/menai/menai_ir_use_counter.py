@@ -7,8 +7,8 @@ variable, producing an IRUseCounts annotation that downstream passes
 
 Design
 ------
-Variables in the IR are symbolic — MenaiIRVariable nodes carry a name and
-var_type but depth=-1 and index=-1 throughout.  The use counter therefore works entirely on names,
+Variables in the IR are symbolic — MenaiIRVariable nodes carry only a name
+and var_type.  The use counter therefore works entirely on names,
 maintaining its own scope chain to resolve each variable reference to the
 frame that owns it.
 
@@ -31,13 +31,6 @@ same frame_id as the enclosing lambda).
 
 Resolution: to find the defining frame for a name, search the scope_stack
 from innermost to outermost.  The first match gives the frame_id.
-
-is_parent_ref
--------------
-MenaiIRVariable.is_parent_ref marks recursive back-references through a
-lambda boundary to a letrec-bound name.  These are counted normally — they
-are uses of the defining frame's binding.  Callers that need to distinguish
-self-calls can inspect is_parent_ref on individual variable nodes.
 """
 
 from __future__ import annotations

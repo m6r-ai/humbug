@@ -24,10 +24,9 @@ all of its free-variable loads, causing code explosion.  Dead lambdas
 
 No lambda boundary rule
 -----------------------
-Variables are symbolic throughout the optimisation pipeline (depth=-1,
-index=-1) throughout.  Substituting any value plan — including calls and other
-compound nodes — at any position in the tree is safe: MenaiCFGBuilder will
-resolve all names correctly in their new positions.
+Variables are symbolic throughout the optimisation pipeline — MenaiIRVariable
+carries only name and var_type.  Substituting any value plan at any position
+in the tree is safe: MenaiCFGBuilder resolves all names correctly.
 
 Shadowing
 ---------

@@ -46,7 +46,7 @@ def _int_const(n: int) -> MenaiIRConstant:
 
 
 def _global(name: str) -> MenaiIRVariable:
-    return MenaiIRVariable(name=name, var_type='global', depth=0, index=0)
+    return MenaiIRVariable(name=name, var_type='global')
 
 
 def _bool_p_call(arg: MenaiIRVariable) -> MenaiIRCall:
@@ -62,7 +62,7 @@ def _bool_p_call(arg: MenaiIRVariable) -> MenaiIRCall:
 
 def _local(index: int) -> MenaiIRVariable:
     return MenaiIRVariable(
-        name=f"v{index}", var_type='local', depth=0, index=index
+        name=f"v{index}", var_type='local'
     )
 
 

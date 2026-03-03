@@ -65,19 +65,16 @@ def _str_const(s: str) -> MenaiIRConstant:
     return MenaiIRConstant(value=MenaiString(s))
 
 
-def _local(name: str, depth: int = 0, is_parent_ref: bool = False) -> MenaiIRVariable:
+def _local(name: str) -> MenaiIRVariable:
     """Create a symbolic local variable reference (name-based, no slot index)."""
     return MenaiIRVariable(
         name=name,
         var_type='local',
-        depth=-1,
-        index=-1,
-        is_parent_ref=is_parent_ref,
     )
 
 
 def _global(name: str) -> MenaiIRVariable:
-    return MenaiIRVariable(name=name, var_type='global', depth=0, index=0)
+    return MenaiIRVariable(name=name, var_type='global')
 
 
 def _add_call(a, b, name: str = 'integer+') -> MenaiIRCall:
@@ -233,12 +230,7 @@ class TestLambdaBoundaryRule:
     def test_local_var_not_inlined_when_captured(self):
         """
         A local variable binding whose value is another local variable IS
-        copy-propagated even when the binding is captured — with symbolic
-        variables there is no depth arithmetic to go wrong.  The addresser
-        resolves the substituted name correctly in its new position.
-        However, the free_var_plan references the binding by name ('x'),
-        and after propagation the plan for 'x' (which is _local('other'))
-        is substituted into the free_var_plan.  The binding IS inlined.
+        copy-propagated even when the binding is captured.
         """
         # (let ((x other))   ; x = alias for 'other' local
         #   (lambda () x))

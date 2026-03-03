@@ -50,28 +50,22 @@ def _const(n: int) -> MenaiIRConstant:
     return MenaiIRConstant(value=MenaiInteger(n))
 
 
-def _local(index: int, depth: int = 0, is_parent_ref: bool = False) -> MenaiIRVariable:
+def _local(index: int) -> MenaiIRVariable:
     return MenaiIRVariable(
         name=f"v{index}",
         var_type='local',
-        depth=depth,
-        index=index,
-        is_parent_ref=is_parent_ref,
     )
 
 
-def _local_named(name: str, depth: int = 0, is_parent_ref: bool = False) -> MenaiIRVariable:
+def _local_named(name: str) -> MenaiIRVariable:
     return MenaiIRVariable(
         name=name,
         var_type='local',
-        depth=depth,
-        index=-1,
-        is_parent_ref=is_parent_ref,
     )
 
 
 def _global(name: str) -> MenaiIRVariable:
-    return MenaiIRVariable(name=name, var_type='global', depth=0, index=0)
+    return MenaiIRVariable(name=name, var_type='global')
 
 
 def _add_call(a: MenaiIRVariable, b: MenaiIRVariable) -> MenaiIRCall:

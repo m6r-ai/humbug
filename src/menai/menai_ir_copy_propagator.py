@@ -23,10 +23,9 @@ a concern (no side effects, no aliasing), so the question reduces to cost:
 
 Lambda boundary rule
 --------------------
-There is none.  Variables are symbolic throughout the optimisation pipeline
-(depth=-1, index=-1) throughout.  Substituting a name reference at any
-position in the tree — including inside a child lambda body or free_var_plans
-— is always safe: MenaiCFGBuilder will resolve names correctly in their new positions.
+There is none.  Variables are symbolic throughout — MenaiIRVariable carries
+only name and var_type.  Substituting a name reference at any position in the
+tree, including inside a child lambda body or free_var_plans, is always safe.
 
 Scope of the pass: let only, not letrec
 ----------------------------------------

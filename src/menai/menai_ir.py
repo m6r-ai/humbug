@@ -3,8 +3,8 @@ Compilation plan data structures for the Menai compiler.
 
 These IR nodes are produced by MenaiIRBuilder from a desugared AST and
 consumed by the CFG backend (MenaiCFGBuilder).  All variable references
-remain symbolic (depth=-1, index=-1) throughout — slot allocation is
-handled by MenaiCFGBuilder, not by a separate addressing pass.
+remain symbolic throughout — MenaiIRVariable carries only a name and
+var_type; slot allocation is handled by MenaiCFGBuilder.
 """
 
 from dataclasses import dataclass
@@ -24,11 +24,6 @@ class MenaiIRVariable:
     """Plan for compiling a variable reference."""
     name: str
     var_type: str       # 'local' or 'global'
-    depth: int = -1     # Scope depth; always -1 (symbolic) in the CFG pipeline.
-    index: int = -1     # Slot index; always -1 (symbolic) in the CFG pipeline.
-    is_parent_ref: bool = False
-                        # True if this is a recursive back-reference through
-                        # a lambda boundary to a letrec-bound name.
 
 
 @dataclass
