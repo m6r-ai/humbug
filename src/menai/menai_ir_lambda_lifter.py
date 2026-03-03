@@ -263,6 +263,8 @@ class MenaiIRLambdaLifter:
                 binding_name=ir.binding_name,
                 source_line=ir.source_line,
                 source_file=ir.source_file,
+                is_wrapper=False,
+                lifted_helper_name=None,
             )
 
         # Build all_captured: (name, free_var_plan) for every value the
@@ -296,6 +298,8 @@ class MenaiIRLambdaLifter:
             binding_name=helper_name,
             source_line=ir.source_line,
             source_file=ir.source_file,
+            is_wrapper=False,
+            lifted_helper_name=None,
         )
 
         # Wrapper lambda
@@ -342,6 +346,8 @@ class MenaiIRLambdaLifter:
             binding_name=ir.binding_name,
             source_line=ir.source_line,
             source_file=ir.source_file,
+            is_wrapper=True,
+            lifted_helper_name=helper_name,
         )
 
         return helper_lambda, wrapper_lambda

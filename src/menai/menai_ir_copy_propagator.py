@@ -208,6 +208,8 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
             binding_name=ir.binding_name,
             source_line=ir.source_line,
             source_file=ir.source_file,
+            is_wrapper=ir.is_wrapper,
+            lifted_helper_name=ir.lifted_helper_name,
         )
 
     def _substitute(
@@ -361,6 +363,8 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
             binding_name=ir.binding_name,
             source_line=ir.source_line,
             source_file=ir.source_file,
+            is_wrapper=ir.is_wrapper,
+            lifted_helper_name=ir.lifted_helper_name,
         )
 
     @staticmethod

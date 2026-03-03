@@ -115,6 +115,13 @@ class MenaiIRLambda:
     binding_name: str | None = None  # Name if bound in let/letrec (for recursion detection)
     source_line: int = 0  # Line number in source where this lambda is defined
     source_file: str = ""  # Source file name where this lambda is defined
+    is_wrapper: bool = False  # True if this lambda is a worker/wrapper wrapper produced
+                              # by MenaiIRLambdaLifter.  A wrapper has original arity and
+                              # body that is a single tail-call to its helper.
+    lifted_helper_name: str | None = None  # binding_name of the helper this wrapper
+                                           # delegates to.  Set iff is_wrapper is True.
+                                           # Used by devirtualization and inlining passes
+                                           # to locate the helper without searching.
 
 
 @dataclass
