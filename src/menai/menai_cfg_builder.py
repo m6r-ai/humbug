@@ -195,6 +195,18 @@ class MenaiCFGBuilder:
         cfg = MenaiCFGBuilder().build(ir_expr)
     """
 
+    def __init__(self) -> None:
+        # Instance-level letrec sibling context.  Set to the sibling-name set
+        # during Phase 2b of _build_letrec (evaluating non-lambda binding RHS
+        # expressions) so that _build_lambda_expr can detect lambdas that have
+        # sibling captures and need PATCH_CLOSURE treatment.  None at all other
+        # times, including during normal lambda-only letrec Phase 1.
+        self._letrec_sibling_names: Optional[set] = None
+        # Collected during Phase 2b: (closure_val, ir_lambda) pairs for lambdas
+        # embedded in non-lambda letrec binding RHS expressions that have at
+        # least one sibling capture.  Processed (patched) after Phase 2b.
+        self._letrec_deferred_patches: Optional[List[Tuple[MenaiCFGValue, MenaiIRLambda]]] = None
+
     def build(self, ir: MenaiIRExpr) -> MenaiCFGFunction:
         """
         Build the top-level MenaiCFGFunction from an IR expression.
@@ -474,14 +486,21 @@ class MenaiCFGBuilder:
         """
         Build a letrec in three phases.
 
-        Phase 1: Build child CFGs and emit MenaiCFGMakeClosureInstr for each
-                 lambda with only its OUTER (non-sibling) captures.  Sibling
-                 captures cannot be loaded yet because the sibling closures
-                 haven't been created.  The VM pre-allocates None slots for
-                 the full free_vars list; PATCH_CLOSURE fills in siblings.
+        Phase 1: For lambda bindings, build child CFGs and emit
+                 MenaiCFGMakeClosureInstr with only OUTER (non-sibling)
+                 captures.  Sibling captures cannot be loaded yet because the
+                 sibling closures haven't been created.  The VM pre-allocates
+                 None slots for the full free_vars list; PATCH_CLOSURE fills
+                 in siblings.  Non-lambda bindings are deferred to Phase 2b.
 
         Phase 2: Register all closure SSA values in letrec_scope so that
                  sibling references resolve.
+
+        Phase 2b: Evaluate non-lambda binding values now that all sibling
+                 closure SSA values are in letrec_scope.  Any lambdas nested
+                 inside the value expression that capture sibling names are
+                 built with needs_patching=True and their sibling captures are
+                 collected for Phase 3.
 
         Phase 3: Emit MenaiCFGPatchClosureInstr for every sibling capture of
                  every lambda binding, using the full capture_index from the
@@ -496,10 +515,15 @@ class MenaiCFGBuilder:
         binding_vals: Dict[str, MenaiCFGValue] = {}
 
         for name, value_plan in ir.bindings:
-            assert isinstance(value_plan, MenaiIRLambda), (
-                "MenaiCFGBuilder: letrec binding is not a lambda — "
-                "desugarer invariant violated"
-            )
+            if not isinstance(value_plan, MenaiIRLambda):
+                # Non-lambda binding (e.g. a list or call expression whose RHS
+                # contains a nested lambda closing over this binding's name).
+                # Allocate a placeholder SSA value now so sibling lambdas can
+                # reference this name; the real value is computed in Phase 2b.
+                placeholder = state.new_value(name)
+                binding_vals[name] = placeholder
+                continue
+
             child_func = self._build_lambda_function(value_plan, scope)
 
             # Collect outer captures only — evaluate them in the current scope.
@@ -529,22 +553,60 @@ class MenaiCFGBuilder:
         for name, closure_val in binding_vals.items():
             letrec_scope.bind(name, closure_val)
 
+        # Phase 2b: evaluate non-lambda binding values now that all sibling
+        # closure SSA values are in letrec_scope.  Any nested lambdas in the
+        # value expression that have sibling captures are intercepted by
+        # _build_lambda_expr (which checks self._letrec_sibling_names) and
+        # recorded in self._letrec_deferred_patches for Phase 3b below.
+        prev_sibling_names = self._letrec_sibling_names
+        prev_deferred_patches = self._letrec_deferred_patches
+        self._letrec_sibling_names = sibling_names
+        self._letrec_deferred_patches = []
+        for name, value_plan in ir.bindings:
+            if isinstance(value_plan, MenaiIRLambda):
+                continue
+            real_val, block = self._build_expr(value_plan, block, letrec_scope, state, tail=False)
+            letrec_scope.bind(name, real_val)
+        deferred_non_lambda_patches = self._letrec_deferred_patches
+        self._letrec_sibling_names = prev_sibling_names
+        self._letrec_deferred_patches = prev_deferred_patches
+
         # Phase 3: emit PATCH_CLOSURE for every sibling capture of every lambda.
         # capture_index is the position in the child function's full free_vars
         # list (sibling_free_vars + outer_free_vars), which is what the VM uses.
+        # Appended to block.instrs (not patch_instrs) so they execute before
+        # the letrec body, which is also built into the same block's instrs.
         for name, value_plan in ir.bindings:
-            assert isinstance(value_plan, MenaiIRLambda)
+            if not isinstance(value_plan, MenaiIRLambda):
+                continue  # Non-lambda bindings have no closure captures to patch
             closure_val = binding_vals[name]
 
             for capture_index, fv_name in enumerate(
                 value_plan.sibling_free_vars + value_plan.outer_free_vars
             ):
                 if fv_name in {n for n, _ in ir.bindings}:
-                    # Sibling capture — patch after all closures are created.
-                    # This is a sibling capture — needs patching.
                     fv_val = letrec_scope.lookup(fv_name)
                     assert fv_val is not None
-                    block.patch_instrs.append(MenaiCFGPatchClosureInstr(
+                    block.instrs.append(MenaiCFGPatchClosureInstr(
+                        closure=closure_val,
+                        capture_index=capture_index,
+                        value=fv_val,
+                    ))
+
+        # Phase 3b: emit PATCH_CLOSURE for lambdas embedded in non-lambda
+        # binding RHS expressions (collected during Phase 2b).  After Phase 2b,
+        # all non-lambda binding names are in letrec_scope with their real
+        # values, so we can patch the sibling captures now.
+        for closure_val, lambda_ir in deferred_non_lambda_patches:
+            for capture_index, fv_name in enumerate(
+                lambda_ir.sibling_free_vars + lambda_ir.outer_free_vars
+            ):
+                if fv_name in sibling_names:
+                    fv_val = letrec_scope.lookup(fv_name)
+                    assert fv_val is not None, (
+                        f"MenaiCFGBuilder: sibling free var {fv_name!r} not in letrec_scope"
+                    )
+                    block.instrs.append(MenaiCFGPatchClosureInstr(
                         closure=closure_val,
                         capture_index=capture_index,
                         value=fv_val,
@@ -574,8 +636,39 @@ class MenaiCFGBuilder:
         expression.  After copy propagation these may be constants or other
         non-variable expressions, not necessarily MenaiIRVariable nodes, so
         we dispatch through _build_expr rather than doing a scope lookup by name.
+
+        Letrec Phase 2b interception: if self._letrec_sibling_names is set (we
+        are inside the evaluation of a non-lambda letrec binding's RHS) and
+        this lambda has sibling captures, we treat it like a letrec lambda:
+        emit MAKE_CLOSURE with needs_patching=True and record it in
+        self._letrec_deferred_patches so Phase 3b can PATCH_CLOSURE the
+        sibling captures after all non-lambda binding values are available.
         """
         child_func = self._build_lambda_function(ir, scope)
+
+        # Check for letrec Phase 2b interception.
+        sibling_names = self._letrec_sibling_names
+        has_sibling_captures = bool(ir.sibling_free_vars) and sibling_names is not None
+        if has_sibling_captures:
+            # Evaluate only outer (non-sibling) captures now.
+            outer_captures: List[MenaiCFGValue] = []
+            for fv_plan, fv_name in zip(
+                ir.sibling_free_var_plans + ir.outer_free_var_plans,
+                ir.sibling_free_vars + ir.outer_free_vars,
+            ):
+                if fv_name not in sibling_names:
+                    fv_val, block = self._build_expr(fv_plan, block, scope, state, tail=False)
+                    outer_captures.append(fv_val)
+            result = state.new_value(ir.binding_name or "lambda")
+            block.instrs.append(MenaiCFGMakeClosureInstr(
+                result=result,
+                function=child_func,
+                captures=outer_captures,
+                needs_patching=True,
+            ))
+            assert self._letrec_deferred_patches is not None
+            self._letrec_deferred_patches.append((result, ir))
+            return result, block
 
         # Evaluate each capture plan in the current block and scope.
         captures: List[MenaiCFGValue] = []

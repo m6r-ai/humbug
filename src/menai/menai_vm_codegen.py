@@ -423,6 +423,13 @@ class MenaiVMCodeGen:
             ctx.emit(Opcode.STORE_VAR, slot)
             return
 
+        if isinstance(instr, MenaiCFGPatchClosureInstr):
+            # Patch instructions may appear in block.instrs (letrec sibling
+            # captures emitted before the body) as well as block.patch_instrs.
+            # Delegate to the shared helper.
+            self._emit_patch(instr, ctx)
+            return
+
         raise TypeError(f"MenaiVMCodeGen: unhandled instruction {type(instr).__name__}")
 
     def _emit_phi_stores_for_successor(
@@ -658,9 +665,15 @@ class MenaiVMCodeGen:
 
         Recursively generates the child CodeObject for instr.function, then
         emits:
-          - MAKE_CLOSURE with all eagerly-loaded captures, if there are any
-            captures OR if needs_patching is True (letrec sibling captures
-            require a mutable closure object even when outer captures = 0).
+          - MAKE_CLOSURE code_idx 0 followed by PATCH_CLOSURE for each outer
+            capture, when needs_patching is True.  All free-var slots are
+            pre-allocated as None; sibling captures are filled later by the
+            letrec phase-3 patch_instrs, and outer captures are filled here
+            immediately after MAKE_CLOSURE.  This mirrors the old codegen's
+            letrec two-phase approach and ensures outer captures land at the
+            correct slot indices (after the sibling slots), not at slot 0.
+          - MAKE_CLOSURE with all eagerly-loaded captures packed from slot 0,
+            when needs_patching is False but there are captures.
           - LOAD_CONST with a pre-built MenaiFunction, only when there are
             no captures AND needs_patching is False.
         """
@@ -671,13 +684,26 @@ class MenaiVMCodeGen:
         capture_count = len(instr.captures)
         total_free_vars = len(child_func.free_vars)
 
-        if capture_count > 0 or instr.needs_patching:
-            # Load eagerly-available captures onto the stack.
+        if instr.needs_patching:
+            # Letrec case: emit MAKE_CLOSURE with 0 captures so the VM
+            # pre-allocates None for all free-var slots.  Then immediately
+            # PATCH_CLOSURE the outer (non-sibling) captures into their
+            # correct slot indices.  Sibling captures are patched later by
+            # the block's patch_instrs (phase 3 of letrec).
+            ctx.emit(Opcode.MAKE_CLOSURE, code_idx, 0)
+            closure_slot = ctx.alloc_slot(instr.result)
+            ctx.emit(Opcode.STORE_VAR, closure_slot)
+            # Outer captures occupy the tail of free_vars: indices
+            # [total_free_vars - capture_count .. total_free_vars - 1].
+            outer_start = total_free_vars - capture_count
+            for i, cap in enumerate(instr.captures):
+                ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(cap))
+                ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, outer_start + i)
+            return
+        elif capture_count > 0:
+            # Non-letrec closure with captures: pack all from slot 0.
             for cap in instr.captures:
                 ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(cap))
-            # MAKE_CLOSURE arg2 = number of captures being loaded now.
-            # The VM pre-allocates None for any remaining slots up to
-            # total_free_vars; PATCH_CLOSURE fills those in.
             ctx.emit(Opcode.MAKE_CLOSURE, code_idx, capture_count)
         else:
             # No captures — pre-build a MenaiFunction and store as a constant.
