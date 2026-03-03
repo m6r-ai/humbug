@@ -18,6 +18,7 @@ from menai.menai_ir_copy_propagator import MenaiIRCopyPropagator
 from menai.menai_free_var_analyzer import MenaiFreeVarAnalyzer
 from menai.menai_ir_lambda_lifter import MenaiIRLambdaLifter
 from menai.menai_ir_addresser import MenaiIRAddresser
+from menai.menai_ir_devirtualizer import MenaiIRDevirtualizer
 from menai.menai_ir_optimizer import MenaiIROptimizer
 from menai.menai_ir_inline_once import MenaiIRInlineOnce
 from menai.menai_lexer import MenaiLexer
@@ -53,6 +54,7 @@ class MenaiCompiler:
         self.ir_addresser = MenaiIRAddresser()
         self.free_var_analyzer = MenaiFreeVarAnalyzer()
         self.lambda_lifter = MenaiIRLambdaLifter()
+        self.devirtualizer = MenaiIRDevirtualizer()
         self.ast_passes: List[MenaiASTOptimizationPass] = []
         self.ir_passes: List[MenaiIROptimizationPass] = []
         if optimize:
@@ -122,6 +124,10 @@ class MenaiCompiler:
         # Lambda lifting: replace every capturing lambda with a closed helper
         # plus a thin wrapper.  Variables remain symbolic throughout.
         ir = self.lambda_lifter.lift(ir)
+
+        # Devirtualization: rewrite every static wrapper call site to call the
+        # helper directly, eliminating the MAKE_CLOSURE + CALL indirection.
+        ir = self.devirtualizer.devirtualize(ir)
 
         # IR-level optimization passes (all work on symbolic variables).
         if self.ir_passes:
