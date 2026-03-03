@@ -15,7 +15,6 @@ from menai.menai_desugarer import MenaiDesugarer
 from menai.menai_ir_builder import MenaiIRBuilder
 from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
 from menai.menai_ir_copy_propagator import MenaiIRCopyPropagator
-from menai.menai_free_var_analyzer import MenaiFreeVarAnalyzer
 from menai.menai_ir_addresser import MenaiIRAddresser
 from menai.menai_ir_optimizer import MenaiIROptimizer
 from menai.menai_ir_inline_once import MenaiIRInlineOnce
@@ -49,8 +48,6 @@ class MenaiCompiler:
         self.desugarer = MenaiDesugarer()
 
         # AST optimization passes
-        self.ir_addresser = MenaiIRAddresser()
-        self.free_var_analyzer = MenaiFreeVarAnalyzer()
         self.ast_passes: List[MenaiASTOptimizationPass] = []
         self.ir_passes: List[MenaiIROptimizationPass] = []
         if optimize:
@@ -63,6 +60,7 @@ class MenaiCompiler:
                 MenaiIROptimizer(),
             ]
 
+        self.ir_addresser = MenaiIRAddresser()
         self.ir_builder = MenaiIRBuilder()
         self.codegen = MenaiCodeGen()
 
@@ -112,8 +110,6 @@ class MenaiCompiler:
         for ast_pass in self.ast_passes:
             desugared_ast = ast_pass.optimize(desugared_ast)
 
-        # Analyze free variables (result currently unused — kept for future use).
-        _free_var_info = self.free_var_analyzer.analyze(desugared_ast)
 
         ir = self.ir_builder.build(desugared_ast)
 
