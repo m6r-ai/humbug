@@ -3,6 +3,7 @@
 from typing import List, Dict, Tuple, Set, cast
 from dataclasses import dataclass, field
 
+from menai.menai_bytecode import BUILTIN_OPCODE_MAP
 from menai.menai_builtin_registry import MenaiBuiltinRegistry
 from menai.menai_error import MenaiEvalError
 from menai.menai_ir import (
@@ -117,7 +118,14 @@ class MenaiIRBuilder:
 
     def __init__(self) -> None:
         """Initialize IR builder."""
-        self._builtin_names: frozenset = frozenset(MenaiBuiltinRegistry.BUILTIN_OPCODE_ARITIES.keys())
+        # Only $-prefixed names are treated as opcode-backed builtins by the IR
+        # builder.  Public names (integer+, float=?, etc.) are prelude functions
+        # and resolve as globals.
+        # Exception: 'list' and 'dict' are variadic BUILD_OPS handled specially
+        # by the codegen.  They are not in BUILTIN_OPCODE_MAP (no fixed arity)
+        # and cannot be $-prefixed, so they remain as plain builtin names here.
+        self._builtin_names: frozenset = frozenset('$' + name for name in BUILTIN_OPCODE_MAP)
+        self._builtin_names |= frozenset({'list', 'dict'})
 
     def build(self, expr: MenaiASTNode) -> MenaiIRExpr:
         """
@@ -455,10 +463,14 @@ class MenaiIRBuilder:
         func_type = type(func_expr)
 
         if func_type is MenaiASTSymbol and cast(MenaiASTSymbol, func_expr).name in self._builtin_names:
-            builtin_name = cast(MenaiASTSymbol, func_expr).name
+            dollar_name = cast(MenaiASTSymbol, func_expr).name
+            # Strip the $ prefix — the rest of the pipeline (codegen etc.)
+            # uses the bare opcode name.
+            # 'list' and 'dict' are plain builtin names (no $ prefix).
+            builtin_name = dollar_name[1:] if dollar_name.startswith('$') else dollar_name
             arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
             return MenaiIRCall(
-                func_plan=MenaiIRVariable(name=builtin_name, var_type='global', depth=0, index=0),
+                func_plan=MenaiIRVariable(name=dollar_name, var_type='global', depth=0, index=0),
                 arg_plans=arg_plans,
                 is_tail_call=False,
                 is_builtin=True,
@@ -496,6 +508,10 @@ class MenaiIRBuilder:
         if expr_type is MenaiASTSymbol:
             name = cast(MenaiASTSymbol, expr).name
             if name in seen or name in bound_vars:
+                return
+
+            # $-prefixed names are opcode primitives, never free variables.
+            if name.startswith('$'):
                 return
 
             var_type, _, _ = parent_ctx.resolve_variable(name)

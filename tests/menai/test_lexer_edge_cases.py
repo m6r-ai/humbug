@@ -328,8 +328,8 @@ class TestMenaiLexerEdgeCases:
         """Test invalid character tokenization."""
         invalid_chars = [
             "@",            # Invalid character
-            "$",            # Invalid character
-            "hello$world",  # Invalid character in identifier
+            "±",            # Invalid character
+            "hello±world",  # Invalid character in identifier
             "42@",          # Invalid character after number
         ]
 
@@ -524,7 +524,7 @@ class TestMenaiLexerEdgeCases:
         assert result == 42
 
         # Multiple errors in sequence
-        invalid_inputs = ["@", "$", "#", ":"]
+        invalid_inputs = ["@", "±", "#", ":"]
         for invalid in invalid_inputs:
             with pytest.raises(MenaiTokenError):
                 menai.evaluate(invalid)

@@ -189,6 +189,22 @@ class MenaiBuiltinRegistry:
         'range': (2, 3),
     }
 
+    # Set of all $-prefixed opcode names.  A call to $name is always a
+    # fixed-arity opcode call — never a prelude function or free variable.
+    # Built lazily from BUILTIN_OPCODE_MAP at class definition time.
+    DOLLAR_BUILTIN_NAMES: frozenset = frozenset(
+        '$' + name for name in BUILTIN_OPCODE_MAP
+    )
+
+    @staticmethod
+    def is_dollar_builtin(name: str) -> bool:
+        """Return True if *name* is a $-prefixed opcode-backed primitive.
+
+        A $-prefixed name always refers to the fixed-arity VM opcode form,
+        never to a prelude function or user-defined variable.
+        """
+        return name.startswith('$') and name[1:] in BUILTIN_OPCODE_MAP
+
     def create_builtin_function_objects(self) -> Dict[str, MenaiFunction]:
         """
         Create MenaiFunction objects for all builtins.

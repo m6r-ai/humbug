@@ -311,7 +311,7 @@ class TestDesugarerMatchType:
         body = result.elements[2]
         condition = body.elements[1]
         assert isinstance(condition, MenaiASTList)
-        assert condition.first().name == 'string?'
+        assert condition.first().name == '$string?'
 
         # Then branch should not have a let (no binding)
         then_branch = body.elements[2]
@@ -337,7 +337,7 @@ class TestDesugarerMatchList:
         body = result.elements[2]
         condition = body.elements[1]
         assert isinstance(condition, MenaiASTList)
-        assert condition.first().name == 'list-null?'
+        assert condition.first().name == '$list-null?'
 
     def test_match_fixed_list_simple(self):
         """Test desugaring of simple fixed-length list pattern."""
@@ -361,13 +361,13 @@ class TestDesugarerMatchList:
         # First condition is (list? x), then-branch tests length
         list_test = condition.elements[1]
         assert isinstance(list_test, MenaiASTList)
-        assert list_test.first().name == 'list?'
+        assert list_test.first().name == '$list?'
 
         # Then-branch is the length test directly (two-arg and folds to single if)
         then_branch = condition.elements[2]
         assert isinstance(then_branch, MenaiASTList)
         assert isinstance(then_branch.elements[1], MenaiASTList)
-        assert then_branch.elements[1].first().name == 'list-length'
+        assert then_branch.elements[1].first().name == '$list-length'
 
     def test_match_fixed_list_with_literals(self):
         """Test desugaring of fixed-length list with literal patterns."""
@@ -403,7 +403,7 @@ class TestDesugarerMatchCons:
         # Condition should be an if-chain (and lowered to if)
         assert isinstance(condition, MenaiASTList)
         assert condition.first().name == 'if'
-        assert condition.elements[1].first().name == 'list?'
+        assert condition.elements[1].first().name == '$list?'
 
     def test_match_cons_multiple_heads(self):
         """Test desugaring of cons pattern with multiple head elements."""

@@ -18,6 +18,8 @@ from menai.menai_ast import (
     MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTInteger,
     MenaiASTFloat, MenaiASTComplex, MenaiASTString, MenaiASTBoolean, MenaiASTNone
 )
+from menai.menai_bytecode import BUILTIN_OPCODE_MAP
+from menai.menai_builtin_registry import MenaiBuiltinRegistry
 from menai.menai_dependency_analyzer import MenaiDependencyAnalyzer
 from menai.menai_error import MenaiEvalError
 
@@ -219,6 +221,23 @@ class MenaiDesugarer:
 
             if name == 'or':
                 return self._desugar_or(expr)
+
+            # Fixed-arity opcode rewrite: if this call is to a known builtin
+            # with exactly the fixed arity in BUILTIN_OPCODE_MAP, rewrite the
+            # function name to the $-prefixed opcode form.  This fires before
+            # the variadic/comparison/equality rewrites so that e.g.
+            # (integer+ a b) → ($integer+ a b) directly, while
+            # (integer+ a b c) still falls through to _desugar_variadic_arithmetic.
+            if name in MenaiBuiltinRegistry.BUILTIN_OPCODE_ARITIES and name in BUILTIN_OPCODE_MAP:
+                _, fixed_arity = BUILTIN_OPCODE_MAP[name]
+                n_args = len(expr.elements) - 1
+                if n_args == fixed_arity:
+                    dollar_name = '$' + name
+                    desugared_args = [self.desugar(arg) for arg in expr.elements[1:]]
+                    return self._make_list(
+                        (self._make_symbol(dollar_name, expr),) + tuple(desugared_args),
+                        expr
+                    )
 
             # Check for typed variadic arithmetic operations
             if name in [
@@ -545,7 +564,9 @@ class MenaiDesugarer:
         # Handle binary case (already optimal)
         if len(args) == 2:
             desugared_args = [self.desugar(arg) for arg in args]
-            return self._make_list((op_symbol,) + tuple(desugared_args), expr)
+            return self._make_list(
+                (self._make_symbol('$' + op_name, expr),) + tuple(desugared_args), expr
+            )
 
         # Handle variadic case (3+ arguments) - fold left to right
         # (+ 1 2 3 4) → (+ (+ (+ 1 2) 3) 4)
@@ -553,7 +574,7 @@ class MenaiDesugarer:
 
         # Start with first two arguments
         result = self._make_list((
-            self._make_symbol(op_name, expr),
+            self._make_symbol('$' + op_name, expr),
             desugared_args[0],
             desugared_args[1]
         ), expr)
@@ -561,7 +582,7 @@ class MenaiDesugarer:
         # Fold remaining arguments left-to-right
         for arg in desugared_args[2:]:
             result = self._make_list((
-                self._make_symbol(op_name, expr),
+                self._make_symbol('$' + op_name, expr),
                 result,
                 arg
             ), expr)
@@ -620,11 +641,11 @@ class MenaiDesugarer:
         # 3+ args: left-fold
         desugared_args = [self.desugar(arg) for arg in args]
         result = self._make_list(
-            (self._make_symbol(op_name, expr), desugared_args[0], desugared_args[1]), expr
+            (self._make_symbol('$' + op_name, expr), desugared_args[0], desugared_args[1]), expr
         )
         for arg in desugared_args[2:]:
             result = self._make_list(
-                (self._make_symbol(op_name, expr), result, arg), expr
+                (self._make_symbol('$' + op_name, expr), result, arg), expr
             )
 
         return result
@@ -662,7 +683,7 @@ class MenaiDesugarer:
 
         # Build pairwise comparisons
         pairs: List[MenaiASTNode] = [
-            self._make_list((self._make_symbol(op_name, expr),
+            self._make_list((self._make_symbol('$' + op_name, expr),
                              self._make_symbol(temps[i], expr),
                              self._make_symbol(temps[i + 1], expr)), expr)
             for i in range(len(temps) - 1)
@@ -722,7 +743,7 @@ class MenaiDesugarer:
 
             # Build pairwise binary calls directly: (op ti ti+1)
             pairs: List[MenaiASTNode] = [
-                self._make_list((self._make_symbol(op_name, expr),
+                self._make_list((self._make_symbol('$' + op_name, expr),
                                  self._make_symbol(temps[i], expr),
                                  self._make_symbol(temps[i + 1], expr)), expr)
                 for i in range(len(args) - 1)

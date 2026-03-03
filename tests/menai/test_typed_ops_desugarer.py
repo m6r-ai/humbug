@@ -159,27 +159,27 @@ class TestDesugarerTwoArgs:
 
     def test_integer_add_two_args(self):
         result = desugar("(integer+ 3 4)")
-        assert op_name(result) == "integer+"
+        assert op_name(result) == "$integer+"
         assert len(result.elements) == 3
 
     def test_float_sub_two_args(self):
         result = desugar("(float- 5.0 2.0)")
-        assert op_name(result) == "float-"
+        assert op_name(result) == "$float-"
         assert len(result.elements) == 3
 
     def test_complex_mul_two_args(self):
         result = desugar("(complex* (float->complex 1 2) (float->complex 3 4))")
-        assert op_name(result) == "complex*"
+        assert op_name(result) == "$complex*"
         assert len(result.elements) == 3
 
     def test_integer_div_two_args(self):
         result = desugar("(integer/ 10 3)")
-        assert op_name(result) == "integer/"
+        assert op_name(result) == "$integer/"
         assert len(result.elements) == 3
 
     def test_float_div_two_args(self):
         result = desugar("(float/ 10.0 4.0)")
-        assert op_name(result) == "float/"
+        assert op_name(result) == "$float/"
         assert len(result.elements) == 3
 
 
@@ -196,39 +196,39 @@ class TestDesugarerVariadic:
     def test_integer_add_three_args(self):
         result = desugar("(integer+ 1 2 3)")
         # (integer+ (integer+ 1 2) 3)
-        self._assert_left_fold(result, "integer+", 2)
+        self._assert_left_fold(result, "$integer+", 2)
 
     def test_integer_add_four_args(self):
         result = desugar("(integer+ 1 2 3 4)")
         # (integer+ (integer+ (integer+ 1 2) 3) 4)
-        self._assert_left_fold(result, "integer+", 3)
+        self._assert_left_fold(result, "$integer+", 3)
 
     def test_float_mul_three_args(self):
         result = desugar("(float* 2.0 3.0 4.0)")
-        self._assert_left_fold(result, "float*", 2)
+        self._assert_left_fold(result, "$float*", 2)
 
     def test_complex_add_three_args(self):
         result = desugar("(complex+ (float->complex 1 0) (float->complex 2 0) (float->complex 3 0))")
-        self._assert_left_fold(result, "complex+", 2)
+        self._assert_left_fold(result, "$complex+", 2)
 
     def test_integer_sub_three_args(self):
         # (integer- 10 3 2) → (integer- (integer- 10 3) 2)
         result = desugar("(integer- 10 3 2)")
-        self._assert_left_fold(result, "integer-", 2)
+        self._assert_left_fold(result, "$integer-", 2)
 
     def test_float_div_three_args(self):
         # (float/ 24.0 4.0 3.0) → (float/ (float/ 24.0 4.0) 3.0)
         result = desugar("(float/ 24.0 4.0 3.0)")
-        self._assert_left_fold(result, "float/", 2)
+        self._assert_left_fold(result, "$float/", 2)
 
     def test_integer_div_three_args(self):
         # (integer/ 24 4 3) → (integer/ (integer/ 24 4) 3)
         result = desugar("(integer/ 24 4 3)")
-        self._assert_left_fold(result, "integer/", 2)
+        self._assert_left_fold(result, "$integer/", 2)
 
     def test_complex_mul_three_args(self):
         result = desugar("(complex* (float->complex 1 1) (float->complex 2 0) (float->complex 0 1))")
-        self._assert_left_fold(result, "complex*", 2)
+        self._assert_left_fold(result, "$complex*", 2)
 
 
 # ---------------------------------------------------------------------------

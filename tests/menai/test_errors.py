@@ -16,7 +16,7 @@ class TestErrors:
             menai.evaluate("@invalid")
 
         with pytest.raises(MenaiTokenError):
-            menai.evaluate("hello$world")
+            menai.evaluate("hello±world")
 
         # FIXED: Use actually invalid character instead of & which is valid
         with pytest.raises(MenaiTokenError):

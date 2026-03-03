@@ -101,7 +101,7 @@ class TestTwoArgPassThrough:
     def test_two_arg_is_direct_binary_call(self, op):
         result = desugar(_two_arg_expr(op))
         # Top-level node is the operator itself
-        assert sym(result) == op, f"Expected {op!r}, got {sym(result)!r}"
+        assert sym(result) == '$' + op, f"Expected {op!r}, got {sym(result)!r}"
         assert isinstance(result, MenaiASTList)
         # Exactly (op arg0 arg1)
         assert len(result.elements) == 3, (
@@ -112,7 +112,7 @@ class TestTwoArgPassThrough:
     def test_two_arg_no_temp_bindings(self, op):
         result = desugar(_two_arg_expr(op))
         # No temp variables — the two arguments are the original literals
-        assert sym(result) == op
+        assert sym(result) == '$' + op
         for arg in result.elements[1:]:
             assert not is_temp(arg), f"Unexpected temp variable in 2-arg result: {arg}"
 
@@ -190,8 +190,8 @@ class TestThreeArgStructure:
         # body = (if pair0 pair1 #f)
         pair0 = body.elements[1]
         pair1 = body.elements[2]
-        assert sym(pair0) == op, f"pair0 operator: expected {op!r}, got {sym(pair0)!r}"
-        assert sym(pair1) == op, f"pair1 operator: expected {op!r}, got {sym(pair1)!r}"
+        assert sym(pair0) == '$' + op, f"pair0 operator: expected {op!r}, got {sym(pair0)!r}"
+        assert sym(pair1) == '$' + op, f"pair1 operator: expected {op!r}, got {sym(pair1)!r}"
 
     @pytest.mark.parametrize("op", ALL_OPS)
     def test_three_arg_pairs_share_middle_temp(self, op):
@@ -255,7 +255,7 @@ class TestFourArgStructure:
         p1 = inner.elements[1]
         p2 = inner.elements[2]
         for i, pair in enumerate([p0, p1, p2]):
-            assert sym(pair) == op, f"pair{i}: expected {op!r}, got {sym(pair)!r}"
+            assert sym(pair) == '$' + op, f"pair{i}: expected {op!r}, got {sym(pair)!r}"
 
     @pytest.mark.parametrize("op", ALL_OPS)
     def test_four_arg_adjacent_pairs_share_temps(self, op):
@@ -289,6 +289,6 @@ class TestNoInterferenceWithGenericOps:
     def test_integer_lt_two_arg_is_direct(self):
         """integer<? with 2 args produces a direct binary call, no wrapping."""
         result = desugar('(integer<? 1 2)')
-        assert sym(result) == 'integer<?'
+        assert sym(result) == '$integer<?'
         assert len(result.elements) == 3
 

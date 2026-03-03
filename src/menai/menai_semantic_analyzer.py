@@ -15,6 +15,7 @@ before any transformations occur.
 from typing import List, cast
 
 from menai.menai_ast import MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTString
+from menai.menai_bytecode import BUILTIN_OPCODE_MAP
 from menai.menai_builtin_registry import MenaiBuiltinRegistry
 from menai.menai_error import MenaiEvalError
 
@@ -807,6 +808,27 @@ class MenaiSemanticAnalyzer:
         first = expr.first()
         if isinstance(first, MenaiASTSymbol):
             name = first.name
+
+            # $-prefixed names are opcode-backed primitives written explicitly
+            # (e.g. inside prelude bodies or emitted by the desugarer).
+            # Validate that the base name is a known opcode; arity is not
+            # checked here — the IR builder enforces that.
+            if name.startswith('$'):
+                base = name[1:]
+                if base not in BUILTIN_OPCODE_MAP:
+                    raise MenaiEvalError(
+                        message=f"Unknown primitive '{name}'",
+                        received=f"'{name}' is not a known opcode-backed primitive",
+                        expected="A valid $-prefixed primitive name such as '$integer+'",
+                        line=expr.line,
+                        column=expr.column,
+                        source=self.source
+                    )
+                # Valid $-name: recurse into arguments and return.
+                for elem in expr.elements[1:]:
+                    self.analyze(elem, self.source)
+                return expr
+
             if name in MenaiBuiltinRegistry.BUILTIN_OPCODE_ARITIES:
                 min_args, max_args = MenaiBuiltinRegistry.BUILTIN_OPCODE_ARITIES[name]
                 n_args = len(expr.elements) - 1
