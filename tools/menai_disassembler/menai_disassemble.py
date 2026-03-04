@@ -124,6 +124,26 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
             capture_word = "capture" if arg2 == 1 else "captures"
             annotation = f"  ; Create closure for {name}{line_info} with {arg2} {capture_word}"
 
+    elif opcode == Opcode.PATCH_CLOSURE:
+        # arg1 = local slot holding the closure to patch
+        # arg2 = which captured-values slot to fill (index into free_vars)
+        # The value to store was pushed onto the stack by the preceding LOAD_VAR.
+        closure_slot = describe_local(arg1, code)
+        # Find which nested code object lives in that local slot by scanning
+        # for a MAKE_CLOSURE followed (eventually) by STORE_VAR arg1.
+        free_var_name = None
+        for j, scan_instr in enumerate(code.instructions):
+            if (scan_instr.opcode == Opcode.STORE_VAR and scan_instr.arg1 == arg1
+                    and j > 0 and code.instructions[j - 1].opcode == Opcode.MAKE_CLOSURE):
+                nested = code.code_objects[code.instructions[j - 1].arg1]
+                if arg2 < len(nested.free_vars):
+                    free_var_name = nested.free_vars[arg2]
+
+                break
+
+        slot_desc = f"'{free_var_name}'" if free_var_name else f"slot {arg2}"
+        annotation = f"  ; Patch {closure_slot}: set capture {slot_desc} from stack"
+
     elif opcode == Opcode.CALL:
         arg_word = "arg" if arg1 == 1 else "args"
         annotation = f"  ; Call function with {arg1} {arg_word} (function on stack)"
@@ -159,7 +179,7 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
 
 def format_instruction(instr: Instruction, index: int) -> str:
     """Format instruction with appropriate arguments based on opcode."""
-    n = instr.opcode.arg_count
+    n = instr.arg_count()
     if n == 0:
         instr_str = f"{index:4}: {instr.opcode.name}"
     elif n == 2:
@@ -193,6 +213,7 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
     output.append(f"{indent}Instructions: {len(code.instructions)}")
     output.append(f"{indent}Locals: {code.local_count}")
     output.append(f"{indent}Constants: {len(code.constants)}")
+    output.append(f"{indent}Code Objects: {len(code.code_objects)}")
     output.append(f"{indent}{'='*70}")
 
     # Show constants table
@@ -203,6 +224,25 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
         for i, const in enumerate(code.constants):
             const_str = format_constant(const)
             output.append(f"{indent}  [{i:3}] {const_str}")
+
+        output.append(f"{indent}{'-'*70}")
+        output.append(f"{indent}")
+
+    # Show code objects table
+    if code.code_objects:
+        output.append(f"{indent}Code Objects Table:")
+        output.append(f"{indent}{'-'*70}")
+        for i, nested in enumerate(code.code_objects):
+            nested_name = nested.name or f"<lambda-{i}>"
+            loc_parts = []
+            if nested.source_file:
+                loc_parts.append(nested.source_file)
+
+            if nested.source_line and nested.source_line > 0:
+                loc_parts.append(f"line {nested.source_line}")
+
+            loc_str = f" [{':'.join(loc_parts)}]" if loc_parts else ""
+            output.append(f"{indent}  [{i:3}] {nested_name}{loc_str}")
 
         output.append(f"{indent}{'-'*70}")
         output.append(f"{indent}")

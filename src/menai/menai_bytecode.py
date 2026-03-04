@@ -63,7 +63,7 @@ class Opcode(IntEnum):
 
     # Functions
     MAKE_CLOSURE = _op(30, 2)           # MAKE_CLOSURE code_index capture_count
-    PATCH_CLOSURE = _op(31, 2)           # PATCH_CLOSURE var_index capture_slot
+    PATCH_CLOSURE = _op(31, 2)          # PATCH_CLOSURE var_index capture_slot
     CALL = _op(32, 1)                   # CALL arity
     TAIL_CALL = _op(33, 1)              # TAIL_CALL arity
     APPLY = _op(34, 0)                  # Apply function to arg list (non-tail)
