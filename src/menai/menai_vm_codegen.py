@@ -195,33 +195,49 @@ class _EmitContext:
         """
         Emit the instruction(s) needed to make `value` available on the stack.
 
-        For slotted values: emit LOAD_VAR <slot>.
         For stack-transient values: emit nothing — the value is already on
         top of the stack, left there by the immediately preceding instruction.
+        For rematerialisable constants: re-emit the constant load instruction.
+        For slotted values: emit LOAD_VAR <slot>.
         """
         if self.schedule.is_transient(value):
             return
+        if self.schedule.is_remat(value):
+            self.emit_constant(self.schedule.remat_value_of(value))
+            return
         self.emit(Opcode.LOAD_VAR, self.slot_of(value))
+
+    def emit_constant(self, value: MenaiValue) -> None:
+        """Emit the appropriate LOAD instruction for a compile-time constant."""
+        if isinstance(value, MenaiNone):
+            self.emit(Opcode.LOAD_NONE)
+            return
+        if isinstance(value, MenaiBoolean):
+            self.emit(Opcode.LOAD_TRUE if value.value else Opcode.LOAD_FALSE)
+            return
+        if isinstance(value, MenaiList) and len(value.elements) == 0:
+            self.emit(Opcode.LOAD_EMPTY_LIST)
+            return
+        const_idx = self.add_constant(value)
+        self.emit(Opcode.LOAD_CONST, const_idx)
 
     def store_result(self, value: MenaiCFGValue) -> int:
         """
         Emit the instruction(s) needed to store a freshly computed result.
 
-        For slotted values: allocate a slot, emit STORE_VAR <slot>, return slot.
         For stack-transient values: emit nothing — the value stays on the
         stack for its single consumer.  Returns -1 (no slot allocated).
+        For rematerialisable constants: emit nothing — no slot needed, the
+        load will be re-emitted at each use site.  Returns -1.
+        For slotted values: allocate a slot, emit STORE_VAR <slot>, return slot.
         """
         if self.schedule.is_transient(value):
+            return -1
+        if self.schedule.is_remat(value):
             return -1
         slot = self.alloc_slot(value)
         self.emit(Opcode.STORE_VAR, slot)
         return slot
-
-    def patch_jump(self, instr_index: int, target: int) -> None:
-        """Emit an instruction, returning its index."""
-        idx = len(self.instructions)
-        self.instructions.append(Instruction(opcode, arg1, arg2))
-        return idx
 
     def patch_jump(self, instr_index: int, target: int) -> None:
         self.instructions[instr_index].arg1 = target
@@ -414,8 +430,12 @@ class MenaiVMCodeGen:
             return
 
         if isinstance(instr, MenaiCFGConstInstr):
-            self._emit_load_value(instr.value, ctx)
-            ctx.store_result(instr.result)
+            # Rematerialisable constants: skip both the load and the store at
+            # the definition site.  The load will be re-emitted at each use
+            # site by ctx.load_value().
+            if not ctx.schedule.is_remat(instr.result):
+                ctx.emit_constant(instr.value)
+                ctx.store_result(instr.result)
             return
 
         if isinstance(instr, MenaiCFGGlobalInstr):
@@ -800,17 +820,4 @@ class MenaiVMCodeGen:
 
     def _emit_load_value(self, value: MenaiValue, ctx: _EmitContext) -> None:
         """Emit the appropriate LOAD instruction for a constant value."""
-        if isinstance(value, MenaiNone):
-            ctx.emit(Opcode.LOAD_NONE)
-            return
-
-        if isinstance(value, MenaiBoolean):
-            ctx.emit(Opcode.LOAD_TRUE if value.value else Opcode.LOAD_FALSE)
-            return
-
-        if isinstance(value, MenaiList) and len(value.elements) == 0:
-            ctx.emit(Opcode.LOAD_EMPTY_LIST)
-            return
-
-        const_idx = ctx.add_constant(value)
-        ctx.emit(Opcode.LOAD_CONST, const_idx)
+        ctx.emit_constant(value)

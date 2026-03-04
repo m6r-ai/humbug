@@ -133,12 +133,12 @@ class TestBasicTransient:
 
     def test_const_into_binary_last_arg(self):
         """
-        %0 = const 1   (slotted: used as first arg of binary op)
-        %1 = const 2   (slotted: last arg, but %0 is slotted and pushed first,
-                        so LOAD_VAR(%0) would go on top of %1 → %1 must be slotted)
+        %0 = const 1   (remat: used as first arg, not immediately next)
+        %1 = const 2   (remat: last arg, but preceding %0 is remat and will
+                        still emit LOAD_CONST at use site → displaces %1)
         %2 = builtin 'integer+' [%0, %1]
         return %2
-        Only %2 should be transient (used only by return, single operand).
+        %0 and %1 are remat, %2 is transient.
         """
         v0, c0 = const_instr("v0")
         v1, c1 = const_instr("v1")
@@ -148,9 +148,9 @@ class TestBasicTransient:
         block = make_block(c0, c1, b, terminator=ret)
         func = make_func(block)
         ids = schedule(func)
-        assert v0.id not in ids, "first arg of binary op must be slotted"
-        assert v1.id not in ids, "last arg slotted: preceding arg is slotted, LOAD_VAR would displace it"
-        assert v2.id in ids,     "result used only by return should be transient"
+        assert v0.id not in ids, "first arg not immediately before consumer → remat not transient"
+        assert v1.id not in ids, "last arg, preceding is remat but still emits LOAD_CONST → remat"
+        assert v2.id in ids,     "result used only by return → transient"
 
 
 # ---------------------------------------------------------------------------
@@ -205,9 +205,9 @@ class TestNotImmediatelyNext:
         %1 = const 2        ← intervening instruction
         %2 = builtin 'integer+' [%0, %1]
         return %2
-        %0's consumer is the builtin at i+2, not i+1 → slotted.
-        %1's consumer is the builtin at i+1 and it's the last arg, but %0
-        is slotted and will be LOAD_VAR'd before the opcode → %1 also slotted.
+        %0's consumer is the builtin at i+2, not i+1 → not transient → remat.
+        %1's consumer is the builtin at i+1, last arg, but preceding %0 is
+        remat and still emits LOAD_CONST at use site → displaces %1 → remat.
         %2 is used only by return → transient.
         """
         v0, c0 = const_instr("v0")
@@ -218,8 +218,8 @@ class TestNotImmediatelyNext:
         block = make_block(c0, c1, b, terminator=ret)
         func = make_func(block)
         ids = schedule(func)
-        assert v0.id not in ids, "v0 used two instructions later → slotted"
-        assert v1.id not in ids, "v1 is last arg but preceding arg %0 is slotted → slotted"
+        assert v0.id not in ids, "v0 used two instructions later → remat not transient"
+        assert v1.id not in ids, "v1 last arg but preceding %0 is remat (emits LOAD_CONST) → remat"
         assert v2.id in ids,     "v2 used only by return → transient"
 
 
@@ -231,20 +231,15 @@ class TestOrderingSafety:
 
     def test_multi_arg_builtin_only_last_arg_transient(self):
         """
-        The key ordering-safety test.
-
-        %0 = const 1   (slotted: used as args[0] of list builtin)
-        %1 = const 2   (slotted: used as args[1])
-        %2 = const 3   (transient candidate: last arg of list builtin)
+        %0 = const 1   (remat: used as args[0], not immediately next)
+        %1 = const 2   (remat: used as args[1], not immediately next)
+        %2 = const 3   (remat: last arg, but preceding %0 and %1 are remat
+                        and still emit LOAD_CONST at use site → displace %2)
         %3 = builtin 'list' [%0, %1, %2]
         return %3
 
-        If %2 were transient, the emitter would leave it on the stack, then
-        load %0 and %1 on top of it — producing [3,1,2] instead of [1,2,3].
-
-        %2 MUST be slotted because %0 and %1 are slotted and will be loaded
-        (via LOAD_VAR) between %2's definition and the LIST opcode, displacing
-        %2 from the stack top.
+        All three consts are remat.  The emitter re-emits LOAD_CONST for each
+        at the use site in order, giving correct LIST order [1,2,3].
         """
         v0, c0 = const_instr("v0")
         v1, c1 = const_instr("v1")
@@ -255,10 +250,9 @@ class TestOrderingSafety:
         block = make_block(c0, c1, c2, b, terminator=ret)
         func = make_func(block)
         ids = schedule(func)
-        assert v0.id not in ids, "v0 is not last arg → slotted"
-        assert v1.id not in ids, "v1 is not last arg → slotted"
-        assert v2.id not in ids, \
-            "v2 is last arg but earlier args are slotted → must be slotted too"
+        assert v0.id not in ids, "v0 not last arg, not immediately before consumer → remat"
+        assert v1.id not in ids, "v1 not last arg → remat"
+        assert v2.id not in ids, "v2 last arg but preceding are remat (emit LOAD_CONST) → remat"
         assert v3.id in ids,     "v3 used only by return → transient"
 
     def test_call_func_not_transient_when_args_are_slotted(self):
@@ -410,7 +404,7 @@ class TestTerminatorConsumers:
         func = make_func(block)
         ids = schedule(func)
         assert v0.id not in ids, "arg[0] is not last push → slotted"
-        assert v1.id not in ids, "func is last push but preceding arg is slotted → slotted"
+        assert v1.id not in ids, "func is last push but preceding const emits LOAD_CONST → slotted"
 
     def test_tail_apply_arg_list_transient(self):
         """
@@ -454,8 +448,8 @@ class TestTerminatorConsumers:
         %0 = const 1
         %1 = const 2
         self_loop [%0, %1]
-        %0 is args[0], not last → slotted.
-        %1 is args[-1], last, but %0 is slotted and pushed before %1 → slotted.
+        %0 is args[0], not last → remat.
+        %1 is args[-1], last, but %0 is remat and still emits LOAD_CONST → %1 remat.
         """
         v0, c0 = const_instr("v0")
         v1, c1 = const_instr("v1")
@@ -506,9 +500,9 @@ class TestSynthesisedArgBuiltins:
     def test_range_3_args_last_is_transient(self):
         """
         range with 3 args uses no synthesised trailing arg — last arg is transient.
-        %0 = const 0  (slotted: args[0])
-        %1 = const 10 (slotted: args[1])
-        %2 = const 1  (transient: args[2], last, no synth)
+        %0 = const 0  (remat: args[0], not immediately before consumer)
+        %1 = const 10 (remat: args[1], not immediately before consumer)
+        %2 = const 1  (transient: args[2], last, preceding are remat → no LOAD_VAR)
         %3 = builtin 'range' [%0, %1, %2]
         return %3
         """
@@ -523,6 +517,131 @@ class TestSynthesisedArgBuiltins:
         ids = schedule(func)
         assert v0.id not in ids
         assert v1.id not in ids
-        assert v2.id not in ids, \
-            "v2 is last arg but v0/v1 are slotted → must be slotted too"
+        assert v2.id not in ids, "v2 last arg but preceding are remat (emit LOAD_CONST) → remat"
         assert v3.id in ids
+
+
+# ---------------------------------------------------------------------------
+# 8. Rematerialisation of constants
+# ---------------------------------------------------------------------------
+
+class TestRematerialisation:
+
+    def test_single_use_const_is_transient_not_remat(self):
+        """
+        A constant that qualifies as stack-transient should be transient,
+        not remat.  Transient takes priority.
+        """
+        v0, c0 = const_instr("v0")
+        ret = MenaiCFGReturnTerm(value=v0)
+        block = make_block(c0, terminator=ret)
+        func = make_func(block)
+        sched = MenaiCFGStackScheduler().schedule(func)
+        assert sched.is_transient(v0)
+        assert not sched.is_remat(v0)
+
+    def test_multi_use_const_is_remat(self):
+        """
+        A constant used more than once cannot be transient, but should be
+        rematerialisable — no slot needed, load re-emitted at each use.
+        """
+        v0, c0 = const_instr("v0")
+        v1 = fresh_value("v1")
+        b = MenaiCFGBuiltinInstr(result=v1, op='integer+', args=[v0, v0])
+        ret = MenaiCFGReturnTerm(value=v1)
+        block = make_block(c0, b, terminator=ret)
+        func = make_func(block)
+        sched = MenaiCFGStackScheduler().schedule(func)
+        assert not sched.is_transient(v0)
+        assert sched.is_remat(v0)
+
+    def test_const_used_two_instructions_later_is_remat(self):
+        """
+        A constant whose single use is not the immediately-next instruction
+        cannot be transient, but should be remat.
+        """
+        v0, c0 = const_instr("v0")
+        v1, c1 = const_instr("v1")
+        v2 = fresh_value("v2")
+        b = MenaiCFGBuiltinInstr(result=v2, op='integer+', args=[v0, v1])
+        ret = MenaiCFGReturnTerm(value=v2)
+        block = make_block(c0, c1, b, terminator=ret)
+        func = make_func(block)
+        sched = MenaiCFGStackScheduler().schedule(func)
+        # v0: used at i+2, not immediately next → not transient → remat
+        assert not sched.is_transient(v0)
+        assert sched.is_remat(v0)
+        # v1: last arg but v0 is remat and still emits LOAD_CONST → v1 remat
+        assert not sched.is_transient(v1)
+        assert sched.is_remat(v1)
+
+    def test_const_with_slotted_preceding_arg_is_remat(self):
+        """
+        A constant that is the last arg of a multi-arg builtin, where an
+        earlier arg is a non-constant (slotted), cannot be transient.
+        It should be remat.
+        """
+        # v0 is a global (slotted, not a const)
+        v0 = fresh_value("g")
+        g0 = MenaiCFGGlobalInstr(result=v0, name='x')
+        v1, c1 = const_instr("v1")
+        v2 = fresh_value("v2")
+        b = MenaiCFGBuiltinInstr(result=v2, op='integer+', args=[v0, v1])
+        ret = MenaiCFGReturnTerm(value=v2)
+        block = make_block(g0, c1, b, terminator=ret)
+        func = make_func(block)
+        sched = MenaiCFGStackScheduler().schedule(func)
+        assert not sched.is_transient(v1), "preceding arg is slotted → not transient"
+        assert sched.is_remat(v1),         "but it is a const → remat"
+
+    def test_remat_preceding_allows_last_const_to_be_transient(self):
+        """
+        Remat preceding operands still emit LOAD_CONST at the use site, so
+        they still displace the last operand from the stack top.  The last
+        const therefore cannot be transient — it is also remat.
+
+        %0 = const 1   → remat (used at i+2, not immediately next)
+        %1 = const 2   → remat (last arg, but preceding %0 emits LOAD_CONST)
+        %2 = builtin 'integer+' [%0, %1]
+        return %2
+        """
+        v0, c0 = const_instr("v0")
+        v1, c1 = const_instr("v1")
+        v2 = fresh_value("v2")
+        b = MenaiCFGBuiltinInstr(result=v2, op='integer+', args=[v0, v1])
+        ret = MenaiCFGReturnTerm(value=v2)
+        block = make_block(c0, c1, b, terminator=ret)
+        func = make_func(block)
+        sched = MenaiCFGStackScheduler().schedule(func)
+        assert sched.is_remat(v0),      "v0 used at i+2 → remat"
+        assert sched.is_remat(v1),      "v1 last arg, preceding v0 emits LOAD_CONST → remat"
+
+    def test_non_const_slotted_not_remat(self):
+        """
+        A non-constant (global, call result, etc.) that is not transient
+        should be slotted, not remat.
+        """
+        v0 = fresh_value("g")
+        g0 = MenaiCFGGlobalInstr(result=v0, name='x')
+        ret = MenaiCFGReturnTerm(value=v0)
+        block = make_block(g0, terminator=ret)
+        func = make_func(block)
+        sched = MenaiCFGStackScheduler().schedule(func)
+        # global used only by return → transient (single use, last operand)
+        assert sched.is_transient(v0)
+        assert not sched.is_remat(v0)
+
+    def test_non_const_multi_use_is_slotted_not_remat(self):
+        """
+        A non-constant used more than once must be slotted, not remat.
+        """
+        v0 = fresh_value("g")
+        g0 = MenaiCFGGlobalInstr(result=v0, name='x')
+        v1 = fresh_value("v1")
+        b = MenaiCFGBuiltinInstr(result=v1, op='integer+', args=[v0, v0])
+        ret = MenaiCFGReturnTerm(value=v1)
+        block = make_block(g0, b, terminator=ret)
+        func = make_func(block)
+        sched = MenaiCFGStackScheduler().schedule(func)
+        assert not sched.is_transient(v0)
+        assert not sched.is_remat(v0)   # global, not a const → slotted

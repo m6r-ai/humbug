@@ -109,7 +109,7 @@ When captures is empty, there are no SSA operands to be transient.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Set
+from typing import Dict, Set
 
 from menai.menai_cfg import (
     MenaiCFGApplyInstr,
@@ -136,6 +136,7 @@ from menai.menai_cfg import (
     MenaiCFGTraceInstr,
     MenaiCFGValue,
 )
+from menai.menai_value import MenaiValue
 
 # ---------------------------------------------------------------------------
 # Special-case builtins where the default-arity form synthesises extra
@@ -163,19 +164,40 @@ class StackSchedule:
 
     transient_ids
         The set of SSA value IDs that are stack-transient.  All other
-        SSA values that produce a result are slotted.
+        SSA values that produce a result are either rematerialisable or slotted.
+
+    remat_values
+        Maps SSA value ID → MenaiValue for constants that are rematerialisable.
+        A rematerialisable value is a MenaiCFGConstInstr result that is NOT
+        stack-transient.  Instead of spilling to a slot, the codegen re-emits
+        the constant load instruction at each use site.  This eliminates the
+        slot entirely regardless of use count.
 
     Usage by the code generator::
 
         schedule = MenaiCFGStackScheduler().schedule(func)
         if schedule.is_transient(value):
             # do not emit STORE_VAR / LOAD_VAR for this value
+        elif schedule.is_remat(value):
+            # emit a fresh LOAD_CONST / LOAD_NONE / etc. at each use site
     """
     transient_ids: Set[int] = field(default_factory=set)
+    remat_values: Dict[int, MenaiValue] = field(default_factory=dict)
 
     def is_transient(self, value: MenaiCFGValue) -> bool:
         """Return True if `value` should be left on the stack (no slot)."""
         return value.id in self.transient_ids
+
+    def is_remat(self, value: MenaiCFGValue) -> bool:
+        """Return True if `value` should be rematerialised at each use site."""
+        return value.id in self.remat_values
+
+    def remat_value_of(self, value: MenaiCFGValue) -> MenaiValue:
+        """Return the MenaiValue to rematerialise for `value`.  Asserts it exists."""
+        assert value.id in self.remat_values, (
+            f"StackSchedule: SSA value {value} is not rematerialisable"
+        )
+        return self.remat_values[value.id]
 
 
 class MenaiCFGStackScheduler:
@@ -190,7 +212,9 @@ class MenaiCFGStackScheduler:
 
       Pass 2 — classification: for each block, walk its instruction list
                and check whether each produced value satisfies all
-               stack-transient conditions.
+               stack-transient conditions.  Constants that do not qualify
+               as stack-transient are classified as rematerialisable instead
+               of slotted.
 
     The scheduler does not modify the CFG.
     """
@@ -206,8 +230,8 @@ class MenaiCFGStackScheduler:
             A StackSchedule classifying each SSA value.
         """
         use_counts = self._count_uses(func)
-        transient_ids = self._classify(func, use_counts)
-        return StackSchedule(transient_ids=transient_ids)
+        transient_ids, remat_values = self._classify(func, use_counts)
+        return StackSchedule(transient_ids=transient_ids, remat_values=remat_values)
 
     # ------------------------------------------------------------------
     # Pass 1: use counting
@@ -303,20 +327,26 @@ class MenaiCFGStackScheduler:
         self,
         func: MenaiCFGFunction,
         use_counts: dict[int, int],
-    ) -> Set[int]:
+    ) -> tuple[Set[int], Dict[int, MenaiValue]]:
         """
-        Return the set of SSA value IDs that are stack-transient.
+        Return (transient_ids, remat_values) for the function.
 
         For each block, walk its instruction list.  For each instruction that
         produces a result, check all three conditions (use count, position,
         last-operand, preceding-operands-all-transient) and add to the
         transient set if all pass.
 
+        Constants that do not qualify as transient are added to remat_values
+        instead of being left for slot allocation.  remat_values maps SSA
+        value ID → MenaiValue so the codegen can re-emit the load at each use.
+
         The transient set is built incrementally so that condition 4 can
-        consult it: a preceding operand is safe only if it is itself already
-        classified transient (meaning no LOAD_VAR will be emitted for it).
+        consult it: a preceding operand displaces the stack top only if it
+        will cause a LOAD_VAR to be emitted, which happens when it is slotted
+        (neither transient nor rematerialisable).
         """
         transient: Set[int] = set()
+        remat: Dict[int, MenaiValue] = {}
 
         for block in func.blocks:
             instrs = block.instrs
@@ -331,37 +361,50 @@ class MenaiCFGStackScheduler:
                 if self._is_hard_excluded(instr):
                     continue
 
+                # Rematerialisable constants: MenaiCFGConstInstr results that
+                # are not stack-transient.  We attempt transient classification
+                # first; if that fails, a ConstInstr falls through to remat.
+                is_const = isinstance(instr, MenaiCFGConstInstr)
+
+                # --- Attempt transient classification ---
                 # Condition 1: exactly one use.
-                if use_counts.get(result.id, 0) != 1:
-                    continue
+                qualifies_transient = use_counts.get(result.id, 0) == 1
 
-                # Condition 2: the single use is the next instruction or the
-                # terminator (when this is the last instruction in the block).
-                if i + 1 < n:
-                    consumer: MenaiCFGInstr | MenaiCFGTerminator = instrs[i + 1]
-                    is_term_consumer = False
-                elif block.terminator is not None:
-                    consumer = block.terminator
-                    is_term_consumer = True
-                else:
-                    continue  # No consumer in this block.
+                if qualifies_transient:
+                    # Condition 2: the single use is the next instruction or
+                    # the terminator.
+                    if i + 1 < n:
+                        consumer: MenaiCFGInstr | MenaiCFGTerminator = instrs[i + 1]
+                        is_term_consumer = False
+                    elif block.terminator is not None:
+                        consumer = block.terminator
+                        is_term_consumer = True
+                    else:
+                        qualifies_transient = False
 
-                # Condition 3: the result is the last SSA operand of the consumer.
-                if not self._is_last_operand(result, consumer, is_term_consumer):
-                    continue
+                if qualifies_transient:
+                    # Condition 3: result is the last SSA operand of consumer.
+                    if not self._is_last_operand(result, consumer, is_term_consumer):
+                        qualifies_transient = False
 
-                # Condition 4: all SSA operands of the consumer that are pushed
-                # BEFORE the last one must already be in the transient set.
-                # If any preceding operand is slotted, the emitter will emit a
-                # LOAD_VAR for it between this value's definition and the opcode,
-                # displacing this value from the stack top and corrupting order.
-                preceding = self._preceding_operands(result, consumer, is_term_consumer)
-                if any(p.id not in transient for p in preceding):
-                    continue
+                if qualifies_transient:
+                    # Condition 4: all preceding operands of consumer must
+                    # themselves be transient — meaning no load instruction
+                    # (LOAD_VAR or LOAD_CONST) will be emitted for them at
+                    # the use site.  Remat operands still emit a LOAD_CONST
+                    # at the use site, which would displace this value from
+                    # the stack top just as LOAD_VAR would.
+                    preceding = self._preceding_operands(result, consumer, is_term_consumer)
+                    if any(p.id not in transient for p in preceding):
+                        qualifies_transient = False
 
-                transient.add(result.id)
+                if qualifies_transient:
+                    transient.add(result.id)
+                elif is_const:
+                    # Not transient but is a constant: rematerialise instead.
+                    remat[result.id] = instr.value  # type: ignore[union-attr]
 
-        return transient
+        return transient, remat
 
     def _result_of(self, instr: MenaiCFGInstr) -> MenaiCFGValue | None:
         """Return the SSA result of `instr`, or None if it has no result."""
