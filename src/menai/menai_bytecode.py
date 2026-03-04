@@ -418,14 +418,23 @@ class Instruction:
     """Single bytecode instruction.
 
     Stores opcode and arguments for easier debugging and manipulation.
-    In the VM, we'll use a more compact representation.
+
+    Fields use the virtual register naming convention that will be used by the
+    register-based VM.  During the current stack-machine phase dest and src2 are
+    always 0 and are unused; src0 and src1 carry the instruction-stream immediates
+    that were previously called arg1 and arg2.
     """
     opcode: Opcode
-    arg1: int = 0
-    arg2: int = 0
+    dest: int = 0   # destination register (unused in stack-machine phase)
+    src0: int = 0   # first immediate / source operand (was arg1)
+    src1: int = 0   # second immediate / source operand (was arg2)
+    src2: int = 0   # third source operand (unused in stack-machine phase)
 
     def arg_count(self) -> int:
-        """Return the number of instruction-stream arguments this instruction takes (0, 1, or 2)."""
+        """Return the number of instruction-stream immediates this instruction takes (0, 1, or 2).
+
+        Maps to src0 (count=1) or src0+src1 (count=2).  dest and src2 are always 0.
+        """
         return self.opcode.arg_count()
 
     def __repr__(self) -> str:
@@ -435,9 +444,9 @@ class Instruction:
             return f"{self.opcode.name}"
 
         if n == 2:
-            return f"{self.opcode.name} {self.arg1} {self.arg2}"
+            return f"{self.opcode.name} {self.src0} {self.src1}"
 
-        return f"{self.opcode.name} {self.arg1}"
+        return f"{self.opcode.name} {self.src0}"
 
 
 @dataclass

@@ -185,10 +185,10 @@ class _EmitContext:
         )
         return self.slot_map[value.id]
 
-    def emit(self, opcode: Opcode, arg1: int = 0, arg2: int = 0) -> int:
+    def emit(self, opcode: Opcode, src0: int = 0, src1: int = 0) -> int:
         """Emit an instruction, returning its index."""
         idx = len(self.instructions)
-        self.instructions.append(Instruction(opcode, arg1, arg2))
+        self.instructions.append(Instruction(opcode, src0=src0, src1=src1))
         return idx
 
     def load_value(self, value: MenaiCFGValue) -> None:
@@ -240,7 +240,7 @@ class _EmitContext:
         return slot
 
     def patch_jump(self, instr_index: int, target: int) -> None:
-        self.instructions[instr_index].arg1 = target
+        self.instructions[instr_index].src0 = target
 
     def current_index(self) -> int:
         return len(self.instructions)

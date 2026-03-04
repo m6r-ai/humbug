@@ -20,7 +20,7 @@ class TestBytecodeValidator:
         # Simple code: LOAD_CONST 0, RETURN
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.LOAD_CONST, src0=0),
                 Instruction(Opcode.RETURN),
             ],
             constants=[MenaiInteger(42)],
@@ -36,7 +36,7 @@ class TestBytecodeValidator:
         """Test that invalid constant index is caught."""
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, 5),  # Index 5 but only 1 constant
+                Instruction(Opcode.LOAD_CONST, src0=5),  # Index 5 but only 1 constant
                 Instruction(Opcode.RETURN),
             ],
             constants=[MenaiInteger(42)],
@@ -55,7 +55,7 @@ class TestBytecodeValidator:
         """Test that invalid name index is caught."""
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_NAME, 3),  # Index 3 but only 1 name
+                Instruction(Opcode.LOAD_NAME, src0=3),  # Index 3 but only 1 name
                 Instruction(Opcode.RETURN),
             ],
             constants=[],
@@ -74,7 +74,7 @@ class TestBytecodeValidator:
         """Test that invalid jump target is caught."""
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.JUMP, 100),  # Jump to instruction 100 (doesn't exist)
+                Instruction(Opcode.JUMP, src0=100),  # Jump to instruction 100 (doesn't exist)
             ],
             constants=[],
             names=[],
@@ -92,7 +92,7 @@ class TestBytecodeValidator:
         """Test that invalid variable index is caught."""
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_VAR, 5, 0),  # Index 5 but local_count is 2
+                Instruction(Opcode.LOAD_VAR, src0=5),  # Index 5 but local_count is 2
                 Instruction(Opcode.RETURN),
             ],
             constants=[],
@@ -130,8 +130,8 @@ class TestBytecodeValidator:
         # Try to call function with arity 2 but only 1 item on stack
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, 0),  # Push 1 item
-                Instruction(Opcode.CALL, 2),  # Try to call with arity 2 (needs 3 items: func + 2 args)
+                Instruction(Opcode.LOAD_CONST, src0=0),  # Push 1 item
+                Instruction(Opcode.CALL, src0=2),  # Try to call with arity 2 (needs 3 items: func + 2 args)
                 Instruction(Opcode.RETURN),
             ],
             constants=[MenaiInteger(42)],
@@ -151,12 +151,12 @@ class TestBytecodeValidator:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_TRUE),           # 0: Push true (depth=1)
-                Instruction(Opcode.JUMP_IF_FALSE, 4),    # 1: Jump to 4 if false (pops, depth=0)
+                Instruction(Opcode.JUMP_IF_FALSE, src0=4),    # 1: Jump to 4 if false (pops, depth=0)
                 # Fall through path: depth=0
-                Instruction(Opcode.LOAD_CONST, 0),       # 2: Push constant (depth=1)
-                Instruction(Opcode.JUMP, 5),             # 3: Jump to 5 (depth=1)
+                Instruction(Opcode.LOAD_CONST, src0=0),       # 2: Push constant (depth=1)
+                Instruction(Opcode.JUMP, src0=5),             # 3: Jump to 5 (depth=1)
                 # Jump path: depth=0
-                Instruction(Opcode.LOAD_CONST, 0),       # 4: Push constant (depth=1), then fall to 5 (depth=1)
+                Instruction(Opcode.LOAD_CONST, src0=0),       # 4: Push constant (depth=1), then fall to 5 (depth=1)
                 Instruction(Opcode.RETURN),              # 5: Return (depth from 3 is 1, from 4 is 1 - consistent!)
             ],
             constants=[MenaiInteger(42)],
@@ -175,11 +175,11 @@ class TestBytecodeValidator:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_TRUE),           # 0: depth=0->1
-                Instruction(Opcode.JUMP_IF_FALSE, 4),    # 1: pops, jump to 4 (depth=0) or fall through (depth=0)
-                Instruction(Opcode.LOAD_CONST, 0),       # 2: depth=0->1
-                Instruction(Opcode.JUMP, 5),             # 3: depth=1, jump to 5
+                Instruction(Opcode.JUMP_IF_FALSE, src0=4),    # 1: pops, jump to 4 (depth=0) or fall through (depth=0)
+                Instruction(Opcode.LOAD_CONST, src0=0),       # 2: depth=0->1
+                Instruction(Opcode.JUMP, src0=5),             # 3: depth=1, jump to 5
                 # From jump at 1:
-                Instruction(Opcode.JUMP, 5),             # 4: depth=0, jump to 5
+                Instruction(Opcode.JUMP, src0=5),             # 4: depth=0, jump to 5
                 # Merge point:
                 Instruction(Opcode.RETURN),              # 5: depth from 3 is 1, from 4 is 0 - inconsistent!
             ],
@@ -201,10 +201,10 @@ class TestBytecodeValidator:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_TRUE),           # 0: Push true
-                Instruction(Opcode.JUMP_IF_FALSE, 4),    # 1: Jump to 4 if false
-                Instruction(Opcode.LOAD_CONST, 0),       # 2: Push 1
+                Instruction(Opcode.JUMP_IF_FALSE, src0=4),    # 1: Jump to 4 if false
+                Instruction(Opcode.LOAD_CONST, src0=0),       # 2: Push 1
                 Instruction(Opcode.RETURN),              # 3: Return
-                Instruction(Opcode.LOAD_CONST, 1),       # 4: Push 2
+                Instruction(Opcode.LOAD_CONST, src0=1),       # 4: Push 2
                 Instruction(Opcode.RETURN),              # 5: Return
             ],
             constants=[MenaiInteger(1), MenaiInteger(2)],
@@ -221,11 +221,11 @@ class TestBytecodeValidator:
         # Simple loop that jumps back
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, 0),       # 0: Push constant
+                Instruction(Opcode.LOAD_CONST, src0=0),       # 0: Push constant
                 Instruction(Opcode.LOAD_TRUE),           # 1: Push true
-                Instruction(Opcode.JUMP_IF_FALSE, 5),    # 2: Exit loop if false
-                Instruction(Opcode.JUMP, 1),             # 3: Jump back to 1 (loop)
-                Instruction(Opcode.JUMP, 1),             # 4: Unreachable (but valid)
+                Instruction(Opcode.JUMP_IF_FALSE, src0=5),    # 2: Exit loop if false
+                Instruction(Opcode.JUMP, src0=1),             # 3: Jump back to 1 (loop)
+                Instruction(Opcode.JUMP, src0=1),             # 4: Unreachable (but valid)
                 Instruction(Opcode.RETURN),              # 5: Return
             ],
             constants=[MenaiInteger(42)],
@@ -242,8 +242,8 @@ class TestBytecodeValidator:
         # Create a simple lambda
         lambda_code = CodeObject(
             instructions=[
-                Instruction(Opcode.STORE_VAR, 0),     # Store parameter
-                Instruction(Opcode.LOAD_VAR, 0),      # Load parameter
+                Instruction(Opcode.STORE_VAR, src0=0),     # Store parameter
+                Instruction(Opcode.LOAD_VAR, src0=0),      # Load parameter
                 Instruction(Opcode.RETURN),
             ],
             constants=[],
@@ -255,8 +255,8 @@ class TestBytecodeValidator:
 
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, 0),       # Push captured value
-                Instruction(Opcode.MAKE_CLOSURE, 0, 1),  # Make closure with 1 capture
+                Instruction(Opcode.LOAD_CONST, src0=0),       # Push captured value
+                Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=1),  # Make closure with 1 capture
                 Instruction(Opcode.RETURN),
             ],
             constants=[MenaiInteger(42)],
@@ -289,7 +289,7 @@ class TestBytecodeValidator:
         # Code that falls off the end without RETURN
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, 0),  # Push constant
+                Instruction(Opcode.LOAD_CONST, src0=0),  # Push constant
                 # Missing RETURN
             ],
             constants=[MenaiInteger(42)],
@@ -308,10 +308,10 @@ class TestBytecodeValidator:
         # TAIL_CALL should be terminal, code after it is unreachable but valid
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_NAME, 0),        # Load function
-                Instruction(Opcode.LOAD_CONST, 0),       # Load arg
-                Instruction(Opcode.TAIL_CALL, 1),        # Tail call
-                Instruction(Opcode.LOAD_CONST, 0),       # Unreachable (but valid)
+                Instruction(Opcode.LOAD_NAME, src0=0),        # Load function
+                Instruction(Opcode.LOAD_CONST, src0=0),       # Load arg
+                Instruction(Opcode.TAIL_CALL, src0=1),        # Tail call
+                Instruction(Opcode.LOAD_CONST, src0=0),       # Unreachable (but valid)
                 Instruction(Opcode.RETURN),              # Unreachable (but valid)
             ],
             constants=[MenaiInteger(42)],
@@ -328,7 +328,7 @@ class TestBytecodeValidator:
         # Create invalid nested code
         invalid_lambda = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, 99),  # Invalid constant index
+                Instruction(Opcode.LOAD_CONST, src0=99),  # Invalid constant index
                 Instruction(Opcode.RETURN),
             ],
             constants=[],  # No constants!
@@ -339,7 +339,7 @@ class TestBytecodeValidator:
 
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.MAKE_CLOSURE, 0, 0),
+                Instruction(Opcode.MAKE_CLOSURE, src0=0),
                 Instruction(Opcode.RETURN),
             ],
             constants=[],
@@ -358,7 +358,7 @@ class TestBytecodeValidator:
         """Test that using uninitialized variable is caught."""
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_VAR, 0),  # Load var 0 without storing first
+                Instruction(Opcode.LOAD_VAR, src0=0),  # Load var 0 without storing first
                 Instruction(Opcode.RETURN),
             ],
             constants=[],
@@ -376,9 +376,9 @@ class TestBytecodeValidator:
         """Test that initialized variable passes validation."""
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, 0),   # Push value
-                Instruction(Opcode.STORE_VAR, 0), # Store to var 0
-                Instruction(Opcode.LOAD_VAR, 0),  # Load var 0 - OK
+                Instruction(Opcode.LOAD_CONST, src0=0),   # Push value
+                Instruction(Opcode.STORE_VAR, src0=0), # Store to var 0
+                Instruction(Opcode.LOAD_VAR, src0=0),  # Load var 0 - OK
                 Instruction(Opcode.RETURN),
             ],
             constants=[MenaiInteger(42)],
@@ -395,8 +395,8 @@ class TestBytecodeValidator:
         # Function with 1 parameter
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.STORE_VAR, 0), # Store parameter (from stack)
-                Instruction(Opcode.LOAD_VAR, 0),  # Load parameter - OK
+                Instruction(Opcode.STORE_VAR, src0=0), # Store parameter (from stack)
+                Instruction(Opcode.LOAD_VAR, src0=0),  # Load parameter - OK
                 Instruction(Opcode.RETURN),
             ],
             constants=[],
@@ -414,16 +414,16 @@ class TestBytecodeValidator:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_TRUE),           # 0: condition
-                Instruction(Opcode.JUMP_IF_FALSE, 5),    # 1: jump to else
+                Instruction(Opcode.JUMP_IF_FALSE, src0=5),    # 1: jump to else
                 # Then branch
-                Instruction(Opcode.LOAD_CONST, 0),       # 2: push value
-                Instruction(Opcode.STORE_VAR, 0),     # 3: store to var 0
-                Instruction(Opcode.JUMP, 7),             # 4: jump to merge
+                Instruction(Opcode.LOAD_CONST, src0=0),       # 2: push value
+                Instruction(Opcode.STORE_VAR, src0=0),     # 3: store to var 0
+                Instruction(Opcode.JUMP, src0=7),             # 4: jump to merge
                 # Else branch
-                Instruction(Opcode.LOAD_CONST, 0),       # 5: push value
-                Instruction(Opcode.STORE_VAR, 0),     # 6: store to var 0
+                Instruction(Opcode.LOAD_CONST, src0=0),       # 5: push value
+                Instruction(Opcode.STORE_VAR, src0=0),     # 6: store to var 0
                 # Merge point
-                Instruction(Opcode.LOAD_VAR, 0),      # 7: load var 0 - OK (both branches stored)
+                Instruction(Opcode.LOAD_VAR, src0=0),      # 7: load var 0 - OK (both branches stored)
                 Instruction(Opcode.RETURN),              # 8
             ],
             constants=[MenaiInteger(42)],
@@ -440,15 +440,15 @@ class TestBytecodeValidator:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_TRUE),           # 0: condition
-                Instruction(Opcode.JUMP_IF_FALSE, 5),    # 1: jump to else
+                Instruction(Opcode.JUMP_IF_FALSE, src0=5),    # 1: jump to else
                 # Then branch
-                Instruction(Opcode.LOAD_CONST, 0),       # 2: push value
-                Instruction(Opcode.STORE_VAR, 0),     # 3: store to var 0
-                Instruction(Opcode.JUMP, 6),             # 4: jump to merge
+                Instruction(Opcode.LOAD_CONST, src0=0),       # 2: push value
+                Instruction(Opcode.STORE_VAR, src0=0),     # 3: store to var 0
+                Instruction(Opcode.JUMP, src0=6),             # 4: jump to merge
                 # Else branch - doesn't initialize!
-                Instruction(Opcode.JUMP, 6),             # 5: jump to merge
+                Instruction(Opcode.JUMP, src0=6),             # 5: jump to merge
                 # Merge point
-                Instruction(Opcode.LOAD_VAR, 0),      # 6: load var 0 - ERROR (boolean-not initialized on else path)
+                Instruction(Opcode.LOAD_VAR, src0=0),      # 6: load var 0 - ERROR (boolean-not initialized on else path)
                 Instruction(Opcode.RETURN),              # 7
             ],
             constants=[MenaiInteger(42)],
@@ -466,16 +466,16 @@ class TestBytecodeValidator:
         """Test that variable initialized before loop is OK."""
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, 0),       # 0: push value
-                Instruction(Opcode.STORE_VAR, 0),     # 1: store to var 0
+                Instruction(Opcode.LOAD_CONST, src0=0),       # 0: push value
+                Instruction(Opcode.STORE_VAR, src0=0),     # 1: store to var 0
                 # Loop start
                 Instruction(Opcode.LOAD_TRUE),           # 2: condition
-                Instruction(Opcode.JUMP_IF_FALSE, 6),    # 3: exit loop
+                Instruction(Opcode.JUMP_IF_FALSE, src0=6),    # 3: exit loop
                 # Loop body
-                Instruction(Opcode.LOAD_VAR, 0),      # 4: load var 0 - OK
+                Instruction(Opcode.LOAD_VAR, src0=0),      # 4: load var 0 - OK
                 Instruction(Opcode.RETURN),              # 5: return (pop from stack)
                 # After loop
-                Instruction(Opcode.LOAD_CONST, 1),       # 6: push value
+                Instruction(Opcode.LOAD_CONST, src0=1),       # 6: push value
                 Instruction(Opcode.RETURN),              # 7: return
             ],
             constants=[MenaiInteger(42), MenaiInteger(99)],
@@ -509,8 +509,8 @@ class TestPatchClosureValidation:
         """Return a minimal closed CodeObject with n_free_vars free variable slots."""
         return CodeObject(
             instructions=[
-                Instruction(Opcode.ENTER, 1),
-                Instruction(Opcode.LOAD_VAR, 0),
+                Instruction(Opcode.ENTER, src0=1),
+                Instruction(Opcode.LOAD_VAR, src0=0),
                 Instruction(Opcode.RETURN),
             ],
             constants=[],
@@ -540,13 +540,13 @@ class TestPatchClosureValidation:
         #   7: RETURN
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.MAKE_CLOSURE, 0, 0),
-                Instruction(Opcode.STORE_VAR, 0),
-                Instruction(Opcode.LOAD_CONST, 0),
-                Instruction(Opcode.PATCH_CLOSURE, 0, 0),
-                Instruction(Opcode.LOAD_CONST, 0),
-                Instruction(Opcode.PATCH_CLOSURE, 0, 1),
-                Instruction(Opcode.LOAD_VAR, 0),
+                Instruction(Opcode.MAKE_CLOSURE, src0=0),
+                Instruction(Opcode.STORE_VAR, src0=0),
+                Instruction(Opcode.LOAD_CONST, src0=0),
+                Instruction(Opcode.PATCH_CLOSURE, src0=0),
+                Instruction(Opcode.LOAD_CONST, src0=0),
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1),
+                Instruction(Opcode.LOAD_VAR, src0=0),
                 Instruction(Opcode.RETURN),
             ],
             constants=[MenaiInteger(42)],
@@ -561,11 +561,11 @@ class TestPatchClosureValidation:
         inner = self._make_closure_code(1)
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.MAKE_CLOSURE, 0, 0),
-                Instruction(Opcode.STORE_VAR, 0),
-                Instruction(Opcode.LOAD_CONST, 0),
-                Instruction(Opcode.PATCH_CLOSURE, 0, 0),
-                Instruction(Opcode.LOAD_VAR, 0),
+                Instruction(Opcode.MAKE_CLOSURE, src0=0),
+                Instruction(Opcode.STORE_VAR, src0=0),
+                Instruction(Opcode.LOAD_CONST, src0=0),
+                Instruction(Opcode.PATCH_CLOSURE, src0=0),
+                Instruction(Opcode.LOAD_VAR, src0=0),
                 Instruction(Opcode.RETURN),
             ],
             constants=[MenaiInteger(1)],
@@ -585,9 +585,9 @@ class TestPatchClosureValidation:
         # slot 0 is never written — PATCH_CLOSURE reads it without a prior STORE_VAR
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, 0),
-                Instruction(Opcode.PATCH_CLOSURE, 0, 0),   # slot 0 never initialised
-                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.LOAD_CONST, src0=0),
+                Instruction(Opcode.PATCH_CLOSURE, src0=0),   # slot 0 never initialised
+                Instruction(Opcode.LOAD_CONST, src0=0),
                 Instruction(Opcode.RETURN),
             ],
             constants=[MenaiInteger(1)],
@@ -609,14 +609,14 @@ class TestPatchClosureValidation:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_TRUE),            # 0
-                Instruction(Opcode.JUMP_IF_FALSE, 5),     # 1: branch to 5
-                Instruction(Opcode.MAKE_CLOSURE, 0, 0),   # 2
-                Instruction(Opcode.STORE_VAR, 0),         # 3
-                Instruction(Opcode.JUMP, 6),              # 4
-                Instruction(Opcode.JUMP, 6),              # 5: no STORE_VAR
-                Instruction(Opcode.LOAD_CONST, 0),        # 6
-                Instruction(Opcode.PATCH_CLOSURE, 0, 0),  # 7: slot 0 may be uninit
-                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.JUMP_IF_FALSE, src0=5),     # 1: branch to 5
+                Instruction(Opcode.MAKE_CLOSURE, src0=0),   # 2
+                Instruction(Opcode.STORE_VAR, src0=0),         # 3
+                Instruction(Opcode.JUMP, src0=6),              # 4
+                Instruction(Opcode.JUMP, src0=6),              # 5: no STORE_VAR
+                Instruction(Opcode.LOAD_CONST, src0=0),        # 6
+                Instruction(Opcode.PATCH_CLOSURE, src0=0),  # 7: slot 0 may be uninit
+                Instruction(Opcode.LOAD_CONST, src0=0),
                 Instruction(Opcode.RETURN),
             ],
             constants=[MenaiInteger(1)],
@@ -637,11 +637,11 @@ class TestPatchClosureValidation:
         inner = self._make_closure_code(1)
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, 0),        # push a plain integer
-                Instruction(Opcode.STORE_VAR, 0),         # slot 0 = integer (not a closure)
-                Instruction(Opcode.LOAD_CONST, 0),
-                Instruction(Opcode.PATCH_CLOSURE, 0, 0),  # slot 0 is not a closure
-                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.LOAD_CONST, src0=0),        # push a plain integer
+                Instruction(Opcode.STORE_VAR, src0=0),         # slot 0 = integer (not a closure)
+                Instruction(Opcode.LOAD_CONST, src0=0),
+                Instruction(Opcode.PATCH_CLOSURE, src0=0),  # slot 0 is not a closure
+                Instruction(Opcode.LOAD_CONST, src0=0),
                 Instruction(Opcode.RETURN),
             ],
             constants=[MenaiInteger(42)],
@@ -659,13 +659,13 @@ class TestPatchClosureValidation:
         inner = self._make_closure_code(1)
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.MAKE_CLOSURE, 0, 0),   # create closure
-                Instruction(Opcode.STORE_VAR, 0),         # slot 0 = closure
-                Instruction(Opcode.LOAD_CONST, 0),        # push integer
-                Instruction(Opcode.STORE_VAR, 0),         # slot 0 = integer (overwrites closure)
-                Instruction(Opcode.LOAD_CONST, 0),
-                Instruction(Opcode.PATCH_CLOSURE, 0, 0),  # slot 0 no longer a closure
-                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.MAKE_CLOSURE, src0=0),   # create closure
+                Instruction(Opcode.STORE_VAR, src0=0),         # slot 0 = closure
+                Instruction(Opcode.LOAD_CONST, src0=0),        # push integer
+                Instruction(Opcode.STORE_VAR, src0=0),         # slot 0 = integer (overwrites closure)
+                Instruction(Opcode.LOAD_CONST, src0=0),
+                Instruction(Opcode.PATCH_CLOSURE, src0=0),  # slot 0 no longer a closure
+                Instruction(Opcode.LOAD_CONST, src0=0),
                 Instruction(Opcode.RETURN),
             ],
             constants=[MenaiInteger(42)],
@@ -688,15 +688,15 @@ class TestPatchClosureValidation:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_TRUE),            # 0
-                Instruction(Opcode.JUMP_IF_FALSE, 5),     # 1: branch to 5
-                Instruction(Opcode.MAKE_CLOSURE, 0, 0),   # 2: closure from code_objects[0]
-                Instruction(Opcode.STORE_VAR, 0),         # 3
-                Instruction(Opcode.JUMP, 7),              # 4
-                Instruction(Opcode.MAKE_CLOSURE, 1, 0),   # 5: closure from code_objects[1]
-                Instruction(Opcode.STORE_VAR, 0),         # 6
-                Instruction(Opcode.LOAD_CONST, 0),        # 7 (merge)
-                Instruction(Opcode.PATCH_CLOSURE, 0, 0),  # 8: ambiguous — which closure?
-                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.JUMP_IF_FALSE, src0=5),     # 1: branch to 5
+                Instruction(Opcode.MAKE_CLOSURE, src0=0),   # 2: closure from code_objects[0]
+                Instruction(Opcode.STORE_VAR, src0=0),         # 3
+                Instruction(Opcode.JUMP, src0=7),              # 4
+                Instruction(Opcode.MAKE_CLOSURE, src0=1),   # 5: closure from code_objects[1]
+                Instruction(Opcode.STORE_VAR, src0=0),         # 6
+                Instruction(Opcode.LOAD_CONST, src0=0),        # 7 (merge)
+                Instruction(Opcode.PATCH_CLOSURE, src0=0),  # 8: ambiguous — which closure?
+                Instruction(Opcode.LOAD_CONST, src0=0),
                 Instruction(Opcode.RETURN),
             ],
             constants=[MenaiInteger(1)],
@@ -718,11 +718,11 @@ class TestPatchClosureValidation:
         inner = self._make_closure_code(2)  # free_vars has 2 entries (slots 0 and 1)
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.MAKE_CLOSURE, 0, 0),
-                Instruction(Opcode.STORE_VAR, 0),
-                Instruction(Opcode.LOAD_CONST, 0),
-                Instruction(Opcode.PATCH_CLOSURE, 0, 2),  # capture_slot=2, but only 0 and 1 exist
-                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.MAKE_CLOSURE, src0=0),
+                Instruction(Opcode.STORE_VAR, src0=0),
+                Instruction(Opcode.LOAD_CONST, src0=0),
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=2),  # capture_slot=2, but only 0 and 1 exist
+                Instruction(Opcode.LOAD_CONST, src0=0),
                 Instruction(Opcode.RETURN),
             ],
             constants=[MenaiInteger(1)],
@@ -741,11 +741,11 @@ class TestPatchClosureValidation:
         inner = self._make_closure_code(0)  # no free vars at all
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.MAKE_CLOSURE, 0, 0),
-                Instruction(Opcode.STORE_VAR, 0),
-                Instruction(Opcode.LOAD_CONST, 0),
-                Instruction(Opcode.PATCH_CLOSURE, 0, 0),  # capture_slot=0, but n_free=0
-                Instruction(Opcode.LOAD_CONST, 0),
+                Instruction(Opcode.MAKE_CLOSURE, src0=0),
+                Instruction(Opcode.STORE_VAR, src0=0),
+                Instruction(Opcode.LOAD_CONST, src0=0),
+                Instruction(Opcode.PATCH_CLOSURE, src0=0),  # capture_slot=0, but n_free=0
+                Instruction(Opcode.LOAD_CONST, src0=0),
                 Instruction(Opcode.RETURN),
             ],
             constants=[MenaiInteger(1)],

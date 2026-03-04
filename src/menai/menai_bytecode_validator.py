@@ -345,7 +345,7 @@ class BytecodeValidator:
 
             # Validate constant pool indices
             if opcode in (Opcode.LOAD_CONST, Opcode.RAISE_ERROR):
-                const_index = instr.arg1
+                const_index = instr.src0
                 if const_index < 0 or const_index >= len(code.constants):
                     raise ValidationError(
                         ValidationErrorType.INDEX_OUT_OF_BOUNDS,
@@ -356,7 +356,7 @@ class BytecodeValidator:
 
             # Validate name pool indices
             if opcode == Opcode.LOAD_NAME:
-                name_index = instr.arg1
+                name_index = instr.src0
                 if name_index < 0 or name_index >= len(code.names):
                     raise ValidationError(
                         ValidationErrorType.INDEX_OUT_OF_BOUNDS,
@@ -367,7 +367,7 @@ class BytecodeValidator:
 
             # Validate code object indices
             if opcode == Opcode.MAKE_CLOSURE:
-                code_index = instr.arg1
+                code_index = instr.src0
                 if code_index < 0 or code_index >= len(code.code_objects):
                     raise ValidationError(
                         ValidationErrorType.INDEX_OUT_OF_BOUNDS,
@@ -378,7 +378,7 @@ class BytecodeValidator:
 
             # Validate variable indices (must be < local_count)
             if opcode in (Opcode.LOAD_VAR, Opcode.STORE_VAR):
-                var_index = instr.arg1
+                var_index = instr.src0
                 if var_index < 0 or var_index >= code.local_count:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
@@ -389,7 +389,7 @@ class BytecodeValidator:
 
             # Validate ENTER: n must match param_count and fit within local_count
             if opcode == Opcode.ENTER:
-                n = instr.arg1
+                n = instr.src0
                 if n != code.param_count:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
@@ -407,7 +407,7 @@ class BytecodeValidator:
 
             # Validate PATCH_CLOSURE: var_index must be a valid local slot
             if opcode == Opcode.PATCH_CLOSURE:
-                var_index = instr.arg1
+                var_index = instr.src0
                 if var_index < 0 or var_index >= code.local_count:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
@@ -418,7 +418,7 @@ class BytecodeValidator:
 
             # Validate jump targets
             if opcode in (Opcode.JUMP, Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE):
-                target = instr.arg1
+                target = instr.src0
                 if target < 0 or target >= len(code.instructions):
                     raise ValidationError(
                         ValidationErrorType.INVALID_JUMP_TARGET,
@@ -536,9 +536,9 @@ class BytecodeValidator:
         definitively known to hold a closure created by MAKE_CLOSURE.  This
         is needed to validate PATCH_CLOSURE, which has three requirements:
 
-          1. arg1 (var_index) must refer to an initialized slot.
+          1. src0 (var_index) must refer to an initialized slot.
           2. That slot must definitively hold a closure (not an arbitrary value).
-          3. arg2 (capture_slot) must be < len(code_objects[code_index].free_vars)
+          3. src1 (capture_slot) must be < len(code_objects[code_index].free_vars)
              for the closure stored in that slot.
 
         At merge points the closure map is intersected conservatively: a slot
@@ -587,7 +587,7 @@ class BytecodeValidator:
 
             # Check LOAD_VAR - must be initialized
             if opcode == Opcode.LOAD_VAR:
-                var_index = instr.arg1
+                var_index = instr.src0
                 if var_index not in current_initialized:
                     raise ValidationError(
                         ValidationErrorType.UNINITIALIZED_VARIABLE,
@@ -598,12 +598,12 @@ class BytecodeValidator:
                     )
 
             # Check PATCH_CLOSURE:
-            #   1. var_index (arg1) must be initialized.
+            #   1. var_index (src0) must be initialized.
             #   2. That slot must definitively hold a closure.
-            #   3. capture_slot (arg2) must be in range for that closure's free_vars.
+            #   3. capture_slot (src1) must be in range for that closure's free_vars.
             if opcode == Opcode.PATCH_CLOSURE:
-                var_index = instr.arg1
-                capture_slot = instr.arg2
+                var_index = instr.src0
+                capture_slot = instr.src1
 
                 if var_index not in current_initialized:
                     raise ValidationError(
@@ -644,7 +644,7 @@ class BytecodeValidator:
 
             # STORE_VAR marks variable as initialized
             if opcode == Opcode.STORE_VAR:
-                var_index = instr.arg1
+                var_index = instr.src0
                 new_initialized.add(var_index)
                 # If the immediately preceding instruction was MAKE_CLOSURE,
                 # record the closure identity for this slot so PATCH_CLOSURE
@@ -653,7 +653,7 @@ class BytecodeValidator:
                 if instr_idx > 0:
                     prev_instr = code.instructions[instr_idx - 1]
                     if prev_instr.opcode == Opcode.MAKE_CLOSURE:
-                        new_closures[var_index] = prev_instr.arg1  # code_object index
+                        new_closures[var_index] = prev_instr.src0  # code_object index
 
                     else:
                         new_closures.pop(var_index, None)
@@ -663,7 +663,7 @@ class BytecodeValidator:
 
             # ENTER marks locals 0..n-1 as initialized
             if opcode == Opcode.ENTER:
-                new_initialized.update(range(instr.arg1))
+                new_initialized.update(range(instr.src0))
 
             # Re-apply frame invariants: free-var slots are always initialized.
             new_initialized |= initial_initialized
@@ -704,27 +704,27 @@ class BytecodeValidator:
 
         # Special cases that depend on arguments
         if opcode == Opcode.MAKE_CLOSURE:
-            capture_count = instr.arg2
+            capture_count = instr.src1
             return (capture_count, 1)  # Pop captures, push closure
 
         if opcode == Opcode.CALL:
-            arity = instr.arg1
+            arity = instr.src0
             return (arity + 1, 1)  # Pop function + args, push result
 
         if opcode == Opcode.TAIL_CALL:
-            arity = instr.arg1
+            arity = instr.src0
             return (arity + 1, 0)  # Pop function + args, tail position (no push)
 
         if opcode == Opcode.ENTER:
-            n = instr.arg1
+            n = instr.src0
             return (n, 0)  # Pop n args from stack, store into locals 0..n-1
 
         if opcode == Opcode.LIST:
-            n = instr.arg1
+            n = instr.src0
             return (n, 1)  # Pop n elements, push list
 
         if opcode == Opcode.DICT:
-            n = instr.arg1
+            n = instr.src0
             return (n, 1)  # Pop n pair-lists, push dict
 
         # Default case
@@ -746,11 +746,11 @@ class BytecodeValidator:
 
         # Unconditional jump
         if opcode == Opcode.JUMP:
-            successors.append(instr.arg1)
+            successors.append(instr.src0)
 
         # Conditional jumps have two successors
         elif opcode in (Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE):
-            successors.append(instr.arg1)  # Jump target
+            successors.append(instr.src0)  # Jump target
             if instr_idx + 1 < len(code.instructions):
                 successors.append(instr_idx + 1)  # Fall through
 
@@ -774,7 +774,7 @@ class BytecodeValidator:
         for i, instr in enumerate(code.instructions):
             # Jump targets are leaders
             if instr.opcode in (Opcode.JUMP, Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE):
-                leaders.add(instr.arg1)
+                leaders.add(instr.src0)
                 # Instruction after conditional jump is a leader
                 if instr.opcode in (Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE):
                     if i + 1 < len(code.instructions):

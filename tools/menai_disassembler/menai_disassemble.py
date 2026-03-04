@@ -81,27 +81,27 @@ def describe_local(index: int, code: CodeObject) -> str:
 def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
     """Add annotation to instruction showing what it does."""
     opcode = instr.opcode
-    arg1 = instr.arg1
-    arg2 = instr.arg2
+    src0 = instr.src0
+    src1 = instr.src1
 
     annotation = ""
 
     if opcode == Opcode.LOAD_CONST:
-        if arg1 < len(code.constants):
-            const = code.constants[arg1]
+        if src0 < len(code.constants):
+            const = code.constants[src0]
             const_str = format_constant(const)
             if len(const_str) > 40:
                 const_str = const_str[:37] + "..."
             annotation = f"  ; Load constant: {const_str}"
 
     elif opcode == Opcode.LOAD_VAR:
-        annotation = f"  ; Load {describe_local(arg1, code)}"
+        annotation = f"  ; Load {describe_local(src0, code)}"
 
     elif opcode == Opcode.STORE_VAR:
-        annotation = f"  ; Store to {describe_local(arg1, code)}"
+        annotation = f"  ; Store to {describe_local(src0, code)}"
 
     elif opcode == Opcode.ENTER:
-        n = arg1
+        n = src0
         if n > 0 and code.param_names:
             names = ', '.join(f"'{name}'" for name in code.param_names[:n])
             annotation = f"  ; Store {n} params into locals: {names}"
@@ -110,9 +110,9 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
             annotation = f"  ; Store {n} params into locals 0..{n - 1}"
 
     elif opcode == Opcode.MAKE_CLOSURE:
-        if arg1 < len(code.code_objects):
-            nested = code.code_objects[arg1]
-            name = nested.name or f"<lambda-{arg1}>"
+        if src0 < len(code.code_objects):
+            nested = code.code_objects[src0]
+            name = nested.name or f"<lambda-{src0}>"
             loc_parts = []
             if nested.source_file:
                 loc_parts.append(nested.source_file)
@@ -121,36 +121,36 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
                 loc_parts.append(f"line {nested.source_line}")
 
             line_info = f" at {':'.join(loc_parts)}" if loc_parts else ""
-            capture_word = "capture" if arg2 == 1 else "captures"
-            annotation = f"  ; Create closure for {name}{line_info} with {arg2} {capture_word}"
+            capture_word = "capture" if src1 == 1 else "captures"
+            annotation = f"  ; Create closure for {name}{line_info} with {src1} {capture_word}"
 
     elif opcode == Opcode.PATCH_CLOSURE:
-        # arg1 = local slot holding the closure to patch
-        # arg2 = which captured-values slot to fill (index into free_vars)
+        # src0 = local slot holding the closure to patch
+        # src1 = which captured-values slot to fill (index into free_vars)
         # The value to store was pushed onto the stack by the preceding LOAD_VAR.
-        closure_slot = describe_local(arg1, code)
+        closure_slot = describe_local(src0, code)
         # Find which nested code object lives in that local slot by scanning
-        # for a MAKE_CLOSURE followed (eventually) by STORE_VAR arg1.
+        # for a MAKE_CLOSURE followed (eventually) by STORE_VAR src0.
         free_var_name = None
         for j, scan_instr in enumerate(code.instructions):
-            if (scan_instr.opcode == Opcode.STORE_VAR and scan_instr.arg1 == arg1
+            if (scan_instr.opcode == Opcode.STORE_VAR and scan_instr.src0 == src0
                     and j > 0 and code.instructions[j - 1].opcode == Opcode.MAKE_CLOSURE):
-                nested = code.code_objects[code.instructions[j - 1].arg1]
-                if arg2 < len(nested.free_vars):
-                    free_var_name = nested.free_vars[arg2]
+                nested = code.code_objects[code.instructions[j - 1].src0]
+                if src1 < len(nested.free_vars):
+                    free_var_name = nested.free_vars[src1]
 
                 break
 
-        slot_desc = f"'{free_var_name}'" if free_var_name else f"slot {arg2}"
+        slot_desc = f"'{free_var_name}'" if free_var_name else f"slot {src1}"
         annotation = f"  ; Patch {closure_slot}: set capture {slot_desc} from stack"
 
     elif opcode == Opcode.CALL:
-        arg_word = "arg" if arg1 == 1 else "args"
-        annotation = f"  ; Call function with {arg1} {arg_word} (function on stack)"
+        arg_word = "arg" if src0 == 1 else "args"
+        annotation = f"  ; Call function with {src0} {arg_word} (function on stack)"
 
     elif opcode == Opcode.TAIL_CALL:
-        arg_word = "arg" if arg1 == 1 else "args"
-        annotation = f"  ; Tail call function with {arg1} {arg_word}"
+        arg_word = "arg" if src0 == 1 else "args"
+        annotation = f"  ; Tail call function with {src0} {arg_word}"
 
     elif opcode == Opcode.RETURN:
         annotation = "  ; Return from function"
@@ -165,13 +165,13 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
         annotation = "  ; Load empty list"
 
     elif opcode == Opcode.LOAD_NAME:
-        if arg1 < len(code.names):
-            name = code.names[arg1]
+        if src0 < len(code.names):
+            name = code.names[src0]
             annotation = f"  ; Load name: {name}"
 
     elif opcode == Opcode.RAISE_ERROR:
-        if arg1 < len(code.constants):
-            msg = code.constants[arg1]
+        if src0 < len(code.constants):
+            msg = code.constants[src0]
             annotation = f"  ; Raise error: {format_constant(msg)[:40]}"
 
     return annotation
@@ -183,9 +183,9 @@ def format_instruction(instr: Instruction, index: int) -> str:
     if n == 0:
         instr_str = f"{index:4}: {instr.opcode.name}"
     elif n == 2:
-        instr_str = f"{index:4}: {instr.opcode.name} {instr.arg1} {instr.arg2}"
+        instr_str = f"{index:4}: {instr.opcode.name} {instr.src0} {instr.src1}"
     else:
-        instr_str = f"{index:4}: {instr.opcode.name} {instr.arg1}"
+        instr_str = f"{index:4}: {instr.opcode.name} {instr.src0}"
 
     # Pad to fixed width so annotations align
     return instr_str.ljust(40)
@@ -254,7 +254,7 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
     # Pre-pass: collect all jump target indices.
     jump_opcodes = {Opcode.JUMP, Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE}
     jump_targets = {
-        instr.arg1
+        instr.src0
         for instr in code.instructions
         if instr.opcode in jump_opcodes
     }
@@ -303,8 +303,8 @@ def analyze_function_flow(code: CodeObject) -> Dict[int, str]:
         if instr.opcode == Opcode.STORE_VAR and i > 0:
             prev_instr = code.instructions[i - 1]
             if prev_instr.opcode == Opcode.MAKE_CLOSURE:
-                closure_idx = prev_instr.arg1
-                var_idx = instr.arg2
+                closure_idx = prev_instr.src0
+                var_idx = instr.src1
                 if closure_idx < len(code.code_objects):
                     nested_code = code.code_objects[closure_idx]
                     func_name = nested_code.name or f"<closure-{closure_idx}>"
@@ -327,14 +327,14 @@ def trace_calls(code: CodeObject, var_map: Dict[int, str]) -> List[str]:
 
     for i, instr in enumerate(code.instructions):
         if instr.opcode == Opcode.CALL:
-            arg_count = instr.arg1
+            arg_count = instr.src0
             func_load_idx = i - arg_count - 1
             if func_load_idx >= 0:
                 func_instr = code.instructions[func_load_idx]
 
                 func_desc = "???"
                 if func_instr.opcode == Opcode.LOAD_VAR:
-                    var_idx = func_instr.arg2
+                    var_idx = func_instr.src1
                     if var_idx in var_map:
                         func_desc = var_map[var_idx]
 
@@ -344,14 +344,14 @@ def trace_calls(code: CodeObject, var_map: Dict[int, str]) -> List[str]:
                 traces.append(f"Instr {i:3}: CALL({arg_count} args) -> {func_desc}")
 
         elif instr.opcode == Opcode.TAIL_CALL:
-            arg_count = instr.arg1
+            arg_count = instr.src0
             func_load_idx = i - arg_count - 1
             if func_load_idx >= 0:
                 func_instr = code.instructions[func_load_idx]
 
                 func_desc = "???"
                 if func_instr.opcode == Opcode.LOAD_VAR:
-                    var_idx = func_instr.arg2
+                    var_idx = func_instr.src1
                     if var_idx in var_map:
                         func_desc = var_map[var_idx]
 

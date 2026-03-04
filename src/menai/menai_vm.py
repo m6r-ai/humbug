@@ -526,7 +526,7 @@ class MenaiVM:
                 raise MenaiEvalError(f"Unimplemented opcode: {opcode}")
 
             # Call the handler
-            result = handler(frame, code, instr.arg1, instr.arg2)
+            result = handler(frame, code, instr.dest, instr.src0, instr.src1, instr.src2)
             if result is None:
                 # Fast path: continue execution
                 continue
@@ -578,44 +578,44 @@ class MenaiVM:
         raise MenaiEvalError("Frame execution ended without RETURN instruction")
 
     def _op_load_none(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_NONE: Push #none onto stack."""
         self.stack.append(Menai_NONE)
         return None
 
     def _op_load_true(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_TRUE: Push boolean true onto stack."""
         self.stack.append(MenaiBoolean(True))
         return None
 
     def _op_load_false(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_FALSE: Push boolean false onto stack."""
         self.stack.append(MenaiBoolean(False))
         return None
 
     def _op_load_empty_list(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_EMPTY_LIST: Push empty list onto stack."""
         self.stack.append(MenaiList(()))
         return None
 
     def _op_load_const(  # pylint: disable=useless-return
-        self, _frame: Frame, code: CodeObject, arg1: int, _arg2: int
+        self, _frame: Frame, code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_CONST: Push constant from pool onto stack."""
-        # Validator guarantees arg1 is in bounds
+        # Validator guarantees src0 is in bounds
         # No bounds check needed - direct access for maximum performance
-        self.stack.append(code.constants[arg1])
+        self.stack.append(code.constants[src0])
         return None
 
     def _op_load_var(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, index: int, _arg2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, index: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_VAR: Load variable from current frame at index."""
         # Validator guarantees index is in bounds AND variable is initialized
@@ -624,7 +624,7 @@ class MenaiVM:
         return None
 
     def _op_store_var(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, index: int, _arg2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, index: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STORE_VAR: Store top of stack to variable in current frame at index."""
         # Validator guarantees index is in bounds and stack has value
@@ -633,7 +633,7 @@ class MenaiVM:
         return None
 
     def _op_enter(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, n: int, _arg2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, n: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """
         ENTER n: Pop n arguments from stack into locals 0..n-1.
@@ -649,7 +649,7 @@ class MenaiVM:
         return None
 
     def _op_patch_closure(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, var_index: int, capture_slot: int
+        self, frame: Frame, _code: CodeObject, _dest: int, var_index: int, capture_slot: int, _src2: int
     ) -> MenaiValue | None:
         """
         PATCH_CLOSURE: Fill in a captured-value slot on an existing closure.
@@ -669,10 +669,10 @@ class MenaiVM:
         return None
 
     def _op_load_name(  # pylint: disable=useless-return
-        self, _frame: Frame, code: CodeObject, arg1: int, _arg2: int
+        self, _frame: Frame, code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_NAME: Load global variable by name."""
-        name = code.names[arg1]
+        name = code.names[src0]
 
         # Load from globals
         if name in self.globals:
@@ -699,14 +699,14 @@ class MenaiVM:
         )
 
     def _op_jump(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, target: int, _arg2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, target: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """JUMP: Unconditional jump to instruction."""
         frame.ip = target
         return None
 
     def _op_jump_if_false(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, target: int, _arg2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, target: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """JUMP_IF_FALSE: Pop stack, jump if false."""
         # Validator guarantees target is valid and stack has value
@@ -721,7 +721,7 @@ class MenaiVM:
         return None
 
     def _op_jump_if_true(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, target: int, _arg2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, target: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """JUMP_IF_TRUE: Pop stack, jump if true."""
         # Validator guarantees target is valid and stack has value
@@ -736,23 +736,23 @@ class MenaiVM:
         return None
 
     def _op_raise_error(  # pylint: disable=useless-return
-        self, _frame: Frame, code: CodeObject, arg1: int, _arg2: int
+        self, _frame: Frame, code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """RAISE_ERROR: Raise error with message from constant pool."""
-        # Validator guarantees arg1 is in bounds
+        # Validator guarantees src0 is in bounds
         # Type check could be removed if we validate constant types, but keep for now
-        error_msg = code.constants[arg1]
+        error_msg = code.constants[src0]
         if not isinstance(error_msg, MenaiString):
             raise MenaiEvalError("RAISE_ERROR requires a string constant")
 
         raise MenaiEvalError(error_msg.value)
 
     def _op_make_closure(  # pylint: disable=useless-return
-        self, _frame: Frame, code: CodeObject, arg1: int, capture_count: int
+        self, _frame: Frame, code: CodeObject, _dest: int, src0: int, capture_count: int, _src2: int
     ) -> MenaiValue | None:
         """MAKE_CLOSURE: Create closure from code object and captured values."""
-        # Validator guarantees arg1 is in bounds and stack has enough values
-        closure_code = code.code_objects[arg1]
+        # Validator guarantees src0 is in bounds and stack has enough values
+        closure_code = code.code_objects[src0]
 
         # Pop captured values from stack (in reverse order)
         if capture_count == 0:
@@ -783,7 +783,7 @@ class MenaiVM:
         return None
 
     def _op_call(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, arity: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, arity: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """CALL: Call function with arguments from stack."""
         # Validator guarantees stack has enough values (arity + 1)
@@ -818,7 +818,7 @@ class MenaiVM:
         return None
 
     def _op_tail_call(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, arity: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, arity: int, _src1: int, _src2: int
     ) -> TailCall | None:
         """
         TAIL_CALL: Perform tail call with optimization.
@@ -846,7 +846,7 @@ class MenaiVM:
         return TailCall(func)
 
     def _op_apply(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """APPLY: Call function with arguments spread from a list (non-tail)."""
         arg_list = self.stack.pop()
@@ -884,7 +884,7 @@ class MenaiVM:
         return None
 
     def _op_tail_apply(
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> TailCall:
         """TAIL_APPLY: Apply function to argument list in tail position."""
         arg_list = self.stack.pop()
@@ -911,7 +911,7 @@ class MenaiVM:
         return TailCall(func)
 
     def _op_return(
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """RETURN: Pop frame and return value from stack."""
         # Validator guarantees stack has a value to return
@@ -920,7 +920,7 @@ class MenaiVM:
         return self.stack.pop()
 
     def _op_emit_trace(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """EMIT_TRACE: Pop value from stack and emit to trace watcher."""
         # Pop the message from stack
@@ -934,7 +934,7 @@ class MenaiVM:
         return None
 
     def _op_function_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FUNCTION_P: Check if value is a function."""
         value = self.stack.pop()
@@ -942,7 +942,7 @@ class MenaiVM:
         return None
 
     def _op_function_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FUNCTION_EQ_P: Return #t if two function references are identical."""
         b = self.stack.pop()
@@ -963,7 +963,7 @@ class MenaiVM:
         return None
 
     def _op_function_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FUNCTION_NEQ_P: Return #t if two function references are not identical."""
         b = self.stack.pop()
@@ -984,7 +984,7 @@ class MenaiVM:
         return None
 
     def _op_function_min_arity(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FUNCTION_MIN_ARITY: Return minimum number of arguments a function requires."""
         func = self.stack.pop()
@@ -1000,7 +1000,7 @@ class MenaiVM:
         return None
 
     def _op_function_variadic_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FUNCTION_VARIADIC_P: Return #t if function accepts variable number of arguments."""
         func = self.stack.pop()
@@ -1014,7 +1014,7 @@ class MenaiVM:
         return None
 
     def _op_function_accepts_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FUNCTION_ACCEPTS_P: Return #t if function accepts exactly n arguments."""
         n = self.stack.pop()
@@ -1043,7 +1043,7 @@ class MenaiVM:
         return None
 
     def _op_symbol_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """SYMBOL_P: Check if value is a symbol."""
         value = self.stack.pop()
@@ -1051,7 +1051,7 @@ class MenaiVM:
         return None
 
     def _op_symbol_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """SYMBOL_EQ_P: Return #t if two symbols have the same name."""
         b = self.stack.pop()
@@ -1071,7 +1071,7 @@ class MenaiVM:
         return None
 
     def _op_symbol_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """SYMBOL_NEQ_P: Return #t if two symbols have different names."""
         b = self.stack.pop()
@@ -1092,7 +1092,7 @@ class MenaiVM:
         return None
 
     def _op_symbol_to_string(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """SYMBOL_TO_STRING: Pop a symbol, push its name as a string."""
         a = self.stack.pop()
@@ -1106,7 +1106,7 @@ class MenaiVM:
         return None
 
     def _op_none_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """NONE_P: Check if value is #none."""
         value = self.stack.pop()
@@ -1114,7 +1114,7 @@ class MenaiVM:
         return None
 
     def _op_boolean_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """BOOLEAN_P: Check if value is a boolean."""
         value = self.stack.pop()
@@ -1122,7 +1122,7 @@ class MenaiVM:
         return None
 
     def _op_boolean_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """BOOLEAN_EQ_P: Pop two values, push true if both are booleans and equal."""
         b = self.stack.pop()
@@ -1133,7 +1133,7 @@ class MenaiVM:
         return None
 
     def _op_boolean_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """BOOLEAN_NEQ_P: Pop two values, push true if both are booleans and not equal."""
         b = self.stack.pop()
@@ -1144,7 +1144,7 @@ class MenaiVM:
         return None
 
     def _op_boolean_not(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """BOOLEAN_NOT: Logical NOT operation."""
         value = self.stack.pop()
@@ -1153,7 +1153,7 @@ class MenaiVM:
         return None
 
     def _op_integer_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_P: Check if value is an integer."""
         value = self.stack.pop()
@@ -1161,7 +1161,7 @@ class MenaiVM:
         return None
 
     def _op_integer_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_EQ_P: Pop two values, push true if both are integers and equal."""
         b = self.stack.pop()
@@ -1176,7 +1176,7 @@ class MenaiVM:
         return None
 
     def _op_integer_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_NEQ_P: Pop two values, push true if both are integers and not equal."""
         b = self.stack.pop()
@@ -1191,7 +1191,7 @@ class MenaiVM:
         return None
 
     def _op_integer_lt_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_LT_P: Pop two integers, push true if a < b."""
         b = self.stack.pop()
@@ -1200,7 +1200,7 @@ class MenaiVM:
         return None
 
     def _op_integer_gt_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_GT_P: Pop two integers, push true if a > b."""
         b = self.stack.pop()
@@ -1209,7 +1209,7 @@ class MenaiVM:
         return None
 
     def _op_integer_lte_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_LTE_P: Pop two integers, push true if a <= b."""
         b = self.stack.pop()
@@ -1218,7 +1218,7 @@ class MenaiVM:
         return None
 
     def _op_integer_gte_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_GTE_P: Pop two integers, push true if a >= b."""
         b = self.stack.pop()
@@ -1227,7 +1227,7 @@ class MenaiVM:
         return None
 
     def _op_integer_abs(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_ABS: Pop an integer, push its absolute value."""
         a = self.stack.pop()
@@ -1235,7 +1235,7 @@ class MenaiVM:
         return None
 
     def _op_integer_add(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_ADD: Pop two integers, push their sum as integer."""
         b = self.stack.pop()
@@ -1244,7 +1244,7 @@ class MenaiVM:
         return None
 
     def _op_integer_sub(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_SUB: Pop two integers, push their difference as integer."""
         b = self.stack.pop()
@@ -1253,7 +1253,7 @@ class MenaiVM:
         return None
 
     def _op_integer_mul(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_MUL: Pop two integers, push their product as integer."""
         b = self.stack.pop()
@@ -1262,7 +1262,7 @@ class MenaiVM:
         return None
 
     def _op_integer_div(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_DIV: Pop two integers, push floor division result as integer."""
         b = self.stack.pop()
@@ -1276,7 +1276,7 @@ class MenaiVM:
         return None
 
     def _op_integer_mod(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_MOD: Pop two integers, push modulo result as integer."""
         b = self.stack.pop()
@@ -1290,7 +1290,7 @@ class MenaiVM:
         return None
 
     def _op_integer_neg(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_NEG: Pop an integer, push its negation."""
         a = self.stack.pop()
@@ -1298,7 +1298,7 @@ class MenaiVM:
         return None
 
     def _op_integer_expn(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_EXPN: Pop exponent and base integers, push base ** exponent as integer."""
         b = self.stack.pop()
@@ -1312,7 +1312,7 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_not(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """BIT_NOT: Pop an integer, push bitwise NOT."""
         a = self.stack.pop()
@@ -1321,7 +1321,7 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_shift_left(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """BIT_SHIFT_LEFT: Pop shift amount and value, push value << n."""
         n = self.stack.pop()
@@ -1332,7 +1332,7 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_shift_right(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """BIT_SHIFT_RIGHT: Pop shift amount and value, push value >> n."""
         n = self.stack.pop()
@@ -1343,7 +1343,7 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_or(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """BIT_OR: Pop two integers, push a | b."""
         b = self.stack.pop()
@@ -1352,7 +1352,7 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_and(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """BIT_AND: Pop two integers, push a & b."""
         b = self.stack.pop()
@@ -1361,7 +1361,7 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_xor(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """BIT_XOR: Pop two integers, push a ^ b."""
         b = self.stack.pop()
@@ -1370,7 +1370,7 @@ class MenaiVM:
         return None
 
     def _op_integer_to_float(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_TO_FLOAT: Pop an integer, push as float."""
         a = self.stack.pop()
@@ -1379,7 +1379,7 @@ class MenaiVM:
         return None
 
     def _op_integer_to_complex(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_TO_COMPLEX: Pop two integers, push as complex with zero imaginary part."""
         imag = self.stack.pop()
@@ -1390,7 +1390,7 @@ class MenaiVM:
         return None
 
     def _op_integer_to_string(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_TO_STRING: Pop radix then integer, push string representation in given base."""
         radix_val = self.stack.pop()
@@ -1421,7 +1421,7 @@ class MenaiVM:
         return None
 
     def _op_float_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_P: Check if value is a float."""
         value = self.stack.pop()
@@ -1429,7 +1429,7 @@ class MenaiVM:
         return None
 
     def _op_float_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_EQ_P: Pop two values, push true if both are floats and equal."""
         b = self.stack.pop()
@@ -1444,7 +1444,7 @@ class MenaiVM:
         return None
 
     def _op_float_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_NEQ_P: Pop two values, push true if both are floats and not equal."""
         b = self.stack.pop()
@@ -1457,7 +1457,7 @@ class MenaiVM:
         return None
 
     def _op_float_lt_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LT_P: Pop two floats, push true if a < b."""
         b = self.stack.pop()
@@ -1466,7 +1466,7 @@ class MenaiVM:
         return None
 
     def _op_float_gt_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_GT_P: Pop two floats, push true if a > b."""
         b = self.stack.pop()
@@ -1475,7 +1475,7 @@ class MenaiVM:
         return None
 
     def _op_float_lte_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LTE_P: Pop two floats, push true if a <= b."""
         b = self.stack.pop()
@@ -1484,7 +1484,7 @@ class MenaiVM:
         return None
 
     def _op_float_gte_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_GTE_P: Pop two floats, push true if a >= b."""
         b = self.stack.pop()
@@ -1493,7 +1493,7 @@ class MenaiVM:
         return None
 
     def _op_float_abs(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_ABS: Pop a float, push abs(x) as float."""
         a = self.stack.pop()
@@ -1501,7 +1501,7 @@ class MenaiVM:
         return None
 
     def _op_float_add(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_ADD: Pop two floats, push their sum as float."""
         b = self.stack.pop()
@@ -1510,7 +1510,7 @@ class MenaiVM:
         return None
 
     def _op_float_sub(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_SUB: Pop two floats, push their difference as float."""
         b = self.stack.pop()
@@ -1519,7 +1519,7 @@ class MenaiVM:
         return None
 
     def _op_float_mul(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_MUL: Pop two floats, push their product as float."""
         b = self.stack.pop()
@@ -1528,7 +1528,7 @@ class MenaiVM:
         return None
 
     def _op_float_div(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_DIV: Pop two floats, push their quotient as float."""
         b = self.stack.pop()
@@ -1542,7 +1542,7 @@ class MenaiVM:
         return None
 
     def _op_float_floor_div(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_FLOOR_DIV: Pop two floats, compute float// a b, push result as float."""
         b = self.stack.pop()
@@ -1556,7 +1556,7 @@ class MenaiVM:
         return None
 
     def _op_float_mod(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_MOD: Pop two floats, compute float% a b, push result as float."""
         b = self.stack.pop()
@@ -1570,7 +1570,7 @@ class MenaiVM:
         return None
 
     def _op_float_neg(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_NEG: Pop a float, push its negation."""
         a = self.stack.pop()
@@ -1578,7 +1578,7 @@ class MenaiVM:
         return None
 
     def _op_float_exp(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_EXP: Pop a float, push exp(x) as float."""
         a = self.stack.pop()
@@ -1586,7 +1586,7 @@ class MenaiVM:
         return None
 
     def _op_float_expn(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_EXPN: Pop two floats, push a ** b as float."""
         b = self.stack.pop()
@@ -1595,7 +1595,7 @@ class MenaiVM:
         return None
 
     def _op_float_log(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LOG: Pop a float, push natural log(x) as float."""
         a = self.stack.pop()
@@ -1611,7 +1611,7 @@ class MenaiVM:
         return None
 
     def _op_float_log10(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LOG10: Pop a float, push log10(x) as float."""
         a = self.stack.pop()
@@ -1627,7 +1627,7 @@ class MenaiVM:
         return None
 
     def _op_float_log2(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LOG2: Pop a float, push log2(x) as float (correctly rounded via math.log2)."""
         a = self.stack.pop()
@@ -1643,7 +1643,7 @@ class MenaiVM:
         return None
 
     def _op_float_logn(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LOGN: Pop base and x floats, push log_base(x) as float."""
         base = self.stack.pop()
@@ -1664,7 +1664,7 @@ class MenaiVM:
         return None
 
     def _op_float_sin(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_SIN: Pop a float, push sin(x) as float."""
         a = self.stack.pop()
@@ -1672,7 +1672,7 @@ class MenaiVM:
         return None
 
     def _op_float_cos(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_COS: Pop a float, push cos(x) as float."""
         a = self.stack.pop()
@@ -1680,7 +1680,7 @@ class MenaiVM:
         return None
 
     def _op_float_tan(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_TAN: Pop a float, push tan(x) as float."""
         a = self.stack.pop()
@@ -1688,7 +1688,7 @@ class MenaiVM:
         return None
 
     def _op_float_sqrt(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_SQRT: Pop a float, push sqrt(x) as float."""
         a = self.stack.pop()
@@ -1700,7 +1700,7 @@ class MenaiVM:
         return None
 
     def _op_float_to_integer(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_TO_INTEGER: Pop a float, push truncated integer."""
         a = self.stack.pop()
@@ -1709,7 +1709,7 @@ class MenaiVM:
         return None
 
     def _op_float_to_complex(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_TO_COMPLEX: Pop two floats, push as complex with zero imaginary part."""
         imag = self.stack.pop()
@@ -1720,7 +1720,7 @@ class MenaiVM:
         return None
 
     def _op_float_to_string(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_TO_STRING: Pop a float, push string representation."""
         a = self.stack.pop()
@@ -1733,7 +1733,7 @@ class MenaiVM:
         return None
 
     def _op_float_floor(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_FLOOR: Pop a float, push floor as float."""
         arg = self.stack.pop()
@@ -1742,7 +1742,7 @@ class MenaiVM:
         return None
 
     def _op_float_ceil(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_CEIL: Pop a float, push ceiling as float."""
         arg = self.stack.pop()
@@ -1751,7 +1751,7 @@ class MenaiVM:
         return None
 
     def _op_float_round(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_ROUND: Pop a float, push rounded value as float."""
         a = self.stack.pop()
@@ -1760,7 +1760,7 @@ class MenaiVM:
         return None
 
     def _op_float_min(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_MIN: Pop two floats, push the smaller."""
         b = self.stack.pop()
@@ -1771,7 +1771,7 @@ class MenaiVM:
         return None
 
     def _op_float_max(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_MAX: Pop two floats, push the larger."""
         b = self.stack.pop()
@@ -1782,7 +1782,7 @@ class MenaiVM:
         return None
 
     def _op_integer_min(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_MIN: Pop two integers, push the smaller."""
         b = self.stack.pop()
@@ -1793,7 +1793,7 @@ class MenaiVM:
         return None
 
     def _op_integer_max(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_MAX: Pop two integers, push the larger."""
         b = self.stack.pop()
@@ -1804,7 +1804,7 @@ class MenaiVM:
         return None
 
     def _op_complex_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_P: Check if value is a complex number."""
         value = self.stack.pop()
@@ -1812,7 +1812,7 @@ class MenaiVM:
         return None
 
     def _op_complex_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_EQ_P: Pop two values, push true if both are complex and equal."""
         b = self.stack.pop()
@@ -1827,7 +1827,7 @@ class MenaiVM:
         return None
 
     def _op_complex_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_NEQ_P: Pop two values, push true if both are complex and not equal."""
         b = self.stack.pop()
@@ -1840,7 +1840,7 @@ class MenaiVM:
         return None
 
     def _op_complex_real(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_REAL: Pop a complex number, push its real part as float."""
         a = self.stack.pop()
@@ -1849,7 +1849,7 @@ class MenaiVM:
         return None
 
     def _op_complex_imag(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_IMAG: Pop a complex number, push its imaginary part as float."""
         a = self.stack.pop()
@@ -1858,7 +1858,7 @@ class MenaiVM:
         return None
 
     def _op_complex_abs(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_ABS: Pop a complex number, push its magnitude as float."""
         a = self.stack.pop()
@@ -1866,7 +1866,7 @@ class MenaiVM:
         return None
 
     def _op_complex_add(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_ADD: Pop two complex numbers, push their sum."""
         b = self.stack.pop()
@@ -1875,7 +1875,7 @@ class MenaiVM:
         return None
 
     def _op_complex_sub(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_SUB: Pop two complex numbers, push their difference."""
         b = self.stack.pop()
@@ -1884,7 +1884,7 @@ class MenaiVM:
         return None
 
     def _op_complex_mul(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_MUL: Pop two complex numbers, push their product."""
         b = self.stack.pop()
@@ -1893,7 +1893,7 @@ class MenaiVM:
         return None
 
     def _op_complex_div(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_DIV: Pop two complex numbers, push their quotient."""
         b = self.stack.pop()
@@ -1907,7 +1907,7 @@ class MenaiVM:
         return None
 
     def _op_complex_neg(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_NEG: Pop a complex number, push its negation."""
         a = self.stack.pop()
@@ -1915,7 +1915,7 @@ class MenaiVM:
         return None
 
     def _op_complex_exp(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_EXP: Pop a complex number, push exp(x)."""
         a = self.stack.pop()
@@ -1923,7 +1923,7 @@ class MenaiVM:
         return None
 
     def _op_complex_expn(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_EXPN: Pop two complex numbers, push a ** b."""
         b = self.stack.pop()
@@ -1932,7 +1932,7 @@ class MenaiVM:
         return None
 
     def _op_complex_log(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_LOG: Pop a complex number, push natural log(x)."""
         a = self.stack.pop()
@@ -1940,7 +1940,7 @@ class MenaiVM:
         return None
 
     def _op_complex_log10(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_LOG10: Pop a complex number, push log10(x)."""
         a = self.stack.pop()
@@ -1948,7 +1948,7 @@ class MenaiVM:
         return None
 
     def _op_complex_logn(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_LOGN: Pop base and x complex numbers, push log_base(x) as complex."""
         base = self.stack.pop()
@@ -1962,7 +1962,7 @@ class MenaiVM:
         return None
 
     def _op_complex_sin(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_SIN: Pop a complex number, push sin(x)."""
         a = self.stack.pop()
@@ -1970,7 +1970,7 @@ class MenaiVM:
         return None
 
     def _op_complex_cos(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_COS: Pop a complex number, push cos(x)."""
         a = self.stack.pop()
@@ -1978,7 +1978,7 @@ class MenaiVM:
         return None
 
     def _op_complex_tan(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_TAN: Pop a complex number, push tan(x)."""
         a = self.stack.pop()
@@ -1986,7 +1986,7 @@ class MenaiVM:
         return None
 
     def _op_complex_sqrt(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_SQRT: Pop a complex number, push sqrt(x)."""
         a = self.stack.pop()
@@ -1994,7 +1994,7 @@ class MenaiVM:
         return None
 
     def _op_complex_to_string(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_TO_STRING: Pop a complex number, push string representation."""
         a = self.stack.pop()
@@ -2007,7 +2007,7 @@ class MenaiVM:
         return None
 
     def _op_string_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_P: Check if value is a string."""
         value = self.stack.pop()
@@ -2015,7 +2015,7 @@ class MenaiVM:
         return None
 
     def _op_string_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_EQ_P: Pop two strings, push true if they are equal."""
         b = self.stack.pop()
@@ -2024,7 +2024,7 @@ class MenaiVM:
         return None
 
     def _op_string_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_NEQ_P: Pop two strings, push true if they are not equal."""
         b = self.stack.pop()
@@ -2033,7 +2033,7 @@ class MenaiVM:
         return None
 
     def _op_string_lt_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_LT_P: Pop two strings, push true if a < b (lexicographic)."""
         b = self.stack.pop()
@@ -2042,7 +2042,7 @@ class MenaiVM:
         return None
 
     def _op_string_gt_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_GT_P: Pop two strings, push true if a > b (lexicographic)."""
         b = self.stack.pop()
@@ -2051,7 +2051,7 @@ class MenaiVM:
         return None
 
     def _op_string_lte_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_LTE_P: Pop two strings, push true if a <= b (lexicographic)."""
         b = self.stack.pop()
@@ -2060,7 +2060,7 @@ class MenaiVM:
         return None
 
     def _op_string_gte_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_GTE_P: Pop two strings, push true if a >= b (lexicographic)."""
         b = self.stack.pop()
@@ -2069,7 +2069,7 @@ class MenaiVM:
         return None
 
     def _op_string_length(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_LENGTH: Pop a string, push its length."""
         a = self.stack.pop()
@@ -2077,7 +2077,7 @@ class MenaiVM:
         return None
 
     def _op_string_upcase(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_UPCASE: Pop a string, push uppercased string."""
         a = self.stack.pop()
@@ -2085,7 +2085,7 @@ class MenaiVM:
         return None
 
     def _op_string_downcase(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_DOWNCASE: Pop a string, push lowercased string."""
         a = self.stack.pop()
@@ -2093,7 +2093,7 @@ class MenaiVM:
         return None
 
     def _op_string_trim(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TRIM: Pop a string, push whitespace-trimmed string."""
         a = self.stack.pop()
@@ -2101,7 +2101,7 @@ class MenaiVM:
         return None
 
     def _op_string_trim_left(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TRIM_LEFT: Pop a string, push string with leading whitespace removed."""
         a = self.stack.pop()
@@ -2109,7 +2109,7 @@ class MenaiVM:
         return None
 
     def _op_string_trim_right(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TRIM_RIGHT: Pop a string, push string with trailing whitespace removed."""
         a = self.stack.pop()
@@ -2117,7 +2117,7 @@ class MenaiVM:
         return None
 
     def _op_string_to_integer(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TO_INTEGER: Pop radix then string, push parsed integer or #f if unparseable."""
         radix_val = self.stack.pop()
@@ -2136,7 +2136,7 @@ class MenaiVM:
             return None
 
     def _op_string_to_number(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TO_NUMBER: Pop a string, push parsed number or #f if unparseable."""
         a = self.stack.pop()
@@ -2158,7 +2158,7 @@ class MenaiVM:
             return None
 
     def _op_string_to_list(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TO_LIST: Pop delimiter and string, push list of parts split by delimiter."""
         delim_val = self.stack.pop()
@@ -2173,7 +2173,7 @@ class MenaiVM:
         return None
 
     def _op_string_ref(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_REF: Pop an index and string, push character at index."""
         index_val = self.stack.pop()
@@ -2187,7 +2187,7 @@ class MenaiVM:
         return None
 
     def _op_string_prefix_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_PREFIX_P: Pop prefix and string, push true if string starts with prefix."""
         prefix_val = self.stack.pop()
@@ -2198,7 +2198,7 @@ class MenaiVM:
         return None
 
     def _op_string_suffix_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_SUFFIX_P: Pop suffix and string, push true if string ends with suffix."""
         suffix_val = self.stack.pop()
@@ -2209,7 +2209,7 @@ class MenaiVM:
         return None
 
     def _op_string_slice(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_SLICE: Pop end, start, and string, push slice."""
         end_val = self.stack.pop()
@@ -2238,7 +2238,7 @@ class MenaiVM:
         return None
 
     def _op_string_replace(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_REPLACE: Pop new, old, and string, push string with replacements."""
         new_val = self.stack.pop()
@@ -2251,7 +2251,7 @@ class MenaiVM:
         return None
 
     def _op_string_index(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_INDEX: Pop substring and string, push index or #f."""
         substr_val = self.stack.pop()
@@ -2266,7 +2266,7 @@ class MenaiVM:
         return None
 
     def _op_string_concat(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_CONCAT: Pop two strings, push concatenated string."""
         b = self.stack.pop()
@@ -2275,7 +2275,7 @@ class MenaiVM:
         return None
 
     def _op_dict(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, n: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, n: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT n: Pop n 2-element MenaiList pair objects, push MenaiDict.
 
@@ -2306,7 +2306,7 @@ class MenaiVM:
         return None
 
     def _op_dict_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_P: Check if value is an dict."""
         value = self.stack.pop()
@@ -2314,7 +2314,7 @@ class MenaiVM:
         return None
 
     def _op_dict_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_EQ_P: Pop two values, push true if both are dicts and equal."""
         b = self.stack.pop()
@@ -2323,7 +2323,7 @@ class MenaiVM:
         return None
 
     def _op_dict_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_NEQ_P: Pop two values, push true if both are dicts and not equal."""
         b = self.stack.pop()
@@ -2332,7 +2332,7 @@ class MenaiVM:
         return None
 
     def _op_dict_keys(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_KEYS: Pop an dict, push list of its keys."""
         a = self.stack.pop()
@@ -2340,7 +2340,7 @@ class MenaiVM:
         return None
 
     def _op_dict_values(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_VALUES: Pop an dict, push list of its values."""
         a = self.stack.pop()
@@ -2348,7 +2348,7 @@ class MenaiVM:
         return None
 
     def _op_dict_length(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_LENGTH: Pop an dict, push its length."""
         a = self.stack.pop()
@@ -2356,7 +2356,7 @@ class MenaiVM:
         return None
 
     def _op_dict_has_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_HAS_P: Pop a key and dict, push true if dict contains key."""
         key = self.stack.pop()
@@ -2365,7 +2365,7 @@ class MenaiVM:
         return None
 
     def _op_dict_remove(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_REMOVE: Pop a key and dict, push new dict without that key."""
         key = self.stack.pop()
@@ -2374,7 +2374,7 @@ class MenaiVM:
         return None
 
     def _op_dict_merge(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_MERGE: Pop two dicts, push merged dict (second wins on conflicts)."""
         b = self.stack.pop()
@@ -2383,7 +2383,7 @@ class MenaiVM:
         return None
 
     def _op_dict_set(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_SET: Pop value, key, and dict, push new dict with key set to value."""
         value = self.stack.pop()
@@ -2393,7 +2393,7 @@ class MenaiVM:
         return None
 
     def _op_dict_get(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_GET: Pop default, key, and dict, push value or default if not found."""
         default = self.stack.pop()
@@ -2404,7 +2404,7 @@ class MenaiVM:
         return None
 
     def _op_list(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, n: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, n: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST n: Pop n values from stack (top is last element), push MenaiList."""
         if n == 0:
@@ -2417,7 +2417,7 @@ class MenaiVM:
         return None
 
     def _op_list_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_P: Check if value is a list."""
         value = self.stack.pop()
@@ -2425,7 +2425,7 @@ class MenaiVM:
         return None
 
     def _op_list_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_EQ_P: Pop two values, push true if both are lists and equal."""
         b = self.stack.pop()
@@ -2434,7 +2434,7 @@ class MenaiVM:
         return None
 
     def _op_list_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_NEQ_P: Pop two values, push true if both are lists and not equal."""
         b = self.stack.pop()
@@ -2443,7 +2443,7 @@ class MenaiVM:
         return None
 
     def _op_list_prepend(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_PREPEND: Pop item and list (list first, item second on stack), push list with item prepended."""
         item = self.stack.pop()
@@ -2453,7 +2453,7 @@ class MenaiVM:
         return None
 
     def _op_list_append(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_APPEND: Pop item and list (list first, item second on stack), push list with item appended at end."""
         item = self.stack.pop()
@@ -2463,7 +2463,7 @@ class MenaiVM:
         return None
 
     def _op_list_reverse(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """REVERSE: Pop a list, push a new list with elements in reversed order."""
         value = self.stack.pop()
@@ -2472,7 +2472,7 @@ class MenaiVM:
         return None
 
     def _op_list_first(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FIRST: Pop a list, push its first element."""
         value = self.stack.pop()
@@ -2486,7 +2486,7 @@ class MenaiVM:
         return None
 
     def _op_list_rest(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """REST: Pop a list, push a new list of all elements except the first."""
         value = self.stack.pop()
@@ -2500,7 +2500,7 @@ class MenaiVM:
         return None
 
     def _op_list_last(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LAST: Pop a list, push its last element."""
         value = self.stack.pop()
@@ -2514,7 +2514,7 @@ class MenaiVM:
         return None
 
     def _op_list_length(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_LENGTH: Pop a list, push its length as an integer."""
         value = self.stack.pop()
@@ -2527,7 +2527,7 @@ class MenaiVM:
         )
 
     def _op_list_ref(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_REF: Pop an integer index and a list, push the element at that index."""
         index_val = self.stack.pop()
@@ -2551,7 +2551,7 @@ class MenaiVM:
         return None
 
     def _op_list_null_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_NULL_P: Pop a list, push true if empty."""
         value = self.stack.pop()
@@ -2560,7 +2560,7 @@ class MenaiVM:
         return None
 
     def _op_list_member_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_MEMBER_P: Pop item and list (list first, item second on stack), push true if item is in list."""
         item = self.stack.pop()
@@ -2570,7 +2570,7 @@ class MenaiVM:
         return None
 
     def _op_list_index(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_INDEX: Pop item and list (list first, item second on stack), push index or #f if not found."""
         item = self.stack.pop()
@@ -2581,7 +2581,7 @@ class MenaiVM:
         return None
 
     def _op_list_slice(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_SLICE: Pop end, start, and list, push slice from start to end (exclusive)."""
         end_val = self.stack.pop()
@@ -2610,7 +2610,7 @@ class MenaiVM:
         return None
 
     def _op_list_remove(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_REMOVE: Pop item and list (list first, item second on stack), push list with all occurrences removed."""
         item = self.stack.pop()
@@ -2620,7 +2620,7 @@ class MenaiVM:
         return None
 
     def _op_list_concat(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_CONCAT: Pop two lists, push concatenated list."""
         b = self.stack.pop()
@@ -2629,7 +2629,7 @@ class MenaiVM:
         return None
 
     def _op_list_to_string(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_TO_STRING: Pop separator and list of strings, push joined string."""
         sep_val = self.stack.pop()
@@ -2647,7 +2647,7 @@ class MenaiVM:
         return None
 
     def _op_range(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _arg1: int, _arg2: int
+        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """RANGE: Pop step, end, and start integers, push list of integers."""
         step_val = self.stack.pop()
