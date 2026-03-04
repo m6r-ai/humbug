@@ -50,10 +50,10 @@ class Opcode(IntEnum):
     LOAD_EMPTY_LIST = _op(3, 0)         # Push empty list
     LOAD_CONST = _op(4, 1)              # LOAD_CONST const_index
 
-    # Variables (lexically addressed)
-    LOAD_VAR = _op(5, 1)                # LOAD_VAR index
-    STORE_VAR = _op(6, 1)               # STORE_VAR index
-    LOAD_NAME = _op(7, 1)               # LOAD_NAME name_index
+    # Stack / register transfer
+    PUSH = _op(5, 1)                    # PUSH src0  — push register src0 onto the call stack
+    POP = _op(6, 0)                     # POP dest   — pop call stack top into register dest
+    LOAD_NAME = _op(7, 1)               # LOAD_NAME name_index — load global by name into dest
 
     # Control flow
     JUMP = _op(20, 1)                   # Unconditional jump: JUMP offset
@@ -419,13 +419,19 @@ class Instruction:
 
     Stores opcode and arguments for easier debugging and manipulation.
 
-    Fields use the virtual register naming convention that will be used by the
-    register-based VM.  During the current stack-machine phase dest and src2 are
-    always 0 and are unused; src0 and src1 carry the instruction-stream immediates
-    that were previously called arg1 and arg2.
+    Register fields:
+      dest  — destination register written by this instruction (0 if unused)
+      src0  — first source register or instruction-stream immediate
+      src1  — second source register or instruction-stream immediate
+      src2  — third source register (unused in current stack-machine phase)
+
+    Opcode conventions (as of the PUSH/POP rename):
+      PUSH src0       — src0 is the register index to push; dest unused
+      POP  dest       — dest is the register index to pop into; src0/src1/src2 unused
+      All other stack-machine ops — src0/src1 carry stream immediates; dest unused
     """
     opcode: Opcode
-    dest: int = 0   # destination register (unused in stack-machine phase)
+    dest: int = 0   # destination register (written by POP; unused by most ops currently)
     src0: int = 0   # first immediate / source operand (was arg1)
     src1: int = 0   # second immediate / source operand (was arg2)
     src2: int = 0   # third source operand (unused in stack-machine phase)
@@ -433,20 +439,40 @@ class Instruction:
     def arg_count(self) -> int:
         """Return the number of instruction-stream immediates this instruction takes (0, 1, or 2).
 
-        Maps to src0 (count=1) or src0+src1 (count=2).  dest and src2 are always 0.
+        For PUSH: 1 (src0 is the register index, encoded in the stream).
+        For POP:  0 (dest is the register index, encoded in the stream as dest, not src0).
+        For most other ops: 0, 1, or 2 as before.
         """
         return self.opcode.arg_count()
 
     def __repr__(self) -> str:
-        """Human-readable representation."""
+        """Human-readable representation using register-ISA disassembly style.
+
+        Opcodes that write to a destination register are shown as:
+            rN = OPCODE ...
+        Opcodes that only consume or have no result are shown as:
+            OPCODE ...
+
+        Currently only POP writes to dest; all other ops are still stack-based.
+        """
+        opcode = self.opcode
+        name = opcode.name
+
+        # POP: dest = POP  (pops stack top into a register — dest is meaningful)
+        if opcode == Opcode.POP:
+            return f"r{self.dest} = POP"
+
+        # PUSH: PUSH rN  (pushes a register onto the call stack — src0 is the register)
+        if opcode == Opcode.PUSH:
+            return f"PUSH r{self.src0}"
+
+        # All other opcodes: use stream-immediate formatting (unchanged from before)
         n = self.arg_count()
         if n == 0:
-            return f"{self.opcode.name}"
-
+            return name
         if n == 2:
-            return f"{self.opcode.name} {self.src0} {self.src1}"
-
-        return f"{self.opcode.name} {self.src0}"
+            return f"{name} {self.src0} {self.src1}"
+        return f"{name} {self.src0}"
 
 
 @dataclass

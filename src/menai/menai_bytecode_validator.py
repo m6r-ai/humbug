@@ -104,9 +104,9 @@ class BytecodeValidator:
             Opcode.LOAD_EMPTY_LIST: (0, 1),
             Opcode.LOAD_CONST: (0, 1),
 
-            # Variables - load pushes 1, store pops 1
-            Opcode.LOAD_VAR: (0, 1),
-            Opcode.STORE_VAR: (1, 0),
+            # Stack/register transfer: PUSH pushes 1 from a register, POP pops 1 into a register
+            Opcode.PUSH: (0, 1),
+            Opcode.POP: (1, 0),
             Opcode.LOAD_NAME: (0, 1),
 
             # Control flow - jumps don't affect stack, conditionals pop 1
@@ -376,9 +376,20 @@ class BytecodeValidator:
                         opcode=opcode
                     )
 
-            # Validate variable indices (must be < local_count)
-            if opcode in (Opcode.LOAD_VAR, Opcode.STORE_VAR):
+            # Validate register indices (must be < local_count)
+            # PUSH reads from src0; POP writes to dest.
+            if opcode == Opcode.PUSH:
                 var_index = instr.src0
+                if var_index < 0 or var_index >= code.local_count:
+                    raise ValidationError(
+                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
+                        f"Variable index {var_index} out of bounds (local_count: {code.local_count})",
+                        instruction_index=i,
+                        opcode=opcode
+                    )
+
+            if opcode == Opcode.POP:
+                var_index = instr.dest
                 if var_index < 0 or var_index >= code.local_count:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
@@ -585,8 +596,8 @@ class BytecodeValidator:
             instr = code.instructions[instr_idx]
             opcode = instr.opcode
 
-            # Check LOAD_VAR - must be initialized
-            if opcode == Opcode.LOAD_VAR:
+            # Check PUSH - source register must be initialized
+            if opcode == Opcode.PUSH:
                 var_index = instr.src0
                 if var_index not in current_initialized:
                     raise ValidationError(
@@ -642,12 +653,12 @@ class BytecodeValidator:
             new_initialized = current_initialized.copy()
             new_closures = current_closures.copy()
 
-            # STORE_VAR marks variable as initialized
-            if opcode == Opcode.STORE_VAR:
-                var_index = instr.src0
+            # POP marks destination register as initialized
+            if opcode == Opcode.POP:
+                var_index = instr.dest
                 new_initialized.add(var_index)
                 # If the immediately preceding instruction was MAKE_CLOSURE,
-                # record the closure identity for this slot so PATCH_CLOSURE
+                # record the closure identity for this register so PATCH_CLOSURE
                 # can be validated.  Otherwise the slot holds a non-closure
                 # value, so any prior closure identity is invalidated.
                 if instr_idx > 0:

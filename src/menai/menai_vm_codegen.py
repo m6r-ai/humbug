@@ -8,16 +8,16 @@ Position in the pipeline
 ------------------------
     MenaiCFGFunction  →  MenaiVMCodeGen  →  CodeObject
 
-SSA-to-stack mapping
---------------------
-The VM is a stack machine, but the CFG uses explicit SSA values.  We bridge
-this by assigning each MenaiCFGValue a local variable slot, then emitting
-STORE_VAR after each instruction that produces a value and LOAD_VAR wherever
-that value is consumed.
+SSA-to-register mapping
+-----------------------
+The VM is a stack machine transitioning to register-based ops.  We bridge
+the CFG's explicit SSA values by assigning each MenaiCFGValue a local slot
+(register), then emitting POP after each instruction that produces a value
+and PUSH wherever that value must be placed on the call stack for a CALL.
 
-This is deliberately naive — it produces correct code and gives the existing
-test suite something to run against.  A future peephole pass or smarter
-slot allocator can eliminate redundant STORE/LOAD pairs.
+This is deliberately straightforward — it produces correct code and gives the
+existing test suite something to run against.  Redundant PUSH/POP pairs will
+be eliminated as ops are converted to read/write registers directly.
 
 Slot layout
 -----------
@@ -29,15 +29,15 @@ Within each lambda frame:
 Phi nodes
 ---------
 A MenaiCFGPhiInstr emits no instructions.  Both predecessor blocks store
-their result into the phi's slot before jumping to the join block.  The join
-block then simply loads from that slot (via the normal LOAD_VAR path) when
-the phi value is used downstream.
+their result into the phi's slot (via POP) before jumping to the join block.
+The join block then simply pushes from that slot (via PUSH) when the phi
+value is used downstream.
 
 The mechanism: when we assign a slot to a phi value, we also record that
 each predecessor block's "outgoing value" (the value it contributes to the
 phi) must be stored into that same slot before its terminator jump.  We
 handle this via a _phi_stores dict: block_id → list of (value, slot) pairs
-to emit as STORE_VAR before the block's terminator.
+to emit as POP before the block's terminator.
 
 Block ordering
 --------------
@@ -64,8 +64,8 @@ ENTER instruction re-reads the slots, so we must NOT re-emit ENTER on
 the loop-back path — JUMP 0 lands at instruction index 0 which is ENTER,
 and ENTER pops from the *locals* array, not the stack.  Wait — actually the
 VM ENTER opcode pops N values off the stack into locals.  On the loop-back
-path (JUMP 0) the stack is empty, so we must store new arg values into the
-parameter slots directly (STORE_VAR 0..N-1) and then JUMP past ENTER, or
+path (JUMP 0) the stack is empty, so we must push new arg values onto the
+call stack (PUSH 0..N-1) and then JUMP 0 so ENTER re-pops them, or
 store into the slots and jump to instruction 1.
 
 Re-reading the VM design: JUMP 0 is the canonical self-tail-call target and
@@ -185,10 +185,10 @@ class _EmitContext:
         )
         return self.slot_map[value.id]
 
-    def emit(self, opcode: Opcode, src0: int = 0, src1: int = 0) -> int:
+    def emit(self, opcode: Opcode, src0: int = 0, src1: int = 0, dest: int = 0) -> int:
         """Emit an instruction, returning its index."""
         idx = len(self.instructions)
-        self.instructions.append(Instruction(opcode, src0=src0, src1=src1))
+        self.instructions.append(Instruction(opcode, dest=dest, src0=src0, src1=src1))
         return idx
 
     def load_value(self, value: MenaiCFGValue) -> None:
@@ -198,14 +198,14 @@ class _EmitContext:
         For stack-transient values: emit nothing — the value is already on
         top of the stack, left there by the immediately preceding instruction.
         For rematerialisable constants: re-emit the constant load instruction.
-        For slotted values: emit LOAD_VAR <slot>.
+        For slotted values: emit PUSH <slot>.
         """
         if self.schedule.is_transient(value):
             return
         if self.schedule.is_remat(value):
             self.emit_constant(self.schedule.remat_value_of(value))
             return
-        self.emit(Opcode.LOAD_VAR, self.slot_of(value))
+        self.emit(Opcode.PUSH, self.slot_of(value))
 
     def emit_constant(self, value: MenaiValue) -> None:
         """Emit the appropriate LOAD instruction for a compile-time constant."""
@@ -229,14 +229,14 @@ class _EmitContext:
         stack for its single consumer.  Returns -1 (no slot allocated).
         For rematerialisable constants: emit nothing — no slot needed, the
         load will be re-emitted at each use site.  Returns -1.
-        For slotted values: allocate a slot, emit STORE_VAR <slot>, return slot.
+        For slotted values: allocate a slot, emit POP into <slot>, return slot.
         """
         if self.schedule.is_transient(value):
             return -1
         if self.schedule.is_remat(value):
             return -1
         slot = self.alloc_slot(value)
-        self.emit(Opcode.STORE_VAR, slot)
+        self.emit(Opcode.POP, dest=slot)
         return slot
 
     def patch_jump(self, instr_index: int, target: int) -> None:
@@ -513,7 +513,7 @@ class MenaiVMCodeGen:
                     else:
                         phi_slot = ctx.phi_slot_map[instr.result.id]
                     ctx.load_value(incoming_val)
-                    ctx.emit(Opcode.STORE_VAR, phi_slot)
+                    ctx.emit(Opcode.POP, dest=phi_slot)
 
     def _emit_patch(self, patch: MenaiCFGPatchClosureInstr, ctx: _EmitContext) -> None:
         """Emit a PATCH_CLOSURE instruction for a letrec fixup."""
@@ -758,7 +758,7 @@ class MenaiVMCodeGen:
             # the block's patch_instrs (phase 3 of letrec).
             ctx.emit(Opcode.MAKE_CLOSURE, code_idx, 0)
             closure_slot = ctx.alloc_slot(instr.result)
-            ctx.emit(Opcode.STORE_VAR, closure_slot)
+            ctx.emit(Opcode.POP, dest=closure_slot)
             # Outer captures occupy the tail of free_vars: indices
             # [total_free_vars - capture_count .. total_free_vars - 1].
             outer_start = total_free_vars - capture_count

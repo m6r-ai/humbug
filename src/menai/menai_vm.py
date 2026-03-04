@@ -162,8 +162,8 @@ class MenaiVM:
         table[Opcode.LOAD_FALSE] = self._op_load_false
         table[Opcode.LOAD_EMPTY_LIST] = self._op_load_empty_list
         table[Opcode.LOAD_CONST] = self._op_load_const
-        table[Opcode.LOAD_VAR] = self._op_load_var
-        table[Opcode.STORE_VAR] = self._op_store_var
+        table[Opcode.PUSH] = self._op_push
+        table[Opcode.POP] = self._op_pop
         table[Opcode.LOAD_NAME] = self._op_load_name
         table[Opcode.PATCH_CLOSURE] = self._op_patch_closure
         table[Opcode.JUMP] = self._op_jump
@@ -614,22 +614,22 @@ class MenaiVM:
         self.stack.append(code.constants[src0])
         return None
 
-    def _op_load_var(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, index: int, _src1: int, _src2: int
+    def _op_push(  # pylint: disable=useless-return
+        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LOAD_VAR: Load variable from current frame at index."""
-        # Validator guarantees index is in bounds AND variable is initialized
-        value = frame.locals[index]
+        """PUSH src0: Push the value in register src0 onto the call stack."""
+        # Validator guarantees src0 is in bounds AND variable is initialized
+        value = frame.locals[src0]
         self.stack.append(cast(MenaiValue, value))
         return None
 
-    def _op_store_var(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, index: int, _src1: int, _src2: int
+    def _op_pop(  # pylint: disable=useless-return
+        self, frame: Frame, _code: CodeObject, dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STORE_VAR: Store top of stack to variable in current frame at index."""
-        # Validator guarantees index is in bounds and stack has value
+        """POP dest: Pop the call stack top into register dest."""
+        # Validator guarantees dest is in bounds and stack has value
         value = self.stack.pop()
-        frame.locals[index] = value
+        frame.locals[dest] = value
         return None
 
     def _op_enter(  # pylint: disable=useless-return
