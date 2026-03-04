@@ -110,6 +110,7 @@ from menai.menai_cfg import (
     MenaiCFGTraceInstr,
     MenaiCFGValue,
 )
+from menai.menai_cfg_stack_scheduler import MenaiCFGStackScheduler, StackSchedule
 from menai.menai_value import (
     MenaiBoolean,
     MenaiComplex,
@@ -153,6 +154,9 @@ class _EmitContext:
     slot_map: Dict[int, int] = field(default_factory=dict)
     next_slot: int = 0
 
+    # Stack schedule for this function — set before emission begins.
+    schedule: StackSchedule = field(default_factory=StackSchedule)
+
     # Phi result id → slot, populated lazily on first store by a predecessor.
     # Kept separate so we can assert that a phi slot is allocated before the
     # join block tries to read it (via slot_of on the phi result).
@@ -182,6 +186,38 @@ class _EmitContext:
         return self.slot_map[value.id]
 
     def emit(self, opcode: Opcode, arg1: int = 0, arg2: int = 0) -> int:
+        """Emit an instruction, returning its index."""
+        idx = len(self.instructions)
+        self.instructions.append(Instruction(opcode, arg1, arg2))
+        return idx
+
+    def load_value(self, value: MenaiCFGValue) -> None:
+        """
+        Emit the instruction(s) needed to make `value` available on the stack.
+
+        For slotted values: emit LOAD_VAR <slot>.
+        For stack-transient values: emit nothing — the value is already on
+        top of the stack, left there by the immediately preceding instruction.
+        """
+        if self.schedule.is_transient(value):
+            return
+        self.emit(Opcode.LOAD_VAR, self.slot_of(value))
+
+    def store_result(self, value: MenaiCFGValue) -> int:
+        """
+        Emit the instruction(s) needed to store a freshly computed result.
+
+        For slotted values: allocate a slot, emit STORE_VAR <slot>, return slot.
+        For stack-transient values: emit nothing — the value stays on the
+        stack for its single consumer.  Returns -1 (no slot allocated).
+        """
+        if self.schedule.is_transient(value):
+            return -1
+        slot = self.alloc_slot(value)
+        self.emit(Opcode.STORE_VAR, slot)
+        return slot
+
+    def patch_jump(self, instr_index: int, target: int) -> None:
         """Emit an instruction, returning its index."""
         idx = len(self.instructions)
         self.instructions.append(Instruction(opcode, arg1, arg2))
@@ -276,6 +312,9 @@ class MenaiVMCodeGen:
         # Phase 1: assign fixed slots to params and free-vars only.
         # Phi slots are allocated lazily in _emit_phi_stores_for_successor.
         param_count = len(func.params)
+
+        # Phase 0: classify SSA values as stack-transient or slotted.
+        ctx.schedule = MenaiCFGStackScheduler().schedule(func)
 
         for block in func.blocks:
             for instr in block.instrs:
@@ -376,15 +415,13 @@ class MenaiVMCodeGen:
 
         if isinstance(instr, MenaiCFGConstInstr):
             self._emit_load_value(instr.value, ctx)
-            slot = ctx.alloc_slot(instr.result)
-            ctx.emit(Opcode.STORE_VAR, slot)
+            ctx.store_result(instr.result)
             return
 
         if isinstance(instr, MenaiCFGGlobalInstr):
             name_idx = ctx.add_name(instr.name)
             ctx.emit(Opcode.LOAD_NAME, name_idx)
-            slot = ctx.alloc_slot(instr.result)
-            ctx.emit(Opcode.STORE_VAR, slot)
+            ctx.store_result(instr.result)
             return
 
         if isinstance(instr, MenaiCFGBuiltinInstr):
@@ -393,19 +430,17 @@ class MenaiVMCodeGen:
 
         if isinstance(instr, MenaiCFGCallInstr):
             for arg in instr.args:
-                ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(arg))
-            ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(instr.func))
+                ctx.load_value(arg)
+            ctx.load_value(instr.func)
             ctx.emit(Opcode.CALL, len(instr.args))
-            slot = ctx.alloc_slot(instr.result)
-            ctx.emit(Opcode.STORE_VAR, slot)
+            ctx.store_result(instr.result)
             return
 
         if isinstance(instr, MenaiCFGApplyInstr):
-            ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(instr.func))
-            ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(instr.arg_list))
+            ctx.load_value(instr.func)
+            ctx.load_value(instr.arg_list)
             ctx.emit(Opcode.APPLY)
-            slot = ctx.alloc_slot(instr.result)
-            ctx.emit(Opcode.STORE_VAR, slot)
+            ctx.store_result(instr.result)
             return
 
         if isinstance(instr, MenaiCFGMakeClosureInstr):
@@ -414,11 +449,10 @@ class MenaiVMCodeGen:
 
         if isinstance(instr, MenaiCFGTraceInstr):
             for msg in instr.messages:
-                ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(msg))
+                ctx.load_value(msg)
                 ctx.emit(Opcode.EMIT_TRACE)
-            ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(instr.value))
-            slot = ctx.alloc_slot(instr.result)
-            ctx.emit(Opcode.STORE_VAR, slot)
+            ctx.load_value(instr.value)
+            ctx.store_result(instr.result)
             return
 
         if isinstance(instr, MenaiCFGPatchClosureInstr):
@@ -455,14 +489,13 @@ class MenaiVMCodeGen:
                         ctx.phi_slot_map[instr.result.id] = phi_slot
                     else:
                         phi_slot = ctx.phi_slot_map[instr.result.id]
-                    src_slot = ctx.slot_of(incoming_val)
-                    ctx.emit(Opcode.LOAD_VAR, src_slot)
+                    ctx.load_value(incoming_val)
                     ctx.emit(Opcode.STORE_VAR, phi_slot)
 
     def _emit_patch(self, patch: MenaiCFGPatchClosureInstr, ctx: _EmitContext) -> None:
         """Emit a PATCH_CLOSURE instruction for a letrec fixup."""
         closure_slot = ctx.slot_of(patch.closure)
-        ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(patch.value))
+        ctx.load_value(patch.value)
         ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, patch.capture_index)
 
     # ------------------------------------------------------------------
@@ -478,7 +511,7 @@ class MenaiVMCodeGen:
         func: MenaiCFGFunction,
     ) -> None:
         if isinstance(term, MenaiCFGReturnTerm):
-            ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(term.value))
+            ctx.load_value(term.value)
             ctx.emit(Opcode.RETURN)
             return
 
@@ -489,7 +522,7 @@ class MenaiVMCodeGen:
             return
 
         if isinstance(term, MenaiCFGBranchTerm):
-            ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(term.cond))
+            ctx.load_value(term.cond)
             false_jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, 0)
             # True branch: explicit jump (phi stores happen in then/else blocks
             # via their own MenaiCFGJumpTerm to join_block).
@@ -500,14 +533,14 @@ class MenaiVMCodeGen:
 
         if isinstance(term, MenaiCFGTailCallTerm):
             for arg in term.args:
-                ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(arg))
-            ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(term.func))
+                ctx.load_value(arg)
+            ctx.load_value(term.func)
             ctx.emit(Opcode.TAIL_CALL, len(term.args))
             return
 
         if isinstance(term, MenaiCFGTailApplyTerm):
-            ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(term.func))
-            ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(term.arg_list))
+            ctx.load_value(term.func)
+            ctx.load_value(term.arg_list)
             ctx.emit(Opcode.TAIL_APPLY)
             return
 
@@ -515,7 +548,7 @@ class MenaiVMCodeGen:
             # Push new arg values onto the stack in order, then JUMP 0.
             # ENTER at instruction 0 will pop them into param slots.
             for arg in term.args:
-                ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(arg))
+                ctx.load_value(arg)
             ctx.emit(Opcode.JUMP, 0)
             return
 
@@ -539,11 +572,11 @@ class MenaiVMCodeGen:
         args = instr.args
 
         def load_arg(i: int) -> None:
-            ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(args[i]))
+            ctx.load_value(args[i])
 
         def load_all() -> None:
             for a in args:
-                ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(a))
+                ctx.load_value(a)
 
         # Special cases with optional / synthesised arguments.
         if op == 'range':
@@ -648,8 +681,7 @@ class MenaiVMCodeGen:
             raise ValueError(f"MenaiVMCodeGen: unknown builtin op {op!r}")
 
         # Store the result.
-        slot = ctx.alloc_slot(instr.result)
-        ctx.emit(Opcode.STORE_VAR, slot)
+        ctx.store_result(instr.result)
 
     # ------------------------------------------------------------------
     # Closure emission
@@ -695,13 +727,13 @@ class MenaiVMCodeGen:
             # [total_free_vars - capture_count .. total_free_vars - 1].
             outer_start = total_free_vars - capture_count
             for i, cap in enumerate(instr.captures):
-                ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(cap))
+                ctx.load_value(cap)
                 ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, outer_start + i)
             return
         elif capture_count > 0:
             # Non-letrec closure with captures: pack all from slot 0.
             for cap in instr.captures:
-                ctx.emit(Opcode.LOAD_VAR, ctx.slot_of(cap))
+                ctx.load_value(cap)
             ctx.emit(Opcode.MAKE_CLOSURE, code_idx, capture_count)
         else:
             # No captures — pre-build a MenaiFunction and store as a constant.
@@ -717,8 +749,7 @@ class MenaiVMCodeGen:
                 ctx.constants.append(func_val)
             ctx.emit(Opcode.LOAD_CONST, ctx.constant_map[key])
 
-        slot = ctx.alloc_slot(instr.result)
-        ctx.emit(Opcode.STORE_VAR, slot)
+        ctx.store_result(instr.result)
 
     def _generate_lambda_code_object(self, func: MenaiCFGFunction) -> CodeObject:
         """
