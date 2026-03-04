@@ -132,15 +132,6 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
         arg_word = "arg" if arg1 == 1 else "args"
         annotation = f"  ; Tail call function with {arg1} {arg_word}"
 
-    elif opcode == Opcode.JUMP:
-        annotation = f"  ; Jump to instruction {arg1}"
-
-    elif opcode == Opcode.JUMP_IF_FALSE:
-        annotation = f"  ; Jump to {arg1} if top of stack is false"
-
-    elif opcode == Opcode.JUMP_IF_TRUE:
-        annotation = f"  ; Jump to {arg1} if top of stack is true"
-
     elif opcode == Opcode.RETURN:
         annotation = "  ; Return from function"
 
@@ -171,10 +162,8 @@ def format_instruction(instr: Instruction, index: int) -> str:
     n = instr.opcode.arg_count
     if n == 0:
         instr_str = f"{index:4}: {instr.opcode.name}"
-
     elif n == 2:
         instr_str = f"{index:4}: {instr.opcode.name} {instr.arg1} {instr.arg2}"
-
     else:
         instr_str = f"{index:4}: {instr.opcode.name} {instr.arg1}"
 
@@ -221,14 +210,38 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
     # Show annotated disassembly
     output.append(f"{indent}Instructions:")
     output.append(f"{indent}{'-'*70}")
+
+    # Pre-pass: collect all jump target indices.
+    jump_opcodes = {Opcode.JUMP, Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE}
+    jump_targets = {
+        instr.arg1
+        for instr in code.instructions
+        if instr.opcode in jump_opcodes
+    }
+    conditional_jump_opcodes = {Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE}
+
     for i, instr in enumerate(code.instructions):
+        is_target = i in jump_targets
+        if is_target and i > 0:
+            output.append(f"{indent}")
+
         annotation = annotate_instruction(instr, code)
         instr_str = format_instruction(instr, i)
-        if annotation:
-            output.append(f"{indent}{instr_str}{annotation}")
 
+        # For jump target lines, replace the last two characters of the indent
+        # with "► " so the marker sits flush at the indent boundary and all
+        # subsequent columns remain aligned with non-target lines.
+        target_marker = "► " if is_target else "  "
+
+        if annotation:
+            output.append(f"{indent}{target_marker}{instr_str}{annotation}")
         else:
-            output.append(f"{indent}{instr_str}")
+            output.append(f"{indent}{target_marker}{instr_str}")
+
+        # Blank line after a conditional jump, unless the next instruction is
+        # already a jump target (which will insert its own blank line above).
+        if instr.opcode in conditional_jump_opcodes and (i + 1) not in jump_targets:
+            output.append(f"{indent}")
 
     output.append(f"{indent}{'-'*70}")
     output.append(f"{indent}")
