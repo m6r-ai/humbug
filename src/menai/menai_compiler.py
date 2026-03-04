@@ -12,6 +12,7 @@ from menai.menai_ast_optimization_pass import MenaiASTOptimizationPass
 from menai.menai_bytecode import CodeObject
 from menai.menai_cfg_builder import MenaiCFGBuilder
 from menai.menai_desugarer import MenaiDesugarer
+from menai.menai_cfg_optimizer import MenaiCFGOptimizer
 from menai.menai_ir_builder import MenaiIRBuilder
 from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
 from menai.menai_ir_copy_propagator import MenaiIRCopyPropagator
@@ -66,6 +67,7 @@ class MenaiCompiler:
 
         self.ir_builder = MenaiIRBuilder()
         self.cfg_builder = MenaiCFGBuilder()
+        self.cfg_optimizer = MenaiCFGOptimizer()
         self.vm_codegen = MenaiVMCodeGen()
 
     def compile_to_resolved_ast(self, source: str, source_file: str = "") -> MenaiASTNode:
@@ -126,5 +128,7 @@ class MenaiCompiler:
                     changed = changed or pass_changed
 
         cfg = self.cfg_builder.build(ir)
+        if self.optimize:
+            cfg = self.cfg_optimizer.optimize(cfg)
         bytecode = self.vm_codegen.generate(cfg, name)
         return bytecode
