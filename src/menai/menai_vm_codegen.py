@@ -541,8 +541,10 @@ class MenaiVMCodeGen:
 
         if isinstance(term, MenaiCFGJumpTerm):
             self._emit_phi_stores_for_successor(block, term.target, ctx)
-            jump_idx = ctx.emit(Opcode.JUMP, 0)
-            forward_jumps.append((jump_idx, term.target))
+            # Suppress the JUMP if the target is the immediately following block.
+            if next_block is None or next_block.id != term.target.id:
+                jump_idx = ctx.emit(Opcode.JUMP, 0)
+                forward_jumps.append((jump_idx, term.target))
             return
 
         if isinstance(term, MenaiCFGBranchTerm):
