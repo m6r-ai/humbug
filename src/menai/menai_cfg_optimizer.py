@@ -225,6 +225,7 @@ def _prune_stale_phi_entries(
         term = block.terminator
         if isinstance(term, MenaiCFGJumpTerm):
             edges.add((block.id, term.target.id))
+
         elif isinstance(term, MenaiCFGBranchTerm):
             edges.add((block.id, term.true_block.id))
             edges.add((block.id, term.false_block.id))
@@ -235,6 +236,7 @@ def _prune_stale_phi_entries(
         for i, instr in enumerate(block.instrs):
             if not isinstance(instr, MenaiCFGPhiInstr):
                 continue
+
             pruned = [
                 (val, pred)
                 for val, pred in instr.incoming
@@ -249,6 +251,7 @@ def _prune_stale_phi_entries(
 
     if changed:
         _relink_predecessors(func)
+
     return func, changed
 
 
@@ -298,6 +301,7 @@ def _eliminate_trivial_phis(
         while v.id in subst and v.id not in seen:
             seen.add(v.id)
             v = subst[v.id]
+
         return v
 
     # Mutate all blocks in place, applying substitution.
@@ -308,7 +312,9 @@ def _eliminate_trivial_phis(
             # Drop trivial phi instructions entirely.
             if isinstance(instr, MenaiCFGPhiInstr) and instr.result.id in subst:
                 continue
+
             new_instrs.append(_subst_instr(instr, resolve))
+
         block.instrs = new_instrs
 
         block.patch_instrs = [_subst_patch(p, resolve) for p in block.patch_instrs]
@@ -378,9 +384,11 @@ def _bypass_empty_blocks(
         if isinstance(term, MenaiCFGJumpTerm):
             if term.target.id in pred_map_pre:
                 pred_map_pre[term.target.id].append(block)
+
         elif isinstance(term, MenaiCFGBranchTerm):
             if term.true_block.id in pred_map_pre:
                 pred_map_pre[term.true_block.id].append(block)
+
             if term.false_block.id in pred_map_pre:
                 pred_map_pre[term.false_block.id].append(block)
 
@@ -411,12 +419,15 @@ def _bypass_empty_blocks(
                 for pred in pred_map_pre.get(block.id, [])
             ):
                 return True
+
             seen.add(block.id)
             assert isinstance(block.terminator, MenaiCFGJumpTerm)
             next_b = block_map.get(block.terminator.target.id)
             if next_b is None:
                 break
+
             block = next_b
+
         return False
 
     # Find ultimate non-empty target, following chains.
@@ -428,7 +439,9 @@ def _bypass_empty_blocks(
             next_b = block_map.get(block.terminator.target.id)
             if next_b is None:
                 break
+
             block = next_b
+
         return block
 
     # Build bypass map: empty_block_id → ultimate non-empty target.
@@ -467,8 +480,10 @@ def _bypass_empty_blocks(
                     for actual_pred in actual_preds:
                         remapped = _find_non_empty_pred(actual_pred, bypass, pred_map)
                         new_incoming.append((val, remapped))
+
                 else:
                     new_incoming.append((val, pred))
+
             block.instrs[i] = MenaiCFGPhiInstr(
                 result=instr.result,
                 incoming=new_incoming,
@@ -505,7 +520,9 @@ def _find_non_empty_pred(
         preds = pred_map.get(block.id, [])
         if not preds:
             break
+
         block = preds[0]
+
     return block
 
 
@@ -535,10 +552,12 @@ def _eliminate_dead_blocks(
     def dfs(block: MenaiCFGBlock) -> None:
         if block.id in reachable:
             return
+
         reachable.add(block.id)
         term = block.terminator
         if isinstance(term, MenaiCFGJumpTerm):
             dfs(term.target)
+
         elif isinstance(term, MenaiCFGBranchTerm):
             dfs(term.true_block)
             dfs(term.false_block)
@@ -554,9 +573,11 @@ def _eliminate_dead_blocks(
     for block in func.blocks:
         if block.id in dead:
             continue
+
         for i, instr in enumerate(block.instrs):
             if not isinstance(instr, MenaiCFGPhiInstr):
                 continue
+
             pruned = [
                 (val, pred)
                 for val, pred in instr.incoming
@@ -600,6 +621,7 @@ def _relink_predecessors(func: MenaiCFGFunction) -> None:
         term = block.terminator
         if isinstance(term, MenaiCFGJumpTerm):
             _safe_add_pred(term.target, block, func)
+
         elif isinstance(term, MenaiCFGBranchTerm):
             _safe_add_pred(term.true_block, block, func)
             _safe_add_pred(term.false_block, block, func)
@@ -634,12 +656,14 @@ def _subst_instr(
         new_incoming = [(resolve(val), pred) for val, pred in instr.incoming]
         if new_incoming == instr.incoming:
             return instr
+
         return MenaiCFGPhiInstr(result=instr.result, incoming=new_incoming)
 
     if isinstance(instr, MenaiCFGBuiltinInstr):
         new_args = [resolve(a) for a in instr.args]
         if new_args == instr.args:
             return instr
+
         return MenaiCFGBuiltinInstr(result=instr.result, op=instr.op, args=new_args)
 
     if isinstance(instr, MenaiCFGCallInstr):
@@ -647,6 +671,7 @@ def _subst_instr(
         new_func = resolve(instr.func)
         if new_args == instr.args and new_func is instr.func:
             return instr
+
         return MenaiCFGCallInstr(result=instr.result, func=new_func, args=new_args)
 
     if isinstance(instr, MenaiCFGApplyInstr):
@@ -654,6 +679,7 @@ def _subst_instr(
         new_arg_list = resolve(instr.arg_list)
         if new_func is instr.func and new_arg_list is instr.arg_list:
             return instr
+
         return MenaiCFGApplyInstr(
             result=instr.result, func=new_func, arg_list=new_arg_list
         )
@@ -662,6 +688,7 @@ def _subst_instr(
         new_captures = [resolve(c) for c in instr.captures]
         if new_captures == instr.captures:
             return instr
+
         return MenaiCFGMakeClosureInstr(
             result=instr.result,
             function=instr.function,
@@ -674,6 +701,7 @@ def _subst_instr(
         new_value = resolve(instr.value)
         if new_closure is instr.closure and new_value is instr.value:
             return instr
+
         return MenaiCFGPatchClosureInstr(
             closure=new_closure,
             capture_index=instr.capture_index,
@@ -685,6 +713,7 @@ def _subst_instr(
         new_value = resolve(instr.value)
         if new_messages == instr.messages and new_value is instr.value:
             return instr
+
         return MenaiCFGTraceInstr(
             result=instr.result,
             messages=new_messages,
@@ -702,6 +731,7 @@ def _subst_patch(
     new_value = resolve(patch.value)
     if new_closure is patch.closure and new_value is patch.value:
         return patch
+
     return MenaiCFGPatchClosureInstr(
         closure=new_closure,
         capture_index=patch.capture_index,
@@ -721,6 +751,7 @@ def _subst_term(
         new_val = resolve(term.value)
         if new_val is term.value:
             return term
+
         return MenaiCFGReturnTerm(value=new_val)
 
     if isinstance(term, MenaiCFGJumpTerm):
@@ -730,6 +761,7 @@ def _subst_term(
         new_cond = resolve(term.cond)
         if new_cond is term.cond:
             return term
+
         return MenaiCFGBranchTerm(
             cond=new_cond,
             true_block=term.true_block,
@@ -741,6 +773,7 @@ def _subst_term(
         new_func = resolve(term.func)
         if new_args == term.args and new_func is term.func:
             return term
+
         return MenaiCFGTailCallTerm(func=new_func, args=new_args)
 
     if isinstance(term, MenaiCFGTailApplyTerm):
@@ -748,12 +781,14 @@ def _subst_term(
         new_arg_list = resolve(term.arg_list)
         if new_func is term.func and new_arg_list is term.arg_list:
             return term
+
         return MenaiCFGTailApplyTerm(func=new_func, arg_list=new_arg_list)
 
     if isinstance(term, MenaiCFGSelfLoopTerm):
         new_args = [resolve(a) for a in term.args]
         if new_args == term.args:
             return term
+
         return MenaiCFGSelfLoopTerm(args=new_args)
 
     if isinstance(term, MenaiCFGRaiseTerm):
@@ -778,6 +813,7 @@ def _remap_term(
         new_target = remap_block(term.target)
         if new_target is term.target:
             return term
+
         return MenaiCFGJumpTerm(target=new_target)
 
     if isinstance(term, MenaiCFGBranchTerm):
@@ -785,6 +821,7 @@ def _remap_term(
         new_false = remap_block(term.false_block)
         if new_true is term.true_block and new_false is term.false_block:
             return term
+
         return MenaiCFGBranchTerm(
             cond=term.cond,
             true_block=new_true,

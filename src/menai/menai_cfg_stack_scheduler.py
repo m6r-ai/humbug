@@ -53,16 +53,12 @@ Special-case builtins — last SSA operand is NOT the last thing pushed
 ----------------------------------------------------------------------
 Several builtins synthesise extra arguments after the last SSA operand:
 
-  range(a, b)           → pushes synthesised MenaiInteger(1) last
   integer->complex(x)   → pushes synthesised MenaiInteger(0) last
   integer->string(x)    → pushes synthesised MenaiInteger(10) last
   float->complex(x)     → pushes synthesised MenaiFloat(0.0) last
   string->integer(x)    → pushes synthesised MenaiInteger(10) last
   string->list(x)       → pushes synthesised MenaiString("") last
   list->string(x)       → pushes synthesised MenaiString("") last
-  dict-get(d, k)        → pushes synthesised LOAD_NONE last
-  string-slice(s, i)    → reloads s and computes STRING_LENGTH last
-  list-slice(l, i)      → reloads l and computes LIST_LENGTH last
 
 For these cases (when invoked with the default-argument arity), no SSA
 operand of the consuming builtin can be stack-transient.
@@ -144,16 +140,12 @@ from menai.menai_value import MenaiValue
 # SSA operand can be stack-transient as a consumer of that builtin.
 # ---------------------------------------------------------------------------
 _SYNTH_LAST_AT_ARITY: dict[str, int] = {
-    'range': 2,
     'integer->complex': 1,
     'integer->string': 1,
     'float->complex': 1,
     'string->integer': 1,
     'string->list': 1,
     'list->string': 1,
-    'dict-get': 2,
-    'string-slice': 2,
-    'list-slice': 2,
 }
 
 
@@ -252,9 +244,11 @@ class MenaiCFGStackScheduler:
         for block in func.blocks:
             for instr in block.instrs:
                 self._count_instr_uses(instr, use)
+
             for patch in block.patch_instrs:
                 use(patch.closure)
                 use(patch.value)
+
             if block.terminator is not None:
                 self._count_term_uses(block.terminator, use)
 
@@ -302,20 +296,27 @@ class MenaiCFGStackScheduler:
         """Increment use counts for all SSA operands of `term`."""
         if isinstance(term, MenaiCFGReturnTerm):
             use(term.value)
+
         elif isinstance(term, MenaiCFGJumpTerm):
             pass  # No SSA operands.
+
         elif isinstance(term, MenaiCFGBranchTerm):
             use(term.cond)
+
         elif isinstance(term, MenaiCFGTailCallTerm):
             for a in term.args:
                 use(a)
+
             use(term.func)
+
         elif isinstance(term, MenaiCFGTailApplyTerm):
             use(term.func)
             use(term.arg_list)
+
         elif isinstance(term, MenaiCFGSelfLoopTerm):
             for a in term.args:
                 use(a)
+
         elif isinstance(term, (MenaiCFGRaiseTerm,)):
             pass  # No SSA operands.
 
@@ -376,9 +377,11 @@ class MenaiCFGStackScheduler:
                     if i + 1 < n:
                         consumer: MenaiCFGInstr | MenaiCFGTerminator = instrs[i + 1]
                         is_term_consumer = False
+
                     elif block.terminator is not None:
                         consumer = block.terminator
                         is_term_consumer = True
+
                     else:
                         qualifies_transient = False
 
@@ -400,6 +403,7 @@ class MenaiCFGStackScheduler:
 
                 if qualifies_transient:
                     transient.add(result.id)
+
                 elif is_const:
                     # Not transient but is a constant: rematerialise instead.
                     remat[result.id] = instr.value  # type: ignore[union-attr]
@@ -410,6 +414,7 @@ class MenaiCFGStackScheduler:
         """Return the SSA result of `instr`, or None if it has no result."""
         if isinstance(instr, MenaiCFGPatchClosureInstr):
             return None
+
         return instr.result  # type: ignore[union-attr]
 
     def _is_hard_excluded(self, instr: MenaiCFGInstr) -> bool:
@@ -419,10 +424,13 @@ class MenaiCFGStackScheduler:
         """
         if isinstance(instr, (MenaiCFGParamInstr, MenaiCFGFreeVarInstr)):
             return True
+
         if isinstance(instr, MenaiCFGPhiInstr):
             return True
+
         if isinstance(instr, MenaiCFGMakeClosureInstr) and instr.needs_patching:
             return True
+
         return False
 
     def _is_last_operand(
@@ -478,8 +486,10 @@ class MenaiCFGStackScheduler:
             # PATCH_CLOSURE instructions follow — no single "last push".
             if instr.needs_patching:
                 return False
+
             if not instr.captures:
                 return False
+
             # Push order: captures[0], ..., captures[-1], then MAKE_CLOSURE.
             return value.id == instr.captures[-1].id
 
@@ -505,6 +515,7 @@ class MenaiCFGStackScheduler:
         """
         if is_terminator:
             return self._preceding_operands_of_term(last_value, consumer)  # type: ignore[arg-type]
+
         return self._preceding_operands_of_instr(last_value, consumer)  # type: ignore[arg-type]
 
     def _preceding_operands_of_instr(
@@ -574,6 +585,7 @@ class MenaiCFGStackScheduler:
         # Normal case: args are pushed in order, last arg is last on stack.
         if not instr.args:
             return False
+
         return value.id == instr.args[-1].id
 
     def _is_last_operand_of_term(

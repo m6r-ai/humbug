@@ -437,8 +437,10 @@ class MenaiCFGBuilder:
         incoming = []
         if then_jumps_to_join:
             incoming.append((then_val, then_exit))
+
         if else_jumps_to_join:
             incoming.append((else_val, else_exit))
+
         join_block.instrs.append(MenaiCFGPhiInstr(
             result=phi_result,
             incoming=incoming,
@@ -828,14 +830,14 @@ class MenaiCFGBuilder:
                 )
                 placeholder = state.new_value("tail_apply")
                 return placeholder, block
-            else:
-                result = state.new_value("apply_result")
-                block.instrs.append(MenaiCFGApplyInstr(
-                    result=result,
-                    func=arg_vals[0],
-                    arg_list=arg_vals[1],
-                ))
-                return result, block
+
+            result = state.new_value("apply_result")
+            block.instrs.append(MenaiCFGApplyInstr(
+                result=result,
+                func=arg_vals[0],
+                arg_list=arg_vals[1],
+            ))
+            return result, block
 
         result = state.new_value(ir.builtin_name)
         block.instrs.append(MenaiCFGBuiltinInstr(
@@ -887,8 +889,10 @@ class MenaiCFGBuilder:
             term = block.terminator
             if isinstance(term, MenaiCFGJumpTerm):
                 term.target.predecessors.append(block)
+
             elif isinstance(term, MenaiCFGBranchTerm):
                 term.true_block.predecessors.append(block)
                 term.false_block.predecessors.append(block)
+
             # ReturnTerm, TailCallTerm, TailApplyTerm, SelfLoopTerm,
             # RaiseTerm have no successors.

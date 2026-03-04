@@ -67,10 +67,6 @@ from typing import List, Optional, Tuple
 from menai.menai_value import MenaiValue
 
 
-# ---------------------------------------------------------------------------
-# SSA values
-# ---------------------------------------------------------------------------
-
 @dataclass
 class MenaiCFGValue:
     """
@@ -407,10 +403,13 @@ class MenaiCFGBlock:
         lines = [f"block {self.id} ({self.label}):"]
         for instr in self.instrs:
             lines.append(f"  {_fmt_instr(instr)}")
+
         for patch in self.patch_instrs:
             lines.append(f"  patch_closure {patch.closure} [{patch.capture_index}] = {patch.value}")
+
         if self.terminator is not None:
             lines.append(f"  {_fmt_term(self.terminator)}")
+
         return "\n".join(lines)
 
 
@@ -460,8 +459,10 @@ class MenaiCFGFunction:
         lines = [f"MenaiCFGFunction {name}({', '.join(self.params)}):"]
         if self.free_vars:
             lines.append(f"  free_vars: {self.free_vars}")
+
         for block in self.blocks:
             lines.append(repr(block))
+
         return "\n".join(lines)
 
 
@@ -481,26 +482,36 @@ def _fmt_instr(instr: MenaiCFGInstr) -> str:
     """One-line human-readable representation of a non-terminator instruction."""
     if isinstance(instr, MenaiCFGConstInstr):
         return f"{instr.result} = const {instr.value!r}"
+
     if isinstance(instr, MenaiCFGGlobalInstr):
         return f"{instr.result} = global {instr.name!r}"
+
     if isinstance(instr, MenaiCFGParamInstr):
         return f"{instr.result} = param {instr.index} ({instr.param_name!r})"
+
     if isinstance(instr, MenaiCFGFreeVarInstr):
         return f"{instr.result} = free_var {instr.index} ({instr.var_name!r})"
+
     if isinstance(instr, MenaiCFGBuiltinInstr):
         return f"{instr.result} = builtin {instr.op!r} {_fmt_values(instr.args)}"
+
     if isinstance(instr, MenaiCFGCallInstr):
         return f"{instr.result} = call {instr.func} {_fmt_values(instr.args)}"
+
     if isinstance(instr, MenaiCFGApplyInstr):
         return f"{instr.result} = apply {instr.func} {instr.arg_list}"
+
     if isinstance(instr, MenaiCFGMakeClosureInstr):
         name = instr.function.binding_name or "<lambda>"
         return f"{instr.result} = make_closure {name!r} {_fmt_values(instr.captures)}"
+
     if isinstance(instr, MenaiCFGPhiInstr):
         parts = ", ".join(f"{v} <- block{b.id}" for v, b in instr.incoming)
         return f"{instr.result} = phi [{parts}]"
+
     if isinstance(instr, MenaiCFGTraceInstr):
         return f"{instr.result} = trace {_fmt_values(instr.messages)} {instr.value}"
+
     return f"<unknown instr {type(instr).__name__}>"
 
 
@@ -508,17 +519,24 @@ def _fmt_term(term: MenaiCFGTerminator) -> str:
     """One-line human-readable representation of a terminator."""
     if isinstance(term, MenaiCFGJumpTerm):
         return f"jump block{term.target.id}"
+
     if isinstance(term, MenaiCFGBranchTerm):
         return (f"branch {term.cond} → block{term.true_block.id} / "
                 f"block{term.false_block.id}")
+
     if isinstance(term, MenaiCFGReturnTerm):
         return f"return {term.value}"
+
     if isinstance(term, MenaiCFGTailCallTerm):
         return f"tail_call {term.func} {_fmt_values(term.args)}"
+
     if isinstance(term, MenaiCFGTailApplyTerm):
         return f"tail_apply {term.func} {term.arg_list}"
+
     if isinstance(term, MenaiCFGSelfLoopTerm):
         return f"self_loop {_fmt_values(term.args)}"
+
     if isinstance(term, MenaiCFGRaiseTerm):
         return f"raise {term.message!r}"
+
     return f"<unknown term {type(term).__name__}>"
