@@ -345,9 +345,11 @@ class MenaiVMCodeGen:
         block_start: Dict[int, int] = {}   # block id → instruction index of first instr
         forward_jumps: List[Tuple[int, MenaiCFGBlock]] = []  # (instr_idx, target_block)
 
-        for block in self._rpo(func):
+        rpo = self._rpo(func)
+        for i, block in enumerate(rpo):
+            next_block = rpo[i + 1] if i + 1 < len(rpo) else None
             block_start[block.id] = ctx.current_index()
-            self._emit_block(block, ctx, forward_jumps, func)
+            self._emit_block(block, ctx, forward_jumps, func, next_block)
 
         # Phase 3: back-patch forward jumps.
         for instr_idx, target_block in forward_jumps:
@@ -390,6 +392,7 @@ class MenaiVMCodeGen:
         ctx: _EmitContext,
         forward_jumps: List[Tuple[int, MenaiCFGBlock]],
         func: MenaiCFGFunction,
+        next_block: Optional[MenaiCFGBlock],
     ) -> None:
         """Emit all instructions and the terminator for one block."""
         # Regular instructions.
@@ -404,7 +407,7 @@ class MenaiVMCodeGen:
         assert block.terminator is not None, (
             f"MenaiVMCodeGen: block {block.id} ({block.label}) has no terminator"
         )
-        self._emit_terminator(block, block.terminator, ctx, forward_jumps, func)
+        self._emit_terminator(block, block.terminator, ctx, forward_jumps, func, next_block)
 
     # ------------------------------------------------------------------
     # Instruction emission
@@ -529,6 +532,7 @@ class MenaiVMCodeGen:
         ctx: _EmitContext,
         forward_jumps: List[Tuple[int, MenaiCFGBlock]],
         func: MenaiCFGFunction,
+        next_block: Optional[MenaiCFGBlock],
     ) -> None:
         if isinstance(term, MenaiCFGReturnTerm):
             ctx.load_value(term.value)
@@ -543,12 +547,22 @@ class MenaiVMCodeGen:
 
         if isinstance(term, MenaiCFGBranchTerm):
             ctx.load_value(term.cond)
-            false_jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, 0)
-            # True branch: explicit jump (phi stores happen in then/else blocks
-            # via their own MenaiCFGJumpTerm to join_block).
-            true_jump_idx = ctx.emit(Opcode.JUMP, 0)
-            forward_jumps.append((true_jump_idx, term.true_block))
-            forward_jumps.append((false_jump_idx, term.false_block))
+            next_id = next_block.id if next_block is not None else -1
+            if next_id == term.false_block.id:
+                # False block is the fall-through: emit JUMP_IF_TRUE <true> only.
+                # Phi stores happen in then/else blocks via their own JumpTerm.
+                true_jump_idx = ctx.emit(Opcode.JUMP_IF_TRUE, 0)
+                forward_jumps.append((true_jump_idx, term.true_block))
+            elif next_id == term.true_block.id:
+                # True block is the fall-through: emit JUMP_IF_FALSE <false> only.
+                false_jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, 0)
+                forward_jumps.append((false_jump_idx, term.false_block))
+            else:
+                # Neither successor is adjacent: emit JUMP_IF_FALSE <false> + JUMP <true>.
+                false_jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, 0)
+                true_jump_idx = ctx.emit(Opcode.JUMP, 0)
+                forward_jumps.append((true_jump_idx, term.true_block))
+                forward_jumps.append((false_jump_idx, term.false_block))
             return
 
         if isinstance(term, MenaiCFGTailCallTerm):
