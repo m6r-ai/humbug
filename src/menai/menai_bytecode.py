@@ -7,24 +7,27 @@ from typing import Dict, List, Tuple
 from menai.menai_value import MenaiValue
 
 
-def _op(n: int, arg_count: int = 0) -> Tuple[int, int]:
-    """Helper to construct an Opcode value: (integer_value, instruction_stream_arg_count).
+def _op(n: int, arg_count: int = 0, has_dest: bool = False) -> Tuple[int, int, int]:
+    """Helper to construct an Opcode value: (integer_value, arg_count, has_dest).
 
     arg_count is the number of instruction-stream arguments the opcode encodes
     (i.e. fields read from the bytecode stream, not operands popped from the stack):
       0 — all operands come from the value stack (the common case for primitives)
       1 — one immediate argument follows the opcode in the stream
       2 — two immediate arguments follow the opcode in the stream
+
+    has_dest indicates whether the opcode writes its result to the dest register.
     """
-    return (n, arg_count)
+    return (n, arg_count, int(has_dest))
 
 
 class Opcode(IntEnum):
     """Bytecode operation codes.
 
-    Each member's value is a (integer_value, instruction_stream_arg_count) tuple.
+    Each member's value is a (integer_value, arg_count, has_dest) tuple.
     The integer value is used for fast VM dispatch (IntEnum identity).
     The arg_count property returns the number of instruction-stream arguments.
+    The has_dest property returns True if the opcode writes to the dest register.
 
     Encoding arg_count directly on the enum eliminates the error-prone
     no_arg_opcodes / two_arg_opcodes sets that previously lived in
@@ -32,28 +35,34 @@ class Opcode(IntEnum):
     """
 
     _arg_count: int  # Set in __new__; declared here so mypy knows the attribute exists
+    _has_dest: int   # Set in __new__; 1 if opcode writes to dest register, else 0
 
-    def __new__(cls, int_value: int, arg_count: int = 0) -> 'Opcode':
+    def __new__(cls, int_value: int, arg_count: int = 0, has_dest: int = 0) -> 'Opcode':
         obj = int.__new__(cls, int_value,)
         obj._value_ = int_value
         obj._arg_count = arg_count
+        obj._has_dest = has_dest
         return obj
 
     def arg_count(self) -> int:
         """Number of instruction-stream arguments (0, 1, or 2)."""
         return self._arg_count
 
+    def has_dest(self) -> bool:
+        """True if this opcode writes its result to the dest register."""
+        return bool(self._has_dest)
+
     # Constants
-    LOAD_NONE = _op(0, 0)               # Push #none
-    LOAD_TRUE = _op(1, 0)               # Push True
-    LOAD_FALSE = _op(2, 0)              # Push False
-    LOAD_EMPTY_LIST = _op(3, 0)         # Push empty list
-    LOAD_CONST = _op(4, 1)              # LOAD_CONST const_index
+    LOAD_NONE = _op(0, 0, True)         # r_dest = #none
+    LOAD_TRUE = _op(1, 0, True)         # r_dest = #t
+    LOAD_FALSE = _op(2, 0, True)        # r_dest = #f
+    LOAD_EMPTY_LIST = _op(3, 0, True)   # r_dest = []
+    LOAD_CONST = _op(4, 1, True)        # r_dest = constants[src0]
+    LOAD_NAME = _op(5, 1, True)         # r_dest = globals[names[src0]]
 
     # Stack / register transfer
-    PUSH = _op(5, 1)                    # PUSH src0  — push register src0 onto the call stack
-    POP = _op(6, 0)                     # POP dest   — pop call stack top into register dest
-    LOAD_NAME = _op(7, 1)               # LOAD_NAME name_index — load global by name into dest
+    PUSH = _op(10, 1)                    # PUSH src0  — push register src0 onto the call stack
+    POP = _op(11, 0, True)               # r_dest = POP — pop call stack top into register dest
 
     # Control flow
     JUMP = _op(20, 1)                   # Unconditional jump: JUMP offset
@@ -453,7 +462,8 @@ class Instruction:
         Opcodes that only consume or have no result are shown as:
             OPCODE ...
 
-        Currently only POP writes to dest; all other ops are still stack-based.
+        All load ops (LOAD_NONE, LOAD_TRUE, LOAD_FALSE, LOAD_EMPTY_LIST,
+        LOAD_CONST, LOAD_NAME) always write to dest.
         """
         opcode = self.opcode
         name = opcode.name
@@ -466,7 +476,17 @@ class Instruction:
         if opcode == Opcode.PUSH:
             return f"PUSH r{self.src0}"
 
-        # All other opcodes: use stream-immediate formatting (unchanged from before)
+        if opcode in (Opcode.LOAD_NONE, Opcode.LOAD_TRUE,
+                      Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST):
+            return f"r{self.dest} = {name}"
+
+        if opcode == Opcode.LOAD_CONST:
+            return f"r{self.dest} = LOAD_CONST {self.src0}"
+
+        if opcode == Opcode.LOAD_NAME:
+            return f"r{self.dest} = LOAD_NAME {self.src0}"
+
+        # All remaining opcodes: stream-immediate formatting (not yet converted)
         n = self.arg_count()
         if n == 0:
             return name

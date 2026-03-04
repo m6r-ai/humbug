@@ -195,31 +195,47 @@ class _EmitContext:
         """
         Emit the instruction(s) needed to make `value` available on the stack.
 
-        For stack-transient values: emit nothing — the value is already on
-        top of the stack, left there by the immediately preceding instruction.
-        For rematerialisable constants: re-emit the constant load instruction.
+        For stack-transient values that have a slot (produced by a register-based
+        op such as LOAD_CONST): emit PUSH <slot>.
+        For stack-transient values without a slot: emit nothing — the value is
+        already on top of the stack from the immediately preceding unconverted op.
+        For rematerialisable constants: allocate a temp slot, emit the register
+        load into it, then PUSH it onto the call stack.
         For slotted values: emit PUSH <slot>.
         """
         if self.schedule.is_transient(value):
+            if value.id in self.slot_map:
+                self.emit(Opcode.PUSH, self.slot_of(value))
             return
         if self.schedule.is_remat(value):
-            self.emit_constant(self.schedule.remat_value_of(value))
+            self.emit_const_push(self.schedule.remat_value_of(value))
             return
         self.emit(Opcode.PUSH, self.slot_of(value))
 
-    def emit_constant(self, value: MenaiValue) -> None:
-        """Emit the appropriate LOAD instruction for a compile-time constant."""
+    def emit_constant(self, value: MenaiValue, dest: int) -> None:
+        """Emit the appropriate LOAD instruction writing directly to register dest."""
         if isinstance(value, MenaiNone):
-            self.emit(Opcode.LOAD_NONE)
+            self.emit(Opcode.LOAD_NONE, dest=dest)
             return
         if isinstance(value, MenaiBoolean):
-            self.emit(Opcode.LOAD_TRUE if value.value else Opcode.LOAD_FALSE)
+            self.emit(Opcode.LOAD_TRUE if value.value else Opcode.LOAD_FALSE, dest=dest)
             return
         if isinstance(value, MenaiList) and len(value.elements) == 0:
-            self.emit(Opcode.LOAD_EMPTY_LIST)
+            self.emit(Opcode.LOAD_EMPTY_LIST, dest=dest)
             return
         const_idx = self.add_constant(value)
-        self.emit(Opcode.LOAD_CONST, const_idx)
+        self.emit(Opcode.LOAD_CONST, const_idx, dest=dest)
+
+    def emit_const_push(self, value: MenaiValue) -> None:
+        """Load a constant into a fresh temp register then PUSH it onto the call stack.
+
+        Used for synthesised default arguments feeding unconverted stack-based ops,
+        and for rematerialisable constants consumed by those same ops.
+        """
+        slot = self.next_slot
+        self.next_slot += 1
+        self.emit_constant(value, dest=slot)
+        self.emit(Opcode.PUSH, slot)
 
     def store_result(self, value: MenaiCFGValue) -> int:
         """
@@ -433,18 +449,21 @@ class MenaiVMCodeGen:
             return
 
         if isinstance(instr, MenaiCFGConstInstr):
-            # Rematerialisable constants: skip both the load and the store at
-            # the definition site.  The load will be re-emitted at each use
-            # site by ctx.load_value().
+            # Rematerialisable constants: skip entirely at the definition site.
+            # The load will be re-emitted (stack-push, dest=0) at each use site.
             if not ctx.schedule.is_remat(instr.result):
-                ctx.emit_constant(instr.value)
-                ctx.store_result(instr.result)
+                # Always allocate a slot: LOAD_* is now register-based so it must
+                # write to a register even if the stack scheduler marked it transient.
+                slot = ctx.alloc_slot(instr.result)
+                ctx.emit_constant(instr.value, dest=slot)
             return
 
         if isinstance(instr, MenaiCFGGlobalInstr):
             name_idx = ctx.add_name(instr.name)
-            ctx.emit(Opcode.LOAD_NAME, name_idx)
-            ctx.store_result(instr.result)
+            # LOAD_NAME is register-based: always allocate a slot regardless of
+            # the stack scheduler's transient/slotted classification.
+            slot = ctx.alloc_slot(instr.result)
+            ctx.emit(Opcode.LOAD_NAME, name_idx, dest=slot)
             return
 
         if isinstance(instr, MenaiCFGBuiltinInstr):
@@ -618,13 +637,13 @@ class MenaiVMCodeGen:
         if op == 'range':
             load_all()
             if len(args) == 2:
-                ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(MenaiInteger(1)))
+                ctx.emit_const_push(MenaiInteger(1))
             ctx.emit(Opcode.RANGE)
 
         elif op == 'integer->complex':
             load_arg(0)
             if len(args) == 1:
-                ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(MenaiInteger(0)))
+                ctx.emit_const_push(MenaiInteger(0))
             else:
                 load_arg(1)
             ctx.emit(Opcode.INTEGER_TO_COMPLEX)
@@ -632,7 +651,7 @@ class MenaiVMCodeGen:
         elif op == 'integer->string':
             load_arg(0)
             if len(args) == 1:
-                ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(MenaiInteger(10)))
+                ctx.emit_const_push(MenaiInteger(10))
             else:
                 load_arg(1)
             ctx.emit(Opcode.INTEGER_TO_STRING)
@@ -640,7 +659,7 @@ class MenaiVMCodeGen:
         elif op == 'float->complex':
             load_arg(0)
             if len(args) == 1:
-                ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(MenaiFloat(0.0)))
+                ctx.emit_const_push(MenaiFloat(0.0))
             else:
                 load_arg(1)
             ctx.emit(Opcode.FLOAT_TO_COMPLEX)
@@ -648,7 +667,7 @@ class MenaiVMCodeGen:
         elif op == 'string->integer':
             load_arg(0)
             if len(args) == 1:
-                ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(MenaiInteger(10)))
+                ctx.emit_const_push(MenaiInteger(10))
             else:
                 load_arg(1)
             ctx.emit(Opcode.STRING_TO_INTEGER)
@@ -667,7 +686,7 @@ class MenaiVMCodeGen:
         elif op == 'string->list':
             load_arg(0)
             if len(args) == 1:
-                ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(MenaiString("")))
+                ctx.emit_const_push(MenaiString(""))
             else:
                 load_arg(1)
             ctx.emit(Opcode.STRING_TO_LIST)
@@ -686,7 +705,7 @@ class MenaiVMCodeGen:
         elif op == 'list->string':
             load_arg(0)
             if len(args) == 1:
-                ctx.emit(Opcode.LOAD_CONST, ctx.add_constant(MenaiString("")))
+                ctx.emit_const_push(MenaiString(""))
             else:
                 load_arg(1)
             ctx.emit(Opcode.LIST_TO_STRING)
@@ -694,7 +713,7 @@ class MenaiVMCodeGen:
         elif op == 'dict-get':
             load_all()
             if len(args) == 2:
-                ctx.emit(Opcode.LOAD_NONE)
+                ctx.emit_const_push(MenaiNone())
             ctx.emit(Opcode.DICT_GET)
 
         elif op in BINARY_OPS:
@@ -783,7 +802,9 @@ class MenaiVMCodeGen:
             if key not in ctx.constant_map:
                 ctx.constant_map[key] = len(ctx.constants)
                 ctx.constants.append(func_val)
-            ctx.emit(Opcode.LOAD_CONST, ctx.constant_map[key])
+            slot = ctx.alloc_slot(instr.result)
+            ctx.emit(Opcode.LOAD_CONST, ctx.constant_map[key], dest=slot)
+            return
 
         ctx.store_result(instr.result)
 

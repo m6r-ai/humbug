@@ -92,7 +92,21 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
             const_str = format_constant(const)
             if len(const_str) > 40:
                 const_str = const_str[:37] + "..."
-            annotation = f"  ; Load constant: {const_str}"
+            annotation = f"  ; {describe_local(instr.dest, code)} = {const_str}"
+
+    elif opcode == Opcode.LOAD_NONE:
+        annotation = f"  ; {describe_local(instr.dest, code)} = #none"
+
+    elif opcode in (Opcode.LOAD_TRUE, Opcode.LOAD_FALSE):
+        val = "#t" if opcode == Opcode.LOAD_TRUE else "#f"
+        annotation = f"  ; {describe_local(instr.dest, code)} = {val}"
+
+    elif opcode == Opcode.LOAD_EMPTY_LIST:
+        annotation = f"  ; {describe_local(instr.dest, code)} = []"
+
+    elif opcode == Opcode.LOAD_NAME:
+        if src0 < len(code.names):
+            annotation = f"  ; {describe_local(instr.dest, code)} = global '{code.names[src0]}'"
 
     elif opcode == Opcode.PUSH:
         annotation = f"  ; Push {describe_local(src0, code)} onto call stack"

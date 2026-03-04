@@ -305,17 +305,32 @@ class MenaiBuiltinRegistry:
 
             # Truly fixed-arity builtin: generate a bytecode stub
             opcode, arity = BUILTIN_OPCODE_MAP[name]
-            instructions = [
-                Instruction(opcode),
-                Instruction(Opcode.RETURN),
-            ]
+            if opcode.has_dest():
+                # Register-based opcode: result goes into slot `arity` (after params),
+                # then must be pushed onto the stack for RETURN to pop.
+                result_slot = arity
+                instructions = [
+                    Instruction(opcode, dest=result_slot),
+                    Instruction(Opcode.PUSH, src0=result_slot),
+                    Instruction(Opcode.RETURN),
+                ]
+                local_count = arity + 1
+
+            else:
+                # Stack-based opcode: result left on stack for RETURN to pop.
+                instructions = [
+                    Instruction(opcode),
+                    Instruction(Opcode.RETURN),
+                ]
+                local_count = arity
+
             stub = CodeObject(
                 instructions=instructions,
                 constants=[],
                 names=[],
                 code_objects=[],
                 param_count=arity,
-                local_count=arity,
+                local_count=local_count,
                 name=f'<builtin:{name}>',
             )
             parameters = tuple(f'arg{i}' for i in range(arity))

@@ -578,40 +578,38 @@ class MenaiVM:
         raise MenaiEvalError("Frame execution ended without RETURN instruction")
 
     def _op_load_none(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LOAD_NONE: Push #none onto stack."""
-        self.stack.append(Menai_NONE)
+        """LOAD_NONE dest: Write #none into register dest."""
+        frame.locals[dest] = Menai_NONE
         return None
 
     def _op_load_true(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LOAD_TRUE: Push boolean true onto stack."""
-        self.stack.append(MenaiBoolean(True))
+        """LOAD_TRUE dest: Write boolean true into register dest."""
+        frame.locals[dest] = MenaiBoolean(True)
         return None
 
     def _op_load_false(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LOAD_FALSE: Push boolean false onto stack."""
-        self.stack.append(MenaiBoolean(False))
+        """LOAD_FALSE dest: Write boolean false into register dest."""
+        frame.locals[dest] = MenaiBoolean(False)
         return None
 
     def _op_load_empty_list(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LOAD_EMPTY_LIST: Push empty list onto stack."""
-        self.stack.append(MenaiList(()))
+        """LOAD_EMPTY_LIST dest: Write empty list into register dest."""
+        frame.locals[dest] = MenaiList(())
         return None
 
     def _op_load_const(  # pylint: disable=useless-return
-        self, _frame: Frame, code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LOAD_CONST: Push constant from pool onto stack."""
-        # Validator guarantees src0 is in bounds
-        # No bounds check needed - direct access for maximum performance
-        self.stack.append(code.constants[src0])
+        """LOAD_CONST dest, src0: Write constant[src0] into register dest."""
+        frame.locals[dest] = code.constants[src0]
         return None
 
     def _op_push(  # pylint: disable=useless-return
@@ -669,14 +667,14 @@ class MenaiVM:
         return None
 
     def _op_load_name(  # pylint: disable=useless-return
-        self, _frame: Frame, code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LOAD_NAME: Load global variable by name."""
+        """LOAD_NAME dest, src0: Load global[names[src0]] into register dest."""
         name = code.names[src0]
 
         # Load from globals
         if name in self.globals:
-            self.stack.append(self.globals[name])
+            frame.locals[dest] = self.globals[name]
             return None
 
         # Not found - generate helpful error

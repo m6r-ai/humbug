@@ -97,17 +97,17 @@ class BytecodeValidator:
         # Stack effect: how many items are popped (-) and pushed (+)
         # Format: (pop_count, push_count)
         self.stack_effects: Dict[Opcode, Tuple[int, int]] = {
-            # Constants - push 1
-            Opcode.LOAD_NONE: (0, 1),
-            Opcode.LOAD_TRUE: (0, 1),
-            Opcode.LOAD_FALSE: (0, 1),
-            Opcode.LOAD_EMPTY_LIST: (0, 1),
-            Opcode.LOAD_CONST: (0, 1),
+            # Register-based load ops: always write to dest, no stack effect.
+            Opcode.LOAD_NONE: (0, 0),
+            Opcode.LOAD_TRUE: (0, 0),
+            Opcode.LOAD_FALSE: (0, 0),
+            Opcode.LOAD_EMPTY_LIST: (0, 0),
+            Opcode.LOAD_CONST: (0, 0),
+            Opcode.LOAD_NAME: (0, 0),
 
             # Stack/register transfer: PUSH pushes 1 from a register, POP pops 1 into a register
             Opcode.PUSH: (0, 1),
             Opcode.POP: (1, 0),
-            Opcode.LOAD_NAME: (0, 1),
 
             # Control flow - jumps don't affect stack, conditionals pop 1
             Opcode.JUMP: (0, 0),
@@ -340,6 +340,10 @@ class BytecodeValidator:
 
     def _validate_indices(self, code: CodeObject) -> None:
         """Validate all indices (constants, names, code objects, variables)."""
+        load_reg_ops = (
+            Opcode.LOAD_NONE, Opcode.LOAD_TRUE, Opcode.LOAD_FALSE,
+            Opcode.LOAD_EMPTY_LIST, Opcode.LOAD_CONST, Opcode.LOAD_NAME,
+        )
         for i, instr in enumerate(code.instructions):
             opcode = instr.opcode
 
@@ -394,6 +398,17 @@ class BytecodeValidator:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
                         f"Variable index {var_index} out of bounds (local_count: {code.local_count})",
+                        instruction_index=i,
+                        opcode=opcode
+                    )
+
+            # Validate dest register bounds for register-based load ops.
+            if opcode in load_reg_ops:
+                var_index = instr.dest
+                if var_index >= code.local_count:
+                    raise ValidationError(
+                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
+                        f"Destination register {var_index} out of bounds (local_count: {code.local_count})",
                         instruction_index=i,
                         opcode=opcode
                     )
@@ -585,6 +600,10 @@ class BytecodeValidator:
         # initial closure map is empty.
         initialized_at[0] = (initial_initialized.copy(), {})
 
+        load_reg_ops = (
+            Opcode.LOAD_NONE, Opcode.LOAD_TRUE, Opcode.LOAD_FALSE,
+            Opcode.LOAD_EMPTY_LIST, Opcode.LOAD_CONST, Opcode.LOAD_NAME,
+        )
         while worklist:
             instr_idx = worklist.pop(0)
 
@@ -657,20 +676,20 @@ class BytecodeValidator:
             if opcode == Opcode.POP:
                 var_index = instr.dest
                 new_initialized.add(var_index)
-                # If the immediately preceding instruction was MAKE_CLOSURE,
-                # record the closure identity for this register so PATCH_CLOSURE
-                # can be validated.  Otherwise the slot holds a non-closure
-                # value, so any prior closure identity is invalidated.
+                # Check if preceding instruction was MAKE_CLOSURE for closure tracking
                 if instr_idx > 0:
                     prev_instr = code.instructions[instr_idx - 1]
                     if prev_instr.opcode == Opcode.MAKE_CLOSURE:
-                        new_closures[var_index] = prev_instr.src0  # code_object index
-
+                        new_closures[var_index] = prev_instr.src0
                     else:
                         new_closures.pop(var_index, None)
-
                 else:
                     new_closures.pop(var_index, None)
+
+            # Load ops mark the destination register as initialized
+            if opcode in load_reg_ops:
+                new_initialized.add(instr.dest)
+                new_closures.pop(instr.dest, None)
 
             # ENTER marks locals 0..n-1 as initialized
             if opcode == Opcode.ENTER:
@@ -713,7 +732,6 @@ class BytecodeValidator:
         """
         opcode = instr.opcode
 
-        # Special cases that depend on arguments
         if opcode == Opcode.MAKE_CLOSURE:
             capture_count = instr.src1
             return (capture_count, 1)  # Pop captures, push closure
