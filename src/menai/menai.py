@@ -584,7 +584,7 @@ class Menai:
                                                        (loop ($list-rest keys) acc)))))))
                               (loop ($dict-keys al) (dict))))""",
         'range': """(lambda (start end . rest)
-                      (range start end (if ($list-null? rest)
+                      ($range start end (if ($list-null? rest)
                                            1
                                            ($list-first rest))))""",
     }
