@@ -659,99 +659,239 @@ class MenaiVMCodeGen:
         """
         Emit a builtin operation, including special-case handling for
         optional-argument builtins (range, string-slice, dict-get, etc.).
+
+        Dispatch is driven by opcode.has_dest():
+          - True  → register-based: operands read from src registers, result
+                    written to dest register.  No PUSH/POP involved.
+          - False → legacy stack-based: operands pushed onto the call stack,
+                    result left on top of the stack (then stored via
+                    store_result).  Used for ops not yet converted.
         """
         op = instr.op
         args = instr.args
 
-        def load_arg(i: int) -> None:
-            ctx.load_value(args[i])
+        opcode, _ = BUILTIN_OPCODE_MAP.get(op, (None, None))
+        if opcode is None and op not in BUILD_OPS:
+            raise ValueError(f"MenaiVMCodeGen: unknown builtin op {op!r}")
+
+        if opcode is not None and opcode.has_dest():
+            # ------------------------------------------------------------------
+            # Register-based path
+            # ------------------------------------------------------------------
+            # Resolve each SSA arg to a register slot.  For ops with optional
+            # arguments the missing arg is loaded into a fresh slot first.
+            self._emit_builtin_reg(op, opcode, args, instr.result, ctx)
+        else:
+            # ------------------------------------------------------------------
+            # Legacy stack-based path (ops not yet converted)
+            # ------------------------------------------------------------------
+            self._emit_builtin_stack(op, opcode, args, instr.result, ctx)
+
+    def _emit_builtin_reg(
+        self,
+        op: str,
+        opcode: Opcode,
+        args: list,
+        result: 'MenaiCFGValue',
+        ctx: _EmitContext,
+    ) -> None:
+        """Emit a register-based builtin: operands from src registers, result to dest."""
+
+        def slot(i: int) -> int:
+            return ctx.ensure_slot(args[i])
+
+        def const_slot(value: MenaiValue) -> int:
+            """Load a constant into a fresh register and return its slot."""
+            s = ctx.next_slot
+            ctx.next_slot += 1
+            ctx.emit_constant(value, dest=s)
+            return s
+
+        dest = ctx.alloc_slot(result)
+
+        # Special cases: optional / synthesised arguments.
+        if op == 'range':
+            s0 = slot(0)
+            s1 = slot(1)
+            s2 = slot(2) if len(args) == 3 else const_slot(MenaiInteger(1))
+            ctx.emit(opcode, s0, s1, dest=dest, src2=s2)
+
+        elif op == 'integer->complex':
+            s0 = slot(0)
+            s1 = slot(1) if len(args) == 2 else const_slot(MenaiInteger(0))
+            ctx.emit(opcode, s0, s1, dest=dest)
+
+        elif op == 'integer->string':
+            s0 = slot(0)
+            s1 = slot(1) if len(args) == 2 else const_slot(MenaiInteger(10))
+            ctx.emit(opcode, s0, s1, dest=dest)
+
+        elif op == 'float->complex':
+            s0 = slot(0)
+            s1 = slot(1) if len(args) == 2 else const_slot(MenaiFloat(0.0))
+            ctx.emit(opcode, s0, s1, dest=dest)
+
+        elif op == 'string->integer':
+            s0 = slot(0)
+            s1 = slot(1) if len(args) == 2 else const_slot(MenaiInteger(10))
+            ctx.emit(opcode, s0, s1, dest=dest)
+
+        elif op == 'string-slice':
+            s0 = slot(0)
+            s1 = slot(1)
+            if len(args) == 2:
+                # Default end = string-length(str): emit STRING_LENGTH into a
+                # fresh slot, then use that slot as src2.
+                len_slot = ctx.next_slot
+                ctx.next_slot += 1
+                len_opcode, _ = BUILTIN_OPCODE_MAP['string-length']
+                ctx.emit(len_opcode, s0, dest=len_slot)
+                s2 = len_slot
+            else:
+                s2 = slot(2)
+            ctx.emit(opcode, s0, s1, dest=dest, src2=s2)
+
+        elif op == 'string->list':
+            s0 = slot(0)
+            s1 = slot(1) if len(args) == 2 else const_slot(MenaiString(""))
+            ctx.emit(opcode, s0, s1, dest=dest)
+
+        elif op == 'list-slice':
+            s0 = slot(0)
+            s1 = slot(1)
+            if len(args) == 2:
+                # Default end = list-length(lst)
+                len_slot = ctx.next_slot
+                ctx.next_slot += 1
+                len_opcode, _ = BUILTIN_OPCODE_MAP['list-length']
+                ctx.emit(len_opcode, s0, dest=len_slot)
+                s2 = len_slot
+            else:
+                s2 = slot(2)
+            ctx.emit(opcode, s0, s1, dest=dest, src2=s2)
+
+        elif op == 'list->string':
+            s0 = slot(0)
+            s1 = slot(1) if len(args) == 2 else const_slot(MenaiString(""))
+            ctx.emit(opcode, s0, s1, dest=dest)
+
+        elif op == 'dict-get':
+            s0 = slot(0)
+            s1 = slot(1)
+            s2 = slot(2) if len(args) == 3 else const_slot(MenaiNone())
+            ctx.emit(opcode, s0, s1, dest=dest, src2=s2)
+
+        elif op in TERNARY_OPS:
+            ctx.emit(opcode, slot(0), slot(1), dest=dest, src2=slot(2))
+
+        elif op in BINARY_OPS:
+            ctx.emit(opcode, slot(0), slot(1), dest=dest)
+
+        elif op in UNARY_OPS:
+            ctx.emit(opcode, slot(0), dest=dest)
+
+        else:
+            raise ValueError(f"MenaiVMCodeGen: unhandled register-based builtin op {op!r}")
+
+    def _emit_builtin_stack(
+        self,
+        op: str,
+        opcode: 'Opcode | None',
+        args: list,
+        result: 'MenaiCFGValue',
+        ctx: _EmitContext,
+    ) -> None:
+        """Emit a legacy stack-based builtin: operands pushed, result left on stack."""
 
         def load_all() -> None:
             for a in args:
                 ctx.load_value(a)
 
-        # Special cases with optional / synthesised arguments.
+        # Special cases: optional / synthesised arguments.
+        # These mirror the register-path handling but use load_value / emit_const_push.
         if op == 'range':
             load_all()
             if len(args) == 2:
                 ctx.emit_const_push(MenaiInteger(1))
-            ctx.emit(Opcode.RANGE)
+            ctx.emit(opcode)
 
         elif op == 'integer->complex':
-            load_arg(0)
+            ctx.load_value(args[0])
             if len(args) == 1:
                 ctx.emit_const_push(MenaiInteger(0))
             else:
-                load_arg(1)
-            ctx.emit(Opcode.INTEGER_TO_COMPLEX)
+                ctx.load_value(args[1])
+            ctx.emit(opcode)
 
         elif op == 'integer->string':
-            load_arg(0)
+            ctx.load_value(args[0])
             if len(args) == 1:
                 ctx.emit_const_push(MenaiInteger(10))
             else:
-                load_arg(1)
-            ctx.emit(Opcode.INTEGER_TO_STRING)
+                ctx.load_value(args[1])
+            ctx.emit(opcode)
 
         elif op == 'float->complex':
-            load_arg(0)
+            ctx.load_value(args[0])
             if len(args) == 1:
                 ctx.emit_const_push(MenaiFloat(0.0))
             else:
-                load_arg(1)
-            ctx.emit(Opcode.FLOAT_TO_COMPLEX)
+                ctx.load_value(args[1])
+            ctx.emit(opcode)
 
         elif op == 'string->integer':
-            load_arg(0)
+            ctx.load_value(args[0])
             if len(args) == 1:
                 ctx.emit_const_push(MenaiInteger(10))
             else:
-                load_arg(1)
-            ctx.emit(Opcode.STRING_TO_INTEGER)
-
-        elif op == 'string-slice':
-            load_arg(0)
-            load_arg(1)
-            if len(args) == 2:
-                # Default end = string-length(str)
-                load_arg(0)
-                ctx.emit(Opcode.STRING_LENGTH)
-            else:
-                load_arg(2)
-            ctx.emit(Opcode.STRING_SLICE)
+                ctx.load_value(args[1])
+            ctx.emit(opcode)
 
         elif op == 'string->list':
-            load_arg(0)
+            ctx.load_value(args[0])
             if len(args) == 1:
                 ctx.emit_const_push(MenaiString(""))
             else:
-                load_arg(1)
-            ctx.emit(Opcode.STRING_TO_LIST)
-
-        elif op == 'list-slice':
-            load_arg(0)
-            load_arg(1)
-            if len(args) == 2:
-                # Default end = list-length(lst)
-                load_arg(0)
-                ctx.emit(Opcode.LIST_LENGTH)
-            else:
-                load_arg(2)
-            ctx.emit(Opcode.LIST_SLICE)
+                ctx.load_value(args[1])
+            ctx.emit(opcode)
 
         elif op == 'list->string':
-            load_arg(0)
+            ctx.load_value(args[0])
             if len(args) == 1:
                 ctx.emit_const_push(MenaiString(""))
             else:
-                load_arg(1)
-            ctx.emit(Opcode.LIST_TO_STRING)
+                ctx.load_value(args[1])
+            ctx.emit(opcode)
 
         elif op == 'dict-get':
             load_all()
             if len(args) == 2:
                 ctx.emit_const_push(MenaiNone())
-            ctx.emit(Opcode.DICT_GET)
+            ctx.emit(opcode)
+
+        elif op == 'string-slice':
+            ctx.load_value(args[0])
+            ctx.load_value(args[1])
+            if len(args) == 2:
+                ctx.load_value(args[0])
+                ctx.emit(BUILTIN_OPCODE_MAP['string-length'][0])
+            else:
+                ctx.load_value(args[2])
+            ctx.emit(opcode)
+
+        elif op == 'list-slice':
+            ctx.load_value(args[0])
+            ctx.load_value(args[1])
+            if len(args) == 2:
+                ctx.load_value(args[0])
+                ctx.emit(BUILTIN_OPCODE_MAP['list-length'][0])
+            else:
+                ctx.load_value(args[2])
+            ctx.emit(opcode)
+
+        elif op in BUILD_OPS:
+            load_all()
+            ctx.emit(BUILD_OPS[op], len(args))
 
         elif op in BINARY_OPS:
             load_all()
@@ -765,15 +905,11 @@ class MenaiVMCodeGen:
             load_all()
             ctx.emit(TERNARY_OPS[op])
 
-        elif op in BUILD_OPS:
-            load_all()
-            ctx.emit(BUILD_OPS[op], len(args))
-
         else:
-            raise ValueError(f"MenaiVMCodeGen: unknown builtin op {op!r}")
+            raise ValueError(f"MenaiVMCodeGen: unhandled stack-based builtin op {op!r}")
 
-        # Store the result.
-        ctx.store_result(instr.result)
+        # Store the result (POP into a slot, or leave transient on stack).
+        ctx.store_result(result)
 
     def _emit_make_closure(
         self, instr: MenaiCFGMakeClosureInstr, ctx: _EmitContext
