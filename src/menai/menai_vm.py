@@ -936,11 +936,13 @@ class MenaiVM:
                 message="function=?: arguments must be functions",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
+
         if not isinstance(b, MenaiFunction):
             raise MenaiEvalError(
                 message="function=?: arguments must be functions",
                 received=f"Second argument: {b.describe()} ({b.type_name()})"
             )
+
         frame.locals[dest] = MenaiBoolean(a is b)
         return None
 
@@ -955,11 +957,13 @@ class MenaiVM:
                 message="function!=?: arguments must be functions",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
+
         if not isinstance(b, MenaiFunction):
             raise MenaiEvalError(
                 message="function!=?: arguments must be functions",
                 received=f"Second argument: {b.describe()} ({b.type_name()})"
             )
+
         frame.locals[dest] = MenaiBoolean(a is not b)
         return None
 
@@ -973,6 +977,7 @@ class MenaiVM:
                 message="function-min-arity: argument must be a function",
                 received=f"Got: {func.describe()} ({func.type_name()})"
             )
+
         code = func.bytecode
         min_arity = (code.param_count - 1) if code.is_variadic else code.param_count
         frame.locals[dest] = MenaiInteger(min_arity)
@@ -988,6 +993,7 @@ class MenaiVM:
                 message="function-variadic?: argument must be a function",
                 received=f"Got: {func.describe()} ({func.type_name()})"
             )
+
         frame.locals[dest] = MenaiBoolean(func.bytecode.is_variadic)
         return None
 
@@ -1002,17 +1008,21 @@ class MenaiVM:
                 message="function-accepts?: first argument must be a function",
                 received=f"Got: {func.describe()} ({func.type_name()})"
             )
+
         if not isinstance(n, MenaiInteger):
             raise MenaiEvalError(
                 message="function-accepts?: second argument must be an integer",
                 received=f"Got: {n.describe()} ({n.type_name()})"
             )
+
         code = func.bytecode
         if code.is_variadic:
             min_arity = code.param_count - 1
             result = n.value >= min_arity
+
         else:
             result = n.value == code.param_count
+
         frame.locals[dest] = MenaiBoolean(result)
         return None
 
@@ -1035,11 +1045,13 @@ class MenaiVM:
                 message="symbol=?: arguments must be symbols",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
+
         if not isinstance(b, MenaiSymbol):
             raise MenaiEvalError(
                 message="symbol=?: arguments must be symbols",
                 received=f"Second argument: {b.describe()} ({b.type_name()})"
             )
+
         frame.locals[dest] = MenaiBoolean(a.name == b.name)
         return None
 
@@ -1054,11 +1066,13 @@ class MenaiVM:
                 message="symbol!=?: arguments must be symbols",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
+
         if not isinstance(b, MenaiSymbol):
             raise MenaiEvalError(
                 message="symbol!=?: arguments must be symbols",
                 received=f"Second argument: {b.describe()} ({b.type_name()})"
             )
+
         frame.locals[dest] = MenaiBoolean(a.name != b.name)
         return None
 
@@ -1072,6 +1086,7 @@ class MenaiVM:
                 message="symbol->string: argument must be a symbol",
                 received=f"Got: {a.describe()} ({a.type_name()})"
             )
+
         frame.locals[dest] = MenaiString(a.name)
         return None
 
@@ -1132,8 +1147,10 @@ class MenaiVM:
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
             raise MenaiEvalError(f"Function 'integer=?' requires integer arguments, got {a.type_name()}")
+
         if not isinstance(b, MenaiInteger):
             raise MenaiEvalError(f"Function 'integer=?' requires integer arguments, got {b.type_name()}")
+
         frame.locals[dest] = MenaiBoolean(a.value == b.value)
         return None
 
@@ -1145,8 +1162,10 @@ class MenaiVM:
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
             raise MenaiEvalError(f"Function 'integer!=?' requires integer arguments, got {a.type_name()}")
+
         if not isinstance(b, MenaiInteger):
             raise MenaiEvalError(f"Function 'integer!=?' requires integer arguments, got {b.type_name()}")
+
         frame.locals[dest] = MenaiBoolean(a.value != b.value)
         return None
 
@@ -1214,6 +1233,7 @@ class MenaiVM:
         b_val = self._ensure_integer(frame.locals[src1], 'integer/')
         if b_val == 0:
             raise MenaiEvalError("Division by zero in 'integer/'")
+
         frame.locals[dest] = MenaiInteger(a_val // b_val)
         return None
 
@@ -1225,6 +1245,7 @@ class MenaiVM:
         b_val = self._ensure_integer(frame.locals[src1], 'integer%')
         if b_val == 0:
             raise MenaiEvalError("Modulo by zero in 'integer%'")
+
         frame.locals[dest] = MenaiInteger(a_val % b_val)
         return None
 
@@ -1243,6 +1264,7 @@ class MenaiVM:
         b_val = self._ensure_integer(frame.locals[src1], 'integer-expn')
         if b_val < 0:
             raise MenaiEvalError("Function 'integer-expn' requires a non-negative exponent")
+
         frame.locals[dest] = MenaiInteger(a_val ** b_val)
         return None
 
@@ -1312,20 +1334,25 @@ class MenaiVM:
         radix = self._ensure_integer(frame.locals[src1], 'integer->string')
         if radix not in (2, 8, 10, 16):
             raise MenaiEvalError(f"integer->string radix must be 2, 8, 10, or 16, got {radix}")
+
         if radix == 10:
             frame.locals[dest] = MenaiString(str(a_val))
             return None
+
         if radix == 2:
             sign = "-" if a_val < 0 else ""
             frame.locals[dest] = MenaiString(f"{sign}{bin(abs(a_val))[2:]}")
             return None
+
         if radix == 8:
             sign = "-" if a_val < 0 else ""
             frame.locals[dest] = MenaiString(f"{sign}{oct(abs(a_val))[2:]}")
             return None
+
         if radix == 16:
             sign = "-" if a_val < 0 else ""
             frame.locals[dest] = MenaiString(f"{sign}{hex(abs(a_val))[2:]}")
+
         return None
 
     def _op_float_p(  # pylint: disable=useless-return
@@ -1343,8 +1370,10 @@ class MenaiVM:
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float=?' requires float arguments, got {a.type_name()}")
+
         if not isinstance(b, MenaiFloat):
             raise MenaiEvalError(f"Function 'float=?' requires float arguments, got {b.type_name()}")
+
         frame.locals[dest] = MenaiBoolean(a.value == b.value)
         return None
 
@@ -1356,8 +1385,10 @@ class MenaiVM:
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float!=?' requires float arguments, got {a.type_name()}")
+
         if not isinstance(b, MenaiFloat):
             raise MenaiEvalError(f"Function 'float!=?' requires float arguments, got {b.type_name()}")
+
         frame.locals[dest] = MenaiBoolean(a.value != b.value)
         return None
 
@@ -1425,6 +1456,7 @@ class MenaiVM:
         b_val = self._ensure_float(frame.locals[src1], 'float/')
         if b_val == 0.0:
             raise MenaiEvalError("Division by zero in 'float/'")
+
         frame.locals[dest] = MenaiFloat(a_val / b_val)
         return None
 
@@ -1436,6 +1468,7 @@ class MenaiVM:
         b_val = self._ensure_float(frame.locals[src1], 'float//')
         if b_val == 0:
             raise MenaiEvalError("Division by zero")
+
         frame.locals[dest] = MenaiFloat(float(a_val // b_val))
         return None
 
@@ -1447,6 +1480,7 @@ class MenaiVM:
         b_val = self._ensure_float(frame.locals[src1], 'float%')
         if b_val == 0:
             raise MenaiEvalError("Modulo by zero")
+
         frame.locals[dest] = MenaiFloat(a_val % b_val)
         return None
 
@@ -1479,8 +1513,10 @@ class MenaiVM:
         if a_val == 0.0:
             frame.locals[dest] = MenaiFloat(float('-inf'))
             return None
+
         if a_val < 0.0:
             raise MenaiEvalError("Function 'float-log' requires a non-negative argument")
+
         frame.locals[dest] = MenaiFloat(math.log(a_val))
         return None
 
@@ -1492,8 +1528,10 @@ class MenaiVM:
         if a_val == 0.0:
             frame.locals[dest] = MenaiFloat(float('-inf'))
             return None
+
         if a_val < 0.0:
             raise MenaiEvalError("Function 'float-log10' requires a non-negative argument")
+
         frame.locals[dest] = MenaiFloat(math.log10(a_val))
         return None
 
@@ -1505,8 +1543,10 @@ class MenaiVM:
         if a_val == 0.0:
             frame.locals[dest] = MenaiFloat(float('-inf'))
             return None
+
         if a_val < 0.0:
             raise MenaiEvalError("Function 'float-log2' requires a non-negative argument")
+
         frame.locals[dest] = MenaiFloat(math.log2(a_val))
         return None
 
@@ -1521,8 +1561,10 @@ class MenaiVM:
         if a_val == 0.0:
             frame.locals[dest] = MenaiFloat(float('-inf'))
             return None
+
         if a_val < 0.0:
             raise MenaiEvalError("Function 'float-logn' requires a non-negative argument")
+
         frame.locals[dest] = MenaiFloat(math.log(a_val, base_val))
         return None
 
@@ -1581,6 +1623,7 @@ class MenaiVM:
         if isinstance(a_val, complex):
             frame.locals[dest] = MenaiString(str(a_val).strip('()'))
             return None
+
         frame.locals[dest] = MenaiString(str(a_val))
         return None
 
@@ -1642,420 +1685,353 @@ class MenaiVM:
         return None
 
     def _op_complex_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_P: Check if value is a complex number."""
-        value = self.stack.pop()
-        self.stack.append(MenaiBoolean(isinstance(value, MenaiComplex)))
+        """COMPLEX_P dest, src0: r_dest = (complex? r_src0)"""
+        frame.locals[dest] = MenaiBoolean(isinstance(frame.locals[src0], MenaiComplex))
         return None
 
     def _op_complex_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_EQ_P: Pop two values, push true if both are complex and equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
+        """COMPLEX_EQ_P dest, src0, src1: r_dest = (complex=? r_src0 r_src1)"""
+        a = frame.locals[src0]
+        b = frame.locals[src1]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex=?' requires complex arguments, got {a.type_name()}")
 
         if not isinstance(b, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex=?' requires complex arguments, got {b.type_name()}")
 
-        self.stack.append(MenaiBoolean(a.value == b.value))
+        frame.locals[dest] = MenaiBoolean(a.value == b.value)
         return None
 
     def _op_complex_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_NEQ_P: Pop two values, push true if both are complex and not equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
+        """COMPLEX_NEQ_P dest, src0, src1: r_dest = (complex!=? r_src0 r_src1)"""
+        a = frame.locals[src0]
+        b = frame.locals[src1]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex!=?' requires complex arguments, got {a.type_name()}")
+
         if not isinstance(b, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex!=?' requires complex arguments, got {b.type_name()}")
-        self.stack.append(MenaiBoolean(a.value != b.value))
+
+        frame.locals[dest] = MenaiBoolean(a.value != b.value)
         return None
 
     def _op_complex_real(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_REAL: Pop a complex number, push its real part as float."""
-        a = self.stack.pop()
-        a_val = self._ensure_complex(a, 'complex-real')
-        self.stack.append(MenaiFloat(a_val.real))
+        """COMPLEX_REAL dest, src0: r_dest = (complex-real r_src0)"""
+        frame.locals[dest] = MenaiFloat(self._ensure_complex(frame.locals[src0], 'complex-real').real)
         return None
 
     def _op_complex_imag(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_IMAG: Pop a complex number, push its imaginary part as float."""
-        a = self.stack.pop()
-        a_val = self._ensure_complex(a, 'complex-imag')
-        self.stack.append(MenaiFloat(a_val.imag))
+        """COMPLEX_IMAG dest, src0: r_dest = (complex-imag r_src0)"""
+        frame.locals[dest] = MenaiFloat(self._ensure_complex(frame.locals[src0], 'complex-imag').imag)
         return None
 
     def _op_complex_abs(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_ABS: Pop a complex number, push its magnitude as float."""
-        a = self.stack.pop()
-        self.stack.append(MenaiFloat(abs(self._ensure_complex(a, 'complex-abs'))))
+        """COMPLEX_ABS dest, src0: r_dest = (complex-abs r_src0)"""
+        frame.locals[dest] = MenaiFloat(abs(self._ensure_complex(frame.locals[src0], 'complex-abs')))
         return None
 
     def _op_complex_add(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_ADD: Pop two complex numbers, push their sum."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiComplex(self._ensure_complex(a, 'complex+') + self._ensure_complex(b, 'complex+')))
+        """COMPLEX_ADD dest, src0, src1: r_dest = (complex+ r_src0 r_src1)"""
+        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex+') + self._ensure_complex(frame.locals[src1], 'complex+'))
         return None
 
     def _op_complex_sub(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_SUB: Pop two complex numbers, push their difference."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiComplex(self._ensure_complex(a, 'complex-') - self._ensure_complex(b, 'complex-')))
+        """COMPLEX_SUB dest, src0, src1: r_dest = (complex- r_src0 r_src1)"""
+        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex-') - self._ensure_complex(frame.locals[src1], 'complex-'))
         return None
 
     def _op_complex_mul(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_MUL: Pop two complex numbers, push their product."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiComplex(self._ensure_complex(a, 'complex*') * self._ensure_complex(b, 'complex*')))
+        """COMPLEX_MUL dest, src0, src1: r_dest = (complex* r_src0 r_src1)"""
+        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex*') * self._ensure_complex(frame.locals[src1], 'complex*'))
         return None
 
     def _op_complex_div(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_DIV: Pop two complex numbers, push their quotient."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_complex(a, 'complex/')
-        b_val = self._ensure_complex(b, 'complex/')
+        """COMPLEX_DIV dest, src0, src1: r_dest = (complex/ r_src0 r_src1)"""
+        a_val = self._ensure_complex(frame.locals[src0], 'complex/')
+        b_val = self._ensure_complex(frame.locals[src1], 'complex/')
         if b_val == 0:
             raise MenaiEvalError("Division by zero in 'complex/'")
 
-        self.stack.append(MenaiComplex(a_val / b_val))
+        frame.locals[dest] = MenaiComplex(a_val / b_val)
         return None
 
     def _op_complex_neg(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_NEG: Pop a complex number, push its negation."""
-        a = self.stack.pop()
-        self.stack.append(MenaiComplex(-self._ensure_complex(a, 'complex-neg')))
+        """COMPLEX_NEG dest, src0: r_dest = (complex-neg r_src0)"""
+        frame.locals[dest] = MenaiComplex(-self._ensure_complex(frame.locals[src0], 'complex-neg'))
         return None
 
     def _op_complex_exp(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_EXP: Pop a complex number, push exp(x)."""
-        a = self.stack.pop()
-        self.stack.append(MenaiComplex(cmath.exp(self._ensure_complex(a, 'complex-exp'))))
+        """COMPLEX_EXP dest, src0: r_dest = (complex-exp r_src0)"""
+        frame.locals[dest] = MenaiComplex(cmath.exp(self._ensure_complex(frame.locals[src0], 'complex-exp')))
         return None
 
     def _op_complex_expn(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_EXPN: Pop two complex numbers, push a ** b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiComplex(self._ensure_complex(a, 'complex-expn') ** self._ensure_complex(b, 'complex-expn')))
+        """COMPLEX_EXPN dest, src0, src1: r_dest = (complex-expn r_src0 r_src1)"""
+        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex-expn') ** self._ensure_complex(frame.locals[src1], 'complex-expn'))
         return None
 
     def _op_complex_log(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_LOG: Pop a complex number, push natural log(x)."""
-        a = self.stack.pop()
-        self.stack.append(MenaiComplex(cmath.log(self._ensure_complex(a, 'complex-log'))))
+        """COMPLEX_LOG dest, src0: r_dest = (complex-log r_src0)"""
+        frame.locals[dest] = MenaiComplex(cmath.log(self._ensure_complex(frame.locals[src0], 'complex-log')))
         return None
 
     def _op_complex_log10(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_LOG10: Pop a complex number, push log10(x)."""
-        a = self.stack.pop()
-        self.stack.append(MenaiComplex(cmath.log10(self._ensure_complex(a, 'complex-log10'))))
+        """COMPLEX_LOG10 dest, src0: r_dest = (complex-log10 r_src0)"""
+        frame.locals[dest] = MenaiComplex(cmath.log10(self._ensure_complex(frame.locals[src0], 'complex-log10')))
         return None
 
     def _op_complex_logn(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_LOGN: Pop base and x complex numbers, push log_base(x) as complex."""
-        base = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_complex(a, 'complex-logn')
-        base_val = self._ensure_complex(base, 'complex-logn')
+        """COMPLEX_LOGN dest, src0, src1: r_dest = (complex-logn r_src0 r_src1)"""
+        a_val = self._ensure_complex(frame.locals[src0], 'complex-logn')
+        base_val = self._ensure_complex(frame.locals[src1], 'complex-logn')
         if base_val == 0j:
             raise MenaiEvalError("Function 'complex-logn' requires a non-zero base")
-
-        self.stack.append(MenaiComplex(cmath.log(a_val, base_val)))
+        frame.locals[dest] = MenaiComplex(cmath.log(a_val, base_val))
         return None
 
     def _op_complex_sin(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_SIN: Pop a complex number, push sin(x)."""
-        a = self.stack.pop()
-        self.stack.append(MenaiComplex(cmath.sin(self._ensure_complex(a, 'complex-sin'))))
+        """COMPLEX_SIN dest, src0: r_dest = (complex-sin r_src0)"""
+        frame.locals[dest] = MenaiComplex(cmath.sin(self._ensure_complex(frame.locals[src0], 'complex-sin')))
         return None
 
     def _op_complex_cos(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_COS: Pop a complex number, push cos(x)."""
-        a = self.stack.pop()
-        self.stack.append(MenaiComplex(cmath.cos(self._ensure_complex(a, 'complex-cos'))))
+        """COMPLEX_COS dest, src0: r_dest = (complex-cos r_src0)"""
+        frame.locals[dest] = MenaiComplex(cmath.cos(self._ensure_complex(frame.locals[src0], 'complex-cos')))
         return None
 
     def _op_complex_tan(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_TAN: Pop a complex number, push tan(x)."""
-        a = self.stack.pop()
-        self.stack.append(MenaiComplex(cmath.tan(self._ensure_complex(a, 'complex-tan'))))
+        """COMPLEX_TAN dest, src0: r_dest = (complex-tan r_src0)"""
+        frame.locals[dest] = MenaiComplex(cmath.tan(self._ensure_complex(frame.locals[src0], 'complex-tan')))
         return None
 
     def _op_complex_sqrt(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_SQRT: Pop a complex number, push sqrt(x)."""
-        a = self.stack.pop()
-        self.stack.append(MenaiComplex(cmath.sqrt(self._ensure_complex(a, 'complex-sqrt'))))
+        """COMPLEX_SQRT dest, src0: r_dest = (complex-sqrt r_src0)"""
+        frame.locals[dest] = MenaiComplex(cmath.sqrt(self._ensure_complex(frame.locals[src0], 'complex-sqrt')))
         return None
 
     def _op_complex_to_string(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """COMPLEX_TO_STRING: Pop a complex number, push string representation."""
-        a = self.stack.pop()
-        a_val = self._ensure_complex(a, 'complex->string')
-        if isinstance(a_val, complex):
-            self.stack.append(MenaiString(str(a_val).strip('()')))
-            return None
-
-        self.stack.append(MenaiString(str(a_val)))
+        """COMPLEX_TO_STRING dest, src0: r_dest = (complex->string r_src0)"""
+        a_val = self._ensure_complex(frame.locals[src0], 'complex->string')
+        frame.locals[dest] = MenaiString(str(a_val).strip('()') if isinstance(a_val, complex) else str(a_val))
         return None
 
     def _op_string_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_P: Check if value is a string."""
-        value = self.stack.pop()
-        self.stack.append(MenaiBoolean(isinstance(value, MenaiString)))
+        """STRING_P dest, src0: r_dest = (string? r_src0)"""
+        frame.locals[dest] = MenaiBoolean(isinstance(frame.locals[src0], MenaiString))
         return None
 
     def _op_string_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_EQ_P: Pop two strings, push true if they are equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_string(a, 'string=?') == self._ensure_string(b, 'string=?')))
+        """STRING_EQ_P dest, src0, src1: r_dest = (string=? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string=?') == self._ensure_string(frame.locals[src1], 'string=?'))
         return None
 
     def _op_string_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_NEQ_P: Pop two strings, push true if they are not equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_string(a, 'string!=?') != self._ensure_string(b, 'string!=?')))
+        """STRING_NEQ_P dest, src0, src1: r_dest = (string!=? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string!=?') != self._ensure_string(frame.locals[src1], 'string!=?'))
         return None
 
     def _op_string_lt_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_LT_P: Pop two strings, push true if a < b (lexicographic)."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_string(a, 'string<?') < self._ensure_string(b, 'string<?')))
+        """STRING_LT_P dest, src0, src1: r_dest = (string<? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string<?') < self._ensure_string(frame.locals[src1], 'string<?'))
         return None
 
     def _op_string_gt_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_GT_P: Pop two strings, push true if a > b (lexicographic)."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_string(a, 'string>?') > self._ensure_string(b, 'string>?')))
+        """STRING_GT_P dest, src0, src1: r_dest = (string>? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string>?') > self._ensure_string(frame.locals[src1], 'string>?'))
         return None
 
     def _op_string_lte_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_LTE_P: Pop two strings, push true if a <= b (lexicographic)."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_string(a, 'string<=?') <= self._ensure_string(b, 'string<=?')))
+        """STRING_LTE_P dest, src0, src1: r_dest = (string<=? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string<=?') <= self._ensure_string(frame.locals[src1], 'string<=?'))
         return None
 
     def _op_string_gte_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_GTE_P: Pop two strings, push true if a >= b (lexicographic)."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_string(a, 'string>=?') >= self._ensure_string(b, 'string>=?')))
+        """STRING_GTE_P dest, src0, src1: r_dest = (string>=? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string>=?') >= self._ensure_string(frame.locals[src1], 'string>=?'))
         return None
 
     def _op_string_length(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_LENGTH: Pop a string, push its length."""
-        a = self.stack.pop()
-        self.stack.append(MenaiInteger(len(self._ensure_string(a, 'string-length'))))
+        """STRING_LENGTH dest, src0: r_dest = (string-length r_src0)"""
+        frame.locals[dest] = MenaiInteger(len(self._ensure_string(frame.locals[src0], 'string-length')))
         return None
 
     def _op_string_upcase(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_UPCASE: Pop a string, push uppercased string."""
-        a = self.stack.pop()
-        self.stack.append(MenaiString(self._ensure_string(a, 'string-upcase').upper()))
+        """STRING_UPCASE dest, src0: r_dest = (string-upcase r_src0)"""
+        frame.locals[dest] = MenaiString(self._ensure_string(frame.locals[src0], 'string-upcase').upper())
         return None
 
     def _op_string_downcase(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_DOWNCASE: Pop a string, push lowercased string."""
-        a = self.stack.pop()
-        self.stack.append(MenaiString(self._ensure_string(a, 'string-downcase').lower()))
+        """STRING_DOWNCASE dest, src0: r_dest = (string-downcase r_src0)"""
+        frame.locals[dest] = MenaiString(self._ensure_string(frame.locals[src0], 'string-downcase').lower())
         return None
 
     def _op_string_trim(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_TRIM: Pop a string, push whitespace-trimmed string."""
-        a = self.stack.pop()
-        self.stack.append(MenaiString(self._ensure_string(a, 'string-trim').strip()))
+        """STRING_TRIM dest, src0: r_dest = (string-trim r_src0)"""
+        frame.locals[dest] = MenaiString(self._ensure_string(frame.locals[src0], 'string-trim').strip())
         return None
 
     def _op_string_trim_left(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_TRIM_LEFT: Pop a string, push string with leading whitespace removed."""
-        a = self.stack.pop()
-        self.stack.append(MenaiString(self._ensure_string(a, 'string-trim-left').lstrip()))
+        """STRING_TRIM_LEFT dest, src0: r_dest = (string-trim-left r_src0)"""
+        frame.locals[dest] = MenaiString(self._ensure_string(frame.locals[src0], 'string-trim-left').lstrip())
         return None
 
     def _op_string_trim_right(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_TRIM_RIGHT: Pop a string, push string with trailing whitespace removed."""
-        a = self.stack.pop()
-        self.stack.append(MenaiString(self._ensure_string(a, 'string-trim-right').rstrip()))
+        """STRING_TRIM_RIGHT dest, src0: r_dest = (string-trim-right r_src0)"""
+        frame.locals[dest] = MenaiString(self._ensure_string(frame.locals[src0], 'string-trim-right').rstrip())
         return None
 
     def _op_string_to_integer(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_TO_INTEGER: Pop radix then string, push parsed integer or #f if unparseable."""
-        radix_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string->integer')
-        radix = self._ensure_integer(radix_val, 'string->integer')
+        """STRING_TO_INTEGER dest, src0, src1: r_dest = (string->integer r_src0 r_src1)"""
+        s = self._ensure_string(frame.locals[src0], 'string->integer')
+        radix = self._ensure_integer(frame.locals[src1], 'string->integer')
         if radix not in (2, 8, 10, 16):
             raise MenaiEvalError(f"string->integer radix must be 2, 8, 10, or 16, got {radix}")
 
         try:
-            self.stack.append(MenaiInteger(int(s, radix)))
+            frame.locals[dest] = MenaiInteger(int(s, radix))
             return None
 
         except ValueError:
-            self.stack.append(Menai_NONE)
+            frame.locals[dest] = Menai_NONE
             return None
 
     def _op_string_to_number(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_TO_NUMBER: Pop a string, push parsed number or #f if unparseable."""
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string->number')
+        """STRING_TO_NUMBER dest, src0: r_dest = (string->number r_src0)"""
+        s = self._ensure_string(frame.locals[src0], 'string->number')
         try:
             if '.' not in s and 'e' not in s.lower() and 'j' not in s.lower():
-                self.stack.append(MenaiInteger(int(s)))
+                frame.locals[dest] = MenaiInteger(int(s))
                 return None
 
             if 'j' in s.lower():
-                self.stack.append(MenaiComplex(complex(s)))
+                frame.locals[dest] = MenaiComplex(complex(s))
                 return None
 
-            self.stack.append(MenaiFloat(float(s)))
+            frame.locals[dest] = MenaiFloat(float(s))
             return None
 
         except ValueError:
-            self.stack.append(Menai_NONE)
+            frame.locals[dest] = Menai_NONE
             return None
 
     def _op_string_to_list(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_TO_LIST: Pop delimiter and string, push list of parts split by delimiter."""
-        delim_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string->list')
-        delim = self._ensure_string(delim_val, 'string->list')
+        """STRING_TO_LIST dest, src0, src1: r_dest = (string->list r_src0 r_src1)"""
+        s = self._ensure_string(frame.locals[src0], 'string->list')
+        delim = self._ensure_string(frame.locals[src1], 'string->list')
         if delim == "":
-            self.stack.append(MenaiList(tuple(MenaiString(ch) for ch in s)))
+            frame.locals[dest] = MenaiList(tuple(MenaiString(ch) for ch in s))
             return None
 
-        self.stack.append(MenaiList(tuple(MenaiString(part) for part in s.split(delim))))
+        frame.locals[dest] = MenaiList(tuple(MenaiString(part) for part in s.split(delim)))
         return None
 
     def _op_string_ref(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_REF: Pop an index and string, push character at index."""
-        index_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string-ref')
-        index = self._ensure_integer(index_val, 'string-ref')
+        """STRING_REF dest, src0, src1: r_dest = (string-ref r_src0 r_src1)"""
+        s = self._ensure_string(frame.locals[src0], 'string-ref')
+        index = self._ensure_integer(frame.locals[src1], 'string-ref')
         if index < 0 or index >= len(s):
             raise MenaiEvalError(f"string-ref index out of range: {index}")
 
-        self.stack.append(MenaiString(s[index]))
+        frame.locals[dest] = MenaiString(s[index])
         return None
 
     def _op_string_prefix_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_PREFIX_P: Pop prefix and string, push true if string starts with prefix."""
-        prefix_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string-prefix?')
-        prefix = self._ensure_string(prefix_val, 'string-prefix?')
-        self.stack.append(MenaiBoolean(s.startswith(prefix)))
+        """STRING_PREFIX_P dest, src0, src1: r_dest = (string-prefix? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string-prefix?').startswith(self._ensure_string(frame.locals[src1], 'string-prefix?')))
         return None
 
     def _op_string_suffix_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_SUFFIX_P: Pop suffix and string, push true if string ends with suffix."""
-        suffix_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string-suffix?')
-        suffix = self._ensure_string(suffix_val, 'string-suffix?')
-        self.stack.append(MenaiBoolean(s.endswith(suffix)))
+        """STRING_SUFFIX_P dest, src0, src1: r_dest = (string-suffix? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string-suffix?').endswith(self._ensure_string(frame.locals[src1], 'string-suffix?')))
         return None
 
     def _op_string_slice(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
     ) -> MenaiValue | None:
-        """STRING_SLICE: Pop end, start, and string, push slice."""
-        end_val = self.stack.pop()
-        start_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string-slice')
-        start = self._ensure_integer(start_val, 'string-slice')
-        end = self._ensure_integer(end_val, 'string-slice')
+        """STRING_SLICE dest, src0, src1, src2: r_dest = (string-slice r_src0 r_src1 r_src2)"""
+        s = self._ensure_string(frame.locals[src0], 'string-slice')
+        start = self._ensure_integer(frame.locals[src1], 'string-slice')
+        end = self._ensure_integer(frame.locals[src2], 'string-slice')
         n = len(s)
         if start < 0:
             raise MenaiEvalError(f"string-slice start index cannot be negative: {start}")
@@ -2072,44 +2048,35 @@ class MenaiVM:
         if start > end:
             raise MenaiEvalError(f"string-slice start index ({start}) cannot be greater than end index ({end})")
 
-        self.stack.append(MenaiString(s[start:end]))
+        frame.locals[dest] = MenaiString(s[start:end])
         return None
 
     def _op_string_replace(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
     ) -> MenaiValue | None:
-        """STRING_REPLACE: Pop new, old, and string, push string with replacements."""
-        new_val = self.stack.pop()
-        old_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string-replace')
-        old = self._ensure_string(old_val, 'string-replace')
-        new = self._ensure_string(new_val, 'string-replace')
-        self.stack.append(MenaiString(s.replace(old, new)))
+        """STRING_REPLACE dest, src0, src1, src2: r_dest = (string-replace r_src0 r_src1 r_src2)"""
+        s = self._ensure_string(frame.locals[src0], 'string-replace')
+        old = self._ensure_string(frame.locals[src1], 'string-replace')
+        new = self._ensure_string(frame.locals[src2], 'string-replace')
+        frame.locals[dest] = MenaiString(s.replace(old, new))
         return None
 
     def _op_string_index(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_INDEX: Pop substring and string, push index or #f."""
-        substr_val = self.stack.pop()
-        a = self.stack.pop()
-        s = self._ensure_string(a, 'string-index')
-        substr = self._ensure_string(substr_val, 'string-index')
+        """STRING_INDEX dest, src0, src1: r_dest = (string-index r_src0 r_src1)"""
+        s = self._ensure_string(frame.locals[src0], 'string-index')
+        substr = self._ensure_string(frame.locals[src1], 'string-index')
         idx = s.find(substr)
-        if idx == -1:
-            self.stack.append(Menai_NONE)
-        else:
-            self.stack.append(MenaiInteger(idx))
+        frame.locals[dest] = Menai_NONE if idx == -1 else MenaiInteger(idx)
         return None
 
     def _op_string_concat(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """STRING_CONCAT: Pop two strings, push concatenated string."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiString(self._ensure_string(a, 'string-concat') + self._ensure_string(b, 'string-concat')))
+        """STRING_CONCAT dest, src0, src1: r_dest = (string-concat r_src0 r_src1)"""
+        frame.locals[dest] = MenaiString(self._ensure_string(frame.locals[src0], 'string-concat') + self._ensure_string(frame.locals[src1], 'string-concat'))
+
         return None
 
     def _op_dict(  # pylint: disable=useless-return

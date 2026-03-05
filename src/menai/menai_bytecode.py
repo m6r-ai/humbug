@@ -180,52 +180,56 @@ class Opcode(IntEnum):
     FLOAT_MAX = _op(192, 2, True)       # r_dest = (float-max r_src0 r_src1)
 
     # Complex operations
-    COMPLEX_P = _op(200, 0)             # (complex? x)
-    COMPLEX_EQ_P = _op(201, 0)          # complex=? a b
-    COMPLEX_NEQ_P = _op(202, 0)         # complex!=? a b
-    COMPLEX_REAL = _op(203, 0)          # Extract real part
-    COMPLEX_IMAG = _op(204, 0)          # Extract imaginary part
-    COMPLEX_ABS = _op(205, 0)           # complex-abs x  (returns float: magnitude)
-    COMPLEX_ADD = _op(206, 0)           # complex+ a b
-    COMPLEX_SUB = _op(207, 0)           # complex- a b
-    COMPLEX_MUL = _op(208, 0)           # complex* a b
-    COMPLEX_DIV = _op(209, 0)           # complex/ a b
-    COMPLEX_NEG = _op(210, 0)           # complex-neg x  (unary minus)
-    COMPLEX_EXP = _op(211, 0)           # complex-exp x
-    COMPLEX_EXPN = _op(212, 0)          # complex-expn a b
-    COMPLEX_LOG = _op(213, 0)           # complex-log x
-    COMPLEX_LOG10 = _op(214, 0)         # complex-log10 x
-    COMPLEX_LOGN = _op(215, 0)          # complex-logn x base  (log base n)
-    COMPLEX_SIN = _op(216, 0)           # complex-sin x
-    COMPLEX_COS = _op(217, 0)           # complex-cos x
-    COMPLEX_TAN = _op(218, 0)           # complex-tan x
-    COMPLEX_SQRT = _op(219, 0)          # complex-sqrt x
-    COMPLEX_TO_STRING = _op(220, 0)     # Convert complex to string
+    COMPLEX_P = _op(200, 1, True)       # r_dest = (complex? r_src0)
+    COMPLEX_EQ_P = _op(201, 2, True)    # r_dest = (complex=? r_src0 r_src1)
+    COMPLEX_NEQ_P = _op(202, 2, True)   # r_dest = (complex!=? r_src0 r_src1)
+    COMPLEX_REAL = _op(203, 1, True)    # r_dest = (complex-real r_src0)
+    COMPLEX_IMAG = _op(204, 1, True)    # r_dest = (complex-imag r_src0)
+    COMPLEX_ABS = _op(205, 1, True)     # r_dest = (complex-abs r_src0)
+    COMPLEX_ADD = _op(206, 2, True)     # r_dest = (complex+ r_src0 r_src1)
+    COMPLEX_SUB = _op(207, 2, True)     # r_dest = (complex- r_src0 r_src1)
+    COMPLEX_MUL = _op(208, 2, True)     # r_dest = (complex* r_src0 r_src1)
+    COMPLEX_DIV = _op(209, 2, True)     # r_dest = (complex/ r_src0 r_src1)
+    COMPLEX_NEG = _op(210, 1, True)     # r_dest = (complex-neg r_src0)
+    COMPLEX_EXP = _op(211, 1, True)     # r_dest = (complex-exp r_src0)
+    COMPLEX_EXPN = _op(212, 2, True)    # r_dest = (complex-expn r_src0 r_src1)
+    COMPLEX_LOG = _op(213, 1, True)     # r_dest = (complex-log r_src0)
+    COMPLEX_LOG10 = _op(214, 1, True)   # r_dest = (complex-log10 r_src0)
+    COMPLEX_LOGN = _op(215, 2, True)    # r_dest = (complex-logn r_src0 r_src1)
+    COMPLEX_SIN = _op(216, 1, True)     # r_dest = (complex-sin r_src0)
+    COMPLEX_COS = _op(217, 1, True)     # r_dest = (complex-cos r_src0)
+    COMPLEX_TAN = _op(218, 1, True)     # r_dest = (complex-tan r_src0)
+    COMPLEX_SQRT = _op(219, 1, True)    # r_dest = (complex-sqrt r_src0)
+    COMPLEX_TO_STRING = _op(220, 1, True) # r_dest = (complex->string r_src0)
 
     # String operations
-    STRING_P = _op(240, 0)              # (string? x)
-    STRING_EQ_P = _op(241, 0)           # string=? a b
-    STRING_NEQ_P = _op(242, 0)          # string!=? a b
-    STRING_LT_P = _op(243, 0)           # string<? a b  (lexicographic)
-    STRING_GT_P = _op(244, 0)           # string>? a b  (lexicographic)
-    STRING_LTE_P = _op(245, 0)          # string<=? a b (lexicographic)
-    STRING_GTE_P = _op(246, 0)          # string>=? a b (lexicographic)
-    STRING_LENGTH = _op(247, 0)         # Get length of string
-    STRING_UPCASE = _op(248, 0)         # Convert string to uppercase
-    STRING_DOWNCASE = _op(249, 0)       # Convert string to lowercase
-    STRING_TRIM = _op(250, 0)           # Trim whitespace from string
-    STRING_TRIM_LEFT = _op(251, 0)      # Trim leading whitespace
-    STRING_TRIM_RIGHT = _op(252, 0)     # Trim trailing whitespace
-    STRING_TO_INTEGER = _op(253, 0)     # Parse string to integer with radix
-    STRING_TO_NUMBER = _op(254, 0)      # Parse string to number
-    STRING_TO_LIST = _op(255, 0)        # Split string by delimiter: (string->list str delim)
-    STRING_REF = _op(256, 0)            # Get character at index
-    STRING_PREFIX_P = _op(257, 0)       # Check if string has prefix
-    STRING_SUFFIX_P = _op(258, 0)       # Check if string has suffix
-    STRING_CONCAT = _op(259, 0)         # Concatenate two strings: (string-concat a b)
-    STRING_SLICE = _op(260, 0)          # Extract substring (string, start, end)
-    STRING_REPLACE = _op(261, 0)        # Replace substring (string, old, new)
-    STRING_INDEX = _op(262, 0)          # Find index of substring (string, substring)
+    STRING_P = _op(240, 1, True)        # r_dest = (string? r_src0)
+    STRING_EQ_P = _op(241, 2, True)     # r_dest = (string=? r_src0 r_src1)
+    STRING_NEQ_P = _op(242, 2, True)    # r_dest = (string!=? r_src0 r_src1)
+    STRING_LT_P = _op(243, 2, True)     # r_dest = (string<? r_src0 r_src1)
+    STRING_GT_P = _op(244, 2, True)     # r_dest = (string>? r_src0 r_src1)
+    STRING_LTE_P = _op(245, 2, True)    # r_dest = (string<=? r_src0 r_src1)
+    STRING_GTE_P = _op(246, 2, True)    # r_dest = (string>=? r_src0 r_src1)
+    STRING_LENGTH = _op(247, 1, True)   # r_dest = (string-length r_src0)
+    STRING_UPCASE = _op(248, 1, True)   # r_dest = (string-upcase r_src0)
+    STRING_DOWNCASE = _op(249, 1, True) # r_dest = (string-downcase r_src0)
+    STRING_TRIM = _op(250, 1, True)     # r_dest = (string-trim r_src0)
+    STRING_TRIM_LEFT = _op(251, 1, True)
+                                        # r_dest = (string-trim-left r_src0)
+    STRING_TRIM_RIGHT = _op(252, 1, True)
+                                        # r_dest = (string-trim-right r_src0)
+    STRING_TO_INTEGER = _op(253, 2, True)
+                                        # r_dest = (string->integer r_src0 r_src1)
+    STRING_TO_NUMBER = _op(254, 1, True)
+                                        # r_dest = (string->number r_src0)
+    STRING_TO_LIST = _op(255, 2, True)  # r_dest = (string->list r_src0 r_src1)
+    STRING_REF = _op(256, 2, True)      # r_dest = (string-ref r_src0 r_src1)
+    STRING_PREFIX_P = _op(257, 2, True) # r_dest = (string-prefix? r_src0 r_src1)
+    STRING_SUFFIX_P = _op(258, 2, True) # r_dest = (string-suffix? r_src0 r_src1)
+    STRING_CONCAT = _op(259, 2, True)   # r_dest = (string-concat r_src0 r_src1)
+    STRING_SLICE = _op(260, 3, True)    # r_dest = (string-slice r_src0 r_src1 r_src2)
+    STRING_REPLACE = _op(261, 3, True)  # r_dest = (string-replace r_src0 r_src1 r_src2)
+    STRING_INDEX = _op(262, 2, True)    # r_dest = (string-index r_src0 r_src1)
 
     # Alist operations
     DICT = _op(280, 1)                  # DICT n  (build dict from n pairs on stack)
