@@ -55,6 +55,8 @@ from menai.menai_ir import (
     MenaiIRCall,
     MenaiIRConstant,
     MenaiIREmptyList,
+    MenaiIRBuildList,
+    MenaiIRBuildDict,
     MenaiIRError,
     MenaiIRExpr,
     MenaiIRIf,
@@ -119,6 +121,17 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
                 is_tail_call=ir.is_tail_call,
                 is_builtin=ir.is_builtin,
                 builtin_name=ir.builtin_name,
+            )
+
+        if isinstance(ir, MenaiIRBuildList):
+            return MenaiIRBuildList(
+                element_plans=[self._prop(e, frame_stack) for e in ir.element_plans],
+            )
+
+        if isinstance(ir, MenaiIRBuildDict):
+            return MenaiIRBuildDict(
+                pair_plans=[(self._prop(k, frame_stack), self._prop(v, frame_stack))
+                            for k, v in ir.pair_plans],
             )
 
         if isinstance(ir, MenaiIRReturn):
@@ -252,6 +265,18 @@ class MenaiIRCopyPropagator(MenaiIROptimizationPass):
                 is_tail_call=ir.is_tail_call,
                 is_builtin=ir.is_builtin,
                 builtin_name=ir.builtin_name,
+            )
+
+        if isinstance(ir, MenaiIRBuildList):
+            return MenaiIRBuildList(
+                element_plans=[self._substitute(e, replacements, frame_stack) for e in ir.element_plans],
+            )
+
+        if isinstance(ir, MenaiIRBuildDict):
+            return MenaiIRBuildDict(
+                pair_plans=[(self._substitute(k, replacements, frame_stack),
+                             self._substitute(v, replacements, frame_stack))
+                            for k, v in ir.pair_plans],
             )
 
         if isinstance(ir, MenaiIRReturn):

@@ -297,7 +297,6 @@ class MenaiVM:
         table[Opcode.STRING_SLICE] = self._op_string_slice
         table[Opcode.STRING_REPLACE] = self._op_string_replace
         table[Opcode.STRING_INDEX] = self._op_string_index
-        table[Opcode.DICT] = self._op_dict
         table[Opcode.DICT_P] = self._op_dict_p
         table[Opcode.DICT_EQ_P] = self._op_dict_eq_p
         table[Opcode.DICT_NEQ_P] = self._op_dict_neq_p
@@ -309,7 +308,6 @@ class MenaiVM:
         table[Opcode.DICT_MERGE] = self._op_dict_merge
         table[Opcode.DICT_SET] = self._op_dict_set
         table[Opcode.DICT_GET] = self._op_dict_get
-        table[Opcode.LIST] = self._op_list
         table[Opcode.LIST_P] = self._op_list_p
         table[Opcode.LIST_EQ_P] = self._op_list_eq_p
         table[Opcode.LIST_NEQ_P] = self._op_list_neq_p
@@ -2087,37 +2085,6 @@ class MenaiVM:
 
         return None
 
-    def _op_dict(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, n: int, _src1: int, _src2: int
-    ) -> MenaiValue | None:
-        """DICT n: Pop n 2-element MenaiList pair objects, push MenaiDict.
-
-        Each pair on the stack is a 2-element list (list key value), matching the
-        existing (dict (list k1 v1) (list k2 v2) ...) calling convention.
-        """
-        if n == 0:
-            self.stack.append(MenaiDict(()))
-            return None
-
-        pair_lists = self.stack[-n:]
-        del self.stack[-n:]
-        pairs = []
-        for i, pair_list in enumerate(pair_lists):
-            if not isinstance(pair_list, MenaiList):
-                raise MenaiEvalError(
-                    f"Dict pair {i + 1} must be a list"
-                )
-
-            if len(pair_list.elements) != 2:
-                raise MenaiEvalError(
-                    f"Dict pair {i + 1} must have exactly 2 elements"
-                )
-
-            pairs.append((pair_list.elements[0], pair_list.elements[1]))
-
-        self.stack.append(MenaiDict(tuple(pairs)))
-        return None
-
     def _op_dict_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
@@ -2213,19 +2180,6 @@ class MenaiVM:
         default = cast(MenaiValue, frame.locals[src2])
         result = self._ensure_dict(a, 'dict-get').get(key)
         frame.locals[dest] = result if result is not None else default
-        return None
-
-    def _op_list(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, n: int, _src1: int, _src2: int
-    ) -> MenaiValue | None:
-        """LIST n: Pop n values from stack (top is last element), push MenaiList."""
-        if n == 0:
-            self.stack.append(MenaiList(()))
-            return None
-
-        elements = self.stack[-n:]
-        del self.stack[-n:]
-        self.stack.append(MenaiList(tuple(elements)))
         return None
 
     def _op_list_p(  # pylint: disable=useless-return

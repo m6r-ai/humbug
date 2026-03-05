@@ -277,9 +277,6 @@ class MenaiDesugarer:
             ]:
                 return self._desugar_strict_inequality(expr)
 
-            if name == 'dict':
-                return self._desugar_dict(expr)
-
         # Regular function call - desugar all elements
         return self._desugar_call(expr)
 
@@ -402,6 +399,7 @@ class MenaiDesugarer:
                     binding_list_node,
                     result,
                 ), expr)
+
             else:
                 # Non-recursive singleton -> let
                 result = self._make_list((
@@ -497,65 +495,6 @@ class MenaiDesugarer:
             desugared_elements.append(self.desugar(elem))
 
         return self._make_list(tuple(desugared_elements), expr)
-
-    def _desugar_dict(self, expr: MenaiASTList) -> MenaiASTNode:
-        """
-        Desugar a (dict ...) literal into a fold of $dict-set over LOAD_EMPTY_DICT.
-
-        Each argument must be a 2-element list (list key value).  We extract the
-        key and value at desugar time and emit a left-fold of $dict-set calls.
-        Non-literal pair forms (e.g. a variable holding a pair list) are left to
-        the runtime prelude lambda — they fall through to _desugar_call.
-
-        (dict)                        -> MenaiASTDict() — lowers to LOAD_EMPTY_DICT
-        (dict (list k1 v1))           -> ($dict-set MenaiASTDict() k1 v1)
-        (dict (list k1 v1) (list k2 v2) ...) -> left-fold of $dict-set
-
-        If any argument is not a literal (list ...) form we fall through to
-        _desugar_call so the runtime prelude lambda handles it.
-        """
-        args = list(expr.elements[1:])
-
-        # Zero-argument case: emit an empty dict AST node.  The IR builder lowers
-        # this to MenaiCFGConstInstr(MenaiDict(())), which emit_constant turns
-        # into LOAD_EMPTY_DICT.
-        if not args:
-            return MenaiASTDict(
-                (),
-                line=expr.line,
-                column=expr.column,
-                source_file=expr.source_file,
-            )
-
-        # Check that every argument is a literal (list key value) form.
-        # If not, fall through to _desugar_call so the prelude lambda handles it.
-        for arg in args:
-            if not (isinstance(arg, MenaiASTList) and
-                    len(arg.elements) == 3 and
-                    isinstance(arg.elements[0], MenaiASTSymbol) and
-                    arg.elements[0].name == 'list'):
-                return self._desugar_call(expr)
-
-        # All args are literal (list k v) pairs — fold into $dict-set calls.
-        # Seed with an empty dict literal.
-        acc: MenaiASTNode = MenaiASTDict(
-            (),
-            line=expr.line,
-            column=expr.column,
-            source_file=expr.source_file,
-        )
-        for arg in args:
-            assert isinstance(arg, MenaiASTList)
-            key = self.desugar(arg.elements[1])
-            val = self.desugar(arg.elements[2])
-            acc = self._make_list((
-                self._make_symbol('$dict-set', expr),
-                acc,
-                key,
-                val,
-            ), expr)
-
-        return acc
 
     def _desugar_variadic_arithmetic(self, expr: MenaiASTList) -> MenaiASTNode:
         """

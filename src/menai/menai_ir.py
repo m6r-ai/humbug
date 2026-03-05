@@ -8,7 +8,7 @@ var_type; slot allocation is handled by MenaiCFGBuilder.
 """
 
 from dataclasses import dataclass
-from typing import List
+from typing import List, Tuple
 
 from menai.menai_value import MenaiValue
 
@@ -100,6 +100,18 @@ class MenaiIRCall:
 
 
 @dataclass
+class MenaiIRBuildList:
+    """Plan for compiling a (list e1 e2 ... eN) literal.
+
+    Carries a flat list of element plans.  The constant folder can evaluate
+    this to a MenaiIRConstant when all elements are compile-time constants.
+    The VM codegen lowers it to LOAD_EMPTY_LIST followed by N LIST_APPEND
+    register ops, accumulating the result in a single register slot.
+    """
+    element_plans: List['MenaiIRExpr']
+
+
+@dataclass
 class MenaiIREmptyList:
     """Plan for compiling an empty list literal."""
 
@@ -108,6 +120,22 @@ class MenaiIREmptyList:
 class MenaiIRReturn:
     """Plan for compiling a return statement."""
     value_plan: 'MenaiIRExpr'
+
+
+@dataclass
+class MenaiIRBuildDict:
+    """Plan for compiling a (dict (list k1 v1) (list k2 v2) ...) literal.
+
+    Carries a flat list of (key_plan, value_plan) pairs.  The constant folder
+    can evaluate this to a MenaiIRConstant when all keys and values are
+    compile-time constants.  The VM codegen lowers it to LOAD_EMPTY_DICT
+    followed by N DICT_SET register ops, accumulating the result in a single
+    register slot.
+
+    Only emitted when every argument is a literal (list key value) form.
+    Non-literal arguments fall through to the runtime prelude lambda instead.
+    """
+    pair_plans: List[Tuple['MenaiIRExpr', 'MenaiIRExpr']]
 
 
 @dataclass

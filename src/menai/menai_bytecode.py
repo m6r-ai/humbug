@@ -57,9 +57,9 @@ class Opcode(IntEnum):
     LOAD_TRUE = _op(1, 0, True)         # r_dest = #t
     LOAD_FALSE = _op(2, 0, True)        # r_dest = #f
     LOAD_EMPTY_LIST = _op(3, 0, True)   # r_dest = []
-    LOAD_EMPTY_DICT = _op(6, 0, True)   # r_dest = {}
-    LOAD_CONST = _op(4, 1, True)        # r_dest = constants[src0]
-    LOAD_NAME = _op(5, 1, True)         # r_dest = globals[names[src0]]
+    LOAD_EMPTY_DICT = _op(4, 0, True)   # r_dest = {}
+    LOAD_CONST = _op(5, 1, True)        # r_dest = constants[src0]
+    LOAD_NAME = _op(6, 1, True)         # r_dest = globals[names[src0]]
 
     # Stack / register transfer
     PUSH = _op(10, 1)                   # PUSH src0  — push register src0 onto the call stack
@@ -233,7 +233,6 @@ class Opcode(IntEnum):
     STRING_INDEX = _op(262, 2, True)    # r_dest = (string-index r_src0 r_src1)
 
     # Alist operations
-    DICT = _op(280, 1)                  # DICT n  (build dict from n pairs on stack)
     DICT_P = _op(281, 1, True)          # r_dest = (dict? r_src0)
     DICT_EQ_P = _op(282, 2, True)       # r_dest = (dict=? r_src0 r_src1)
     DICT_NEQ_P = _op(283, 2, True)      # r_dest = (dict!=? r_src0 r_src1)
@@ -247,7 +246,6 @@ class Opcode(IntEnum):
     DICT_GET = _op(291, 3, True)        # r_dest = (dict-get r_src0 r_src1 r_src2)
 
     # List operations
-    LIST = _op(320, 1)                  # LIST n  (build list from n elements on stack)
     LIST_P = _op(321, 1, True)          # r_dest = (list? r_src0)
     LIST_EQ_P = _op(322, 2, True)       # r_dest = (list=? r_src0 r_src1)
     LIST_NEQ_P = _op(323, 2, True)      # r_dest = (list!=? r_src0 r_src1)

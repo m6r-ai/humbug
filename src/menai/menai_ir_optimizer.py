@@ -36,6 +36,8 @@ from menai.menai_ir import (
     MenaiIRExpr,
     MenaiIRCall,
     MenaiIRConstant,
+    MenaiIRBuildList,
+    MenaiIRBuildDict,
     MenaiIREmptyList,
     MenaiIRError,
     MenaiIRIf,
@@ -92,6 +94,17 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
 
         if isinstance(ir, MenaiIRCall):
             return self._opt_call(ir, frame_stack)
+
+        if isinstance(ir, MenaiIRBuildList):
+            return MenaiIRBuildList(
+                element_plans=[self._opt(e, frame_stack) for e in ir.element_plans],
+            )
+
+        if isinstance(ir, MenaiIRBuildDict):
+            return MenaiIRBuildDict(
+                pair_plans=[(self._opt(k, frame_stack), self._opt(v, frame_stack))
+                            for k, v in ir.pair_plans],
+            )
 
         if isinstance(ir, MenaiIRReturn):
             return MenaiIRReturn(value_plan=self._opt(ir.value_plan, frame_stack))

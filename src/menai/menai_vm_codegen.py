@@ -130,10 +130,6 @@ UNARY_OPS  = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if ar
 BINARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 2}
 TERNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 3}
 
-BUILD_OPS = {
-    'list': Opcode.LIST,
-}
-
 
 @dataclass
 class _EmitContext:
@@ -674,7 +670,7 @@ class MenaiVMCodeGen:
         args = instr.args
 
         opcode, _ = BUILTIN_OPCODE_MAP.get(op, (None, None))
-        if opcode is None and op not in BUILD_OPS:
+        if opcode is None:
             raise ValueError(f"MenaiVMCodeGen: unknown builtin op {op!r}")
 
         if opcode is not None and opcode.has_dest():
@@ -891,10 +887,6 @@ class MenaiVMCodeGen:
             else:
                 ctx.load_value(args[2])
             ctx.emit(opcode)
-
-        elif op in BUILD_OPS:
-            load_all()
-            ctx.emit(BUILD_OPS[op], len(args))
 
         elif op in BINARY_OPS:
             load_all()

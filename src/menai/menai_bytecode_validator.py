@@ -869,14 +869,6 @@ class BytecodeValidator:
             n = instr.src0
             return (n, 0)  # Pop n args from stack, store into locals 0..n-1
 
-        if opcode == Opcode.LIST:
-            n = instr.src0
-            return (n, 1)  # Pop n elements, push list
-
-        if opcode == Opcode.DICT:
-            n = instr.src0
-            return (n, 1)  # Pop n pair-lists, push dict
-
         # Default case
         return self.stack_effects.get(opcode, (0, 0))
 

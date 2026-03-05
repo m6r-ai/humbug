@@ -9,7 +9,7 @@ from menai.menai_error import MenaiEvalError
 from menai.menai_ir import (
     MenaiIRExpr, MenaiIRConstant, MenaiIRVariable, MenaiIRIf, MenaiIRLet, MenaiIRLetrec,
     MenaiIRLambda, MenaiIRCall, MenaiIRQuote, MenaiIRError, MenaiIREmptyList,
-    MenaiIRReturn, MenaiIRTrace
+    MenaiIRReturn, MenaiIRTrace, MenaiIRBuildList, MenaiIRBuildDict
 )
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex,
@@ -109,12 +109,11 @@ class MenaiIRBuilder:
         # Only $-prefixed names are treated as opcode-backed builtins by the IR
         # builder.  Public names (integer+, float=?, etc.) are prelude functions
         # and resolve as globals.
-        # Exception: 'list' is a variadic BUILD_OP handled specially by the
-        # codegen.  It is not in BUILTIN_OPCODE_MAP (no fixed arity) and cannot
-        # be $-prefixed, so it remains as a plain builtin name here.
-        # 'dict' literals are now fully desugared before reaching the IR builder.
+        # Exceptions: 'list' and 'dict' are variadic BUILD_OPs intercepted here
+        # to emit MenaiIRBuildList / MenaiIRBuildDict flat nodes.  They are not
+        # in BUILTIN_OPCODE_MAP (no fixed arity) and cannot be $-prefixed.
         self._builtin_names: frozenset = frozenset('$' + name for name in BUILTIN_OPCODE_MAP)
-        self._builtin_names |= frozenset({'list'})
+        self._builtin_names |= frozenset({'list', 'dict'})
 
     def build(self, expr: MenaiASTNode) -> MenaiIRExpr:
         """
@@ -251,6 +250,12 @@ class MenaiIRBuilder:
 
         if isinstance(plan, MenaiIRReturn):
             return False
+
+        if isinstance(plan, MenaiIRBuildList):
+            return True
+
+        if isinstance(plan, MenaiIRBuildDict):
+            return True
 
         return True
 
@@ -448,6 +453,41 @@ class MenaiIRBuilder:
 
         if func_type is MenaiASTSymbol and cast(MenaiASTSymbol, func_expr).name in self._builtin_names:
             dollar_name = cast(MenaiASTSymbol, func_expr).name
+            # (list e1 ... eN) — emit a flat MenaiIRBuildList node.
+            if dollar_name == 'list':
+                element_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
+                return MenaiIRBuildList(element_plans=element_plans)
+
+            # (dict (list k1 v1) ...) — emit MenaiIRBuildDict if all args are
+            # literal (list key value) forms; otherwise fall through to a regular
+            # call so the runtime prelude lambda handles non-literal arguments.
+            if dollar_name == 'dict':
+                if not arg_exprs:
+                    return MenaiIRBuildDict(pair_plans=[])
+                all_literal = all(
+                    isinstance(arg, MenaiASTList) and
+                    len(arg.elements) == 3 and
+                    isinstance(arg.elements[0], MenaiASTSymbol) and
+                    arg.elements[0].name == 'list'
+                    for arg in arg_exprs
+                )
+                if all_literal:
+                    pair_plans = [
+                        (self._analyze_expression(arg.elements[1], ctx, in_tail_position=False),
+                         self._analyze_expression(arg.elements[2], ctx, in_tail_position=False))
+                        for arg in arg_exprs
+                    ]
+                    return MenaiIRBuildDict(pair_plans=pair_plans)
+                # Non-literal args: emit a regular call to the prelude lambda.
+                arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
+                return MenaiIRCall(
+                    func_plan=MenaiIRVariable(name='dict', var_type='global'),
+                    arg_plans=arg_plans,
+                    is_tail_call=in_tail_position,
+                    is_builtin=False,
+                    builtin_name=None,
+                )
+
             # Strip the $ prefix — the rest of the pipeline (codegen etc.)
             # uses the bare opcode name.
             # 'list' and 'dict' are plain builtin names (no $ prefix).

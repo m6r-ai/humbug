@@ -107,6 +107,8 @@ from menai.menai_ir import (
     MenaiIRCall,
     MenaiIRConstant,
     MenaiIREmptyList,
+    MenaiIRBuildList,
+    MenaiIRBuildDict,
     MenaiIRError,
     MenaiIRExpr,
     MenaiIRIf,
@@ -118,7 +120,7 @@ from menai.menai_ir import (
     MenaiIRTrace,
     MenaiIRVariable,
 )
-from menai.menai_value import MenaiList
+from menai.menai_value import MenaiDict, MenaiList
 
 
 # ---------------------------------------------------------------------------
@@ -297,6 +299,12 @@ class MenaiCFGBuilder:
 
         if isinstance(ir, MenaiIRCall):
             return self._build_call(ir, block, scope, state, tail)
+
+        if isinstance(ir, MenaiIRBuildList):
+            return self._build_list(ir, block, scope, state)
+
+        if isinstance(ir, MenaiIRBuildDict):
+            return self._build_dict(ir, block, scope, state)
 
         if isinstance(ir, MenaiIRReturn):
             # MenaiIRReturn is the IR tree's explicit return wrapper.
@@ -794,6 +802,66 @@ class MenaiCFGBuilder:
             args=arg_vals,
         ))
         return result, block
+
+    def _build_list(
+        self,
+        ir: MenaiIRBuildList,
+        block: MenaiCFGBlock,
+        scope: MenaiCFGScope,
+        state: _FunctionState,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """
+        Build a list literal iteratively.
+
+        Emits LOAD_EMPTY_LIST into an accumulator slot, then for each element
+        emits a LIST_APPEND builtin op into the same accumulator slot,
+        reusing the slot each time.  This is O(N) in instructions and O(1)
+        in register slots regardless of list size.
+        """
+        # Seed: empty list into a fresh accumulator slot.
+        acc_val = state.new_value("list_acc")
+        block.instrs.append(MenaiCFGConstInstr(result=acc_val, value=MenaiList()))
+
+        for elem_plan in ir.element_plans:
+            elem_val, block = self._build_expr(elem_plan, block, scope, state, tail=False)
+            new_acc = state.new_value("list_acc")
+            block.instrs.append(MenaiCFGBuiltinInstr(
+                result=new_acc,
+                op='list-append',
+                args=[acc_val, elem_val],
+            ))
+            acc_val = new_acc
+
+        return acc_val, block
+
+    def _build_dict(
+        self,
+        ir: MenaiIRBuildDict,
+        block: MenaiCFGBlock,
+        scope: MenaiCFGScope,
+        state: _FunctionState,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """
+        Build a dict literal iteratively.
+
+        Emits LOAD_EMPTY_DICT into an accumulator slot, then for each
+        (key, value) pair emits a DICT_SET builtin op into the accumulator.
+        """
+        acc_val = state.new_value("dict_acc")
+        block.instrs.append(MenaiCFGConstInstr(result=acc_val, value=MenaiDict()))
+
+        for key_plan, val_plan in ir.pair_plans:
+            key_val, block = self._build_expr(key_plan, block, scope, state, tail=False)
+            val_val, block = self._build_expr(val_plan, block, scope, state, tail=False)
+            new_acc = state.new_value("dict_acc")
+            block.instrs.append(MenaiCFGBuiltinInstr(
+                result=new_acc,
+                op='dict-set',
+                args=[acc_val, key_val, val_val],
+            ))
+            acc_val = new_acc
+
+        return acc_val, block
 
     def _build_builtin_call(
         self,
