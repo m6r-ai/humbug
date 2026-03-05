@@ -749,36 +749,21 @@ class MenaiVM:
     def _op_make_closure(  # pylint: disable=useless-return
         self, frame: Frame, code: CodeObject, dest: int, src0: int, capture_count: int, _src2: int
     ) -> MenaiValue | None:
-        """MAKE_CLOSURE dest, src0, capture_count: Create closure, write to register dest."""
-        # Validator guarantees src0 is in bounds and stack has enough values for captures
+        """MAKE_CLOSURE dest, src0, 0: Create closure with all capture slots pre-set to None.
+
+        capture_count is always 0: all capture wiring is done by subsequent PATCH_CLOSURE
+        instructions (both for letrec mutual-recursion and for ordinary non-letrec closures).
+        """
         closure_code = code.code_objects[src0]
-
-        # Pop captured values from stack (in reverse order)
-        if capture_count == 0:
-            captured_values = []
-
-        else:
-            captured_values = self.stack[-capture_count:]
-            del self.stack[-capture_count:]
-
         closure = MenaiFunction(
             parameters=tuple(closure_code.param_names),
             name=closure_code.name,
             bytecode=closure_code,
             is_variadic=closure_code.is_variadic,
         )
-        # Build captured_values list.
-        # For letrec Phase 1, capture_count=0 is passed so that ALL free_var
-        # slots (both sibling and outer captures) are pre-allocated as None.
-        # PATCH_CLOSURE fills every slot in Phase 2.
+        # Pre-allocate all free-var slots as None.  PATCH_CLOSURE fills them.
         n_free = len(closure_code.free_vars)
-        if capture_count < n_free:
-            # Letrec Phase 1: captured_values holds whatever was pre-pushed
-            # (currently always zero items), then Nones for the remaining slots.
-            cv: list = list(captured_values) + [None] * (n_free - capture_count)
-
-        else:
-            cv = list(captured_values)
+        cv: list = [None] * n_free
         object.__setattr__(closure, 'captured_values', cv)
         frame.locals[dest] = closure
         return None

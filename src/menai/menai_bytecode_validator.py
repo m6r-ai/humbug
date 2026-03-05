@@ -116,15 +116,14 @@ class BytecodeValidator:
             Opcode.RAISE_ERROR: (0, 0),  # Doesn't return, but doesn't matter
 
             # Functions
-            # MAKE_CLOSURE: register-based result; still pops captures from stack
-            Opcode.MAKE_CLOSURE: (-1, 0),  # pops capture_count values, writes to dest (no push)
+            Opcode.MAKE_CLOSURE: (0, 0),
             Opcode.PATCH_CLOSURE: (0, 0),
-            Opcode.CALL: (-1, 0),      # pops func+args, result written to dest (no stack push)
-            Opcode.TAIL_CALL: (-1, 0), # pops func+args, tail position
-            Opcode.APPLY: (2, 0),      # pops func+arg_list, result written to dest (no stack push)
-            Opcode.TAIL_APPLY: (2, 0), # pops func+arg_list, tail position
+            Opcode.CALL: (-1, 0),
+            Opcode.TAIL_CALL: (-1, 0),
+            Opcode.APPLY: (2, 0),
+            Opcode.TAIL_APPLY: (2, 0),
             # ENTER effect is n-dependent; handled in _get_stack_effect
-            Opcode.RETURN: (0, 0),     # reads from src0 register; no stack pop
+            Opcode.RETURN: (0, 0),
 
             # Trace debug
             Opcode.EMIT_TRACE: (0, 0),

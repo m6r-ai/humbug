@@ -802,45 +802,30 @@ class MenaiVMCodeGen:
         capture_count = len(instr.captures)
         total_free_vars = len(child_func.free_vars)
 
-        if instr.needs_patching:
-            # Letrec case: emit MAKE_CLOSURE with 0 captures so the VM
-            # pre-allocates None for all free-var slots.  Then immediately
-            # PATCH_CLOSURE the outer (non-sibling) captures into their
-            # correct slot indices.  Sibling captures are patched later by
-            # the block's patch_instrs (phase 3 of letrec).
+        if instr.needs_patching or capture_count > 0:
             closure_slot = ctx.alloc_slot(instr.result)
             ctx.emit(Opcode.MAKE_CLOSURE, code_idx, 0, dest=closure_slot)
-            # Outer captures occupy the tail of free_vars: indices
-            # [total_free_vars - capture_count .. total_free_vars - 1].
             outer_start = total_free_vars - capture_count
             for i, cap in enumerate(instr.captures):
                 value_slot = ctx.ensure_slot(cap)
                 ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, value_slot, src2=outer_start + i)
+
             return
-        elif capture_count > 0:
-            # Non-letrec closure with captures: still passes captures via the
-            # stack (PUSH each, then MAKE_CLOSURE pops them).  Result written
-            # to dest register directly — no POP needed.
-            for cap in instr.captures:
-                ctx.load_value(cap)
-            closure_slot = ctx.alloc_slot(instr.result)
-            ctx.emit(Opcode.MAKE_CLOSURE, code_idx, capture_count, dest=closure_slot)
-            return
-        else:
-            # No captures — pre-build a MenaiFunction and store as a constant.
-            func_val = MenaiFunction(
-                parameters=tuple(child_code.param_names),
-                name=child_code.name,
-                bytecode=child_code,
-                is_variadic=child_code.is_variadic,
-            )
-            key = ('function', id(child_code))
-            if key not in ctx.constant_map:
-                ctx.constant_map[key] = len(ctx.constants)
-                ctx.constants.append(func_val)
-            slot = ctx.alloc_slot(instr.result)
-            ctx.emit(Opcode.LOAD_CONST, ctx.constant_map[key], dest=slot)
-            return
+
+        # No captures — pre-build a MenaiFunction and store as a constant.
+        func_val = MenaiFunction(
+            parameters=tuple(child_code.param_names),
+            name=child_code.name,
+            bytecode=child_code,
+            is_variadic=child_code.is_variadic,
+        )
+        key = ('function', id(child_code))
+        if key not in ctx.constant_map:
+            ctx.constant_map[key] = len(ctx.constants)
+            ctx.constants.append(func_val)
+        slot = ctx.alloc_slot(instr.result)
+        ctx.emit(Opcode.LOAD_CONST, ctx.constant_map[key], dest=slot)
+        return
 
     def _generate_lambda_code_object(self, func: MenaiCFGFunction) -> CodeObject:
         """

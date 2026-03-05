@@ -92,14 +92,9 @@ For instructions where the last SSA operand IS the last thing pushed:
 
   MenaiCFGJumpTerm / MenaiCFGRaiseTerm — no SSA operands; never a consumer
 
-Note on MakeClosureInstr as a consumer
----------------------------------------
-When needs_patching is False and captures is non-empty, captures are pushed
-in order and MAKE_CLOSURE fires — so captures[-1] is the last thing pushed.
-When needs_patching is True, the closure is stored to a slot immediately and
-then PATCH_CLOSURE instructions follow — the last capture is not the last
-thing pushed before any single opcode, so no capture can be transient.
-When captures is empty, there are no SSA operands to be transient.
+  MenaiCFGMakeClosureInstr — captures are always wired via PATCH_CLOSURE
+                             (never pushed onto the stack), so MakeClosureInstr
+                             is never a stack consumer.
 """
 
 from dataclasses import dataclass, field
@@ -425,7 +420,7 @@ class MenaiCFGStackScheduler:
         if isinstance(instr, MenaiCFGPhiInstr):
             return True
 
-        if isinstance(instr, MenaiCFGMakeClosureInstr) and instr.needs_patching:
+        if isinstance(instr, MenaiCFGMakeClosureInstr):
             return True
 
         return False
@@ -478,18 +473,6 @@ class MenaiCFGStackScheduler:
         if isinstance(instr, MenaiCFGBuiltinInstr):
             return self._is_last_operand_of_builtin(value, instr)
 
-        if isinstance(instr, MenaiCFGMakeClosureInstr):
-            # needs_patching=True: closure goes to slot immediately, then
-            # PATCH_CLOSURE instructions follow — no single "last push".
-            if instr.needs_patching:
-                return False
-
-            if not instr.captures:
-                return False
-
-            # Push order: captures[0], ..., captures[-1], then MAKE_CLOSURE.
-            return value.id == instr.captures[-1].id
-
         return False
 
     def _preceding_operands(
@@ -536,8 +519,8 @@ class MenaiCFGStackScheduler:
             return list(instr.args[:-1])
 
         if isinstance(instr, MenaiCFGMakeClosureInstr):
-            # Push order: captures[0..N-1].  last_value == captures[-1].
-            return list(instr.captures[:-1])
+            # Captures are wired via PATCH_CLOSURE, not the stack.
+            return []
 
         return []
 
