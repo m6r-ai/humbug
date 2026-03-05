@@ -271,39 +271,47 @@ class _EmitContext:
         self.emit(Opcode.POP, dest=slot)
         return slot
 
-    def patch_jump(self, instr_index: int, target: int, field: str = 'src0') -> None:
+    def patch_jump(self, instr_index: int, target: int, src0: str = 'src0') -> None:
         """Back-patch a jump target into the given field of an already-emitted instruction.
 
         JUMP stores its target in src0.
         JUMP_IF_FALSE / JUMP_IF_TRUE store the condition in src0 and the target in src1.
         """
-        setattr(self.instructions[instr_index], field, target)
+        setattr(self.instructions[instr_index], src0, target)
 
     def current_index(self) -> int:
+        """Return the instruction index of the next instruction to be emitted."""
         return len(self.instructions)
 
     def add_constant(self, value: MenaiValue) -> int:
+        """Add `value` to the constant pool if not already present, and return its index."""
         if isinstance(value, (MenaiInteger, MenaiFloat, MenaiComplex,
                                MenaiBoolean, MenaiString)):
             key: tuple = (type(value).__name__, value.value)
+
         else:
             key = (id(value),)
+
         if key in self.constant_map:
             return self.constant_map[key]
+
         idx = len(self.constants)
         self.constants.append(value)
         self.constant_map[key] = idx
         return idx
 
     def add_name(self, name: str) -> int:
+        """Add `name` to the name pool if not already present, and return its index."""
         if name in self.name_map:
             return self.name_map[name]
+
         idx = len(self.names)
         self.names.append(name)
         self.name_map[name] = idx
         return idx
 
     def add_code_object(self, code_obj: CodeObject) -> int:
+        """Add `code_obj` to the code object pool and return its index."""
         idx = len(self.code_objects)
         self.code_objects.append(code_obj)
         return idx
@@ -344,10 +352,6 @@ class MenaiVMCodeGen:
             name=name,
         )
 
-    # ------------------------------------------------------------------
-    # Function body emission
-    # ------------------------------------------------------------------
-
     def _emit_function_body(self, func: MenaiCFGFunction, ctx: _EmitContext) -> None:
         """
         Emit all blocks of `func` into `ctx` in reverse post-order (RPO).
@@ -386,7 +390,7 @@ class MenaiVMCodeGen:
         for i, block in enumerate(rpo):
             next_block = rpo[i + 1] if i + 1 < len(rpo) else None
             block_start[block.id] = ctx.current_index()
-            self._emit_block(block, ctx, forward_jumps, func, next_block)
+            self._emit_block(block, ctx, forward_jumps, next_block)
 
         # Phase 3: back-patch forward jumps.
         for instr_idx, target_block, patch_field in forward_jumps:
@@ -428,7 +432,6 @@ class MenaiVMCodeGen:
         block: MenaiCFGBlock,
         ctx: _EmitContext,
         forward_jumps: List[Tuple[int, MenaiCFGBlock, str]],
-        func: MenaiCFGFunction,
         next_block: Optional[MenaiCFGBlock],
     ) -> None:
         """Emit all instructions and the terminator for one block."""
@@ -444,11 +447,7 @@ class MenaiVMCodeGen:
         assert block.terminator is not None, (
             f"MenaiVMCodeGen: block {block.id} ({block.label}) has no terminator"
         )
-        self._emit_terminator(block, block.terminator, ctx, forward_jumps, func, next_block)
-
-    # ------------------------------------------------------------------
-    # Instruction emission
-    # ------------------------------------------------------------------
+        self._emit_terminator(block, block.terminator, ctx, forward_jumps, next_block)
 
     def _emit_instr(self, instr: MenaiCFGInstr, ctx: _EmitContext) -> None:
         """Emit a single non-terminator instruction."""
@@ -577,17 +576,12 @@ class MenaiVMCodeGen:
         value_slot = ctx.ensure_slot(patch.value)
         ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, value_slot, src2=patch.capture_index)
 
-    # ------------------------------------------------------------------
-    # Terminator emission
-    # ------------------------------------------------------------------
-
     def _emit_terminator(
         self,
         block: MenaiCFGBlock,
         term: MenaiCFGTerminator,
         ctx: _EmitContext,
         forward_jumps: List[Tuple[int, MenaiCFGBlock, str]],
-        func: MenaiCFGFunction,
         next_block: Optional[MenaiCFGBlock],
     ) -> None:
         if isinstance(term, MenaiCFGReturnTerm):
@@ -650,10 +644,6 @@ class MenaiVMCodeGen:
             return
 
         raise TypeError(f"MenaiVMCodeGen: unhandled terminator {type(term).__name__}")
-
-    # ------------------------------------------------------------------
-    # Builtin emission
-    # ------------------------------------------------------------------
 
     def _emit_builtin(self, instr: MenaiCFGBuiltinInstr, ctx: _EmitContext) -> None:
         """
@@ -774,10 +764,6 @@ class MenaiVMCodeGen:
 
         # Store the result.
         ctx.store_result(instr.result)
-
-    # ------------------------------------------------------------------
-    # Closure emission
-    # ------------------------------------------------------------------
 
     def _emit_make_closure(
         self, instr: MenaiCFGMakeClosureInstr, ctx: _EmitContext

@@ -102,10 +102,8 @@ thing pushed before any single opcode, so no capture can be transient.
 When captures is empty, there are no SSA operands to be transient.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
-from typing import Dict, Set
+from typing import Dict, Set, Callable
 
 from menai.menai_cfg import (
     MenaiCFGApplyInstr,
@@ -253,7 +251,7 @@ class MenaiCFGStackScheduler:
 
         return counts
 
-    def _count_instr_uses(self, instr: MenaiCFGInstr, use) -> None:  # type: ignore[type-arg]
+    def _count_instr_uses(self, instr: MenaiCFGInstr, use: Callable[[MenaiCFGValue], None]) -> None:  # type: ignore[type-arg]
         """Increment use counts for all SSA operands of `instr`."""
         if isinstance(instr, (MenaiCFGParamInstr,
                                MenaiCFGFreeVarInstr,
@@ -291,7 +289,7 @@ class MenaiCFGStackScheduler:
             use(instr.closure)
             use(instr.value)
 
-    def _count_term_uses(self, term: MenaiCFGTerminator, use) -> None:  # type: ignore[type-arg]
+    def _count_term_uses(self, term: MenaiCFGTerminator, use: Callable[[MenaiCFGValue], None]) -> None:
         """Increment use counts for all SSA operands of `term`."""
         if isinstance(term, MenaiCFGReturnTerm):
             use(term.value)

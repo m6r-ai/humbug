@@ -60,9 +60,7 @@ values for one another (phi elimination maps phi-result → incoming-value).
 All IDs therefore remain globally unique within the function.
 """
 
-from __future__ import annotations
-
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple, Callable
 
 from menai.menai_cfg import (
     MenaiCFGApplyInstr,
@@ -100,10 +98,6 @@ from menai.menai_cfg import (
 _SubstMap = Dict[int, MenaiCFGValue]
 
 
-# ---------------------------------------------------------------------------
-# Public entry point
-# ---------------------------------------------------------------------------
-
 class MenaiCFGOptimizer:
     """
     Runs all CFG optimization passes to a fixed point on a MenaiCFGFunction
@@ -134,12 +128,9 @@ class MenaiCFGOptimizer:
         func = self._optimize_nested(func)
         return func
 
-    # ------------------------------------------------------------------
-    # Fixed-point loop over a single function (not its nested lambdas)
-    # ------------------------------------------------------------------
-
     def _optimize_function(self, func: MenaiCFGFunction) -> MenaiCFGFunction:
-        """Run all passes on `func` to a fixed point.
+        """
+        Run all passes on `func` to a fixed point.
 
         Passes mutate block content in place and return a (possibly new)
         MenaiCFGFunction together with a changed flag.
@@ -161,10 +152,6 @@ class MenaiCFGOptimizer:
             changed = changed or c
 
         return func
-
-    # ------------------------------------------------------------------
-    # Recursive descent into nested lambdas
-    # ------------------------------------------------------------------
 
     def _optimize_nested(self, func: MenaiCFGFunction) -> MenaiCFGFunction:
         """
@@ -194,10 +181,6 @@ class MenaiCFGOptimizer:
                         )
         return func
 
-
-# ---------------------------------------------------------------------------
-# Pass 1: Prune stale phi incoming entries
-# ---------------------------------------------------------------------------
 
 def _prune_stale_phi_entries(
     func: MenaiCFGFunction,
@@ -254,10 +237,6 @@ def _prune_stale_phi_entries(
 
     return func, changed
 
-
-# ---------------------------------------------------------------------------
-# Pass 2: Eliminate trivial (single-incoming) phis
-# ---------------------------------------------------------------------------
 
 def _eliminate_trivial_phis(
     func: MenaiCFGFunction,
@@ -324,10 +303,6 @@ def _eliminate_trivial_phis(
     _relink_predecessors(func)
     return func, True
 
-
-# ---------------------------------------------------------------------------
-# Pass 3: Empty-block bypass
-# ---------------------------------------------------------------------------
 
 def _bypass_empty_blocks(
     func: MenaiCFGFunction,
@@ -526,10 +501,6 @@ def _find_non_empty_pred(
     return block
 
 
-# ---------------------------------------------------------------------------
-# Pass 4: Dead-block elimination
-# ---------------------------------------------------------------------------
-
 def _eliminate_dead_blocks(
     func: MenaiCFGFunction,
 ) -> Tuple[MenaiCFGFunction, bool]:
@@ -603,10 +574,6 @@ def _eliminate_dead_blocks(
     return new_func, True
 
 
-# ---------------------------------------------------------------------------
-# Predecessor relinking
-# ---------------------------------------------------------------------------
-
 def _relink_predecessors(func: MenaiCFGFunction) -> None:
     """
     Recompute the `predecessors` list for every block in `func` from scratch.
@@ -637,13 +604,9 @@ def _safe_add_pred(
         target.predecessors.append(pred)
 
 
-# ---------------------------------------------------------------------------
-# Value substitution helpers
-# ---------------------------------------------------------------------------
-
 def _subst_instr(
     instr: MenaiCFGInstr,
-    resolve,
+    resolve: Callable[[MenaiCFGValue], MenaiCFGValue],
 ) -> MenaiCFGInstr:
     """Return a new instruction with all value references substituted."""
     if isinstance(instr, (MenaiCFGConstInstr,
@@ -725,7 +688,7 @@ def _subst_instr(
 
 def _subst_patch(
     patch: MenaiCFGPatchClosureInstr,
-    resolve,
+    resolve: Callable[[MenaiCFGValue], MenaiCFGValue],
 ) -> MenaiCFGPatchClosureInstr:
     new_closure = resolve(patch.closure)
     new_value = resolve(patch.value)
@@ -740,9 +703,9 @@ def _subst_patch(
 
 
 def _subst_term(
-    term: Optional[MenaiCFGTerminator],
-    resolve,
-) -> Optional[MenaiCFGTerminator]:
+    term: MenaiCFGTerminator | None,
+    resolve: Callable[[MenaiCFGValue], MenaiCFGValue],
+) -> MenaiCFGTerminator | None:
     """Return a new terminator with all value references substituted."""
     if term is None:
         return None
@@ -797,14 +760,10 @@ def _subst_term(
     return term
 
 
-# ---------------------------------------------------------------------------
-# Block remapping helpers (for empty-block bypass)
-# ---------------------------------------------------------------------------
-
 def _remap_term(
-    term: Optional[MenaiCFGTerminator],
-    remap_block,
-) -> Optional[MenaiCFGTerminator]:
+    term: MenaiCFGTerminator | None,
+    remap_block: Callable[[MenaiCFGBlock], MenaiCFGBlock],
+) -> MenaiCFGTerminator | None:
     """Return a new terminator with all block references remapped."""
     if term is None:
         return None
