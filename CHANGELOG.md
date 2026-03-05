@@ -11,6 +11,8 @@ New features:
 - Added a lot of new functionality for lists and strings in Menai.
 - Added more operators for functions and symbols.
 - Added a new IR optimization pass manager for Menai.
+- Added a new SSA control flow graph layer for Menai.
+- Replaced the Menai stack machine VM with a register machine for speed.
 - Added support for Gemini Pro 3.1 preview and removed 3.0.
 - Removed support for Gemini 3.0 Pro Preview (no longer available).
 - Removed support for Gemma3:4b (obsolete).
