@@ -640,3 +640,74 @@ class TestDictLengthErrors:
         """Test that dict-length with non-dict raises error."""
         with pytest.raises(MenaiEvalError, match="requires dict argument"):
             tool.evaluate('(dict-length (list 1 2 3))')
+
+
+class TestDictFirstClass:
+    """Test dict used as a first-class function value.
+
+    The prelude 'dict' is a variadic lambda: (lambda (. args) ...).
+    These tests verify it can be stored, passed, returned, and applied
+    like any other function — not just called as a literal constructor.
+    """
+
+    def test_dict_is_function(self, tool):
+        """dict is a callable function value."""
+        result = tool.evaluate("(function? dict)")
+        assert result is True
+
+    def test_dict_stored_in_variable(self, tool):
+        """dict can be stored in a let binding and called via the binding."""
+        result = tool.evaluate(
+            '(let ((make-dict dict))'
+            '  (make-dict (list "a" 1) (list "b" 2)))'
+        )
+        assert result == {"a": 1, "b": 2}
+
+    def test_dict_stored_zero_arg_call(self, tool):
+        """dict stored in a variable can be called with zero args."""
+        result = tool.evaluate(
+            "(let ((make-dict dict))"
+            "  (make-dict))"
+        )
+        assert result == {}
+
+    def test_dict_passed_to_higher_order_function(self, tool):
+        """dict can be passed to a higher-order function as a constructor."""
+        # map-list over a list of pair-lists, using dict to build each singleton dict
+        result = tool.evaluate(
+            '(map-list (lambda (pair) (dict pair))'
+            '  (list (list "x" 1) (list "y" 2) (list "z" 3)))'
+        )
+        assert result == [{"x": 1}, {"y": 2}, {"z": 3}]
+
+    def test_dict_returned_from_function(self, tool):
+        """dict can be returned from a function and called later."""
+        result = tool.evaluate(
+            '(let ((get-constructor (lambda (type)'
+            '                         (if (string=? type "dict") dict list))))'
+            '  ((get-constructor "dict") (list "k" 42)))'
+        )
+        assert result == {"k": 42}
+
+    def test_dict_called_via_apply(self, tool):
+        """dict can be invoked through apply with a list of pair arguments."""
+        result = tool.evaluate(
+            '(apply dict (list (list "a" 1) (list "b" 2) (list "c" 3)))'
+        )
+        assert result == {"a": 1, "b": 2, "c": 3}
+
+    def test_dict_called_via_apply_empty(self, tool):
+        """apply with dict and an empty argument list produces an empty dict."""
+        result = tool.evaluate("(apply dict (list))")
+        assert result == {}
+
+    def test_dict_in_list_of_constructors(self, tool):
+        """dict can be stored alongside other functions in a list."""
+        result = tool.evaluate(
+            '(let* ((constructors (list dict list))'
+            '       (make-dict (list-first constructors))'
+            '       (make-list (list-first (list-rest constructors))))'
+            '  (list (dict? (make-dict (list "k" 1)))'
+            '        (list? (make-list 1 2 3))))'
+        )
+        assert result == [True, True]
