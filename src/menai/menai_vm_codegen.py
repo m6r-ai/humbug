@@ -681,7 +681,6 @@ class MenaiVMCodeGen:
         """
         Emit a builtin operation, including special-case handling for
         optional-argument builtins (range, string-slice, dict-get, etc.).
-sed for ops not yet converted.
         """
         op = instr.op
         args = instr.args
