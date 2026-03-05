@@ -126,8 +126,8 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
             annotation = f"  ; Store {n} params into locals 0..{n - 1}"
 
     elif opcode == Opcode.MAKE_CLOSURE:
-        if src0 < len(code.code_objects):
-            nested = code.code_objects[src0]
+        if instr.src0 < len(code.code_objects):
+            nested = code.code_objects[instr.src0]
             name = nested.name or f"<lambda-{src0}>"
             loc_parts = []
             if nested.source_file:
@@ -137,28 +137,28 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
                 loc_parts.append(f"line {nested.source_line}")
 
             line_info = f" at {':'.join(loc_parts)}" if loc_parts else ""
-            capture_word = "capture" if src1 == 1 else "captures"
-            annotation = f"  ; Create closure for {name}{line_info} with {src1} {capture_word}"
+            capture_word = "capture" if instr.src1 == 1 else "captures"
+            annotation = f"  ; r{instr.dest} = closure for {name}{line_info} with {instr.src1} {capture_word}"
 
     elif opcode == Opcode.PATCH_CLOSURE:
-        # src0 = local slot holding the closure to patch
-        # src1 = which captured-values slot to fill (index into free_vars)
-        # The value to store was pushed onto the stack by the preceding PUSH.
-        closure_slot = describe_local(src0, code)
-        # Find which nested code object lives in that local slot by scanning
-        # for a MAKE_CLOSURE followed (eventually) by POP dest==src0.
+        # src0 = closure register, src1 = value register, src2 = capture index
+        closure_desc = describe_local(instr.src0, code)
+        value_desc = describe_local(instr.src1, code)
+        # Find the free_var name by scanning for MAKE_CLOSURE that targets src0.
         free_var_name = None
         for j, scan_instr in enumerate(code.instructions):
-            if (scan_instr.opcode == Opcode.POP and scan_instr.dest == src0
-                    and j > 0 and code.instructions[j - 1].opcode == Opcode.MAKE_CLOSURE):
-                nested = code.code_objects[code.instructions[j - 1].src0]
-                if src1 < len(nested.free_vars):
-                    free_var_name = nested.free_vars[src1]
+            if scan_instr.opcode == Opcode.MAKE_CLOSURE and scan_instr.dest == instr.src0:
+                nested = code.code_objects[scan_instr.src0]
+                if instr.src2 < len(nested.free_vars):
+                    free_var_name = nested.free_vars[instr.src2]
 
                 break
 
-        slot_desc = f"'{free_var_name}'" if free_var_name else f"slot {src1}"
-        annotation = f"  ; Patch {closure_slot}: set capture {slot_desc} from stack"
+        capture_desc = f"'{free_var_name}'" if free_var_name else f"slot {instr.src2}"
+        annotation = f"  ; Patch {closure_desc} capture {capture_desc} from {value_desc}"
+
+    elif opcode == Opcode.EMIT_TRACE:
+        annotation = f"  ; Emit {describe_local(instr.src0, code)} to trace watcher"
 
     elif opcode == Opcode.CALL:
         arg_word = "arg" if src0 == 1 else "args"
@@ -314,23 +314,21 @@ def analyze_function_flow(code: CodeObject) -> Dict[int, str]:
     var_map = {}
 
     for i, instr in enumerate(code.instructions):
-        if instr.opcode == Opcode.POP and i > 0:
-            prev_instr = code.instructions[i - 1]
-            if prev_instr.opcode == Opcode.MAKE_CLOSURE:
-                closure_idx = prev_instr.src0
-                var_idx = instr.dest
-                if closure_idx < len(code.code_objects):
-                    nested_code = code.code_objects[closure_idx]
-                    func_name = nested_code.name or f"<closure-{closure_idx}>"
-                    loc_parts = []
-                    if nested_code.source_file:
-                        loc_parts.append(nested_code.source_file)
+        if instr.opcode == Opcode.MAKE_CLOSURE:
+            closure_idx = instr.src0
+            var_idx = instr.dest
+            if closure_idx < len(code.code_objects):
+                nested_code = code.code_objects[closure_idx]
+                func_name = nested_code.name or f"<closure-{closure_idx}>"
+                loc_parts = []
+                if nested_code.source_file:
+                    loc_parts.append(nested_code.source_file)
 
-                    if nested_code.source_line and nested_code.source_line > 0:
-                        loc_parts.append(f"line {nested_code.source_line}")
+                if nested_code.source_line and nested_code.source_line > 0:
+                    loc_parts.append(f"line {nested_code.source_line}")
 
-                    line_info = f" [{':'.join(loc_parts)}]" if loc_parts else ""
-                    var_map[var_idx] = f"{func_name}{line_info}"
+                line_info = f" [{':'.join(loc_parts)}]" if loc_parts else ""
+                var_map[var_idx] = f"{func_name}{line_info}"
 
     return var_map
 

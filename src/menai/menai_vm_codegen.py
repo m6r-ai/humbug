@@ -201,10 +201,10 @@ class _EmitContext:
 
         return self.slot_of(value)
 
-    def emit(self, opcode: Opcode, src0: int = 0, src1: int = 0, dest: int = 0) -> int:
+    def emit(self, opcode: Opcode, src0: int = 0, src1: int = 0, dest: int = 0, src2: int = 0) -> int:
         """Emit an instruction, returning its index."""
         idx = len(self.instructions)
-        self.instructions.append(Instruction(opcode, dest=dest, src0=src0, src1=src1))
+        self.instructions.append(Instruction(opcode, dest=dest, src0=src0, src1=src1, src2=src2))
         return idx
 
     def load_value(self, value: MenaiCFGValue) -> None:
@@ -512,10 +512,22 @@ class MenaiVMCodeGen:
 
         if isinstance(instr, MenaiCFGTraceInstr):
             for msg in instr.messages:
-                ctx.load_value(msg)
-                ctx.emit(Opcode.EMIT_TRACE)
-            ctx.load_value(instr.value)
-            ctx.store_result(instr.result)
+                msg_slot = ctx.ensure_slot(msg)
+                ctx.emit(Opcode.EMIT_TRACE, msg_slot)
+            # instr.value may be stack-transient with no slot, meaning it is
+            # sitting on top of the stack from the preceding stack-based op.
+            # We must pop it into a fresh slot before recording the result slot.
+            # A transient MenaiCFGConstInstr is given a register slot by the
+            # const emitter even though the scheduler marks it transient, so we
+            # check slot_map to distinguish "truly on stack" from "in register".
+            if ctx.schedule.is_transient(instr.value) and instr.value.id not in ctx.slot_map:
+                result_slot = ctx.next_slot
+                ctx.next_slot += 1
+                ctx.slot_map[instr.value.id] = result_slot
+                ctx.emit(Opcode.POP, dest=result_slot)
+            else:
+                result_slot = ctx.ensure_slot(instr.value)
+            ctx.slot_map[instr.result.id] = result_slot
             return
 
         if isinstance(instr, MenaiCFGPatchClosureInstr):
@@ -556,10 +568,14 @@ class MenaiVMCodeGen:
                     ctx.emit(Opcode.POP, dest=phi_slot)
 
     def _emit_patch(self, patch: MenaiCFGPatchClosureInstr, ctx: _EmitContext) -> None:
-        """Emit a PATCH_CLOSURE instruction for a letrec fixup."""
+        """Emit a PATCH_CLOSURE instruction for a letrec fixup.
+
+        PATCH_CLOSURE src0=closure_reg, src1=value_reg, src2=capture_idx
+        All three operands are register indices — no stack involvement.
+        """
         closure_slot = ctx.slot_of(patch.closure)
-        ctx.load_value(patch.value)
-        ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, patch.capture_index)
+        value_slot = ctx.ensure_slot(patch.value)
+        ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, value_slot, src2=patch.capture_index)
 
     # ------------------------------------------------------------------
     # Terminator emission
@@ -796,21 +812,24 @@ class MenaiVMCodeGen:
             # PATCH_CLOSURE the outer (non-sibling) captures into their
             # correct slot indices.  Sibling captures are patched later by
             # the block's patch_instrs (phase 3 of letrec).
-            ctx.emit(Opcode.MAKE_CLOSURE, code_idx, 0)
             closure_slot = ctx.alloc_slot(instr.result)
-            ctx.emit(Opcode.POP, dest=closure_slot)
+            ctx.emit(Opcode.MAKE_CLOSURE, code_idx, 0, dest=closure_slot)
             # Outer captures occupy the tail of free_vars: indices
             # [total_free_vars - capture_count .. total_free_vars - 1].
             outer_start = total_free_vars - capture_count
             for i, cap in enumerate(instr.captures):
-                ctx.load_value(cap)
-                ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, outer_start + i)
+                value_slot = ctx.ensure_slot(cap)
+                ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, value_slot, src2=outer_start + i)
             return
         elif capture_count > 0:
-            # Non-letrec closure with captures: pack all from slot 0.
+            # Non-letrec closure with captures: still passes captures via the
+            # stack (PUSH each, then MAKE_CLOSURE pops them).  Result written
+            # to dest register directly — no POP needed.
             for cap in instr.captures:
                 ctx.load_value(cap)
-            ctx.emit(Opcode.MAKE_CLOSURE, code_idx, capture_count)
+            closure_slot = ctx.alloc_slot(instr.result)
+            ctx.emit(Opcode.MAKE_CLOSURE, code_idx, capture_count, dest=closure_slot)
+            return
         else:
             # No captures — pre-build a MenaiFunction and store as a constant.
             func_val = MenaiFunction(
@@ -826,8 +845,6 @@ class MenaiVMCodeGen:
             slot = ctx.alloc_slot(instr.result)
             ctx.emit(Opcode.LOAD_CONST, ctx.constant_map[key], dest=slot)
             return
-
-        ctx.store_result(instr.result)
 
     def _generate_lambda_code_object(self, func: MenaiCFGFunction) -> CodeObject:
         """

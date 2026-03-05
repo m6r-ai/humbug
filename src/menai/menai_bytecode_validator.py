@@ -115,11 +115,10 @@ class BytecodeValidator:
             Opcode.JUMP_IF_TRUE: (0, 0),
             Opcode.RAISE_ERROR: (0, 0),  # Doesn't return, but doesn't matter
 
-            # Functions - MAKE_CLOSURE pops captures and pushes closure
-            # CALL_* effects depend on arity (handled specially)
-            # RETURN pops 1 (handled specially as it exits)
-            Opcode.MAKE_CLOSURE: (-1, 1),
-            Opcode.PATCH_CLOSURE: (1, 0),  # pops 1 value, mutates existing closure slot
+            # Functions
+            # MAKE_CLOSURE: register-based result; still pops captures from stack
+            Opcode.MAKE_CLOSURE: (-1, 0),  # pops capture_count values, writes to dest (no push)
+            Opcode.PATCH_CLOSURE: (0, 0),
             Opcode.CALL: (-1, 1),
             Opcode.TAIL_CALL: (-1, 0),
             Opcode.APPLY: (2, 1),
@@ -128,7 +127,7 @@ class BytecodeValidator:
             Opcode.RETURN: (1, 0),
 
             # Trace debug
-            Opcode.EMIT_TRACE: (1, 0),  # Pops 1 (message), pushes 0
+            Opcode.EMIT_TRACE: (0, 0),
 
             # Function operations
             Opcode.FUNCTION_P: (1, 1),
@@ -413,6 +412,26 @@ class BytecodeValidator:
                         opcode=opcode
                     )
 
+            # Validate MAKE_CLOSURE dest register and code_object index
+            if opcode == Opcode.MAKE_CLOSURE:
+                if instr.dest < 0 or instr.dest >= code.local_count:
+                    raise ValidationError(
+                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
+                        f"MAKE_CLOSURE dest {instr.dest} out of bounds (local_count: {code.local_count})",
+                        instruction_index=i,
+                        opcode=opcode
+                    )
+
+            # Validate EMIT_TRACE src0 register
+            if opcode == Opcode.EMIT_TRACE:
+                if instr.src0 < 0 or instr.src0 >= code.local_count:
+                    raise ValidationError(
+                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
+                        f"EMIT_TRACE src0 {instr.src0} out of bounds (local_count: {code.local_count})",
+                        instruction_index=i,
+                        opcode=opcode
+                    )
+
             # Validate ENTER: n must match param_count and fit within local_count
             if opcode == Opcode.ENTER:
                 n = instr.src0
@@ -431,13 +450,21 @@ class BytecodeValidator:
                         opcode=opcode
                     )
 
-            # Validate PATCH_CLOSURE: var_index must be a valid local slot
+            # Validate PATCH_CLOSURE: all three register operands must be valid
             if opcode == Opcode.PATCH_CLOSURE:
-                var_index = instr.src0
-                if var_index < 0 or var_index >= code.local_count:
+                for field_name, reg in (('src0 (closure)', instr.src0), ('src1 (value)', instr.src1)):
+                    if reg < 0 or reg >= code.local_count:
+                        raise ValidationError(
+                            ValidationErrorType.INVALID_VARIABLE_ACCESS,
+                            f"PATCH_CLOSURE {field_name} register {reg} out of bounds (local_count: {code.local_count})",
+                            instruction_index=i,
+                            opcode=opcode
+                        )
+                # src2 is the capture index — validated in _validate_variable_initialization
+                if instr.src2 < 0:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"PATCH_CLOSURE var_index {var_index} out of bounds (local_count: {code.local_count})",
+                        f"PATCH_CLOSURE capture_idx (src2) {instr.src2} is negative",
                         instruction_index=i,
                         opcode=opcode
                     )
@@ -646,18 +673,40 @@ class BytecodeValidator:
                         context=f"Initialized variables: {sorted(current_initialized)}"
                     )
 
+            # Check EMIT_TRACE - source register must be initialized
+            if opcode == Opcode.EMIT_TRACE:
+                var_index = instr.src0
+                if var_index not in current_initialized:
+                    raise ValidationError(
+                        ValidationErrorType.UNINITIALIZED_VARIABLE,
+                        f"EMIT_TRACE source register {var_index} may be uninitialized",
+                        instruction_index=instr_idx,
+                        opcode=opcode,
+                        context=f"Initialized variables: {sorted(current_initialized)}"
+                    )
+
             # Check PATCH_CLOSURE:
-            #   1. var_index (src0) must be initialized.
-            #   2. That slot must definitively hold a closure.
-            #   3. capture_slot (src1) must be in range for that closure's free_vars.
+            #   src0 = closure register — must be initialized and hold a closure.
+            #   src1 = value register   — must be initialized.
+            #   src2 = capture index    — must be in range for the closure's free_vars.
             if opcode == Opcode.PATCH_CLOSURE:
                 var_index = instr.src0
-                capture_slot = instr.src1
+                value_reg = instr.src1
+                capture_slot = instr.src2
 
                 if var_index not in current_initialized:
                     raise ValidationError(
                         ValidationErrorType.UNINITIALIZED_VARIABLE,
                         f"PATCH_CLOSURE target slot {var_index} may be uninitialized",
+                        instruction_index=instr_idx,
+                        opcode=opcode,
+                        context=f"Initialized variables: {sorted(current_initialized)}"
+                    )
+
+                if value_reg not in current_initialized:
+                    raise ValidationError(
+                        ValidationErrorType.UNINITIALIZED_VARIABLE,
+                        f"PATCH_CLOSURE value register {value_reg} may be uninitialized",
                         instruction_index=instr_idx,
                         opcode=opcode,
                         context=f"Initialized variables: {sorted(current_initialized)}"
@@ -695,15 +744,13 @@ class BytecodeValidator:
             if opcode == Opcode.POP:
                 var_index = instr.dest
                 new_initialized.add(var_index)
-                # Check if preceding instruction was MAKE_CLOSURE for closure tracking
-                if instr_idx > 0:
-                    prev_instr = code.instructions[instr_idx - 1]
-                    if prev_instr.opcode == Opcode.MAKE_CLOSURE:
-                        new_closures[var_index] = prev_instr.src0
-                    else:
-                        new_closures.pop(var_index, None)
-                else:
-                    new_closures.pop(var_index, None)
+                new_closures.pop(var_index, None)
+
+            # MAKE_CLOSURE marks dest as initialized and records the closure identity
+            if opcode == Opcode.MAKE_CLOSURE:
+                var_index = instr.dest
+                new_initialized.add(var_index)
+                new_closures[var_index] = instr.src0  # src0 = code_object index
 
             # Load ops mark the destination register as initialized
             if opcode in load_reg_ops:
@@ -753,7 +800,7 @@ class BytecodeValidator:
 
         if opcode == Opcode.MAKE_CLOSURE:
             capture_count = instr.src1
-            return (capture_count, 1)  # Pop captures, push closure
+            return (capture_count, 0)  # Pop captures, write closure to dest register
 
         if opcode == Opcode.CALL:
             arity = instr.src0

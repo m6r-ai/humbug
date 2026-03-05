@@ -647,23 +647,24 @@ class MenaiVM:
         return None
 
     def _op_patch_closure(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, var_index: int, capture_slot: int, _src2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, closure_reg: int, value_reg: int, capture_idx: int
     ) -> MenaiValue | None:
         """
-        PATCH_CLOSURE: Fill in a captured-value slot on an existing closure.
+        PATCH_CLOSURE closure_reg, value_reg, capture_idx: Fill a free-var slot on a closure.
 
         Used in Phase 2 of letrec two-phase initialisation to wire sibling
         closures together after all have been created in Phase 1.
 
         Args:
-            var_index    - local slot holding the closure to patch
-            capture_slot - which captured-values slot to fill in
+            closure_reg - register holding the closure to patch
+            value_reg   - register holding the value to store into the capture slot
+            capture_idx - which captured-values slot to fill
         """
-        value = self.stack.pop()
-        closure = frame.locals[var_index]
+        value = frame.locals[value_reg]
+        closure = frame.locals[closure_reg]
         assert isinstance(closure, MenaiFunction)
         assert isinstance(closure.captured_values, list), "PATCH_CLOSURE: captured_values must be a list (set by MAKE_CLOSURE)"
-        closure.captured_values[capture_slot] = value
+        closure.captured_values[capture_idx] = value
         return None
 
     def _op_load_name(  # pylint: disable=useless-return
@@ -746,10 +747,10 @@ class MenaiVM:
         raise MenaiEvalError(error_msg.value)
 
     def _op_make_closure(  # pylint: disable=useless-return
-        self, _frame: Frame, code: CodeObject, _dest: int, src0: int, capture_count: int, _src2: int
+        self, frame: Frame, code: CodeObject, dest: int, src0: int, capture_count: int, _src2: int
     ) -> MenaiValue | None:
-        """MAKE_CLOSURE: Create closure from code object and captured values."""
-        # Validator guarantees src0 is in bounds and stack has enough values
+        """MAKE_CLOSURE dest, src0, capture_count: Create closure, write to register dest."""
+        # Validator guarantees src0 is in bounds and stack has enough values for captures
         closure_code = code.code_objects[src0]
 
         # Pop captured values from stack (in reverse order)
@@ -775,10 +776,11 @@ class MenaiVM:
             # Letrec Phase 1: captured_values holds whatever was pre-pushed
             # (currently always zero items), then Nones for the remaining slots.
             cv: list = list(captured_values) + [None] * (n_free - capture_count)
+
         else:
             cv = list(captured_values)
         object.__setattr__(closure, 'captured_values', cv)
-        self.stack.append(closure)
+        frame.locals[dest] = closure
         return None
 
     def _op_call(  # pylint: disable=useless-return
@@ -919,11 +921,10 @@ class MenaiVM:
         return self.stack.pop()
 
     def _op_emit_trace(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """EMIT_TRACE: Pop value from stack and emit to trace watcher."""
-        # Pop the message from stack
-        message = self.stack.pop()
+        """EMIT_TRACE src0: Read value from register src0 and emit to trace watcher."""
+        message = frame.locals[src0]
 
         # Emit trace if watcher is available
         if self.trace_watcher:

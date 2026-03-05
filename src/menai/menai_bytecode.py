@@ -71,8 +71,8 @@ class Opcode(IntEnum):
     RAISE_ERROR = _op(23, 1)            # RAISE_ERROR const_index
 
     # Functions
-    MAKE_CLOSURE = _op(30, 2)           # MAKE_CLOSURE code_index capture_count
-    PATCH_CLOSURE = _op(31, 2)          # PATCH_CLOSURE var_index capture_slot
+    MAKE_CLOSURE = _op(30, 2, True)     # r_dest = MAKE_CLOSURE code_idx, capture_count
+    PATCH_CLOSURE = _op(31, 3)          # PATCH_CLOSURE closure_reg, value_reg, capture_idx
     CALL = _op(32, 1)                   # CALL arity
     TAIL_CALL = _op(33, 1)              # TAIL_CALL arity
     APPLY = _op(34, 0)                  # Apply function to arg list (non-tail)
@@ -81,7 +81,7 @@ class Opcode(IntEnum):
     RETURN = _op(37, 0)                 # Return from function
 
     # Debugging
-    EMIT_TRACE = _op(40, 0)             # Emit trace (pops value, emits to watcher)
+    EMIT_TRACE = _op(40, 1)             # EMIT_TRACE src0 — read register src0, emit to trace watcher
 
     # None operations
     NONE_P = _op(50, 0)                 # (none? x)
@@ -434,16 +434,19 @@ class Instruction:
       src1  — second source register or instruction-stream immediate
       src2  — third source register (unused in current stack-machine phase)
 
-    Opcode conventions (as of the PUSH/POP rename):
-      PUSH src0       — src0 is the register index to push; dest unused
-      POP  dest       — dest is the register index to pop into; src0/src1/src2 unused
-      All other stack-machine ops — src0/src1 carry stream immediates; dest unused
+    Opcode conventions:
+      PUSH src0                        — push register src0 onto call stack; dest unused
+      POP  dest                        — pop call stack into register dest; src0/src1/src2 unused
+      MAKE_CLOSURE dest, src0, src1    — dest=result reg; src0=code_idx; src1=capture_count
+      PATCH_CLOSURE src0, src1, src2   — src0=closure reg; src1=value reg; src2=capture_idx
+      EMIT_TRACE src0                  — src0=value register to trace; no dest
+      All remaining stack-machine ops  — src0/src1 carry stream immediates; dest unused
     """
     opcode: Opcode
-    dest: int = 0   # destination register (written by POP; unused by most ops currently)
+    dest: int = 0   # destination register (written by MAKE_CLOSURE, POP, and load ops)
     src0: int = 0   # first immediate / source operand (was arg1)
     src1: int = 0   # second immediate / source operand (was arg2)
-    src2: int = 0   # third source operand (unused in stack-machine phase)
+    src2: int = 0   # third source operand (used by PATCH_CLOSURE for capture_idx)
 
     def arg_count(self) -> int:
         """Return the number of instruction-stream immediates this instruction takes (0, 1, or 2).
@@ -491,6 +494,15 @@ class Instruction:
 
         if opcode == Opcode.JUMP_IF_TRUE:
             return f"JUMP_IF_TRUE r{self.src0}, @{self.src1}"
+
+        if opcode == Opcode.MAKE_CLOSURE:
+            return f"r{self.dest} = MAKE_CLOSURE {self.src0}, {self.src1}"
+
+        if opcode == Opcode.PATCH_CLOSURE:
+            return f"PATCH_CLOSURE r{self.src0}, r{self.src1}, {self.src2}"
+
+        if opcode == Opcode.EMIT_TRACE:
+            return f"EMIT_TRACE r{self.src0}"
 
         # All remaining opcodes: stream-immediate formatting (not yet converted)
         n = self.arg_count()

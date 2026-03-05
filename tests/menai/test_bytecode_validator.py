@@ -46,10 +46,8 @@ Minimal valid "load and return" sequence:
 import pytest
 
 from menai.menai_bytecode import CodeObject, Instruction, Opcode
-from menai.menai_bytecode_validator import (
-    BytecodeValidator, ValidationError, ValidationErrorType, validate_bytecode
-)
-from menai.menai_value import MenaiInteger, MenaiString
+from menai.menai_bytecode_validator import ValidationError, ValidationErrorType, validate_bytecode
+from menai.menai_value import MenaiInteger
 
 
 class TestBytecodeValidator:
@@ -416,11 +414,12 @@ class TestBytecodeValidator:
           1: PUSH src0=0   — slot 0 initialized ✓; stack: 0 → 1
           2: RETURN        — terminal ✓
 
-        Outer code (local_count=1, param_count=0, initial depth=0):
+        Outer code (local_count=2, param_count=0, initial depth=0):
           0: LOAD_CONST dest=0, src0=0   — r0=42; stack: 0
           1: PUSH src0=0                 — stack: 0 → 1  (captured value)
-          2: MAKE_CLOSURE src0=0, src1=1 — pops 1 capture, pushes closure; depth: 1 → 1
-          3: RETURN                      — terminal ✓
+          2: MAKE_CLOSURE dest=1, src0=0, src1=1 — pops 1 capture, writes closure to r1; depth: 1 → 0
+          3: PUSH src0=1                 — push closure onto stack; depth: 0 → 1
+          4: RETURN                      — terminal ✓
         """
         lambda_code = CodeObject(
             instructions=[
@@ -439,13 +438,14 @@ class TestBytecodeValidator:
             instructions=[
                 Instruction(Opcode.LOAD_CONST, dest=0, src0=0),       # 0: r0=42; stack: 0
                 Instruction(Opcode.PUSH, src0=0),                     # 1: stack: 0 → 1 (captured value)
-                Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=1),     # 2: pops 1, pushes closure; depth: 1 → 1
-                Instruction(Opcode.RETURN),                           # 3: terminal ✓
+                Instruction(Opcode.MAKE_CLOSURE, dest=1, src0=0, src1=1),  # 2: pops 1 capture, writes closure to r1; depth: 1 → 0
+                Instruction(Opcode.PUSH, src0=1),                     # 3: push closure; depth: 0 → 1
+                Instruction(Opcode.RETURN),                           # 4: terminal ✓
             ],
             constants=[MenaiInteger(42)],
             names=[],
             code_objects=[lambda_code],
-            local_count=1,
+            local_count=2,
         )
         # Should not raise
         validate_bytecode(code)
@@ -829,21 +829,20 @@ class TestPatchClosureValidation:
     """
     Tests for PATCH_CLOSURE validation in _validate_initialization.
 
-    PATCH_CLOSURE src0=var_index, src1=capture_slot has three requirements:
-      1. var_index (src0) must refer to an initialized slot.
-      2. That slot must definitively hold a closure (created by MAKE_CLOSURE).
-      3. capture_slot (src1) must be < len(code_objects[code_index].free_vars).
+    PATCH_CLOSURE src0=closure_reg, src1=value_reg, src2=capture_idx has three requirements:
+      1. closure_reg (src0) must refer to an initialized slot holding a closure.
+      2. value_reg (src1) must refer to an initialized slot.
+      3. capture_idx (src2) must be < len(code_objects[code_index].free_vars).
 
     At merge points the closure map is intersected conservatively: a slot is
     only kept if both incoming paths agree on the same code_object index.
 
     Register allocation convention in these tests:
-      Slot 0 — holds the closure (written by POP dest=0 after MAKE_CLOSURE).
+      Slot 0 — holds the closure (written directly by MAKE_CLOSURE dest=0).
       Slot 1 — scratch register for values being patched in (LOAD_CONST dest=1).
       local_count >= 2 whenever both slots are used.
 
-    Using slot 1 for LOAD_CONST avoids clobbering the closure in slot 0
-    (LOAD_CONST dest=0 would remove slot 0 from the closure map).
+    Using slot 1 for the patch value avoids clobbering the closure in slot 0.
     """
 
     # ------------------------------------------------------------------
@@ -880,33 +879,27 @@ class TestPatchClosureValidation:
         """PATCH_CLOSURE against a known closure slot with valid capture slots passes.
 
         Outer frame (local_count=2):
-          Slot 0: holds the closure (written by POP dest=0 after MAKE_CLOSURE).
+          Slot 0: holds the closure (written directly by MAKE_CLOSURE dest=0).
           Slot 1: scratch register for the values being patched in.
 
-          0: MAKE_CLOSURE src0=0, src1=0  — 0 pre-captured values; pushes closure; depth: 0 → 1
-          1: POP dest=0                   — slot 0 = closure; depth: 1 → 0; slot 0 tracked as closure
-          2: LOAD_CONST dest=1, src0=0    — r1=42; stack: 0  (slot 1, NOT slot 0)
-          3: PUSH src0=1                  — stack: 0 → 1
-          4: PATCH_CLOSURE src0=0, src1=0 — pops 1; slot 0 is closure ✓; capture_slot=0 < 2 ✓
-          5: LOAD_CONST dest=1, src0=0    — r1=42; stack: 0
-          6: PUSH src0=1                  — stack: 0 → 1
-          7: PATCH_CLOSURE src0=0, src1=1 — pops 1; slot 0 is closure ✓; capture_slot=1 < 2 ✓
-          8: PUSH src0=0                  — stack: 0 → 1
-          9: RETURN                       — terminal ✓
+          0: MAKE_CLOSURE dest=0, src0=0, src1=0 — r0=closure; slot 0 tracked as closure
+          1: LOAD_CONST dest=1, src0=0            — r1=42
+          2: PATCH_CLOSURE src0=0, src1=1, src2=0 — r0 is closure ✓; capture_idx=0 < 2 ✓
+          3: LOAD_CONST dest=1, src0=0            — r1=42
+          4: PATCH_CLOSURE src0=0, src1=1, src2=1 — r0 is closure ✓; capture_idx=1 < 2 ✓
+          5: PUSH src0=0                          — stack: 0 → 1
+          6: RETURN                               — terminal ✓
         """
         inner = self._make_closure_code(2)
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),   # 0: pushes closure; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                    # 1: slot 0 = closure; depth: 1 → 0
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 2: r1=42; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                   # 3: stack: 0 → 1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),  # 4: pops 1; slot 0 closure ✓; cap 0 < 2 ✓
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 5: r1=42; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                   # 6: stack: 0 → 1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1),  # 7: pops 1; slot 0 closure ✓; cap 1 < 2 ✓
-                Instruction(Opcode.PUSH, src0=0),                   # 8: stack: 0 → 1
-                Instruction(Opcode.RETURN),                         # 9: terminal ✓
+                Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),    # 0: r0=closure
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),              # 1: r1=42
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0),   # 2: cap 0 < 2 ✓
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),              # 3: r1=42
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=1),   # 4: cap 1 < 2 ✓
+                Instruction(Opcode.PUSH, src0=0),                            # 5: stack: 0 → 1
+                Instruction(Opcode.RETURN),                                  # 6: terminal ✓
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -919,24 +912,20 @@ class TestPatchClosureValidation:
         """PATCH_CLOSURE with exactly one free var and capture_slot=0 passes.
 
         Outer frame (local_count=2):
-          0: MAKE_CLOSURE src0=0, src1=0  — pushes closure; depth: 0 → 1
-          1: POP dest=0                   — slot 0 = closure; depth: 1 → 0
-          2: LOAD_CONST dest=1, src0=0    — r1=1; stack: 0
-          3: PUSH src0=1                  — stack: 0 → 1
-          4: PATCH_CLOSURE src0=0, src1=0 — pops 1; slot 0 closure ✓; capture_slot=0 < 1 ✓
-          5: PUSH src0=0                  — stack: 0 → 1
-          6: RETURN                       — terminal ✓
+          0: MAKE_CLOSURE dest=0, src0=0, src1=0  — r0=closure
+          1: LOAD_CONST dest=1, src0=0             — r1=1
+          2: PATCH_CLOSURE src0=0, src1=1, src2=0  — capture_idx=0 < 1 ✓
+          3: PUSH src0=0                           — stack: 0 → 1
+          4: RETURN                                — terminal ✓
         """
         inner = self._make_closure_code(1)
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),   # 0: pushes closure; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                    # 1: slot 0 = closure; depth: 1 → 0
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 2: r1=1; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                   # 3: stack: 0 → 1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),  # 4: pops 1; slot 0 closure ✓; cap 0 < 1 ✓
-                Instruction(Opcode.PUSH, src0=0),                   # 5: stack: 0 → 1
-                Instruction(Opcode.RETURN),                         # 6: terminal ✓
+                Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),   # 0: r0=closure
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 1: r1=1
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0),  # 2: cap 0 < 1 ✓
+                Instruction(Opcode.PUSH, src0=0),                           # 3: stack: 0 → 1
+                Instruction(Opcode.RETURN),                                 # 4: terminal ✓
             ],
             constants=[MenaiInteger(1)],
             names=[],
@@ -955,22 +944,20 @@ class TestPatchClosureValidation:
         Slot 0 is never written before PATCH_CLOSURE src0=0.
 
         Sequence (local_count=2):
-          0: LOAD_CONST dest=1, src0=0    — r1=1; stack: 0  (slot 0 never written)
-          1: PUSH src0=1                  — stack: 0 → 1
-          2: PATCH_CLOSURE src0=0, src1=0 — slot 0 never initialized → UNINITIALIZED_VARIABLE
-          3: LOAD_CONST dest=1, src0=0
-          4: PUSH src0=1
-          5: RETURN
+          0: LOAD_CONST dest=1, src0=0             — r1=1 (slot 0 never written)
+          1: PATCH_CLOSURE src0=0, src1=1, src2=0  — slot 0 never initialized → UNINITIALIZED_VARIABLE
+          2: LOAD_CONST dest=1, src0=0
+          3: PUSH src0=1
+          4: RETURN
         """
         inner = self._make_closure_code(1)
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 0: r1=1; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                   # 1: stack: 0 → 1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),  # 2: slot 0 never init → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 3
-                Instruction(Opcode.PUSH, src0=1),                   # 4
-                Instruction(Opcode.RETURN),                         # 5
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 0: r1=1
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0),  # 1: slot 0 never init → error
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 2
+                Instruction(Opcode.PUSH, src0=1),                           # 3
+                Instruction(Opcode.RETURN),                                 # 4
             ],
             constants=[MenaiInteger(1)],
             names=[],
@@ -987,43 +974,39 @@ class TestPatchClosureValidation:
 
         Branch A (instr 3-5): creates closure, stores to slot 0.
         Branch B (instr 6):   skips creation — slot 0 remains uninitialized.
-        Merge (instr 7):      PATCH_CLOSURE — slot 0 may be uninitialised → error.
+        Merge:                PATCH_CLOSURE — slot 0 may be uninitialised → error.
 
         Control flow (local_count=2, initial depth=0):
           0: LOAD_TRUE dest=1            — r1=#t; stack: 0
-          1: JUMP_IF_FALSE src0=1, src1=5 — read r1; jump→5, fall→2
+          1: JUMP_IF_FALSE src0=1, src1=4 — read r1; jump→4, fall→2
 
           Branch A (depth=0):
-          2: MAKE_CLOSURE src0=0, src1=0 — pushes closure; depth: 0 → 1
-          3: POP dest=0                  — slot 0 = closure; depth: 1 → 0
-          4: JUMP src0=6                 — stack: 0; jump to 6
+          2: MAKE_CLOSURE dest=0, src0=0, src1=0 — r0=closure
+          3: JUMP src0=5                         — jump to 5
 
           Branch B (depth=0):
-          5: JUMP src0=6                 — stack: 0; jump to 6 (slot 0 not initialized)
+          4: JUMP src0=5                         — jump to 5 (slot 0 not initialized)
 
           Merge (slot 0 initialized only on branch A):
-          6: LOAD_CONST dest=1, src0=0   — r1=1; stack: 0
-          7: PUSH src0=1                 — stack: 0 → 1
-          8: PATCH_CLOSURE src0=0, src1=0 — slot 0 may be uninit → UNINITIALIZED_VARIABLE
-          9: LOAD_CONST dest=1, src0=0
-          10: PUSH src0=1
-          11: RETURN
+          5: LOAD_CONST dest=1, src0=0            — r1=1
+          6: PATCH_CLOSURE src0=0, src1=1, src2=0 — slot 0 may be uninit → UNINITIALIZED_VARIABLE
+          7: LOAD_CONST dest=1, src0=0
+          8: PUSH src0=1
+          9: RETURN
         """
         inner = self._make_closure_code(1)
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_TRUE, dest=1),               # 0: r1=#t; stack: 0
-                Instruction(Opcode.JUMP_IF_FALSE, src0=1, src1=5),   # 1: read r1; jump→5, fall→2
-                Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),    # 2: pushes closure; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                     # 3: slot 0 = closure; depth: 1 → 0
-                Instruction(Opcode.JUMP, src0=6),                    # 4: stack: 0; jump to 6
-                Instruction(Opcode.JUMP, src0=6),                    # 5: stack: 0; jump to 6 (no init)
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 6: r1=1; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                    # 7: stack: 0 → 1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),   # 8: slot 0 may be uninit → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 9
-                Instruction(Opcode.PUSH, src0=1),                    # 10
-                Instruction(Opcode.RETURN),                          # 11
+                Instruction(Opcode.JUMP_IF_FALSE, src0=1, src1=4),   # 1: jump→4, fall→2
+                Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),  # 2: r0=closure
+                Instruction(Opcode.JUMP, src0=5),                    # 3: jump to 5
+                Instruction(Opcode.JUMP, src0=5),                    # 4: jump to 5 (no init)
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 5: r1=1
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0), # 6: may be uninit → error
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 7
+                Instruction(Opcode.PUSH, src0=1),                    # 8
+                Instruction(Opcode.RETURN),                          # 9
             ],
             constants=[MenaiInteger(1)],
             names=[],
@@ -1042,23 +1025,21 @@ class TestPatchClosureValidation:
 
         Sequence (local_count=2):
           0: LOAD_CONST dest=0, src0=0    — slot 0 = 42 (plain integer, not a closure)
-          1: LOAD_CONST dest=1, src0=0    — r1=42; stack: 0
-          2: PUSH src0=1                  — stack: 0 → 1
-          3: PATCH_CLOSURE src0=0, src1=0 — slot 0 not a closure → INVALID_VARIABLE_ACCESS
-          4: LOAD_CONST dest=1, src0=0
-          5: PUSH src0=1
-          6: RETURN
+          1: LOAD_CONST dest=1, src0=0             — r1=42
+          2: PATCH_CLOSURE src0=0, src1=1, src2=0  — slot 0 not a closure → INVALID_VARIABLE_ACCESS
+          3: LOAD_CONST dest=1, src0=0
+          4: PUSH src0=1
+          5: RETURN
         """
         inner = self._make_closure_code(1)
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 0: slot 0 = 42 (not a closure)
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 1: r1=42; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                   # 2: stack: 0 → 1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),  # 3: slot 0 not closure → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 4
-                Instruction(Opcode.PUSH, src0=1),                   # 5
-                Instruction(Opcode.RETURN),                         # 6
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 1: r1=42
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0),  # 2: not closure → error
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 3
+                Instruction(Opcode.PUSH, src0=1),                           # 4
+                Instruction(Opcode.RETURN),                                 # 5
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -1071,31 +1052,18 @@ class TestPatchClosureValidation:
         assert "not known to hold a closure" in exc_info.value.message
 
     def test_patch_closure_slot_overwritten_after_make_closure(self):
-        """PATCH_CLOSURE is rejected when a second write overwrites the closure slot.
+        """PATCH_CLOSURE is rejected when a second write overwrites the closure slot."""
 
-        Sequence (local_count=2):
-          0: MAKE_CLOSURE src0=0, src1=0  — pushes closure; depth: 0 → 1
-          1: POP dest=0                   — slot 0 = closure; depth: 1 → 0
-          2: LOAD_CONST dest=0, src0=0    — slot 0 = 42 (overwrites closure!)
-          3: LOAD_CONST dest=1, src0=0    — r1=42; stack: 0
-          4: PUSH src0=1                  — stack: 0 → 1
-          5: PATCH_CLOSURE src0=0, src1=0 — slot 0 no longer a closure → INVALID_VARIABLE_ACCESS
-          6: LOAD_CONST dest=1, src0=0
-          7: PUSH src0=1
-          8: RETURN
-        """
         inner = self._make_closure_code(1)
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),   # 0: pushes closure; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                    # 1: slot 0 = closure; depth: 1 → 0
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 2: slot 0 = 42 (overwrites closure)
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 3: r1=42; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                   # 4: stack: 0 → 1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),  # 5: slot 0 not closure → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 6
-                Instruction(Opcode.PUSH, src0=1),                   # 7
-                Instruction(Opcode.RETURN),                         # 8
+                Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),   # 0: r0=closure
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),             # 1: r0=42 (overwrites closure)
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 2: r1=42
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0),  # 3: not closure → error
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 4
+                Instruction(Opcode.PUSH, src0=1),                           # 5
+                Instruction(Opcode.RETURN),                                 # 6
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -1116,42 +1084,38 @@ class TestPatchClosureValidation:
 
         Control flow (local_count=2, initial depth=0):
           0: LOAD_TRUE dest=1            — r1=#t; stack: 0
-          1: JUMP_IF_FALSE src0=1, src1=5 — read r1; jump→5, fall→2
+          1: JUMP_IF_FALSE src0=1, src1=4 — read r1; jump→4, fall→2
 
           Branch A (depth=0):
-          2: MAKE_CLOSURE src0=0, src1=0 — closure from code_objects[0]; depth: 0 → 1
-          3: POP dest=0                  — slot 0 = closure[0]; depth: 1 → 0
-          4: JUMP src0=7                 — stack: 0; jump to 7
+          2: MAKE_CLOSURE dest=0, src0=0, src1=0 — r0=closure[0]
+          3: JUMP src0=6                         — jump to 6
 
           Branch B (depth=0):
-          5: MAKE_CLOSURE src0=1, src1=0 — closure from code_objects[1]; depth: 0 → 1
-          6: POP dest=0                  — slot 0 = closure[1]; depth: 1 → 0; falls to 7
+          4: MAKE_CLOSURE dest=0, src0=1, src1=0 — r0=closure[1]
+          5: JUMP src0=6                         — falls to 6
 
           Merge (slot 0 holds different closures on each path):
-          7: LOAD_CONST dest=1, src0=0   — r1=1; stack: 0
-          8: PUSH src0=1                 — stack: 0 → 1
-          9: PATCH_CLOSURE src0=0, src1=0 — ambiguous closure → INVALID_VARIABLE_ACCESS
-          10: LOAD_CONST dest=1, src0=0
-          11: PUSH src0=1
-          12: RETURN
+          6: LOAD_CONST dest=1, src0=0            — r1=1
+          7: PATCH_CLOSURE src0=0, src1=1, src2=0 — ambiguous closure → INVALID_VARIABLE_ACCESS
+          8: LOAD_CONST dest=1, src0=0
+          9: PUSH src0=1
+          10: RETURN
         """
         inner_a = self._make_closure_code(1, name="<inner-a>")
         inner_b = self._make_closure_code(1, name="<inner-b>")
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_TRUE, dest=1),               # 0: r1=#t; stack: 0
-                Instruction(Opcode.JUMP_IF_FALSE, src0=1, src1=5),   # 1: read r1; jump→5, fall→2
-                Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),    # 2: closure[0]; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                     # 3: slot 0 = closure[0]; depth: 1 → 0
-                Instruction(Opcode.JUMP, src0=7),                    # 4: stack: 0; jump to 7
-                Instruction(Opcode.MAKE_CLOSURE, src0=1, src1=0),    # 5: closure[1]; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                     # 6: slot 0 = closure[1]; depth: 1 → 0
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 7: r1=1; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                    # 8: stack: 0 → 1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),   # 9: ambiguous → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 10
-                Instruction(Opcode.PUSH, src0=1),                    # 11
-                Instruction(Opcode.RETURN),                          # 12
+                Instruction(Opcode.JUMP_IF_FALSE, src0=1, src1=4),   # 1: jump→4, fall→2
+                Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),  # 2: r0=closure[0]
+                Instruction(Opcode.JUMP, src0=6),                    # 3: jump to 6
+                Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=1, src1=0),  # 4: r0=closure[1]
+                Instruction(Opcode.JUMP, src0=6),                    # 5: falls to 6
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 6: r1=1
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0), # 7: ambiguous → error
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 8
+                Instruction(Opcode.PUSH, src0=1),                    # 9
+                Instruction(Opcode.RETURN),                          # 10
             ],
             constants=[MenaiInteger(1)],
             names=[],
@@ -1170,26 +1134,22 @@ class TestPatchClosureValidation:
         capture_slot=2 is out of range.
 
         Sequence (local_count=2):
-          0: MAKE_CLOSURE src0=0, src1=0  — pushes closure; depth: 0 → 1
-          1: POP dest=0                   — slot 0 = closure; depth: 1 → 0
-          2: LOAD_CONST dest=1, src0=0    — r1=1; stack: 0
-          3: PUSH src0=1                  — stack: 0 → 1
-          4: PATCH_CLOSURE src0=0, src1=2 — capture_slot=2 >= n_free=2 → INDEX_OUT_OF_BOUNDS
-          5: LOAD_CONST dest=1, src0=0
-          6: PUSH src0=1
-          7: RETURN
+          0: MAKE_CLOSURE dest=0, src0=0, src1=0  — r0=closure
+          1: LOAD_CONST dest=1, src0=0             — r1=1
+          2: PATCH_CLOSURE src0=0, src1=1, src2=2  — capture_idx=2 >= n_free=2 → INDEX_OUT_OF_BOUNDS
+          3: LOAD_CONST dest=1, src0=0
+          4: PUSH src0=1
+          5: RETURN
         """
         inner = self._make_closure_code(2)
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),   # 0: pushes closure; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                    # 1: slot 0 = closure; depth: 1 → 0
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 2: r1=1; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                   # 3: stack: 0 → 1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=2),  # 4: cap 2 >= n_free=2 → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 5
-                Instruction(Opcode.PUSH, src0=1),                   # 6
-                Instruction(Opcode.RETURN),                         # 7
+                Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),   # 0: r0=closure
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 1: r1=1
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=2),  # 2: cap 2 >= n_free=2 → error
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 3
+                Instruction(Opcode.PUSH, src0=1),                           # 4
+                Instruction(Opcode.RETURN),                                 # 5
             ],
             constants=[MenaiInteger(1)],
             names=[],
@@ -1208,26 +1168,22 @@ class TestPatchClosureValidation:
         inner has 0 free vars, so any capture_slot (including 0) is invalid.
 
         Sequence (local_count=2):
-          0: MAKE_CLOSURE src0=0, src1=0  — pushes closure; depth: 0 → 1
-          1: POP dest=0                   — slot 0 = closure; depth: 1 → 0
-          2: LOAD_CONST dest=1, src0=0    — r1=1; stack: 0
-          3: PUSH src0=1                  — stack: 0 → 1
-          4: PATCH_CLOSURE src0=0, src1=0 — capture_slot=0 >= n_free=0 → INDEX_OUT_OF_BOUNDS
-          5: LOAD_CONST dest=1, src0=0
-          6: PUSH src0=1
-          7: RETURN
+          0: MAKE_CLOSURE dest=0, src0=0, src1=0  — r0=closure
+          1: LOAD_CONST dest=1, src0=0             — r1=1
+          2: PATCH_CLOSURE src0=0, src1=1, src2=0  — capture_idx=0 >= n_free=0 → INDEX_OUT_OF_BOUNDS
+          3: LOAD_CONST dest=1, src0=0
+          4: PUSH src0=1
+          5: RETURN
         """
         inner = self._make_closure_code(0)
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),   # 0: pushes closure; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                    # 1: slot 0 = closure; depth: 1 → 0
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 2: r1=1; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                   # 3: stack: 0 → 1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),  # 4: cap 0 >= n_free=0 → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 5
-                Instruction(Opcode.PUSH, src0=1),                   # 6
-                Instruction(Opcode.RETURN),                         # 7
+                Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),   # 0: r0=closure
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 1: r1=1
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0),  # 2: cap 0 >= n_free=0 → error
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 3
+                Instruction(Opcode.PUSH, src0=1),                           # 4
+                Instruction(Opcode.RETURN),                                 # 5
             ],
             constants=[MenaiInteger(1)],
             names=[],
