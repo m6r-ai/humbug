@@ -2111,101 +2111,100 @@ class MenaiVM:
         return None
 
     def _op_dict_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """DICT_P: Check if value is an dict."""
-        value = self.stack.pop()
-        self.stack.append(MenaiBoolean(isinstance(value, MenaiDict)))
+        """DICT_P dest, src0: r_dest = (dict? r_src0)"""
+        frame.locals[dest] = MenaiBoolean(isinstance(frame.locals[src0], MenaiDict))
         return None
 
     def _op_dict_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """DICT_EQ_P: Pop two values, push true if both are dicts and equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_dict(a, 'dict=?') == self._ensure_dict(b, 'dict=?')))
+        """DICT_EQ_P dest, src0, src1: r_dest = (dict=? r_src0 r_src1)"""
+        a = cast(MenaiValue, frame.locals[src0])
+        b = cast(MenaiValue, frame.locals[src1])
+        frame.locals[dest] = MenaiBoolean(self._ensure_dict(a, 'dict=?') == self._ensure_dict(b, 'dict=?'))
         return None
 
     def _op_dict_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """DICT_NEQ_P: Pop two values, push true if both are dicts and not equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_dict(a, 'dict!=?') != self._ensure_dict(b, 'dict!=?')))
+        """DICT_NEQ_P dest, src0, src1: r_dest = (dict!=? r_src0 r_src1)"""
+        a = cast(MenaiValue, frame.locals[src0])
+        b = cast(MenaiValue, frame.locals[src1])
+        frame.locals[dest] = MenaiBoolean(self._ensure_dict(a, 'dict!=?') != self._ensure_dict(b, 'dict!=?'))
         return None
 
     def _op_dict_keys(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """DICT_KEYS: Pop an dict, push list of its keys."""
-        a = self.stack.pop()
-        self.stack.append(MenaiList(self._ensure_dict(a, 'dict-keys').keys()))
+        """DICT_KEYS dest, src0: r_dest = (dict-keys r_src0)"""
+        a = cast(MenaiValue, frame.locals[src0])
+        frame.locals[dest] = MenaiList(self._ensure_dict(a, 'dict-keys').keys())
         return None
 
     def _op_dict_values(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """DICT_VALUES: Pop an dict, push list of its values."""
-        a = self.stack.pop()
-        self.stack.append(MenaiList(self._ensure_dict(a, 'dict-values').values()))
+        """DICT_VALUES dest, src0: r_dest = (dict-values r_src0)"""
+        a = cast(MenaiValue, frame.locals[src0])
+        frame.locals[dest] = MenaiList(self._ensure_dict(a, 'dict-values').values())
         return None
 
     def _op_dict_length(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """DICT_LENGTH: Pop an dict, push its length."""
-        a = self.stack.pop()
-        self.stack.append(MenaiInteger(self._ensure_dict(a, 'dict-length').length()))
+        """DICT_LENGTH dest, src0: r_dest = (dict-length r_src0)"""
+        a = cast(MenaiValue, frame.locals[src0])
+        frame.locals[dest] = MenaiInteger(self._ensure_dict(a, 'dict-length').length())
         return None
 
     def _op_dict_has_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """DICT_HAS_P: Pop a key and dict, push true if dict contains key."""
-        key = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_dict(a, 'dict-has?').has_key(key)))
+        """DICT_HAS_P dest, src0, src1: r_dest = (dict-has? r_src0 r_src1)"""
+        a = cast(MenaiValue, frame.locals[src0])
+        key = cast(MenaiValue, frame.locals[src1])
+        frame.locals[dest] = MenaiBoolean(self._ensure_dict(a, 'dict-has?').has_key(key))
         return None
 
     def _op_dict_remove(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """DICT_REMOVE: Pop a key and dict, push new dict without that key."""
-        key = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(self._ensure_dict(a, 'dict-remove').remove(key))
+        """DICT_REMOVE dest, src0, src1: r_dest = (dict-remove r_src0 r_src1)"""
+        a = cast(MenaiValue, frame.locals[src0])
+        key = cast(MenaiValue, frame.locals[src1])
+        frame.locals[dest] = self._ensure_dict(a, 'dict-remove').remove(key)
         return None
 
     def _op_dict_merge(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """DICT_MERGE: Pop two dicts, push merged dict (second wins on conflicts)."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(self._ensure_dict(a, 'dict-merge').merge(self._ensure_dict(b, 'dict-merge')))
+        """DICT_MERGE dest, src0, src1: r_dest = (dict-merge r_src0 r_src1)"""
+        a = cast(MenaiValue, frame.locals[src0])
+        b = cast(MenaiValue, frame.locals[src1])
+        frame.locals[dest] = self._ensure_dict(a, 'dict-merge').merge(self._ensure_dict(b, 'dict-merge'))
         return None
 
     def _op_dict_set(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
     ) -> MenaiValue | None:
-        """DICT_SET: Pop value, key, and dict, push new dict with key set to value."""
-        value = self.stack.pop()
-        key = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(self._ensure_dict(a, 'dict-set').set(key, value))
+        """DICT_SET dest, src0, src1, src2: r_dest = (dict-set r_src0 r_src1 r_src2)"""
+        a = cast(MenaiValue, frame.locals[src0])
+        key = cast(MenaiValue, frame.locals[src1])
+        value = cast(MenaiValue, frame.locals[src2])
+        frame.locals[dest] = self._ensure_dict(a, 'dict-set').set(key, value)
         return None
 
     def _op_dict_get(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
     ) -> MenaiValue | None:
-        """DICT_GET: Pop default, key, and dict, push value or default if not found."""
-        default = self.stack.pop()
-        key = self.stack.pop()
-        a = self.stack.pop()
+        """DICT_GET dest, src0, src1, src2: r_dest = (dict-get r_src0 r_src1 r_src2)"""
+        a = cast(MenaiValue, frame.locals[src0])
+        key = cast(MenaiValue, frame.locals[src1])
+        default = cast(MenaiValue, frame.locals[src2])
         result = self._ensure_dict(a, 'dict-get').get(key)
-        self.stack.append(result if result is not None else default)
+        frame.locals[dest] = result if result is not None else default
         return None
 
     def _op_list(  # pylint: disable=useless-return
@@ -2222,109 +2221,96 @@ class MenaiVM:
         return None
 
     def _op_list_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LIST_P: Check if value is a list."""
-        value = self.stack.pop()
-        self.stack.append(MenaiBoolean(isinstance(value, MenaiList)))
+        """LIST_P dest, src0: r_dest = (list? r_src0)"""
+        frame.locals[dest] = MenaiBoolean(isinstance(frame.locals[src0], MenaiList))
         return None
 
     def _op_list_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LIST_EQ_P: Pop two values, push true if both are lists and equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_list(a, 'list=?') == self._ensure_list(b, 'list=?')))
+        """LIST_EQ_P dest, src0, src1: r_dest = (list=? r_src0 r_src1)"""
+        a = cast(MenaiValue, frame.locals[src0])
+        b = cast(MenaiValue, frame.locals[src1])
+        frame.locals[dest] = MenaiBoolean(self._ensure_list(a, 'list=?') == self._ensure_list(b, 'list=?'))
         return None
 
     def _op_list_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LIST_NEQ_P: Pop two values, push true if both are lists and not equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_list(a, 'list!=?') != self._ensure_list(b, 'list!=?')))
+        """LIST_NEQ_P dest, src0, src1: r_dest = (list!=? r_src0 r_src1)"""
+        a = cast(MenaiValue, frame.locals[src0])
+        b = cast(MenaiValue, frame.locals[src1])
+        frame.locals[dest] = MenaiBoolean(self._ensure_list(a, 'list!=?') != self._ensure_list(b, 'list!=?'))
         return None
 
     def _op_list_prepend(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LIST_PREPEND: Pop item and list (list first, item second on stack), push list with item prepended."""
-        item = self.stack.pop()
-        list_val_raw = self.stack.pop()
-        list_val = self._ensure_list(list_val_raw, 'list-prepend')
-        self.stack.append(list_val.cons(item))
+        """LIST_PREPEND dest, src0, src1: r_dest = (list-prepend r_src0 r_src1)"""
+        item = cast(MenaiValue, frame.locals[src1])
+        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-prepend')
+        frame.locals[dest] = list_val.cons(item)
         return None
 
     def _op_list_append(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LIST_APPEND: Pop item and list (list first, item second on stack), push list with item appended at end."""
-        item = self.stack.pop()
-        list_val_raw = self.stack.pop()
-        list_val = self._ensure_list(list_val_raw, 'list-append')
-        self.stack.append(MenaiList(list_val.elements + (item,)))
+        """LIST_APPEND dest, src0, src1: r_dest = (list-append r_src0 r_src1)"""
+        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-append')
+        item = cast(MenaiValue, frame.locals[src1])
+        frame.locals[dest] = MenaiList(list_val.elements + (item,))
         return None
 
     def _op_list_reverse(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """REVERSE: Pop a list, push a new list with elements in reversed order."""
-        value = self.stack.pop()
-        list_val = self._ensure_list(value, 'list-reverse')
-        self.stack.append(list_val.reverse())
+        """LIST_REVERSE dest, src0: r_dest = (list-reverse r_src0)"""
+        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-reverse')
+        frame.locals[dest] = list_val.reverse()
         return None
 
     def _op_list_first(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FIRST: Pop a list, push its first element."""
-        value = self.stack.pop()
-        list_val = self._ensure_list(value, 'list-first')
+        """LIST_FIRST dest, src0: r_dest = (list-first r_src0)"""
+        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-first')
         try:
-            self.stack.append(list_val.first())
-
+            frame.locals[dest] = list_val.first()
         except IndexError as e:
             raise MenaiEvalError(str(e)) from e
-
         return None
 
     def _op_list_rest(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """REST: Pop a list, push a new list of all elements except the first."""
-        value = self.stack.pop()
-        list_val = self._ensure_list(value, 'list-rest')
+        """LIST_REST dest, src0: r_dest = (list-rest r_src0)"""
+        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-rest')
         try:
-            self.stack.append(list_val.rest())
-
+            frame.locals[dest] = list_val.rest()
         except IndexError as e:
             raise MenaiEvalError(str(e)) from e
-
         return None
 
     def _op_list_last(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LAST: Pop a list, push its last element."""
-        value = self.stack.pop()
-        list_val = self._ensure_list(value, 'list-last')
+        """LIST_LAST dest, src0: r_dest = (list-last r_src0)"""
+        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-last')
         try:
-            self.stack.append(list_val.last())
-
+            frame.locals[dest] = list_val.last()
         except IndexError as e:
             raise MenaiEvalError(str(e)) from e
-
         return None
 
     def _op_list_length(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LIST_LENGTH: Pop a list, push its length as an integer."""
-        value = self.stack.pop()
+        """LIST_LENGTH dest, src0: r_dest = (list-length r_src0)"""
+        value = cast(MenaiValue, frame.locals[src0])
         if isinstance(value, MenaiList):
-            self.stack.append(MenaiInteger(value.length()))
+            frame.locals[dest] = MenaiInteger(value.length())
             return None
 
         raise MenaiEvalError(
@@ -2332,12 +2318,11 @@ class MenaiVM:
         )
 
     def _op_list_ref(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LIST_REF: Pop an integer index and a list, push the element at that index."""
-        index_val = self.stack.pop()
-        value = self.stack.pop()
-        list_val = self._ensure_list(value, 'list-ref')
+        """LIST_REF dest, src0, src1: r_dest = (list-ref r_src0 r_src1)"""
+        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-ref')
+        index_val = cast(MenaiValue, frame.locals[src1])
         if not isinstance(index_val, MenaiInteger):
             raise MenaiEvalError(
                 f"Function 'list-ref' requires integer index, got {index_val.type_name()}"
@@ -2348,53 +2333,46 @@ class MenaiVM:
             raise MenaiEvalError(f"list-ref index out of range: {index}")
 
         try:
-            self.stack.append(list_val.get(index))
-
+            frame.locals[dest] = list_val.get(index)
         except IndexError as e:
             raise MenaiEvalError(f"list-ref index out of range: {index}") from e
 
         return None
 
     def _op_list_null_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LIST_NULL_P: Pop a list, push true if empty."""
-        value = self.stack.pop()
-        list_val = self._ensure_list(value, 'list-null?')
-        self.stack.append(MenaiBoolean(list_val.is_empty()))
+        """LIST_NULL_P dest, src0: r_dest = (list-null? r_src0)"""
+        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-null?')
+        frame.locals[dest] = MenaiBoolean(list_val.is_empty())
         return None
 
     def _op_list_member_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LIST_MEMBER_P: Pop item and list (list first, item second on stack), push true if item is in list."""
-        item = self.stack.pop()
-        list_val_raw = self.stack.pop()
-        list_val = self._ensure_list(list_val_raw, 'list-member?')
-        self.stack.append(MenaiBoolean(list_val.contains(item)))
+        """LIST_MEMBER_P dest, src0, src1: r_dest = (list-member? r_src0 r_src1)"""
+        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-member?')
+        item = cast(MenaiValue, frame.locals[src1])
+        frame.locals[dest] = MenaiBoolean(list_val.contains(item))
         return None
 
     def _op_list_index(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LIST_INDEX: Pop item and list (list first, item second on stack), push index or #f if not found."""
-        item = self.stack.pop()
-        list_val_raw = self.stack.pop()
-        list_val = self._ensure_list(list_val_raw, 'list-index')
+        """LIST_INDEX dest, src0, src1: r_dest = (list-index r_src0 r_src1)"""
+        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-index')
+        item = cast(MenaiValue, frame.locals[src1])
         pos = list_val.position(item)
-        self.stack.append(MenaiInteger(pos) if pos is not None else Menai_NONE)
+        frame.locals[dest] = MenaiInteger(pos) if pos is not None else Menai_NONE
         return None
 
     def _op_list_slice(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
     ) -> MenaiValue | None:
-        """LIST_SLICE: Pop end, start, and list, push slice from start to end (exclusive)."""
-        end_val = self.stack.pop()
-        start_val = self.stack.pop()
-        list_val_raw = self.stack.pop()
-        list_val = self._ensure_list(list_val_raw, 'list-slice')
-        start = self._ensure_integer(start_val, 'list-slice')
-        end = self._ensure_integer(end_val, 'list-slice')
+        """LIST_SLICE dest, src0, src1, src2: r_dest = (list-slice r_src0 r_src1 r_src2)"""
+        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-slice')
+        start = self._ensure_integer(cast(MenaiValue, frame.locals[src1]), 'list-slice')
+        end = self._ensure_integer(cast(MenaiValue, frame.locals[src2]), 'list-slice')
         n = list_val.length()
         if start < 0:
             raise MenaiEvalError(f"list-slice start index cannot be negative: {start}")
@@ -2411,36 +2389,33 @@ class MenaiVM:
         if start > end:
             raise MenaiEvalError(f"list-slice start index ({start}) cannot be greater than end index ({end})")
 
-        self.stack.append(MenaiList(list_val.elements[start:end]))
+        frame.locals[dest] = MenaiList(list_val.elements[start:end])
         return None
 
     def _op_list_remove(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LIST_REMOVE: Pop item and list (list first, item second on stack), push list with all occurrences removed."""
-        item = self.stack.pop()
-        list_val_raw = self.stack.pop()
-        list_val = self._ensure_list(list_val_raw, 'list-remove')
-        self.stack.append(list_val.remove_all(item))
+        """LIST_REMOVE dest, src0, src1: r_dest = (list-remove r_src0 r_src1)"""
+        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-remove')
+        item = cast(MenaiValue, frame.locals[src1])
+        frame.locals[dest] = list_val.remove_all(item)
         return None
 
     def _op_list_concat(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LIST_CONCAT: Pop two lists, push concatenated list."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(self._ensure_list(a, 'list-concat').append_list(self._ensure_list(b, 'list-concat')))
+        """LIST_CONCAT dest, src0, src1: r_dest = (list-concat r_src0 r_src1)"""
+        a = cast(MenaiValue, frame.locals[src0])
+        b = cast(MenaiValue, frame.locals[src1])
+        frame.locals[dest] = self._ensure_list(a, 'list-concat').append_list(self._ensure_list(b, 'list-concat'))
         return None
 
     def _op_list_to_string(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """LIST_TO_STRING: Pop separator and list of strings, push joined string."""
-        sep_val = self.stack.pop()
-        a = self.stack.pop()
-        list_val = self._ensure_list(a, 'list->string')
-        sep = self._ensure_string(sep_val, 'list->string')
+        """LIST_TO_STRING dest, src0, src1: r_dest = (list->string r_src0 r_src1)"""
+        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list->string')
+        sep = self._ensure_string(cast(MenaiValue, frame.locals[src1]), 'list->string')
         parts = []
         for item in list_val.elements:
             if not isinstance(item, MenaiString):
@@ -2448,21 +2423,18 @@ class MenaiVM:
 
             parts.append(item.value)
 
-        self.stack.append(MenaiString(sep.join(parts)))
+        frame.locals[dest] = MenaiString(sep.join(parts))
         return None
 
     def _op_range(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
     ) -> MenaiValue | None:
-        """RANGE: Pop step, end, and start integers, push list of integers."""
-        step_val = self.stack.pop()
-        end_val = self.stack.pop()
-        start_val = self.stack.pop()
-        start = self._ensure_integer(start_val, 'range')
-        end = self._ensure_integer(end_val, 'range')
-        step = self._ensure_integer(step_val, 'range')
+        """RANGE dest, src0, src1, src2: r_dest = (range r_src0 r_src1 r_src2)"""
+        start = self._ensure_integer(cast(MenaiValue, frame.locals[src0]), 'range')
+        end = self._ensure_integer(cast(MenaiValue, frame.locals[src1]), 'range')
+        step = self._ensure_integer(cast(MenaiValue, frame.locals[src2]), 'range')
         if step == 0:
             raise MenaiEvalError("Range step cannot be zero")
 
-        self.stack.append(MenaiList(tuple(MenaiInteger(v) for v in range(start, end, step))))
+        frame.locals[dest] = MenaiList(tuple(MenaiInteger(v) for v in range(start, end, step)))
         return None

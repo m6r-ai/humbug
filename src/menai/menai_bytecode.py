@@ -233,41 +233,41 @@ class Opcode(IntEnum):
 
     # Alist operations
     DICT = _op(280, 1)                  # DICT n  (build dict from n pairs on stack)
-    DICT_P = _op(281, 0)                # (dict? x)
-    DICT_EQ_P = _op(282, 0)             # dict=? a b
-    DICT_NEQ_P = _op(283, 0)            # dict!=? a b
-    DICT_KEYS = _op(284, 0)             # Get all keys from dict
-    DICT_VALUES = _op(285, 0)           # Get all values from dict
-    DICT_LENGTH = _op(286, 0)           # Get number of entries in dict
-    DICT_HAS_P = _op(287, 0)            # Check if dict has key
-    DICT_REMOVE = _op(288, 0)           # Remove key from dict
-    DICT_MERGE = _op(289, 0)            # Merge two dicts
-    DICT_SET = _op(290, 0)              # Set key in dict (dict, key, value)
-    DICT_GET = _op(291, 0)              # Get value from dict by key with default
+    DICT_P = _op(281, 1, True)          # r_dest = (dict? r_src0)
+    DICT_EQ_P = _op(282, 2, True)       # r_dest = (dict=? r_src0 r_src1)
+    DICT_NEQ_P = _op(283, 2, True)      # r_dest = (dict!=? r_src0 r_src1)
+    DICT_KEYS = _op(284, 1, True)       # r_dest = (dict-keys r_src0)
+    DICT_VALUES = _op(285, 1, True)     # r_dest = (dict-values r_src0)
+    DICT_LENGTH = _op(286, 1, True)     # r_dest = (dict-length r_src0)
+    DICT_HAS_P = _op(287, 2, True)      # r_dest = (dict-has? r_src0 r_src1)
+    DICT_REMOVE = _op(288, 2, True)     # r_dest = (dict-remove r_src0 r_src1)
+    DICT_MERGE = _op(289, 2, True)      # r_dest = (dict-merge r_src0 r_src1)
+    DICT_SET = _op(290, 3, True)        # r_dest = (dict-set r_src0 r_src1 r_src2)
+    DICT_GET = _op(291, 3, True)        # r_dest = (dict-get r_src0 r_src1 r_src2)
 
     # List operations
     LIST = _op(320, 1)                  # LIST n  (build list from n elements on stack)
-    LIST_P = _op(321, 0)                # (list? x)
-    LIST_EQ_P = _op(322, 0)             # list=? a b
-    LIST_NEQ_P = _op(323, 0)            # list!=? a b
-    LIST_PREPEND = _op(324, 0)          # list-prepend item lst
-    LIST_APPEND = _op(325, 0)           # list-append lst item
-    LIST_REVERSE = _op(326, 0)          # Reverse list on top of stack
-    LIST_FIRST = _op(327, 0)            # Get first element of list
-    LIST_REST = _op(328, 0)             # Get rest of list (all but first element)
-    LIST_LAST = _op(329, 0)             # Get last element of list
-    LIST_LENGTH = _op(330, 0)           # Get length of list
-    LIST_REF = _op(331, 0)              # Get element at index from list
-    LIST_NULL_P = _op(332, 0)           # Check if list is empty
-    LIST_MEMBER_P = _op(333, 0)         # Check if item is in list
-    LIST_INDEX = _op(334, 0)            # Find index of item in list
-    LIST_SLICE = _op(335, 0)            # Slice list: (list-slice lst start end)
-    LIST_REMOVE = _op(336, 0)           # Remove all occurrences of item from list
-    LIST_CONCAT = _op(337, 0)           # Append two lists: (append a b)
-    LIST_TO_STRING = _op(338, 0)        # Join list of strings with separator
+    LIST_P = _op(321, 1, True)          # r_dest = (list? r_src0)
+    LIST_EQ_P = _op(322, 2, True)       # r_dest = (list=? r_src0 r_src1)
+    LIST_NEQ_P = _op(323, 2, True)      # r_dest = (list!=? r_src0 r_src1)
+    LIST_PREPEND = _op(324, 2, True)    # r_dest = (list-prepend r_src0 r_src1)
+    LIST_APPEND = _op(325, 2, True)     # r_dest = (list-append r_src0 r_src1)
+    LIST_REVERSE = _op(326, 1, True)    # r_dest = (list-reverse r_src0)
+    LIST_FIRST = _op(327, 1, True)      # r_dest = (list-first r_src0)
+    LIST_REST = _op(328, 1, True)       # r_dest = (list-rest r_src0)
+    LIST_LAST = _op(329, 1, True)       # r_dest = (list-last r_src0)
+    LIST_LENGTH = _op(330, 1, True)     # r_dest = (list-length r_src0)
+    LIST_REF = _op(331, 2, True)        # r_dest = (list-ref r_src0 r_src1)
+    LIST_NULL_P = _op(332, 1, True)     # r_dest = (list-null? r_src0)
+    LIST_MEMBER_P = _op(333, 2, True)   # r_dest = (list-member? r_src0 r_src1)
+    LIST_INDEX = _op(334, 2, True)      # r_dest = (list-index r_src0 r_src1)
+    LIST_SLICE = _op(335, 3, True)      # r_dest = (list-slice r_src0 r_src1 r_src2)
+    LIST_REMOVE = _op(336, 2, True)     # r_dest = (list-remove r_src0 r_src1)
+    LIST_CONCAT = _op(337, 2, True)     # r_dest = (list-concat r_src0 r_src1)
+    LIST_TO_STRING = _op(338, 2, True)  # r_dest = (list->string r_src0 r_src1)
 
     # Generate integer range list
-    RANGE = _op(360, 0)                 # (range start end step)
+    RANGE = _op(360, 3, True)           # r_dest = (range r_src0 r_src1 r_src2)
 
 
 # Maps builtin function name → (opcode, arity) for all fixed-arity builtins.
