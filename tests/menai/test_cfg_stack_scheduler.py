@@ -426,22 +426,20 @@ class TestTerminatorConsumers:
         assert v0.id not in ids, "func is not last push for tail_apply → slotted"
         assert v1.id not in ids, "arg_list is last push but func is slotted → slotted"
 
-    def test_branch_cond_transient(self):
+    def test_branch_cond_not_transient(self):
         """
         %0 = const #t
         branch %0 → then / else
-        %0 is the only operand of branch → transient.
+        %0 is the cond of a BranchTerm.  JUMP_IF_FALSE/TRUE now reads the
+        condition from a register (not the stack), so cond is never transient.
+        As a constant with a single use it will be rematerialisable instead.
         """
         v0, c0 = const_instr("v0")
-        then_block = make_block(label="then",
-                                terminator=MenaiCFGReturnTerm(value=fresh_value()))
-        else_block = make_block(label="else",
-                                terminator=MenaiCFGReturnTerm(value=fresh_value()))
-        entry = make_block(c0, terminator=MenaiCFGBranchTerm(
-            cond=v0, true_block=then_block, false_block=else_block
-        ))
+        then_block = make_block(label="then", terminator=MenaiCFGReturnTerm(value=fresh_value()))
+        else_block = make_block(label="else", terminator=MenaiCFGReturnTerm(value=fresh_value()))
+        entry = make_block(c0, terminator=MenaiCFGBranchTerm(cond=v0, true_block=then_block, false_block=else_block))
         func = make_func(entry, then_block, else_block)
-        assert v0.id in schedule(func)
+        assert v0.id not in schedule(func)  # not transient — read from register
 
     def test_self_loop_last_arg_transient(self):
         """

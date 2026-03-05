@@ -69,7 +69,9 @@ def describe_local(index: int, code: CodeObject) -> str:
         # Parameter slot — use stored name if available
         if index < len(code.param_names):
             return f"param '{code.param_names[index]}'"
+
         return f"param[{index}]"
+
     captured_index = index - param_count
     if captured_index < capture_count:
         return f"captured '{code.free_vars[captured_index]}'"
@@ -263,11 +265,12 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
     output.append(f"{indent}{'-'*70}")
 
     # Pre-pass: collect all jump target indices.
-    jump_opcodes = {Opcode.JUMP, Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE}
+    # JUMP target is in src0; JUMP_IF_FALSE/TRUE target is in src1.
     jump_targets = {
-        instr.src0
+        instr.src1 if instr.opcode in (Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE)
+        else instr.src0
         for instr in code.instructions
-        if instr.opcode in jump_opcodes
+        if instr.opcode in (Opcode.JUMP, Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE)
     }
     conditional_jump_opcodes = {Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE}
 

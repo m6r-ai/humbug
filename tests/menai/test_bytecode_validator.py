@@ -242,37 +242,33 @@ class TestBytecodeValidator:
     def test_consistent_stack_depth_at_merge(self):
         """Test that two paths with equal depth at a merge point pass validation.
 
-        Control flow (local_count=1, param_count=0, initial depth=0):
+        Control flow (local_count=1, param_count=0):
 
-          0: LOAD_TRUE dest=0          — r0=#t; stack: 0
-          1: PUSH src0=0               — stack: 0 → 1
-          2: JUMP_IF_FALSE src0=6      — pops 1; depth 1→0
-                                         fall-through → 3 (depth=0)
-                                         jump        → 6 (depth=0)
+          0: LOAD_TRUE dest=0                  — r0=#t
+          1: JUMP_IF_FALSE src0=0, src1=5      — read r0; jump→5, fall→2
 
-          Fall-through branch (depth=0):
-          3: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
-          4: PUSH src0=0               — stack: 0 → 1
-          5: JUMP src0=8               — stack: 1; jump to 8
+          Fall-through branch:
+          2: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
+          3: PUSH src0=0               — stack: 0 → 1
+          4: JUMP src0=7               — stack: 1; jump to 7
 
-          Jump branch (depth=0):
-          6: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
-          7: PUSH src0=0               — stack: 0 → 1; falls to 8
+          Jump branch:
+          5: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
+          6: PUSH src0=0               — stack: 0 → 1; falls to 7
 
           Merge point (both arrive with depth=1):
-          8: RETURN                    — depth=1 ✓
+          7: RETURN                    — depth=1 ✓
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_TRUE, dest=0),            # 0: r0=#t; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # 1: stack: 0 → 1
-                Instruction(Opcode.JUMP_IF_FALSE, src0=6),        # 2: pops; depth 1→0; jump→6, fall→3
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # 3: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # 4: stack: 0 → 1
-                Instruction(Opcode.JUMP, src0=8),                 # 5: stack: 1; jump to 8
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # 6: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # 7: stack: 0 → 1; falls to 8
-                Instruction(Opcode.RETURN),                       # 8: depth=1 from both paths ✓
+                Instruction(Opcode.LOAD_TRUE, dest=0),              # 0: r0=#t; stack: 0
+                Instruction(Opcode.JUMP_IF_FALSE, src0=0, src1=5),  # 1: read r0; jump→5, fall→2
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 2: r0=42; stack: 0
+                Instruction(Opcode.PUSH, src0=0),                   # 3: stack: 0 → 1
+                Instruction(Opcode.JUMP, src0=7),                   # 4: stack: 1; jump to 7
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 5: r0=42; stack: 0
+                Instruction(Opcode.PUSH, src0=0),                   # 6: stack: 0 → 1; falls to 7
+                Instruction(Opcode.RETURN),                         # 7: depth=1 from both paths ✓
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -289,35 +285,31 @@ class TestBytecodeValidator:
     def test_inconsistent_stack_depth_at_merge(self):
         """Test that two paths with different depths at a merge point are caught.
 
-        Control flow (local_count=1, param_count=0, initial depth=0):
+        Control flow (local_count=1, param_count=0):
 
-          0: LOAD_TRUE dest=0          — r0=#t; stack: 0
-          1: PUSH src0=0               — stack: 0 → 1
-          2: JUMP_IF_FALSE src0=6      — pops 1; depth 1→0
-                                         fall-through → 3 (depth=0)
-                                         jump        → 6 (depth=0)
+          0: LOAD_TRUE dest=0                  — r0=#t
+          1: JUMP_IF_FALSE src0=0, src1=5      — read r0; jump→5, fall→2
 
-          Fall-through branch (depth=0):
-          3: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
-          4: PUSH src0=0               — stack: 0 → 1
-          5: JUMP src0=7               — stack: 1; jump to 7
+          Fall-through branch:
+          2: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
+          3: PUSH src0=0               — stack: 0 → 1
+          4: JUMP src0=6               — stack: 1; jump to 6
 
-          Jump branch (depth=0):
-          6: JUMP src0=7               — stack: 0; jump to 7
+          Jump branch:
+          5: JUMP src0=6               — stack: 0; jump to 6
 
-          Merge point (fall-through arrives with depth=1, jump arrives with depth=0):
-          7: RETURN                    — STACK_INCONSISTENT (or STACK_UNDERFLOW)
+          Merge point (fall-through depth=1, jump depth=0):
+          6: RETURN                    — STACK_INCONSISTENT (or STACK_UNDERFLOW)
         """
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_TRUE, dest=0),            # 0: r0=#t; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # 1: stack: 0 → 1
-                Instruction(Opcode.JUMP_IF_FALSE, src0=6),        # 2: pops; depth 1→0; jump→6, fall→3
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # 3: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # 4: stack: 0 → 1
-                Instruction(Opcode.JUMP, src0=7),                 # 5: stack: 1; jump to 7
-                Instruction(Opcode.JUMP, src0=7),                 # 6: stack: 0; jump to 7
-                Instruction(Opcode.RETURN),                       # 7: depth=1 vs 0 → inconsistent
+                Instruction(Opcode.JUMP_IF_FALSE, src0=0, src1=5),  # 1: read r0; jump→5, fall→2
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 2: r0=42; stack: 0
+                Instruction(Opcode.PUSH, src0=0),                    # 3: stack: 0 → 1
+                Instruction(Opcode.JUMP, src0=6),                    # 4: stack: 1; jump to 6
+                Instruction(Opcode.JUMP, src0=6),                    # 5: stack: 0; jump to 6
+                Instruction(Opcode.RETURN),                          # 6: depth=1 vs 0 → inconsistent
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -340,33 +332,31 @@ class TestBytecodeValidator:
     def test_valid_conditional_jump(self):
         """Test that a valid if/else (both branches return) passes validation.
 
-        Control flow (local_count=1, param_count=0, initial depth=0):
+        Control flow (local_count=1, param_count=0):
 
-          0: LOAD_TRUE dest=0          — r0=#t; stack: 0
-          1: PUSH src0=0               — stack: 0 → 1
-          2: JUMP_IF_FALSE src0=6      — pops 1; depth 1→0; jump→6, fall→3
+          0: LOAD_TRUE dest=0                  — r0=#t
+          1: JUMP_IF_FALSE src0=0, src1=5      — read r0; jump→5, fall→2
 
-          Then branch (depth=0):
-          3: LOAD_CONST dest=0, src0=0 — r0=1; stack: 0
-          4: PUSH src0=0               — stack: 0 → 1
-          5: RETURN                    — terminal ✓
+          Then branch:
+          2: LOAD_CONST dest=0, src0=0 — r0=1; stack: 0
+          3: PUSH src0=0               — stack: 0 → 1
+          4: RETURN                    — terminal ✓
 
-          Else branch (depth=0):
-          6: LOAD_CONST dest=0, src0=1 — r0=2; stack: 0
-          7: PUSH src0=0               — stack: 0 → 1
-          8: RETURN                    — terminal ✓
+          Else branch:
+          5: LOAD_CONST dest=0, src0=1 — r0=2; stack: 0
+          6: PUSH src0=0               — stack: 0 → 1
+          7: RETURN                    — terminal ✓
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_TRUE, dest=0),            # 0: r0=#t; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # 1: stack: 0 → 1
-                Instruction(Opcode.JUMP_IF_FALSE, src0=6),        # 2: pops; depth 1→0; jump→6, fall→3
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # 3: r0=1; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # 4: stack: 0 → 1
-                Instruction(Opcode.RETURN),                       # 5: terminal ✓
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=1),  # 6: r0=2; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # 7: stack: 0 → 1
-                Instruction(Opcode.RETURN),                       # 8: terminal ✓
+                Instruction(Opcode.LOAD_TRUE, dest=0),              # 0: r0=#t; stack: 0
+                Instruction(Opcode.JUMP_IF_FALSE, src0=0, src1=5),  # 1: read r0; jump→5, fall→2
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 2: r0=1; stack: 0
+                Instruction(Opcode.PUSH, src0=0),                   # 3: stack: 0 → 1
+                Instruction(Opcode.RETURN),                         # 4: terminal ✓
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=1),     # 5: r0=2; stack: 0
+                Instruction(Opcode.PUSH, src0=0),                   # 6: stack: 0 → 1
+                Instruction(Opcode.RETURN),                         # 7: terminal ✓
             ],
             constants=[MenaiInteger(1), MenaiInteger(2)],
             names=[],
@@ -383,29 +373,27 @@ class TestBytecodeValidator:
     def test_valid_loop(self):
         """Test that a valid loop with a consistent stack depth at the back-edge passes.
 
-        The loop header is instruction 0.  Both the initial entry (depth=0) and
-        the back-edge from instruction 3 (depth=0) arrive with the same depth,
+        The loop header is instruction 0.  Both the initial entry and
+        the back-edge from instruction 2 arrive with the same depth,
         so the validator accepts the backward jump.
 
-        Control flow (local_count=1, param_count=0, initial depth=0):
+        Control flow (local_count=1, param_count=0):
 
-          0: LOAD_TRUE dest=0          — r0=#t; stack: 0  ← loop header (depth=0)
-          1: PUSH src0=0               — stack: 0 → 1
-          2: JUMP_IF_FALSE src0=4      — pops 1; depth 1→0; jump→4, fall→3
-          3: JUMP src0=0               — stack: 0; back to 0 (depth=0 matches ✓)
-          4: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
-          5: PUSH src0=0               — stack: 0 → 1
-          6: RETURN                    — terminal ✓
+          0: LOAD_TRUE dest=0                  — r0=#t  ← loop header
+          1: JUMP_IF_FALSE src0=0, src1=3      — read r0; jump→3, fall→2
+          2: JUMP src0=0                       — back to 0 ✓
+          3: LOAD_CONST dest=0, src0=0         — r0=42; stack: 0
+          4: PUSH src0=0                       — stack: 0 → 1
+          5: RETURN                            — terminal ✓
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_TRUE, dest=0),            # 0: r0=#t; stack: 0  ← loop header
-                Instruction(Opcode.PUSH, src0=0),                 # 1: stack: 0 → 1
-                Instruction(Opcode.JUMP_IF_FALSE, src0=4),        # 2: pops; depth 1→0; jump→4, fall→3
-                Instruction(Opcode.JUMP, src0=0),                 # 3: stack: 0; back to 0 ✓
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # 4: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # 5: stack: 0 → 1
-                Instruction(Opcode.RETURN),                       # 6: terminal ✓
+                Instruction(Opcode.LOAD_TRUE, dest=0),              # 0: r0=#t; stack: 0  ← loop header
+                Instruction(Opcode.JUMP_IF_FALSE, src0=0, src1=3),  # 1: read r0; jump→3, fall→2
+                Instruction(Opcode.JUMP, src0=0),                   # 2: back to 0 ✓
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 3: r0=42; stack: 0
+                Instruction(Opcode.PUSH, src0=0),                   # 4: stack: 0 → 1
+                Instruction(Opcode.RETURN),                         # 5: terminal ✓
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -438,7 +426,7 @@ class TestBytecodeValidator:
             instructions=[
                 Instruction(Opcode.ENTER, src0=1),   # 0: pops 1 arg; depth: 1 → 0; slot 0 initialized
                 Instruction(Opcode.PUSH, src0=0),    # 1: stack: 0 → 1
-                Instruction(Opcode.RETURN),           # 2: terminal ✓
+                Instruction(Opcode.RETURN),          # 2: terminal ✓
             ],
             constants=[],
             names=[],
@@ -450,9 +438,9 @@ class TestBytecodeValidator:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_CONST, dest=0, src0=0),       # 0: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                      # 1: stack: 0 → 1 (captured value)
+                Instruction(Opcode.PUSH, src0=0),                     # 1: stack: 0 → 1 (captured value)
                 Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=1),     # 2: pops 1, pushes closure; depth: 1 → 1
-                Instruction(Opcode.RETURN),                            # 3: terminal ✓
+                Instruction(Opcode.RETURN),                           # 3: terminal ✓
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -496,7 +484,7 @@ class TestBytecodeValidator:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # stack: 0 → 1
+                Instruction(Opcode.PUSH, src0=0),                # stack: 0 → 1
                 # Missing RETURN
             ],
             constants=[MenaiInteger(42)],
@@ -531,13 +519,13 @@ class TestBytecodeValidator:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_NAME, dest=0, src0=0),    # 0: r0=f; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                  # 1: stack: 0 → 1
+                Instruction(Opcode.PUSH, src0=0),                 # 1: stack: 0 → 1
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),   # 2: r1=42; stack: 1
-                Instruction(Opcode.PUSH, src0=1),                  # 3: stack: 1 → 2
-                Instruction(Opcode.TAIL_CALL, src0=1),             # 4: pops 2; terminal ✓
+                Instruction(Opcode.PUSH, src0=1),                 # 3: stack: 1 → 2
+                Instruction(Opcode.TAIL_CALL, src0=1),            # 4: pops 2; terminal ✓
                 Instruction(Opcode.LOAD_CONST, dest=0, src0=0),   # 5: unreachable
-                Instruction(Opcode.PUSH, src0=0),                  # 6: unreachable
-                Instruction(Opcode.RETURN),                        # 7: unreachable
+                Instruction(Opcode.PUSH, src0=0),                 # 6: unreachable
+                Instruction(Opcode.RETURN),                       # 7: unreachable
             ],
             constants=[MenaiInteger(42)],
             names=["f"],
@@ -656,7 +644,7 @@ class TestBytecodeValidator:
             instructions=[
                 Instruction(Opcode.ENTER, src0=1),  # 0: pops 1; depth: 1 → 0; slot 0 initialized
                 Instruction(Opcode.PUSH, src0=0),   # 1: stack: 0 → 1
-                Instruction(Opcode.RETURN),          # 2: terminal ✓
+                Instruction(Opcode.RETURN),         # 2: terminal ✓
             ],
             constants=[],
             names=[],
@@ -710,7 +698,7 @@ class TestBytecodeValidator:
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # r0=42; stack: 0
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),   # r0=42; stack: 0
                 Instruction(Opcode.PUSH, src0=0),                 # stack: 0 → 1
                 Instruction(Opcode.POP, dest=0),                  # r0 initialized; stack: 1 → 0
                 Instruction(Opcode.PUSH, src0=0),                 # r0 initialized ✓; stack: 0 → 1
@@ -727,35 +715,33 @@ class TestBytecodeValidator:
     def test_conditional_both_branches_initialize(self):
         """Test that a variable initialized in both branches is OK at the merge point.
 
-        Control flow (local_count=1, param_count=0, initial depth=0):
+        Control flow (local_count=1, param_count=0):
 
-          0: LOAD_TRUE dest=0          — r0=#t; stack: 0
-          1: PUSH src0=0               — stack: 0 → 1
-          2: JUMP_IF_FALSE src0=6      — pops; depth 1→0; jump→6, fall→3
+          0: LOAD_TRUE dest=0                  — r0=#t
+          1: JUMP_IF_FALSE src0=0, src1=5      — read r0; jump→5, fall→2
 
-          Then branch (depth=0):
-          3: LOAD_CONST dest=0, src0=0 — r0=42; r0 initialized; stack: 0
-          4: PUSH src0=0               — stack: 0 → 1
-          5: JUMP src0=8               — stack: 1; jump to 8
+          Then branch:
+          2: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
+          3: PUSH src0=0               — stack: 0 → 1
+          4: JUMP src0=7               — stack: 1; jump to 7
 
-          Else branch (depth=0):
-          6: LOAD_CONST dest=0, src0=0 — r0=42; r0 initialized; stack: 0
-          7: PUSH src0=0               — stack: 0 → 1; falls to 8
+          Else branch:
+          5: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
+          6: PUSH src0=0               — stack: 0 → 1; falls to 7
 
           Merge (depth=1, r0 initialized on both paths):
-          8: RETURN                    — depth=1 ✓
+          7: RETURN                    — depth=1 ✓
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_TRUE, dest=0),            # 0: r0=#t; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # 1: stack: 0 → 1
-                Instruction(Opcode.JUMP_IF_FALSE, src0=6),        # 2: pops; depth 1→0; jump→6, fall→3
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # 3: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # 4: stack: 0 → 1
-                Instruction(Opcode.JUMP, src0=8),                 # 5: stack: 1; jump to 8
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # 6: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # 7: stack: 0 → 1; falls to 8
-                Instruction(Opcode.RETURN),                       # 8: depth=1 ✓
+                Instruction(Opcode.LOAD_TRUE, dest=0),              # 0: r0=#t; stack: 0
+                Instruction(Opcode.JUMP_IF_FALSE, src0=0, src1=5),  # 1: read r0; jump→5, fall→2
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 2: r0=42; stack: 0
+                Instruction(Opcode.PUSH, src0=0),                   # 3: stack: 0 → 1
+                Instruction(Opcode.JUMP, src0=7),                   # 4: stack: 1; jump to 7
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 5: r0=42; stack: 0
+                Instruction(Opcode.PUSH, src0=0),                   # 6: stack: 0 → 1; falls to 7
+                Instruction(Opcode.RETURN),                         # 7: depth=1 ✓
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -768,37 +754,34 @@ class TestBytecodeValidator:
     def test_conditional_one_branch_initializes(self):
         """Test that PUSH of a variable initialized in only one branch is caught.
 
-        r0 must start uninitialised, so we use r1 for the condition and leave
-        r0 untouched until the then-branch.  The else-branch skips the write,
-        so at the merge point r0 may be uninitialised.
+        r0 starts uninitialised; r1 holds the condition.
+        The then-branch initializes r0; the else-branch does not.
 
-        Control flow (local_count=2, param_count=0, initial depth=0):
+        Control flow (local_count=2, param_count=0):
 
-          0: LOAD_TRUE dest=1          — r1=#t; r0 untouched; stack: 0
-          1: PUSH src0=1               — stack: 0 → 1
-          2: JUMP_IF_FALSE src0=5      — pops; depth 1→0; jump→5, fall→3
+          0: LOAD_TRUE dest=1                  — r1=#t
+          1: JUMP_IF_FALSE src0=1, src1=4      — read r1; jump→4, fall→2
 
-          Then branch (depth=0): initializes r0
-          3: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
-          4: JUMP src0=6               — stack: 0; jump to 6
+          Then branch: initializes r0
+          2: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
+          3: JUMP src0=5               — stack: 0; jump to 5
 
-          Else branch (depth=0): does NOT initialize r0
-          5: JUMP src0=6               — stack: 0; jump to 6
+          Else branch: does NOT initialize r0
+          4: JUMP src0=5               — stack: 0; jump to 5
 
-          Merge (depth=0, r0 initialized only on then-path):
-          6: PUSH src0=0               — r0 may be uninitialized → UNINITIALIZED_VARIABLE
-          7: RETURN
+          Merge:
+          5: PUSH src0=0               — r0 may be uninitialized → UNINITIALIZED_VARIABLE
+          6: RETURN
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_TRUE, dest=1),            # 0: r1=#t; r0 untouched; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                 # 1: stack: 0 → 1
-                Instruction(Opcode.JUMP_IF_FALSE, src0=5),        # 2: pops; depth 1→0; jump→5, fall→3
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # 3: r0=42; stack: 0
-                Instruction(Opcode.JUMP, src0=6),                 # 4: stack: 0; jump to 6
-                Instruction(Opcode.JUMP, src0=6),                 # 5: stack: 0; jump to 6 (no init)
-                Instruction(Opcode.PUSH, src0=0),                 # 6: r0 may be uninit → error
-                Instruction(Opcode.RETURN),                       # 7
+                Instruction(Opcode.LOAD_TRUE, dest=1),              # 0: r1=#t; r0 untouched; stack: 0
+                Instruction(Opcode.JUMP_IF_FALSE, src0=1, src1=4),  # 1: read r1; jump→4, fall→2
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 2: r0=42; stack: 0
+                Instruction(Opcode.JUMP, src0=5),                   # 3: stack: 0; jump to 5
+                Instruction(Opcode.JUMP, src0=5),                   # 4: stack: 0; jump to 5 (no init)
+                Instruction(Opcode.PUSH, src0=0),                   # 5: r0 may be uninit → error
+                Instruction(Opcode.RETURN),                         # 6
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -813,28 +796,25 @@ class TestBytecodeValidator:
     def test_loop_with_initialization_before_loop(self):
         """Test that a variable initialized at the loop header is accessible inside it.
 
-        r0 is initialized by LOAD_TRUE at instruction 0 on every iteration,
-        so PUSH src0=0 inside the loop body is always valid.
+        r0 is initialized by LOAD_TRUE at instruction 0 on every iteration.
 
-        Control flow (local_count=1, param_count=0, initial depth=0):
+        Control flow (local_count=1, param_count=0):
 
-          0: LOAD_TRUE dest=0          — r0=#t; r0 initialized; stack: 0  ← loop header
-          1: PUSH src0=0               — r0 initialized ✓; stack: 0 → 1
-          2: JUMP_IF_FALSE src0=4      — pops; depth 1→0; jump→4, fall→3
-          3: JUMP src0=0               — stack: 0; back to 0 (depth=0 matches ✓)
-          4: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
-          5: PUSH src0=0               — stack: 0 → 1
-          6: RETURN                    — terminal ✓
+          0: LOAD_TRUE dest=0                  — r0=#t  ← loop header
+          1: JUMP_IF_FALSE src0=0, src1=3      — read r0; jump→3, fall→2
+          2: JUMP src0=0                       — back to 0 ✓
+          3: LOAD_CONST dest=0, src0=0         — r0=42; stack: 0
+          4: PUSH src0=0                       — stack: 0 → 1
+          5: RETURN                            — terminal ✓
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_TRUE, dest=0),            # 0: r0=#t; stack: 0  ← loop header
-                Instruction(Opcode.PUSH, src0=0),                 # 1: r0 initialized ✓; stack: 0 → 1
-                Instruction(Opcode.JUMP_IF_FALSE, src0=4),        # 2: pops; depth 1→0; jump→4, fall→3
-                Instruction(Opcode.JUMP, src0=0),                 # 3: stack: 0; back to 0 ✓
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # 4: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # 5: stack: 0 → 1
-                Instruction(Opcode.RETURN),                       # 6: terminal ✓
+                Instruction(Opcode.LOAD_TRUE, dest=0),              # 0: r0=#t; stack: 0  ← loop header
+                Instruction(Opcode.JUMP_IF_FALSE, src0=0, src1=3),  # 1: read r0; jump→3, fall→2
+                Instruction(Opcode.JUMP, src0=0),                   # 2: back to 0 ✓
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 3: r0=42; stack: 0
+                Instruction(Opcode.PUSH, src0=0),                   # 4: stack: 0 → 1
+                Instruction(Opcode.RETURN),                         # 5: terminal ✓
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -918,15 +898,15 @@ class TestPatchClosureValidation:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),   # 0: pushes closure; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                     # 1: slot 0 = closure; depth: 1 → 0
+                Instruction(Opcode.POP, dest=0),                    # 1: slot 0 = closure; depth: 1 → 0
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 2: r1=42; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                    # 3: stack: 0 → 1
+                Instruction(Opcode.PUSH, src0=1),                   # 3: stack: 0 → 1
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),  # 4: pops 1; slot 0 closure ✓; cap 0 < 2 ✓
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 5: r1=42; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                    # 6: stack: 0 → 1
+                Instruction(Opcode.PUSH, src0=1),                   # 6: stack: 0 → 1
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1),  # 7: pops 1; slot 0 closure ✓; cap 1 < 2 ✓
-                Instruction(Opcode.PUSH, src0=0),                    # 8: stack: 0 → 1
-                Instruction(Opcode.RETURN),                          # 9: terminal ✓
+                Instruction(Opcode.PUSH, src0=0),                   # 8: stack: 0 → 1
+                Instruction(Opcode.RETURN),                         # 9: terminal ✓
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -951,12 +931,12 @@ class TestPatchClosureValidation:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),   # 0: pushes closure; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                     # 1: slot 0 = closure; depth: 1 → 0
+                Instruction(Opcode.POP, dest=0),                    # 1: slot 0 = closure; depth: 1 → 0
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 2: r1=1; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                    # 3: stack: 0 → 1
+                Instruction(Opcode.PUSH, src0=1),                   # 3: stack: 0 → 1
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),  # 4: pops 1; slot 0 closure ✓; cap 0 < 1 ✓
-                Instruction(Opcode.PUSH, src0=0),                    # 5: stack: 0 → 1
-                Instruction(Opcode.RETURN),                          # 6: terminal ✓
+                Instruction(Opcode.PUSH, src0=0),                   # 5: stack: 0 → 1
+                Instruction(Opcode.RETURN),                         # 6: terminal ✓
             ],
             constants=[MenaiInteger(1)],
             names=[],
@@ -986,11 +966,11 @@ class TestPatchClosureValidation:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 0: r1=1; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                    # 1: stack: 0 → 1
+                Instruction(Opcode.PUSH, src0=1),                   # 1: stack: 0 → 1
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),  # 2: slot 0 never init → error
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 3
-                Instruction(Opcode.PUSH, src0=1),                    # 4
-                Instruction(Opcode.RETURN),                          # 5
+                Instruction(Opcode.PUSH, src0=1),                   # 4
+                Instruction(Opcode.RETURN),                         # 5
             ],
             constants=[MenaiInteger(1)],
             names=[],
@@ -1011,41 +991,39 @@ class TestPatchClosureValidation:
 
         Control flow (local_count=2, initial depth=0):
           0: LOAD_TRUE dest=1            — r1=#t; stack: 0
-          1: PUSH src0=1                 — stack: 0 → 1
-          2: JUMP_IF_FALSE src0=6        — pops; depth 1→0; jump→6, fall→3
+          1: JUMP_IF_FALSE src0=1, src1=5 — read r1; jump→5, fall→2
 
           Branch A (depth=0):
-          3: MAKE_CLOSURE src0=0, src1=0 — pushes closure; depth: 0 → 1
-          4: POP dest=0                  — slot 0 = closure; depth: 1 → 0
-          5: JUMP src0=7                 — stack: 0; jump to 7
+          2: MAKE_CLOSURE src0=0, src1=0 — pushes closure; depth: 0 → 1
+          3: POP dest=0                  — slot 0 = closure; depth: 1 → 0
+          4: JUMP src0=6                 — stack: 0; jump to 6
 
           Branch B (depth=0):
-          6: JUMP src0=7                 — stack: 0; jump to 7 (slot 0 not initialized)
+          5: JUMP src0=6                 — stack: 0; jump to 6 (slot 0 not initialized)
 
-          Merge (depth=0, slot 0 initialized only on branch A):
-          7: LOAD_CONST dest=1, src0=0   — r1=1; stack: 0
-          8: PUSH src0=1                 — stack: 0 → 1
-          9: PATCH_CLOSURE src0=0, src1=0 — slot 0 may be uninit → UNINITIALIZED_VARIABLE
-          10: LOAD_CONST dest=1, src0=0
-          11: PUSH src0=1
-          12: RETURN
+          Merge (slot 0 initialized only on branch A):
+          6: LOAD_CONST dest=1, src0=0   — r1=1; stack: 0
+          7: PUSH src0=1                 — stack: 0 → 1
+          8: PATCH_CLOSURE src0=0, src1=0 — slot 0 may be uninit → UNINITIALIZED_VARIABLE
+          9: LOAD_CONST dest=1, src0=0
+          10: PUSH src0=1
+          11: RETURN
         """
         inner = self._make_closure_code(1)
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_TRUE, dest=1),               # 0: r1=#t; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                    # 1: stack: 0 → 1
-                Instruction(Opcode.JUMP_IF_FALSE, src0=6),           # 2: pops; depth 1→0; jump→6, fall→3
-                Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),   # 3: pushes closure; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                     # 4: slot 0 = closure; depth: 1 → 0
-                Instruction(Opcode.JUMP, src0=7),                    # 5: stack: 0; jump to 7
-                Instruction(Opcode.JUMP, src0=7),                    # 6: stack: 0; jump to 7 (no init)
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 7: r1=1; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                    # 8: stack: 0 → 1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),  # 9: slot 0 may be uninit → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 10
-                Instruction(Opcode.PUSH, src0=1),                    # 11
-                Instruction(Opcode.RETURN),                          # 12
+                Instruction(Opcode.JUMP_IF_FALSE, src0=1, src1=5),   # 1: read r1; jump→5, fall→2
+                Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),    # 2: pushes closure; depth: 0 → 1
+                Instruction(Opcode.POP, dest=0),                     # 3: slot 0 = closure; depth: 1 → 0
+                Instruction(Opcode.JUMP, src0=6),                    # 4: stack: 0; jump to 6
+                Instruction(Opcode.JUMP, src0=6),                    # 5: stack: 0; jump to 6 (no init)
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 6: r1=1; stack: 0
+                Instruction(Opcode.PUSH, src0=1),                    # 7: stack: 0 → 1
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),   # 8: slot 0 may be uninit → error
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 9
+                Instruction(Opcode.PUSH, src0=1),                    # 10
+                Instruction(Opcode.RETURN),                          # 11
             ],
             constants=[MenaiInteger(1)],
             names=[],
@@ -1076,11 +1054,11 @@ class TestPatchClosureValidation:
             instructions=[
                 Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 0: slot 0 = 42 (not a closure)
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 1: r1=42; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                    # 2: stack: 0 → 1
+                Instruction(Opcode.PUSH, src0=1),                   # 2: stack: 0 → 1
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),  # 3: slot 0 not closure → error
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 4
-                Instruction(Opcode.PUSH, src0=1),                    # 5
-                Instruction(Opcode.RETURN),                          # 6
+                Instruction(Opcode.PUSH, src0=1),                   # 5
+                Instruction(Opcode.RETURN),                         # 6
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -1110,14 +1088,14 @@ class TestPatchClosureValidation:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),   # 0: pushes closure; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                     # 1: slot 0 = closure; depth: 1 → 0
+                Instruction(Opcode.POP, dest=0),                    # 1: slot 0 = closure; depth: 1 → 0
                 Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 2: slot 0 = 42 (overwrites closure)
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 3: r1=42; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                    # 4: stack: 0 → 1
+                Instruction(Opcode.PUSH, src0=1),                   # 4: stack: 0 → 1
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),  # 5: slot 0 not closure → error
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 6
-                Instruction(Opcode.PUSH, src0=1),                    # 7
-                Instruction(Opcode.RETURN),                          # 8
+                Instruction(Opcode.PUSH, src0=1),                   # 7
+                Instruction(Opcode.RETURN),                         # 8
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -1138,44 +1116,42 @@ class TestPatchClosureValidation:
 
         Control flow (local_count=2, initial depth=0):
           0: LOAD_TRUE dest=1            — r1=#t; stack: 0
-          1: PUSH src0=1                 — stack: 0 → 1
-          2: JUMP_IF_FALSE src0=6        — pops; depth 1→0; jump→6, fall→3
+          1: JUMP_IF_FALSE src0=1, src1=5 — read r1; jump→5, fall→2
 
           Branch A (depth=0):
-          3: MAKE_CLOSURE src0=0, src1=0 — closure from code_objects[0]; depth: 0 → 1
-          4: POP dest=0                  — slot 0 = closure[0]; depth: 1 → 0
-          5: JUMP src0=8                 — stack: 0; jump to 8
+          2: MAKE_CLOSURE src0=0, src1=0 — closure from code_objects[0]; depth: 0 → 1
+          3: POP dest=0                  — slot 0 = closure[0]; depth: 1 → 0
+          4: JUMP src0=7                 — stack: 0; jump to 7
 
           Branch B (depth=0):
-          6: MAKE_CLOSURE src0=1, src1=0 — closure from code_objects[1]; depth: 0 → 1
-          7: POP dest=0                  — slot 0 = closure[1]; depth: 1 → 0; falls to 8
+          5: MAKE_CLOSURE src0=1, src1=0 — closure from code_objects[1]; depth: 0 → 1
+          6: POP dest=0                  — slot 0 = closure[1]; depth: 1 → 0; falls to 7
 
-          Merge (depth=0, slot 0 holds different closures on each path):
-          8: LOAD_CONST dest=1, src0=0   — r1=1; stack: 0
-          9: PUSH src0=1                 — stack: 0 → 1
-          10: PATCH_CLOSURE src0=0, src1=0 — ambiguous closure → INVALID_VARIABLE_ACCESS
-          11: LOAD_CONST dest=1, src0=0
-          12: PUSH src0=1
-          13: RETURN
+          Merge (slot 0 holds different closures on each path):
+          7: LOAD_CONST dest=1, src0=0   — r1=1; stack: 0
+          8: PUSH src0=1                 — stack: 0 → 1
+          9: PATCH_CLOSURE src0=0, src1=0 — ambiguous closure → INVALID_VARIABLE_ACCESS
+          10: LOAD_CONST dest=1, src0=0
+          11: PUSH src0=1
+          12: RETURN
         """
         inner_a = self._make_closure_code(1, name="<inner-a>")
         inner_b = self._make_closure_code(1, name="<inner-b>")
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_TRUE, dest=1),               # 0: r1=#t; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                    # 1: stack: 0 → 1
-                Instruction(Opcode.JUMP_IF_FALSE, src0=6),           # 2: pops; depth 1→0; jump→6, fall→3
-                Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),   # 3: closure[0]; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                     # 4: slot 0 = closure[0]; depth: 1 → 0
-                Instruction(Opcode.JUMP, src0=8),                    # 5: stack: 0; jump to 8
-                Instruction(Opcode.MAKE_CLOSURE, src0=1, src1=0),   # 6: closure[1]; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                     # 7: slot 0 = closure[1]; depth: 1 → 0
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 8: r1=1; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                    # 9: stack: 0 → 1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),  # 10: ambiguous → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 11
-                Instruction(Opcode.PUSH, src0=1),                    # 12
-                Instruction(Opcode.RETURN),                          # 13
+                Instruction(Opcode.JUMP_IF_FALSE, src0=1, src1=5),   # 1: read r1; jump→5, fall→2
+                Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),    # 2: closure[0]; depth: 0 → 1
+                Instruction(Opcode.POP, dest=0),                     # 3: slot 0 = closure[0]; depth: 1 → 0
+                Instruction(Opcode.JUMP, src0=7),                    # 4: stack: 0; jump to 7
+                Instruction(Opcode.MAKE_CLOSURE, src0=1, src1=0),    # 5: closure[1]; depth: 0 → 1
+                Instruction(Opcode.POP, dest=0),                     # 6: slot 0 = closure[1]; depth: 1 → 0
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 7: r1=1; stack: 0
+                Instruction(Opcode.PUSH, src0=1),                    # 8: stack: 0 → 1
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),   # 9: ambiguous → error
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 10
+                Instruction(Opcode.PUSH, src0=1),                    # 11
+                Instruction(Opcode.RETURN),                          # 12
             ],
             constants=[MenaiInteger(1)],
             names=[],
@@ -1207,13 +1183,13 @@ class TestPatchClosureValidation:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),   # 0: pushes closure; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                     # 1: slot 0 = closure; depth: 1 → 0
+                Instruction(Opcode.POP, dest=0),                    # 1: slot 0 = closure; depth: 1 → 0
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 2: r1=1; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                    # 3: stack: 0 → 1
+                Instruction(Opcode.PUSH, src0=1),                   # 3: stack: 0 → 1
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=2),  # 4: cap 2 >= n_free=2 → error
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 5
-                Instruction(Opcode.PUSH, src0=1),                    # 6
-                Instruction(Opcode.RETURN),                          # 7
+                Instruction(Opcode.PUSH, src0=1),                   # 6
+                Instruction(Opcode.RETURN),                         # 7
             ],
             constants=[MenaiInteger(1)],
             names=[],
@@ -1245,13 +1221,13 @@ class TestPatchClosureValidation:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),   # 0: pushes closure; depth: 0 → 1
-                Instruction(Opcode.POP, dest=0),                     # 1: slot 0 = closure; depth: 1 → 0
+                Instruction(Opcode.POP, dest=0),                    # 1: slot 0 = closure; depth: 1 → 0
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 2: r1=1; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                    # 3: stack: 0 → 1
+                Instruction(Opcode.PUSH, src0=1),                   # 3: stack: 0 → 1
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0),  # 4: cap 0 >= n_free=0 → error
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 5
-                Instruction(Opcode.PUSH, src0=1),                    # 6
-                Instruction(Opcode.RETURN),                          # 7
+                Instruction(Opcode.PUSH, src0=1),                   # 6
+                Instruction(Opcode.RETURN),                         # 7
             ],
             constants=[MenaiInteger(1)],
             names=[],

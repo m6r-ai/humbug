@@ -185,6 +185,22 @@ class _EmitContext:
         )
         return self.slot_map[value.id]
 
+    def ensure_slot(self, value: MenaiCFGValue) -> int:
+        """Return a register slot for `value`, materialising it if necessary.
+
+        For slotted values: returns the existing slot.
+        For rematerialisable constants: allocates a fresh slot, emits the
+        constant load into it, and returns that slot.
+        Transient values should not reach here — they have no slot by design.
+        """
+        if self.schedule.is_remat(value):
+            slot = self.next_slot
+            self.next_slot += 1
+            self.emit_constant(self.schedule.remat_value_of(value), slot)
+            return slot
+
+        return self.slot_of(value)
+
     def emit(self, opcode: Opcode, src0: int = 0, src1: int = 0, dest: int = 0) -> int:
         """Emit an instruction, returning its index."""
         idx = len(self.instructions)
@@ -255,8 +271,13 @@ class _EmitContext:
         self.emit(Opcode.POP, dest=slot)
         return slot
 
-    def patch_jump(self, instr_index: int, target: int) -> None:
-        self.instructions[instr_index].src0 = target
+    def patch_jump(self, instr_index: int, target: int, field: str = 'src0') -> None:
+        """Back-patch a jump target into the given field of an already-emitted instruction.
+
+        JUMP stores its target in src0.
+        JUMP_IF_FALSE / JUMP_IF_TRUE store the condition in src0 and the target in src1.
+        """
+        setattr(self.instructions[instr_index], field, target)
 
     def current_index(self) -> int:
         return len(self.instructions)
@@ -359,7 +380,7 @@ class MenaiVMCodeGen:
         # We need to back-patch jump targets, so we collect
         # (instr_index, target_block) pairs as we go.
         block_start: Dict[int, int] = {}   # block id → instruction index of first instr
-        forward_jumps: List[Tuple[int, MenaiCFGBlock]] = []  # (instr_idx, target_block)
+        forward_jumps: List[Tuple[int, MenaiCFGBlock, str]] = []  # (instr_idx, target_block, patch_field)
 
         rpo = self._rpo(func)
         for i, block in enumerate(rpo):
@@ -368,8 +389,8 @@ class MenaiVMCodeGen:
             self._emit_block(block, ctx, forward_jumps, func, next_block)
 
         # Phase 3: back-patch forward jumps.
-        for instr_idx, target_block in forward_jumps:
-            ctx.patch_jump(instr_idx, block_start[target_block.id])
+        for instr_idx, target_block, patch_field in forward_jumps:
+            ctx.patch_jump(instr_idx, block_start[target_block.id], patch_field)
 
     def _rpo(self, func: MenaiCFGFunction) -> List['MenaiCFGBlock']:
         """
@@ -406,7 +427,7 @@ class MenaiVMCodeGen:
         self,
         block: MenaiCFGBlock,
         ctx: _EmitContext,
-        forward_jumps: List[Tuple[int, MenaiCFGBlock]],
+        forward_jumps: List[Tuple[int, MenaiCFGBlock, str]],
         func: MenaiCFGFunction,
         next_block: Optional[MenaiCFGBlock],
     ) -> None:
@@ -549,7 +570,7 @@ class MenaiVMCodeGen:
         block: MenaiCFGBlock,
         term: MenaiCFGTerminator,
         ctx: _EmitContext,
-        forward_jumps: List[Tuple[int, MenaiCFGBlock]],
+        forward_jumps: List[Tuple[int, MenaiCFGBlock, str]],
         func: MenaiCFGFunction,
         next_block: Optional[MenaiCFGBlock],
     ) -> None:
@@ -563,27 +584,27 @@ class MenaiVMCodeGen:
             # Suppress the JUMP if the target is the immediately following block.
             if next_block is None or next_block.id != term.target.id:
                 jump_idx = ctx.emit(Opcode.JUMP, 0)
-                forward_jumps.append((jump_idx, term.target))
+                forward_jumps.append((jump_idx, term.target, 'src0'))
             return
 
         if isinstance(term, MenaiCFGBranchTerm):
-            ctx.load_value(term.cond)
+            cond_slot = ctx.ensure_slot(term.cond)
             next_id = next_block.id if next_block is not None else -1
             if next_id == term.false_block.id:
                 # False block is the fall-through: emit JUMP_IF_TRUE <true> only.
                 # Phi stores happen in then/else blocks via their own JumpTerm.
-                true_jump_idx = ctx.emit(Opcode.JUMP_IF_TRUE, 0)
-                forward_jumps.append((true_jump_idx, term.true_block))
+                true_jump_idx = ctx.emit(Opcode.JUMP_IF_TRUE, cond_slot, 0)
+                forward_jumps.append((true_jump_idx, term.true_block, 'src1'))
             elif next_id == term.true_block.id:
                 # True block is the fall-through: emit JUMP_IF_FALSE <false> only.
-                false_jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, 0)
-                forward_jumps.append((false_jump_idx, term.false_block))
+                false_jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, cond_slot, 0)
+                forward_jumps.append((false_jump_idx, term.false_block, 'src1'))
             else:
                 # Neither successor is adjacent: emit JUMP_IF_FALSE <false> + JUMP <true>.
-                false_jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, 0)
+                false_jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, cond_slot, 0)
                 true_jump_idx = ctx.emit(Opcode.JUMP, 0)
-                forward_jumps.append((true_jump_idx, term.true_block))
-                forward_jumps.append((false_jump_idx, term.false_block))
+                forward_jumps.append((true_jump_idx, term.true_block, 'src0'))
+                forward_jumps.append((false_jump_idx, term.false_block, 'src1'))
             return
 
         if isinstance(term, MenaiCFGTailCallTerm):

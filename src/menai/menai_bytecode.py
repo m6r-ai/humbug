@@ -66,8 +66,8 @@ class Opcode(IntEnum):
 
     # Control flow
     JUMP = _op(20, 1)                   # Unconditional jump: JUMP offset
-    JUMP_IF_FALSE = _op(21, 1)          # Conditional jump if false
-    JUMP_IF_TRUE = _op(22, 1)           # Conditional jump if true
+    JUMP_IF_FALSE = _op(21, 2)          # JUMP_IF_FALSE r_src0, @src1 — jump to src1 if r_src0 is false
+    JUMP_IF_TRUE = _op(22, 2)           # JUMP_IF_TRUE  r_src0, @src1 — jump to src1 if r_src0 is true
     RAISE_ERROR = _op(23, 1)            # RAISE_ERROR const_index
 
     # Functions
@@ -101,10 +101,10 @@ class Opcode(IntEnum):
     SYMBOL_TO_STRING = _op(83, 0)       # (symbol->string sym)
 
     # Boolean operations
-    BOOLEAN_P = _op(100, 0)              # (boolean? x)
-    BOOLEAN_EQ_P = _op(101, 0)           # boolean=? a b
-    BOOLEAN_NEQ_P = _op(102, 0)          # boolean!=? a b
-    BOOLEAN_NOT = _op(103, 0)            # Logical NOT
+    BOOLEAN_P = _op(100, 0)             # (boolean? x)
+    BOOLEAN_EQ_P = _op(101, 0)          # boolean=? a b
+    BOOLEAN_NEQ_P = _op(102, 0)         # boolean!=? a b
+    BOOLEAN_NOT = _op(103, 0)           # Logical NOT
 
     # Integer operations
     INTEGER_P = _op(120, 0)             # (integer? x)
@@ -220,18 +220,18 @@ class Opcode(IntEnum):
     STRING_INDEX = _op(262, 0)          # Find index of substring (string, substring)
 
     # Alist operations
-    DICT = _op(280, 1)                 # DICT n  (build dict from n pairs on stack)
-    DICT_P = _op(281, 0)               # (dict? x)
-    DICT_EQ_P = _op(282, 0)            # dict=? a b
-    DICT_NEQ_P = _op(283, 0)           # dict!=? a b
-    DICT_KEYS = _op(284, 0)            # Get all keys from dict
-    DICT_VALUES = _op(285, 0)          # Get all values from dict
-    DICT_LENGTH = _op(286, 0)          # Get number of entries in dict
-    DICT_HAS_P = _op(287, 0)           # Check if dict has key
-    DICT_REMOVE = _op(288, 0)          # Remove key from dict
-    DICT_MERGE = _op(289, 0)           # Merge two dicts
-    DICT_SET = _op(290, 0)             # Set key in dict (dict, key, value)
-    DICT_GET = _op(291, 0)             # Get value from dict by key with default
+    DICT = _op(280, 1)                  # DICT n  (build dict from n pairs on stack)
+    DICT_P = _op(281, 0)                # (dict? x)
+    DICT_EQ_P = _op(282, 0)             # dict=? a b
+    DICT_NEQ_P = _op(283, 0)            # dict!=? a b
+    DICT_KEYS = _op(284, 0)             # Get all keys from dict
+    DICT_VALUES = _op(285, 0)           # Get all values from dict
+    DICT_LENGTH = _op(286, 0)           # Get number of entries in dict
+    DICT_HAS_P = _op(287, 0)            # Check if dict has key
+    DICT_REMOVE = _op(288, 0)           # Remove key from dict
+    DICT_MERGE = _op(289, 0)            # Merge two dicts
+    DICT_SET = _op(290, 0)              # Set key in dict (dict, key, value)
+    DICT_GET = _op(291, 0)              # Get value from dict by key with default
 
     # List operations
     LIST = _op(320, 1)                  # LIST n  (build list from n elements on stack)
@@ -485,6 +485,12 @@ class Instruction:
 
         if opcode == Opcode.LOAD_NAME:
             return f"r{self.dest} = LOAD_NAME {self.src0}"
+
+        if opcode == Opcode.JUMP_IF_FALSE:
+            return f"JUMP_IF_FALSE r{self.src0}, @{self.src1}"
+
+        if opcode == Opcode.JUMP_IF_TRUE:
+            return f"JUMP_IF_TRUE r{self.src0}, @{self.src1}"
 
         # All remaining opcodes: stream-immediate formatting (not yet converted)
         n = self.arg_count()

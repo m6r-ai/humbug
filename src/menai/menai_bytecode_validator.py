@@ -109,10 +109,10 @@ class BytecodeValidator:
             Opcode.PUSH: (0, 1),
             Opcode.POP: (1, 0),
 
-            # Control flow - jumps don't affect stack, conditionals pop 1
+            # Control flow - no stack effects (conditionals now read from a register)
             Opcode.JUMP: (0, 0),
-            Opcode.JUMP_IF_FALSE: (1, 0),
-            Opcode.JUMP_IF_TRUE: (1, 0),
+            Opcode.JUMP_IF_FALSE: (0, 0),
+            Opcode.JUMP_IF_TRUE: (0, 0),
             Opcode.RAISE_ERROR: (0, 0),  # Doesn't return, but doesn't matter
 
             # Functions - MAKE_CLOSURE pops captures and pushes closure
@@ -443,8 +443,27 @@ class BytecodeValidator:
                     )
 
             # Validate jump targets
-            if opcode in (Opcode.JUMP, Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE):
+            if opcode == Opcode.JUMP:
                 target = instr.src0
+                if target < 0 or target >= len(code.instructions):
+                    raise ValidationError(
+                        ValidationErrorType.INVALID_JUMP_TARGET,
+                        f"Jump target {target} out of bounds (instruction count: {len(code.instructions)})",
+                        instruction_index=i,
+                        opcode=opcode
+                    )
+
+            if opcode in (Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE):
+                cond_reg = instr.src0
+                target = instr.src1
+                if cond_reg < 0 or cond_reg >= code.local_count:
+                    raise ValidationError(
+                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
+                        f"Condition register {cond_reg} out of bounds (local_count: {code.local_count})",
+                        instruction_index=i,
+                        opcode=opcode
+                    )
+
                 if target < 0 or target >= len(code.instructions):
                     raise ValidationError(
                         ValidationErrorType.INVALID_JUMP_TARGET,
@@ -779,7 +798,7 @@ class BytecodeValidator:
 
         # Conditional jumps have two successors
         elif opcode in (Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE):
-            successors.append(instr.src0)  # Jump target
+            successors.append(instr.src1)  # Jump target (condition is in src0)
             if instr_idx + 1 < len(code.instructions):
                 successors.append(instr_idx + 1)  # Fall through
 
@@ -803,7 +822,7 @@ class BytecodeValidator:
         for i, instr in enumerate(code.instructions):
             # Jump targets are leaders
             if instr.opcode in (Opcode.JUMP, Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE):
-                leaders.add(instr.src0)
+                leaders.add(instr.src0 if instr.opcode == Opcode.JUMP else instr.src1)
                 # Instruction after conditional jump is a leader
                 if instr.opcode in (Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE):
                     if i + 1 < len(code.instructions):

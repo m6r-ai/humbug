@@ -87,7 +87,7 @@ For instructions where the last SSA operand IS the last thing pushed:
   MenaiCFGReturnTerm       — last SSA operand is `value`
   MenaiCFGTailCallTerm     — last SSA operand is `func`
   MenaiCFGTailApplyTerm    — last SSA operand is `arg_list`
-  MenaiCFGBranchTerm       — last SSA operand is `cond`
+  MenaiCFGBranchTerm       — cond is read from a register (not the stack); never a stack consumer
   MenaiCFGSelfLoopTerm     — last SSA operand is args[-1] (if any args)
 
   MenaiCFGJumpTerm / MenaiCFGRaiseTerm — no SSA operands; never a consumer
@@ -109,7 +109,6 @@ from typing import Dict, Set
 
 from menai.menai_cfg import (
     MenaiCFGApplyInstr,
-    MenaiCFGBlock,
     MenaiCFGBranchTerm,
     MenaiCFGBuiltinInstr,
     MenaiCFGCallInstr,
@@ -514,13 +513,11 @@ class MenaiCFGStackScheduler:
         consumers, or consumers where last_value is the only operand).
         """
         if is_terminator:
-            return self._preceding_operands_of_term(last_value, consumer)  # type: ignore[arg-type]
+            return self._preceding_operands_of_term(consumer)
 
-        return self._preceding_operands_of_instr(last_value, consumer)  # type: ignore[arg-type]
+        return self._preceding_operands_of_instr(consumer)
 
-    def _preceding_operands_of_instr(
-        self, last_value: MenaiCFGValue, instr: MenaiCFGInstr
-    ) -> list[MenaiCFGValue]:
+    def _preceding_operands_of_instr(self, instr: MenaiCFGInstr) -> list[MenaiCFGValue]:
         if isinstance(instr, MenaiCFGCallInstr):
             # Push order: args[0..N-1], func.  last_value == func.
             return list(instr.args)
@@ -546,9 +543,7 @@ class MenaiCFGStackScheduler:
 
         return []
 
-    def _preceding_operands_of_term(
-        self, last_value: MenaiCFGValue, term: MenaiCFGTerminator
-    ) -> list[MenaiCFGValue]:
+    def _preceding_operands_of_term(self, term: MenaiCFGTerminator) -> list[MenaiCFGValue]:
         if isinstance(term, MenaiCFGTailCallTerm):
             # Push order: args[0..N-1], func.  last_value == func.
             return list(term.args)
@@ -598,7 +593,9 @@ class MenaiCFGStackScheduler:
             return False  # No SSA operands.
 
         if isinstance(term, MenaiCFGBranchTerm):
-            return value.id == term.cond.id
+            # cond is now read from a register (src0 of JUMP_IF_FALSE/TRUE),
+            # not popped from the stack — so it is never a stack-transient consumer.
+            return False
 
         if isinstance(term, MenaiCFGTailCallTerm):
             # Push order: args[0], ..., args[-1], func.

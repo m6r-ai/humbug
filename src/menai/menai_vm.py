@@ -704,12 +704,12 @@ class MenaiVM:
         return None
 
     def _op_jump_if_false(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, target: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, target: int, _src2: int
     ) -> MenaiValue | None:
-        """JUMP_IF_FALSE: Pop stack, jump if false."""
-        # Validator guarantees target is valid and stack has value
+        """JUMP_IF_FALSE r_src0, @target: Read condition from register src0, jump if false."""
+        # Validator guarantees src0 is in bounds and target is valid
         # Must keep type check (runtime-dependent)
-        condition = self.stack.pop()
+        condition = frame.locals[src0]
         if not isinstance(condition, MenaiBoolean):
             raise MenaiEvalError("If condition must be boolean")
 
@@ -719,12 +719,12 @@ class MenaiVM:
         return None
 
     def _op_jump_if_true(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, target: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, target: int, _src2: int
     ) -> MenaiValue | None:
-        """JUMP_IF_TRUE: Pop stack, jump if true."""
-        # Validator guarantees target is valid and stack has value
+        """JUMP_IF_TRUE r_src0, @target: Read condition from register src0, jump if true."""
+        # Validator guarantees src0 is in bounds and target is valid
         # Must keep type check (runtime-dependent)
-        condition = self.stack.pop()
+        condition = frame.locals[src0]
         if not isinstance(condition, MenaiBoolean):
             raise MenaiEvalError("If condition must be boolean")
 
@@ -755,6 +755,7 @@ class MenaiVM:
         # Pop captured values from stack (in reverse order)
         if capture_count == 0:
             captured_values = []
+
         else:
             captured_values = self.stack[-capture_count:]
             del self.stack[-capture_count:]
