@@ -57,6 +57,7 @@ class Opcode(IntEnum):
     LOAD_TRUE = _op(1, 0, True)         # r_dest = #t
     LOAD_FALSE = _op(2, 0, True)        # r_dest = #f
     LOAD_EMPTY_LIST = _op(3, 0, True)   # r_dest = []
+    LOAD_EMPTY_DICT = _op(6, 0, True)   # r_dest = {}
     LOAD_CONST = _op(4, 1, True)        # r_dest = constants[src0]
     LOAD_NAME = _op(5, 1, True)         # r_dest = globals[names[src0]]
 

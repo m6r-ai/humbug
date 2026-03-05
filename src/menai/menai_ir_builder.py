@@ -13,7 +13,7 @@ from menai.menai_ir import (
 )
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex,
-    MenaiASTString, MenaiASTBoolean, MenaiASTNone, MenaiASTSymbol, MenaiASTList
+    MenaiASTString, MenaiASTBoolean, MenaiASTNone, MenaiASTSymbol, MenaiASTList, MenaiASTDict
 )
 
 
@@ -109,11 +109,12 @@ class MenaiIRBuilder:
         # Only $-prefixed names are treated as opcode-backed builtins by the IR
         # builder.  Public names (integer+, float=?, etc.) are prelude functions
         # and resolve as globals.
-        # Exception: 'list' and 'dict' are variadic BUILD_OPS handled specially
-        # by the codegen.  They are not in BUILTIN_OPCODE_MAP (no fixed arity)
-        # and cannot be $-prefixed, so they remain as plain builtin names here.
+        # Exception: 'list' is a variadic BUILD_OP handled specially by the
+        # codegen.  It is not in BUILTIN_OPCODE_MAP (no fixed arity) and cannot
+        # be $-prefixed, so it remains as a plain builtin name here.
+        # 'dict' literals are now fully desugared before reaching the IR builder.
         self._builtin_names: frozenset = frozenset('$' + name for name in BUILTIN_OPCODE_MAP)
-        self._builtin_names |= frozenset({'list', 'dict'})
+        self._builtin_names |= frozenset({'list'})
 
     def build(self, expr: MenaiASTNode) -> MenaiIRExpr:
         """
@@ -152,6 +153,9 @@ class MenaiIRBuilder:
 
         if expr_type is MenaiASTList:
             return self._analyze_list(cast(MenaiASTList, expr), ctx, in_tail_position)
+
+        if expr_type is MenaiASTDict:
+            return MenaiIRConstant(value=cast(MenaiASTDict, expr).to_runtime_value())
 
         raise MenaiEvalError(
             message=f"Cannot analyze expression of type {type(expr).__name__}",

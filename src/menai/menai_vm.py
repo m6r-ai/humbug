@@ -161,6 +161,7 @@ class MenaiVM:
         table[Opcode.LOAD_TRUE] = self._op_load_true
         table[Opcode.LOAD_FALSE] = self._op_load_false
         table[Opcode.LOAD_EMPTY_LIST] = self._op_load_empty_list
+        table[Opcode.LOAD_EMPTY_DICT] = self._op_load_empty_dict
         table[Opcode.LOAD_CONST] = self._op_load_const
         table[Opcode.PUSH] = self._op_push
         table[Opcode.POP] = self._op_pop
@@ -603,6 +604,13 @@ class MenaiVM:
     ) -> MenaiValue | None:
         """LOAD_EMPTY_LIST dest: Write empty list into register dest."""
         frame.locals[dest] = MenaiList(())
+        return None
+
+    def _op_load_empty_dict(  # pylint: disable=useless-return
+        self, frame: Frame, _code: CodeObject, dest: int, _src0: int, _src1: int, _src2: int
+    ) -> MenaiValue | None:
+        """LOAD_EMPTY_DICT dest: Write empty dict into register dest."""
+        frame.locals[dest] = MenaiDict(())
         return None
 
     def _op_load_const(  # pylint: disable=useless-return

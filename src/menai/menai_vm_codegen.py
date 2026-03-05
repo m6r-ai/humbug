@@ -114,6 +114,7 @@ from menai.menai_cfg_stack_scheduler import MenaiCFGStackScheduler, StackSchedul
 from menai.menai_value import (
     MenaiBoolean,
     MenaiComplex,
+    MenaiDict,
     MenaiFloat,
     MenaiFunction,
     MenaiInteger,
@@ -131,7 +132,6 @@ TERNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if a
 
 BUILD_OPS = {
     'list': Opcode.LIST,
-    'dict': Opcode.DICT,
 }
 
 
@@ -248,6 +248,9 @@ class _EmitContext:
             return
         if isinstance(value, MenaiList) and len(value.elements) == 0:
             self.emit(Opcode.LOAD_EMPTY_LIST, dest=dest)
+            return
+        if isinstance(value, MenaiDict) and len(value.pairs) == 0:
+            self.emit(Opcode.LOAD_EMPTY_DICT, dest=dest)
             return
         const_idx = self.add_constant(value)
         self.emit(Opcode.LOAD_CONST, const_idx, dest=dest)

@@ -102,6 +102,7 @@ class BytecodeValidator:
             Opcode.LOAD_TRUE: (0, 0),
             Opcode.LOAD_FALSE: (0, 0),
             Opcode.LOAD_EMPTY_LIST: (0, 0),
+            Opcode.LOAD_EMPTY_DICT: (0, 0),
             Opcode.LOAD_CONST: (0, 0),
             Opcode.LOAD_NAME: (0, 0),
 
@@ -340,7 +341,7 @@ class BytecodeValidator:
         """Validate all indices (constants, names, code objects, variables)."""
         load_reg_ops = (
             Opcode.LOAD_NONE, Opcode.LOAD_TRUE, Opcode.LOAD_FALSE,
-            Opcode.LOAD_EMPTY_LIST, Opcode.LOAD_CONST, Opcode.LOAD_NAME,
+            Opcode.LOAD_EMPTY_LIST, Opcode.LOAD_EMPTY_DICT, Opcode.LOAD_CONST, Opcode.LOAD_NAME,
         )
         for i, instr in enumerate(code.instructions):
             opcode = instr.opcode
@@ -680,7 +681,7 @@ class BytecodeValidator:
 
         load_reg_ops = (
             Opcode.LOAD_NONE, Opcode.LOAD_TRUE, Opcode.LOAD_FALSE,
-            Opcode.LOAD_EMPTY_LIST, Opcode.LOAD_CONST, Opcode.LOAD_NAME,
+            Opcode.LOAD_EMPTY_LIST, Opcode.LOAD_EMPTY_DICT, Opcode.LOAD_CONST, Opcode.LOAD_NAME,
         )
         while worklist:
             instr_idx = worklist.pop(0)

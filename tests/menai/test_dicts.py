@@ -55,17 +55,17 @@ class TestDictConstructionErrors:
 
     def test_dict_pair_not_list(self, tool):
         """Test error when pair is not a list."""
-        with pytest.raises(MenaiEvalError, match="Dict pair 1 must be a list"):
+        with pytest.raises(MenaiEvalError, match="dict: each argument must be a 2-element list"):
             tool.evaluate('(dict "not-a-pair")')
 
     def test_dict_pair_wrong_length(self, tool):
         """Test error when pair doesn't have exactly 2 elements."""
-        with pytest.raises(MenaiEvalError, match="Dict pair 1 must have exactly 2 elements"):
+        with pytest.raises(MenaiEvalError, match="dict: each argument must be a 2-element list"):
             tool.evaluate('(dict (list "key"))')
 
     def test_dict_pair_too_many_elements(self, tool):
         """Test error when pair has more than 2 elements."""
-        with pytest.raises(MenaiEvalError, match="Dict pair 1 must have exactly 2 elements"):
+        with pytest.raises(MenaiEvalError, match="dict: each argument must be a 2-element list"):
             tool.evaluate('(dict (list "key" "val1" "val2"))')
 
     def test_dict_invalid_key_type(self, tool):

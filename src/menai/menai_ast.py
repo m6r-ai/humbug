@@ -19,7 +19,7 @@ from typing import Any, Tuple
 
 from menai.menai_value import (
     MenaiValue, MenaiInteger, MenaiFloat, MenaiComplex,
-    MenaiString, MenaiBoolean, MenaiSymbol, MenaiList, MenaiNone, Menai_NONE
+    MenaiString, MenaiBoolean, MenaiSymbol, MenaiList, MenaiDict, MenaiNone, Menai_NONE
 )
 
 
@@ -261,3 +261,36 @@ class MenaiASTList(MenaiASTNode):
     def get(self, index: int) -> MenaiASTNode:
         """Get element at index (raises IndexError if out of bounds)."""
         return self.elements[index]
+
+
+@dataclass(frozen=True)
+class MenaiASTDict(MenaiASTNode):
+    """Represents a dict literal in the AST.
+
+    Carries key-value pairs as parallel tuples of already-converted
+    MenaiValue objects (not AST nodes), mirroring MenaiASTList's approach
+    of storing runtime-ready elements.
+
+    Currently only the empty case (pairs=()) is synthesised by the desugarer,
+    as the seed accumulator for a (dict (list k v) ...) literal fold and for
+    zero-argument (dict) calls.  Non-empty dict literals are handled by the
+    desugarer as a fold of $dict-set calls over an empty seed.
+    """
+    pairs: Tuple[Tuple['MenaiASTNode', 'MenaiASTNode'], ...] = ()
+
+    def to_runtime_value(self) -> MenaiDict:
+        return MenaiDict(
+            tuple((k.to_runtime_value(), v.to_runtime_value()) for k, v in self.pairs)
+        )
+
+    def type_name(self) -> str:
+        return "dict"
+
+    def describe(self) -> str:
+        if not self.pairs:
+            return "{}"
+        parts = " ".join(f"({k.describe()} {v.describe()})" for k, v in self.pairs)
+        return "{" + parts + "}"
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, MenaiASTDict) and self.pairs == other.pairs

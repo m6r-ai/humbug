@@ -177,7 +177,6 @@ class MenaiBuiltinRegistry:
         'dict?': (1, 1),
         'dict=?': (2, None),
         'dict!=?': (2, None),
-        'dict': (0, None),
         'dict-get': (2, 3),
         'dict-set': (3, 3),
         'dict-remove': (2, 2),
