@@ -784,9 +784,9 @@ class MenaiVM:
         return None
 
     def _op_call(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, arity: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, arity: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """CALL: Call function with arguments from stack."""
+        """CALL dest, arity: Call function; pop result from stack into dest register."""
         # Validator guarantees stack has enough values (arity + 1)
 
         # Function is on top of the stack
@@ -815,7 +815,7 @@ class MenaiVM:
         self.current_frame = new_frame
 
         result = self._execute_frame(new_frame)
-        self.stack.append(result)
+        frame.locals[dest] = result
         return None
 
     def _op_tail_call(  # pylint: disable=useless-return
@@ -847,9 +847,9 @@ class MenaiVM:
         return TailCall(func)
 
     def _op_apply(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """APPLY: Call function with arguments spread from a list (non-tail)."""
+        """APPLY dest: Apply function to arg list; pop result from stack into dest register."""
         arg_list = self.stack.pop()
         func = self.stack.pop()
         if not isinstance(func, MenaiFunction):
@@ -881,7 +881,7 @@ class MenaiVM:
         self.frames.append(new_frame)
         self.current_frame = new_frame
         result = self._execute_frame(new_frame)
-        self.stack.append(result)
+        frame.locals[dest] = result
         return None
 
     def _op_tail_apply(
@@ -912,13 +912,12 @@ class MenaiVM:
         return TailCall(func)
 
     def _op_return(
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """RETURN: Pop frame and return value from stack."""
-        # Validator guarantees stack has a value to return
+        """RETURN src0: Push frame.locals[src0] as return value, then pop frame."""
         self.frames.pop()
         self.current_frame = self.frames[-1]
-        return self.stack.pop()
+        return cast(MenaiValue, frame.locals[src0])
 
     def _op_emit_trace(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int

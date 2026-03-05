@@ -161,15 +161,21 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
         annotation = f"  ; Emit {describe_local(instr.src0, code)} to trace watcher"
 
     elif opcode == Opcode.CALL:
-        arg_word = "arg" if src0 == 1 else "args"
-        annotation = f"  ; Call function with {src0} {arg_word} (function on stack)"
+        arg_word = "arg" if instr.src0 == 1 else "args"
+        annotation = f"  ; Call function with {instr.src0} {arg_word}, result -> r{instr.dest}"
 
     elif opcode == Opcode.TAIL_CALL:
-        arg_word = "arg" if src0 == 1 else "args"
-        annotation = f"  ; Tail call function with {src0} {arg_word}"
+        arg_word = "arg" if instr.src0 == 1 else "args"
+        annotation = f"  ; Tail call function with {instr.src0} {arg_word}"
+
+    elif opcode == Opcode.APPLY:
+        annotation = f"  ; Apply function to arg list, result -> r{instr.dest}"
+
+    elif opcode == Opcode.TAIL_APPLY:
+        annotation = "  ; Tail apply function to arg list"
 
     elif opcode == Opcode.RETURN:
-        annotation = "  ; Return from function"
+        annotation = f"  ; Return value from r{instr.src0}"
 
     elif opcode == Opcode.LOAD_TRUE:
         annotation = "  ; Load boolean true"

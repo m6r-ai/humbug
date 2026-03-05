@@ -191,15 +191,25 @@ class _EmitContext:
         For slotted values: returns the existing slot.
         For rematerialisable constants: allocates a fresh slot, emits the
         constant load into it, and returns that slot.
-        Transient values should not reach here — they have no slot by design.
+        For transient values from stack-based ops: the value is on the stack top;
+        allocate a fresh slot and emit POP to capture it.
+        For transient values from register-based ops: the value is already in its
+        dest slot (allocated by alloc_slot at the call site); slot_of finds it.
         """
+        # Already has a slot (most common case, and register-based op transients)
+        if value.id in self.slot_map:
+            return self.slot_map[value.id]
+
         if self.schedule.is_remat(value):
             slot = self.next_slot
             self.next_slot += 1
             self.emit_constant(self.schedule.remat_value_of(value), slot)
             return slot
 
-        return self.slot_of(value)
+        # Transient from a stack-based op: value is on the stack top
+        slot = self.alloc_slot(value)
+        self.emit(Opcode.POP, dest=slot)
+        return slot
 
     def emit(self, opcode: Opcode, src0: int = 0, src1: int = 0, dest: int = 0, src2: int = 0) -> int:
         """Emit an instruction, returning its index."""
@@ -494,15 +504,15 @@ class MenaiVMCodeGen:
             for arg in instr.args:
                 ctx.load_value(arg)
             ctx.load_value(instr.func)
-            ctx.emit(Opcode.CALL, len(instr.args))
-            ctx.store_result(instr.result)
+            dest = ctx.alloc_slot(instr.result)
+            ctx.emit(Opcode.CALL, len(instr.args), dest=dest)
             return
 
         if isinstance(instr, MenaiCFGApplyInstr):
             ctx.load_value(instr.func)
             ctx.load_value(instr.arg_list)
-            ctx.emit(Opcode.APPLY)
-            ctx.store_result(instr.result)
+            dest = ctx.alloc_slot(instr.result)
+            ctx.emit(Opcode.APPLY, dest=dest)
             return
 
         if isinstance(instr, MenaiCFGMakeClosureInstr):
@@ -585,8 +595,8 @@ class MenaiVMCodeGen:
         next_block: Optional[MenaiCFGBlock],
     ) -> None:
         if isinstance(term, MenaiCFGReturnTerm):
-            ctx.load_value(term.value)
-            ctx.emit(Opcode.RETURN)
+            src0 = ctx.ensure_slot(term.value)
+            ctx.emit(Opcode.RETURN, src0)
             return
 
         if isinstance(term, MenaiCFGJumpTerm):

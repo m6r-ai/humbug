@@ -119,12 +119,12 @@ class BytecodeValidator:
             # MAKE_CLOSURE: register-based result; still pops captures from stack
             Opcode.MAKE_CLOSURE: (-1, 0),  # pops capture_count values, writes to dest (no push)
             Opcode.PATCH_CLOSURE: (0, 0),
-            Opcode.CALL: (-1, 1),
-            Opcode.TAIL_CALL: (-1, 0),
-            Opcode.APPLY: (2, 1),
-            Opcode.TAIL_APPLY: (2, 0),
+            Opcode.CALL: (-1, 0),      # pops func+args, result written to dest (no stack push)
+            Opcode.TAIL_CALL: (-1, 0), # pops func+args, tail position
+            Opcode.APPLY: (2, 0),      # pops func+arg_list, result written to dest (no stack push)
+            Opcode.TAIL_APPLY: (2, 0), # pops func+arg_list, tail position
             # ENTER effect is n-dependent; handled in _get_stack_effect
-            Opcode.RETURN: (1, 0),
+            Opcode.RETURN: (0, 0),     # reads from src0 register; no stack pop
 
             # Trace debug
             Opcode.EMIT_TRACE: (0, 0),
@@ -432,6 +432,36 @@ class BytecodeValidator:
                         opcode=opcode
                     )
 
+            # Validate RETURN src0 register
+            if opcode == Opcode.RETURN:
+                if instr.src0 < 0 or instr.src0 >= code.local_count:
+                    raise ValidationError(
+                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
+                        f"RETURN src0 {instr.src0} out of bounds (local_count: {code.local_count})",
+                        instruction_index=i,
+                        opcode=opcode
+                    )
+
+            # Validate CALL dest register
+            if opcode == Opcode.CALL:
+                if instr.dest < 0 or instr.dest >= code.local_count:
+                    raise ValidationError(
+                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
+                        f"CALL dest {instr.dest} out of bounds (local_count: {code.local_count})",
+                        instruction_index=i,
+                        opcode=opcode
+                    )
+
+            # Validate APPLY dest register
+            if opcode == Opcode.APPLY:
+                if instr.dest < 0 or instr.dest >= code.local_count:
+                    raise ValidationError(
+                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
+                        f"APPLY dest {instr.dest} out of bounds (local_count: {code.local_count})",
+                        instruction_index=i,
+                        opcode=opcode
+                    )
+
             # Validate ENTER: n must match param_count and fit within local_count
             if opcode == Opcode.ENTER:
                 n = instr.src0
@@ -442,6 +472,7 @@ class BytecodeValidator:
                         instruction_index=i,
                         opcode=opcode
                     )
+
                 if n > code.local_count:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
@@ -460,6 +491,7 @@ class BytecodeValidator:
                             instruction_index=i,
                             opcode=opcode
                         )
+
                 # src2 is the capture index — validated in _validate_variable_initialization
                 if instr.src2 < 0:
                     raise ValidationError(
@@ -591,6 +623,7 @@ class BytecodeValidator:
                             instruction_index=succ_idx,
                             context=f"Predecessor at {instr_idx}"
                         )
+
                 else:
                     # First time visiting - record depth and add to worklist
                     stack_depths[succ_idx] = new_depth
@@ -685,6 +718,18 @@ class BytecodeValidator:
                         context=f"Initialized variables: {sorted(current_initialized)}"
                     )
 
+            # Check RETURN - source register must be initialized
+            if opcode == Opcode.RETURN:
+                var_index = instr.src0
+                if var_index not in current_initialized:
+                    raise ValidationError(
+                        ValidationErrorType.UNINITIALIZED_VARIABLE,
+                        f"RETURN source register {var_index} may be uninitialized",
+                        instruction_index=instr_idx,
+                        opcode=opcode,
+                        context=f"Initialized variables: {sorted(current_initialized)}"
+                    )
+
             # Check PATCH_CLOSURE:
             #   src0 = closure register — must be initialized and hold a closure.
             #   src1 = value register   — must be initialized.
@@ -757,6 +802,11 @@ class BytecodeValidator:
                 new_initialized.add(instr.dest)
                 new_closures.pop(instr.dest, None)
 
+            # CALL and APPLY mark dest as initialized (result written by VM)
+            if opcode in (Opcode.CALL, Opcode.APPLY):
+                new_initialized.add(instr.dest)
+                new_closures.pop(instr.dest, None)
+
             # ENTER marks locals 0..n-1 as initialized
             if opcode == Opcode.ENTER:
                 new_initialized.update(range(instr.src0))
@@ -804,7 +854,7 @@ class BytecodeValidator:
 
         if opcode == Opcode.CALL:
             arity = instr.src0
-            return (arity + 1, 1)  # Pop function + args, push result
+            return (arity + 1, 0)  # Pop function + args, result written to dest register
 
         if opcode == Opcode.TAIL_CALL:
             arity = instr.src0

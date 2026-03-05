@@ -67,18 +67,18 @@ class Opcode(IntEnum):
     # Control flow
     JUMP = _op(20, 1)                   # Unconditional jump: JUMP offset
     JUMP_IF_FALSE = _op(21, 2)          # JUMP_IF_FALSE r_src0, @src1 — jump to src1 if r_src0 is false
-    JUMP_IF_TRUE = _op(22, 2)           # JUMP_IF_TRUE  r_src0, @src1 — jump to src1 if r_src0 is true
+    JUMP_IF_TRUE = _op(22, 2)           # JUMP_IF_TRUE r_src0, @src1 — jump to src1 if r_src0 is true
     RAISE_ERROR = _op(23, 1)            # RAISE_ERROR const_index
 
     # Functions
     MAKE_CLOSURE = _op(30, 2, True)     # r_dest = MAKE_CLOSURE code_idx, capture_count
     PATCH_CLOSURE = _op(31, 3)          # PATCH_CLOSURE closure_reg, value_reg, capture_idx
-    CALL = _op(32, 1)                   # CALL arity
-    TAIL_CALL = _op(33, 1)              # TAIL_CALL arity
-    APPLY = _op(34, 0)                  # Apply function to arg list (non-tail)
-    TAIL_APPLY = _op(35, 0)             # Apply function to arg list (tail position)
-    ENTER = _op(36, 1)                  # ENTER n  (pop N args into locals 0..N-1)
-    RETURN = _op(37, 0)                 # Return from function
+    CALL = _op(32, 1, True)             # r_dest = CALL arity — result written to dest
+    TAIL_CALL = _op(33, 1)              # TAIL_CALL arity — no dest (result propagates up)
+    APPLY = _op(34, 0, True)            # r_dest = APPLY — result written to dest
+    TAIL_APPLY = _op(35, 0)             # TAIL_APPLY — no dest (result propagates up)
+    ENTER = _op(36, 1)                  # ENTER n (pop N args into locals 0..N-1)
+    RETURN = _op(37, 1)                 # RETURN src0 — push frame.locals[src0] as return value
 
     # Debugging
     EMIT_TRACE = _op(40, 1)             # EMIT_TRACE src0 — read register src0, emit to trace watcher
@@ -437,6 +437,11 @@ class Instruction:
     Opcode conventions:
       PUSH src0                        — push register src0 onto call stack; dest unused
       POP  dest                        — pop call stack into register dest; src0/src1/src2 unused
+      CALL dest, src0                  — dest=result reg; src0=arity; pops func+args from stack
+      TAIL_CALL src0                   — src0=arity; no dest (result propagates via trampoline)
+      APPLY dest                       — dest=result reg; pops func+arg_list from stack
+      TAIL_APPLY                       — no dest (result propagates via trampoline)
+      RETURN src0                      — src0=register holding return value; pushes it for caller
       MAKE_CLOSURE dest, src0, src1    — dest=result reg; src0=code_idx; src1=capture_count
       PATCH_CLOSURE src0, src1, src2   — src0=closure reg; src1=value reg; src2=capture_idx
       EMIT_TRACE src0                  — src0=value register to trace; no dest
@@ -500,6 +505,21 @@ class Instruction:
 
         if opcode == Opcode.PATCH_CLOSURE:
             return f"PATCH_CLOSURE r{self.src0}, r{self.src1}, {self.src2}"
+
+        if opcode == Opcode.RETURN:
+            return f"RETURN r{self.src0}"
+
+        if opcode == Opcode.CALL:
+            return f"r{self.dest} = CALL {self.src0}"
+
+        if opcode == Opcode.TAIL_CALL:
+            return f"TAIL_CALL {self.src0}"
+
+        if opcode == Opcode.APPLY:
+            return f"r{self.dest} = APPLY"
+
+        if opcode == Opcode.TAIL_APPLY:
+            return "TAIL_APPLY"
 
         if opcode == Opcode.EMIT_TRACE:
             return f"EMIT_TRACE r{self.src0}"

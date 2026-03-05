@@ -185,14 +185,13 @@ class TestBytecodeValidator:
     # ------------------------------------------------------------------
 
     def test_stack_underflow(self):
-        """Test that RETURN with an empty stack is caught.
+        """Test that RETURN with an out-of-bounds src0 register is caught.
 
-        param_count=0 → initial depth=0.
-        RETURN needs depth >= 1 → STACK_UNDERFLOW.
+        RETURN src0=0 with local_count=0 → INVALID_VARIABLE_ACCESS.
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.RETURN),  # depth=0, needs 1 → underflow
+                Instruction(Opcode.RETURN, src0=0),  # src0=0 but local_count=0 → out of bounds
             ],
             constants=[],
             names=[],
@@ -202,7 +201,8 @@ class TestBytecodeValidator:
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
 
-        assert exc_info.value.error_type == ValidationErrorType.STACK_UNDERFLOW
+        assert exc_info.value.error_type == ValidationErrorType.INVALID_VARIABLE_ACCESS
+        assert "RETURN src0" in exc_info.value.message
 
     # ------------------------------------------------------------------
     # Category 7: Stack underflow in call
