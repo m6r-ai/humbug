@@ -87,6 +87,15 @@ class BytecodeValidator:
     enabling the VM to remove redundant runtime checks.
     """
 
+    # Opcodes that do not write a destination register — dest field is unused.
+    # Every opcode not in this set writes its result to instr.dest.
+    NO_DEST_OPCODES: frozenset = frozenset({
+        Opcode.PUSH, Opcode.TAIL_CALL, Opcode.TAIL_APPLY,
+        Opcode.PATCH_CLOSURE, Opcode.ENTER, Opcode.RETURN,
+        Opcode.EMIT_TRACE, Opcode.JUMP, Opcode.JUMP_IF_FALSE,
+        Opcode.JUMP_IF_TRUE, Opcode.RAISE_ERROR,
+    })
+
     def __init__(self) -> None:
         """Initialize validator."""
         # Track which opcodes affect stack depth and how
@@ -339,10 +348,6 @@ class BytecodeValidator:
 
     def _validate_indices(self, code: CodeObject) -> None:
         """Validate all indices (constants, names, code objects, variables)."""
-        load_reg_ops = (
-            Opcode.LOAD_NONE, Opcode.LOAD_TRUE, Opcode.LOAD_FALSE,
-            Opcode.LOAD_EMPTY_LIST, Opcode.LOAD_EMPTY_DICT, Opcode.LOAD_CONST, Opcode.LOAD_NAME,
-        )
         for i, instr in enumerate(code.instructions):
             opcode = instr.opcode
 
@@ -379,8 +384,8 @@ class BytecodeValidator:
                         opcode=opcode
                     )
 
-            # Validate register indices (must be < local_count)
-            # PUSH reads from src0; POP writes to dest.
+            # Validate register indices (must be < local_count).
+            # PUSH reads src0; all dest-writing ops are validated below.
             if opcode == Opcode.PUSH:
                 var_index = instr.src0
                 if var_index < 0 or var_index >= code.local_count:
@@ -391,73 +396,12 @@ class BytecodeValidator:
                         opcode=opcode
                     )
 
-            if opcode == Opcode.POP:
-                var_index = instr.dest
-                if var_index < 0 or var_index >= code.local_count:
-                    raise ValidationError(
-                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"Variable index {var_index} out of bounds (local_count: {code.local_count})",
-                        instruction_index=i,
-                        opcode=opcode
-                    )
-
-            # Validate dest register bounds for register-based load ops.
-            if opcode in load_reg_ops:
-                var_index = instr.dest
-                if var_index >= code.local_count:
-                    raise ValidationError(
-                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"Destination register {var_index} out of bounds (local_count: {code.local_count})",
-                        instruction_index=i,
-                        opcode=opcode
-                    )
-
-            # Validate MAKE_CLOSURE dest register and code_object index
-            if opcode == Opcode.MAKE_CLOSURE:
+            # Validate dest register bounds for all opcodes that write a dest register.
+            if opcode not in self.NO_DEST_OPCODES:
                 if instr.dest < 0 or instr.dest >= code.local_count:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"MAKE_CLOSURE dest {instr.dest} out of bounds (local_count: {code.local_count})",
-                        instruction_index=i,
-                        opcode=opcode
-                    )
-
-            # Validate EMIT_TRACE src0 register
-            if opcode == Opcode.EMIT_TRACE:
-                if instr.src0 < 0 or instr.src0 >= code.local_count:
-                    raise ValidationError(
-                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"EMIT_TRACE src0 {instr.src0} out of bounds (local_count: {code.local_count})",
-                        instruction_index=i,
-                        opcode=opcode
-                    )
-
-            # Validate RETURN src0 register
-            if opcode == Opcode.RETURN:
-                if instr.src0 < 0 or instr.src0 >= code.local_count:
-                    raise ValidationError(
-                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"RETURN src0 {instr.src0} out of bounds (local_count: {code.local_count})",
-                        instruction_index=i,
-                        opcode=opcode
-                    )
-
-            # Validate CALL dest register
-            if opcode == Opcode.CALL:
-                if instr.dest < 0 or instr.dest >= code.local_count:
-                    raise ValidationError(
-                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"CALL dest {instr.dest} out of bounds (local_count: {code.local_count})",
-                        instruction_index=i,
-                        opcode=opcode
-                    )
-
-            # Validate APPLY dest register
-            if opcode == Opcode.APPLY:
-                if instr.dest < 0 or instr.dest >= code.local_count:
-                    raise ValidationError(
-                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"APPLY dest {instr.dest} out of bounds (local_count: {code.local_count})",
+                        f"Destination register {instr.dest} out of bounds (local_count: {code.local_count})",
                         instruction_index=i,
                         opcode=opcode
                     )
@@ -679,10 +623,6 @@ class BytecodeValidator:
         # initial closure map is empty.
         initialized_at[0] = (initial_initialized.copy(), {})
 
-        load_reg_ops = (
-            Opcode.LOAD_NONE, Opcode.LOAD_TRUE, Opcode.LOAD_FALSE,
-            Opcode.LOAD_EMPTY_LIST, Opcode.LOAD_EMPTY_DICT, Opcode.LOAD_CONST, Opcode.LOAD_NAME,
-        )
         while worklist:
             instr_idx = worklist.pop(0)
 
@@ -785,30 +725,13 @@ class BytecodeValidator:
             new_initialized = current_initialized.copy()
             new_closures = current_closures.copy()
 
-            # POP marks destination register as initialized
-            if opcode == Opcode.POP:
-                var_index = instr.dest
-                new_initialized.add(var_index)
-                new_closures.pop(var_index, None)
-
-            # MAKE_CLOSURE marks dest as initialized and records the closure identity
+            # MAKE_CLOSURE marks dest as initialized and records the closure identity.
             if opcode == Opcode.MAKE_CLOSURE:
-                var_index = instr.dest
-                new_initialized.add(var_index)
-                new_closures[var_index] = instr.src0  # src0 = code_object index
-
-            # Load ops mark the destination register as initialized
-            if opcode in load_reg_ops:
                 new_initialized.add(instr.dest)
-                new_closures.pop(instr.dest, None)
+                new_closures[instr.dest] = instr.src0  # src0 = code_object index
 
-            # CALL and APPLY mark dest as initialized (result written by VM)
-            if opcode in (Opcode.CALL, Opcode.APPLY):
-                new_initialized.add(instr.dest)
-                new_closures.pop(instr.dest, None)
-
-            # Any register-based op with a dest register marks it as initialized
-            if opcode.has_dest() and opcode not in (Opcode.MAKE_CLOSURE, Opcode.CALL, Opcode.APPLY):
+            # All other dest-writing ops mark dest as initialized (not a closure).
+            elif opcode not in self.NO_DEST_OPCODES:
                 new_initialized.add(instr.dest)
                 new_closures.pop(instr.dest, None)
 

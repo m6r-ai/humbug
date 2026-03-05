@@ -7,27 +7,24 @@ from typing import Dict, List, Tuple
 from menai.menai_value import MenaiValue
 
 
-def _op(n: int, arg_count: int = 0, has_dest: bool = False) -> Tuple[int, int, int]:
-    """Helper to construct an Opcode value: (integer_value, arg_count, has_dest).
+def _op(n: int, arg_count: int = 0) -> Tuple[int, int]:
+    """Helper to construct an Opcode value: (integer_value, arg_count).
 
     arg_count is the number of instruction-stream arguments the opcode encodes
     (i.e. fields read from the bytecode stream, not operands popped from the stack):
       0 — all operands come from the value stack (the common case for primitives)
       1 — one immediate argument follows the opcode in the stream
       2 — two immediate arguments follow the opcode in the stream
-
-    has_dest indicates whether the opcode writes its result to the dest register.
     """
-    return (n, arg_count, int(has_dest))
+    return (n, arg_count)
 
 
 class Opcode(IntEnum):
     """Bytecode operation codes.
 
-    Each member's value is a (integer_value, arg_count, has_dest) tuple.
+    Each member's value is a (integer_value, arg_count) tuple.
     The integer value is used for fast VM dispatch (IntEnum identity).
     The arg_count property returns the number of instruction-stream arguments.
-    The has_dest property returns True if the opcode writes to the dest register.
 
     Encoding arg_count directly on the enum eliminates the error-prone
     no_arg_opcodes / two_arg_opcodes sets that previously lived in
@@ -35,35 +32,29 @@ class Opcode(IntEnum):
     """
 
     _arg_count: int  # Set in __new__; declared here so mypy knows the attribute exists
-    _has_dest: int   # Set in __new__; 1 if opcode writes to dest register, else 0
 
-    def __new__(cls, int_value: int, arg_count: int = 0, has_dest: int = 0) -> 'Opcode':
+    def __new__(cls, int_value: int, arg_count: int = 0) -> 'Opcode':
         obj = int.__new__(cls, int_value,)
         obj._value_ = int_value
         obj._arg_count = arg_count
-        obj._has_dest = has_dest
         return obj
 
     def arg_count(self) -> int:
         """Number of instruction-stream arguments (0, 1, or 2)."""
         return self._arg_count
 
-    def has_dest(self) -> bool:
-        """True if this opcode writes its result to the dest register."""
-        return bool(self._has_dest)
-
     # Constants
-    LOAD_NONE = _op(0, 0, True)         # r_dest = #none
-    LOAD_TRUE = _op(1, 0, True)         # r_dest = #t
-    LOAD_FALSE = _op(2, 0, True)        # r_dest = #f
-    LOAD_EMPTY_LIST = _op(3, 0, True)   # r_dest = []
-    LOAD_EMPTY_DICT = _op(4, 0, True)   # r_dest = {}
-    LOAD_CONST = _op(5, 1, True)        # r_dest = constants[src0]
-    LOAD_NAME = _op(6, 1, True)         # r_dest = globals[names[src0]]
+    LOAD_NONE = _op(0)                  # r_dest = #none
+    LOAD_TRUE = _op(1)                  # r_dest = #t
+    LOAD_FALSE = _op(2)                 # r_dest = #f
+    LOAD_EMPTY_LIST = _op(3)            # r_dest = []
+    LOAD_EMPTY_DICT = _op(4)            # r_dest = {}
+    LOAD_CONST = _op(5, 1)              # r_dest = constants[src0]
+    LOAD_NAME = _op(6, 1)               # r_dest = globals[names[src0]]
 
     # Stack / register transfer
     PUSH = _op(10, 1)                   # PUSH src0  — push register src0 onto the call stack
-    POP = _op(11, 0, True)              # r_dest = POP — pop call stack top into register dest
+    POP = _op(11)                       # r_dest = POP — pop call stack top into register dest
 
     # Control flow
     JUMP = _op(20, 1)                   # Unconditional jump: JUMP offset
@@ -72,12 +63,12 @@ class Opcode(IntEnum):
     RAISE_ERROR = _op(23, 1)            # RAISE_ERROR const_index
 
     # Functions
-    MAKE_CLOSURE = _op(30, 2, True)     # r_dest = MAKE_CLOSURE code_idx, capture_count
+    MAKE_CLOSURE = _op(30, 2)           # r_dest = MAKE_CLOSURE code_idx, capture_count
     PATCH_CLOSURE = _op(31, 3)          # PATCH_CLOSURE closure_reg, value_reg, capture_idx
-    CALL = _op(32, 1, True)             # r_dest = CALL arity — result written to dest
+    CALL = _op(32, 1)                   # r_dest = CALL arity — result written to dest
     TAIL_CALL = _op(33, 1)              # TAIL_CALL arity — no dest (result propagates up)
-    APPLY = _op(34, 0, True)            # r_dest = APPLY — result written to dest
-    TAIL_APPLY = _op(35, 0)             # TAIL_APPLY — no dest (result propagates up)
+    APPLY = _op(34)                     # r_dest = APPLY — result written to dest
+    TAIL_APPLY = _op(35)                # TAIL_APPLY — no dest (result propagates up)
     ENTER = _op(36, 1)                  # ENTER n (pop N args into locals 0..N-1)
     RETURN = _op(37, 1)                 # RETURN src0 — push frame.locals[src0] as return value
 
@@ -85,188 +76,184 @@ class Opcode(IntEnum):
     EMIT_TRACE = _op(40, 1)             # EMIT_TRACE src0 — read register src0, emit to trace watcher
 
     # None operations
-    NONE_P = _op(50, 1, True)           # r_dest = (none? r_src0)
+    NONE_P = _op(50, 1)                 # r_dest = (none? r_src0)
 
     # Function operations
-    FUNCTION_P = _op(60, 1, True)       # r_dest = (function? r_src0)
-    FUNCTION_EQ_P = _op(61, 2, True)    # r_dest = (function=? r_src0 r_src1)
-    FUNCTION_NEQ_P = _op(62, 2, True)   # r_dest = (function!=? r_src0 r_src1)
-    FUNCTION_MIN_ARITY = _op(63, 1, True)
+    FUNCTION_P = _op(60, 1)             # r_dest = (function? r_src0)
+    FUNCTION_EQ_P = _op(61, 2)          # r_dest = (function=? r_src0 r_src1)
+    FUNCTION_NEQ_P = _op(62, 2)         # r_dest = (function!=? r_src0 r_src1)
+    FUNCTION_MIN_ARITY = _op(63, 1)
                                         # r_dest = (function-min-arity r_src0)
-    FUNCTION_VARIADIC_P = _op(64, 1, True)
+    FUNCTION_VARIADIC_P = _op(64, 1)
                                         # r_dest = (function-variadic? r_src0)
-    FUNCTION_ACCEPTS_P = _op(65, 2, True)
+    FUNCTION_ACCEPTS_P = _op(65, 2)
                                         # r_dest = (function-accepts? r_src0 r_src1)
 
     # Symbol operations
-    SYMBOL_P = _op(80, 1, True)         # r_dest = (symbol? r_src0)
-    SYMBOL_EQ_P = _op(81, 2, True)      # r_dest = (symbol=? r_src0 r_src1)
-    SYMBOL_NEQ_P = _op(82, 2, True)     # r_dest = (symbol!=? r_src0 r_src1)
-    SYMBOL_TO_STRING = _op(83, 1, True) # r_dest = (symbol->string r_src0)
+    SYMBOL_P = _op(80, 1)               # r_dest = (symbol? r_src0)
+    SYMBOL_EQ_P = _op(81, 2)            # r_dest = (symbol=? r_src0 r_src1)
+    SYMBOL_NEQ_P = _op(82, 2)           # r_dest = (symbol!=? r_src0 r_src1)
+    SYMBOL_TO_STRING = _op(83, 1)       # r_dest = (symbol->string r_src0)
 
     # Boolean operations
-    BOOLEAN_P = _op(100, 1, True)       # r_dest = (boolean? r_src0)
-    BOOLEAN_EQ_P = _op(101, 2, True)    # r_dest = (boolean=? r_src0 r_src1)
-    BOOLEAN_NEQ_P = _op(102, 2, True)   # r_dest = (boolean!=? r_src0 r_src1)
-    BOOLEAN_NOT = _op(103, 1, True)     # r_dest = (boolean-not r_src0)
+    BOOLEAN_P = _op(100, 1)             # r_dest = (boolean? r_src0)
+    BOOLEAN_EQ_P = _op(101, 2)          # r_dest = (boolean=? r_src0 r_src1)
+    BOOLEAN_NEQ_P = _op(102, 2)         # r_dest = (boolean!=? r_src0 r_src1)
+    BOOLEAN_NOT = _op(103, 1)           # r_dest = (boolean-not r_src0)
 
     # Integer operations
-    INTEGER_P = _op(120, 1, True)       # r_dest = (integer? r_src0)
-    INTEGER_EQ_P = _op(121, 2, True)    # r_dest = (integer=? r_src0 r_src1)
-    INTEGER_NEQ_P = _op(122, 2, True)   # r_dest = (integer!=? r_src0 r_src1)
-    INTEGER_LT_P = _op(123, 2, True)    # r_dest = (integer<? r_src0 r_src1)
-    INTEGER_GT_P = _op(124, 2, True)    # r_dest = (integer>? r_src0 r_src1)
-    INTEGER_LTE_P = _op(125, 2, True)   # r_dest = (integer<=? r_src0 r_src1)
-    INTEGER_GTE_P = _op(126, 2, True)   # r_dest = (integer>=? r_src0 r_src1)
-    INTEGER_ABS = _op(127, 1, True)     # r_dest = (integer-abs r_src0)
-    INTEGER_ADD = _op(128, 2, True)     # r_dest = (integer+ r_src0 r_src1)
-    INTEGER_SUB = _op(129, 2, True)     # r_dest = (integer- r_src0 r_src1)
-    INTEGER_MUL = _op(130, 2, True)     # r_dest = (integer* r_src0 r_src1)
-    INTEGER_DIV = _op(131, 2, True)     # r_dest = (integer/ r_src0 r_src1)
-    INTEGER_MOD = _op(132, 2, True)     # r_dest = (integer% r_src0 r_src1)
-    INTEGER_NEG = _op(133, 1, True)     # r_dest = (integer-neg r_src0)
-    INTEGER_EXPN = _op(134, 2, True)    # r_dest = (integer-expn r_src0 r_src1)
-    INTEGER_BIT_NOT = _op(135, 1, True) # r_dest = (integer-bit-not r_src0)
-    INTEGER_BIT_SHIFT_LEFT = _op(136, 2, True)
+    INTEGER_P = _op(120, 1)             # r_dest = (integer? r_src0)
+    INTEGER_EQ_P = _op(121, 2)          # r_dest = (integer=? r_src0 r_src1)
+    INTEGER_NEQ_P = _op(122, 2)         # r_dest = (integer!=? r_src0 r_src1)
+    INTEGER_LT_P = _op(123, 2)          # r_dest = (integer<? r_src0 r_src1)
+    INTEGER_GT_P = _op(124, 2)          # r_dest = (integer>? r_src0 r_src1)
+    INTEGER_LTE_P = _op(125, 2)         # r_dest = (integer<=? r_src0 r_src1)
+    INTEGER_GTE_P = _op(126, 2)         # r_dest = (integer>=? r_src0 r_src1)
+    INTEGER_ABS = _op(127, 1)           # r_dest = (integer-abs r_src0)
+    INTEGER_ADD = _op(128, 2)           # r_dest = (integer+ r_src0 r_src1)
+    INTEGER_SUB = _op(129, 2)           # r_dest = (integer- r_src0 r_src1)
+    INTEGER_MUL = _op(130, 2)           # r_dest = (integer* r_src0 r_src1)
+    INTEGER_DIV = _op(131, 2)           # r_dest = (integer/ r_src0 r_src1)
+    INTEGER_MOD = _op(132, 2)           # r_dest = (integer% r_src0 r_src1)
+    INTEGER_NEG = _op(133, 1)           # r_dest = (integer-neg r_src0)
+    INTEGER_EXPN = _op(134, 2)          # r_dest = (integer-expn r_src0 r_src1)
+    INTEGER_BIT_NOT = _op(135, 1)       # r_dest = (integer-bit-not r_src0)
+    INTEGER_BIT_SHIFT_LEFT = _op(136, 2)
                                         # r_dest = (integer-bit-shift-left r_src0 r_src1)
-    INTEGER_BIT_SHIFT_RIGHT = _op(137, 2, True)
+    INTEGER_BIT_SHIFT_RIGHT = _op(137, 2)
                                         # r_dest = (integer-bit-shift-right r_src0 r_src1)
-    INTEGER_BIT_OR = _op(138, 2, True)  # r_dest = (integer-bit-or r_src0 r_src1)
-    INTEGER_BIT_AND = _op(139, 2, True) # r_dest = (integer-bit-and r_src0 r_src1)
-    INTEGER_BIT_XOR = _op(140, 2, True) # r_dest = (integer-bit-xor r_src0 r_src1)
-    INTEGER_MIN = _op(141, 2, True)     # r_dest = (integer-min r_src0 r_src1)
-    INTEGER_MAX = _op(142, 2, True)     # r_dest = (integer-max r_src0 r_src1)
-    INTEGER_TO_FLOAT = _op(143, 1, True)
+    INTEGER_BIT_OR = _op(138, 2)        # r_dest = (integer-bit-or r_src0 r_src1)
+    INTEGER_BIT_AND = _op(139, 2)       # r_dest = (integer-bit-and r_src0 r_src1)
+    INTEGER_BIT_XOR = _op(140, 2)       # r_dest = (integer-bit-xor r_src0 r_src1)
+    INTEGER_MIN = _op(141, 2)           # r_dest = (integer-min r_src0 r_src1)
+    INTEGER_MAX = _op(142, 2)           # r_dest = (integer-max r_src0 r_src1)
+    INTEGER_TO_FLOAT = _op(143, 1)
                                         # r_dest = (integer->float r_src0)
-    INTEGER_TO_COMPLEX = _op(144, 2, True)
+    INTEGER_TO_COMPLEX = _op(144, 2)
                                         # r_dest = (integer->complex r_src0 r_src1)
-    INTEGER_TO_STRING = _op(145, 2, True)
+    INTEGER_TO_STRING = _op(145, 2)
                                         # r_dest = (integer->string r_src0 r_src1)
 
     # Floating point operations
-    FLOAT_P = _op(160, 1, True)         # r_dest = (float? r_src0)
-    FLOAT_EQ_P = _op(161, 2, True)      # r_dest = (float=? r_src0 r_src1)
-    FLOAT_NEQ_P = _op(162, 2, True)     # r_dest = (float!=? r_src0 r_src1)
-    FLOAT_LT_P = _op(163, 2, True)      # r_dest = (float<? r_src0 r_src1)
-    FLOAT_GT_P = _op(164, 2, True)      # r_dest = (float>? r_src0 r_src1)
-    FLOAT_LTE_P = _op(165, 2, True)     # r_dest = (float<=? r_src0 r_src1)
-    FLOAT_GTE_P = _op(166, 2, True)     # r_dest = (float>=? r_src0 r_src1)
-    FLOAT_NEG = _op(167, 1, True)       # r_dest = (float-neg r_src0)
-    FLOAT_ADD = _op(168, 2, True)       # r_dest = (float+ r_src0 r_src1)
-    FLOAT_SUB = _op(169, 2, True)       # r_dest = (float- r_src0 r_src1)
-    FLOAT_MUL = _op(170, 2, True)       # r_dest = (float* r_src0 r_src1)
-    FLOAT_DIV = _op(171, 2, True)       # r_dest = (float/ r_src0 r_src1)
-    FLOAT_FLOOR_DIV = _op(172, 2, True) # r_dest = (float// r_src0 r_src1)
-    FLOAT_MOD = _op(173, 2, True)       # r_dest = (float% r_src0 r_src1)
-    FLOAT_EXP = _op(174, 1, True)       # r_dest = (float-exp r_src0)
-    FLOAT_EXPN = _op(175, 2, True)      # r_dest = (float-expn r_src0 r_src1)
-    FLOAT_LOG = _op(176, 1, True)       # r_dest = (float-log r_src0)
-    FLOAT_LOG10 = _op(177, 1, True)     # r_dest = (float-log10 r_src0)
-    FLOAT_LOG2 = _op(178, 1, True)      # r_dest = (float-log2 r_src0)
-    FLOAT_LOGN = _op(179, 2, True)      # r_dest = (float-logn r_src0 r_src1)
-    FLOAT_SIN = _op(180, 1, True)       # r_dest = (float-sin r_src0)
-    FLOAT_COS = _op(181, 1, True)       # r_dest = (float-cos r_src0)
-    FLOAT_TAN = _op(182, 1, True)       # r_dest = (float-tan r_src0)
-    FLOAT_SQRT = _op(183, 1, True)      # r_dest = (float-sqrt r_src0)
-    FLOAT_ABS = _op(184, 1, True)       # r_dest = (float-abs r_src0)
-    FLOAT_TO_INTEGER = _op(185, 1, True)
+    FLOAT_P = _op(160, 1)               # r_dest = (float? r_src0)
+    FLOAT_EQ_P = _op(161, 2)            # r_dest = (float=? r_src0 r_src1)
+    FLOAT_NEQ_P = _op(162, 2)           # r_dest = (float!=? r_src0 r_src1)
+    FLOAT_LT_P = _op(163, 2)            # r_dest = (float<? r_src0 r_src1)
+    FLOAT_GT_P = _op(164, 2)            # r_dest = (float>? r_src0 r_src1)
+    FLOAT_LTE_P = _op(165, 2)           # r_dest = (float<=? r_src0 r_src1)
+    FLOAT_GTE_P = _op(166, 2)           # r_dest = (float>=? r_src0 r_src1)
+    FLOAT_NEG = _op(167, 1)             # r_dest = (float-neg r_src0)
+    FLOAT_ADD = _op(168, 2)             # r_dest = (float+ r_src0 r_src1)
+    FLOAT_SUB = _op(169, 2)             # r_dest = (float- r_src0 r_src1)
+    FLOAT_MUL = _op(170, 2)             # r_dest = (float* r_src0 r_src1)
+    FLOAT_DIV = _op(171, 2)             # r_dest = (float/ r_src0 r_src1)
+    FLOAT_FLOOR_DIV = _op(172, 2)       # r_dest = (float// r_src0 r_src1)
+    FLOAT_MOD = _op(173, 2)             # r_dest = (float% r_src0 r_src1)
+    FLOAT_EXP = _op(174, 1)             # r_dest = (float-exp r_src0)
+    FLOAT_EXPN = _op(175, 2)            # r_dest = (float-expn r_src0 r_src1)
+    FLOAT_LOG = _op(176, 1)             # r_dest = (float-log r_src0)
+    FLOAT_LOG10 = _op(177, 1)           # r_dest = (float-log10 r_src0)
+    FLOAT_LOG2 = _op(178, 1)            # r_dest = (float-log2 r_src0)
+    FLOAT_LOGN = _op(179, 2)            # r_dest = (float-logn r_src0 r_src1)
+    FLOAT_SIN = _op(180, 1)             # r_dest = (float-sin r_src0)
+    FLOAT_COS = _op(181, 1)             # r_dest = (float-cos r_src0)
+    FLOAT_TAN = _op(182, 1)             # r_dest = (float-tan r_src0)
+    FLOAT_SQRT = _op(183, 1)            # r_dest = (float-sqrt r_src0)
+    FLOAT_ABS = _op(184, 1)             # r_dest = (float-abs r_src0)
+    FLOAT_TO_INTEGER = _op(185, 1)
                                         # r_dest = (float->integer r_src0)
-    FLOAT_TO_COMPLEX = _op(186, 2, True)
+    FLOAT_TO_COMPLEX = _op(186, 2)
                                         # r_dest = (float->complex r_src0 r_src1)
-    FLOAT_TO_STRING = _op(187, 1, True) # r_dest = (float->string r_src0)
-    FLOAT_FLOOR = _op(188, 1, True)     # r_dest = (float-floor r_src0)
-    FLOAT_CEIL = _op(189, 1, True)      # r_dest = (float-ceil r_src0)
-    FLOAT_ROUND = _op(190, 1, True)     # r_dest = (float-round r_src0)
-    FLOAT_MIN = _op(191, 2, True)       # r_dest = (float-min r_src0 r_src1)
-    FLOAT_MAX = _op(192, 2, True)       # r_dest = (float-max r_src0 r_src1)
+    FLOAT_TO_STRING = _op(187, 1)       # r_dest = (float->string r_src0)
+    FLOAT_FLOOR = _op(188, 1)           # r_dest = (float-floor r_src0)
+    FLOAT_CEIL = _op(189, 1)            # r_dest = (float-ceil r_src0)
+    FLOAT_ROUND = _op(190, 1)           # r_dest = (float-round r_src0)
+    FLOAT_MIN = _op(191, 2)             # r_dest = (float-min r_src0 r_src1)
+    FLOAT_MAX = _op(192, 2)             # r_dest = (float-max r_src0 r_src1)
 
     # Complex operations
-    COMPLEX_P = _op(200, 1, True)       # r_dest = (complex? r_src0)
-    COMPLEX_EQ_P = _op(201, 2, True)    # r_dest = (complex=? r_src0 r_src1)
-    COMPLEX_NEQ_P = _op(202, 2, True)   # r_dest = (complex!=? r_src0 r_src1)
-    COMPLEX_REAL = _op(203, 1, True)    # r_dest = (complex-real r_src0)
-    COMPLEX_IMAG = _op(204, 1, True)    # r_dest = (complex-imag r_src0)
-    COMPLEX_ABS = _op(205, 1, True)     # r_dest = (complex-abs r_src0)
-    COMPLEX_ADD = _op(206, 2, True)     # r_dest = (complex+ r_src0 r_src1)
-    COMPLEX_SUB = _op(207, 2, True)     # r_dest = (complex- r_src0 r_src1)
-    COMPLEX_MUL = _op(208, 2, True)     # r_dest = (complex* r_src0 r_src1)
-    COMPLEX_DIV = _op(209, 2, True)     # r_dest = (complex/ r_src0 r_src1)
-    COMPLEX_NEG = _op(210, 1, True)     # r_dest = (complex-neg r_src0)
-    COMPLEX_EXP = _op(211, 1, True)     # r_dest = (complex-exp r_src0)
-    COMPLEX_EXPN = _op(212, 2, True)    # r_dest = (complex-expn r_src0 r_src1)
-    COMPLEX_LOG = _op(213, 1, True)     # r_dest = (complex-log r_src0)
-    COMPLEX_LOG10 = _op(214, 1, True)   # r_dest = (complex-log10 r_src0)
-    COMPLEX_LOGN = _op(215, 2, True)    # r_dest = (complex-logn r_src0 r_src1)
-    COMPLEX_SIN = _op(216, 1, True)     # r_dest = (complex-sin r_src0)
-    COMPLEX_COS = _op(217, 1, True)     # r_dest = (complex-cos r_src0)
-    COMPLEX_TAN = _op(218, 1, True)     # r_dest = (complex-tan r_src0)
-    COMPLEX_SQRT = _op(219, 1, True)    # r_dest = (complex-sqrt r_src0)
-    COMPLEX_TO_STRING = _op(220, 1, True) # r_dest = (complex->string r_src0)
+    COMPLEX_P = _op(200, 1)             # r_dest = (complex? r_src0)
+    COMPLEX_EQ_P = _op(201, 2)          # r_dest = (complex=? r_src0 r_src1)
+    COMPLEX_NEQ_P = _op(202, 2)         # r_dest = (complex!=? r_src0 r_src1)
+    COMPLEX_REAL = _op(203, 1)          # r_dest = (complex-real r_src0)
+    COMPLEX_IMAG = _op(204, 1)          # r_dest = (complex-imag r_src0)
+    COMPLEX_ABS = _op(205, 1)           # r_dest = (complex-abs r_src0)
+    COMPLEX_ADD = _op(206, 2)           # r_dest = (complex+ r_src0 r_src1)
+    COMPLEX_SUB = _op(207, 2)           # r_dest = (complex- r_src0 r_src1)
+    COMPLEX_MUL = _op(208, 2)           # r_dest = (complex* r_src0 r_src1)
+    COMPLEX_DIV = _op(209, 2)           # r_dest = (complex/ r_src0 r_src1)
+    COMPLEX_NEG = _op(210, 1)           # r_dest = (complex-neg r_src0)
+    COMPLEX_EXP = _op(211, 1)           # r_dest = (complex-exp r_src0)
+    COMPLEX_EXPN = _op(212, 2)          # r_dest = (complex-expn r_src0 r_src1)
+    COMPLEX_LOG = _op(213, 1)           # r_dest = (complex-log r_src0)
+    COMPLEX_LOG10 = _op(214, 1)         # r_dest = (complex-log10 r_src0)
+    COMPLEX_LOGN = _op(215, 2)          # r_dest = (complex-logn r_src0 r_src1)
+    COMPLEX_SIN = _op(216, 1)           # r_dest = (complex-sin r_src0)
+    COMPLEX_COS = _op(217, 1)           # r_dest = (complex-cos r_src0)
+    COMPLEX_TAN = _op(218, 1)           # r_dest = (complex-tan r_src0)
+    COMPLEX_SQRT = _op(219, 1)          # r_dest = (complex-sqrt r_src0)
+    COMPLEX_TO_STRING = _op(220, 1)     # r_dest = (complex->string r_src0)
 
     # String operations
-    STRING_P = _op(240, 1, True)        # r_dest = (string? r_src0)
-    STRING_EQ_P = _op(241, 2, True)     # r_dest = (string=? r_src0 r_src1)
-    STRING_NEQ_P = _op(242, 2, True)    # r_dest = (string!=? r_src0 r_src1)
-    STRING_LT_P = _op(243, 2, True)     # r_dest = (string<? r_src0 r_src1)
-    STRING_GT_P = _op(244, 2, True)     # r_dest = (string>? r_src0 r_src1)
-    STRING_LTE_P = _op(245, 2, True)    # r_dest = (string<=? r_src0 r_src1)
-    STRING_GTE_P = _op(246, 2, True)    # r_dest = (string>=? r_src0 r_src1)
-    STRING_LENGTH = _op(247, 1, True)   # r_dest = (string-length r_src0)
-    STRING_UPCASE = _op(248, 1, True)   # r_dest = (string-upcase r_src0)
-    STRING_DOWNCASE = _op(249, 1, True) # r_dest = (string-downcase r_src0)
-    STRING_TRIM = _op(250, 1, True)     # r_dest = (string-trim r_src0)
-    STRING_TRIM_LEFT = _op(251, 1, True)
-                                        # r_dest = (string-trim-left r_src0)
-    STRING_TRIM_RIGHT = _op(252, 1, True)
-                                        # r_dest = (string-trim-right r_src0)
-    STRING_TO_INTEGER = _op(253, 2, True)
-                                        # r_dest = (string->integer r_src0 r_src1)
-    STRING_TO_NUMBER = _op(254, 1, True)
-                                        # r_dest = (string->number r_src0)
-    STRING_TO_LIST = _op(255, 2, True)  # r_dest = (string->list r_src0 r_src1)
-    STRING_REF = _op(256, 2, True)      # r_dest = (string-ref r_src0 r_src1)
-    STRING_PREFIX_P = _op(257, 2, True) # r_dest = (string-prefix? r_src0 r_src1)
-    STRING_SUFFIX_P = _op(258, 2, True) # r_dest = (string-suffix? r_src0 r_src1)
-    STRING_CONCAT = _op(259, 2, True)   # r_dest = (string-concat r_src0 r_src1)
-    STRING_SLICE = _op(260, 3, True)    # r_dest = (string-slice r_src0 r_src1 r_src2)
-    STRING_REPLACE = _op(261, 3, True)  # r_dest = (string-replace r_src0 r_src1 r_src2)
-    STRING_INDEX = _op(262, 2, True)    # r_dest = (string-index r_src0 r_src1)
+    STRING_P = _op(240, 1)              # r_dest = (string? r_src0)
+    STRING_EQ_P = _op(241, 2)           # r_dest = (string=? r_src0 r_src1)
+    STRING_NEQ_P = _op(242, 2)          # r_dest = (string!=? r_src0 r_src1)
+    STRING_LT_P = _op(243, 2)           # r_dest = (string<? r_src0 r_src1)
+    STRING_GT_P = _op(244, 2)           # r_dest = (string>? r_src0 r_src1)
+    STRING_LTE_P = _op(245, 2)          # r_dest = (string<=? r_src0 r_src1)
+    STRING_GTE_P = _op(246, 2)          # r_dest = (string>=? r_src0 r_src1)
+    STRING_LENGTH = _op(247, 1)         # r_dest = (string-length r_src0)
+    STRING_UPCASE = _op(248, 1)         # r_dest = (string-upcase r_src0)
+    STRING_DOWNCASE = _op(249, 1)       # r_dest = (string-downcase r_src0)
+    STRING_TRIM = _op(250, 1)           # r_dest = (string-trim r_src0)
+    STRING_TRIM_LEFT = _op(251, 1)      # r_dest = (string-trim-left r_src0)
+    STRING_TRIM_RIGHT = _op(252, 1)     # r_dest = (string-trim-right r_src0)
+    STRING_TO_INTEGER = _op(253, 2)     # r_dest = (string->integer r_src0 r_src1)
+    STRING_TO_NUMBER = _op(254, 1)      # r_dest = (string->number r_src0)
+    STRING_TO_LIST = _op(255, 2)        # r_dest = (string->list r_src0 r_src1)
+    STRING_REF = _op(256, 2)            # r_dest = (string-ref r_src0 r_src1)
+    STRING_PREFIX_P = _op(257, 2)       # r_dest = (string-prefix? r_src0 r_src1)
+    STRING_SUFFIX_P = _op(258, 2)       # r_dest = (string-suffix? r_src0 r_src1)
+    STRING_CONCAT = _op(259, 2)         # r_dest = (string-concat r_src0 r_src1)
+    STRING_SLICE = _op(260, 3)          # r_dest = (string-slice r_src0 r_src1 r_src2)
+    STRING_REPLACE = _op(261, 3)        # r_dest = (string-replace r_src0 r_src1 r_src2)
+    STRING_INDEX = _op(262, 2)          # r_dest = (string-index r_src0 r_src1)
 
     # Alist operations
-    DICT_P = _op(281, 1, True)          # r_dest = (dict? r_src0)
-    DICT_EQ_P = _op(282, 2, True)       # r_dest = (dict=? r_src0 r_src1)
-    DICT_NEQ_P = _op(283, 2, True)      # r_dest = (dict!=? r_src0 r_src1)
-    DICT_KEYS = _op(284, 1, True)       # r_dest = (dict-keys r_src0)
-    DICT_VALUES = _op(285, 1, True)     # r_dest = (dict-values r_src0)
-    DICT_LENGTH = _op(286, 1, True)     # r_dest = (dict-length r_src0)
-    DICT_HAS_P = _op(287, 2, True)      # r_dest = (dict-has? r_src0 r_src1)
-    DICT_REMOVE = _op(288, 2, True)     # r_dest = (dict-remove r_src0 r_src1)
-    DICT_MERGE = _op(289, 2, True)      # r_dest = (dict-merge r_src0 r_src1)
-    DICT_SET = _op(290, 3, True)        # r_dest = (dict-set r_src0 r_src1 r_src2)
-    DICT_GET = _op(291, 3, True)        # r_dest = (dict-get r_src0 r_src1 r_src2)
+    DICT_P = _op(281, 1)                # r_dest = (dict? r_src0)
+    DICT_EQ_P = _op(282, 2)             # r_dest = (dict=? r_src0 r_src1)
+    DICT_NEQ_P = _op(283, 2)            # r_dest = (dict!=? r_src0 r_src1)
+    DICT_KEYS = _op(284, 1)             # r_dest = (dict-keys r_src0)
+    DICT_VALUES = _op(285, 1)           # r_dest = (dict-values r_src0)
+    DICT_LENGTH = _op(286, 1)           # r_dest = (dict-length r_src0)
+    DICT_HAS_P = _op(287, 2)            # r_dest = (dict-has? r_src0 r_src1)
+    DICT_REMOVE = _op(288, 2)           # r_dest = (dict-remove r_src0 r_src1)
+    DICT_MERGE = _op(289, 2)            # r_dest = (dict-merge r_src0 r_src1)
+    DICT_SET = _op(290, 3)              # r_dest = (dict-set r_src0 r_src1 r_src2)
+    DICT_GET = _op(291, 3)              # r_dest = (dict-get r_src0 r_src1 r_src2)
 
     # List operations
-    LIST_P = _op(321, 1, True)          # r_dest = (list? r_src0)
-    LIST_EQ_P = _op(322, 2, True)       # r_dest = (list=? r_src0 r_src1)
-    LIST_NEQ_P = _op(323, 2, True)      # r_dest = (list!=? r_src0 r_src1)
-    LIST_PREPEND = _op(324, 2, True)    # r_dest = (list-prepend r_src0 r_src1)
-    LIST_APPEND = _op(325, 2, True)     # r_dest = (list-append r_src0 r_src1)
-    LIST_REVERSE = _op(326, 1, True)    # r_dest = (list-reverse r_src0)
-    LIST_FIRST = _op(327, 1, True)      # r_dest = (list-first r_src0)
-    LIST_REST = _op(328, 1, True)       # r_dest = (list-rest r_src0)
-    LIST_LAST = _op(329, 1, True)       # r_dest = (list-last r_src0)
-    LIST_LENGTH = _op(330, 1, True)     # r_dest = (list-length r_src0)
-    LIST_REF = _op(331, 2, True)        # r_dest = (list-ref r_src0 r_src1)
-    LIST_NULL_P = _op(332, 1, True)     # r_dest = (list-null? r_src0)
-    LIST_MEMBER_P = _op(333, 2, True)   # r_dest = (list-member? r_src0 r_src1)
-    LIST_INDEX = _op(334, 2, True)      # r_dest = (list-index r_src0 r_src1)
-    LIST_SLICE = _op(335, 3, True)      # r_dest = (list-slice r_src0 r_src1 r_src2)
-    LIST_REMOVE = _op(336, 2, True)     # r_dest = (list-remove r_src0 r_src1)
-    LIST_CONCAT = _op(337, 2, True)     # r_dest = (list-concat r_src0 r_src1)
-    LIST_TO_STRING = _op(338, 2, True)  # r_dest = (list->string r_src0 r_src1)
+    LIST_P = _op(321, 1)                # r_dest = (list? r_src0)
+    LIST_EQ_P = _op(322, 2)             # r_dest = (list=? r_src0 r_src1)
+    LIST_NEQ_P = _op(323, 2)            # r_dest = (list!=? r_src0 r_src1)
+    LIST_PREPEND = _op(324, 2)          # r_dest = (list-prepend r_src0 r_src1)
+    LIST_APPEND = _op(325, 2)           # r_dest = (list-append r_src0 r_src1)
+    LIST_REVERSE = _op(326, 1)          # r_dest = (list-reverse r_src0)
+    LIST_FIRST = _op(327, 1)            # r_dest = (list-first r_src0)
+    LIST_REST = _op(328, 1)             # r_dest = (list-rest r_src0)
+    LIST_LAST = _op(329, 1)             # r_dest = (list-last r_src0)
+    LIST_LENGTH = _op(330, 1)           # r_dest = (list-length r_src0)
+    LIST_REF = _op(331, 2)              # r_dest = (list-ref r_src0 r_src1)
+    LIST_NULL_P = _op(332, 1)           # r_dest = (list-null? r_src0)
+    LIST_MEMBER_P = _op(333, 2)         # r_dest = (list-member? r_src0 r_src1)
+    LIST_INDEX = _op(334, 2)            # r_dest = (list-index r_src0 r_src1)
+    LIST_SLICE = _op(335, 3)            # r_dest = (list-slice r_src0 r_src1 r_src2)
+    LIST_REMOVE = _op(336, 2)           # r_dest = (list-remove r_src0 r_src1)
+    LIST_CONCAT = _op(337, 2)           # r_dest = (list-concat r_src0 r_src1)
+    LIST_TO_STRING = _op(338, 2)        # r_dest = (list->string r_src0 r_src1)
 
     # Generate integer range list
-    RANGE = _op(360, 3, True)           # r_dest = (range r_src0 r_src1 r_src2)
+    RANGE = _op(360, 3)                 # r_dest = (range r_src0 r_src1 r_src2)
 
 
 # Maps builtin function name → (opcode, arity) for all fixed-arity builtins.

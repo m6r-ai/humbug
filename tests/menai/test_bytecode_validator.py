@@ -187,7 +187,8 @@ class TestBytecodeValidator:
     def test_stack_underflow(self):
         """Test that RETURN with an out-of-bounds src0 register is caught.
 
-        RETURN src0=0 with local_count=0 → INVALID_VARIABLE_ACCESS.
+        RETURN src0=0 with local_count=0: the initialization pass fires first
+        (register 0 is uninitialized) and raises UNINITIALIZED_VARIABLE.
         """
         code = CodeObject(
             instructions=[
@@ -201,8 +202,8 @@ class TestBytecodeValidator:
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
 
-        assert exc_info.value.error_type == ValidationErrorType.INVALID_VARIABLE_ACCESS
-        assert "RETURN src0" in exc_info.value.message
+        assert exc_info.value.error_type == ValidationErrorType.UNINITIALIZED_VARIABLE
+        assert "RETURN source register" in exc_info.value.message
 
     # ------------------------------------------------------------------
     # Category 7: Stack underflow in call
