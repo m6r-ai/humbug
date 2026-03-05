@@ -308,30 +308,13 @@ class MenaiBuiltinRegistry:
             # Omit ENTER when arity=0 (nothing to pop).
             enter_instrs = [Instruction(Opcode.ENTER, src0=arity)] if arity > 0 else []
 
-            if opcode.has_dest():
-                # Register-based opcode: result goes into slot `arity` (after params).
-                # RETURN reads directly from that register.
-                result_slot = arity
-                instructions = [
-                    *enter_instrs,
-                    Instruction(opcode, dest=result_slot),
-                    Instruction(Opcode.RETURN, src0=result_slot),
-                ]
-                local_count = arity + 1
-
-            else:
-                # Stack-based opcode: params are in registers 0..arity-1 (loaded by ENTER).
-                # Push them onto the stack, run the opcode (result lands on stack),
-                # POP result into a result slot, then RETURN from that slot.
-                result_slot = arity
-                instructions = [
-                    *enter_instrs,
-                    *[Instruction(Opcode.PUSH, src0=i) for i in range(arity)],
-                    Instruction(opcode),
-                    Instruction(Opcode.POP, dest=result_slot),
-                    Instruction(Opcode.RETURN, src0=result_slot),
-                ]
-                local_count = arity + 1
+            result_slot = arity
+            instructions = [
+                *enter_instrs,
+                Instruction(opcode, dest=result_slot),
+                Instruction(Opcode.RETURN, src0=result_slot),
+            ]
+            local_count = arity + 1
 
             stub = CodeObject(
                 instructions=instructions,
