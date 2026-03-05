@@ -888,11 +888,3 @@ class MenaiVMCodeGen:
             source_line=func.source_line,
             source_file=func.source_file,
         )
-
-    # ------------------------------------------------------------------
-    # Value loading helpers
-    # ------------------------------------------------------------------
-
-    def _emit_load_value(self, value: MenaiValue, ctx: _EmitContext) -> None:
-        """Emit the appropriate LOAD instruction for a constant value."""
-        ctx.emit_constant(value)

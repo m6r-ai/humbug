@@ -928,7 +928,7 @@ class MenaiVM:
 
         # Emit trace if watcher is available
         if self.trace_watcher:
-            self._emit_trace(message)
+            self._emit_trace(cast(MenaiValue, message))
 
         # Continue execution (no return value)
         return None
