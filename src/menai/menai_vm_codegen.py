@@ -681,13 +681,7 @@ class MenaiVMCodeGen:
         """
         Emit a builtin operation, including special-case handling for
         optional-argument builtins (range, string-slice, dict-get, etc.).
-
-        Dispatch is driven by opcode.has_dest():
-          - True  → register-based: operands read from src registers, result
-                    written to dest register.  No PUSH/POP involved.
-          - False → legacy stack-based: operands pushed onto the call stack,
-                    result left on top of the stack (then stored via
-                    store_result).  Used for ops not yet converted.
+sed for ops not yet converted.
         """
         op = instr.op
         args = instr.args

@@ -535,25 +535,10 @@ class Instruction:
         if opcode == Opcode.EMIT_TRACE:
             return f"EMIT_TRACE r{self.src0}"
 
-        # General case: driven by has_dest() and arg_count().
-        #
-        # has_dest() == True  → register-based: show "rD = NAME rS0, rS1, ..."
-        # has_dest() == False → legacy stack-based or no-result op:
-        #                       show "NAME" with any stream immediates
         n = self.arg_count()
-        if opcode.has_dest():
-            srcs = [f"r{self.src0}", f"r{self.src1}", f"r{self.src2}"][:n]
-            src_str = (", ".join(srcs) + " " if srcs else "")
-            return f"r{self.dest} = {name} {src_str}".rstrip()
-
-        # Legacy stack-based: src fields carry stream immediates, not registers.
-        if n == 0:
-            return name
-
-        if n == 2:
-            return f"{name} {self.src0} {self.src1}"
-
-        return f"{name} {self.src0}"
+        srcs = [f"r{self.src0}", f"r{self.src1}", f"r{self.src2}"][:n]
+        src_str = (", ".join(srcs) + " " if srcs else "")
+        return f"r{self.dest} = {name} {src_str}".rstrip()
 
 
 @dataclass

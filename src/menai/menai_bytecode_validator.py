@@ -835,6 +835,7 @@ class BytecodeValidator:
                         for slot, cidx in existing_closures.items()
                         if new_closures.get(slot) == cidx
                     }
+
                     if merged_init != existing_init or merged_closures != existing_closures:
                         initialized_at[succ_idx] = (merged_init, merged_closures)
                         worklist.append(succ_idx)
