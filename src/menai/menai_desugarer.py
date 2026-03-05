@@ -249,7 +249,7 @@ class MenaiDesugarer:
 
             # Fold-reducible variadic operations
             if name in [
-                'bit-or', 'bit-and', 'bit-xor',
+                'integer-bit-or', 'integer-bit-and', 'integer-bit-xor',
                 'integer-min', 'integer-max',
                 'float-min', 'float-max',
                 'list-concat',
@@ -596,12 +596,6 @@ class MenaiDesugarer:
 
         These are operations where (f a b c) means (f (f a b) c) — a left fold.
         Each operation has a natural identity element for the 0-arg case.
-
-        Handles:
-            bit-or, bit-and, bit-xor  — bitwise ops, identity: 0
-            list-concat               — list concatenation, identity: ()
-            string-append             — string concatenation, identity: ""
-            min, max                  — numeric reduction (1+ args required)
         """
         op_symbol = expr.first()
         assert isinstance(op_symbol, MenaiASTSymbol)
@@ -611,13 +605,13 @@ class MenaiDesugarer:
 
         # 0-arg identity cases
         if len(args) == 0:
-            if op_name == 'bit-or':
+            if op_name == 'integer-bit-or':
                 return MenaiASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
 
-            if op_name == 'bit-and':
+            if op_name == 'integer-bit-and':
                 return MenaiASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
 
-            if op_name == 'bit-xor':
+            if op_name == 'integer-bit-xor':
                 return MenaiASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file)
 
             if op_name == 'string-concat':

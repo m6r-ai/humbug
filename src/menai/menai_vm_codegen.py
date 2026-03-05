@@ -229,9 +229,11 @@ class _EmitContext:
             if value.id in self.slot_map:
                 self.emit(Opcode.PUSH, self.slot_of(value))
             return
+
         if self.schedule.is_remat(value):
             self.emit_const_push(self.schedule.remat_value_of(value))
             return
+
         self.emit(Opcode.PUSH, self.slot_of(value))
 
     def emit_constant(self, value: MenaiValue, dest: int) -> None:
@@ -239,15 +241,19 @@ class _EmitContext:
         if isinstance(value, MenaiNone):
             self.emit(Opcode.LOAD_NONE, dest=dest)
             return
+
         if isinstance(value, MenaiBoolean):
             self.emit(Opcode.LOAD_TRUE if value.value else Opcode.LOAD_FALSE, dest=dest)
             return
+
         if isinstance(value, MenaiList) and len(value.elements) == 0:
             self.emit(Opcode.LOAD_EMPTY_LIST, dest=dest)
             return
+
         if isinstance(value, MenaiDict) and len(value.pairs) == 0:
             self.emit(Opcode.LOAD_EMPTY_DICT, dest=dest)
             return
+
         const_idx = self.add_constant(value)
         self.emit(Opcode.LOAD_CONST, const_idx, dest=dest)
 
@@ -274,8 +280,10 @@ class _EmitContext:
         """
         if self.schedule.is_transient(value):
             return -1
+
         if self.schedule.is_remat(value):
             return -1
+
         slot = self.alloc_slot(value)
         self.emit(Opcode.POP, dest=slot)
         return slot
@@ -386,6 +394,7 @@ class MenaiVMCodeGen:
             for instr in block.instrs:
                 if isinstance(instr, MenaiCFGParamInstr):
                     ctx.assign_slot(instr.result, instr.index)
+
                 elif isinstance(instr, MenaiCFGFreeVarInstr):
                     ctx.assign_slot(instr.result, param_count + instr.index)
 
@@ -420,10 +429,12 @@ class MenaiVMCodeGen:
         def dfs(block: MenaiCFGBlock) -> None:
             if block.id in visited:
                 return
+
             visited.add(block.id)
             term = block.terminator
             if isinstance(term, MenaiCFGJumpTerm):
                 dfs(term.target)
+
             elif isinstance(term, MenaiCFGBranchTerm):
                 dfs(term.true_block)
                 dfs(term.false_block)
@@ -522,6 +533,7 @@ class MenaiVMCodeGen:
             for msg in instr.messages:
                 msg_slot = ctx.ensure_slot(msg)
                 ctx.emit(Opcode.EMIT_TRACE, msg_slot)
+
             # instr.value may be stack-transient with no slot, meaning it is
             # sitting on top of the stack from the preceding stack-based op.
             # We must pop it into a fresh slot before recording the result slot.
@@ -533,8 +545,10 @@ class MenaiVMCodeGen:
                 ctx.next_slot += 1
                 ctx.slot_map[instr.value.id] = result_slot
                 ctx.emit(Opcode.POP, dest=result_slot)
+
             else:
                 result_slot = ctx.ensure_slot(instr.value)
+
             ctx.slot_map[instr.result.id] = result_slot
             return
 
@@ -564,14 +578,17 @@ class MenaiVMCodeGen:
         for instr in successor.instrs:
             if not isinstance(instr, MenaiCFGPhiInstr):
                 break
+
             for incoming_val, pred_block in instr.incoming:
                 if pred_block.id == current_block.id:
                     # Allocate the phi slot lazily on first store.
                     if instr.result.id not in ctx.phi_slot_map:
                         phi_slot = ctx.alloc_slot(instr.result)
                         ctx.phi_slot_map[instr.result.id] = phi_slot
+
                     else:
                         phi_slot = ctx.phi_slot_map[instr.result.id]
+
                     ctx.load_value(incoming_val)
                     ctx.emit(Opcode.POP, dest=phi_slot)
 
@@ -604,6 +621,7 @@ class MenaiVMCodeGen:
             if next_block is None or next_block.id != term.target.id:
                 jump_idx = ctx.emit(Opcode.JUMP, 0)
                 forward_jumps.append((jump_idx, term.target, 'src0'))
+
             return
 
         if isinstance(term, MenaiCFGBranchTerm):
@@ -614,21 +632,25 @@ class MenaiVMCodeGen:
                 # Phi stores happen in then/else blocks via their own JumpTerm.
                 true_jump_idx = ctx.emit(Opcode.JUMP_IF_TRUE, cond_slot, 0)
                 forward_jumps.append((true_jump_idx, term.true_block, 'src1'))
+
             elif next_id == term.true_block.id:
                 # True block is the fall-through: emit JUMP_IF_FALSE <false> only.
                 false_jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, cond_slot, 0)
                 forward_jumps.append((false_jump_idx, term.false_block, 'src1'))
+
             else:
                 # Neither successor is adjacent: emit JUMP_IF_FALSE <false> + JUMP <true>.
                 false_jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, cond_slot, 0)
                 true_jump_idx = ctx.emit(Opcode.JUMP, 0)
                 forward_jumps.append((true_jump_idx, term.true_block, 'src0'))
                 forward_jumps.append((false_jump_idx, term.false_block, 'src1'))
+
             return
 
         if isinstance(term, MenaiCFGTailCallTerm):
             for arg in term.args:
                 ctx.load_value(arg)
+
             ctx.load_value(term.func)
             ctx.emit(Opcode.TAIL_CALL, len(term.args))
             return
@@ -644,6 +666,7 @@ class MenaiVMCodeGen:
             # ENTER at instruction 0 will pop them into param slots.
             for arg in term.args:
                 ctx.load_value(arg)
+
             ctx.emit(Opcode.JUMP, 0)
             return
 
@@ -668,33 +691,11 @@ class MenaiVMCodeGen:
         """
         op = instr.op
         args = instr.args
+        result = instr.result
 
         opcode, _ = BUILTIN_OPCODE_MAP.get(op, (None, None))
         if opcode is None:
             raise ValueError(f"MenaiVMCodeGen: unknown builtin op {op!r}")
-
-        if opcode is not None and opcode.has_dest():
-            # ------------------------------------------------------------------
-            # Register-based path
-            # ------------------------------------------------------------------
-            # Resolve each SSA arg to a register slot.  For ops with optional
-            # arguments the missing arg is loaded into a fresh slot first.
-            self._emit_builtin_reg(op, opcode, args, instr.result, ctx)
-        else:
-            # ------------------------------------------------------------------
-            # Legacy stack-based path (ops not yet converted)
-            # ------------------------------------------------------------------
-            self._emit_builtin_stack(op, opcode, args, instr.result, ctx)
-
-    def _emit_builtin_reg(
-        self,
-        op: str,
-        opcode: Opcode,
-        args: list,
-        result: 'MenaiCFGValue',
-        ctx: _EmitContext,
-    ) -> None:
-        """Emit a register-based builtin: operands from src registers, result to dest."""
 
         def slot(i: int) -> int:
             return ctx.ensure_slot(args[i])
@@ -746,6 +747,7 @@ class MenaiVMCodeGen:
                 len_opcode, _ = BUILTIN_OPCODE_MAP['string-length']
                 ctx.emit(len_opcode, s0, dest=len_slot)
                 s2 = len_slot
+
             else:
                 s2 = slot(2)
             ctx.emit(opcode, s0, s1, dest=dest, src2=s2)
@@ -765,6 +767,7 @@ class MenaiVMCodeGen:
                 len_opcode, _ = BUILTIN_OPCODE_MAP['list-length']
                 ctx.emit(len_opcode, s0, dest=len_slot)
                 s2 = len_slot
+
             else:
                 s2 = slot(2)
             ctx.emit(opcode, s0, s1, dest=dest, src2=s2)
@@ -791,120 +794,6 @@ class MenaiVMCodeGen:
 
         else:
             raise ValueError(f"MenaiVMCodeGen: unhandled register-based builtin op {op!r}")
-
-    def _emit_builtin_stack(
-        self,
-        op: str,
-        opcode: 'Opcode | None',
-        args: list,
-        result: 'MenaiCFGValue',
-        ctx: _EmitContext,
-    ) -> None:
-        """Emit a legacy stack-based builtin: operands pushed, result left on stack."""
-
-        def load_all() -> None:
-            for a in args:
-                ctx.load_value(a)
-
-        # Special cases: optional / synthesised arguments.
-        # These mirror the register-path handling but use load_value / emit_const_push.
-        if op == 'range':
-            load_all()
-            if len(args) == 2:
-                ctx.emit_const_push(MenaiInteger(1))
-            ctx.emit(opcode)
-
-        elif op == 'integer->complex':
-            ctx.load_value(args[0])
-            if len(args) == 1:
-                ctx.emit_const_push(MenaiInteger(0))
-            else:
-                ctx.load_value(args[1])
-            ctx.emit(opcode)
-
-        elif op == 'integer->string':
-            ctx.load_value(args[0])
-            if len(args) == 1:
-                ctx.emit_const_push(MenaiInteger(10))
-            else:
-                ctx.load_value(args[1])
-            ctx.emit(opcode)
-
-        elif op == 'float->complex':
-            ctx.load_value(args[0])
-            if len(args) == 1:
-                ctx.emit_const_push(MenaiFloat(0.0))
-            else:
-                ctx.load_value(args[1])
-            ctx.emit(opcode)
-
-        elif op == 'string->integer':
-            ctx.load_value(args[0])
-            if len(args) == 1:
-                ctx.emit_const_push(MenaiInteger(10))
-            else:
-                ctx.load_value(args[1])
-            ctx.emit(opcode)
-
-        elif op == 'string->list':
-            ctx.load_value(args[0])
-            if len(args) == 1:
-                ctx.emit_const_push(MenaiString(""))
-            else:
-                ctx.load_value(args[1])
-            ctx.emit(opcode)
-
-        elif op == 'list->string':
-            ctx.load_value(args[0])
-            if len(args) == 1:
-                ctx.emit_const_push(MenaiString(""))
-            else:
-                ctx.load_value(args[1])
-            ctx.emit(opcode)
-
-        elif op == 'dict-get':
-            load_all()
-            if len(args) == 2:
-                ctx.emit_const_push(MenaiNone())
-            ctx.emit(opcode)
-
-        elif op == 'string-slice':
-            ctx.load_value(args[0])
-            ctx.load_value(args[1])
-            if len(args) == 2:
-                ctx.load_value(args[0])
-                ctx.emit(BUILTIN_OPCODE_MAP['string-length'][0])
-            else:
-                ctx.load_value(args[2])
-            ctx.emit(opcode)
-
-        elif op == 'list-slice':
-            ctx.load_value(args[0])
-            ctx.load_value(args[1])
-            if len(args) == 2:
-                ctx.load_value(args[0])
-                ctx.emit(BUILTIN_OPCODE_MAP['list-length'][0])
-            else:
-                ctx.load_value(args[2])
-            ctx.emit(opcode)
-
-        elif op in BINARY_OPS:
-            load_all()
-            ctx.emit(BINARY_OPS[op])
-
-        elif op in UNARY_OPS:
-            load_all()
-            ctx.emit(UNARY_OPS[op])
-
-        elif op in TERNARY_OPS:
-            load_all()
-            ctx.emit(TERNARY_OPS[op])
-
-        else:
-            raise ValueError(f"MenaiVMCodeGen: unhandled stack-based builtin op {op!r}")
-
-        # Store the result (POP into a slot, or leave transient on stack).
-        ctx.store_result(result)
 
     def _emit_make_closure(
         self, instr: MenaiCFGMakeClosureInstr, ctx: _EmitContext
