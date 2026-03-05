@@ -61,8 +61,8 @@ class Opcode(IntEnum):
     LOAD_NAME = _op(5, 1, True)         # r_dest = globals[names[src0]]
 
     # Stack / register transfer
-    PUSH = _op(10, 1)                    # PUSH src0  — push register src0 onto the call stack
-    POP = _op(11, 0, True)               # r_dest = POP — pop call stack top into register dest
+    PUSH = _op(10, 1)                   # PUSH src0  — push register src0 onto the call stack
+    POP = _op(11, 0, True)              # r_dest = POP — pop call stack top into register dest
 
     # Control flow
     JUMP = _op(20, 1)                   # Unconditional jump: JUMP offset
@@ -110,69 +110,74 @@ class Opcode(IntEnum):
     BOOLEAN_NOT = _op(103, 1, True)     # r_dest = (boolean-not r_src0)
 
     # Integer operations
-    INTEGER_P = _op(120, 0)             # (integer? x)
-    INTEGER_EQ_P = _op(121, 0)          # integer=? a b
-    INTEGER_NEQ_P = _op(122, 0)         # integer!=? a b
-    INTEGER_LT_P = _op(123, 0)          # integer<? a b
-    INTEGER_GT_P = _op(124, 0)          # integer>? a b
-    INTEGER_LTE_P = _op(125, 0)         # integer<=? a b
-    INTEGER_GTE_P = _op(126, 0)         # integer>=? a b
-    INTEGER_ABS = _op(127, 0)           # integer-abs x
-    INTEGER_ADD = _op(128, 0)           # integer+ a b
-    INTEGER_SUB = _op(129, 0)           # integer- a b
-    INTEGER_MUL = _op(130, 0)           # integer* a b
-    INTEGER_DIV = _op(131, 0)           # integer/ a b  (floor division)
-    INTEGER_MOD = _op(132, 0)           # integer% a b  (modulo)
-    INTEGER_NEG = _op(133, 0)           # integer-neg x  (unary minus)
-    INTEGER_EXPN = _op(134, 0)          # integer-expn a b  (exact integer exponentiation)
-    INTEGER_BIT_NOT = _op(135, 0)       # Bitwise NOT ~x
-    INTEGER_BIT_SHIFT_LEFT = _op(136, 0)
-                                        # Bitwise left shift x << n
-    INTEGER_BIT_SHIFT_RIGHT = _op(137, 0)
-                                        # Bitwise right shift x >> n
-    INTEGER_BIT_OR = _op(138, 0)        # Bitwise OR: a | b
-    INTEGER_BIT_AND = _op(139, 0)       # Bitwise AND: a & b
-    INTEGER_BIT_XOR = _op(140, 0)       # Bitwise XOR: a ^ b
-    INTEGER_MIN = _op(141, 0)           # integer-min a b
-    INTEGER_MAX = _op(142, 0)           # integer-max a b
-    INTEGER_TO_FLOAT = _op(143, 0)      # Convert integer to float
-    INTEGER_TO_COMPLEX = _op(144, 0)    # integer->complex: construct complex from integer
-    INTEGER_TO_STRING = _op(145, 0)     # Convert integer to string
+    INTEGER_P = _op(120, 1, True)       # r_dest = (integer? r_src0)
+    INTEGER_EQ_P = _op(121, 2, True)    # r_dest = (integer=? r_src0 r_src1)
+    INTEGER_NEQ_P = _op(122, 2, True)   # r_dest = (integer!=? r_src0 r_src1)
+    INTEGER_LT_P = _op(123, 2, True)    # r_dest = (integer<? r_src0 r_src1)
+    INTEGER_GT_P = _op(124, 2, True)    # r_dest = (integer>? r_src0 r_src1)
+    INTEGER_LTE_P = _op(125, 2, True)   # r_dest = (integer<=? r_src0 r_src1)
+    INTEGER_GTE_P = _op(126, 2, True)   # r_dest = (integer>=? r_src0 r_src1)
+    INTEGER_ABS = _op(127, 1, True)     # r_dest = (integer-abs r_src0)
+    INTEGER_ADD = _op(128, 2, True)     # r_dest = (integer+ r_src0 r_src1)
+    INTEGER_SUB = _op(129, 2, True)     # r_dest = (integer- r_src0 r_src1)
+    INTEGER_MUL = _op(130, 2, True)     # r_dest = (integer* r_src0 r_src1)
+    INTEGER_DIV = _op(131, 2, True)     # r_dest = (integer/ r_src0 r_src1)
+    INTEGER_MOD = _op(132, 2, True)     # r_dest = (integer% r_src0 r_src1)
+    INTEGER_NEG = _op(133, 1, True)     # r_dest = (integer-neg r_src0)
+    INTEGER_EXPN = _op(134, 2, True)    # r_dest = (integer-expn r_src0 r_src1)
+    INTEGER_BIT_NOT = _op(135, 1, True) # r_dest = (integer-bit-not r_src0)
+    INTEGER_BIT_SHIFT_LEFT = _op(136, 2, True)
+                                        # r_dest = (integer-bit-shift-left r_src0 r_src1)
+    INTEGER_BIT_SHIFT_RIGHT = _op(137, 2, True)
+                                        # r_dest = (integer-bit-shift-right r_src0 r_src1)
+    INTEGER_BIT_OR = _op(138, 2, True)  # r_dest = (integer-bit-or r_src0 r_src1)
+    INTEGER_BIT_AND = _op(139, 2, True) # r_dest = (integer-bit-and r_src0 r_src1)
+    INTEGER_BIT_XOR = _op(140, 2, True) # r_dest = (integer-bit-xor r_src0 r_src1)
+    INTEGER_MIN = _op(141, 2, True)     # r_dest = (integer-min r_src0 r_src1)
+    INTEGER_MAX = _op(142, 2, True)     # r_dest = (integer-max r_src0 r_src1)
+    INTEGER_TO_FLOAT = _op(143, 1, True)
+                                        # r_dest = (integer->float r_src0)
+    INTEGER_TO_COMPLEX = _op(144, 2, True)
+                                        # r_dest = (integer->complex r_src0 r_src1)
+    INTEGER_TO_STRING = _op(145, 2, True)
+                                        # r_dest = (integer->string r_src0 r_src1)
 
     # Floating point operations
-    FLOAT_P = _op(160, 0)               # (float? x)
-    FLOAT_EQ_P = _op(161, 0)            # float=? a b
-    FLOAT_NEQ_P = _op(162, 0)           # float!=? a b
-    FLOAT_LT_P = _op(163, 0)            # float<? a b
-    FLOAT_GT_P = _op(164, 0)            # float>? a b
-    FLOAT_LTE_P = _op(165, 0)           # float<=? a b
-    FLOAT_GTE_P = _op(166, 0)           # float>=? a b
-    FLOAT_NEG = _op(167, 0)             # float-neg x  (unary minus)
-    FLOAT_ADD = _op(168, 0)             # float+ a b
-    FLOAT_SUB = _op(169, 0)             # float- a b
-    FLOAT_MUL = _op(170, 0)             # float* a b
-    FLOAT_DIV = _op(171, 0)             # float/ a b
-    FLOAT_FLOOR_DIV = _op(172, 0)       # float// a b  (floor division)
-    FLOAT_MOD = _op(173, 0)             # float% a b  (modulo)
-    FLOAT_EXP = _op(174, 0)             # float-exp x
-    FLOAT_EXPN = _op(175, 0)            # float-expn a b
-    FLOAT_LOG = _op(176, 0)             # float-log x
-    FLOAT_LOG10 = _op(177, 0)           # float-log10 x
-    FLOAT_LOG2 = _op(178, 0)            # float-log2 x  (log base 2, correctly rounded)
-    FLOAT_LOGN = _op(179, 0)            # float-logn x base  (log base n)
-    FLOAT_SIN = _op(180, 0)             # float-sin x
-    FLOAT_COS = _op(181, 0)             # float-cos x
-    FLOAT_TAN = _op(182, 0)             # float-tan x
-    FLOAT_SQRT = _op(183, 0)            # float-sqrt x
-    FLOAT_ABS = _op(184, 0)             # float-abs x
-    FLOAT_TO_INTEGER = _op(185, 0)      # Convert float to integer
-    FLOAT_TO_COMPLEX = _op(186, 0)      # float->complex: construct complex from one or two floats
-    FLOAT_TO_STRING = _op(187, 0)       # Convert float to string
-    FLOAT_FLOOR = _op(188, 0)           # float-floor x  (returns float)
-    FLOAT_CEIL = _op(189, 0)            # float-ceil x   (returns float)
-    FLOAT_ROUND = _op(190, 0)           # float-round x  (returns float)
-    FLOAT_MIN = _op(191, 0)             # float-min a b
-    FLOAT_MAX = _op(192, 0)             # float-max a b
+    FLOAT_P = _op(160, 1, True)         # r_dest = (float? r_src0)
+    FLOAT_EQ_P = _op(161, 2, True)      # r_dest = (float=? r_src0 r_src1)
+    FLOAT_NEQ_P = _op(162, 2, True)     # r_dest = (float!=? r_src0 r_src1)
+    FLOAT_LT_P = _op(163, 2, True)      # r_dest = (float<? r_src0 r_src1)
+    FLOAT_GT_P = _op(164, 2, True)      # r_dest = (float>? r_src0 r_src1)
+    FLOAT_LTE_P = _op(165, 2, True)     # r_dest = (float<=? r_src0 r_src1)
+    FLOAT_GTE_P = _op(166, 2, True)     # r_dest = (float>=? r_src0 r_src1)
+    FLOAT_NEG = _op(167, 1, True)       # r_dest = (float-neg r_src0)
+    FLOAT_ADD = _op(168, 2, True)       # r_dest = (float+ r_src0 r_src1)
+    FLOAT_SUB = _op(169, 2, True)       # r_dest = (float- r_src0 r_src1)
+    FLOAT_MUL = _op(170, 2, True)       # r_dest = (float* r_src0 r_src1)
+    FLOAT_DIV = _op(171, 2, True)       # r_dest = (float/ r_src0 r_src1)
+    FLOAT_FLOOR_DIV = _op(172, 2, True) # r_dest = (float// r_src0 r_src1)
+    FLOAT_MOD = _op(173, 2, True)       # r_dest = (float% r_src0 r_src1)
+    FLOAT_EXP = _op(174, 1, True)       # r_dest = (float-exp r_src0)
+    FLOAT_EXPN = _op(175, 2, True)      # r_dest = (float-expn r_src0 r_src1)
+    FLOAT_LOG = _op(176, 1, True)       # r_dest = (float-log r_src0)
+    FLOAT_LOG10 = _op(177, 1, True)     # r_dest = (float-log10 r_src0)
+    FLOAT_LOG2 = _op(178, 1, True)      # r_dest = (float-log2 r_src0)
+    FLOAT_LOGN = _op(179, 2, True)      # r_dest = (float-logn r_src0 r_src1)
+    FLOAT_SIN = _op(180, 1, True)       # r_dest = (float-sin r_src0)
+    FLOAT_COS = _op(181, 1, True)       # r_dest = (float-cos r_src0)
+    FLOAT_TAN = _op(182, 1, True)       # r_dest = (float-tan r_src0)
+    FLOAT_SQRT = _op(183, 1, True)      # r_dest = (float-sqrt r_src0)
+    FLOAT_ABS = _op(184, 1, True)       # r_dest = (float-abs r_src0)
+    FLOAT_TO_INTEGER = _op(185, 1, True)
+                                        # r_dest = (float->integer r_src0)
+    FLOAT_TO_COMPLEX = _op(186, 2, True)
+                                        # r_dest = (float->complex r_src0 r_src1)
+    FLOAT_TO_STRING = _op(187, 1, True) # r_dest = (float->string r_src0)
+    FLOAT_FLOOR = _op(188, 1, True)     # r_dest = (float-floor r_src0)
+    FLOAT_CEIL = _op(189, 1, True)      # r_dest = (float-ceil r_src0)
+    FLOAT_ROUND = _op(190, 1, True)     # r_dest = (float-round r_src0)
+    FLOAT_MIN = _op(191, 2, True)       # r_dest = (float-min r_src0 r_src1)
+    FLOAT_MAX = _op(192, 2, True)       # r_dest = (float-max r_src0 r_src1)
 
     # Complex operations
     COMPLEX_P = _op(200, 0)             # (complex? x)

@@ -1118,654 +1118,527 @@ class MenaiVM:
         return None
 
     def _op_integer_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_P: Check if value is an integer."""
-        value = self.stack.pop()
-        self.stack.append(MenaiBoolean(isinstance(value, MenaiInteger)))
+        """INTEGER_P dest, src0: r_dest = (integer? r_src0)"""
+        frame.locals[dest] = MenaiBoolean(isinstance(frame.locals[src0], MenaiInteger))
         return None
 
     def _op_integer_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_EQ_P: Pop two values, push true if both are integers and equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
+        """INTEGER_EQ_P dest, src0, src1: r_dest = (integer=? r_src0 r_src1)"""
+        a = frame.locals[src0]
+        b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
             raise MenaiEvalError(f"Function 'integer=?' requires integer arguments, got {a.type_name()}")
-
         if not isinstance(b, MenaiInteger):
             raise MenaiEvalError(f"Function 'integer=?' requires integer arguments, got {b.type_name()}")
-
-        self.stack.append(MenaiBoolean(a.value == b.value))
+        frame.locals[dest] = MenaiBoolean(a.value == b.value)
         return None
 
     def _op_integer_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_NEQ_P: Pop two values, push true if both are integers and not equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
+        """INTEGER_NEQ_P dest, src0, src1: r_dest = (integer!=? r_src0 r_src1)"""
+        a = frame.locals[src0]
+        b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
             raise MenaiEvalError(f"Function 'integer!=?' requires integer arguments, got {a.type_name()}")
-
         if not isinstance(b, MenaiInteger):
             raise MenaiEvalError(f"Function 'integer!=?' requires integer arguments, got {b.type_name()}")
-
-        self.stack.append(MenaiBoolean(a.value != b.value))
+        frame.locals[dest] = MenaiBoolean(a.value != b.value)
         return None
 
     def _op_integer_lt_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_LT_P: Pop two integers, push true if a < b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_integer(a, 'integer<?') < self._ensure_integer(b, 'integer<?')))
+        """INTEGER_LT_P dest, src0, src1: r_dest = (integer<? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer<?') < self._ensure_integer(frame.locals[src1], 'integer<?'))
         return None
 
     def _op_integer_gt_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_GT_P: Pop two integers, push true if a > b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_integer(a, 'integer>?') > self._ensure_integer(b, 'integer>?')))
+        """INTEGER_GT_P dest, src0, src1: r_dest = (integer>? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer>?') > self._ensure_integer(frame.locals[src1], 'integer>?'))
         return None
 
     def _op_integer_lte_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_LTE_P: Pop two integers, push true if a <= b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_integer(a, 'integer<=?') <= self._ensure_integer(b, 'integer<=?')))
+        """INTEGER_LTE_P dest, src0, src1: r_dest = (integer<=? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer<=?') <= self._ensure_integer(frame.locals[src1], 'integer<=?'))
         return None
 
     def _op_integer_gte_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_GTE_P: Pop two integers, push true if a >= b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_integer(a, 'integer>=?') >= self._ensure_integer(b, 'integer>=?')))
+        """INTEGER_GTE_P dest, src0, src1: r_dest = (integer>=? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer>=?') >= self._ensure_integer(frame.locals[src1], 'integer>=?'))
         return None
 
     def _op_integer_abs(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_ABS: Pop an integer, push its absolute value."""
-        a = self.stack.pop()
-        self.stack.append(MenaiInteger(abs(self._ensure_integer(a, 'integer-abs'))))
+        """INTEGER_ABS dest, src0: r_dest = (integer-abs r_src0)"""
+        frame.locals[dest] = MenaiInteger(abs(self._ensure_integer(frame.locals[src0], 'integer-abs')))
         return None
 
     def _op_integer_add(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_ADD: Pop two integers, push their sum as integer."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiInteger(self._ensure_integer(a, 'integer+') + self._ensure_integer(b, 'integer+')))
+        """INTEGER_ADD dest, src0, src1: r_dest = (integer+ r_src0 r_src1)"""
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer+') + self._ensure_integer(frame.locals[src1], 'integer+'))
         return None
 
     def _op_integer_sub(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_SUB: Pop two integers, push their difference as integer."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiInteger(self._ensure_integer(a, 'integer-') - self._ensure_integer(b, 'integer-')))
+        """INTEGER_SUB dest, src0, src1: r_dest = (integer- r_src0 r_src1)"""
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-') - self._ensure_integer(frame.locals[src1], 'integer-'))
         return None
 
     def _op_integer_mul(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_MUL: Pop two integers, push their product as integer."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiInteger(self._ensure_integer(a, 'integer*') * self._ensure_integer(b, 'integer*')))
+        """INTEGER_MUL dest, src0, src1: r_dest = (integer* r_src0 r_src1)"""
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer*') * self._ensure_integer(frame.locals[src1], 'integer*'))
         return None
 
     def _op_integer_div(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_DIV: Pop two integers, push floor division result as integer."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'integer/')
-        b_val = self._ensure_integer(b, 'integer/')
+        """INTEGER_DIV dest, src0, src1: r_dest = (integer/ r_src0 r_src1)"""
+        a_val = self._ensure_integer(frame.locals[src0], 'integer/')
+        b_val = self._ensure_integer(frame.locals[src1], 'integer/')
         if b_val == 0:
             raise MenaiEvalError("Division by zero in 'integer/'")
-
-        self.stack.append(MenaiInteger(a_val // b_val))
+        frame.locals[dest] = MenaiInteger(a_val // b_val)
         return None
 
     def _op_integer_mod(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_MOD: Pop two integers, push modulo result as integer."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'integer%')
-        b_val = self._ensure_integer(b, 'integer%')
+        """INTEGER_MOD dest, src0, src1: r_dest = (integer% r_src0 r_src1)"""
+        a_val = self._ensure_integer(frame.locals[src0], 'integer%')
+        b_val = self._ensure_integer(frame.locals[src1], 'integer%')
         if b_val == 0:
             raise MenaiEvalError("Modulo by zero in 'integer%'")
-
-        self.stack.append(MenaiInteger(a_val % b_val))
+        frame.locals[dest] = MenaiInteger(a_val % b_val)
         return None
 
     def _op_integer_neg(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_NEG: Pop an integer, push its negation."""
-        a = self.stack.pop()
-        self.stack.append(MenaiInteger(-self._ensure_integer(a, 'integer-neg')))
+        """INTEGER_NEG dest, src0: r_dest = (integer-neg r_src0)"""
+        frame.locals[dest] = MenaiInteger(-self._ensure_integer(frame.locals[src0], 'integer-neg'))
         return None
 
     def _op_integer_expn(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_EXPN: Pop exponent and base integers, push base ** exponent as integer."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'integer-expn')
-        b_val = self._ensure_integer(b, 'integer-expn')
+        """INTEGER_EXPN dest, src0, src1: r_dest = (integer-expn r_src0 r_src1)"""
+        a_val = self._ensure_integer(frame.locals[src0], 'integer-expn')
+        b_val = self._ensure_integer(frame.locals[src1], 'integer-expn')
         if b_val < 0:
             raise MenaiEvalError("Function 'integer-expn' requires a non-negative exponent")
-
-        self.stack.append(MenaiInteger(a_val ** b_val))
+        frame.locals[dest] = MenaiInteger(a_val ** b_val)
         return None
 
     def _op_integer_bit_not(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """BIT_NOT: Pop an integer, push bitwise NOT."""
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'bit-not')
-        self.stack.append(MenaiInteger(~a_val))
+        """INTEGER_BIT_NOT dest, src0: r_dest = (integer-bit-not r_src0)"""
+        frame.locals[dest] = MenaiInteger(~self._ensure_integer(frame.locals[src0], 'integer-bit-not'))
         return None
 
     def _op_integer_bit_shift_left(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """BIT_SHIFT_LEFT: Pop shift amount and value, push value << n."""
-        n = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'bit-shift-left')
-        n_val = self._ensure_integer(n, 'bit-shift-left')
-        self.stack.append(MenaiInteger(a_val << n_val))
+        """INTEGER_BIT_SHIFT_LEFT dest, src0, src1: r_dest = (integer-bit-shift-left r_src0 r_src1)"""
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-shift-left') << self._ensure_integer(frame.locals[src1], 'integer-bit-shift-left'))
         return None
 
     def _op_integer_bit_shift_right(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """BIT_SHIFT_RIGHT: Pop shift amount and value, push value >> n."""
-        n = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'bit-shift-right')
-        n_val = self._ensure_integer(n, 'bit-shift-right')
-        self.stack.append(MenaiInteger(a_val >> n_val))
+        """INTEGER_BIT_SHIFT_RIGHT dest, src0, src1: r_dest = (integer-bit-shift-right r_src0 r_src1)"""
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-shift-right') >> self._ensure_integer(frame.locals[src1], 'integer-bit-shift-right'))
         return None
 
     def _op_integer_bit_or(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """BIT_OR: Pop two integers, push a | b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiInteger(self._ensure_integer(a, 'bit-or') | self._ensure_integer(b, 'bit-or')))
+        """INTEGER_BIT_OR dest, src0, src1: r_dest = (integer-bit-or r_src0 r_src1)"""
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-or') | self._ensure_integer(frame.locals[src1], 'integer-bit-or'))
         return None
 
     def _op_integer_bit_and(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """BIT_AND: Pop two integers, push a & b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiInteger(self._ensure_integer(a, 'bit-and') & self._ensure_integer(b, 'bit-and')))
+        """INTEGER_BIT_AND dest, src0, src1: r_dest = (integer-bit-and r_src0 r_src1)"""
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-and') & self._ensure_integer(frame.locals[src1], 'integer-bit-and'))
         return None
 
     def _op_integer_bit_xor(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """BIT_XOR: Pop two integers, push a ^ b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiInteger(self._ensure_integer(a, 'bit-xor') ^ self._ensure_integer(b, 'bit-xor')))
+        """INTEGER_BIT_XOR dest, src0, src1: r_dest = (integer-bit-xor r_src0 r_src1)"""
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-xor') ^ self._ensure_integer(frame.locals[src1], 'integer-bit-xor'))
         return None
 
     def _op_integer_to_float(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_TO_FLOAT: Pop an integer, push as float."""
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'integer->float')
-        self.stack.append(MenaiFloat(float(a_val)))
+        """INTEGER_TO_FLOAT dest, src0: r_dest = (integer->float r_src0)"""
+        frame.locals[dest] = MenaiFloat(float(self._ensure_integer(frame.locals[src0], 'integer->float')))
         return None
 
     def _op_integer_to_complex(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_TO_COMPLEX: Pop two integers, push as complex with zero imaginary part."""
-        imag = self.stack.pop()
-        real = self.stack.pop()
-        real_val = self._ensure_integer(real, 'integer->complex')
-        imag_val = self._ensure_integer(imag, 'integer->complex')
-        self.stack.append(MenaiComplex(complex(float(real_val), float(imag_val))))
+        """INTEGER_TO_COMPLEX dest, src0, src1: r_dest = (integer->complex r_src0 r_src1)"""
+        real_val = self._ensure_integer(frame.locals[src0], 'integer->complex')
+        imag_val = self._ensure_integer(frame.locals[src1], 'integer->complex')
+        frame.locals[dest] = MenaiComplex(complex(float(real_val), float(imag_val)))
         return None
 
     def _op_integer_to_string(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_TO_STRING: Pop radix then integer, push string representation in given base."""
-        radix_val = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'integer->string')
-        radix = self._ensure_integer(radix_val, 'integer->string')
+        """INTEGER_TO_STRING dest, src0, src1: r_dest = (integer->string r_src0 r_src1)"""
+        a_val = self._ensure_integer(frame.locals[src0], 'integer->string')
+        radix = self._ensure_integer(frame.locals[src1], 'integer->string')
         if radix not in (2, 8, 10, 16):
             raise MenaiEvalError(f"integer->string radix must be 2, 8, 10, or 16, got {radix}")
-
         if radix == 10:
-            self.stack.append(MenaiString(str(a_val)))
+            frame.locals[dest] = MenaiString(str(a_val))
             return None
-
         if radix == 2:
             sign = "-" if a_val < 0 else ""
-            self.stack.append(MenaiString(f"{sign}{bin(abs(a_val))[2:]}"))
+            frame.locals[dest] = MenaiString(f"{sign}{bin(abs(a_val))[2:]}")
             return None
-
         if radix == 8:
             sign = "-" if a_val < 0 else ""
-            self.stack.append(MenaiString(f"{sign}{oct(abs(a_val))[2:]}"))
+            frame.locals[dest] = MenaiString(f"{sign}{oct(abs(a_val))[2:]}")
             return None
-
         if radix == 16:
             sign = "-" if a_val < 0 else ""
-            self.stack.append(MenaiString(f"{sign}{hex(abs(a_val))[2:]}"))
-
+            frame.locals[dest] = MenaiString(f"{sign}{hex(abs(a_val))[2:]}")
         return None
 
     def _op_float_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_P: Check if value is a float."""
-        value = self.stack.pop()
-        self.stack.append(MenaiBoolean(isinstance(value, MenaiFloat)))
+        """FLOAT_P dest, src0: r_dest = (float? r_src0)"""
+        frame.locals[dest] = MenaiBoolean(isinstance(frame.locals[src0], MenaiFloat))
         return None
 
     def _op_float_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_EQ_P: Pop two values, push true if both are floats and equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
+        """FLOAT_EQ_P dest, src0, src1: r_dest = (float=? r_src0 r_src1)"""
+        a = frame.locals[src0]
+        b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float=?' requires float arguments, got {a.type_name()}")
-
         if not isinstance(b, MenaiFloat):
             raise MenaiEvalError(f"Function 'float=?' requires float arguments, got {b.type_name()}")
-
-        self.stack.append(MenaiBoolean(a.value == b.value))
+        frame.locals[dest] = MenaiBoolean(a.value == b.value)
         return None
 
     def _op_float_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_NEQ_P: Pop two values, push true if both are floats and not equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
+        """FLOAT_NEQ_P dest, src0, src1: r_dest = (float!=? r_src0 r_src1)"""
+        a = frame.locals[src0]
+        b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float!=?' requires float arguments, got {a.type_name()}")
         if not isinstance(b, MenaiFloat):
             raise MenaiEvalError(f"Function 'float!=?' requires float arguments, got {b.type_name()}")
-        self.stack.append(MenaiBoolean(a.value != b.value))
+        frame.locals[dest] = MenaiBoolean(a.value != b.value)
         return None
 
     def _op_float_lt_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_LT_P: Pop two floats, push true if a < b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_float(a, 'float<?') < self._ensure_float(b, 'float<?')))
+        """FLOAT_LT_P dest, src0, src1: r_dest = (float<? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float<?') < self._ensure_float(frame.locals[src1], 'float<?'))
         return None
 
     def _op_float_gt_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_GT_P: Pop two floats, push true if a > b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_float(a, 'float>?') > self._ensure_float(b, 'float>?')))
+        """FLOAT_GT_P dest, src0, src1: r_dest = (float>? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float>?') > self._ensure_float(frame.locals[src1], 'float>?'))
         return None
 
     def _op_float_lte_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_LTE_P: Pop two floats, push true if a <= b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_float(a, 'float<=?') <= self._ensure_float(b, 'float<=?')))
+        """FLOAT_LTE_P dest, src0, src1: r_dest = (float<=? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float<=?') <= self._ensure_float(frame.locals[src1], 'float<=?'))
         return None
 
     def _op_float_gte_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_GTE_P: Pop two floats, push true if a >= b."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiBoolean(self._ensure_float(a, 'float>=?') >= self._ensure_float(b, 'float>=?')))
+        """FLOAT_GTE_P dest, src0, src1: r_dest = (float>=? r_src0 r_src1)"""
+        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float>=?') >= self._ensure_float(frame.locals[src1], 'float>=?'))
         return None
 
     def _op_float_abs(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_ABS: Pop a float, push abs(x) as float."""
-        a = self.stack.pop()
-        self.stack.append(MenaiFloat(abs(self._ensure_float(a, 'float-abs'))))
+        """FLOAT_ABS dest, src0: r_dest = (float-abs r_src0)"""
+        frame.locals[dest] = MenaiFloat(abs(self._ensure_float(frame.locals[src0], 'float-abs')))
         return None
 
     def _op_float_add(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_ADD: Pop two floats, push their sum as float."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiFloat(self._ensure_float(a, 'float+') + self._ensure_float(b, 'float+')))
+        """FLOAT_ADD dest, src0, src1: r_dest = (float+ r_src0 r_src1)"""
+        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float+') + self._ensure_float(frame.locals[src1], 'float+'))
         return None
 
     def _op_float_sub(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_SUB: Pop two floats, push their difference as float."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiFloat(self._ensure_float(a, 'float-') - self._ensure_float(b, 'float-')))
+        """FLOAT_SUB dest, src0, src1: r_dest = (float- r_src0 r_src1)"""
+        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float-') - self._ensure_float(frame.locals[src1], 'float-'))
         return None
 
     def _op_float_mul(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_MUL: Pop two floats, push their product as float."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiFloat(self._ensure_float(a, 'float*') * self._ensure_float(b, 'float*')))
+        """FLOAT_MUL dest, src0, src1: r_dest = (float* r_src0 r_src1)"""
+        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float*') * self._ensure_float(frame.locals[src1], 'float*'))
         return None
 
     def _op_float_div(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_DIV: Pop two floats, push their quotient as float."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_float(a, 'float/')
-        b_val = self._ensure_float(b, 'float/')
+        """FLOAT_DIV dest, src0, src1: r_dest = (float/ r_src0 r_src1)"""
+        a_val = self._ensure_float(frame.locals[src0], 'float/')
+        b_val = self._ensure_float(frame.locals[src1], 'float/')
         if b_val == 0.0:
             raise MenaiEvalError("Division by zero in 'float/'")
-
-        self.stack.append(MenaiFloat(a_val / b_val))
+        frame.locals[dest] = MenaiFloat(a_val / b_val)
         return None
 
     def _op_float_floor_div(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_FLOOR_DIV: Pop two floats, compute float// a b, push result as float."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_float(a, 'float//')
-        b_val = self._ensure_float(b, 'float//')
+        """FLOAT_FLOOR_DIV dest, src0, src1: r_dest = (float// r_src0 r_src1)"""
+        a_val = self._ensure_float(frame.locals[src0], 'float//')
+        b_val = self._ensure_float(frame.locals[src1], 'float//')
         if b_val == 0:
             raise MenaiEvalError("Division by zero")
-
-        self.stack.append(MenaiFloat(float(a_val // b_val)))
+        frame.locals[dest] = MenaiFloat(float(a_val // b_val))
         return None
 
     def _op_float_mod(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_MOD: Pop two floats, compute float% a b, push result as float."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_float(a, 'float%')
-        b_val = self._ensure_float(b, 'float%')
+        """FLOAT_MOD dest, src0, src1: r_dest = (float% r_src0 r_src1)"""
+        a_val = self._ensure_float(frame.locals[src0], 'float%')
+        b_val = self._ensure_float(frame.locals[src1], 'float%')
         if b_val == 0:
             raise MenaiEvalError("Modulo by zero")
-
-        self.stack.append(MenaiFloat(a_val % b_val))
+        frame.locals[dest] = MenaiFloat(a_val % b_val)
         return None
 
     def _op_float_neg(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_NEG: Pop a float, push its negation."""
-        a = self.stack.pop()
-        self.stack.append(MenaiFloat(-self._ensure_float(a, 'float-neg')))
+        """FLOAT_NEG dest, src0: r_dest = (float-neg r_src0)"""
+        frame.locals[dest] = MenaiFloat(-self._ensure_float(frame.locals[src0], 'float-neg'))
         return None
 
     def _op_float_exp(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_EXP: Pop a float, push exp(x) as float."""
-        a = self.stack.pop()
-        self.stack.append(MenaiFloat(math.exp(self._ensure_float(a, 'float-exp'))))
+        """FLOAT_EXP dest, src0: r_dest = (float-exp r_src0)"""
+        frame.locals[dest] = MenaiFloat(math.exp(self._ensure_float(frame.locals[src0], 'float-exp')))
         return None
 
     def _op_float_expn(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_EXPN: Pop two floats, push a ** b as float."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        self.stack.append(MenaiFloat(self._ensure_float(a, 'float-expn') ** self._ensure_float(b, 'float-expn')))
+        """FLOAT_EXPN dest, src0, src1: r_dest = (float-expn r_src0 r_src1)"""
+        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float-expn') ** self._ensure_float(frame.locals[src1], 'float-expn'))
         return None
 
     def _op_float_log(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_LOG: Pop a float, push natural log(x) as float."""
-        a = self.stack.pop()
-        a_val = self._ensure_float(a, 'float-log')
+        """FLOAT_LOG dest, src0: r_dest = (float-log r_src0)"""
+        a_val = self._ensure_float(frame.locals[src0], 'float-log')
         if a_val == 0.0:
-            self.stack.append(MenaiFloat(float('-inf')))
+            frame.locals[dest] = MenaiFloat(float('-inf'))
             return None
-
         if a_val < 0.0:
             raise MenaiEvalError("Function 'float-log' requires a non-negative argument")
-
-        self.stack.append(MenaiFloat(math.log(a_val)))
+        frame.locals[dest] = MenaiFloat(math.log(a_val))
         return None
 
     def _op_float_log10(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_LOG10: Pop a float, push log10(x) as float."""
-        a = self.stack.pop()
-        a_val = self._ensure_float(a, 'float-log10')
+        """FLOAT_LOG10 dest, src0: r_dest = (float-log10 r_src0)"""
+        a_val = self._ensure_float(frame.locals[src0], 'float-log10')
         if a_val == 0.0:
-            self.stack.append(MenaiFloat(float('-inf')))
+            frame.locals[dest] = MenaiFloat(float('-inf'))
             return None
-
         if a_val < 0.0:
             raise MenaiEvalError("Function 'float-log10' requires a non-negative argument")
-
-        self.stack.append(MenaiFloat(math.log10(a_val)))
+        frame.locals[dest] = MenaiFloat(math.log10(a_val))
         return None
 
     def _op_float_log2(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_LOG2: Pop a float, push log2(x) as float (correctly rounded via math.log2)."""
-        a = self.stack.pop()
-        a_val = self._ensure_float(a, 'float-log2')
+        """FLOAT_LOG2 dest, src0: r_dest = (float-log2 r_src0)"""
+        a_val = self._ensure_float(frame.locals[src0], 'float-log2')
         if a_val == 0.0:
-            self.stack.append(MenaiFloat(float('-inf')))
+            frame.locals[dest] = MenaiFloat(float('-inf'))
             return None
-
         if a_val < 0.0:
             raise MenaiEvalError("Function 'float-log2' requires a non-negative argument")
-
-        self.stack.append(MenaiFloat(math.log2(a_val)))
+        frame.locals[dest] = MenaiFloat(math.log2(a_val))
         return None
 
     def _op_float_logn(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_LOGN: Pop base and x floats, push log_base(x) as float."""
-        base = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_float(a, 'float-logn')
-        base_val = self._ensure_float(base, 'float-logn')
+        """FLOAT_LOGN dest, src0, src1: r_dest = (float-logn r_src0 r_src1)"""
+        a_val = self._ensure_float(frame.locals[src0], 'float-logn')
+        base_val = self._ensure_float(frame.locals[src1], 'float-logn')
         if base_val <= 0.0 or base_val == 1.0:
             raise MenaiEvalError("Function 'float-logn' requires a positive base not equal to 1")
-
         if a_val == 0.0:
-            self.stack.append(MenaiFloat(float('-inf')))
+            frame.locals[dest] = MenaiFloat(float('-inf'))
             return None
-
         if a_val < 0.0:
             raise MenaiEvalError("Function 'float-logn' requires a non-negative argument")
-
-        self.stack.append(MenaiFloat(math.log(a_val, base_val)))
+        frame.locals[dest] = MenaiFloat(math.log(a_val, base_val))
         return None
 
     def _op_float_sin(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_SIN: Pop a float, push sin(x) as float."""
-        a = self.stack.pop()
-        self.stack.append(MenaiFloat(math.sin(self._ensure_float(a, 'float-sin'))))
+        """FLOAT_SIN dest, src0: r_dest = (float-sin r_src0)"""
+        frame.locals[dest] = MenaiFloat(math.sin(self._ensure_float(frame.locals[src0], 'float-sin')))
         return None
 
     def _op_float_cos(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_COS: Pop a float, push cos(x) as float."""
-        a = self.stack.pop()
-        self.stack.append(MenaiFloat(math.cos(self._ensure_float(a, 'float-cos'))))
+        """FLOAT_COS dest, src0: r_dest = (float-cos r_src0)"""
+        frame.locals[dest] = MenaiFloat(math.cos(self._ensure_float(frame.locals[src0], 'float-cos')))
         return None
 
     def _op_float_tan(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_TAN: Pop a float, push tan(x) as float."""
-        a = self.stack.pop()
-        self.stack.append(MenaiFloat(math.tan(self._ensure_float(a, 'float-tan'))))
+        """FLOAT_TAN dest, src0: r_dest = (float-tan r_src0)"""
+        frame.locals[dest] = MenaiFloat(math.tan(self._ensure_float(frame.locals[src0], 'float-tan')))
         return None
 
     def _op_float_sqrt(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_SQRT: Pop a float, push sqrt(x) as float."""
-        a = self.stack.pop()
-        a_val = self._ensure_float(a, 'float-sqrt')
+        """FLOAT_SQRT dest, src0: r_dest = (float-sqrt r_src0)"""
+        a_val = self._ensure_float(frame.locals[src0], 'float-sqrt')
         if a_val < 0.0:
             raise MenaiEvalError("Function 'float-sqrt' requires a non-negative argument")
-
-        self.stack.append(MenaiFloat(math.sqrt(a_val)))
+        frame.locals[dest] = MenaiFloat(math.sqrt(a_val))
         return None
 
     def _op_float_to_integer(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_TO_INTEGER: Pop a float, push truncated integer."""
-        a = self.stack.pop()
-        a_val = self._ensure_float(a, 'float->integer')
-        self.stack.append(MenaiInteger(int(a_val)))
+        """FLOAT_TO_INTEGER dest, src0: r_dest = (float->integer r_src0)"""
+        frame.locals[dest] = MenaiInteger(int(self._ensure_float(frame.locals[src0], 'float->integer')))
         return None
 
     def _op_float_to_complex(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_TO_COMPLEX: Pop two floats, push as complex with zero imaginary part."""
-        imag = self.stack.pop()
-        real = self.stack.pop()
-        real_val = self._ensure_float(real, 'float->complex')
-        imag_val = self._ensure_float(imag, 'float->complex')
-        self.stack.append(MenaiComplex(complex(real_val, imag_val)))
+        """FLOAT_TO_COMPLEX dest, src0, src1: r_dest = (float->complex r_src0 r_src1)"""
+        real_val = self._ensure_float(frame.locals[src0], 'float->complex')
+        imag_val = self._ensure_float(frame.locals[src1], 'float->complex')
+        frame.locals[dest] = MenaiComplex(complex(real_val, imag_val))
         return None
 
     def _op_float_to_string(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_TO_STRING: Pop a float, push string representation."""
-        a = self.stack.pop()
-        a_val = self._ensure_float(a, 'float->string')
+        """FLOAT_TO_STRING dest, src0: r_dest = (float->string r_src0)"""
+        a_val = self._ensure_float(frame.locals[src0], 'float->string')
         if isinstance(a_val, complex):
-            self.stack.append(MenaiString(str(a_val).strip('()')))
+            frame.locals[dest] = MenaiString(str(a_val).strip('()'))
             return None
-
-        self.stack.append(MenaiString(str(a_val)))
+        frame.locals[dest] = MenaiString(str(a_val))
         return None
 
     def _op_float_floor(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_FLOOR: Pop a float, push floor as float."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_float(arg, 'float-floor')
-        self.stack.append(MenaiFloat(float(math.floor(arg_val))))
+        """FLOAT_FLOOR dest, src0: r_dest = (float-floor r_src0)"""
+        frame.locals[dest] = MenaiFloat(float(math.floor(self._ensure_float(frame.locals[src0], 'float-floor'))))
         return None
 
     def _op_float_ceil(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_CEIL: Pop a float, push ceiling as float."""
-        arg = self.stack.pop()
-        arg_val = self._ensure_float(arg, 'float-ceil')
-        self.stack.append(MenaiFloat(float(math.ceil(arg_val))))
+        """FLOAT_CEIL dest, src0: r_dest = (float-ceil r_src0)"""
+        frame.locals[dest] = MenaiFloat(float(math.ceil(self._ensure_float(frame.locals[src0], 'float-ceil'))))
         return None
 
     def _op_float_round(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_ROUND: Pop a float, push rounded value as float."""
-        a = self.stack.pop()
-        a_val = self._ensure_float(a, 'float-round')
-        self.stack.append(MenaiFloat(float(round(a_val))))
+        """FLOAT_ROUND dest, src0: r_dest = (float-round r_src0)"""
+        frame.locals[dest] = MenaiFloat(float(round(self._ensure_float(frame.locals[src0], 'float-round'))))
         return None
 
     def _op_float_min(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_MIN: Pop two floats, push the smaller."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_float(a, 'float-min')
-        b_val = self._ensure_float(b, 'float-min')
-        self.stack.append(MenaiFloat(a_val if a_val <= b_val else b_val))
+        """FLOAT_MIN dest, src0, src1: r_dest = (float-min r_src0 r_src1)"""
+        a_val = self._ensure_float(frame.locals[src0], 'float-min')
+        b_val = self._ensure_float(frame.locals[src1], 'float-min')
+        frame.locals[dest] = MenaiFloat(a_val if a_val <= b_val else b_val)
         return None
 
     def _op_float_max(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FLOAT_MAX: Pop two floats, push the larger."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_float(a, 'float-max')
-        b_val = self._ensure_float(b, 'float-max')
-        self.stack.append(MenaiFloat(a_val if a_val >= b_val else b_val))
+        """FLOAT_MAX dest, src0, src1: r_dest = (float-max r_src0 r_src1)"""
+        a_val = self._ensure_float(frame.locals[src0], 'float-max')
+        b_val = self._ensure_float(frame.locals[src1], 'float-max')
+        frame.locals[dest] = MenaiFloat(a_val if a_val >= b_val else b_val)
         return None
 
     def _op_integer_min(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_MIN: Pop two integers, push the smaller."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'integer-min')
-        b_val = self._ensure_integer(b, 'integer-min')
-        self.stack.append(MenaiInteger(a_val if a_val <= b_val else b_val))
+        """INTEGER_MIN dest, src0, src1: r_dest = (integer-min r_src0 r_src1)"""
+        a_val = self._ensure_integer(frame.locals[src0], 'integer-min')
+        b_val = self._ensure_integer(frame.locals[src1], 'integer-min')
+        frame.locals[dest] = MenaiInteger(a_val if a_val <= b_val else b_val)
         return None
 
     def _op_integer_max(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """INTEGER_MAX: Pop two integers, push the larger."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        a_val = self._ensure_integer(a, 'integer-max')
-        b_val = self._ensure_integer(b, 'integer-max')
-        self.stack.append(MenaiInteger(a_val if a_val >= b_val else b_val))
+        """INTEGER_MAX dest, src0, src1: r_dest = (integer-max r_src0 r_src1)"""
+        a_val = self._ensure_integer(frame.locals[src0], 'integer-max')
+        b_val = self._ensure_integer(frame.locals[src1], 'integer-max')
+        frame.locals[dest] = MenaiInteger(a_val if a_val >= b_val else b_val)
         return None
 
     def _op_complex_p(  # pylint: disable=useless-return
