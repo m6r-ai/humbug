@@ -60,7 +60,7 @@ values for one another (phi elimination maps phi-result → incoming-value).
 All IDs therefore remain globally unique within the function.
 """
 
-from typing import Dict, List, Optional, Set, Tuple, Callable
+from typing import Dict, List, Set, Tuple, Callable
 
 from menai.menai_cfg import (
     MenaiCFGApplyInstr,
@@ -447,6 +447,7 @@ def _bypass_empty_blocks(
         for i, instr in enumerate(block.instrs):
             if not isinstance(instr, MenaiCFGPhiInstr):
                 continue
+
             new_incoming: List[Tuple[MenaiCFGValue, MenaiCFGBlock]] = []
             for val, pred in instr.incoming:
                 if pred.id in bypass:

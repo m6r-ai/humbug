@@ -48,7 +48,7 @@ class Frame:
     """
     code: CodeObject
     ip: int = 0  # Instruction pointer
-    locals: List[MenaiValue | None] = field(init=False)  # Local variables
+    locals: List[MenaiValue] = field(init=False)  # Local variables
 
 
 class MenaiVM:
@@ -466,7 +466,7 @@ class MenaiVM:
         self.stack = []
         self.frames = self.frames[:1]  # Keep only the main sentinel frame
         frame = Frame(code)
-        frame.locals = [None] * code.local_count
+        frame.locals = cast(List[MenaiValue], [None] * code.local_count)
         self.frames.append(frame)
         self.current_frame = frame
 
@@ -555,7 +555,7 @@ class MenaiVM:
 
                 # Create new frame
                 new_frame = Frame(code)
-                new_frame.locals = [None] * code.local_count
+                new_frame.locals = cast(List[MenaiValue], [None] * code.local_count)
 
                 # Store captured values in locals (after parameters)
                 if func.captured_values:
@@ -794,7 +794,7 @@ class MenaiVM:
         code = func.bytecode
 
         new_frame = Frame(code)
-        new_frame.locals = [None] * code.local_count
+        new_frame.locals = cast(List[MenaiValue], [None] * code.local_count)
 
         # Store captured values in locals (after parameters)
         if func.captured_values:
@@ -864,7 +864,7 @@ class MenaiVM:
         self._check_and_pack_args(func, arity)
         code = func.bytecode
         new_frame = Frame(code)
-        new_frame.locals = [None] * code.local_count
+        new_frame.locals = cast(List[MenaiValue], [None] * code.local_count)
         if func.captured_values:
             for i, captured_val in enumerate(func.captured_values):
                 new_frame.locals[code.param_count + i] = captured_val

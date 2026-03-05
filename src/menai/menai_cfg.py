@@ -452,6 +452,7 @@ class MenaiCFGFunction:
 
     @property
     def param_count(self) -> int:
+        """Get the number of parameters (length of the params list)."""
         return len(self.params)
 
     def __repr__(self) -> str:
@@ -464,14 +465,6 @@ class MenaiCFGFunction:
             lines.append(repr(block))
 
         return "\n".join(lines)
-
-
-# ---------------------------------------------------------------------------
-# Formatting helpers (used by __repr__ methods above)
-# ---------------------------------------------------------------------------
-
-def _fmt_value(v: MenaiCFGValue) -> str:
-    return str(v)
 
 
 def _fmt_values(vs: List[MenaiCFGValue]) -> str:

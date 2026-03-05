@@ -98,7 +98,7 @@ For instructions where the last SSA operand IS the last thing pushed:
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Set, Callable
+from typing import Dict, Set, Callable, cast
 
 from menai.menai_cfg import (
     MenaiCFGApplyInstr,
@@ -398,7 +398,7 @@ class MenaiCFGStackScheduler:
 
                 elif is_const:
                     # Not transient but is a constant: rematerialise instead.
-                    remat[result.id] = instr.value  # type: ignore[union-attr]
+                    remat[result.id] = cast(MenaiCFGConstInstr, instr).value
 
         return transient, remat
 
@@ -494,9 +494,9 @@ class MenaiCFGStackScheduler:
         consumers, or consumers where last_value is the only operand).
         """
         if is_terminator:
-            return self._preceding_operands_of_term(consumer)
+            return self._preceding_operands_of_term(cast(MenaiCFGTerminator, consumer))
 
-        return self._preceding_operands_of_instr(consumer)
+        return self._preceding_operands_of_instr(cast(MenaiCFGInstr, consumer))
 
     def _preceding_operands_of_instr(self, instr: MenaiCFGInstr) -> list[MenaiCFGValue]:
         if isinstance(instr, MenaiCFGCallInstr):

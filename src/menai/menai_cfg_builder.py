@@ -78,7 +78,7 @@ The builder tracks whether the current expression is in tail position via the
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, cast
 
 from menai.menai_cfg import (
     MenaiCFGApplyInstr,
@@ -594,12 +594,12 @@ class MenaiCFGBuilder:
                 value_plan.sibling_free_vars + value_plan.outer_free_vars
             ):
                 if fv_name in {n for n, _ in ir.bindings}:
-                    fv_val = letrec_scope.lookup(fv_name)
-                    assert fv_val is not None
-                    block.instrs.append(MenaiCFGPatchClosureInstr(
+                    patch_val = letrec_scope.lookup(fv_name)
+                    assert patch_val is not None
+                    block.instrs.append(MenaiCFGPatchClosureInstr(  # type: ignore[arg-type]  # PatchClosure placed before letrec body
                         closure=closure_val,
                         capture_index=capture_index,
-                        value=fv_val,
+                        value=patch_val,
                     ))
 
         # Phase 3b: emit PATCH_CLOSURE for lambdas embedded in non-lambda
@@ -611,14 +611,14 @@ class MenaiCFGBuilder:
                 lambda_ir.sibling_free_vars + lambda_ir.outer_free_vars
             ):
                 if fv_name in sibling_names:
-                    fv_val = letrec_scope.lookup(fv_name)
-                    assert fv_val is not None, (
+                    patch_val = letrec_scope.lookup(fv_name)
+                    assert patch_val is not None, (
                         f"MenaiCFGBuilder: sibling free var {fv_name!r} not in letrec_scope"
                     )
-                    block.instrs.append(MenaiCFGPatchClosureInstr(
+                    block.instrs.append(MenaiCFGPatchClosureInstr(  # type: ignore[arg-type]  # PatchClosure placed before letrec body
                         closure=closure_val,
                         capture_index=capture_index,
-                        value=fv_val,
+                        value=patch_val,
                     ))
 
         # Build the body with all letrec names in scope.
@@ -659,6 +659,7 @@ class MenaiCFGBuilder:
         sibling_names = self._letrec_sibling_names
         has_sibling_captures = bool(ir.sibling_free_vars) and sibling_names is not None
         if has_sibling_captures:
+            assert sibling_names is not None
             # Evaluate only outer (non-sibling) captures now.
             outer_captures: List[MenaiCFGValue] = []
             for fv_plan, fv_name in zip(

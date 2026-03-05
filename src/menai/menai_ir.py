@@ -157,6 +157,8 @@ MenaiIRExpr = (
     MenaiIRLambda |
     MenaiIRCall |
     MenaiIREmptyList |
+    MenaiIRBuildList |
+    MenaiIRBuildDict |
     MenaiIRReturn |
     MenaiIRTrace
 )

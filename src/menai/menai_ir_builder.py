@@ -4,7 +4,6 @@ from typing import List, Dict, Tuple, Set, cast
 from dataclasses import dataclass, field
 
 from menai.menai_bytecode import BUILTIN_OPCODE_MAP
-from menai.menai_builtin_registry import MenaiBuiltinRegistry
 from menai.menai_error import MenaiEvalError
 from menai.menai_ir import (
     MenaiIRExpr, MenaiIRConstant, MenaiIRVariable, MenaiIRIf, MenaiIRLet, MenaiIRLetrec,
@@ -444,7 +443,7 @@ class MenaiIRBuilder:
             source_file=expr.source_file if (hasattr(expr, 'source_file') and expr.source_file) else ""
         )
 
-    def _analyze_function_call(self, expr: MenaiASTList, ctx: AnalysisContext, in_tail_position: bool) -> MenaiIRCall:
+    def _analyze_function_call(self, expr: MenaiASTList, ctx: AnalysisContext, in_tail_position: bool) -> MenaiIRExpr:
         """Analyze a function call."""
         func_expr = expr.first()
         arg_exprs = list(expr.elements[1:])
@@ -473,8 +472,8 @@ class MenaiIRBuilder:
                 )
                 if all_literal:
                     pair_plans = [
-                        (self._analyze_expression(arg.elements[1], ctx, in_tail_position=False),
-                         self._analyze_expression(arg.elements[2], ctx, in_tail_position=False))
+                        (self._analyze_expression(cast(MenaiASTList, arg).elements[1], ctx, in_tail_position=False),
+                         self._analyze_expression(cast(MenaiASTList, arg).elements[2], ctx, in_tail_position=False))
                         for arg in arg_exprs
                     ]
                     return MenaiIRBuildDict(pair_plans=pair_plans)
