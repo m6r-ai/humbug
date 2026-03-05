@@ -84,27 +84,30 @@ class Opcode(IntEnum):
     EMIT_TRACE = _op(40, 1)             # EMIT_TRACE src0 — read register src0, emit to trace watcher
 
     # None operations
-    NONE_P = _op(50, 0)                 # (none? x)
+    NONE_P = _op(50, 1, True)           # r_dest = (none? r_src0)
 
     # Function operations
-    FUNCTION_P = _op(60, 0)             # (function? x)
-    FUNCTION_EQ_P = _op(61, 0)          # (function=? f g)
-    FUNCTION_NEQ_P = _op(62, 0)         # (function!=? f g)
-    FUNCTION_MIN_ARITY = _op(63, 0)     # (function-min-arity f)
-    FUNCTION_VARIADIC_P = _op(64, 0)    # (function-variadic? f)
-    FUNCTION_ACCEPTS_P = _op(65, 0)     # (function-accepts? f n)
+    FUNCTION_P = _op(60, 1, True)       # r_dest = (function? r_src0)
+    FUNCTION_EQ_P = _op(61, 2, True)    # r_dest = (function=? r_src0 r_src1)
+    FUNCTION_NEQ_P = _op(62, 2, True)   # r_dest = (function!=? r_src0 r_src1)
+    FUNCTION_MIN_ARITY = _op(63, 1, True)
+                                        # r_dest = (function-min-arity r_src0)
+    FUNCTION_VARIADIC_P = _op(64, 1, True)
+                                        # r_dest = (function-variadic? r_src0)
+    FUNCTION_ACCEPTS_P = _op(65, 2, True)
+                                        # r_dest = (function-accepts? r_src0 r_src1)
 
     # Symbol operations
-    SYMBOL_P = _op(80, 0)               # (symbol? x)
-    SYMBOL_EQ_P = _op(81, 0)            # symbol=? a b
-    SYMBOL_NEQ_P = _op(82, 0)           # symbol!=? a b
-    SYMBOL_TO_STRING = _op(83, 0)       # (symbol->string sym)
+    SYMBOL_P = _op(80, 1, True)         # r_dest = (symbol? r_src0)
+    SYMBOL_EQ_P = _op(81, 2, True)      # r_dest = (symbol=? r_src0 r_src1)
+    SYMBOL_NEQ_P = _op(82, 2, True)     # r_dest = (symbol!=? r_src0 r_src1)
+    SYMBOL_TO_STRING = _op(83, 1, True) # r_dest = (symbol->string r_src0)
 
     # Boolean operations
-    BOOLEAN_P = _op(100, 0)             # (boolean? x)
-    BOOLEAN_EQ_P = _op(101, 0)          # boolean=? a b
-    BOOLEAN_NEQ_P = _op(102, 0)         # boolean!=? a b
-    BOOLEAN_NOT = _op(103, 0)           # Logical NOT
+    BOOLEAN_P = _op(100, 1, True)       # r_dest = (boolean? r_src0)
+    BOOLEAN_EQ_P = _op(101, 2, True)    # r_dest = (boolean=? r_src0 r_src1)
+    BOOLEAN_NEQ_P = _op(102, 2, True)   # r_dest = (boolean!=? r_src0 r_src1)
+    BOOLEAN_NOT = _op(103, 1, True)     # r_dest = (boolean-not r_src0)
 
     # Integer operations
     INTEGER_P = _op(120, 0)             # (integer? x)

@@ -918,222 +918,203 @@ class MenaiVM:
         return None
 
     def _op_function_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FUNCTION_P: Check if value is a function."""
-        value = self.stack.pop()
-        self.stack.append(MenaiBoolean(isinstance(value, MenaiFunction)))
+        """FUNCTION_P dest, src0: r_dest = (function? r_src0)"""
+        value = frame.locals[src0]
+        frame.locals[dest] = MenaiBoolean(isinstance(value, MenaiFunction))
         return None
 
     def _op_function_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FUNCTION_EQ_P: Return #t if two function references are identical."""
-        b = self.stack.pop()
-        a = self.stack.pop()
+        """FUNCTION_EQ_P dest, src0, src1: r_dest = (function=? r_src0 r_src1)"""
+        a = frame.locals[src0]
+        b = frame.locals[src1]
         if not isinstance(a, MenaiFunction):
             raise MenaiEvalError(
                 message="function=?: arguments must be functions",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
-
         if not isinstance(b, MenaiFunction):
             raise MenaiEvalError(
                 message="function=?: arguments must be functions",
                 received=f"Second argument: {b.describe()} ({b.type_name()})"
             )
-
-        self.stack.append(MenaiBoolean(a is b))
+        frame.locals[dest] = MenaiBoolean(a is b)
         return None
 
     def _op_function_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FUNCTION_NEQ_P: Return #t if two function references are not identical."""
-        b = self.stack.pop()
-        a = self.stack.pop()
+        """FUNCTION_NEQ_P dest, src0, src1: r_dest = (function!=? r_src0 r_src1)"""
+        a = frame.locals[src0]
+        b = frame.locals[src1]
         if not isinstance(a, MenaiFunction):
             raise MenaiEvalError(
                 message="function!=?: arguments must be functions",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
-
         if not isinstance(b, MenaiFunction):
             raise MenaiEvalError(
                 message="function!=?: arguments must be functions",
                 received=f"Second argument: {b.describe()} ({b.type_name()})"
             )
-
-        self.stack.append(MenaiBoolean(a is not b))
+        frame.locals[dest] = MenaiBoolean(a is not b)
         return None
 
     def _op_function_min_arity(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FUNCTION_MIN_ARITY: Return minimum number of arguments a function requires."""
-        func = self.stack.pop()
+        """FUNCTION_MIN_ARITY dest, src0: r_dest = (function-min-arity r_src0)"""
+        func = frame.locals[src0]
         if not isinstance(func, MenaiFunction):
             raise MenaiEvalError(
                 message="function-min-arity: argument must be a function",
                 received=f"Got: {func.describe()} ({func.type_name()})"
             )
-
         code = func.bytecode
         min_arity = (code.param_count - 1) if code.is_variadic else code.param_count
-        self.stack.append(MenaiInteger(min_arity))
+        frame.locals[dest] = MenaiInteger(min_arity)
         return None
 
     def _op_function_variadic_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FUNCTION_VARIADIC_P: Return #t if function accepts variable number of arguments."""
-        func = self.stack.pop()
+        """FUNCTION_VARIADIC_P dest, src0: r_dest = (function-variadic? r_src0)"""
+        func = frame.locals[src0]
         if not isinstance(func, MenaiFunction):
             raise MenaiEvalError(
                 message="function-variadic?: argument must be a function",
                 received=f"Got: {func.describe()} ({func.type_name()})"
             )
-
-        self.stack.append(MenaiBoolean(func.bytecode.is_variadic))
+        frame.locals[dest] = MenaiBoolean(func.bytecode.is_variadic)
         return None
 
     def _op_function_accepts_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """FUNCTION_ACCEPTS_P: Return #t if function accepts exactly n arguments."""
-        n = self.stack.pop()
-        func = self.stack.pop()
+        """FUNCTION_ACCEPTS_P dest, src0, src1: r_dest = (function-accepts? r_src0 r_src1)"""
+        func = frame.locals[src0]
+        n = frame.locals[src1]
         if not isinstance(func, MenaiFunction):
             raise MenaiEvalError(
                 message="function-accepts?: first argument must be a function",
                 received=f"Got: {func.describe()} ({func.type_name()})"
             )
-
         if not isinstance(n, MenaiInteger):
             raise MenaiEvalError(
                 message="function-accepts?: second argument must be an integer",
                 received=f"Got: {n.describe()} ({n.type_name()})"
             )
-
         code = func.bytecode
         if code.is_variadic:
             min_arity = code.param_count - 1
             result = n.value >= min_arity
-
         else:
             result = n.value == code.param_count
-
-        self.stack.append(MenaiBoolean(result))
+        frame.locals[dest] = MenaiBoolean(result)
         return None
 
     def _op_symbol_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """SYMBOL_P: Check if value is a symbol."""
-        value = self.stack.pop()
-        self.stack.append(MenaiBoolean(isinstance(value, MenaiSymbol)))
+        """SYMBOL_P dest, src0: r_dest = (symbol? r_src0)"""
+        value = frame.locals[src0]
+        frame.locals[dest] = MenaiBoolean(isinstance(value, MenaiSymbol))
         return None
 
     def _op_symbol_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """SYMBOL_EQ_P: Return #t if two symbols have the same name."""
-        b = self.stack.pop()
-        a = self.stack.pop()
+        """SYMBOL_EQ_P dest, src0, src1: r_dest = (symbol=? r_src0 r_src1)"""
+        a = frame.locals[src0]
+        b = frame.locals[src1]
         if not isinstance(a, MenaiSymbol):
             raise MenaiEvalError(
                 message="symbol=?: arguments must be symbols",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
-
         if not isinstance(b, MenaiSymbol):
             raise MenaiEvalError(
                 message="symbol=?: arguments must be symbols",
                 received=f"Second argument: {b.describe()} ({b.type_name()})"
             )
-        self.stack.append(MenaiBoolean(a.name == b.name))
+        frame.locals[dest] = MenaiBoolean(a.name == b.name)
         return None
 
     def _op_symbol_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """SYMBOL_NEQ_P: Return #t if two symbols have different names."""
-        b = self.stack.pop()
-        a = self.stack.pop()
+        """SYMBOL_NEQ_P dest, src0, src1: r_dest = (symbol!=? r_src0 r_src1)"""
+        a = frame.locals[src0]
+        b = frame.locals[src1]
         if not isinstance(a, MenaiSymbol):
             raise MenaiEvalError(
                 message="symbol!=?: arguments must be symbols",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
-
         if not isinstance(b, MenaiSymbol):
             raise MenaiEvalError(
                 message="symbol!=?: arguments must be symbols",
                 received=f"Second argument: {b.describe()} ({b.type_name()})"
             )
-
-        self.stack.append(MenaiBoolean(a.name != b.name))
+        frame.locals[dest] = MenaiBoolean(a.name != b.name)
         return None
 
     def _op_symbol_to_string(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """SYMBOL_TO_STRING: Pop a symbol, push its name as a string."""
-        a = self.stack.pop()
+        """SYMBOL_TO_STRING dest, src0: r_dest = (symbol->string r_src0)"""
+        a = frame.locals[src0]
         if not isinstance(a, MenaiSymbol):
             raise MenaiEvalError(
                 message="symbol->string: argument must be a symbol",
                 received=f"Got: {a.describe()} ({a.type_name()})"
             )
-
-        self.stack.append(MenaiString(a.name))
+        frame.locals[dest] = MenaiString(a.name)
         return None
 
     def _op_none_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """NONE_P: Check if value is #none."""
-        value = self.stack.pop()
-        self.stack.append(MenaiBoolean(isinstance(value, MenaiNone)))
+        """NONE_P dest, src0: r_dest = (none? r_src0)"""
+        value = frame.locals[src0]
+        frame.locals[dest] = MenaiBoolean(isinstance(value, MenaiNone))
         return None
 
     def _op_boolean_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """BOOLEAN_P: Check if value is a boolean."""
-        value = self.stack.pop()
-        self.stack.append(MenaiBoolean(isinstance(value, MenaiBoolean)))
+        """BOOLEAN_P dest, src0: r_dest = (boolean? r_src0)"""
+        value = frame.locals[src0]
+        frame.locals[dest] = MenaiBoolean(isinstance(value, MenaiBoolean))
         return None
 
     def _op_boolean_eq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """BOOLEAN_EQ_P: Pop two values, push true if both are booleans and equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        bool_a = self._ensure_boolean(a, 'boolean=?')
-        bool_b = self._ensure_boolean(b, 'boolean=?')
-        self.stack.append(MenaiBoolean(bool_a == bool_b))
+        """BOOLEAN_EQ_P dest, src0, src1: r_dest = (boolean=? r_src0 r_src1)"""
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        frame.locals[dest] = MenaiBoolean(self._ensure_boolean(a, 'boolean=?') == self._ensure_boolean(b, 'boolean=?'))
         return None
 
     def _op_boolean_neq_p(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
-        """BOOLEAN_NEQ_P: Pop two values, push true if both are booleans and not equal."""
-        b = self.stack.pop()
-        a = self.stack.pop()
-        bool_a = self._ensure_boolean(a, 'boolean!=?')
-        bool_b = self._ensure_boolean(b, 'boolean!=?')
-        self.stack.append(MenaiBoolean(bool_a != bool_b))
+        """BOOLEAN_NEQ_P dest, src0, src1: r_dest = (boolean!=? r_src0 r_src1)"""
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        frame.locals[dest] = MenaiBoolean(self._ensure_boolean(a, 'boolean!=?') != self._ensure_boolean(b, 'boolean!=?'))
         return None
 
     def _op_boolean_not(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
-        """BOOLEAN_NOT: Logical NOT operation."""
-        value = self.stack.pop()
-        bool_val = self._ensure_boolean(value, "boolean-not")
-        self.stack.append(MenaiBoolean(not bool_val))
+        """BOOLEAN_NOT dest, src0: r_dest = (boolean-not r_src0)"""
+        value = frame.locals[src0]
+        frame.locals[dest] = MenaiBoolean(not self._ensure_boolean(value, "boolean-not"))
         return None
 
     def _op_integer_p(  # pylint: disable=useless-return

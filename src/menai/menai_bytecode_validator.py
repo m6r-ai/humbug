@@ -129,27 +129,27 @@ class BytecodeValidator:
             Opcode.EMIT_TRACE: (0, 0),
 
             # Function operations
-            Opcode.FUNCTION_P: (1, 1),
-            Opcode.FUNCTION_MIN_ARITY: (1, 1),
-            Opcode.FUNCTION_VARIADIC_P: (1, 1),
-            Opcode.FUNCTION_ACCEPTS_P: (2, 1),
-            Opcode.FUNCTION_EQ_P: (2, 1),
-            Opcode.FUNCTION_NEQ_P: (2, 1),
+            Opcode.FUNCTION_P: (0, 0),
+            Opcode.FUNCTION_MIN_ARITY: (0, 0),
+            Opcode.FUNCTION_VARIADIC_P: (0, 0),
+            Opcode.FUNCTION_ACCEPTS_P: (0, 0),
+            Opcode.FUNCTION_EQ_P: (0, 0),
+            Opcode.FUNCTION_NEQ_P: (0, 0),
 
             # Symbol
-            Opcode.SYMBOL_P: (1, 1),
-            Opcode.SYMBOL_EQ_P: (2, 1),
-            Opcode.SYMBOL_NEQ_P: (2, 1),
-            Opcode.SYMBOL_TO_STRING: (1, 1),
+            Opcode.SYMBOL_P: (0, 0),
+            Opcode.SYMBOL_EQ_P: (0, 0),
+            Opcode.SYMBOL_NEQ_P: (0, 0),
+            Opcode.SYMBOL_TO_STRING: (0, 0),
 
             # None operations
-            Opcode.NONE_P: (1, 1),
+            Opcode.NONE_P: (0, 0),
 
             # Boolean operations
-            Opcode.BOOLEAN_P: (1, 1),
-            Opcode.BOOLEAN_EQ_P: (2, 1),
-            Opcode.BOOLEAN_NEQ_P: (2, 1),
-            Opcode.BOOLEAN_NOT: (1, 1),
+            Opcode.BOOLEAN_P: (0, 0),
+            Opcode.BOOLEAN_EQ_P: (0, 0),
+            Opcode.BOOLEAN_NEQ_P: (0, 0),
+            Opcode.BOOLEAN_NOT: (0, 0),
 
             # Integer operations
             Opcode.INTEGER_P: (1, 1),
@@ -803,6 +803,11 @@ class BytecodeValidator:
 
             # CALL and APPLY mark dest as initialized (result written by VM)
             if opcode in (Opcode.CALL, Opcode.APPLY):
+                new_initialized.add(instr.dest)
+                new_closures.pop(instr.dest, None)
+
+            # Any register-based op with a dest register marks it as initialized
+            if opcode.has_dest() and opcode not in (Opcode.MAKE_CLOSURE, Opcode.CALL, Opcode.APPLY):
                 new_initialized.add(instr.dest)
                 new_closures.pop(instr.dest, None)
 
