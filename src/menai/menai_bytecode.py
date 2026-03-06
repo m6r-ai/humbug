@@ -63,7 +63,7 @@ class Opcode(IntEnum):
     RAISE_ERROR = _op(23, 1)            # RAISE_ERROR const_index
 
     # Functions
-    MAKE_CLOSURE = _op(30, 2)           # r_dest = MAKE_CLOSURE code_idx, capture_count
+    MAKE_CLOSURE = _op(30, 1)           # r_dest = MAKE_CLOSURE code_idx
     PATCH_CLOSURE = _op(31, 3)          # PATCH_CLOSURE closure_reg, value_reg, capture_idx
     CALL = _op(32, 1)                   # r_dest = CALL arity — result written to dest
     TAIL_CALL = _op(33, 1)              # TAIL_CALL arity — no dest (result propagates up)

@@ -163,15 +163,15 @@ class MenaiVM:
         table[Opcode.LOAD_EMPTY_LIST] = self._op_load_empty_list
         table[Opcode.LOAD_EMPTY_DICT] = self._op_load_empty_dict
         table[Opcode.LOAD_CONST] = self._op_load_const
+        table[Opcode.LOAD_NAME] = self._op_load_name
         table[Opcode.PUSH] = self._op_push
         table[Opcode.POP] = self._op_pop
-        table[Opcode.LOAD_NAME] = self._op_load_name
-        table[Opcode.PATCH_CLOSURE] = self._op_patch_closure
         table[Opcode.JUMP] = self._op_jump
         table[Opcode.JUMP_IF_FALSE] = self._op_jump_if_false
         table[Opcode.JUMP_IF_TRUE] = self._op_jump_if_true
         table[Opcode.RAISE_ERROR] = self._op_raise_error
         table[Opcode.MAKE_CLOSURE] = self._op_make_closure
+        table[Opcode.PATCH_CLOSURE] = self._op_patch_closure
         table[Opcode.CALL] = self._op_call
         table[Opcode.TAIL_CALL] = self._op_tail_call
         table[Opcode.APPLY] = self._op_apply
@@ -618,6 +618,36 @@ class MenaiVM:
         frame.locals[dest] = code.constants[src0]
         return None
 
+    def _op_load_name(  # pylint: disable=useless-return
+        self, frame: Frame, code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+    ) -> MenaiValue | None:
+        """LOAD_NAME dest, src0: Load global[names[src0]] into register dest."""
+        name = code.names[src0]
+
+        # Load from globals
+        if name in self.globals:
+            frame.locals[dest] = self.globals[name]
+            return None
+
+        # Not found - generate helpful error
+        available_vars = list(self.globals.keys())
+        similar = difflib.get_close_matches(name, available_vars, n=3, cutoff=0.6)
+
+        suggestion_text = (
+            f"Did you mean: {', '.join(similar)}?" if similar
+            else "Check spelling or define it in a let binding"
+        )
+
+        raise MenaiEvalError(
+            message=f"Undefined variable: '{name}'",
+            context=(
+                f"Available variables: "
+                f"{', '.join(sorted(available_vars)[:10])}{'...' if len(available_vars) > 10 else ''}"
+            ),
+            suggestion=suggestion_text,
+            example=f"(let (({name} some-value)) ...)"
+        )
+
     def _op_push(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
@@ -651,57 +681,6 @@ class MenaiVM:
             frame.locals[i] = self.stack.pop()
 
         return None
-
-    def _op_patch_closure(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, closure_reg: int, value_reg: int, capture_idx: int
-    ) -> MenaiValue | None:
-        """
-        PATCH_CLOSURE closure_reg, value_reg, capture_idx: Fill a free-var slot on a closure.
-
-        Used in Phase 2 of letrec two-phase initialisation to wire sibling
-        closures together after all have been created in Phase 1.
-
-        Args:
-            closure_reg - register holding the closure to patch
-            value_reg   - register holding the value to store into the capture slot
-            capture_idx - which captured-values slot to fill
-        """
-        value = frame.locals[value_reg]
-        closure = frame.locals[closure_reg]
-        assert isinstance(closure, MenaiFunction)
-        assert isinstance(closure.captured_values, list), "PATCH_CLOSURE: captured_values must be a list (set by MAKE_CLOSURE)"
-        closure.captured_values[capture_idx] = value
-        return None
-
-    def _op_load_name(  # pylint: disable=useless-return
-        self, frame: Frame, code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
-    ) -> MenaiValue | None:
-        """LOAD_NAME dest, src0: Load global[names[src0]] into register dest."""
-        name = code.names[src0]
-
-        # Load from globals
-        if name in self.globals:
-            frame.locals[dest] = self.globals[name]
-            return None
-
-        # Not found - generate helpful error
-        available_vars = list(self.globals.keys())
-        similar = difflib.get_close_matches(name, available_vars, n=3, cutoff=0.6)
-
-        suggestion_text = (
-            f"Did you mean: {', '.join(similar)}?" if similar
-            else "Check spelling or define it in a let binding"
-        )
-
-        raise MenaiEvalError(
-            message=f"Undefined variable: '{name}'",
-            context=(
-                f"Available variables: "
-                f"{', '.join(sorted(available_vars)[:10])}{'...' if len(available_vars) > 10 else ''}"
-            ),
-            suggestion=suggestion_text,
-            example=f"(let (({name} some-value)) ...)"
-        )
 
     def _op_jump(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, _dest: int, target: int, _src1: int, _src2: int
@@ -753,7 +732,7 @@ class MenaiVM:
         raise MenaiEvalError(error_msg.value)
 
     def _op_make_closure(  # pylint: disable=useless-return
-        self, frame: Frame, code: CodeObject, dest: int, src0: int, capture_count: int, _src2: int
+        self, frame: Frame, code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """MAKE_CLOSURE dest, src0, 0: Create closure with all capture slots pre-set to None.
 
@@ -772,6 +751,27 @@ class MenaiVM:
         cv: list = [None] * n_free
         object.__setattr__(closure, 'captured_values', cv)
         frame.locals[dest] = closure
+        return None
+
+    def _op_patch_closure(  # pylint: disable=useless-return
+        self, frame: Frame, _code: CodeObject, _dest: int, closure_reg: int, value_reg: int, capture_idx: int
+    ) -> MenaiValue | None:
+        """
+        PATCH_CLOSURE closure_reg, value_reg, capture_idx: Fill a free-var slot on a closure.
+
+        Used in Phase 2 of letrec two-phase initialisation to wire sibling
+        closures together after all have been created in Phase 1.
+
+        Args:
+            closure_reg - register holding the closure to patch
+            value_reg   - register holding the value to store into the capture slot
+            capture_idx - which captured-values slot to fill
+        """
+        value = frame.locals[value_reg]
+        closure = frame.locals[closure_reg]
+        assert isinstance(closure, MenaiFunction)
+        assert isinstance(closure.captured_values, list), "PATCH_CLOSURE: captured_values must be a list (set by MAKE_CLOSURE)"
+        closure.captured_values[capture_idx] = value
         return None
 
     def _op_call(  # pylint: disable=useless-return

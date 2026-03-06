@@ -50,10 +50,6 @@ from menai.menai_ir import (
 from menai.menai_value import MenaiDict, MenaiList
 
 
-# ---------------------------------------------------------------------------
-# Scope
-# ---------------------------------------------------------------------------
-
 @dataclass
 class MenaiCFGScope:
     """
@@ -82,10 +78,6 @@ class MenaiCFGScope:
         return MenaiCFGScope(parent=self)
 
 
-# ---------------------------------------------------------------------------
-# Per-function build state
-# ---------------------------------------------------------------------------
-
 @dataclass
 class _FunctionState:
     """
@@ -99,20 +91,18 @@ class _FunctionState:
     block_counter: int = 0
 
     def new_value(self, hint: str = "") -> MenaiCFGValue:
+        """Allocate a new SSA value with an optional hint for debugging."""
         v = MenaiCFGValue(id=self.value_counter, hint=hint)
         self.value_counter += 1
         return v
 
     def new_block(self, label: str) -> MenaiCFGBlock:
+        """Allocate a new CFG block with the given label."""
         b = MenaiCFGBlock(id=self.block_counter, label=label)
         self.block_counter += 1
         self.function.blocks.append(b)
         return b
 
-
-# ---------------------------------------------------------------------------
-# Builder
-# ---------------------------------------------------------------------------
 
 class MenaiCFGBuilder:
     """
@@ -130,6 +120,7 @@ class MenaiCFGBuilder:
         # sibling captures and need PATCH_CLOSURE treatment.  None at all other
         # times, including during normal lambda-only letrec Phase 1.
         self._letrec_sibling_names: Optional[set] = None
+
         # Collected during Phase 2b: (closure_val, ir_lambda) pairs for lambdas
         # embedded in non-lambda letrec binding RHS expressions that have at
         # least one sibling capture.  Processed (patched) after Phase 2b.
@@ -167,10 +158,6 @@ class MenaiCFGBuilder:
 
         self._link_predecessors(func)
         return func
-
-    # ------------------------------------------------------------------
-    # Core expression builder
-    # ------------------------------------------------------------------
 
     def _build_expr(
         self,
@@ -239,52 +226,36 @@ class MenaiCFGBuilder:
             return self._build_expr(ir.value_plan, block, scope, state, tail=True)
 
         if isinstance(ir, MenaiIRTrace):
-            return self._build_trace(ir, block, scope, state, tail)
+            return self._build_trace(ir, block, scope, state)
 
         if isinstance(ir, MenaiIRError):
             return self._build_error(ir, block, state)
 
         raise TypeError(f"MenaiCFGBuilder: unhandled IR node {type(ir).__name__}")
 
-    # ------------------------------------------------------------------
-    # Leaf nodes
-    # ------------------------------------------------------------------
-
     def _build_constant(
-        self,
-        ir: MenaiIRConstant,
-        block: MenaiCFGBlock,
-        state: _FunctionState,
+        self, ir: MenaiIRConstant, block: MenaiCFGBlock, state: _FunctionState
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         result = state.new_value("const")
         block.instrs.append(MenaiCFGConstInstr(result=result, value=ir.value))
         return result, block
 
     def _build_empty_list(
-        self,
-        block: MenaiCFGBlock,
-        state: _FunctionState,
+        self, block: MenaiCFGBlock, state: _FunctionState
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         result = state.new_value("empty_list")
         block.instrs.append(MenaiCFGConstInstr(result=result, value=MenaiList()))
         return result, block
 
     def _build_quote(
-        self,
-        ir: MenaiIRQuote,
-        block: MenaiCFGBlock,
-        state: _FunctionState,
+        self, ir: MenaiIRQuote, block: MenaiCFGBlock, state: _FunctionState
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         result = state.new_value("quoted")
         block.instrs.append(MenaiCFGConstInstr(result=result, value=ir.quoted_value))
         return result, block
 
     def _build_variable(
-        self,
-        ir: MenaiIRVariable,
-        block: MenaiCFGBlock,
-        scope: MenaiCFGScope,
-        state: _FunctionState,
+        self, ir: MenaiIRVariable, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         if ir.var_type == 'global':
             result = state.new_value(ir.name)
@@ -299,10 +270,7 @@ class MenaiCFGBuilder:
         return val, block
 
     def _build_error(
-        self,
-        ir: MenaiIRError,
-        block: MenaiCFGBlock,
-        state: _FunctionState,
+        self, ir: MenaiIRError, block: MenaiCFGBlock, state: _FunctionState
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         # error terminates the block; the returned value is a placeholder
         # that will never be used (the block has no successors).
@@ -310,17 +278,8 @@ class MenaiCFGBuilder:
         placeholder = state.new_value("error")
         return placeholder, block
 
-    # ------------------------------------------------------------------
-    # if expression
-    # ------------------------------------------------------------------
-
     def _build_if(
-        self,
-        ir: MenaiIRIf,
-        block: MenaiCFGBlock,
-        scope: MenaiCFGScope,
-        state: _FunctionState,
-        tail: bool,
+        self, ir: MenaiIRIf, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState, tail: bool
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         # Emit condition into the current block.
         cond_val, block = self._build_expr(
@@ -382,17 +341,8 @@ class MenaiCFGBuilder:
         ))
         return phi_result, join_block
 
-    # ------------------------------------------------------------------
-    # let
-    # ------------------------------------------------------------------
-
     def _build_let(
-        self,
-        ir: MenaiIRLet,
-        block: MenaiCFGBlock,
-        scope: MenaiCFGScope,
-        state: _FunctionState,
-        tail: bool,
+        self, ir: MenaiIRLet, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState, tail: bool
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         # Binding values are evaluated in the outer scope (parallel let).
         binding_vals: List[Tuple[str, MenaiCFGValue]] = []
@@ -407,17 +357,8 @@ class MenaiCFGBuilder:
 
         return self._build_expr(ir.body_plan, block, body_scope, state, tail=tail)
 
-    # ------------------------------------------------------------------
-    # letrec
-    # ------------------------------------------------------------------
-
     def _build_letrec(
-        self,
-        ir: MenaiIRLetrec,
-        block: MenaiCFGBlock,
-        scope: MenaiCFGScope,
-        state: _FunctionState,
-        tail: bool,
+        self, ir: MenaiIRLetrec, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState, tail: bool
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         """
         Build a letrec in three phases.
@@ -460,7 +401,7 @@ class MenaiCFGBuilder:
                 binding_vals[name] = placeholder
                 continue
 
-            child_func = self._build_lambda_function(value_plan, scope)
+            child_func = self._build_lambda_function(value_plan)
 
             # Collect outer captures only — evaluate them in the current scope.
             # Sibling captures are deferred to Phase 3 (PATCH_CLOSURE).
@@ -503,6 +444,7 @@ class MenaiCFGBuilder:
                 continue
             real_val, block = self._build_expr(value_plan, block, letrec_scope, state, tail=False)
             letrec_scope.bind(name, real_val)
+
         deferred_non_lambda_patches = self._letrec_deferred_patches
         self._letrec_sibling_names = prev_sibling_names
         self._letrec_deferred_patches = prev_deferred_patches
@@ -523,7 +465,7 @@ class MenaiCFGBuilder:
                 if fv_name in {n for n, _ in ir.bindings}:
                     patch_val = letrec_scope.lookup(fv_name)
                     assert patch_val is not None
-                    block.instrs.append(MenaiCFGPatchClosureInstr(  # type: ignore[arg-type]  # PatchClosure placed before letrec body
+                    block.instrs.append(MenaiCFGPatchClosureInstr(
                         closure=closure_val,
                         capture_index=capture_index,
                         value=patch_val,
@@ -542,7 +484,7 @@ class MenaiCFGBuilder:
                     assert patch_val is not None, (
                         f"MenaiCFGBuilder: sibling free var {fv_name!r} not in letrec_scope"
                     )
-                    block.instrs.append(MenaiCFGPatchClosureInstr(  # type: ignore[arg-type]  # PatchClosure placed before letrec body
+                    block.instrs.append(MenaiCFGPatchClosureInstr(
                         closure=closure_val,
                         capture_index=capture_index,
                         value=patch_val,
@@ -551,16 +493,8 @@ class MenaiCFGBuilder:
         # Build the body with all letrec names in scope.
         return self._build_expr(ir.body_plan, block, letrec_scope, state, tail=tail)
 
-    # ------------------------------------------------------------------
-    # Lambda (as an expression in the parent)
-    # ------------------------------------------------------------------
-
     def _build_lambda_expr(
-        self,
-        ir: MenaiIRLambda,
-        block: MenaiCFGBlock,
-        scope: MenaiCFGScope,
-        state: _FunctionState,
+        self, ir: MenaiIRLambda, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState,
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         """
         Build a lambda that appears as a value expression (not inside letrec).
@@ -580,7 +514,7 @@ class MenaiCFGBuilder:
         self._letrec_deferred_patches so Phase 3b can PATCH_CLOSURE the
         sibling captures after all non-lambda binding values are available.
         """
-        child_func = self._build_lambda_function(ir, scope)
+        child_func = self._build_lambda_function(ir)
 
         # Check for letrec Phase 2b interception.
         sibling_names = self._letrec_sibling_names
@@ -596,6 +530,7 @@ class MenaiCFGBuilder:
                 if fv_name not in sibling_names:
                     fv_val, block = self._build_expr(fv_plan, block, scope, state, tail=False)
                     outer_captures.append(fv_val)
+
             result = state.new_value(ir.binding_name or "lambda")
             block.instrs.append(MenaiCFGMakeClosureInstr(
                 result=result,
@@ -621,11 +556,7 @@ class MenaiCFGBuilder:
         ))
         return result, block
 
-    def _build_lambda_function(
-        self,
-        ir: MenaiIRLambda,
-        enclosing_scope: MenaiCFGScope,
-    ) -> MenaiCFGFunction:
+    def _build_lambda_function(self, ir: MenaiIRLambda) -> MenaiCFGFunction:
         """
         Recursively build a MenaiCFGFunction for a MenaiIRLambda node.
 
@@ -634,9 +565,7 @@ class MenaiCFGBuilder:
         (all captures are explicit in ir.sibling_free_vars / outer_free_vars).
 
         Args:
-            ir:             The lambda IR node.
-            enclosing_scope: The parent scope (used only to verify captures
-                             exist — the child does not inherit it).
+            ir: The lambda IR node.
 
         Returns:
             A fully-built MenaiCFGFunction for this lambda.
@@ -685,17 +614,8 @@ class MenaiCFGBuilder:
         self._link_predecessors(func)
         return func
 
-    # ------------------------------------------------------------------
-    # Call
-    # ------------------------------------------------------------------
-
     def _build_call(
-        self,
-        ir: MenaiIRCall,
-        block: MenaiCFGBlock,
-        scope: MenaiCFGScope,
-        state: _FunctionState,
-        tail: bool,
+        self, ir: MenaiIRCall, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState, tail: bool
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         if ir.is_builtin:
             return self._build_builtin_call(ir, block, scope, state, tail)
@@ -732,11 +652,7 @@ class MenaiCFGBuilder:
         return result, block
 
     def _build_list(
-        self,
-        ir: MenaiIRBuildList,
-        block: MenaiCFGBlock,
-        scope: MenaiCFGScope,
-        state: _FunctionState,
+        self, ir: MenaiIRBuildList, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState,
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         """
         Build a list literal iteratively.
@@ -843,17 +759,8 @@ class MenaiCFGBuilder:
         ))
         return result, block
 
-    # ------------------------------------------------------------------
-    # Trace
-    # ------------------------------------------------------------------
-
     def _build_trace(
-        self,
-        ir: MenaiIRTrace,
-        block: MenaiCFGBlock,
-        scope: MenaiCFGScope,
-        state: _FunctionState,
-        tail: bool,
+        self, ir: MenaiIRTrace, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState,
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         msg_vals: List[MenaiCFGValue] = []
         for msg_plan in ir.message_plans:
@@ -869,10 +776,6 @@ class MenaiCFGBuilder:
             value=value_val,
         ))
         return result, block
-
-    # ------------------------------------------------------------------
-    # Predecessor linking
-    # ------------------------------------------------------------------
 
     def _link_predecessors(self, func: MenaiCFGFunction) -> None:
         """

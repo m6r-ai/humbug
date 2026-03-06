@@ -45,10 +45,6 @@ class MenaiCFGValue:
         return NotImplemented
 
 
-# ---------------------------------------------------------------------------
-# Non-terminator instructions
-# ---------------------------------------------------------------------------
-
 @dataclass
 class MenaiCFGConstInstr:
     """
@@ -229,14 +225,11 @@ MenaiCFGInstr = (
     | MenaiCFGCallInstr
     | MenaiCFGApplyInstr
     | MenaiCFGMakeClosureInstr
+    | MenaiCFGPatchClosureInstr
     | MenaiCFGPhiInstr
     | MenaiCFGTraceInstr
 )
 
-
-# ---------------------------------------------------------------------------
-# Terminator instructions
-# ---------------------------------------------------------------------------
 
 @dataclass
 class MenaiCFGJumpTerm:
@@ -319,10 +312,6 @@ MenaiCFGTerminator = (
 )
 
 
-# ---------------------------------------------------------------------------
-# Basic block
-# ---------------------------------------------------------------------------
-
 @dataclass
 class MenaiCFGBlock:
     """
@@ -360,10 +349,6 @@ class MenaiCFGBlock:
 
         return "\n".join(lines)
 
-
-# ---------------------------------------------------------------------------
-# CFG function
-# ---------------------------------------------------------------------------
 
 @dataclass
 class MenaiCFGFunction:

@@ -1,4 +1,5 @@
-"""Menai Semantic Analyzer - validates AST structure and semantics.
+"""
+Menai Semantic Analyzer - validates AST structure and semantics.
 
 This module performs semantic validation after parsing but before desugaring.
 It checks:
