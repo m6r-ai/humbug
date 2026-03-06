@@ -466,11 +466,12 @@ class Instruction:
         opcode = self.opcode
         name = opcode.name
 
-        # POP: dest = POP  (pops stack top into a register — dest is meaningful)
+        if opcode == Opcode.ENTER:
+            return f"ENTER {self.src0}"
+
         if opcode == Opcode.POP:
             return f"r{self.dest} = POP"
 
-        # PUSH: PUSH rN  (pushes a register onto the call stack — src0 is the register)
         if opcode == Opcode.PUSH:
             return f"PUSH r{self.src0}"
 
