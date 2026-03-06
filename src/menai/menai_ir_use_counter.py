@@ -4,33 +4,6 @@ Menai IR Use Counter - pure analysis pass over the IR tree.
 Walks a MenaiIRExpr tree and counts every reference to every locally-bound
 variable, producing an IRUseCounts annotation that downstream passes
 (MenaiIRCopyPropagator, MenaiIRInlineOnce, MenaiIROptimizer) can consume.
-
-Design
-------
-Variables in the IR are symbolic — MenaiIRVariable nodes carry only a name
-and var_type.  The use counter therefore works entirely on names,
-maintaining its own scope chain to resolve each variable reference to the
-frame that owns it.
-
-A *frame* corresponds to a single lambda (or the top-level module scope).
-Each frame owns a set of variable names (its parameters and any let/letrec
-bindings within it).  Use counts are keyed by (frame_id, name).
-
-There is no local/external split.  A use is simply a use of a name — the
-frame_id tells us which frame's binding is being referenced, regardless of
-whether the reference crosses lambda boundaries.
-
-Scope chain
------------
-The counter maintains a scope_stack: List[Dict[str, int]] where each entry
-maps name → frame_id.  When a MenaiIRLambda is entered, a new scope level
-is pushed with the lambda's params and free_vars mapped to the lambda's own
-frame_id.  When a MenaiIRLet or MenaiIRLetrec is encountered, its binding
-names are pushed onto the *current* lambda's scope level (they share the
-same frame_id as the enclosing lambda).
-
-Resolution: to find the defining frame for a name, search the scope_stack
-from innermost to outermost.  The first match gives the frame_id.
 """
 
 from __future__ import annotations

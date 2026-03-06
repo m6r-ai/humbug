@@ -1,4 +1,5 @@
-"""Menai trace watcher implementations.
+"""
+Menai trace watcher implementations.
 
 This module provides standard trace watcher implementations for debugging
 and profiling Menai programs.

@@ -2,83 +2,10 @@
 CFG builder for the Menai compiler.
 
 Translates a symbolic MenaiIR tree into a MenaiCFGFunction in SSA form.
-Handles slot allocation for all local variables.
-
-Position in the pipeline
-------------------------
-    IR tree (optimised, symbolic)  →  MenaiCFGBuilder  →  MenaiCFGFunction
-                                                        ↓
-                                              MenaiVMCodeGen / future native backend
-
-The builder is called once per top-level expression.  Nested lambdas are
-compiled recursively; each produces its own MenaiCFGFunction, referenced
-directly from the parent's MenaiCFGMakeClosureInstr.
-
-Scope model
------------
-Variable resolution uses a MenaiCFGScope chain — a linked list of scope
-frames, one per lexical scope level.  Each frame maps a variable name to the
-MenaiCFGValue that holds its current binding.  The chain is searched
-innermost-first.
-
-Within a single lambda, let/letrec bindings add entries to the current scope
-frame (or a new child frame pushed for the body).  Crossing a lambda boundary
-creates a new scope chain rooted at the lambda's parameter and free-variable
-values; the parent chain is not accessible (all captures are explicit in
-MenaiIRLambda.sibling_free_vars / outer_free_vars).
-
-SSA value allocation
---------------------
-A single integer counter (`_value_counter`) is incremented for each new
-MenaiCFGValue within a function.  The counter is reset when starting a new
-MenaiCFGFunction (i.e. per lambda).
-
-Block allocation
-----------------
-A single integer counter (`_block_counter`) is incremented for each new
-MenaiCFGBlock within a function.  Also reset per lambda.
-
-letrec handling
----------------
-letrec is processed in three phases within the current block:
-
-  Phase 1 — Allocate SSA values for all binding names (so recursive
-            references can resolve during Phase 2).  Emit
-            MenaiCFGMakeClosureInstr for each lambda binding with an empty
-            captures list (to be filled in Phase 3).
-
-  Phase 2 — Walk each binding value expression with all binding names in
-            scope.  For lambda bindings this re-uses the already-emitted
-            closure value.  For non-lambda bindings (which the desugarer
-            guarantees are absent from letrec after desugaring, but we
-            handle defensively) we emit the value expression normally.
-
-  Phase 3 — Emit MenaiCFGPatchClosureInstr for each sibling capture of
-            each lambda binding, appended to the current block's
-            patch_instrs list.
-
-if handling
------------
-An `if` expression creates three new blocks: then_block, else_block, and
-join_block.  The current block gets a MenaiCFGBranchTerm.  Both branch blocks
-get a MenaiCFGJumpTerm to join_block.  join_block starts with a
-MenaiCFGPhiInstr merging the two branch results.
-
-Tail position
--------------
-The builder tracks whether the current expression is in tail position via the
-`tail` parameter on _build_expr.  In tail position:
-  - A call becomes a MenaiCFGTailCallTerm / MenaiCFGSelfLoopTerm terminator.
-  - An if expression propagates tail position to both branches.
-  - let/letrec bodies propagate tail position.
-  - The result value is wrapped in a MenaiCFGReturnTerm if it is not already
-    a terminator.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple, cast
+from typing import Dict, List, Optional, Tuple
 
 from menai.menai_cfg import (
     MenaiCFGApplyInstr,

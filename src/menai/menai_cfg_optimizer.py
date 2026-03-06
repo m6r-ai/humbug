@@ -6,58 +6,6 @@ builder's mechanical translation of `if` expressions into branch/then/else/join
 quadruples.  The most common case is an `if` whose one branch is a
 tail-terminator (tail-call, return, raise): the join block then has a phi with
 only one real incoming value, which is pure overhead.
-
-Position in the pipeline
-------------------------
-    MenaiCFGFunction (from MenaiCFGBuilder)
-        → MenaiCFGOptimizer
-            → MenaiCFGFunction (optimised)
-                → MenaiVMCodeGen
-
-The optimizer runs to a fixed point: it applies all passes in sequence and
-repeats until no pass reports a change.
-
-Passes (in order)
------------------
-1. **Stale-phi pruning** — removes incoming entries from phi nodes where the
-   listed predecessor block has no actual control-flow edge to the phi's block.
-   This is the precondition for trivial-phi detection.
-
-2. **Trivial-phi elimination** — a phi with exactly one remaining incoming
-   entry is just an alias.  Substitute the incoming value for the phi result
-   throughout the function and remove the phi instruction.
-
-3. **Empty-block bypass** — a block with no instructions, no patch_instrs, and
-   an unconditional jump terminator is a pure indirection.  Re-point all its
-   predecessors directly to its target.  Update phi incoming entries in the
-   target to name the correct predecessor.
-
-4. **Dead-block elimination** — remove blocks unreachable from the entry block.
-   Also prunes any phi incoming entries that reference a now-dead block.
-
-Each pass returns a new MenaiCFGFunction and a boolean indicating whether
-anything changed.  The outer loop iterates to fixpoint.
-
-Block identity and mutability
-------------------------------
-MenaiCFGBlock objects are referenced by identity from MenaiCFGTerminator
-objects (BranchTerm.true_block, BranchTerm.false_block, JumpTerm.target) and
-from MenaiCFGPhiInstr.incoming entries.  To avoid stale references when
-blocks are rebuilt, all passes that modify block content do so by **mutating
-the block objects in place** (updating instrs, patch_instrs, and terminator
-fields).  Block identity is preserved so all existing references remain valid.
-
-This is consistent with the existing treatment of the `predecessors` field,
-which is already mutated in place by _relink_predecessors.
-
-The MenaiCFGFunction itself is replaced (new object) when its block list
-changes (blocks added or removed), or when nested lambda functions are updated.
-
-SSA value IDs
--------------
-The optimizer never allocates new SSA values.  It only substitutes existing
-values for one another (phi elimination maps phi-result → incoming-value).
-All IDs therefore remain globally unique within the function.
 """
 
 from typing import Dict, List, Set, Tuple, Callable
@@ -88,10 +36,6 @@ from menai.menai_cfg import (
     MenaiCFGValue,
 )
 
-
-# ---------------------------------------------------------------------------
-# Value substitution map type alias
-# ---------------------------------------------------------------------------
 
 # Maps SSA value id → replacement MenaiCFGValue.
 # Applied everywhere a value is referenced (operands, phi incoming, etc.).

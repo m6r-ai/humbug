@@ -5,48 +5,6 @@ Consumes an IRUseCounts annotation (produced by MenaiIRUseCounter) and applies
 copy propagation to MenaiIRLet bindings whose right-hand side is *trivially
 copyable* — meaning it is safe and profitable to substitute the value directly
 at every use site rather than storing it in a local slot.
-
-What is trivially copyable?
----------------------------
-A value plan is trivially copyable when duplicating it at every use site is
-both semantically correct and not more expensive than the original
-store-then-load sequence.  In a pure language like Menai, correctness is never
-a concern (no side effects, no aliasing), so the question reduces to cost:
-
-  MenaiIRConstant   — a compile-time constant; zero-cost to duplicate.
-  MenaiIREmptyList  — the empty list singleton; zero-cost to duplicate.
-  MenaiIRQuote      — a quoted literal; zero-cost to duplicate.
-  MenaiIRVariable(var_type='global')
-                    — a global/builtin name lookup; always immutable and O(1).
-  MenaiIRVariable(var_type='local')
-                    — a local variable reference; O(1) to load.
-
-Lambda boundary rule
---------------------
-There is none.  Variables are symbolic throughout — MenaiIRVariable carries
-only name and var_type.  Substituting a name reference at any position in the
-tree, including inside a child lambda body or free_var_plans, is always safe.
-
-Scope of the pass: let only, not letrec
-----------------------------------------
-Copy propagation is applied only to MenaiIRLet bindings.  MenaiIRLetrec
-bindings are skipped because they may be mutually recursive and their values
-are almost always lambdas (not trivially copyable).
-
-Substitution walk
------------------
-For a qualifying binding (name, value_plan) in a MenaiIRLet:
-  1. Walk the let's body_plan and replace every MenaiIRVariable(name=n,
-     var_type='local') with a fresh copy of value_plan.
-  2. Drop the binding from the let's binding list.
-  3. If all bindings are dropped, collapse the let to its body.
-
-Shadowing: when the walk descends into an inner let or letrec that binds the
-same name, that name is removed from the substitution map for the inner body
-so that the inner binding is not incorrectly replaced.
-
-Implements MenaiIROptimizationPass so it can be managed by the IR pass manager
-in MenaiCompiler.
 """
 
 from typing import Dict, List, Tuple, cast

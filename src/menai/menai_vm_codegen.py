@@ -3,77 +3,7 @@ VM code generator for the Menai compiler.
 
 Translates a MenaiCFGFunction (SSA CFG) into a CodeObject ready for
 execution by the Menai VM.
-
-Position in the pipeline
-------------------------
-    MenaiCFGFunction  →  MenaiVMCodeGen  →  CodeObject
-
-SSA-to-register mapping
------------------------
-Each MenaiCFGValue is assigned a local slot (register).  Producer instructions
-write directly to their dest slot.  PUSH is emitted only where the call stack
-protocol requires it: arguments to CALL/APPLY/TAIL_CALL/TAIL_APPLY/SELF_LOOP.
-
-Slot layout
------------
-Within each lambda frame:
-    0 .. P-1          parameters          (MenaiCFGParamInstr)
-    P .. P+F-1        captured free vars  (MenaiCFGFreeVarInstr)
-    P+F ..            all other SSA values, allocated in definition order
-
-Phi nodes
----------
-A MenaiCFGPhiInstr emits no instructions.  Both predecessor blocks store
-their result into the phi's slot (via POP) before jumping to the join block.
-The join block then simply pushes from that slot (via PUSH) when the phi
-value is used downstream.
-
-The mechanism: when we assign a slot to a phi value, we also record that
-each predecessor block's "outgoing value" (the value it contributes to the
-phi) must be stored into that same slot before its terminator jump.  We
-handle this via a _phi_stores dict: block_id → list of (value, slot) pairs
-to emit as POP before the block's terminator.
-
-Block ordering
---------------
-We emit blocks in the order they appear in MenaiCFGFunction.blocks (which
-is construction order from the builder).  The builder always appends:
-  entry, then_N, else_N, join_N for each if-expression, in nesting order.
-This means the fall-through from a branch's true-block to its join is never
-adjacent in the linear order (we always emit an explicit JUMP), which is
-fine — the VM handles it correctly.
-
-letrec patching
----------------
-MenaiCFGPatchClosureInstr in block.patch_instrs is emitted after the block's
-regular instructions and before its terminator.  The VM PATCH_CLOSURE opcode
-is register-based: PATCH_CLOSURE src0=closure_slot, src1=value_slot,
-src2=capture_index.
-
-self-loop (direct tail recursion)
-----------------------------------
-MenaiCFGSelfLoopTerm stores the new argument values into parameter slots
-0..N-1 then emits JUMP 0 (back to the entry block).  The entry block's
-ENTER instruction re-reads the slots, so we must NOT re-emit ENTER on
-the loop-back path — JUMP 0 lands at instruction index 0 which is ENTER,
-and ENTER pops from the *locals* array, not the stack.  Wait — actually the
-VM ENTER opcode pops N values off the stack into locals.  On the loop-back
-path (JUMP 0) the stack is empty, so we must push new arg values onto the
-call stack (PUSH 0..N-1) and then JUMP 0 so ENTER re-pops them, or
-store into the slots and jump to instruction 1.
-
-Re-reading the VM design: JUMP 0 is the canonical self-tail-call target and
-the VM's ENTER opcode is only executed on function entry (it pops from the
-call stack frame set up by CALL/TAIL_CALL).  The correct pattern is:
-  - Evaluate new args onto the stack
-  - JUMP 0  (which re-executes ENTER, which pops the args back into slots)
-But that only works if the args are on the stack in the right order when
-ENTER fires.  Looking at the existing codegen: it pushes new arg values
-onto the stack and then emits JUMP 0, so ENTER re-runs and re-pops them.
-We follow the same convention.
 """
-
-from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
@@ -662,6 +592,7 @@ class MenaiVMCodeGen:
 
             else:
                 s2 = slot(2)
+
             ctx.emit(opcode, s0, s1, dest=dest, src2=s2)
 
         elif op == 'string->list':
@@ -682,6 +613,7 @@ class MenaiVMCodeGen:
 
             else:
                 s2 = slot(2)
+
             ctx.emit(opcode, s0, s1, dest=dest, src2=s2)
 
         elif op == 'list->string':

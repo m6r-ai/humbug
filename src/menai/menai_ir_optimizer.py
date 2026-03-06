@@ -4,30 +4,6 @@ Menai IR Optimizer - transformation pass over the IR tree.
 Consumes an IRUseCounts annotation (produced by MenaiIRUseCounter) and applies
 IR-level optimizations that are safe because Menai is a pure functional language
 — every binding is immutable and every expression is side-effect-free.
-
-Current optimizations
----------------------
-1. Dead binding elimination
-   Any let/letrec binding whose total use count is zero is dropped entirely.
-   Because Menai is pure, the value expression can never have side effects, so
-   removing it is always safe.  When *all* bindings in a let/letrec are dead the
-   entire form collapses to its body.
-
-2. Boolean identity elimination
-   An if-expression whose then-branch is #t and else-branch is #f is replaced
-   by its condition expression directly:
-       (if <cond> #t #f)  →  <cond>
-   The negated form is also handled:
-       (if <cond> #f #t)  →  (boolean-not <cond>)
-   Both patterns arise from desugared match guard forms and explicit boolean
-   coercions in source code.
-
-Use counts are keyed by (frame_id, name) — no slot indices are involved.
-Variables remain symbolic throughout all optimisation passes; MenaiCFGBuilder
-handles slot allocation after optimisation is complete.
-
-Implements MenaiIROptimizationPass so it can be managed by the IR pass manager
-in MenaiCompiler.
 """
 
 from typing import List, Tuple, cast

@@ -1,4 +1,5 @@
-"""Menai Desugarer - transforms complex constructs into core language.
+"""
+Menai Desugarer - transforms complex constructs into core language.
 
 The desugarer takes a full AST (including match, and, or) and transforms it
 into a core AST containing only:
@@ -16,7 +17,7 @@ from typing import List, Tuple, Any, cast
 
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTInteger,
-    MenaiASTFloat, MenaiASTComplex, MenaiASTString, MenaiASTBoolean, MenaiASTNone, MenaiASTDict
+    MenaiASTFloat, MenaiASTComplex, MenaiASTString, MenaiASTBoolean, MenaiASTNone
 )
 from menai.menai_bytecode import BUILTIN_OPCODE_MAP
 from menai.menai_builtin_registry import MenaiBuiltinRegistry

@@ -3,14 +3,6 @@
 This module defines the Abstract Syntax Tree node types used during compilation.
 These are separate from runtime MenaiValue types to avoid carrying metadata overhead
 into the bytecode and VM execution.
-
-Key differences from MenaiValue:
-- AST nodes have source location metadata (line, column, source_file)
-- AST nodes are used only during compilation
-- Runtime values (MenaiValue) are lightweight with no metadata
-
-The conversion from AST -> runtime Value happens in the code generator when
-building the constants pool for bytecode.
 """
 
 from abc import ABC, abstractmethod

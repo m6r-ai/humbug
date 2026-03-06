@@ -2,47 +2,7 @@
 Menai IR Inline-Once Pass - single-use let binding inliner.
 
 Consumes an IRUseCounts annotation (produced by MenaiIRUseCounter) and inlines
-any MenaiIRLet binding that has exactly one total use, subject to the lambda
-exclusion rule described below.
-
-Why this is different from MenaiIRCopyPropagator
--------------------------------------------------
-Copy propagation inlines *trivially copyable* values (constants, variable
-loads, etc.) at any use count, because duplicating a cheap value costs nothing.
-This pass instead targets bindings with *any* value — including calls,
-if-expressions, and other compound nodes — but only when the use count is
-exactly 1.  With a single use and no work duplication, inlining is always
-profitable in a pure language.
-
-Lambda exclusion rule
----------------------
-MenaiIRLambda values are never inlined, even when use count is 1.  A lambda
-is a closure definition that may be called many times even if its binding slot
-is referenced only once.  Inlining it would duplicate the closure creation and
-all of its free-variable loads, causing code explosion.  Dead lambdas
-(total_count == 0) are handled by MenaiIROptimizer instead.
-
-No lambda boundary rule
------------------------
-Variables are symbolic throughout the optimisation pipeline — MenaiIRVariable
-carries only name and var_type.  Substituting any value plan at any position
-in the tree is safe: MenaiCFGBuilder resolves all names correctly.
-
-Shadowing
----------
-When the substitution walk descends into an inner let/letrec that binds the
-same name as a pending substitution, that name is removed from the map for
-the inner body so the inner binding is not incorrectly replaced.  For lambdas,
-params and free_vars shadow the enclosing substitutions.
-
-Scope of the pass: let only, not letrec
-----------------------------------------
-Inline-once is applied only to MenaiIRLet bindings.  MenaiIRLetrec bindings
-are skipped (same rationale as copy propagation).  The pass still recurses
-into letrec bodies to optimise inner let nodes.
-
-Implements MenaiIROptimizationPass so it can be managed by the IR pass manager
-in MenaiCompiler.
+any MenaiIRLet binding that has exactly one total use.
 """
 
 from typing import Dict, List, Tuple, cast

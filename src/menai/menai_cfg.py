@@ -5,58 +5,6 @@ This module defines the SSA-form CFG IR that sits between the IR tree
 (menai_ir.py) and the backend code generators.  The VM codegen
 (menai_vm_codegen.py) and any future native backend both consume this
 representation.
-
-Overview
---------
-Each lambda in the IR tree is compiled independently to a MenaiCFGFunction.
-A MenaiCFGFunction is a list of MenaiCFGBlock objects connected by explicit
-control-flow edges.  Every MenaiCFGBlock ends with exactly one
-MenaiCFGTerminator.  Non-terminator instructions inside a block each produce
-exactly one MenaiCFGValue (SSA value).
-
-SSA invariant
--------------
-Every MenaiCFGValue is defined exactly once (by the instruction whose
-`result` field it is).  Uses are references to already-defined values.
-Because Menai is a pure functional language with no mutation, every binding
-site is a single static assignment by construction.  The only place a
-MenaiCFGPhiInstr is required is at the join point of an `if` expression,
-where the then-branch and else-branch each produce a value that must be
-unified.
-
-Value naming
-------------
-MenaiCFGValue carries an integer `id` (globally unique within a function,
-assigned by a counter in the builder) and a `hint` string (the source name
-or a descriptive label) for debugging and disassembly.  The string
-representation is `%<id>` optionally followed by `(<hint>)`.
-
-Block naming
-------------
-MenaiCFGBlock carries an integer `id` and a `label` string.  The entry block
-always has id=0 and label="entry".
-
-Instruction taxonomy
---------------------
-All non-terminator instructions are subclasses of MenaiCFGInstr and carry a
-`result: MenaiCFGValue` field.  Terminators are subclasses of
-MenaiCFGTerminator and carry no result (they end the block).
-
-Nested lambdas
---------------
-When the builder encounters a MenaiIRLambda it recursively builds a child
-MenaiCFGFunction.  The parent block emits a MenaiCFGMakeClosureInstr whose
-`function` field holds the child MenaiCFGFunction directly (not an index).
-The VM codegen then assigns code-object indices during its own pass.
-
-letrec / mutual recursion
---------------------------
-The two-phase PATCH_CLOSURE scheme used by the old codegen is replaced by
-explicit MenaiCFGPatchClosureInstr instructions emitted after all closures in
-a letrec group have been created.  Each patch instruction names the closure
-SSA value to patch and the capture SSA value to install.  The VM codegen
-lowers these to PATCH_CLOSURE opcodes; a native backend can implement the
-same semantics differently.
 """
 
 from __future__ import annotations
