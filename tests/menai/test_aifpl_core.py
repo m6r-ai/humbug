@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import Menai, MenaiError, MenaiTokenError, MenaiParseError, MenaiEvalError
+from menai import Menai, MenaiError, MenaiTokenError, MenaiASTBuildError, MenaiEvalError
 
 
 class TestMenaiCore:
@@ -102,18 +102,18 @@ class TestMenaiCore:
 
     def test_empty_input_error(self, menai):
         """Test that empty input raises appropriate error."""
-        with pytest.raises(MenaiParseError, match="Empty expression"):
+        with pytest.raises(MenaiASTBuildError, match="Empty expression"):
             menai.evaluate("")
 
-        with pytest.raises(MenaiParseError, match="Empty expression"):
+        with pytest.raises(MenaiASTBuildError, match="Empty expression"):
             menai.evaluate("   ")  # Whitespace only
 
     def test_invalid_syntax_error(self, menai):
         """Test that invalid syntax raises parse errors."""
-        with pytest.raises(MenaiParseError):
+        with pytest.raises(MenaiASTBuildError):
             menai.evaluate("(+ 1 2")  # Missing closing paren
 
-        with pytest.raises(MenaiParseError):
+        with pytest.raises(MenaiASTBuildError):
             menai.evaluate("+ 1 2)")  # Missing opening paren
 
         with pytest.raises(MenaiTokenError):
@@ -167,23 +167,23 @@ class TestMenaiCore:
 
     def test_multiple_expressions_error(self, menai):
         """Test that multiple expressions in one call raise error."""
-        with pytest.raises(MenaiParseError, match=r"Unexpected token after complete expression"):
+        with pytest.raises(MenaiASTBuildError, match=r"Unexpected token after complete expression"):
             menai.evaluate("1 2")
 
-        with pytest.raises(MenaiParseError, match=r"Unexpected token after complete expression"):
+        with pytest.raises(MenaiASTBuildError, match=r"Unexpected token after complete expression"):
             menai.evaluate("(integer+ 1 2) (integer+ 3 4)")
 
     def test_exception_hierarchy(self):
         """Test that all Menai exceptions inherit from MenaiError."""
         assert issubclass(MenaiTokenError, MenaiError)
-        assert issubclass(MenaiParseError, MenaiError)
+        assert issubclass(MenaiASTBuildError, MenaiError)
         assert issubclass(MenaiEvalError, MenaiError)
 
         # Test that they can be instantiated
         token_error = MenaiTokenError("test token error")
         assert "test token error" in str(token_error)
 
-        parse_error = MenaiParseError("test parse error")
+        parse_error = MenaiASTBuildError("test parse error")
         assert "test parse error" in str(parse_error)
 
         eval_error = MenaiEvalError("test eval error")

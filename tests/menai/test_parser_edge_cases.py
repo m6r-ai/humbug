@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import MenaiTokenError, MenaiParseError, MenaiEvalError
+from menai import MenaiTokenError, MenaiASTBuildError, MenaiEvalError
 
 
 class TestMenaiParserEdgeCases:
@@ -49,7 +49,7 @@ class TestMenaiParserEdgeCases:
             # Single line comments
             result = menai.evaluate("(integer+ 1 2) ; this is a comment")
             assert result == 3
-        except (MenaiParseError, MenaiTokenError):
+        except (MenaiASTBuildError, MenaiTokenError):
             # Comments might not be supported, which is fine
             pass
 
@@ -60,7 +60,7 @@ class TestMenaiParserEdgeCases:
                2) ; second number
             """)
             assert result == 3
-        except (MenaiParseError, MenaiTokenError):
+        except (MenaiASTBuildError, MenaiTokenError):
             pass
 
     def test_malformed_syntax_comprehensive(self, menai):
@@ -95,7 +95,7 @@ class TestMenaiParserEdgeCases:
         ]
 
         for expr in malformed_expressions:
-            with pytest.raises((MenaiTokenError, MenaiParseError, MenaiEvalError)):
+            with pytest.raises((MenaiTokenError, MenaiASTBuildError, MenaiEvalError)):
                 menai.evaluate(expr)
 
     def test_string_parsing_edge_cases(self, menai):
@@ -193,7 +193,7 @@ class TestMenaiParserEdgeCases:
         ]
 
         for expr in invalid_numbers:
-            with pytest.raises((MenaiTokenError, MenaiParseError)):
+            with pytest.raises((MenaiTokenError, MenaiASTBuildError)):
                 menai.evaluate(expr)
 
     def test_boolean_parsing_edge_cases(self, menai):
@@ -346,7 +346,7 @@ class TestMenaiParserEdgeCases:
     def test_parser_error_recovery(self, menai):
         """Test parser error recovery and state management."""
         # After a parse error, parser should be ready for next expression
-        with pytest.raises((MenaiParseError, MenaiTokenError)):
+        with pytest.raises((MenaiASTBuildError, MenaiTokenError)):
             menai.evaluate("(+ 1 2")
 
         # Next evaluation should work normally
@@ -356,7 +356,7 @@ class TestMenaiParserEdgeCases:
         # Multiple errors in sequence
         errors = ["(+ 1 2", "+ 1 2)", "(+ 1 @)"]
         for expr in errors:
-            with pytest.raises((MenaiTokenError, MenaiParseError, MenaiEvalError)):
+            with pytest.raises((MenaiTokenError, MenaiASTBuildError, MenaiEvalError)):
                 menai.evaluate(expr)
 
         # Should still work after multiple errors
@@ -368,7 +368,7 @@ class TestMenaiParserEdgeCases:
         # Test various error positions
         try:
             menai.evaluate("(+ 1 @)")
-        except (MenaiTokenError, MenaiParseError) as e:
+        except (MenaiTokenError, MenaiASTBuildError) as e:
             # Error message should contain position information
             error_msg = str(e)
             # Should mention position or the problematic character
@@ -376,7 +376,7 @@ class TestMenaiParserEdgeCases:
 
         try:
             menai.evaluate("(+ 1 2")
-        except (MenaiTokenError, MenaiParseError) as e:
+        except (MenaiTokenError, MenaiASTBuildError) as e:
             error_msg = str(e)
             assert "parenthesis" in error_msg.lower() or "list-position" in error_msg.lower()
 
@@ -417,20 +417,20 @@ class TestMenaiParserEdgeCases:
                 result = menai.evaluate(expr)
                 assert isinstance(result, str)
                 assert len(result) >= 1
-            except (MenaiTokenError, MenaiParseError):
+            except (MenaiTokenError, MenaiASTBuildError):
                 # Some Unicode might not be supported, which is fine
                 pass
 
     def test_parser_expression_boundaries(self, menai):
         """Test parser expression boundary detection."""
         # Multiple expressions should be rejected
-        with pytest.raises(MenaiParseError, match="Unexpected token after complete expression"):
+        with pytest.raises(MenaiASTBuildError, match="Unexpected token after complete expression"):
             menai.evaluate("1 2")
 
-        with pytest.raises(MenaiParseError, match="Unexpected token after complete expression"):
+        with pytest.raises(MenaiASTBuildError, match="Unexpected token after complete expression"):
             menai.evaluate("(+ 1 2) (+ 3 4)")
 
-        with pytest.raises(MenaiParseError, match="Unexpected token after complete expression"):
+        with pytest.raises(MenaiASTBuildError, match="Unexpected token after complete expression"):
             menai.evaluate('42 "hello"')
 
     def test_parser_special_forms_edge_cases(self, menai):
@@ -452,19 +452,19 @@ class TestMenaiParserEdgeCases:
             except MenaiEvalError:
                 # Evaluation errors are fine, we're testing parsing
                 pass
-            except (MenaiTokenError, MenaiParseError):
+            except (MenaiTokenError, MenaiASTBuildError):
                 # These would indicate parsing problems
                 pytest.fail(f"Parsing failed for special form: {expr}")
 
     def test_parser_broken_quote(self, menai):
         """Handle an empty quote"""
-        with pytest.raises(MenaiParseError, match="Incomplete quote expression"):
+        with pytest.raises(MenaiASTBuildError, match="Incomplete quote expression"):
             result = menai.evaluate("('")
 
-        with pytest.raises(MenaiParseError, match=r"Unexpected token: \)"):
+        with pytest.raises(MenaiASTBuildError, match=r"Unexpected token: \)"):
             result = menai.evaluate("(')")
 
-        with pytest.raises(MenaiParseError, match=r"Unexpected token: \)"):
+        with pytest.raises(MenaiASTBuildError, match=r"Unexpected token: \)"):
             result = menai.evaluate("(' )")
 
     def test_parser_operator_precedence_not_applicable(self, menai):

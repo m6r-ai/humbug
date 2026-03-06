@@ -1,7 +1,7 @@
 """Final test to achieve 100% coverage - nested let with related_symbol in stack."""
 
 import pytest
-from menai import MenaiLexer, MenaiParser, MenaiParseError
+from menai import MenaiLexer, MenaiASTBuilder, MenaiASTBuildError
 
 
 def test_nested_let_with_related_symbol_in_incomplete_bindings_stack():
@@ -15,10 +15,10 @@ def test_nested_let_with_related_symbol_in_incomplete_bindings_stack():
     # Outer let with binding 'x', inner let with binding 'y' that's incomplete
     code = "(let ((x (let ((y 5"
     tokens = lexer.lex(code)
-    parser = MenaiParser()
+    ast_builder = MenaiASTBuilder()
 
-    with pytest.raises(MenaiParseError) as exc_info:
-        parser.parse(tokens, code)
+    with pytest.raises(MenaiASTBuildError) as exc_info:
+        ast_builder.build(tokens, code)
 
     error = exc_info.value
     # Should show both 'x' and 'y' in the context

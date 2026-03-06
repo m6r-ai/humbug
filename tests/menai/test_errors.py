@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import MenaiError, MenaiTokenError, MenaiParseError, MenaiEvalError
+from menai import MenaiError, MenaiTokenError, MenaiASTBuildError, MenaiEvalError
 
 
 class TestErrors:
@@ -85,29 +85,29 @@ class TestErrors:
 
     def test_empty_expression_parse_error(self, menai):
         """Test that empty expressions cause parse errors."""
-        with pytest.raises(MenaiParseError, match="Empty expression"):
+        with pytest.raises(MenaiASTBuildError, match="Empty expression"):
             menai.evaluate("")
 
-        with pytest.raises(MenaiParseError, match="Empty expression"):
+        with pytest.raises(MenaiASTBuildError, match="Empty expression"):
             menai.evaluate("   ")  # Whitespace only
 
     def test_unmatched_parentheses_parse_error(self, menai):
         """Test that unmatched parentheses cause parse errors."""
-        with pytest.raises(MenaiParseError, match="Unterminated list"):
+        with pytest.raises(MenaiASTBuildError, match="Unterminated list"):
             menai.evaluate("(integer+ 1 2")
 
-        with pytest.raises(MenaiParseError, match="Unterminated list"):
+        with pytest.raises(MenaiASTBuildError, match="Unterminated list"):
             menai.evaluate("(integer* (integer+ 1 2) 3")
 
-        with pytest.raises(MenaiParseError, match="Unexpected token after complete expression"):
+        with pytest.raises(MenaiASTBuildError, match="Unexpected token after complete expression"):
             menai.evaluate("integer+ 1 2)")
 
     def test_unexpected_token_after_expression_parse_error(self, menai):
         """Test that extra tokens after complete expression cause parse errors."""
-        with pytest.raises(MenaiParseError, match="Unexpected token after complete expression"):
+        with pytest.raises(MenaiASTBuildError, match="Unexpected token after complete expression"):
             menai.evaluate("42 43")
 
-        with pytest.raises(MenaiParseError, match="Unexpected token after complete expression"):
+        with pytest.raises(MenaiASTBuildError, match="Unexpected token after complete expression"):
             menai.evaluate("(integer+ 1 2) (integer+ 3 4)")
 
     def test_invalid_lambda_syntax_parse_error(self, menai):
@@ -416,7 +416,7 @@ class TestErrors:
 
         try:
             menai.evaluate("(integer+ 1 2")
-        except MenaiParseError as e:
+        except MenaiASTBuildError as e:
             assert "list-position" in str(e) or "parenthesis" in str(e)
 
     def test_error_message_context_information(self, menai):
@@ -510,13 +510,13 @@ class TestErrors:
         """Test that all Menai exceptions inherit properly."""
         # All specific exceptions should inherit from MenaiError
         assert issubclass(MenaiTokenError, MenaiError)
-        assert issubclass(MenaiParseError, MenaiError)
+        assert issubclass(MenaiASTBuildError, MenaiError)
         assert issubclass(MenaiEvalError, MenaiError)
 
         # All Menai errors should inherit from Exception
         assert issubclass(MenaiError, Exception)
         assert issubclass(MenaiTokenError, Exception)
-        assert issubclass(MenaiParseError, Exception)
+        assert issubclass(MenaiASTBuildError, Exception)
         assert issubclass(MenaiEvalError, Exception)
 
     def test_exception_can_be_caught_generically(self, menai):
@@ -540,7 +540,7 @@ class TestErrors:
             menai.evaluate("@invalid")
 
         # Catch specific parse error
-        with pytest.raises(MenaiParseError):
+        with pytest.raises(MenaiASTBuildError):
             menai.evaluate("(integer+ 1 2")
 
         # Catch specific eval error

@@ -5,7 +5,7 @@ from menai.menai import Menai
 
 # Exceptions (enhanced with detailed context)
 from menai.menai_error import (
-    MenaiError, MenaiTokenError, MenaiParseError, MenaiEvalError,
+    MenaiError, MenaiTokenError, MenaiASTBuildError, MenaiEvalError,
     MenaiCancelledException
 )
 
@@ -24,7 +24,7 @@ from menai.menai_value import (
 # Lower-level components (for advanced usage)
 from menai.menai_token import MenaiToken, MenaiTokenType
 from menai.menai_lexer import MenaiLexer
-from menai.menai_parser import MenaiParser
+from menai.menai_ast_builder import MenaiASTBuilder
 
 # Trace watchers (for debugging)
 from menai.menai_vm import MenaiTraceWatcher
@@ -37,7 +37,7 @@ __all__ = [
     "Menai",
 
     # Exceptions (enhanced with detailed context)
-    "MenaiError", "MenaiTokenError", "MenaiParseError", "MenaiEvalError", "MenaiCancelledException",
+    "MenaiError", "MenaiTokenError", "MenaiASTParseError", "MenaiEvalError", "MenaiCancelledException",
 
     # AST node types
     "MenaiASTNode", "MenaiASTInteger", "MenaiASTFloat", "MenaiASTComplex",
@@ -48,7 +48,7 @@ __all__ = [
     "MenaiString", "MenaiBoolean", "MenaiSymbol", "MenaiList", "MenaiDict", "MenaiFunction",
 
     # Lower-level components
-    "MenaiToken", "MenaiTokenType", "MenaiLexer", "MenaiParser",
+    "MenaiToken", "MenaiTokenType", "MenaiLexer", "MenaiASTBuilder",
 
     # Trace watchers
     "MenaiTraceWatcher", "MenaiStdoutTraceWatcher",

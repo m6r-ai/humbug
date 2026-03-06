@@ -171,8 +171,8 @@ class MenaiTokenError(MenaiError):
     """Tokenization errors with detailed context."""
 
 
-class MenaiParseError(MenaiError):
-    """Parsing errors with detailed context."""
+class MenaiASTBuildError(MenaiError):
+    """AST build errors with detailed context."""
 
 
 class MenaiEvalError(MenaiError):

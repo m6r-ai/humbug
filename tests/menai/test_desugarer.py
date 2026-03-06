@@ -8,7 +8,7 @@ import pytest
 
 from menai.menai_desugarer import MenaiDesugarer
 from menai.menai_lexer import MenaiLexer
-from menai.menai_parser import MenaiParser
+from menai.menai_ast_builder import MenaiASTBuilder
 from menai.menai_semantic_analyzer import MenaiSemanticAnalyzer
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTInteger, MenaiASTString, MenaiASTBoolean
@@ -20,8 +20,9 @@ def parse_and_analyze_expression(expr_str: str) -> MenaiASTNode:
     """Helper to parse and semantically analyze an expression string into AST."""
     lexer = MenaiLexer()
     tokens = lexer.lex(expr_str)
-    parser = MenaiParser()
-    ast = parser.parse(tokens, expr_str)
+    ast_builder = MenaiASTBuilder()
+    ast = ast_builder.build(tokens, expr_str)
+
     # Run semantic analysis before desugaring
     analyzer = MenaiSemanticAnalyzer()
     return analyzer.analyze(ast)
@@ -491,8 +492,8 @@ class TestDesugarerMatchErrors:
         # Errors should be caught by semantic analyzer, not desugarer
         analyzer = MenaiSemanticAnalyzer()
         lexer = MenaiLexer()
-        parser = MenaiParser()
-        expr = parser.parse(lexer.lex('(match x)'), '(match x)')
+        ast_builder = MenaiASTBuilder()
+        expr = ast_builder.build(lexer.lex('(match x)'), '(match x)')
 
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
             analyzer.analyze(expr)
@@ -501,8 +502,8 @@ class TestDesugarerMatchErrors:
         """Test error when match clause is invalid."""
         analyzer = MenaiSemanticAnalyzer()
         lexer = MenaiLexer()
-        parser = MenaiParser()
-        expr = parser.parse(lexer.lex('(match x (42))'), '(match x (42))')
+        ast_builder = MenaiASTBuilder()
+        expr = ast_builder.build(lexer.lex('(match x (42))'), '(match x (42))')
 
         with pytest.raises(MenaiEvalError, match="wrong number of elements"):
             analyzer.analyze(expr)
@@ -512,8 +513,8 @@ class TestDesugarerMatchErrors:
         analyzer = MenaiSemanticAnalyzer()
         lexer = MenaiLexer()
         code = '(match x ((. tail) "bad") (_ "other"))'
-        parser = MenaiParser()
-        expr = parser.parse(lexer.lex(code), code)
+        ast_builder = MenaiASTBuilder()
+        expr = ast_builder.build(lexer.lex(code), code)
 
         with pytest.raises(MenaiEvalError, match="dot at beginning"):
             analyzer.analyze(expr)
@@ -523,8 +524,8 @@ class TestDesugarerMatchErrors:
         analyzer = MenaiSemanticAnalyzer()
         lexer = MenaiLexer()
         code = '(match x ((head .) "bad") (_ "other"))'
-        parser = MenaiParser()
-        expr = parser.parse(lexer.lex(code), code)
+        ast_builder = MenaiASTBuilder()
+        expr = ast_builder.build(lexer.lex(code), code)
 
         with pytest.raises(MenaiEvalError, match="dot at end"):
             analyzer.analyze(expr)
@@ -534,8 +535,8 @@ class TestDesugarerMatchErrors:
         analyzer = MenaiSemanticAnalyzer()
         lexer = MenaiLexer()
         code = '(match x ((head . a b) "bad") (_ "other"))'
-        parser = MenaiParser()
-        expr = parser.parse(lexer.lex(code), code)
+        ast_builder = MenaiASTBuilder()
+        expr = ast_builder.build(lexer.lex(code), code)
 
         with pytest.raises(MenaiEvalError, match="multiple elements after dot"):
             analyzer.analyze(expr)

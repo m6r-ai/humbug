@@ -7,6 +7,7 @@ It chains together all compilation passes in the correct order.
 from typing import List
 
 from menai.menai_ast import MenaiASTNode
+from menai.menai_ast_builder import MenaiASTBuilder
 from menai.menai_ast_constant_folder import MenaiASTConstantFolder
 from menai.menai_ast_optimization_pass import MenaiASTOptimizationPass
 from menai.menai_bytecode import CodeObject
@@ -20,7 +21,6 @@ from menai.menai_ir_optimizer import MenaiIROptimizer
 from menai.menai_ir_inline_once import MenaiIRInlineOnce
 from menai.menai_lexer import MenaiLexer
 from menai.menai_module_resolver import MenaiModuleResolver, ModuleLoader
-from menai.menai_parser import MenaiParser
 from menai.menai_semantic_analyzer import MenaiSemanticAnalyzer
 from menai.menai_vm_codegen import MenaiVMCodeGen
 
@@ -45,16 +45,18 @@ class MenaiCompiler:
         self.optimize = optimize
         self.module_loader = module_loader
 
-        # Initialize all passes
         self.lexer = MenaiLexer()
-        self.parser = MenaiParser()
+        self.ast_builder = MenaiASTBuilder()
         self.semantic_analyzer = MenaiSemanticAnalyzer()
         self.module_resolver = MenaiModuleResolver(module_loader)
         self.desugarer = MenaiDesugarer()
-
-        # AST optimization passes
         self.ast_passes: List[MenaiASTOptimizationPass] = []
+        self.ir_builder = MenaiIRBuilder()
         self.ir_passes: List[MenaiIROptimizationPass] = []
+        self.cfg_builder = MenaiCFGBuilder()
+        self.cfg_optimizer = MenaiCFGOptimizer()
+        self.vm_codegen = MenaiVMCodeGen()
+
         if optimize:
             self.ast_passes = [
                 MenaiASTConstantFolder(),
@@ -64,11 +66,6 @@ class MenaiCompiler:
                 MenaiIRInlineOnce(),
                 MenaiIROptimizer(),
             ]
-
-        self.ir_builder = MenaiIRBuilder()
-        self.cfg_builder = MenaiCFGBuilder()
-        self.cfg_optimizer = MenaiCFGOptimizer()
-        self.vm_codegen = MenaiVMCodeGen()
 
     def compile_to_resolved_ast(self, source: str, source_file: str = "") -> MenaiASTNode:
         """
@@ -91,7 +88,7 @@ class MenaiCompiler:
             Fully resolved AST (all imports replaced with module ASTs)
         """
         tokens = self.lexer.lex(source)
-        ast = self.parser.parse(tokens, source, source_file)
+        ast = self.ast_builder.build(tokens, source, source_file)
         checked_ast = self.semantic_analyzer.analyze(ast, source)
         resolved_ast = self.module_resolver.resolve(checked_ast)
         return resolved_ast
@@ -109,14 +106,12 @@ class MenaiCompiler:
         Returns:
             Compiled bytecode ready for execution
         """
-        # Front-end: lex, parse, semantic analysis, module resolution.
         resolved_ast = self.compile_to_resolved_ast(source, name)
         desugared_ast = self.desugarer.desugar(resolved_ast)
 
         for ast_pass in self.ast_passes:
             desugared_ast = ast_pass.optimize(desugared_ast)
 
-        # IR construction and optimisation (shared by both backends).
         ir = self.ir_builder.build(desugared_ast)
 
         if self.ir_passes:
@@ -130,5 +125,6 @@ class MenaiCompiler:
         cfg = self.cfg_builder.build(ir)
         if self.optimize:
             cfg = self.cfg_optimizer.optimize(cfg)
+
         bytecode = self.vm_codegen.generate(cfg, name)
         return bytecode

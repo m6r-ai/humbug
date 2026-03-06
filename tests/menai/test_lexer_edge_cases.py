@@ -2,7 +2,7 @@
 
 import pytest
 
-from menai import MenaiError, MenaiTokenError, MenaiParseError
+from menai import MenaiError, MenaiTokenError, MenaiASTBuildError
 
 
 class TestMenaiLexerEdgeCases:
@@ -303,7 +303,7 @@ class TestMenaiLexerEdgeCases:
                 else:
                     # Pure comment might be empty expression
                     result = menai.evaluate(expr)
-            except (MenaiTokenError, MenaiParseError):
+            except (MenaiTokenError, MenaiASTBuildError):
                 # Comments might not be supported, which is fine
                 pass
 
@@ -468,7 +468,7 @@ class TestMenaiLexerEdgeCases:
             try:
                 result = menai.evaluate(expr)
                 assert result == expected
-            except (MenaiTokenError, MenaiParseError):
+            except (MenaiTokenError, MenaiASTBuildError):
                 # Some Unicode might not be supported
                 pass
 

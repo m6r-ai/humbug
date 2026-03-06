@@ -244,13 +244,13 @@ class TestLetrecSplittingStructure:
     def _desugar(self, source: str):
         """Helper: lex, parse, analyse, then desugar the source."""
         from menai.menai_lexer import MenaiLexer
-        from menai.menai_parser import MenaiParser
+        from menai.menai_ast_builder import MenaiASTBuilder
         from menai.menai_semantic_analyzer import MenaiSemanticAnalyzer
         from menai.menai_desugarer import MenaiDesugarer
         from menai.menai_ast import MenaiASTList, MenaiASTSymbol
 
         tokens = MenaiLexer().lex(source)
-        ast = MenaiParser().parse(tokens, source)
+        ast = MenaiASTBuilder().build(tokens, source)
         ast = MenaiSemanticAnalyzer().analyze(ast, source)
         return MenaiDesugarer().desugar(ast)
 

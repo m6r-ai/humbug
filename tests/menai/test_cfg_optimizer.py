@@ -911,7 +911,7 @@ class TestIntegration:
     def _build_cfg(self, source: str, optimize: bool):
         """Compile source to CFG, with or without CFG optimization."""
         from menai.menai_lexer import MenaiLexer
-        from menai.menai_parser import MenaiParser
+        from menai.menai_ast_builder import MenaiASTBuilder
         from menai.menai_semantic_analyzer import MenaiSemanticAnalyzer
         from menai.menai_module_resolver import MenaiModuleResolver
         from menai.menai_desugarer import MenaiDesugarer
@@ -924,7 +924,7 @@ class TestIntegration:
         from menai.menai_cfg_optimizer import MenaiCFGOptimizer
 
         lexer = MenaiLexer()
-        parser = MenaiParser()
+        ast_builder = MenaiASTBuilder()
         sem = MenaiSemanticAnalyzer()
         resolver = MenaiModuleResolver(None)
         desugarer = MenaiDesugarer()
@@ -934,7 +934,7 @@ class TestIntegration:
         cfg_optimizer = MenaiCFGOptimizer()
 
         tokens = lexer.lex(source)
-        ast = parser.parse(tokens, source, "")
+        ast = ast_builder.build(tokens, source, "")
         ast = sem.analyze(ast, source)
         ast = resolver.resolve(ast)
         ast = desugarer.desugar(ast)

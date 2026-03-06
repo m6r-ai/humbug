@@ -19,7 +19,7 @@ by whitespace (the `i >= len` early-return branch).
 """
 
 import pytest
-from menai import MenaiLexer, MenaiParser, MenaiParseError
+from menai import MenaiLexer, MenaiASTBuilder, MenaiASTBuildError
 
 
 class TestLineColToCharLoop:
@@ -36,10 +36,10 @@ class TestLineColToCharLoop:
         code = "(let (\n  (x (+ 1 2"
         lexer = MenaiLexer()
         tokens = lexer.lex(code)
-        parser = MenaiParser()
+        ast_builder = MenaiASTBuilder()
 
-        with pytest.raises(MenaiParseError) as exc_info:
-            parser.parse(tokens, code)
+        with pytest.raises(MenaiASTBuildError) as exc_info:
+            ast_builder.build(tokens, code)
 
         error = exc_info.value
         # The error must reference the binding on line 2
@@ -59,10 +59,10 @@ class TestLineColToCharLoop:
         code = "(let (\n  (x 1)\n  (y (+ 2"
         lexer = MenaiLexer()
         tokens = lexer.lex(code)
-        parser = MenaiParser()
+        ast_builder = MenaiASTBuilder()
 
-        with pytest.raises(MenaiParseError) as exc_info:
-            parser.parse(tokens, code)
+        with pytest.raises(MenaiASTBuildError) as exc_info:
+            ast_builder.build(tokens, code)
 
         error = exc_info.value
         assert "line 3" in error.context
@@ -81,10 +81,10 @@ class TestLineColToCharLoop:
         code = "(let (\n  (a 10)\n  (b 20)\n  (c (lambda (n)"
         lexer = MenaiLexer()
         tokens = lexer.lex(code)
-        parser = MenaiParser()
+        ast_builder = MenaiASTBuilder()
 
-        with pytest.raises(MenaiParseError) as exc_info:
-            parser.parse(tokens, code)
+        with pytest.raises(MenaiASTBuildError) as exc_info:
+            ast_builder.build(tokens, code)
 
         error = exc_info.value
         assert "line 4" in error.context
@@ -100,10 +100,10 @@ class TestLineColToCharLoop:
         code = "(let (\n  (myvar (integer+ 1 2"
         lexer = MenaiLexer()
         tokens = lexer.lex(code)
-        parser = MenaiParser()
+        ast_builder = MenaiASTBuilder()
 
-        with pytest.raises(MenaiParseError) as exc_info:
-            parser.parse(tokens, code)
+        with pytest.raises(MenaiASTBuildError) as exc_info:
+            ast_builder.build(tokens, code)
 
         error = exc_info.value
         # The context snippet for the binding frame on line 2 should contain
@@ -119,10 +119,10 @@ class TestLineColToCharLoop:
         code = "(let (\n  (f (lambda (x) (+ x"
         lexer = MenaiLexer()
         tokens = lexer.lex(code)
-        parser = MenaiParser()
+        ast_builder = MenaiASTBuilder()
 
-        with pytest.raises(MenaiParseError) as exc_info:
-            parser.parse(tokens, code)
+        with pytest.raises(MenaiASTBuildError) as exc_info:
+            ast_builder.build(tokens, code)
 
         error = exc_info.value
         # The lambda opened on line 2 should be classified correctly
@@ -138,10 +138,10 @@ class TestLineColToCharLoop:
         code = "(let ((x 1))\n  (let ((y"
         lexer = MenaiLexer()
         tokens = lexer.lex(code)
-        parser = MenaiParser()
+        ast_builder = MenaiASTBuilder()
 
-        with pytest.raises(MenaiParseError) as exc_info:
-            parser.parse(tokens, code)
+        with pytest.raises(MenaiASTBuildError) as exc_info:
+            ast_builder.build(tokens, code)
 
         error = exc_info.value
         assert "let" in error.context
@@ -170,9 +170,9 @@ class TestDetectExpressionTypeWhitespaceLoop:
         code = "( lambda (x) (+ x"
         lexer = MenaiLexer()
         tokens = lexer.lex(code)
-        parser = MenaiParser()
-        with pytest.raises(MenaiParseError) as exc_info:
-            parser.parse(tokens, code)
+        ast_builder = MenaiASTBuilder()
+        with pytest.raises(MenaiASTBuildError) as exc_info:
+            ast_builder.build(tokens, code)
 
         error = exc_info.value
         assert "lambda" in error.context
@@ -184,10 +184,10 @@ class TestDetectExpressionTypeWhitespaceLoop:
         code = "( if (> x 0) x"
         lexer = MenaiLexer()
         tokens = lexer.lex(code)
-        parser = MenaiParser()
+        ast_builder = MenaiASTBuilder()
 
-        with pytest.raises(MenaiParseError) as exc_info:
-            parser.parse(tokens, code)
+        with pytest.raises(MenaiASTBuildError) as exc_info:
+            ast_builder.build(tokens, code)
 
         error = exc_info.value
         assert "if" in error.context
@@ -199,10 +199,10 @@ class TestDetectExpressionTypeWhitespaceLoop:
         code = "(\tlet ((x 5)) x"
         lexer = MenaiLexer()
         tokens = lexer.lex(code)
-        parser = MenaiParser()
+        ast_builder = MenaiASTBuilder()
 
-        with pytest.raises(MenaiParseError) as exc_info:
-            parser.parse(tokens, code)
+        with pytest.raises(MenaiASTBuildError) as exc_info:
+            ast_builder.build(tokens, code)
 
         error = exc_info.value
         assert "let" in error.context
@@ -219,10 +219,10 @@ class TestDetectExpressionTypeWhitespaceLoop:
         code = "(  "
         lexer = MenaiLexer()
         tokens = lexer.lex(code)
-        parser = MenaiParser()
+        ast_builder = MenaiASTBuilder()
 
-        with pytest.raises(MenaiParseError) as exc_info:
-            parser.parse(tokens, code)
+        with pytest.raises(MenaiASTBuildError) as exc_info:
+            ast_builder.build(tokens, code)
 
         error = exc_info.value
         # The expression type for `(  ` should fall back to 'list'

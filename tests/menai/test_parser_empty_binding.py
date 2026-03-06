@@ -1,6 +1,6 @@
 """Test to cover the empty binding case in parser."""
 
-from menai import MenaiLexer, MenaiParser
+from menai import MenaiLexer, MenaiASTBuilder
 
 
 def test_empty_binding_in_let():
@@ -12,10 +12,10 @@ def test_empty_binding_in_let():
     """
     lexer = MenaiLexer()
     tokens = lexer.lex("(let (() 5))")
-    parser = MenaiParser()
+    ast_builder = MenaiASTBuilder()
 
     # Should parse successfully (evaluator will complain about invalid binding)
-    result = parser.parse(tokens, "(let (() 5))")
+    result = ast_builder.build(tokens, "(let (() 5))")
 
     # Verify structure: (let (() 5))
     assert result.length() == 2
@@ -31,9 +31,9 @@ def test_multiple_bindings_with_empty():
     """Test multiple bindings including an empty one."""
     lexer = MenaiLexer()
     tokens = lexer.lex("(let ((x 5) () (y 10)) 42)")
-    parser = MenaiParser()
+    ast_builder = MenaiASTBuilder()
 
-    result = parser.parse(tokens, "(let ((x 5) () (y 10)) 42)")
+    result = ast_builder.build(tokens, "(let ((x 5) () (y 10)) 42)")
 
     # Verify structure
     bindings = result.get(1)

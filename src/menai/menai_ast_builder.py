@@ -1,8 +1,8 @@
-"""Parser for Menai expressions with detailed error messages."""
+"""AST builder for Menai expressions with detailed error messages."""
 
 from typing import List, cast
 from dataclasses import dataclass
-from menai.menai_error import MenaiParseError
+from menai.menai_error import MenaiASTBuildError
 from menai.menai_token import MenaiToken, MenaiTokenType
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex, MenaiASTString,
@@ -15,7 +15,7 @@ class ParenStackFrame:
     """Represents an unclosed opening parenthesis with context."""
     line: int
     column: int
-    parser: 'MenaiParser'  # Reference to parser for lazy evaluation
+    parser: 'MenaiASTBuildr'  # Reference to parser for lazy evaluation
     _expression_type: str | None = None  # Cached lazily
     elements_parsed: int = 0
     last_complete_line: int | None = None
@@ -40,7 +40,7 @@ class ParenStackFrame:
         return self.parser.get_context_snippet(self.line, self.column, length=30)
 
 
-class MenaiParser:
+class MenaiASTBuilder:
     """Parses tokens into an Abstract Syntax Tree using pure list representation with detailed error messages."""
 
     def __init__(self) -> None:
@@ -64,7 +64,7 @@ class MenaiParser:
         self.last_token_end_line: int = 1
         self.last_token_end_column: int = 1
 
-    def parse(self, tokens: List[MenaiToken], expression: str = "", source_file: str = "") -> MenaiASTNode:
+    def build(self, tokens: List[MenaiToken], expression: str = "", source_file: str = "") -> MenaiASTNode:
         """
         Parse tokens into AST with detailed error reporting.
 
@@ -77,7 +77,7 @@ class MenaiParser:
             Parsed expression
 
         Raises:
-            MenaiParseError: If parsing fails with detailed context
+            MenaiASTBuildError: If parsing fails with detailed context
         """
         self.tokens = tokens
         self.pos = 0
@@ -86,7 +86,7 @@ class MenaiParser:
         self.source_file = source_file
 
         if self.current_token is None:
-            raise MenaiParseError(
+            raise MenaiASTBuildError(
                 message="Empty expression",
                 expected="Valid Menai expression",
                 example="(+ 1 2) or 42 or \"hello\"",
@@ -101,7 +101,7 @@ class MenaiParser:
             current_line = self.current_token.line if self.current_token else 1
             current_col = self.current_token.column if self.current_token else 1
 
-            raise MenaiParseError(
+            raise MenaiASTBuildError(
                 message="Unexpected token after complete expression",
                 line=current_line,
                 column=current_col,
@@ -160,7 +160,7 @@ class MenaiParser:
         token_value = token.value
         token_type = token.type.name
 
-        raise MenaiParseError(
+        raise MenaiASTBuildError(
             message=f"Unexpected token: {token_value}",
             line=token.line,
             column=token.column,
@@ -321,7 +321,7 @@ class MenaiParser:
 
         return snippet
 
-    def _create_enhanced_unterminated_error(self, start_line: int, start_col: int) -> MenaiParseError:
+    def _create_enhanced_unterminated_error(self, start_line: int, start_col: int) -> MenaiASTBuildError:
         """
         Create enhanced error message with paren stack information.
 
@@ -330,7 +330,7 @@ class MenaiParser:
             start_col: Column where the unterminated list started
 
         Returns:
-            MenaiParseError with detailed stack trace
+            MenaiASTBuildError with detailed stack trace
         """
         depth = len(self.paren_stack)
 
@@ -382,7 +382,7 @@ class MenaiParser:
         # Determine singular vs plural
         paren_word = "parenthesis" if depth == 1 else "parentheses"
 
-        return MenaiParseError(
+        return MenaiASTBuildError(
             message=f"Unterminated list - missing {depth} closing {paren_word}",
             line=start_line,
             column=start_col,
@@ -608,7 +608,7 @@ class MenaiParser:
         parsed_bindings: List[MenaiASTNode],
         bindings_start_line: int,
         bindings_start_col: int
-    ) -> MenaiParseError:
+    ) -> MenaiASTBuildError:
         """
         Create enhanced error when EOF is reached while parsing let bindings.
 
@@ -618,7 +618,7 @@ class MenaiParser:
             bindings_start_col: Column where bindings list started
 
         Returns:
-            MenaiParseError with detailed context
+            MenaiASTBuildError with detailed context
         """
         # Analyze the parsed bindings to show what completed successfully
         binding_summary = []
@@ -677,7 +677,7 @@ class MenaiParser:
             f"Unclosed expressions:\n{stack_trace}"
         )
 
-        return MenaiParseError(
+        return MenaiASTBuildError(
             message=f"Incomplete let/letrec bindings - missing {depth} closing {paren_word}",
             line=bindings_start_line,
             column=bindings_start_col,
@@ -696,7 +696,7 @@ class MenaiParser:
             MenaiASTList representing (quote expr)
 
         Raises:
-            MenaiParseError: If quote is incomplete or malformed
+            MenaiASTBuildError: If quote is incomplete or malformed
         """
         quote_line = self.current_token.line if self.current_token else 1
         quote_col = self.current_token.column if self.current_token else 1
@@ -704,7 +704,7 @@ class MenaiParser:
 
         # Check if we have something to quote
         if self.current_token is None:
-            raise MenaiParseError(
+            raise MenaiASTBuildError(
                 message="Incomplete quote expression",
                 line=quote_line,
                 column=quote_col,

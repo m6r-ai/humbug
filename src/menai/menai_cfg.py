@@ -30,6 +30,7 @@ class MenaiCFGValue:
     def __str__(self) -> str:
         if self.hint:
             return f"%{self.id}({self.hint})"
+
         return f"%{self.id}"
 
     def __repr__(self) -> str:
@@ -42,6 +43,7 @@ class MenaiCFGValue:
     def __eq__(self, other: object) -> bool:
         if isinstance(other, MenaiCFGValue):
             return self.id == other.id
+
         return NotImplemented
 
 

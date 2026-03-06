@@ -32,7 +32,7 @@ Source code
 MenaiLexer             – tokenization
     │
     ▼
-MenaiParser            – S-expression parsing to AST (MenaiASTNode)
+MenaiASTBuilder        – S-expression parsing to AST (MenaiASTNode)
     │
     ▼
 MenaiSemanticAnalyzer  – type checking, scope analysis, free variable detection

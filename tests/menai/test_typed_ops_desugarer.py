@@ -28,7 +28,7 @@ from menai.menai_ast import (
 )
 from menai.menai_desugarer import MenaiDesugarer
 from menai.menai_lexer import MenaiLexer
-from menai.menai_parser import MenaiParser
+from menai.menai_ast_builder import MenaiASTBuilder
 from menai.menai_semantic_analyzer import MenaiSemanticAnalyzer
 
 
@@ -39,7 +39,7 @@ from menai.menai_semantic_analyzer import MenaiSemanticAnalyzer
 def parse(source: str) -> MenaiASTNode:
     """Lex, parse, and semantically-analyse *source*, returning the AST."""
     tokens = MenaiLexer().lex(source)
-    ast = MenaiParser().parse(tokens, source)
+    ast = MenaiASTBuilder().build(tokens, source)
     return MenaiSemanticAnalyzer().analyze(ast)
 
 
