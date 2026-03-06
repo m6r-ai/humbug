@@ -5,7 +5,7 @@ This module provides builtin function metadata and first-class function objects
 for all builtins, used by the VM to populate the global environment.
 """
 
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional
 
 from menai.menai_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Instruction, Opcode
 from menai.menai_value import MenaiFunction
@@ -22,7 +22,7 @@ class MenaiBuiltinRegistry:
     are skipped here so the prelude lambdas take effect instead.
     """
 
-    # Arity table for all opcode-backed builtins ONLY.
+    # Arity table for all builtin functions.
     #
     # Each entry is (min_args, max_args) where max_args is None for truly
     # variadic functions (no upper bound).  Functions with fixed arity
@@ -34,9 +34,9 @@ class MenaiBuiltinRegistry:
     # be added — the registry asserts every entry has a BUILTIN_OPCODE_MAP
     # entry, so adding a prelude-only name will cause an assertion failure.
     #
-    # Consumed by: the semantic analyser (early arity checking) and
+    # Consumed by: get_function_arity() (for the semantic analyser) and
     # create_builtin_function_objects() (building MenaiFunction stubs).
-    BUILTIN_OPCODE_ARITIES: Dict[str, Tuple[int, int | None]] = {
+    BUILTIN_FUNCTION_ARITIES: Dict[str, Tuple[int, int | None]] = {
         'function?': (1, 1),
         'function-min-arity': (1, 1),
         'function-variadic?': (1, 1),
@@ -188,21 +188,38 @@ class MenaiBuiltinRegistry:
         'range': (2, 3),
     }
 
-    # Set of all $-prefixed opcode names.  A call to $name is always a
-    # fixed-arity opcode call — never a prelude function or free variable.
-    # Built lazily from BUILTIN_OPCODE_MAP at class definition time.
-    DOLLAR_BUILTIN_NAMES: frozenset = frozenset(
-        '$' + name for name in BUILTIN_OPCODE_MAP
-    )
+    @staticmethod
+    def get_function_arity(name: str) -> Optional[Tuple[int, int | None]]:
+        """Return (min_args, max_args) for a known builtin function, or None if unknown.
+
+        max_args is None for truly variadic functions (no upper bound).
+        Used by the semantic analyser for call-site arity validation.
+        """
+        return MenaiBuiltinRegistry.BUILTIN_FUNCTION_ARITIES.get(name)
 
     @staticmethod
-    def is_dollar_builtin(name: str) -> bool:
-        """Return True if *name* is a $-prefixed opcode-backed primitive.
+    def is_primitive_name(name: str) -> bool:
+        """Return True if name is a valid primitive function name.
 
-        A $-prefixed name always refers to the fixed-arity VM opcode form,
-        never to a prelude function or user-defined variable.
+        A primitive name has a direct $-prefixed form that the desugarer and
+        semantic analyser can use.  The $ prefix is the source-level syntax
+        for bypassing the variadic wrapper and calling the primitive directly.
         """
-        return name.startswith('$') and name[1:] in BUILTIN_OPCODE_MAP
+        return name in BUILTIN_OPCODE_MAP
+
+    @staticmethod
+    def get_primitive_arity(name: str) -> Optional[int]:
+        """Return the exact argument count of the primitive form of this builtin, or None.
+
+        Returns None if this name has no primitive form (i.e. it is a pure-Menai
+        stdlib function with no direct primitive backing).
+        Used by the desugarer to decide whether (f a b) can be rewritten to ($f a b).
+        """
+        entry = BUILTIN_OPCODE_MAP.get(name)
+        if entry is None:
+            return None
+        _, arity = entry
+        return arity
 
     def create_builtin_function_objects(self) -> Dict[str, MenaiFunction]:
         """
@@ -224,7 +241,7 @@ class MenaiBuiltinRegistry:
         """
         # Names provided by the Menai prelude — the registry skips these so the
         # prelude's compiled function objects take effect in the global environment.
-        # These names are still kept in BUILTIN_OPCODE_ARITIES so that 2-arg calls inside
+        # These names are still kept in BUILTIN_FUNCTION_ARITIES so that 2-arg calls inside
         # their own prelude stub bodies resolve to opcodes correctly via
         # BUILTIN_OPCODE_MAP in the codegen.
         prelude_names = {
@@ -292,7 +309,7 @@ class MenaiBuiltinRegistry:
         }
 
         builtins = {}
-        for name, (min_args, max_args) in self.BUILTIN_OPCODE_ARITIES.items():
+        for name, (min_args, max_args) in self.BUILTIN_FUNCTION_ARITIES.items():
             if name in prelude_names:
                 # Prelude supplies the function object for this name
                 continue

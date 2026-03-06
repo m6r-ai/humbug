@@ -13,6 +13,7 @@ from menai.menai_ast_desugarer import MenaiASTDesugarer
 from menai.menai_ast_optimization_pass import MenaiASTOptimizationPass
 from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
 from menai.menai_bytecode import CodeObject
+from menai.menai_bytecode_builder import MenaiBytecodeBuilder
 from menai.menai_cfg_builder import MenaiCFGBuilder
 from menai.menai_cfg_optimizer import MenaiCFGOptimizer
 from menai.menai_ir_builder import MenaiIRBuilder
@@ -22,7 +23,6 @@ from menai.menai_ir_optimizer import MenaiIROptimizer
 from menai.menai_ir_inline_once import MenaiIRInlineOnce
 from menai.menai_lexer import MenaiLexer
 from menai.menai_module_resolver import MenaiModuleResolver, ModuleLoader
-from menai.menai_vm_codegen import MenaiVMCodeGen
 
 
 class MenaiCompiler:
@@ -55,7 +55,7 @@ class MenaiCompiler:
         self.ir_passes: List[MenaiIROptimizationPass] = []
         self.cfg_builder = MenaiCFGBuilder()
         self.cfg_optimizer = MenaiCFGOptimizer()
-        self.vm_codegen = MenaiVMCodeGen()
+        self.bytecode_builder = MenaiBytecodeBuilder()
 
         if optimize:
             self.ast_passes = [
@@ -126,5 +126,5 @@ class MenaiCompiler:
         if self.optimize:
             cfg = self.cfg_optimizer.optimize(cfg)
 
-        bytecode = self.vm_codegen.generate(cfg, name)
+        bytecode = self.bytecode_builder.build(cfg, name)
         return bytecode

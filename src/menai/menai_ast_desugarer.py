@@ -20,7 +20,6 @@ from menai.menai_ast import (
     MenaiASTFloat, MenaiASTComplex, MenaiASTString, MenaiASTBoolean, MenaiASTNone
 )
 from menai.menai_ast_dependency_analyzer import MenaiASTDependencyAnalyzer
-from menai.menai_bytecode import BUILTIN_OPCODE_MAP
 from menai.menai_builtin_registry import MenaiBuiltinRegistry
 from menai.menai_error import MenaiEvalError
 
@@ -224,15 +223,15 @@ class MenaiASTDesugarer:
                 return self._desugar_or(expr)
 
             # Fixed-arity opcode rewrite: if this call is to a known builtin
-            # with exactly the fixed arity in BUILTIN_OPCODE_MAP, rewrite the
-            # function name to the $-prefixed opcode form.  This fires before
+            # with exactly its primitive arity, rewrite the function name to the
+            # $-prefixed primitive form.  This fires before
             # the variadic/comparison/equality rewrites so that e.g.
             # (integer+ a b) → ($integer+ a b) directly, while
             # (integer+ a b c) still falls through to _desugar_variadic_arithmetic.
-            if name in MenaiBuiltinRegistry.BUILTIN_OPCODE_ARITIES and name in BUILTIN_OPCODE_MAP:
-                _, fixed_arity = BUILTIN_OPCODE_MAP[name]
+            primitive_arity = MenaiBuiltinRegistry.get_primitive_arity(name)
+            if primitive_arity is not None:
                 n_args = len(expr.elements) - 1
-                if n_args == fixed_arity:
+                if n_args == primitive_arity:
                     dollar_name = '$' + name
                     desugared_args = [self.desugar(arg) for arg in expr.elements[1:]]
                     return self._make_list(

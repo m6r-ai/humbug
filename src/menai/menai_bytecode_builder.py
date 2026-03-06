@@ -208,7 +208,7 @@ class _EmitContext:
         return idx
 
 
-class MenaiVMCodeGen:
+class MenaiBytecodeBuilder:
     """
     Generates a CodeObject from a MenaiCFGFunction.
 
@@ -220,7 +220,7 @@ class MenaiVMCodeGen:
     def __init__(self) -> None:
         self._lambda_counter = 0
 
-    def generate(self, func: MenaiCFGFunction, name: str = "<module>") -> CodeObject:
+    def build(self, func: MenaiCFGFunction, name: str = "<module>") -> CodeObject:
         """
         Generate a top-level CodeObject from a MenaiCFGFunction.
 

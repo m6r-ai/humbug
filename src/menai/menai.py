@@ -901,8 +901,10 @@ class Menai:
             module_path: List of directories to search for modules
         """
         self._module_path = module_path
+
         # Clear the cache since modules from the old path are no longer valid
         self.clear_module_cache()
+
         # Also clear the loading stack to ensure clean state
         self.loading_stack.clear()
 

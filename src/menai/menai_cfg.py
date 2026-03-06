@@ -2,9 +2,8 @@
 Control Flow Graph (CFG) data structures for the Menai compiler.
 
 This module defines the SSA-form CFG IR that sits between the IR tree
-(menai_ir.py) and the backend code generators.  The VM codegen
-(menai_vm_codegen.py) and any future native backend both consume this
-representation.
+(menai_ir.py) and the backend code generators.  The code generators
+consume this representation.
 """
 
 from __future__ import annotations
