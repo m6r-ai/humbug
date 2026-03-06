@@ -218,6 +218,7 @@ class MenaiBuiltinRegistry:
         entry = BUILTIN_OPCODE_MAP.get(name)
         if entry is None:
             return None
+
         _, arity = entry
         return arity
 
