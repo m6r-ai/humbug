@@ -419,19 +419,6 @@ class Instruction:
       src0  — first source register or instruction-stream immediate
       src1  — second source register or instruction-stream immediate
       src2  — third source register (unused in current stack-machine phase)
-
-    Opcode conventions:
-      PUSH src0                        — push register src0 onto call stack; dest unused
-      POP  dest                        — pop call stack into register dest; src0/src1/src2 unused
-      CALL dest, src0                  — dest=result reg; src0=arity; pops func+args from stack
-      TAIL_CALL src0                   — src0=arity; no dest (result propagates via trampoline)
-      APPLY dest                       — dest=result reg; pops func+arg_list from stack
-      TAIL_APPLY                       — no dest (result propagates via trampoline)
-      RETURN src0                      — src0=register holding return value; pushes it for caller
-      MAKE_CLOSURE dest, src0, src1    — dest=result reg; src0=code_idx; src1=capture_count
-      PATCH_CLOSURE src0, src1, src2   — src0=closure reg; src1=value reg; src2=capture_idx
-      EMIT_TRACE src0                  — src0=value register to trace; no dest
-      All remaining stack-machine ops  — src0/src1 carry stream immediates; dest unused
     """
     opcode: Opcode
     dest: int = 0   # destination register (written by MAKE_CLOSURE, POP, and load ops)
@@ -481,6 +468,9 @@ class Instruction:
         if opcode == Opcode.LOAD_NAME:
             return f"r{self.dest} = LOAD_NAME {self.src0}"
 
+        if opcode == Opcode.JUMP:
+            return f"JUMP @{self.src0}"
+
         if opcode == Opcode.JUMP_IF_FALSE:
             return f"JUMP_IF_FALSE r{self.src0}, @{self.src1}"
 
@@ -488,10 +478,10 @@ class Instruction:
             return f"JUMP_IF_TRUE r{self.src0}, @{self.src1}"
 
         if opcode == Opcode.MAKE_CLOSURE:
-            return f"r{self.dest} = MAKE_CLOSURE {self.src0}, {self.src1}"
+            return f"r{self.dest} = MAKE_CLOSURE {self.src0}"
 
         if opcode == Opcode.PATCH_CLOSURE:
-            return f"PATCH_CLOSURE r{self.src0}, r{self.src1}, {self.src2}"
+            return f"PATCH_CLOSURE r{self.src0}, {self.src1}, {self.src2}"
 
         if opcode == Opcode.RETURN:
             return f"RETURN r{self.src0}"
