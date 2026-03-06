@@ -10,6 +10,7 @@ from menai.menai_ast import MenaiASTNode
 from menai.menai_ast_builder import MenaiASTBuilder
 from menai.menai_ast_constant_folder import MenaiASTConstantFolder
 from menai.menai_ast_optimization_pass import MenaiASTOptimizationPass
+from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
 from menai.menai_bytecode import CodeObject
 from menai.menai_cfg_builder import MenaiCFGBuilder
 from menai.menai_desugarer import MenaiDesugarer
@@ -21,7 +22,6 @@ from menai.menai_ir_optimizer import MenaiIROptimizer
 from menai.menai_ir_inline_once import MenaiIRInlineOnce
 from menai.menai_lexer import MenaiLexer
 from menai.menai_module_resolver import MenaiModuleResolver, ModuleLoader
-from menai.menai_semantic_analyzer import MenaiSemanticAnalyzer
 from menai.menai_vm_codegen import MenaiVMCodeGen
 
 
@@ -47,7 +47,7 @@ class MenaiCompiler:
 
         self.lexer = MenaiLexer()
         self.ast_builder = MenaiASTBuilder()
-        self.semantic_analyzer = MenaiSemanticAnalyzer()
+        self.ast_semantic_analyzer = MenaiASTSemanticAnalyzer()
         self.module_resolver = MenaiModuleResolver(module_loader)
         self.desugarer = MenaiDesugarer()
         self.ast_passes: List[MenaiASTOptimizationPass] = []
@@ -89,7 +89,7 @@ class MenaiCompiler:
         """
         tokens = self.lexer.lex(source)
         ast = self.ast_builder.build(tokens, source, source_file)
-        checked_ast = self.semantic_analyzer.analyze(ast, source)
+        checked_ast = self.ast_semantic_analyzer.analyze(ast, source)
         resolved_ast = self.module_resolver.resolve(checked_ast)
         return resolved_ast
 

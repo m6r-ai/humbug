@@ -9,7 +9,7 @@ import pytest
 from menai.menai_desugarer import MenaiDesugarer
 from menai.menai_lexer import MenaiLexer
 from menai.menai_ast_builder import MenaiASTBuilder
-from menai.menai_semantic_analyzer import MenaiSemanticAnalyzer
+from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTInteger, MenaiASTString, MenaiASTBoolean
 )
@@ -24,7 +24,7 @@ def parse_and_analyze_expression(expr_str: str) -> MenaiASTNode:
     ast = ast_builder.build(tokens, expr_str)
 
     # Run semantic analysis before desugaring
-    analyzer = MenaiSemanticAnalyzer()
+    analyzer = MenaiASTSemanticAnalyzer()
     return analyzer.analyze(ast)
 
 
@@ -490,7 +490,7 @@ class TestDesugarerMatchErrors:
     def test_match_no_clauses(self):
         """Test error when match has no clauses."""
         # Errors should be caught by semantic analyzer, not desugarer
-        analyzer = MenaiSemanticAnalyzer()
+        analyzer = MenaiASTSemanticAnalyzer()
         lexer = MenaiLexer()
         ast_builder = MenaiASTBuilder()
         expr = ast_builder.build(lexer.lex('(match x)'), '(match x)')
@@ -500,7 +500,7 @@ class TestDesugarerMatchErrors:
 
     def test_match_invalid_clause(self):
         """Test error when match clause is invalid."""
-        analyzer = MenaiSemanticAnalyzer()
+        analyzer = MenaiASTSemanticAnalyzer()
         lexer = MenaiLexer()
         ast_builder = MenaiASTBuilder()
         expr = ast_builder.build(lexer.lex('(match x (42))'), '(match x (42))')
@@ -510,7 +510,7 @@ class TestDesugarerMatchErrors:
 
     def test_cons_pattern_dot_at_start(self):
         """Test error when cons pattern has dot at start."""
-        analyzer = MenaiSemanticAnalyzer()
+        analyzer = MenaiASTSemanticAnalyzer()
         lexer = MenaiLexer()
         code = '(match x ((. tail) "bad") (_ "other"))'
         ast_builder = MenaiASTBuilder()
@@ -521,7 +521,7 @@ class TestDesugarerMatchErrors:
 
     def test_cons_pattern_dot_at_end(self):
         """Test error when cons pattern has dot at end."""
-        analyzer = MenaiSemanticAnalyzer()
+        analyzer = MenaiASTSemanticAnalyzer()
         lexer = MenaiLexer()
         code = '(match x ((head .) "bad") (_ "other"))'
         ast_builder = MenaiASTBuilder()
@@ -532,7 +532,7 @@ class TestDesugarerMatchErrors:
 
     def test_cons_pattern_multiple_after_dot(self):
         """Test error when cons pattern has multiple elements after dot."""
-        analyzer = MenaiSemanticAnalyzer()
+        analyzer = MenaiASTSemanticAnalyzer()
         lexer = MenaiLexer()
         code = '(match x ((head . a b) "bad") (_ "other"))'
         ast_builder = MenaiASTBuilder()

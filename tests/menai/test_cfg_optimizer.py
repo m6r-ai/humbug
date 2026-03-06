@@ -908,7 +908,7 @@ class TestIntegration:
         """Compile source to CFG, with or without CFG optimization."""
         from menai.menai_lexer import MenaiLexer
         from menai.menai_ast_builder import MenaiASTBuilder
-        from menai.menai_semantic_analyzer import MenaiSemanticAnalyzer
+        from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
         from menai.menai_module_resolver import MenaiModuleResolver
         from menai.menai_desugarer import MenaiDesugarer
         from menai.menai_ast_constant_folder import MenaiASTConstantFolder
@@ -921,7 +921,7 @@ class TestIntegration:
 
         lexer = MenaiLexer()
         ast_builder = MenaiASTBuilder()
-        sem = MenaiSemanticAnalyzer()
+        sem = MenaiASTSemanticAnalyzer()
         resolver = MenaiModuleResolver(None)
         desugarer = MenaiDesugarer()
         folder = MenaiASTConstantFolder()

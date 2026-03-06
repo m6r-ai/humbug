@@ -21,7 +21,7 @@ from menai.menai_builtin_registry import MenaiBuiltinRegistry
 from menai.menai_error import MenaiEvalError
 
 
-class MenaiSemanticAnalyzer:
+class MenaiASTSemanticAnalyzer:
     """
     Validates Menai AST structure and semantics.
 
