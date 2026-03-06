@@ -36,7 +36,14 @@ class Menai:
     # Menai implementations of higher-order functions
     _PRELUDE_SOURCE = """
 (letrec
-  ((boolean=? (lambda (. args)
+  ((function? (lambda (x) ($function? x)))
+   (function=? (lambda (a b) ($function=? a b)))
+   (function!=? (lambda (a b) ($function!=? a b)))
+   (function-min-arity (lambda (f) ($function-min-arity f)))
+   (function-variadic? (lambda (f) ($function-variadic? f)))
+   (function-accepts? (lambda (f n) ($function-accepts? f n)))
+   (boolean? (lambda (x) ($boolean? x)))
+   (boolean=? (lambda (. args)
                 (if ($integer<? ($list-length args) 2)
                     (error "Function 'boolean=?' requires at least 2 arguments")
                     (letrec
@@ -63,6 +70,7 @@ class Menai:
                                                          #f)))))
                                        (inner ($list-rest lst)))))))
                        (outer args)))))
+   (integer? (lambda (x) ($integer? x)))
    (integer=? (lambda (. args)
                 (if ($integer<? ($list-length args) 2)
                     (error "Function 'integer=?' requires at least 2 arguments")
@@ -225,6 +233,7 @@ class Menai:
                       (if ($list-null? rest)
                           ($integer->string n 10)
                           ($integer->string n ($list-first rest)))))
+   (float? (lambda (x) ($float? x)))
    (float=? (lambda (. args)
               (if ($integer<? ($list-length args) 2)
                   (error "Function 'float=?' requires at least 2 arguments")
@@ -362,6 +371,7 @@ class Menai:
    (float->complex (lambda (real . rest)
                      ($float->complex real
                                       (if ($list-null? rest) 0 ($list-first rest)))))
+   (complex? (lambda (x) ($complex? x)))
    (complex=? (lambda (. args)
                 (if ($integer<? ($list-length args) 2)
                     (error "Function 'complex=?' requires at least 2 arguments")
@@ -435,6 +445,7 @@ class Menai:
                                       (loop ($list-rest lst)
                                             ($complex-expn acc ($list-first lst)))))))
                          (loop ($list-rest args) ($list-first args))))))
+   (string? (lambda (x) ($string? x)))
    (string=? (lambda (. args)
                (if ($integer<? ($list-length args) 2)
                    (error "Function 'string=?' requires at least 2 arguments")
@@ -528,6 +539,7 @@ class Menai:
                    ($string->list str
                                   (if ($list-null? rest) "" ($list-first rest)))))
    (list (lambda (. args) args))
+   (list? (lambda (x) ($list? x)))
    (list=? (lambda (. args)
              (if ($integer<? ($list-length args) 2)
                  (error "Function 'list=?' requires at least 2 arguments")
@@ -585,6 +597,7 @@ class Menai:
                                                    ($list-first ($list-first pairs))
                                                    ($list-first ($list-rest ($list-first pairs)))))))))))
              (loop args (dict)))))
+   (dict? (lambda (x) ($dict? x)))
    (dict=? (lambda (. args)
              (if ($integer<? ($list-length args) 2)
                  (error "Function 'dict=?' requires at least 2 arguments")
@@ -616,6 +629,13 @@ class Menai:
                ($dict-get d
                           key
                           (if ($list-null? rest) #none ($list-first rest)))))
+   (dict-set (lambda (d key value) ($dict-set d key value)))
+   (dict-remove (lambda (d key) ($dict-remove d key)))
+   (dict-has? (lambda (d key) ($dict-has? d key)))
+   (dict-keys (lambda (d) ($dict-keys d)))
+   (dict-values (lambda (d) ($dict-values d)))
+   (dict-merge (lambda (d1 d2) ($dict-merge d1 d2)))
+   (dict-length (lambda (d) ($dict-length d)))
    (map-list (lambda (f lst)
                (letrec
                  ((helper (lambda (f lst acc)
