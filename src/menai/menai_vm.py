@@ -8,12 +8,12 @@ from typing import List, Dict, Any, cast, Protocol
 
 from menai.menai_builtin_registry import MenaiBuiltinRegistry
 from menai.menai_bytecode import CodeObject, Opcode
-from menai.menai_bytecode_validator import validate_bytecode
 from menai.menai_error import MenaiEvalError, MenaiCancelledException
 from menai.menai_value import (
     MenaiValue, MenaiBoolean, MenaiString, MenaiList, MenaiDict, MenaiFunction,
     MenaiInteger, MenaiComplex, MenaiFloat, MenaiSymbol, MenaiNone, Menai_NONE
 )
+from menai.menai_vm_bytecode_validator import validate_bytecode
 
 
 class MenaiTraceWatcher(Protocol):
