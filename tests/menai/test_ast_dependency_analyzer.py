@@ -484,3 +484,67 @@ class TestMenaiDependencyAnalyzerEdgeCases:
           result)
         """)
         assert result == 9  # ((5+1)*2)-3 = 12-3 = 9
+
+    def test_inner_letrec_shadows_outer_letrec_same_name(self, menai):
+        """Test that an inner letrec binding with the same name as an outer letrec
+        binding correctly shadows the outer one.
+
+        This is a regression test for a bug in the dependency analyser where
+        _find_free_variables did not handle letrec forms, causing inner letrec
+        binding names to leak as free variables of the outer binding.  The symptom
+        was that a recursive call inside the inner letrec resolved to the outer
+        global binding instead of the inner local one, producing either an infinite
+        loop or a bytecode validation error.
+        """
+        # Basic case: inner letrec shadows outer, inner is self-recursive
+        result = menai.evaluate("""
+        (letrec ((count (lambda (lst)
+                          (letrec ((count (lambda (lst acc)
+                                            (if ($list-null? lst)
+                                                acc
+                                                (count ($list-rest lst)
+                                                       ($integer+ acc 1))))))
+                            (count lst 0)))))
+          (count (list 1 2 3)))
+        """)
+        assert result == 3
+
+        # Same name, deeper nesting
+        result = menai.evaluate("""
+        (letrec ((sum (lambda (lst)
+                        (letrec ((sum (lambda (lst acc)
+                                        (if ($list-null? lst)
+                                            acc
+                                            (sum ($list-rest lst)
+                                                 ($integer+ acc ($list-first lst)))))))
+                          (sum lst 0)))))
+          (sum (list 1 2 3 4 5)))
+        """)
+        assert result == 15
+
+        # Pattern from the stdlib: outer wrapper + inner helper with same name
+        result = menai.evaluate("""
+        (letrec ((any? (lambda (pred lst)
+                         (letrec ((any? (lambda (pred lst)
+                                          (if ($list-null? lst)
+                                              #f
+                                              (if (pred ($list-first lst))
+                                                  #t
+                                                  (any? pred ($list-rest lst)))))))
+                           (any? pred lst)))))
+          (any? (lambda (x) ($integer>? x 3)) (list 1 2 3 4 5)))
+        """)
+        assert result is True
+
+        result = menai.evaluate("""
+        (letrec ((any? (lambda (pred lst)
+                         (letrec ((any? (lambda (pred lst)
+                                          (if ($list-null? lst)
+                                              #f
+                                              (if (pred ($list-first lst))
+                                                  #t
+                                                  (any? pred ($list-rest lst)))))))
+                           (any? pred lst)))))
+          (any? (lambda (x) ($integer>? x 10)) (list 1 2 3 4 5)))
+        """)
+        assert result is False

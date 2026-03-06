@@ -133,6 +133,69 @@ class MenaiASTDependencyAnalyzer:
 
                         return free_vars
 
+                    if first_elem.name == "letrec":
+                        # (letrec ((var1 val1) (var2 val2) ...) body)
+                        # All binding names are in scope for all RHS expressions and the body.
+                        assert expr.length() == 3, "Letrec expressions must have exactly 3 elements (validated by evaluator)"
+
+                        binding_list = expr.get(1)
+                        body = expr.get(2)
+
+                        assert isinstance(binding_list, MenaiASTList), "Letrec binding list must be a list (validated by evaluator)"
+
+                        binding_names = set()
+                        binding_exprs = []
+
+                        for binding in binding_list.elements:
+                            assert isinstance(binding, MenaiASTList), "Letrec bindings must be lists (validated by evaluator)"
+                            assert binding.length() == 2, "Letrec bindings must have exactly 2 elements (validated by evaluator)"
+
+                            var_name = binding.get(0)
+                            var_value = binding.get(1)
+
+                            assert isinstance(var_name, MenaiASTSymbol), \
+                                "Letrec binding variables must be symbols (validated by evaluator)"
+                            binding_names.add(var_name.name)
+                            binding_exprs.append(var_value)
+
+                        for var_value in binding_exprs:
+                            free_vars.update(self._find_free_variables(var_value) - binding_names)
+
+                        body_vars = self._find_free_variables(body)
+                        free_vars.update(body_vars - binding_names)
+
+                        return free_vars
+
+                    if first_elem.name == "let*":
+                        # (let* ((var1 val1) (var2 val2) ...) body)
+                        # Each binding name is in scope for subsequent bindings and the body.
+                        assert expr.length() == 3, "Let* expressions must have exactly 3 elements (validated by evaluator)"
+
+                        binding_list = expr.get(1)
+                        body = expr.get(2)
+
+                        assert isinstance(binding_list, MenaiASTList), "Let* binding list must be a list (validated by evaluator)"
+
+                        bound_so_far: Set[str] = set()
+
+                        for binding in binding_list.elements:
+                            assert isinstance(binding, MenaiASTList), "Let* bindings must be lists (validated by evaluator)"
+                            assert binding.length() == 2, "Let* bindings must have exactly 2 elements (validated by evaluator)"
+
+                            var_name = binding.get(0)
+                            var_value = binding.get(1)
+
+                            assert isinstance(var_name, MenaiASTSymbol), \
+                                "Let* binding variables must be symbols (validated by evaluator)"
+
+                            free_vars.update(self._find_free_variables(var_value) - bound_so_far)
+                            bound_so_far.add(var_name.name)
+
+                        body_vars = self._find_free_variables(body)
+                        free_vars.update(body_vars - bound_so_far)
+
+                        return free_vars
+
                 # Regular list - process all elements
                 for elem in expr.elements:
                     free_vars.update(self._find_free_variables(elem))

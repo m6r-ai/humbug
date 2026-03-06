@@ -15,7 +15,7 @@ class ParenStackFrame:
     """Represents an unclosed opening parenthesis with context."""
     line: int
     column: int
-    parser: 'MenaiASTBuildr'  # Reference to parser for lazy evaluation
+    ast_builder: 'MenaiASTBuilder'  # Reference to AST builder for lazy evaluation
     _expression_type: str | None = None  # Cached lazily
     elements_parsed: int = 0
     last_complete_line: int | None = None
@@ -27,7 +27,7 @@ class ParenStackFrame:
     def get_expression_type(self) -> str:
         """Lazily compute expression type only when needed."""
         if self._expression_type is None:
-            self._expression_type = self.parser.detect_expression_type(self.line, self.column)
+            self._expression_type = self.ast_builder.detect_expression_type(self.line, self.column)
 
         return self._expression_type
 
@@ -37,7 +37,7 @@ class ParenStackFrame:
 
     def get_context_snippet(self) -> str:
         """Lazily compute context snippet only when needed."""
-        return self.parser.get_context_snippet(self.line, self.column, length=30)
+        return self.ast_builder.get_context_snippet(self.line, self.column, length=30)
 
 
 class MenaiASTBuilder:
@@ -186,7 +186,7 @@ class MenaiASTBuilder:
         frame = ParenStackFrame(
             line=line,
             column=column,
-            parser=self  # Pass parser reference for lazy evaluation
+            ast_builder=self  # Pass AST builder reference for lazy evaluation
         )
 
         self.paren_stack.append(frame)

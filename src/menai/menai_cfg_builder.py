@@ -89,6 +89,8 @@ class _FunctionState:
     function: MenaiCFGFunction
     value_counter: int = 0
     block_counter: int = 0
+    self_value: 'MenaiCFGValue | None' = None  # SSA value of the function's own self-capture
+                                                # free var, set for letrec-bound lambdas only.
 
     def new_value(self, hint: str = "") -> MenaiCFGValue:
         """Allocate a new SSA value with an optional hint for debugging."""
@@ -602,6 +604,8 @@ class MenaiCFGBuilder:
                 var_name=fv_name,
             ))
             lambda_scope.bind(fv_name, fv_val)
+            if fv_name == ir.binding_name:
+                state.self_value = fv_val
 
         # Build the body.
         result_val, current_block = self._build_expr(
@@ -634,7 +638,8 @@ class MenaiCFGBuilder:
             if (isinstance(ir.func_plan, MenaiIRVariable)
                     and ir.func_plan.var_type == 'local'
                     and ir.func_plan.name == state.function.binding_name
-                    and state.function.binding_name is not None):
+                    and state.self_value is not None
+                    and func_val is state.self_value):
                 block.terminator = MenaiCFGSelfLoopTerm(args=arg_vals)
                 placeholder = state.new_value("self_loop")
                 return placeholder, block
