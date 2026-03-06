@@ -10,14 +10,9 @@ Position in the pipeline
 
 SSA-to-register mapping
 -----------------------
-The VM is a stack machine transitioning to register-based ops.  We bridge
-the CFG's explicit SSA values by assigning each MenaiCFGValue a local slot
-(register), then emitting POP after each instruction that produces a value
-and PUSH wherever that value must be placed on the call stack for a CALL.
-
-This is deliberately straightforward — it produces correct code and gives the
-existing test suite something to run against.  Redundant PUSH/POP pairs will
-be eliminated as ops are converted to read/write registers directly.
+Each MenaiCFGValue is assigned a local slot (register).  Producer instructions
+write directly to their dest slot.  PUSH is emitted only where the call stack
+protocol requires it: arguments to CALL/APPLY/TAIL_CALL/TAIL_APPLY/SELF_LOOP.
 
 Slot layout
 -----------
@@ -52,9 +47,8 @@ letrec patching
 ---------------
 MenaiCFGPatchClosureInstr in block.patch_instrs is emitted after the block's
 regular instructions and before its terminator.  The VM PATCH_CLOSURE opcode
-takes (closure_slot, capture_index) and pops the value from the stack, so
-we load the value, then emit PATCH_CLOSURE with the closure's slot and the
-capture index.
+is register-based: PATCH_CLOSURE src0=closure_slot, src1=value_slot,
+src2=capture_index.
 
 self-loop (direct tail recursion)
 ----------------------------------
@@ -110,7 +104,6 @@ from menai.menai_cfg import (
     MenaiCFGTraceInstr,
     MenaiCFGValue,
 )
-from menai.menai_cfg_stack_scheduler import MenaiCFGStackScheduler, StackSchedule
 from menai.menai_value import (
     MenaiBoolean,
     MenaiComplex,
@@ -150,9 +143,6 @@ class _EmitContext:
     slot_map: Dict[int, int] = field(default_factory=dict)
     next_slot: int = 0
 
-    # Stack schedule for this function — set before emission begins.
-    schedule: StackSchedule = field(default_factory=StackSchedule)
-
     # Phi result id → slot, populated lazily on first store by a predecessor.
     # Kept separate so we can assert that a phi slot is allocated before the
     # join block tries to read it (via slot_of on the phi result).
@@ -184,25 +174,14 @@ class _EmitContext:
     def ensure_slot(self, value: MenaiCFGValue) -> int:
         """Return a register slot for `value`, materialising it if necessary.
 
-        For slotted values: returns the existing slot.
-        For rematerialisable constants: allocates a fresh slot, emits the
-        constant load into it, and returns that slot.
-        For transient values from stack-based ops: the value is on the stack top;
-        allocate a fresh slot and emit POP to capture it.
-        For transient values from register-based ops: the value is already in its
-        dest slot (allocated by alloc_slot at the call site); slot_of finds it.
+        For values with an existing slot: returns the existing slot.
+        For values without a slot (should not occur in normal operation):
+        allocates a fresh slot and emits POP to capture a value from the stack.
         """
-        # Already has a slot (most common case, and register-based op transients)
         if value.id in self.slot_map:
             return self.slot_map[value.id]
 
-        if self.schedule.is_remat(value):
-            slot = self.next_slot
-            self.next_slot += 1
-            self.emit_constant(self.schedule.remat_value_of(value), slot)
-            return slot
-
-        # Transient from a stack-based op: value is on the stack top
+        # Fallback: value is on the stack top (should not occur with register-based ops)
         slot = self.alloc_slot(value)
         self.emit(Opcode.POP, dest=slot)
         return slot
@@ -215,25 +194,10 @@ class _EmitContext:
 
     def load_value(self, value: MenaiCFGValue) -> None:
         """
-        Emit the instruction(s) needed to make `value` available on the stack.
+        Push `value` onto the call stack.
 
-        For stack-transient values that have a slot (produced by a register-based
-        op such as LOAD_CONST): emit PUSH <slot>.
-        For stack-transient values without a slot: emit nothing — the value is
-        already on top of the stack from the immediately preceding unconverted op.
-        For rematerialisable constants: allocate a temp slot, emit the register
-        load into it, then PUSH it onto the call stack.
-        For slotted values: emit PUSH <slot>.
+        All values have a slot; emit PUSH <slot>.
         """
-        if self.schedule.is_transient(value):
-            if value.id in self.slot_map:
-                self.emit(Opcode.PUSH, self.slot_of(value))
-            return
-
-        if self.schedule.is_remat(value):
-            self.emit_const_push(self.schedule.remat_value_of(value))
-            return
-
         self.emit(Opcode.PUSH, self.slot_of(value))
 
     def emit_constant(self, value: MenaiValue, dest: int) -> None:
@@ -267,26 +231,6 @@ class _EmitContext:
         self.next_slot += 1
         self.emit_constant(value, dest=slot)
         self.emit(Opcode.PUSH, slot)
-
-    def store_result(self, value: MenaiCFGValue) -> int:
-        """
-        Emit the instruction(s) needed to store a freshly computed result.
-
-        For stack-transient values: emit nothing — the value stays on the
-        stack for its single consumer.  Returns -1 (no slot allocated).
-        For rematerialisable constants: emit nothing — no slot needed, the
-        load will be re-emitted at each use site.  Returns -1.
-        For slotted values: allocate a slot, emit POP into <slot>, return slot.
-        """
-        if self.schedule.is_transient(value):
-            return -1
-
-        if self.schedule.is_remat(value):
-            return -1
-
-        slot = self.alloc_slot(value)
-        self.emit(Opcode.POP, dest=slot)
-        return slot
 
     def patch_jump(self, instr_index: int, target: int, src0: str = 'src0') -> None:
         """Back-patch a jump target into the given field of an already-emitted instruction.
@@ -386,10 +330,6 @@ class MenaiVMCodeGen:
         # Phase 1: assign fixed slots to params and free-vars only.
         # Phi slots are allocated lazily in _emit_phi_stores_for_successor.
         param_count = len(func.params)
-
-        # Phase 0: classify SSA values as stack-transient or slotted.
-        ctx.schedule = MenaiCFGStackScheduler().schedule(func)
-
         for block in func.blocks:
             for instr in block.instrs:
                 if isinstance(instr, MenaiCFGParamInstr):
@@ -489,19 +429,12 @@ class MenaiVMCodeGen:
             return
 
         if isinstance(instr, MenaiCFGConstInstr):
-            # Rematerialisable constants: skip entirely at the definition site.
-            # The load will be re-emitted (stack-push, dest=0) at each use site.
-            if not ctx.schedule.is_remat(instr.result):
-                # Always allocate a slot: LOAD_* is now register-based so it must
-                # write to a register even if the stack scheduler marked it transient.
-                slot = ctx.alloc_slot(instr.result)
-                ctx.emit_constant(instr.value, dest=slot)
+            slot = ctx.alloc_slot(instr.result)
+            ctx.emit_constant(instr.value, dest=slot)
             return
 
         if isinstance(instr, MenaiCFGGlobalInstr):
             name_idx = ctx.add_name(instr.name)
-            # LOAD_NAME is register-based: always allocate a slot regardless of
-            # the stack scheduler's transient/slotted classification.
             slot = ctx.alloc_slot(instr.result)
             ctx.emit(Opcode.LOAD_NAME, name_idx, dest=slot)
             return
@@ -534,21 +467,7 @@ class MenaiVMCodeGen:
                 msg_slot = ctx.ensure_slot(msg)
                 ctx.emit(Opcode.EMIT_TRACE, msg_slot)
 
-            # instr.value may be stack-transient with no slot, meaning it is
-            # sitting on top of the stack from the preceding stack-based op.
-            # We must pop it into a fresh slot before recording the result slot.
-            # A transient MenaiCFGConstInstr is given a register slot by the
-            # const emitter even though the scheduler marks it transient, so we
-            # check slot_map to distinguish "truly on stack" from "in register".
-            if ctx.schedule.is_transient(instr.value) and instr.value.id not in ctx.slot_map:
-                result_slot = ctx.next_slot
-                ctx.next_slot += 1
-                ctx.slot_map[instr.value.id] = result_slot
-                ctx.emit(Opcode.POP, dest=result_slot)
-
-            else:
-                result_slot = ctx.ensure_slot(instr.value)
-
+            result_slot = ctx.ensure_slot(instr.value)
             ctx.slot_map[instr.result.id] = result_slot
             return
 
