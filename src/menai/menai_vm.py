@@ -1179,28 +1179,32 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_LT_P dest, src0, src1: r_dest = (integer<? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer<?') < self._ensure_integer(frame.locals[src1], 'integer<?'))
+        src1_val = self._ensure_integer(frame.locals[src1], 'integer<?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer<?') < src1_val)
         return None
 
     def _op_integer_gt_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_GT_P dest, src0, src1: r_dest = (integer>? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer>?') > self._ensure_integer(frame.locals[src1], 'integer>?'))
+        src1_val = self._ensure_integer(frame.locals[src1], 'integer>?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer>?') > src1_val)
         return None
 
     def _op_integer_lte_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_LTE_P dest, src0, src1: r_dest = (integer<=? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer<=?') <= self._ensure_integer(frame.locals[src1], 'integer<=?'))
+        src1_val = self._ensure_integer(frame.locals[src1], 'integer<=?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer<=?') <= src1_val)
         return None
 
     def _op_integer_gte_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_GTE_P dest, src0, src1: r_dest = (integer>=? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer>=?') >= self._ensure_integer(frame.locals[src1], 'integer>=?'))
+        src1_val = self._ensure_integer(frame.locals[src1], 'integer>=?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer>=?') >= src1_val)
         return None
 
     def _op_integer_abs(  # pylint: disable=useless-return
@@ -1214,21 +1218,24 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_ADD dest, src0, src1: r_dest = (integer+ r_src0 r_src1)"""
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer+') + self._ensure_integer(frame.locals[src1], 'integer+'))
+        src1_val = self._ensure_integer(frame.locals[src1], 'integer+')
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer+') + src1_val)
         return None
 
     def _op_integer_sub(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_SUB dest, src0, src1: r_dest = (integer- r_src0 r_src1)"""
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-') - self._ensure_integer(frame.locals[src1], 'integer-'))
+        src1_val = self._ensure_integer(frame.locals[src1], 'integer-')
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-') - src1_val)
         return None
 
     def _op_integer_mul(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_MUL dest, src0, src1: r_dest = (integer* r_src0 r_src1)"""
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer*') * self._ensure_integer(frame.locals[src1], 'integer*'))
+        src1_val = self._ensure_integer(frame.locals[src1], 'integer*')
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer*') * src1_val)
         return None
 
     def _op_integer_div(  # pylint: disable=useless-return
@@ -1285,35 +1292,40 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_SHIFT_LEFT dest, src0, src1: r_dest = (integer-bit-shift-left r_src0 r_src1)"""
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-shift-left') << self._ensure_integer(frame.locals[src1], 'integer-bit-shift-left'))
+        src1_val = self._ensure_integer(frame.locals[src1], 'integer-bit-shift-left')
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-shift-left') << src1_val)
         return None
 
     def _op_integer_bit_shift_right(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_SHIFT_RIGHT dest, src0, src1: r_dest = (integer-bit-shift-right r_src0 r_src1)"""
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-shift-right') >> self._ensure_integer(frame.locals[src1], 'integer-bit-shift-right'))
+        src1_val = self._ensure_integer(frame.locals[src1], 'integer-bit-shift-right')
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-shift-right') >> src1_val)
         return None
 
     def _op_integer_bit_or(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_OR dest, src0, src1: r_dest = (integer-bit-or r_src0 r_src1)"""
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-or') | self._ensure_integer(frame.locals[src1], 'integer-bit-or'))
+        src1_val = self._ensure_integer(frame.locals[src1], 'integer-bit-or')
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-or') | src1_val)
         return None
 
     def _op_integer_bit_and(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_AND dest, src0, src1: r_dest = (integer-bit-and r_src0 r_src1)"""
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-and') & self._ensure_integer(frame.locals[src1], 'integer-bit-and'))
+        src1_val = self._ensure_integer(frame.locals[src1], 'integer-bit-and')
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-and') & src1_val)
         return None
 
     def _op_integer_bit_xor(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_XOR dest, src0, src1: r_dest = (integer-bit-xor r_src0 r_src1)"""
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-xor') ^ self._ensure_integer(frame.locals[src1], 'integer-bit-xor'))
+        src1_val = self._ensure_integer(frame.locals[src1], 'integer-bit-xor')
+        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-xor') ^ src1_val)
         return None
 
     def _op_integer_to_float(  # pylint: disable=useless-return
@@ -1402,28 +1414,32 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LT_P dest, src0, src1: r_dest = (float<? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float<?') < self._ensure_float(frame.locals[src1], 'float<?'))
+        src1_val = self._ensure_float(frame.locals[src1], 'float<?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float<?') < src1_val)
         return None
 
     def _op_float_gt_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_GT_P dest, src0, src1: r_dest = (float>? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float>?') > self._ensure_float(frame.locals[src1], 'float>?'))
+        src1_val = self._ensure_float(frame.locals[src1], 'float>?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float>?') > src1_val)
         return None
 
     def _op_float_lte_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LTE_P dest, src0, src1: r_dest = (float<=? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float<=?') <= self._ensure_float(frame.locals[src1], 'float<=?'))
+        src1_val = self._ensure_float(frame.locals[src1], 'float<=?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float<=?') <= src1_val)
         return None
 
     def _op_float_gte_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_GTE_P dest, src0, src1: r_dest = (float>=? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float>=?') >= self._ensure_float(frame.locals[src1], 'float>=?'))
+        src1_val = self._ensure_float(frame.locals[src1], 'float>=?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float>=?') >= src1_val)
         return None
 
     def _op_float_abs(  # pylint: disable=useless-return
@@ -1437,21 +1453,24 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_ADD dest, src0, src1: r_dest = (float+ r_src0 r_src1)"""
-        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float+') + self._ensure_float(frame.locals[src1], 'float+'))
+        src1_val = self._ensure_float(frame.locals[src1], 'float+')
+        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float+') + src1_val)
         return None
 
     def _op_float_sub(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_SUB dest, src0, src1: r_dest = (float- r_src0 r_src1)"""
-        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float-') - self._ensure_float(frame.locals[src1], 'float-'))
+        src1_val = self._ensure_float(frame.locals[src1], 'float-')
+        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float-') - src1_val)
         return None
 
     def _op_float_mul(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_MUL dest, src0, src1: r_dest = (float* r_src0 r_src1)"""
-        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float*') * self._ensure_float(frame.locals[src1], 'float*'))
+        src1_val = self._ensure_float(frame.locals[src1], 'float*')
+        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float*') * src1_val)
         return None
 
     def _op_float_div(  # pylint: disable=useless-return
@@ -1508,7 +1527,8 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_EXPN dest, src0, src1: r_dest = (float-expn r_src0 r_src1)"""
-        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float-expn') ** self._ensure_float(frame.locals[src1], 'float-expn'))
+        src1_val = self._ensure_float(frame.locals[src1], 'float-expn')
+        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float-expn') ** src1_val)
         return None
 
     def _op_float_log(  # pylint: disable=useless-return
@@ -1752,21 +1772,24 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_ADD dest, src0, src1: r_dest = (complex+ r_src0 r_src1)"""
-        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex+') + self._ensure_complex(frame.locals[src1], 'complex+'))
+        src1_val = self._ensure_complex(frame.locals[src1], 'complex+')
+        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex+') + src1_val)
         return None
 
     def _op_complex_sub(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_SUB dest, src0, src1: r_dest = (complex- r_src0 r_src1)"""
-        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex-') - self._ensure_complex(frame.locals[src1], 'complex-'))
+        src1_val = self._ensure_complex(frame.locals[src1], 'complex-')
+        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex-') - src1_val)
         return None
 
     def _op_complex_mul(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_MUL dest, src0, src1: r_dest = (complex* r_src0 r_src1)"""
-        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex*') * self._ensure_complex(frame.locals[src1], 'complex*'))
+        src1_val = self._ensure_complex(frame.locals[src1], 'complex*')
+        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex*') * src1_val)
         return None
 
     def _op_complex_div(  # pylint: disable=useless-return
@@ -1799,7 +1822,8 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_EXPN dest, src0, src1: r_dest = (complex-expn r_src0 r_src1)"""
-        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex-expn') ** self._ensure_complex(frame.locals[src1], 'complex-expn'))
+        src1_val = self._ensure_complex(frame.locals[src1], 'complex-expn')
+        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex-expn') ** src1_val)
         return None
 
     def _op_complex_log(  # pylint: disable=useless-return
@@ -1874,42 +1898,48 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_EQ_P dest, src0, src1: r_dest = (string=? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string=?') == self._ensure_string(frame.locals[src1], 'string=?'))
+        src1_val = self._ensure_string(frame.locals[src1], 'string=?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string=?') == src1_val)
         return None
 
     def _op_string_neq_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_NEQ_P dest, src0, src1: r_dest = (string!=? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string!=?') != self._ensure_string(frame.locals[src1], 'string!=?'))
+        src1_val = self._ensure_string(frame.locals[src1], 'string!=?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string!=?') != src1_val)
         return None
 
     def _op_string_lt_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_LT_P dest, src0, src1: r_dest = (string<? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string<?') < self._ensure_string(frame.locals[src1], 'string<?'))
+        src1_val = self._ensure_string(frame.locals[src1], 'string<?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string<?') < src1_val)
         return None
 
     def _op_string_gt_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_GT_P dest, src0, src1: r_dest = (string>? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string>?') > self._ensure_string(frame.locals[src1], 'string>?'))
+        src1_val = self._ensure_string(frame.locals[src1], 'string>?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string>?') > src1_val)
         return None
 
     def _op_string_lte_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_LTE_P dest, src0, src1: r_dest = (string<=? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string<=?') <= self._ensure_string(frame.locals[src1], 'string<=?'))
+        src1_val = self._ensure_string(frame.locals[src1], 'string<=?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string<=?') <= src1_val)
         return None
 
     def _op_string_gte_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_GTE_P dest, src0, src1: r_dest = (string>=? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string>=?') >= self._ensure_string(frame.locals[src1], 'string>=?'))
+        src1_val = self._ensure_string(frame.locals[src1], 'string>=?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string>=?') >= src1_val)
         return None
 
     def _op_string_length(  # pylint: disable=useless-return
@@ -2021,14 +2051,16 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_PREFIX_P dest, src0, src1: r_dest = (string-prefix? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string-prefix?').startswith(self._ensure_string(frame.locals[src1], 'string-prefix?')))
+        src1_val = self._ensure_string(frame.locals[src1], 'string-prefix?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string-prefix?').startswith(src1_val))
         return None
 
     def _op_string_suffix_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_SUFFIX_P dest, src0, src1: r_dest = (string-suffix? r_src0 r_src1)"""
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string-suffix?').endswith(self._ensure_string(frame.locals[src1], 'string-suffix?')))
+        src1_val = self._ensure_string(frame.locals[src1], 'string-suffix?')
+        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string-suffix?').endswith(src1_val))
         return None
 
     def _op_string_slice(  # pylint: disable=useless-return
@@ -2081,7 +2113,8 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_CONCAT dest, src0, src1: r_dest = (string-concat r_src0 r_src1)"""
-        frame.locals[dest] = MenaiString(self._ensure_string(frame.locals[src0], 'string-concat') + self._ensure_string(frame.locals[src1], 'string-concat'))
+        src1_val = self._ensure_string(frame.locals[src1], 'string-concat')
+        frame.locals[dest] = MenaiString(self._ensure_string(frame.locals[src0], 'string-concat') + src1_val)
 
         return None
 
