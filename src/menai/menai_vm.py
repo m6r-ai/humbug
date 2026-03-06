@@ -6,7 +6,6 @@ from dataclasses import dataclass, field
 import math
 from typing import List, Dict, Any, cast, Protocol
 
-from menai.menai_builtin_registry import MenaiBuiltinRegistry
 from menai.menai_bytecode import CodeObject, Opcode
 from menai.menai_error import MenaiEvalError, MenaiCancelledException
 from menai.menai_value import (
@@ -79,12 +78,6 @@ class MenaiVM:
 
         # Check cancellation every N instructions (balance between responsiveness and performance)
         self._cancellation_check_interval: int = 1000
-
-        # Create builtin registry to build first-class function objects
-        builtin_registry = MenaiBuiltinRegistry()
-
-        # Create builtin function objects for first-class function support (e.g., passed to map)
-        self._builtin_functions = builtin_registry.create_builtin_function_objects()
 
         # Build dispatch table for fast opcode execution
         self._dispatch_table = self._build_dispatch_table()
@@ -455,7 +448,6 @@ class MenaiVM:
             validate_bytecode(code)
 
         self.globals = constants.copy()
-        self.globals.update(self._builtin_functions)
         if prelude_functions:
             self.globals.update(prelude_functions)
 

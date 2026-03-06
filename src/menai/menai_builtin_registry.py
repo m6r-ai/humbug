@@ -5,10 +5,9 @@ This module provides builtin function metadata and first-class function objects
 for all builtins, used by the VM to populate the global environment.
 """
 
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple
 
-from menai.menai_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Instruction, Opcode
-from menai.menai_value import MenaiFunction
+from menai.menai_bytecode import BUILTIN_OPCODE_MAP
 
 
 class MenaiBuiltinRegistry:
@@ -33,9 +32,6 @@ class MenaiBuiltinRegistry:
     # zip, unzip, find, any?, all?, etc.) are NOT in this table and must NOT
     # be added — the registry asserts every entry has a BUILTIN_OPCODE_MAP
     # entry, so adding a prelude-only name will cause an assertion failure.
-    #
-    # Consumed by: get_function_arity() (for the semantic analyser) and
-    # create_builtin_function_objects() (building MenaiFunction stubs).
     BUILTIN_FUNCTION_ARITIES: Dict[str, Tuple[int, int | None]] = {
         'function?': (1, 1),
         'function=?': (2, 2),
@@ -189,7 +185,7 @@ class MenaiBuiltinRegistry:
     }
 
     @staticmethod
-    def get_function_arity(name: str) -> Optional[Tuple[int, int | None]]:
+    def get_function_arity(name: str) -> Tuple[int, int | None] | None:
         """Return (min_args, max_args) for a known builtin function, or None if unknown.
 
         max_args is None for truly variadic functions (no upper bound).
@@ -208,7 +204,7 @@ class MenaiBuiltinRegistry:
         return name in BUILTIN_OPCODE_MAP
 
     @staticmethod
-    def get_primitive_arity(name: str) -> Optional[int]:
+    def get_primitive_arity(name: str) -> int | None:
         """Return the exact argument count of the primitive form of this builtin, or None.
 
         Returns None if this name has no primitive form (i.e. it is a pure-Menai
@@ -221,186 +217,3 @@ class MenaiBuiltinRegistry:
 
         _, arity = entry
         return arity
-
-    def create_builtin_function_objects(self) -> Dict[str, MenaiFunction]:
-        """
-        Create MenaiFunction objects for all builtins.
-
-        This is used to populate the global environment with first-class function objects.
-
-        Fixed-arity builtins that appear in BUILTIN_OPCODE_MAP are represented as
-        MenaiFunction objects with a bytecode stub — a minimal CodeObject whose body
-        is the single opcode followed by RETURN.  The stub has no locals and no
-        constants; it relies entirely on the arguments already being on the stack
-        when CALL enters the frame.
-
-        Names provided by the Menai prelude are skipped entirely — the prelude's
-        compiled lambda objects take effect in the global environment instead.
-
-        Returns:
-            Dictionary mapping function names to MenaiFunction objects
-        """
-        # Names provided by the Menai prelude — the registry skips these so the
-        # prelude's compiled function objects take effect in the global environment.
-        # These names are still kept in BUILTIN_FUNCTION_ARITIES so that 2-arg calls inside
-        # their own prelude stub bodies resolve to opcodes correctly via
-        # BUILTIN_OPCODE_MAP in the codegen.
-        prelude_names = {
-            'function?',
-            'function=?',
-            'function!=?',
-            'function-min-arity',
-            'function-variadic?',
-            'function-accepts?',
-            'symbol?',
-            'symbol=?',
-            'symbol!=?',
-            'symbol->string',
-            'none?',
-            'boolean?',
-            'boolean=?',
-            'boolean!=?',
-            'boolean-not',
-            'integer?',
-            'integer=?',
-            'integer!=?',
-            'integer<?',
-            'integer>?',
-            'integer<=?',
-            'integer>=?',
-            'integer+',
-            'integer-',
-            'integer*',
-            'integer/',
-            'integer%',
-            'integer-neg',
-            'integer-expn',
-            'integer-abs',
-            'integer-bit-or',
-            'integer-bit-and',
-            'integer-bit-xor',
-            'integer-bit-not',
-            'integer-bit-shift-left',
-            'integer-bit-shift-right',
-            'integer-min',
-            'integer-max',
-            'integer->complex',
-            'integer->string',
-            'integer->float',
-            'float?',
-            'float=?',
-            'float!=?',
-            'float<?',
-            'float>?',
-            'float<=?',
-            'float>=?',
-            'float+',
-            'float-',
-            'float*',
-            'float/',
-            'float//',
-            'float%',
-            'float-neg',
-            'float-exp',
-            'float-expn',
-            'float-log',
-            'float-log10',
-            'float-log2',
-            'float-logn',
-            'float-sin',
-            'float-cos',
-            'float-tan',
-            'float-sqrt',
-            'float-abs',
-            'float->integer',
-            'float->complex',
-            'float->string',
-            'float-floor',
-            'float-ceil',
-            'float-round',
-            'float-min',
-            'float-max',
-            'complex?',
-            'complex=?',
-            'complex!=?',
-            'complex+',
-            'complex-',
-            'complex*',
-            'complex/',
-            'complex-expn',
-            'string?',
-            'string=?',
-            'string!=?',
-            'string<?',
-            'string>?',
-            'string<=?',
-            'string>=?',
-            'string-concat',
-            'string-slice',
-            'string->list',
-            'string->integer',
-            'list',
-            'list?',
-            'list=?',
-            'list!=?',
-            'list-concat',
-            'list-slice',
-            'list->string',
-            'dict',
-            'dict?',
-            'dict=?',
-            'dict!=?',
-            'dict-get',
-            'dict-set',
-            'dict-remove',
-            'dict-has?',
-            'dict-keys',
-            'dict-values',
-            'dict-merge',
-            'dict-length',
-            'range',
-        }
-
-        builtins = {}
-        for name, (min_args, max_args) in self.BUILTIN_FUNCTION_ARITIES.items():
-            if name in prelude_names:
-                # Prelude supplies the function object for this name
-                continue
-
-            is_fixed_arity = (max_args is not None and min_args == max_args)
-
-            assert name in BUILTIN_OPCODE_MAP, f"Builtin '{name}' is missing from BUILTIN_OPCODE_MAP"
-            assert is_fixed_arity, f"Builtin '{name}' is variadic but missing from prelude_names set"
-
-            # Truly fixed-arity builtin: generate a bytecode stub
-            opcode, arity = BUILTIN_OPCODE_MAP[name]
-            # ENTER pops arity args from the call stack into locals 0..arity-1.
-            # Omit ENTER when arity=0 (nothing to pop).
-            enter_instrs = [Instruction(Opcode.ENTER, src0=arity)] if arity > 0 else []
-
-            result_slot = arity
-            instructions = [
-                *enter_instrs,
-                Instruction(opcode, dest=result_slot),
-                Instruction(Opcode.RETURN, src0=result_slot),
-            ]
-            local_count = arity + 1
-
-            stub = CodeObject(
-                instructions=instructions,
-                constants=[],
-                names=[],
-                code_objects=[],
-                param_count=arity,
-                local_count=local_count,
-                name=f'<builtin:{name}>',
-            )
-            parameters = tuple(f'arg{i}' for i in range(arity))
-            builtins[name] = MenaiFunction(
-                parameters=parameters,
-                name=name,
-                bytecode=stub,
-                is_variadic=False
-            )
-
-        return builtins

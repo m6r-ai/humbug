@@ -467,6 +467,10 @@ class Menai:
                                   acc
                                   (loop ($list-rest lst) ($complex/ acc ($list-first lst)))))))
                      (loop ($list-rest args) ($list-first args))))))
+   (complex-neg (lambda (a) ($complex-neg a)))
+   (complex-real (lambda (a) ($complex-real a)))
+   (complex-imag (lambda (a) ($complex-imag a)))
+   (complex-exp (lambda (a) ($complex-exp a)))
    (complex-expn (lambda (. args)
                    (if ($integer<? ($list-length args) 2)
                        (error "Function 'complex-expt' requires at least 2 arguments")
@@ -477,6 +481,15 @@ class Menai:
                                       (loop ($list-rest lst)
                                             ($complex-expn acc ($list-first lst)))))))
                          (loop ($list-rest args) ($list-first args))))))
+   (complex-log (lambda (a) ($complex-log a)))
+   (complex-log10 (lambda (a) ($complex-log10 a)))
+   (complex-logn (lambda (a b) ($complex-logn a b)))
+   (complex-sin (lambda (a) ($complex-sin a)))
+   (complex-cos (lambda (a) ($complex-cos a)))
+   (complex-tan (lambda (a) ($complex-tan a)))
+   (complex-sqrt (lambda (a) ($complex-sqrt a)))
+   (complex-abs (lambda (a) ($complex-abs a)))
+   (complex->string (lambda (c) ($complex->string c)))
    (string? (lambda (x) ($string? x)))
    (string=? (lambda (. args)
                (if ($integer<? ($list-length args) 2)
@@ -559,10 +572,22 @@ class Menai:
                                        (loop ($list-rest lst)
                                              ($string-concat acc ($list-first lst)))))))
                           (loop ($list-rest args) ($list-first args))))))
+   (string-length (lambda (s) ($string-length s)))
+   (string-upcase (lambda (s) ($string-upcase s)))
+   (string-downcase (lambda (s) ($string-downcase s)))
+   (string-trim (lambda (s) ($string-trim s)))
+   (string-trim-left (lambda (s) ($string-trim-left s)))
+   (string-trim-right (lambda (s) ($string-trim-right s)))
+   (string-replace (lambda (s old new) ($string-replace s old new)))
+   (string-index (lambda (s sub) ($string-index s sub)))
+   (string-prefix? (lambda (s prefix) ($string-prefix? s prefix)))
+   (string-suffix? (lambda (s suffix) ($string-suffix? s suffix)))
+   (string-ref (lambda (s i) ($string-ref s i)))
    (string-slice (lambda (str start . rest)
                    (if ($list-null? rest)
                        ($string-slice str start ($string-length str))
                        ($string-slice str start ($list-first rest)))))
+   (string->number (lambda (s) ($string->number s)))
    (string->integer (lambda (s . rest)
                       (if ($list-null? rest)
                           ($string->integer s 10)
@@ -599,6 +624,8 @@ class Menai:
                                                       #f)))))
                                     (inner ($list-rest lst)))))))
                     (outer args)))))
+   (list-prepend (lambda (lst elem) ($list-prepend lst elem)))
+   (list-append (lambda (lst elem) ($list-append lst elem)))
    (list-concat (lambda (. args)
                   (if ($list-null? args)
                       (list)
@@ -608,10 +635,20 @@ class Menai:
                                      acc
                                      (loop ($list-rest lst) ($list-concat acc ($list-first lst)))))))
                         (loop ($list-rest args) ($list-first args))))))
+   (list-reverse (lambda (lst) ($list-reverse lst)))
+   (list-first (lambda (lst) ($list-first lst)))
+   (list-rest (lambda (lst) ($list-rest lst)))
+   (list-length (lambda (lst) ($list-length lst)))
+   (list-last (lambda (lst) ($list-last lst)))
+   (list-member? (lambda (elem lst) ($list-member? elem lst)))
+   (list-null? (lambda (lst) ($list-null? lst)))
+   (list-index (lambda (elem lst) ($list-index elem lst)))
    (list-slice (lambda (lst start . rest)
                  (if ($list-null? rest)
                      ($list-slice lst start ($list-length lst))
                      ($list-slice lst start ($list-first rest)))))
+   (list-remove (lambda (lst elem) ($list-remove lst elem)))
+   (list-ref (lambda (lst i) ($list-ref lst i)))
    (list->string (lambda (lst . rest)
                    ($list->string lst
                                   (if ($list-null? rest) "" ($list-first rest)))))
@@ -802,11 +839,18 @@ class Menai:
   ($dict-set ($dict-set ($dict-set ($dict-set ($dict-set
   ($dict-set ($dict-set ($dict-set ($dict-set ($dict-set
   ($dict-set ($dict-set ($dict-set ($dict-set ($dict-set
-  ($dict-set ($dict-set ($dict-set ($dict-set
   ($dict-set ($dict-set ($dict-set ($dict-set ($dict-set
   ($dict-set ($dict-set ($dict-set ($dict-set ($dict-set
   ($dict-set ($dict-set ($dict-set ($dict-set ($dict-set
-  ($dict-set ($dict-set ($dict-set
+  ($dict-set ($dict-set ($dict-set ($dict-set ($dict-set
+  ($dict-set ($dict-set ($dict-set ($dict-set ($dict-set
+  ($dict-set ($dict-set ($dict-set ($dict-set ($dict-set
+  ($dict-set ($dict-set ($dict-set ($dict-set ($dict-set
+  ($dict-set ($dict-set ($dict-set ($dict-set ($dict-set
+  ($dict-set ($dict-set ($dict-set ($dict-set ($dict-set
+  ($dict-set ($dict-set ($dict-set ($dict-set ($dict-set
+  ($dict-set ($dict-set ($dict-set ($dict-set ($dict-set
+  ($dict-set ($dict-set ($dict-set ($dict-set 
     ($dict-set (dict)
     "function?" function?)
     "function=?" function=?)
@@ -889,7 +933,20 @@ class Menai:
     "complex-" complex-)
     "complex*" complex*)
     "complex/" complex/)
+    "complex-neg" complex-neg)
+    "complex-real" complex-real)
+    "complex-imag" complex-imag)
+    "complex-exp" complex-exp)
     "complex-expn" complex-expn)
+    "complex-log" complex-log)
+    "complex-log10" complex-log10)
+    "complex-logn" complex-logn)
+    "complex-sin" complex-sin)
+    "complex-cos" complex-cos)
+    "complex-tan" complex-tan)
+    "complex-sqrt" complex-sqrt)
+    "complex-abs" complex-abs)
+    "complex->string" complex->string)
     "string?" string?)
     "string=?" string=?)
     "string!=?" string!=?)
@@ -898,15 +955,39 @@ class Menai:
     "string<=?" string<=?)
     "string>=?" string>=?)
     "string-concat" string-concat)
+    "string-length" string-length)
+    "string-upcase" string-upcase)
+    "string-downcase" string-downcase)
+    "string-trim" string-trim)
+    "string-trim-left" string-trim-left)
+    "string-trim-right" string-trim-right)
+    "string-replace" string-replace)
+    "string-index" string-index)
+    "string-prefix?" string-prefix?)
+    "string-suffix?" string-suffix?)
+    "string-ref" string-ref)
     "string-slice" string-slice)
+    "string->number" string->number)
     "string->integer" string->integer)
     "string->list" string->list)
     "list" list)
     "list?" list?)
     "list=?" list=?)
     "list!=?" list!=?)
+    "list-prepend" list-prepend)
+    "list-append" list-append)
     "list-concat" list-concat)
+    "list-reverse" list-reverse)
+    "list-first" list-first)
+    "list-rest" list-rest)
+    "list-length" list-length)
+    "list-last" list-last)
+    "list-member?" list-member?)
+    "list-null?" list-null?)
+    "list-index" list-index)
     "list-slice" list-slice)
+    "list-remove" list-remove)
+    "list-ref" list-ref)
     "list->string" list->string)
     "dict" dict)
     "dict?" dict?)
@@ -964,6 +1045,8 @@ class Menai:
                 f"Prelude dict key must be a string, got {key.type_name()}"
             assert isinstance(value, MenaiFunction), \
                 f"Prelude dict value for '{key.value}' must be a function, got {value.type_name()}"
+            assert stdlib.get(key.value) is None, \
+                f"Duplicate function name in prelude: '{key.value}'"
             stdlib[key.value] = value
 
         cls._prelude_cache = stdlib
