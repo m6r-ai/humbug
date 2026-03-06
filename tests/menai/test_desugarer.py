@@ -6,7 +6,7 @@ This module tests the desugarer's ability to transform complex constructs
 
 import pytest
 
-from menai.menai_desugarer import MenaiDesugarer
+from menai.menai_ast_desugarer import MenaiASTDesugarer
 from menai.menai_lexer import MenaiLexer
 from menai.menai_ast_builder import MenaiASTBuilder
 from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
@@ -33,7 +33,7 @@ class TestDesugarerBasic:
 
     def test_literals_pass_through(self):
         """Test that literals pass through unchanged."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # Numbers
         num = MenaiASTInteger(42)
@@ -49,21 +49,21 @@ class TestDesugarerBasic:
 
     def test_symbols_pass_through(self):
         """Test that symbols pass through unchanged."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         symbol = MenaiASTSymbol('x')
         assert desugarer.desugar(symbol) == symbol
 
     def test_empty_list_passes_through(self):
         """Test that empty lists pass through unchanged."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         empty = MenaiASTList(())
         assert desugarer.desugar(empty) == empty
 
     def test_quote_not_desugared(self):
         """Test that quoted expressions are not desugared."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (quote (match x (42 "found")))
         expr = parse_and_analyze_expression("(quote (match x (42 \"found\")))")
@@ -79,7 +79,7 @@ class TestDesugarerCoreConstructs:
 
     def test_if_desugars_children(self):
         """Test that if expressions desugar their children."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (if (match x (42 #t) (_ #f)) "yes" "no")
         # The match should be desugared, but if structure preserved
@@ -97,7 +97,7 @@ class TestDesugarerCoreConstructs:
 
     def test_let_desugars_children(self):
         """Test that let expressions desugar their children."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (let ((x (match y (42 1) (_ 0)))) x)
         expr = parse_and_analyze_expression('(let ((x (match y (42 1) (_ 0)))) x)')
@@ -116,7 +116,7 @@ class TestDesugarerCoreConstructs:
 
     def test_lambda_desugars_body(self):
         """Test that lambda expressions desugar their body."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (lambda (x) (match x (42 "found") (_ "not found")))
         expr = parse_and_analyze_expression('(lambda (x) (match x (42 "found") (_ "not found")))')
@@ -133,7 +133,7 @@ class TestDesugarerCoreConstructs:
 
     def test_function_call_desugars_all_elements(self):
         """Test that function calls desugar all elements."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (+ (match x (42 1) (_ 0)) (match y (1 10) (_ 0)))
         expr = parse_and_analyze_expression('(+ (match x (42 1) (_ 0)) (match y (1 10) (_ 0)))')
@@ -157,7 +157,7 @@ class TestDesugarerMatchLiteral:
 
     def test_match_number_literal(self):
         """Test desugaring of number literal pattern."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x (42 "found") (_ "default"))
         expr = parse_and_analyze_expression('(match x (42 "found") (_ "default"))')
@@ -185,7 +185,7 @@ class TestDesugarerMatchLiteral:
 
     def test_match_string_literal(self):
         """Test desugaring of string literal pattern."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x ("hello" "greeting") (_ "other"))
         expr = parse_and_analyze_expression('(match x ("hello" "greeting") (_ "other"))')
@@ -201,7 +201,7 @@ class TestDesugarerMatchLiteral:
 
     def test_match_boolean_literal(self):
         """Test desugaring of boolean literal pattern."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x (#t "true") (#f "false"))
         expr = parse_and_analyze_expression('(match x (#t "true") (#f "false"))')
@@ -217,7 +217,7 @@ class TestDesugarerMatchVariable:
 
     def test_match_variable_binding(self):
         """Test desugaring of variable binding pattern."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x (n n))
         expr = parse_and_analyze_expression('(match x (n n))')
@@ -243,7 +243,7 @@ class TestDesugarerMatchVariable:
 
     def test_match_wildcard(self):
         """Test desugaring of wildcard pattern."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x (_ "anything"))
         expr = parse_and_analyze_expression('(match x (_ "anything"))')
@@ -273,7 +273,7 @@ class TestDesugarerMatchType:
 
     def test_match_type_pattern(self):
         """Test desugaring of type pattern."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x ((? number? n) n) (_ "not a number"))
         expr = parse_and_analyze_expression('(match x ((? number? n) n) (_ "not a number"))')
@@ -299,7 +299,7 @@ class TestDesugarerMatchType:
 
     def test_match_type_pattern_with_wildcard(self):
         """Test desugaring of type pattern with wildcard."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x ((? string? _) "is string") (_ "not string"))
         expr = parse_and_analyze_expression('(match x ((? string? _) "is string") (_ "not string"))')
@@ -325,7 +325,7 @@ class TestDesugarerMatchList:
 
     def test_match_empty_list(self):
         """Test desugaring of empty list pattern."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x (() "empty") (_ "not empty"))
         expr = parse_and_analyze_expression('(match x (() "empty") (_ "not empty"))')
@@ -342,7 +342,7 @@ class TestDesugarerMatchList:
 
     def test_match_fixed_list_simple(self):
         """Test desugaring of simple fixed-length list pattern."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x ((a b) (list a b)) (_ "wrong"))
         expr = parse_and_analyze_expression('(match x ((a b) (list a b)) (_ "wrong"))')
@@ -372,7 +372,7 @@ class TestDesugarerMatchList:
 
     def test_match_fixed_list_with_literals(self):
         """Test desugaring of fixed-length list with literal patterns."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x ((1 2 3) "found") (_ "not found"))
         expr = parse_and_analyze_expression('(match x ((1 2 3) "found") (_ "not found"))')
@@ -388,7 +388,7 @@ class TestDesugarerMatchCons:
 
     def test_match_cons_simple(self):
         """Test desugaring of simple cons pattern."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x ((head . tail) (list head tail)) (_ "not list"))
         expr = parse_and_analyze_expression('(match x ((head . tail) (list head tail)) (_ "not list"))')
@@ -408,7 +408,7 @@ class TestDesugarerMatchCons:
 
     def test_match_cons_multiple_heads(self):
         """Test desugaring of cons pattern with multiple head elements."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x ((a b . rest) (list a b rest)) (_ "not list"))
         expr = parse_and_analyze_expression('(match x ((a b . rest) (list a b rest)) (_ "not list"))')
@@ -424,7 +424,7 @@ class TestDesugarerMatchNested:
 
     def test_match_nested_list(self):
         """Test desugaring of nested list pattern."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x (((a b)) (list a b)) (_ "wrong"))
         expr = parse_and_analyze_expression('(match x (((a b)) (list a b)) (_ "wrong"))')
@@ -436,7 +436,7 @@ class TestDesugarerMatchNested:
 
     def test_match_nested_type(self):
         """Test desugaring of nested type pattern."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x (((? number? n)) n) (_ "not list with number"))
         expr = parse_and_analyze_expression('(match x (((? number? n)) n) (_ "not list with number"))')
@@ -452,7 +452,7 @@ class TestDesugarerMatchMultipleClauses:
 
     def test_match_multiple_clauses_simple(self):
         """Test desugaring of match with multiple simple clauses."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x (1 "one") (2 "two") (3 "three") (_ "other"))
         expr = parse_and_analyze_expression('(match x (1 "one") (2 "two") (3 "three") (_ "other"))')
@@ -473,7 +473,7 @@ class TestDesugarerMatchMultipleClauses:
 
     def test_match_multiple_clauses_complex(self):
         """Test desugaring of match with complex multiple clauses."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x ((? number? n) n) ((? string? s) s) (() "empty") (_ "other"))
         expr = parse_and_analyze_expression('(match x ((? number? n) n) ((? string? s) s) (() "empty") (_ "other"))')
@@ -547,7 +547,7 @@ class TestDesugarerTempVariables:
 
     def test_temp_variables_unique(self):
         """Test that temporary variables are unique."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # Multiple match expressions should get different temp vars
         expr1 = parse_and_analyze_expression('(match x (42 "found") (_ "boolean-not"))')
@@ -573,7 +573,7 @@ class TestDesugarerTempVariables:
 
     def test_nested_match_temp_variables(self):
         """Test that nested matches get unique temp variables."""
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match x ((? number? n) (match n (42 "found") (_ "not 42"))) (_ "not number"))
         expr = parse_and_analyze_expression('(match x ((? number? n) (match n (42 "found") (_ "not 42"))) (_ "not number"))')
@@ -592,7 +592,7 @@ class TestDesugarerIntegration:
         # We need to integrate the desugarer with the evaluator
         # For now, we'll just test the structure
 
-        desugarer = MenaiDesugarer()
+        desugarer = MenaiASTDesugarer()
 
         # (match 42 (42 "found") (_ "not found"))
         expr = parse_and_analyze_expression('(match 42 (42 "found") (_ "not found"))')

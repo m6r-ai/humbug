@@ -9,11 +9,11 @@ from typing import List
 from menai.menai_ast import MenaiASTNode
 from menai.menai_ast_builder import MenaiASTBuilder
 from menai.menai_ast_constant_folder import MenaiASTConstantFolder
+from menai.menai_ast_desugarer import MenaiASTDesugarer
 from menai.menai_ast_optimization_pass import MenaiASTOptimizationPass
 from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
 from menai.menai_bytecode import CodeObject
 from menai.menai_cfg_builder import MenaiCFGBuilder
-from menai.menai_desugarer import MenaiDesugarer
 from menai.menai_cfg_optimizer import MenaiCFGOptimizer
 from menai.menai_ir_builder import MenaiIRBuilder
 from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
@@ -49,7 +49,7 @@ class MenaiCompiler:
         self.ast_builder = MenaiASTBuilder()
         self.ast_semantic_analyzer = MenaiASTSemanticAnalyzer()
         self.module_resolver = MenaiModuleResolver(module_loader)
-        self.desugarer = MenaiDesugarer()
+        self.ast_desugarer = MenaiASTDesugarer()
         self.ast_passes: List[MenaiASTOptimizationPass] = []
         self.ir_builder = MenaiIRBuilder()
         self.ir_passes: List[MenaiIROptimizationPass] = []
@@ -107,7 +107,7 @@ class MenaiCompiler:
             Compiled bytecode ready for execution
         """
         resolved_ast = self.compile_to_resolved_ast(source, name)
-        desugared_ast = self.desugarer.desugar(resolved_ast)
+        desugared_ast = self.ast_desugarer.desugar(resolved_ast)
 
         for ast_pass in self.ast_passes:
             desugared_ast = ast_pass.optimize(desugared_ast)

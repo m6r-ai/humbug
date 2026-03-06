@@ -1,6 +1,6 @@
 """Desugarer structure tests for variadic type-specific ordered comparisons.
 
-Verifies the AST shape produced by MenaiDesugarer for:
+Verifies the AST shape produced by MenaiASTDesugarer for:
     integer<?  integer>?  integer<=?  integer>=?
     float<?    float>?    float<=?    float>=?
     string<?   string>?   string<=?   string>=?
@@ -22,7 +22,7 @@ from menai.menai_ast import (
     MenaiASTSymbol,
     MenaiASTBoolean,
 )
-from menai.menai_desugarer import MenaiDesugarer
+from menai.menai_ast_desugarer import MenaiASTDesugarer
 from menai.menai_lexer import MenaiLexer
 from menai.menai_ast_builder import MenaiASTBuilder
 from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
@@ -39,7 +39,7 @@ def parse(source: str) -> MenaiASTNode:
 
 
 def desugar(source: str) -> MenaiASTNode:
-    return MenaiDesugarer().desugar(parse(source))
+    return MenaiASTDesugarer().desugar(parse(source))
 
 
 def sym(node: MenaiASTNode) -> str:

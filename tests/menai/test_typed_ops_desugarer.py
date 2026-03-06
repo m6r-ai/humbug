@@ -26,7 +26,7 @@ from menai.menai_ast import (
     MenaiASTNode,
     MenaiASTSymbol,
 )
-from menai.menai_desugarer import MenaiDesugarer
+from menai.menai_ast_desugarer import MenaiASTDesugarer
 from menai.menai_lexer import MenaiLexer
 from menai.menai_ast_builder import MenaiASTBuilder
 from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
@@ -45,7 +45,7 @@ def parse(source: str) -> MenaiASTNode:
 
 def desugar(source: str) -> MenaiASTNode:
     """Parse and desugar *source*, returning the desugared AST."""
-    return MenaiDesugarer().desugar(parse(source))
+    return MenaiASTDesugarer().desugar(parse(source))
 
 
 def op_name(node: MenaiASTNode) -> str:

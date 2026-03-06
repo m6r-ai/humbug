@@ -246,13 +246,13 @@ class TestLetrecSplittingStructure:
         from menai.menai_lexer import MenaiLexer
         from menai.menai_ast_builder import MenaiASTBuilder
         from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
-        from menai.menai_desugarer import MenaiDesugarer
+        from menai.menai_ast_desugarer import MenaiASTDesugarer
         from menai.menai_ast import MenaiASTList, MenaiASTSymbol
 
         tokens = MenaiLexer().lex(source)
         ast = MenaiASTBuilder().build(tokens, source)
         ast = MenaiASTSemanticAnalyzer().analyze(ast, source)
-        return MenaiDesugarer().desugar(ast)
+        return MenaiASTDesugarer().desugar(ast)
 
     def _head_symbol(self, node) -> str:
         """Return the name of the first element of a list node."""
