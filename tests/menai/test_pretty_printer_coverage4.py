@@ -417,7 +417,7 @@ class TestStandaloneCommentsNoDoubleNewline:
         result = printer.format(code)
 
         # Should not have double newline
-        assert "; then comment\n  42" in result
+        assert "; then comment\n    42" in result
 
     def test_if_standalone_comment_else_single_newline(self):
         """Test if with standalone comment before else has single newline."""
@@ -430,7 +430,7 @@ class TestStandaloneCommentsNoDoubleNewline:
         result = printer.format(code)
 
         # Should not have double newline
-        assert "; else comment\n  99" in result
+        assert "; else comment\n    99" in result
 
     def test_match_standalone_comment_with_clauses_formatting(self):
         """Test match with standalone comments between clauses."""

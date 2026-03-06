@@ -76,7 +76,6 @@ SPECIAL_FORM_RULES = {
     'let': 1,
     'let*': 1,
     'letrec': 1,
-    'if': 2,
     'match': 2,
 }
 
@@ -519,6 +518,7 @@ class Renderer:
         # For regular lists, align subsequent elements with first argument position
         if is_special_form:
             subsequent_col = lparen_col + self.options.indent_size
+
         else:
             # For traditional Lisp alignment, subsequent arguments align with first argument
             # First argument position = column + '(' + function_name + ' '
@@ -526,6 +526,7 @@ class Renderer:
             if lst.elements and isinstance(lst.elements[0], ASTAtom):
                 func_name_len = len(lst.elements[0].value)
                 subsequent_col = lparen_col + 1 + func_name_len + 1
+
             else:
                 subsequent_col = lparen_col + 1
 
@@ -574,7 +575,6 @@ class Renderer:
 
                 # After a comment, we're past the "first line"
                 elements_on_current_line = elements_on_first_line
-
                 continue
 
             # Code element
