@@ -108,14 +108,14 @@ class TestEvaluatorMissingCoverage:
     def test_builtin_function_formatting(self, menai):
         """Test formatting of builtin function references."""
         result = menai.evaluate_and_format("float-sqrt")
-        assert result == "<lambda (arg0)>"
+        assert result == "<lambda (a)>"
 
     def test_builtin_function_formatting_various(self, menai):
         """Test formatting of various builtin functions."""
         # Fixed-arity stubs describe as <lambda (arg0, ...)>
         cases = [
-            ("float-sqrt", "<lambda (arg0)>"),  # unary fixed-arity — bytecode stub
-            ("list", "<lambda (args)>"),        # variadic prelude lambda — rest param named 'args'
+            ("float-sqrt", "<lambda (a)>"),  # unary fixed-arity — bytecode stub
+            ("list", "<lambda (args)>"),     # variadic prelude lambda — rest param named 'args'
         ]
         for func_name, expected in cases:
             result = menai.evaluate_and_format(func_name)
