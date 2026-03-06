@@ -19,9 +19,9 @@ from menai.menai_ast import (
     MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTInteger,
     MenaiASTFloat, MenaiASTComplex, MenaiASTString, MenaiASTBoolean, MenaiASTNone
 )
+from menai.menai_ast_dependency_analyzer import MenaiASTDependencyAnalyzer
 from menai.menai_bytecode import BUILTIN_OPCODE_MAP
 from menai.menai_builtin_registry import MenaiBuiltinRegistry
-from menai.menai_dependency_analyzer import MenaiDependencyAnalyzer
 from menai.menai_error import MenaiEvalError
 
 
@@ -376,7 +376,7 @@ class MenaiDesugarer:
         raw_dict = dict(raw_pairs)
 
         # Compute topological binding groups (already in dependency order).
-        binding_groups = MenaiDependencyAnalyzer().analyze_letrec_bindings(raw_pairs)
+        binding_groups = MenaiASTDependencyAnalyzer().analyze_letrec_bindings(raw_pairs)
 
         # Desugar the body, then wrap it in binding forms from innermost outward
         # (i.e. process groups in reverse topological order so each group's body

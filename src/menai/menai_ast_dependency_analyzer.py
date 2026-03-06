@@ -18,7 +18,7 @@ class MenaiBindingGroup:
     depends_on: Set[str]  # Other groups this depends on
 
 
-class MenaiDependencyAnalyzer:
+class MenaiASTDependencyAnalyzer:
     """Analyzes dependencies in let bindings to determine evaluation strategy."""
 
     def analyze_letrec_bindings(self, bindings: List[Tuple[str, MenaiASTNode]]) -> List[MenaiBindingGroup]:

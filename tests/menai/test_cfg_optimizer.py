@@ -22,17 +22,13 @@ from menai.menai_cfg import (
     MenaiCFGBranchTerm,
     MenaiCFGBuiltinInstr,
     MenaiCFGConstInstr,
-    MenaiCFGFreeVarInstr,
     MenaiCFGFunction,
     MenaiCFGGlobalInstr,
     MenaiCFGJumpTerm,
     MenaiCFGMakeClosureInstr,
-    MenaiCFGParamInstr,
     MenaiCFGPatchClosureInstr,
     MenaiCFGPhiInstr,
-    MenaiCFGRaiseTerm,
     MenaiCFGReturnTerm,
-    MenaiCFGSelfLoopTerm,
     MenaiCFGTailCallTerm,
     MenaiCFGValue,
 )
@@ -43,7 +39,7 @@ from menai.menai_cfg_optimizer import (
     _eliminate_trivial_phis,
     _prune_stale_phi_entries,
 )
-from menai.menai_value import MenaiInteger, MenaiString
+from menai.menai_value import MenaiInteger
 
 
 # ---------------------------------------------------------------------------
