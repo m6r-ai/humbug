@@ -34,7 +34,7 @@ from menai.menai_cfg import (
     MenaiCFGTraceInstr,
     MenaiCFGValue,
 )
-from menai.menai_cfg_collapse_phi_chains import _value_ids_in_instr, _value_ids_in_term
+from menai.menai_cfg_liveness import allocate_slots
 from menai.menai_value import (
     MenaiBoolean,
     MenaiComplex,
@@ -61,7 +61,8 @@ class _EmitContext:
     Mutable state for emitting one MenaiCFGFunction into a CodeObject.
 
     Tracks the instruction stream, constant/name pools, nested code objects,
-    and the SSA-value-to-slot mapping.
+    and the SSA-value-to-slot mapping.  The slot_map is populated up front by
+    the liveness-based allocator before emission begins.
     """
     instructions: List[Instruction] = field(default_factory=list)
     constants: List[MenaiValue] = field(default_factory=list)
@@ -70,30 +71,12 @@ class _EmitContext:
     constant_map: Dict[tuple, int] = field(default_factory=dict)
     name_map: Dict[str, int] = field(default_factory=dict)
 
-    # SSA value id → local slot index
+    # SSA value id → local slot index (pre-populated by allocate_slots)
     slot_map: Dict[int, int] = field(default_factory=dict)
     next_slot: int = 0
 
-    # Phi result id → slot, populated lazily on first store by a predecessor.
-    # Kept separate so we can assert that a phi slot is allocated before the
-    # join block tries to read it (via slot_of on the phi result).
-    phi_slot_map: Dict[int, int] = field(default_factory=dict)
-
-    # Value ids whose result is used only as a single phi incoming.  At
-    # phi-store time the defining instruction is emitted directly into the phi
-    # slot; during normal block emission the instruction is skipped so that no
-    # intermediate slot is allocated.
-    phi_sink: Dict[int, 'MenaiCFGInstr'] = field(default_factory=dict)
-
     # Name of the current function (for self-loop detection label)
     current_lambda_name: Optional[str] = None
-
-    def alloc_slot(self, value: MenaiCFGValue) -> int:
-        """Allocate the next free slot for `value` and record the mapping."""
-        slot = self.next_slot
-        self.next_slot += 1
-        self.slot_map[value.id] = slot
-        return slot
 
     def assign_slot(self, value: MenaiCFGValue, slot: int) -> None:
         """Assign a specific slot to `value` (used for params/free-vars)."""
@@ -108,22 +91,6 @@ class _EmitContext:
         )
         return self.slot_map[value.id]
 
-    def ensure_slot(self, value: MenaiCFGValue) -> int:
-        """
-        Return a register slot for `value`, materialising it if necessary.
-
-        For values with an existing slot: returns the existing slot.
-        For values without a slot (should not occur in normal operation):
-        allocates a fresh slot and emits MOVE from slot 0 as a safe fallback.
-        """
-        if value.id in self.slot_map:
-            return self.slot_map[value.id]
-
-        # Fallback: should not occur with register-based ops; copy from slot 0.
-        slot = self.alloc_slot(value)
-        self.emit(Opcode.MOVE, slot, dest=slot)
-        return slot
-
     def emit(self, opcode: Opcode, src0: int = 0, src1: int = 0, dest: int = 0, src2: int = 0) -> int:
         """Emit an instruction, returning its index."""
         idx = len(self.instructions)
@@ -131,11 +98,7 @@ class _EmitContext:
         return idx
 
     def load_value(self, value: MenaiCFGValue) -> None:
-        """
-        Push `value` onto the call stack.
-
-        All values have a slot; emit PUSH <slot>.
-        """
+        """Push `value` onto the call stack via PUSH <slot>."""
         self.emit(Opcode.PUSH, self.slot_of(value))
 
     def emit_constant(self, value: MenaiValue, dest: int) -> None:
@@ -245,36 +208,16 @@ class MenaiBytecodeBuilder:
         """
         Emit all blocks of `func` into `ctx` in reverse post-order (RPO).
 
-        Phase 1: assign fixed slots to all params and free-var values.
+        Phase 1: run liveness analysis and pre-populate the slot map.
         Phase 2: emit each block's instructions, patch_instrs, and terminator.
         Phase 3: back-patch all forward jump targets.
-
-        RPO guarantees that all predecessors of a block are emitted before
-        the block itself (for non-back-edges / self-loops).  This is required
-        for the lazy phi-slot allocation scheme: when a predecessor emits its
-        JumpTerm, it calls _emit_phi_stores_for_successor which allocates the
-        phi slot; by the time the join block is emitted, the phi slot exists.
         """
-        # Phase 1: assign fixed slots to params and free-vars only.
-        # Phi slots are allocated lazily in _emit_phi_stores_for_successor.
-        param_count = len(func.params)
-        for block in func.blocks:
-            for instr in block.instrs:
-                if isinstance(instr, MenaiCFGParamInstr):
-                    ctx.assign_slot(instr.result, instr.index)
-
-                elif isinstance(instr, MenaiCFGFreeVarInstr):
-                    ctx.assign_slot(instr.result, param_count + instr.index)
-
-        # Phase 1b: identify phi-sink values — ConstInstr or GlobalInstr
-        # results that are used only as a single phi incoming.  These will be
-        # emitted directly into the phi slot at phi-store time, eliminating the
-        # intermediate slot and the MOVE that would otherwise copy into it.
-        ctx.phi_sink = _build_phi_sink(func)
+        # Phase 1: allocate all slots up front via liveness analysis.
+        allocation = allocate_slots(func)
+        ctx.slot_map = allocation.slot_map
+        ctx.next_slot = allocation.slot_count
 
         # Phase 2: emit blocks.
-        # We need to back-patch jump targets, so we collect
-        # (instr_index, target_block) pairs as we go.
         block_start: Dict[int, int] = {}   # block id → instruction index of first instr
         forward_jumps: List[Tuple[int, MenaiCFGBlock, str]] = []  # (instr_idx, target_block, patch_field)
 
@@ -329,15 +272,12 @@ class MenaiBytecodeBuilder:
         next_block: Optional[MenaiCFGBlock],
     ) -> None:
         """Emit all instructions and the terminator for one block."""
-        # Regular instructions.
         for instr in block.instrs:
             self._emit_instr(instr, ctx)
 
-        # Patch instructions (letrec closure fixup).
         for patch in block.patch_instrs:
             self._emit_patch(patch, ctx)
 
-        # Terminator.
         assert block.terminator is not None, (
             f"MenaiVMCodeGen: block {block.id} ({block.label}) has no terminator"
         )
@@ -345,12 +285,6 @@ class MenaiBytecodeBuilder:
 
     def _emit_instr(self, instr: MenaiCFGInstr, ctx: _EmitContext) -> None:
         """Emit a single non-terminator instruction."""
-        # Phi-sink values are emitted directly into the phi slot at phi-store
-        # time.  Skip them here so no intermediate slot is allocated.
-        result = _result_of(instr)
-        if result is not None and result.id in ctx.phi_sink:
-            return
-
         if isinstance(instr, MenaiCFGParamInstr):
             # Params are already in their slots via ENTER; nothing to emit.
             return
@@ -360,23 +294,16 @@ class MenaiBytecodeBuilder:
             return
 
         if isinstance(instr, MenaiCFGPhiInstr):
-            # Phi nodes emit no instructions.  The phi result slot is
-            # allocated lazily by _emit_phi_stores_for_successor when a
-            # predecessor stores into it.  By the time the join block's
-            # instructions run, the slot is guaranteed to exist in slot_map.
-            if instr.result.id in ctx.phi_slot_map:
-                ctx.slot_map[instr.result.id] = ctx.phi_slot_map[instr.result.id]
+            # Phi nodes emit no instructions; slots are pre-assigned by the allocator.
             return
 
         if isinstance(instr, MenaiCFGConstInstr):
-            slot = ctx.alloc_slot(instr.result)
-            ctx.emit_constant(instr.value, dest=slot)
+            ctx.emit_constant(instr.value, dest=ctx.slot_of(instr.result))
             return
 
         if isinstance(instr, MenaiCFGGlobalInstr):
             name_idx = ctx.add_name(instr.name)
-            slot = ctx.alloc_slot(instr.result)
-            ctx.emit(Opcode.LOAD_NAME, name_idx, dest=slot)
+            ctx.emit(Opcode.LOAD_NAME, name_idx, dest=ctx.slot_of(instr.result))
             return
 
         if isinstance(instr, MenaiCFGBuiltinInstr):
@@ -387,15 +314,13 @@ class MenaiBytecodeBuilder:
             for arg in instr.args:
                 ctx.load_value(arg)
             ctx.load_value(instr.func)
-            dest = ctx.alloc_slot(instr.result)
-            ctx.emit(Opcode.CALL, len(instr.args), dest=dest)
+            ctx.emit(Opcode.CALL, len(instr.args), dest=ctx.slot_of(instr.result))
             return
 
         if isinstance(instr, MenaiCFGApplyInstr):
             ctx.load_value(instr.func)
             ctx.load_value(instr.arg_list)
-            dest = ctx.alloc_slot(instr.result)
-            ctx.emit(Opcode.APPLY, dest=dest)
+            ctx.emit(Opcode.APPLY, dest=ctx.slot_of(instr.result))
             return
 
         if isinstance(instr, MenaiCFGMakeClosureInstr):
@@ -404,17 +329,11 @@ class MenaiBytecodeBuilder:
 
         if isinstance(instr, MenaiCFGTraceInstr):
             for msg in instr.messages:
-                msg_slot = ctx.ensure_slot(msg)
-                ctx.emit(Opcode.EMIT_TRACE, msg_slot)
-
-            result_slot = ctx.ensure_slot(instr.value)
-            ctx.slot_map[instr.result.id] = result_slot
+                ctx.emit(Opcode.EMIT_TRACE, ctx.slot_of(msg))
+            # result is aliased to value by the allocator; slot_of works directly.
             return
 
         if isinstance(instr, MenaiCFGPatchClosureInstr):
-            # Patch instructions may appear in block.instrs (letrec sibling
-            # captures emitted before the body) as well as block.patch_instrs.
-            # Delegate to the shared helper.
             self._emit_patch(instr, ctx)
             return
 
@@ -426,94 +345,17 @@ class MenaiBytecodeBuilder:
         successor: MenaiCFGBlock,
         ctx: _EmitContext,
     ) -> None:
-        """
-        Before jumping to `successor`, store each incoming phi value that
-        this block contributes into the phi's pre-assigned slot.
-
-        Called by jump/branch terminator emission immediately before the
-        JUMP instruction so that the incoming value's slot is guaranteed
-        to exist (it was defined earlier in this block's instruction stream).
-        """
+        """Emit MOVEs for phi incomings that this block contributes to successor."""
         for instr in successor.instrs:
             if not isinstance(instr, MenaiCFGPhiInstr):
                 break
 
             for incoming_val, pred_block in instr.incoming:
                 if pred_block.id == current_block.id:
-                    # Allocate the phi slot lazily on first store.
-                    if instr.result.id not in ctx.phi_slot_map:
-                        phi_slot = ctx.alloc_slot(instr.result)
-                        ctx.phi_slot_map[instr.result.id] = phi_slot
-
-                    else:
-                        phi_slot = ctx.phi_slot_map[instr.result.id]
-
-                    if incoming_val.id in ctx.phi_sink:
-                        # The incoming value is a phi-sink: its defining
-                        # instruction was skipped during normal block emission.
-                        # Emit the defining instruction directly into the phi
-                        # slot, bypassing the phi-sink skip guard.
-                        ctx.slot_map[incoming_val.id] = phi_slot
-                        self._emit_sink_instr(ctx.phi_sink[incoming_val.id], phi_slot, ctx)
-
-                    else:
-                        src_slot = ctx.slot_of(incoming_val)
-                        if src_slot != phi_slot:
-                            ctx.emit(Opcode.MOVE, src_slot, dest=phi_slot)
-
-    def _emit_sink_instr(
-        self, instr: MenaiCFGInstr, dest: int, ctx: _EmitContext
-    ) -> None:
-        """
-        Emit a phi-sink instruction directly into `dest`, bypassing the
-        phi-sink skip guard in _emit_instr.  Called exclusively from
-        _emit_phi_stores_for_successor after the phi slot has been allocated
-        and pre-registered in ctx.slot_map for the incoming value.
-
-        Covers all result-bearing instruction types admitted by _build_phi_sink.
-        """
-        if isinstance(instr, MenaiCFGConstInstr):
-            ctx.emit_constant(instr.value, dest=dest)
-
-        elif isinstance(instr, MenaiCFGGlobalInstr):
-            name_idx = ctx.add_name(instr.name)
-            ctx.emit(Opcode.LOAD_NAME, name_idx, dest=dest)
-
-        elif isinstance(instr, MenaiCFGBuiltinInstr):
-            opcode, _ = BUILTIN_OPCODE_MAP.get(instr.op, (None, None))
-            if opcode is None:
-                raise ValueError(f"_emit_sink_instr: unknown builtin {instr.op!r}")
-
-            args = instr.args
-            def slot(i: int) -> int:
-                return ctx.slot_of(args[i])
-            if instr.op in TERNARY_OPS:
-                ctx.emit(opcode, slot(0), slot(1), dest=dest, src2=slot(2))
-
-            elif instr.op in BINARY_OPS:
-                ctx.emit(opcode, slot(0), slot(1), dest=dest)
-
-            else:
-                ctx.emit(opcode, slot(0), dest=dest)
-
-        elif isinstance(instr, MenaiCFGCallInstr):
-            for arg in instr.args:
-                ctx.load_value(arg)
-            ctx.load_value(instr.func)
-            ctx.emit(Opcode.CALL, len(instr.args), dest=dest)
-
-        elif isinstance(instr, MenaiCFGApplyInstr):
-            ctx.load_value(instr.func)
-            ctx.load_value(instr.arg_list)
-            ctx.emit(Opcode.APPLY, dest=dest)
-
-        elif isinstance(instr, MenaiCFGMakeClosureInstr):
-            self._emit_make_closure(instr, ctx)
-
-        else:
-            raise TypeError(
-                f"_emit_sink_instr: unhandled instruction {type(instr).__name__}"
-            )
+                    src_slot = ctx.slot_of(incoming_val)
+                    phi_slot = ctx.slot_of(instr.result)
+                    if src_slot != phi_slot:
+                        ctx.emit(Opcode.MOVE, src_slot, dest=phi_slot)
 
     def _emit_patch(self, patch: MenaiCFGPatchClosureInstr, ctx: _EmitContext) -> None:
         """
@@ -523,7 +365,7 @@ class MenaiBytecodeBuilder:
         All three operands are register indices — no stack involvement.
         """
         closure_slot = ctx.slot_of(patch.closure)
-        value_slot = ctx.ensure_slot(patch.value)
+        value_slot = ctx.slot_of(patch.value)
         ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, value_slot, src2=patch.capture_index)
 
     def _emit_terminator(
@@ -535,13 +377,11 @@ class MenaiBytecodeBuilder:
         next_block: Optional[MenaiCFGBlock],
     ) -> None:
         if isinstance(term, MenaiCFGReturnTerm):
-            src0 = ctx.ensure_slot(term.value)
-            ctx.emit(Opcode.RETURN, src0)
+            ctx.emit(Opcode.RETURN, ctx.slot_of(term.value))
             return
 
         if isinstance(term, MenaiCFGJumpTerm):
             self._emit_phi_stores_for_successor(block, term.target, ctx)
-            # Suppress the JUMP if the target is the immediately following block.
             if next_block is None or next_block.id != term.target.id:
                 jump_idx = ctx.emit(Opcode.JUMP, 0)
                 forward_jumps.append((jump_idx, term.target, 'src0'))
@@ -549,21 +389,17 @@ class MenaiBytecodeBuilder:
             return
 
         if isinstance(term, MenaiCFGBranchTerm):
-            cond_slot = ctx.ensure_slot(term.cond)
+            cond_slot = ctx.slot_of(term.cond)
             next_id = next_block.id if next_block is not None else -1
             if next_id == term.false_block.id:
-                # False block is the fall-through: emit JUMP_IF_TRUE <true> only.
-                # Phi stores happen in then/else blocks via their own JumpTerm.
                 true_jump_idx = ctx.emit(Opcode.JUMP_IF_TRUE, cond_slot, 0)
                 forward_jumps.append((true_jump_idx, term.true_block, 'src1'))
 
             elif next_id == term.true_block.id:
-                # True block is the fall-through: emit JUMP_IF_FALSE <false> only.
                 false_jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, cond_slot, 0)
                 forward_jumps.append((false_jump_idx, term.false_block, 'src1'))
 
             else:
-                # Neither successor is adjacent: emit JUMP_IF_FALSE <false> + JUMP <true>.
                 false_jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, cond_slot, 0)
                 true_jump_idx = ctx.emit(Opcode.JUMP, 0)
                 forward_jumps.append((true_jump_idx, term.true_block, 'src0'))
@@ -586,8 +422,6 @@ class MenaiBytecodeBuilder:
             return
 
         if isinstance(term, MenaiCFGSelfLoopTerm):
-            # Push new arg values onto the stack in order, then JUMP 0.
-            # ENTER at instruction 0 will pop them into param slots.
             for arg in term.args:
                 ctx.load_value(arg)
 
@@ -619,9 +453,9 @@ class MenaiBytecodeBuilder:
             raise ValueError(f"MenaiVMCodeGen: unknown builtin op {op!r}")
 
         def slot(i: int) -> int:
-            return ctx.ensure_slot(args[i])
+            return ctx.slot_of(args[i])
 
-        dest = ctx.alloc_slot(result)
+        dest = ctx.slot_of(result)
 
         if op in TERNARY_OPS:
             assert len(args) == 3, f"_emit_builtin: {op!r} expects 3 args, got {len(args)}"
@@ -666,11 +500,11 @@ class MenaiBytecodeBuilder:
         total_free_vars = len(child_func.free_vars)
 
         if instr.needs_patching or capture_count > 0:
-            closure_slot = ctx.alloc_slot(instr.result)
+            closure_slot = ctx.slot_of(instr.result)
             ctx.emit(Opcode.MAKE_CLOSURE, code_idx, 0, dest=closure_slot)
             outer_start = total_free_vars - capture_count
             for i, cap in enumerate(instr.captures):
-                value_slot = ctx.ensure_slot(cap)
+                value_slot = ctx.slot_of(cap)
                 ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, value_slot, src2=outer_start + i)
 
             return
@@ -686,8 +520,7 @@ class MenaiBytecodeBuilder:
         if key not in ctx.constant_map:
             ctx.constant_map[key] = len(ctx.constants)
             ctx.constants.append(func_val)
-        slot = ctx.alloc_slot(instr.result)
-        ctx.emit(Opcode.LOAD_CONST, ctx.constant_map[key], dest=slot)
+        ctx.emit(Opcode.LOAD_CONST, ctx.constant_map[key], dest=ctx.slot_of(instr.result))
         return
 
     def _generate_lambda_code_object(self, func: MenaiCFGFunction) -> CodeObject:
@@ -695,14 +528,10 @@ class MenaiBytecodeBuilder:
         child_ctx = _EmitContext(current_lambda_name=func.binding_name)
 
         param_count = len(func.params)
-        free_var_count = len(func.free_vars)
 
         # Emit ENTER to pop parameters into slots 0..P-1.
         if param_count > 0:
             child_ctx.emit(Opcode.ENTER, param_count)
-
-        # Reserve slots for params and free vars so alloc_slot starts above them.
-        child_ctx.next_slot = param_count + free_var_count
 
         self._emit_function_body(func, child_ctx)
 
@@ -731,112 +560,3 @@ class MenaiBytecodeBuilder:
             source_line=func.source_line,
             source_file=func.source_file,
         )
-
-
-def _result_of(instr: MenaiCFGInstr) -> 'MenaiCFGValue | None':
-    """Return the SSA result value of `instr`, or None if it produces no result."""
-    if isinstance(instr, (
-        MenaiCFGConstInstr,
-        MenaiCFGGlobalInstr,
-        MenaiCFGParamInstr,
-        MenaiCFGFreeVarInstr,
-        MenaiCFGBuiltinInstr,
-        MenaiCFGCallInstr,
-        MenaiCFGApplyInstr,
-        MenaiCFGMakeClosureInstr,
-        MenaiCFGPhiInstr,
-        MenaiCFGTraceInstr,
-    )):
-        return instr.result
-    # MenaiCFGPatchClosureInstr has no result.
-    return None
-
-
-def _build_phi_sink(func: MenaiCFGFunction) -> Dict[int, MenaiCFGInstr]:
-    """
-    Identify values that are used only as a single phi incoming and can
-    therefore be emitted directly into the phi slot, eliminating the
-    intermediate slot and the MOVE.
-
-    Returns a map from value id to the defining instruction.  The bytecode
-    builder uses this map to:
-      - skip the defining instruction during normal block emission, and
-      - re-emit the defining instruction into the phi slot when the predecessor
-        processes its phi store.
-
-    A value qualifies as a phi-sink when:
-      1. Its defining instruction produces a result (has a `result` field).
-      2. It appears exactly once across all uses in the function — as an
-         incoming value in exactly one phi node.
-      3. Its defining instruction is in the predecessor block that contributes
-         the phi incoming (guaranteeing all operands are live at emit time).
-      4. It is not a ParamInstr, FreeVarInstr, TraceInstr, or PhiInstr.
-         The first three have special slot-assignment or emit logic incompatible
-         with deferred emission.  PhiInstr results that flow into another phi
-         are handled by the normal MOVE path (CollapsePhiChains eliminates
-         them in the optimized pipeline).  PatchClosureInstr has no result.
-    """
-    # Collect all candidate instruction results, keyed by value id, with the
-    # block they are defined in.
-    candidate_defs: Dict[int, tuple] = {}  # value_id -> (instr, block)
-    for block in func.blocks:
-        for instr in block.instrs:
-            result = _result_of(instr)
-            if result is not None and not isinstance(
-                instr, (
-                    MenaiCFGParamInstr, MenaiCFGFreeVarInstr, MenaiCFGTraceInstr, MenaiCFGPhiInstr,
-                )
-            ):
-                candidate_defs[result.id] = (instr, block)
-
-    if not candidate_defs:
-        return {}
-
-    # Count every use of each candidate value across the whole function,
-    # distinguishing phi-incoming uses from all other uses.
-    use_counts: Dict[int, int] = {vid: 0 for vid in candidate_defs}
-    phi_use_counts: Dict[int, int] = {vid: 0 for vid in candidate_defs}
-    # Also record which predecessor block each phi incoming comes from.
-    phi_pred_block: Dict[int, MenaiCFGBlock] = {}
-
-    for block in func.blocks:
-        for instr in block.instrs:
-            if isinstance(instr, MenaiCFGPhiInstr):
-                for val, _ in instr.incoming:
-                    if val.id in use_counts:
-                        use_counts[val.id] += 1
-                        phi_use_counts[val.id] += 1
-
-            else:
-                for vid in _value_ids_in_instr(instr):
-                    if vid in use_counts:
-                        use_counts[vid] += 1
-
-        for patch in block.patch_instrs:
-            for vid in (patch.closure.id, patch.value.id):
-                if vid in use_counts:
-                    use_counts[vid] += 1
-
-        if block.terminator is not None:
-            for vid in _value_ids_in_term(block.terminator):
-                if vid in use_counts:
-                    use_counts[vid] += 1
-
-    # Build the predecessor-block map from phi incomings.
-    for block in func.blocks:
-        for instr in block.instrs:
-            if isinstance(instr, MenaiCFGPhiInstr):
-                for val, pred in instr.incoming:
-                    if val.id in candidate_defs:
-                        phi_pred_block[val.id] = pred
-
-    # A value is a phi-sink if it has exactly one use (the phi incoming) and
-    # its defining instruction is in the predecessor block for that incoming.
-    result_map: Dict[int, MenaiCFGInstr] = {}
-    for vid, (instr, def_block) in candidate_defs.items():
-        if use_counts.get(vid, 0) == 1 and phi_use_counts.get(vid, 0) == 1:
-            def_pred: MenaiCFGBlock | None = phi_pred_block.get(vid)
-            if def_pred is not None and def_pred.id == def_block.id:
-                result_map[vid] = instr
-
-    return result_map

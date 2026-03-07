@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from menai import Menai
 from menai.menai_compiler import MenaiCompiler
-from menai.menai_bytecode import CodeObject
+from menai.menai_bytecode import CodeObject, Opcode
 
 
 def split_test_file(content: str) -> List[Tuple[str, str]]:
@@ -187,7 +187,7 @@ class BytecodeAnalyzer:
 
         # Count instructions
         stats.total_instructions = len(code.instructions)
-        instruction_counter = Counter(instr.opcode.name for instr in code.instructions)
+        instruction_counter = Counter(Opcode(instr.opcode).name for instr in code.instructions)
         stats.instruction_counts = dict(instruction_counter)
 
         # Count resources
