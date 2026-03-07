@@ -12,7 +12,7 @@ from typing import Any, List, Tuple
 from menai.menai_error import MenaiEvalError
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, unsafe_hash=True)
 class MenaiValue(ABC):
     """
     Abstract base class for all Menai runtime values.
@@ -33,7 +33,7 @@ class MenaiValue(ABC):
         """Describe the value."""
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, unsafe_hash=True)
 class MenaiSymbol(MenaiValue):
     """Represents symbols that require environment lookup."""
     name: str
@@ -55,7 +55,7 @@ class MenaiSymbol(MenaiValue):
         return f'MenaiSymbol({self.name!r})'
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, unsafe_hash=True)
 class MenaiFunction(MenaiValue):
     """
     Represents a function (both user-defined lambdas and builtins).
@@ -92,7 +92,7 @@ class MenaiFunction(MenaiValue):
         return f"<lambda ({param_str})>"
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, unsafe_hash=True)
 class MenaiNone(MenaiValue):
     """Represents the absence of a value (#none).
 
@@ -116,7 +116,7 @@ class MenaiNone(MenaiValue):
 Menai_NONE = MenaiNone()
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, unsafe_hash=True)
 class MenaiBoolean(MenaiValue):
     """Represents boolean values."""
     value: bool
@@ -138,7 +138,7 @@ class MenaiBoolean(MenaiValue):
         return self.value == other.value
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, unsafe_hash=True)
 class MenaiInteger(MenaiValue):
     """Represents integer values."""
     value: int
@@ -160,7 +160,7 @@ class MenaiInteger(MenaiValue):
         return self.value == other.value
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, unsafe_hash=True)
 class MenaiFloat(MenaiValue):
     """Represents floating-point values."""
     value: float
@@ -182,7 +182,7 @@ class MenaiFloat(MenaiValue):
         return self.value == other.value
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, unsafe_hash=True)
 class MenaiComplex(MenaiValue):
     """Represents complex number values."""
     value: complex
@@ -227,7 +227,7 @@ class MenaiComplex(MenaiValue):
         return self.value == other.value
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, unsafe_hash=True)
 class MenaiString(MenaiValue):
     """Represents string values."""
     value: str
@@ -277,7 +277,7 @@ class MenaiString(MenaiValue):
         return self.value == other.value
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, unsafe_hash=True)
 class MenaiList(MenaiValue):
     """Represents lists of Menai values."""
     elements: Tuple[MenaiValue, ...] = ()
@@ -384,6 +384,9 @@ class MenaiDict(MenaiValue):
         if not isinstance(other, MenaiDict):
             return False
         return self.pairs == other.pairs
+
+    def __hash__(self) -> int:
+        return hash(self.pairs)
 
     def to_python(self) -> dict:
         """Convert to Python dict."""
