@@ -358,13 +358,6 @@ class MenaiVM:
 
         return value.value
 
-    def _ensure_integer(self, value: MenaiValue, function_name: str) -> int:
-        """Ensure value is an integer, raise error if not."""
-        if not isinstance(value, MenaiInteger):
-            raise MenaiEvalError(f"Function '{function_name}' requires integer arguments, got {value.type_name()}")
-
-        return value.value
-
     def _ensure_float(self, value: MenaiValue, function_name: str) -> float:
         """Ensure value is a float, raise error if not."""
         if not isinstance(value, MenaiFloat):
@@ -2131,8 +2124,16 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TO_INTEGER dest, src0, src1: r_dest = (string->integer r_src0 r_src1)"""
-        s = self._ensure_string(frame.locals[src0], 'string->integer')
-        radix = self._ensure_integer(frame.locals[src1], 'string->integer')
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string->integer' requires string arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'string->integer' requires integer arguments, got {b.type_name()}")
+
+        s = a.value
+        radix = b.value
         if radix not in (2, 8, 10, 16):
             raise MenaiEvalError(f"string->integer radix must be 2, 8, 10, or 16, got {radix}")
 
@@ -2182,8 +2183,16 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_REF dest, src0, src1: r_dest = (string-ref r_src0 r_src1)"""
-        s = self._ensure_string(frame.locals[src0], 'string-ref')
-        index = self._ensure_integer(frame.locals[src1], 'string-ref')
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string-ref' requires string arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'string-ref' requires integer arguments, got {b.type_name()}")
+
+        s = a.value
+        index = b.value
         if index < 0 or index >= len(s):
             raise MenaiEvalError(f"string-ref index out of range: {index}")
 
@@ -2210,9 +2219,21 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
     ) -> MenaiValue | None:
         """STRING_SLICE dest, src0, src1, src2: r_dest = (string-slice r_src0 r_src1 r_src2)"""
-        s = self._ensure_string(frame.locals[src0], 'string-slice')
-        start = self._ensure_integer(frame.locals[src1], 'string-slice')
-        end = self._ensure_integer(frame.locals[src2], 'string-slice')
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        c = frame.locals[src2]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string-slice' requires string arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'string-slice' requires integer arguments, got {b.type_name()}")
+
+        if not isinstance(c, MenaiInteger):
+            raise MenaiEvalError(f"Function 'string-slice' requires integer arguments, got {c.type_name()}")
+
+        s = a.value
+        start = b.value
+        end = c.value
         n = len(s)
         if start < 0:
             raise MenaiEvalError(f"string-slice start index cannot be negative: {start}")
@@ -2507,9 +2528,22 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
     ) -> MenaiValue | None:
         """LIST_SLICE dest, src0, src1, src2: r_dest = (list-slice r_src0 r_src1 r_src2)"""
-        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-slice')
-        start = self._ensure_integer(cast(MenaiValue, frame.locals[src1]), 'list-slice')
-        end = self._ensure_integer(cast(MenaiValue, frame.locals[src2]), 'list-slice')
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        c = frame.locals[src2]
+
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list-slice' requires list arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'list-slice' requires integer arguments, got {b.type_name()}")
+
+        if not isinstance(c, MenaiInteger):
+            raise MenaiEvalError(f"Function 'list-slice' requires integer arguments, got {c.type_name()}")
+
+        list_val = a
+        start = b.value
+        end = c.value
         n = list_val.length()
         if start < 0:
             raise MenaiEvalError(f"list-slice start index cannot be negative: {start}")
@@ -2567,9 +2601,21 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
     ) -> MenaiValue | None:
         """RANGE dest, src0, src1, src2: r_dest = (range r_src0 r_src1 r_src2)"""
-        start = self._ensure_integer(cast(MenaiValue, frame.locals[src0]), 'range')
-        end = self._ensure_integer(cast(MenaiValue, frame.locals[src1]), 'range')
-        step = self._ensure_integer(cast(MenaiValue, frame.locals[src2]), 'range')
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        c = frame.locals[src2]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'range' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'range' requires integer arguments, got {b.type_name()}")
+
+        if not isinstance(c, MenaiInteger):
+            raise MenaiEvalError(f"Function 'range' requires integer arguments, got {c.type_name()}")
+
+        start = a.value
+        end = b.value
+        step = c.value
         if step == 0:
             raise MenaiEvalError("Range step cannot be zero")
 
