@@ -811,8 +811,11 @@ class MenaiASTSemanticAnalyzer:
 
             # $-prefixed names are opcode-backed primitives written explicitly
             # (e.g. inside prelude bodies or emitted by the desugarer).
-            # Validate that the base name is a known primitive; arity is not
-            # checked here — the IR builder enforces that.
+            # Validate that the base name is known and that the call supplies
+            # exactly the opcode's arity.  User-written $-calls must always be
+            # fully saturated — there is no optional-argument handling for the
+            # primitive form, so the only valid arity is the exact primitive
+            # arity from BUILTIN_OPCODE_MAP.
             if name.startswith('$'):
                 base = name[1:]
                 if not MenaiBuiltinRegistry.is_primitive_name(base):
@@ -824,7 +827,17 @@ class MenaiASTSemanticAnalyzer:
                         column=expr.column,
                         source=self.source
                     )
-                # Valid $-name: recurse into arguments and return.
+                primitive_arity = MenaiBuiltinRegistry.get_primitive_arity(base)
+                n_args = len(expr.elements) - 1
+                if n_args != primitive_arity:
+                    raise MenaiEvalError(
+                        message=f"Primitive '{name}' called with wrong number of arguments",
+                        received=f"Got {n_args} argument{'s' if n_args != 1 else ''}",
+                        expected=f"Exactly {primitive_arity} argument{'s' if primitive_arity != 1 else ''}",
+                        line=expr.line,
+                        column=expr.column,
+                        source=self.source
+                    )
                 for elem in expr.elements[1:]:
                     self.analyze(elem, self.source)
                 return expr
