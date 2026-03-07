@@ -323,13 +323,6 @@ class MenaiVM:
         table[Opcode.RANGE] = self._op_range
         return table
 
-    def _ensure_string(self, value: MenaiValue, function_name: str) -> str:
-        """Ensure value is a string, raise error if not."""
-        if not isinstance(value, MenaiString):
-            raise MenaiEvalError(f"Function '{function_name}' requires string arguments, got {value.type_name()}")
-
-        return value.value
-
     def _ensure_float(self, value: MenaiValue, function_name: str) -> float:
         """Ensure value is a float, raise error if not."""
         if not isinstance(value, MenaiFloat):
@@ -347,13 +340,6 @@ class MenaiVM:
             )
 
         return value.value
-
-    def _ensure_dict(self, value: MenaiValue, function_name: str) -> MenaiDict:
-        """Ensure value is an dict, raise error if not."""
-        if not isinstance(value, MenaiDict):
-            raise MenaiEvalError(f"Function '{function_name}' requires dict arguments, got {value.type_name()}")
-
-        return value
 
     def _check_and_pack_args(self, func: MenaiFunction, arity: int) -> None:
         """
@@ -2021,90 +2007,156 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_EQ_P dest, src0, src1: r_dest = (string=? r_src0 r_src1)"""
-        src1_val = self._ensure_string(frame.locals[src1], 'string=?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string=?') == src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string=?' requires string arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiString):
+            raise MenaiEvalError(f"Function 'string=?' requires string arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value == b.value)
         return None
 
     def _op_string_neq_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_NEQ_P dest, src0, src1: r_dest = (string!=? r_src0 r_src1)"""
-        src1_val = self._ensure_string(frame.locals[src1], 'string!=?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string!=?') != src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string!=?' requires string arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiString):
+            raise MenaiEvalError(f"Function 'string!=?' requires string arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value != b.value)
         return None
 
     def _op_string_lt_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_LT_P dest, src0, src1: r_dest = (string<? r_src0 r_src1)"""
-        src1_val = self._ensure_string(frame.locals[src1], 'string<?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string<?') < src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string<?' requires string arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiString):
+            raise MenaiEvalError(f"Function 'string<?' requires string arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value < b.value)
         return None
 
     def _op_string_gt_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_GT_P dest, src0, src1: r_dest = (string>? r_src0 r_src1)"""
-        src1_val = self._ensure_string(frame.locals[src1], 'string>?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string>?') > src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string>?' requires string arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiString):
+            raise MenaiEvalError(f"Function 'string>?' requires string arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value > b.value)
         return None
 
     def _op_string_lte_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_LTE_P dest, src0, src1: r_dest = (string<=? r_src0 r_src1)"""
-        src1_val = self._ensure_string(frame.locals[src1], 'string<=?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string<=?') <= src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string<=?' requires string arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiString):
+            raise MenaiEvalError(f"Function 'string<=?' requires string arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value <= b.value)
         return None
 
     def _op_string_gte_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_GTE_P dest, src0, src1: r_dest = (string>=? r_src0 r_src1)"""
-        src1_val = self._ensure_string(frame.locals[src1], 'string>=?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string>=?') >= src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string>=?' requires string arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiString):
+            raise MenaiEvalError(f"Function 'string>=?' requires string arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value >= b.value)
         return None
 
     def _op_string_length(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_LENGTH dest, src0: r_dest = (string-length r_src0)"""
-        frame.locals[dest] = MenaiInteger(len(self._ensure_string(frame.locals[src0], 'string-length')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string-length' requires string arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(len(a.value))
         return None
 
     def _op_string_upcase(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_UPCASE dest, src0: r_dest = (string-upcase r_src0)"""
-        frame.locals[dest] = MenaiString(self._ensure_string(frame.locals[src0], 'string-upcase').upper())
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string-upcase' requires string arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiString(a.value.upper())
         return None
 
     def _op_string_downcase(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_DOWNCASE dest, src0: r_dest = (string-downcase r_src0)"""
-        frame.locals[dest] = MenaiString(self._ensure_string(frame.locals[src0], 'string-downcase').lower())
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string-downcase' requires string arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiString(a.value.lower())
         return None
 
     def _op_string_trim(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TRIM dest, src0: r_dest = (string-trim r_src0)"""
-        frame.locals[dest] = MenaiString(self._ensure_string(frame.locals[src0], 'string-trim').strip())
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string-trim' requires string arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiString(a.value.strip())
         return None
 
     def _op_string_trim_left(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TRIM_LEFT dest, src0: r_dest = (string-trim-left r_src0)"""
-        frame.locals[dest] = MenaiString(self._ensure_string(frame.locals[src0], 'string-trim-left').lstrip())
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string-trim-left' requires string arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiString(a.value.lstrip())
         return None
 
     def _op_string_trim_right(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TRIM_RIGHT dest, src0: r_dest = (string-trim-right r_src0)"""
-        frame.locals[dest] = MenaiString(self._ensure_string(frame.locals[src0], 'string-trim-right').rstrip())
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string-trim-right' requires string arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiString(a.value.rstrip())
         return None
 
     def _op_string_to_integer(  # pylint: disable=useless-return
@@ -2136,19 +2188,21 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TO_NUMBER dest, src0: r_dest = (string->number r_src0)"""
-        s = self._ensure_string(frame.locals[src0], 'string->number')
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string->number' requires string arguments, got {a.type_name()}")
+
+        s = a.value
+
         try:
             if '.' not in s and 'e' not in s.lower() and 'j' not in s.lower():
                 frame.locals[dest] = MenaiInteger(int(s))
                 return None
-
             if 'j' in s.lower():
                 frame.locals[dest] = MenaiComplex(complex(s))
                 return None
-
             frame.locals[dest] = MenaiFloat(float(s))
             return None
-
         except ValueError:
             frame.locals[dest] = Menai_NONE
             return None
@@ -2157,13 +2211,19 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TO_LIST dest, src0, src1: r_dest = (string->list r_src0 r_src1)"""
-        s = self._ensure_string(frame.locals[src0], 'string->list')
-        delim = self._ensure_string(frame.locals[src1], 'string->list')
-        if delim == "":
-            frame.locals[dest] = MenaiList(tuple(MenaiString(ch) for ch in s))
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string->list' requires string arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiString):
+            raise MenaiEvalError(f"Function 'string->list' requires string arguments, got {b.type_name()}")
+
+        if b.value == "":
+            frame.locals[dest] = MenaiList(tuple(MenaiString(ch) for ch in a.value))
             return None
 
-        frame.locals[dest] = MenaiList(tuple(MenaiString(part) for part in s.split(delim)))
+        frame.locals[dest] = MenaiList(tuple(MenaiString(part) for part in a.value.split(b.value)))
         return None
 
     def _op_string_ref(  # pylint: disable=useless-return
@@ -2190,16 +2250,30 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_PREFIX_P dest, src0, src1: r_dest = (string-prefix? r_src0 r_src1)"""
-        src1_val = self._ensure_string(frame.locals[src1], 'string-prefix?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string-prefix?').startswith(src1_val))
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string-prefix?' requires string arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiString):
+            raise MenaiEvalError(f"Function 'string-prefix?' requires string arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value.startswith(b.value))
         return None
 
     def _op_string_suffix_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_SUFFIX_P dest, src0, src1: r_dest = (string-suffix? r_src0 r_src1)"""
-        src1_val = self._ensure_string(frame.locals[src1], 'string-suffix?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_string(frame.locals[src0], 'string-suffix?').endswith(src1_val))
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string-suffix?' requires string arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiString):
+            raise MenaiEvalError(f"Function 'string-suffix?' requires string arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value.endswith(b.value))
         return None
 
     def _op_string_slice(  # pylint: disable=useless-return
@@ -2244,19 +2318,34 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
     ) -> MenaiValue | None:
         """STRING_REPLACE dest, src0, src1, src2: r_dest = (string-replace r_src0 r_src1 r_src2)"""
-        s = self._ensure_string(frame.locals[src0], 'string-replace')
-        old = self._ensure_string(frame.locals[src1], 'string-replace')
-        new = self._ensure_string(frame.locals[src2], 'string-replace')
-        frame.locals[dest] = MenaiString(s.replace(old, new))
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        c = frame.locals[src2]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string-replace' requires string arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiString):
+            raise MenaiEvalError(f"Function 'string-replace' requires string arguments, got {b.type_name()}")
+
+        if not isinstance(c, MenaiString):
+            raise MenaiEvalError(f"Function 'string-replace' requires string arguments, got {c.type_name()}")
+
+        frame.locals[dest] = MenaiString(a.value.replace(b.value, c.value))
         return None
 
     def _op_string_index(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_INDEX dest, src0, src1: r_dest = (string-index r_src0 r_src1)"""
-        s = self._ensure_string(frame.locals[src0], 'string-index')
-        substr = self._ensure_string(frame.locals[src1], 'string-index')
-        idx = s.find(substr)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string-index' requires string arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiString):
+            raise MenaiEvalError(f"Function 'string-index' requires string arguments, got {b.type_name()}")
+
+        idx = a.value.find(b.value)
         frame.locals[dest] = Menai_NONE if idx == -1 else MenaiInteger(idx)
         return None
 
@@ -2264,8 +2353,15 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_CONCAT dest, src0, src1: r_dest = (string-concat r_src0 r_src1)"""
-        src1_val = self._ensure_string(frame.locals[src1], 'string-concat')
-        frame.locals[dest] = MenaiString(self._ensure_string(frame.locals[src0], 'string-concat') + src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(f"Function 'string-concat' requires string arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiString):
+            raise MenaiEvalError(f"Function 'string-concat' requires string arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiString(a.value + b.value)
         return None
 
     def _op_dict_p(  # pylint: disable=useless-return
@@ -2279,90 +2375,123 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_EQ_P dest, src0, src1: r_dest = (dict=? r_src0 r_src1)"""
-        a = cast(MenaiValue, frame.locals[src0])
-        b = cast(MenaiValue, frame.locals[src1])
-        frame.locals[dest] = MenaiBoolean(self._ensure_dict(a, 'dict=?') == self._ensure_dict(b, 'dict=?'))
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiDict):
+            raise MenaiEvalError(f"Function 'dict=?' requires dict arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiDict):
+            raise MenaiEvalError(f"Function 'dict=?' requires dict arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a == b)
         return None
 
     def _op_dict_neq_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_NEQ_P dest, src0, src1: r_dest = (dict!=? r_src0 r_src1)"""
-        a = cast(MenaiValue, frame.locals[src0])
-        b = cast(MenaiValue, frame.locals[src1])
-        frame.locals[dest] = MenaiBoolean(self._ensure_dict(a, 'dict!=?') != self._ensure_dict(b, 'dict!=?'))
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiDict):
+            raise MenaiEvalError(f"Function 'dict!=?' requires dict arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiDict):
+            raise MenaiEvalError(f"Function 'dict!=?' requires dict arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a != b)
         return None
 
     def _op_dict_keys(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_KEYS dest, src0: r_dest = (dict-keys r_src0)"""
-        a = cast(MenaiValue, frame.locals[src0])
-        frame.locals[dest] = MenaiList(self._ensure_dict(a, 'dict-keys').keys())
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiDict):
+            raise MenaiEvalError(f"Function 'dict-keys' requires dict arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiList(a.keys())
         return None
 
     def _op_dict_values(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_VALUES dest, src0: r_dest = (dict-values r_src0)"""
-        a = cast(MenaiValue, frame.locals[src0])
-        frame.locals[dest] = MenaiList(self._ensure_dict(a, 'dict-values').values())
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiDict):
+            raise MenaiEvalError(f"Function 'dict-values' requires dict arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiList(a.values())
         return None
 
     def _op_dict_length(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_LENGTH dest, src0: r_dest = (dict-length r_src0)"""
-        a = cast(MenaiValue, frame.locals[src0])
-        frame.locals[dest] = MenaiInteger(self._ensure_dict(a, 'dict-length').length())
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiDict):
+            raise MenaiEvalError(f"Function 'dict-length' requires dict arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(a.length())
         return None
 
     def _op_dict_has_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_HAS_P dest, src0, src1: r_dest = (dict-has? r_src0 r_src1)"""
-        a = cast(MenaiValue, frame.locals[src0])
-        key = cast(MenaiValue, frame.locals[src1])
-        frame.locals[dest] = MenaiBoolean(self._ensure_dict(a, 'dict-has?').has_key(key))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiDict):
+            raise MenaiEvalError(f"Function 'dict-has?' requires dict arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.has_key(cast(MenaiValue, frame.locals[src1])))
         return None
 
     def _op_dict_remove(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_REMOVE dest, src0, src1: r_dest = (dict-remove r_src0 r_src1)"""
-        a = cast(MenaiValue, frame.locals[src0])
-        key = cast(MenaiValue, frame.locals[src1])
-        frame.locals[dest] = self._ensure_dict(a, 'dict-remove').remove(key)
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiDict):
+            raise MenaiEvalError(f"Function 'dict-remove' requires dict arguments, got {a.type_name()}")
+
+        frame.locals[dest] = a.remove(cast(MenaiValue, frame.locals[src1]))
         return None
 
     def _op_dict_merge(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_MERGE dest, src0, src1: r_dest = (dict-merge r_src0 r_src1)"""
-        a = cast(MenaiValue, frame.locals[src0])
-        b = cast(MenaiValue, frame.locals[src1])
-        frame.locals[dest] = self._ensure_dict(a, 'dict-merge').merge(self._ensure_dict(b, 'dict-merge'))
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiDict):
+            raise MenaiEvalError(f"Function 'dict-merge' requires dict arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiDict):
+            raise MenaiEvalError(f"Function 'dict-merge' requires dict arguments, got {b.type_name()}")
+
+        frame.locals[dest] = a.merge(b)
         return None
 
     def _op_dict_set(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
     ) -> MenaiValue | None:
         """DICT_SET dest, src0, src1, src2: r_dest = (dict-set r_src0 r_src1 r_src2)"""
-        a = cast(MenaiValue, frame.locals[src0])
-        key = cast(MenaiValue, frame.locals[src1])
-        value = cast(MenaiValue, frame.locals[src2])
-        frame.locals[dest] = self._ensure_dict(a, 'dict-set').set(key, value)
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiDict):
+            raise MenaiEvalError(f"Function 'dict-set' requires dict arguments, got {a.type_name()}")
+
+        frame.locals[dest] = a.set(cast(MenaiValue, frame.locals[src1]), cast(MenaiValue, frame.locals[src2]))
         return None
 
     def _op_dict_get(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
     ) -> MenaiValue | None:
         """DICT_GET dest, src0, src1, src2: r_dest = (dict-get r_src0 r_src1 r_src2)"""
-        a = cast(MenaiValue, frame.locals[src0])
-        key = cast(MenaiValue, frame.locals[src1])
-        default = cast(MenaiValue, frame.locals[src2])
-        result = self._ensure_dict(a, 'dict-get').get(key)
-        frame.locals[dest] = result if result is not None else default
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiDict):
+            raise MenaiEvalError(f"Function 'dict-get' requires dict arguments, got {a.type_name()}")
+
+        result = a.get(cast(MenaiValue, frame.locals[src1]))
+        frame.locals[dest] = result if result is not None else cast(MenaiValue, frame.locals[src2])
         return None
 
     def _op_list_p(  # pylint: disable=useless-return
