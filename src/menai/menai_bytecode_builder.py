@@ -34,6 +34,7 @@ from menai.menai_cfg import (
     MenaiCFGTraceInstr,
     MenaiCFGValue,
 )
+from menai.menai_cfg_collapse_phi_chains import _value_ids_in_instr, _value_ids_in_term
 from menai.menai_value import (
     MenaiBoolean,
     MenaiComplex,
@@ -454,6 +455,7 @@ class MenaiBytecodeBuilder:
                         # slot, bypassing the phi-sink skip guard.
                         ctx.slot_map[incoming_val.id] = phi_slot
                         self._emit_sink_instr(ctx.phi_sink[incoming_val.id], phi_slot, ctx)
+
                     else:
                         src_slot = ctx.slot_of(incoming_val)
                         if src_slot != phi_slot:
@@ -481,13 +483,16 @@ class MenaiBytecodeBuilder:
             opcode, _ = BUILTIN_OPCODE_MAP.get(instr.op, (None, None))
             if opcode is None:
                 raise ValueError(f"_emit_sink_instr: unknown builtin {instr.op!r}")
+
             args = instr.args
             def slot(i: int) -> int:
                 return ctx.slot_of(args[i])
             if instr.op in TERNARY_OPS:
                 ctx.emit(opcode, slot(0), slot(1), dest=dest, src2=slot(2))
+
             elif instr.op in BINARY_OPS:
                 ctx.emit(opcode, slot(0), slot(1), dest=dest)
+
             else:
                 ctx.emit(opcode, slot(0), dest=dest)
 
@@ -704,6 +709,7 @@ class MenaiBytecodeBuilder:
         # Build the human-readable name.
         if func.binding_name:
             lambda_name = func.binding_name
+
         else:
             lambda_name = f"<lambda-{self._lambda_counter}>"
             self._lambda_counter += 1
@@ -770,8 +776,6 @@ def _build_phi_sink(func: MenaiCFGFunction) -> Dict[int, MenaiCFGInstr]:
          are handled by the normal MOVE path (CollapsePhiChains eliminates
          them in the optimized pipeline).  PatchClosureInstr has no result.
     """
-    from menai.menai_cfg_collapse_phi_chains import _value_ids_in_instr, _value_ids_in_term
-
     # Collect all candidate instruction results, keyed by value id, with the
     # block they are defined in.
     candidate_defs: Dict[int, tuple] = {}  # value_id -> (instr, block)
@@ -802,14 +806,17 @@ def _build_phi_sink(func: MenaiCFGFunction) -> Dict[int, MenaiCFGInstr]:
                     if val.id in use_counts:
                         use_counts[val.id] += 1
                         phi_use_counts[val.id] += 1
+
             else:
                 for vid in _value_ids_in_instr(instr):
                     if vid in use_counts:
                         use_counts[vid] += 1
+
         for patch in block.patch_instrs:
             for vid in (patch.closure.id, patch.value.id):
                 if vid in use_counts:
                     use_counts[vid] += 1
+
         if block.terminator is not None:
             for vid in _value_ids_in_term(block.terminator):
                 if vid in use_counts:
@@ -831,4 +838,5 @@ def _build_phi_sink(func: MenaiCFGFunction) -> Dict[int, MenaiCFGInstr]:
             pred = phi_pred_block.get(vid)
             if pred is not None and pred.id == def_block.id:
                 result_map[vid] = instr
+
     return result_map

@@ -923,7 +923,7 @@ class TestIntegration:
         from menai.menai_lexer import MenaiLexer
         from menai.menai_ast_builder import MenaiASTBuilder
         from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
-        from menai.menai_module_resolver import MenaiModuleResolver
+        from menai.menai_ast_module_resolver import MenaiASTModuleResolver
         from menai.menai_ast_desugarer import MenaiASTDesugarer
         from menai.menai_ast_constant_folder import MenaiASTConstantFolder
         from menai.menai_ir_builder import MenaiIRBuilder
@@ -935,7 +935,7 @@ class TestIntegration:
         lexer = MenaiLexer()
         ast_builder = MenaiASTBuilder()
         sem = MenaiASTSemanticAnalyzer()
-        resolver = MenaiModuleResolver(None)
+        resolver = MenaiASTModuleResolver(None)
         desugarer = MenaiASTDesugarer()
         folder = MenaiASTConstantFolder()
         ir_builder = MenaiIRBuilder()

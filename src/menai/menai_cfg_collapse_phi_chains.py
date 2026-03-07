@@ -47,7 +47,6 @@ from menai.menai_cfg import (
     MenaiCFGBranchTerm,
     MenaiCFGFunction,
     MenaiCFGInstr,
-    MenaiCFGJumpTerm,
     MenaiCFGMakeClosureInstr,
     MenaiCFGPatchClosureInstr,
     MenaiCFGPhiInstr,

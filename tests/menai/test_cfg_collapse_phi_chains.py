@@ -662,7 +662,7 @@ class TestEndToEnd:
         from menai.menai_lexer import MenaiLexer
         from menai.menai_ast_builder import MenaiASTBuilder
         from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
-        from menai.menai_module_resolver import MenaiModuleResolver
+        from menai.menai_ast_module_resolver import MenaiASTModuleResolver
         from menai.menai_ast_desugarer import MenaiASTDesugarer
         from menai.menai_ast_constant_folder import MenaiASTConstantFolder
         from menai.menai_ir_builder import MenaiIRBuilder
@@ -674,7 +674,7 @@ class TestEndToEnd:
         tokens = MenaiLexer().lex(source)
         ast = MenaiASTBuilder().build(tokens, source, "")
         ast = MenaiASTSemanticAnalyzer().analyze(ast, source)
-        ast = MenaiModuleResolver(None).resolve(ast)
+        ast = MenaiASTModuleResolver(None).resolve(ast)
         ast = MenaiASTDesugarer().desugar(ast)
         ast = MenaiASTConstantFolder().optimize(ast)
         ir = MenaiIRBuilder().build(ast)

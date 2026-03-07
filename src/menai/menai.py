@@ -1093,7 +1093,7 @@ class Menai:
         result = self._evaluate_raw(expression)
         return result.describe()
 
-    # Module System Implementation (ModuleLoader interface)
+    # Module System Implementation (MenaiASTModuleLoader interface)
 
     @contextmanager
     def begin_loading(self, module_name: str) -> Iterator[None]:
@@ -1194,7 +1194,7 @@ class Menai:
         """
         Load and compile a module to a fully resolved AST.
 
-        This implements the ModuleLoader interface. It compiles the module through
+        This implements the MenaiASTModuleLoader interface. It compiles the module through
         the full front-end pipeline (lex, parse, semantic analysis, module resolution).
         The result is cached for subsequent imports. Cache is automatically invalidated
         when the module file content changes (detected via SHA256 hash).

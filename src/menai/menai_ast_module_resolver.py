@@ -1,7 +1,7 @@
 """Menai Module Resolver Pass - resolves import expressions at compile-time.
 
 This pass walks the AST looking for (import "module-name") expressions and
-replaces them with the loaded module's dict value. It uses a ModuleLoader
+replaces them with the loaded module's dict value. It uses a MenaiASTModuleLoader
 interface to delegate the actual module loading logic.
 """
 
@@ -11,7 +11,7 @@ from menai.menai_error import MenaiModuleError
 from menai.menai_ast import MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTString
 
 
-class ModuleLoader(Protocol):
+class MenaiASTModuleLoader(Protocol):
     """Interface for loading Menai modules at compile-time.
 
     The module loader is responsible for:
@@ -65,7 +65,7 @@ class ModuleLoader(Protocol):
         ...  # pylint: disable=unnecessary-ellipsis
 
 
-class MenaiModuleResolver:
+class MenaiASTModuleResolver:
     """
     Resolves import expressions by loading modules and replacing imports with their values.
 
@@ -74,10 +74,10 @@ class MenaiModuleResolver:
     Into:
         (dict (list "add-days" <function>) (list "working-days" <function>) ...)
 
-    The actual module loading is delegated to a ModuleLoader interface.
+    The actual module loading is delegated to a MenaiASTModuleLoader interface.
     """
 
-    def __init__(self, module_loader: ModuleLoader | None = None):
+    def __init__(self, module_loader: MenaiASTModuleLoader | None = None):
         """
         Initialize module resolver pass.
 

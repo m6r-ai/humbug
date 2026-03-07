@@ -10,6 +10,7 @@ from menai.menai_ast import MenaiASTNode
 from menai.menai_ast_builder import MenaiASTBuilder
 from menai.menai_ast_constant_folder import MenaiASTConstantFolder
 from menai.menai_ast_desugarer import MenaiASTDesugarer
+from menai.menai_ast_module_resolver import MenaiASTModuleResolver, MenaiASTModuleLoader
 from menai.menai_ast_optimization_pass import MenaiASTOptimizationPass
 from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
 from menai.menai_bytecode import CodeObject
@@ -27,7 +28,6 @@ from menai.menai_ir_copy_propagator import MenaiIRCopyPropagator
 from menai.menai_ir_optimizer import MenaiIROptimizer
 from menai.menai_ir_inline_once import MenaiIRInlineOnce
 from menai.menai_lexer import MenaiLexer
-from menai.menai_module_resolver import MenaiModuleResolver, ModuleLoader
 
 
 class MenaiCompiler:
@@ -38,7 +38,7 @@ class MenaiCompiler:
     def __init__(
         self,
         optimize: bool = True,
-        module_loader: ModuleLoader | None = None,
+        module_loader: MenaiASTModuleLoader | None = None,
     ):
         """
         Initialize compiler with all passes.
@@ -53,7 +53,7 @@ class MenaiCompiler:
         self.lexer = MenaiLexer()
         self.ast_builder = MenaiASTBuilder()
         self.ast_semantic_analyzer = MenaiASTSemanticAnalyzer()
-        self.module_resolver = MenaiModuleResolver(module_loader)
+        self.ast_module_resolver = MenaiASTModuleResolver(module_loader)
         self.ast_desugarer = MenaiASTDesugarer()
         self.ast_passes: List[MenaiASTOptimizationPass] = []
         self.ir_builder = MenaiIRBuilder()
@@ -103,7 +103,7 @@ class MenaiCompiler:
         tokens = self.lexer.lex(source)
         ast = self.ast_builder.build(tokens, source, source_file)
         checked_ast = self.ast_semantic_analyzer.analyze(ast, source)
-        resolved_ast = self.module_resolver.resolve(checked_ast)
+        resolved_ast = self.ast_module_resolver.resolve(checked_ast)
         return resolved_ast
 
     def compile(self, source: str, name: str = "<module>") -> CodeObject:
