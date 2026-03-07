@@ -102,7 +102,8 @@ class _EmitContext:
         return self.slot_map[value.id]
 
     def ensure_slot(self, value: MenaiCFGValue) -> int:
-        """Return a register slot for `value`, materialising it if necessary.
+        """
+        Return a register slot for `value`, materialising it if necessary.
 
         For values with an existing slot: returns the existing slot.
         For values without a slot (should not occur in normal operation):
@@ -151,19 +152,9 @@ class _EmitContext:
         const_idx = self.add_constant(value)
         self.emit(Opcode.LOAD_CONST, const_idx, dest=dest)
 
-    def emit_const_push(self, value: MenaiValue) -> None:
-        """Load a constant into a fresh temp register then PUSH it onto the call stack.
-
-        Used for synthesised default arguments feeding unconverted stack-based ops,
-        and for rematerialisable constants consumed by those same ops.
-        """
-        slot = self.next_slot
-        self.next_slot += 1
-        self.emit_constant(value, dest=slot)
-        self.emit(Opcode.PUSH, slot)
-
     def patch_jump(self, instr_index: int, target: int, src0: str = 'src0') -> None:
-        """Back-patch a jump target into the given field of an already-emitted instruction.
+        """
+        Back-patch a jump target into the given field of an already-emitted instruction.
 
         JUMP stores its target in src0.
         JUMP_IF_FALSE / JUMP_IF_TRUE store the condition in src0 and the target in src1.
@@ -442,7 +433,8 @@ class MenaiBytecodeBuilder:
                     ctx.emit(Opcode.POP, dest=phi_slot)
 
     def _emit_patch(self, patch: MenaiCFGPatchClosureInstr, ctx: _EmitContext) -> None:
-        """Emit a PATCH_CLOSURE instruction for a letrec fixup.
+        """
+        Emit a PATCH_CLOSURE instruction for a letrec fixup.
 
         PATCH_CLOSURE src0=closure_reg, src1=value_reg, src2=capture_idx
         All three operands are register indices — no stack involvement.
@@ -692,9 +684,7 @@ class MenaiBytecodeBuilder:
         return
 
     def _generate_lambda_code_object(self, func: MenaiCFGFunction) -> CodeObject:
-        """
-        Recursively generate a CodeObject for a nested lambda MenaiCFGFunction.
-        """
+        """Recursively generate a CodeObject for a nested lambda MenaiCFGFunction."""
         child_ctx = _EmitContext(current_lambda_name=func.binding_name)
 
         param_count = len(func.params)
