@@ -343,12 +343,12 @@ class BytecodeValidator:
             try:
                 Opcode(instr.opcode)
 
-            except ValueError:
+            except ValueError as e:
                 raise ValidationError(
                     ValidationErrorType.INVALID_OPCODE,
                     f"Invalid opcode value: {instr.opcode}",
                     instruction_index=i
-                )
+                ) from e
 
     def _validate_indices(self, code: CodeObject) -> None:
         """Validate all indices (constants, names, code objects, variables)."""
