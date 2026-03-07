@@ -323,24 +323,6 @@ class MenaiVM:
         table[Opcode.RANGE] = self._op_range
         return table
 
-    def _ensure_float(self, value: MenaiValue, function_name: str) -> float:
-        """Ensure value is a float, raise error if not."""
-        if not isinstance(value, MenaiFloat):
-            raise MenaiEvalError(
-                f"Function '{function_name}' requires float arguments, got {value.type_name()}"
-            )
-
-        return value.value
-
-    def _ensure_complex(self, value: MenaiValue, function_name: str) -> complex:
-        """Ensure value is a complex number, raise error if not."""
-        if not isinstance(value, MenaiComplex):
-            raise MenaiEvalError(
-                f"Function '{function_name}' requires complex arguments, got {value.type_name()}"
-            )
-
-        return value.value
-
     def _check_and_pack_args(self, func: MenaiFunction, arity: int) -> None:
         """
         Shared arity-check and variadic-pack logic for CALL, TAIL_CALL, APPLY, TAIL_APPLY.
@@ -1541,282 +1523,433 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LT_P dest, src0, src1: r_dest = (float<? r_src0 r_src1)"""
-        src1_val = self._ensure_float(frame.locals[src1], 'float<?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float<?') < src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float<?' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float<?' requires float arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value < b.value)
         return None
 
     def _op_float_gt_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_GT_P dest, src0, src1: r_dest = (float>? r_src0 r_src1)"""
-        src1_val = self._ensure_float(frame.locals[src1], 'float>?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float>?') > src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float>?' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float>?' requires float arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value > b.value)
         return None
 
     def _op_float_lte_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LTE_P dest, src0, src1: r_dest = (float<=? r_src0 r_src1)"""
-        src1_val = self._ensure_float(frame.locals[src1], 'float<=?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float<=?') <= src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float<=?' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float<=?' requires float arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value <= b.value)
         return None
 
     def _op_float_gte_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_GTE_P dest, src0, src1: r_dest = (float>=? r_src0 r_src1)"""
-        src1_val = self._ensure_float(frame.locals[src1], 'float>=?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_float(frame.locals[src0], 'float>=?') >= src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float>=?' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float>=?' requires float arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value >= b.value)
         return None
 
     def _op_float_abs(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_ABS dest, src0: r_dest = (float-abs r_src0)"""
-        frame.locals[dest] = MenaiFloat(abs(self._ensure_float(frame.locals[src0], 'float-abs')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-abs' requires float arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(abs(a.value))
         return None
 
     def _op_float_add(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_ADD dest, src0, src1: r_dest = (float+ r_src0 r_src1)"""
-        src1_val = self._ensure_float(frame.locals[src1], 'float+')
-        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float+') + src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float+' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float+' requires float arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(a.value + b.value)
         return None
 
     def _op_float_sub(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_SUB dest, src0, src1: r_dest = (float- r_src0 r_src1)"""
-        src1_val = self._ensure_float(frame.locals[src1], 'float-')
-        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float-') - src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-' requires float arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(a.value - b.value)
         return None
 
     def _op_float_mul(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_MUL dest, src0, src1: r_dest = (float* r_src0 r_src1)"""
-        src1_val = self._ensure_float(frame.locals[src1], 'float*')
-        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float*') * src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float*' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float*' requires float arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(a.value * b.value)
         return None
 
     def _op_float_div(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_DIV dest, src0, src1: r_dest = (float/ r_src0 r_src1)"""
-        a_val = self._ensure_float(frame.locals[src0], 'float/')
-        b_val = self._ensure_float(frame.locals[src1], 'float/')
-        if b_val == 0.0:
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float/' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float/' requires float arguments, got {b.type_name()}")
+
+        if b.value == 0.0:
             raise MenaiEvalError("Division by zero in 'float/'")
 
-        frame.locals[dest] = MenaiFloat(a_val / b_val)
+        frame.locals[dest] = MenaiFloat(a.value / b.value)
         return None
 
     def _op_float_floor_div(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_FLOOR_DIV dest, src0, src1: r_dest = (float// r_src0 r_src1)"""
-        a_val = self._ensure_float(frame.locals[src0], 'float//')
-        b_val = self._ensure_float(frame.locals[src1], 'float//')
-        if b_val == 0:
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float//' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float//' requires float arguments, got {b.type_name()}")
+
+        if b.value == 0:
             raise MenaiEvalError("Division by zero")
 
-        frame.locals[dest] = MenaiFloat(float(a_val // b_val))
+        frame.locals[dest] = MenaiFloat(float(a.value // b.value))
         return None
 
     def _op_float_mod(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_MOD dest, src0, src1: r_dest = (float% r_src0 r_src1)"""
-        a_val = self._ensure_float(frame.locals[src0], 'float%')
-        b_val = self._ensure_float(frame.locals[src1], 'float%')
-        if b_val == 0:
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float%' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float%' requires float arguments, got {b.type_name()}")
+
+        if b.value == 0:
             raise MenaiEvalError("Modulo by zero")
 
-        frame.locals[dest] = MenaiFloat(a_val % b_val)
+        frame.locals[dest] = MenaiFloat(a.value % b.value)
         return None
 
     def _op_float_neg(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_NEG dest, src0: r_dest = (float-neg r_src0)"""
-        frame.locals[dest] = MenaiFloat(-self._ensure_float(frame.locals[src0], 'float-neg'))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-neg' requires float arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(-a.value)
         return None
 
     def _op_float_exp(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_EXP dest, src0: r_dest = (float-exp r_src0)"""
-        frame.locals[dest] = MenaiFloat(math.exp(self._ensure_float(frame.locals[src0], 'float-exp')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-exp' requires float arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(math.exp(a.value))
         return None
 
     def _op_float_expn(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_EXPN dest, src0, src1: r_dest = (float-expn r_src0 r_src1)"""
-        src1_val = self._ensure_float(frame.locals[src1], 'float-expn')
-        frame.locals[dest] = MenaiFloat(self._ensure_float(frame.locals[src0], 'float-expn') ** src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-expn' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-expn' requires float arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(a.value ** b.value)
         return None
 
     def _op_float_log(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LOG dest, src0: r_dest = (float-log r_src0)"""
-        a_val = self._ensure_float(frame.locals[src0], 'float-log')
-        if a_val == 0.0:
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-log' requires float arguments, got {a.type_name()}")
+
+        if a.value == 0.0:
             frame.locals[dest] = MenaiFloat(float('-inf'))
             return None
 
-        if a_val < 0.0:
+        if a.value < 0.0:
             raise MenaiEvalError("Function 'float-log' requires a non-negative argument")
 
-        frame.locals[dest] = MenaiFloat(math.log(a_val))
+        frame.locals[dest] = MenaiFloat(math.log(a.value))
         return None
 
     def _op_float_log10(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LOG10 dest, src0: r_dest = (float-log10 r_src0)"""
-        a_val = self._ensure_float(frame.locals[src0], 'float-log10')
-        if a_val == 0.0:
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-log10' requires float arguments, got {a.type_name()}")
+
+        if a.value == 0.0:
             frame.locals[dest] = MenaiFloat(float('-inf'))
             return None
 
-        if a_val < 0.0:
+        if a.value < 0.0:
             raise MenaiEvalError("Function 'float-log10' requires a non-negative argument")
 
-        frame.locals[dest] = MenaiFloat(math.log10(a_val))
+        frame.locals[dest] = MenaiFloat(math.log10(a.value))
         return None
 
     def _op_float_log2(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LOG2 dest, src0: r_dest = (float-log2 r_src0)"""
-        a_val = self._ensure_float(frame.locals[src0], 'float-log2')
-        if a_val == 0.0:
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-log2' requires float arguments, got {a.type_name()}")
+
+        if a.value == 0.0:
             frame.locals[dest] = MenaiFloat(float('-inf'))
             return None
 
-        if a_val < 0.0:
+        if a.value < 0.0:
             raise MenaiEvalError("Function 'float-log2' requires a non-negative argument")
 
-        frame.locals[dest] = MenaiFloat(math.log2(a_val))
+        frame.locals[dest] = MenaiFloat(math.log2(a.value))
         return None
 
     def _op_float_logn(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LOGN dest, src0, src1: r_dest = (float-logn r_src0 r_src1)"""
-        a_val = self._ensure_float(frame.locals[src0], 'float-logn')
-        base_val = self._ensure_float(frame.locals[src1], 'float-logn')
-        if base_val <= 0.0 or base_val == 1.0:
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-logn' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-logn' requires float arguments, got {b.type_name()}")
+
+        if b.value <= 0.0 or b.value == 1.0:
             raise MenaiEvalError("Function 'float-logn' requires a positive base not equal to 1")
-        if a_val == 0.0:
+
+        if a.value == 0.0:
             frame.locals[dest] = MenaiFloat(float('-inf'))
             return None
 
-        if a_val < 0.0:
+        if a.value < 0.0:
             raise MenaiEvalError("Function 'float-logn' requires a non-negative argument")
 
-        frame.locals[dest] = MenaiFloat(math.log(a_val, base_val))
+        frame.locals[dest] = MenaiFloat(math.log(a.value, b.value))
         return None
 
     def _op_float_sin(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_SIN dest, src0: r_dest = (float-sin r_src0)"""
-        frame.locals[dest] = MenaiFloat(math.sin(self._ensure_float(frame.locals[src0], 'float-sin')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-sin' requires float arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(math.sin(a.value))
         return None
 
     def _op_float_cos(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_COS dest, src0: r_dest = (float-cos r_src0)"""
-        frame.locals[dest] = MenaiFloat(math.cos(self._ensure_float(frame.locals[src0], 'float-cos')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-cos' requires float arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(math.cos(a.value))
         return None
 
     def _op_float_tan(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_TAN dest, src0: r_dest = (float-tan r_src0)"""
-        frame.locals[dest] = MenaiFloat(math.tan(self._ensure_float(frame.locals[src0], 'float-tan')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-tan' requires float arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(math.tan(a.value))
         return None
 
     def _op_float_sqrt(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_SQRT dest, src0: r_dest = (float-sqrt r_src0)"""
-        a_val = self._ensure_float(frame.locals[src0], 'float-sqrt')
-        if a_val < 0.0:
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-sqrt' requires float arguments, got {a.type_name()}")
+
+        if a.value < 0.0:
             raise MenaiEvalError("Function 'float-sqrt' requires a non-negative argument")
-        frame.locals[dest] = MenaiFloat(math.sqrt(a_val))
+
+        frame.locals[dest] = MenaiFloat(math.sqrt(a.value))
         return None
 
     def _op_float_to_integer(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_TO_INTEGER dest, src0: r_dest = (float->integer r_src0)"""
-        frame.locals[dest] = MenaiInteger(int(self._ensure_float(frame.locals[src0], 'float->integer')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float->integer' requires float arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(int(a.value))
         return None
 
     def _op_float_to_complex(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_TO_COMPLEX dest, src0, src1: r_dest = (float->complex r_src0 r_src1)"""
-        real_val = self._ensure_float(frame.locals[src0], 'float->complex')
-        imag_val = self._ensure_float(frame.locals[src1], 'float->complex')
-        frame.locals[dest] = MenaiComplex(complex(real_val, imag_val))
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float->complex' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float->complex' requires float arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiComplex(complex(a.value, b.value))
         return None
 
     def _op_float_to_string(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_TO_STRING dest, src0: r_dest = (float->string r_src0)"""
-        a_val = self._ensure_float(frame.locals[src0], 'float->string')
-        if isinstance(a_val, complex):
-            frame.locals[dest] = MenaiString(str(a_val).strip('()'))
-            return None
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float->string' requires float arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiString(str(a_val))
+        frame.locals[dest] = MenaiString(str(a.value))
         return None
 
     def _op_float_floor(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_FLOOR dest, src0: r_dest = (float-floor r_src0)"""
-        frame.locals[dest] = MenaiFloat(float(math.floor(self._ensure_float(frame.locals[src0], 'float-floor'))))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-floor' requires float arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(float(math.floor(a.value)))
         return None
 
     def _op_float_ceil(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_CEIL dest, src0: r_dest = (float-ceil r_src0)"""
-        frame.locals[dest] = MenaiFloat(float(math.ceil(self._ensure_float(frame.locals[src0], 'float-ceil'))))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-ceil' requires float arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(float(math.ceil(a.value)))
         return None
 
     def _op_float_round(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_ROUND dest, src0: r_dest = (float-round r_src0)"""
-        frame.locals[dest] = MenaiFloat(float(round(self._ensure_float(frame.locals[src0], 'float-round'))))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-round' requires float arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(float(round(a.value)))
         return None
 
     def _op_float_min(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_MIN dest, src0, src1: r_dest = (float-min r_src0 r_src1)"""
-        a_val = self._ensure_float(frame.locals[src0], 'float-min')
-        b_val = self._ensure_float(frame.locals[src1], 'float-min')
-        frame.locals[dest] = MenaiFloat(a_val if a_val <= b_val else b_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-min' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-min' requires float arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(a.value if a.value <= b.value else b.value)
         return None
 
     def _op_float_max(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_MAX dest, src0, src1: r_dest = (float-max r_src0 r_src1)"""
-        a_val = self._ensure_float(frame.locals[src0], 'float-max')
-        b_val = self._ensure_float(frame.locals[src1], 'float-max')
-        frame.locals[dest] = MenaiFloat(a_val if a_val >= b_val else b_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-max' requires float arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiFloat):
+            raise MenaiEvalError(f"Function 'float-max' requires float arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(a.value if a.value >= b.value else b.value)
         return None
 
     def _op_complex_p(  # pylint: disable=useless-return
@@ -1860,140 +1993,228 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_REAL dest, src0: r_dest = (complex-real r_src0)"""
-        frame.locals[dest] = MenaiFloat(self._ensure_complex(frame.locals[src0], 'complex-real').real)
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-real' requires complex arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(a.value.real)
         return None
 
     def _op_complex_imag(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_IMAG dest, src0: r_dest = (complex-imag r_src0)"""
-        frame.locals[dest] = MenaiFloat(self._ensure_complex(frame.locals[src0], 'complex-imag').imag)
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-imag' requires complex arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(a.value.imag)
         return None
 
     def _op_complex_abs(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_ABS dest, src0: r_dest = (complex-abs r_src0)"""
-        frame.locals[dest] = MenaiFloat(abs(self._ensure_complex(frame.locals[src0], 'complex-abs')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-abs' requires complex arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(abs(a.value))
         return None
 
     def _op_complex_add(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_ADD dest, src0, src1: r_dest = (complex+ r_src0 r_src1)"""
-        src1_val = self._ensure_complex(frame.locals[src1], 'complex+')
-        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex+') + src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex+' requires complex arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex+' requires complex arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiComplex(a.value + b.value)
         return None
 
     def _op_complex_sub(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_SUB dest, src0, src1: r_dest = (complex- r_src0 r_src1)"""
-        src1_val = self._ensure_complex(frame.locals[src1], 'complex-')
-        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex-') - src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-' requires complex arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-' requires complex arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiComplex(a.value - b.value)
         return None
 
     def _op_complex_mul(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_MUL dest, src0, src1: r_dest = (complex* r_src0 r_src1)"""
-        src1_val = self._ensure_complex(frame.locals[src1], 'complex*')
-        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex*') * src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex*' requires complex arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex*' requires complex arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiComplex(a.value * b.value)
         return None
 
     def _op_complex_div(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_DIV dest, src0, src1: r_dest = (complex/ r_src0 r_src1)"""
-        a_val = self._ensure_complex(frame.locals[src0], 'complex/')
-        b_val = self._ensure_complex(frame.locals[src1], 'complex/')
-        if b_val == 0:
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex/' requires complex arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex/' requires complex arguments, got {b.type_name()}")
+
+        if b.value == 0:
             raise MenaiEvalError("Division by zero in 'complex/'")
 
-        frame.locals[dest] = MenaiComplex(a_val / b_val)
+        frame.locals[dest] = MenaiComplex(a.value / b.value)
         return None
 
     def _op_complex_neg(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_NEG dest, src0: r_dest = (complex-neg r_src0)"""
-        frame.locals[dest] = MenaiComplex(-self._ensure_complex(frame.locals[src0], 'complex-neg'))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-neg' requires complex arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiComplex(-a.value)
         return None
 
     def _op_complex_exp(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_EXP dest, src0: r_dest = (complex-exp r_src0)"""
-        frame.locals[dest] = MenaiComplex(cmath.exp(self._ensure_complex(frame.locals[src0], 'complex-exp')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-exp' requires complex arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiComplex(cmath.exp(a.value))
         return None
 
     def _op_complex_expn(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_EXPN dest, src0, src1: r_dest = (complex-expn r_src0 r_src1)"""
-        src1_val = self._ensure_complex(frame.locals[src1], 'complex-expn')
-        frame.locals[dest] = MenaiComplex(self._ensure_complex(frame.locals[src0], 'complex-expn') ** src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-expn' requires complex arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-expn' requires complex arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiComplex(a.value ** b.value)
         return None
 
     def _op_complex_log(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_LOG dest, src0: r_dest = (complex-log r_src0)"""
-        frame.locals[dest] = MenaiComplex(cmath.log(self._ensure_complex(frame.locals[src0], 'complex-log')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-log' requires complex arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiComplex(cmath.log(a.value))
         return None
 
     def _op_complex_log10(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_LOG10 dest, src0: r_dest = (complex-log10 r_src0)"""
-        frame.locals[dest] = MenaiComplex(cmath.log10(self._ensure_complex(frame.locals[src0], 'complex-log10')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-log10' requires complex arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiComplex(cmath.log10(a.value))
         return None
 
     def _op_complex_logn(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_LOGN dest, src0, src1: r_dest = (complex-logn r_src0 r_src1)"""
-        a_val = self._ensure_complex(frame.locals[src0], 'complex-logn')
-        base_val = self._ensure_complex(frame.locals[src1], 'complex-logn')
-        if base_val == 0j:
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-logn' requires complex arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-logn' requires complex arguments, got {b.type_name()}")
+
+        if b.value == 0j:
             raise MenaiEvalError("Function 'complex-logn' requires a non-zero base")
-        frame.locals[dest] = MenaiComplex(cmath.log(a_val, base_val))
+
+        frame.locals[dest] = MenaiComplex(cmath.log(a.value, b.value))
         return None
 
     def _op_complex_sin(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_SIN dest, src0: r_dest = (complex-sin r_src0)"""
-        frame.locals[dest] = MenaiComplex(cmath.sin(self._ensure_complex(frame.locals[src0], 'complex-sin')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-sin' requires complex arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiComplex(cmath.sin(a.value))
         return None
 
     def _op_complex_cos(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_COS dest, src0: r_dest = (complex-cos r_src0)"""
-        frame.locals[dest] = MenaiComplex(cmath.cos(self._ensure_complex(frame.locals[src0], 'complex-cos')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-cos' requires complex arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiComplex(cmath.cos(a.value))
         return None
 
     def _op_complex_tan(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_TAN dest, src0: r_dest = (complex-tan r_src0)"""
-        frame.locals[dest] = MenaiComplex(cmath.tan(self._ensure_complex(frame.locals[src0], 'complex-tan')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-tan' requires complex arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiComplex(cmath.tan(a.value))
         return None
 
     def _op_complex_sqrt(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_SQRT dest, src0: r_dest = (complex-sqrt r_src0)"""
-        frame.locals[dest] = MenaiComplex(cmath.sqrt(self._ensure_complex(frame.locals[src0], 'complex-sqrt')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex-sqrt' requires complex arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiComplex(cmath.sqrt(a.value))
         return None
 
     def _op_complex_to_string(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_TO_STRING dest, src0: r_dest = (complex->string r_src0)"""
-        a_val = self._ensure_complex(frame.locals[src0], 'complex->string')
-        frame.locals[dest] = MenaiString(str(a_val).strip('()') if isinstance(a_val, complex) else str(a_val))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiComplex):
+            raise MenaiEvalError(f"Function 'complex->string' requires complex arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiString(str(a.value).strip('()'))
         return None
 
     def _op_string_p(  # pylint: disable=useless-return
