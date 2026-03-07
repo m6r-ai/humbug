@@ -6,7 +6,7 @@ from dataclasses import dataclass
 import math
 from typing import List, Dict, Any, cast, Protocol
 
-from menai.menai_bytecode import CodeObject, Opcode
+from menai.menai_bytecode import CodeObject, Opcode, Instruction
 from menai.menai_error import MenaiEvalError, MenaiCancelledException
 from menai.menai_value import (
     MenaiValue, MenaiBoolean, MenaiString, MenaiList, MenaiDict, MenaiFunction,
@@ -49,6 +49,7 @@ class Frame:
     def __init__(self, code: CodeObject) -> None:
         self.code = code
         self.ip = 0
+        self.locals = cast(List[MenaiValue], [None] * code.local_count)
 
 
 class MenaiVM:
@@ -118,30 +119,6 @@ class MenaiVM:
         than the one executing the VM.
         """
         self._cancelled = True
-
-    def reset_cancellation(self) -> None:
-        """
-        Reset the cancellation flag.
-
-        This should be called before starting a new execution to ensure
-        the cancellation state from a previous execution doesn't affect
-        the new one.
-        """
-        self._cancelled = False
-        self._instruction_count = 0
-
-    def _check_cancellation(self) -> None:
-        """
-        Check if execution has been cancelled and raise exception if so.
-
-        This is called periodically during execution (every N instructions)
-        to allow long-running computations to be interrupted.
-
-        Raises:
-            MenaiCancelledException: If execution has been cancelled
-        """
-        if self._cancelled:
-            raise MenaiCancelledException()
 
     def _build_dispatch_table(self) -> List[Any]:
         """
@@ -387,13 +364,13 @@ class MenaiVM:
             self.globals.update(prelude_functions)
 
         # Reset state
-        self.reset_cancellation()
+        self._cancelled = False
+        self._instruction_count = 0
 
         # Reset execution state
         self.stack = []
         self.frames = self.frames[:1]  # Keep only the main sentinel frame
         frame = Frame(code)
-        frame.locals = cast(List[MenaiValue], [None] * code.local_count)
         self.frames.append(frame)
         self.current_frame = frame
 
@@ -426,33 +403,33 @@ class MenaiVM:
         instruction_count = 0
 
         while True:
-            # Re-fetch code and instructions each iteration in case frame.code changes (mutual recursion TCO)
-            code = frame.code
-            instructions = code.instructions
-            if frame.ip >= len(instructions):
-                break
-
             # Periodically check for cancellation
             # This adds minimal overhead while allowing timely cancellation
             instruction_count += 1
             if instruction_count >= check_interval:
-                self._check_cancellation()
+                if self._cancelled:
+                    raise MenaiCancelledException()
+
                 instruction_count = 0
 
+            # Re-fetch code and instructions each iteration in case frame.code changes (mutual recursion TCO)
+            code = frame.code
+            instructions = code.instructions
+            if frame.ip >= len(instructions):
+                # Frame finished without explicit return
+                raise MenaiEvalError("Frame execution ended without RETURN instruction")
+
             instr = instructions[frame.ip]
-            opcode = instr.opcode
 
             # Increment IP before executing (so jumps can override)
             frame.ip += 1
 
-            # Jump table dispatch - this is the key optimization!
-            # Direct array indexing is much faster than if/elif chain
-            handler = dispatch[opcode]
+            handler = dispatch[instr.opcode]
             if handler is None:
-                raise MenaiEvalError(f"Unimplemented opcode: {opcode}")
+                raise MenaiEvalError(f"Unimplemented opcode: {instr.opcode}")
 
             # Call the handler
-            result = handler(frame, code, instr.dest, instr.src0, instr.src1, instr.src2)
+            result = handler(frame, code, instr)
             if result is None:
                 # Fast path: continue execution
                 continue
@@ -482,7 +459,6 @@ class MenaiVM:
 
                 # Create new frame
                 new_frame = Frame(code)
-                new_frame.locals = cast(List[MenaiValue], [None] * code.local_count)
 
                 # Store captured values in locals (after parameters)
                 if func.captured_values:
@@ -500,55 +476,59 @@ class MenaiVM:
             # Otherwise it's a return value (from RETURN opcode)
             return result
 
-        # Frame finished without explicit return
-        raise MenaiEvalError("Frame execution ended without RETURN instruction")
-
     def _op_load_none(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LOAD_NONE dest: Write #none into register dest."""
+        dest = instr.dest
         frame.locals[dest] = Menai_NONE
         return None
 
     def _op_load_true(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LOAD_TRUE dest: Write boolean true into register dest."""
+        dest = instr.dest
         frame.locals[dest] = MenaiBoolean(True)
         return None
 
     def _op_load_false(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LOAD_FALSE dest: Write boolean false into register dest."""
+        dest = instr.dest
         frame.locals[dest] = MenaiBoolean(False)
         return None
 
     def _op_load_empty_list(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LOAD_EMPTY_LIST dest: Write empty list into register dest."""
+        dest = instr.dest
         frame.locals[dest] = MenaiList(())
         return None
 
     def _op_load_empty_dict(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LOAD_EMPTY_DICT dest: Write empty dict into register dest."""
+        dest = instr.dest
         frame.locals[dest] = MenaiDict(())
         return None
 
     def _op_load_const(  # pylint: disable=useless-return
-        self, frame: Frame, code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LOAD_CONST dest, src0: Write constant[src0] into register dest."""
+        dest, src0 = instr.dest, instr.src0
         frame.locals[dest] = code.constants[src0]
         return None
 
     def _op_load_name(  # pylint: disable=useless-return
-        self, frame: Frame, code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LOAD_NAME dest, src0: Load global[names[src0]] into register dest."""
+        dest, src0 = instr.dest, instr.src0
         name = code.names[src0]
 
         # Load from globals
@@ -576,33 +556,36 @@ class MenaiVM:
         )
 
     def _op_push(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """PUSH src0: Push the value in register src0 onto the call stack."""
+        src0 = instr.src0
         # Validator guarantees src0 is in bounds AND variable is initialized
         value = frame.locals[src0]
         self.stack.append(cast(MenaiValue, value))
         return None
 
     def _op_pop(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """POP dest: Pop the call stack top into register dest."""
+        dest = instr.dest
         # Validator guarantees dest is in bounds and stack has value
         value = self.stack.pop()
         frame.locals[dest] = value
         return None
 
     def _op_move(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """MOVE dest, src0: Copy the value in register src0 into register dest."""
+        dest, src0 = instr.dest, instr.src0
         # Validator guarantees src0 is in bounds and initialized, dest is in bounds
         frame.locals[dest] = frame.locals[src0]
         return None
 
     def _op_enter(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """
         ENTER n: Pop n arguments from stack into locals 0..n-1.
@@ -611,6 +594,7 @@ class MenaiVM:
         is on top of the stack. We pop in reverse order so that param 0 ends up
         in locals[0], param 1 in locals[1], etc.
         """
+        src0 = instr.src0
         # Validator guarantees n >= 1 and stack has at least n values
         for i in range(src0 - 1, -1, -1):
             frame.locals[i] = self.stack.pop()
@@ -618,16 +602,18 @@ class MenaiVM:
         return None
 
     def _op_jump(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """JUMP: Unconditional jump to instruction."""
+        src0 = instr.src0
         frame.ip = src0
         return None
 
     def _op_jump_if_false(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """JUMP_IF_FALSE r_src0, @target: Read condition from register src0, jump if false."""
+        src0, src1 = instr.src0, instr.src1
         # Validator guarantees src0 is in bounds and target is valid
         # Must keep type check (runtime-dependent)
         condition = frame.locals[src0]
@@ -640,9 +626,10 @@ class MenaiVM:
         return None
 
     def _op_jump_if_true(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """JUMP_IF_TRUE r_src0, @target: Read condition from register src0, jump if true."""
+        src0, src1 = instr.src0, instr.src1
         # Validator guarantees src0 is in bounds and target is valid
         # Must keep type check (runtime-dependent)
         condition = frame.locals[src0]
@@ -655,9 +642,10 @@ class MenaiVM:
         return None
 
     def _op_raise_error(  # pylint: disable=useless-return
-        self, frame: Frame, code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
+        self, _frame: Frame, code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """RAISE_ERROR: Raise error with message from constant pool."""
+        src0 = instr.src0
         # Validator guarantees src0 is in bounds
         # Type check could be removed if we validate constant types, but keep for now
         error_msg = code.constants[src0]
@@ -667,13 +655,14 @@ class MenaiVM:
         raise MenaiEvalError(error_msg.value)
 
     def _op_make_closure(  # pylint: disable=useless-return
-        self, frame: Frame, code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """MAKE_CLOSURE dest, src0, 0: Create closure with all capture slots pre-set to None.
 
         capture_count is always 0: all capture wiring is done by subsequent PATCH_CLOSURE
         instructions (both for letrec mutual-recursion and for ordinary non-letrec closures).
         """
+        dest, src0 = instr.dest, instr.src0
         closure_code = code.code_objects[src0]
         closure = MenaiFunction(
             parameters=tuple(closure_code.param_names),
@@ -689,7 +678,7 @@ class MenaiVM:
         return None
 
     def _op_patch_closure(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """
         PATCH_CLOSURE closure_reg, value_reg, capture_idx: Fill a free-var slot on a closure.
@@ -702,6 +691,7 @@ class MenaiVM:
             src1 - register holding the value to store into the capture slot
             src2 - which captured-values slot to fill
         """
+        src0, src1, src2 = instr.src0, instr.src1, instr.src2
         value = frame.locals[src1]
         closure = frame.locals[src0]
         assert isinstance(closure, MenaiFunction)
@@ -710,9 +700,10 @@ class MenaiVM:
         return None
 
     def _op_call(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """CALL dest, arity: Call function; pop result from stack into dest register."""
+        dest, src0 = instr.dest, instr.src0
         # Validator guarantees stack has enough values (arity + 1)
 
         # Function is on top of the stack
@@ -729,7 +720,6 @@ class MenaiVM:
         code = func.bytecode
 
         new_frame = Frame(code)
-        new_frame.locals = cast(List[MenaiValue], [None] * code.local_count)
 
         # Store captured values in locals (after parameters)
         if func.captured_values:
@@ -745,7 +735,7 @@ class MenaiVM:
         return None
 
     def _op_tail_call(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
+        self, _frame: Frame, _code: CodeObject, instr: Instruction
     ) -> TailCall | None:
         """
         TAIL_CALL: Perform tail call with optimization.
@@ -754,6 +744,7 @@ class MenaiVM:
         replacing the current frame with the target frame, achieving true
         tail call optimization with constant stack space for all tail calls.
         """
+        src0 = instr.src0
         # Validator guarantees stack has enough values (arity + 1)
 
         # Function is on top of the stack (pushed after arguments).
@@ -773,9 +764,10 @@ class MenaiVM:
         return TailCall(func)
 
     def _op_apply(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """APPLY dest: Apply function to arg list; pop result from stack into dest register."""
+        dest = instr.dest
         arg_list = self.stack.pop()
         func = self.stack.pop()
         if not isinstance(func, MenaiFunction):
@@ -799,7 +791,6 @@ class MenaiVM:
         self._check_and_pack_args(func, arity)
         code = func.bytecode
         new_frame = Frame(code)
-        new_frame.locals = cast(List[MenaiValue], [None] * code.local_count)
         if func.captured_values:
             for i, captured_val in enumerate(func.captured_values):
                 new_frame.locals[code.param_count + i] = captured_val
@@ -811,7 +802,7 @@ class MenaiVM:
         return None
 
     def _op_tail_apply(
-        self, frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, _frame: Frame, _code: CodeObject, _instr: Instruction
     ) -> TailCall:
         """TAIL_APPLY: Apply function to argument list in tail position."""
         arg_list = self.stack.pop()
@@ -838,17 +829,19 @@ class MenaiVM:
         return TailCall(func)
 
     def _op_return(
-        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """RETURN src0: Push frame.locals[src0] as return value, then pop frame."""
+        src0 = instr.src0
         self.frames.pop()
         self.current_frame = self.frames[-1]
         return cast(MenaiValue, frame.locals[src0])
 
     def _op_emit_trace(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """EMIT_TRACE src0: Read value from register src0 and emit to trace watcher."""
+        src0 = instr.src0
         message = frame.locals[src0]
 
         # Emit trace if watcher is available
@@ -859,17 +852,19 @@ class MenaiVM:
         return None
 
     def _op_function_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FUNCTION_P dest, src0: r_dest = (function? r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         value = frame.locals[src0]
         frame.locals[dest] = MenaiBoolean(isinstance(value, MenaiFunction))
         return None
 
     def _op_function_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FUNCTION_EQ_P dest, src0, src1: r_dest = (function=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFunction):
@@ -888,9 +883,10 @@ class MenaiVM:
         return None
 
     def _op_function_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FUNCTION_NEQ_P dest, src0, src1: r_dest = (function!=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFunction):
@@ -909,9 +905,10 @@ class MenaiVM:
         return None
 
     def _op_function_min_arity(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FUNCTION_MIN_ARITY dest, src0: r_dest = (function-min-arity r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         func = frame.locals[src0]
         if not isinstance(func, MenaiFunction):
             raise MenaiEvalError(
@@ -925,9 +922,10 @@ class MenaiVM:
         return None
 
     def _op_function_variadic_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FUNCTION_VARIADIC_P dest, src0: r_dest = (function-variadic? r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         func = frame.locals[src0]
         if not isinstance(func, MenaiFunction):
             raise MenaiEvalError(
@@ -939,9 +937,10 @@ class MenaiVM:
         return None
 
     def _op_function_accepts_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FUNCTION_ACCEPTS_P dest, src0, src1: r_dest = (function-accepts? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         func = frame.locals[src0]
         n = frame.locals[src1]
         if not isinstance(func, MenaiFunction):
@@ -968,17 +967,19 @@ class MenaiVM:
         return None
 
     def _op_symbol_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """SYMBOL_P dest, src0: r_dest = (symbol? r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         value = frame.locals[src0]
         frame.locals[dest] = MenaiBoolean(isinstance(value, MenaiSymbol))
         return None
 
     def _op_symbol_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """SYMBOL_EQ_P dest, src0, src1: r_dest = (symbol=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiSymbol):
@@ -997,9 +998,10 @@ class MenaiVM:
         return None
 
     def _op_symbol_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """SYMBOL_NEQ_P dest, src0, src1: r_dest = (symbol!=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiSymbol):
@@ -1018,9 +1020,10 @@ class MenaiVM:
         return None
 
     def _op_symbol_to_string(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """SYMBOL_TO_STRING dest, src0: r_dest = (symbol->string r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiSymbol):
             raise MenaiEvalError(
@@ -1032,25 +1035,28 @@ class MenaiVM:
         return None
 
     def _op_none_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """NONE_P dest, src0: r_dest = (none? r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         value = frame.locals[src0]
         frame.locals[dest] = MenaiBoolean(isinstance(value, MenaiNone))
         return None
 
     def _op_boolean_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """BOOLEAN_P dest, src0: r_dest = (boolean? r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         value = frame.locals[src0]
         frame.locals[dest] = MenaiBoolean(isinstance(value, MenaiBoolean))
         return None
 
     def _op_boolean_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """BOOLEAN_EQ_P dest, src0, src1: r_dest = (boolean=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiBoolean):
@@ -1063,9 +1069,10 @@ class MenaiVM:
         return None
 
     def _op_boolean_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """BOOLEAN_NEQ_P dest, src0, src1: r_dest = (boolean!=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiBoolean):
@@ -1078,9 +1085,10 @@ class MenaiVM:
         return None
 
     def _op_boolean_not(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """BOOLEAN_NOT dest, src0: r_dest = (boolean-not r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiBoolean):
             raise MenaiEvalError(f"Function 'boolean-not' requires boolean arguments, got {a.type_name()}")
@@ -1089,16 +1097,18 @@ class MenaiVM:
         return None
 
     def _op_integer_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_P dest, src0: r_dest = (integer? r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         frame.locals[dest] = MenaiBoolean(isinstance(frame.locals[src0], MenaiInteger))
         return None
 
     def _op_integer_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_EQ_P dest, src0, src1: r_dest = (integer=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1111,9 +1121,10 @@ class MenaiVM:
         return None
 
     def _op_integer_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_NEQ_P dest, src0, src1: r_dest = (integer!=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1126,9 +1137,10 @@ class MenaiVM:
         return None
 
     def _op_integer_lt_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_LT_P dest, src0, src1: r_dest = (integer<? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1141,9 +1153,10 @@ class MenaiVM:
         return None
 
     def _op_integer_gt_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_GT_P dest, src0, src1: r_dest = (integer>? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1156,9 +1169,10 @@ class MenaiVM:
         return None
 
     def _op_integer_lte_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_LTE_P dest, src0, src1: r_dest = (integer<=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1171,9 +1185,10 @@ class MenaiVM:
         return None
 
     def _op_integer_gte_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_GTE_P dest, src0, src1: r_dest = (integer>=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1186,9 +1201,10 @@ class MenaiVM:
         return None
 
     def _op_integer_abs(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_ABS dest, src0: r_dest = (integer-abs r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiInteger):
             raise MenaiEvalError(f"Function 'integer-abs' requires integer arguments, got {a.type_name()}")
@@ -1197,9 +1213,10 @@ class MenaiVM:
         return None
 
     def _op_integer_add(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_ADD dest, src0, src1: r_dest = (integer+ r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1212,9 +1229,10 @@ class MenaiVM:
         return None
 
     def _op_integer_sub(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_SUB dest, src0, src1: r_dest = (integer- r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1227,9 +1245,10 @@ class MenaiVM:
         return None
 
     def _op_integer_mul(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_MUL dest, src0, src1: r_dest = (integer* r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1242,9 +1261,10 @@ class MenaiVM:
         return None
 
     def _op_integer_div(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_DIV dest, src0, src1: r_dest = (integer/ r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1259,9 +1279,10 @@ class MenaiVM:
         return None
 
     def _op_integer_mod(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_MOD dest, src0, src1: r_dest = (integer% r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1276,9 +1297,10 @@ class MenaiVM:
         return None
 
     def _op_integer_neg(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_NEG dest, src0: r_dest = (integer-neg r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiInteger):
             raise MenaiEvalError(f"Function 'integer-neg' requires integer arguments, got {a.type_name()}")
@@ -1287,9 +1309,10 @@ class MenaiVM:
         return None
 
     def _op_integer_expn(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_EXPN dest, src0, src1: r_dest = (integer-expn r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1305,9 +1328,10 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_not(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_BIT_NOT dest, src0: r_dest = (integer-bit-not r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiInteger):
             raise MenaiEvalError(f"Function 'integer-bit-not' requires integer arguments, got {a.type_name()}")
@@ -1316,9 +1340,10 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_shift_left(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_BIT_SHIFT_LEFT dest, src0, src1: r_dest = (integer-bit-shift-left r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1331,9 +1356,10 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_shift_right(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_BIT_SHIFT_RIGHT dest, src0, src1: r_dest = (integer-bit-shift-right r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1346,9 +1372,10 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_or(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_BIT_OR dest, src0, src1: r_dest = (integer-bit-or r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1361,9 +1388,10 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_and(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_BIT_AND dest, src0, src1: r_dest = (integer-bit-and r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1376,9 +1404,10 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_xor(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_BIT_XOR dest, src0, src1: r_dest = (integer-bit-xor r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1391,9 +1420,10 @@ class MenaiVM:
         return None
 
     def _op_integer_min(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_MIN dest, src0, src1: r_dest = (integer-min r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1406,9 +1436,10 @@ class MenaiVM:
         return None
 
     def _op_integer_max(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_MAX dest, src0, src1: r_dest = (integer-max r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1421,9 +1452,10 @@ class MenaiVM:
         return None
 
     def _op_integer_to_float(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_TO_FLOAT dest, src0: r_dest = (integer->float r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiInteger):
             raise MenaiEvalError(f"Function 'integer->float' requires integer arguments, got {a.type_name()}")
@@ -1432,9 +1464,10 @@ class MenaiVM:
         return None
 
     def _op_integer_to_complex(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_TO_COMPLEX dest, src0, src1: r_dest = (integer->complex r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1447,9 +1480,10 @@ class MenaiVM:
         return None
 
     def _op_integer_to_string(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_TO_STRING dest, src0, src1: r_dest = (integer->string r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiInteger):
@@ -1484,16 +1518,18 @@ class MenaiVM:
         return None
 
     def _op_float_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_P dest, src0: r_dest = (float? r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         frame.locals[dest] = MenaiBoolean(isinstance(frame.locals[src0], MenaiFloat))
         return None
 
     def _op_float_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_EQ_P dest, src0, src1: r_dest = (float=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1506,9 +1542,10 @@ class MenaiVM:
         return None
 
     def _op_float_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_NEQ_P dest, src0, src1: r_dest = (float!=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1521,9 +1558,10 @@ class MenaiVM:
         return None
 
     def _op_float_lt_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_LT_P dest, src0, src1: r_dest = (float<? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1536,9 +1574,10 @@ class MenaiVM:
         return None
 
     def _op_float_gt_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_GT_P dest, src0, src1: r_dest = (float>? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1551,9 +1590,10 @@ class MenaiVM:
         return None
 
     def _op_float_lte_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_LTE_P dest, src0, src1: r_dest = (float<=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1566,9 +1606,10 @@ class MenaiVM:
         return None
 
     def _op_float_gte_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_GTE_P dest, src0, src1: r_dest = (float>=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1581,9 +1622,10 @@ class MenaiVM:
         return None
 
     def _op_float_abs(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_ABS dest, src0: r_dest = (float-abs r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float-abs' requires float arguments, got {a.type_name()}")
@@ -1592,9 +1634,10 @@ class MenaiVM:
         return None
 
     def _op_float_add(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_ADD dest, src0, src1: r_dest = (float+ r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1607,9 +1650,10 @@ class MenaiVM:
         return None
 
     def _op_float_sub(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_SUB dest, src0, src1: r_dest = (float- r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1622,9 +1666,10 @@ class MenaiVM:
         return None
 
     def _op_float_mul(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_MUL dest, src0, src1: r_dest = (float* r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1637,9 +1682,10 @@ class MenaiVM:
         return None
 
     def _op_float_div(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_DIV dest, src0, src1: r_dest = (float/ r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1655,9 +1701,10 @@ class MenaiVM:
         return None
 
     def _op_float_floor_div(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_FLOOR_DIV dest, src0, src1: r_dest = (float// r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1673,9 +1720,10 @@ class MenaiVM:
         return None
 
     def _op_float_mod(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_MOD dest, src0, src1: r_dest = (float% r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1691,9 +1739,10 @@ class MenaiVM:
         return None
 
     def _op_float_neg(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_NEG dest, src0: r_dest = (float-neg r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float-neg' requires float arguments, got {a.type_name()}")
@@ -1702,9 +1751,10 @@ class MenaiVM:
         return None
 
     def _op_float_exp(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_EXP dest, src0: r_dest = (float-exp r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float-exp' requires float arguments, got {a.type_name()}")
@@ -1713,9 +1763,10 @@ class MenaiVM:
         return None
 
     def _op_float_expn(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_EXPN dest, src0, src1: r_dest = (float-expn r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1728,9 +1779,10 @@ class MenaiVM:
         return None
 
     def _op_float_log(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_LOG dest, src0: r_dest = (float-log r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float-log' requires float arguments, got {a.type_name()}")
@@ -1746,9 +1798,10 @@ class MenaiVM:
         return None
 
     def _op_float_log10(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_LOG10 dest, src0: r_dest = (float-log10 r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float-log10' requires float arguments, got {a.type_name()}")
@@ -1764,9 +1817,10 @@ class MenaiVM:
         return None
 
     def _op_float_log2(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_LOG2 dest, src0: r_dest = (float-log2 r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float-log2' requires float arguments, got {a.type_name()}")
@@ -1782,9 +1836,10 @@ class MenaiVM:
         return None
 
     def _op_float_logn(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_LOGN dest, src0, src1: r_dest = (float-logn r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1807,9 +1862,10 @@ class MenaiVM:
         return None
 
     def _op_float_sin(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_SIN dest, src0: r_dest = (float-sin r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float-sin' requires float arguments, got {a.type_name()}")
@@ -1818,9 +1874,10 @@ class MenaiVM:
         return None
 
     def _op_float_cos(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_COS dest, src0: r_dest = (float-cos r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float-cos' requires float arguments, got {a.type_name()}")
@@ -1829,9 +1886,10 @@ class MenaiVM:
         return None
 
     def _op_float_tan(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_TAN dest, src0: r_dest = (float-tan r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float-tan' requires float arguments, got {a.type_name()}")
@@ -1840,9 +1898,10 @@ class MenaiVM:
         return None
 
     def _op_float_sqrt(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_SQRT dest, src0: r_dest = (float-sqrt r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float-sqrt' requires float arguments, got {a.type_name()}")
@@ -1854,9 +1913,10 @@ class MenaiVM:
         return None
 
     def _op_float_to_integer(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_TO_INTEGER dest, src0: r_dest = (float->integer r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float->integer' requires float arguments, got {a.type_name()}")
@@ -1865,9 +1925,10 @@ class MenaiVM:
         return None
 
     def _op_float_to_complex(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_TO_COMPLEX dest, src0, src1: r_dest = (float->complex r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1880,9 +1941,10 @@ class MenaiVM:
         return None
 
     def _op_float_to_string(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_TO_STRING dest, src0: r_dest = (float->string r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float->string' requires float arguments, got {a.type_name()}")
@@ -1891,9 +1953,10 @@ class MenaiVM:
         return None
 
     def _op_float_floor(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_FLOOR dest, src0: r_dest = (float-floor r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float-floor' requires float arguments, got {a.type_name()}")
@@ -1902,9 +1965,10 @@ class MenaiVM:
         return None
 
     def _op_float_ceil(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_CEIL dest, src0: r_dest = (float-ceil r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float-ceil' requires float arguments, got {a.type_name()}")
@@ -1913,9 +1977,10 @@ class MenaiVM:
         return None
 
     def _op_float_round(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_ROUND dest, src0: r_dest = (float-round r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiFloat):
             raise MenaiEvalError(f"Function 'float-round' requires float arguments, got {a.type_name()}")
@@ -1924,9 +1989,10 @@ class MenaiVM:
         return None
 
     def _op_float_min(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_MIN dest, src0, src1: r_dest = (float-min r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1939,9 +2005,10 @@ class MenaiVM:
         return None
 
     def _op_float_max(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_MAX dest, src0, src1: r_dest = (float-max r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiFloat):
@@ -1954,16 +2021,18 @@ class MenaiVM:
         return None
 
     def _op_complex_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_P dest, src0: r_dest = (complex? r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         frame.locals[dest] = MenaiBoolean(isinstance(frame.locals[src0], MenaiComplex))
         return None
 
     def _op_complex_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_EQ_P dest, src0, src1: r_dest = (complex=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiComplex):
@@ -1976,9 +2045,10 @@ class MenaiVM:
         return None
 
     def _op_complex_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_NEQ_P dest, src0, src1: r_dest = (complex!=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiComplex):
@@ -1991,9 +2061,10 @@ class MenaiVM:
         return None
 
     def _op_complex_real(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_REAL dest, src0: r_dest = (complex-real r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-real' requires complex arguments, got {a.type_name()}")
@@ -2002,9 +2073,10 @@ class MenaiVM:
         return None
 
     def _op_complex_imag(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_IMAG dest, src0: r_dest = (complex-imag r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-imag' requires complex arguments, got {a.type_name()}")
@@ -2013,9 +2085,10 @@ class MenaiVM:
         return None
 
     def _op_complex_abs(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_ABS dest, src0: r_dest = (complex-abs r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-abs' requires complex arguments, got {a.type_name()}")
@@ -2024,9 +2097,10 @@ class MenaiVM:
         return None
 
     def _op_complex_add(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_ADD dest, src0, src1: r_dest = (complex+ r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiComplex):
@@ -2039,9 +2113,10 @@ class MenaiVM:
         return None
 
     def _op_complex_sub(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_SUB dest, src0, src1: r_dest = (complex- r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiComplex):
@@ -2054,9 +2129,10 @@ class MenaiVM:
         return None
 
     def _op_complex_mul(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_MUL dest, src0, src1: r_dest = (complex* r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiComplex):
@@ -2069,9 +2145,10 @@ class MenaiVM:
         return None
 
     def _op_complex_div(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_DIV dest, src0, src1: r_dest = (complex/ r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiComplex):
@@ -2087,9 +2164,10 @@ class MenaiVM:
         return None
 
     def _op_complex_neg(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_NEG dest, src0: r_dest = (complex-neg r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-neg' requires complex arguments, got {a.type_name()}")
@@ -2098,9 +2176,10 @@ class MenaiVM:
         return None
 
     def _op_complex_exp(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_EXP dest, src0: r_dest = (complex-exp r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-exp' requires complex arguments, got {a.type_name()}")
@@ -2109,9 +2188,10 @@ class MenaiVM:
         return None
 
     def _op_complex_expn(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_EXPN dest, src0, src1: r_dest = (complex-expn r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiComplex):
@@ -2124,9 +2204,10 @@ class MenaiVM:
         return None
 
     def _op_complex_log(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_LOG dest, src0: r_dest = (complex-log r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-log' requires complex arguments, got {a.type_name()}")
@@ -2135,9 +2216,10 @@ class MenaiVM:
         return None
 
     def _op_complex_log10(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_LOG10 dest, src0: r_dest = (complex-log10 r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-log10' requires complex arguments, got {a.type_name()}")
@@ -2146,9 +2228,10 @@ class MenaiVM:
         return None
 
     def _op_complex_logn(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_LOGN dest, src0, src1: r_dest = (complex-logn r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiComplex):
@@ -2164,9 +2247,10 @@ class MenaiVM:
         return None
 
     def _op_complex_sin(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_SIN dest, src0: r_dest = (complex-sin r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-sin' requires complex arguments, got {a.type_name()}")
@@ -2175,9 +2259,10 @@ class MenaiVM:
         return None
 
     def _op_complex_cos(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_COS dest, src0: r_dest = (complex-cos r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-cos' requires complex arguments, got {a.type_name()}")
@@ -2186,9 +2271,10 @@ class MenaiVM:
         return None
 
     def _op_complex_tan(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_TAN dest, src0: r_dest = (complex-tan r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-tan' requires complex arguments, got {a.type_name()}")
@@ -2197,9 +2283,10 @@ class MenaiVM:
         return None
 
     def _op_complex_sqrt(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_SQRT dest, src0: r_dest = (complex-sqrt r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-sqrt' requires complex arguments, got {a.type_name()}")
@@ -2208,9 +2295,10 @@ class MenaiVM:
         return None
 
     def _op_complex_to_string(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_TO_STRING dest, src0: r_dest = (complex->string r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex->string' requires complex arguments, got {a.type_name()}")
@@ -2219,16 +2307,18 @@ class MenaiVM:
         return None
 
     def _op_string_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_P dest, src0: r_dest = (string? r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         frame.locals[dest] = MenaiBoolean(isinstance(frame.locals[src0], MenaiString))
         return None
 
     def _op_string_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_EQ_P dest, src0, src1: r_dest = (string=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiString):
@@ -2241,9 +2331,10 @@ class MenaiVM:
         return None
 
     def _op_string_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_NEQ_P dest, src0, src1: r_dest = (string!=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiString):
@@ -2256,9 +2347,10 @@ class MenaiVM:
         return None
 
     def _op_string_lt_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_LT_P dest, src0, src1: r_dest = (string<? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiString):
@@ -2271,9 +2363,10 @@ class MenaiVM:
         return None
 
     def _op_string_gt_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_GT_P dest, src0, src1: r_dest = (string>? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiString):
@@ -2286,9 +2379,10 @@ class MenaiVM:
         return None
 
     def _op_string_lte_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_LTE_P dest, src0, src1: r_dest = (string<=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiString):
@@ -2301,9 +2395,10 @@ class MenaiVM:
         return None
 
     def _op_string_gte_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_GTE_P dest, src0, src1: r_dest = (string>=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiString):
@@ -2316,9 +2411,10 @@ class MenaiVM:
         return None
 
     def _op_string_length(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_LENGTH dest, src0: r_dest = (string-length r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-length' requires string arguments, got {a.type_name()}")
@@ -2327,9 +2423,10 @@ class MenaiVM:
         return None
 
     def _op_string_upcase(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_UPCASE dest, src0: r_dest = (string-upcase r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-upcase' requires string arguments, got {a.type_name()}")
@@ -2338,9 +2435,10 @@ class MenaiVM:
         return None
 
     def _op_string_downcase(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_DOWNCASE dest, src0: r_dest = (string-downcase r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-downcase' requires string arguments, got {a.type_name()}")
@@ -2349,9 +2447,10 @@ class MenaiVM:
         return None
 
     def _op_string_trim(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_TRIM dest, src0: r_dest = (string-trim r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-trim' requires string arguments, got {a.type_name()}")
@@ -2360,9 +2459,10 @@ class MenaiVM:
         return None
 
     def _op_string_trim_left(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_TRIM_LEFT dest, src0: r_dest = (string-trim-left r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-trim-left' requires string arguments, got {a.type_name()}")
@@ -2371,9 +2471,10 @@ class MenaiVM:
         return None
 
     def _op_string_trim_right(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_TRIM_RIGHT dest, src0: r_dest = (string-trim-right r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-trim-right' requires string arguments, got {a.type_name()}")
@@ -2382,9 +2483,10 @@ class MenaiVM:
         return None
 
     def _op_string_to_integer(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_TO_INTEGER dest, src0, src1: r_dest = (string->integer r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiString):
@@ -2407,9 +2509,10 @@ class MenaiVM:
             return None
 
     def _op_string_to_number(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_TO_NUMBER dest, src0: r_dest = (string->number r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string->number' requires string arguments, got {a.type_name()}")
@@ -2430,9 +2533,10 @@ class MenaiVM:
             return None
 
     def _op_string_to_list(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_TO_LIST dest, src0, src1: r_dest = (string->list r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiString):
@@ -2449,9 +2553,10 @@ class MenaiVM:
         return None
 
     def _op_string_ref(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_REF dest, src0, src1: r_dest = (string-ref r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiString):
@@ -2469,9 +2574,10 @@ class MenaiVM:
         return None
 
     def _op_string_prefix_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_PREFIX_P dest, src0, src1: r_dest = (string-prefix? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiString):
@@ -2484,9 +2590,10 @@ class MenaiVM:
         return None
 
     def _op_string_suffix_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_SUFFIX_P dest, src0, src1: r_dest = (string-suffix? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiString):
@@ -2499,9 +2606,10 @@ class MenaiVM:
         return None
 
     def _op_string_slice(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_SLICE dest, src0, src1, src2: r_dest = (string-slice r_src0 r_src1 r_src2)"""
+        dest, src0, src1, src2 = instr.dest, instr.src0, instr.src1, instr.src2
         a = frame.locals[src0]
         b = frame.locals[src1]
         c = frame.locals[src2]
@@ -2537,9 +2645,10 @@ class MenaiVM:
         return None
 
     def _op_string_replace(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_REPLACE dest, src0, src1, src2: r_dest = (string-replace r_src0 r_src1 r_src2)"""
+        dest, src0, src1, src2 = instr.dest, instr.src0, instr.src1, instr.src2
         a = frame.locals[src0]
         b = frame.locals[src1]
         c = frame.locals[src2]
@@ -2556,9 +2665,10 @@ class MenaiVM:
         return None
 
     def _op_string_index(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_INDEX dest, src0, src1: r_dest = (string-index r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiString):
@@ -2572,9 +2682,10 @@ class MenaiVM:
         return None
 
     def _op_string_concat(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_CONCAT dest, src0, src1: r_dest = (string-concat r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiString):
@@ -2587,16 +2698,18 @@ class MenaiVM:
         return None
 
     def _op_dict_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_P dest, src0: r_dest = (dict? r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         frame.locals[dest] = MenaiBoolean(isinstance(frame.locals[src0], MenaiDict))
         return None
 
     def _op_dict_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_EQ_P dest, src0, src1: r_dest = (dict=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiDict):
@@ -2609,9 +2722,10 @@ class MenaiVM:
         return None
 
     def _op_dict_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_NEQ_P dest, src0, src1: r_dest = (dict!=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiDict):
@@ -2624,9 +2738,10 @@ class MenaiVM:
         return None
 
     def _op_dict_keys(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_KEYS dest, src0: r_dest = (dict-keys r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiDict):
             raise MenaiEvalError(f"Function 'dict-keys' requires dict arguments, got {a.type_name()}")
@@ -2635,9 +2750,10 @@ class MenaiVM:
         return None
 
     def _op_dict_values(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_VALUES dest, src0: r_dest = (dict-values r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiDict):
             raise MenaiEvalError(f"Function 'dict-values' requires dict arguments, got {a.type_name()}")
@@ -2646,9 +2762,10 @@ class MenaiVM:
         return None
 
     def _op_dict_length(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_LENGTH dest, src0: r_dest = (dict-length r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiDict):
             raise MenaiEvalError(f"Function 'dict-length' requires dict arguments, got {a.type_name()}")
@@ -2657,9 +2774,10 @@ class MenaiVM:
         return None
 
     def _op_dict_has_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_HAS_P dest, src0, src1: r_dest = (dict-has? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         if not isinstance(a, MenaiDict):
             raise MenaiEvalError(f"Function 'dict-has?' requires dict arguments, got {a.type_name()}")
@@ -2668,9 +2786,10 @@ class MenaiVM:
         return None
 
     def _op_dict_remove(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_REMOVE dest, src0, src1: r_dest = (dict-remove r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         if not isinstance(a, MenaiDict):
             raise MenaiEvalError(f"Function 'dict-remove' requires dict arguments, got {a.type_name()}")
@@ -2679,9 +2798,10 @@ class MenaiVM:
         return None
 
     def _op_dict_merge(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_MERGE dest, src0, src1: r_dest = (dict-merge r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiDict):
@@ -2694,9 +2814,10 @@ class MenaiVM:
         return None
 
     def _op_dict_set(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_SET dest, src0, src1, src2: r_dest = (dict-set r_src0 r_src1 r_src2)"""
+        dest, src0, src1, src2 = instr.dest, instr.src0, instr.src1, instr.src2
         a = frame.locals[src0]
         if not isinstance(a, MenaiDict):
             raise MenaiEvalError(f"Function 'dict-set' requires dict arguments, got {a.type_name()}")
@@ -2705,9 +2826,10 @@ class MenaiVM:
         return None
 
     def _op_dict_get(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_GET dest, src0, src1, src2: r_dest = (dict-get r_src0 r_src1 r_src2)"""
+        dest, src0, src1, src2 = instr.dest, instr.src0, instr.src1, instr.src2
         a = frame.locals[src0]
         if not isinstance(a, MenaiDict):
             raise MenaiEvalError(f"Function 'dict-get' requires dict arguments, got {a.type_name()}")
@@ -2717,16 +2839,18 @@ class MenaiVM:
         return None
 
     def _op_list_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_P dest, src0: r_dest = (list? r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         frame.locals[dest] = MenaiBoolean(isinstance(frame.locals[src0], MenaiList))
         return None
 
     def _op_list_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_EQ_P dest, src0, src1: r_dest = (list=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiList):
@@ -2739,9 +2863,10 @@ class MenaiVM:
         return None
 
     def _op_list_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_NEQ_P dest, src0, src1: r_dest = (list!=? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiList):
@@ -2754,9 +2879,10 @@ class MenaiVM:
         return None
 
     def _op_list_prepend(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_PREPEND dest, src0, src1: r_dest = (list-prepend r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-prepend' requires list arguments, got {a.type_name()}")
@@ -2766,9 +2892,10 @@ class MenaiVM:
         return None
 
     def _op_list_append(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_APPEND dest, src0, src1: r_dest = (list-append r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-append' requires list arguments, got {a.type_name()}")
@@ -2778,9 +2905,10 @@ class MenaiVM:
         return None
 
     def _op_list_reverse(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_REVERSE dest, src0: r_dest = (list-reverse r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-reverse' requires list arguments, got {a.type_name()}")
@@ -2789,9 +2917,10 @@ class MenaiVM:
         return None
 
     def _op_list_first(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_FIRST dest, src0: r_dest = (list-first r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-first' requires list arguments, got {a.type_name()}")
@@ -2805,9 +2934,10 @@ class MenaiVM:
         return None
 
     def _op_list_rest(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_REST dest, src0: r_dest = (list-rest r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-rest' requires list arguments, got {a.type_name()}")
@@ -2820,9 +2950,10 @@ class MenaiVM:
         return None
 
     def _op_list_last(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_LAST dest, src0: r_dest = (list-last r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-last' requires list arguments, got {a.type_name()}")
@@ -2836,9 +2967,10 @@ class MenaiVM:
         return None
 
     def _op_list_length(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_LENGTH dest, src0: r_dest = (list-length r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         value = cast(MenaiValue, frame.locals[src0])
         if isinstance(value, MenaiList):
             frame.locals[dest] = MenaiInteger(value.length())
@@ -2849,9 +2981,10 @@ class MenaiVM:
         )
 
     def _op_list_ref(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_REF dest, src0, src1: r_dest = (list-ref r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiList):
@@ -2875,9 +3008,10 @@ class MenaiVM:
         return None
 
     def _op_list_null_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_NULL_P dest, src0: r_dest = (list-null? r_src0)"""
+        dest, src0 = instr.dest, instr.src0
         a = frame.locals[src0]
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-null?' requires list arguments, got {a.type_name()}")
@@ -2886,9 +3020,10 @@ class MenaiVM:
         return None
 
     def _op_list_member_p(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_MEMBER_P dest, src0, src1: r_dest = (list-member? r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-member?' requires list arguments, got {a.type_name()}")
@@ -2898,9 +3033,10 @@ class MenaiVM:
         return None
 
     def _op_list_index(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_INDEX dest, src0, src1: r_dest = (list-index r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-index' requires list arguments, got {a.type_name()}")
@@ -2911,9 +3047,10 @@ class MenaiVM:
         return None
 
     def _op_list_slice(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_SLICE dest, src0, src1, src2: r_dest = (list-slice r_src0 r_src1 r_src2)"""
+        dest, src0, src1, src2 = instr.dest, instr.src0, instr.src1, instr.src2
         a = frame.locals[src0]
         b = frame.locals[src1]
         c = frame.locals[src2]
@@ -2950,9 +3087,10 @@ class MenaiVM:
         return None
 
     def _op_list_remove(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_REMOVE dest, src0, src1: r_dest = (list-remove r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-remove' requires list arguments, got {a.type_name()}")
@@ -2962,9 +3100,10 @@ class MenaiVM:
         return None
 
     def _op_list_concat(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_CONCAT dest, src0, src1: r_dest = (list-concat r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiList):
@@ -2977,9 +3116,10 @@ class MenaiVM:
         return None
 
     def _op_list_to_string(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_TO_STRING dest, src0, src1: r_dest = (list->string r_src0 r_src1)"""
+        dest, src0, src1 = instr.dest, instr.src0, instr.src1
         a = frame.locals[src0]
         b = frame.locals[src1]
         if not isinstance(a, MenaiList):
@@ -2999,9 +3139,10 @@ class MenaiVM:
         return None
 
     def _op_range(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _code: CodeObject, instr: Instruction
     ) -> MenaiValue | None:
         """RANGE dest, src0, src1, src2: r_dest = (range r_src0 r_src1 r_src2)"""
+        dest, src0, src1, src2 = instr.dest, instr.src0, instr.src1, instr.src2
         a = frame.locals[src0]
         b = frame.locals[src1]
         c = frame.locals[src2]
