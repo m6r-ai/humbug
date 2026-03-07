@@ -15,7 +15,11 @@ from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
 from menai.menai_bytecode import CodeObject
 from menai.menai_bytecode_builder import MenaiBytecodeBuilder
 from menai.menai_cfg_builder import MenaiCFGBuilder
-from menai.menai_cfg_optimizer import MenaiCFGOptimizer
+from menai.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
+from menai.menai_cfg_bypass_empty_blocks import MenaiCFGBypassEmptyBlocks
+from menai.menai_cfg_eliminate_dead_blocks import MenaiCFGEliminateDeadBlocks
+from menai.menai_cfg_eliminate_trivial_phis import MenaiCFGEliminateTrivialPhis
+from menai.menai_cfg_prune_stale_phi_entries import MenaiCFGPruneStalePhiEntries
 from menai.menai_ir_builder import MenaiIRBuilder
 from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
 from menai.menai_ir_copy_propagator import MenaiIRCopyPropagator
@@ -54,7 +58,7 @@ class MenaiCompiler:
         self.ir_builder = MenaiIRBuilder()
         self.ir_passes: List[MenaiIROptimizationPass] = []
         self.cfg_builder = MenaiCFGBuilder()
-        self.cfg_optimizer = MenaiCFGOptimizer()
+        self.cfg_passes: List[MenaiCFGOptimizationPass] = []
         self.bytecode_builder = MenaiBytecodeBuilder()
 
         if optimize:
@@ -66,6 +70,13 @@ class MenaiCompiler:
                 MenaiIRInlineOnce(),
                 MenaiIROptimizer(),
             ]
+            self.cfg_passes = [
+                MenaiCFGPruneStalePhiEntries(),
+                MenaiCFGEliminateTrivialPhis(),
+                MenaiCFGBypassEmptyBlocks(),
+                MenaiCFGEliminateDeadBlocks(),
+            ]
+
 
     def compile_to_resolved_ast(self, source: str, source_file: str = "") -> MenaiASTNode:
         """
@@ -123,8 +134,13 @@ class MenaiCompiler:
                     changed = changed or pass_changed
 
         cfg = self.cfg_builder.build(ir)
-        if self.optimize:
-            cfg = self.cfg_optimizer.optimize(cfg)
+        if self.cfg_passes:
+            changed = True
+            while changed:
+                changed = False
+                for cfg_pass in self.cfg_passes:
+                    cfg, pass_changed = cfg_pass.optimize(cfg)
+                    changed = changed or pass_changed
 
         bytecode = self.bytecode_builder.build(cfg, name)
         return bytecode

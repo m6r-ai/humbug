@@ -1,15 +1,15 @@
 """
-Tests for MenaiCFGOptimizer.
+Tests for CFG optimization passes.
 
 Each pass is tested in isolation using hand-built MenaiCFGFunction objects,
 then integration tests compile real Menai source and verify the optimised
 CFG has the expected block structure.
 
 Pass coverage:
-  1. Stale-phi pruning  (_prune_stale_phi_entries)
-  2. Trivial-phi elimination  (_eliminate_trivial_phis)
-  3. Empty-block bypass  (_bypass_empty_blocks)
-  4. Dead-block elimination  (_eliminate_dead_blocks)
+  1. Stale-phi pruning  (MenaiCFGPruneStalePhiEntries)
+  2. Trivial-phi elimination  (MenaiCFGEliminateTrivialPhis)
+  3. Empty-block bypass  (MenaiCFGBypassEmptyBlocks)
+  4. Dead-block elimination  (MenaiCFGEliminateDeadBlocks)
   5. Fixed-point iteration (cascading passes)
   6. Nested lambda optimization
   7. Integration: compile Menai source and inspect CFG
@@ -32,13 +32,10 @@ from menai.menai_cfg import (
     MenaiCFGTailCallTerm,
     MenaiCFGValue,
 )
-from menai.menai_cfg_optimizer import (
-    MenaiCFGOptimizer,
-    _bypass_empty_blocks,
-    _eliminate_dead_blocks,
-    _eliminate_trivial_phis,
-    _prune_stale_phi_entries,
-)
+from menai.menai_cfg_bypass_empty_blocks import MenaiCFGBypassEmptyBlocks
+from menai.menai_cfg_eliminate_dead_blocks import MenaiCFGEliminateDeadBlocks
+from menai.menai_cfg_eliminate_trivial_phis import MenaiCFGEliminateTrivialPhis
+from menai.menai_cfg_prune_stale_phi_entries import MenaiCFGPruneStalePhiEntries
 from menai.menai_value import MenaiInteger
 
 
@@ -144,7 +141,7 @@ class TestStalePhi:
         )
         f = func(entry, then_b, else_b, join_b)
 
-        new_f, changed = _prune_stale_phi_entries(f)
+        new_f, changed = MenaiCFGPruneStalePhiEntries()._optimize_function(f)
         assert not changed
         phi = first_phi(new_f.blocks[3])
         assert len(phi.incoming) == 2
@@ -188,7 +185,7 @@ class TestStalePhi:
         )
         f = func(entry, then_b, else_b, join_b)
 
-        new_f, changed = _prune_stale_phi_entries(f)
+        new_f, changed = MenaiCFGPruneStalePhiEntries()._optimize_function(f)
         assert changed
         phi = first_phi(new_f.blocks[3])
         assert len(phi.incoming) == 1
@@ -224,7 +221,7 @@ class TestStalePhi:
         )
         f = func(entry, pred_b, join_b)
 
-        new_f, changed = _prune_stale_phi_entries(f)
+        new_f, changed = MenaiCFGPruneStalePhiEntries()._optimize_function(f)
         assert changed
         phi = first_phi(new_f.blocks[2])
         assert len(phi.incoming) == 0
@@ -239,7 +236,7 @@ class TestStalePhi:
             label="entry",
         )
         f = func(entry)
-        new_f, changed = _prune_stale_phi_entries(f)
+        new_f, changed = MenaiCFGPruneStalePhiEntries()._optimize_function(f)
         assert not changed
         assert new_f is f
 
@@ -280,7 +277,7 @@ class TestTrivialPhi:
         )
         f = func(entry, then_b, join_b)
 
-        new_f, changed = _eliminate_trivial_phis(f)
+        new_f, changed = MenaiCFGEliminateTrivialPhis()._optimize_function(f)
         assert changed
 
         # join_b should have no phi instruction remaining.
@@ -320,7 +317,7 @@ class TestTrivialPhi:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=src_b), label="entry")
         f = func(entry, src_b, mid_b, join_b)
 
-        new_f, changed = _eliminate_trivial_phis(f)
+        new_f, changed = MenaiCFGEliminateTrivialPhis()._optimize_function(f)
         assert changed
 
         # The return in join_b should reference v_real (chain resolved).
@@ -355,7 +352,7 @@ class TestTrivialPhi:
         )
         f = func(entry, block_a, block_b, join_b)
 
-        new_f, changed = _eliminate_trivial_phis(f)
+        new_f, changed = MenaiCFGEliminateTrivialPhis()._optimize_function(f)
         assert not changed
 
     def test_phi_result_used_in_builtin(self):
@@ -377,7 +374,7 @@ class TestTrivialPhi:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=src_b), label="entry")
         f = func(entry, src_b, join_b)
 
-        new_f, changed = _eliminate_trivial_phis(f)
+        new_f, changed = MenaiCFGEliminateTrivialPhis()._optimize_function(f)
         assert changed
 
         join_new = new_f.blocks[2]
@@ -406,7 +403,7 @@ class TestTrivialPhi:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=src_b), label="entry")
         f = func(entry, src_b, join_b)
 
-        new_f, changed = _eliminate_trivial_phis(f)
+        new_f, changed = MenaiCFGEliminateTrivialPhis()._optimize_function(f)
         assert changed
 
         join_new = new_f.blocks[2]
@@ -430,7 +427,7 @@ class TestEmptyBlockBypass:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=empty), label="entry")
         f = func(entry, empty, target)
 
-        new_f, changed = _bypass_empty_blocks(f)
+        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
         assert changed
         assert 1 not in block_ids(new_f), "empty block should be removed"
         # entry's terminator should now point to target directly.
@@ -444,7 +441,7 @@ class TestEmptyBlockBypass:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=target), label="entry")
         f = func(entry, target)
 
-        new_f, changed = _bypass_empty_blocks(f)
+        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
         assert not changed, "entry block must not be bypassed"
 
     def test_chain_of_empty_blocks_collapsed(self):
@@ -459,7 +456,7 @@ class TestEmptyBlockBypass:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=empty1), label="entry")
         f = func(entry, empty1, empty2, target)
 
-        new_f, changed = _bypass_empty_blocks(f)
+        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
         assert changed
         assert 1 not in block_ids(new_f)
         assert 2 not in block_ids(new_f)
@@ -496,7 +493,7 @@ class TestEmptyBlockBypass:
         )
         f = func(entry, then_empty, else_real, join)
 
-        new_f, changed = _bypass_empty_blocks(f)
+        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
         assert changed, "empty block with phi-free target must be bypassed"
         assert 1 not in block_ids(new_f), "then_empty must be removed"
         branch = new_f.blocks[0].terminator
@@ -545,7 +542,7 @@ class TestEmptyBlockBypass:
         )
         f = func(entry, then_empty, else_real, join)
 
-        new_f, changed = _bypass_empty_blocks(f)
+        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
         assert not changed, (
             "empty block with branch predecessor and phi-bearing target "
             "must not be bypassed (phi store mechanism requires it)"
@@ -583,7 +580,7 @@ class TestEmptyBlockBypass:
         )
         f = func(entry, then_empty, join)
 
-        new_f, changed = _bypass_empty_blocks(f)
+        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
         assert changed
 
         join_new = new_f.blocks[1]  # join is now blocks[1] after empty removed
@@ -605,7 +602,7 @@ class TestEmptyBlockBypass:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=real), label="entry")
         f = func(entry, real)
 
-        new_f, changed = _bypass_empty_blocks(f)
+        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
         assert not changed
 
     def test_block_with_patch_instrs_not_bypassed(self):
@@ -623,7 +620,7 @@ class TestEmptyBlockBypass:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=patched), label="entry")
         f = func(entry, patched, target)
 
-        new_f, changed = _bypass_empty_blocks(f)
+        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
         assert not changed, "block with patch_instrs must not be bypassed"
 
 
@@ -646,7 +643,7 @@ class TestDeadBlockElimination:
         )
         f = func(entry, dead)
 
-        new_f, changed = _eliminate_dead_blocks(f)
+        new_f, changed = MenaiCFGEliminateDeadBlocks()._optimize_function(f)
         assert changed
         assert 1 not in block_ids(new_f)
 
@@ -657,7 +654,7 @@ class TestDeadBlockElimination:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=b1), label="entry")
         f = func(entry, b1)
 
-        new_f, changed = _eliminate_dead_blocks(f)
+        new_f, changed = MenaiCFGEliminateDeadBlocks()._optimize_function(f)
         assert not changed
 
     def test_stale_phi_entry_pruned_for_dead_predecessor(self):
@@ -686,7 +683,7 @@ class TestDeadBlockElimination:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=live_b), label="entry")
         f = func(entry, dead_b, live_b, join_b)
 
-        new_f, changed = _eliminate_dead_blocks(f)
+        new_f, changed = MenaiCFGEliminateDeadBlocks()._optimize_function(f)
         assert changed
         assert 1 not in block_ids(new_f)
 
@@ -706,7 +703,7 @@ class TestDeadBlockElimination:
         )
         f = func(entry)
 
-        new_f, changed = _eliminate_dead_blocks(f)
+        new_f, changed = MenaiCFGEliminateDeadBlocks()._optimize_function(f)
         assert not changed
         assert len(new_f.blocks) == 1
 
@@ -725,7 +722,7 @@ class TestDeadBlockElimination:
         )
         f = func(entry, then_b, else_b)
 
-        new_f, changed = _eliminate_dead_blocks(f)
+        new_f, changed = MenaiCFGEliminateDeadBlocks()._optimize_function(f)
         assert not changed
         assert len(new_f.blocks) == 3
 
@@ -733,6 +730,14 @@ class TestDeadBlockElimination:
 # ---------------------------------------------------------------------------
 # 5. Fixed-point: cascading passes
 # ---------------------------------------------------------------------------
+
+_ALL_PASSES = [
+    MenaiCFGPruneStalePhiEntries(),
+    MenaiCFGEliminateTrivialPhis(),
+    MenaiCFGBypassEmptyBlocks(),
+    MenaiCFGEliminateDeadBlocks(),
+]
+
 
 class TestFixedPoint:
 
@@ -792,8 +797,13 @@ class TestFixedPoint:
         )
         f = func(entry, then_b, else_b, join_b)
 
-        optimizer = MenaiCFGOptimizer()
-        new_f = optimizer._optimize_function(f)
+        changed = True
+        while changed:
+            changed = False
+            for pass_ in _ALL_PASSES:
+                f, c = pass_._optimize_function(f)
+                changed = changed or c
+        new_f = f
 
         # After full optimization:
         # - No phi instructions anywhere.
@@ -825,8 +835,13 @@ class TestFixedPoint:
         )
         f = func(entry)
 
-        optimizer = MenaiCFGOptimizer()
-        new_f = optimizer._optimize_function(f)
+        changed = True
+        while changed:
+            changed = False
+            for pass_ in _ALL_PASSES:
+                f, c = pass_._optimize_function(f)
+                changed = changed or c
+        new_f = f
 
         assert len(new_f.blocks) == 1
         assert isinstance(new_f.blocks[0].terminator, MenaiCFGReturnTerm)
@@ -873,8 +888,7 @@ class TestNestedLambdaOptimization:
         )
         parent_f = func(parent_entry)
 
-        optimizer = MenaiCFGOptimizer()
-        new_parent = optimizer.optimize(parent_f)
+        new_parent, _ = MenaiCFGEliminateTrivialPhis().optimize(parent_f)
 
         # Find the MakeClosureInstr in the optimized parent.
         mk_new = None
@@ -917,7 +931,6 @@ class TestIntegration:
         from menai.menai_ir_inline_once import MenaiIRInlineOnce
         from menai.menai_ir_optimizer import MenaiIROptimizer
         from menai.menai_cfg_builder import MenaiCFGBuilder
-        from menai.menai_cfg_optimizer import MenaiCFGOptimizer
 
         lexer = MenaiLexer()
         ast_builder = MenaiASTBuilder()
@@ -927,7 +940,6 @@ class TestIntegration:
         folder = MenaiASTConstantFolder()
         ir_builder = MenaiIRBuilder()
         cfg_builder = MenaiCFGBuilder()
-        cfg_optimizer = MenaiCFGOptimizer()
 
         tokens = lexer.lex(source)
         ast = ast_builder.build(tokens, source, "")
@@ -947,7 +959,12 @@ class TestIntegration:
 
         cfg = cfg_builder.build(ir)
         if optimize:
-            cfg = cfg_optimizer.optimize(cfg)
+            changed = True
+            while changed:
+                changed = False
+                for pass_ in _ALL_PASSES:
+                    cfg, c = pass_.optimize(cfg)
+                    changed = changed or c
         return cfg
 
     def _find_lambda_cfg(self, cfg: MenaiCFGFunction, name: str) -> MenaiCFGFunction:
