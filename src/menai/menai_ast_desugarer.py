@@ -263,18 +263,18 @@ class MenaiASTDesugarer:
                         expr
                     )
                 # Constant-default completions.
-                _CONSTANT_DEFAULTS: dict[str, MenaiASTNode] = {
-                    'integer->complex': MenaiASTInteger(0,   line=expr.line, column=expr.column, source_file=expr.source_file),
-                    'integer->string':  MenaiASTInteger(10,  line=expr.line, column=expr.column, source_file=expr.source_file),
-                    'float->complex':   MenaiASTFloat(0.0,   line=expr.line, column=expr.column, source_file=expr.source_file),
-                    'string->integer':  MenaiASTInteger(10,  line=expr.line, column=expr.column, source_file=expr.source_file),
-                    'string->list':     MenaiASTString("",   line=expr.line, column=expr.column, source_file=expr.source_file),
-                    'list->string':     MenaiASTString("",   line=expr.line, column=expr.column, source_file=expr.source_file),
-                    'dict-get':         MenaiASTNone(        line=expr.line, column=expr.column, source_file=expr.source_file),
-                    'range':            MenaiASTInteger(1,   line=expr.line, column=expr.column, source_file=expr.source_file),
+                constant_defaults: dict[str, MenaiASTNode] = {
+                    'integer->complex': MenaiASTInteger(0, line=expr.line, column=expr.column, source_file=expr.source_file),
+                    'integer->string': MenaiASTInteger(10, line=expr.line, column=expr.column, source_file=expr.source_file),
+                    'float->complex': MenaiASTFloat(0.0, line=expr.line, column=expr.column, source_file=expr.source_file),
+                    'string->integer': MenaiASTInteger(10, line=expr.line, column=expr.column, source_file=expr.source_file),
+                    'string->list': MenaiASTString("", line=expr.line, column=expr.column, source_file=expr.source_file),
+                    'list->string': MenaiASTString("", line=expr.line, column=expr.column, source_file=expr.source_file),
+                    'dict-get': MenaiASTNone(line=expr.line, column=expr.column, source_file=expr.source_file),
+                    'range': MenaiASTInteger(1, line=expr.line, column=expr.column, source_file=expr.source_file),
                 }
-                if name in _CONSTANT_DEFAULTS and n_args == primitive_arity - 1:
-                    default = _CONSTANT_DEFAULTS[name]
+                if name in constant_defaults and n_args == primitive_arity - 1:
+                    default = constant_defaults[name]
                     desugared_args = [self.desugar(arg) for arg in expr.elements[1:]]
                     return self._make_list(
                         (self._make_symbol('$' + name, expr),) + tuple(desugared_args) + (default,),
