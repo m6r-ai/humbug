@@ -451,25 +451,20 @@ class MenaiVM:
                     continue
 
                 # Replace frame for general tail call
-                self.frames.pop()
-                self.current_frame = self.frames[-1]
                 func = result.func
                 code = func.bytecode
 
                 # Create new frame
-                new_frame = Frame(code)
+                frame.code = code
+                frame.ip = 0
+                frame.locals = cast(List[MenaiValue], [None] * code.local_count)
 
                 # Store captured values in locals (after parameters)
                 if func.captured_values:
                     for i, captured_val in enumerate(func.captured_values):
-                        new_frame.locals[code.param_count + i] = captured_val
+                        frame.locals[code.param_count + i] = captured_val
 
-                # Push frame onto stack
-                self.frames.append(new_frame)
-                self.current_frame = new_frame
-                frame = new_frame  # Update frame reference
-                code = frame.code
-                instructions = code.instructions
+                instructions = frame.code.instructions
                 continue
 
             # Otherwise it's a return value (from RETURN opcode)
