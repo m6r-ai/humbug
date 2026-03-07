@@ -13,7 +13,7 @@ into a core AST containing only:
 This simplifies the compiler and enables better optimization.
 """
 
-from typing import List, Tuple, Any, cast
+from typing import List, Set, Tuple, Any, cast
 
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTInteger,
@@ -380,33 +380,67 @@ class MenaiASTDesugarer:
         # Desugar the body, then wrap it in binding forms from innermost outward
         # (i.e. process groups in reverse topological order so each group's body
         # is the already-built inner expression).
+        #
+        # Consecutive non-recursive groups are sub-partitioned into flat lets:
+        # bindings that are mutually independent (no sibling references) are
+        # batched into a single let; only when a binding depends on an earlier
+        # sibling does a new nested let begin.  This keeps nesting depth
+        # proportional to the number of inter-sibling dependencies, not the
+        # total number of bindings — which matters for large letrecs like a
+        # library module where almost all bindings are independent.
         result: MenaiASTNode = self.desugar(body)
 
-        for group in reversed(binding_groups):
-            # Build the desugared binding list for this group.
-            group_bindings: List[MenaiASTNode] = []
-            for name in group.names:
-                name_sym = self._make_symbol(name, expr)
-                desugared_value = self.desugar(raw_dict[name])
-                group_bindings.append(self._make_list((name_sym, desugared_value), expr))
+        # Build a flat list of (kind, [group, ...]) entries in topological order,
+        # then process in reverse so each entry wraps the already-built inner result.
+        #
+        # For non-recursive groups we sub-partition greedily: accumulate bindings
+        # into the current batch as long as none of them reference a name already
+        # in the batch.  When a dependency on a batch-sibling is detected, close
+        # the current batch and start a new one.  Each batch becomes one let.
+        runs: List[tuple] = []
+        current_batch: List = []
+        current_batch_names: Set[str] = set()
 
-            binding_list_node = self._make_list(tuple(group_bindings), expr)
-
+        for group in binding_groups:
             if group.is_recursive:
-                # Genuine recursive group -> letrec
-                result = self._make_list((
-                    self._make_symbol('letrec', expr),
-                    binding_list_node,
-                    result,
-                ), expr)
+                if current_batch:
+                    runs.append(('let', current_batch))
+                    current_batch = []
+                    current_batch_names = set()
+                runs.append(('letrec', [group]))
 
             else:
-                # Non-recursive singleton -> let
-                result = self._make_list((
-                    self._make_symbol('let', expr),
-                    binding_list_node,
-                    result,
-                ), expr)
+                # Check whether this group's binding references any name already
+                # in the current batch.  Non-recursive singletons have exactly
+                # one name, but we use group.depends_on for the dependency check
+                # since the dependency analyser already computed it.
+                if group.depends_on & current_batch_names:
+                    # Dependency on a batch sibling — close current batch first.
+                    runs.append(('let', current_batch))
+                    current_batch = [group]
+                    current_batch_names = set(group.names)
+
+                else:
+                    current_batch.append(group)
+                    current_batch_names |= group.names
+
+        if current_batch:
+            runs.append(('let', current_batch))
+
+        for kind, run_groups in reversed(runs):
+            combined_bindings: List[MenaiASTNode] = []
+            for group in run_groups:
+                for name in group.names:
+                    name_sym = self._make_symbol(name, expr)
+                    desugared_value = self.desugar(raw_dict[name])
+                    combined_bindings.append(self._make_list((name_sym, desugared_value), expr))
+
+            binding_list_node = self._make_list(tuple(combined_bindings), expr)
+            result = self._make_list((
+                self._make_symbol(kind, expr),
+                binding_list_node,
+                result,
+            ), expr)
 
         return result
 

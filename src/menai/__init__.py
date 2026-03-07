@@ -37,7 +37,7 @@ __all__ = [
     "Menai",
 
     # Exceptions (enhanced with detailed context)
-    "MenaiError", "MenaiTokenError", "MenaiASTParseError", "MenaiEvalError", "MenaiCancelledException",
+    "MenaiError", "MenaiTokenError", "MenaiASTBuildError", "MenaiEvalError", "MenaiCancelledException",
 
     # AST node types
     "MenaiASTNode", "MenaiASTInteger", "MenaiASTFloat", "MenaiASTComplex",

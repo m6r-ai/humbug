@@ -1,15 +1,14 @@
 """
 Tests for letrec splitting in the desugarer.
 
-The desugarer's _desugar_letrec pass splits mixed letrec forms into nested
+The desugarer's _desugar_letrec pass splits mixed letrec forms into flat
 let/letrec forms in topological order:
 
   - Non-recursive binding (lambda or non-lambda) -> let
   - Recursive group (always lambdas after splitting) -> letrec
 
-This eliminates the mixed-binding problem that previously prevented lambda
-lifting: after splitting, every remaining letrec contains only a genuine
-mutually-recursive group of lambdas.
+Independent non-recursive bindings are batched into a single flat let.
+Only bindings with inter-sibling dependencies require separate nested lets.
 
 Test organisation:
   - Splitting correctness: the right structure is produced
@@ -321,23 +320,29 @@ class TestLetrecSplittingStructure:
         inner = result.elements[2]
         assert self._head_symbol(inner) == 'letrec'
 
-    def test_two_non_lambda_bindings_produce_nested_lets(self):
+    def test_two_independent_non_lambda_bindings_produce_single_let(self):
         """
-        Two independent non-lambda bindings must produce two nested lets.
+        Two independent non-lambda bindings must produce a single flat let
+        with both bindings, since neither references the other.
         """
-        from menai.menai_ast import MenaiASTList
+        from menai.menai_ast import MenaiASTList, MenaiASTSymbol
 
         result = self._desugar('''
         (letrec ((a 1)
                  (b 2))
           (integer+ a b))
         ''')
-        # Outer: let
+        # Single flat let with both bindings
         assert self._head_symbol(result) == 'let'
-        # Inner body: let
         assert isinstance(result, MenaiASTList)
+        bindings = result.elements[1]
+        assert isinstance(bindings, MenaiASTList)
+        assert len(bindings.elements) == 2
+        bound_names = {b.elements[0].name for b in bindings.elements}
+        assert bound_names == {'a', 'b'}
+        # Body is directly the expression, not another let
         inner = result.elements[2]
-        assert self._head_symbol(inner) == 'let'
+        assert self._head_symbol(inner) == '$integer+'
 
     def test_non_lambda_then_mutual_recursion(self):
         """

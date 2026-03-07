@@ -2107,7 +2107,6 @@ class MenaiVM:
         """STRING_CONCAT dest, src0, src1: r_dest = (string-concat r_src0 r_src1)"""
         src1_val = self._ensure_string(frame.locals[src1], 'string-concat')
         frame.locals[dest] = MenaiString(self._ensure_string(frame.locals[src0], 'string-concat') + src1_val)
-
         return None
 
     def _op_dict_p(  # pylint: disable=useless-return
