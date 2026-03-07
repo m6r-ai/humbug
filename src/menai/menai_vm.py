@@ -683,7 +683,7 @@ class MenaiVM:
         # Pre-allocate all free-var slots as None.  PATCH_CLOSURE fills them.
         n_free = len(closure_code.free_vars)
         cv: list = [None] * n_free
-        object.__setattr__(closure, 'captured_values', cv)
+        closure.captured_values = cv
         frame.locals[dest] = closure
         return None
 

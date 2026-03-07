@@ -12,7 +12,7 @@ from typing import Any, List, Tuple
 from menai.menai_error import MenaiEvalError
 
 
-@dataclass(frozen=True)
+@dataclass
 class MenaiValue(ABC):
     """
     Abstract base class for all Menai runtime values.
@@ -33,7 +33,7 @@ class MenaiValue(ABC):
         """Describe the value."""
 
 
-@dataclass(frozen=True)
+@dataclass
 class MenaiSymbol(MenaiValue):
     """Represents symbols that require environment lookup."""
     name: str
@@ -55,7 +55,7 @@ class MenaiSymbol(MenaiValue):
         return f'MenaiSymbol({self.name!r})'
 
 
-@dataclass(frozen=True)
+@dataclass
 class MenaiFunction(MenaiValue):
     """
     Represents a function (both user-defined lambdas and builtins).
@@ -92,7 +92,7 @@ class MenaiFunction(MenaiValue):
         return f"<lambda ({param_str})>"
 
 
-@dataclass(frozen=True)
+@dataclass
 class MenaiNone(MenaiValue):
     """Represents the absence of a value (#none).
 
@@ -116,7 +116,7 @@ class MenaiNone(MenaiValue):
 Menai_NONE = MenaiNone()
 
 
-@dataclass(frozen=True)
+@dataclass
 class MenaiBoolean(MenaiValue):
     """Represents boolean values."""
     value: bool
@@ -138,7 +138,7 @@ class MenaiBoolean(MenaiValue):
         return self.value == other.value
 
 
-@dataclass(frozen=True)
+@dataclass
 class MenaiInteger(MenaiValue):
     """Represents integer values."""
     value: int
@@ -160,7 +160,7 @@ class MenaiInteger(MenaiValue):
         return self.value == other.value
 
 
-@dataclass(frozen=True)
+@dataclass
 class MenaiFloat(MenaiValue):
     """Represents floating-point values."""
     value: float
@@ -182,7 +182,7 @@ class MenaiFloat(MenaiValue):
         return self.value == other.value
 
 
-@dataclass(frozen=True)
+@dataclass
 class MenaiComplex(MenaiValue):
     """Represents complex number values."""
     value: complex
@@ -227,7 +227,7 @@ class MenaiComplex(MenaiValue):
         return self.value == other.value
 
 
-@dataclass(frozen=True)
+@dataclass
 class MenaiString(MenaiValue):
     """Represents string values."""
     value: str
@@ -277,7 +277,7 @@ class MenaiString(MenaiValue):
         return self.value == other.value
 
 
-@dataclass(frozen=True)
+@dataclass
 class MenaiList(MenaiValue):
     """Represents lists of Menai values."""
     elements: Tuple[MenaiValue, ...] = ()
@@ -363,7 +363,7 @@ class MenaiList(MenaiValue):
         return None
 
 
-@dataclass(frozen=True)
+@dataclass
 class MenaiDict(MenaiValue):
     """
     Represents dictionaries - immutable key-value mappings.
@@ -376,12 +376,11 @@ class MenaiDict(MenaiValue):
 
     def __post_init__(self) -> None:
         """Build internal lookup dict after initialization."""
-        # Use object.__setattr__ because dataclass is frozen
         lookup = {}
         for key, value in self.pairs:
             hashable_key = self._to_hashable_key(key)
             lookup[hashable_key] = (key, value)
-        object.__setattr__(self, '_lookup', lookup)
+        self._lookup = lookup
 
     def to_python(self) -> dict:
         """Convert to Python dict."""
