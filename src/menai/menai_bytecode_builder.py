@@ -463,12 +463,12 @@ class MenaiBytecodeBuilder:
         self, instr: MenaiCFGInstr, dest: int, ctx: _EmitContext
     ) -> None:
         """
-        Emit a phi-sink instruction directly into `dest`.  Called from
-        _emit_phi_stores_for_successor; bypasses the phi-sink skip guard in
-        _emit_instr.
+        Emit a phi-sink instruction directly into `dest`, bypassing the
+        phi-sink skip guard in _emit_instr.  Called exclusively from
+        _emit_phi_stores_for_successor after the phi slot has been allocated
+        and pre-registered in ctx.slot_map for the incoming value.
 
-        Covers ConstInstr, GlobalInstr, and BuiltinInstr — the only types
-        admitted by _build_phi_sink.
+        Covers all result-bearing instruction types admitted by _build_phi_sink.
         """
         if isinstance(instr, MenaiCFGConstInstr):
             ctx.emit_constant(instr.value, dest=dest)
@@ -490,6 +490,20 @@ class MenaiBytecodeBuilder:
                 ctx.emit(opcode, slot(0), slot(1), dest=dest)
             else:
                 ctx.emit(opcode, slot(0), dest=dest)
+
+        elif isinstance(instr, MenaiCFGCallInstr):
+            for arg in instr.args:
+                ctx.load_value(arg)
+            ctx.load_value(instr.func)
+            ctx.emit(Opcode.CALL, len(instr.args), dest=dest)
+
+        elif isinstance(instr, MenaiCFGApplyInstr):
+            ctx.load_value(instr.func)
+            ctx.load_value(instr.arg_list)
+            ctx.emit(Opcode.APPLY, dest=dest)
+
+        elif isinstance(instr, MenaiCFGMakeClosureInstr):
+            self._emit_make_closure(instr, ctx)
 
         else:
             raise TypeError(
@@ -750,9 +764,11 @@ def _build_phi_sink(func: MenaiCFGFunction) -> Dict[int, MenaiCFGInstr]:
          incoming value in exactly one phi node.
       3. Its defining instruction is in the predecessor block that contributes
          the phi incoming (guaranteeing all operands are live at emit time).
-      4. It is not a ParamInstr, FreeVarInstr, PatchClosureInstr, or
-         TraceInstr — these have special slot-assignment or emit logic that
-         is incompatible with deferred emission.
+      4. It is not a ParamInstr, FreeVarInstr, TraceInstr, or PhiInstr.
+         The first three have special slot-assignment or emit logic incompatible
+         with deferred emission.  PhiInstr results that flow into another phi
+         are handled by the normal MOVE path (CollapsePhiChains eliminates
+         them in the optimized pipeline).  PatchClosureInstr has no result.
     """
     from menai.menai_cfg_collapse_phi_chains import _value_ids_in_instr, _value_ids_in_term
 
@@ -764,9 +780,7 @@ def _build_phi_sink(func: MenaiCFGFunction) -> Dict[int, MenaiCFGInstr]:
             result = _result_of(instr)
             if result is not None and not isinstance(
                 instr, (
-                    MenaiCFGParamInstr, MenaiCFGFreeVarInstr, MenaiCFGTraceInstr,
-                    MenaiCFGCallInstr, MenaiCFGApplyInstr,
-                    MenaiCFGMakeClosureInstr, MenaiCFGPhiInstr,
+                    MenaiCFGParamInstr, MenaiCFGFreeVarInstr, MenaiCFGTraceInstr, MenaiCFGPhiInstr,
                 )
             ):
                 candidate_defs[result.id] = (instr, block)
