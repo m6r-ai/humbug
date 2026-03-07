@@ -2,7 +2,7 @@
 
 import cmath
 import difflib
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import math
 from typing import List, Dict, Any, cast, Protocol
 
@@ -26,7 +26,7 @@ class MenaiTraceWatcher(Protocol):
         """
 
 
-@dataclass
+@dataclass(slots=True)
 class TailCall:
     """
     Marker for tail call optimization.
@@ -38,16 +38,17 @@ class TailCall:
     func: MenaiFunction
 
 
-@dataclass
 class Frame:
     """
     Execution frame for function calls.
 
     Each frame has its own locals and instruction pointer.
     """
-    code: CodeObject
-    ip: int = 0  # Instruction pointer
-    locals: List[MenaiValue] = field(init=False)  # Local variables
+    __slots__ = ('code', 'ip', 'locals')
+
+    def __init__(self, code: CodeObject) -> None:
+        self.code = code
+        self.ip = 0
 
 
 class MenaiVM:

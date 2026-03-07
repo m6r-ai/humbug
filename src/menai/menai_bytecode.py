@@ -409,7 +409,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'range': (Opcode.RANGE, 3),
 }
 
-@dataclass
+@dataclass(slots=True)
 class Instruction:
     """Single bytecode instruction.
 
@@ -511,7 +511,7 @@ class Instruction:
         return f"r{self.dest} = {name} {src_str}".rstrip()
 
 
-@dataclass
+@dataclass(slots=True)
 class CodeObject:
     """Compiled code object containing bytecode and metadata.
 
