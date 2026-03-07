@@ -309,6 +309,24 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
+        "gpt-5.4 (non-reasoning)": AIModel(
+            name="gpt-5.4",
+            provider="openai",
+            context_window=1000000,
+            max_output_tokens=128000,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "gpt-5.4": AIModel(
+            name="gpt-5.4",
+            provider="openai",
+            context_window=1000000,
+            max_output_tokens=128000,
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.HIDDEN_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "gpt-5.2 (non-reasoning)": AIModel(
             name="gpt-5.2",
             provider="openai",
@@ -673,7 +691,7 @@ class AIConversationSettings:
             return "mistral-large-latest"
 
         if "ollama" in ai_backends:
-            return "qwen3:4b"
+            return "qwen3.5"
 
         if "openai" in ai_backends:
             return "gpt-5-mini"
