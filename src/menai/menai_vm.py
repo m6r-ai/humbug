@@ -1180,177 +1180,337 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_LT_P dest, src0, src1: r_dest = (integer<? r_src0 r_src1)"""
-        src1_val = self._ensure_integer(frame.locals[src1], 'integer<?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer<?') < src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer<?' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer<?' requires integer arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value < b.value)
         return None
 
     def _op_integer_gt_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_GT_P dest, src0, src1: r_dest = (integer>? r_src0 r_src1)"""
-        src1_val = self._ensure_integer(frame.locals[src1], 'integer>?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer>?') > src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer>?' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer>?' requires integer arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value > b.value)
         return None
 
     def _op_integer_lte_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_LTE_P dest, src0, src1: r_dest = (integer<=? r_src0 r_src1)"""
-        src1_val = self._ensure_integer(frame.locals[src1], 'integer<=?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer<=?') <= src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer<=?' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer<=?' requires integer arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value <= b.value)
         return None
 
     def _op_integer_gte_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_GTE_P dest, src0, src1: r_dest = (integer>=? r_src0 r_src1)"""
-        src1_val = self._ensure_integer(frame.locals[src1], 'integer>=?')
-        frame.locals[dest] = MenaiBoolean(self._ensure_integer(frame.locals[src0], 'integer>=?') >= src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer>=?' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer>=?' requires integer arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value >= b.value)
         return None
 
     def _op_integer_abs(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_ABS dest, src0: r_dest = (integer-abs r_src0)"""
-        frame.locals[dest] = MenaiInteger(abs(self._ensure_integer(frame.locals[src0], 'integer-abs')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-abs' requires integer arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(abs(a.value))
         return None
 
     def _op_integer_add(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_ADD dest, src0, src1: r_dest = (integer+ r_src0 r_src1)"""
-        src1_val = self._ensure_integer(frame.locals[src1], 'integer+')
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer+') + src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer+' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer+' requires integer arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(a.value + b.value)
         return None
 
     def _op_integer_sub(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_SUB dest, src0, src1: r_dest = (integer- r_src0 r_src1)"""
-        src1_val = self._ensure_integer(frame.locals[src1], 'integer-')
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-') - src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-' requires integer arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(a.value - b.value)
         return None
 
     def _op_integer_mul(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_MUL dest, src0, src1: r_dest = (integer* r_src0 r_src1)"""
-        src1_val = self._ensure_integer(frame.locals[src1], 'integer*')
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer*') * src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer*' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer*' requires integer arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(a.value * b.value)
         return None
 
     def _op_integer_div(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_DIV dest, src0, src1: r_dest = (integer/ r_src0 r_src1)"""
-        a_val = self._ensure_integer(frame.locals[src0], 'integer/')
-        b_val = self._ensure_integer(frame.locals[src1], 'integer/')
-        if b_val == 0:
-            raise MenaiEvalError("Division by zero in 'integer/'")
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer/' requires integer arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiInteger(a_val // b_val)
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer/' requires integer arguments, got {b.type_name()}")
+
+        if b.value == 0:
+            raise MenaiEvalError("Division by zero in 'integer/'")
+        frame.locals[dest] = MenaiInteger(a.value // b.value)
         return None
 
     def _op_integer_mod(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_MOD dest, src0, src1: r_dest = (integer% r_src0 r_src1)"""
-        a_val = self._ensure_integer(frame.locals[src0], 'integer%')
-        b_val = self._ensure_integer(frame.locals[src1], 'integer%')
-        if b_val == 0:
-            raise MenaiEvalError("Modulo by zero in 'integer%'")
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer%' requires integer arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiInteger(a_val % b_val)
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer%' requires integer arguments, got {b.type_name()}")
+
+        if b.value == 0:
+            raise MenaiEvalError("Modulo by zero in 'integer%'")
+        frame.locals[dest] = MenaiInteger(a.value % b.value)
         return None
 
     def _op_integer_neg(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_NEG dest, src0: r_dest = (integer-neg r_src0)"""
-        frame.locals[dest] = MenaiInteger(-self._ensure_integer(frame.locals[src0], 'integer-neg'))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-neg' requires integer arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(-a.value)
         return None
 
     def _op_integer_expn(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_EXPN dest, src0, src1: r_dest = (integer-expn r_src0 r_src1)"""
-        a_val = self._ensure_integer(frame.locals[src0], 'integer-expn')
-        b_val = self._ensure_integer(frame.locals[src1], 'integer-expn')
-        if b_val < 0:
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-expn' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-expn' requires integer arguments, got {b.type_name()}")
+
+        if b.value < 0:
             raise MenaiEvalError("Function 'integer-expn' requires a non-negative exponent")
 
-        frame.locals[dest] = MenaiInteger(a_val ** b_val)
+        frame.locals[dest] = MenaiInteger(a.value ** b.value)
         return None
 
     def _op_integer_bit_not(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_NOT dest, src0: r_dest = (integer-bit-not r_src0)"""
-        frame.locals[dest] = MenaiInteger(~self._ensure_integer(frame.locals[src0], 'integer-bit-not'))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-bit-not' requires integer arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(~a.value)
         return None
 
     def _op_integer_bit_shift_left(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_SHIFT_LEFT dest, src0, src1: r_dest = (integer-bit-shift-left r_src0 r_src1)"""
-        src1_val = self._ensure_integer(frame.locals[src1], 'integer-bit-shift-left')
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-shift-left') << src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-bit-shift-left' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-bit-shift-left' requires integer arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(a.value << b.value)
         return None
 
     def _op_integer_bit_shift_right(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_SHIFT_RIGHT dest, src0, src1: r_dest = (integer-bit-shift-right r_src0 r_src1)"""
-        src1_val = self._ensure_integer(frame.locals[src1], 'integer-bit-shift-right')
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-shift-right') >> src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-bit-shift-right' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-bit-shift-right' requires integer arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(a.value >> b.value)
         return None
 
     def _op_integer_bit_or(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_OR dest, src0, src1: r_dest = (integer-bit-or r_src0 r_src1)"""
-        src1_val = self._ensure_integer(frame.locals[src1], 'integer-bit-or')
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-or') | src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-bit-or' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-bit-or' requires integer arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(a.value | b.value)
         return None
 
     def _op_integer_bit_and(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_AND dest, src0, src1: r_dest = (integer-bit-and r_src0 r_src1)"""
-        src1_val = self._ensure_integer(frame.locals[src1], 'integer-bit-and')
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-and') & src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-bit-and' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-bit-and' requires integer arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(a.value & b.value)
         return None
 
     def _op_integer_bit_xor(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_XOR dest, src0, src1: r_dest = (integer-bit-xor r_src0 r_src1)"""
-        src1_val = self._ensure_integer(frame.locals[src1], 'integer-bit-xor')
-        frame.locals[dest] = MenaiInteger(self._ensure_integer(frame.locals[src0], 'integer-bit-xor') ^ src1_val)
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-bit-xor' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-bit-xor' requires integer arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(a.value ^ b.value)
+        return None
+
+    def _op_integer_min(  # pylint: disable=useless-return
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+    ) -> MenaiValue | None:
+        """INTEGER_MIN dest, src0, src1: r_dest = (integer-min r_src0 r_src1)"""
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-min' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-min' requires integer arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(a.value if a.value <= b.value else b.value)
+        return None
+
+    def _op_integer_max(  # pylint: disable=useless-return
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
+    ) -> MenaiValue | None:
+        """INTEGER_MAX dest, src0, src1: r_dest = (integer-max r_src0 r_src1)"""
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-max' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer-max' requires integer arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiInteger(a.value if a.value >= b.value else b.value)
         return None
 
     def _op_integer_to_float(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_TO_FLOAT dest, src0: r_dest = (integer->float r_src0)"""
-        frame.locals[dest] = MenaiFloat(float(self._ensure_integer(frame.locals[src0], 'integer->float')))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer->float' requires integer arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiFloat(float(a.value))
         return None
 
     def _op_integer_to_complex(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_TO_COMPLEX dest, src0, src1: r_dest = (integer->complex r_src0 r_src1)"""
-        real_val = self._ensure_integer(frame.locals[src0], 'integer->complex')
-        imag_val = self._ensure_integer(frame.locals[src1], 'integer->complex')
-        frame.locals[dest] = MenaiComplex(complex(float(real_val), float(imag_val)))
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer->complex' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer->complex' requires integer arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiComplex(complex(float(a.value), float(b.value)))
         return None
 
     def _op_integer_to_string(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_TO_STRING dest, src0, src1: r_dest = (integer->string r_src0 r_src1)"""
-        a_val = self._ensure_integer(frame.locals[src0], 'integer->string')
-        radix = self._ensure_integer(frame.locals[src1], 'integer->string')
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer->string' requires integer arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
+            raise MenaiEvalError(f"Function 'integer->string' requires integer arguments, got {b.type_name()}")
+
+        a_val = a.value
+        radix = b.value
         if radix not in (2, 8, 10, 16):
             raise MenaiEvalError(f"integer->string radix must be 2, 8, 10, or 16, got {radix}")
 
@@ -1691,24 +1851,6 @@ class MenaiVM:
         a_val = self._ensure_float(frame.locals[src0], 'float-max')
         b_val = self._ensure_float(frame.locals[src1], 'float-max')
         frame.locals[dest] = MenaiFloat(a_val if a_val >= b_val else b_val)
-        return None
-
-    def _op_integer_min(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
-    ) -> MenaiValue | None:
-        """INTEGER_MIN dest, src0, src1: r_dest = (integer-min r_src0 r_src1)"""
-        a_val = self._ensure_integer(frame.locals[src0], 'integer-min')
-        b_val = self._ensure_integer(frame.locals[src1], 'integer-min')
-        frame.locals[dest] = MenaiInteger(a_val if a_val <= b_val else b_val)
-        return None
-
-    def _op_integer_max(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
-    ) -> MenaiValue | None:
-        """INTEGER_MAX dest, src0, src1: r_dest = (integer-max r_src0 r_src1)"""
-        a_val = self._ensure_integer(frame.locals[src0], 'integer-max')
-        b_val = self._ensure_integer(frame.locals[src1], 'integer-max')
-        frame.locals[dest] = MenaiInteger(a_val if a_val >= b_val else b_val)
         return None
 
     def _op_complex_p(  # pylint: disable=useless-return
