@@ -1,8 +1,8 @@
 """
 VM code generator for the Menai compiler.
 
-Translates a MenaiCFGFunction (SSA CFG) into a CodeObject ready for
-execution by the Menai VM.
+Translates a MenaiCFGFunction (SSA CFG) into a CodeObject ready for execution
+by the Menai VM.
 """
 
 from dataclasses import dataclass, field
@@ -77,6 +77,12 @@ class _EmitContext:
     # Kept separate so we can assert that a phi slot is allocated before the
     # join block tries to read it (via slot_of on the phi result).
     phi_slot_map: Dict[int, int] = field(default_factory=dict)
+
+    # Value ids whose result is used only as a single phi incoming.  At
+    # phi-store time the defining instruction is emitted directly into the phi
+    # slot; during normal block emission the instruction is skipped so that no
+    # intermediate slot is allocated.
+    phi_sink: Dict[int, 'MenaiCFGInstr'] = field(default_factory=dict)
 
     # Name of the current function (for self-loop detection label)
     current_lambda_name: Optional[str] = None
@@ -259,6 +265,12 @@ class MenaiBytecodeBuilder:
                 elif isinstance(instr, MenaiCFGFreeVarInstr):
                     ctx.assign_slot(instr.result, param_count + instr.index)
 
+        # Phase 1b: identify phi-sink values — ConstInstr or GlobalInstr
+        # results that are used only as a single phi incoming.  These will be
+        # emitted directly into the phi slot at phi-store time, eliminating the
+        # intermediate slot and the MOVE that would otherwise copy into it.
+        ctx.phi_sink = _build_phi_sink(func)
+
         # Phase 2: emit blocks.
         # We need to back-patch jump targets, so we collect
         # (instr_index, target_block) pairs as we go.
@@ -332,6 +344,12 @@ class MenaiBytecodeBuilder:
 
     def _emit_instr(self, instr: MenaiCFGInstr, ctx: _EmitContext) -> None:
         """Emit a single non-terminator instruction."""
+        # Phi-sink values are emitted directly into the phi slot at phi-store
+        # time.  Skip them here so no intermediate slot is allocated.
+        result = _result_of(instr)
+        if result is not None and result.id in ctx.phi_sink:
+            return
+
         if isinstance(instr, MenaiCFGParamInstr):
             # Params are already in their slots via ENTER; nothing to emit.
             return
@@ -429,7 +447,54 @@ class MenaiBytecodeBuilder:
                     else:
                         phi_slot = ctx.phi_slot_map[instr.result.id]
 
-                    ctx.emit(Opcode.MOVE, ctx.slot_of(incoming_val), dest=phi_slot)
+                    if incoming_val.id in ctx.phi_sink:
+                        # The incoming value is a phi-sink: its defining
+                        # instruction was skipped during normal block emission.
+                        # Emit the defining instruction directly into the phi
+                        # slot, bypassing the phi-sink skip guard.
+                        ctx.slot_map[incoming_val.id] = phi_slot
+                        self._emit_sink_instr(ctx.phi_sink[incoming_val.id], phi_slot, ctx)
+                    else:
+                        src_slot = ctx.slot_of(incoming_val)
+                        if src_slot != phi_slot:
+                            ctx.emit(Opcode.MOVE, src_slot, dest=phi_slot)
+
+    def _emit_sink_instr(
+        self, instr: MenaiCFGInstr, dest: int, ctx: _EmitContext
+    ) -> None:
+        """
+        Emit a phi-sink instruction directly into `dest`.  Called from
+        _emit_phi_stores_for_successor; bypasses the phi-sink skip guard in
+        _emit_instr.
+
+        Covers ConstInstr, GlobalInstr, and BuiltinInstr — the only types
+        admitted by _build_phi_sink.
+        """
+        if isinstance(instr, MenaiCFGConstInstr):
+            ctx.emit_constant(instr.value, dest=dest)
+
+        elif isinstance(instr, MenaiCFGGlobalInstr):
+            name_idx = ctx.add_name(instr.name)
+            ctx.emit(Opcode.LOAD_NAME, name_idx, dest=dest)
+
+        elif isinstance(instr, MenaiCFGBuiltinInstr):
+            opcode, _ = BUILTIN_OPCODE_MAP.get(instr.op, (None, None))
+            if opcode is None:
+                raise ValueError(f"_emit_sink_instr: unknown builtin {instr.op!r}")
+            args = instr.args
+            def slot(i: int) -> int:
+                return ctx.slot_of(args[i])
+            if instr.op in TERNARY_OPS:
+                ctx.emit(opcode, slot(0), slot(1), dest=dest, src2=slot(2))
+            elif instr.op in BINARY_OPS:
+                ctx.emit(opcode, slot(0), slot(1), dest=dest)
+            else:
+                ctx.emit(opcode, slot(0), dest=dest)
+
+        else:
+            raise TypeError(
+                f"_emit_sink_instr: unhandled instruction {type(instr).__name__}"
+            )
 
     def _emit_patch(self, patch: MenaiCFGPatchClosureInstr, ctx: _EmitContext) -> None:
         """
@@ -646,3 +711,110 @@ class MenaiBytecodeBuilder:
             source_line=func.source_line,
             source_file=func.source_file,
         )
+
+
+def _result_of(instr: MenaiCFGInstr) -> 'MenaiCFGValue | None':
+    """Return the SSA result value of `instr`, or None if it produces no result."""
+    if isinstance(instr, (
+        MenaiCFGConstInstr,
+        MenaiCFGGlobalInstr,
+        MenaiCFGParamInstr,
+        MenaiCFGFreeVarInstr,
+        MenaiCFGBuiltinInstr,
+        MenaiCFGCallInstr,
+        MenaiCFGApplyInstr,
+        MenaiCFGMakeClosureInstr,
+        MenaiCFGPhiInstr,
+        MenaiCFGTraceInstr,
+    )):
+        return instr.result
+    # MenaiCFGPatchClosureInstr has no result.
+    return None
+
+
+def _build_phi_sink(func: MenaiCFGFunction) -> Dict[int, MenaiCFGInstr]:
+    """
+    Identify values that are used only as a single phi incoming and can
+    therefore be emitted directly into the phi slot, eliminating the
+    intermediate slot and the MOVE.
+
+    Returns a map from value id to the defining instruction.  The bytecode
+    builder uses this map to:
+      - skip the defining instruction during normal block emission, and
+      - re-emit the defining instruction into the phi slot when the predecessor
+        processes its phi store.
+
+    A value qualifies as a phi-sink when:
+      1. Its defining instruction produces a result (has a `result` field).
+      2. It appears exactly once across all uses in the function — as an
+         incoming value in exactly one phi node.
+      3. Its defining instruction is in the predecessor block that contributes
+         the phi incoming (guaranteeing all operands are live at emit time).
+      4. It is not a ParamInstr, FreeVarInstr, PatchClosureInstr, or
+         TraceInstr — these have special slot-assignment or emit logic that
+         is incompatible with deferred emission.
+    """
+    from menai.menai_cfg_collapse_phi_chains import _value_ids_in_instr, _value_ids_in_term
+
+    # Collect all candidate instruction results, keyed by value id, with the
+    # block they are defined in.
+    candidate_defs: Dict[int, tuple] = {}  # value_id -> (instr, block)
+    for block in func.blocks:
+        for instr in block.instrs:
+            result = _result_of(instr)
+            if result is not None and not isinstance(
+                instr, (
+                    MenaiCFGParamInstr, MenaiCFGFreeVarInstr, MenaiCFGTraceInstr,
+                    MenaiCFGCallInstr, MenaiCFGApplyInstr,
+                    MenaiCFGMakeClosureInstr, MenaiCFGPhiInstr,
+                )
+            ):
+                candidate_defs[result.id] = (instr, block)
+
+    if not candidate_defs:
+        return {}
+
+    # Count every use of each candidate value across the whole function,
+    # distinguishing phi-incoming uses from all other uses.
+    use_counts: Dict[int, int] = {vid: 0 for vid in candidate_defs}
+    phi_use_counts: Dict[int, int] = {vid: 0 for vid in candidate_defs}
+    # Also record which predecessor block each phi incoming comes from.
+    phi_pred_block: Dict[int, MenaiCFGBlock] = {}
+
+    for block in func.blocks:
+        for instr in block.instrs:
+            if isinstance(instr, MenaiCFGPhiInstr):
+                for val, _ in instr.incoming:
+                    if val.id in use_counts:
+                        use_counts[val.id] += 1
+                        phi_use_counts[val.id] += 1
+            else:
+                for vid in _value_ids_in_instr(instr):
+                    if vid in use_counts:
+                        use_counts[vid] += 1
+        for patch in block.patch_instrs:
+            for vid in (patch.closure.id, patch.value.id):
+                if vid in use_counts:
+                    use_counts[vid] += 1
+        if block.terminator is not None:
+            for vid in _value_ids_in_term(block.terminator):
+                if vid in use_counts:
+                    use_counts[vid] += 1
+
+    # Build the predecessor-block map from phi incomings.
+    for block in func.blocks:
+        for instr in block.instrs:
+            if isinstance(instr, MenaiCFGPhiInstr):
+                for val, pred in instr.incoming:
+                    if val.id in candidate_defs:
+                        phi_pred_block[val.id] = pred
+
+    # A value is a phi-sink if it has exactly one use (the phi incoming) and
+    # its defining instruction is in the predecessor block for that incoming.
+    result_map: Dict[int, MenaiCFGInstr] = {}
+    for vid, (instr, def_block) in candidate_defs.items():
+        if use_counts.get(vid, 0) == 1 and phi_use_counts.get(vid, 0) == 1:
+            pred = phi_pred_block.get(vid)
+            if pred is not None and pred.id == def_block.id:
+                result_map[vid] = instr
+    return result_map

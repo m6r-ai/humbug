@@ -17,6 +17,7 @@ from menai.menai_bytecode_builder import MenaiBytecodeBuilder
 from menai.menai_cfg_builder import MenaiCFGBuilder
 from menai.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
 from menai.menai_cfg_bypass_empty_blocks import MenaiCFGBypassEmptyBlocks
+from menai.menai_cfg_collapse_phi_chains import MenaiCFGCollapsePhiChains
 from menai.menai_cfg_eliminate_dead_blocks import MenaiCFGEliminateDeadBlocks
 from menai.menai_cfg_eliminate_trivial_phis import MenaiCFGEliminateTrivialPhis
 from menai.menai_cfg_prune_stale_phi_entries import MenaiCFGPruneStalePhiEntries
@@ -73,6 +74,7 @@ class MenaiCompiler:
             self.cfg_passes = [
                 MenaiCFGPruneStalePhiEntries(),
                 MenaiCFGEliminateTrivialPhis(),
+                MenaiCFGCollapsePhiChains(),
                 MenaiCFGBypassEmptyBlocks(),
                 MenaiCFGEliminateDeadBlocks(),
             ]
