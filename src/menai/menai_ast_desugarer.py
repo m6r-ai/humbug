@@ -228,6 +228,30 @@ class MenaiASTDesugarer:
             # the variadic/comparison/equality rewrites so that e.g.
             # (integer+ a b) → ($integer+ a b) directly, while
             # (integer+ a b c) still falls through to _desugar_variadic_arithmetic.
+            #
+            # Several builtins have optional trailing arguments whose opcodes
+            # always require the full argument count.  When the user omits the
+            # optional argument(s) the desugarer synthesises the missing default
+            # so that the $-prefixed opcode call is always fully saturated:
+            #
+            #   Constant defaults (1-arg min, 2-arg opcode):
+            #     (integer->complex n)     → ($integer->complex n 0)
+            #     (integer->string n)      → ($integer->string  n 10)
+            #     (float->complex x)       → ($float->complex   x 0.0)
+            #     (string->integer s)      → ($string->integer  s 10)
+            #     (string->list s)         → ($string->list     s "")
+            #     (list->string l)         → ($list->string     l "")
+            #
+            #   Constant defaults (2-arg min, 3-arg opcode):
+            #     (dict-get d k)           → ($dict-get   d k #none)
+            #     (range start end)        → ($range      start end 1)
+            #
+            #   Computed defaults (2-arg min, 3-arg opcode):
+            #     (string-slice s start)   → (let ((#:t s)) ($string-slice #:t start ($string-length #:t)))
+            #     (list-slice   l start)   → (let ((#:t l)) ($list-slice   #:t start ($list-length   #:t)))
+            #
+            # The computed-default cases bind the collection argument to a temp
+            # to avoid evaluating it twice.
             primitive_arity = MenaiBuiltinRegistry.get_primitive_arity(name)
             if primitive_arity is not None:
                 n_args = len(expr.elements) - 1
@@ -238,6 +262,49 @@ class MenaiASTDesugarer:
                         (self._make_symbol(dollar_name, expr),) + tuple(desugared_args),
                         expr
                     )
+                # Constant-default completions.
+                _CONSTANT_DEFAULTS: dict[str, MenaiASTNode] = {
+                    'integer->complex': MenaiASTInteger(0,   line=expr.line, column=expr.column, source_file=expr.source_file),
+                    'integer->string':  MenaiASTInteger(10,  line=expr.line, column=expr.column, source_file=expr.source_file),
+                    'float->complex':   MenaiASTFloat(0.0,   line=expr.line, column=expr.column, source_file=expr.source_file),
+                    'string->integer':  MenaiASTInteger(10,  line=expr.line, column=expr.column, source_file=expr.source_file),
+                    'string->list':     MenaiASTString("",   line=expr.line, column=expr.column, source_file=expr.source_file),
+                    'list->string':     MenaiASTString("",   line=expr.line, column=expr.column, source_file=expr.source_file),
+                    'dict-get':         MenaiASTNone(        line=expr.line, column=expr.column, source_file=expr.source_file),
+                    'range':            MenaiASTInteger(1,   line=expr.line, column=expr.column, source_file=expr.source_file),
+                }
+                if name in _CONSTANT_DEFAULTS and n_args == primitive_arity - 1:
+                    default = _CONSTANT_DEFAULTS[name]
+                    desugared_args = [self.desugar(arg) for arg in expr.elements[1:]]
+                    return self._make_list(
+                        (self._make_symbol('$' + name, expr),) + tuple(desugared_args) + (default,),
+                        expr
+                    )
+                # Computed-default completions: bind the collection to a temp to
+                # avoid double-evaluation, then synthesise the length call.
+                if name in ('string-slice', 'list-slice') and n_args == 2:
+                    length_fn = 'string-length' if name == 'string-slice' else 'list-length'
+                    coll_arg = self.desugar(expr.elements[1])
+                    start_arg = self.desugar(expr.elements[2])
+                    temp = self._gen_temp()
+                    temp_sym = self._make_symbol(temp, expr)
+                    length_call = self._make_list((
+                        self._make_symbol('$' + length_fn, expr),
+                        temp_sym,
+                    ), expr)
+                    slice_call = self._make_list((
+                        self._make_symbol('$' + name, expr),
+                        temp_sym,
+                        start_arg,
+                        length_call,
+                    ), expr)
+                    return self._make_list((
+                        self._make_symbol('let', expr),
+                        self._make_list((
+                            self._make_list((temp_sym, coll_arg), expr),
+                        ), expr),
+                        slice_call,
+                    ), expr)
 
             # Check for typed variadic arithmetic operations
             if name in [

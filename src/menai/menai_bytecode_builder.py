@@ -520,8 +520,12 @@ class MenaiBytecodeBuilder:
 
     def _emit_builtin(self, instr: MenaiCFGBuiltinInstr, ctx: _EmitContext) -> None:
         """
-        Emit a builtin operation, including special-case handling for
-        optional-argument builtins (range, string-slice, dict-get, etc.).
+        Emit a builtin operation.
+
+        All optional arguments are synthesised by the desugarer, so every
+        builtin arrives here with exactly the arity declared in
+        BUILTIN_OPCODE_MAP.  The three generic branches below assert that
+        invariant and dispatch to the correct opcode.
         """
         op = instr.op
         args = instr.args
@@ -534,98 +538,18 @@ class MenaiBytecodeBuilder:
         def slot(i: int) -> int:
             return ctx.ensure_slot(args[i])
 
-        def const_slot(value: MenaiValue) -> int:
-            """Load a constant into a fresh register and return its slot."""
-            s = ctx.next_slot
-            ctx.next_slot += 1
-            ctx.emit_constant(value, dest=s)
-            return s
-
         dest = ctx.alloc_slot(result)
 
-        # Special cases: optional / synthesised arguments.
-        if op == 'range':
-            s0 = slot(0)
-            s1 = slot(1)
-            s2 = slot(2) if len(args) == 3 else const_slot(MenaiInteger(1))
-            ctx.emit(opcode, s0, s1, dest=dest, src2=s2)
-
-        elif op == 'integer->complex':
-            s0 = slot(0)
-            s1 = slot(1) if len(args) == 2 else const_slot(MenaiInteger(0))
-            ctx.emit(opcode, s0, s1, dest=dest)
-
-        elif op == 'integer->string':
-            s0 = slot(0)
-            s1 = slot(1) if len(args) == 2 else const_slot(MenaiInteger(10))
-            ctx.emit(opcode, s0, s1, dest=dest)
-
-        elif op == 'float->complex':
-            s0 = slot(0)
-            s1 = slot(1) if len(args) == 2 else const_slot(MenaiFloat(0.0))
-            ctx.emit(opcode, s0, s1, dest=dest)
-
-        elif op == 'string->integer':
-            s0 = slot(0)
-            s1 = slot(1) if len(args) == 2 else const_slot(MenaiInteger(10))
-            ctx.emit(opcode, s0, s1, dest=dest)
-
-        elif op == 'string-slice':
-            s0 = slot(0)
-            s1 = slot(1)
-            if len(args) == 2:
-                # Default end = string-length(str): emit STRING_LENGTH into a
-                # fresh slot, then use that slot as src2.
-                len_slot = ctx.next_slot
-                ctx.next_slot += 1
-                len_opcode, _ = BUILTIN_OPCODE_MAP['string-length']
-                ctx.emit(len_opcode, s0, dest=len_slot)
-                s2 = len_slot
-
-            else:
-                s2 = slot(2)
-
-            ctx.emit(opcode, s0, s1, dest=dest, src2=s2)
-
-        elif op == 'string->list':
-            s0 = slot(0)
-            s1 = slot(1) if len(args) == 2 else const_slot(MenaiString(""))
-            ctx.emit(opcode, s0, s1, dest=dest)
-
-        elif op == 'list-slice':
-            s0 = slot(0)
-            s1 = slot(1)
-            if len(args) == 2:
-                # Default end = list-length(lst)
-                len_slot = ctx.next_slot
-                ctx.next_slot += 1
-                len_opcode, _ = BUILTIN_OPCODE_MAP['list-length']
-                ctx.emit(len_opcode, s0, dest=len_slot)
-                s2 = len_slot
-
-            else:
-                s2 = slot(2)
-
-            ctx.emit(opcode, s0, s1, dest=dest, src2=s2)
-
-        elif op == 'list->string':
-            s0 = slot(0)
-            s1 = slot(1) if len(args) == 2 else const_slot(MenaiString(""))
-            ctx.emit(opcode, s0, s1, dest=dest)
-
-        elif op == 'dict-get':
-            s0 = slot(0)
-            s1 = slot(1)
-            s2 = slot(2) if len(args) == 3 else const_slot(MenaiNone())
-            ctx.emit(opcode, s0, s1, dest=dest, src2=s2)
-
-        elif op in TERNARY_OPS:
+        if op in TERNARY_OPS:
+            assert len(args) == 3, f"_emit_builtin: {op!r} expects 3 args, got {len(args)}"
             ctx.emit(opcode, slot(0), slot(1), dest=dest, src2=slot(2))
 
         elif op in BINARY_OPS:
+            assert len(args) == 2, f"_emit_builtin: {op!r} expects 2 args, got {len(args)}"
             ctx.emit(opcode, slot(0), slot(1), dest=dest)
 
         elif op in UNARY_OPS:
+            assert len(args) == 1, f"_emit_builtin: {op!r} expects 1 arg, got {len(args)}"
             ctx.emit(opcode, slot(0), dest=dest)
 
         else:

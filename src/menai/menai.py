@@ -801,7 +801,7 @@ class Menai:
                           (if ($list-null? keys)
                               acc
                               (let*
-                                ((k ($list-first keys)) (v ($dict-get al k)))
+                                ((k ($list-first keys)) (v ($dict-get al k #none)))
                                 (loop ($list-rest keys) ($dict-set acc k (f k v))))))))
                  (loop ($dict-keys al) (dict)))))
    (filter-dict (lambda (pred al)
@@ -810,7 +810,7 @@ class Menai:
                              (if ($list-null? keys)
                                  acc
                                  (let*
-                                   ((k ($list-first keys)) (v ($dict-get al k)))
+                                   ((k ($list-first keys)) (v ($dict-get al k #none)))
                                    (if (pred k v)
                                        (loop ($list-rest keys) ($dict-set acc k v))
                                        (loop ($list-rest keys) acc)))))))
