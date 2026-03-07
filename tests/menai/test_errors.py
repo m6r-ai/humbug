@@ -287,10 +287,10 @@ class TestErrors:
 
     def test_empty_list_access_errors(self, menai):
         """Test that accessing empty lists causes evaluation errors."""
-        with pytest.raises(MenaiEvalError, match="Cannot get first element of empty list"):
+        with pytest.raises(MenaiEvalError, match="list-first.*non-empty list"):
             menai.evaluate("(list-first (list))")
 
-        with pytest.raises(MenaiEvalError, match="Cannot get rest of empty list"):
+        with pytest.raises(MenaiEvalError, match="list-rest.*non-empty list"):
             menai.evaluate("(list-rest (list))")
 
     def test_index_out_of_range_errors(self, menai):

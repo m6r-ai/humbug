@@ -2632,7 +2632,12 @@ class MenaiVM:
         if not isinstance(a, MenaiDict):
             raise MenaiEvalError(f"Function 'dict-has?' requires dict arguments, got {a.type_name()}")
 
-        frame.locals[instr.dest] = MenaiBoolean(a.has_key(cast(MenaiValue, frame.locals[instr.src1])))
+        try:
+            frame.locals[instr.dest] = MenaiBoolean(a.has_key(cast(MenaiValue, frame.locals[instr.src1])))
+
+        except MenaiEvalError as e:
+            raise MenaiEvalError(f"Function 'dict-has?' invalid key: {e.message}") from e
+
         return None
 
     def _op_dict_remove(  # pylint: disable=useless-return
@@ -2643,7 +2648,12 @@ class MenaiVM:
         if not isinstance(a, MenaiDict):
             raise MenaiEvalError(f"Function 'dict-remove' requires dict arguments, got {a.type_name()}")
 
-        frame.locals[instr.dest] = a.remove(cast(MenaiValue, frame.locals[instr.src1]))
+        try:
+            frame.locals[instr.dest] = a.remove(cast(MenaiValue, frame.locals[instr.src1]))
+
+        except MenaiEvalError as e:
+            raise MenaiEvalError(f"Function 'dict-remove' invalid key: {e.message}") from e
+
         return None
 
     def _op_dict_merge(  # pylint: disable=useless-return
@@ -2669,7 +2679,12 @@ class MenaiVM:
         if not isinstance(a, MenaiDict):
             raise MenaiEvalError(f"Function 'dict-set' requires dict arguments, got {a.type_name()}")
 
-        frame.locals[instr.dest] = a.set(cast(MenaiValue, frame.locals[instr.src1]), cast(MenaiValue, frame.locals[instr.src2]))
+        try:
+            frame.locals[instr.dest] = a.set(cast(MenaiValue, frame.locals[instr.src1]), cast(MenaiValue, frame.locals[instr.src2]))
+
+        except MenaiEvalError as e:
+            raise MenaiEvalError(f"Function 'dict-set' invalid key: {e.message}") from e
+
         return None
 
     def _op_dict_get(  # pylint: disable=useless-return
@@ -2680,8 +2695,13 @@ class MenaiVM:
         if not isinstance(a, MenaiDict):
             raise MenaiEvalError(f"Function 'dict-get' requires dict arguments, got {a.type_name()}")
 
-        result = a.get(cast(MenaiValue, frame.locals[instr.src1]))
-        frame.locals[instr.dest] = result if result is not None else cast(MenaiValue, frame.locals[instr.src2])
+        try:
+            result = a.get(cast(MenaiValue, frame.locals[instr.src1]))
+            frame.locals[instr.dest] = result if result is not None else cast(MenaiValue, frame.locals[instr.src2])
+
+        except MenaiEvalError as e:
+            raise MenaiEvalError(f"Function 'dict-get' invalid key: {e.message}") from e
+
         return None
 
     def _op_list_p(  # pylint: disable=useless-return
@@ -2768,7 +2788,7 @@ class MenaiVM:
             frame.locals[instr.dest] = a.first()
 
         except IndexError as e:
-            raise MenaiEvalError(str(e)) from e
+            raise MenaiEvalError("Function 'list-first' requires a non-empty list") from e
 
         return None
 
@@ -2779,11 +2799,12 @@ class MenaiVM:
         a = frame.locals[instr.src0]
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-rest' requires list arguments, got {a.type_name()}")
+
         try:
             frame.locals[instr.dest] = a.rest()
 
         except IndexError as e:
-            raise MenaiEvalError(str(e)) from e
+            raise MenaiEvalError("Function 'list-rest' requires a non-empty list") from e
 
         return None
 
@@ -2799,7 +2820,7 @@ class MenaiVM:
             frame.locals[instr.dest] = a.last()
 
         except IndexError as e:
-            raise MenaiEvalError(str(e)) from e
+            raise MenaiEvalError("Function 'list-last' requires a non-empty list") from e
 
         return None
 

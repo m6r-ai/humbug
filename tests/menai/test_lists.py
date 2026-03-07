@@ -147,7 +147,7 @@ class TestLists:
 
     def test_first_empty_list_error(self, menai):
         """Test that first raises error on empty list."""
-        with pytest.raises(MenaiEvalError, match="Cannot get first element of empty list"):
+        with pytest.raises(MenaiEvalError, match="list-first.*non-empty list"):
             menai.evaluate('(list-first (list))')
 
     def test_first_requires_list_argument(self, menai):
@@ -171,7 +171,7 @@ class TestLists:
 
     def test_rest_empty_list_error(self, menai):
         """Test that rest raises error on empty list."""
-        with pytest.raises(MenaiEvalError, match="Cannot get rest of empty list"):
+        with pytest.raises(MenaiEvalError, match="list-rest.*non-empty list"):
             menai.evaluate('(list-rest (list))')
 
     def test_rest_requires_list_argument(self, menai):

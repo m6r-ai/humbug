@@ -45,13 +45,13 @@ class TestMenaiCollectionEdgeCases:
     def test_empty_collection_error_cases(self, menai):
         """Test operations that should fail on empty collections."""
         # Operations that require non-empty lists
-        with pytest.raises(MenaiEvalError, match="Cannot get first element of empty list"):
+        with pytest.raises(MenaiEvalError, match="list-first.*non-empty list"):
             menai.evaluate("(list-first ())")
 
-        with pytest.raises(MenaiEvalError, match="Cannot get rest of empty list"):
+        with pytest.raises(MenaiEvalError, match="list-rest.*non-empty list"):
             menai.evaluate("(list-rest ())")
 
-        with pytest.raises(MenaiEvalError, match="Cannot get last element of empty list"):
+        with pytest.raises(MenaiEvalError, match="list-last.*non-empty list"):
             menai.evaluate("(list-last ())")
 
     def test_single_element_collections(self, menai):
