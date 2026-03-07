@@ -401,6 +401,7 @@ class MenaiVM:
         # Local instruction counter for cancellation checking
         # Using a local variable is faster than accessing self._instruction_count
         instruction_count = 0
+        instructions = frame.code.instructions
 
         while True:
             # Periodically check for cancellation
@@ -413,7 +414,6 @@ class MenaiVM:
                 instruction_count = 0
 
             # Re-fetch instructions each iteration in case frame.code changes (mutual recursion TCO)
-            instructions = frame.code.instructions
             if frame.ip >= len(instructions):
                 # Frame finished without explicit return
                 raise MenaiEvalError("Frame execution ended without RETURN instruction")
