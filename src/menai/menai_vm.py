@@ -602,7 +602,7 @@ class MenaiVM:
         return None
 
     def _op_enter(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, n: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """
         ENTER n: Pop n arguments from stack into locals 0..n-1.
@@ -612,20 +612,20 @@ class MenaiVM:
         in locals[0], param 1 in locals[1], etc.
         """
         # Validator guarantees n >= 1 and stack has at least n values
-        for i in range(n - 1, -1, -1):
+        for i in range(src0 - 1, -1, -1):
             frame.locals[i] = self.stack.pop()
 
         return None
 
     def _op_jump(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, target: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """JUMP: Unconditional jump to instruction."""
-        frame.ip = target
+        frame.ip = src0
         return None
 
     def _op_jump_if_false(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, target: int, _src2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """JUMP_IF_FALSE r_src0, @target: Read condition from register src0, jump if false."""
         # Validator guarantees src0 is in bounds and target is valid
@@ -635,12 +635,12 @@ class MenaiVM:
             raise MenaiEvalError("If condition must be boolean")
 
         if not condition.value:
-            frame.ip = target
+            frame.ip = src1
 
         return None
 
     def _op_jump_if_true(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, target: int, _src2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """JUMP_IF_TRUE r_src0, @target: Read condition from register src0, jump if true."""
         # Validator guarantees src0 is in bounds and target is valid
@@ -650,12 +650,12 @@ class MenaiVM:
             raise MenaiEvalError("If condition must be boolean")
 
         if condition.value:
-            frame.ip = target
+            frame.ip = src1
 
         return None
 
     def _op_raise_error(  # pylint: disable=useless-return
-        self, _frame: Frame, code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
+        self, frame: Frame, code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """RAISE_ERROR: Raise error with message from constant pool."""
         # Validator guarantees src0 is in bounds
@@ -689,7 +689,7 @@ class MenaiVM:
         return None
 
     def _op_patch_closure(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, _dest: int, closure_reg: int, value_reg: int, capture_idx: int
+        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, src1: int, src2: int
     ) -> MenaiValue | None:
         """
         PATCH_CLOSURE closure_reg, value_reg, capture_idx: Fill a free-var slot on a closure.
@@ -698,19 +698,19 @@ class MenaiVM:
         closures together after all have been created in Phase 1.
 
         Args:
-            closure_reg - register holding the closure to patch
-            value_reg   - register holding the value to store into the capture slot
-            capture_idx - which captured-values slot to fill
+            src0 - register holding the closure to patch
+            src1 - register holding the value to store into the capture slot
+            src2 - which captured-values slot to fill
         """
-        value = frame.locals[value_reg]
-        closure = frame.locals[closure_reg]
+        value = frame.locals[src1]
+        closure = frame.locals[src0]
         assert isinstance(closure, MenaiFunction)
         assert isinstance(closure.captured_values, list), "PATCH_CLOSURE: captured_values must be a list (set by MAKE_CLOSURE)"
-        closure.captured_values[capture_idx] = value
+        closure.captured_values[src2] = value
         return None
 
     def _op_call(  # pylint: disable=useless-return
-        self, frame: Frame, _code: CodeObject, dest: int, arity: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """CALL dest, arity: Call function; pop result from stack into dest register."""
         # Validator guarantees stack has enough values (arity + 1)
@@ -725,7 +725,7 @@ class MenaiVM:
                 suggestion="Only functions can be called"
             )
 
-        self._check_and_pack_args(func, arity)
+        self._check_and_pack_args(func, src0)
         code = func.bytecode
 
         new_frame = Frame(code)
@@ -745,7 +745,7 @@ class MenaiVM:
         return None
 
     def _op_tail_call(  # pylint: disable=useless-return
-        self, _frame: Frame, _code: CodeObject, _dest: int, arity: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, src0: int, _src1: int, _src2: int
     ) -> TailCall | None:
         """
         TAIL_CALL: Perform tail call with optimization.
@@ -769,7 +769,7 @@ class MenaiVM:
                 suggestion="Only functions can be called"
             )
 
-        self._check_and_pack_args(func, arity)
+        self._check_and_pack_args(func, src0)
         return TailCall(func)
 
     def _op_apply(  # pylint: disable=useless-return
@@ -811,7 +811,7 @@ class MenaiVM:
         return None
 
     def _op_tail_apply(
-        self, _frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
+        self, frame: Frame, _code: CodeObject, _dest: int, _src0: int, _src1: int, _src2: int
     ) -> TailCall:
         """TAIL_APPLY: Apply function to argument list in tail position."""
         arg_list = self.stack.pop()
