@@ -27,6 +27,7 @@ from menai.menai_cfg import (
     MenaiCFGBlock,
     MenaiCFGFreeVarInstr,
     MenaiCFGFunction,
+    MenaiCFGMakeClosureInstr,
     MenaiCFGInstr,
     MenaiCFGParamInstr,
     MenaiCFGPhiInstr,
@@ -343,18 +344,33 @@ def allocate_slots(func: MenaiCFGFunction) -> SlotAllocation:
             # General case: instruction with a result.
             input_ids = _value_ids_in_instr(instr)
 
-            # Allocate the result slot using the current live set.
-            # Inputs are still live at this point (they are read by this
-            # instruction), so the result cannot reuse their slots.
+            # For MakeClosureInstr, captures are read again after the result
+            # slot is written (the bytecode builder emits PATCH_CLOSURE after
+            # MAKE_CLOSURE).  Allocate the result first so captures cannot be
+            # assigned the same slot as the closure.  For all other instructions
+            # the VM reads all sources before writing the destination, so we
+            # can kill dead inputs first and let the result reuse their slots.
+            from menai.menai_cfg import MenaiCFGMakeClosureInstr
+            if isinstance(instr, MenaiCFGMakeClosureInstr):
+                result = _result_of_instr(instr)
+                if result is not None:
+                    _assign(result, live)
+                    live.add(result.id)
+                for vid in input_ids:
+                    if last_use.get(vid, term_idx + 1) <= i and vid not in block_live_out:
+                        live.discard(vid)
+                continue
+
+            # All other instructions: kill dead inputs first so the result
+            # can reuse their slots.
+            for vid in input_ids:
+                if last_use.get(vid, term_idx + 1) <= i and vid not in block_live_out:
+                    live.discard(vid)
+
             result = _result_of_instr(instr)
             if result is not None:
                 _assign(result, live)
                 live.add(result.id)
-
-            # Kill inputs whose last use is this instruction.
-            for vid in input_ids:
-                if last_use.get(vid, term_idx + 1) <= i and vid not in block_live_out:
-                    live.discard(vid)
 
             # Kill result if it has no further uses in this block and is not live-out.
             if result is not None and result.id not in block_live_out:
