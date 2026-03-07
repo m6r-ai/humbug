@@ -22,6 +22,7 @@ New features:
 - Removed support for Phi4 (obsolete).
 - Added support for MiniMax M2.5 and removed MiniMax M2.
 - Added support for Kimi k2.5 and removed Kimi k2.
+- Added support for GPT-5.4.
 
 Internal structure changes:
 
