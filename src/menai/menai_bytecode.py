@@ -421,7 +421,7 @@ class Instruction:
       src1  — second source register or instruction-stream immediate
       src2  — third source register (unused in current stack-machine phase)
     """
-    opcode: Opcode
+    opcode: int  # Plain int (Opcode integer value) for fast VM dispatch table indexing
     dest: int = 0   # destination register (written by MAKE_CLOSURE, POP, and load ops)
     src0: int = 0   # first immediate / source operand (was arg1)
     src1: int = 0   # second immediate / source operand (was arg2)
@@ -434,7 +434,7 @@ class Instruction:
         For POP:  0 (dest is the register index, encoded in the stream as dest, not src0).
         For most other ops: 0, 1, or 2 as before.
         """
-        return self.opcode.arg_count()
+        return Opcode(self.opcode).arg_count()
 
     def __repr__(self) -> str:
         """Human-readable representation using register-ISA disassembly style.
@@ -447,7 +447,7 @@ class Instruction:
         All load ops (LOAD_NONE, LOAD_TRUE, LOAD_FALSE, LOAD_EMPTY_LIST,
         LOAD_CONST, LOAD_NAME) always write to dest.
         """
-        opcode = self.opcode
+        opcode = Opcode(self.opcode)
         name = opcode.name
 
         if opcode == Opcode.ENTER:

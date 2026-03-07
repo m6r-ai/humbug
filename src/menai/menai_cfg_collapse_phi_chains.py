@@ -54,6 +54,7 @@ from menai.menai_cfg import (
     MenaiCFGSelfLoopTerm,
     MenaiCFGTailApplyTerm,
     MenaiCFGTailCallTerm,
+    MenaiCFGTerminator,
     MenaiCFGTraceInstr,
     MenaiCFGValue,
     relink_predecessors,
@@ -263,7 +264,7 @@ def _value_ids_in_instr(instr: MenaiCFGInstr) -> List[int]:
     return []
 
 
-def _value_ids_in_term(term) -> List[int]:
+def _value_ids_in_term(term: MenaiCFGTerminator) -> List[int]:
     """Return all input value ids referenced by a terminator."""
     if isinstance(term, MenaiCFGReturnTerm):
         return [term.value.id]

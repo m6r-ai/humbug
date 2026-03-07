@@ -39,7 +39,7 @@ class ValidationError(Exception):
     error_type: ValidationErrorType
     message: str
     instruction_index: int | None = None
-    opcode: Opcode | None = None
+    opcode: int | None = None
     context: str | None = None
 
     def __str__(self) -> str:
@@ -48,7 +48,7 @@ class ValidationError(Exception):
             parts.append(f"  at instruction {self.instruction_index}")
 
         if self.opcode is not None:
-            parts.append(f"  opcode: {self.opcode.name}")
+            parts.append(f"  opcode: {Opcode(self.opcode).name}")
 
         if self.context:
             parts.append(f"  context: {self.context}")
@@ -105,7 +105,7 @@ class BytecodeValidator:
         """Initialize metadata about opcodes for validation."""
         # Stack effect: how many items are popped (-) and pushed (+)
         # Format: (pop_count, push_count)
-        self.stack_effects: Dict[Opcode, Tuple[int, int]] = {
+        self.stack_effects: Dict[int, Tuple[int, int]] = {
             # Register-based load ops: always write to dest, no stack effect.
             Opcode.LOAD_NONE: (0, 0),
             Opcode.LOAD_TRUE: (0, 0),
@@ -340,10 +340,13 @@ class BytecodeValidator:
 
         # Check all opcodes are valid
         for i, instr in enumerate(code.instructions):
-            if not isinstance(instr.opcode, Opcode):
+            try:
+                Opcode(instr.opcode)
+
+            except ValueError:
                 raise ValidationError(
                     ValidationErrorType.INVALID_OPCODE,
-                    f"Invalid opcode type: {type(instr.opcode)}",
+                    f"Invalid opcode value: {instr.opcode}",
                     instruction_index=i
                 )
 

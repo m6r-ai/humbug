@@ -127,7 +127,7 @@ class _EmitContext:
     def emit(self, opcode: Opcode, src0: int = 0, src1: int = 0, dest: int = 0, src2: int = 0) -> int:
         """Emit an instruction, returning its index."""
         idx = len(self.instructions)
-        self.instructions.append(Instruction(opcode, dest=dest, src0=src0, src1=src1, src2=src2))
+        self.instructions.append(Instruction(int(opcode), dest=dest, src0=src0, src1=src1, src2=src2))
         return idx
 
     def load_value(self, value: MenaiCFGValue) -> None:
@@ -835,8 +835,8 @@ def _build_phi_sink(func: MenaiCFGFunction) -> Dict[int, MenaiCFGInstr]:
     result_map: Dict[int, MenaiCFGInstr] = {}
     for vid, (instr, def_block) in candidate_defs.items():
         if use_counts.get(vid, 0) == 1 and phi_use_counts.get(vid, 0) == 1:
-            pred = phi_pred_block.get(vid)
-            if pred is not None and pred.id == def_block.id:
+            def_pred: MenaiCFGBlock | None = phi_pred_block.get(vid)
+            if def_pred is not None and def_pred.id == def_block.id:
                 result_map[vid] = instr
 
     return result_map
