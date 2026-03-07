@@ -159,6 +159,7 @@ class MenaiVM:
         table[Opcode.LOAD_NAME] = self._op_load_name
         table[Opcode.PUSH] = self._op_push
         table[Opcode.POP] = self._op_pop
+        table[Opcode.MOVE] = self._op_move
         table[Opcode.JUMP] = self._op_jump
         table[Opcode.JUMP_IF_FALSE] = self._op_jump_if_false
         table[Opcode.JUMP_IF_TRUE] = self._op_jump_if_true
@@ -656,6 +657,14 @@ class MenaiVM:
         # Validator guarantees dest is in bounds and stack has value
         value = self.stack.pop()
         frame.locals[dest] = value
+        return None
+
+    def _op_move(  # pylint: disable=useless-return
+        self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
+    ) -> MenaiValue | None:
+        """MOVE dest, src0: Copy the value in register src0 into register dest."""
+        # Validator guarantees src0 is in bounds and initialized, dest is in bounds
+        frame.locals[dest] = frame.locals[src0]
         return None
 
     def _op_enter(  # pylint: disable=useless-return

@@ -114,6 +114,7 @@ class BytecodeValidator:
             Opcode.LOAD_EMPTY_DICT: (0, 0),
             Opcode.LOAD_CONST: (0, 0),
             Opcode.LOAD_NAME: (0, 0),
+            Opcode.MOVE: (0, 0),
 
             # Stack/register transfer: PUSH pushes 1 from a register, POP pops 1 into a register
             Opcode.PUSH: (0, 1),
@@ -386,7 +387,7 @@ class BytecodeValidator:
 
             # Validate register indices (must be < local_count).
             # PUSH reads src0; all dest-writing ops are validated below.
-            if opcode == Opcode.PUSH:
+            if opcode in (Opcode.PUSH, Opcode.MOVE):
                 var_index = instr.src0
                 if var_index < 0 or var_index >= code.local_count:
                     raise ValidationError(
@@ -647,6 +648,18 @@ class BytecodeValidator:
                     )
 
             # Check EMIT_TRACE - source register must be initialized
+            # Check MOVE - source register must be initialized
+            if opcode == Opcode.MOVE:
+                var_index = instr.src0
+                if var_index not in current_initialized:
+                    raise ValidationError(
+                        ValidationErrorType.UNINITIALIZED_VARIABLE,
+                        f"MOVE source register {var_index} may be uninitialized",
+                        instruction_index=instr_idx,
+                        opcode=opcode,
+                        context=f"Initialized variables: {sorted(current_initialized)}"
+                    )
+
             if opcode == Opcode.EMIT_TRACE:
                 var_index = instr.src0
                 if var_index not in current_initialized:

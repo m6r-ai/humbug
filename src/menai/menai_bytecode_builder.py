@@ -107,14 +107,14 @@ class _EmitContext:
 
         For values with an existing slot: returns the existing slot.
         For values without a slot (should not occur in normal operation):
-        allocates a fresh slot and emits POP to capture a value from the stack.
+        allocates a fresh slot and emits MOVE from slot 0 as a safe fallback.
         """
         if value.id in self.slot_map:
             return self.slot_map[value.id]
 
-        # Fallback: value is on the stack top (should not occur with register-based ops)
+        # Fallback: should not occur with register-based ops; copy from slot 0.
         slot = self.alloc_slot(value)
-        self.emit(Opcode.POP, dest=slot)
+        self.emit(Opcode.MOVE, slot, dest=slot)
         return slot
 
     def emit(self, opcode: Opcode, src0: int = 0, src1: int = 0, dest: int = 0, src2: int = 0) -> int:
@@ -429,8 +429,7 @@ class MenaiBytecodeBuilder:
                     else:
                         phi_slot = ctx.phi_slot_map[instr.result.id]
 
-                    ctx.load_value(incoming_val)
-                    ctx.emit(Opcode.POP, dest=phi_slot)
+                    ctx.emit(Opcode.MOVE, ctx.slot_of(incoming_val), dest=phi_slot)
 
     def _emit_patch(self, patch: MenaiCFGPatchClosureInstr, ctx: _EmitContext) -> None:
         """

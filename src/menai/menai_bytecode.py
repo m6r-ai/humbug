@@ -51,6 +51,7 @@ class Opcode(IntEnum):
     LOAD_EMPTY_DICT = _op(4)            # r_dest = {}
     LOAD_CONST = _op(5, 1)              # r_dest = constants[src0]
     LOAD_NAME = _op(6, 1)               # r_dest = globals[names[src0]]
+    MOVE = _op(7, 1)                    # r_dest = r_src0  (register copy)
 
     # Stack / register transfer
     PUSH = _op(10, 1)                   # PUSH src0  — push register src0 onto the call stack
@@ -467,6 +468,9 @@ class Instruction:
 
         if opcode == Opcode.LOAD_NAME:
             return f"r{self.dest} = LOAD_NAME {self.src0}"
+
+        if opcode == Opcode.MOVE:
+            return f"r{self.dest} = MOVE r{self.src0}"
 
         if opcode == Opcode.JUMP:
             return f"JUMP @{self.src0}"
