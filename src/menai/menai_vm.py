@@ -402,6 +402,7 @@ class MenaiVM:
         # Using a local variable is faster than accessing self._instruction_count
         instruction_count = 0
         instructions = frame.code.instructions
+        instructions_len = len(instructions)  # Cache length for loop condition
 
         while True:
             # Periodically check for cancellation
@@ -414,7 +415,7 @@ class MenaiVM:
                 instruction_count = 0
 
             # Re-fetch instructions each iteration in case frame.code changes (mutual recursion TCO)
-            if frame.ip >= len(instructions):
+            if frame.ip >= instructions_len:
                 # Frame finished without explicit return
                 raise MenaiEvalError("Frame execution ended without RETURN instruction")
 
@@ -465,6 +466,7 @@ class MenaiVM:
                         frame.locals[code.param_count + i] = captured_val
 
                 instructions = frame.code.instructions
+                instructions_len = len(instructions)
                 continue
 
             # Otherwise it's a return value (from RETURN opcode)
@@ -1920,474 +1922,439 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_P dest, src0: r_dest = (complex? r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        frame.locals[dest] = MenaiBoolean(isinstance(frame.locals[src0], MenaiComplex))
+        frame.locals[instr.dest] = MenaiBoolean(isinstance(frame.locals[instr.src0], MenaiComplex))
         return None
 
     def _op_complex_eq_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_EQ_P dest, src0, src1: r_dest = (complex=? r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex=?' requires complex arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex=?' requires complex arguments, got {b.type_name()}")
 
-        frame.locals[dest] = MenaiBoolean(a.value == b.value)
+        frame.locals[instr.dest] = MenaiBoolean(a.value == b.value)
         return None
 
     def _op_complex_neq_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_NEQ_P dest, src0, src1: r_dest = (complex!=? r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex!=?' requires complex arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex!=?' requires complex arguments, got {b.type_name()}")
 
-        frame.locals[dest] = MenaiBoolean(a.value != b.value)
+        frame.locals[instr.dest] = MenaiBoolean(a.value != b.value)
         return None
 
     def _op_complex_real(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_REAL dest, src0: r_dest = (complex-real r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-real' requires complex arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiFloat(a.value.real)
+        frame.locals[instr.dest] = MenaiFloat(a.value.real)
         return None
 
     def _op_complex_imag(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_IMAG dest, src0: r_dest = (complex-imag r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-imag' requires complex arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiFloat(a.value.imag)
+        frame.locals[instr.dest] = MenaiFloat(a.value.imag)
         return None
 
     def _op_complex_abs(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_ABS dest, src0: r_dest = (complex-abs r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-abs' requires complex arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiFloat(abs(a.value))
+        frame.locals[instr.dest] = MenaiFloat(abs(a.value))
         return None
 
     def _op_complex_add(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_ADD dest, src0, src1: r_dest = (complex+ r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex+' requires complex arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex+' requires complex arguments, got {b.type_name()}")
 
-        frame.locals[dest] = MenaiComplex(a.value + b.value)
+        frame.locals[instr.dest] = MenaiComplex(a.value + b.value)
         return None
 
     def _op_complex_sub(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_SUB dest, src0, src1: r_dest = (complex- r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-' requires complex arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-' requires complex arguments, got {b.type_name()}")
 
-        frame.locals[dest] = MenaiComplex(a.value - b.value)
+        frame.locals[instr.dest] = MenaiComplex(a.value - b.value)
         return None
 
     def _op_complex_mul(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_MUL dest, src0, src1: r_dest = (complex* r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex*' requires complex arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex*' requires complex arguments, got {b.type_name()}")
 
-        frame.locals[dest] = MenaiComplex(a.value * b.value)
+        frame.locals[instr.dest] = MenaiComplex(a.value * b.value)
         return None
 
     def _op_complex_div(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_DIV dest, src0, src1: r_dest = (complex/ r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex/' requires complex arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex/' requires complex arguments, got {b.type_name()}")
 
         if b.value == 0:
             raise MenaiEvalError("Division by zero in 'complex/'")
 
-        frame.locals[dest] = MenaiComplex(a.value / b.value)
+        frame.locals[instr.dest] = MenaiComplex(a.value / b.value)
         return None
 
     def _op_complex_neg(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_NEG dest, src0: r_dest = (complex-neg r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-neg' requires complex arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiComplex(-a.value)
+        frame.locals[instr.dest] = MenaiComplex(-a.value)
         return None
 
     def _op_complex_exp(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_EXP dest, src0: r_dest = (complex-exp r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-exp' requires complex arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiComplex(cmath.exp(a.value))
+        frame.locals[instr.dest] = MenaiComplex(cmath.exp(a.value))
         return None
 
     def _op_complex_expn(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_EXPN dest, src0, src1: r_dest = (complex-expn r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-expn' requires complex arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-expn' requires complex arguments, got {b.type_name()}")
 
-        frame.locals[dest] = MenaiComplex(a.value ** b.value)
+        frame.locals[instr.dest] = MenaiComplex(a.value ** b.value)
         return None
 
     def _op_complex_log(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_LOG dest, src0: r_dest = (complex-log r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-log' requires complex arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiComplex(cmath.log(a.value))
+        frame.locals[instr.dest] = MenaiComplex(cmath.log(a.value))
         return None
 
     def _op_complex_log10(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_LOG10 dest, src0: r_dest = (complex-log10 r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-log10' requires complex arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiComplex(cmath.log10(a.value))
+        frame.locals[instr.dest] = MenaiComplex(cmath.log10(a.value))
         return None
 
     def _op_complex_logn(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_LOGN dest, src0, src1: r_dest = (complex-logn r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-logn' requires complex arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-logn' requires complex arguments, got {b.type_name()}")
 
         if b.value == 0j:
             raise MenaiEvalError("Function 'complex-logn' requires a non-zero base")
 
-        frame.locals[dest] = MenaiComplex(cmath.log(a.value, b.value))
+        frame.locals[instr.dest] = MenaiComplex(cmath.log(a.value, b.value))
         return None
 
     def _op_complex_sin(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_SIN dest, src0: r_dest = (complex-sin r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-sin' requires complex arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiComplex(cmath.sin(a.value))
+        frame.locals[instr.dest] = MenaiComplex(cmath.sin(a.value))
         return None
 
     def _op_complex_cos(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_COS dest, src0: r_dest = (complex-cos r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-cos' requires complex arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiComplex(cmath.cos(a.value))
+        frame.locals[instr.dest] = MenaiComplex(cmath.cos(a.value))
         return None
 
     def _op_complex_tan(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_TAN dest, src0: r_dest = (complex-tan r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-tan' requires complex arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiComplex(cmath.tan(a.value))
+        frame.locals[instr.dest] = MenaiComplex(cmath.tan(a.value))
         return None
 
     def _op_complex_sqrt(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_SQRT dest, src0: r_dest = (complex-sqrt r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex-sqrt' requires complex arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiComplex(cmath.sqrt(a.value))
+        frame.locals[instr.dest] = MenaiComplex(cmath.sqrt(a.value))
         return None
 
     def _op_complex_to_string(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """COMPLEX_TO_STRING dest, src0: r_dest = (complex->string r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiComplex):
             raise MenaiEvalError(f"Function 'complex->string' requires complex arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiString(str(a.value).strip('()'))
+        frame.locals[instr.dest] = MenaiString(str(a.value).strip('()'))
         return None
 
     def _op_string_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_P dest, src0: r_dest = (string? r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        frame.locals[dest] = MenaiBoolean(isinstance(frame.locals[src0], MenaiString))
+        frame.locals[instr.dest] = MenaiBoolean(isinstance(frame.locals[instr.src0], MenaiString))
         return None
 
     def _op_string_eq_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_EQ_P dest, src0, src1: r_dest = (string=? r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string=?' requires string arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiString):
             raise MenaiEvalError(f"Function 'string=?' requires string arguments, got {b.type_name()}")
 
-        frame.locals[dest] = MenaiBoolean(a.value == b.value)
+        frame.locals[instr.dest] = MenaiBoolean(a.value == b.value)
         return None
 
     def _op_string_neq_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_NEQ_P dest, src0, src1: r_dest = (string!=? r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string!=?' requires string arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiString):
             raise MenaiEvalError(f"Function 'string!=?' requires string arguments, got {b.type_name()}")
 
-        frame.locals[dest] = MenaiBoolean(a.value != b.value)
+        frame.locals[instr.dest] = MenaiBoolean(a.value != b.value)
         return None
 
     def _op_string_lt_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_LT_P dest, src0, src1: r_dest = (string<? r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string<?' requires string arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiString):
             raise MenaiEvalError(f"Function 'string<?' requires string arguments, got {b.type_name()}")
 
-        frame.locals[dest] = MenaiBoolean(a.value < b.value)
+        frame.locals[instr.dest] = MenaiBoolean(a.value < b.value)
         return None
 
     def _op_string_gt_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_GT_P dest, src0, src1: r_dest = (string>? r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string>?' requires string arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiString):
             raise MenaiEvalError(f"Function 'string>?' requires string arguments, got {b.type_name()}")
 
-        frame.locals[dest] = MenaiBoolean(a.value > b.value)
+        frame.locals[instr.dest] = MenaiBoolean(a.value > b.value)
         return None
 
     def _op_string_lte_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_LTE_P dest, src0, src1: r_dest = (string<=? r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string<=?' requires string arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiString):
             raise MenaiEvalError(f"Function 'string<=?' requires string arguments, got {b.type_name()}")
 
-        frame.locals[dest] = MenaiBoolean(a.value <= b.value)
+        frame.locals[instr.dest] = MenaiBoolean(a.value <= b.value)
         return None
 
     def _op_string_gte_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_GTE_P dest, src0, src1: r_dest = (string>=? r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string>=?' requires string arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiString):
             raise MenaiEvalError(f"Function 'string>=?' requires string arguments, got {b.type_name()}")
 
-        frame.locals[dest] = MenaiBoolean(a.value >= b.value)
+        frame.locals[instr.dest] = MenaiBoolean(a.value >= b.value)
         return None
 
     def _op_string_length(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_LENGTH dest, src0: r_dest = (string-length r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-length' requires string arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiInteger(len(a.value))
+        frame.locals[instr.dest] = MenaiInteger(len(a.value))
         return None
 
     def _op_string_upcase(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_UPCASE dest, src0: r_dest = (string-upcase r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-upcase' requires string arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiString(a.value.upper())
+        frame.locals[instr.dest] = MenaiString(a.value.upper())
         return None
 
     def _op_string_downcase(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_DOWNCASE dest, src0: r_dest = (string-downcase r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-downcase' requires string arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiString(a.value.lower())
+        frame.locals[instr.dest] = MenaiString(a.value.lower())
         return None
 
     def _op_string_trim(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_TRIM dest, src0: r_dest = (string-trim r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-trim' requires string arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiString(a.value.strip())
+        frame.locals[instr.dest] = MenaiString(a.value.strip())
         return None
 
     def _op_string_trim_left(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_TRIM_LEFT dest, src0: r_dest = (string-trim-left r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-trim-left' requires string arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiString(a.value.lstrip())
+        frame.locals[instr.dest] = MenaiString(a.value.lstrip())
         return None
 
     def _op_string_trim_right(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_TRIM_RIGHT dest, src0: r_dest = (string-trim-right r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-trim-right' requires string arguments, got {a.type_name()}")
 
-        frame.locals[dest] = MenaiString(a.value.rstrip())
+        frame.locals[instr.dest] = MenaiString(a.value.rstrip())
         return None
 
     def _op_string_to_integer(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_TO_INTEGER dest, src0, src1: r_dest = (string->integer r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string->integer' requires string arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiInteger):
             raise MenaiEvalError(f"Function 'string->integer' requires integer arguments, got {b.type_name()}")
 
@@ -2397,19 +2364,18 @@ class MenaiVM:
             raise MenaiEvalError(f"string->integer radix must be 2, 8, 10, or 16, got {radix}")
 
         try:
-            frame.locals[dest] = MenaiInteger(int(s, radix))
+            frame.locals[instr.dest] = MenaiInteger(int(s, radix))
             return None
 
         except ValueError:
-            frame.locals[dest] = Menai_NONE
+            frame.locals[instr.dest] = Menai_NONE
             return None
 
     def _op_string_to_number(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_TO_NUMBER dest, src0: r_dest = (string->number r_src0)"""
-        dest, src0 = instr.dest, instr.src0
-        a = frame.locals[src0]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string->number' requires string arguments, got {a.type_name()}")
 
@@ -2417,47 +2383,48 @@ class MenaiVM:
 
         try:
             if '.' not in s and 'e' not in s.lower() and 'j' not in s.lower():
-                frame.locals[dest] = MenaiInteger(int(s))
+                frame.locals[instr.dest] = MenaiInteger(int(s))
                 return None
+
             if 'j' in s.lower():
-                frame.locals[dest] = MenaiComplex(complex(s))
+                frame.locals[instr.dest] = MenaiComplex(complex(s))
                 return None
-            frame.locals[dest] = MenaiFloat(float(s))
+
+            frame.locals[instr.dest] = MenaiFloat(float(s))
             return None
+
         except ValueError:
-            frame.locals[dest] = Menai_NONE
+            frame.locals[instr.dest] = Menai_NONE
             return None
 
     def _op_string_to_list(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_TO_LIST dest, src0, src1: r_dest = (string->list r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string->list' requires string arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiString):
             raise MenaiEvalError(f"Function 'string->list' requires string arguments, got {b.type_name()}")
 
         if b.value == "":
-            frame.locals[dest] = MenaiList(tuple(MenaiString(ch) for ch in a.value))
+            frame.locals[instr.dest] = MenaiList(tuple(MenaiString(ch) for ch in a.value))
             return None
 
-        frame.locals[dest] = MenaiList(tuple(MenaiString(part) for part in a.value.split(b.value)))
+        frame.locals[instr.dest] = MenaiList(tuple(MenaiString(part) for part in a.value.split(b.value)))
         return None
 
     def _op_string_ref(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_REF dest, src0, src1: r_dest = (string-ref r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-ref' requires string arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiInteger):
             raise MenaiEvalError(f"Function 'string-ref' requires integer arguments, got {b.type_name()}")
 
@@ -2466,55 +2433,52 @@ class MenaiVM:
         if index < 0 or index >= len(s):
             raise MenaiEvalError(f"string-ref index out of range: {index}")
 
-        frame.locals[dest] = MenaiString(s[index])
+        frame.locals[instr.dest] = MenaiString(s[index])
         return None
 
     def _op_string_prefix_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_PREFIX_P dest, src0, src1: r_dest = (string-prefix? r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-prefix?' requires string arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiString):
             raise MenaiEvalError(f"Function 'string-prefix?' requires string arguments, got {b.type_name()}")
 
-        frame.locals[dest] = MenaiBoolean(a.value.startswith(b.value))
+        frame.locals[instr.dest] = MenaiBoolean(a.value.startswith(b.value))
         return None
 
     def _op_string_suffix_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_SUFFIX_P dest, src0, src1: r_dest = (string-suffix? r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-suffix?' requires string arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiString):
             raise MenaiEvalError(f"Function 'string-suffix?' requires string arguments, got {b.type_name()}")
 
-        frame.locals[dest] = MenaiBoolean(a.value.endswith(b.value))
+        frame.locals[instr.dest] = MenaiBoolean(a.value.endswith(b.value))
         return None
 
     def _op_string_slice(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_SLICE dest, src0, src1, src2: r_dest = (string-slice r_src0 r_src1 r_src2)"""
-        dest, src0, src1, src2 = instr.dest, instr.src0, instr.src1, instr.src2
-        a = frame.locals[src0]
-        b = frame.locals[src1]
-        c = frame.locals[src2]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-slice' requires string arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiInteger):
             raise MenaiEvalError(f"Function 'string-slice' requires integer arguments, got {b.type_name()}")
 
+        c = frame.locals[instr.src2]
         if not isinstance(c, MenaiInteger):
             raise MenaiEvalError(f"Function 'string-slice' requires integer arguments, got {c.type_name()}")
 
@@ -2537,60 +2501,57 @@ class MenaiVM:
         if start > end:
             raise MenaiEvalError(f"string-slice start index ({start}) cannot be greater than end index ({end})")
 
-        frame.locals[dest] = MenaiString(s[start:end])
+        frame.locals[instr.dest] = MenaiString(s[start:end])
         return None
 
     def _op_string_replace(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_REPLACE dest, src0, src1, src2: r_dest = (string-replace r_src0 r_src1 r_src2)"""
-        dest, src0, src1, src2 = instr.dest, instr.src0, instr.src1, instr.src2
-        a = frame.locals[src0]
-        b = frame.locals[src1]
-        c = frame.locals[src2]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-replace' requires string arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiString):
             raise MenaiEvalError(f"Function 'string-replace' requires string arguments, got {b.type_name()}")
 
+        c = frame.locals[instr.src2]
         if not isinstance(c, MenaiString):
             raise MenaiEvalError(f"Function 'string-replace' requires string arguments, got {c.type_name()}")
 
-        frame.locals[dest] = MenaiString(a.value.replace(b.value, c.value))
+        frame.locals[instr.dest] = MenaiString(a.value.replace(b.value, c.value))
         return None
 
     def _op_string_index(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_INDEX dest, src0, src1: r_dest = (string-index r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-index' requires string arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiString):
             raise MenaiEvalError(f"Function 'string-index' requires string arguments, got {b.type_name()}")
 
         idx = a.value.find(b.value)
-        frame.locals[dest] = Menai_NONE if idx == -1 else MenaiInteger(idx)
+        frame.locals[instr.dest] = Menai_NONE if idx == -1 else MenaiInteger(idx)
         return None
 
     def _op_string_concat(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """STRING_CONCAT dest, src0, src1: r_dest = (string-concat r_src0 r_src1)"""
-        dest, src0, src1 = instr.dest, instr.src0, instr.src1
-        a = frame.locals[src0]
-        b = frame.locals[src1]
+        a = frame.locals[instr.src0]
         if not isinstance(a, MenaiString):
             raise MenaiEvalError(f"Function 'string-concat' requires string arguments, got {a.type_name()}")
 
+        b = frame.locals[instr.src1]
         if not isinstance(b, MenaiString):
             raise MenaiEvalError(f"Function 'string-concat' requires string arguments, got {b.type_name()}")
 
-        frame.locals[dest] = MenaiString(a.value + b.value)
+        frame.locals[instr.dest] = MenaiString(a.value + b.value)
         return None
 
     def _op_dict_p(  # pylint: disable=useless-return
