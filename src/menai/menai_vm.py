@@ -323,34 +323,6 @@ class MenaiVM:
         table[Opcode.RANGE] = self._op_range
         return table
 
-    def _ensure_boolean(self, value: MenaiValue, operation_name: str) -> bool:
-        """
-        Ensure value is a boolean, raise user-friendly error if not.
-
-        Args:
-            value: Value to check
-            operation_name: Name of operation for error message (e.g., 'not', 'if')
-
-        Returns:
-            Python boolean value
-
-        Raises:
-            MenaiEvalError: If value is not a boolean
-        """
-        if not isinstance(value, MenaiBoolean):
-            raise MenaiEvalError(
-                f"Function '{operation_name}' requires boolean arguments, got {value.type_name()}"
-            )
-
-        return value.value
-
-    def _ensure_list(self, value: MenaiValue, function_name: str) -> MenaiList:
-        """Ensure value is a list, raise error if not."""
-        if not isinstance(value, MenaiList):
-            raise MenaiEvalError(f"Function '{function_name}' requires list arguments, got {value.type_name()}")
-
-        return value
-
     def _ensure_string(self, value: MenaiValue, function_name: str) -> str:
         """Ensure value is a string, raise error if not."""
         if not isinstance(value, MenaiString):
@@ -1112,7 +1084,13 @@ class MenaiVM:
         """BOOLEAN_EQ_P dest, src0, src1: r_dest = (boolean=? r_src0 r_src1)"""
         a = frame.locals[src0]
         b = frame.locals[src1]
-        frame.locals[dest] = MenaiBoolean(self._ensure_boolean(a, 'boolean=?') == self._ensure_boolean(b, 'boolean=?'))
+        if not isinstance(a, MenaiBoolean):
+            raise MenaiEvalError(f"Function 'boolean=?' requires boolean arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiBoolean):
+            raise MenaiEvalError(f"Function 'boolean=?' requires boolean arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value == b.value)
         return None
 
     def _op_boolean_neq_p(  # pylint: disable=useless-return
@@ -1121,15 +1099,24 @@ class MenaiVM:
         """BOOLEAN_NEQ_P dest, src0, src1: r_dest = (boolean!=? r_src0 r_src1)"""
         a = frame.locals[src0]
         b = frame.locals[src1]
-        frame.locals[dest] = MenaiBoolean(self._ensure_boolean(a, 'boolean!=?') != self._ensure_boolean(b, 'boolean!=?'))
+        if not isinstance(a, MenaiBoolean):
+            raise MenaiEvalError(f"Function 'boolean!=?' requires boolean arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiBoolean):
+            raise MenaiEvalError(f"Function 'boolean!=?' requires boolean arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.value != b.value)
         return None
 
     def _op_boolean_not(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """BOOLEAN_NOT dest, src0: r_dest = (boolean-not r_src0)"""
-        value = frame.locals[src0]
-        frame.locals[dest] = MenaiBoolean(not self._ensure_boolean(value, "boolean-not"))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiBoolean):
+            raise MenaiEvalError(f"Function 'boolean-not' requires boolean arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(not a.value)
         return None
 
     def _op_integer_p(  # pylint: disable=useless-return
@@ -2389,77 +2376,112 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_EQ_P dest, src0, src1: r_dest = (list=? r_src0 r_src1)"""
-        a = cast(MenaiValue, frame.locals[src0])
-        b = cast(MenaiValue, frame.locals[src1])
-        frame.locals[dest] = MenaiBoolean(self._ensure_list(a, 'list=?') == self._ensure_list(b, 'list=?'))
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list=?' requires list arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiList):
+            raise MenaiEvalError(f"Function 'list=?' requires list arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a == b)
         return None
 
     def _op_list_neq_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_NEQ_P dest, src0, src1: r_dest = (list!=? r_src0 r_src1)"""
-        a = cast(MenaiValue, frame.locals[src0])
-        b = cast(MenaiValue, frame.locals[src1])
-        frame.locals[dest] = MenaiBoolean(self._ensure_list(a, 'list!=?') != self._ensure_list(b, 'list!=?'))
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list!=?' requires list arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiList):
+            raise MenaiEvalError(f"Function 'list!=?' requires list arguments, got {b.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a != b)
         return None
 
     def _op_list_prepend(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_PREPEND dest, src0, src1: r_dest = (list-prepend r_src0 r_src1)"""
-        item = cast(MenaiValue, frame.locals[src1])
-        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-prepend')
-        frame.locals[dest] = list_val.cons(item)
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list-prepend' requires list arguments, got {a.type_name()}")
+
+        item = frame.locals[src1]
+        frame.locals[dest] = a.cons(cast(MenaiValue, item))
         return None
 
     def _op_list_append(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_APPEND dest, src0, src1: r_dest = (list-append r_src0 r_src1)"""
-        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-append')
-        item = cast(MenaiValue, frame.locals[src1])
-        frame.locals[dest] = MenaiList(list_val.elements + (item,))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list-append' requires list arguments, got {a.type_name()}")
+
+        item = frame.locals[src1]
+        frame.locals[dest] = MenaiList(a.elements + (cast(MenaiValue, item),))
         return None
 
     def _op_list_reverse(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_REVERSE dest, src0: r_dest = (list-reverse r_src0)"""
-        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-reverse')
-        frame.locals[dest] = list_val.reverse()
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list-reverse' requires list arguments, got {a.type_name()}")
+
+        frame.locals[dest] = a.reverse()
         return None
 
     def _op_list_first(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_FIRST dest, src0: r_dest = (list-first r_src0)"""
-        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-first')
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list-first' requires list arguments, got {a.type_name()}")
+
         try:
-            frame.locals[dest] = list_val.first()
+            frame.locals[dest] = a.first()
+
         except IndexError as e:
             raise MenaiEvalError(str(e)) from e
+
         return None
 
     def _op_list_rest(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_REST dest, src0: r_dest = (list-rest r_src0)"""
-        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-rest')
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list-rest' requires list arguments, got {a.type_name()}")
         try:
-            frame.locals[dest] = list_val.rest()
+            frame.locals[dest] = a.rest()
+
         except IndexError as e:
             raise MenaiEvalError(str(e)) from e
+
         return None
 
     def _op_list_last(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_LAST dest, src0: r_dest = (list-last r_src0)"""
-        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-last')
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list-last' requires list arguments, got {a.type_name()}")
+
         try:
-            frame.locals[dest] = list_val.last()
+            frame.locals[dest] = a.last()
+
         except IndexError as e:
             raise MenaiEvalError(str(e)) from e
+
         return None
 
     def _op_list_length(  # pylint: disable=useless-return
@@ -2479,19 +2501,23 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_REF dest, src0, src1: r_dest = (list-ref r_src0 r_src1)"""
-        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-ref')
-        index_val = cast(MenaiValue, frame.locals[src1])
-        if not isinstance(index_val, MenaiInteger):
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list-ref' requires list arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiInteger):
             raise MenaiEvalError(
-                f"Function 'list-ref' requires integer index, got {index_val.type_name()}"
+                f"Function 'list-ref' requires integer index, got {b.type_name()}"
             )
 
-        index = index_val.value
+        index = b.value
         if index < 0:
             raise MenaiEvalError(f"list-ref index out of range: {index}")
 
         try:
-            frame.locals[dest] = list_val.get(index)
+            frame.locals[dest] = a.get(index)
+
         except IndexError as e:
             raise MenaiEvalError(f"list-ref index out of range: {index}") from e
 
@@ -2501,26 +2527,35 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_NULL_P dest, src0: r_dest = (list-null? r_src0)"""
-        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-null?')
-        frame.locals[dest] = MenaiBoolean(list_val.is_empty())
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list-null?' requires list arguments, got {a.type_name()}")
+
+        frame.locals[dest] = MenaiBoolean(a.is_empty())
         return None
 
     def _op_list_member_p(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_MEMBER_P dest, src0, src1: r_dest = (list-member? r_src0 r_src1)"""
-        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-member?')
-        item = cast(MenaiValue, frame.locals[src1])
-        frame.locals[dest] = MenaiBoolean(list_val.contains(item))
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list-member?' requires list arguments, got {a.type_name()}")
+
+        item = frame.locals[src1]
+        frame.locals[dest] = MenaiBoolean(a.contains(cast(MenaiValue, item)))
         return None
 
     def _op_list_index(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_INDEX dest, src0, src1: r_dest = (list-index r_src0 r_src1)"""
-        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-index')
-        item = cast(MenaiValue, frame.locals[src1])
-        pos = list_val.position(item)
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list-index' requires list arguments, got {a.type_name()}")
+
+        item = frame.locals[src1]
+        pos = a.position(cast(MenaiValue, item))
         frame.locals[dest] = MenaiInteger(pos) if pos is not None else Menai_NONE
         return None
 
@@ -2567,34 +2602,49 @@ class MenaiVM:
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_REMOVE dest, src0, src1: r_dest = (list-remove r_src0 r_src1)"""
-        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list-remove')
-        item = cast(MenaiValue, frame.locals[src1])
-        frame.locals[dest] = list_val.remove_all(item)
+        a = frame.locals[src0]
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list-remove' requires list arguments, got {a.type_name()}")
+
+        item = frame.locals[src1]
+        frame.locals[dest] = a.remove_all(cast(MenaiValue, item))
         return None
 
     def _op_list_concat(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_CONCAT dest, src0, src1: r_dest = (list-concat r_src0 r_src1)"""
-        a = cast(MenaiValue, frame.locals[src0])
-        b = cast(MenaiValue, frame.locals[src1])
-        frame.locals[dest] = self._ensure_list(a, 'list-concat').append_list(self._ensure_list(b, 'list-concat'))
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list-concat' requires list arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiList):
+            raise MenaiEvalError(f"Function 'list-concat' requires list arguments, got {b.type_name()}")
+
+        frame.locals[dest] = a.append_list(b)
         return None
 
     def _op_list_to_string(  # pylint: disable=useless-return
         self, frame: Frame, _code: CodeObject, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_TO_STRING dest, src0, src1: r_dest = (list->string r_src0 r_src1)"""
-        list_val = self._ensure_list(cast(MenaiValue, frame.locals[src0]), 'list->string')
-        sep = self._ensure_string(cast(MenaiValue, frame.locals[src1]), 'list->string')
+        a = frame.locals[src0]
+        b = frame.locals[src1]
+        if not isinstance(a, MenaiList):
+            raise MenaiEvalError(f"Function 'list->string' requires list arguments, got {a.type_name()}")
+
+        if not isinstance(b, MenaiString):
+            raise MenaiEvalError(f"Function 'list->string' requires string arguments, got {b.type_name()}")
+
         parts = []
-        for item in list_val.elements:
+        for item in a.elements:
             if not isinstance(item, MenaiString):
                 raise MenaiEvalError(f"list->string requires list of strings, found {item.type_name()}")
 
             parts.append(item.value)
 
-        frame.locals[dest] = MenaiString(sep.join(parts))
+        frame.locals[dest] = MenaiString(b.value.join(parts))
         return None
 
     def _op_range(  # pylint: disable=useless-return
