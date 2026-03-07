@@ -236,19 +236,19 @@ class MenaiASTDesugarer:
             #
             #   Constant defaults (1-arg min, 2-arg opcode):
             #     (integer->complex n)     → ($integer->complex n 0)
-            #     (integer->string n)      → ($integer->string  n 10)
-            #     (float->complex x)       → ($float->complex   x 0.0)
-            #     (string->integer s)      → ($string->integer  s 10)
-            #     (string->list s)         → ($string->list     s "")
-            #     (list->string l)         → ($list->string     l "")
+            #     (integer->string n)      → ($integer->string n 10)
+            #     (float->complex x)       → ($float->complex x 0.0)
+            #     (string->integer s)      → ($string->integer s 10)
+            #     (string->list s)         → ($string->list s "")
+            #     (list->string l)         → ($list->string l "")
             #
             #   Constant defaults (2-arg min, 3-arg opcode):
-            #     (dict-get d k)           → ($dict-get   d k #none)
-            #     (range start end)        → ($range      start end 1)
+            #     (dict-get d k)           → ($dict-get d k #none)
+            #     (range start end)        → ($range start end 1)
             #
             #   Computed defaults (2-arg min, 3-arg opcode):
             #     (string-slice s start)   → (let ((#:t s)) ($string-slice #:t start ($string-length #:t)))
-            #     (list-slice   l start)   → (let ((#:t l)) ($list-slice   #:t start ($list-length   #:t)))
+            #     (list-slice   l start)   → (let ((#:t l)) ($list-slice #:t start ($list-length #:t)))
             #
             # The computed-default cases bind the collection argument to a temp
             # to avoid evaluating it twice.
