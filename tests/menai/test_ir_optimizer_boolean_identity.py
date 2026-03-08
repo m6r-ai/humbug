@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import pytest
 
-from menai import Menai
+from menai import Menai, MenaiEvalError
 from menai.menai_ir import (
     MenaiIRCall,
     MenaiIRConstant,
@@ -274,6 +274,73 @@ class TestNoTransformation:
 
 
 # ---------------------------------------------------------------------------
+# Unit tests: Return-wrapped branches (tail position as IR builder produces)
+# ---------------------------------------------------------------------------
+
+class TestReturnWrappedBranches:
+    """The optimizer must see through MenaiIRReturn wrappers on branches.
+
+    The IR builder wraps both branches of a tail-position if in MenaiIRReturn.
+    The old code checked isinstance(opt_then, MenaiIRConstant) directly, which
+    always failed when branches were wrapped, so the optimisation never fired
+    inside lambdas.
+    """
+
+    def test_identity_fires_with_wrapped_branches(self):
+        """(if (pred? v) Return(#t) Return(#f)) → Return(pred? v)"""
+        cond = _bool_p_call(_local(0))
+        ir = MenaiIRIf(
+            condition_plan=cond,
+            then_plan=MenaiIRReturn(value_plan=_bool_const(True)),
+            else_plan=MenaiIRReturn(value_plan=_bool_const(False)),
+            in_tail_position=True,
+        )
+        result, changed = _run(ir)
+        assert changed is True
+        assert isinstance(result, MenaiIRReturn)
+        assert isinstance(result.value_plan, MenaiIRCall)
+        assert result.value_plan.builtin_name == 'boolean?'
+
+    def test_negation_fires_with_wrapped_branches(self):
+        """(if (pred? v) Return(#f) Return(#t)) → Return(boolean-not (pred? v))"""
+        cond = _bool_p_call(_local(0))
+        ir = MenaiIRIf(
+            condition_plan=cond,
+            then_plan=MenaiIRReturn(value_plan=_bool_const(False)),
+            else_plan=MenaiIRReturn(value_plan=_bool_const(True)),
+            in_tail_position=True,
+        )
+        result, changed = _run(ir)
+        assert changed is True
+        assert isinstance(result, MenaiIRReturn)
+        assert isinstance(result.value_plan, MenaiIRCall)
+        assert result.value_plan.builtin_name == 'boolean-not'
+
+    def test_non_boolean_condition_not_rewritten_with_wrapped_branches(self):
+        """(if non-pred Return(#t) Return(#f)) must NOT be rewritten.
+
+        The condition is a call to a non-predicate builtin.  Replacing the if
+        with the condition would bypass the VM's boolean type check.
+        """
+        non_pred_cond = MenaiIRCall(
+            func_plan=_global('$integer+'),
+            arg_plans=[_local(0), _local(1)],
+            is_tail_call=False,
+            is_builtin=True,
+            builtin_name='integer+',
+        )
+        ir = MenaiIRIf(
+            condition_plan=non_pred_cond,
+            then_plan=MenaiIRReturn(value_plan=_bool_const(True)),
+            else_plan=MenaiIRReturn(value_plan=_bool_const(False)),
+            in_tail_position=True,
+        )
+        result, changed = _run(ir)
+        assert changed is False
+        assert isinstance(result, MenaiIRIf)
+
+
+# ---------------------------------------------------------------------------
 # Integration tests: correct runtime semantics
 # ---------------------------------------------------------------------------
 
@@ -334,3 +401,54 @@ class TestBooleanIdentityIntegration:
               (list (is-int 42) (is-int "hi") (is-int #t)))
         """)
         assert result == [True, False, False]
+
+    def test_match_predicate_pattern_optimised(self, menai):
+        """match with a single predicate arm desugars to (if (pred? c) #t #f).
+
+        This is the original motivating case: the match is correctly simplified
+        to a predicate call, with no redundant LOAD_TRUE/LOAD_FALSE branches.
+        """
+        result = menai.evaluate("""
+            (let ((valid-string (lambda (c)
+                    (match c ((? string? s) #t) (_ #f)))))
+              (list (valid-string "hello") (valid-string 42) (valid-string #t)))
+        """)
+        assert result == [True, False, False]
+
+    def test_match_predicate_negation_pattern_optimised(self, menai):
+        """match with inverted boolean arms desugars to (if (pred? c) #f #t).
+
+        This exercises the boolean-not path of the optimisation.
+        """
+        result = menai.evaluate("""
+            (let ((not-string (lambda (c)
+                    (match c ((? string? s) #f) (_ #t)))))
+              (list (not-string "hello") (not-string 42) (not-string #t)))
+        """)
+        assert result == [False, True, True]
+
+    def test_non_boolean_condition_preserves_type_error(self, menai):
+        """(if non-boolean #t #f) must still raise a type error at runtime.
+
+        The optimisation is only safe when the condition is known to be boolean.
+        A non-predicate expression in condition position must not be silently
+        accepted just because the branches happen to be #t and #f.
+        """
+        with pytest.raises(MenaiEvalError, match="must be boolean"):
+            menai.evaluate('(if "hello" #t #f)')
+
+        with pytest.raises(MenaiEvalError, match="must be boolean"):
+            menai.evaluate('(if 42 #t #f)')
+
+    def test_non_boolean_condition_in_and_preserves_type_error(self, menai):
+        """(and non-boolean #t) must still raise a type error at runtime.
+
+        (and x y) desugars to (if x y #f).  When x is non-boolean and y is #t,
+        the branches are #t and #f — exactly the identity pattern.  The guard
+        must prevent the rewrite because x is not known to be boolean.
+        """
+        with pytest.raises(MenaiEvalError, match="must be boolean"):
+            menai.evaluate('(and "hello" #t)')
+
+        with pytest.raises(MenaiEvalError, match="must be boolean"):
+            menai.evaluate('(or 1 #f)')

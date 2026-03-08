@@ -145,6 +145,37 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
             in_tail_position=ir.in_tail_position,
         )
 
+    @staticmethod
+    def _unwrap_return(node: MenaiIRExpr) -> tuple[MenaiIRExpr, bool]:
+        """Return (inner, was_wrapped) — strips a MenaiIRReturn wrapper if present."""
+        if isinstance(node, MenaiIRReturn):
+            return node.value_plan, True
+
+        return node, False
+
+    @staticmethod
+    def _is_boolean_typed(node: MenaiIRExpr) -> bool:
+        """
+        Return True if node is guaranteed to produce a boolean value at runtime.
+
+        Used to guard the (if cond #t #f) → cond rewrite: replacing the if with
+        cond directly is only sound when cond is known to be boolean, because the
+        VM's JUMP_IF_TRUE/FALSE opcodes enforce that the condition is boolean.
+
+        For builtin calls this check is exhaustive: every builtin that returns a
+        boolean either has a name ending in '?' (all type predicates, equality and
+        comparison operators) or is 'boolean-not'.  No other builtin returns a
+        boolean.  User-defined functions are excluded because their return type is
+        not known statically.
+        """
+        if isinstance(node, MenaiIRConstant) and isinstance(node.value, MenaiBoolean):
+            return True
+
+        if isinstance(node, MenaiIRCall) and node.is_builtin and node.builtin_name is not None:
+            return node.builtin_name.endswith('?') or node.builtin_name == 'boolean-not'
+
+        return False
+
     def _opt_if(self, ir: MenaiIRIf, frame_stack: List[int]) -> MenaiIRExpr:
         opt_condition = self._opt(ir.condition_plan, frame_stack)
         opt_then = self._opt(ir.then_plan, frame_stack)
@@ -163,19 +194,33 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
         # Boolean identity elimination:
         #   (if <cond> #t #f)  →  <cond>
         #   (if <cond> #f #t)  →  (boolean-not <cond>)
-        if (isinstance(opt_then, MenaiIRConstant)
-                and isinstance(opt_then.value, MenaiBoolean)
-                and isinstance(opt_else, MenaiIRConstant)
-                and isinstance(opt_else.value, MenaiBoolean)):
-            if opt_then.value.value and not opt_else.value.value:
-                # (if cond #t #f) →  cond
+        #
+        # The IR builder wraps tail-position branches in MenaiIRReturn.  Branches
+        # can be asymmetrically wrapped (e.g. one is a tail call that needs no
+        # wrapper, the other is a constant that does), so we use in_tail_position
+        # to decide whether the replacement needs wrapping.  We look through any
+        # MenaiIRReturn wrapper on each branch to reach the inner constant.  When
+        # both branches are boolean constants, they are always symmetrically
+        # wrapped (both wrapped or both bare), so then_wrapped is the right signal.
+        then_inner, then_wrapped = self._unwrap_return(opt_then)
+        else_inner, _ = self._unwrap_return(opt_else)
+        if (isinstance(then_inner, MenaiIRConstant)
+                and isinstance(then_inner.value, MenaiBoolean)
+                and isinstance(else_inner, MenaiIRConstant)
+                and isinstance(else_inner.value, MenaiBoolean)
+                and self._is_boolean_typed(opt_condition)):
+            if then_inner.value.value and not else_inner.value.value:
+                # (if cond #t #f) →  cond  (or Return(cond) in tail position)
                 self._eliminations += 1
+                if then_wrapped:
+                    return MenaiIRReturn(value_plan=opt_condition)
+
                 return opt_condition
 
-            if not opt_then.value.value and opt_else.value.value:
+            if not then_inner.value.value and else_inner.value.value:
                 # (if cond #f #t) → (boolean-not cond)
                 self._eliminations += 1
-                return MenaiIRCall(
+                not_call = MenaiIRCall(
                     func_plan=MenaiIRVariable(
                             name='boolean-not', var_type='global'
                     ),
@@ -184,6 +229,10 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
                     is_builtin=True,
                     builtin_name='boolean-not',
                 )
+                if then_wrapped:
+                    return MenaiIRReturn(value_plan=not_call)
+
+                return not_call
 
         return MenaiIRIf(
             condition_plan=opt_condition,
