@@ -293,7 +293,13 @@ class MenaiCFGBuilder:
             and condition_plan.builtin_name == 'boolean-not'
             and len(condition_plan.arg_plans) == 1
         )
-        inner_plan = condition_plan.arg_plans[0] if negate else condition_plan
+        if negate:
+            assert isinstance(condition_plan, MenaiIRCall)
+            inner_plan = condition_plan.arg_plans[0]
+
+        else:
+            inner_plan = condition_plan
+
         cond_val, block = self._build_expr(inner_plan, block, scope, state, tail=False)
 
         # Create the branch target blocks.  The join block is created lazily
