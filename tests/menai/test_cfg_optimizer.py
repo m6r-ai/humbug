@@ -411,31 +411,29 @@ _ALL_PASSES = [
 
 class TestFixedPoint:
 
-    def test_stale_phi_then_trivial_phi_then_dead_block(self):
+    def test_empty_then_block_bypassed_and_dead_else_block_removed(self):
         """
-        The canonical `if` with one tail-call branch:
+        The CFG builder no longer emits stale phi entries: when only one branch
+        reaches the join block, no phi is emitted at all.  This test verifies
+        the fixed-point loop over BypassEmptyBlocks + EliminateDeadBlocks
+        handles the resulting shape:
 
           entry: branch cond → then / else
-          then:  jump → join
-          else:  tail_call f()
-          join:  phi(v_then ← then, v_else ← else) → return phi
+          then:  jump → join          (empty block — no instructions)
+          else:  tail_call f()        (never reaches join)
+          join:  return v_then        (no phi — builder emits value directly)
 
-        Pass 1 (stale phi): prune else entry from phi → phi(v_then ← then)
-        Pass 2 (trivial phi): eliminate phi → join uses v_then directly
-        Pass 3 (empty block): then_b has only a jump → bypass it
-        Pass 4 (dead block): join_b may become unreachable if then_b is gone
-          (but here join_b is still reachable from entry via then_b → join_b)
+        Pass 1 (bypass empty blocks): then_b is empty → entry branches to join
+        Pass 2 (dead block): else_b becomes unreachable from join's perspective
+          but is still reachable from entry; then_b is now bypassed and removed.
 
         After full optimization:
-        - join_b has no phi
-        - join_b returns v_then directly
-        - 4 blocks → at most 3 (else is unreachable from join after phi elim?
-          No — else is reachable from entry's branch, just doesn't reach join)
-        - The else block (tail-call) remains reachable from entry.
+        - No phi instructions anywhere (there were none to begin with).
+        - then_b (id=1) is bypassed and removed.
+        - join_b (id=3) is still reachable from entry directly.
+        - The return in join_b references v_then.
         """
         v_then = v("then_val")
-        v_else_placeholder = v("else_placeholder")
-        v_phi = v("phi")
         v_f = v("f")
         v_cond = v("cond")
 
@@ -448,11 +446,7 @@ class TestFixedPoint:
         )
         join_b = block(
             3,
-            MenaiCFGPhiInstr(
-                result=v_phi,
-                incoming=[(v_then, then_b), (v_else_placeholder, else_b)],
-            ),
-            terminator=MenaiCFGReturnTerm(value=v_phi),
+            terminator=MenaiCFGReturnTerm(value=v_then),
             label="join",
         )
         then_b.terminator = MenaiCFGJumpTerm(target=join_b)
@@ -475,16 +469,16 @@ class TestFixedPoint:
                 changed = changed or c
         new_f = f
 
-        # After full optimization:
-        # - No phi instructions anywhere.
+        # No phi instructions anywhere (there were none to begin with).
         for b in new_f.blocks:
             for instr in b.instrs:
                 assert not isinstance(instr, MenaiCFGPhiInstr), \
                     f"No phi should remain, found one in block {b.id}"
 
-        # - join_b (id=3) should still exist (reachable via then_b or directly)
-        #   OR then_b was bypassed and join_b is reached directly from entry.
-        # Either way, the return terminator somewhere should reference v_then.
+        # then_b (empty) should have been bypassed and removed.
+        assert 1 not in [b.id for b in new_f.blocks], "then_b should be bypassed and removed"
+
+        # A return referencing v_then must still exist.
         all_returns = [
             b.terminator for b in new_f.blocks
             if isinstance(b.terminator, MenaiCFGReturnTerm)
@@ -634,9 +628,10 @@ class TestIntegration:
               start-date
               (add-working-days start-date duration-days)))
 
-        The else branch is a tail-call and never reaches the join block.
-        The join phi is stale after pruning → trivial → eliminated.
-        Optimized CFG should have no phi instructions.
+        The else branch is a tail-call and never reaches the join block.  The
+        CFG builder recognises this and emits no phi at all — the join block
+        is empty (just a jump target for the then branch).  The optimizer then
+        bypasses the empty join block, reducing the block count.
         """
         source = """
         (lambda (start-date duration-days add-working-days)
@@ -647,18 +642,17 @@ class TestIntegration:
         cfg_opt = self._build_cfg(source, optimize=True)
         cfg_raw = self._build_cfg(source, optimize=False)
 
-        # The lambda is nested inside a top-level MakeClosure wrapper.
-        # Count phis recursively (including nested lambdas).
+        # The builder emits no phi when only one branch reaches join.
         raw_phis = self._count_phis(cfg_raw)
-        assert raw_phis >= 1, f"raw CFG should have phi(s), got {raw_phis}"
+        assert raw_phis == 0, f"raw CFG should have no phis (builder fix), got {raw_phis}"
 
-        # Optimized CFG (including nested lambdas) should have no phis.
+        # Optimized CFG should also have no phis.
         opt_phis = self._count_phis(cfg_opt)
         assert opt_phis == 0, f"optimized CFG should have no phis, got {opt_phis}"
 
         # The innermost lambda (the actual function) should have fewer blocks.
-        # After phi elimination the then-block has a phi-free target, so it
-        # can be bypassed and the block count drops.
+        # The join block is empty (no phi), so BypassEmptyBlocks eliminates it
+        # and the block count drops.
         raw_inner = self._find_innermost_lambda(cfg_raw)
         opt_inner = self._find_innermost_lambda(cfg_opt)
         assert len(opt_inner.blocks) < len(raw_inner.blocks), \

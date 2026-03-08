@@ -328,18 +328,20 @@ class MenaiCFGBuilder:
             placeholder = state.new_value("if_result")
             return placeholder, join_block
 
-        # Join block is reachable — add a phi node for the branches that jump to it.
+        # Join block is reachable.  If only one branch reaches it, the join
+        # value is unambiguous — no phi needed.  The join block will be empty
+        # and MenaiCFGBypassEmptyBlocks will eliminate it.
+        # If both branches reach it, emit a phi to merge the two values.
+        if then_jumps_to_join and not else_jumps_to_join:
+            return then_val, join_block
+
+        if else_jumps_to_join and not then_jumps_to_join:
+            return else_val, join_block
+
         phi_result = state.new_value("if_result")
-        incoming = []
-        if then_jumps_to_join:
-            incoming.append((then_val, then_exit))
-
-        if else_jumps_to_join:
-            incoming.append((else_val, else_exit))
-
         join_block.instrs.append(MenaiCFGPhiInstr(
             result=phi_result,
-            incoming=incoming,
+            incoming=[(then_val, then_exit), (else_val, else_exit)],
         ))
         return phi_result, join_block
 
