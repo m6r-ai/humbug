@@ -283,10 +283,18 @@ class MenaiCFGBuilder:
     def _build_if(
         self, ir: MenaiIRIf, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState, tail: bool
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
-        # Emit condition into the current block.
-        cond_val, block = self._build_expr(
-            ir.condition_plan, block, scope, state, tail=False
+        # If the condition is (boolean-not <inner>), emit <inner> as the branch
+        # condition and swap then/else.  This avoids a BOOLEAN_NOT instruction
+        # followed by a conditional jump in the opposite direction.
+        condition_plan = ir.condition_plan
+        negate = (
+            isinstance(condition_plan, MenaiIRCall)
+            and condition_plan.is_builtin
+            and condition_plan.builtin_name == 'boolean-not'
+            and len(condition_plan.arg_plans) == 1
         )
+        inner_plan = condition_plan.arg_plans[0] if negate else condition_plan
+        cond_val, block = self._build_expr(inner_plan, block, scope, state, tail=False)
 
         # Create the branch target blocks.  The join block is created lazily
         # below — only if at least one branch actually reaches it.
@@ -295,8 +303,8 @@ class MenaiCFGBuilder:
 
         block.terminator = MenaiCFGBranchTerm(
             cond=cond_val,
-            true_block=then_block,
-            false_block=else_block,
+            true_block=else_block if negate else then_block,
+            false_block=then_block if negate else else_block,
         )
 
         # Build then branch.
