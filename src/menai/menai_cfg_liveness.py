@@ -27,20 +27,19 @@ from menai.menai_cfg import (
     MenaiCFGBlock,
     MenaiCFGFreeVarInstr,
     MenaiCFGFunction,
-    MenaiCFGMakeClosureInstr,
     MenaiCFGInstr,
     MenaiCFGParamInstr,
     MenaiCFGPhiInstr,
     MenaiCFGPatchClosureInstr,
     MenaiCFGTraceInstr,
     MenaiCFGValue,
+    MenaiCFGMakeClosureInstr,
+    MenaiCFGJumpTerm,
+    MenaiCFGBranchTerm,
+    MenaiCFGSelfLoopTerm,
 )
 from menai.menai_cfg_collapse_phi_chains import _value_ids_in_instr, _value_ids_in_term
 
-
-# ---------------------------------------------------------------------------
-# Public result type
-# ---------------------------------------------------------------------------
 
 class SlotAllocation:
     """Result of slot allocation for one MenaiCFGFunction."""
@@ -49,10 +48,6 @@ class SlotAllocation:
         self.slot_map = slot_map      # SSA value id → slot index
         self.slot_count = slot_count  # total slots needed (= local_count)
 
-
-# ---------------------------------------------------------------------------
-# Liveness analysis
-# ---------------------------------------------------------------------------
 
 def _uses_of_block(block: MenaiCFGBlock) -> Set[int]:
     """
@@ -77,9 +72,11 @@ def _uses_of_block(block: MenaiCFGBlock) -> Set[int]:
         if isinstance(instr, MenaiCFGPhiInstr):
             # Phi result is defined here; phi incomings are uses in predecessors.
             _def(instr.result.id)
+
         else:
             for vid in _value_ids_in_instr(instr):
                 _use(vid)
+
             result = _result_of_instr(instr)
             if result is not None:
                 _def(result.id)
@@ -104,6 +101,7 @@ def _defs_of_block(block: MenaiCFGBlock) -> Set[int]:
         result = _result_of_instr(instr)
         if result is not None:
             defs.add(result.id)
+
     return defs
 
 
@@ -118,8 +116,10 @@ def _phi_uses_in_block(block: MenaiCFGBlock) -> Dict[int, Set[int]]:
     for instr in block.instrs:
         if not isinstance(instr, MenaiCFGPhiInstr):
             break
+
         for val, pred in instr.incoming:
             result.setdefault(pred.id, set()).add(val.id)
+
     return result
 
 
@@ -150,17 +150,19 @@ def compute_liveness(func: MenaiCFGFunction) -> Tuple[
         phi_uses_from[block.id] = _phi_uses_in_block(block)
 
     # Build successor lists.
-    from menai.menai_cfg import MenaiCFGJumpTerm, MenaiCFGBranchTerm, MenaiCFGSelfLoopTerm
     successors: Dict[int, List[MenaiCFGBlock]] = {b.id: [] for b in blocks}
     for block in blocks:
         term = block.terminator
         if term is None:
             continue
+
         if isinstance(term, MenaiCFGJumpTerm):
             successors[block.id].append(term.target)
+
         elif isinstance(term, MenaiCFGBranchTerm):
             successors[block.id].append(term.true_block)
             successors[block.id].append(term.false_block)
+
         elif isinstance(term, MenaiCFGSelfLoopTerm):
             # Back-edge to entry; including it is correct and the fixed-point
             # iteration handles it naturally.
@@ -202,10 +204,6 @@ def compute_liveness(func: MenaiCFGFunction) -> Tuple[
     )
 
 
-# ---------------------------------------------------------------------------
-# Slot allocation
-# ---------------------------------------------------------------------------
-
 def allocate_slots(func: MenaiCFGFunction) -> SlotAllocation:
     """
     Assign a slot index to every SSA value in func, reusing slots across
@@ -241,6 +239,7 @@ def allocate_slots(func: MenaiCFGFunction) -> SlotAllocation:
         for instr in block.instrs:
             if isinstance(instr, MenaiCFGParamInstr):
                 slot_map[instr.result.id] = instr.index
+
             elif isinstance(instr, MenaiCFGFreeVarInstr):
                 slot_map[instr.result.id] = param_count + instr.index
 
@@ -257,14 +256,17 @@ def allocate_slots(func: MenaiCFGFunction) -> SlotAllocation:
         slot = param_count + free_var_count
         while slot in occupied:
             slot += 1
+
         if slot >= next_new_slot:
             next_new_slot = slot + 1
+
         return slot
 
     def _assign(value: MenaiCFGValue, live: Set[int]) -> int:
         """Assign the lowest free slot to value if not already assigned."""
         if value.id in slot_map:
             return slot_map[value.id]
+
         s = _free_slot(live)
         slot_map[value.id] = s
         return s
@@ -284,6 +286,7 @@ def allocate_slots(func: MenaiCFGFunction) -> SlotAllocation:
             if isinstance(instr, MenaiCFGPhiInstr):
                 # Phi incomings are uses in predecessor blocks, not here.
                 continue
+
             for vid in _value_ids_in_instr(instr):
                 last_use[vid] = i
 
@@ -310,11 +313,13 @@ def allocate_slots(func: MenaiCFGFunction) -> SlotAllocation:
                 # Allocate the phi result using the current live set.
                 if instr.result.id not in slot_map:
                     _assign(instr.result, live)
+
                 live.add(instr.result.id)
                 # Kill phi result if its last use is at or before this point
                 # and it is not needed by successor blocks.
                 if last_use.get(instr.result.id, term_idx + 1) <= i and instr.result.id not in block_live_out:
                     live.discard(instr.result.id)
+
                 continue
 
             if isinstance(instr, MenaiCFGTraceInstr):
@@ -322,23 +327,29 @@ def allocate_slots(func: MenaiCFGFunction) -> SlotAllocation:
                 for msg in instr.messages:
                     if last_use.get(msg.id, term_idx + 1) <= i and msg.id not in block_live_out:
                         live.discard(msg.id)
+
                 # Result aliases the value input — same slot.
                 if instr.value.id in slot_map:
                     slot_map[instr.result.id] = slot_map[instr.value.id]
+
                 else:
                     _assign(instr.result, live)
                     slot_map[instr.value.id] = slot_map[instr.result.id]
+
                 live.add(instr.result.id)
                 if last_use.get(instr.result.id, term_idx + 1) <= i and instr.result.id not in block_live_out:
                     live.discard(instr.result.id)
+
                 continue
 
             if isinstance(instr, MenaiCFGPatchClosureInstr):
                 # No result. Kill inputs if this is their last use.
                 if last_use.get(instr.closure.id, term_idx + 1) <= i and instr.closure.id not in block_live_out:
                     live.discard(instr.closure.id)
+
                 if last_use.get(instr.value.id, term_idx + 1) <= i and instr.value.id not in block_live_out:
                     live.discard(instr.value.id)
+
                 continue
 
             # General case: instruction with a result.
@@ -350,15 +361,16 @@ def allocate_slots(func: MenaiCFGFunction) -> SlotAllocation:
             # assigned the same slot as the closure.  For all other instructions
             # the VM reads all sources before writing the destination, so we
             # can kill dead inputs first and let the result reuse their slots.
-            from menai.menai_cfg import MenaiCFGMakeClosureInstr
             if isinstance(instr, MenaiCFGMakeClosureInstr):
                 result = _result_of_instr(instr)
                 if result is not None:
                     _assign(result, live)
                     live.add(result.id)
+
                 for vid in input_ids:
                     if last_use.get(vid, term_idx + 1) <= i and vid not in block_live_out:
                         live.discard(vid)
+
                 continue
 
             # All other instructions: kill dead inputs first so the result
@@ -386,34 +398,33 @@ def allocate_slots(func: MenaiCFGFunction) -> SlotAllocation:
     return SlotAllocation(slot_map=slot_map, slot_count=slot_count)
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def _result_of_instr(instr: MenaiCFGInstr) -> 'MenaiCFGValue | None':
     """Return the SSA result of instr, or None if it produces no result."""
     if isinstance(instr, MenaiCFGPatchClosureInstr):
         return None
+
     result = getattr(instr, 'result', None)
     return result
 
 
 def _rpo(func: MenaiCFGFunction) -> List[MenaiCFGBlock]:
     """Return reachable blocks in reverse post-order."""
-    from menai.menai_cfg import MenaiCFGJumpTerm, MenaiCFGBranchTerm
     visited: Set[int] = set()
     post_order: List[MenaiCFGBlock] = []
 
     def dfs(block: MenaiCFGBlock) -> None:
         if block.id in visited:
             return
+
         visited.add(block.id)
         term = block.terminator
         if isinstance(term, MenaiCFGJumpTerm):
             dfs(term.target)
+
         elif isinstance(term, MenaiCFGBranchTerm):
             dfs(term.true_block)
             dfs(term.false_block)
+
         post_order.append(block)
 
     dfs(func.entry)

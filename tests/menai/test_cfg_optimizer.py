@@ -4,15 +4,6 @@ Tests for CFG optimization passes.
 Each pass is tested in isolation using hand-built MenaiCFGFunction objects,
 then integration tests compile real Menai source and verify the optimised
 CFG has the expected block structure.
-
-Pass coverage:
-  1. Stale-phi pruning  (MenaiCFGPruneStalePhiEntries)
-  2. Trivial-phi elimination  (MenaiCFGEliminateTrivialPhis)
-  3. Empty-block bypass  (MenaiCFGBypassEmptyBlocks)
-  4. Dead-block elimination  (MenaiCFGEliminateDeadBlocks)
-  5. Fixed-point iteration (cascading passes)
-  6. Nested lambda optimization
-  7. Integration: compile Menai source and inspect CFG
 """
 
 import pytest
@@ -34,14 +25,9 @@ from menai.menai_cfg import (
 )
 from menai.menai_cfg_bypass_empty_blocks import MenaiCFGBypassEmptyBlocks
 from menai.menai_cfg_eliminate_dead_blocks import MenaiCFGEliminateDeadBlocks
-from menai.menai_cfg_eliminate_trivial_phis import MenaiCFGEliminateTrivialPhis
-from menai.menai_cfg_prune_stale_phi_entries import MenaiCFGPruneStalePhiEntries
 from menai.menai_value import MenaiInteger
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 _vid = 0
 _bid = 0
@@ -107,312 +93,6 @@ def first_phi(b: MenaiCFGBlock) -> MenaiCFGPhiInstr:
             return instr
     raise AssertionError(f"No phi in block {b.id}")
 
-
-# ---------------------------------------------------------------------------
-# 1. Pass: Stale-phi pruning
-# ---------------------------------------------------------------------------
-
-class TestStalePhi:
-
-    def test_no_change_when_all_entries_valid(self):
-        """Phi with two valid predecessors — nothing to prune."""
-        v_then = v("then")
-        v_else = v("else")
-        v_phi = v("phi")
-
-        then_b = block(1, terminator=None, label="then")
-        else_b = block(2, terminator=None, label="else")
-        join_b = block(
-            3,
-            MenaiCFGPhiInstr(result=v_phi, incoming=[(v_then, then_b), (v_else, else_b)]),
-            terminator=MenaiCFGReturnTerm(value=v_phi),
-            label="join",
-        )
-        # Wire terminators so both branches jump to join.
-        then_b.terminator = MenaiCFGJumpTerm(target=join_b)
-        else_b.terminator = MenaiCFGJumpTerm(target=join_b)
-
-        cond = v("cond")
-        entry = block(
-            0,
-            MenaiCFGConstInstr(result=cond, value=MenaiInteger(1)),
-            terminator=MenaiCFGBranchTerm(cond=cond, true_block=then_b, false_block=else_b),
-            label="entry",
-        )
-        f = func(entry, then_b, else_b, join_b)
-
-        new_f, changed = MenaiCFGPruneStalePhiEntries()._optimize_function(f)
-        assert not changed
-        phi = first_phi(new_f.blocks[3])
-        assert len(phi.incoming) == 2
-
-    def test_prunes_entry_with_no_edge(self):
-        """
-        Phi lists a block as predecessor, but that block's terminator is a
-        tail-call (no edge to the phi's block).  The entry must be pruned.
-        """
-        v_then = v("then")
-        v_else = v("else_placeholder")
-        v_phi = v("phi")
-
-        # then_b jumps to join → valid edge
-        then_b = block(1, label="then")
-        # else_b has a tail-call → NO edge to join
-        v_func = v("f")
-        else_b = block(
-            2,
-            MenaiCFGGlobalInstr(result=v_func, name="f"),
-            terminator=MenaiCFGTailCallTerm(func=v_func, args=[]),
-            label="else",
-        )
-        join_b = block(
-            3,
-            MenaiCFGPhiInstr(
-                result=v_phi,
-                incoming=[(v_then, then_b), (v_else, else_b)],
-            ),
-            terminator=MenaiCFGReturnTerm(value=v_phi),
-            label="join",
-        )
-        then_b.terminator = MenaiCFGJumpTerm(target=join_b)
-
-        cond = v("cond")
-        entry = block(
-            0,
-            MenaiCFGConstInstr(result=cond, value=MenaiInteger(1)),
-            terminator=MenaiCFGBranchTerm(cond=cond, true_block=then_b, false_block=else_b),
-            label="entry",
-        )
-        f = func(entry, then_b, else_b, join_b)
-
-        new_f, changed = MenaiCFGPruneStalePhiEntries()._optimize_function(f)
-        assert changed
-        phi = first_phi(new_f.blocks[3])
-        assert len(phi.incoming) == 1
-        assert phi.incoming[0][1].id == 1  # then_b
-
-    def test_prunes_to_zero_incoming(self):
-        """
-        A phi whose only predecessor has no edge to it is pruned to zero
-        incoming entries.  (Unreachable join block — dead-block elimination
-        will remove it in a subsequent pass.)
-        """
-        v_val = v("val")
-        v_phi = v("phi")
-
-        # pred_b has a tail-call, never reaches join_b
-        v_f = v("f")
-        pred_b = block(
-            1,
-            MenaiCFGGlobalInstr(result=v_f, name="f"),
-            terminator=MenaiCFGTailCallTerm(func=v_f, args=[]),
-            label="pred",
-        )
-        join_b = block(
-            2,
-            MenaiCFGPhiInstr(result=v_phi, incoming=[(v_val, pred_b)]),
-            terminator=MenaiCFGReturnTerm(value=v_phi),
-            label="join",
-        )
-        entry = block(
-            0,
-            terminator=MenaiCFGJumpTerm(target=pred_b),
-            label="entry",
-        )
-        f = func(entry, pred_b, join_b)
-
-        new_f, changed = MenaiCFGPruneStalePhiEntries()._optimize_function(f)
-        assert changed
-        phi = first_phi(new_f.blocks[2])
-        assert len(phi.incoming) == 0
-
-    def test_no_phi_no_change(self):
-        """A function with no phi instructions is unchanged."""
-        v_c = v("c")
-        entry = block(
-            0,
-            MenaiCFGConstInstr(result=v_c, value=MenaiInteger(42)),
-            terminator=MenaiCFGReturnTerm(value=v_c),
-            label="entry",
-        )
-        f = func(entry)
-        new_f, changed = MenaiCFGPruneStalePhiEntries()._optimize_function(f)
-        assert not changed
-        assert new_f is f
-
-
-# ---------------------------------------------------------------------------
-# 2. Pass: Trivial-phi elimination
-# ---------------------------------------------------------------------------
-
-class TestTrivialPhi:
-
-    def test_single_incoming_phi_eliminated(self):
-        """
-        join_b has phi(%v_then ← then_b).  After elimination, every use of
-        v_phi should be replaced with v_then, and the phi instruction removed.
-        """
-        v_then = v("then_val")
-        v_phi = v("phi")
-
-        then_b = block(1, label="then")
-        join_b = block(
-            2,
-            MenaiCFGPhiInstr(result=v_phi, incoming=[(v_then, then_b)]),
-            terminator=MenaiCFGReturnTerm(value=v_phi),
-            label="join",
-        )
-        then_b.terminator = MenaiCFGJumpTerm(target=join_b)
-
-        cond = v("cond")
-        entry = block(
-            0,
-            MenaiCFGConstInstr(result=cond, value=MenaiInteger(1)),
-            terminator=MenaiCFGBranchTerm(
-                cond=cond,
-                true_block=then_b,
-                false_block=join_b,  # else falls directly to join (unusual but valid)
-            ),
-            label="entry",
-        )
-        f = func(entry, then_b, join_b)
-
-        new_f, changed = MenaiCFGEliminateTrivialPhis()._optimize_function(f)
-        assert changed
-
-        # join_b should have no phi instruction remaining.
-        join_new = new_f.blocks[2]
-        for instr in join_new.instrs:
-            assert not isinstance(instr, MenaiCFGPhiInstr), "phi should be removed"
-
-        # The return terminator should now reference v_then, not v_phi.
-        ret = join_new.terminator
-        assert isinstance(ret, MenaiCFGReturnTerm)
-        assert ret.value.id == v_then.id, "phi result should be substituted with incoming value"
-
-    def test_chain_of_trivial_phis_resolved(self):
-        """
-        phi1 → phi2 → v_real: both phis should be eliminated, and uses of
-        phi1 and phi2 should both resolve to v_real.
-        """
-        v_real = v("real")
-        v_phi1 = v("phi1")
-        v_phi2 = v("phi2")
-
-        src_b = block(1, label="src")
-        mid_b = block(
-            2,
-            MenaiCFGPhiInstr(result=v_phi2, incoming=[(v_real, src_b)]),
-            label="mid",
-        )
-        join_b = block(
-            3,
-            MenaiCFGPhiInstr(result=v_phi1, incoming=[(v_phi2, mid_b)]),
-            terminator=MenaiCFGReturnTerm(value=v_phi1),
-            label="join",
-        )
-        src_b.terminator = MenaiCFGJumpTerm(target=mid_b)
-        mid_b.terminator = MenaiCFGJumpTerm(target=join_b)
-
-        entry = block(0, terminator=MenaiCFGJumpTerm(target=src_b), label="entry")
-        f = func(entry, src_b, mid_b, join_b)
-
-        new_f, changed = MenaiCFGEliminateTrivialPhis()._optimize_function(f)
-        assert changed
-
-        # The return in join_b should reference v_real (chain resolved).
-        join_new = new_f.blocks[3]
-        ret = join_new.terminator
-        assert isinstance(ret, MenaiCFGReturnTerm)
-        assert ret.value.id == v_real.id
-
-    def test_no_trivial_phi_no_change(self):
-        """A phi with two incoming entries is not trivial — no change."""
-        v_a = v("a")
-        v_b = v("b")
-        v_phi = v("phi")
-
-        block_a = block(1, label="a")
-        block_b = block(2, label="b")
-        join_b = block(
-            3,
-            MenaiCFGPhiInstr(result=v_phi, incoming=[(v_a, block_a), (v_b, block_b)]),
-            terminator=MenaiCFGReturnTerm(value=v_phi),
-            label="join",
-        )
-        block_a.terminator = MenaiCFGJumpTerm(target=join_b)
-        block_b.terminator = MenaiCFGJumpTerm(target=join_b)
-
-        cond = v("cond")
-        entry = block(
-            0,
-            MenaiCFGConstInstr(result=cond, value=MenaiInteger(1)),
-            terminator=MenaiCFGBranchTerm(cond=cond, true_block=block_a, false_block=block_b),
-            label="entry",
-        )
-        f = func(entry, block_a, block_b, join_b)
-
-        new_f, changed = MenaiCFGEliminateTrivialPhis()._optimize_function(f)
-        assert not changed
-
-    def test_phi_result_used_in_builtin(self):
-        """Phi result used as a builtin operand is correctly substituted."""
-        v_val = v("val")
-        v_phi = v("phi")
-        v_result = v("result")
-
-        src_b = block(1, label="src")
-        join_b = block(
-            2,
-            MenaiCFGPhiInstr(result=v_phi, incoming=[(v_val, src_b)]),
-            MenaiCFGBuiltinInstr(result=v_result, op="not", args=[v_phi]),
-            terminator=MenaiCFGReturnTerm(value=v_result),
-            label="join",
-        )
-        src_b.terminator = MenaiCFGJumpTerm(target=join_b)
-
-        entry = block(0, terminator=MenaiCFGJumpTerm(target=src_b), label="entry")
-        f = func(entry, src_b, join_b)
-
-        new_f, changed = MenaiCFGEliminateTrivialPhis()._optimize_function(f)
-        assert changed
-
-        join_new = new_f.blocks[2]
-        # Find the builtin instruction.
-        builtins = [i for i in join_new.instrs if isinstance(i, MenaiCFGBuiltinInstr)]
-        assert len(builtins) == 1
-        assert builtins[0].args[0].id == v_val.id, "phi substituted in builtin arg"
-
-    def test_phi_substituted_in_patch_closure(self):
-        """Phi result used in a patch_closure instruction is substituted."""
-        v_val = v("val")
-        v_phi = v("phi")
-        v_closure = v("closure")
-
-        src_b = block(1, label="src")
-        patch = MenaiCFGPatchClosureInstr(closure=v_closure, capture_index=0, value=v_phi)
-        join_b = block(
-            2,
-            MenaiCFGPhiInstr(result=v_phi, incoming=[(v_val, src_b)]),
-            patch_instrs=[patch],
-            terminator=MenaiCFGReturnTerm(value=v_closure),
-            label="join",
-        )
-        src_b.terminator = MenaiCFGJumpTerm(target=join_b)
-
-        entry = block(0, terminator=MenaiCFGJumpTerm(target=src_b), label="entry")
-        f = func(entry, src_b, join_b)
-
-        new_f, changed = MenaiCFGEliminateTrivialPhis()._optimize_function(f)
-        assert changed
-
-        join_new = new_f.blocks[2]
-        assert join_new.patch_instrs[0].value.id == v_val.id
-
-
-# ---------------------------------------------------------------------------
-# 3. Pass: Empty-block bypass
-# ---------------------------------------------------------------------------
 
 class TestEmptyBlockBypass:
 
@@ -624,10 +304,6 @@ class TestEmptyBlockBypass:
         assert not changed, "block with patch_instrs must not be bypassed"
 
 
-# ---------------------------------------------------------------------------
-# 4. Pass: Dead-block elimination
-# ---------------------------------------------------------------------------
-
 class TestDeadBlockElimination:
 
     def test_unreachable_block_removed(self):
@@ -727,13 +403,7 @@ class TestDeadBlockElimination:
         assert len(new_f.blocks) == 3
 
 
-# ---------------------------------------------------------------------------
-# 5. Fixed-point: cascading passes
-# ---------------------------------------------------------------------------
-
 _ALL_PASSES = [
-    MenaiCFGPruneStalePhiEntries(),
-    MenaiCFGEliminateTrivialPhis(),
     MenaiCFGBypassEmptyBlocks(),
     MenaiCFGEliminateDeadBlocks(),
 ]
@@ -846,68 +516,6 @@ class TestFixedPoint:
         assert len(new_f.blocks) == 1
         assert isinstance(new_f.blocks[0].terminator, MenaiCFGReturnTerm)
 
-
-# ---------------------------------------------------------------------------
-# 6. Nested lambda optimization
-# ---------------------------------------------------------------------------
-
-class TestNestedLambdaOptimization:
-
-    def test_nested_lambda_is_optimized(self):
-        """
-        A MenaiCFGMakeClosureInstr whose child function has a trivial phi
-        should have that phi eliminated by the recursive optimization pass.
-        """
-        # Build a child function with a trivial phi.
-        v_val = v("val")
-        v_phi = v("phi_child")
-        child_src = block(1, label="child_src")
-        child_join = block(
-            2,
-            MenaiCFGPhiInstr(result=v_phi, incoming=[(v_val, child_src)]),
-            terminator=MenaiCFGReturnTerm(value=v_phi),
-            label="child_join",
-        )
-        child_src.terminator = MenaiCFGJumpTerm(target=child_join)
-        child_entry = block(0, terminator=MenaiCFGJumpTerm(target=child_src), label="child_entry")
-        child_func = func(child_entry, child_src, child_join)
-
-        # Parent function contains a MakeClosureInstr wrapping the child.
-        v_closure = v("closure")
-        mk = MenaiCFGMakeClosureInstr(
-            result=v_closure,
-            function=child_func,
-            captures=[],
-            needs_patching=False,
-        )
-        parent_entry = block(
-            0,
-            mk,
-            terminator=MenaiCFGReturnTerm(value=v_closure),
-            label="entry",
-        )
-        parent_f = func(parent_entry)
-
-        new_parent, _ = MenaiCFGEliminateTrivialPhis().optimize(parent_f)
-
-        # Find the MakeClosureInstr in the optimized parent.
-        mk_new = None
-        for instr in new_parent.blocks[0].instrs:
-            if isinstance(instr, MenaiCFGMakeClosureInstr):
-                mk_new = instr
-                break
-        assert mk_new is not None
-
-        # The child function should have no phi instructions.
-        for b in mk_new.function.blocks:
-            for instr in b.instrs:
-                assert not isinstance(instr, MenaiCFGPhiInstr), \
-                    "Nested lambda phi should have been eliminated"
-
-
-# ---------------------------------------------------------------------------
-# 7. Integration: compile Menai source and inspect CFG
-# ---------------------------------------------------------------------------
 
 class TestIntegration:
     """
