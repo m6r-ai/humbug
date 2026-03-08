@@ -248,3 +248,77 @@ class TestMenaiBooleans:
             if boolean_tokens:
                 # If it starts with #t or #f, there should be more tokens after
                 assert len(tokens) > 1
+
+
+class TestMenaiNone:
+    """Test Menai #none tokenization."""
+
+    def test_none_lowercase(self):
+        """Test #none (lowercase) is a keyword token."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '#none')
+
+        tokens = list(lexer._tokens)
+        assert len(tokens) == 1
+        assert tokens[0].type == TokenType.KEYWORD
+        assert tokens[0].value == '#none'
+
+    def test_none_uppercase(self):
+        """Test #NONE (uppercase) is a keyword token."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '#NONE')
+
+        tokens = list(lexer._tokens)
+        assert len(tokens) == 1
+        assert tokens[0].type == TokenType.KEYWORD
+        assert tokens[0].value == '#NONE'
+
+    def test_none_mixed_case(self):
+        """Test #None (mixed case) is a keyword token."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '#None')
+
+        tokens = list(lexer._tokens)
+        assert len(tokens) == 1
+        assert tokens[0].type == TokenType.KEYWORD
+        assert tokens[0].value == '#None'
+
+    def test_none_position(self):
+        """Test that #none position is correctly tracked."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '  #none')
+
+        tokens = list(lexer._tokens)
+        keyword_tokens = [t for t in tokens if t.type == TokenType.KEYWORD]
+        assert len(keyword_tokens) == 1
+        assert keyword_tokens[0].start == 2
+
+    def test_none_in_expression(self):
+        """Test #none in an expression."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '(if #t #none 42)')
+
+        tokens = list(lexer._tokens)
+        none_tokens = [t for t in tokens if t.type == TokenType.KEYWORD and t.value.lower() == '#none']
+        assert len(none_tokens) == 1
+        assert none_tokens[0].value == '#none'
+
+    def test_none_adjacent_to_parens(self):
+        """Test #none adjacent to parentheses."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '(#none)')
+
+        tokens = list(lexer._tokens)
+        keyword_tokens = [t for t in tokens if t.type == TokenType.KEYWORD]
+        assert len(keyword_tokens) == 1
+        assert keyword_tokens[0].value == '#none'
+
+    def test_hash_n_not_none_is_error(self):
+        """Test that #n alone (not #none) is an error token."""
+        lexer = MenaiLexer()
+        lexer.lex(None, '#n')
+
+        tokens = list(lexer._tokens)
+        error_tokens = [t for t in tokens if t.type == TokenType.ERROR]
+        assert len(error_tokens) >= 1
+        assert error_tokens[0].value == '#'

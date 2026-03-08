@@ -100,6 +100,7 @@ class MenaiLexer(Lexer):
         - Boolean (#t, #f)
         - Character (#\\x)
         - Binary/octal/decimal/hex (#b, #o, #d, #x)
+        - None (#none)
         """
         start = self._position
         if self._position + 1 >= self._input_len:
@@ -108,6 +109,17 @@ class MenaiLexer(Lexer):
             return
 
         ch = self._input[self._position + 1].lower()
+
+        # Handle #none
+        if ch == 'n':
+            if self._input[self._position:self._position + 5].lower() == '#none':
+                self._position += 5
+                self._tokens.append(Token(
+                    type=TokenType.KEYWORD,
+                    value=self._input[start:self._position],
+                    start=start
+                ))
+                return
 
         # Handle booleans
         if ch in ('t', 'f'):
