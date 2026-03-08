@@ -1100,6 +1100,19 @@ class MenaiASTDesugarer:
 
         # All bindings here are pattern variable bindings (user-defined names).
         # They must go inside the then branch (only evaluated after test passes).
+
+        # Short-circuit: a constant #t test always matches — no branch needed.
+        # This is the wildcard (_) and unconditional variable-binding case.
+        if isinstance(test_expr, MenaiASTBoolean) and test_expr.value:
+            if bindings:
+                return MenaiASTList((
+                    MenaiASTSymbol('let*'),
+                    MenaiASTList(tuple(MenaiASTList((MenaiASTSymbol(vn), ve)) for vn, ve in bindings)),
+                    result_expr
+                ))
+
+            return result_expr
+
         if bindings:
             binding_list = [MenaiASTList((MenaiASTSymbol(vn), ve)) for vn, ve in bindings]
 

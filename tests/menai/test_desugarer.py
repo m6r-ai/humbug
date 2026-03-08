@@ -223,23 +223,20 @@ class TestDesugarerMatchVariable:
         expr = parse_and_analyze_expression('(match x (n n))')
         result = desugarer.desugar(expr)
 
-        # Should be: (let ((#:tmp x)) (if #t (let ((n #:tmp)) n) error))
+        # Should be: (let ((#:tmp x)) (let* ((n #:tmp)) n))
+        # The (if #t ...) is eliminated because a variable pattern always matches.
         assert isinstance(result, MenaiASTList)
         assert result.first().name == 'let'
 
         body = result.elements[2]
         assert isinstance(body, MenaiASTList)
-        assert body.first().name == 'if'
-
-        # Condition should be #t (variable always matches)
-        condition = body.elements[1]
-        assert isinstance(condition, MenaiASTBoolean)
-        assert condition.value is True
-
-        # Then branch should be a let binding the variable
-        then_branch = body.elements[2]
-        assert isinstance(then_branch, MenaiASTList)
-        assert then_branch.first().name == 'let'
+        # Body is directly the let* binding (no wrapping if)
+        assert body.first().name in ('let', 'let*')
+        # The binding should bind n to the temp var
+        binding = body.elements[1].elements[0]
+        assert isinstance(binding, MenaiASTList)
+        assert isinstance(binding.elements[0], MenaiASTSymbol)
+        assert binding.elements[0].name == 'n'
 
     def test_match_wildcard(self):
         """Test desugaring of wildcard pattern."""
@@ -249,23 +246,15 @@ class TestDesugarerMatchVariable:
         expr = parse_and_analyze_expression('(match x (_ "anything"))')
         result = desugarer.desugar(expr)
 
-        # Should be: (let ((#:tmp x)) (if #t "anything" error))
+        # Should be: (let ((#:tmp x)) "anything")
+        # The (if #t ...) is eliminated because a wildcard always matches.
         assert isinstance(result, MenaiASTList)
         assert result.first().name == 'let'
 
         body = result.elements[2]
-        assert isinstance(body, MenaiASTList)
-        assert body.first().name == 'if'
-
-        # Condition should be #t
-        condition = body.elements[1]
-        assert isinstance(condition, MenaiASTBoolean)
-        assert condition.value is True
-
-        # Then branch should be the result directly (no bindings)
-        then_branch = body.elements[2]
-        assert isinstance(then_branch, MenaiASTString)
-        assert then_branch.value == "anything"
+        # Body is directly the result string (no wrapping if or let)
+        assert isinstance(body, MenaiASTString)
+        assert body.value == "anything"
 
 
 class TestDesugarerMatchType:
@@ -466,10 +455,12 @@ class TestDesugarerMatchMultipleClauses:
         assert isinstance(body, MenaiASTList)
         assert body.first().name == 'if'
 
-        # Else branch should also be an if
+        # The outer if is the integer type guard.
+        # The else branch of the type guard is the wildcard result "other"
+        # directly — (if #t "other" error) is eliminated by the desugarer.
         else_branch = body.elements[3]
-        assert isinstance(else_branch, MenaiASTList)
-        assert else_branch.first().name == 'if'
+        assert isinstance(else_branch, MenaiASTString)
+        assert else_branch.value == "other"
 
     def test_match_multiple_clauses_complex(self):
         """Test desugaring of match with complex multiple clauses."""

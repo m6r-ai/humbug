@@ -150,6 +150,16 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
         opt_then = self._opt(ir.then_plan, frame_stack)
         opt_else = self._opt(ir.else_plan, frame_stack)
 
+        # Constant-condition elimination:
+        #   (if #t then else)  →  then
+        #   (if #f then else)  →  else
+        if isinstance(opt_condition, MenaiIRConstant) and isinstance(opt_condition.value, MenaiBoolean):
+            self._eliminations += 1
+            if opt_condition.value.value:
+                return opt_then
+
+            return opt_else
+
         # Boolean identity elimination:
         #   (if <cond> #t #f)  →  <cond>
         #   (if <cond> #f #t)  →  (boolean-not <cond>)
