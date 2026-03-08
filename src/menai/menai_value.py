@@ -202,21 +202,27 @@ class MenaiComplex(MenaiValue):
                 as_int = int(x)
                 if x == as_int:
                     return str(as_int)
+
             except (ValueError, OverflowError):
                 pass
+
             return str(x)
 
         if r == 0.0 and i == 0.0:
             return "0+0j"
+
         if r == 0.0:
             # Pure imaginary: omit the real part entirely
             return f"{_fmt_float(i)}j"
+
         # General case: always show both parts with explicit sign on imaginary
         real_str = _fmt_float(r)
         if i >= 0.0:
             imag_str = f"+{_fmt_float(i)}j"
+
         else:
             imag_str = f"{_fmt_float(i)}j"
+
         return f"{real_str}{imag_str}"
 
     def __eq__(self, other: Any) -> bool:
@@ -291,7 +297,7 @@ class MenaiList(MenaiValue):
 
     def describe(self) -> str:
         # Format list: (element1 element2 ...)
-        if self.is_empty():
+        if len(self.elements) == 0:
             return "()"
 
         formatted_elements = []
@@ -299,68 +305,6 @@ class MenaiList(MenaiValue):
             formatted_elements.append(element.describe())
 
         return f"({' '.join(formatted_elements)})"
-
-    def length(self) -> int:
-        """Return the length of the list."""
-        return len(self.elements)
-
-    def is_empty(self) -> bool:
-        """Check if the list is empty."""
-        return len(self.elements) == 0
-
-    def first(self) -> MenaiValue:
-        """Get the first element (raises IndexError if empty)."""
-        if not self.elements:
-            raise IndexError("Cannot get first element of empty list")
-
-        return self.elements[0]
-
-    def rest(self) -> 'MenaiList':
-        """Get all elements except the first (raises IndexError if empty)."""
-        if not self.elements:
-            raise IndexError("Cannot get rest of empty list")
-
-        return MenaiList(self.elements[1:])
-
-    def last(self) -> MenaiValue:
-        """Get the last element (raises IndexError if empty)."""
-        if not self.elements:
-            raise IndexError("Cannot get last element of empty list")
-
-        return self.elements[-1]
-
-    def cons(self, element: MenaiValue) -> 'MenaiList':
-        """Prepend an element to the front of the list."""
-        return MenaiList((element,) + self.elements)
-
-    def append_list(self, other: 'MenaiList') -> 'MenaiList':
-        """Append another list to this one."""
-        return MenaiList(self.elements + other.elements)
-
-    def reverse(self) -> 'MenaiList':
-        """Return a reversed copy of the list."""
-        return MenaiList(tuple(reversed(self.elements)))
-
-    def get(self, index: int) -> MenaiValue:
-        """Get element at index (raises IndexError if out of bounds)."""
-        return self.elements[index]
-
-    def contains(self, value: MenaiValue) -> bool:
-        """Check if the list contains a value (using Menai equality)."""
-        return value in self.elements
-
-    def remove_all(self, value: MenaiValue) -> 'MenaiList':
-        """Remove all occurrences of a value."""
-        new_elements = tuple(elem for elem in self.elements if elem != value)
-        return MenaiList(new_elements)
-
-    def position(self, value: MenaiValue) -> int | None:
-        """Find the first position of a value, or None if not found."""
-        for i, elem in enumerate(self.elements):
-            if elem == value:
-                return i
-
-        return None
 
 
 class MenaiDict(MenaiValue):
@@ -370,23 +314,22 @@ class MenaiDict(MenaiValue):
     Internally uses a dict for O(1) lookups while maintaining insertion order.
     Keys must be hashable (strings, numbers, booleans, symbols).
     """
-    __slots__ = ('pairs', '_lookup')
+    __slots__ = ('pairs', 'lookup')
 
     def __init__(self, pairs: Tuple[Tuple[MenaiValue, MenaiValue], ...] = ()) -> None:
         self.pairs = pairs
         lookup = {}
         for key, value in pairs:
-            hashable_key = self._to_hashable_key(key)
+            hashable_key = self.to_hashable_key(key)
             lookup[hashable_key] = (key, value)
-        self._lookup = lookup
+
+        self.lookup = lookup
 
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, MenaiDict):
             return False
-        return self.pairs == other.pairs
 
-    def __hash__(self) -> int:
-        return hash(self.pairs)
+        return self.pairs == other.pairs
 
     def to_python(self) -> dict:
         """Convert to Python dict."""
@@ -412,7 +355,7 @@ class MenaiDict(MenaiValue):
 
     def describe(self) -> str:
         # Format dict with curly braces: {(key1 val1) (key2 val2) ...}
-        if self.is_empty():
+        if len(self.pairs) == 0:
             return "{}"
 
         formatted_pairs = []
@@ -424,99 +367,8 @@ class MenaiDict(MenaiValue):
         pairs_str = ' '.join(formatted_pairs)
         return f"{{{pairs_str}}}"
 
-    def get(self, key: MenaiValue) -> MenaiValue | None:
-        """Get value by key, returns None if not found."""
-        hashable_key = self._to_hashable_key(key)
-        if hashable_key in self._lookup:
-            _, value = self._lookup[hashable_key]
-            return value
-
-        return None
-
-    def has_key(self, key: MenaiValue) -> bool:
-        """Check if key exists."""
-        hashable_key = self._to_hashable_key(key)
-        return hashable_key in self._lookup
-
-    def set(self, key: MenaiValue, value: MenaiValue) -> 'MenaiDict':
-        """Return new dict with key set (immutable update)."""
-        hashable_key = self._to_hashable_key(key)
-
-        # Build new pairs list, replacing or appending
-        new_pairs = []
-        found = False
-
-        for k, v in self.pairs:
-            if self._to_hashable_key(k) == hashable_key:
-                new_pairs.append((key, value))  # Replace with new value
-                found = True
-
-            else:
-                new_pairs.append((k, v))
-
-        if not found:
-            new_pairs.append((key, value))  # Append new pair
-
-        return MenaiDict(tuple(new_pairs))
-
-    def remove(self, key: MenaiValue) -> 'MenaiDict':
-        """Return new dict without key."""
-        hashable_key = self._to_hashable_key(key)
-        new_pairs = tuple(
-            (k, v) for k, v in self.pairs
-            if self._to_hashable_key(k) != hashable_key
-        )
-        return MenaiDict(new_pairs)
-
-    def keys(self) -> Tuple[MenaiValue, ...]:
-        """Get all keys in insertion order."""
-        return tuple(k for k, _ in self.pairs)
-
-    def values(self) -> Tuple[MenaiValue, ...]:
-        """Get all values in insertion order."""
-        return tuple(v for _, v in self.pairs)
-
-    def merge(self, other: 'MenaiDict') -> 'MenaiDict':
-        """Merge with another dict (other's values win on conflicts)."""
-        # Start with self's pairs
-        result_dict = {}
-        for k, v in self.pairs:
-            hashable_key = self._to_hashable_key(k)
-            result_dict[hashable_key] = (k, v)
-
-        # Override/add from other
-        for k, v in other.pairs:
-            hashable_key = self._to_hashable_key(k)
-            result_dict[hashable_key] = (k, v)
-
-        # Preserve insertion order: self's keys first, then other's new keys
-        new_pairs = []
-        seen = set()
-
-        # Add all of self's keys (with potentially updated values)
-        for k, _ in self.pairs:
-            hashable_key = self._to_hashable_key(k)
-            new_pairs.append(result_dict[hashable_key])
-            seen.add(hashable_key)
-
-        # Add other's keys that weren't in self
-        for k, v in other.pairs:
-            hashable_key = self._to_hashable_key(k)
-            if hashable_key not in seen:
-                new_pairs.append((k, v))
-
-        return MenaiDict(tuple(new_pairs))
-
-    def length(self) -> int:
-        """Number of key-value pairs."""
-        return len(self.pairs)
-
-    def is_empty(self) -> bool:
-        """Check if dict is empty."""
-        return len(self.pairs) == 0
-
     @staticmethod
-    def _to_hashable_key(key: MenaiValue) -> Tuple[str, Any]:
+    def to_hashable_key(key: MenaiValue) -> Tuple[str, Any]:
         """Convert Menai key to hashable Python value."""
         if isinstance(key, MenaiString):
             return ('str', key.value)

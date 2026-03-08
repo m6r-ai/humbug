@@ -2599,7 +2599,7 @@ class MenaiVM:
         if not isinstance(a, MenaiDict):
             raise MenaiEvalError(f"Function 'dict-keys' requires dict arguments, got {a.type_name()}")
 
-        frame.locals[instr.dest] = MenaiList(a.keys())
+        frame.locals[instr.dest] = MenaiList(tuple(k for k, _ in a.pairs))
         return None
 
     def _op_dict_values(  # pylint: disable=useless-return
@@ -2610,7 +2610,7 @@ class MenaiVM:
         if not isinstance(a, MenaiDict):
             raise MenaiEvalError(f"Function 'dict-values' requires dict arguments, got {a.type_name()}")
 
-        frame.locals[instr.dest] = MenaiList(a.values())
+        frame.locals[instr.dest] = MenaiList(tuple(v for _, v in a.pairs))
         return None
 
     def _op_dict_length(  # pylint: disable=useless-return
@@ -2621,7 +2621,7 @@ class MenaiVM:
         if not isinstance(a, MenaiDict):
             raise MenaiEvalError(f"Function 'dict-length' requires dict arguments, got {a.type_name()}")
 
-        frame.locals[instr.dest] = MenaiInteger(a.length())
+        frame.locals[instr.dest] = MenaiInteger(len(a.pairs))
         return None
 
     def _op_dict_has_p(  # pylint: disable=useless-return
@@ -2633,7 +2633,8 @@ class MenaiVM:
             raise MenaiEvalError(f"Function 'dict-has?' requires dict arguments, got {a.type_name()}")
 
         try:
-            frame.locals[instr.dest] = MenaiBoolean(a.has_key(cast(MenaiValue, frame.locals[instr.src1])))
+            hashable_key = a.to_hashable_key(cast(MenaiValue, frame.locals[instr.src1]))
+            frame.locals[instr.dest] = MenaiBoolean(hashable_key in a.lookup)
 
         except MenaiEvalError as e:
             raise MenaiEvalError(f"Function 'dict-has?' invalid key: {e.message}") from e
@@ -2649,7 +2650,12 @@ class MenaiVM:
             raise MenaiEvalError(f"Function 'dict-remove' requires dict arguments, got {a.type_name()}")
 
         try:
-            frame.locals[instr.dest] = a.remove(cast(MenaiValue, frame.locals[instr.src1]))
+            hashable_key = a.to_hashable_key(cast(MenaiValue, frame.locals[instr.src1]))
+            new_pairs = tuple(
+                (k, v) for k, v in a.pairs
+                if a.to_hashable_key(k) != hashable_key
+            )
+            frame.locals[instr.dest] = MenaiDict(new_pairs)
 
         except MenaiEvalError as e:
             raise MenaiEvalError(f"Function 'dict-remove' invalid key: {e.message}") from e
@@ -2668,7 +2674,34 @@ class MenaiVM:
         if not isinstance(b, MenaiDict):
             raise MenaiEvalError(f"Function 'dict-merge' requires dict arguments, got {b.type_name()}")
 
-        frame.locals[instr.dest] = a.merge(b)
+        # Start with self's pairs
+        result_dict = {}
+        for k, v in a.pairs:
+            hashable_key = a.to_hashable_key(k)
+            result_dict[hashable_key] = (k, v)
+
+        # Override/add from other
+        for k, v in b.pairs:
+            hashable_key = b.to_hashable_key(k)
+            result_dict[hashable_key] = (k, v)
+
+        # Preserve insertion order: self's keys first, then other's new keys
+        new_pairs = []
+        seen = set()
+
+        # Add all of self's keys (with potentially updated values)
+        for k, _ in a.pairs:
+            hashable_key = a.to_hashable_key(k)
+            new_pairs.append(result_dict[hashable_key])
+            seen.add(hashable_key)
+
+        # Add other's keys that weren't in self
+        for k, v in b.pairs:
+            hashable_key = b.to_hashable_key(k)
+            if hashable_key not in seen:
+                new_pairs.append((k, v))
+
+        frame.locals[instr.dest] = MenaiDict(tuple(new_pairs))
         return None
 
     def _op_dict_set(  # pylint: disable=useless-return
@@ -2680,7 +2713,27 @@ class MenaiVM:
             raise MenaiEvalError(f"Function 'dict-set' requires dict arguments, got {a.type_name()}")
 
         try:
-            frame.locals[instr.dest] = a.set(cast(MenaiValue, frame.locals[instr.src1]), cast(MenaiValue, frame.locals[instr.src2]))
+            hashable_key = a.to_hashable_key(cast(MenaiValue, frame.locals[instr.src1]))
+
+            # Build new pairs list, replacing or appending
+            new_pairs = []
+            found = False
+
+            key = cast(MenaiValue, frame.locals[instr.src1])
+            value = cast(MenaiValue, frame.locals[instr.src2])
+
+            for k, v in a.pairs:
+                if a.to_hashable_key(k) == hashable_key:
+                    new_pairs.append((key, value))  # Replace with new value
+                    found = True
+
+                else:
+                    new_pairs.append((k, v))
+
+            if not found:
+                new_pairs.append((key, value))  # Append new pair
+
+            frame.locals[instr.dest] = MenaiDict(tuple(new_pairs))
 
         except MenaiEvalError as e:
             raise MenaiEvalError(f"Function 'dict-set' invalid key: {e.message}") from e
@@ -2696,8 +2749,13 @@ class MenaiVM:
             raise MenaiEvalError(f"Function 'dict-get' requires dict arguments, got {a.type_name()}")
 
         try:
-            result = a.get(cast(MenaiValue, frame.locals[instr.src1]))
-            frame.locals[instr.dest] = result if result is not None else cast(MenaiValue, frame.locals[instr.src2])
+            hashable_key = a.to_hashable_key(cast(MenaiValue, frame.locals[instr.src1]))
+            if hashable_key in a.lookup:
+                _, value = a.lookup[hashable_key]
+                frame.locals[instr.dest] = value
+                return None
+
+            frame.locals[instr.dest] = cast(MenaiValue, frame.locals[instr.src2])
 
         except MenaiEvalError as e:
             raise MenaiEvalError(f"Function 'dict-get' invalid key: {e.message}") from e
@@ -2750,7 +2808,7 @@ class MenaiVM:
             raise MenaiEvalError(f"Function 'list-prepend' requires list arguments, got {a.type_name()}")
 
         item = frame.locals[instr.src1]
-        frame.locals[instr.dest] = a.cons(cast(MenaiValue, item))
+        frame.locals[instr.dest] = MenaiList((cast(MenaiValue, item),) + a.elements)
         return None
 
     def _op_list_append(  # pylint: disable=useless-return
@@ -2773,7 +2831,7 @@ class MenaiVM:
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-reverse' requires list arguments, got {a.type_name()}")
 
-        frame.locals[instr.dest] = a.reverse()
+        frame.locals[instr.dest] = MenaiList(tuple(reversed(a.elements)))
         return None
 
     def _op_list_first(  # pylint: disable=useless-return
@@ -2784,12 +2842,10 @@ class MenaiVM:
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-first' requires list arguments, got {a.type_name()}")
 
-        try:
-            frame.locals[instr.dest] = a.first()
+        if not a.elements:
+            raise MenaiEvalError("Function 'list-first' requires a non-empty list")
 
-        except IndexError as e:
-            raise MenaiEvalError("Function 'list-first' requires a non-empty list") from e
-
+        frame.locals[instr.dest] = a.elements[0]
         return None
 
     def _op_list_rest(  # pylint: disable=useless-return
@@ -2800,12 +2856,10 @@ class MenaiVM:
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-rest' requires list arguments, got {a.type_name()}")
 
-        try:
-            frame.locals[instr.dest] = a.rest()
+        if not a.elements:
+            raise MenaiEvalError("Function 'list-rest' requires a non-empty list")
 
-        except IndexError as e:
-            raise MenaiEvalError("Function 'list-rest' requires a non-empty list") from e
-
+        frame.locals[instr.dest] = MenaiList(a.elements[1:])
         return None
 
     def _op_list_last(  # pylint: disable=useless-return
@@ -2816,25 +2870,23 @@ class MenaiVM:
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-last' requires list arguments, got {a.type_name()}")
 
-        try:
-            frame.locals[instr.dest] = a.last()
+        if not a.elements:
+            raise MenaiEvalError("Function 'list-last' requires a non-empty list")
 
-        except IndexError as e:
-            raise MenaiEvalError("Function 'list-last' requires a non-empty list") from e
-
+        frame.locals[instr.dest] = a.elements[-1]
         return None
 
     def _op_list_length(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """LIST_LENGTH dest, src0: r_dest = (list-length r_src0)"""
-        value = cast(MenaiValue, frame.locals[instr.src0])
+        value = frame.locals[instr.src0]
         if not isinstance(value, MenaiList):
             raise MenaiEvalError(
                 f"Function 'list-length' requires list argument, got {value.type_name()}"
             )
 
-        frame.locals[instr.dest] = MenaiInteger(value.length())
+        frame.locals[instr.dest] = MenaiInteger(len(value.elements))
         return None
 
     def _op_list_ref(  # pylint: disable=useless-return
@@ -2856,7 +2908,7 @@ class MenaiVM:
             raise MenaiEvalError(f"list-ref index out of range: {index}")
 
         try:
-            frame.locals[instr.dest] = a.get(index)
+            frame.locals[instr.dest] = a.elements[index]
 
         except IndexError as e:
             raise MenaiEvalError(f"list-ref index out of range: {index}") from e
@@ -2871,7 +2923,7 @@ class MenaiVM:
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-null?' requires list arguments, got {a.type_name()}")
 
-        frame.locals[instr.dest] = MenaiBoolean(a.is_empty())
+        frame.locals[instr.dest] = MenaiBoolean(len(a.elements) == 0)
         return None
 
     def _op_list_member_p(  # pylint: disable=useless-return
@@ -2882,8 +2934,8 @@ class MenaiVM:
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-member?' requires list arguments, got {a.type_name()}")
 
-        item = frame.locals[instr.src1]
-        frame.locals[instr.dest] = MenaiBoolean(a.contains(cast(MenaiValue, item)))
+        item = cast(MenaiValue, frame.locals[instr.src1])
+        frame.locals[instr.dest] = MenaiBoolean(item in a.elements)
         return None
 
     def _op_list_index(  # pylint: disable=useless-return
@@ -2894,9 +2946,13 @@ class MenaiVM:
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-index' requires list arguments, got {a.type_name()}")
 
-        item = frame.locals[instr.src1]
-        pos = a.position(cast(MenaiValue, item))
-        frame.locals[instr.dest] = MenaiInteger(pos) if pos is not None else Menai_NONE
+        item = cast(MenaiValue, frame.locals[instr.src1])
+        for i, elem in enumerate(a.elements):
+            if elem == item:
+                frame.locals[instr.dest] = MenaiInteger(i)
+                return None
+
+        frame.locals[instr.dest] = Menai_NONE
         return None
 
     def _op_list_slice(  # pylint: disable=useless-return
@@ -2919,7 +2975,7 @@ class MenaiVM:
         list_val = a
         start = b.value
         end = c.value
-        n = list_val.length()
+        n = len(list_val.elements)
         if start < 0:
             raise MenaiEvalError(f"list-slice start index cannot be negative: {start}")
 
@@ -2946,8 +3002,9 @@ class MenaiVM:
         if not isinstance(a, MenaiList):
             raise MenaiEvalError(f"Function 'list-remove' requires list arguments, got {a.type_name()}")
 
-        item = frame.locals[instr.src1]
-        frame.locals[instr.dest] = a.remove_all(cast(MenaiValue, item))
+        item = cast(MenaiValue, frame.locals[instr.src1])
+        new_elements = tuple(elem for elem in a.elements if elem != item)
+        frame.locals[instr.dest] = MenaiList(new_elements)
         return None
 
     def _op_list_concat(  # pylint: disable=useless-return
@@ -2962,7 +3019,7 @@ class MenaiVM:
         if not isinstance(b, MenaiList):
             raise MenaiEvalError(f"Function 'list-concat' requires list arguments, got {b.type_name()}")
 
-        frame.locals[instr.dest] = a.append_list(b)
+        frame.locals[instr.dest] = MenaiList(a.elements + b.elements)
         return None
 
     def _op_list_to_string(  # pylint: disable=useless-return

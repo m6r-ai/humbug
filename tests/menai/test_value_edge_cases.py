@@ -339,14 +339,7 @@ class TestMenaiValueEdgeCases:
         # Test type_name
         assert dict.type_name() == "dict"
 
-        # Test length method directly
-        assert dict.length() == 1
-
-        # Test is_empty method directly
-        assert not dict.is_empty()
-        assert MenaiDict().is_empty()
-
         # Test invalid key type error
         # Using a list as a key should fail
         with pytest.raises(MenaiEvalError, match="Dict keys must be strings, numbers, booleans, or symbols"):
-            MenaiDict._to_hashable_key(MenaiDict())
+            MenaiDict.to_hashable_key(MenaiDict())
