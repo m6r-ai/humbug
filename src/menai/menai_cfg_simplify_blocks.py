@@ -303,6 +303,7 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
             if not jump_preds:
                 continue
 
+            actually_inlined: Set[int] = set()
             for pred in jump_preds:
                 if isinstance(instr, MenaiCFGConstInstr):
                     # Duplicate the const with a fresh SSA value.
@@ -325,13 +326,14 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
                 else:
                     pred.terminator = MenaiCFGReturnTerm(value=return_term.value)
 
+                actually_inlined.add(pred.id)
                 changed = True
 
             # Remove target if every predecessor was a jump predecessor that
-            # we just inlined (i.e. no predecessor reaches target via a branch
-            # or other non-jump edge).  We compare counts before any mutation
-            # has changed the predecessors' terminators.
-            if len(jump_preds) == len(target.predecessors):
+            # we just inlined, and no predecessor reaches target via a branch
+            # or other non-jump edge.
+            if (len(actually_inlined) == len(jump_preds)
+                    and len(jump_preds) == len(target.predecessors)):
                 inlined_block_ids.add(target.id)
 
         if not changed:
@@ -365,6 +367,10 @@ def _max_value_id(func: MenaiCFGFunction) -> int:
             result = getattr(instr, 'result', None)
             if result is not None:
                 _check(result.id)
+
+            if isinstance(instr, MenaiCFGPhiInstr):
+                for incoming_val, _ in instr.incoming:
+                    _check(incoming_val.id)
 
             for vid in value_ids_in_instr(instr):
                 _check(vid)

@@ -534,6 +534,80 @@ class TestTrivialReturnInlining:
         assert not changed, "block with patch_instrs must not be inlined"
 
 
+    def test_phi_predecessor_missing_from_incoming_not_removed(self):
+        """
+        Bug #3: a phi-bearing trivial return block must not be removed when
+        one of its jump predecessors is absent from the phi's incoming list.
+
+        Setup:
+          entry branches to pred_a and pred_b.
+          pred_a jumps to ret_block.
+          pred_b jumps to ret_block.
+          ret_block: phi(%val_a <- pred_a); return phi_result
+
+        pred_b is NOT listed in the phi's incoming entries, so it cannot be
+        inlined (there is no contributing value to substitute).  The block
+        must therefore remain — removing it would leave pred_b with a
+        dangling jump.
+        """
+        v_cond = v("cond")
+        v_val_a = v("val_a")
+        v_phi = v("phi")
+
+        ret_block = block(
+            3,
+            MenaiCFGPhiInstr(result=v_phi, incoming=[]),
+            terminator=MenaiCFGReturnTerm(value=v_phi),
+            label="ret",
+        )
+        pred_a = block(1, terminator=MenaiCFGJumpTerm(target=ret_block), label="pred_a")
+        pred_b = block(2, terminator=MenaiCFGJumpTerm(target=ret_block), label="pred_b")
+        entry = block(
+            0,
+            MenaiCFGConstInstr(result=v_cond, value=MenaiInteger(1)),
+            terminator=MenaiCFGBranchTerm(cond=v_cond, true_block=pred_a, false_block=pred_b),
+            label="entry",
+        )
+        # Only pred_a is listed in the phi — pred_b is intentionally absent.
+        ret_block.instrs[0] = MenaiCFGPhiInstr(
+            result=v_phi, incoming=[(v_val_a, pred_a)]
+        )
+        f = func(entry, pred_a, pred_b, ret_block)
+
+        new_f, changed = _pass._inline_trivial_returns(f)
+
+        # pred_a was inlined (it is in the phi incoming list).
+        assert isinstance(next(b for b in new_f.blocks if b.id == 1).terminator,
+                          MenaiCFGReturnTerm), "pred_a should be inlined"
+        # ret_block must NOT be removed because pred_b was not inlined.
+        assert 3 in block_ids(new_f), "ret_block must remain (pred_b still jumps to it)"
+
+    def test_max_value_id_includes_phi_incoming_values(self):
+        """
+        Bug #5: _max_value_id must account for value ids that appear only as
+        phi incoming values, not as instruction results or other operands.
+
+        If the highest id in the function is a phi incoming value that is not
+        defined in any instruction result, _max_value_id would previously
+        return a lower bound, causing fresh_value() to reuse an existing id.
+        """
+        from menai.menai_cfg_simplify_blocks import _max_value_id
+
+        # v_high appears only as a phi incoming value — it is not the result
+        # of any instruction in this function.
+        v_low = MenaiCFGValue(id=1, hint="low")
+        v_high = MenaiCFGValue(id=999, hint="high")
+        v_phi = MenaiCFGValue(id=2, hint="phi")
+
+        phi_instr = MenaiCFGPhiInstr(result=v_phi, incoming=[(v_high, None)])  # type: ignore[arg-type]
+        b = block(0, phi_instr, terminator=MenaiCFGReturnTerm(value=v_low), label="entry")
+        f = func(b)
+
+        assert _max_value_id(f) == 999, (
+            "_max_value_id must include phi incoming value ids"
+        )
+
+
 class TestIntegration:
     """
     Compile Menai source through the full pipeline up to the CFG stage and
