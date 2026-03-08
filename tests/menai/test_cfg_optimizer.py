@@ -24,7 +24,6 @@ from menai.menai_cfg import (
     MenaiCFGValue,
 )
 from menai.menai_cfg_bypass_empty_blocks import MenaiCFGBypassEmptyBlocks
-from menai.menai_cfg_eliminate_dead_blocks import MenaiCFGEliminateDeadBlocks
 from menai.menai_value import MenaiInteger
 
 
@@ -304,108 +303,8 @@ class TestEmptyBlockBypass:
         assert not changed, "block with patch_instrs must not be bypassed"
 
 
-class TestDeadBlockElimination:
-
-    def test_unreachable_block_removed(self):
-        """A block with no predecessors (and not the entry) is removed."""
-        v_c = v("c")
-        v_d = v("d")
-        dead = block(1, terminator=MenaiCFGReturnTerm(value=v_d), label="dead")
-        entry = block(
-            0,
-            MenaiCFGConstInstr(result=v_c, value=MenaiInteger(1)),
-            terminator=MenaiCFGReturnTerm(value=v_c),
-            label="entry",
-        )
-        f = func(entry, dead)
-
-        new_f, changed = MenaiCFGEliminateDeadBlocks()._optimize_function(f)
-        assert changed
-        assert 1 not in block_ids(new_f)
-
-    def test_reachable_blocks_kept(self):
-        """All blocks reachable from entry are kept."""
-        v_c = v("c")
-        b1 = block(1, terminator=MenaiCFGReturnTerm(value=v_c), label="b1")
-        entry = block(0, terminator=MenaiCFGJumpTerm(target=b1), label="entry")
-        f = func(entry, b1)
-
-        new_f, changed = MenaiCFGEliminateDeadBlocks()._optimize_function(f)
-        assert not changed
-
-    def test_stale_phi_entry_pruned_for_dead_predecessor(self):
-        """
-        A phi that lists a dead block as predecessor has that entry pruned.
-        """
-        v_live = v("live")
-        v_dead = v("dead_val")
-        v_phi = v("phi")
-
-        dead_b = block(1, label="dead")
-        live_b = block(2, label="live")
-        join_b = block(
-            3,
-            MenaiCFGPhiInstr(
-                result=v_phi,
-                incoming=[(v_live, live_b), (v_dead, dead_b)],
-            ),
-            terminator=MenaiCFGReturnTerm(value=v_phi),
-            label="join",
-        )
-        live_b.terminator = MenaiCFGJumpTerm(target=join_b)
-        # dead_b has no terminator pointing to it from entry → unreachable.
-        dead_b.terminator = MenaiCFGJumpTerm(target=join_b)
-
-        entry = block(0, terminator=MenaiCFGJumpTerm(target=live_b), label="entry")
-        f = func(entry, dead_b, live_b, join_b)
-
-        new_f, changed = MenaiCFGEliminateDeadBlocks()._optimize_function(f)
-        assert changed
-        assert 1 not in block_ids(new_f)
-
-        join_new = next(b for b in new_f.blocks if b.id == 3)
-        phi = first_phi(join_new)
-        assert len(phi.incoming) == 1
-        assert phi.incoming[0][1].id == 2
-
-    def test_entry_block_kept_even_if_empty(self):
-        """The entry block is never removed, even if it has no predecessors."""
-        v_c = v("c")
-        entry = block(
-            0,
-            MenaiCFGConstInstr(result=v_c, value=MenaiInteger(1)),
-            terminator=MenaiCFGReturnTerm(value=v_c),
-            label="entry",
-        )
-        f = func(entry)
-
-        new_f, changed = MenaiCFGEliminateDeadBlocks()._optimize_function(f)
-        assert not changed
-        assert len(new_f.blocks) == 1
-
-    def test_branch_both_targets_reachable(self):
-        """Both sides of a branch are reachable and kept."""
-        v_cond = v("cond")
-        v_t = v("t")
-        v_e = v("e")
-        then_b = block(1, terminator=MenaiCFGReturnTerm(value=v_t), label="then")
-        else_b = block(2, terminator=MenaiCFGReturnTerm(value=v_e), label="else")
-        entry = block(
-            0,
-            MenaiCFGConstInstr(result=v_cond, value=MenaiInteger(1)),
-            terminator=MenaiCFGBranchTerm(cond=v_cond, true_block=then_b, false_block=else_b),
-            label="entry",
-        )
-        f = func(entry, then_b, else_b)
-
-        new_f, changed = MenaiCFGEliminateDeadBlocks()._optimize_function(f)
-        assert not changed
-        assert len(new_f.blocks) == 3
-
-
 _ALL_PASSES = [
     MenaiCFGBypassEmptyBlocks(),
-    MenaiCFGEliminateDeadBlocks(),
 ]
 
 
@@ -665,8 +564,8 @@ class TestIntegration:
               (f x)
               (g x)))
 
-        Both branches are tail-calls.  The join block is unreachable.
-        After optimization: no phi, no join block.
+        Both branches are tail-calls.  The CFG builder does not create a join
+        block at all — it is a builder invariant, not an optimizer concern.
         """
         source = """
         (lambda (x f g)
@@ -674,12 +573,12 @@ class TestIntegration:
               (f x)
               (g x)))
         """
-        cfg_opt = self._build_cfg(source, optimize=True)
-
-        assert self._count_phis(cfg_opt) == 0
-        # No join block should remain in the innermost lambda (it was unreachable).
-        inner = self._find_innermost_lambda(cfg_opt)
+        cfg_raw = self._build_cfg(source, optimize=False)
+        assert self._count_phis(cfg_raw) == 0
+        # The builder never creates a join block when both branches are tail-calls.
+        inner = self._find_innermost_lambda(cfg_raw)
         join_blocks = [b for b in inner.blocks if b.label == "join"]
+        assert len(join_blocks) == 0, "builder should not create a join block when both branches are tail-calls"
         assert len(join_blocks) == 0, "unreachable join block should be eliminated"
 
     def test_nested_if_optimization(self):

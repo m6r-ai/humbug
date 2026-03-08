@@ -685,3 +685,49 @@ def remap_term(
         )
 
     return term
+
+
+def value_ids_in_instr(instr: 'MenaiCFGInstr') -> List[int]:
+    """Return all input value ids referenced by a non-phi instruction."""
+    if isinstance(instr, MenaiCFGBuiltinInstr):
+        return [a.id for a in instr.args]
+
+    if isinstance(instr, MenaiCFGCallInstr):
+        return [instr.func.id] + [a.id for a in instr.args]
+
+    if isinstance(instr, MenaiCFGApplyInstr):
+        return [instr.func.id, instr.arg_list.id]
+
+    if isinstance(instr, MenaiCFGMakeClosureInstr):
+        return [c.id for c in instr.captures]
+
+    if isinstance(instr, MenaiCFGPatchClosureInstr):
+        return [instr.closure.id, instr.value.id]
+
+    if isinstance(instr, MenaiCFGTraceInstr):
+        return [m.id for m in instr.messages] + [instr.value.id]
+
+    # MenaiCFGConstInstr, MenaiCFGGlobalInstr, MenaiCFGParamInstr,
+    # MenaiCFGFreeVarInstr: no input value references.
+    return []
+
+
+def value_ids_in_term(term: 'MenaiCFGTerminator') -> List[int]:
+    """Return all input value ids referenced by a terminator."""
+    if isinstance(term, MenaiCFGReturnTerm):
+        return [term.value.id]
+
+    if isinstance(term, MenaiCFGBranchTerm):
+        return [term.cond.id]
+
+    if isinstance(term, MenaiCFGTailCallTerm):
+        return [term.func.id] + [a.id for a in term.args]
+
+    if isinstance(term, MenaiCFGTailApplyTerm):
+        return [term.func.id, term.arg_list.id]
+
+    if isinstance(term, MenaiCFGSelfLoopTerm):
+        return [a.id for a in term.args]
+
+    # MenaiCFGJumpTerm, MenaiCFGRaiseTerm: no value references.
+    return []

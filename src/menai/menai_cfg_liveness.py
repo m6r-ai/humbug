@@ -37,8 +37,9 @@ from menai.menai_cfg import (
     MenaiCFGJumpTerm,
     MenaiCFGBranchTerm,
     MenaiCFGSelfLoopTerm,
+    value_ids_in_instr,
+    value_ids_in_term,
 )
-from menai.menai_cfg_collapse_phi_chains import _value_ids_in_instr, _value_ids_in_term
 
 
 class SlotAllocation:
@@ -74,7 +75,7 @@ def _uses_of_block(block: MenaiCFGBlock) -> Set[int]:
             _def(instr.result.id)
 
         else:
-            for vid in _value_ids_in_instr(instr):
+            for vid in value_ids_in_instr(instr):
                 _use(vid)
 
             result = _result_of_instr(instr)
@@ -86,7 +87,7 @@ def _uses_of_block(block: MenaiCFGBlock) -> Set[int]:
         _use(patch.value.id)
 
     if block.terminator is not None:
-        for vid in _value_ids_in_term(block.terminator):
+        for vid in value_ids_in_term(block.terminator):
             _use(vid)
 
     return uses
@@ -287,7 +288,7 @@ def allocate_slots(func: MenaiCFGFunction) -> SlotAllocation:
                 # Phi incomings are uses in predecessor blocks, not here.
                 continue
 
-            for vid in _value_ids_in_instr(instr):
+            for vid in value_ids_in_instr(instr):
                 last_use[vid] = i
 
         for j, patch in enumerate(block.patch_instrs):
@@ -296,7 +297,7 @@ def allocate_slots(func: MenaiCFGFunction) -> SlotAllocation:
             last_use[patch.value.id] = idx
 
         if block.terminator is not None:
-            for vid in _value_ids_in_term(block.terminator):
+            for vid in value_ids_in_term(block.terminator):
                 last_use[vid] = term_idx
 
         # Start with the live-in set for this block.
@@ -353,7 +354,7 @@ def allocate_slots(func: MenaiCFGFunction) -> SlotAllocation:
                 continue
 
             # General case: instruction with a result.
-            input_ids = _value_ids_in_instr(instr)
+            input_ids = value_ids_in_instr(instr)
 
             # For MakeClosureInstr, captures are read again after the result
             # slot is written (the bytecode builder emits PATCH_CLOSURE after

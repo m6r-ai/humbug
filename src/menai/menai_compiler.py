@@ -19,7 +19,6 @@ from menai.menai_cfg_builder import MenaiCFGBuilder
 from menai.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
 from menai.menai_cfg_bypass_empty_blocks import MenaiCFGBypassEmptyBlocks
 from menai.menai_cfg_collapse_phi_chains import MenaiCFGCollapsePhiChains
-from menai.menai_cfg_eliminate_dead_blocks import MenaiCFGEliminateDeadBlocks
 from menai.menai_ir_builder import MenaiIRBuilder
 from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
 from menai.menai_ir_copy_propagator import MenaiIRCopyPropagator
@@ -72,7 +71,6 @@ class MenaiCompiler:
             self.cfg_passes = [
                 MenaiCFGCollapsePhiChains(),
                 MenaiCFGBypassEmptyBlocks(),
-                MenaiCFGEliminateDeadBlocks(),
             ]
 
 

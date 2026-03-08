@@ -41,23 +41,14 @@ from typing import Dict, List, Set, Tuple
 
 from menai.menai_cfg import (
     MenaiCFGBlock,
-    MenaiCFGBuiltinInstr,
-    MenaiCFGCallInstr,
-    MenaiCFGApplyInstr,
-    MenaiCFGBranchTerm,
     MenaiCFGFunction,
     MenaiCFGInstr,
     MenaiCFGMakeClosureInstr,
-    MenaiCFGPatchClosureInstr,
     MenaiCFGPhiInstr,
-    MenaiCFGReturnTerm,
-    MenaiCFGSelfLoopTerm,
-    MenaiCFGTailApplyTerm,
-    MenaiCFGTailCallTerm,
-    MenaiCFGTerminator,
-    MenaiCFGTraceInstr,
     MenaiCFGValue,
     relink_predecessors,
+    value_ids_in_instr,
+    value_ids_in_term,
 )
 from menai.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
 
@@ -123,7 +114,7 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
                             total_uses[incoming_val.id] += 1
                             phi_uses[incoming_val.id] += 1
                 else:
-                    for vid in _value_ids_in_instr(instr):
+                    for vid in value_ids_in_instr(instr):
                         if vid in phi_defs:
                             total_uses[vid] += 1
 
@@ -134,7 +125,7 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
 
             term = block.terminator
             if term is not None:
-                for vid in _value_ids_in_term(term):
+                for vid in value_ids_in_term(term):
                     if vid in phi_defs:
                         total_uses[vid] += 1
 
@@ -237,49 +228,3 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
                 ]
 
         return True
-
-
-def _value_ids_in_instr(instr: MenaiCFGInstr) -> List[int]:
-    """Return all input value ids referenced by a non-phi instruction."""
-    if isinstance(instr, MenaiCFGBuiltinInstr):
-        return [a.id for a in instr.args]
-
-    if isinstance(instr, MenaiCFGCallInstr):
-        return [instr.func.id] + [a.id for a in instr.args]
-
-    if isinstance(instr, MenaiCFGApplyInstr):
-        return [instr.func.id, instr.arg_list.id]
-
-    if isinstance(instr, MenaiCFGMakeClosureInstr):
-        return [c.id for c in instr.captures]
-
-    if isinstance(instr, MenaiCFGPatchClosureInstr):
-        return [instr.closure.id, instr.value.id]
-
-    if isinstance(instr, MenaiCFGTraceInstr):
-        return [m.id for m in instr.messages] + [instr.value.id]
-
-    # MenaiCFGConstInstr, MenaiCFGGlobalInstr, MenaiCFGParamInstr,
-    # MenaiCFGFreeVarInstr: no input value references.
-    return []
-
-
-def _value_ids_in_term(term: MenaiCFGTerminator) -> List[int]:
-    """Return all input value ids referenced by a terminator."""
-    if isinstance(term, MenaiCFGReturnTerm):
-        return [term.value.id]
-
-    if isinstance(term, MenaiCFGBranchTerm):
-        return [term.cond.id]
-
-    if isinstance(term, MenaiCFGTailCallTerm):
-        return [term.func.id] + [a.id for a in term.args]
-
-    if isinstance(term, MenaiCFGTailApplyTerm):
-        return [term.func.id, term.arg_list.id]
-
-    if isinstance(term, MenaiCFGSelfLoopTerm):
-        return [a.id for a in term.args]
-
-    # MenaiCFGJumpTerm, MenaiCFGRaiseTerm: no value references.
-    return []

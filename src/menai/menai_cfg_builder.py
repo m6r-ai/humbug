@@ -288,10 +288,10 @@ class MenaiCFGBuilder:
             ir.condition_plan, block, scope, state, tail=False
         )
 
-        # Create the three successor blocks.
+        # Create the branch target blocks.  The join block is created lazily
+        # below — only if at least one branch actually reaches it.
         then_block = state.new_block("then")
         else_block = state.new_block("else")
-        join_block = state.new_block("join")
 
         block.terminator = MenaiCFGBranchTerm(
             cond=cond_val,
@@ -303,39 +303,37 @@ class MenaiCFGBuilder:
         then_val, then_exit = self._build_expr(
             ir.then_plan, then_block, scope, state, tail=tail
         )
-        # If the then branch didn't terminate (e.g. it's not a tail call),
-        # jump to the join block.
-        if then_exit.terminator is None:
-            then_exit.terminator = MenaiCFGJumpTerm(target=join_block)
 
         # Build else branch.
         else_val, else_exit = self._build_expr(
             ir.else_plan, else_block, scope, state, tail=tail
         )
-        if else_exit.terminator is None:
+
+        then_falls_through = then_exit.terminator is None
+        else_falls_through = else_exit.terminator is None
+
+        if not then_falls_through and not else_falls_through:
+            # Both branches are tail-terminated; no join block needed at all.
+            # Return else_exit as the current block — it is already terminated,
+            # so the caller's terminator-is-None guard will not emit a return.
+            placeholder = state.new_value("if_result")
+            return placeholder, else_exit
+
+        # At least one branch falls through — create the join block now.
+        join_block = state.new_block("join")
+
+        if then_falls_through:
+            then_exit.terminator = MenaiCFGJumpTerm(target=join_block)
+        if else_falls_through:
             else_exit.terminator = MenaiCFGJumpTerm(target=join_block)
 
-        # Determine whether the join block is reachable.  It is reachable iff
-        # at least one branch has a JumpTerm pointing to it (i.e. the branch
-        # did not terminate with a tail-call/return/self-loop).
-        then_jumps_to_join = isinstance(then_exit.terminator, MenaiCFGJumpTerm) and then_exit.terminator.target is join_block
-        else_jumps_to_join = isinstance(else_exit.terminator, MenaiCFGJumpTerm) and else_exit.terminator.target is join_block
-        join_reachable = then_jumps_to_join or else_jumps_to_join
-
-        if not join_reachable:
-            # Both branches are tail-terminated; join is unreachable.
-            # Return a placeholder — the caller will not emit a further return.
-            placeholder = state.new_value("if_result")
-            return placeholder, join_block
-
-        # Join block is reachable.  If only one branch reaches it, the join
-        # value is unambiguous — no phi needed.  The join block will be empty
-        # and MenaiCFGBypassEmptyBlocks will eliminate it.
+        # If only one branch reaches join, the value is unambiguous — no phi.
+        # The join block will be empty and BypassEmptyBlocks will eliminate it.
         # If both branches reach it, emit a phi to merge the two values.
-        if then_jumps_to_join and not else_jumps_to_join:
+        if then_falls_through and not else_falls_through:
             return then_val, join_block
 
-        if else_jumps_to_join and not then_jumps_to_join:
+        if else_falls_through and not then_falls_through:
             return else_val, join_block
 
         phi_result = state.new_value("if_result")
