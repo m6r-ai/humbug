@@ -1,40 +1,27 @@
 """
-VM code generator for the Menai compiler.
+Bytecode emitter for the Menai VM backend.
 
-Translates a MenaiCFGFunction (SSA CFG) into a CodeObject ready for execution
-by the Menai VM.
+Translates a MenaiVCodeFunction (with allocated slots) into a CodeObject
+ready for execution by the Menai VM.
+
+This is the final, purely mechanical pass of the VM backend pipeline:
+
+    MenaiCFGFunction
+        → MenaiVCodeBuilder   (linearise, phi-eliminate)
+        → allocate_slots      (assign virtual registers to slots)
+        → peephole            (eliminate redundant moves and jumps)
+        → MenaiBytecodeBuilder (emit CodeObject)  ← this file
+
+The emitter has no knowledge of SSA, phi nodes, or liveness.  It simply
+walks the flat VCode instruction list and emits the corresponding bytecode,
+resolving label references to instruction indices in a back-patch phase.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 from menai.menai_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Instruction, Opcode
-from menai.menai_cfg import (
-    MenaiCFGApplyInstr,
-    MenaiCFGBlock,
-    MenaiCFGBranchTerm,
-    MenaiCFGBuiltinInstr,
-    MenaiCFGCallInstr,
-    MenaiCFGConstInstr,
-    MenaiCFGFreeVarInstr,
-    MenaiCFGFunction,
-    MenaiCFGGlobalInstr,
-    MenaiCFGInstr,
-    MenaiCFGJumpTerm,
-    MenaiCFGMakeClosureInstr,
-    MenaiCFGPatchClosureInstr,
-    MenaiCFGParamInstr,
-    MenaiCFGPhiInstr,
-    MenaiCFGRaiseTerm,
-    MenaiCFGReturnTerm,
-    MenaiCFGSelfLoopTerm,
-    MenaiCFGTailApplyTerm,
-    MenaiCFGTailCallTerm,
-    MenaiCFGTerminator,
-    MenaiCFGTraceInstr,
-    MenaiCFGValue,
-)
-from menai.menai_cfg_liveness import allocate_slots
+from menai.menai_cfg import MenaiCFGFunction
 from menai.menai_value import (
     MenaiBoolean,
     MenaiComplex,
@@ -47,9 +34,32 @@ from menai.menai_value import (
     MenaiString,
     MenaiValue,
 )
+from menai.menai_vcode import (
+    MenaiVCodeApply,
+    MenaiVCodeBuiltin,
+    MenaiVCodeCall,
+    MenaiVCodeFunction,
+    MenaiVCodeJump,
+    MenaiVCodeJumpIfFalse,
+    MenaiVCodeJumpIfTrue,
+    MenaiVCodeLabel,
+    MenaiVCodeLoadConst,
+    MenaiVCodeLoadName,
+    MenaiVCodeMakeClosure,
+    MenaiVCodeMove,
+    MenaiVCodePatchClosure,
+    MenaiVCodeRaise,
+    MenaiVCodeReg,
+    MenaiVCodeReturn,
+    MenaiVCodeTailApply,
+    MenaiVCodeTailCall,
+    MenaiVCodeTrace,
+)
+from menai.menai_vcode_allocator import SlotMap, allocate_slots
+from menai.menai_vcode_builder import MenaiVCodeBuilder
+from menai.menai_vcode_peephole import peephole
 
 
-# Derived opcode maps built from the single source of truth in BUILTIN_OPCODE_MAP.
 UNARY_OPS  = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 1}
 BINARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 2}
 TERNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 3}
@@ -57,52 +67,35 @@ TERNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if a
 
 @dataclass
 class _EmitContext:
-    """
-    Mutable state for emitting one MenaiCFGFunction into a CodeObject.
-
-    Tracks the instruction stream, constant/name pools, nested code objects,
-    and the SSA-value-to-slot mapping.  The slot_map is populated up front by
-    the liveness-based allocator before emission begins.
-    """
+    """Mutable state for emitting one MenaiVCodeFunction into a CodeObject."""
     instructions: List[Instruction] = field(default_factory=list)
     constants: List[MenaiValue] = field(default_factory=list)
     names: List[str] = field(default_factory=list)
     code_objects: List[CodeObject] = field(default_factory=list)
     constant_map: Dict[tuple, int] = field(default_factory=dict)
     name_map: Dict[str, int] = field(default_factory=dict)
+    slot_map: SlotMap = field(default_factory=lambda: SlotMap(slots={}, slot_count=0))
 
-    # SSA value id → local slot index (pre-populated by allocate_slots)
-    slot_map: Dict[int, int] = field(default_factory=dict)
-    next_slot: int = 0
-
-    # Name of the current function (for self-loop detection label)
-    current_lambda_name: Optional[str] = None
-
-    def assign_slot(self, value: MenaiCFGValue, slot: int) -> None:
-        """Assign a specific slot to `value` (used for params/free-vars)."""
-        self.slot_map[value.id] = slot
-        if slot >= self.next_slot:
-            self.next_slot = slot + 1
-
-    def slot_of(self, value: MenaiCFGValue) -> int:
-        """Return the slot assigned to `value`.  Asserts it exists."""
-        assert value.id in self.slot_map, (
-            f"MenaiVMCodeGen: SSA value {value} has no assigned slot"
-        )
-        return self.slot_map[value.id]
+    def slot_of(self, reg: MenaiVCodeReg) -> int:
+        """Get the slot index assigned to reg."""
+        return self.slot_map.slot_of(reg)
 
     def emit(self, opcode: Opcode, src0: int = 0, src1: int = 0, dest: int = 0, src2: int = 0) -> int:
-        """Emit an instruction, returning its index."""
+        """Emit an instruction and return its index."""
         idx = len(self.instructions)
         self.instructions.append(Instruction(int(opcode), dest=dest, src0=src0, src1=src1, src2=src2))
         return idx
 
-    def load_value(self, value: MenaiCFGValue) -> None:
-        """Push `value` onto the call stack via PUSH <slot>."""
-        self.emit(Opcode.PUSH, self.slot_of(value))
+    def current_index(self) -> int:
+        """Get the index of the next instruction to be emitted."""
+        return len(self.instructions)
+
+    def patch(self, instr_index: int, field_name: str, value: int) -> None:
+        """Patch the specified field of an instruction."""
+        setattr(self.instructions[instr_index], field_name, value)
 
     def emit_constant(self, value: MenaiValue, dest: int) -> None:
-        """Emit the appropriate LOAD instruction writing directly to register dest."""
+        """Emit instructions to load a constant value into dest."""
         if isinstance(value, MenaiNone):
             self.emit(Opcode.LOAD_NONE, dest=dest)
             return
@@ -122,23 +115,9 @@ class _EmitContext:
         const_idx = self.add_constant(value)
         self.emit(Opcode.LOAD_CONST, const_idx, dest=dest)
 
-    def patch_jump(self, instr_index: int, target: int, src0: str = 'src0') -> None:
-        """
-        Back-patch a jump target into the given field of an already-emitted instruction.
-
-        JUMP stores its target in src0.
-        JUMP_IF_FALSE / JUMP_IF_TRUE store the condition in src0 and the target in src1.
-        """
-        setattr(self.instructions[instr_index], src0, target)
-
-    def current_index(self) -> int:
-        """Return the instruction index of the next instruction to be emitted."""
-        return len(self.instructions)
-
     def add_constant(self, value: MenaiValue) -> int:
-        """Add `value` to the constant pool if not already present, and return its index."""
-        if isinstance(value, (MenaiInteger, MenaiFloat, MenaiComplex,
-                               MenaiBoolean, MenaiString)):
+        """Add value to the constant pool if not already present, and return its index."""
+        if isinstance(value, (MenaiInteger, MenaiFloat, MenaiComplex, MenaiBoolean, MenaiString)):
             key: tuple = (type(value).__name__, value.value)
 
         else:
@@ -153,7 +132,7 @@ class _EmitContext:
         return idx
 
     def add_name(self, name: str) -> int:
-        """Add `name` to the name pool if not already present, and return its index."""
+        """Add a name to the name pool if not already present, and return its index."""
         if name in self.name_map:
             return self.name_map[name]
 
@@ -163,7 +142,7 @@ class _EmitContext:
         return idx
 
     def add_code_object(self, code_obj: CodeObject) -> int:
-        """Add `code_obj` to the code object pool and return its index."""
+        """Add a code object to the code object pool and return its index."""
         idx = len(self.code_objects)
         self.code_objects.append(code_obj)
         return idx
@@ -173,9 +152,15 @@ class MenaiBytecodeBuilder:
     """
     Generates a CodeObject from a MenaiCFGFunction.
 
+    Orchestrates the full VM backend pipeline:
+      1. Lower CFG to VCode (MenaiVCodeBuilder)
+      2. Allocate slots (allocate_slots)
+      3. Peephole optimise (peephole)
+      4. Emit bytecode (this class)
+
     Usage::
 
-        code_obj = MenaiVMCodeGen().generate(cfg_function, name="<module>")
+        code_obj = MenaiBytecodeBuilder().build(cfg_function, name="<module>")
     """
 
     def __init__(self) -> None:
@@ -192,315 +177,195 @@ class MenaiBytecodeBuilder:
         Returns:
             A CodeObject ready for execution by the Menai VM.
         """
-        ctx = _EmitContext(current_lambda_name=func.binding_name)
-        self._emit_function_body(func, ctx)
+        vcode = MenaiVCodeBuilder().build(func)
+        slot_map = allocate_slots(vcode)
+        vcode = peephole(vcode, slot_map)
+
+        ctx = _EmitContext(slot_map=slot_map)
+        self._emit_vcode(vcode, ctx)
         return CodeObject(
             instructions=ctx.instructions,
             constants=ctx.constants,
             names=ctx.names,
             code_objects=ctx.code_objects,
             param_count=0,
-            local_count=ctx.next_slot,
+            local_count=slot_map.slot_count,
             name=name,
         )
 
-    def _emit_function_body(self, func: MenaiCFGFunction, ctx: _EmitContext) -> None:
+    def _emit_vcode(self, func: MenaiVCodeFunction, ctx: _EmitContext) -> None:
         """
-        Emit all blocks of `func` into `ctx` in reverse post-order (RPO).
+        Emit all instructions of func into ctx.
 
-        Phase 1: run liveness analysis and pre-populate the slot map.
-        Phase 2: emit each block's instructions, patch_instrs, and terminator.
-        Phase 3: back-patch all forward jump targets.
+        Phase 1: emit instructions, recording label positions and collecting
+                 forward jump patch sites.
+        Phase 2: back-patch all forward jump targets.
         """
-        # Phase 1: allocate all slots up front via liveness analysis.
-        allocation = allocate_slots(func)
-        ctx.slot_map = allocation.slot_map
-        ctx.next_slot = allocation.slot_count
+        label_index: Dict[str, int] = {}
+        forward_jumps: List[Tuple[int, str, str]] = []  # (instr_idx, label, field)
 
-        # Phase 2: emit blocks.
-        block_start: Dict[int, int] = {}   # block id → instruction index of first instr
-        forward_jumps: List[Tuple[int, MenaiCFGBlock, str]] = []  # (instr_idx, target_block, patch_field)
+        # The self-loop sentinel label resolves to instruction index 0 — the
+        # start of the function body (after ENTER, which is emitted before
+        # _emit_vcode is called for lambdas).
+        entry_index = ctx.current_index()
 
-        rpo = self._rpo(func)
-        for i, block in enumerate(rpo):
-            next_block = rpo[i + 1] if i + 1 < len(rpo) else None
-            block_start[block.id] = ctx.current_index()
-            self._emit_block(block, ctx, forward_jumps, next_block)
+        for instr in func.instrs:
+            if isinstance(instr, MenaiVCodeLabel):
+                label_index[instr.name] = ctx.current_index()
+                continue
 
-        # Phase 3: back-patch forward jumps.
-        for instr_idx, target_block, patch_field in forward_jumps:
-            ctx.patch_jump(instr_idx, block_start[target_block.id], patch_field)
+            if isinstance(instr, MenaiVCodeMove):
+                src_slot = ctx.slot_of(instr.src)
+                dst_slot = ctx.slot_of(instr.dst)
+                # Redundant moves should have been eliminated by the peephole
+                # pass, but guard here for safety.
+                if src_slot != dst_slot:
+                    ctx.emit(Opcode.MOVE, src_slot, dest=dst_slot)
 
-    def _rpo(self, func: MenaiCFGFunction) -> List['MenaiCFGBlock']:
-        """
-        Return the reachable blocks of `func` in reverse post-order.
+                continue
 
-        RPO is computed by DFS from the entry block, collecting blocks in
-        post-order (appended after all successors are visited), then reversing.
-        Self-loop back-edges (SelfLoopTerm → entry) are not followed.
-        Unreachable blocks (no path from entry) are excluded.
-        """
-        visited: set = set()
-        post_order: List[MenaiCFGBlock] = []
+            if isinstance(instr, MenaiVCodeLoadConst):
+                ctx.emit_constant(instr.value, dest=ctx.slot_of(instr.dst))
+                continue
 
-        def dfs(block: MenaiCFGBlock) -> None:
-            if block.id in visited:
-                return
+            if isinstance(instr, MenaiVCodeLoadName):
+                name_idx = ctx.add_name(instr.name)
+                ctx.emit(Opcode.LOAD_NAME, name_idx, dest=ctx.slot_of(instr.dst))
+                continue
 
-            visited.add(block.id)
-            term = block.terminator
-            if isinstance(term, MenaiCFGJumpTerm):
-                dfs(term.target)
+            if isinstance(instr, MenaiVCodeBuiltin):
+                self._emit_builtin(instr, ctx)
+                continue
 
-            elif isinstance(term, MenaiCFGBranchTerm):
-                dfs(term.true_block)
-                dfs(term.false_block)
-            # ReturnTerm, TailCallTerm, TailApplyTerm, SelfLoopTerm, RaiseTerm
-            # have no successors (SelfLoopTerm loops to entry but we don't
-            # follow it — it's a back-edge handled by JUMP 0).
-            post_order.append(block)
+            if isinstance(instr, MenaiVCodeCall):
+                for arg in instr.args:
+                    ctx.emit(Opcode.PUSH, ctx.slot_of(arg))
 
-        dfs(func.entry)
-        post_order.reverse()
-        return post_order
+                ctx.emit(Opcode.PUSH, ctx.slot_of(instr.func))
+                ctx.emit(Opcode.CALL, len(instr.args), dest=ctx.slot_of(instr.dst))
+                continue
 
-    def _emit_block(
-        self,
-        block: MenaiCFGBlock,
-        ctx: _EmitContext,
-        forward_jumps: List[Tuple[int, MenaiCFGBlock, str]],
-        next_block: Optional[MenaiCFGBlock],
-    ) -> None:
-        """Emit all instructions and the terminator for one block."""
-        for instr in block.instrs:
-            self._emit_instr(instr, ctx)
+            if isinstance(instr, MenaiVCodeTailCall):
+                for arg in instr.args:
+                    ctx.emit(Opcode.PUSH, ctx.slot_of(arg))
+                ctx.emit(Opcode.PUSH, ctx.slot_of(instr.func))
+                ctx.emit(Opcode.TAIL_CALL, len(instr.args))
+                continue
 
-        for patch in block.patch_instrs:
-            self._emit_patch(patch, ctx)
+            if isinstance(instr, MenaiVCodeApply):
+                ctx.emit(Opcode.PUSH, ctx.slot_of(instr.func))
+                ctx.emit(Opcode.PUSH, ctx.slot_of(instr.arg_list))
+                ctx.emit(Opcode.APPLY, dest=ctx.slot_of(instr.dst))
+                continue
 
-        assert block.terminator is not None, (
-            f"MenaiVMCodeGen: block {block.id} ({block.label}) has no terminator"
-        )
-        self._emit_terminator(block, block.terminator, ctx, forward_jumps, next_block)
+            if isinstance(instr, MenaiVCodeTailApply):
+                ctx.emit(Opcode.PUSH, ctx.slot_of(instr.func))
+                ctx.emit(Opcode.PUSH, ctx.slot_of(instr.arg_list))
+                ctx.emit(Opcode.TAIL_APPLY)
+                continue
 
-    def _emit_instr(self, instr: MenaiCFGInstr, ctx: _EmitContext) -> None:
-        """Emit a single non-terminator instruction."""
-        if isinstance(instr, MenaiCFGParamInstr):
-            # Params are already in their slots via ENTER; nothing to emit.
-            return
+            if isinstance(instr, MenaiVCodeMakeClosure):
+                self._emit_make_closure(instr, ctx)
+                continue
 
-        if isinstance(instr, MenaiCFGFreeVarInstr):
-            # Free vars are in their slots after ENTER loads them; nothing to emit.
-            return
+            if isinstance(instr, MenaiVCodePatchClosure):
+                ctx.emit(
+                    Opcode.PATCH_CLOSURE,
+                    ctx.slot_of(instr.closure),
+                    ctx.slot_of(instr.value),
+                    src2=instr.capture_index,
+                )
+                continue
 
-        if isinstance(instr, MenaiCFGPhiInstr):
-            # Phi nodes emit no instructions; slots are pre-assigned by the allocator.
-            return
+            if isinstance(instr, MenaiVCodeTrace):
+                for msg in instr.messages:
+                    ctx.emit(Opcode.EMIT_TRACE, ctx.slot_of(msg))
 
-        if isinstance(instr, MenaiCFGConstInstr):
-            ctx.emit_constant(instr.value, dest=ctx.slot_of(instr.result))
-            return
+                dst_slot = ctx.slot_of(instr.dst)
+                val_slot = ctx.slot_of(instr.value)
+                if dst_slot != val_slot:
+                    ctx.emit(Opcode.MOVE, val_slot, dest=dst_slot)
 
-        if isinstance(instr, MenaiCFGGlobalInstr):
-            name_idx = ctx.add_name(instr.name)
-            ctx.emit(Opcode.LOAD_NAME, name_idx, dest=ctx.slot_of(instr.result))
-            return
+                continue
 
-        if isinstance(instr, MenaiCFGBuiltinInstr):
-            self._emit_builtin(instr, ctx)
-            return
+            if isinstance(instr, MenaiVCodeReturn):
+                ctx.emit(Opcode.RETURN, ctx.slot_of(instr.value))
+                continue
 
-        if isinstance(instr, MenaiCFGCallInstr):
-            for arg in instr.args:
-                ctx.load_value(arg)
-            ctx.load_value(instr.func)
-            ctx.emit(Opcode.CALL, len(instr.args), dest=ctx.slot_of(instr.result))
-            return
+            if isinstance(instr, MenaiVCodeRaise):
+                const_idx = ctx.add_constant(instr.message)
+                ctx.emit(Opcode.RAISE_ERROR, const_idx)
+                continue
 
-        if isinstance(instr, MenaiCFGApplyInstr):
-            ctx.load_value(instr.func)
-            ctx.load_value(instr.arg_list)
-            ctx.emit(Opcode.APPLY, dest=ctx.slot_of(instr.result))
-            return
+            if isinstance(instr, MenaiVCodeJump):
+                if instr.label == "__entry__":
+                    ctx.emit(Opcode.JUMP, entry_index)
 
-        if isinstance(instr, MenaiCFGMakeClosureInstr):
-            self._emit_make_closure(instr, ctx)
-            return
+                else:
+                    jump_idx = ctx.emit(Opcode.JUMP, 0)
+                    forward_jumps.append((jump_idx, instr.label, 'src0'))
 
-        if isinstance(instr, MenaiCFGTraceInstr):
-            for msg in instr.messages:
-                ctx.emit(Opcode.EMIT_TRACE, ctx.slot_of(msg))
-            # result is aliased to value by the allocator; slot_of works directly.
-            return
+                continue
 
-        if isinstance(instr, MenaiCFGPatchClosureInstr):
-            self._emit_patch(instr, ctx)
-            return
+            if isinstance(instr, MenaiVCodeJumpIfTrue):
+                cond_slot = ctx.slot_of(instr.cond)
+                jump_idx = ctx.emit(Opcode.JUMP_IF_TRUE, cond_slot, 0)
+                forward_jumps.append((jump_idx, instr.label, 'src1'))
+                continue
 
-        raise TypeError(f"MenaiVMCodeGen: unhandled instruction {type(instr).__name__}")
+            if isinstance(instr, MenaiVCodeJumpIfFalse):
+                cond_slot = ctx.slot_of(instr.cond)
+                jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, cond_slot, 0)
+                forward_jumps.append((jump_idx, instr.label, 'src1'))
+                continue
 
-    def _emit_phi_stores_for_successor(
-        self,
-        current_block: MenaiCFGBlock,
-        successor: MenaiCFGBlock,
-        ctx: _EmitContext,
-    ) -> None:
-        """Emit MOVEs for phi incomings that this block contributes to successor."""
-        for instr in successor.instrs:
-            if not isinstance(instr, MenaiCFGPhiInstr):
-                break
+            raise TypeError(
+                f"MenaiBytecodeBuilder: unhandled VCode instruction {type(instr).__name__}"
+            )
 
-            for incoming_val, pred_block in instr.incoming:
-                if pred_block.id == current_block.id:
-                    src_slot = ctx.slot_of(incoming_val)
-                    phi_slot = ctx.slot_of(instr.result)
-                    if src_slot != phi_slot:
-                        ctx.emit(Opcode.MOVE, src_slot, dest=phi_slot)
+        # Phase 2: back-patch forward jumps.
+        for instr_idx, label, field_name in forward_jumps:
+            assert label in label_index, (
+                f"MenaiBytecodeBuilder: undefined label {label!r}"
+            )
+            ctx.patch(instr_idx, field_name, label_index[label])
 
-    def _emit_patch(self, patch: MenaiCFGPatchClosureInstr, ctx: _EmitContext) -> None:
-        """
-        Emit a PATCH_CLOSURE instruction for a letrec fixup.
-
-        PATCH_CLOSURE src0=closure_reg, src1=value_reg, src2=capture_idx
-        All three operands are register indices — no stack involvement.
-        """
-        closure_slot = ctx.slot_of(patch.closure)
-        value_slot = ctx.slot_of(patch.value)
-        ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, value_slot, src2=patch.capture_index)
-
-    def _emit_terminator(
-        self,
-        block: MenaiCFGBlock,
-        term: MenaiCFGTerminator,
-        ctx: _EmitContext,
-        forward_jumps: List[Tuple[int, MenaiCFGBlock, str]],
-        next_block: Optional[MenaiCFGBlock],
-    ) -> None:
-        if isinstance(term, MenaiCFGReturnTerm):
-            ctx.emit(Opcode.RETURN, ctx.slot_of(term.value))
-            return
-
-        if isinstance(term, MenaiCFGJumpTerm):
-            self._emit_phi_stores_for_successor(block, term.target, ctx)
-            if next_block is None or next_block.id != term.target.id:
-                jump_idx = ctx.emit(Opcode.JUMP, 0)
-                forward_jumps.append((jump_idx, term.target, 'src0'))
-
-            return
-
-        if isinstance(term, MenaiCFGBranchTerm):
-            cond_slot = ctx.slot_of(term.cond)
-            next_id = next_block.id if next_block is not None else -1
-            if next_id == term.false_block.id:
-                true_jump_idx = ctx.emit(Opcode.JUMP_IF_TRUE, cond_slot, 0)
-                forward_jumps.append((true_jump_idx, term.true_block, 'src1'))
-
-            elif next_id == term.true_block.id:
-                false_jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, cond_slot, 0)
-                forward_jumps.append((false_jump_idx, term.false_block, 'src1'))
-
-            else:
-                false_jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, cond_slot, 0)
-                true_jump_idx = ctx.emit(Opcode.JUMP, 0)
-                forward_jumps.append((true_jump_idx, term.true_block, 'src0'))
-                forward_jumps.append((false_jump_idx, term.false_block, 'src1'))
-
-            return
-
-        if isinstance(term, MenaiCFGTailCallTerm):
-            for arg in term.args:
-                ctx.load_value(arg)
-
-            ctx.load_value(term.func)
-            ctx.emit(Opcode.TAIL_CALL, len(term.args))
-            return
-
-        if isinstance(term, MenaiCFGTailApplyTerm):
-            ctx.load_value(term.func)
-            ctx.load_value(term.arg_list)
-            ctx.emit(Opcode.TAIL_APPLY)
-            return
-
-        if isinstance(term, MenaiCFGSelfLoopTerm):
-            for arg in term.args:
-                ctx.load_value(arg)
-
-            ctx.emit(Opcode.JUMP, 0)
-            return
-
-        if isinstance(term, MenaiCFGRaiseTerm):
-            const_idx = ctx.add_constant(term.message)
-            ctx.emit(Opcode.RAISE_ERROR, const_idx)
-            return
-
-        raise TypeError(f"MenaiVMCodeGen: unhandled terminator {type(term).__name__}")
-
-    def _emit_builtin(self, instr: MenaiCFGBuiltinInstr, ctx: _EmitContext) -> None:
-        """
-        Emit a builtin operation.
-
-        All optional arguments are synthesised by the desugarer, so every
-        builtin arrives here with exactly the arity declared in
-        BUILTIN_OPCODE_MAP.  The three generic branches below assert that
-        invariant and dispatch to the correct opcode.
-        """
+    def _emit_builtin(self, instr: MenaiVCodeBuiltin, ctx: _EmitContext) -> None:
         op = instr.op
         args = instr.args
-        result = instr.result
+        dest = ctx.slot_of(instr.dst)
 
         opcode, _ = BUILTIN_OPCODE_MAP.get(op, (None, None))
         if opcode is None:
-            raise ValueError(f"MenaiVMCodeGen: unknown builtin op {op!r}")
+            raise ValueError(f"MenaiBytecodeBuilder: unknown builtin op {op!r}")
 
         def slot(i: int) -> int:
             return ctx.slot_of(args[i])
 
-        dest = ctx.slot_of(result)
-
         if op in TERNARY_OPS:
-            assert len(args) == 3, f"_emit_builtin: {op!r} expects 3 args, got {len(args)}"
+            assert len(args) == 3
             ctx.emit(opcode, slot(0), slot(1), dest=dest, src2=slot(2))
 
         elif op in BINARY_OPS:
-            assert len(args) == 2, f"_emit_builtin: {op!r} expects 2 args, got {len(args)}"
+            assert len(args) == 2
             ctx.emit(opcode, slot(0), slot(1), dest=dest)
 
         elif op in UNARY_OPS:
-            assert len(args) == 1, f"_emit_builtin: {op!r} expects 1 arg, got {len(args)}"
+            assert len(args) == 1
             ctx.emit(opcode, slot(0), dest=dest)
 
         else:
-            raise ValueError(f"MenaiVMCodeGen: unhandled register-based builtin op {op!r}")
+            raise ValueError(f"MenaiBytecodeBuilder: unhandled builtin op {op!r}")
 
-    def _emit_make_closure(
-        self, instr: MenaiCFGMakeClosureInstr, ctx: _EmitContext
-    ) -> None:
-        """
-        Emit the code to construct a closure or a plain function constant.
-
-        Recursively generates the child CodeObject for instr.function, then
-        emits:
-          - MAKE_CLOSURE code_idx 0 followed by PATCH_CLOSURE for each outer
-            capture, when needs_patching is True.  All free-var slots are
-            pre-allocated as None; sibling captures are filled later by the
-            letrec phase-3 patch_instrs, and outer captures are filled here
-            immediately after MAKE_CLOSURE.  This mirrors the old codegen's
-            letrec two-phase approach and ensures outer captures land at the
-            correct slot indices (after the sibling slots), not at slot 0.
-          - MAKE_CLOSURE with all eagerly-loaded captures packed from slot 0,
-            when needs_patching is False but there are captures.
-          - LOAD_CONST with a pre-built MenaiFunction, only when there are
-            no captures AND needs_patching is False.
-        """
-        child_func = instr.function
-        child_code = self._generate_lambda_code_object(child_func)
+    def _emit_make_closure(self, instr: MenaiVCodeMakeClosure, ctx: _EmitContext) -> None:
+        child_code = self._emit_lambda(instr.function)
         code_idx = ctx.add_code_object(child_code)
 
         capture_count = len(instr.captures)
-        total_free_vars = len(child_func.free_vars)
+        total_free_vars = len(instr.function.free_vars)
 
         if instr.needs_patching or capture_count > 0:
-            closure_slot = ctx.slot_of(instr.result)
+            closure_slot = ctx.slot_of(instr.dst)
             ctx.emit(Opcode.MAKE_CLOSURE, code_idx, 0, dest=closure_slot)
             outer_start = total_free_vars - capture_count
             for i, cap in enumerate(instr.captures):
@@ -509,7 +374,6 @@ class MenaiBytecodeBuilder:
 
             return
 
-        # No captures — pre-build a MenaiFunction and store as a constant.
         func_val = MenaiFunction(
             parameters=tuple(child_code.param_names),
             name=child_code.name,
@@ -520,22 +384,21 @@ class MenaiBytecodeBuilder:
         if key not in ctx.constant_map:
             ctx.constant_map[key] = len(ctx.constants)
             ctx.constants.append(func_val)
-        ctx.emit(Opcode.LOAD_CONST, ctx.constant_map[key], dest=ctx.slot_of(instr.result))
-        return
+        ctx.emit(Opcode.LOAD_CONST, ctx.constant_map[key], dest=ctx.slot_of(instr.dst))
 
-    def _generate_lambda_code_object(self, func: MenaiCFGFunction) -> CodeObject:
-        """Recursively generate a CodeObject for a nested lambda MenaiCFGFunction."""
-        child_ctx = _EmitContext(current_lambda_name=func.binding_name)
+    def _emit_lambda(self, func: MenaiVCodeFunction) -> CodeObject:
+        """Recursively emit a nested lambda MenaiVCodeFunction to a CodeObject."""
+        slot_map = allocate_slots(func)
+        func = peephole(func, slot_map)
 
+        child_ctx = _EmitContext(slot_map=slot_map)
         param_count = len(func.params)
 
-        # Emit ENTER to pop parameters into slots 0..P-1.
         if param_count > 0:
             child_ctx.emit(Opcode.ENTER, param_count)
 
-        self._emit_function_body(func, child_ctx)
+        self._emit_vcode(func, child_ctx)
 
-        # Build the human-readable name.
         if func.binding_name:
             lambda_name = func.binding_name
 
@@ -554,7 +417,7 @@ class MenaiBytecodeBuilder:
             free_vars=func.free_vars,
             param_names=func.params,
             param_count=param_count,
-            local_count=child_ctx.next_slot,
+            local_count=slot_map.slot_count,
             is_variadic=func.is_variadic,
             name=lambda_name,
             source_line=func.source_line,
