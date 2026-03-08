@@ -458,17 +458,23 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Handle Alt/Meta key combinations
         if modifiers & Qt.KeyboardModifier.AltModifier:
-            # Alt + letter sends ESC + letter
+            # Only send ESC + key if Alt did not compose a new character.
+            # On macOS, Option+key is used to enter special characters (e.g.
+            # Option+3 = '#' on a British keyboard), so we must not intercept
+            # those — fall through to the regular text input path instead.
             if Qt.Key.Key_A <= key <= Qt.Key.Key_Z:
-                self.data_ready.emit(b'\x1b' + chr(key).lower().encode())
-                event.accept()
-                return
+                expected = chr(key).lower()
+                if not text or text == expected:
+                    self.data_ready.emit(b'\x1b' + expected.encode())
+                    event.accept()
+                    return
 
-            # Alt + number sends ESC + number
             if Qt.Key.Key_0 <= key <= Qt.Key.Key_9:
-                self.data_ready.emit(b'\x1b' + chr(key).encode())
-                event.accept()
-                return
+                expected = chr(key)
+                if not text or text == expected:
+                    self.data_ready.emit(b'\x1b' + expected.encode())
+                    event.accept()
+                    return
 
         # Handle keypad in application mode
         if self._state.application_keypad_mode() and not modifiers:

@@ -24,6 +24,10 @@ New features:
 - Added support for Kimi k2.5 and removed Kimi k2.
 - Added support for GPT-5.4.
 
+Bug fixes:
+
+- Alt+ keypresses now generate the correct characters on a Mac (e.g. # on a British keyboard).
+
 Internal structure changes:
 
 - Reworked a lot of the internals of Menai to make the code easier to read and to allow AIs to update it more reliably.
