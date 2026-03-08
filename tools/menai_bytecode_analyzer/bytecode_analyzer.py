@@ -356,11 +356,20 @@ def main():
 
     args = parser.parse_args()
 
-    # Determine module path based on file location
-    module_path = ["."]
-    if args.file:
-        file_dir = str(Path(args.file).parent.absolute())
-        module_path = [file_dir]
+    # Build a deduplicated module search path:
+    #   1. The source file's own directory (so bare module names resolve when
+    #      the source file lives alongside its modules)
+    #   2. The current working directory (so import paths written relative to
+    #      the project root resolve correctly when run from the root)
+    # For --expr there is no source file, so only CWD is used.
+    cwd = str(Path.cwd())
+    source_file = args.file or args.test_suite or (args.batch[0] if args.batch else None)
+    seen: set = set()
+    if source_file:
+        file_dir = str(Path(source_file).parent.absolute())
+        module_path = [d for d in [file_dir, cwd] if not (d in seen or seen.add(d))]
+    else:
+        module_path = [cwd]
 
     analyzer = BytecodeAnalyzer(module_path=module_path)
 
