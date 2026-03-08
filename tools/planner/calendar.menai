@@ -1,0 +1,310 @@
+; calendar.menai
+; Calendar arithmetic for project planning
+;
+; Returns an dict of calendar functions
+
+(letrec (
+  ; ============================================================================
+  ; DATE UTILITIES
+  ; ============================================================================
+
+  ; Parse ISO date string "YYYY-MM-DD" to list (year month day)
+  (parse-date
+    (lambda (date-str)
+      (let ((parts (string->list date-str "-")))
+        (list
+          (string->number (list-ref parts 0))  ; year
+          (string->number (list-ref parts 1))  ; month
+          (string->number (list-ref parts 2))  ; day
+        ))))
+
+  ; Format date list (year month day) to ISO string "YYYY-MM-DD"
+  (format-date
+    (lambda (date-list)
+      (let ((year (list-ref date-list 0))
+            (month (list-ref date-list 1))
+            (day (list-ref date-list 2)))
+        (string-concat
+          (integer->string year)
+          "-"
+          (if (integer<? month 10)
+              (string-concat "0" (integer->string month))
+              (integer->string month))
+          "-"
+          (if (integer<? day 10)
+              (string-concat "0" (integer->string day))
+              (integer->string day))))))
+
+  ; Get day of week for a date (0=Sunday, 1=Monday, ..., 6=Saturday)
+  ; Uses Zeller's congruence algorithm
+  (day-of-week
+    (lambda (date-str)
+      (let* ((date (parse-date date-str))
+             (year (list-ref date 0))
+             (month (list-ref date 1))
+             (day (list-ref date 2))
+             (adj-month (if (integer<=? month 2) (integer+ month 12) month))
+             (adj-year (if (integer<=? month 2) (integer- year 1) year))
+             (century (integer/ adj-year 100))
+             (year-of-century (integer% adj-year 100))
+             (h (integer% (integer+ day
+                     (integer/ (integer* 13 (integer+ adj-month 1)) 5)
+                     year-of-century
+                     (integer/ year-of-century 4)
+                     (integer/ century 4)
+                     (integer* -2 century))
+                   7)))
+        ; Convert Zeller's result (0=Sat) to (0=Sun, 1=Mon, ...)
+        (integer% (integer+ h 6) 7))))
+
+  ; Get day name from day number
+  (day-name
+    (lambda (day-num)
+      (match day-num
+        (0 "sun")
+        (1 "mon")
+        (2 "tue")
+        (3 "wed")
+        (4 "thu")
+        (5 "fri")
+        (6 "sat")
+        (_ "unknown"))))
+
+  ; ============================================================================
+  ; CALENDAR QUERIES
+  ; ============================================================================
+
+  ; Check if a date is a holiday in the given calendar
+  (is-holiday?
+    (lambda (date-str calendar)
+      (let ((holidays (dict-get calendar "holidays")))
+        (list-member? holidays date-str))))
+
+  ; Check if a day-of-week is a working day in the calendar
+  (is-working-day-of-week?
+    (lambda (day-name calendar)
+      (let ((working-days (dict-get calendar "working-days")))
+        (list-member? working-days day-name))))
+
+  ; Check if a specific date is a working day
+  (is-working-day?
+    (lambda (date-str calendar)
+      (let* ((dow (day-of-week date-str))
+             (dow-name (day-name dow)))
+        (and (is-working-day-of-week? dow-name calendar)
+             (boolean-not (is-holiday? date-str calendar))))))
+
+  ; ============================================================================
+  ; DATE ARITHMETIC (CALENDAR DAYS)
+  ; ============================================================================
+
+  ; Check if a year is a leap year
+  (is-leap-year?
+    (lambda (year)
+      (or (and (integer=? (integer% year 4) 0) (integer!=? (integer% year 100) 0))
+          (integer=? (integer% year 400) 0))))
+
+  ; Get days in a month
+  (days-in-month
+    (lambda (year month)
+      (match month
+        (1 31)
+        (2 (if (is-leap-year? year) 29 28))
+        (3 31)
+        (4 30)
+        (5 31)
+        (6 30)
+        (7 31)
+        (8 31)
+        (9 30)
+        (10 31)
+        (11 30)
+        (12 31)
+        (_ 0))))
+
+  ; Add one calendar day to a date
+  (add-one-day
+    (lambda (date-str)
+      (let* ((date (parse-date date-str))
+             (year (list-ref date 0))
+             (month (list-ref date 1))
+             (day (list-ref date 2))
+             (max-day (days-in-month year month)))
+        (if (integer<? day max-day)
+            ; Same month
+            (format-date (list year month (integer+ day 1)))
+            ; Next month
+            (if (integer<? month 12)
+                (format-date (list year (integer+ month 1) 1))
+                ; Next year
+                (format-date (list (integer+ year 1) 1 1)))))))
+
+  ; Subtract one calendar day from a date
+  (subtract-one-day
+    (lambda (date-str)
+      (let* ((date (parse-date date-str))
+             (year (list-ref date 0))
+             (month (list-ref date 1))
+             (day (list-ref date 2)))
+        (if (integer>? day 1)
+            ; Same month
+            (format-date (list year month (integer- day 1)))
+            ; Previous month
+            (if (integer>? month 1)
+                (let ((prev-month (integer- month 1)))
+                  (format-date (list year prev-month (days-in-month year prev-month))))
+                ; Previous year
+                (format-date (list (integer- year 1) 12 31)))))))
+
+  ; Add N calendar days to a date (can be negative)
+  (add-calendar-days
+    (lambda (date-str days)
+      (if (integer=? days 0)
+          date-str
+          (if (integer>? days 0)
+              (add-calendar-days (add-one-day date-str) (integer- days 1))
+              (add-calendar-days (subtract-one-day date-str) (integer+ days 1))))))
+
+  ; ============================================================================
+  ; WORKING DAY ARITHMETIC
+  ; ============================================================================
+
+  ; Add one working day to a date (skip weekends and holidays)
+  (add-one-working-day
+    (lambda (date-str calendar)
+      (let ((next-date (add-one-day date-str)))
+        (if (is-working-day? next-date calendar)
+            next-date
+            (add-one-working-day next-date calendar)))))
+
+  ; Subtract one working day from a date
+  (subtract-one-working-day
+    (lambda (date-str calendar)
+      (let ((prev-date (subtract-one-day date-str)))
+        (if (is-working-day? prev-date calendar)
+            prev-date
+            (subtract-one-working-day prev-date calendar)))))
+
+  ; Add N working days to a date (can be negative)
+  (add-working-days
+    (lambda (date-str days calendar)
+      (if (integer=? days 0)
+          date-str
+          (if (integer>? days 0)
+              (add-working-days (add-one-working-day date-str calendar) (integer- days 1) calendar)
+              (add-working-days (subtract-one-working-day date-str calendar) (integer+ days 1) calendar)))))
+
+  ; ============================================================================
+  ; DURATION CALCULATIONS
+  ; ============================================================================
+
+  ; Count working days between two dates (inclusive of start, exclusive of end)
+  (working-days-between
+    (lambda (start-date end-date calendar)
+      (letrec ((count-helper
+                 (lambda (current-date end-date calendar count)
+                   (if (string=? current-date end-date)
+                       count
+                       (let ((next-date (add-one-day current-date))
+                             (is-working (is-working-day? current-date calendar)))
+                         (count-helper next-date end-date calendar
+                                       (if is-working (integer+ count 1) count)))))))
+        (count-helper start-date end-date calendar 0))))
+
+  ; Count calendar days between two dates (inclusive of start, exclusive of end)
+  (calendar-days-between
+    (lambda (start-date end-date)
+      (letrec ((count-helper
+                 (lambda (current-date end-date count)
+                   (if (string=? current-date end-date)
+                       count
+                       (count-helper (add-one-day current-date) end-date (integer+ count 1))))))
+        (count-helper start-date end-date 0))))
+
+  ; ============================================================================
+  ; DATE COMPARISON
+  ; ============================================================================
+
+  ; Compare two dates: returns -1 if date1 < date2, 0 if equal, 1 if date1 > date2
+  (compare-dates
+    (lambda (date1 date2)
+      (let* ((d1 (parse-date date1))
+             (d2 (parse-date date2))
+             (y1 (list-ref d1 0))
+             (m1 (list-ref d1 1))
+             (day1 (list-ref d1 2))
+             (y2 (list-ref d2 0))
+             (m2 (list-ref d2 1))
+             (day2 (list-ref d2 2)))
+        (if (integer!=? y1 y2)
+            (if (integer<? y1 y2) -1 1)
+            (if (integer!=? m1 m2)
+                (if (integer<? m1 m2) -1 1)
+                (if (integer!=? day1 day2)
+                    (if (integer<? day1 day2) -1 1)
+                    0))))))
+
+  ; Date predicates
+  (date-before?
+    (lambda (date1 date2)
+      (integer=? (compare-dates date1 date2) -1)))
+
+  (date-after?
+    (lambda (date1 date2)
+      (integer=? (compare-dates date1 date2) 1)))
+
+  (date-equal?
+    (lambda (date1 date2)
+      (integer=? (compare-dates date1 date2) 0)))
+
+  (date-on-or-before?
+    (lambda (date1 date2)
+      (integer<=? (compare-dates date1 date2) 0)))
+
+  (date-on-or-after?
+    (lambda (date1 date2)
+      (integer>=? (compare-dates date1 date2) 0)))
+
+  ; ============================================================================
+  ; HIGH-LEVEL SCHEDULING HELPERS
+  ; ============================================================================
+
+  ; Calculate end date from start date and duration
+  (calculate-end-date
+    (lambda (start-date duration-days calendar)
+      (if (integer=? duration-days 0)
+          start-date
+          (add-working-days start-date duration-days calendar))))
+
+  ; Calculate start date from end date and duration
+  (calculate-start-date
+    (lambda (end-date duration-days calendar)
+      (if (integer=? duration-days 0)
+          end-date
+          (add-working-days end-date (integer-neg duration-days) calendar))))
+
+  ; Calculate duration from start and end dates
+  (calculate-duration
+    (lambda (start-date end-date calendar)
+      (working-days-between start-date end-date calendar)))
+)
+
+; Return dict of all calendar functions
+(dict
+  (list "parse-date" parse-date)
+  (list "format-date" format-date)
+  (list "day-of-week" day-of-week)
+  (list "day-name" day-name)
+  (list "is-holiday?" is-holiday?)
+  (list "is-working-day?" is-working-day?)
+  (list "add-calendar-days" add-calendar-days)
+  (list "add-working-days" add-working-days)
+  (list "working-days-between" working-days-between)
+  (list "calendar-days-between" calendar-days-between)
+  (list "compare-dates" compare-dates)
+  (list "date-before?" date-before?)
+  (list "date-after?" date-after?)
+  (list "calculate-end-date" calculate-end-date)
+  (list "calculate-start-date" calculate-start-date)
+  (list "calculate-duration" calculate-duration)
+))

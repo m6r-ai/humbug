@@ -1,0 +1,378 @@
+; Rubik's Cube Solver in Menai
+; Uses IDA* algorithm with heuristic based on misplaced stickers
+; 
+; Cube representation: dict with 6 faces, each face is list of 9 stickers (0-5)
+; Face order: U(up/white), D(down/yellow), F(front/green), B(back/blue), L(left/orange), R(right/red)
+; Sticker positions on each face:
+;   0 1 2
+;   3 4 5
+;   6 7 8
+; Center (list-position 4) never moves and identifies the face color
+
+(letrec
+  ((second (lambda (lst) (list-first (list-rest lst))))
+   (solved-cube
+     (lambda ()
+       (dict
+         (list "U" (list 0 0 0 0 0 0 0 0 0))
+         (list "D" (list 1 1 1 1 1 1 1 1 1))
+         (list "F" (list 2 2 2 2 2 2 2 2 2))
+         (list "B" (list 3 3 3 3 3 3 3 3 3))
+         (list "L" (list 4 4 4 4 4 4 4 4 4))
+         (list "R" (list 5 5 5 5 5 5 5 5 5)))))
+
+   (get-face
+     (lambda (cube face)
+       (dict-get cube face)))
+
+   (get-sticker
+     (lambda (face pos)
+       (list-ref face pos)))
+
+   (rotate-face-cw
+     (lambda (face)
+       (list
+         (get-sticker face 6)
+         (get-sticker face 3)
+         (get-sticker face 0)
+         (get-sticker face 7)
+         (get-sticker face 4)
+         (get-sticker face 1)
+         (get-sticker face 8)
+         (get-sticker face 5)
+         (get-sticker face 2))))
+
+   (move-U
+     (lambda (cube)
+       (let* ((u (get-face cube "U"))
+              (f (get-face cube "F"))
+              (r (get-face cube "R"))
+              (b (get-face cube "B"))
+              (l (get-face cube "L")))
+         (dict
+           (list "U" (rotate-face-cw u))
+           (list "D" (get-face cube "D"))
+           (list "F" (list (get-sticker r 0) (get-sticker r 1) (get-sticker r 2)
+                          (get-sticker f 3) (get-sticker f 4) (get-sticker f 5)
+                          (get-sticker f 6) (get-sticker f 7) (get-sticker f 8)))
+           (list "B" (list (get-sticker l 0) (get-sticker l 1) (get-sticker l 2)
+                          (get-sticker b 3) (get-sticker b 4) (get-sticker b 5)
+                          (get-sticker b 6) (get-sticker b 7) (get-sticker b 8)))
+           (list "L" (list (get-sticker f 0) (get-sticker f 1) (get-sticker f 2)
+                          (get-sticker l 3) (get-sticker l 4) (get-sticker l 5)
+                          (get-sticker l 6) (get-sticker l 7) (get-sticker l 8)))
+           (list "R" (list (get-sticker b 0) (get-sticker b 1) (get-sticker b 2)
+                          (get-sticker r 3) (get-sticker r 4) (get-sticker r 5)
+                          (get-sticker r 6) (get-sticker r 7) (get-sticker r 8)))))))
+
+   (move-D
+     (lambda (cube)
+       (let* ((d (get-face cube "D"))
+              (f (get-face cube "F"))
+              (r (get-face cube "R"))
+              (b (get-face cube "B"))
+              (l (get-face cube "L")))
+         (dict
+           (list "U" (get-face cube "U"))
+           (list "D" (rotate-face-cw d))
+           (list "F" (list (get-sticker f 0) (get-sticker f 1) (get-sticker f 2)
+                          (get-sticker f 3) (get-sticker f 4) (get-sticker f 5)
+                          (get-sticker l 6) (get-sticker l 7) (get-sticker l 8)))
+           (list "B" (list (get-sticker b 0) (get-sticker b 1) (get-sticker b 2)
+                          (get-sticker b 3) (get-sticker b 4) (get-sticker b 5)
+                          (get-sticker r 6) (get-sticker r 7) (get-sticker r 8)))
+           (list "L" (list (get-sticker l 0) (get-sticker l 1) (get-sticker l 2)
+                          (get-sticker l 3) (get-sticker l 4) (get-sticker l 5)
+                          (get-sticker b 6) (get-sticker b 7) (get-sticker b 8)))
+           (list "R" (list (get-sticker r 0) (get-sticker r 1) (get-sticker r 2)
+                          (get-sticker r 3) (get-sticker r 4) (get-sticker r 5)
+                          (get-sticker f 6) (get-sticker f 7) (get-sticker f 8)))))))
+
+   (move-F
+     (lambda (cube)
+       (let* ((f (get-face cube "F"))
+              (u (get-face cube "U"))
+              (r (get-face cube "R"))
+              (d (get-face cube "D"))
+              (l (get-face cube "L")))
+         (dict
+           (list "U" (list (get-sticker u 0) (get-sticker u 1) (get-sticker u 2)
+                          (get-sticker u 3) (get-sticker u 4) (get-sticker u 5)
+                          (get-sticker l 8) (get-sticker l 5) (get-sticker l 2)))
+           (list "D" (list (get-sticker r 0) (get-sticker r 3) (get-sticker r 6)
+                          (get-sticker d 3) (get-sticker d 4) (get-sticker d 5)
+                          (get-sticker d 6) (get-sticker d 7) (get-sticker d 8)))
+           (list "F" (rotate-face-cw f))
+           (list "B" (get-face cube "B"))
+           (list "L" (list (get-sticker l 0) (get-sticker l 1) (get-sticker d 2)
+                          (get-sticker l 3) (get-sticker l 4) (get-sticker d 1)
+                          (get-sticker l 6) (get-sticker l 7) (get-sticker d 0)))
+           (list "R" (list (get-sticker u 6) (get-sticker r 1) (get-sticker r 2)
+                          (get-sticker u 7) (get-sticker r 4) (get-sticker r 5)
+                          (get-sticker u 8) (get-sticker r 7) (get-sticker r 8)))))))
+
+   (move-B
+     (lambda (cube)
+       (let* ((b (get-face cube "B"))
+              (u (get-face cube "U"))
+              (l (get-face cube "L"))
+              (d (get-face cube "D"))
+              (r (get-face cube "R")))
+         (dict
+           (list "U" (list (get-sticker r 8) (get-sticker r 5) (get-sticker r 2)
+                          (get-sticker u 3) (get-sticker u 4) (get-sticker u 5)
+                          (get-sticker u 6) (get-sticker u 7) (get-sticker u 8)))
+           (list "D" (list (get-sticker d 0) (get-sticker d 1) (get-sticker d 2)
+                          (get-sticker d 3) (get-sticker d 4) (get-sticker d 5)
+                          (get-sticker l 6) (get-sticker l 3) (get-sticker l 0)))
+           (list "F" (get-face cube "F"))
+           (list "B" (rotate-face-cw b))
+           (list "L" (list (get-sticker u 2) (get-sticker l 1) (get-sticker l 2)
+                          (get-sticker u 1) (get-sticker l 4) (get-sticker l 5)
+                          (get-sticker u 0) (get-sticker l 7) (get-sticker l 8)))
+           (list "R" (list (get-sticker r 0) (get-sticker r 1) (get-sticker d 6)
+                          (get-sticker r 3) (get-sticker r 4) (get-sticker d 7)
+                          (get-sticker r 6) (get-sticker r 7) (get-sticker d 8)))))))
+
+   (move-L
+     (lambda (cube)
+       (let* ((l (get-face cube "L"))
+              (u (get-face cube "U"))
+              (f (get-face cube "F"))
+              (d (get-face cube "D"))
+              (b (get-face cube "B")))
+         (dict
+           (list "U" (list (get-sticker b 8) (get-sticker u 1) (get-sticker u 2)
+                          (get-sticker b 5) (get-sticker u 4) (get-sticker u 5)
+                          (get-sticker b 2) (get-sticker u 7) (get-sticker u 8)))
+           (list "D" (list (get-sticker f 0) (get-sticker d 1) (get-sticker d 2)
+                          (get-sticker f 3) (get-sticker d 4) (get-sticker d 5)
+                          (get-sticker f 6) (get-sticker d 7) (get-sticker d 8)))
+           (list "F" (list (get-sticker u 0) (get-sticker f 1) (get-sticker f 2)
+                          (get-sticker u 3) (get-sticker f 4) (get-sticker f 5)
+                          (get-sticker u 6) (get-sticker f 7) (get-sticker f 8)))
+           (list "B" (list (get-sticker b 0) (get-sticker b 1) (get-sticker d 6)
+                          (get-sticker b 3) (get-sticker b 4) (get-sticker d 3)
+                          (get-sticker b 6) (get-sticker b 7) (get-sticker d 0)))
+           (list "L" (rotate-face-cw l))
+           (list "R" (get-face cube "R"))))))
+
+   (move-R
+     (lambda (cube)
+       (let* ((r (get-face cube "R"))
+              (u (get-face cube "U"))
+              (b (get-face cube "B"))
+              (d (get-face cube "D"))
+              (f (get-face cube "F")))
+         (dict
+           (list "U" (list (get-sticker u 0) (get-sticker u 1) (get-sticker f 2)
+                          (get-sticker u 3) (get-sticker u 4) (get-sticker f 5)
+                          (get-sticker u 6) (get-sticker u 7) (get-sticker f 8)))
+           (list "D" (list (get-sticker d 0) (get-sticker d 1) (get-sticker b 6)
+                          (get-sticker d 3) (get-sticker d 4) (get-sticker b 3)
+                          (get-sticker d 6) (get-sticker d 7) (get-sticker b 0)))
+           (list "F" (list (get-sticker f 0) (get-sticker f 1) (get-sticker d 2)
+                          (get-sticker f 3) (get-sticker f 4) (get-sticker d 5)
+                          (get-sticker f 6) (get-sticker f 7) (get-sticker d 8)))
+           (list "B" (list (get-sticker u 8) (get-sticker b 1) (get-sticker b 2)
+                          (get-sticker u 5) (get-sticker b 4) (get-sticker b 5)
+                          (get-sticker u 2) (get-sticker b 7) (get-sticker b 8)))
+           (list "L" (get-face cube "L"))
+           (list "R" (rotate-face-cw r))))))
+
+   (apply-move
+     (lambda (cube move-name)
+       (match move-name
+         ("U" (move-U cube))
+         ("U'" (move-U (move-U (move-U cube))))
+         ("U2" (move-U (move-U cube)))
+         ("D" (move-D cube))
+         ("D'" (move-D (move-D (move-D cube))))
+         ("D2" (move-D (move-D cube)))
+         ("F" (move-F cube))
+         ("F'" (move-F (move-F (move-F cube))))
+         ("F2" (move-F (move-F cube)))
+         ("B" (move-B cube))
+         ("B'" (move-B (move-B (move-B cube))))
+         ("B2" (move-B (move-B cube)))
+         ("L" (move-L cube))
+         ("L'" (move-L (move-L (move-L cube))))
+         ("L2" (move-L (move-L cube)))
+         ("R" (move-R cube))
+         ("R'" (move-R (move-R (move-R cube))))
+         ("R2" (move-R (move-R cube)))
+         (_ cube))))
+
+   (apply-moves
+     (lambda (cube moves)
+       (if (list-null? moves)
+           cube
+           (apply-moves (apply-move cube (list-first moves)) (list-rest moves)))))
+
+   (face-solved?
+     (lambda (face)
+       (let ((center (get-sticker face 4)))
+       (all-list? (lambda (s) (integer=? s center)) face))))
+
+   (cube-solved?
+     (lambda (cube)
+       (and (face-solved? (get-face cube "U"))
+            (face-solved? (get-face cube "D"))
+            (face-solved? (get-face cube "F"))
+            (face-solved? (get-face cube "B"))
+            (face-solved? (get-face cube "L"))
+            (face-solved? (get-face cube "R")))))
+
+   (count-mismatched
+     (lambda (face)
+       (let ((center (get-sticker face 4)))
+       (list-length (filter-list (lambda (s) (integer!=? s center)) face)))))
+
+   (heuristic
+     (lambda (cube)
+       (let ((u (get-face cube "U"))
+             (d (get-face cube "D"))
+             (f (get-face cube "F"))
+             (b (get-face cube "B"))
+             (l (get-face cube "L"))
+             (r (get-face cube "R")))
+         (let ((total (integer+ (count-mismatched u)
+                                (count-mismatched d)
+                                (count-mismatched f)
+                                (count-mismatched b)
+                                (count-mismatched l)
+                                (count-mismatched r))))
+           (integer/ total 8)))))
+
+   (all-moves (list "U" "U'" "U2" "D" "D'" "D2"
+                    "F" "F'" "F2" "B" "B'" "B2"
+                    "L" "L'" "L2" "R" "R'" "R2"))
+
+   (move-face
+     (lambda (move)
+       (string-ref move 0)))
+
+   (same-face?
+     (lambda (m1 m2)
+       (string=? (move-face m1) (move-face m2))))
+
+   (inverse-move
+     (lambda (move)
+       (match move
+         ("U" "U'") ("U'" "U") ("U2" "U2")
+         ("D" "D'") ("D'" "D") ("D2" "D2")
+         ("F" "F'") ("F'" "F") ("F2" "F2")
+         ("B" "B'") ("B'" "B") ("B2" "B2")
+         ("L" "L'") ("L'" "L") ("L2" "L2")
+         ("R" "R'") ("R'" "R") ("R2" "R2")
+         (_ move))))
+
+   (should-prune?
+     (lambda (move last-move)
+       (or (same-face? move last-move)
+           (string=? move (inverse-move last-move)))))
+
+   (get-candidates
+     (lambda (last-move)
+       (if (match last-move
+             ((? boolean? b) #t) (_ #f))
+           all-moves
+           (filter-list (lambda (m) (boolean-not (should-prune? m last-move))) all-moves))))
+
+   (search-moves
+     (lambda (cube bound g last-move path moves best-threshold)
+       (if (list-null? moves)
+           (list #f (if (match best-threshold ((? boolean? b) #t) (_ #f)) (integer+ bound 1) best-threshold))
+           (let* ((move (list-first moves))
+                  (new-cube (apply-move cube move))
+                  (new-path (list-concat path (list move)))
+                  (result (ida-search new-cube bound (integer+ g 1) move new-path)))
+             (if (list-first result)
+                 result
+                 (search-moves cube bound g last-move path (list-rest moves)
+                              (if (match best-threshold ((? boolean? b) #t) (_ #f))
+                                  (second result)
+                                  (integer-min best-threshold (second result)))))))))
+
+   (ida-search
+     (lambda (cube bound g last-move path)
+       (let ((h (heuristic cube)))
+         (if (cube-solved? cube)
+             (list #t path)
+           (if (integer>? (integer+ g h) bound)
+               (list #f (integer+ g h))
+                 (search-moves cube bound g last-move path (get-candidates last-move) #f))))))
+
+   (ida-star
+     (lambda (cube max-depth)
+       (letrec ((search-loop
+                  (lambda (bound)
+                    (if (integer>? bound max-depth)
+                        (list #f "Max depth exceeded")
+                        (let ((result (ida-search cube bound 0 #f (list))))
+                          (if (list-first result)
+                              result
+                              (search-loop (second result))))))))
+         (search-loop 0))))
+
+   (sticker->str
+     (lambda (s)
+       (match s
+         (0 "W")
+         (1 "Y")
+         (2 "G")
+         (3 "B")
+         (4 "O")
+         (5 "R")
+         (_ "?"))))
+
+   (face-row->str
+     (lambda (face row)
+       (let ((start (integer* row 3)))
+         (string-concat
+           (sticker->str (get-sticker face start))
+           (sticker->str (get-sticker face (integer+ start 1)))
+           (sticker->str (get-sticker face (integer+ start 2)))))))
+
+   (print-cube
+     (lambda (cube)
+       (let ((u (get-face cube "U"))
+             (d (get-face cube "D"))
+             (f (get-face cube "F"))
+             (b (get-face cube "B"))
+             (l (get-face cube "L"))
+             (r (get-face cube "R")))
+         (string-concat
+           "    " (face-row->str u 0) "\n"
+           "    " (face-row->str u 1) "\n"
+           "    " (face-row->str u 2) "\n"
+           (face-row->str l 0) " " (face-row->str f 0) " " (face-row->str r 0) " " (face-row->str b 0) "\n"
+           (face-row->str l 1) " " (face-row->str f 1) " " (face-row->str r 1) " " (face-row->str b 1) "\n"
+           (face-row->str l 2) " " (face-row->str f 2) " " (face-row->str r 2) " " (face-row->str b 2) "\n"
+           "    " (face-row->str d 0) "\n"
+           "    " (face-row->str d 1) "\n"
+           "    " (face-row->str d 2) "\n"))))
+
+   (format-solution
+     (lambda (result)
+       (if (list-first result)
+           (string-concat "Solution found! Moves: " (list->string (second result) " "))
+           (string-concat "No solution: " (second result)))))
+
+   (make-cube
+     (lambda (u d f b l r)
+       (dict
+         (list "U" u) (list "D" d) (list "F" f)
+         (list "B" b) (list "L" l) (list "R" r)))))
+
+  (dict
+    (list "solved-cube" solved-cube)
+    (list "apply-move" apply-move)
+    (list "apply-moves" apply-moves)
+    (list "cube-solved?" cube-solved?)
+    (list "heuristic" heuristic)
+    (list "ida-star" ida-star)
+    (list "print-cube" print-cube)
+    (list "format-solution" format-solution)
+    (list "make-cube" make-cube)
+    (list "all-moves" all-moves)))

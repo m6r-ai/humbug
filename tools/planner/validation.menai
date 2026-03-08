@@ -1,0 +1,250 @@
+; validation.menai
+; Project validation functions
+;
+; Includes:
+; - Circular dependency detection
+; - Data consistency checks
+; - Task validation
+; - Dependency validation
+
+(letrec (
+  ; ============================================================================
+  ; GRAPH OPERATIONS
+  ; ============================================================================
+
+  ; Get all predecessors of a task
+  (get-predecessors
+    (lambda (task-id dependencies)
+      (map-list (lambda (dep) (dict-get dep "from-task"))
+                (filter-list (lambda (dep) (string=? (dict-get dep "to-task") task-id))
+                             dependencies))))
+
+  ; Get all successors of a task
+  (get-successors
+    (lambda (task-id dependencies)
+      (map-list (lambda (dep) (dict-get dep "to-task"))
+                (filter-list (lambda (dep) (string=? (dict-get dep "from-task") task-id))
+                             dependencies))))
+
+  ; Check if a task exists in the project
+  (task-exists?
+    (lambda (task-id tasks)
+      (any-list? (lambda (task) (string=? (dict-get task "id") task-id))
+                 tasks)))
+
+  ; ============================================================================
+  ; CIRCULAR DEPENDENCY DETECTION
+  ; ============================================================================
+
+  ; Detect cycles using depth-first search
+  ; Returns a list of cycles found (each cycle is a list of task IDs)
+  (detect-cycles
+    (lambda (tasks dependencies)
+      (letrec ((all-task-ids (map-list (lambda (t) (dict-get t "id")) tasks))
+             (dfs-visit
+               (lambda (task-id path visited-in-path)
+                 ; Check if we've seen this task in current path (cycle!)
+                 (if (list-member? visited-in-path task-id)
+                     ; Found a cycle - extract the cycle from path
+                     (let ((cycle-start-pos (list-index path task-id)))
+                       (match cycle-start-pos
+                         ((? integer? pos)
+                           (list (list-slice (list-concat path (list task-id)) pos)))
+                         (_ (list))))
+                     ; Not a cycle yet, continue DFS
+                     (let* ((successors (get-successors task-id dependencies))
+                            (new-path (list-concat path (list task-id)))
+                            (new-visited (list-append visited-in-path task-id)))
+                       (fold-list list-concat (list)
+                                  (map-list (lambda (succ) (dfs-visit succ new-path new-visited))
+                                            successors)))))))
+        ; Start DFS from each task
+        (fold-list list-concat (list)
+                   (map-list (lambda (task-id) (dfs-visit task-id (list) (list)))
+                             all-task-ids)))))
+
+  ; Check if project has circular dependencies
+  (has-circular-dependencies?
+    (lambda (tasks dependencies)
+      (integer>? (list-length (detect-cycles tasks dependencies)) 0)))
+
+  ; ============================================================================
+  ; TASK VALIDATION
+  ; ============================================================================
+
+  ; Validate a single task
+  (validate-task
+    (lambda (task)
+      (let* ((errors (list))
+             (warnings (list))
+             ; Check required fields
+             (errors (if (boolean-not (dict-has? task "id"))
+                         (list-append errors "Task missing 'id' field")
+                         errors))
+             (errors (if (boolean-not (dict-has? task "name"))
+                         (list-append errors "Task missing 'name' field")
+                         errors))
+             (errors (if (boolean-not (dict-has? task "duration-days"))
+                         (list-append errors "Task missing 'duration-days' field")
+                         errors))
+             (errors (if (boolean-not (dict-has? task "schedule-mode"))
+                         (list-append errors "Task missing 'schedule-mode' field")
+                         errors))
+             ; Check schedule mode consistency
+             (mode (dict-get task "schedule-mode" "unknown"))
+             (errors (match mode
+                       ("fixed-dates"
+                         (if (and (dict-has? task "start-date")
+                                  (dict-has? task "end-date"))
+                             errors
+                             (list-append errors "fixed-dates mode requires start-date and end-date")))
+                       ("duration-based"
+                         (if (dict-has? task "duration-days")
+                             errors
+                             (list-append errors "duration-based mode requires duration-days")))
+                       ("unscheduled" errors)
+                       (_ (list-append errors (string-concat "Unknown schedule-mode: " mode))))))
+        ; Return validation result
+        (dict
+          (list "task-id" (dict-get task "id" "unknown"))
+          (list "valid" (integer=? (list-length errors) 0))
+          (list "errors" errors)
+          (list "warnings" warnings)))))
+
+  ; ============================================================================
+  ; DEPENDENCY VALIDATION
+  ; ============================================================================
+
+  ; Validate a single dependency
+  (validate-dependency
+    (lambda (dep tasks)
+      (let* ((from-task (dict-get dep "from-task"))
+             (to-task (dict-get dep "to-task"))
+             (dep-type (dict-get dep "type"))
+             (errors (list))
+             ; Check if both tasks exist
+             (errors (if (boolean-not (task-exists? from-task tasks))
+                         (list-append errors (string-concat "From-task not found: " from-task))
+                         errors))
+             (errors (if (boolean-not (task-exists? to-task tasks))
+                         (list-append errors (string-concat "To-task not found: " to-task))
+                         errors))
+             ; Check dependency type
+             (valid-types (list "finish-to-start" "start-to-start" 
+                               "finish-to-finish" "start-to-finish"))
+             (errors (if (boolean-not (list-member? valid-types dep-type))
+                         (list-append errors (string-concat "Invalid dependency type: " dep-type))
+                         errors))
+             ; Check for self-dependency
+             (errors (if (string=? from-task to-task)
+                         (list-append errors (string-concat "Task depends on itself: " from-task))
+                         errors)))
+        ; Return validation result
+        (dict
+          (list "from-task" from-task)
+          (list "to-task" to-task)
+          (list "valid" (integer=? (list-length errors) 0))
+          (list "errors" errors)))))
+
+  ; ============================================================================
+  ; PROJECT VALIDATION
+  ; ============================================================================
+
+  ; Validate entire project
+  (validate-project
+    (lambda (project)
+      (let* ((tasks (dict-get project "tasks"))
+             (dependencies (dict-get project "dependencies"))
+             ; Validate all tasks
+             (task-validations (map-list validate-task tasks))
+             ; Validate all dependencies
+             (dep-validations (map-list (lambda (dep) (validate-dependency dep tasks))
+                                        dependencies))
+             ; Check for circular dependencies
+             (cycles (detect-cycles tasks dependencies))
+             ; Collect all errors
+             (task-errors (fold-list list-append (list)
+                                     (map-list (lambda (v) (dict-get v "errors"))
+                                               (filter-list (lambda (v) (boolean-not (dict-get v "valid")))
+                                                            task-validations))))
+             (dep-errors (fold-list list-append (list)
+                                    (map-list (lambda (v) (dict-get v "errors"))
+                                              (filter-list (lambda (v) (boolean-not (dict-get v "valid")))
+                                                           dep-validations))))
+             (cycle-errors (if (integer>? (list-length cycles) 0)
+                               (map-list (lambda (cycle)
+                                           (string-concat "Circular dependency: "
+                                                         (string-join cycle " -> ")))
+                                         cycles)
+                               (list)))
+             (all-errors (fold-list list-append (list)
+                                    (list task-errors dep-errors cycle-errors))))
+        ; Return validation result
+        (dict
+          (list "valid" (integer=? (list-length all-errors) 0))
+          (list "task-count" (list-length tasks))
+          (list "dependency-count" (list-length dependencies))
+          (list "tasks-with-errors" 
+                (list-length (filter-list (lambda (v) (boolean-not (dict-get v "valid")))
+                                          task-validations)))
+          (list "dependencies-with-errors"
+                (list-length (filter-list (lambda (v) (boolean-not (dict-get v "valid")))
+                                          dep-validations)))
+          (list "circular-dependencies-found" (list-length cycles))
+          (list "errors" all-errors)
+          (list "task-validations" task-validations)
+          (list "dependency-validations" dep-validations)
+          (list "cycles" cycles)))))
+
+  ; ============================================================================
+  ; CONSISTENCY CHECKS
+  ; ============================================================================
+
+  ; Find duplicate task IDs
+  (find-duplicate-task-ids
+    (lambda (tasks)
+      (let* ((task-ids (map-list (lambda (t) (dict-get t "id")) tasks))
+             (check-duplicates
+               (lambda (ids seen duplicates)
+                 (if (list-null? ids)
+                     duplicates
+                     (let* ((current-id (list-first ids))
+                            (rest-ids (list-rest ids)))
+                       (if (list-member? seen current-id)
+                           (check-duplicates rest-ids seen (list-append duplicates current-id))
+                           (check-duplicates rest-ids (list-append seen current-id) duplicates)))))))
+        (check-duplicates task-ids (list) (list)))))
+
+  ; Find orphaned tasks (tasks with no predecessors or successors)
+  (find-orphaned-tasks
+    (lambda (tasks dependencies)
+      (let ((all-task-ids (map-list (lambda (t) (dict-get t "id")) tasks)))
+        (filter-list (lambda (task-id)
+                       (and (integer=? (list-length (get-predecessors task-id dependencies)) 0)
+                            (integer=? (list-length (get-successors task-id dependencies)) 0)))
+                     all-task-ids))))
+
+  ; Find tasks with missing calendar references
+  (find-tasks-with-invalid-calendars
+    (lambda (tasks calendars)
+      (let ((calendar-ids (map-list (lambda (c) (dict-get c "id")) calendars)))
+        (filter-list (lambda (task)
+                       (let ((cal-id (dict-get task "calendar-id")))
+                         (boolean-not (list-member? calendar-ids cal-id))))
+                     tasks))))
+)
+
+; Return dict of all validation functions
+(dict
+  (list "get-predecessors" get-predecessors)
+  (list "get-successors" get-successors)
+  (list "task-exists?" task-exists?)
+  (list "detect-cycles" detect-cycles)
+  (list "has-circular-dependencies?" has-circular-dependencies?)
+  (list "validate-task" validate-task)
+  (list "validate-dependency" validate-dependency)
+  (list "validate-project" validate-project)
+  (list "find-duplicate-task-ids" find-duplicate-task-ids)
+  (list "find-orphaned-tasks" find-orphaned-tasks)
+  (list "find-tasks-with-invalid-calendars" find-tasks-with-invalid-calendars))
+)

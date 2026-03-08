@@ -1,0 +1,119 @@
+; Sudoku solver using backtracking search.
+; Represents the board as a list of 9 rows, each a list of 9 integers.
+; Empty cells are 0. Returns the solved board, or "No solution found".
+
+(letrec (
+  ; Check whether `num` already appears in the given row.
+  (row-has? (lambda (board row num)
+    (any-list? (lambda (v) (integer=? v num)) (list-ref board row))))
+
+  ; Check whether `num` already appears in the given column.
+  (col-has? (lambda (board col num)
+    (any-list? (lambda (r) (integer=? (list-ref r col) num)) board)))
+
+  ; Check whether `num` already appears in the 3x3 box containing (row, col).
+  (box-has? (lambda (board row col num)
+    (let* ((box-row (integer- row (integer% row 3)))
+           (box-col (integer- col (integer% col 3)))
+           (box-rows (list-slice board box-row (integer+ box-row 3))))
+      (any-list?
+        (lambda (r)
+          (any-list? (lambda (v) (integer=? v num))
+            (list-slice r box-col (integer+ box-col 3))))
+        box-rows))))
+
+  ; Return #t if placing `num` at (row, col) violates no constraints.
+  (is-valid? (lambda (board row col num)
+    (and (boolean-not (row-has? board row num))
+         (boolean-not (col-has? board col num))
+         (boolean-not (box-has? board row col num)))))
+
+  ; Scan left-to-right, top-to-bottom for the first cell containing 0.
+  ; Returns (row col), or #none when the board is fully filled.
+  (find-empty (lambda (board row col)
+    (if (integer>=? row 9)
+      #none
+      (if (integer>=? col 9)
+        (find-empty board (integer+ row 1) 0)
+        (if (integer=? (list-ref (list-ref board row) col) 0)
+          (list row col)
+          (find-empty board row (integer+ col 1)))))))
+
+  ; Return a new board with `num` placed at (row, col).
+  (set-cell (lambda (board row col num)
+    (map-list
+      (lambda (row-pair)
+        (let ((r-idx (list-first row-pair))
+              (row-data (list-ref row-pair 1)))
+          (if (integer=? r-idx row)
+            (map-list
+              (lambda (cell-pair)
+                (if (integer=? (list-first cell-pair) col)
+                  num
+                  (list-ref cell-pair 1)))
+              (zip-list (range 0 9) row-data))
+            row-data)))
+      (zip-list (range 0 9) board))))
+
+  ; Try each candidate in `nums` for the cell at (row, col).
+  ; Returns the solved board on success, or #none if all candidates fail.
+  (try-nums (lambda (board row col nums)
+    (if (list-null? nums)
+      #none
+      (let ((num (list-first nums)))
+        (if (is-valid? board row col num)
+          (let ((result (solve (set-cell board row col num))))
+            (if (none? result)
+              (try-nums board row col (list-rest nums))
+              result))
+          (try-nums board row col (list-rest nums)))))))
+
+  ; Solve the board by backtracking. Returns the solved board or #none.
+  (solve (lambda (board)
+    (let ((empty (find-empty board 0 0)))
+      (if (none? empty)
+        board
+        (try-nums board (list-first empty) (list-ref empty 1) (range 1 10))))))
+
+  ; Format one cell: digit (or "." for empty) followed by a column separator.
+  (format-cell (lambda (col val)
+    (let ((digit (if (integer=? val 0) "." (integer->string val)))
+          (sep   (if (integer=? (integer% (integer+ col 1) 3) 0) " | " "   ")))
+      (string-concat digit sep))))
+
+  ; Format one row, appending a horizontal divider after every third row.
+  (format-row (lambda (row-idx row)
+    (let* ((cells   (map-list
+                      (lambda (pair)
+                        (format-cell (list-first pair) (list-ref pair 1)))
+                      (zip-list (range 0 9) row)))
+           (row-str (string-concat "| " (list->string cells "")))
+           (div     (if (integer=? (integer% (integer+ row-idx 1) 3) 0)
+                      (string-concat "\n" "+---------+---------+---------+")
+                      "")))
+      (string-concat row-str div))))
+
+  ; Render a complete board as a printable string.
+  (display-board (lambda (board)
+    (let ((rows (map-list
+                  (lambda (pair)
+                    (format-row (list-first pair) (list-ref pair 1)))
+                  (zip-list (range 0 9) board))))
+      (string-concat "+---------+---------+---------+\n"
+                     (list->string rows "\n"))))))
+
+  ; A classic sample puzzle (0 = empty cell).
+  (let ((puzzle (list
+    (list 5 3 0 0 7 0 0 0 0)
+    (list 6 0 0 1 9 5 0 0 0)
+    (list 0 9 8 0 0 0 0 6 0)
+    (list 8 0 0 0 6 0 0 0 3)
+    (list 4 0 0 8 0 3 0 0 1)
+    (list 7 0 0 0 2 0 0 0 6)
+    (list 0 6 0 0 0 0 2 8 0)
+    (list 0 0 0 4 1 9 0 0 5)
+    (list 0 0 0 0 8 0 0 7 9))))
+    (let ((solution (solve puzzle)))
+      (if (none? solution)
+        "No solution found"
+        (display-board solution)))))

@@ -27,9 +27,6 @@
 # Ignore Mac system files
 .DS_Store
 
-# Ignore the planner app
-/tools/planner
-
 # Ignore benchmark test results
 /tools/aifpl_benchmark/benchmark_results.json
 /tools/aifpl_bytecode_analyzer/optimization_report.md
