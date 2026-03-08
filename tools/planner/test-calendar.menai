@@ -1,0 +1,145 @@
+; test-calendar.menai
+; Tests for the calendar module, mirroring test_calendar.py
+
+(let* (
+  (calendar-mod (import "tools/planner/calendar"))
+
+  (parse-date      (dict-get calendar-mod "parse-date"))
+  (format-date     (dict-get calendar-mod "format-date"))
+  (day-of-week     (dict-get calendar-mod "day-of-week"))
+  (day-name        (dict-get calendar-mod "day-name"))
+  (is-working-day? (dict-get calendar-mod "is-working-day?"))
+  (add-calendar-days   (dict-get calendar-mod "add-calendar-days"))
+  (add-working-days    (dict-get calendar-mod "add-working-days"))
+  (working-days-between (dict-get calendar-mod "working-days-between"))
+  (compare-dates       (dict-get calendar-mod "compare-dates"))
+  (calculate-end-date  (dict-get calendar-mod "calculate-end-date"))
+  (calculate-start-date (dict-get calendar-mod "calculate-start-date"))
+  (calculate-duration  (dict-get calendar-mod "calculate-duration"))
+
+  (cal-5day
+    (dict
+      (list "id"           "test-5day")
+      (list "type"         "5-day")
+      (list "working-days" (list "mon" "tue" "wed" "thu" "fri"))
+      (list "holidays"     (list "2025-12-25" "2025-12-26" "2026-01-01"))))
+
+  (cal-7day
+    (dict
+      (list "id"           "test-7day")
+      (list "type"         "7-day")
+      (list "working-days" (list "mon" "tue" "wed" "thu" "fri" "sat" "sun"))
+      (list "holidays"     (list))))
+
+  ; ============================================================================
+  ; TEST 1: Date parsing and formatting
+  ; ============================================================================
+  (t1-date   "2025-03-15")
+  (t1-parsed (parse-date t1-date))
+  (t1-back   (format-date t1-parsed))
+  (t1-ok     (string=? t1-back t1-date))
+
+  ; ============================================================================
+  ; TEST 2: Day of week
+  ; ============================================================================
+  (t2-r1 (string=? (day-name (day-of-week "2025-01-01")) "wed"))
+  (t2-r2 (string=? (day-name (day-of-week "2025-12-25")) "thu"))
+  (t2-r3 (string=? (day-name (day-of-week "2025-03-17")) "mon"))
+  (t2-r4 (string=? (day-name (day-of-week "2025-06-15")) "sun"))
+  (t2-ok (and t2-r1 t2-r2 t2-r3 t2-r4))
+
+  ; ============================================================================
+  ; TEST 3: Working day detection
+  ; ============================================================================
+  (t3-r1 (boolean=? (is-working-day? "2025-03-17" cal-5day) #t))
+  (t3-r2 (boolean=? (is-working-day? "2025-03-22" cal-5day) #f))
+  (t3-r3 (boolean=? (is-working-day? "2025-03-23" cal-5day) #f))
+  (t3-r4 (boolean=? (is-working-day? "2025-12-25" cal-5day) #f))
+  (t3-r5 (boolean=? (is-working-day? "2025-03-18" cal-5day) #t))
+  (t3-ok (and t3-r1 t3-r2 t3-r3 t3-r4 t3-r5))
+
+  ; ============================================================================
+  ; TEST 4: Add calendar days
+  ; ============================================================================
+  (t4-start "2025-03-15")
+  (t4-r1 (string=? (add-calendar-days t4-start 1)   "2025-03-16"))
+  (t4-r2 (string=? (add-calendar-days t4-start 10)  "2025-03-25"))
+  (t4-r3 (string=? (add-calendar-days t4-start 20)  "2025-04-04"))
+  (t4-r4 (string=? (add-calendar-days t4-start -5)  "2025-03-10"))
+  (t4-ok (and t4-r1 t4-r2 t4-r3 t4-r4))
+
+  ; ============================================================================
+  ; TEST 5: Add working days (5-day calendar)
+  ; ============================================================================
+  (t5-start "2025-03-17")
+  (t5-r1 (string=? (add-working-days t5-start 1  cal-5day) "2025-03-18"))
+  (t5-r2 (string=? (add-working-days t5-start 5  cal-5day) "2025-03-24"))
+  (t5-r3 (string=? (add-working-days t5-start 10 cal-5day) "2025-03-31"))
+  (t5-ok (and t5-r1 t5-r2 t5-r3))
+
+  ; ============================================================================
+  ; TEST 6: Add working days (7-day calendar)
+  ; ============================================================================
+  (t6-start "2025-03-17")
+  (t6-r1 (string=? (add-working-days t6-start 1  cal-7day) "2025-03-18"))
+  (t6-r2 (string=? (add-working-days t6-start 7  cal-7day) "2025-03-24"))
+  (t6-r3 (string=? (add-working-days t6-start 10 cal-7day) "2025-03-27"))
+  (t6-ok (and t6-r1 t6-r2 t6-r3))
+
+  ; ============================================================================
+  ; TEST 7: Working days between dates
+  ; ============================================================================
+  (t7-r1 (integer=? (working-days-between "2025-03-17" "2025-03-18" cal-5day) 1))
+  (t7-r2 (integer=? (working-days-between "2025-03-17" "2025-03-24" cal-5day) 5))
+  (t7-r3 (integer=? (working-days-between "2025-03-17" "2025-03-31" cal-5day) 10))
+  (t7-r4 (integer=? (working-days-between "2025-03-21" "2025-03-24" cal-5day) 1))
+  (t7-ok (and t7-r1 t7-r2 t7-r3 t7-r4))
+
+  ; ============================================================================
+  ; TEST 8: Date comparison
+  ; ============================================================================
+  (t8-r1 (integer=? (compare-dates "2025-03-15" "2025-03-20") -1))
+  (t8-r2 (integer=? (compare-dates "2025-03-20" "2025-03-15") 1))
+  (t8-r3 (integer=? (compare-dates "2025-03-15" "2025-03-15") 0))
+  (t8-ok (and t8-r1 t8-r2 t8-r3))
+
+  ; ============================================================================
+  ; TEST 9: Calculate end date (start + duration)
+  ; ============================================================================
+  (t9-r1 (string=? (calculate-end-date "2025-03-17" 5  cal-5day) "2025-03-24"))
+  (t9-r2 (string=? (calculate-end-date "2025-03-17" 10 cal-5day) "2025-03-31"))
+  (t9-r3 (string=? (calculate-end-date "2025-03-20" 3  cal-5day) "2025-03-25"))
+  (t9-ok (and t9-r1 t9-r2 t9-r3))
+
+  ; ============================================================================
+  ; TEST 10: Calculate start date (end - duration)
+  ; ============================================================================
+  (t10-r1 (string=? (calculate-start-date "2025-03-24" 5  cal-5day) "2025-03-17"))
+  (t10-r2 (string=? (calculate-start-date "2025-03-31" 10 cal-5day) "2025-03-17"))
+  (t10-ok (and t10-r1 t10-r2))
+
+  ; ============================================================================
+  ; TEST 11: Calculate duration (start to end)
+  ; ============================================================================
+  (t11-r1 (integer=? (calculate-duration "2025-03-17" "2025-03-24" cal-5day) 5))
+  (t11-r2 (integer=? (calculate-duration "2025-03-17" "2025-03-31" cal-5day) 10))
+  (t11-r3 (integer=? (calculate-duration "2025-03-21" "2025-03-24" cal-5day) 1))
+  (t11-ok (and t11-r1 t11-r2 t11-r3))
+
+  (all-ok (and t1-ok t2-ok t3-ok t4-ok t5-ok t6-ok t7-ok t8-ok t9-ok t10-ok t11-ok))
+)
+
+(dict
+  (list "test-1-parse-format"        t1-ok)
+  (list "test-2-day-of-week"         t2-ok)
+  (list "test-3-working-day"         t3-ok)
+  (list "test-4-add-calendar-days"   t4-ok)
+  (list "test-5-add-working-5day"    t5-ok)
+  (list "test-6-add-working-7day"    t6-ok)
+  (list "test-7-working-days-between" t7-ok)
+  (list "test-8-compare-dates"       t8-ok)
+  (list "test-9-end-date"            t9-ok)
+  (list "test-10-start-date"         t10-ok)
+  (list "test-11-duration"           t11-ok)
+  (list "all-passed"                 all-ok))
+)

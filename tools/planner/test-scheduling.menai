@@ -1,0 +1,131 @@
+; test-scheduling.menai
+; Tests for the scheduling module, mirroring test_scheduling_basic.py
+;
+; Simple 3-task chain: T1 (5 days) -> T2 (3 days) -> T3 (2 days)
+
+(let* (
+  (scheduling    (import "tools/planner/scheduling"))
+  (forward-pass  (dict-get scheduling "forward-pass"))
+  (schedule-project (dict-get scheduling "schedule-project"))
+
+  (cal-5day
+    (dict
+      (list "id"           "cal1")
+      (list "name"         "5-day week")
+      (list "type"         "5-day")
+      (list "working-days" (list "mon" "tue" "wed" "thu" "fri"))
+      (list "holidays"     (list))))
+
+  (make-task
+    (lambda (id name duration)
+      (dict
+        (list "id"            id)
+        (list "name"          name)
+        (list "duration-days" duration)
+        (list "calendar-id"   "cal1")
+        (list "schedule-mode" "duration-based")
+        (list "start-date"    #f)
+        (list "end-date"      #f)
+        (list "status"        "not-started")
+        (list "progress"      0.0))))
+
+  (make-fs-dep
+    (lambda (from to)
+      (dict
+        (list "from-task" from)
+        (list "to-task"   to)
+        (list "type"      "finish-to-start")
+        (list "lag-days"  0))))
+
+  (base-project
+    (dict
+      (list "project-id"    "SIMPLE-TEST")
+      (list "name"          "Simple Test Project")
+      (list "project-start" "2025-03-03")
+      (list "tasks"
+        (list
+          (make-task "T1" "Task 1" 5)
+          (make-task "T2" "Task 2" 3)
+          (make-task "T3" "Task 3" 2)))
+      (list "dependencies"
+        (list
+          (make-fs-dep "T1" "T2")
+          (make-fs-dep "T2" "T3")))
+      (list "calendars"
+        (list cal-5day))))
+
+  ; ============================================================================
+  ; TEST 1: Forward pass schedules all three tasks
+  ; ============================================================================
+  (t1-result   (forward-pass base-project))
+  (t1-tasks    (dict-get t1-result "tasks"))
+  (t1-count-ok (integer=? (list-length t1-tasks) 3))
+
+  (t1-t1 (find-list (lambda (t) (string=? (dict-get t "id") "T1")) t1-tasks))
+  (t1-t2 (find-list (lambda (t) (string=? (dict-get t "id") "T2")) t1-tasks))
+  (t1-t3 (find-list (lambda (t) (string=? (dict-get t "id") "T3")) t1-tasks))
+
+  ; T2 must start when T1 finishes; T3 must start when T2 finishes
+  (t1-chain-ok
+    (and
+      (string=? (dict-get t1-t2 "earliest-start") (dict-get t1-t1 "earliest-finish"))
+      (string=? (dict-get t1-t3 "earliest-start") (dict-get t1-t2 "earliest-finish"))))
+
+  (t1-ok (and t1-count-ok t1-chain-ok))
+
+  ; ============================================================================
+  ; TEST 2: Full CPM — all tasks on critical path in a simple chain
+  ; ============================================================================
+  (t2-result        (schedule-project base-project))
+  (t2-tasks         (dict-get t2-result "tasks"))
+  (t2-critical-path (dict-get t2-result "critical-path"))
+  (t2-count-ok      (integer=? (list-length t2-tasks) 3))
+  (t2-cp-ok         (integer=? (list-length t2-critical-path) 3))
+  (t2-ok            (and t2-count-ok t2-cp-ok))
+
+  ; ============================================================================
+  ; TEST 3: Start-to-start dependency with lag
+  ; T1 --[SS, lag=2]--> T2: T2 should start 2 working days after T1 starts
+  ; ============================================================================
+  (ss-dep
+    (dict
+      (list "from-task" "T1")
+      (list "to-task"   "T2")
+      (list "type"      "start-to-start")
+      (list "lag-days"  2)))
+
+  (ss-project
+    (dict
+      (list "project-id"    "SS-TEST")
+      (list "name"          "SS Test Project")
+      (list "project-start" "2025-03-03")
+      (list "tasks"
+        (list
+          (make-task "T1" "Task 1" 5)
+          (make-task "T2" "Task 2" 3)
+          (make-task "T3" "Task 3" 2)))
+      (list "dependencies"
+        (list
+          ss-dep
+          (make-fs-dep "T2" "T3")))
+      (list "calendars"
+        (list cal-5day))))
+
+  (t3-result (forward-pass ss-project))
+  (t3-tasks  (dict-get t3-result "tasks"))
+  (t3-t1     (find-list (lambda (t) (string=? (dict-get t "id") "T1")) t3-tasks))
+  (t3-t2     (find-list (lambda (t) (string=? (dict-get t "id") "T2")) t3-tasks))
+
+  ; T2's start must be strictly after T1's start (lag > 0)
+  (t3-ok
+    (string<? (dict-get t3-t1 "earliest-start") (dict-get t3-t2 "earliest-start")))
+
+  (all-ok (and t1-ok t2-ok t3-ok))
+)
+
+(dict
+  (list "test-1-forward-pass"   t1-ok)
+  (list "test-2-full-cpm"       t2-ok)
+  (list "test-3-ss-dependency"  t3-ok)
+  (list "all-passed"            all-ok))
+)

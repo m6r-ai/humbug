@@ -78,19 +78,19 @@
   ; Format one cell: digit (or "." for empty) followed by a column separator.
   (format-cell (lambda (col val)
     (let ((digit (if (integer=? val 0) "." (integer->string val)))
-          (sep   (if (integer=? (integer% (integer+ col 1) 3) 0) " | " "   ")))
+          (sep (if (integer=? (integer% (integer+ col 1) 3) 0) " | " " ")))
       (string-concat digit sep))))
 
   ; Format one row, appending a horizontal divider after every third row.
   (format-row (lambda (row-idx row)
-    (let* ((cells   (map-list
-                      (lambda (pair)
-                        (format-cell (list-first pair) (list-ref pair 1)))
-                      (zip-list (range 0 9) row)))
+    (let* ((cells (map-list
+                    (lambda (pair)
+                      (format-cell (list-first pair) (list-ref pair 1)))
+                    (zip-list (range 0 9) row)))
            (row-str (string-concat "| " (list->string cells "")))
-           (div     (if (integer=? (integer% (integer+ row-idx 1) 3) 0)
-                      (string-concat "\n" "+---------+---------+---------+")
-                      "")))
+           (div (if (integer=? (integer% (integer+ row-idx 1) 3) 0)
+                    (string-concat "\n" "+-------+-------+-------+")
+                    "")))
       (string-concat row-str div))))
 
   ; Render a complete board as a printable string.
@@ -99,7 +99,7 @@
                   (lambda (pair)
                     (format-row (list-first pair) (list-ref pair 1)))
                   (zip-list (range 0 9) board))))
-      (string-concat "+---------+---------+---------+\n"
+      (string-concat "+-------+-------+-------+\n"
                      (list->string rows "\n"))))))
 
   ; A classic sample puzzle (0 = empty cell).
