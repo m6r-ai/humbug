@@ -1,5 +1,5 @@
 """
-CFG pass: bypass empty blocks.
+CFG pass: simplify blocks.
 
 Eliminates blocks that are pure indirections — no instructions, no
 patch_instrs, and an unconditional jump terminator — by re-pointing their
@@ -21,7 +21,7 @@ from menai.menai_cfg import (
 from menai.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
 
 
-class MenaiCFGBypassEmptyBlocks(MenaiCFGOptimizationPass):
+class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
     """
     Bypass blocks that are pure indirections: no instructions, no patch_instrs,
     and an unconditional jump terminator.

@@ -328,7 +328,7 @@ class MenaiCFGBuilder:
             else_exit.terminator = MenaiCFGJumpTerm(target=join_block)
 
         # If only one branch reaches join, the value is unambiguous — no phi.
-        # The join block will be empty and BypassEmptyBlocks will eliminate it.
+        # The join block will be empty and SimplifyBlocks will eliminate it.
         # If both branches reach it, emit a phi to merge the two values.
         if then_falls_through and not else_falls_through:
             return then_val, join_block

@@ -19,7 +19,7 @@ Example after:
     join2:    %v2 = phi [(%a, A), (%b, B), (%c, C)]
 
 join1's phi is removed.  If join1 now has no instructions it becomes an
-empty block, which MenaiCFGBypassEmptyBlocks will then eliminate.
+empty block, which MenaiCFGSimplifyBlocks will then eliminate.
 
 Safety
 ------
@@ -65,7 +65,7 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
 
     After collapsing, blocks that contained only the now-removed phi (and
     an unconditional jump) become empty and will be eliminated by
-    MenaiCFGBypassEmptyBlocks in the next pass.
+MenaiCFGSimplifyBlocks in the next pass.
 
     Mutates block.instrs in place.
     """

@@ -26,7 +26,7 @@ from menai.menai_cfg import (
     MenaiCFGReturnTerm,
     MenaiCFGValue,
 )
-from menai.menai_cfg_bypass_empty_blocks import MenaiCFGBypassEmptyBlocks
+from menai.menai_cfg_simplify_blocks import MenaiCFGSimplifyBlocks
 from menai.menai_cfg_collapse_phi_chains import MenaiCFGCollapsePhiChains
 from menai.menai_value import MenaiInteger
 
@@ -570,7 +570,7 @@ class TestNoChange:
 
 _ALL_PASSES = [
     MenaiCFGCollapsePhiChains(),
-    MenaiCFGBypassEmptyBlocks(),
+    MenaiCFGSimplifyBlocks(),
 ]
 
 
@@ -721,11 +721,11 @@ class TestEndToEnd:
                   "result-other")))
         """
         passes_without = [
-            MenaiCFGBypassEmptyBlocks(),
+            MenaiCFGSimplifyBlocks(),
         ]
         passes_with = [
             MenaiCFGCollapsePhiChains(),
-            MenaiCFGBypassEmptyBlocks(),
+            MenaiCFGSimplifyBlocks(),
         ]
 
         cfg_without = self._build_cfg(source, passes_without)
@@ -753,11 +753,11 @@ class TestEndToEnd:
                   "result-other")))
         """
         passes_without = [
-            MenaiCFGBypassEmptyBlocks(),
+            MenaiCFGSimplifyBlocks(),
         ]
         passes_with = [
             MenaiCFGCollapsePhiChains(),
-            MenaiCFGBypassEmptyBlocks(),
+            MenaiCFGSimplifyBlocks(),
         ]
 
         cfg_without = self._build_cfg(source, passes_without)

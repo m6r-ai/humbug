@@ -23,7 +23,7 @@ from menai.menai_cfg import (
     MenaiCFGTailCallTerm,
     MenaiCFGValue,
 )
-from menai.menai_cfg_bypass_empty_blocks import MenaiCFGBypassEmptyBlocks
+from menai.menai_cfg_simplify_blocks import MenaiCFGSimplifyBlocks
 from menai.menai_value import MenaiInteger
 
 
@@ -106,7 +106,7 @@ class TestEmptyBlockBypass:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=empty), label="entry")
         f = func(entry, empty, target)
 
-        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
+        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
         assert changed
         assert 1 not in block_ids(new_f), "empty block should be removed"
         # entry's terminator should now point to target directly.
@@ -120,7 +120,7 @@ class TestEmptyBlockBypass:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=target), label="entry")
         f = func(entry, target)
 
-        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
+        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
         assert not changed, "entry block must not be bypassed"
 
     def test_chain_of_empty_blocks_collapsed(self):
@@ -135,7 +135,7 @@ class TestEmptyBlockBypass:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=empty1), label="entry")
         f = func(entry, empty1, empty2, target)
 
-        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
+        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
         assert changed
         assert 1 not in block_ids(new_f)
         assert 2 not in block_ids(new_f)
@@ -172,7 +172,7 @@ class TestEmptyBlockBypass:
         )
         f = func(entry, then_empty, else_real, join)
 
-        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
+        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
         assert changed, "empty block with phi-free target must be bypassed"
         assert 1 not in block_ids(new_f), "then_empty must be removed"
         branch = new_f.blocks[0].terminator
@@ -221,7 +221,7 @@ class TestEmptyBlockBypass:
         )
         f = func(entry, then_empty, else_real, join)
 
-        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
+        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
         assert not changed, (
             "empty block with branch predecessor and phi-bearing target "
             "must not be bypassed (phi store mechanism requires it)"
@@ -259,7 +259,7 @@ class TestEmptyBlockBypass:
         )
         f = func(entry, then_empty, join)
 
-        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
+        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
         assert changed
 
         join_new = new_f.blocks[1]  # join is now blocks[1] after empty removed
@@ -281,7 +281,7 @@ class TestEmptyBlockBypass:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=real), label="entry")
         f = func(entry, real)
 
-        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
+        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
         assert not changed
 
     def test_block_with_patch_instrs_not_bypassed(self):
@@ -299,12 +299,12 @@ class TestEmptyBlockBypass:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=patched), label="entry")
         f = func(entry, patched, target)
 
-        new_f, changed = MenaiCFGBypassEmptyBlocks()._optimize_function(f)
+        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
         assert not changed, "block with patch_instrs must not be bypassed"
 
 
 _ALL_PASSES = [
-    MenaiCFGBypassEmptyBlocks(),
+    MenaiCFGSimplifyBlocks(),
 ]
 
 
@@ -314,7 +314,7 @@ class TestFixedPoint:
         """
         The CFG builder no longer emits stale phi entries: when only one branch
         reaches the join block, no phi is emitted at all.  This test verifies
-        the fixed-point loop over BypassEmptyBlocks + EliminateDeadBlocks
+        the fixed-point loop over SimplifyBlocks + EliminateDeadBlocks
         handles the resulting shape:
 
           entry: branch cond → then / else
@@ -550,7 +550,7 @@ class TestIntegration:
         assert opt_phis == 0, f"optimized CFG should have no phis, got {opt_phis}"
 
         # The innermost lambda (the actual function) should have fewer blocks.
-        # The join block is empty (no phi), so BypassEmptyBlocks eliminates it
+        # The join block is empty (no phi), so SimplifyBlocks eliminates it
         # and the block count drops.
         raw_inner = self._find_innermost_lambda(cfg_raw)
         opt_inner = self._find_innermost_lambda(cfg_opt)
