@@ -14,7 +14,6 @@ Covers:
   5. Multi-arm branchy chain (the motivating pattern): no MOVEs for const arms
   6. Non-const arm (param passthrough): MOVE preserved
   7. End-to-end correctness: results are identical with and without the opt
-  8. MOVE count reduction is measurable vs. unoptimized compilation
 """
 
 from menai.menai_bytecode import Opcode
@@ -35,8 +34,8 @@ def _find_lambda(code):
     return code.code_objects[0]
 
 
-def _compile(src: str, optimize: bool = True):
-    return MenaiCompiler(optimize=optimize).compile(src)
+def _compile(src: str):
+    return MenaiCompiler().compile(src)
 
 
 class TestPhiSinkSingleConstArm:
@@ -148,7 +147,7 @@ class TestPhiSinkMultiArmChain:
           (if (string=? x "R2") "R"
               x))))
         """
-        code = _find_lambda(_compile(src, optimize=True))
+        code = _find_lambda(_compile(src))
         # Join block inlined into all predecessors — no MOVEs needed.
         assert _count_op(code, Opcode.MOVE) == 0
 

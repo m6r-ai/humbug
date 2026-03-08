@@ -19,6 +19,7 @@ from menai.menai_cfg_builder import MenaiCFGBuilder
 from menai.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
 from menai.menai_cfg_simplify_blocks import MenaiCFGSimplifyBlocks
 from menai.menai_cfg_collapse_phi_chains import MenaiCFGCollapsePhiChains
+from menai.menai_vcode_builder import MenaiVCodeBuilder
 from menai.menai_ir_builder import MenaiIRBuilder
 from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
 from menai.menai_ir_copy_propagator import MenaiIRCopyPropagator
@@ -34,17 +35,14 @@ class MenaiCompiler:
 
     def __init__(
         self,
-        optimize: bool = True,
         module_loader: MenaiASTModuleLoader | None = None,
     ):
         """
         Initialize compiler with all passes.
 
         Args:
-            optimize:    Enable optimization passes (AST and IR level).
             module_loader: Optional module loader for resolving imports.
         """
-        self.optimize = optimize
         self.module_loader = module_loader
 
         self.lexer = MenaiLexer()
@@ -52,26 +50,22 @@ class MenaiCompiler:
         self.ast_semantic_analyzer = MenaiASTSemanticAnalyzer()
         self.ast_module_resolver = MenaiASTModuleResolver(module_loader)
         self.ast_desugarer = MenaiASTDesugarer()
-        self.ast_passes: List[MenaiASTOptimizationPass] = []
+        self.ast_passes: List[MenaiASTOptimizationPass] = [
+            MenaiASTConstantFolder(),
+        ]
         self.ir_builder = MenaiIRBuilder()
-        self.ir_passes: List[MenaiIROptimizationPass] = []
+        self.ir_passes: List[MenaiIROptimizationPass] = [
+            MenaiIRCopyPropagator(),
+            MenaiIRInlineOnce(),
+            MenaiIROptimizer(),
+        ]
         self.cfg_builder = MenaiCFGBuilder()
-        self.cfg_passes: List[MenaiCFGOptimizationPass] = []
+        self.cfg_passes: List[MenaiCFGOptimizationPass] = [
+            MenaiCFGCollapsePhiChains(),
+            MenaiCFGSimplifyBlocks(),
+        ]
         self.bytecode_builder = MenaiBytecodeBuilder()
-
-        if optimize:
-            self.ast_passes = [
-                MenaiASTConstantFolder(),
-            ]
-            self.ir_passes = [
-                MenaiIRCopyPropagator(),
-                MenaiIRInlineOnce(),
-                MenaiIROptimizer(),
-            ]
-            self.cfg_passes = [
-                MenaiCFGCollapsePhiChains(),
-                MenaiCFGSimplifyBlocks(),
-            ]
+        self.vcode_builder = MenaiVCodeBuilder()
 
 
     def compile_to_resolved_ast(self, source: str, source_file: str = "") -> MenaiASTNode:
@@ -138,5 +132,6 @@ class MenaiCompiler:
                     cfg, pass_changed = cfg_pass.optimize(cfg)
                     changed = changed or pass_changed
 
-        bytecode = self.bytecode_builder.build(cfg, name)
+        vcode = self.vcode_builder.build(cfg)
+        bytecode = self.bytecode_builder.build(vcode, name)
         return bytecode

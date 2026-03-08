@@ -1,27 +1,25 @@
 """
 Bytecode emitter for the Menai VM backend.
 
-Translates a MenaiVCodeFunction (with allocated slots) into a CodeObject
-ready for execution by the Menai VM.
+Translates a MenaiVCodeFunction into a CodeObject ready for execution by
+the Menai VM.
 
-This is the final, purely mechanical pass of the VM backend pipeline:
+This is the final pass of the VM backend pipeline:
 
-    MenaiCFGFunction
-        → MenaiVCodeBuilder   (linearise, phi-eliminate)
+    MenaiVCodeFunction
         → allocate_slots      (assign virtual registers to slots)
         → peephole            (eliminate redundant moves and jumps)
         → MenaiBytecodeBuilder (emit CodeObject)  ← this file
 
-The emitter has no knowledge of SSA, phi nodes, or liveness.  It simply
-walks the flat VCode instruction list and emits the corresponding bytecode,
-resolving label references to instruction indices in a back-patch phase.
+The emitter has no knowledge of SSA, phi nodes, or liveness.  It simply walks
+the flat VCode instruction list and emits the corresponding bytecode, resolving
+label references to instruction indices in a back-patch phase.
 """
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple
 
 from menai.menai_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Instruction, Opcode
-from menai.menai_cfg import MenaiCFGFunction
 from menai.menai_value import (
     MenaiBoolean,
     MenaiComplex,
@@ -56,7 +54,6 @@ from menai.menai_vcode import (
     MenaiVCodeTrace,
 )
 from menai.menai_vcode_allocator import SlotMap, allocate_slots
-from menai.menai_vcode_builder import MenaiVCodeBuilder
 from menai.menai_vcode_peephole import peephole
 
 
@@ -150,39 +147,37 @@ class _EmitContext:
 
 class MenaiBytecodeBuilder:
     """
-    Generates a CodeObject from a MenaiCFGFunction.
+    Generates a CodeObject from a MenaiVCodeFunction.
 
-    Orchestrates the full VM backend pipeline:
-      1. Lower CFG to VCode (MenaiVCodeBuilder)
-      2. Allocate slots (allocate_slots)
-      3. Peephole optimise (peephole)
-      4. Emit bytecode (this class)
+    Runs the VM-specific backend passes:
+      1. Allocate slots (allocate_slots)
+      2. Peephole optimise (peephole)
+      3. Emit bytecode (this class)
 
     Usage::
 
-        code_obj = MenaiBytecodeBuilder().build(cfg_function, name="<module>")
+        code_obj = MenaiBytecodeBuilder().build(vcode_function, name="<module>")
     """
 
     def __init__(self) -> None:
         self._lambda_counter = 0
 
-    def build(self, func: MenaiCFGFunction, name: str = "<module>") -> CodeObject:
+    def build(self, func: MenaiVCodeFunction, name: str = "<module>") -> CodeObject:
         """
-        Generate a top-level CodeObject from a MenaiCFGFunction.
+        Generate a top-level CodeObject from a MenaiVCodeFunction.
 
         Args:
-            func: The CFG function to compile (top-level module body).
+            func: The VCode function to compile (top-level module body).
             name: Name for the resulting CodeObject.
 
         Returns:
             A CodeObject ready for execution by the Menai VM.
         """
-        vcode = MenaiVCodeBuilder().build(func)
-        slot_map = allocate_slots(vcode)
-        vcode = peephole(vcode, slot_map)
+        slot_map = allocate_slots(func)
+        func = peephole(func, slot_map)
 
         ctx = _EmitContext(slot_map=slot_map)
-        self._emit_vcode(vcode, ctx)
+        self._emit_vcode(func, ctx)
         return CodeObject(
             instructions=ctx.instructions,
             constants=ctx.constants,

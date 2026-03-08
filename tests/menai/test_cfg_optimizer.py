@@ -612,13 +612,10 @@ class TestIntegration:
     """
     Compile Menai source through the full pipeline up to the CFG stage and
     verify that the optimizer produces the expected block structure.
-
-    We test by compiling with and without the optimizer and checking that the
-    optimized CFG has fewer blocks / no trivial phis.
     """
 
-    def _build_cfg(self, source: str, optimize: bool):
-        """Compile source to CFG, with or without CFG optimization."""
+    def _build_cfg_raw(self, source: str):
+        """Compile source to CFG without running CFG optimization passes."""
         from menai.menai_lexer import MenaiLexer
         from menai.menai_ast_builder import MenaiASTBuilder
         from menai.menai_ast_semantic_analyzer import MenaiASTSemanticAnalyzer
@@ -657,13 +654,17 @@ class TestIntegration:
                 changed = changed or c
 
         cfg = cfg_builder.build(ir)
-        if optimize:
-            changed = True
-            while changed:
-                changed = False
-                for pass_ in _ALL_PASSES:
-                    cfg, c = pass_.optimize(cfg)
-                    changed = changed or c
+        return cfg
+
+    def _build_cfg(self, source: str):
+        """Compile source to CFG and run CFG optimization passes."""
+        cfg = self._build_cfg_raw(source)
+        changed = True
+        while changed:
+            changed = False
+            for pass_ in _ALL_PASSES:
+                cfg, c = pass_.optimize(cfg)
+                changed = changed or c
         return cfg
 
     def _find_lambda_cfg(self, cfg: MenaiCFGFunction, name: str) -> MenaiCFGFunction:
@@ -711,8 +712,8 @@ class TestIntegration:
         After optimization: CFG should be valid and produce correct results.
         """
         source = "(lambda (x) (if (integer=? x 0) x (integer+ x 1)))"
-        cfg_opt = self._build_cfg(source, optimize=True)
-        cfg_raw = self._build_cfg(source, optimize=False)
+        cfg_opt = self._build_cfg(source)
+        cfg_raw = self._build_cfg_raw(source)
 
         # Both produce the same logical function.
         # The optimized version should have no MORE blocks than the raw version.
@@ -736,8 +737,8 @@ class TestIntegration:
               start-date
               (add-working-days start-date duration-days)))
         """
-        cfg_opt = self._build_cfg(source, optimize=True)
-        cfg_raw = self._build_cfg(source, optimize=False)
+        cfg_opt = self._build_cfg(source)
+        cfg_raw = self._build_cfg_raw(source)
 
         # The builder emits no phi when only one branch reaches join.
         raw_phis = self._count_phis(cfg_raw)
@@ -771,7 +772,7 @@ class TestIntegration:
               (f x)
               (g x)))
         """
-        cfg_raw = self._build_cfg(source, optimize=False)
+        cfg_raw = self._build_cfg_raw(source)
         assert self._count_phis(cfg_raw) == 0
         # The builder never creates a join block when both branches are tail-calls.
         inner = self._find_innermost_lambda(cfg_raw)
@@ -792,8 +793,8 @@ class TestIntegration:
                   (f y))
               (f x)))
         """
-        cfg_opt = self._build_cfg(source, optimize=True)
-        cfg_raw = self._build_cfg(source, optimize=False)
+        cfg_opt = self._build_cfg(source)
+        cfg_raw = self._build_cfg_raw(source)
 
         # Optimized should have fewer or equal blocks.
         assert len(cfg_opt.blocks) <= len(cfg_raw.blocks)

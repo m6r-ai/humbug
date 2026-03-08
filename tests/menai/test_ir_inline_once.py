@@ -30,7 +30,6 @@ from __future__ import annotations
 import pytest
 
 from menai import Menai
-from menai.menai_compiler import MenaiCompiler
 from menai.menai_ir import (
     MenaiIRCall,
     MenaiIRConstant,
@@ -880,38 +879,6 @@ class TestInlineOnceIntegration:
               (map-list fib (list 0 1 2 3 4 5 6 7 8 9 10)))
         """)
         assert result == [0, 1, 1, 2, 3, 5, 8, 13, 21, 34, 55]
-
-    def test_optimize_false_same_result(self):
-        """Compiling with optimize=False produces the same result."""
-        source = """
-            (let* ((a 3)
-                   (b (integer+ a 4))
-                   (c (integer* b 2)))
-              c)
-        """
-        opt_result = Menai().evaluate(source)
-
-        instance = Menai()
-        instance.compiler = MenaiCompiler(optimize=False, module_loader=instance)
-        no_opt_result = instance.evaluate(source)
-
-        assert opt_result == no_opt_result == 14
-
-    def test_optimize_false_match_same_result(self):
-        """optimize=False and optimize=True agree on a match expression."""
-        source = """
-            (let ((x 5))
-              (match (integer+ x 1)
-                (6 "six")
-                (_ "other")))
-        """
-        opt_result = Menai().evaluate(source)
-
-        instance = Menai()
-        instance.compiler = MenaiCompiler(optimize=False, module_loader=instance)
-        no_opt_result = instance.evaluate(source)
-
-        assert opt_result == no_opt_result == "six"
 
     def test_trace_expression_not_broken(self, menai):
         """trace expressions with inlined bindings still evaluate correctly."""

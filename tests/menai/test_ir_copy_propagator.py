@@ -35,7 +35,6 @@ from __future__ import annotations
 import pytest
 
 from menai import Menai
-from menai.menai_compiler import MenaiCompiler
 from menai.menai_ir import (
     MenaiIRCall,
     MenaiIRConstant,
@@ -798,17 +797,6 @@ class TestCopyPropagatorIntegration:
               (list (even? 10) (odd? 7)))
         """)
         assert result == [True, True]
-
-    def test_optimization_disabled_same_result(self):
-        """Compiling with optimize=False produces the same result."""
-        source = "(let ((x 7) (y 6)) (integer* x y))"
-        opt_result = Menai().evaluate(source)
-
-        instance = Menai()
-        instance.compiler = MenaiCompiler(optimize=False, module_loader=instance)
-        no_opt_result = instance.evaluate(source)
-
-        assert opt_result == no_opt_result == 42
 
     def test_complex_program_correct(self, menai):
         """A realistic program with multiple scopes produces the right answer."""

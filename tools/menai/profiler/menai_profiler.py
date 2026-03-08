@@ -12,7 +12,6 @@ Usage:
     python menai_profiler.py <file.menai> --output stats.prof
     python menai_profiler.py <file.menai> --top 50
     python menai_profiler.py <file.menai> --sort time
-    python menai_profiler.py <file.menai> --no-optimize
 """
 
 import argparse
@@ -44,13 +43,12 @@ def build_module_path(source_path: Path) -> list[str]:
     return [d for d in [file_dir, cwd] if not (d in seen or seen.add(d))]  # type: ignore[func-returns-value]
 
 
-def compile_source(source_path: Path, optimize: bool) -> object:
+def compile_source(source_path: Path) -> object:
     """
     Compile a Menai source file and return the CodeObject.
 
     Args:
         source_path: Path to the .menai file.
-        optimize:    Whether to enable compiler optimisations.
 
     Returns:
         Compiled CodeObject.
@@ -62,7 +60,7 @@ def compile_source(source_path: Path, optimize: bool) -> object:
     module_path = build_module_path(source_path)
     menai = Menai(module_path=module_path)
 
-    compiler = MenaiCompiler(module_loader=menai, optimize=optimize)
+    compiler = MenaiCompiler(module_loader=menai)
     try:
         return compiler.compile(source, name=str(source_path))
 
@@ -74,7 +72,6 @@ def compile_source(source_path: Path, optimize: bool) -> object:
 
 def run_profile(
     source_path: Path,
-    optimize: bool,
     output_file: str | None,
     top_n: int,
     sort_by: str,
@@ -84,7 +81,6 @@ def run_profile(
 
     Args:
         source_path:     Path to the .menai source file.
-        optimize:        Whether to compile with optimisations.
         output_file:     Optional path to save raw profile data (.prof).
         top_n:           Number of top functions to print.
         sort_by:         pstats sort key.
@@ -102,7 +98,7 @@ def run_profile(
     menai = Menai(module_path=module_path)
 
     print(f"Compiling: {source_path}", file=sys.stderr)
-    compiler = MenaiCompiler(module_loader=menai, optimize=optimize)
+    compiler = MenaiCompiler(module_loader=menai)
     try:
         code = compiler.compile(source, name=str(source_path))
 
@@ -181,11 +177,6 @@ def main() -> int:
         choices=["cumulative", "time", "calls", "name", "filename"],
         help="Sort profile results by this metric (default: cumulative)",
     )
-    parser.add_argument(
-        "--no-optimize",
-        action="store_true",
-        help="Disable compiler optimisations (useful for profiling the unoptimised path)",
-    )
 
     args = parser.parse_args()
 
@@ -196,7 +187,6 @@ def main() -> int:
 
     return run_profile(
         source_path=source_path,
-        optimize=not args.no_optimize,
         output_file=args.output,
         top_n=args.top,
         sort_by=args.sort,

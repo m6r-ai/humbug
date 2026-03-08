@@ -442,8 +442,6 @@ def main() -> int:
     parser.add_argument('--output', '-o', help='Output file (default: stdout)')
     parser.add_argument('--trace', '-t', action='store_true',
                        help='Also generate function call trace')
-    parser.add_argument('--optimize', action='store_true',
-                       help='Compile with optimizations enabled')
 
     args = parser.parse_args()
 
@@ -472,10 +470,7 @@ def main() -> int:
     menai = Menai(module_path=module_path)
 
     try:
-        compiler = MenaiCompiler(
-            module_loader=menai,
-            optimize=args.optimize
-        )
+        compiler = MenaiCompiler(module_loader=menai)
         code = compiler.compile(source)
 
     except Exception as e:

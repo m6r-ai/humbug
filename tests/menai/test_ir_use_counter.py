@@ -27,7 +27,6 @@ from __future__ import annotations
 import pytest
 
 from menai import Menai
-from menai.menai_compiler import MenaiCompiler
 from menai.menai_ir import (
     MenaiIRCall,
     MenaiIRConstant,
@@ -586,20 +585,6 @@ class TestIROptimizerIntegration:
               (loop 100000 0))
         """)
         assert result == 100000
-
-    def test_optimization_disabled_still_correct(self):
-        """Compiling with optimize=False produces the same result as with optimization."""
-        source = "(let ((x 7) (unused 99)) (integer* x 6))"
-        opt_result = Menai().evaluate(source)
-
-        # Compile without IR optimization by using the compiler directly and
-        # running it through a fresh Menai instance whose compiler has optimize=False.
-        # We can't pass optimize= to Menai() directly, so we patch the compiler.
-        instance = Menai()
-        instance.compiler = MenaiCompiler(optimize=False, module_loader=instance)
-        no_opt_result = instance.evaluate(source)
-
-        assert opt_result == no_opt_result == 42
 
     def test_complex_program_correct(self, menai):
         """A realistic program with multiple scopes produces the right answer."""
