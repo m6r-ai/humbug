@@ -138,8 +138,8 @@ class TestPhiSinkMultiArmChain:
 
     def test_move_count_reduced(self):
         """
-        A three-level nested if with const arms: only the passthrough arm
-        (x) needs a MOVE; the three const arms are coalesced to zero MOVEs.
+        A three-level nested if with const arms: the phi-bearing join block
+        is inlined into each predecessor, so no MOVE instructions are needed.
         """
         src = """
         (lambda (x)
@@ -149,8 +149,8 @@ class TestPhiSinkMultiArmChain:
               x))))
         """
         code = _find_lambda(_compile(src, optimize=True))
-        # Three const arms coalesced; only the passthrough arm (x) needs a MOVE.
-        assert _count_op(code, Opcode.MOVE) == 1
+        # Join block inlined into all predecessors — no MOVEs needed.
+        assert _count_op(code, Opcode.MOVE) == 0
 
     def test_result_correct(self):
         from menai import Menai
@@ -243,13 +243,13 @@ class TestPhiSinkParamPassthrough:
         """
         (lambda (x y) (if (boolean? x) x y))
 
-        Both arms are params — neither qualifies as a phi-sink.
-        Both need MOVEs into the phi slot.
+        Both arms are params.  The phi-bearing join block is inlined into
+        each predecessor, so no MOVE instructions are needed.
         """
         src = '(lambda (x y) (if (boolean? x) x y))'
         code = _find_lambda(_compile(src))
-        # Two param arms → two MOVEs.
-        assert _count_op(code, Opcode.MOVE) == 2
+        # Join block inlined — no MOVEs needed.
+        assert _count_op(code, Opcode.MOVE) == 0
 
     def test_result_correct(self):
         from menai import Menai

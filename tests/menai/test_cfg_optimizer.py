@@ -28,6 +28,7 @@ from menai.menai_value import MenaiInteger
 
 
 
+_pass = MenaiCFGSimplifyBlocks()
 _vid = 0
 _bid = 0
 
@@ -106,7 +107,7 @@ class TestEmptyBlockBypass:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=empty), label="entry")
         f = func(entry, empty, target)
 
-        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
+        new_f, changed = _pass._bypass_empty_blocks(f)
         assert changed
         assert 1 not in block_ids(new_f), "empty block should be removed"
         # entry's terminator should now point to target directly.
@@ -120,7 +121,7 @@ class TestEmptyBlockBypass:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=target), label="entry")
         f = func(entry, target)
 
-        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
+        new_f, changed = _pass._bypass_empty_blocks(f)
         assert not changed, "entry block must not be bypassed"
 
     def test_chain_of_empty_blocks_collapsed(self):
@@ -135,7 +136,7 @@ class TestEmptyBlockBypass:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=empty1), label="entry")
         f = func(entry, empty1, empty2, target)
 
-        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
+        new_f, changed = _pass._bypass_empty_blocks(f)
         assert changed
         assert 1 not in block_ids(new_f)
         assert 2 not in block_ids(new_f)
@@ -172,7 +173,7 @@ class TestEmptyBlockBypass:
         )
         f = func(entry, then_empty, else_real, join)
 
-        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
+        new_f, changed = _pass._bypass_empty_blocks(f)
         assert changed, "empty block with phi-free target must be bypassed"
         assert 1 not in block_ids(new_f), "then_empty must be removed"
         branch = new_f.blocks[0].terminator
@@ -221,7 +222,7 @@ class TestEmptyBlockBypass:
         )
         f = func(entry, then_empty, else_real, join)
 
-        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
+        new_f, changed = _pass._bypass_empty_blocks(f)
         assert not changed, (
             "empty block with branch predecessor and phi-bearing target "
             "must not be bypassed (phi store mechanism requires it)"
@@ -259,7 +260,7 @@ class TestEmptyBlockBypass:
         )
         f = func(entry, then_empty, join)
 
-        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
+        new_f, changed = _pass._bypass_empty_blocks(f)
         assert changed
 
         join_new = new_f.blocks[1]  # join is now blocks[1] after empty removed
@@ -281,7 +282,7 @@ class TestEmptyBlockBypass:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=real), label="entry")
         f = func(entry, real)
 
-        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
+        new_f, changed = _pass._bypass_empty_blocks(f)
         assert not changed
 
     def test_block_with_patch_instrs_not_bypassed(self):
@@ -299,7 +300,7 @@ class TestEmptyBlockBypass:
         entry = block(0, terminator=MenaiCFGJumpTerm(target=patched), label="entry")
         f = func(entry, patched, target)
 
-        new_f, changed = MenaiCFGSimplifyBlocks()._optimize_function(f)
+        new_f, changed = _pass._bypass_empty_blocks(f)
         assert not changed, "block with patch_instrs must not be bypassed"
 
 
@@ -408,6 +409,129 @@ class TestFixedPoint:
 
         assert len(new_f.blocks) == 1
         assert isinstance(new_f.blocks[0].terminator, MenaiCFGReturnTerm)
+
+
+class TestTrivialReturnInlining:
+
+    def test_jump_to_empty_return_block_inlined(self):
+        """
+        entry → return_block (no instrs, returns v_r)
+        The jump in entry is replaced by a direct return.
+        return_block is removed.
+        """
+        v_r = v("r")
+        return_block = block(1, terminator=MenaiCFGReturnTerm(value=v_r), label="ret")
+        entry = block(0, terminator=MenaiCFGJumpTerm(target=return_block), label="entry")
+        f = func(entry, return_block)
+
+        new_f, changed = _pass._inline_trivial_returns(f)
+        assert changed
+        assert 1 not in block_ids(new_f), "trivial return block should be removed"
+        assert isinstance(new_f.blocks[0].terminator, MenaiCFGReturnTerm)
+        assert new_f.blocks[0].terminator.value.id == v_r.id
+
+    def test_jump_to_const_return_block_inlined(self):
+        """
+        entry → const_ret (LOAD_CONST v_c; return v_c)
+        The jump is replaced by LOAD_CONST + return with a fresh SSA value.
+        const_ret is removed.
+        """
+        from menai.menai_value import MenaiBoolean
+        v_c = v("c")
+        const_ret = block(
+            1,
+            MenaiCFGConstInstr(result=v_c, value=MenaiBoolean(False)),
+            terminator=MenaiCFGReturnTerm(value=v_c),
+            label="const_ret",
+        )
+        entry = block(0, terminator=MenaiCFGJumpTerm(target=const_ret), label="entry")
+        f = func(entry, const_ret)
+
+        new_f, changed = _pass._inline_trivial_returns(f)
+        assert changed
+        assert 1 not in block_ids(new_f), "const return block should be removed"
+        term = new_f.blocks[0].terminator
+        assert isinstance(term, MenaiCFGReturnTerm)
+        # The return value must be a fresh SSA id (not the original v_c).
+        assert term.value.id != v_c.id, "fresh SSA value must be used"
+        # The const instruction must be present in entry.
+        assert any(isinstance(i, MenaiCFGConstInstr) for i in new_f.blocks[0].instrs)
+
+    def test_multiple_predecessors_each_get_fresh_copy(self):
+        """
+        Two predecessors both jump to the same const return block.
+        Each gets its own inlined copy with a distinct fresh SSA value.
+        The shared block is removed.
+        """
+        from menai.menai_value import MenaiBoolean
+        v_cond = v("cond")
+        v_c = v("c")
+        shared_ret = block(
+            3,
+            MenaiCFGConstInstr(result=v_c, value=MenaiBoolean(False)),
+            terminator=MenaiCFGReturnTerm(value=v_c),
+            label="shared_ret",
+        )
+        pred_a = block(1, terminator=MenaiCFGJumpTerm(target=shared_ret), label="pred_a")
+        pred_b = block(2, terminator=MenaiCFGJumpTerm(target=shared_ret), label="pred_b")
+        entry = block(
+            0,
+            MenaiCFGConstInstr(result=v_cond, value=MenaiInteger(1)),
+            terminator=MenaiCFGBranchTerm(cond=v_cond, true_block=pred_a, false_block=pred_b),
+            label="entry",
+        )
+        f = func(entry, pred_a, pred_b, shared_ret)
+
+        new_f, changed = _pass._inline_trivial_returns(f)
+        assert changed
+        assert 3 not in block_ids(new_f), "shared return block should be removed"
+
+        ret_a = next(b for b in new_f.blocks if b.id == 1).terminator
+        ret_b = next(b for b in new_f.blocks if b.id == 2).terminator
+        assert isinstance(ret_a, MenaiCFGReturnTerm)
+        assert isinstance(ret_b, MenaiCFGReturnTerm)
+        # Each predecessor got a distinct fresh SSA value.
+        assert ret_a.value.id != ret_b.value.id, "each predecessor must have a distinct fresh value"
+        assert ret_a.value.id != v_c.id
+        assert ret_b.value.id != v_c.id
+
+    def test_branch_predecessor_not_inlined(self):
+        """
+        A block reached via a BranchTerm cannot have the return inlined —
+        the trivial return block must remain when it has branch predecessors.
+        """
+        v_cond = v("cond")
+        v_r = v("r")
+        ret_block = block(1, terminator=MenaiCFGReturnTerm(value=v_r), label="ret")
+        other = block(2, terminator=MenaiCFGReturnTerm(value=v_r), label="other")
+        entry = block(
+            0,
+            MenaiCFGConstInstr(result=v_cond, value=MenaiInteger(1)),
+            terminator=MenaiCFGBranchTerm(cond=v_cond, true_block=ret_block, false_block=other),
+            label="entry",
+        )
+        f = func(entry, ret_block, other)
+
+        new_f, changed = _pass._inline_trivial_returns(f)
+        assert not changed, "branch predecessor must prevent inlining and removal"
+        assert 1 in block_ids(new_f), "ret_block must remain"
+
+    def test_trivial_return_block_with_patch_instrs_not_inlined(self):
+        """A trivial return block with patch_instrs must not be inlined."""
+        v_c = v("closure")
+        v_val = v("val")
+        v_r = v("r")
+        ret_block = block(
+            1,
+            patch_instrs=[MenaiCFGPatchClosureInstr(closure=v_c, capture_index=0, value=v_val)],
+            terminator=MenaiCFGReturnTerm(value=v_r),
+            label="ret",
+        )
+        entry = block(0, terminator=MenaiCFGJumpTerm(target=ret_block), label="entry")
+        f = func(entry, ret_block)
+
+        new_f, changed = _pass._inline_trivial_returns(f)
+        assert not changed, "block with patch_instrs must not be inlined"
 
 
 class TestIntegration:

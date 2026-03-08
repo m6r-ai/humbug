@@ -1,12 +1,22 @@
 """
 CFG pass: collapse phi chains.
 
-Eliminates phi-of-phi redundancy that arises from nested `if` expressions.
+Two sub-passes run to a joint fixed point:
+
+1. Phi-chain collapsing
+   Eliminates phi-of-phi redundancy that arises from nested `if` expressions.
 When the result of a phi node is used *only* as an incoming value in one or
 more other phi nodes, the intermediate phi can be bypassed: each consuming
 phi absorbs the intermediate's incoming entries in its place.
 
-Example before:
+2. Constant phi folding
+   When every incoming value of a phi node is a MenaiCFGConstInstr result
+   carrying the same constant, the phi is replaced by a single
+   MenaiCFGConstInstr.  All uses of the phi result are substituted with the
+   new const value.  The phi block may then become an empty-jump block that
+   MenaiCFGSimplifyBlocks will eliminate.
+
+Example (phi-chain collapse) before:
 
     block A:  jump → join1
     block B:  jump → join1
@@ -21,8 +31,8 @@ Example after:
 join1's phi is removed.  If join1 now has no instructions it becomes an
 empty block, which MenaiCFGSimplifyBlocks will then eliminate.
 
-Safety
-------
+Safety (phi-chain collapse)
+---------------------------
 The transformation is valid when:
   1. The intermediate phi result (%v1) is used *only* as a phi incoming
      value — never in a builtin, call, return, branch condition, etc.
@@ -41,15 +51,20 @@ from typing import Dict, List, Set, Tuple
 
 from menai.menai_cfg import (
     MenaiCFGBlock,
+    MenaiCFGConstInstr,
     MenaiCFGFunction,
     MenaiCFGInstr,
     MenaiCFGMakeClosureInstr,
     MenaiCFGPhiInstr,
     MenaiCFGValue,
     relink_predecessors,
+    subst_instr,
+    subst_patch,
+    subst_term,
     value_ids_in_instr,
     value_ids_in_term,
 )
+from menai.menai_value import MenaiValue
 from menai.menai_cfg_optimization_pass import MenaiCFGOptimizationPass
 
 
@@ -58,7 +73,11 @@ class MenaiCFGCollapsePhiChains(MenaiCFGOptimizationPass):
     Replace phi-of-phi chains with a single flat phi, and remove phi nodes
     whose results are never used.
 
-    For each phi P1 whose result is used *only* as an incoming value in
+    Sub-pass 1 folds constant phis: when every incoming value of a phi is a
+    const result carrying the same MenaiValue, the phi is replaced by a
+    MenaiCFGConstInstr and all uses are substituted.
+
+    Sub-pass 2 collapses phi chains: for each phi P1 whose result is used *only* as an incoming value in
     other phi nodes (or not at all), expand each consuming phi by
     substituting P1's incoming entries for the P1 reference, then remove
     P1.
@@ -75,7 +94,8 @@ MenaiCFGSimplifyBlocks in the next pass.
 
         # Iterate to fixed point: each round may expose new candidates.
         while True:
-            round_changed = self._run_one_round(func)
+            round_changed = self._fold_constant_phis(func)
+            round_changed = self._run_one_round(func) or round_changed
             if not round_changed:
                 break
             changed_overall = True
@@ -84,6 +104,74 @@ MenaiCFGSimplifyBlocks in the next pass.
             relink_predecessors(func)
 
         return func, changed_overall
+
+    def _fold_constant_phis(self, func: MenaiCFGFunction) -> bool:
+        """
+        Fold phi nodes whose every incoming value is a const result carrying
+        the same MenaiValue into a single MenaiCFGConstInstr.
+
+        Builds a map from each phi result id to the folded const value, then
+        substitutes all uses of those ids throughout the function.  The phi
+        instructions themselves are then removed.
+
+        Returns True if any phi was folded.
+        """
+        # Phase 1: identify foldable phis and the constant they fold to.
+        # We need a map from SSA value id → MenaiCFGConstInstr that defines it,
+        # so we can check whether every phi incoming is a same-valued const.
+        const_defs: Dict[int, MenaiValue] = {}
+        for block in func.blocks:
+            for instr in block.instrs:
+                if isinstance(instr, MenaiCFGConstInstr):
+                    const_defs[instr.result.id] = instr.value
+
+        foldable: Dict[int, MenaiValue] = {}  # phi result id → folded constant
+        for block in func.blocks:
+            for instr in block.instrs:
+                if not isinstance(instr, MenaiCFGPhiInstr):
+                    continue
+                if not instr.incoming:
+                    continue
+                values = [const_defs.get(val.id) for val, _ in instr.incoming]
+                if any(v is None for v in values):
+                    continue
+                first = values[0]
+                if all(v == first for v in values):
+                    foldable[instr.result.id] = first  # type: ignore[arg-type]
+
+        if not foldable:
+            return False
+
+        # Phase 2: for each foldable phi, introduce a fresh MenaiCFGConstInstr
+        # in the same block (replacing the phi), and build a substitution map
+        # from the old phi result id to the new const result.
+        subst: Dict[int, MenaiCFGValue] = {}
+        for block in func.blocks:
+            new_instrs: List[MenaiCFGInstr] = []
+            for instr in block.instrs:
+                if isinstance(instr, MenaiCFGPhiInstr) and instr.result.id in foldable:
+                    const_val = foldable[instr.result.id]
+                    new_result = MenaiCFGValue(id=instr.result.id, hint=instr.result.hint)
+                    new_instrs.append(MenaiCFGConstInstr(result=new_result, value=const_val))
+                    subst[instr.result.id] = new_result
+                else:
+                    new_instrs.append(instr)
+            block.instrs = new_instrs
+
+        # Phase 3: substitute uses of the old phi result ids throughout the
+        # function.  Since we reused the same id for the new const result, the
+        # subst map is an identity on those ids — but we still need to re-run
+        # subst_instr / subst_term to handle any phi incoming entries that
+        # reference the now-folded phi results, replacing them with the const.
+        def resolve(v: MenaiCFGValue) -> MenaiCFGValue:
+            return subst.get(v.id, v)
+
+        for block in func.blocks:
+            block.instrs = [subst_instr(i, resolve) for i in block.instrs]
+            block.patch_instrs = [subst_patch(p, resolve) for p in block.patch_instrs]
+            block.terminator = subst_term(block.terminator, resolve)
+
+        return True
 
     def _run_one_round(self, func: MenaiCFGFunction) -> bool:
         """

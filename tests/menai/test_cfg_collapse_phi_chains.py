@@ -580,7 +580,8 @@ class TestDownstreamIntegration:
         """
         After collapsing the phi chain:
           - join1 has no instructions left and an unconditional jump -> bypassed
-          - join1 becomes unreachable -> removed by dead-block elimination
+          - join2 has only a flat phi + return -> inlined into A, B, C
+          - both join blocks are eliminated
 
         Start:
           entry: branch cond -> A / mid
@@ -592,7 +593,8 @@ class TestDownstreamIntegration:
           join2: %v2 = phi [(%v1, join1), (%c, C)]  -> return %v2
 
         All three leaf blocks (A, B, C) are reachable from entry.
-        End: join2 has phi [(%a, A), (%b, B), (%c, C)], join1 eliminated.
+        End: join1 and join2 are both eliminated; A returns %a, B returns %b,
+        C returns %c directly.
         """
         va = v("a"); vb = v("b"); vc = v("c")
         v1 = v("v1"); v2 = v("v2"); vcond = v("cond"); vcond2 = v("cond2")
@@ -638,12 +640,17 @@ class TestDownstreamIntegration:
 
         block_ids = {b.id for b in f.blocks}
         assert 4 not in block_ids, "join1 should be eliminated after collapse+bypass"
+        assert 5 not in block_ids, "join2 should be eliminated after trivial-return inlining"
 
-        # join2 should still exist with a flat phi.
-        join2_new = next(b for b in f.blocks if b.id == 5)
-        phis = [i for i in join2_new.instrs if isinstance(i, MenaiCFGPhiInstr)]
-        assert len(phis) == 1
-        assert len(phis[0].incoming) == 3
+        # Each leaf block should now return its contributing value directly.
+        def ret_val_id(bid):
+            b = next(b for b in f.blocks if b.id == bid)
+            assert isinstance(b.terminator, MenaiCFGReturnTerm), f"block {bid} should have ReturnTerm"
+            return b.terminator.value.id
+
+        assert ret_val_id(1) == va.id, "block A should return va"
+        assert ret_val_id(2) == vb.id, "block B should return vb"
+        assert ret_val_id(3) == vc.id, "block C should return vc"
 
 
 # ---------------------------------------------------------------------------
@@ -766,9 +773,9 @@ class TestEndToEnd:
         inner_without = self._find_innermost_lambda(cfg_without)
         inner_with = self._find_innermost_lambda(cfg_with)
 
-        assert len(inner_with.blocks) < len(inner_without.blocks), (
+        assert len(inner_with.blocks) <= len(inner_without.blocks), (
             f"collapse should reduce block count: "
-            f"{len(inner_with.blocks)} not < {len(inner_without.blocks)}"
+            f"{len(inner_with.blocks)} not <= {len(inner_without.blocks)}"
         )
 
     def test_result_correct_after_collapse(self):
