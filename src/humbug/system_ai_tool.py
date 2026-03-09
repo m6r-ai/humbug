@@ -9,6 +9,7 @@ from ai import AIConversationSettings
 from ai_tool import (
     AITool,
     AIToolAuthorizationCallback,
+    AIToolAuthorizationDenied,
     AIToolCall,
     AIToolDefinition,
     AIToolExecutionError,
@@ -623,8 +624,8 @@ class SystemAITool(AITool):
     async def _close_tab(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        requester_ref: Any,
+        request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Close an existing tab by ID."""
         arguments = tool_call.arguments
@@ -637,7 +638,26 @@ class SystemAITool(AITool):
             raise AIToolExecutionError("'tab_id' must be a string")
 
         try:
-            self._column_manager.close_tab_by_id(tab_id)
+            tab = self._column_manager.get_tab_by_id(tab_id)
+            if not tab:
+                raise AIToolExecutionError(f"No tab found with ID: {tab_id}")
+
+            # If tab has unsaved changes, request user authorization before closing
+            if tab.is_modified():
+                tab_info = self._column_manager.get_tab_info_by_id(tab_id)
+                tab_title = tab_info.get('title', tab_id) if tab_info else tab_id
+                context = f"Close tab '{tab_title}' with unsaved changes? Unsaved modifications will be lost."
+
+                authorized = await request_authorization(
+                    "system", arguments, context, None, True
+                )
+                if not authorized:
+                    raise AIToolAuthorizationDenied(
+                        f"User denied permission to close modified tab '{tab_title}'"
+                    )
+
+            # Force close to bypass the editor's modal save dialog
+            self._column_manager.close_tab_by_id(tab_id, force_close=True)
 
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,

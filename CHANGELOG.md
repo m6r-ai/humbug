@@ -28,6 +28,8 @@ New features:
 Bug fixes:
 
 - Alt+ keypresses now generate the correct characters on a Mac (e.g. # on a British keyboard).
+- If the system AI tool wants to close a modified tab then it now requests authormization to close the tab from within
+  the conversation.  This prevents problems with modal dialogs and async code.
 
 Internal structure changes:
 
