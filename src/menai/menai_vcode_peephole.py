@@ -144,9 +144,14 @@ def _eliminate_jump_over_jump(
                 j += 1
 
             if j < len(instrs) and isinstance(instrs[j], MenaiVCodeJump):
-                # Found the pattern — invert the conditional and drop the JUMP.
                 jump = instrs[j]
                 assert isinstance(jump, MenaiVCodeJump)
+                if jump.label == "__entry__":
+                    result.append(instr)
+                    i += 1
+                    continue
+
+                # Found the pattern — invert the conditional and drop the JUMP.
                 if isinstance(instr, MenaiVCodeJumpIfTrue):
                     result.append(MenaiVCodeJumpIfFalse(
                         cond=instr.cond, label=jump.label

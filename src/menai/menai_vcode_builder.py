@@ -237,18 +237,29 @@ class MenaiVCodeBuilder:
                 for arg in term.args:
                     max_reg_id = max(max_reg_id, arg.id)
 
-                # Emit moves for self-loop args into param slots before jumping.
-                # The param registers occupy slots 0..P-1; we need to copy the
-                # new arg values into those registers.  We emit moves here and
-                # the allocator will assign params to their fixed slots.
+                # Emit moves for all params before jumping.  Always emitting
+                # these (even for unchanged params, where src == dst) is
+                # essential for correct liveness: the allocator uses the
+                # instruction list to compute last-use indices, so a param
+                # whose slot was reused mid-body must have a use recorded here
+                # or its slot will be freed too early.  The peephole pass
+                # eliminates any move that resolves to the same slot.
                 param_regs = [
                     self._param_reg(func, idx)
                     for idx in range(len(term.args))
                 ]
                 for param_reg, arg_val in zip(param_regs, term.args):
                     arg_reg = self._reg(arg_val)
-                    if param_reg.id != arg_reg.id:
-                        instrs.append(MenaiVCodeMove(dst=param_reg, src=arg_reg))
+                    instrs.append(MenaiVCodeMove(dst=param_reg, src=arg_reg))
+
+                # Emit self-moves for free vars.  Free vars do not appear in
+                # the self-loop args (they are captured and never reassigned),
+                # but their slots must remain live to the back-edge for the
+                # same reason as params above.
+                for free_var in func.free_vars:
+                    fv_reg = self._freevar_reg(func, free_var)
+                    instrs.append(MenaiVCodeMove(dst=fv_reg, src=fv_reg))
+                    max_reg_id = max(max_reg_id, fv_reg.id)
 
                 instrs.append(MenaiVCodeJump(label="__entry__"))
 
@@ -352,6 +363,16 @@ class MenaiVCodeBuilder:
 
         raise AssertionError(
             f"MenaiVCodeBuilder: param {index} not found in entry block of {func.binding_name!r}"
+        )
+
+    def _freevar_reg(self, func: MenaiCFGFunction, name: str) -> MenaiVCodeReg:
+        """Return the virtual register for free variable `name` of `func`."""
+        for instr in func.blocks[0].instrs:
+            if isinstance(instr, MenaiCFGFreeVarInstr) and instr.var_name == name:
+                return self._reg(instr.result)
+
+        raise AssertionError(
+            f"MenaiVCodeBuilder: free var {name!r} not found in entry block of {func.binding_name!r}"
         )
 
     def _label(self, block: MenaiCFGBlock) -> str:
