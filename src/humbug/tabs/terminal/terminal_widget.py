@@ -456,6 +456,10 @@ class TerminalWidget(QAbstractScrollArea):
         key = event.key()
         modifiers = event.modifiers()
 
+        # If the user has hit enter then scroll to the bottom to show the new prompt/output
+        if key in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self._scroll_to_bottom()
+
         # Handle Alt/Meta key combinations
         if modifiers & Qt.KeyboardModifier.AltModifier:
             # Only send ESC + key if Alt did not compose a new character.
