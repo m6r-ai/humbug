@@ -450,3 +450,66 @@ class TestTailCallOptimizationPerformance:
         '''
         # 20th Fibonacci number
         helpers.assert_evaluates_to(menai, fibonacci, '6765')
+
+
+class TestParallelMoveCorrectness:
+    """
+    Tests for correct parallel-move sequencing in self-loop TCO.
+
+    Self-loop TCO emits a group of moves to update parameter slots before
+    jumping back to the function entry.  These moves must be treated as a
+    parallel assignment — all sources are read before any destination is
+    written.  Sequential emission is incorrect when two moves form a cycle,
+    e.g. slot0←slot1 followed by slot1←slot0: the second move reads the
+    already-overwritten slot0 and both parameters end up with the same value.
+
+    The bytecode builder's parallel-move sequencer detects such cycles and
+    breaks them with a scratch slot, ensuring correct results.
+    """
+
+    def test_swap_args_single_step(self, menai):
+        """
+        Swapping two arguments in a single recursive step produces the
+        correct result.
+
+        f(a, b, 1) swaps a and b once then returns a-b.
+        With a=10, b=3: after swap a=3, b=10, so result is 3-10 = -7.
+        Sequential move emission would leave both slots holding b (=3),
+        giving 3-3 = 0 instead.
+        """
+        code = '''
+        (letrec ((f (lambda (a b n)
+                      (if (integer=? n 0)
+                          (integer- a b)
+                          (f b a (integer- n 1))))))
+          (f 10 3 1))
+        '''
+        assert menai.evaluate(code) == -7
+
+    def test_swap_args_even_steps(self, menai):
+        """
+        An even number of swaps restores the original argument order.
+
+        f(a, b, 2) swaps twice, returning to a=10, b=3, so result is 10-3=7.
+        """
+        code = '''
+        (letrec ((f (lambda (a b n)
+                      (if (integer=? n 0)
+                          (integer- a b)
+                          (f b a (integer- n 1))))))
+          (f 10 3 2))
+        '''
+        assert menai.evaluate(code) == 7
+
+    def test_swap_args_many_steps(self, menai):
+        """
+        Swapping many times (odd count) gives the same result as one swap.
+        """
+        code = '''
+        (letrec ((f (lambda (a b n)
+                      (if (integer=? n 0)
+                          (integer- a b)
+                          (f b a (integer- n 1))))))
+          (f 10 3 99))
+        '''
+        assert menai.evaluate(code) == -7

@@ -14,10 +14,16 @@ This is the final pass of the VM backend pipeline:
 The emitter has no knowledge of SSA, phi nodes, or liveness.  It simply walks
 the flat VCode instruction list and emits the corresponding bytecode, resolving
 label references to instruction indices in a back-patch phase.
+
+Move instructions are treated as a parallel assignment group whenever they
+appear consecutively.  This is necessary because phi-elimination and self-loop
+TCO both emit groups of moves that must be interpreted as simultaneous
+assignments.  A sequencing algorithm detects cycles and breaks them with a
+scratch slot so that the sequential bytecode MOVE instructions are correct.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple
+from typing import Dict, List, Set, Tuple
 
 from menai.menai_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Instruction, Opcode
 from menai.menai_value import (
@@ -204,32 +210,45 @@ class MenaiBytecodeBuilder:
         # _emit_vcode is called for lambdas).
         entry_index = ctx.current_index()
 
-        for instr in func.instrs:
+        i = 0
+        instrs = func.instrs
+        while i < len(instrs):
+            instr = instrs[i]
+
             if isinstance(instr, MenaiVCodeLabel):
                 label_index[instr.name] = ctx.current_index()
+                i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeMove):
-                src_slot = ctx.slot_of(instr.src)
-                dst_slot = ctx.slot_of(instr.dst)
-                # Redundant moves should have been eliminated by the peephole
-                # pass, but guard here for safety.
-                if src_slot != dst_slot:
-                    ctx.emit(Opcode.MOVE, src_slot, dest=dst_slot)
+                # Collect all consecutive moves into a batch and emit them as
+                # a parallel assignment group to avoid sequential-move hazards.
+                j = i
+                move_pairs: List[Tuple[int, int]] = []
+                while j < len(instrs) and isinstance(instrs[j], MenaiVCodeMove):
+                    m = instrs[j]
+                    assert isinstance(m, MenaiVCodeMove)
+                    move_pairs.append((ctx.slot_of(m.dst), ctx.slot_of(m.src)))
+                    j += 1
 
+                _emit_parallel_moves(move_pairs, ctx)
+                i = j
                 continue
 
             if isinstance(instr, MenaiVCodeLoadConst):
                 ctx.emit_constant(instr.value, dest=ctx.slot_of(instr.dst))
+                i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeLoadName):
                 name_idx = ctx.add_name(instr.name)
                 ctx.emit(Opcode.LOAD_NAME, name_idx, dest=ctx.slot_of(instr.dst))
+                i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeBuiltin):
                 self._emit_builtin(instr, ctx)
+                i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeCall):
@@ -238,6 +257,7 @@ class MenaiBytecodeBuilder:
 
                 ctx.emit(Opcode.PUSH, ctx.slot_of(instr.func))
                 ctx.emit(Opcode.CALL, len(instr.args), dest=ctx.slot_of(instr.dst))
+                i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeTailCall):
@@ -245,22 +265,26 @@ class MenaiBytecodeBuilder:
                     ctx.emit(Opcode.PUSH, ctx.slot_of(arg))
                 ctx.emit(Opcode.PUSH, ctx.slot_of(instr.func))
                 ctx.emit(Opcode.TAIL_CALL, len(instr.args))
+                i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeApply):
                 ctx.emit(Opcode.PUSH, ctx.slot_of(instr.func))
                 ctx.emit(Opcode.PUSH, ctx.slot_of(instr.arg_list))
                 ctx.emit(Opcode.APPLY, dest=ctx.slot_of(instr.dst))
+                i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeTailApply):
                 ctx.emit(Opcode.PUSH, ctx.slot_of(instr.func))
                 ctx.emit(Opcode.PUSH, ctx.slot_of(instr.arg_list))
                 ctx.emit(Opcode.TAIL_APPLY)
+                i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeMakeClosure):
                 self._emit_make_closure(instr, ctx)
+                i += 1
                 continue
 
             if isinstance(instr, MenaiVCodePatchClosure):
@@ -270,6 +294,7 @@ class MenaiBytecodeBuilder:
                     ctx.slot_of(instr.value),
                     src2=instr.capture_index,
                 )
+                i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeTrace):
@@ -281,15 +306,18 @@ class MenaiBytecodeBuilder:
                 if dst_slot != val_slot:
                     ctx.emit(Opcode.MOVE, val_slot, dest=dst_slot)
 
+                i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeReturn):
                 ctx.emit(Opcode.RETURN, ctx.slot_of(instr.value))
+                i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeRaise):
                 const_idx = ctx.add_constant(instr.message)
                 ctx.emit(Opcode.RAISE_ERROR, const_idx)
+                i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeJump):
@@ -300,18 +328,21 @@ class MenaiBytecodeBuilder:
                     jump_idx = ctx.emit(Opcode.JUMP, 0)
                     forward_jumps.append((jump_idx, instr.label, 'src0'))
 
+                i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeJumpIfTrue):
                 cond_slot = ctx.slot_of(instr.cond)
                 jump_idx = ctx.emit(Opcode.JUMP_IF_TRUE, cond_slot, 0)
                 forward_jumps.append((jump_idx, instr.label, 'src1'))
+                i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeJumpIfFalse):
                 cond_slot = ctx.slot_of(instr.cond)
                 jump_idx = ctx.emit(Opcode.JUMP_IF_FALSE, cond_slot, 0)
                 forward_jumps.append((jump_idx, instr.label, 'src1'))
+                i += 1
                 continue
 
             raise TypeError(
@@ -418,3 +449,72 @@ class MenaiBytecodeBuilder:
             source_line=func.source_line,
             source_file=func.source_file,
         )
+
+
+def _emit_parallel_moves(
+    moves: List[Tuple[int, int]],
+    ctx: "_EmitContext",
+) -> None:
+    """
+    Emit a set of parallel moves (dst_slot, src_slot) as safe sequential MOVEs.
+
+    A naive sequential emission is incorrect when moves form a cycle, e.g.:
+      slot0 ← slot1
+      slot1 ← slot0
+    The second move would read the value already overwritten by the first.
+
+    This function detects cycles and breaks them using a scratch slot
+    (slot_map.slot_count), extending slot_count by 1 if any cycle is found.
+    Moves where src == dst are skipped as no-ops.
+
+    Args:
+        moves:  List of (dst_slot, src_slot) pairs to emit as parallel moves.
+        ctx:    Emit context; ctx.slot_map.slot_count is extended if a scratch
+                slot is needed.
+    """
+    # Filter no-ops.
+    pending: Dict[int, int] = {}
+    for dst, src in moves:
+        if dst != src:
+            pending[dst] = src
+
+    if not pending:
+        return
+
+    scratch_used = False
+
+    while pending:
+        # A move is safe to emit when its destination is not needed as a source
+        # by any other pending move — emitting it cannot corrupt another move's
+        # input.
+        srcs: Set[int] = set(pending.values())
+        ready = [dst for dst in pending if dst not in srcs]
+
+        if ready:
+            for dst in ready:
+                src = pending.pop(dst)
+                ctx.emit(Opcode.MOVE, src, dest=dst)
+
+        else:
+            # All remaining moves form cycles.  Break one cycle by saving one
+            # source value into the scratch slot, then unrolling the cycle.
+            scratch = ctx.slot_map.slot_count
+            if not scratch_used:
+                ctx.slot_map.slot_count += 1
+                scratch_used = True
+
+            # Pick any cycle member and save its source to scratch.
+            cycle_dst = next(iter(pending))
+            cycle_src = pending[cycle_dst]
+            ctx.emit(Opcode.MOVE, cycle_src, dest=scratch)
+
+            # Follow the cycle, emitting moves, until we reach cycle_dst again.
+            cur = cycle_src
+            while cur != cycle_dst:
+                next_src = pending.pop(cur)
+                ctx.emit(Opcode.MOVE, next_src, dest=cur)
+                cur = next_src
+
+            # Close the cycle: write scratch into cycle_dst.
+            pending.pop(cycle_dst)
+            ctx.emit(Opcode.MOVE, scratch, dest=cycle_dst)
