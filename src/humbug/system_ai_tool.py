@@ -624,7 +624,7 @@ class SystemAITool(AITool):
     async def _close_tab(
         self,
         tool_call: AIToolCall,
-        requester_ref: Any,
+        _requester_ref: Any,
         request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Close an existing tab by ID."""
