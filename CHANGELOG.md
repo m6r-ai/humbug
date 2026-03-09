@@ -2,6 +2,10 @@
 
 ## v41 (2026-xx-xx)
 
+Bug fixes:
+
+- Reinstated constant folding in the Menai compiler.
+
 ## v40 (2026-03-09)
 
 New features:
