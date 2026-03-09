@@ -7,7 +7,7 @@ consume this representation.
 """
 
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import List, Tuple, Callable
 
 from menai.menai_value import MenaiValue
 
@@ -332,7 +332,7 @@ class MenaiCFGBlock:
     label: str
     instrs: List[MenaiCFGInstr] = field(default_factory=list)
     patch_instrs: List[MenaiCFGPatchClosureInstr] = field(default_factory=list)
-    terminator: Optional[MenaiCFGTerminator] = None
+    terminator: MenaiCFGTerminator | None = None
     predecessors: List['MenaiCFGBlock'] = field(default_factory=list)
 
     def __repr__(self) -> str:
@@ -373,7 +373,7 @@ class MenaiCFGFunction:
     params: List[str] = field(default_factory=list)
     free_vars: List[str] = field(default_factory=list)
     is_variadic: bool = False
-    binding_name: Optional[str] = None
+    binding_name: str | None = None
     source_line: int = 0
     source_file: str = ""
 
@@ -467,10 +467,6 @@ def _fmt_term(term: MenaiCFGTerminator) -> str:
     return f"<unknown term {type(term).__name__}>"
 
 
-# Maps SSA value id → replacement MenaiCFGValue.
-CFGSubstMap = Dict[int, MenaiCFGValue]
-
-
 def relink_predecessors(func: MenaiCFGFunction) -> None:
     """
     Recompute the `predecessors` list for every block in `func` from scratch.
@@ -498,163 +494,6 @@ def _safe_add_pred(
 ) -> None:
     if any(b.id == target.id for b in func.blocks):
         target.predecessors.append(pred)
-
-
-def subst_instr(
-    instr: MenaiCFGInstr,
-    resolve: Callable[[MenaiCFGValue], MenaiCFGValue],
-) -> MenaiCFGInstr:
-    """Return a new instruction with all value references substituted."""
-    if isinstance(instr, (MenaiCFGConstInstr,
-                           MenaiCFGGlobalInstr,
-                           MenaiCFGParamInstr,
-                           MenaiCFGFreeVarInstr)):
-        return instr
-
-    if isinstance(instr, MenaiCFGPhiInstr):
-        new_incoming = [(resolve(val), pred) for val, pred in instr.incoming]
-        if new_incoming == instr.incoming:
-            return instr
-
-        return MenaiCFGPhiInstr(result=instr.result, incoming=new_incoming)
-
-    if isinstance(instr, MenaiCFGBuiltinInstr):
-        new_args = [resolve(a) for a in instr.args]
-        if new_args == instr.args:
-            return instr
-
-        return MenaiCFGBuiltinInstr(result=instr.result, op=instr.op, args=new_args)
-
-    if isinstance(instr, MenaiCFGCallInstr):
-        new_args = [resolve(a) for a in instr.args]
-        new_func = resolve(instr.func)
-        if new_args == instr.args and new_func is instr.func:
-            return instr
-
-        return MenaiCFGCallInstr(result=instr.result, func=new_func, args=new_args)
-
-    if isinstance(instr, MenaiCFGApplyInstr):
-        new_func = resolve(instr.func)
-        new_arg_list = resolve(instr.arg_list)
-        if new_func is instr.func and new_arg_list is instr.arg_list:
-            return instr
-
-        return MenaiCFGApplyInstr(
-            result=instr.result, func=new_func, arg_list=new_arg_list
-        )
-
-    if isinstance(instr, MenaiCFGMakeClosureInstr):
-        new_captures = [resolve(c) for c in instr.captures]
-        if new_captures == instr.captures:
-            return instr
-
-        return MenaiCFGMakeClosureInstr(
-            result=instr.result,
-            function=instr.function,
-            captures=new_captures,
-            needs_patching=instr.needs_patching,
-        )
-
-    if isinstance(instr, MenaiCFGPatchClosureInstr):
-        new_closure = resolve(instr.closure)
-        new_value = resolve(instr.value)
-        if new_closure is instr.closure and new_value is instr.value:
-            return instr
-
-        return MenaiCFGPatchClosureInstr(
-            closure=new_closure,
-            capture_index=instr.capture_index,
-            value=new_value,
-        )
-
-    if isinstance(instr, MenaiCFGTraceInstr):
-        new_messages = [resolve(m) for m in instr.messages]
-        new_value = resolve(instr.value)
-        if new_messages == instr.messages and new_value is instr.value:
-            return instr
-
-        return MenaiCFGTraceInstr(
-            result=instr.result,
-            messages=new_messages,
-            value=new_value,
-        )
-
-    return instr
-
-
-def subst_patch(
-    patch: MenaiCFGPatchClosureInstr,
-    resolve: Callable[[MenaiCFGValue], MenaiCFGValue],
-) -> MenaiCFGPatchClosureInstr:
-    """Return a new patch instruction with all value references substituted."""
-    new_closure = resolve(patch.closure)
-    new_value = resolve(patch.value)
-    if new_closure is patch.closure and new_value is patch.value:
-        return patch
-
-    return MenaiCFGPatchClosureInstr(
-        closure=new_closure,
-        capture_index=patch.capture_index,
-        value=new_value,
-    )
-
-
-def subst_term(
-    term: MenaiCFGTerminator | None,
-    resolve: Callable[[MenaiCFGValue], MenaiCFGValue],
-) -> MenaiCFGTerminator | None:
-    """Return a new terminator with all value references substituted."""
-    if term is None:
-        return None
-
-    if isinstance(term, MenaiCFGReturnTerm):
-        new_val = resolve(term.value)
-        if new_val is term.value:
-            return term
-
-        return MenaiCFGReturnTerm(value=new_val)
-
-    if isinstance(term, MenaiCFGJumpTerm):
-        return term
-
-    if isinstance(term, MenaiCFGBranchTerm):
-        new_cond = resolve(term.cond)
-        if new_cond is term.cond:
-            return term
-
-        return MenaiCFGBranchTerm(
-            cond=new_cond,
-            true_block=term.true_block,
-            false_block=term.false_block,
-        )
-
-    if isinstance(term, MenaiCFGTailCallTerm):
-        new_args = [resolve(a) for a in term.args]
-        new_func = resolve(term.func)
-        if new_args == term.args and new_func is term.func:
-            return term
-
-        return MenaiCFGTailCallTerm(func=new_func, args=new_args)
-
-    if isinstance(term, MenaiCFGTailApplyTerm):
-        new_func = resolve(term.func)
-        new_arg_list = resolve(term.arg_list)
-        if new_func is term.func and new_arg_list is term.arg_list:
-            return term
-
-        return MenaiCFGTailApplyTerm(func=new_func, arg_list=new_arg_list)
-
-    if isinstance(term, MenaiCFGSelfLoopTerm):
-        new_args = [resolve(a) for a in term.args]
-        if new_args == term.args:
-            return term
-
-        return MenaiCFGSelfLoopTerm(args=new_args)
-
-    if isinstance(term, MenaiCFGRaiseTerm):
-        return term
-
-    return term
 
 
 def remap_term(
