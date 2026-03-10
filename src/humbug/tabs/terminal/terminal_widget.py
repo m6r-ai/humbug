@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 import logging
+import math
 from typing import Tuple, Dict, List, cast
 
 from PySide6.QtWidgets import QWidget, QAbstractScrollArea, QMenu
@@ -140,7 +141,7 @@ class TerminalWidget(QAbstractScrollArea):
         self.setFont(font)
 
         fm = QFontMetricsF(self.font())
-        self._char_width = fm.horizontalAdvance(' ')
+        self._char_width = math.ceil(fm.horizontalAdvance(' '))
         self._char_height = fm.height()
         self._char_ascent = fm.ascent()
 
@@ -876,23 +877,24 @@ class TerminalWidget(QAbstractScrollArea):
         # Calculate start x position
         x_start = start_col * self._char_width
 
-        # If no highlights or blinking chars, draw entire run at once
+        # If no highlights or blinking chars, draw background at once then each char individually
         if not highlights and not attrs & TerminalCharacterAttributes.BLINK:
             width = len(text) * self._char_width
 
-            # Draw background - use precise width calculation
+            # Draw background as a single rect
             painter.fillRect(
                 QRectF(x_start, y, width, self._char_height),
                 bg
             )
 
-            # Draw text
+            # Draw each character at its exact integer column position to avoid sub-pixel drift
             if not (attrs & TerminalCharacterAttributes.BLINK and self._blink_state):
                 painter.setPen(fg)
-                painter.drawText(
-                    QPointF(x_start, y + self._char_ascent),
-                    text
-                )
+                for i, char in enumerate(text):
+                    painter.drawText(
+                        QPointF(x_start + i * self._char_width, y + self._char_ascent),
+                        char
+                    )
             return
 
         # Handle runs with highlights or blinking characters
@@ -939,11 +941,11 @@ class TerminalWidget(QAbstractScrollArea):
                     # Draw text if not blinking or in visible state
                     if not (attrs & TerminalCharacterAttributes.BLINK and self._blink_state):
                         painter.setPen(fg)
-                        batch_text = text[current_batch_start:current_batch_start + current_batch_len]
-                        painter.drawText(
-                            QPointF(batch_x, y + self._char_ascent),
-                            batch_text
-                        )
+                        for j in range(current_batch_len):
+                            painter.drawText(
+                                QPointF(batch_x + j * self._char_width, y + self._char_ascent),
+                                text[current_batch_start + j]
+                            )
 
                 # Start a new batch for the current character
                 if i == len(text) - 1 and char_bg != current_highlight_bg:
