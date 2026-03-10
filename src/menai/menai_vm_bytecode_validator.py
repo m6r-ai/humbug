@@ -319,9 +319,6 @@ class BytecodeValidator:
         Args:
             code: Code object to validate
         """
-        if code.validated:
-            return
-
         # First validate all nested code objects recursively
         for nested_code in code.code_objects:
             self.validate(nested_code)
@@ -332,8 +329,6 @@ class BytecodeValidator:
         self._validate_control_flow(code)
         self._validate_stack_depth(code)
         self._validate_initialization(code)
-
-        code.validated = True
 
     def _validate_structure(self, code: CodeObject) -> None:
         """Validate basic structural properties."""

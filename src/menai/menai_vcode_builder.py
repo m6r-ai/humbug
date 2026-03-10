@@ -100,6 +100,9 @@ class MenaiVCodeBuilder:
         vcode = MenaiVCodeBuilder().build(cfg_function)
     """
 
+    def __init__(self) -> None:
+        self._reg_cache: Dict[int, MenaiVCodeReg] = {}
+
     def build(self, func: MenaiCFGFunction) -> MenaiVCodeFunction:
         """
         Lower the top-level MenaiCFGFunction to a MenaiVCodeFunction.
@@ -114,6 +117,9 @@ class MenaiVCodeBuilder:
 
     def _lower_function(self, func: MenaiCFGFunction) -> MenaiVCodeFunction:
         """Lower one CFG function (top-level or nested lambda) to VCode."""
+        # Reset the register cache — reg ids are only unique within a function.
+        self._reg_cache = {}
+
         rpo = self._rpo(func)
 
         # Pre-compute phi moves: for each block, the list of (dst, src) moves
@@ -121,6 +127,22 @@ class MenaiVCodeBuilder:
         phi_moves: Dict[int, List[Tuple[MenaiVCodeReg, MenaiVCodeReg]]] = {
             block.id: [] for block in rpo
         }
+
+        # Pre-compute label strings — each block's label is needed in multiple
+        # places (phi-move pre-computation and terminator emission).
+        labels: Dict[int, str] = {block.id: self._label(block) for block in rpo}
+
+        # Pre-compute param and free-var register lookups from the entry block,
+        # so SelfLoopTerm handling can do O(1) lookups instead of linear scans.
+        param_regs: Dict[int, MenaiVCodeReg] = {}
+        freevar_regs: Dict[str, MenaiVCodeReg] = {}
+        for instr in func.blocks[0].instrs:
+            if isinstance(instr, MenaiCFGParamInstr):
+                param_regs[instr.index] = self._reg(instr.result)
+
+            elif isinstance(instr, MenaiCFGFreeVarInstr):
+                freevar_regs[instr.var_name] = self._reg(instr.result)
+
         for block in rpo:
             term = block.terminator
             successors: List[MenaiCFGBlock] = []
@@ -150,7 +172,7 @@ class MenaiVCodeBuilder:
             # Emit a label for every block except the entry block.
             # The entry block has no predecessor that jumps to it by label.
             if i > 0:
-                instrs.append(MenaiVCodeLabel(name=self._label(block)))
+                instrs.append(MenaiVCodeLabel(name=labels[block.id]))
 
             # Emit non-terminator instructions.
             for cfg_instr in block.instrs:
@@ -161,10 +183,7 @@ class MenaiVCodeBuilder:
                     max_reg_id = max(max_reg_id, cfg_instr.result.id)
                     continue
 
-                vcode_instrs = self._lower_instr(cfg_instr)
-                instrs.extend(vcode_instrs)
-                for vi in vcode_instrs:
-                    max_reg_id = max(max_reg_id, self._max_reg_in_instr(vi))
+                max_reg_id = self._lower_instr(cfg_instr, instrs, max_reg_id)
 
             # Emit patch instructions.
             for patch in block.patch_instrs:
@@ -194,7 +213,7 @@ class MenaiVCodeBuilder:
                 target = term.target
                 # Omit the jump if the target is the immediately next block.
                 if next_block is None or next_block.id != target.id:
-                    instrs.append(MenaiVCodeJump(label=self._label(target)))
+                    instrs.append(MenaiVCodeJump(label=labels[target.id]))
 
             elif isinstance(term, MenaiCFGBranchTerm):
                 cond = self._reg(term.cond)
@@ -203,16 +222,16 @@ class MenaiVCodeBuilder:
 
                 if next_id == term.false_block.id:
                     # False block falls through — emit JUMP_IF_TRUE to true block.
-                    instrs.append(MenaiVCodeJumpIfTrue(cond=cond, label=self._label(term.true_block)))
+                    instrs.append(MenaiVCodeJumpIfTrue(cond=cond, label=labels[term.true_block.id]))
 
                 elif next_id == term.true_block.id:
                     # True block falls through — emit JUMP_IF_FALSE to false block.
-                    instrs.append(MenaiVCodeJumpIfFalse(cond=cond, label=self._label(term.false_block)))
+                    instrs.append(MenaiVCodeJumpIfFalse(cond=cond, label=labels[term.false_block.id]))
 
                 else:
                     # Neither falls through — emit conditional + unconditional jump.
-                    instrs.append(MenaiVCodeJumpIfFalse(cond=cond, label=self._label(term.false_block)))
-                    instrs.append(MenaiVCodeJump(label=self._label(term.true_block)))
+                    instrs.append(MenaiVCodeJumpIfFalse(cond=cond, label=labels[term.false_block.id]))
+                    instrs.append(MenaiVCodeJump(label=labels[term.true_block.id]))
 
             elif isinstance(term, MenaiCFGTailCallTerm):
                 instrs.append(MenaiVCodeTailCall(
@@ -244,11 +263,8 @@ class MenaiVCodeBuilder:
                 # whose slot was reused mid-body must have a use recorded here
                 # or its slot will be freed too early.  The peephole pass
                 # eliminates any move that resolves to the same slot.
-                param_regs = [
-                    self._param_reg(func, idx)
-                    for idx in range(len(term.args))
-                ]
-                for param_reg, arg_val in zip(param_regs, term.args):
+                for idx, arg_val in enumerate(term.args):
+                    param_reg = param_regs[idx]
                     arg_reg = self._reg(arg_val)
                     instrs.append(MenaiVCodeMove(dst=param_reg, src=arg_reg))
 
@@ -257,7 +273,7 @@ class MenaiVCodeBuilder:
                 # but their slots must remain live to the back-edge for the
                 # same reason as params above.
                 for free_var in func.free_vars:
-                    fv_reg = self._freevar_reg(func, free_var)
+                    fv_reg = freevar_regs[free_var]
                     instrs.append(MenaiVCodeMove(dst=fv_reg, src=fv_reg))
                     max_reg_id = max(max_reg_id, fv_reg.id)
 
@@ -282,68 +298,71 @@ class MenaiVCodeBuilder:
             source_file=func.source_file,
         )
 
-    def _lower_instr(self, instr: object) -> List[MenaiVCodeInstr]:
-        """Lower a single CFG instruction to a list of VCode instructions."""
+    def _lower_instr(
+        self,
+        instr: object,
+        instrs: List[MenaiVCodeInstr],
+        max_reg_id: int,
+    ) -> int:
+        """
+        Lower a single CFG instruction, appending to `instrs`.
+
+        Returns the updated max_reg_id.
+        """
         if isinstance(instr, (MenaiCFGParamInstr, MenaiCFGFreeVarInstr)):
             # Params and free vars occupy fixed slots assigned by the allocator.
             # No instruction needed — their registers are pre-assigned.
-            return []
+            return max_reg_id
 
         if isinstance(instr, MenaiCFGConstInstr):
-            return [MenaiVCodeLoadConst(
-                dst=self._reg(instr.result),
-                value=instr.value,
-            )]
+            dst = self._reg(instr.result)
+            instrs.append(MenaiVCodeLoadConst(dst=dst, value=instr.value))
+            return max(max_reg_id, dst.id)
 
         if isinstance(instr, MenaiCFGGlobalInstr):
-            return [MenaiVCodeLoadName(
-                dst=self._reg(instr.result),
-                name=instr.name,
-            )]
+            dst = self._reg(instr.result)
+            instrs.append(MenaiVCodeLoadName(dst=dst, name=instr.name))
+            return max(max_reg_id, dst.id)
 
         if isinstance(instr, MenaiCFGBuiltinInstr):
-            return [MenaiVCodeBuiltin(
-                dst=self._reg(instr.result),
-                op=instr.op,
-                args=[self._reg(a) for a in instr.args],
-            )]
+            dst = self._reg(instr.result)
+            args = [self._reg(a) for a in instr.args]
+            instrs.append(MenaiVCodeBuiltin(dst=dst, op=instr.op, args=args))
+            return max(max_reg_id, dst.id, *(r.id for r in args)) if args else max(max_reg_id, dst.id)
 
         if isinstance(instr, MenaiCFGCallInstr):
-            return [MenaiVCodeCall(
-                dst=self._reg(instr.result),
-                func=self._reg(instr.func),
-                args=[self._reg(a) for a in instr.args],
-            )]
+            dst = self._reg(instr.result)
+            func_reg = self._reg(instr.func)
+            args = [self._reg(a) for a in instr.args]
+            instrs.append(MenaiVCodeCall(dst=dst, func=func_reg, args=args))
+            return max(max_reg_id, dst.id, func_reg.id, *(r.id for r in args)) if args else max(max_reg_id, dst.id, func_reg.id)
 
         if isinstance(instr, MenaiCFGApplyInstr):
-            return [MenaiVCodeApply(
-                dst=self._reg(instr.result),
-                func=self._reg(instr.func),
-                arg_list=self._reg(instr.arg_list),
-            )]
+            dst = self._reg(instr.result)
+            func_reg = self._reg(instr.func)
+            arg_list = self._reg(instr.arg_list)
+            instrs.append(MenaiVCodeApply(dst=dst, func=func_reg, arg_list=arg_list))
+            return max(max_reg_id, dst.id, func_reg.id, arg_list.id)
 
         if isinstance(instr, MenaiCFGMakeClosureInstr):
+            dst = self._reg(instr.result)
+            captures = [self._reg(c) for c in instr.captures]
             child_vcode = self._lower_function(instr.function)
-            return [MenaiVCodeMakeClosure(
-                dst=self._reg(instr.result),
-                function=child_vcode,
-                captures=[self._reg(c) for c in instr.captures],
-                needs_patching=instr.needs_patching,
-            )]
+            instrs.append(MenaiVCodeMakeClosure(dst=dst, function=child_vcode, captures=captures, needs_patching=instr.needs_patching))
+            return max(max_reg_id, dst.id, *(r.id for r in captures)) if captures else max(max_reg_id, dst.id)
 
         if isinstance(instr, MenaiCFGPatchClosureInstr):
-            return [MenaiVCodePatchClosure(
-                closure=self._reg(instr.closure),
-                capture_index=instr.capture_index,
-                value=self._reg(instr.value),
-            )]
+            closure = self._reg(instr.closure)
+            value = self._reg(instr.value)
+            instrs.append(MenaiVCodePatchClosure(closure=closure, capture_index=instr.capture_index, value=value))
+            return max(max_reg_id, closure.id, value.id)
 
         if isinstance(instr, MenaiCFGTraceInstr):
-            return [MenaiVCodeTrace(
-                dst=self._reg(instr.result),
-                messages=[self._reg(m) for m in instr.messages],
-                value=self._reg(instr.value),
-            )]
+            dst = self._reg(instr.result)
+            messages = [self._reg(m) for m in instr.messages]
+            value = self._reg(instr.value)
+            instrs.append(MenaiVCodeTrace(dst=dst, messages=messages, value=value))
+            return max(max_reg_id, dst.id, value.id, *(r.id for r in messages)) if messages else max(max_reg_id, dst.id, value.id)
 
         raise TypeError(
             f"MenaiVCodeBuilder: unhandled instruction {type(instr).__name__}"
@@ -351,29 +370,11 @@ class MenaiVCodeBuilder:
 
     def _reg(self, value: MenaiCFGValue) -> MenaiVCodeReg:
         """Convert a CFG SSA value to a VCode virtual register."""
-        return MenaiVCodeReg(id=value.id, hint=value.hint)
-
-    def _param_reg(self, func: MenaiCFGFunction, index: int) -> MenaiVCodeReg:
-        """Return the virtual register for parameter `index` of `func`."""
-        # Params are defined by MenaiCFGParamInstr in the entry block.
-        # We find the SSA value id for this param by scanning the entry block.
-        for instr in func.blocks[0].instrs:
-            if isinstance(instr, MenaiCFGParamInstr) and instr.index == index:
-                return self._reg(instr.result)
-
-        raise AssertionError(
-            f"MenaiVCodeBuilder: param {index} not found in entry block of {func.binding_name!r}"
-        )
-
-    def _freevar_reg(self, func: MenaiCFGFunction, name: str) -> MenaiVCodeReg:
-        """Return the virtual register for free variable `name` of `func`."""
-        for instr in func.blocks[0].instrs:
-            if isinstance(instr, MenaiCFGFreeVarInstr) and instr.var_name == name:
-                return self._reg(instr.result)
-
-        raise AssertionError(
-            f"MenaiVCodeBuilder: free var {name!r} not found in entry block of {func.binding_name!r}"
-        )
+        reg = self._reg_cache.get(value.id)
+        if reg is None:
+            reg = MenaiVCodeReg(id=value.id, hint=value.hint)
+            self._reg_cache[value.id] = reg
+        return reg
 
     def _label(self, block: MenaiCFGBlock) -> str:
         """Return the label string for a CFG block."""
@@ -406,51 +407,3 @@ class MenaiVCodeBuilder:
         dfs(func.entry)
         post_order.reverse()
         return post_order
-
-    def _max_reg_in_instr(self, instr: MenaiVCodeInstr) -> int:
-        """Return the highest register id referenced in a VCode instruction."""
-        ids: List[int] = []
-
-        if isinstance(instr, MenaiVCodeMove):
-            ids = [instr.dst.id, instr.src.id]
-
-        elif isinstance(instr, MenaiVCodeLoadConst):
-            ids = [instr.dst.id]
-
-        elif isinstance(instr, MenaiVCodeLoadName):
-            ids = [instr.dst.id]
-
-        elif isinstance(instr, MenaiVCodeBuiltin):
-            ids = [instr.dst.id] + [r.id for r in instr.args]
-
-        elif isinstance(instr, MenaiVCodeCall):
-            ids = [instr.dst.id, instr.func.id] + [r.id for r in instr.args]
-
-        elif isinstance(instr, MenaiVCodeTailCall):
-            ids = [instr.func.id] + [r.id for r in instr.args]
-
-        elif isinstance(instr, MenaiVCodeApply):
-            ids = [instr.dst.id, instr.func.id, instr.arg_list.id]
-
-        elif isinstance(instr, MenaiVCodeTailApply):
-            ids = [instr.func.id, instr.arg_list.id]
-
-        elif isinstance(instr, MenaiVCodeMakeClosure):
-            ids = [instr.dst.id] + [r.id for r in instr.captures]
-
-        elif isinstance(instr, MenaiVCodePatchClosure):
-            ids = [instr.closure.id, instr.value.id]
-
-        elif isinstance(instr, MenaiVCodeTrace):
-            ids = [instr.dst.id, instr.value.id] + [r.id for r in instr.messages]
-
-        elif isinstance(instr, MenaiVCodeJumpIfTrue):
-            ids = [instr.cond.id]
-
-        elif isinstance(instr, MenaiVCodeJumpIfFalse):
-            ids = [instr.cond.id]
-
-        elif isinstance(instr, MenaiVCodeReturn):
-            ids = [instr.value.id]
-
-        return max(ids) if ids else -1
