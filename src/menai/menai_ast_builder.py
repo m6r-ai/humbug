@@ -60,6 +60,12 @@ class MenaiASTBuilder:
         # Paren stack for tracking unclosed expressions
         self.paren_stack: List[ParenStackFrame] = []
 
+        # Track the most recently closed frame and where it was closed.
+        # Used to report premature-close errors pointing at the culprit ')'.
+        self.last_closed_frame: ParenStackFrame | None = None
+        self.last_close_line: int = 1
+        self.last_close_column: int = 1
+
         # Track the line/column of the last token we consumed
         self.last_token_end_line: int = 1
         self.last_token_end_column: int = 1
@@ -100,6 +106,31 @@ class MenaiASTBuilder:
             current_value = self.current_token.value if self.current_token else "EOF"
             current_line = self.current_token.line if self.current_token else 1
             current_col = self.current_token.column if self.current_token else 1
+
+            if self.last_closed_frame is not None:
+                # A ')' closed an expression prematurely — point at that ')' as the culprit
+                closed = self.last_closed_frame
+                expr_type = closed.get_expression_type()
+                snippet = closed.get_context_snippet()
+                context = (
+                    f"The expression starting at line {closed.line}, column {closed.column} "
+                    f"({expr_type}: {snippet}) "
+                    f"was closed at line {self.last_close_line}, column {self.last_close_column} "
+                    f"after {closed.elements_parsed} element{'s' if closed.elements_parsed != 1 else ''}, "
+                    f"but '{current_value}' at line {current_line}, column {current_col} was not expected after that close. "
+                    f"The ')' at line {self.last_close_line}, column {self.last_close_column} may be one too many."
+                )
+                raise MenaiASTBuildError(
+                    message="Premature closing parenthesis",
+                    line=self.last_close_line,
+                    column=self.last_close_column,
+                    received=f"Unexpected '{current_value}' at line {current_line}, column {current_col} after close",
+                    expected="Either more elements before this ')' or end of input after it",
+                    example="Correct: (+ 1 2)\\nIncorrect: (+ 1 2)) extra",
+                    suggestion=f"Check the ')' at line {self.last_close_line}, column {self.last_close_column} — it may close too early",
+                    context=context,
+                    source=self.expression
+                )
 
             raise MenaiASTBuildError(
                 message="Unexpected token after complete expression",
@@ -195,7 +226,15 @@ class MenaiASTBuilder:
     def _pop_paren_frame(self) -> None:
         """Pop an opening paren from the stack when it's successfully closed."""
         assert self.paren_stack, "Paren stack underflow - trying to pop from empty stack"
-        self.paren_stack.pop()
+        frame = self.paren_stack.pop()
+        self.last_closed_frame = frame
+        # current_token is the ')' that just closed this frame — record its position
+        if self.current_token is not None:
+            self.last_close_line = self.current_token.line
+            self.last_close_column = self.current_token.column
+        else:
+            self.last_close_line = self.last_token_end_line
+            self.last_close_column = self.last_token_end_column
 
     def _mark_element_start(self) -> None:
         """Mark that we're starting to parse a new element."""
