@@ -8,13 +8,26 @@ import pstats
 import sys
 import time
 from pathlib import Path
+from typing import Callable, Optional, Tuple
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
-from pipeline_engine import PipelineResult, execute_pipeline
+from pipeline_engine import PipelineResult, StepResult, execute_pipeline
 from pipeline_optimizer import optimize_pipeline
 from pipeline_parser import PipelineParseError, load_pipeline
-from pipeline_step import MenaiStep, ToolStep
+from pipeline_step import MenaiStep, Pipeline, ToolStep
+
+
+_ANSI_CYAN  = "\033[36m"
+_ANSI_GREEN = "\033[32m"
+_ANSI_RED   = "\033[31m"
+_ANSI_GREY  = "\033[90m"
+_ANSI_RESET = "\033[0m"
+
+
+def _use_color(no_color: bool) -> bool:
+    """Return True if ANSI colour output should be used."""
+    return not no_color and sys.stdout.isatty()
 
 
 def _format_elapsed(seconds: float) -> str:
@@ -25,24 +38,83 @@ def _format_elapsed(seconds: float) -> str:
     return f"{seconds * 1000:.1f}ms"
 
 
-def _print_step_summary(result: PipelineResult, verbosity: int, timings: bool) -> None:
-    """Print a per-step execution summary (verbosity >= 1 required)."""
-    id_width = max((len(r.step_id) for r in result.step_results), default=8)
+def _make_step_callbacks(
+    pipeline: Pipeline,
+    verbosity: int,
+    timings: bool,
+    color: bool,
+) -> Tuple[Callable[[str], None], Callable[[StepResult], None], Callable[[], None]]:
+    """
+    Build live step callbacks for verbose pipeline execution.
 
-    for step_result in result.step_results:
-        status = "OK" if step_result.success else "FAIL"
-        timing_str = f"  {_format_elapsed(step_result.elapsed_s):>8}" if timings else ""
-        print(f"  [{status}] {step_result.step_id:<{id_width}}{timing_str}")
+    Returns a triple of (on_step_start, on_step_done, print_final_block).
 
-        if not step_result.success:
-            print(f"         {step_result.error}")
+    on_step_start prints a separator followed by the full status block: all previously
+    completed steps with their final status, and the current step marked as Running.
+    on_step_done records the completed result so it appears in the next status block,
+    and at verbosity >= 2 appends the truncated debug value beneath the status block.
+    print_final_block prints the closing separator and final status block after the
+    last step completes.
+    """
+    step_ids = [s.step_id for s in pipeline.steps]
+    num_width = len(str(len(step_ids)))
+    id_width = max((len(s) for s in step_ids), default=8)
+    _dashes = "-" * (num_width + 2 + id_width + 20)
+    separator = f"{_ANSI_GREY}{_dashes}{_ANSI_RESET}" if color else _dashes
 
-        elif verbosity >= 2 and step_result.value:
-            truncated = step_result.value
+    step_index: dict[str, int] = {sid: i for i, sid in enumerate(step_ids)}
+    console_step_ids: set[str] = {
+        s.step_id for s in pipeline.steps
+        if isinstance(s, ToolStep) and s.tool == "console"
+    }
+    pending: list[Optional[StepResult]] = [None]
+
+    def _flush_pending() -> None:
+        prev = pending[0]
+        if prev is None:
+            return
+
+        i = step_index[prev.step_id]
+        if prev.success:
+            status = f"{_ANSI_GREEN}OK{_ANSI_RESET}" if color else "OK"
+
+        else:
+            status = f"{_ANSI_RED}FAIL{_ANSI_RESET}" if color else "FAIL"
+
+        timing_str = f"  {_format_elapsed(prev.elapsed_s):>8}" if timings else ""
+
+        if not prev.success:
+            print(prev.error)
+        elif verbosity >= 2 and prev.value:
+            truncated = prev.value
             if len(truncated) > 120:
                 truncated = truncated[:117] + "..."
 
-            print(f"         {truncated}")
+            print(truncated)
+
+        if prev.step_id in console_step_ids or not prev.success or (verbosity >= 2 and prev.value):
+            print(separator)
+
+        print(f"{i + 1:{num_width}}. {prev.step_id} <- {status}{timing_str}")
+
+        pending[0] = None
+
+    def on_step_start(step_id: str) -> None:
+        _flush_pending()
+        print(separator)
+        i = step_index[step_id]
+        running = f"{_ANSI_CYAN}Running{_ANSI_RESET}" if color else "Running"
+        print(f"{i + 1:{num_width}}. {step_id} <- {running}")
+        print(separator)
+
+    def on_step_done(step_result: StepResult) -> None:
+        pending[0] = step_result
+
+    def print_final_block() -> None:
+        _flush_pending()
+        print(separator)
+
+    return on_step_start, on_step_done, print_final_block
 
 
 def _print_timings_bar(result: PipelineResult) -> None:
@@ -54,14 +126,14 @@ def _print_timings_bar(result: PipelineResult) -> None:
     bar_width = 40
     id_width = max((len(r.step_id) for r in result.step_results), default=8)
 
-    print("  Timing breakdown:")
+    print("Timing breakdown:")
     for step_result in result.step_results:
         proportion = step_result.elapsed_s / total
         filled = round(proportion * bar_width)
-        bar = "█" * filled + "░" * (bar_width - filled)
+        text_bar = "█" * filled + "░" * (bar_width - filled)
         pct = proportion * 100
         print(
-            f"    {step_result.step_id:<{id_width}}  [{bar}]  "
+            f"  {step_result.step_id:<{id_width}}  [{text_bar}]  "
             f"{_format_elapsed(step_result.elapsed_s):>8}  ({pct:4.1f}%)"
         )
 
@@ -73,8 +145,8 @@ def _print_pipeline_summary(
     step_count_after: int
 ) -> None:
     """Print a summary of the pipeline structure."""
-    print(f"  Pipeline: {pipeline_path}")
-    print(f"  Steps:    {step_count_before}", end="")
+    print(f"Pipeline: {pipeline_path}")
+    print(f"Steps: {step_count_before}", end="")
     if optimized and step_count_after < step_count_before:
         collapsed = step_count_before - step_count_after
         print(f" -> {step_count_after} ({collapsed} Menai step(s) collapsed)", end="")
@@ -82,7 +154,13 @@ def _print_pipeline_summary(
     print()
 
 
-def _run_with_profile(pipeline, sort_key: str, lines: int, on_step_start) -> tuple:
+def _run_with_profile(
+    pipeline: Pipeline,
+    sort_key: str,
+    lines: int,
+    on_step_start: Optional[Callable[[str], None]],
+    on_step_done: Optional[Callable[[StepResult], None]],
+) -> Tuple[PipelineResult, str]:
     """
     Execute a pipeline under cProfile and return (result, profile_stats_string).
 
@@ -91,13 +169,14 @@ def _run_with_profile(pipeline, sort_key: str, lines: int, on_step_start) -> tup
         sort_key: pstats sort key (e.g. 'cumulative', 'tottime')
         lines: Number of functions to show in the profile output
         on_step_start: Optional step-start callback forwarded to execute_pipeline
+        on_step_done: Optional step-done callback forwarded to execute_pipeline
 
     Returns:
         Tuple of (PipelineResult, formatted profile string)
     """
     profiler = cProfile.Profile()
     profiler.enable()
-    result = execute_pipeline(pipeline, on_step_start=on_step_start)
+    result = execute_pipeline(pipeline, on_step_start=on_step_start, on_step_done=on_step_done)
     profiler.disable()
 
     buf = io.StringIO()
@@ -146,7 +225,7 @@ Examples:
         action="count",
         default=0,
         dest="verbosity",
-        help="Increase verbosity: -v shows step status, -vv also shows truncated step output"
+        help="Increase verbosity: -v shows live step status, -vv also shows truncated step output"
     )
 
     parser.add_argument(
@@ -182,7 +261,15 @@ Examples:
         help="Sort key for profile output (default: cumulative)"
     )
 
+    parser.add_argument(
+        "--no-color",
+        action="store_true",
+        help="Disable ANSI colour output"
+    )
+
     args = parser.parse_args()
+
+    color = _use_color(args.no_color)
 
     pipeline_path: Path = args.pipeline
 
@@ -230,20 +317,25 @@ Examples:
     start = time.monotonic()
 
     on_step_start = None
-    if args.verbosity >= 2:
-        on_step_start = lambda step_id: print(f"\n» {step_id}")
+    on_step_done = None
+    print_final_block = None
+
+    if args.verbosity >= 1:
+        on_step_start, on_step_done, print_final_block = _make_step_callbacks(
+            pipeline, args.verbosity, args.timings, color
+        )
 
     if args.profile:
         result, profile_output = _run_with_profile(
-            pipeline, args.profile_sort, args.profile_lines, on_step_start
+            pipeline, args.profile_sort, args.profile_lines, on_step_start, on_step_done
         )
     else:
-        result = execute_pipeline(pipeline, on_step_start=on_step_start)
+        result = execute_pipeline(pipeline, on_step_start=on_step_start, on_step_done=on_step_done)
 
     elapsed = time.monotonic() - start
 
-    if args.verbosity >= 1:
-        _print_step_summary(result, args.verbosity, args.timings)
+    if print_final_block is not None:
+        print_final_block()
 
     if args.verbosity >= 1 and args.timings and result.step_results:
         print()
@@ -251,9 +343,9 @@ Examples:
 
     if profile_output:
         print()
-        print(f"  Profile (top {args.profile_lines} by {args.profile_sort}):")
+        print(f"Profile (top {args.profile_lines} by {args.profile_sort}):")
         for line in profile_output.splitlines():
-            print(f"  {line}")
+            print(line)
 
     if result.success:
         if args.verbosity >= 1:
