@@ -9,8 +9,6 @@ New features:
 Bug fixes:
 
 - Reinstated constant folding in the Menai compiler.
-- Modified the terminal emulator to use integer-size character widths to ensure
-  there are no weird rendering artifacts with block characters.
 
 ## v40 (2026-03-09)
 
