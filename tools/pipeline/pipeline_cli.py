@@ -25,8 +25,8 @@ def _format_elapsed(seconds: float) -> str:
     return f"{seconds * 1000:.1f}ms"
 
 
-def _print_step_summary(result: PipelineResult, verbose: bool, timings: bool) -> None:
-    """Print a per-step execution summary."""
+def _print_step_summary(result: PipelineResult, verbosity: int, timings: bool) -> None:
+    """Print a per-step execution summary (verbosity >= 1 required)."""
     id_width = max((len(r.step_id) for r in result.step_results), default=8)
 
     for step_result in result.step_results:
@@ -37,7 +37,7 @@ def _print_step_summary(result: PipelineResult, verbose: bool, timings: bool) ->
         if not step_result.success:
             print(f"         {step_result.error}")
 
-        elif verbose and step_result.value:
+        elif verbosity >= 2 and step_result.value:
             truncated = step_result.value
             if len(truncated) > 120:
                 truncated = truncated[:117] + "..."
@@ -82,7 +82,7 @@ def _print_pipeline_summary(
     print()
 
 
-def _run_with_profile(pipeline, sort_key: str, lines: int) -> tuple:
+def _run_with_profile(pipeline, sort_key: str, lines: int, on_step_start) -> tuple:
     """
     Execute a pipeline under cProfile and return (result, profile_stats_string).
 
@@ -90,13 +90,14 @@ def _run_with_profile(pipeline, sort_key: str, lines: int) -> tuple:
         pipeline: The pipeline to execute
         sort_key: pstats sort key (e.g. 'cumulative', 'tottime')
         lines: Number of functions to show in the profile output
+        on_step_start: Optional step-start callback forwarded to execute_pipeline
 
     Returns:
         Tuple of (PipelineResult, formatted profile string)
     """
     profiler = cProfile.Profile()
     profiler.enable()
-    result = execute_pipeline(pipeline)
+    result = execute_pipeline(pipeline, on_step_start=on_step_start)
     profiler.disable()
 
     buf = io.StringIO()
@@ -122,8 +123,8 @@ def main() -> int:
 Examples:
   python pipeline_cli.py examples/hello-timestamp/pipeline.json
   python pipeline_cli.py --no-optimize examples/adjacent-collapse/pipeline.json
-  python pipeline_cli.py --verbose examples/file-transform/pipeline.json
-  python pipeline_cli.py --timings examples/clock-and-file/pipeline.json
+  python pipeline_cli.py -v examples/file-transform/pipeline.json
+  python pipeline_cli.py -v --timings examples/clock-and-file/pipeline.json
   python pipeline_cli.py --profile examples/file-transform/pipeline.json
         """
     )
@@ -141,9 +142,11 @@ Examples:
     )
 
     parser.add_argument(
-        "--verbose", "-v",
-        action="store_true",
-        help="Show truncated output for each step"
+        "-v", "--verbose",
+        action="count",
+        default=0,
+        dest="verbosity",
+        help="Increase verbosity: -v shows step status, -vv also shows truncated step output"
     )
 
     parser.add_argument(
@@ -219,22 +222,30 @@ Examples:
         print("Pipeline is valid.")
         return 0
 
-    _print_pipeline_summary(pipeline_path, optimized, step_count_before, step_count_after)
-    print()
+    if args.verbosity >= 1:
+        _print_pipeline_summary(pipeline_path, optimized, step_count_before, step_count_after)
+        print()
 
     profile_output = None
     start = time.monotonic()
 
+    on_step_start = None
+    if args.verbosity >= 2:
+        on_step_start = lambda step_id: print(f"\n» {step_id}")
+
     if args.profile:
-        result, profile_output = _run_with_profile(pipeline, args.profile_sort, args.profile_lines)
+        result, profile_output = _run_with_profile(
+            pipeline, args.profile_sort, args.profile_lines, on_step_start
+        )
     else:
-        result = execute_pipeline(pipeline)
+        result = execute_pipeline(pipeline, on_step_start=on_step_start)
 
     elapsed = time.monotonic() - start
 
-    _print_step_summary(result, args.verbose, args.timings)
+    if args.verbosity >= 1:
+        _print_step_summary(result, args.verbosity, args.timings)
 
-    if args.timings and result.step_results:
+    if args.verbosity >= 1 and args.timings and result.step_results:
         print()
         _print_timings_bar(result)
 
@@ -244,13 +255,13 @@ Examples:
         for line in profile_output.splitlines():
             print(f"  {line}")
 
-    print()
-
     if result.success:
-        print(f"Pipeline completed successfully in {_format_elapsed(elapsed)}")
+        if args.verbosity >= 1:
+            print()
+            print(f"Pipeline completed successfully in {_format_elapsed(elapsed)}")
         return 0
 
-    print(f"Pipeline failed after {_format_elapsed(elapsed)}: {result.error}", file=sys.stderr)
+    print(f"Pipeline failed: {result.error}", file=sys.stderr)
     return 1
 
 

@@ -4,7 +4,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
@@ -346,7 +346,11 @@ def _execute_tool_step(
         ) from e
 
 
-def execute_pipeline(pipeline: Pipeline) -> PipelineResult:
+def execute_pipeline(
+    pipeline: Pipeline,
+    on_step_start: Optional[Callable[[str], None]] = None,
+    on_step_done: Optional[Callable[['StepResult'], None]] = None,
+) -> PipelineResult:
     """
     Execute a pipeline, running each step in order.
 
@@ -356,6 +360,8 @@ def execute_pipeline(pipeline: Pipeline) -> PipelineResult:
 
     Args:
         pipeline: The pipeline to execute
+        on_step_start: Optional callback invoked with the step ID before each step runs
+        on_step_done: Optional callback invoked with the StepResult after each step
 
     Returns:
         PipelineResult with per-step results and overall success/failure
@@ -369,6 +375,8 @@ def execute_pipeline(pipeline: Pipeline) -> PipelineResult:
     step_results: List[StepResult] = []
 
     for step in pipeline.steps:
+        if on_step_start is not None:
+            on_step_start(step.step_id)
         step_start = time.monotonic()
         try:
             if isinstance(step, MenaiStep):
@@ -382,6 +390,8 @@ def execute_pipeline(pipeline: Pipeline) -> PipelineResult:
                     value=str(outputs),
                     elapsed_s=time.monotonic() - step_start,
                 ))
+                if on_step_done is not None:
+                    on_step_done(step_results[-1])
 
             elif isinstance(step, ToolStep):
                 output = _execute_tool_step(step, step_outputs)
@@ -392,6 +402,8 @@ def execute_pipeline(pipeline: Pipeline) -> PipelineResult:
                     value=output,
                     elapsed_s=time.monotonic() - step_start,
                 ))
+                if on_step_done is not None:
+                    on_step_done(step_results[-1])
 
         except PipelineAuthorizationDenied as e:
             step_results.append(StepResult(
@@ -400,6 +412,8 @@ def execute_pipeline(pipeline: Pipeline) -> PipelineResult:
                 error=f"Authorization denied: {e}",
                 elapsed_s=time.monotonic() - step_start,
             ))
+            if on_step_done is not None:
+                on_step_done(step_results[-1])
             return PipelineResult(
                 success=False,
                 step_results=step_results,
@@ -413,6 +427,8 @@ def execute_pipeline(pipeline: Pipeline) -> PipelineResult:
                 error=str(e),
                 elapsed_s=time.monotonic() - step_start,
             ))
+            if on_step_done is not None:
+                on_step_done(step_results[-1])
             return PipelineResult(
                 success=False,
                 step_results=step_results,

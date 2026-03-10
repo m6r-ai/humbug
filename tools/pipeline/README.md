@@ -134,9 +134,10 @@ Options:
 | Flag | Description |
 |------|-------------|
 | `--no-optimize` | Disable adjacent Menai step collapsing |
-| `--verbose` / `-v` | Show truncated output for each step |
 | `--dry-run` | Validate and display the pipeline without executing it |
-| `--timings` / `-t` | Show per-step elapsed time and a proportional timing bar |
+| `-v` / `--verbose` | Show pipeline summary and per-step status |
+| `-vv` | Also show truncated output values for each step |
+| `--timings` / `-t` | Show per-step elapsed time and timing bar (implies `-v`) |
 | `--profile` / `-p` | Run under cProfile and print the top hotspots |
 | `--profile-lines N` | Number of functions to show in profile output (default: 30) |
 | `--profile-sort` | Sort key for profile output: `cumulative` (default), `tottime`, `calls`, `filename` |
