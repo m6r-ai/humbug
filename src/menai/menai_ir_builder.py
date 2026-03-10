@@ -48,6 +48,9 @@ class AnalysisContext:
     current_letrec_names: Set[str] = field(default_factory=set)  # Names in the immediately enclosing
                                                                    # letrec group only.
     names: Set[str] = field(default_factory=set)
+    free_vars: List[str] = field(default_factory=list)   # Free variables discovered during analysis,
+                                                          # in order of first encounter.
+    free_vars_seen: Set[str] = field(default_factory=set) # Companion set for O(1) duplicate checks.
 
     def push_scope(self) -> None:
         """Enter a new lexical scope."""
@@ -83,7 +86,11 @@ class AnalysisContext:
                 return 'local'
 
         if self.parent_ctx is not None:
-            return self.parent_ctx.resolve_variable(name)
+            result = self.parent_ctx.resolve_variable(name)
+            if result == 'local' and name not in self.free_vars_seen:
+                self.free_vars.append(name)
+                self.free_vars_seen.add(name)
+            return result
 
         self.names.add(name)
         return 'global'
@@ -397,10 +404,21 @@ class MenaiIRBuilder:
                 continue
             param_names.append(param.name)
 
-        bound_vars = set(param_names)
-        free_vars = self._find_free_variables(body, bound_vars, ctx)
+        lambda_ctx = ctx.create_child_context()
+        lambda_ctx.push_scope()
+
+        for param_name in param_names:
+            lambda_ctx.add_name_to_scope(param_name)
+
+        body_plan = self._analyze_expression(body, lambda_ctx, in_tail_position=True)
+
+        if self._needs_return_wrapper(body_plan):
+            body_plan = MenaiIRReturn(value_plan=body_plan)
+
+        lambda_ctx.pop_scope()
 
         sibling_names = ctx.current_letrec_names
+        free_vars = lambda_ctx.free_vars
         sibling_free_vars: List[str] = [fv for fv in free_vars if fv in sibling_names]
         outer_free_vars:   List[str] = [fv for fv in free_vars if fv not in sibling_names]
 
@@ -412,22 +430,6 @@ class MenaiIRBuilder:
             MenaiIRVariable(name=fv, var_type='local')
             for fv in outer_free_vars
         ]
-
-        lambda_ctx = ctx.create_child_context()
-        lambda_ctx.push_scope()
-
-        for param_name in param_names:
-            lambda_ctx.add_name_to_scope(param_name)
-
-        for free_var in sibling_free_vars + outer_free_vars:
-            lambda_ctx.add_name_to_scope(free_var)
-
-        body_plan = self._analyze_expression(body, lambda_ctx, in_tail_position=True)
-
-        if self._needs_return_wrapper(body_plan):
-            body_plan = MenaiIRReturn(value_plan=body_plan)
-
-        lambda_ctx.pop_scope()
 
         return MenaiIRLambda(
             params=param_names,
@@ -511,80 +513,3 @@ class MenaiIRBuilder:
             builtin_name=None
         )
 
-    def _find_free_variables(self, expr: MenaiASTNode, bound_vars: Set[str], parent_ctx: AnalysisContext) -> List[str]:
-        """Find free variables in an expression."""
-        free: List[str] = []
-        self._collect_free_vars(expr, bound_vars, parent_ctx, free, set())
-        return free
-
-    def _collect_free_vars(
-        self,
-        expr: MenaiASTNode,
-        bound_vars: Set[str],
-        parent_ctx: AnalysisContext,
-        free: List[str],
-        seen: Set[str]
-    ) -> None:
-        """Recursively collect free variables."""
-        expr_type = type(expr)
-
-        if expr_type is MenaiASTSymbol:
-            name = cast(MenaiASTSymbol, expr).name
-            if name in seen or name in bound_vars:
-                return
-
-            # $-prefixed names are opcode primitives, never free variables.
-            if name.startswith('$'):
-                return
-
-            var_type = parent_ctx.resolve_variable(name)
-            if var_type == 'local' and name not in seen:
-                free.append(name)
-                seen.add(name)
-
-        elif expr_type is MenaiASTList:
-            if cast(MenaiASTList, expr).is_empty():
-                return
-
-            first = cast(MenaiASTList, expr).first()
-            first_type = type(first)
-
-            if first_type is MenaiASTSymbol:
-                if cast(MenaiASTSymbol, first).name == 'lambda':
-                    if len(cast(MenaiASTList, expr).elements) >= 3:
-                        nested_params = cast(MenaiASTList, expr).elements[1]
-                        nested_body = cast(MenaiASTList, expr).elements[2]
-                        nested_bound = bound_vars.copy()
-                        if isinstance(nested_params, MenaiASTList):
-                            for param in nested_params.elements:
-                                if isinstance(param, MenaiASTSymbol):
-                                    nested_bound.add(param.name)
-
-                        self._collect_free_vars(nested_body, nested_bound, parent_ctx, free, seen)
-
-                    return
-
-                if cast(MenaiASTSymbol, first).name == 'let':
-                    if len(cast(MenaiASTList, expr).elements) >= 3:
-                        bindings_list = cast(MenaiASTList, expr).elements[1]
-                        body = cast(MenaiASTList, expr).elements[2]
-                        new_bound = bound_vars.copy()
-                        if isinstance(bindings_list, MenaiASTList):
-                            for binding in bindings_list.elements:
-                                if isinstance(binding, MenaiASTList) and len(binding.elements) >= 2:
-                                    name_expr = binding.elements[0]
-                                    if isinstance(name_expr, MenaiASTSymbol):
-                                        new_bound.add(name_expr.name)
-
-                        if isinstance(bindings_list, MenaiASTList):
-                            for binding in bindings_list.elements:
-                                if isinstance(binding, MenaiASTList) and len(binding.elements) >= 2:
-                                    value_expr = binding.elements[1]
-                                    self._collect_free_vars(value_expr, bound_vars, parent_ctx, free, seen)
-
-                        self._collect_free_vars(body, new_bound, parent_ctx, free, seen)
-
-                    return
-
-            for elem in cast(MenaiASTList, expr).elements:
-                self._collect_free_vars(elem, bound_vars, parent_ctx, free, seen)
