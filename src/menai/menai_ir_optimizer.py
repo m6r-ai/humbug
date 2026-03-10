@@ -47,11 +47,20 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
         self._eliminations = 0
         self._counts: IRUseCounts | None = None
 
+    def eliminations(self) -> int:
+        """Return the number of eliminations performed by the last optimize() call."""
+        return self._eliminations
+
     def optimize(self, ir: MenaiIRExpr) -> tuple[MenaiIRExpr, bool]:
         """Return an optimized IR tree and a boolean indicating whether any changes were made."""
         self._eliminations = 0
-        self._counts = MenaiIRUseCounter().count(ir)
-        new_ir = self._opt(ir, frame_stack=[0])
+        new_ir = ir
+        while True:
+            self._counts = MenaiIRUseCounter().count(new_ir)
+            prev_eliminations = self._eliminations
+            new_ir = self._opt(new_ir, frame_stack=[0])
+            if self._eliminations == prev_eliminations:
+                break
         return new_ir, self._eliminations > 0
 
     def _opt(self, ir: MenaiIRExpr, frame_stack: List[int]) -> MenaiIRExpr:

@@ -889,22 +889,19 @@ class MenaiASTDesugarer:
         value_expr = expr.elements[1]
         clauses = list(expr.elements[2:])
 
-        # All clauses already validated by semantic analyzer
-        for i, clause in enumerate(clauses):
-            assert isinstance(clause, MenaiASTList) and len(clause.elements) == 2, \
-                f"Clause {i+1} should be a list with 2 elements (validated by semantic analyzer)"
-
-        # Generate temp variable for match value
-        temp_var = self._gen_temp()
-
         # Desugar the value expression
         desugared_value = self.desugar(value_expr)
 
-        # Build the match logic as nested if/let expressions
-        match_logic = self._build_match_clauses(temp_var, clauses)
+        # If the scrutinee is already a simple variable, use it directly — no
+        # temp binding needed.  The temp exists solely to avoid re-evaluating a
+        # compound expression; a variable reference is free to repeat.
+        if isinstance(desugared_value, MenaiASTSymbol):
+            return self.desugar(self._build_match_clauses(desugared_value.name, clauses))
 
-        # Wrap in let to bind the temp variable
-        # (let ((temp value)) match-logic)
+        # Scrutinee is a compound expression: bind it once to a temp so that
+        # each pattern test references the same evaluated value.
+        temp_var = self._gen_temp()
+        match_logic = self._build_match_clauses(temp_var, clauses)
         result = MenaiASTList((
             MenaiASTSymbol('let*'),
             MenaiASTList((
@@ -912,8 +909,6 @@ class MenaiASTDesugarer:
             )),
             match_logic
         ))
-
-        # Recursively desugar the result to handle let* -> nested let transformation
         return self.desugar(result)
 
     def _build_match_clauses(self, temp_var: str, clauses: List[MenaiASTNode]) -> MenaiASTNode:

@@ -623,8 +623,6 @@ class TestIntegration:
         from menai.menai_ast_desugarer import MenaiASTDesugarer
         from menai.menai_ast_constant_folder import MenaiASTConstantFolder
         from menai.menai_ir_builder import MenaiIRBuilder
-        from menai.menai_ir_copy_propagator import MenaiIRCopyPropagator
-        from menai.menai_ir_inline_once import MenaiIRInlineOnce
         from menai.menai_ir_optimizer import MenaiIROptimizer
         from menai.menai_cfg_builder import MenaiCFGBuilder
 
@@ -645,7 +643,7 @@ class TestIntegration:
         ast = folder.optimize(ast)
 
         ir = ir_builder.build(ast)
-        ir_passes = [MenaiIRCopyPropagator(), MenaiIRInlineOnce(), MenaiIROptimizer()]
+        ir_passes = [MenaiIROptimizer()]
         changed = True
         while changed:
             changed = False

@@ -82,7 +82,7 @@ class TestDesugarerCoreConstructs:
         desugarer = MenaiASTDesugarer()
 
         # (if (match x (42 #t) (_ #f)) "yes" "no")
-        # The match should be desugared, but if structure preserved
+        # The match on symbol x produces if directly (no let wrapper).
         expr = parse_and_analyze_expression('(if (match x (42 #t) (_ #f)) "yes" "no")')
         result = desugarer.desugar(expr)
 
@@ -90,16 +90,17 @@ class TestDesugarerCoreConstructs:
         assert isinstance(result, MenaiASTList)
         assert result.first().name == 'if'
 
-        # Condition should be desugared (should be a let, not match)
+        # Condition should be desugared — match on symbol produces if directly
         condition = result.elements[1]
         assert isinstance(condition, MenaiASTList)
-        assert condition.first().name == 'let'
+        assert condition.first().name == 'if'
 
     def test_let_desugars_children(self):
         """Test that let expressions desugar their children."""
         desugarer = MenaiASTDesugarer()
 
         # (let ((x (match y (42 1) (_ 0)))) x)
+        # Match on symbol y produces if directly (no let wrapper).
         expr = parse_and_analyze_expression('(let ((x (match y (42 1) (_ 0)))) x)')
         result = desugarer.desugar(expr)
 
@@ -107,18 +108,19 @@ class TestDesugarerCoreConstructs:
         assert isinstance(result, MenaiASTList)
         assert result.first().name == 'let'
 
-        # Binding value should be desugared
+        # Binding value should be desugared — match on symbol produces if directly
         bindings = result.elements[1]
         binding = bindings.elements[0]
         value = binding.elements[1]
         assert isinstance(value, MenaiASTList)
-        assert value.first().name == 'let'  # Match desugared to let
+        assert value.first().name == 'if'
 
     def test_lambda_desugars_body(self):
         """Test that lambda expressions desugar their body."""
         desugarer = MenaiASTDesugarer()
 
         # (lambda (x) (match x (42 "found") (_ "not found")))
+        # Match on symbol x produces if directly (no let wrapper).
         expr = parse_and_analyze_expression('(lambda (x) (match x (42 "found") (_ "not found")))')
         result = desugarer.desugar(expr)
 
@@ -126,16 +128,17 @@ class TestDesugarerCoreConstructs:
         assert isinstance(result, MenaiASTList)
         assert result.first().name == 'lambda'
 
-        # Body should be desugared
+        # Body should be desugared — match on symbol produces if directly
         body = result.elements[2]
         assert isinstance(body, MenaiASTList)
-        assert body.first().name == 'let'  # Match desugared to let
+        assert body.first().name == 'if'
 
     def test_function_call_desugars_all_elements(self):
         """Test that function calls desugar all elements."""
         desugarer = MenaiASTDesugarer()
 
         # (+ (match x (42 1) (_ 0)) (match y (1 10) (_ 0)))
+        # Both matches on symbols produce if directly (no let wrapper).
         expr = parse_and_analyze_expression('(+ (match x (42 1) (_ 0)) (match y (1 10) (_ 0)))')
         result = desugarer.desugar(expr)
 
@@ -143,13 +146,13 @@ class TestDesugarerCoreConstructs:
         assert isinstance(result, MenaiASTList)
         assert result.first().name == '+'
 
-        # Both arguments should be desugared
+        # Both arguments should be desugared — match on symbol produces if directly
         arg1 = result.elements[1]
         arg2 = result.elements[2]
         assert isinstance(arg1, MenaiASTList)
-        assert arg1.first().name == 'let'
+        assert arg1.first().name == 'if'
         assert isinstance(arg2, MenaiASTList)
-        assert arg2.first().name == 'let'
+        assert arg2.first().name == 'if'
 
 
 class TestDesugarerMatchLiteral:
@@ -160,56 +163,36 @@ class TestDesugarerMatchLiteral:
         desugarer = MenaiASTDesugarer()
 
         # (match x (42 "found") (_ "default"))
+        # Scrutinee is a symbol — no temp binding needed, result is if directly.
         expr = parse_and_analyze_expression('(match x (42 "found") (_ "default"))')
         result = desugarer.desugar(expr)
 
-        # Should be a let binding a temp variable
         assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
-
-        # Should have bindings and body
-        bindings = result.elements[1]
-        assert isinstance(bindings, MenaiASTList)
-        assert len(bindings.elements) == 1
-
-        # Binding should be (#:match-tmp-1 x)
-        binding = bindings.elements[0]
-        temp_var = binding.elements[0]
-        assert isinstance(temp_var, MenaiASTSymbol)
-        assert temp_var.name.startswith('#:match-tmp-')
-
-        # Body should be nested if expressions
-        body = result.elements[2]
-        assert isinstance(body, MenaiASTList)
-        assert body.first().name == 'if'
+        assert result.first().name == 'if'
 
     def test_match_string_literal(self):
         """Test desugaring of string literal pattern."""
         desugarer = MenaiASTDesugarer()
 
         # (match x ("hello" "greeting") (_ "other"))
+        # Scrutinee is a symbol — result is if directly.
         expr = parse_and_analyze_expression('(match x ("hello" "greeting") (_ "other"))')
         result = desugarer.desugar(expr)
 
-        # Should be a let with if
         assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
-
-        body = result.elements[2]
-        assert isinstance(body, MenaiASTList)
-        assert body.first().name == 'if'
+        assert result.first().name == 'if'
 
     def test_match_boolean_literal(self):
         """Test desugaring of boolean literal pattern."""
         desugarer = MenaiASTDesugarer()
 
         # (match x (#t "true") (#f "false"))
+        # Scrutinee is a symbol — result is if directly.
         expr = parse_and_analyze_expression('(match x (#t "true") (#f "false"))')
         result = desugarer.desugar(expr)
 
-        # Should be a let with if
         assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
+        assert result.first().name == 'if'
 
 
 class TestDesugarerMatchVariable:
@@ -220,41 +203,33 @@ class TestDesugarerMatchVariable:
         desugarer = MenaiASTDesugarer()
 
         # (match x (n n))
+        # Scrutinee is a symbol. Variable pattern always matches so (if #t ...)
+        # is eliminated. Result is directly: (let ((n x)) n).
         expr = parse_and_analyze_expression('(match x (n n))')
         result = desugarer.desugar(expr)
 
-        # Should be: (let ((#:tmp x)) (let* ((n #:tmp)) n))
-        # The (if #t ...) is eliminated because a variable pattern always matches.
         assert isinstance(result, MenaiASTList)
         assert result.first().name == 'let'
-
-        body = result.elements[2]
-        assert isinstance(body, MenaiASTList)
-        # Body is directly the let* binding (no wrapping if)
-        assert body.first().name in ('let', 'let*')
-        # The binding should bind n to the temp var
-        binding = body.elements[1].elements[0]
+        # The binding should bind n directly to x (no temp var)
+        binding = result.elements[1].elements[0]
         assert isinstance(binding, MenaiASTList)
         assert isinstance(binding.elements[0], MenaiASTSymbol)
         assert binding.elements[0].name == 'n'
+        assert isinstance(binding.elements[1], MenaiASTSymbol)
+        assert binding.elements[1].name == 'x'
 
     def test_match_wildcard(self):
         """Test desugaring of wildcard pattern."""
         desugarer = MenaiASTDesugarer()
 
         # (match x (_ "anything"))
+        # Scrutinee is a symbol, wildcard always matches — result is the
+        # string directly with no wrapping let or if.
         expr = parse_and_analyze_expression('(match x (_ "anything"))')
         result = desugarer.desugar(expr)
 
-        # Should be: (let ((#:tmp x)) "anything")
-        # The (if #t ...) is eliminated because a wildcard always matches.
-        assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
-
-        body = result.elements[2]
-        # Body is directly the result string (no wrapping if or let)
-        assert isinstance(body, MenaiASTString)
-        assert body.value == "anything"
+        assert isinstance(result, MenaiASTString)
+        assert result.value == "anything"
 
 
 class TestDesugarerMatchType:
@@ -265,24 +240,20 @@ class TestDesugarerMatchType:
         desugarer = MenaiASTDesugarer()
 
         # (match x ((? number? n) n) (_ "not a number"))
+        # Scrutinee is a symbol — result is if directly.
         expr = parse_and_analyze_expression('(match x ((? number? n) n) (_ "not a number"))')
         result = desugarer.desugar(expr)
 
-        # Should be: (let ((#:tmp x)) (if (number? #:tmp) (let ((n #:tmp)) n) ...))
         assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
+        assert result.first().name == 'if'
 
-        body = result.elements[2]
-        assert isinstance(body, MenaiASTList)
-        assert body.first().name == 'if'
-
-        # Condition should be (number? #:tmp)
-        condition = body.elements[1]
+        # Condition should be (number? x)
+        condition = result.elements[1]
         assert isinstance(condition, MenaiASTList)
         assert condition.first().name == 'number?'
 
-        # Then branch should bind the variable
-        then_branch = body.elements[2]
+        # Then branch should bind n to x
+        then_branch = result.elements[2]
         assert isinstance(then_branch, MenaiASTList)
         assert then_branch.first().name == 'let'
 
@@ -291,20 +262,19 @@ class TestDesugarerMatchType:
         desugarer = MenaiASTDesugarer()
 
         # (match x ((? string? _) "is string") (_ "not string"))
+        # Scrutinee is a symbol — result is if directly.
         expr = parse_and_analyze_expression('(match x ((? string? _) "is string") (_ "not string"))')
         result = desugarer.desugar(expr)
 
-        # Should test type but not bind variable
         assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
+        assert result.first().name == 'if'
 
-        body = result.elements[2]
-        condition = body.elements[1]
+        condition = result.elements[1]
         assert isinstance(condition, MenaiASTList)
         assert condition.first().name == '$string?'
 
-        # Then branch should not have a let (no binding)
-        then_branch = body.elements[2]
+        # Then branch should not have a let (no binding for _)
+        then_branch = result.elements[2]
         assert isinstance(then_branch, MenaiASTString)
         assert then_branch.value == "is string"
 
@@ -317,15 +287,13 @@ class TestDesugarerMatchList:
         desugarer = MenaiASTDesugarer()
 
         # (match x (() "empty") (_ "not empty"))
+        # Scrutinee is a symbol — result is if directly.
         expr = parse_and_analyze_expression('(match x (() "empty") (_ "not empty"))')
         result = desugarer.desugar(expr)
 
-        # Should test with null?
         assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
-
-        body = result.elements[2]
-        condition = body.elements[1]
+        assert result.first().name == 'if'
+        condition = result.elements[1]
         assert isinstance(condition, MenaiASTList)
         assert condition.first().name == '$list-null?'
 
@@ -334,26 +302,21 @@ class TestDesugarerMatchList:
         desugarer = MenaiASTDesugarer()
 
         # (match x ((a b) (list a b)) (_ "wrong"))
+        # Scrutinee is a symbol — result is if directly.
         expr = parse_and_analyze_expression('(match x ((a b) (list a b)) (_ "wrong"))')
         result = desugarer.desugar(expr)
 
-        # Should test list? and length
         assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
+        assert result.first().name == 'if'
 
-        body = result.elements[2]
-        condition = body.elements[1]
-
-        # Condition should be an if-chain (and lowered to if)
+        condition = result.elements[1]
         assert isinstance(condition, MenaiASTList)
         assert condition.first().name == 'if'
 
-        # First condition is (list? x), then-branch tests length
         list_test = condition.elements[1]
         assert isinstance(list_test, MenaiASTList)
         assert list_test.first().name == '$list?'
 
-        # Then-branch is the length test directly (two-arg and folds to single if)
         then_branch = condition.elements[2]
         assert isinstance(then_branch, MenaiASTList)
         assert isinstance(then_branch.elements[1], MenaiASTList)
@@ -364,12 +327,12 @@ class TestDesugarerMatchList:
         desugarer = MenaiASTDesugarer()
 
         # (match x ((1 2 3) "found") (_ "not found"))
+        # Scrutinee is a symbol — result is if directly.
         expr = parse_and_analyze_expression('(match x ((1 2 3) "found") (_ "not found"))')
         result = desugarer.desugar(expr)
 
-        # Should desugar to nested tests
         assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
+        assert result.first().name == 'if'
 
 
 class TestDesugarerMatchCons:
@@ -380,17 +343,14 @@ class TestDesugarerMatchCons:
         desugarer = MenaiASTDesugarer()
 
         # (match x ((head . tail) (list head tail)) (_ "not list"))
+        # Scrutinee is a symbol — result is if directly.
         expr = parse_and_analyze_expression('(match x ((head . tail) (list head tail)) (_ "not list"))')
         result = desugarer.desugar(expr)
 
-        # Should test list? and length
         assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
+        assert result.first().name == 'if'
 
-        body = result.elements[2]
-        condition = body.elements[1]
-
-        # Condition should be an if-chain (and lowered to if)
+        condition = result.elements[1]
         assert isinstance(condition, MenaiASTList)
         assert condition.first().name == 'if'
         assert condition.elements[1].first().name == '$list?'
@@ -400,12 +360,12 @@ class TestDesugarerMatchCons:
         desugarer = MenaiASTDesugarer()
 
         # (match x ((a b . rest) (list a b rest)) (_ "not list"))
+        # Scrutinee is a symbol — result is if directly.
         expr = parse_and_analyze_expression('(match x ((a b . rest) (list a b rest)) (_ "not list"))')
         result = desugarer.desugar(expr)
 
-        # Should test list? and length >= 2
         assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
+        assert result.first().name == 'if'
 
 
 class TestDesugarerMatchNested:
@@ -416,24 +376,24 @@ class TestDesugarerMatchNested:
         desugarer = MenaiASTDesugarer()
 
         # (match x (((a b)) (list a b)) (_ "wrong"))
+        # Scrutinee is a symbol — result is if directly.
         expr = parse_and_analyze_expression('(match x (((a b)) (list a b)) (_ "wrong"))')
         result = desugarer.desugar(expr)
 
-        # Should desugar to nested tests
         assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
+        assert result.first().name == 'if'
 
     def test_match_nested_type(self):
         """Test desugaring of nested type pattern."""
         desugarer = MenaiASTDesugarer()
 
         # (match x (((? number? n)) n) (_ "not list with number"))
+        # Scrutinee is a symbol — result is if directly.
         expr = parse_and_analyze_expression('(match x (((? number? n)) n) (_ "not list with number"))')
         result = desugarer.desugar(expr)
 
-        # Should desugar to nested tests
         assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
+        assert result.first().name == 'if'
 
 
 class TestDesugarerMatchMultipleClauses:
@@ -444,21 +404,16 @@ class TestDesugarerMatchMultipleClauses:
         desugarer = MenaiASTDesugarer()
 
         # (match x (1 "one") (2 "two") (3 "three") (_ "other"))
+        # Scrutinee is a symbol — result is if directly.
         expr = parse_and_analyze_expression('(match x (1 "one") (2 "two") (3 "three") (_ "other"))')
         result = desugarer.desugar(expr)
 
-        # Should be nested if expressions
         assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
+        assert result.first().name == 'if'
 
-        body = result.elements[2]
-        assert isinstance(body, MenaiASTList)
-        assert body.first().name == 'if'
-
-        # The outer if is the integer type guard.
-        # The else branch of the type guard is the wildcard result "other"
-        # directly — (if #t "other" error) is eliminated by the desugarer.
-        else_branch = body.elements[3]
+        # The else branch of the integer type guard is the wildcard result
+        # "other" directly — (if #t "other" error) is eliminated by the desugarer.
+        else_branch = result.elements[3]
         assert isinstance(else_branch, MenaiASTString)
         assert else_branch.value == "other"
 
@@ -467,12 +422,12 @@ class TestDesugarerMatchMultipleClauses:
         desugarer = MenaiASTDesugarer()
 
         # (match x ((? number? n) n) ((? string? s) s) (() "empty") (_ "other"))
+        # Scrutinee is a symbol — result is if directly.
         expr = parse_and_analyze_expression('(match x ((? number? n) n) ((? string? s) s) (() "empty") (_ "other"))')
         result = desugarer.desugar(expr)
 
-        # Should be nested if expressions
         assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
+        assert result.first().name == 'if'
 
 
 class TestDesugarerMatchErrors:
@@ -537,42 +492,42 @@ class TestDesugarerTempVariables:
     """Test temporary variable generation."""
 
     def test_temp_variables_unique(self):
-        """Test that temporary variables are unique."""
+        """Test that temporary variables are unique for compound scrutinees."""
         desugarer = MenaiASTDesugarer()
 
-        # Multiple match expressions should get different temp vars
-        expr1 = parse_and_analyze_expression('(match x (42 "found") (_ "boolean-not"))')
+        # Match on compound expressions — these still generate temp vars.
+        expr1 = parse_and_analyze_expression('(match (foo x) (42 "found") (_ "other"))')
         result1 = desugarer.desugar(expr1)
 
-        expr2 = parse_and_analyze_expression('(match y (1 "one") (_ "other"))')
+        expr2 = parse_and_analyze_expression('(match (bar y) (1 "one") (_ "other"))')
         result2 = desugarer.desugar(expr2)
 
-        # Extract temp var names
-        def get_temp_var(expr):
-            # expr is (let ((temp val)) body)
-            bindings = expr.elements[1]
+        def get_temp_var(result):
+            # result is (let ((temp val)) body)
+            assert isinstance(result, MenaiASTList)
+            assert result.first().name == 'let'
+            bindings = result.elements[1]
             binding = bindings.elements[0]
             return binding.elements[0].name
 
         temp1 = get_temp_var(result1)
         temp2 = get_temp_var(result2)
 
-        # Should be different
         assert temp1 != temp2
         assert temp1.startswith('#:match-tmp-')
         assert temp2.startswith('#:match-tmp-')
 
     def test_nested_match_temp_variables(self):
-        """Test that nested matches get unique temp variables."""
+        """Test that nested matches on symbols produce no temp variables."""
         desugarer = MenaiASTDesugarer()
 
-        # (match x ((? number? n) (match n (42 "found") (_ "not 42"))) (_ "not number"))
+        # Both outer match (on x) and inner match (on n) are symbol scrutinees.
+        # Neither generates a temp binding — both produce if directly.
         expr = parse_and_analyze_expression('(match x ((? number? n) (match n (42 "found") (_ "not 42"))) (_ "not number"))')
         result = desugarer.desugar(expr)
 
-        # Both matches should have different temp variables
         assert isinstance(result, MenaiASTList)
-        assert result.first().name == 'let'
+        assert result.first().name == 'if'
 
 
 class TestDesugarerIntegration:
@@ -580,15 +535,12 @@ class TestDesugarerIntegration:
 
     def test_desugared_match_evaluates_correctly(self, menai):
         """Test that desugared match expressions evaluate correctly."""
-        # We need to integrate the desugarer with the evaluator
-        # For now, we'll just test the structure
-
         desugarer = MenaiASTDesugarer()
 
         # (match 42 (42 "found") (_ "not found"))
+        # Scrutinee is a literal integer — temp binding is generated.
         expr = parse_and_analyze_expression('(match 42 (42 "found") (_ "not found"))')
         result = desugarer.desugar(expr)
 
-        # The desugared expression should be valid Menai code
         assert isinstance(result, MenaiASTList)
         assert result.first().name == 'let'

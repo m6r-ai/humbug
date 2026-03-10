@@ -22,9 +22,7 @@ from menai.menai_cfg_collapse_phi_chains import MenaiCFGCollapsePhiChains
 from menai.menai_vcode_builder import MenaiVCodeBuilder
 from menai.menai_ir_builder import MenaiIRBuilder
 from menai.menai_ir_optimization_pass import MenaiIROptimizationPass
-from menai.menai_ir_copy_propagator import MenaiIRCopyPropagator
 from menai.menai_ir_optimizer import MenaiIROptimizer
-from menai.menai_ir_inline_once import MenaiIRInlineOnce
 from menai.menai_lexer import MenaiLexer
 
 
@@ -55,8 +53,6 @@ class MenaiCompiler:
         ]
         self.ir_builder = MenaiIRBuilder()
         self.ir_passes: List[MenaiIROptimizationPass] = [
-            MenaiIRCopyPropagator(),
-            MenaiIRInlineOnce(),
             MenaiIROptimizer(),
         ]
         self.cfg_builder = MenaiCFGBuilder()
@@ -115,13 +111,8 @@ class MenaiCompiler:
 
         ir = self.ir_builder.build(desugared_ast)
 
-        if self.ir_passes:
-            changed = True
-            while changed:
-                changed = False
-                for ir_pass in self.ir_passes:
-                    ir, pass_changed = ir_pass.optimize(ir)
-                    changed = changed or pass_changed
+        for ir_pass in self.ir_passes:
+            ir, _ = ir_pass.optimize(ir)
 
         cfg = self.cfg_builder.build(ir)
         if self.cfg_passes:
