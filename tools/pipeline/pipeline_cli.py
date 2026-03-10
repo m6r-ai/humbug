@@ -300,10 +300,13 @@ Examples:
                 print(f"  menai    {step.step_id}")
                 if step.module:
                     print(f"             module: {step.module}")
+
                 for name, src in step.inputs.items():
                     print(f"             input:  {name} <- {src}")
+
                 for key, target in step.outputs.items():
                     print(f"             output: {key} -> {target}")
+
             elif isinstance(step, ToolStep):
                 print(f"  {step.tool:<8} {step.step_id}  ({step.operation})")
                 if step.value_from:
@@ -333,6 +336,7 @@ Examples:
         result, profile_output = _run_with_profile(
             pipeline, args.profile_sort, args.profile_lines, on_step_start, on_step_done
         )
+
     else:
         result = execute_pipeline(pipeline, on_step_start=on_step_start, on_step_done=on_step_done)
 
