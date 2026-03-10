@@ -14,7 +14,8 @@ The validator checks:
 """
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Tuple, Set
+from collections import deque
+from typing import Deque, List, Dict, Tuple, Set
 from enum import Enum
 
 from menai.menai_bytecode import CodeObject, Instruction, Opcode
@@ -318,6 +319,9 @@ class BytecodeValidator:
         Args:
             code: Code object to validate
         """
+        if code.validated:
+            return
+
         # First validate all nested code objects recursively
         for nested_code in code.code_objects:
             self.validate(nested_code)
@@ -328,6 +332,8 @@ class BytecodeValidator:
         self._validate_control_flow(code)
         self._validate_stack_depth(code)
         self._validate_initialization(code)
+
+        code.validated = True
 
     def _validate_structure(self, code: CodeObject) -> None:
         """Validate basic structural properties."""
@@ -517,9 +523,6 @@ class BytecodeValidator:
         1. No stack underflows
         2. Stack depth is consistent at merge points (jump targets)
         """
-        # Build control flow graph
-        _ = self._build_cfg(code)
-
         # Track stack depth at each instruction
         stack_depths: Dict[int, int] = {}
 
@@ -605,33 +608,22 @@ class BytecodeValidator:
         #                            dict of slot -> code_object_index for closure slots)
         initialized_at: Dict[int, Tuple[Set[int], Dict[int, int]]] = {}
 
-        # Initial state: captured variables are pre-initialized by MAKE_CLOSURE before the frame runs.
-        # Parameters are no longer pre-seeded here; ENTER at instruction 0 initializes them,
-        # and the dataflow analysis tracks that naturally.
-        #
         # Captured-value slots (param_count .. param_count+len(free_vars)-1) are frame
-        # invariants: the VM copies them from MenaiFunction.captured_values into
-        # frame.locals before the first instruction runs.  Only exactly len(free_vars)
-        # slots are pre-populated — plain locals above that range must be initialised
-        # by the code itself.  These slots must survive back-edge merges (e.g. JUMP 0
-        # self-recursion), so we restore them into new_initialized on every step below.
+        # invariants pre-populated by the VM before the first instruction runs.
+        # They survive back-edge merges via initial_initialized being unioned in on every step.
         initial_initialized: Set[int] = set()
         n_captured = len(code.free_vars)
         if n_captured > 0:
             initial_initialized.update(range(code.param_count, code.param_count + n_captured))
 
-        # Worklist algorithm
-        worklist: List[int] = [0]
-
-        # Captured-value slots are never closures created in this frame, so the
-        # initial closure map is empty.
-        initialized_at[0] = (initial_initialized.copy(), {})
+        # Use a deque for O(1) popleft rather than O(N) pop(0) on a list.
+        worklist: Deque[int] = deque([0])
+        initialized_at[0] = (initial_initialized.copy(), {})  # closure map starts empty
 
         while worklist:
-            instr_idx = worklist.pop(0)
+            instr_idx = worklist.popleft()
 
             if instr_idx not in initialized_at:
-                # Unreachable
                 continue
 
             current_initialized, current_closures = initialized_at[instr_idx]
@@ -738,50 +730,45 @@ class BytecodeValidator:
                     )
 
             # Calculate new initialized set after this instruction
-            new_initialized = current_initialized.copy()
-            new_closures = current_closures.copy()
-
-            # MAKE_CLOSURE marks dest as initialized and records the closure identity.
+            # Compute the exit state by mutating current_initialized in place.
+            # We only copy if there are two successors (branch), so that each
+            # successor gets an independent snapshot.  For the common straight-line
+            # case (one successor, not yet visited) no copy is needed at all.
             if opcode == Opcode.MAKE_CLOSURE:
-                new_initialized.add(instr.dest)
-                new_closures[instr.dest] = instr.src0  # src0 = code_object index
-
-            # All other dest-writing ops mark dest as initialized (not a closure).
+                current_initialized.add(instr.dest)
+                current_closures[instr.dest] = instr.src0
             elif opcode not in self.NO_DEST_OPCODES:
-                new_initialized.add(instr.dest)
-                new_closures.pop(instr.dest, None)
+                current_initialized.add(instr.dest)
+                current_closures.pop(instr.dest, None)
 
-            # ENTER marks locals 0..n-1 as initialized
             if opcode == Opcode.ENTER:
-                new_initialized.update(range(instr.src0))
+                current_initialized.update(range(instr.src0))
 
-            # Re-apply frame invariants: free-var slots are always initialized.
-            new_initialized |= initial_initialized
+            if initial_initialized:
+                current_initialized |= initial_initialized
 
-            # Get successors
             successors = self._get_successors(instr_idx, instr, code)
 
-            # Propagate to successors
-            for succ_idx in successors:
+            # Propagate exit state to each successor.
+            # For two successors (branch) we must copy so each gets an independent state.
+            for i, succ_idx in enumerate(successors):
+                need_copy = i < len(successors) - 1  # copy for all but the last successor
                 if succ_idx in initialized_at:
-                    # Merge: only keep variables initialized on ALL paths
                     existing_init, existing_closures = initialized_at[succ_idx]
-                    merged_init = existing_init & new_initialized
-                    # Closure map: keep only slots where both paths agree on the
-                    # same code_object index.
+                    merged_init = existing_init & current_initialized
                     merged_closures = {
                         slot: cidx
                         for slot, cidx in existing_closures.items()
-                        if new_closures.get(slot) == cidx
+                        if current_closures.get(slot) == cidx
                     }
-
                     if merged_init != existing_init or merged_closures != existing_closures:
                         initialized_at[succ_idx] = (merged_init, merged_closures)
                         worklist.append(succ_idx)
-
                 else:
-                    # First time visiting
-                    initialized_at[succ_idx] = (new_initialized.copy(), new_closures.copy())
+                    initialized_at[succ_idx] = (
+                        current_initialized.copy() if need_copy else current_initialized,
+                        current_closures.copy() if need_copy else current_closures,
+                    )
                     worklist.append(succ_idx)
 
     def _get_stack_effect(self, instr: Instruction) -> Tuple[int, int]:
@@ -880,14 +867,10 @@ class BytecodeValidator:
             last_instr = code.instructions[block.end_index]
             successors = self._get_successors(block.end_index, last_instr, code)
 
-            # Find which blocks these successors belong to
             for succ_idx in successors:
-                # Find the block containing succ_idx
-                for block_start in sorted(blocks.keys(), reverse=True):
-                    if block_start <= succ_idx:
-                        block.successors.append(block_start)
-                        blocks[block_start].predecessors.append(start)
-                        break
+                # Successor indices are always block leaders by construction.
+                block.successors.append(succ_idx)
+                blocks[succ_idx].predecessors.append(start)
 
         # Mark reachable blocks
         self._mark_reachable(blocks, 0)
@@ -895,13 +878,14 @@ class BytecodeValidator:
         return blocks
 
     def _mark_reachable(self, blocks: Dict[int, BasicBlock], start: int) -> None:
-        """Mark all reachable blocks starting from start."""
-        if start not in blocks or blocks[start].visited:
-            return
-
-        blocks[start].visited = True
-        for succ in blocks[start].successors:
-            self._mark_reachable(blocks, succ)
+        """Mark all blocks reachable from start using an iterative worklist."""
+        worklist: Deque[int] = deque([start])
+        while worklist:
+            idx = worklist.popleft()
+            if idx not in blocks or blocks[idx].visited:
+                continue
+            blocks[idx].visited = True
+            worklist.extend(blocks[idx].successors)
 
 
 def validate_bytecode(code: CodeObject) -> None:

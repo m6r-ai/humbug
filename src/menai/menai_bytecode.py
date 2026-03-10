@@ -539,6 +539,7 @@ class CodeObject:
     name: str = "<module>"  # Name for debugging
     source_line: int = 0  # Line number in source code where this function is defined
     source_file: str = ""  # Source file name (if available)
+    validated: bool = False  # Set to True after successful bytecode validation
 
     def __repr__(self) -> str:
         """Human-readable representation."""
