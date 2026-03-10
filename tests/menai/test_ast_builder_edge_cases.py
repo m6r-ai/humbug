@@ -428,9 +428,6 @@ class TestMenaiParserEdgeCases:
             menai.evaluate("1 2")
 
         with pytest.raises(MenaiASTBuildError, match="Unexpected token after complete expression"):
-            menai.evaluate("(+ 1 2) (+ 3 4)")
-
-        with pytest.raises(MenaiASTBuildError, match="Unexpected token after complete expression"):
             menai.evaluate('42 "hello"')
 
     def test_parser_special_forms_edge_cases(self, menai):

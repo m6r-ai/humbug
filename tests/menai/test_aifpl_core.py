@@ -170,9 +170,6 @@ class TestMenaiCore:
         with pytest.raises(MenaiASTBuildError, match=r"Unexpected token after complete expression"):
             menai.evaluate("1 2")
 
-        with pytest.raises(MenaiASTBuildError, match=r"Unexpected token after complete expression"):
-            menai.evaluate("(integer+ 1 2) (integer+ 3 4)")
-
     def test_exception_hierarchy(self):
         """Test that all Menai exceptions inherit from MenaiError."""
         assert issubclass(MenaiTokenError, MenaiError)

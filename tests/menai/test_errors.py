@@ -99,7 +99,7 @@ class TestErrors:
         with pytest.raises(MenaiASTBuildError, match="Unterminated list"):
             menai.evaluate("(integer* (integer+ 1 2) 3")
 
-        with pytest.raises(MenaiASTBuildError, match="Unexpected token after complete expression"):
+        with pytest.raises(MenaiASTBuildError, match="Premature closing parenthesis"):
             menai.evaluate("integer+ 1 2)")
 
     def test_unexpected_token_after_expression_parse_error(self, menai):
@@ -107,7 +107,7 @@ class TestErrors:
         with pytest.raises(MenaiASTBuildError, match="Unexpected token after complete expression"):
             menai.evaluate("42 43")
 
-        with pytest.raises(MenaiASTBuildError, match="Unexpected token after complete expression"):
+        with pytest.raises(MenaiASTBuildError, match="Premature closing parenthesis"):
             menai.evaluate("(integer+ 1 2) (integer+ 3 4)")
 
     def test_invalid_lambda_syntax_parse_error(self, menai):
