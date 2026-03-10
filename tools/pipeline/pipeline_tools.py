@@ -208,6 +208,7 @@ class FilesystemTool:
 
         if path.exists():
             desc = f"Overwrite existing file '{path}' ({content_size:,} bytes)"
+
         else:
             desc = f"Create new file '{path}' ({content_size:,} bytes)"
 
@@ -331,10 +332,13 @@ class FilesystemTool:
                 try:
                     if item.is_file():
                         items.append({"name": item.name, "type": "file", "size": item.stat().st_size})
+
                     elif item.is_dir():
                         items.append({"name": item.name, "type": "directory", "size": None})
+
                     else:
                         items.append({"name": item.name, "type": "other", "size": None})
+
                 except OSError:
                     items.append({"name": item.name, "type": "unknown", "size": None})
 
@@ -356,6 +360,7 @@ class FilesystemTool:
         if path.exists():
             if path.is_dir():
                 raise PipelineToolError(f"Directory already exists: {path}")
+
             raise PipelineToolError(f"Path exists but is not a directory: {path}")
 
         if not _prompt_authorization(f"Create directory '{path}'"):
@@ -533,6 +538,7 @@ class ClockTool:
 
         try:
             return datetime.fromtimestamp(float(time_str), tz=timezone.utc)
+
         except ValueError:
             pass
 
@@ -541,6 +547,7 @@ class ClockTool:
             if parsed.tzinfo is None:
                 if timezone_str is None or timezone_str.upper() == "UTC":
                     parsed = parsed.replace(tzinfo=timezone.utc)
+
                 else:
                     parsed = parsed.replace(tzinfo=zoneinfo.ZoneInfo(timezone_str))
 

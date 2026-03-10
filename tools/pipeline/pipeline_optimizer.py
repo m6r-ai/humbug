@@ -29,6 +29,7 @@ def _merge_two_menai_steps(first: MenaiStep, second: MenaiStep) -> MenaiStep:
     for input_name, source_id in second.inputs.items():
         if source_id == first.step_id:
             injected_from_first.add(input_name)
+
         else:
             rewritten_inputs[input_name] = source_id
 
@@ -49,6 +50,7 @@ def _merge_two_menai_steps(first: MenaiStep, second: MenaiStep) -> MenaiStep:
             f' (inputs {second_inputs_expr}))'
             f' {second_expr})'
         )
+
     else:
         combined_expression = (
             f'(let (({intermediate} {first_expr}))'
