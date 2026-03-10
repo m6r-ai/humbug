@@ -115,13 +115,8 @@ class MenaiCompiler:
             ir, _ = ir_pass.optimize(ir)
 
         cfg = self.cfg_builder.build(ir)
-        if self.cfg_passes:
-            changed = True
-            while changed:
-                changed = False
-                for cfg_pass in self.cfg_passes:
-                    cfg, pass_changed = cfg_pass.optimize(cfg)
-                    changed = changed or pass_changed
+        for cfg_pass in self.cfg_passes:
+            cfg, _ = cfg_pass.optimize(cfg)
 
         vcode = self.vcode_builder.build(cfg)
         bytecode = self.bytecode_builder.build(vcode, name)
