@@ -231,12 +231,16 @@ class MenaiASTBuilder:
             column: Column number (1-indexed)
 
         Returns:
-            Character offset (0-indexed)
+            Character offset (0-indexed), or len(source) if line/column are out of range
         """
         assert line >= 1 and column >= 1, "Line and column numbers should be 1-indexed and positive"
         lines = source.split('\n')
 
-        assert line <= len(lines) + 1, "Line number exceeds total lines in source"
+        # Line may exceed the source if self.expression is stale (e.g. error reporting
+        # for a module whose source was replaced by a shorter calling expression).
+        # Clamp gracefully to the end of source rather than crashing.
+        if line > len(lines):
+            return len(source)
 
         # Calculate position: sum of all previous lines + newlines + column offset
         pos = 0
@@ -244,7 +248,7 @@ class MenaiASTBuilder:
             pos += len(lines[i]) + 1  # +1 for the newline character
 
         # Add column offset (column is 1-indexed, so subtract 1)
-        pos += min(column - 1, len(lines[line - 1]))
+        pos += min(column - 1, len(lines[line - 1]) if line <= len(lines) else 0)
 
         return pos
 
