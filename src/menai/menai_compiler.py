@@ -60,8 +60,8 @@ class MenaiCompiler:
             MenaiCFGCollapsePhiChains(),
             MenaiCFGSimplifyBlocks(),
         ]
-        self.bytecode_builder = MenaiBytecodeBuilder()
         self.vcode_builder = MenaiVCodeBuilder()
+        self.bytecode_builder = MenaiBytecodeBuilder()
 
 
     def compile_to_resolved_ast(self, source: str, source_file: str = "") -> MenaiASTNode:
