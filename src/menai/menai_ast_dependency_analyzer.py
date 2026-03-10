@@ -3,7 +3,7 @@ Dependency analysis for letrec bindings to support mutual recursion.
 Note: This is only used for letrec, not for regular let (which uses simple sequential binding).
 """
 
-from typing import Dict, List, Set, Tuple
+from typing import Dict, FrozenSet, List, Set, Tuple
 from dataclasses import dataclass
 
 from menai.menai_ast import MenaiASTNode, MenaiASTSymbol, MenaiASTList
@@ -29,16 +29,9 @@ class MenaiASTDependencyAnalyzer:
         Returns:
             List of MenaiBindingGroup objects in topological order
         """
-        # Step 1: Find what variables each binding references
-        dependencies = {}
-        binding_names = {name for name, _ in bindings}
-
-        for name, expr in bindings:
-            free_vars = self._find_free_variables(expr)
-            # For letrec, include ALL references to binding names (including self-references)
-            # This allows mutual recursion and self-recursion
-            local_deps = free_vars & binding_names
-            dependencies[name] = local_deps
+        # Step 1: Find what variables each binding references, in a single pass.
+        binding_names = frozenset(name for name, _ in bindings)
+        dependencies = self._collect_dependencies(bindings, binding_names)
 
         # Step 2: Find strongly connected components (recursive groups)
         scc_groups = self._find_strongly_connected_components(dependencies)
@@ -67,141 +60,117 @@ class MenaiASTDependencyAnalyzer:
 
         return groups
 
-    def _find_free_variables(self, expr: MenaiASTNode) -> Set[str]:
-        """Find all free variables (symbols) in an expression."""
-        free_vars = set()
+    def _collect_dependencies(
+        self,
+        bindings: List[Tuple[str, MenaiASTNode]],
+        binding_names: FrozenSet[str],
+    ) -> Dict[str, Set[str]]:
+        """
+        Build the dependency map for all bindings in a single combined pass.
 
+        For each binding name, returns the subset of binding_names that appear
+        as free references in its expression (respecting inner shadowing).
+        """
+        dependencies: Dict[str, Set[str]] = {name: set() for name, _ in bindings}
+        for name, expr in bindings:
+            self._scan_refs(expr, binding_names, frozenset(), dependencies[name])
+        return dependencies
+
+    def _scan_refs(
+        self,
+        expr: MenaiASTNode,
+        targets: FrozenSet[str],
+        shadowed: FrozenSet[str],
+        refs: Set[str],
+    ) -> None:
+        """
+        Recursively scan expr for references to names in targets that are not
+        shadowed by an inner binding, accumulating hits into refs.
+
+        targets:  the letrec binding names we care about (never changes).
+        shadowed: names bound by enclosing inner forms (grows as we descend).
+        refs:     the output set for the current top-level binding.
+        """
         if isinstance(expr, MenaiASTSymbol):
-            free_vars.add(expr.name)
+            if expr.name in targets and expr.name not in shadowed:
+                refs.add(expr.name)
+            return
 
-        elif isinstance(expr, MenaiASTList):
-            if not expr.is_empty():
-                first_elem = expr.first()
+        if not isinstance(expr, MenaiASTList) or expr.is_empty():
+            return
 
-                # Handle special forms
-                if isinstance(first_elem, MenaiASTSymbol):
-                    if first_elem.name == "lambda":
-                        # (lambda (params...) body)
-                        assert expr.length() == 3, "Lambda expressions must have exactly 3 elements (validated by evaluator)"
+        first = expr.first()
+        if not isinstance(first, MenaiASTSymbol):
+            for elem in expr.elements:
+                self._scan_refs(elem, targets, shadowed, refs)
+            return
 
-                        param_list = expr.get(1)
-                        body = expr.get(2)
+        name = first.name
 
-                        assert isinstance(param_list, MenaiASTList), "Lambda parameter list must be a list (validated by evaluator)"
+        if name == 'lambda':
+            if len(expr.elements) == 3:
+                param_list, body = expr.elements[1], expr.elements[2]
+                new_shadowed = shadowed
+                if isinstance(param_list, MenaiASTList):
+                    extra = frozenset(
+                        p.name for p in param_list.elements
+                        if isinstance(p, MenaiASTSymbol) and p.name != '.'
+                    )
+                    if extra:
+                        new_shadowed = shadowed | extra
+                self._scan_refs(body, targets, new_shadowed, refs)
+            return
 
-                        # Extract parameter names (all validated by evaluator to be symbols)
-                        param_names = set()
-                        for param in param_list.elements:
-                            assert isinstance(param, MenaiASTSymbol), "Lambda parameters must be symbols (validated by evaluator)"
-                            param_names.add(param.name)
+        if name == 'let':
+            if len(expr.elements) == 3:
+                binding_list, body = expr.elements[1], expr.elements[2]
+                new_shadowed = shadowed
+                if isinstance(binding_list, MenaiASTList):
+                    for binding in binding_list.elements:
+                        if isinstance(binding, MenaiASTList) and len(binding.elements) == 2:
+                            self._scan_refs(binding.elements[1], targets, shadowed, refs)
+                            var = binding.elements[0]
+                            if isinstance(var, MenaiASTSymbol):
+                                new_shadowed = new_shadowed | frozenset({var.name})
+                self._scan_refs(body, targets, new_shadowed, refs)
+            return
 
-                        # Find free variables in body, excluding parameters
-                        body_vars = self._find_free_variables(body)
-                        free_vars.update(body_vars - param_names)
+        if name == 'letrec':
+            if len(expr.elements) == 3:
+                binding_list, body = expr.elements[1], expr.elements[2]
+                new_shadowed = shadowed
+                if isinstance(binding_list, MenaiASTList):
+                    extra = frozenset(
+                        binding.elements[0].name
+                        for binding in binding_list.elements
+                        if isinstance(binding, MenaiASTList)
+                        and len(binding.elements) == 2
+                        and isinstance(binding.elements[0], MenaiASTSymbol)
+                    )
+                    if extra:
+                        new_shadowed = shadowed | extra
+                    for binding in binding_list.elements:
+                        if isinstance(binding, MenaiASTList) and len(binding.elements) == 2:
+                            self._scan_refs(binding.elements[1], targets, new_shadowed, refs)
+                self._scan_refs(body, targets, new_shadowed, refs)
+            return
 
-                        return free_vars
+        if name == 'let*':
+            if len(expr.elements) == 3:
+                binding_list, body = expr.elements[1], expr.elements[2]
+                new_shadowed = shadowed
+                if isinstance(binding_list, MenaiASTList):
+                    for binding in binding_list.elements:
+                        if isinstance(binding, MenaiASTList) and len(binding.elements) == 2:
+                            self._scan_refs(binding.elements[1], targets, new_shadowed, refs)
+                            var = binding.elements[0]
+                            if isinstance(var, MenaiASTSymbol):
+                                new_shadowed = new_shadowed | frozenset({var.name})
+                self._scan_refs(body, targets, new_shadowed, refs)
+            return
 
-                    if first_elem.name == "let":
-                        # (let ((var1 val1) (var2 val2) ...) body)
-                        assert expr.length() == 3, "Let expressions must have exactly 3 elements (validated by evaluator)"
-
-                        binding_list = expr.get(1)
-                        body = expr.get(2)
-
-                        assert isinstance(binding_list, MenaiASTList), "Let binding list must be a list (validated by evaluator)"
-
-                        binding_names = set()
-
-                        # Process bindings (all validated by evaluator)
-                        for binding in binding_list.elements:
-                            assert isinstance(binding, MenaiASTList), "Let bindings must be lists (validated by evaluator)"
-                            assert binding.length() == 2, "Let bindings must have exactly 2 elements (validated by evaluator)"
-
-                            var_name = binding.get(0)
-                            var_value = binding.get(1)
-
-                            assert isinstance(var_name, MenaiASTSymbol), \
-                                "Let binding variables must be symbols (validated by evaluator)"
-                            binding_names.add(var_name.name)
-
-                            # Free variables in binding expressions
-                            free_vars.update(self._find_free_variables(var_value))
-
-                        # Free variables in body, excluding bound names
-                        body_vars = self._find_free_variables(body)
-                        free_vars.update(body_vars - binding_names)
-
-                        return free_vars
-
-                    if first_elem.name == "letrec":
-                        # (letrec ((var1 val1) (var2 val2) ...) body)
-                        # All binding names are in scope for all RHS expressions and the body.
-                        assert expr.length() == 3, "Letrec expressions must have exactly 3 elements (validated by evaluator)"
-
-                        binding_list = expr.get(1)
-                        body = expr.get(2)
-
-                        assert isinstance(binding_list, MenaiASTList), "Letrec binding list must be a list (validated by evaluator)"
-
-                        binding_names = set()
-                        binding_exprs = []
-
-                        for binding in binding_list.elements:
-                            assert isinstance(binding, MenaiASTList), "Letrec bindings must be lists (validated by evaluator)"
-                            assert binding.length() == 2, "Letrec bindings must have exactly 2 elements (validated by evaluator)"
-
-                            var_name = binding.get(0)
-                            var_value = binding.get(1)
-
-                            assert isinstance(var_name, MenaiASTSymbol), \
-                                "Letrec binding variables must be symbols (validated by evaluator)"
-                            binding_names.add(var_name.name)
-                            binding_exprs.append(var_value)
-
-                        for var_value in binding_exprs:
-                            free_vars.update(self._find_free_variables(var_value) - binding_names)
-
-                        body_vars = self._find_free_variables(body)
-                        free_vars.update(body_vars - binding_names)
-
-                        return free_vars
-
-                    if first_elem.name == "let*":
-                        # (let* ((var1 val1) (var2 val2) ...) body)
-                        # Each binding name is in scope for subsequent bindings and the body.
-                        assert expr.length() == 3, "Let* expressions must have exactly 3 elements (validated by evaluator)"
-
-                        binding_list = expr.get(1)
-                        body = expr.get(2)
-
-                        assert isinstance(binding_list, MenaiASTList), "Let* binding list must be a list (validated by evaluator)"
-
-                        bound_so_far: Set[str] = set()
-
-                        for binding in binding_list.elements:
-                            assert isinstance(binding, MenaiASTList), "Let* bindings must be lists (validated by evaluator)"
-                            assert binding.length() == 2, "Let* bindings must have exactly 2 elements (validated by evaluator)"
-
-                            var_name = binding.get(0)
-                            var_value = binding.get(1)
-
-                            assert isinstance(var_name, MenaiASTSymbol), \
-                                "Let* binding variables must be symbols (validated by evaluator)"
-
-                            free_vars.update(self._find_free_variables(var_value) - bound_so_far)
-                            bound_so_far.add(var_name.name)
-
-                        body_vars = self._find_free_variables(body)
-                        free_vars.update(body_vars - bound_so_far)
-
-                        return free_vars
-
-                # Regular list - process all elements
-                for elem in expr.elements:
-                    free_vars.update(self._find_free_variables(elem))
-
-        # For other expression types (numbers, strings, booleans, etc.), no free variables
-        return free_vars
+        for elem in expr.elements:
+            self._scan_refs(elem, targets, shadowed, refs)
 
     def _find_strongly_connected_components(self, graph: Dict[str, Set[str]]) -> List[Set[str]]:
         """
