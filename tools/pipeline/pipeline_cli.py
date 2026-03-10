@@ -341,7 +341,7 @@ Examples:
     if print_final_block is not None:
         print_final_block()
 
-    if args.verbosity >= 1 and args.timings and result.step_results:
+    if args.timings and result.step_results:
         print()
         _print_timings_bar(result)
 
