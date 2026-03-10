@@ -84,15 +84,19 @@ def _make_step_callbacks(
         timing_str = f"  {_format_elapsed(prev.elapsed_s):>8}" if timings else ""
 
         if not prev.success:
-            print(prev.error)
+            error_text = f"{_ANSI_RED}{prev.error}{_ANSI_RESET}" if color else prev.error
+            print(error_text)
+            print(separator)
         elif verbosity >= 2 and prev.value:
+            if prev.step_id in console_step_ids:
+                print(separator)
             truncated = prev.value
             if len(truncated) > 120:
                 truncated = truncated[:117] + "..."
-
-            print(truncated)
-
-        if prev.step_id in console_step_ids or not prev.success or (verbosity >= 2 and prev.value):
+            value_text = f"{_ANSI_GREEN}{truncated}{_ANSI_RESET}" if color else truncated
+            print(value_text)
+            print(separator)
+        elif prev.step_id in console_step_ids:
             print(separator)
 
         print(f"{i + 1:{num_width}}. {prev.step_id} <- {status}{timing_str}")
