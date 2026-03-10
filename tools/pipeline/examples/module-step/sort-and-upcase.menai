@@ -1,0 +1,9 @@
+(let ((run (lambda (inputs)
+              (let* ((lines   (filter-list
+                                (lambda (s) (boolean-not (string=? s "")))
+                                (string->list (dict-get inputs "content") "\n")))
+                     (sorted  (sort-list string<? lines))
+                     (upper   (map-list string-upcase sorted))
+                     (result  (string-concat (list->string upper "\n") "\n")))
+                (dict (list "result" result))))))
+  (dict (list "run" run)))

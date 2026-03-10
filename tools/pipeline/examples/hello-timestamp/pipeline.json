@@ -1,0 +1,26 @@
+{
+  "steps": [
+    {
+      "id": "get-time",
+      "tool": "clock",
+      "operation": "get_time",
+      "format": "iso",
+      "timezone": "UTC"
+    },
+    {
+      "id": "format-greeting",
+      "tool": "menai",
+      "inputs": {
+        "timestamp": "get-time"
+      },
+      "expression": "(dict (list \"result\" (string-concat \"Hello from the pipeline! Current time: \" (dict-get inputs \"timestamp\") \"\\n\")))",
+      "outputs": {}
+    },
+    {
+      "id": "write-output",
+      "tool": "console",
+      "operation": "write_stdout",
+      "value_from": "format-greeting.result"
+    }
+  ]
+}

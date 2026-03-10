@@ -1,0 +1,32 @@
+{
+  "steps": [
+    {
+      "id": "read-header",
+      "tool": "filesystem",
+      "operation": "read_file",
+      "path": "tools/pipeline/examples/multi-input/header.txt"
+    },
+    {
+      "id": "read-body",
+      "tool": "filesystem",
+      "operation": "read_file",
+      "path": "tools/pipeline/examples/multi-input/body.txt"
+    },
+    {
+      "id": "combine",
+      "tool": "menai",
+      "inputs": {
+        "header": "read-header",
+        "body": "read-body"
+      },
+      "expression": "(dict (list \"result\" (string-concat (dict-get inputs \"header\") (dict-get inputs \"body\"))))",
+      "outputs": {}
+    },
+    {
+      "id": "write-output",
+      "tool": "console",
+      "operation": "write_stdout",
+      "value_from": "combine.result"
+    }
+  ]
+}

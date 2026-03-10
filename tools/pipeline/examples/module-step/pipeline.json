@@ -1,0 +1,25 @@
+{
+  "steps": [
+    {
+      "id": "read-input",
+      "tool": "filesystem",
+      "operation": "read_file",
+      "path": "tools/pipeline/examples/module-step/input.txt"
+    },
+    {
+      "id": "transform",
+      "tool": "menai",
+      "inputs": {
+        "content": "read-input"
+      },
+      "module": "sort-and-upcase",
+      "outputs": {}
+    },
+    {
+      "id": "write-output",
+      "tool": "console",
+      "operation": "write_stdout",
+      "value_from": "transform.result"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "steps": [
+    {
+      "id": "get-time",
+      "tool": "clock",
+      "operation": "get_time",
+      "format": "iso",
+      "timezone": "UTC"
+    },
+    {
+      "id": "read-template",
+      "tool": "filesystem",
+      "operation": "read_file",
+      "path": "tools/pipeline/examples/clock-and-file/template.txt"
+    },
+    {
+      "id": "render",
+      "tool": "menai",
+      "inputs": {
+        "timestamp": "get-time",
+        "template": "read-template"
+      },
+      "expression": "(dict (list \"result\" (string-replace (dict-get inputs \"template\") \"{timestamp}\" (dict-get inputs \"timestamp\"))))",
+      "outputs": {}
+    },
+    {
+      "id": "write-output",
+      "tool": "console",
+      "operation": "write_stdout",
+      "value_from": "render.result"
+    }
+  ]
+}

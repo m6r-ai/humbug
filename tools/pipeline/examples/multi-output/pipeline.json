@@ -1,0 +1,34 @@
+{
+  "steps": [
+    {
+      "id": "read-input",
+      "tool": "filesystem",
+      "operation": "read_file",
+      "path": "tools/pipeline/examples/multi-output/input.txt"
+    },
+    {
+      "id": "split",
+      "tool": "menai",
+      "inputs": {
+        "content": "read-input"
+      },
+      "expression": "(let* ((lines (filter-list (lambda (s) (boolean-not (string=? s \"\"))) (string->list (dict-get inputs \"content\") \"\\n\"))) (lower-lines (filter-list (lambda (s) (string=? s (string-downcase s))) lines)) (upper-lines (filter-list (lambda (s) (string=? s (string-upcase s))) lines)) (lower-out (string-concat (list->string lower-lines \"\\n\") \"\\n\")) (upper-out (string-concat (list->string upper-lines \"\\n\") \"\\n\"))) (dict (list \"lowercase\" lower-out) (list \"uppercase\" upper-out)))",
+      "outputs": {
+        "lowercase": "write-lower",
+        "uppercase": "write-upper"
+      }
+    },
+    {
+      "id": "write-lower",
+      "tool": "console",
+      "operation": "write_stdout",
+      "value_from": "split.lowercase"
+    },
+    {
+      "id": "write-upper",
+      "tool": "console",
+      "operation": "write_stdout",
+      "value_from": "split.uppercase"
+    }
+  ]
+}

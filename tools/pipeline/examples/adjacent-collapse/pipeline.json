@@ -1,0 +1,35 @@
+{
+  "_comment": "Two adjacent Menai steps that the optimizer will collapse into one. The result is identical to running them separately.",
+  "steps": [
+    {
+      "id": "read-input",
+      "tool": "filesystem",
+      "operation": "read_file",
+      "path": "tools/pipeline/examples/adjacent-collapse/input.txt"
+    },
+    {
+      "id": "trim-lines",
+      "tool": "menai",
+      "inputs": {
+        "content": "read-input"
+      },
+      "expression": "(let* ((lines (string->list (dict-get inputs \"content\") \"\\n\")) (trimmed (map-list string-trim lines))) (dict (list \"trimmed\" (list->string trimmed \"\\n\"))))",
+      "outputs": {}
+    },
+    {
+      "id": "upcase-lines",
+      "tool": "menai",
+      "inputs": {
+        "trimmed": "trim-lines"
+      },
+      "expression": "(let* ((lines (filter-list (lambda (s) (boolean-not (string=? s \"\"))) (string->list (dict-get inputs \"trimmed\") \"\\n\"))) (upcased (map-list string-upcase lines))) (dict (list \"result\" (string-concat (list->string upcased \"\\n\") \"\\n\"))))",
+      "outputs": {}
+    },
+    {
+      "id": "write-output",
+      "tool": "console",
+      "operation": "write_stdout",
+      "value_from": "upcase-lines.result"
+    }
+  ]
+}
