@@ -361,18 +361,18 @@ class TestNonConstantPhi:
 
 
 # ---------------------------------------------------------------------------
-# 6. Phi used outside a branch condition — untouched
+# 6. Phi feeding a ReturnTerm — constant arms rewired to return directly
 # ---------------------------------------------------------------------------
 
-class TestPhiUsedOutsideBranch:
+class TestPhiIntoReturn:
 
-    def test_phi_used_in_return_not_rewired(self):
+    def test_single_const_arm_rewired_to_return(self):
         """
         join: %v = phi [True←A, %r←B]
-              return %v          ← not a branch condition
+              return %v
 
-        The phi has a constant incoming arm, but because it is used as a
-        return value (not a branch condition), the pass must leave it alone.
+        After: block_a returns True directly; join phi has only [%r←B],
+        which is trivial so the phi is eliminated and the join returns %r.
         """
         vtrue = v("true"); vr = v("r"); vphi = v("phi")
 
@@ -399,8 +399,67 @@ class TestPhiUsedOutsideBranch:
         f = func(entry, block_a, block_b, join)
 
         new_f, changed = MenaiCFGBranchConstProp()._optimize_function(f)
-        assert not changed
-        assert new_f is f
+        assert changed
+
+        # block_a must now return True directly, not jump to join.
+        a_new = next(b for b in new_f.blocks if b.id == 1)
+        assert isinstance(a_new.terminator, MenaiCFGReturnTerm)
+        assert a_new.terminator.value.id == vtrue.id
+
+        # join had two arms; one was constant so the phi collapses to a single
+        # entry, which the pass eliminates — return value becomes %r directly.
+        join_new = next(b for b in new_f.blocks if b.id == 3)
+        assert not any(isinstance(i, MenaiCFGPhiInstr) for i in join_new.instrs)
+        assert isinstance(join_new.terminator, MenaiCFGReturnTerm)
+        assert join_new.terminator.value.id == vr.id
+
+    def test_all_const_arms_return_directly(self):
+        """
+        join: %v = phi [True←A, False←B]
+              return %v
+
+        After: both blocks return their constant directly; join has no phi
+        and is unreachable.
+        """
+        vtrue = v("true"); vfalse = v("false"); vphi = v("phi")
+
+        block_a = block(1, MenaiCFGConstInstr(result=vtrue,  value=TRUE),  label="A")
+        block_b = block(2, MenaiCFGConstInstr(result=vfalse, value=FALSE), label="B")
+
+        join = block(
+            3,
+            MenaiCFGPhiInstr(result=vphi, incoming=[(vtrue, block_a), (vfalse, block_b)]),
+            terminator=MenaiCFGReturnTerm(value=vphi),
+            label="join",
+        )
+
+        block_a.terminator = MenaiCFGJumpTerm(target=join)
+        block_b.terminator = MenaiCFGJumpTerm(target=join)
+
+        vcond = v("cond")
+        entry = block(
+            0,
+            MenaiCFGConstInstr(result=vcond, value=MenaiInteger(1)),
+            terminator=MenaiCFGBranchTerm(cond=vcond, true_block=block_a, false_block=block_b),
+            label="entry",
+        )
+        f = func(entry, block_a, block_b, join)
+
+        new_f, changed = MenaiCFGBranchConstProp()._optimize_function(f)
+        assert changed
+
+        a_new = next(b for b in new_f.blocks if b.id == 1)
+        assert isinstance(a_new.terminator, MenaiCFGReturnTerm)
+        assert a_new.terminator.value.id == vtrue.id
+
+        b_new = next(b for b in new_f.blocks if b.id == 2)
+        assert isinstance(b_new.terminator, MenaiCFGReturnTerm)
+        assert b_new.terminator.value.id == vfalse.id
+
+        # join is now unreachable; its phi is gone, ReturnTerm left as-is.
+        join_new = next(b for b in new_f.blocks if b.id == 3)
+        assert not any(isinstance(i, MenaiCFGPhiInstr) for i in join_new.instrs)
+        assert isinstance(join_new.terminator, MenaiCFGReturnTerm)
 
 
 # ---------------------------------------------------------------------------
@@ -731,30 +790,20 @@ class TestEndToEnd:
             for i in b.instrs
         ), "BranchConstProp should eliminate all phi nodes in the loop"
 
-        # The three const-True blocks jump directly to the self-loop block.
-        from menai.menai_cfg import MenaiCFGSelfLoopTerm
-        self_loop_block = next(
-            b for b in loop_with.blocks
-            if isinstance(b.terminator, MenaiCFGSelfLoopTerm)
+        # The pass removes the dead True constant instructions and rewires
+        # the defining blocks to jump directly to the self-loop block.
+        # SimplifyBlocks then eliminates those now-empty blocks entirely.
+        # Net result: the optimised loop has fewer blocks.
+        assert len(loop_with.blocks) < len(loop_without.blocks), (
+            f"expected fewer blocks with pass ({len(loop_with.blocks)}) "
+            f"than without ({len(loop_without.blocks)})"
         )
-        const_true_blocks = [
-            b for b in loop_with.blocks
-            if any(
-                isinstance(i, MenaiCFGConstInstr)
-                and isinstance(i.value, MenaiBoolean)
-                and i.value.value
-                for i in b.instrs
-            )
-        ]
-        assert len(const_true_blocks) == 3, (
-            f"expected 3 const-True blocks, got {len(const_true_blocks)}"
-        )
-        for b in const_true_blocks:
-            assert isinstance(b.terminator, MenaiCFGJumpTerm)
-            assert b.terminator.target.id == self_loop_block.id, (
-                f"const-True block {b.id} should jump to self_loop block "
-                f"{self_loop_block.id}, got {b.terminator.target.id}"
-            )
+        # No spurious boolean constant instructions remain anywhere in the loop.
+        assert not any(
+            isinstance(i, MenaiCFGConstInstr) and isinstance(i.value, MenaiBoolean)
+            for b in loop_with.blocks
+            for i in b.instrs
+        ), "no dead boolean constants should remain after BranchConstProp"
 
     def test_skip_ws_correct_results(self):
         """
@@ -852,30 +901,19 @@ class TestEndToEnd:
             for i in b.instrs
         ), "BranchConstProp should eliminate all phi nodes in the loop"
 
-        # The three const-False blocks must not jump to any remaining block
-        # (i.e. they must not pass through a join).  SimplifyBlocks will have
-        # inlined the trivial return into them, so they terminate directly.
-        from menai.menai_cfg import MenaiCFGReturnTerm
-        const_false_blocks = [
-            b for b in loop_with.blocks
-            if any(
-                isinstance(i, MenaiCFGConstInstr)
-                and isinstance(i.value, MenaiBoolean)
-                and not i.value.value
-                for i in b.instrs
-            )
-        ]
-        assert len(const_false_blocks) == 3, (
-            f"expected 3 const-False blocks, got {len(const_false_blocks)}"
+        # The pass removes the dead False constant instructions and rewires
+        # the defining blocks to jump directly to the false-target.
+        # SimplifyBlocks then eliminates those now-empty blocks entirely.
+        assert len(loop_with.blocks) < len(loop_without.blocks), (
+            f"expected fewer blocks with pass ({len(loop_with.blocks)}) "
+            f"than without ({len(loop_without.blocks)})"
         )
-        for b in const_false_blocks:
-            # Each const-False block must terminate without jumping through
-            # a join — either a direct return (inlined by SimplifyBlocks) or
-            # a jump straight to the self-loop (false-target of the branch).
-            assert not isinstance(b.terminator, MenaiCFGPhiInstr)
-            assert isinstance(b.terminator, (MenaiCFGJumpTerm, MenaiCFGReturnTerm)), (
-                f"const-False block {b.id} has unexpected terminator: {b.terminator}"
-            )
+        # No spurious boolean constant instructions remain anywhere in the loop.
+        assert not any(
+            isinstance(i, MenaiCFGConstInstr) and isinstance(i.value, MenaiBoolean)
+            for b in loop_with.blocks
+            for i in b.instrs
+        ), "no dead boolean constants should remain after BranchConstProp"
 
     def test_and_chain_correct_results(self):
         """
@@ -906,3 +944,74 @@ class TestEndToEnd:
             (scan "   " 0)))
         """)
         assert result == [5, 0, 8, 0]
+
+    def test_and_return_const_false_arms_bypass_join(self):
+        """
+        (and A B) as a return value — the phi-into-ReturnTerm case.
+
+        (and (string>=? ch "0") (string<=? ch "9")) desugars to
+        (if (string>=? ch "0") (string<=? ch "9") #f).
+
+        The CFG join has:
+          phi [string_lte_result ← then_exit, #f_const ← else_exit]
+          return phi
+
+        After BranchConstProp the else block should return #f directly,
+        and the join should have no phi (sole remaining arm becomes the
+        return value directly).
+        """
+        passes_with = [
+            MenaiCFGCollapsePhiChains(),
+            MenaiCFGBranchConstProp(),
+            MenaiCFGSimplifyBlocks(),
+        ]
+
+        source = r"""
+        (define is-digit?
+          (lambda (ch)
+            (and (string>=? ch "0") (string<=? ch "9"))))
+        """
+        cfg = self._compile_cfg(source, passes_with)
+
+        # The top-level module body contains exactly one MakeClosure for the lambda.
+        is_digit_func = next(
+            (instr.function
+             for b in cfg.blocks
+             for instr in b.instrs
+             if isinstance(instr, MenaiCFGMakeClosureInstr)),
+            None,
+        )
+        assert is_digit_func is not None, "could not find is-digit? function"
+
+        # No phi nodes should survive.
+        assert not any(
+            isinstance(i, MenaiCFGPhiInstr)
+            for b in is_digit_func.blocks
+            for i in b.instrs
+        ), "BranchConstProp should eliminate the phi in is-digit?"
+
+        # The const-False block must return directly (not jump to a join).
+        const_false_blocks = [
+            b for b in is_digit_func.blocks
+            if any(
+                isinstance(i, MenaiCFGConstInstr)
+                and isinstance(i.value, MenaiBoolean)
+                and not i.value.value
+                for i in b.instrs
+            )
+        ]
+        assert len(const_false_blocks) == 1
+        assert isinstance(const_false_blocks[0].terminator, MenaiCFGReturnTerm)
+
+    def test_is_digit_correct_results(self):
+        """is-digit? compiled with all three passes must produce correct results."""
+        from menai import Menai
+        menai = Menai()
+
+        result = menai.evaluate(r"""
+        (letrec ((is-digit? (lambda (ch)
+                              (and (string>=? ch "0") (string<=? ch "9")))))
+          (list (is-digit? "0") (is-digit? "5") (is-digit? "9")
+                (is-digit? "/") (is-digit? ":")))
+        """)
+        assert result == [True, True, True, False, False]
