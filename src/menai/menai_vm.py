@@ -192,6 +192,7 @@ class MenaiVM:
         table[Opcode.INTEGER_TO_STRING] = self._op_integer_to_string
         table[Opcode.INTEGER_TO_FLOAT] = self._op_integer_to_float
         table[Opcode.INTEGER_TO_COMPLEX] = self._op_integer_to_complex
+        table[Opcode.INTEGER_CODEPOINT_TO_STRING] = self._op_integer_codepoint_to_string
         table[Opcode.FLOAT_P] = self._op_float_p
         table[Opcode.FLOAT_EQ_P] = self._op_float_eq_p
         table[Opcode.FLOAT_NEQ_P] = self._op_float_neq_p
@@ -269,6 +270,7 @@ class MenaiVM:
         table[Opcode.STRING_SLICE] = self._op_string_slice
         table[Opcode.STRING_REPLACE] = self._op_string_replace
         table[Opcode.STRING_INDEX] = self._op_string_index
+        table[Opcode.STRING_TO_INTEGER_CODEPOINT] = self._op_string_to_integer_codepoint
         table[Opcode.DICT_P] = self._op_dict_p
         table[Opcode.DICT_EQ_P] = self._op_dict_eq_p
         table[Opcode.DICT_NEQ_P] = self._op_dict_neq_p
@@ -1448,6 +1450,25 @@ class MenaiVM:
 
         return None
 
+    def _op_integer_codepoint_to_string(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """INTEGER_CODEPOINT_TO_STRING dest, src0: r_dest = (integer-codepoint->string r_src0)"""
+        a = frame.locals[instr.src0]
+        if not isinstance(a, MenaiInteger):
+            raise MenaiEvalError(
+                f"Function 'integer-codepoint->string' requires an integer argument, got {a.type_name()}"
+            )
+
+        cp = a.value
+        if not (0 <= cp <= 0x10FFFF) or (0xD800 <= cp <= 0xDFFF):
+            raise MenaiEvalError(
+                f"Function 'integer-codepoint->string' requires a valid Unicode scalar value, got {cp}"
+            )
+
+        frame.locals[instr.dest] = MenaiString(chr(cp))
+        return None
+
     def _op_float_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
@@ -2537,6 +2558,25 @@ class MenaiVM:
 
         idx = a.value.find(b.value)
         frame.locals[instr.dest] = Menai_NONE if idx == -1 else MenaiInteger(idx)
+        return None
+
+    def _op_string_to_integer_codepoint(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """STRING_TO_INTEGER_CODEPOINT dest, src0: r_dest = (string->integer-codepoint r_src0)"""
+        a = frame.locals[instr.src0]
+        if not isinstance(a, MenaiString):
+            raise MenaiEvalError(
+                f"Function 'string->integer-codepoint' requires a string argument, got {a.type_name()}"
+            )
+
+        if len(a.value) != 1:
+            raise MenaiEvalError(
+                f"Function 'string->integer-codepoint' requires a single-character string, "
+                f"got string of length {len(a.value)}"
+            )
+
+        frame.locals[instr.dest] = MenaiInteger(ord(a.value))
         return None
 
     def _op_string_concat(  # pylint: disable=useless-return

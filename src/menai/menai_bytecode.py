@@ -128,6 +128,8 @@ class Opcode(IntEnum):
     INTEGER_TO_FLOAT = _op(143, 1)      # r_dest = (integer->float r_src0)
     INTEGER_TO_COMPLEX = _op(144, 2)    # r_dest = (integer->complex r_src0 r_src1)
     INTEGER_TO_STRING = _op(145, 2)     # r_dest = (integer->string r_src0 r_src1)
+    INTEGER_CODEPOINT_TO_STRING = _op(146, 1)
+                                        # r_dest = (integer-codepoint->string r_src0)
 
     # Floating point operations
     FLOAT_P = _op(160, 1)               # r_dest = (float? r_src0)
@@ -211,6 +213,8 @@ class Opcode(IntEnum):
     STRING_SLICE = _op(260, 3)          # r_dest = (string-slice r_src0 r_src1 r_src2)
     STRING_REPLACE = _op(261, 3)        # r_dest = (string-replace r_src0 r_src1 r_src2)
     STRING_INDEX = _op(262, 2)          # r_dest = (string-index r_src0 r_src1)
+    STRING_TO_INTEGER_CODEPOINT = _op(263, 1)
+                                        # r_dest = (string->integer-codepoint r_src0)
 
     # Alist operations
     DICT_P = _op(281, 1)                # r_dest = (dict? r_src0)
@@ -300,6 +304,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'integer->float': (Opcode.INTEGER_TO_FLOAT, 1),
     'integer->complex': (Opcode.INTEGER_TO_COMPLEX, 2),
     'integer->string': (Opcode.INTEGER_TO_STRING, 2),
+    'integer-codepoint->string': (Opcode.INTEGER_CODEPOINT_TO_STRING, 1),
     'float?': (Opcode.FLOAT_P, 1),
     'float=?': (Opcode.FLOAT_EQ_P, 2),
     'float!=?': (Opcode.FLOAT_NEQ_P, 2),
@@ -374,6 +379,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'string-index': (Opcode.STRING_INDEX, 2),
     'string-prefix?': (Opcode.STRING_PREFIX_P, 2),
     'string-suffix?': (Opcode.STRING_SUFFIX_P, 2),
+    'string->integer-codepoint': (Opcode.STRING_TO_INTEGER_CODEPOINT, 1),
     'string-concat': (Opcode.STRING_CONCAT, 2),
     'string-slice': (Opcode.STRING_SLICE, 3),
     'string-replace': (Opcode.STRING_REPLACE, 3),

@@ -151,6 +151,7 @@ class MenaiBuiltinRegistry:
         'string-slice': (2, 3),
         'string->number': (1, 1),
         'string->integer': (1, 2),
+        'string->integer-codepoint': (1, 1),
         'list': (0, None),
         'list?': (1, 1),
         'list=?': (2, None),

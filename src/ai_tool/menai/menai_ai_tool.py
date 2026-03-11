@@ -216,6 +216,7 @@ Syntax: (operator arg1 arg2 ...)
 - (integer->float x) → convert integer to float: (integer->float 42) → 42.0, (integer->float 3) → 3.0
 - (integer->complex real [imag]) → construct complex from one or two integers: (integer->complex 3) → 3+0j, (integer->complex 1 -2) → 1-2j
 - (integer->string 42) → "42", (integer->string 255 16) → "ff", (integer->string 255 2) → "11111111", (integer->string 255 8) → "377" (optional radix: 2, 8, 10, or 16; defaults to 10)
+- (integer-codepoint->string 65) → "A", (integer-codepoint->string 960) → "π", (integer-codepoint->string 128512) → "😀" (converts a Unicode scalar value to a single-character string; raises an error for surrogates 0xD800–0xDFFF or values outside 0–0x10FFFF)
 
 ## Floating point operations
 
@@ -299,6 +300,7 @@ Syntax: (operator arg1 arg2 ...)
 - (string->list "hello") → ("h" "e" "l" "l" "o") (no delimiter: splits into individual characters)
 - (string->list "a,b,c" ",") → ("a" "b" "c") (delimiter splits on every occurrence; consecutive delimiters produce empty strings: (string->list "a,,b" ",") → ("a" "" "b"))
 - (string->list "one::two" "::") → ("one" "two") (delimiter may be multi-character)
+- (string->integer-codepoint "A") → 65, (string->integer-codepoint "π") → 960, (string->integer-codepoint "😀") → 128512 (converts a single-character string to its Unicode codepoint as an integer; raises an error if the string is not exactly one character)
 
 ## List operations:
 

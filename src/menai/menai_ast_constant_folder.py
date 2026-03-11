@@ -104,6 +104,8 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         '$complex-sqrt',
         '$string=?',
         '$string!=?',
+        '$string->integer-codepoint',
+        '$integer-codepoint->string',
     }
 
     def __init__(self) -> None:
@@ -185,6 +187,8 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
             '$complex-sqrt': self._fold_complex_sqrt,
             '$string=?': self._fold_string_eq,
             '$string!=?': self._fold_string_neq,
+            '$string->integer-codepoint': self._fold_string_to_integer_codepoint,
+            '$integer-codepoint->string': self._fold_integer_codepoint_to_string,
         }
 
         # Build jump table for special form optimization.  Note we don't include any special forms that were
@@ -1047,6 +1051,28 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
         first = args[0]
         return MenaiASTBoolean(not all(first == arg for arg in args[1:]))
+
+    def _fold_string_to_integer_codepoint(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+        """Fold string->integer-codepoint: arg must be a single-character string, returns integer."""
+        if not isinstance(args[0], MenaiASTString):
+            return None
+
+        s = args[0].value
+        if len(s) != 1:
+            return None  # Wrong length — let runtime raise the error
+
+        return MenaiASTInteger(ord(s))
+
+    def _fold_integer_codepoint_to_string(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
+        """Fold integer-codepoint->string: arg must be a valid Unicode scalar value, returns string."""
+        if not isinstance(args[0], MenaiASTInteger):
+            return None
+
+        cp = args[0].value
+        if not (0 <= cp <= 0x10FFFF) or (0xD800 <= cp <= 0xDFFF):
+            return None  # Invalid codepoint — let runtime raise the error
+
+        return MenaiASTString(chr(cp))
 
     def _fold_float_floor_div(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold float// floor division: (float// a b) → float floor quotient"""
