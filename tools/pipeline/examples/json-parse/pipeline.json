@@ -4,7 +4,7 @@
       "id": "read-json",
       "tool": "filesystem",
       "operation": "read_file",
-      "path": "tools/pipeline/examples/json-parse-test/test.json"
+      "path": "tools/pipeline/examples/json-parse/test.json"
     },
     {
       "id": "parse-json",
