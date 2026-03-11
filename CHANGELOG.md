@@ -10,6 +10,7 @@ Bug fixes:
 
 - Reinstated constant folding in the Menai compiler.
 - Tightened up the logic for applying diffs to files.  Now also includes a more useful diagnostic for the AI to use.
+- Tightened up rules on delegating to another AI.
 
 ## v40 (2026-03-09)
 
