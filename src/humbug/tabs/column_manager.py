@@ -958,6 +958,32 @@ class ColumnManager(QWidget):
         # Otherwise use the column to the left
         return self._tab_columns[current_column_number - 1]
 
+    def _ensure_tab_not_in_protected_column(self, tab: TabBase) -> None:
+        """
+        Move a tab out of the protected column if necessary.
+
+        When tab protection is active and the given tab is in the same column as
+        the protected tab, move it to the target column for new tabs.  If the tab
+        is already in a different column, leave it where it is.
+
+        Args:
+            tab: The tab to check and potentially move
+        """
+        if not self._protect_current_tab or not self._protected_tab:
+            return
+
+        protected_column = self._find_column_for_tab(self._protected_tab)
+        tab_column = self._find_column_for_tab(tab)
+
+        if protected_column is None or tab_column is None:
+            return
+
+        if tab_column != protected_column:
+            return
+
+        target_column = self._get_target_column_for_new_tab()
+        self._move_tab_between_columns(tab, tab_column, target_column)
+
     def _add_tab(self, tab: TabBase, title: str) -> None:
         """
         Add a new tab to the manager.
@@ -1344,6 +1370,7 @@ class ColumnManager(QWidget):
         """
         for tab in self._tabs.values():
             if isinstance(tab, LogTab):
+                self._ensure_tab_not_in_protected_column(tab)
                 self._set_current_tab(tab, False)
                 return tab
 
@@ -1362,6 +1389,7 @@ class ColumnManager(QWidget):
         """
         for tab in self._tabs.values():
             if isinstance(tab, ShellTab):
+                self._ensure_tab_not_in_protected_column(tab)
                 self._set_current_tab(tab, False)
                 return tab
 
@@ -1396,6 +1424,7 @@ class ColumnManager(QWidget):
                 # If the existing tab is ephemeral, convert it to permanent
                 self._make_tab_permanent(existing_tab)
 
+            self._ensure_tab_not_in_protected_column(existing_tab)
             self._set_current_tab(existing_tab, ephemeral)
             return existing_tab
 
@@ -1466,6 +1495,7 @@ class ColumnManager(QWidget):
                 # If the existing tab is ephemeral, convert it to permanent
                 self._make_tab_permanent(existing_tab)
 
+            self._ensure_tab_not_in_protected_column(existing_tab)
             self._set_current_tab(existing_tab, ephemeral)
             return existing_tab
 
@@ -1626,6 +1656,7 @@ class ColumnManager(QWidget):
                 # If the existing tab is ephemeral, convert it to permanent
                 self._make_tab_permanent(existing_tab)
 
+            self._ensure_tab_not_in_protected_column(existing_tab)
             self._set_current_tab(existing_tab, ephemeral)
 
             # If there's an anchor, scroll to it

@@ -5,6 +5,9 @@
 New features:
 
 - Added a new Menai pipeline runner tool.
+- When the AI opens a tab for the first time it does so in a new column.  If the tab
+  already exists but is in the same column as the AI conversation then the column
+  manager will now move it to a new column so it can be seen side-by-side.
 
 Bug fixes:
 
