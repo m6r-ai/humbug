@@ -1,0 +1,27 @@
+{
+  "steps": [
+    {
+      "id": "read-json",
+      "tool": "filesystem",
+      "operation": "read_file",
+      "path": "tools/pipeline/examples/json-parse-test/test.json"
+    },
+    {
+      "id": "parse-json",
+      "tool": "menai",
+      "inputs": {
+        "content": "read-json"
+      },
+      "module": "parse-and-render",
+      "outputs": {
+        "result": "write-output"
+      }
+    },
+    {
+      "id": "write-output",
+      "tool": "console",
+      "operation": "write_stdout",
+      "value_from": "parse-json.result"
+    }
+  ]
+}
