@@ -81,7 +81,15 @@ class DiffMatcher(ABC):
             return exact_match
 
         # Try fuzzy matching within search window
-        return self._fuzzy_search(hunk.old_start, expected_lines, document)
+        fuzzy_result = self._fuzzy_search(hunk.old_start, expected_lines, document)
+        if fuzzy_result.success:
+            return fuzzy_result
+
+        # Fuzzy search failed - scan the entire file for an exact match outside the window.
+        # If found, record its location so the caller can report a more actionable error.
+        out_of_range = self._full_file_exact_search(hunk.old_start, expected_lines, document)
+        fuzzy_result.out_of_range_location = out_of_range
+        return fuzzy_result
 
     def _try_exact_match(
         self,
@@ -124,7 +132,12 @@ class DiffMatcher(ABC):
         document: Any
     ) -> MatchResult:
         """
-        Search for best match within the search window.
+        Search for an exact match within the search window.
+
+        The purpose of fuzzy search is to find the correct location when line
+        numbers have drifted, not to accept approximately-matching content.
+        Only positions where every context/deletion line matches exactly
+        (after stripping whitespace) are considered successful.
 
         Args:
             expected_line: Expected line number (1-indexed)
@@ -157,19 +170,58 @@ class DiffMatcher(ABC):
 
             confidence = self._calculate_confidence(expected_lines, actual_lines)
 
+            # Only consider positions where all lines match exactly.
+            # The confidence score is used to rank candidates and provide useful
+            # error information, but a non-exact match must never succeed.
+            is_exact = self._lines_match_exactly(expected_lines, actual_lines)
+
             # Prefer matches closer to expected location if confidence is equal
             distance_penalty = abs(line_num - expected_line) * 0.001
             adjusted_confidence = confidence - distance_penalty
 
             if adjusted_confidence > best_match.confidence:
                 best_match = MatchResult(
-                    success=confidence >= self._confidence_threshold,
+                    success=is_exact,
                     location=line_num,
                     confidence=confidence,
                     actual_lines=actual_lines
                 )
 
         return best_match
+
+    def _full_file_exact_search(
+        self,
+        expected_line: int,
+        expected_lines: List[str],
+        document: Any
+    ) -> int | None:
+        """
+        Scan the entire file for an exact match outside the search window.
+
+        Called only after the windowed fuzzy search has already failed, to provide
+        a more actionable error message when the context exists in the file but
+        the hunk's line numbers are badly stale.
+
+        Args:
+            expected_line: Expected line number (1-indexed), used to exclude the window
+            expected_lines: Lines we expect to find
+            document: Document to search
+
+        Returns:
+            Line number of the exact match, or None if not found anywhere
+        """
+        total_lines = self._get_document_line_count(document)
+        window_start = max(1, expected_line - self._search_window)
+        window_end = min(total_lines, expected_line + self._search_window)
+
+        for line_num in range(1, total_lines + 1):
+            if window_start <= line_num <= window_end:
+                continue
+            actual_lines = self._get_document_lines(document, line_num, len(expected_lines))
+            if self._lines_match_exactly(expected_lines, actual_lines):
+                return line_num
+
+        return None
 
     def _get_document_line_count(self, document: Any) -> int:
         """

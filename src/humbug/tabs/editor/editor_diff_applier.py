@@ -145,6 +145,15 @@ class EditorDiffApplier(DiffApplier):
                         'content and regenerating the diff.'
                 }
 
+                if match_result.out_of_range_location is not None:
+                    error_details['exact_match_out_of_range'] = match_result.out_of_range_location
+                    error_details['suggestion'] = (
+                        f'Exact match found at line {match_result.out_of_range_location}, '
+                        f'but hunk specifies line {hunk.old_start}. '
+                        'The diff has stale line numbers. Regenerate the diff against the '
+                        'current file content.'
+                    )
+
                 raise DiffMatchError(
                     f'Could not locate hunk {idx + 1} with sufficient confidence',
                     error_details

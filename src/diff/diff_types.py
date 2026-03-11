@@ -31,6 +31,7 @@ class MatchResult:
     location: int  # Line number where hunk should be applied (1-indexed)
     confidence: float  # 0.0 to 1.0
     actual_lines: List[str]  # The actual lines found at this location
+    out_of_range_location: int | None = None  # Exact match found outside the search window
 
 
 @dataclass
