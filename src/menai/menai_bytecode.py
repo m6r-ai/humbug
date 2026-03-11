@@ -511,6 +511,9 @@ class Instruction:
         if opcode == Opcode.EMIT_TRACE:
             return f"EMIT_TRACE r{self.src0}"
 
+        if opcode == Opcode.RAISE_ERROR:
+            return f"RAISE_ERROR r{self.src0}"
+
         n = self.arg_count()
         srcs = [f"r{self.src0}", f"r{self.src1}", f"r{self.src2}"][:n]
         src_str = (", ".join(srcs) + " " if srcs else "")
