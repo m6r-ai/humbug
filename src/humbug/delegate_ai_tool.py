@@ -58,7 +58,6 @@ class DelegateAITool(AITool):
 
                 "Examples where delegation is useful:\n"
                 "- Use AI capabilities from a different model, or with different settings\n"
-                "- Parallelize problem solving (you must use parallel tool/function calls to do this)\n"
                 "- Seek analysis from a different perspective (you must provide the perspective in the task_prompt)\n"
                 "- Use a subset of your current conversation context for more focused reasoning\n"
                 "- Process a lot of context/tokens where you don't need all the context in your main conversation\n"
@@ -66,8 +65,7 @@ class DelegateAITool(AITool):
                 "- Give you a sounding board for ideas or to brainstorm with a different AI\n\n"
 
                 "Important:\n"
-                "- You must not delegate a task to a child AI that is the same task you have been given unless you are "
-                "significantly changing the context or requirements\n"
+                "- You MUST NOT delegate a task to a child AI that is largely the same task you have been given."
                 "- You MUST tell the child AI that it is a child AI instance that has been tasked using the delegate_ai tool\n"
                 "- You MUST tell the child AI that if it creates any files, it must inform you (the parent AI) about them\n"
                 "- You must not use this tool to try to access any tools you do not have access to (if you cannot do "
