@@ -125,7 +125,7 @@ class MenaiVM:
         This replaces the if/elif chain with direct array indexing,
         significantly improving performance in the hot execution loop.
         """
-        table: List[Any] = [None] * 384
+        table: List[Any] = [self._op_not_implemented] * 384
         table[Opcode.LOAD_NONE] = self._op_load_none
         table[Opcode.LOAD_TRUE] = self._op_load_true
         table[Opcode.LOAD_FALSE] = self._op_load_false
@@ -402,12 +402,7 @@ class MenaiVM:
             # Increment IP before executing (so jumps can override)
             frame.ip += 1
 
-            handler = dispatch[instr.opcode]
-            if handler is None:
-                raise MenaiEvalError(f"Unimplemented opcode: {instr.opcode}")
-
-            # Call the handler
-            result = handler(frame, instr)
+            result = dispatch[instr.opcode](frame, instr)
             if result is None:
                 # Common fast path: handler completed normally.
                 continue
@@ -422,6 +417,12 @@ class MenaiVM:
             # MenaiValue returned only by _op_return when the sentinel frame is
             # the sole remaining frame — this is the top-level result.
             return cast(MenaiValue, result)
+
+    def _op_not_implemented(
+        self, frame: Frame, instr: Instruction
+    ) -> None:
+        """Sentinel handler occupying all unused dispatch table slots."""
+        raise MenaiEvalError(f"Unimplemented opcode: {instr.opcode}")
 
     def _op_load_none(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
