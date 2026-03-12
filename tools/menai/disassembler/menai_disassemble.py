@@ -161,18 +161,18 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
         annotation = f"  ; Emit {describe_local(instr.src0, code)} to trace watcher"
 
     elif opcode == Opcode.CALL:
-        arg_word = "arg" if instr.src0 == 1 else "args"
-        annotation = f"  ; Call function with {instr.src0} {arg_word}, result -> r{instr.dest}"
+        arg_word = "arg" if instr.src1 == 1 else "args"
+        annotation = f"  ; Call r{instr.src0} with {instr.src1} {arg_word}, result -> r{instr.dest}"
 
     elif opcode == Opcode.TAIL_CALL:
-        arg_word = "arg" if instr.src0 == 1 else "args"
-        annotation = f"  ; Tail call function with {instr.src0} {arg_word}"
+        arg_word = "arg" if instr.src1 == 1 else "args"
+        annotation = f"  ; Tail call r{instr.src0} with {instr.src1} {arg_word}"
 
     elif opcode == Opcode.APPLY:
-        annotation = f"  ; Apply function to arg list, result -> r{instr.dest}"
+        annotation = f"  ; Apply r{instr.src0} to arg list, result -> r{instr.dest}"
 
     elif opcode == Opcode.TAIL_APPLY:
-        annotation = "  ; Tail apply function to arg list"
+        annotation = f"  ; Tail apply r{instr.src0} to arg list"
 
     elif opcode == Opcode.RETURN:
         annotation = f"  ; Return value from r{instr.src0}"
@@ -345,38 +345,16 @@ def trace_calls(code: CodeObject, var_map: Dict[int, str]) -> List[str]:
 
     for i, instr in enumerate(code.instructions):
         if instr.opcode == Opcode.CALL:
-            arg_count = instr.src0
-            func_load_idx = i - arg_count - 1
-            if func_load_idx >= 0:
-                func_instr = code.instructions[func_load_idx]
-
-                func_desc = "???"
-                if func_instr.opcode == Opcode.PUSH:
-                    var_idx = func_instr.src0
-                    if var_idx in var_map:
-                        func_desc = var_map[var_idx]
-
-                    else:
-                        func_desc = f"var[{var_idx}]"
-
-                traces.append(f"Instr {i:3}: CALL({arg_count} args) -> {func_desc}")
+            arg_count = instr.src1
+            func_reg = instr.src0
+            func_desc = var_map.get(func_reg, f"r{func_reg}")
+            traces.append(f"Instr {i:3}: CALL r{func_reg} ({arg_count} args) -> {func_desc}")
 
         elif instr.opcode == Opcode.TAIL_CALL:
-            arg_count = instr.src0
-            func_load_idx = i - arg_count - 1
-            if func_load_idx >= 0:
-                func_instr = code.instructions[func_load_idx]
-
-                func_desc = "???"
-                if func_instr.opcode == Opcode.PUSH:
-                    var_idx = func_instr.src0
-                    if var_idx in var_map:
-                        func_desc = var_map[var_idx]
-
-                    else:
-                        func_desc = f"var[{var_idx}]"
-
-                traces.append(f"Instr {i:3}: TAIL_CALL({arg_count} args) -> {func_desc}")
+            arg_count = instr.src1
+            func_reg = instr.src0
+            func_desc = var_map.get(func_reg, f"r{func_reg}")
+            traces.append(f"Instr {i:3}: TAIL_CALL r{func_reg} ({arg_count} args) -> {func_desc}")
 
     return traces
 

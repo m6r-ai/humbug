@@ -255,30 +255,27 @@ class MenaiBytecodeBuilder:
                 for arg in instr.args:
                     ctx.emit(Opcode.PUSH, ctx.slot_of(arg))
 
-                ctx.emit(Opcode.PUSH, ctx.slot_of(instr.func))
-                ctx.emit(Opcode.CALL, len(instr.args), dest=ctx.slot_of(instr.dst))
+                ctx.emit(Opcode.CALL, ctx.slot_of(instr.func), len(instr.args), dest=ctx.slot_of(instr.dst))
                 i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeTailCall):
                 for arg in instr.args:
                     ctx.emit(Opcode.PUSH, ctx.slot_of(arg))
-                ctx.emit(Opcode.PUSH, ctx.slot_of(instr.func))
-                ctx.emit(Opcode.TAIL_CALL, len(instr.args))
+
+                ctx.emit(Opcode.TAIL_CALL, ctx.slot_of(instr.func), len(instr.args))
                 i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeApply):
-                ctx.emit(Opcode.PUSH, ctx.slot_of(instr.func))
                 ctx.emit(Opcode.PUSH, ctx.slot_of(instr.arg_list))
-                ctx.emit(Opcode.APPLY, dest=ctx.slot_of(instr.dst))
+                ctx.emit(Opcode.APPLY, ctx.slot_of(instr.func), dest=ctx.slot_of(instr.dst))
                 i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeTailApply):
-                ctx.emit(Opcode.PUSH, ctx.slot_of(instr.func))
                 ctx.emit(Opcode.PUSH, ctx.slot_of(instr.arg_list))
-                ctx.emit(Opcode.TAIL_APPLY)
+                ctx.emit(Opcode.TAIL_APPLY, ctx.slot_of(instr.func))
                 i += 1
                 continue
 

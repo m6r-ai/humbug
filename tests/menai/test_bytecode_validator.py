@@ -24,7 +24,8 @@ ISA summary (register-based LOAD transition):
   All other ops remain stack-based (pop operands, push result).
 
   RETURN pops 1 value and returns (terminal).
-  TAIL_CALL arity pops (arity+1) and is terminal.
+  CALL dest, src0, src1         — func in register src0, arity in src1, args on stack.
+  TAIL_CALL src0, src1          — func in register src0, arity in src1, terminal.
   MAKE_CLOSURE code_idx, capture_count pops capture_count, pushes 1 closure.
   PATCH_CLOSURE var_idx, capture_slot pops 1 value (the captured value to patch in).
 
@@ -36,6 +37,7 @@ Index constraints:
   POP:           dest < local_count
   ENTER:         src0 == param_count and src0 <= local_count
   PATCH_CLOSURE: src0 < local_count
+  CALL/TAIL_CALL/APPLY/TAIL_APPLY: src0 (func register) < local_count
 
 Minimal valid "load and return" sequence:
   LOAD_CONST dest=0, src0=0   (local_count >= 1)
@@ -212,22 +214,22 @@ class TestBytecodeValidator:
     def test_stack_underflow_in_call(self):
         """Test that CALL with insufficient stack items is caught.
 
-        Sequence (local_count=1, initial depth=0):
-          LOAD_CONST dest=0, src0=0  — r0=42; stack: 0
-          PUSH src0=0                — stack: 0 → 1
-          CALL src0=2                — needs arity+1=3 items, has 1 → STACK_UNDERFLOW
+        Sequence (local_count=2, initial depth=0):
+          LOAD_CONST dest=0, src0=0        — r0=42 (the "function"); stack: 0
+          PUSH src0=0                      — stack: 0 → 1 (one arg pushed)
+          CALL dest=1, src0=0, src1=3      — func=r0, arity=3; needs 3 args on stack, has 1 → STACK_UNDERFLOW
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # stack: 0 → 1
-                Instruction(Opcode.CALL, src0=2),                 # needs 3, has 1 → underflow
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),       # r0=42; stack: 0
+                Instruction(Opcode.PUSH, src0=0),                      # stack: 0 → 1 (one arg)
+                Instruction(Opcode.CALL, dest=1, src0=0, src1=3),      # func=r0, arity=3; needs 3, has 1
                 Instruction(Opcode.RETURN),
             ],
             constants=[MenaiInteger(42)],
             names=[],
             code_objects=[],
-            local_count=1,
+            local_count=2,
         )
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
@@ -509,24 +511,22 @@ class TestBytecodeValidator:
 
         Sequence (local_count=2, names=["f"], constants=[42]):
           0: LOAD_NAME dest=0, src0=0   — r0=f; stack: 0
-          1: PUSH src0=0                — stack: 0 → 1  (function)
-          2: LOAD_CONST dest=1, src0=0  — r1=42; stack: 1
-          3: PUSH src0=1                — stack: 1 → 2  (arg)
-          4: TAIL_CALL src0=1           — pops 2 (func+1arg); terminal ✓
-          5: LOAD_CONST dest=0, src0=0  — unreachable; structurally valid
-          6: PUSH src0=0                — unreachable; structurally valid
-          7: RETURN                     — unreachable; structurally valid
+          1: LOAD_CONST dest=1, src0=0  — r1=42; stack: 0
+          2: PUSH src0=1                — stack: 0 → 1 (one arg)
+          3: TAIL_CALL src0=0, src1=1   — func=r0, arity=1; pops 1 arg; terminal ✓
+          4: LOAD_CONST dest=0, src0=0  — unreachable; structurally valid
+          5: PUSH src0=0                — unreachable; structurally valid
+          6: RETURN                     — unreachable; structurally valid
         """
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_NAME, dest=0, src0=0),    # 0: r0=f; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # 1: stack: 0 → 1
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),   # 2: r1=42; stack: 1
-                Instruction(Opcode.PUSH, src0=1),                 # 3: stack: 1 → 2
-                Instruction(Opcode.TAIL_CALL, src0=1),            # 4: pops 2; terminal ✓
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),   # 5: unreachable
-                Instruction(Opcode.PUSH, src0=0),                 # 6: unreachable
-                Instruction(Opcode.RETURN),                       # 7: unreachable
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),   # 1: r1=42; stack: 0
+                Instruction(Opcode.PUSH, src0=1),                  # 2: stack: 0 → 1 (one arg)
+                Instruction(Opcode.TAIL_CALL, src0=0, src1=1),    # 3: func=r0, arity=1; terminal ✓
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),   # 4: unreachable
+                Instruction(Opcode.PUSH, src0=0),                 # 5: unreachable
+                Instruction(Opcode.RETURN),                       # 6: unreachable
             ],
             constants=[MenaiInteger(42)],
             names=["f"],

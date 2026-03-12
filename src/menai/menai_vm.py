@@ -685,9 +685,8 @@ class MenaiVM:
     def _op_call(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
-        """CALL dest, arity: Call function; pop result from stack into dest register."""
-        # Function is on top of the stack
-        func = self.stack.pop()
+        """CALL dest, src0, src1: Call func in register src0 with src1 args on stack; result to dest."""
+        func = frame.locals[instr.src0]
         if not isinstance(func, MenaiFunction):
             raise MenaiEvalError(
                 message="Cannot call non-function value",
@@ -696,24 +695,22 @@ class MenaiVM:
                 suggestion="Only functions can be called"
             )
 
-        self._check_and_pack_args(func, instr.src0)
+        self._check_and_pack_args(func, instr.src1)
         code = func.bytecode
 
         new_frame = Frame(code)
 
-        # Store captured values in locals (after parameters)
         if func.captured_values:
             for i, captured_val in enumerate(func.captured_values):
                 new_frame.locals[code.param_count + i] = captured_val
 
-        # Push frame onto stack
         self.frames.append(new_frame)
         self.current_frame = new_frame
         frame.locals[instr.dest] = self._execute_frame(new_frame)
         return None
 
     def _op_tail_call(  # pylint: disable=useless-return
-        self, _frame: Frame, instr: Instruction
+        self, frame: Frame, instr: Instruction
     ) -> TailCall | None:
         """
         TAIL_CALL: Perform tail call with optimization.
@@ -722,13 +719,7 @@ class MenaiVM:
         replacing the current frame with the target frame, achieving true
         tail call optimization with constant stack space for all tail calls.
         """
-        # Validator guarantees stack has enough values (arity + 1)
-
-        # Function is on top of the stack (pushed after arguments).
-        # Pop it first, then args sit naturally at the top.
-        # Must keep type check (runtime-dependent)
-        func = self.stack.pop()
-
+        func = frame.locals[instr.src0]
         if not isinstance(func, MenaiFunction):
             raise MenaiEvalError(
                 message="Cannot call non-function value",
@@ -737,15 +728,15 @@ class MenaiVM:
                 suggestion="Only functions can be called"
             )
 
-        self._check_and_pack_args(func, instr.src0)
+        self._check_and_pack_args(func, instr.src1)
         return TailCall(func)
 
     def _op_apply(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
-        """APPLY dest: Apply function to arg list; pop result from stack into dest register."""
+        """APPLY dest, src0: Apply func in register src0 to arg_list on stack top; result to dest."""
         arg_list = self.stack.pop()
-        func = self.stack.pop()
+        func = frame.locals[instr.src0]
         if not isinstance(func, MenaiFunction):
             raise MenaiEvalError(
                 message="apply: first argument must be a function",
@@ -777,11 +768,11 @@ class MenaiVM:
         return None
 
     def _op_tail_apply(
-        self, _frame: Frame, _instr: Instruction
+        self, frame: Frame, instr: Instruction
     ) -> TailCall:
-        """TAIL_APPLY: Apply function to argument list in tail position."""
+        """TAIL_APPLY src0: Tail apply func in register src0 to arg_list on stack top."""
         arg_list = self.stack.pop()
-        func = self.stack.pop()
+        func = frame.locals[instr.src0]
         if not isinstance(func, MenaiFunction):
             raise MenaiEvalError(
                 message="apply: first argument must be a function",

@@ -66,10 +66,10 @@ class Opcode(IntEnum):
     # Functions
     MAKE_CLOSURE = _op(30, 1)           # r_dest = MAKE_CLOSURE code_idx
     PATCH_CLOSURE = _op(31, 3)          # PATCH_CLOSURE closure_reg, value_reg, capture_idx
-    CALL = _op(32, 1)                   # r_dest = CALL arity — result written to dest
-    TAIL_CALL = _op(33, 1)              # TAIL_CALL arity — no dest (result propagates up)
-    APPLY = _op(34)                     # r_dest = APPLY — result written to dest
-    TAIL_APPLY = _op(35)                # TAIL_APPLY — no dest (result propagates up)
+    CALL = _op(32, 2)                   # r_dest = CALL r_src0 src1 — func in src0, arity in src1, result to dest
+    TAIL_CALL = _op(33, 2)              # TAIL_CALL r_src0 src1 — func in src0, arity in src1, no dest
+    APPLY = _op(34, 1)                  # r_dest = APPLY r_src0 — func in src0, arg_list on stack, result to dest
+    TAIL_APPLY = _op(35, 1)             # TAIL_APPLY r_src0 — func in src0, arg_list on stack, no dest
     ENTER = _op(36, 1)                  # ENTER n (pop N args into locals 0..N-1)
     RETURN = _op(37, 1)                 # RETURN src0 — push frame.locals[src0] as return value
 
@@ -497,16 +497,16 @@ class Instruction:
             return f"RETURN r{self.src0}"
 
         if opcode == Opcode.CALL:
-            return f"r{self.dest} = CALL {self.src0}"
+            return f"r{self.dest} = CALL r{self.src0} {self.src1}"
 
         if opcode == Opcode.TAIL_CALL:
-            return f"TAIL_CALL {self.src0}"
+            return f"TAIL_CALL r{self.src0} {self.src1}"
 
         if opcode == Opcode.APPLY:
-            return f"r{self.dest} = APPLY"
+            return f"r{self.dest} = APPLY r{self.src0}"
 
         if opcode == Opcode.TAIL_APPLY:
-            return "TAIL_APPLY"
+            return f"TAIL_APPLY r{self.src0}"
 
         if opcode == Opcode.EMIT_TRACE:
             return f"EMIT_TRACE r{self.src0}"

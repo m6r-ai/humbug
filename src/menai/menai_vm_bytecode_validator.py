@@ -132,8 +132,8 @@ class BytecodeValidator:
             Opcode.PATCH_CLOSURE: (0, 0),
             Opcode.CALL: (-1, 0),
             Opcode.TAIL_CALL: (-1, 0),
-            Opcode.APPLY: (2, 0),
-            Opcode.TAIL_APPLY: (2, 0),
+            Opcode.APPLY: (1, 0),
+            Opcode.TAIL_APPLY: (1, 0),
             # ENTER effect is n-dependent; handled in _get_stack_effect
             Opcode.RETURN: (0, 0),
 
@@ -407,6 +407,18 @@ class BytecodeValidator:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
                         f"Destination register {instr.dest} out of bounds (local_count: {code.local_count})",
+                        instruction_index=i,
+                        opcode=opcode
+                    )
+
+            # Validate ENTER: n must match param_count and fit within local_count
+            # Validate func register (src0) for call/apply opcodes
+            if opcode in (Opcode.CALL, Opcode.TAIL_CALL, Opcode.APPLY, Opcode.TAIL_APPLY):
+                func_reg = instr.src0
+                if func_reg < 0 or func_reg >= code.local_count:
+                    raise ValidationError(
+                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
+                        f"Function register {func_reg} out of bounds (local_count: {code.local_count})",
                         instruction_index=i,
                         opcode=opcode
                     )
@@ -724,6 +736,18 @@ class BytecodeValidator:
                         context=f"Closure is code_objects[{code_obj_index}] ({target_code.name!r})"
                     )
 
+            # Check CALL/TAIL_CALL/APPLY/TAIL_APPLY — func register (src0) must be initialized
+            if opcode in (Opcode.CALL, Opcode.TAIL_CALL, Opcode.APPLY, Opcode.TAIL_APPLY):
+                func_reg = instr.src0
+                if func_reg not in current_initialized:
+                    raise ValidationError(
+                        ValidationErrorType.UNINITIALIZED_VARIABLE,
+                        f"Function register {func_reg} may be uninitialized",
+                        instruction_index=instr_idx,
+                        opcode=opcode,
+                        context=f"Initialized variables: {sorted(current_initialized)}"
+                    )
+
             # Calculate new initialized set after this instruction
             # Compute the exit state by mutating current_initialized in place.
             # We only copy if there are two successors (branch), so that each
@@ -777,19 +801,19 @@ class BytecodeValidator:
 
         if opcode == Opcode.MAKE_CLOSURE:
             capture_count = instr.src1
-            return (capture_count, 0)  # Pop captures, write closure to dest register
+            return (capture_count, 0)
 
         if opcode == Opcode.CALL:
-            arity = instr.src0
-            return (arity + 1, 0)  # Pop function + args, result written to dest register
+            arity = instr.src1
+            return (arity, 0)
 
         if opcode == Opcode.TAIL_CALL:
-            arity = instr.src0
-            return (arity + 1, 0)  # Pop function + args, tail position (no push)
+            arity = instr.src1
+            return (arity, 0)
 
         if opcode == Opcode.ENTER:
             n = instr.src0
-            return (n, 0)  # Pop n args from stack, store into locals 0..n-1
+            return (n, 0)
 
         # Default case
         return self.stack_effects.get(opcode, (0, 0))
