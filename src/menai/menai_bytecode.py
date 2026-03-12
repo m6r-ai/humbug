@@ -497,10 +497,10 @@ class Instruction:
             return f"RETURN r{self.src0}"
 
         if opcode == Opcode.CALL:
-            return f"r{self.dest} = CALL r{self.src0} {self.src1}"
+            return f"r{self.dest} = CALL r{self.src0}, {self.src1}"
 
         if opcode == Opcode.TAIL_CALL:
-            return f"TAIL_CALL r{self.src0} {self.src1}"
+            return f"TAIL_CALL r{self.src0}, {self.src1}"
 
         if opcode == Opcode.APPLY:
             return f"r{self.dest} = APPLY r{self.src0}"
