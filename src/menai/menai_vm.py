@@ -40,7 +40,7 @@ class Frame:
 
     Each frame has its own locals and instruction pointer.
     """
-    __slots__ = ('code', 'code_len', 'ip', 'locals', 'return_dest')
+    __slots__ = ('code', 'code_len', 'ip', 'locals', 'return_dest', 'is_sentinel')
 
     def __init__(self, code: CodeObject) -> None:
         self.code = code
@@ -48,7 +48,7 @@ class Frame:
         self.ip = 0
         self.locals = cast(List[MenaiValue], [None] * code.local_count)
         self.return_dest: int = 0
-
+        self.is_sentinel: bool = False
 
 class MenaiVM:
     """
@@ -64,6 +64,7 @@ class MenaiVM:
         main_frame = Frame(CodeObject(
             name="<main>", instructions=[], constants=[], names=[], code_objects=[], local_count=0, param_count=0, is_variadic=False
         ))
+        main_frame.is_sentinel = True
         self.frames: List[Frame] = [main_frame]
         self.current_frame: Frame = main_frame
         self.globals: Dict[str, MenaiValue] = {}
@@ -765,7 +766,7 @@ class MenaiVM:
         caller = self.frames[-1]
         self.current_frame = caller
 
-        if caller.code.name == "<main>":
+        if caller.is_sentinel:
             # Returning to the sentinel: this is the final top-level result.
             return return_value
 
