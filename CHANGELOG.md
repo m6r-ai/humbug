@@ -8,12 +8,15 @@ New features:
 - When the AI opens a tab for the first time it does so in a new column.  If the tab
   already exists but is in the same column as the AI conversation then the column
   manager will now move it to a new column so it can be seen side-by-side.
+- Added new optimization passes to the Menai compiler that will handle `or` and `and` sequences more effectively.
+- Reworked the Menai VM to reduce overheads (improve performance by 20%).
 
 Bug fixes:
 
 - Reinstated constant folding in the Menai compiler.
 - Tightened up the logic for applying diffs to files.  Now also includes a more useful diagnostic for the AI to use.
 - Tightened up rules on delegating to another AI.
+- Fixed some annotations in the Menai disassembler.
 
 ## v40 (2026-03-09)
 
