@@ -74,7 +74,6 @@ class MenaiVM:
 
         # Cancellation support for non-blocking execution
         self._cancelled: bool = False
-        self._instruction_count: int = 0
 
         # Check cancellation every N instructions (balance between responsiveness and performance)
         self._cancellation_check_interval: int = 1000
@@ -365,7 +364,6 @@ class MenaiVM:
 
         # Reset state
         self._cancelled = False
-        self._instruction_count = 0
 
         # Reset execution state
         self.stack = []
@@ -374,32 +372,12 @@ class MenaiVM:
         self.frames.append(frame)
         self.current_frame = frame
 
-        # Execute until we return
-        return self._execute_frame(frame)
-
-    def _execute_frame(self, frame: Frame) -> MenaiValue:
-        """
-        Execute bytecode using a single flat dispatch loop.
-
-        Non-tail calls push a new frame and continue the loop (no Python-level
-        recursion).  RETURN pops the current frame and writes the result into
-        the caller's destination register, then continues.  The loop exits only
-        when RETURN fires with the sentinel frame as the sole remaining frame.
-
-        TAIL_CALL / TAIL_APPLY replace the current frame in-place and return
-        _FRAME_CHANGE, identical to call and return transitions.
-
-        Returns:
-            Result value when frame returns
-        """
         # Cache dispatch table in local variable for faster access
         dispatch = self._dispatch_table
 
         # Cache cancellation check interval for performance
         check_interval = self._cancellation_check_interval
 
-        # Local instruction counter for cancellation checking
-        # Using a local variable is faster than accessing self._instruction_count
         instruction_count = 0
         instructions = frame.code.instructions
         instructions_len = frame.code_len
