@@ -661,8 +661,12 @@ class MenaiVM:
         """
         base = frame.base
         closure = self.regs[base + instr.src0]
-        assert isinstance(closure, MenaiFunction)
-        assert isinstance(closure.captured_values, list), "PATCH_CLOSURE: captured_values must be a list (set by MAKE_CLOSURE)"
+        if not isinstance(closure, MenaiFunction):
+            raise MenaiEvalError("PATCH_CLOSURE requires a function")
+
+        if not isinstance(closure.captured_values, list):
+            raise MenaiEvalError("PATCH_CLOSURE requires closure with captured_values list")
+
         closure.captured_values[instr.src1] = self.regs[base + instr.src2]
         return None
 
