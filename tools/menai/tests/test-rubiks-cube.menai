@@ -5,7 +5,7 @@
         (format-solution-fn (dict-get rubiks "format-solution")))
     ; Create a solved cube and scramble it with a few moves
     (let ((cube (solved-cube-fn)))
-      (let ((scrambled (apply-moves-fn cube (list "R" "U" "R'" "D"))))
+      (let ((scrambled (apply-moves-fn cube (list "R" "U" "R'" "D" "F" "R"))))
         ; Try to solve it (max depth 10)
         (let ((solution (ida-star-fn scrambled 10)))
           (format-solution-fn solution))))))
