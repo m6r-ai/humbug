@@ -444,7 +444,7 @@ class BytecodeValidator:
 
             # Validate PATCH_CLOSURE: all three register operands must be valid
             if opcode == Opcode.PATCH_CLOSURE:
-                for field_name, reg in (('src0 (closure)', instr.src0), ('src1 (value)', instr.src1)):
+                for field_name, reg in (('src0 (closure)', instr.src0), ('src2 (value)', instr.src2)):
                     if reg < 0 or reg >= code.local_count:
                         raise ValidationError(
                             ValidationErrorType.INVALID_VARIABLE_ACCESS,
@@ -453,11 +453,11 @@ class BytecodeValidator:
                             opcode=opcode
                         )
 
-                # src2 is the capture index — validated in _validate_variable_initialization
-                if instr.src2 < 0:
+                # src1 is the capture index — validated in _validate_variable_initialization
+                if instr.src1 < 0:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"PATCH_CLOSURE capture_idx (src2) {instr.src2} is negative",
+                        f"PATCH_CLOSURE capture_idx (src1) {instr.src1} is negative",
                         instruction_index=i,
                         opcode=opcode
                     )
@@ -687,12 +687,12 @@ class BytecodeValidator:
 
             # Check PATCH_CLOSURE:
             #   src0 = closure register — must be initialized and hold a closure.
-            #   src1 = value register   — must be initialized.
-            #   src2 = capture index    — must be in range for the closure's free_vars.
+            #   src1 = capture index    — must be in range for the closure's free_vars.
+            #   src2 = value register   — must be initialized.
             if opcode == Opcode.PATCH_CLOSURE:
                 var_index = instr.src0
-                value_reg = instr.src1
-                capture_slot = instr.src2
+                capture_slot = instr.src1
+                value_reg = instr.src2
 
                 if var_index not in current_initialized:
                     raise ValidationError(

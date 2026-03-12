@@ -830,10 +830,10 @@ class TestPatchClosureValidation:
     """
     Tests for PATCH_CLOSURE validation in _validate_initialization.
 
-    PATCH_CLOSURE src0=closure_reg, src1=value_reg, src2=capture_idx has three requirements:
+    PATCH_CLOSURE src0=closure_reg, src1=capture_idx, src2=value_reg has three requirements:
       1. closure_reg (src0) must refer to an initialized slot holding a closure.
-      2. value_reg (src1) must refer to an initialized slot.
-      3. capture_idx (src2) must be < len(code_objects[code_index].free_vars).
+      2. capture_idx (src1) must be < len(code_objects[code_index].free_vars).
+      3. value_reg (src2) must refer to an initialized slot.
 
     At merge points the closure map is intersected conservatively: a slot is
     only kept if both incoming paths agree on the same code_object index.
@@ -885,7 +885,7 @@ class TestPatchClosureValidation:
 
           0: MAKE_CLOSURE dest=0, src0=0, src1=0 — r0=closure; slot 0 tracked as closure
           1: LOAD_CONST dest=1, src0=0            — r1=42
-          2: PATCH_CLOSURE src0=0, src1=1, src2=0 — r0 is closure ✓; capture_idx=0 < 2 ✓
+          2: PATCH_CLOSURE src0=0, src1=0, src2=1 — r0 is closure ✓; capture_idx=0 < 2 ✓
           3: LOAD_CONST dest=1, src0=0            — r1=42
           4: PATCH_CLOSURE src0=0, src1=1, src2=1 — r0 is closure ✓; capture_idx=1 < 2 ✓
           5: PUSH src0=0                          — stack: 0 → 1
@@ -896,7 +896,7 @@ class TestPatchClosureValidation:
             instructions=[
                 Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),    # 0: r0=closure
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),              # 1: r1=42
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0),   # 2: cap 0 < 2 ✓
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1),   # 2: cap 0 < 2 ✓
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),              # 3: r1=42
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=1),   # 4: cap 1 < 2 ✓
                 Instruction(Opcode.PUSH, src0=0),                            # 5: stack: 0 → 1
@@ -915,7 +915,7 @@ class TestPatchClosureValidation:
         Outer frame (local_count=2):
           0: MAKE_CLOSURE dest=0, src0=0, src1=0  — r0=closure
           1: LOAD_CONST dest=1, src0=0             — r1=1
-          2: PATCH_CLOSURE src0=0, src1=1, src2=0  — capture_idx=0 < 1 ✓
+          2: PATCH_CLOSURE src0=0, src1=0, src2=1  — capture_idx=0 < 1 ✓
           3: PUSH src0=0                           — stack: 0 → 1
           4: RETURN                                — terminal ✓
         """
@@ -924,7 +924,7 @@ class TestPatchClosureValidation:
             instructions=[
                 Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),   # 0: r0=closure
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 1: r1=1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0),  # 2: cap 0 < 1 ✓
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1),  # 2: cap 0 < 1 ✓
                 Instruction(Opcode.PUSH, src0=0),                           # 3: stack: 0 → 1
                 Instruction(Opcode.RETURN),                                 # 4: terminal ✓
             ],
@@ -946,7 +946,7 @@ class TestPatchClosureValidation:
 
         Sequence (local_count=2):
           0: LOAD_CONST dest=1, src0=0             — r1=1 (slot 0 never written)
-          1: PATCH_CLOSURE src0=0, src1=1, src2=0  — slot 0 never initialized → UNINITIALIZED_VARIABLE
+          1: PATCH_CLOSURE src0=0, src1=0, src2=1  — slot 0 never initialized → UNINITIALIZED_VARIABLE
           2: LOAD_CONST dest=1, src0=0
           3: PUSH src0=1
           4: RETURN
@@ -955,7 +955,7 @@ class TestPatchClosureValidation:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 0: r1=1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0),  # 1: slot 0 never init → error
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1),  # 1: slot 0 never init → error
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 2
                 Instruction(Opcode.PUSH, src0=1),                           # 3
                 Instruction(Opcode.RETURN),                                 # 4
@@ -990,7 +990,7 @@ class TestPatchClosureValidation:
 
           Merge (slot 0 initialized only on branch A):
           5: LOAD_CONST dest=1, src0=0            — r1=1
-          6: PATCH_CLOSURE src0=0, src1=1, src2=0 — slot 0 may be uninit → UNINITIALIZED_VARIABLE
+          6: PATCH_CLOSURE src0=0, src1=0, src2=1 — slot 0 may be uninit → UNINITIALIZED_VARIABLE
           7: LOAD_CONST dest=1, src0=0
           8: PUSH src0=1
           9: RETURN
@@ -1004,7 +1004,7 @@ class TestPatchClosureValidation:
                 Instruction(Opcode.JUMP, src0=5),                    # 3: jump to 5
                 Instruction(Opcode.JUMP, src0=5),                    # 4: jump to 5 (no init)
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 5: r1=1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0), # 6: may be uninit → error
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1), # 6: may be uninit → error
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 7
                 Instruction(Opcode.PUSH, src0=1),                    # 8
                 Instruction(Opcode.RETURN),                          # 9
@@ -1027,7 +1027,7 @@ class TestPatchClosureValidation:
         Sequence (local_count=2):
           0: LOAD_CONST dest=0, src0=0    — slot 0 = 42 (plain integer, not a closure)
           1: LOAD_CONST dest=1, src0=0             — r1=42
-          2: PATCH_CLOSURE src0=0, src1=1, src2=0  — slot 0 not a closure → INVALID_VARIABLE_ACCESS
+          2: PATCH_CLOSURE src0=0, src1=0, src2=1  — slot 0 not a closure → INVALID_VARIABLE_ACCESS
           3: LOAD_CONST dest=1, src0=0
           4: PUSH src0=1
           5: RETURN
@@ -1037,7 +1037,7 @@ class TestPatchClosureValidation:
             instructions=[
                 Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 0: slot 0 = 42 (not a closure)
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 1: r1=42
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0),  # 2: not closure → error
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1),  # 2: not closure → error
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 3
                 Instruction(Opcode.PUSH, src0=1),                           # 4
                 Instruction(Opcode.RETURN),                                 # 5
@@ -1061,7 +1061,7 @@ class TestPatchClosureValidation:
                 Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),   # 0: r0=closure
                 Instruction(Opcode.LOAD_CONST, dest=0, src0=0),             # 1: r0=42 (overwrites closure)
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 2: r1=42
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0),  # 3: not closure → error
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1),  # 3: not closure → error
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 4
                 Instruction(Opcode.PUSH, src0=1),                           # 5
                 Instruction(Opcode.RETURN),                                 # 6
@@ -1097,7 +1097,7 @@ class TestPatchClosureValidation:
 
           Merge (slot 0 holds different closures on each path):
           6: LOAD_CONST dest=1, src0=0            — r1=1
-          7: PATCH_CLOSURE src0=0, src1=1, src2=0 — ambiguous closure → INVALID_VARIABLE_ACCESS
+          7: PATCH_CLOSURE src0=0, src1=0, src2=1 — ambiguous closure → INVALID_VARIABLE_ACCESS
           8: LOAD_CONST dest=1, src0=0
           9: PUSH src0=1
           10: RETURN
@@ -1113,7 +1113,7 @@ class TestPatchClosureValidation:
                 Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=1, src1=0),  # 4: r0=closure[1]
                 Instruction(Opcode.JUMP, src0=6),                    # 5: falls to 6
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 6: r1=1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0), # 7: ambiguous → error
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1), # 7: ambiguous → error
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 8
                 Instruction(Opcode.PUSH, src0=1),                    # 9
                 Instruction(Opcode.RETURN),                          # 10
@@ -1137,7 +1137,7 @@ class TestPatchClosureValidation:
         Sequence (local_count=2):
           0: MAKE_CLOSURE dest=0, src0=0, src1=0  — r0=closure
           1: LOAD_CONST dest=1, src0=0             — r1=1
-          2: PATCH_CLOSURE src0=0, src1=1, src2=2  — capture_idx=2 >= n_free=2 → INDEX_OUT_OF_BOUNDS
+          2: PATCH_CLOSURE src0=0, src1=2, src2=1  — capture_idx=2 >= n_free=2 → INDEX_OUT_OF_BOUNDS
           3: LOAD_CONST dest=1, src0=0
           4: PUSH src0=1
           5: RETURN
@@ -1147,7 +1147,7 @@ class TestPatchClosureValidation:
             instructions=[
                 Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),   # 0: r0=closure
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 1: r1=1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=2),  # 2: cap 2 >= n_free=2 → error
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=2, src2=1),  # 2: cap 2 >= n_free=2 → error
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 3
                 Instruction(Opcode.PUSH, src0=1),                           # 4
                 Instruction(Opcode.RETURN),                                 # 5
@@ -1171,7 +1171,7 @@ class TestPatchClosureValidation:
         Sequence (local_count=2):
           0: MAKE_CLOSURE dest=0, src0=0, src1=0  — r0=closure
           1: LOAD_CONST dest=1, src0=0             — r1=1
-          2: PATCH_CLOSURE src0=0, src1=1, src2=0  — capture_idx=0 >= n_free=0 → INDEX_OUT_OF_BOUNDS
+          2: PATCH_CLOSURE src0=0, src1=0, src2=1  — capture_idx=0 >= n_free=0 → INDEX_OUT_OF_BOUNDS
           3: LOAD_CONST dest=1, src0=0
           4: PUSH src0=1
           5: RETURN
@@ -1181,7 +1181,7 @@ class TestPatchClosureValidation:
             instructions=[
                 Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),   # 0: r0=closure
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 1: r1=1
-                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=0),  # 2: cap 0 >= n_free=0 → error
+                Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1),  # 2: cap 0 >= n_free=0 → error
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 3
                 Instruction(Opcode.PUSH, src0=1),                           # 4
                 Instruction(Opcode.RETURN),                                 # 5

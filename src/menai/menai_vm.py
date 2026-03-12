@@ -665,21 +665,21 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """
-        PATCH_CLOSURE closure_reg, value_reg, capture_idx: Fill a free-var slot on a closure.
+        PATCH_CLOSURE closure_reg, capture_idx, r_value_reg: Fill a free-var slot on a closure.
 
         Used in Phase 2 of letrec two-phase initialisation to wire sibling
         closures together after all have been created in Phase 1.
 
         Args:
             src0 - register holding the closure to patch
-            src1 - register holding the value to store into the capture slot
-            src2 - which captured-values slot to fill
+            src1 - which captured-values slot to fill
+            src2 - register holding the value to store into the capture slot
         """
-        value = frame.locals[instr.src1]
+        value = frame.locals[instr.src2]
         closure = frame.locals[instr.src0]
         assert isinstance(closure, MenaiFunction)
         assert isinstance(closure.captured_values, list), "PATCH_CLOSURE: captured_values must be a list (set by MAKE_CLOSURE)"
-        closure.captured_values[instr.src2] = value
+        closure.captured_values[instr.src1] = value
         return None
 
     def _op_call(  # pylint: disable=useless-return

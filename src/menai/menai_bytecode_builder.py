@@ -288,8 +288,8 @@ class MenaiBytecodeBuilder:
                 ctx.emit(
                     Opcode.PATCH_CLOSURE,
                     ctx.slot_of(instr.closure),
-                    ctx.slot_of(instr.value),
-                    src2=instr.capture_index,
+                    instr.capture_index,
+                    src2=ctx.slot_of(instr.value),
                 )
                 i += 1
                 continue
@@ -393,7 +393,7 @@ class MenaiBytecodeBuilder:
             outer_start = total_free_vars - capture_count
             for i, cap in enumerate(instr.captures):
                 value_slot = ctx.slot_of(cap)
-                ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, value_slot, src2=outer_start + i)
+                ctx.emit(Opcode.PATCH_CLOSURE, closure_slot, outer_start + i, src2=value_slot)
 
             return
 

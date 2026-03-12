@@ -65,7 +65,7 @@ class Opcode(IntEnum):
 
     # Functions
     MAKE_CLOSURE = _op(30, 1)           # r_dest = MAKE_CLOSURE code_idx
-    PATCH_CLOSURE = _op(31, 3)          # PATCH_CLOSURE closure_reg, value_reg, capture_idx
+    PATCH_CLOSURE = _op(31, 3)          # PATCH_CLOSURE closure_reg, capture_idx, r_value_reg
     CALL = _op(32, 2)                   # r_dest = CALL r_src0 src1 — func in src0, arity in src1, result to dest
     TAIL_CALL = _op(33, 2)              # TAIL_CALL r_src0 src1 — func in src0, arity in src1, no dest
     APPLY = _op(34, 1)                  # r_dest = APPLY r_src0 — func in src0, arg_list on stack, result to dest
@@ -431,7 +431,7 @@ class Instruction:
     dest: int = 0   # destination register (written by MAKE_CLOSURE, POP, and load ops)
     src0: int = 0   # first immediate / source operand (was arg1)
     src1: int = 0   # second immediate / source operand (was arg2)
-    src2: int = 0   # third source operand (used by PATCH_CLOSURE for capture_idx)
+    src2: int = 0   # third source operand (used by PATCH_CLOSURE for value_reg)
 
     def arg_count(self) -> int:
         """Return the number of instruction-stream immediates this instruction takes (0, 1, or 2).
@@ -491,7 +491,7 @@ class Instruction:
             return f"r{self.dest} = MAKE_CLOSURE {self.src0}"
 
         if opcode == Opcode.PATCH_CLOSURE:
-            return f"PATCH_CLOSURE r{self.src0}, {self.src1}, {self.src2}"
+            return f"PATCH_CLOSURE r{self.src0}, {self.src1}, r{self.src2}"
 
         if opcode == Opcode.RETURN:
             return f"RETURN r{self.src0}"
