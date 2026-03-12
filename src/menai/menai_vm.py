@@ -439,7 +439,8 @@ class MenaiVM:
             # Check if it's a tail call
             if isinstance(result, TailCall):
                 # Optimization: reuse frame for self-recursion
-                if result.func.bytecode == frame.code:
+                func = result.func
+                if func.bytecode == frame.code:
                     frame.ip = 0
 
                     # Update captured values and parent frame in case this is a
@@ -447,14 +448,13 @@ class MenaiVM:
                     # lambda factory returning a new closure on each call).
                     # Without this, reused frames would retain stale captured
                     # values from the original closure.
-                    if result.func.captured_values:
-                        for i, captured_val in enumerate(result.func.captured_values):
+                    if func.captured_values:
+                        for i, captured_val in enumerate(func.captured_values):
                             frame.locals[frame.code.param_count + i] = captured_val
 
                     continue
 
                 # Replace frame for general tail call
-                func = result.func
                 code = func.bytecode
 
                 # Create new frame
@@ -655,9 +655,7 @@ class MenaiVM:
         )
 
         # Pre-allocate all free-var slots as None.  PATCH_CLOSURE fills them.
-        n_free = len(closure_code.free_vars)
-        cv: list = [None] * n_free
-        closure.captured_values = cv
+        closure.captured_values = [None] * len(closure_code.free_vars)
         frame.locals[instr.dest] = closure
         return None
 
@@ -675,11 +673,10 @@ class MenaiVM:
             src1 - which captured-values slot to fill
             src2 - register holding the value to store into the capture slot
         """
-        value = frame.locals[instr.src2]
         closure = frame.locals[instr.src0]
         assert isinstance(closure, MenaiFunction)
         assert isinstance(closure.captured_values, list), "PATCH_CLOSURE: captured_values must be a list (set by MAKE_CLOSURE)"
-        closure.captured_values[instr.src1] = value
+        closure.captured_values[instr.src1] = frame.locals[instr.src2]
         return None
 
     def _op_call(  # pylint: disable=useless-return
