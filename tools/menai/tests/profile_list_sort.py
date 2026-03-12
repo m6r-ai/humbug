@@ -12,85 +12,122 @@ Usage:
     python profile_list_sort.py --top 50             # Show top 50 functions
     python profile_list_sort.py --sort time          # Sort by time instead of cumulative
     python profile_list_sort.py --sizes 10,50,100    # Custom list sizes
+    python profile_list_sort.py --iterations 5       # Iterations per size (default: 10)
 """
 
 import argparse
 import cProfile
 import pstats
 import random
+import sys
 import time
 from io import StringIO
+from pathlib import Path
 
 from menai import Menai
 
 
-# Sort sizes to benchmark
-DEFAULT_SIZES = [10, 50, 100, 250, 500, 1000]
+DEFAULT_SIZES = [10, 50, 100, 250, 500, 1000, 2000]
+DEFAULT_ITERATIONS = 10
+MENAI_FILE = Path(__file__).parent / "list-sort.menai"
 
 
-def make_sort_expression(values: list[int]) -> str:
-    """Build an Menai expression that sorts a list of integers."""
+def load_sort_source() -> str:
+    """Read the sort lambda expression from list-sort.menai."""
+    if not MENAI_FILE.exists():
+        print(f"Error: Menai file not found: {MENAI_FILE}")
+        sys.exit(1)
+
+    return MENAI_FILE.read_text(encoding="utf-8").strip()
+
+
+def make_sort_expression(sort_src: str, values: list[int]) -> str:
+    """Wrap the sort lambda with a concrete list of integers to sort."""
     items = " ".join(str(v) for v in values)
-    return f"(sort-list integer<? (list {items}))"
+    return f"({sort_src} (list {items}))"
 
 
-def run_benchmarks(sizes: list[int]) -> list[tuple[int, float, bool]]:
+def run_benchmarks(sort_src: str, sizes: list[int], iterations: int) -> list[tuple[int, float, float, bool]]:
     """
-    Run sort benchmarks for each size.
+    Run sort benchmarks for each size, repeated `iterations` times.
 
-    Returns list of (size, elapsed_seconds, success) tuples.
+    Returns list of (size, mean_seconds, min_seconds, success) tuples.
     """
     menai = Menai()
+
+    # Warm up: compile prelude and exercise the sort path once
+    menai.evaluate(make_sort_expression(sort_src, random.sample(range(30), 3)))
+
     results = []
 
-    print(f"\n{'Size':>8}  {'Time (s)':>10}  {'Items/s':>12}  {'Status'}")
-    print("-" * 50)
+    print(f"\n{'Size':>8}  {'Mean (s)':>10}  {'Min (s)':>10}  {'Items/s':>12}  {'Status'}")
+    print("-" * 60)
 
     for size in sizes:
-        values = random.sample(range(size * 10), size)
-        expr = make_sort_expression(values)
+        times = []
+        all_ok = True
 
-        try:
-            start = time.perf_counter()
-            result = menai.evaluate(expr)
-            elapsed = time.perf_counter() - start
+        for _ in range(iterations):
+            values = random.sample(range(size * 10), size)
+            expr = make_sort_expression(sort_src, values)
 
-            # Verify the result is actually sorted
-            sorted_ok = all(
-                result[i] <= result[i + 1]
-                for i in range(len(result) - 1)
-            )
+            try:
+                start = time.perf_counter()
+                result = menai.evaluate(expr)
+                elapsed = time.perf_counter() - start
 
-            items_per_sec = size / elapsed if elapsed > 0 else float('inf')
-            status = "✓" if sorted_ok else "✗ WRONG ORDER"
-            print(f"{size:>8}  {elapsed:>10.4f}  {items_per_sec:>12.1f}  {status}")
-            results.append((size, elapsed, sorted_ok))
+                sorted_ok = all(
+                    result[i] <= result[i + 1]
+                    for i in range(len(result) - 1)
+                )
+                if not sorted_ok:
+                    all_ok = False
 
-        except Exception as e:
-            print(f"{size:>8}  {'ERROR':>10}  {'':>12}  ✗ {e}")
-            results.append((size, 0.0, False))
+                times.append(elapsed)
+
+            except Exception as e:
+                print(f"{size:>8}  {'ERROR':>10}  {'':>10}  {'':>12}  ✗ {e}")
+                all_ok = False
+                break
+
+        if times:
+            mean_t = sum(times) / len(times)
+            min_t = min(times)
+            items_per_sec = size / mean_t if mean_t > 0 else float('inf')
+            status = "✓" if all_ok else "✗ WRONG ORDER"
+            print(f"{size:>8}  {mean_t:>10.4f}  {min_t:>10.4f}  {items_per_sec:>12.1f}  {status}")
+            results.append((size, mean_t, min_t, all_ok))
+        else:
+            results.append((size, 0.0, 0.0, False))
 
     return results
 
 
-def run_profile(size: int, output_file: str | None, top_n: int, sort_by: str) -> None:
-    """Run cProfile on a single sort of the given size."""
+def run_profile(
+    sort_src: str,
+    size: int,
+    iterations: int,
+    output_file: str | None,
+    top_n: int,
+    sort_by: str,
+) -> None:
+    """Run cProfile on repeated sorts of the given size."""
     menai = Menai()
-    values = random.sample(range(size * 10), size)
-    expr = make_sort_expression(values)
 
-    # Warm up the prelude cache
-    menai.evaluate("(sort-list integer<? (list 3 1 2))")
+    # Warm up
+    menai.evaluate(make_sort_expression(sort_src, random.sample(range(30), 3)))
 
-    print(f"\nProfiling sort-list on {size} elements...")
+    print(f"\nProfiling sort-list on {size} elements × {iterations} iterations...")
     print("=" * 100)
 
     profiler = cProfile.Profile()
     profiler.enable()
 
     try:
-        result = menai.evaluate(expr)
-        print(f"✓ Sorted {size} elements successfully")
+        for _ in range(iterations):
+            values = random.sample(range(size * 10), size)
+            menai.evaluate(make_sort_expression(sort_src, values))
+        print(f"✓ Sorted {size} elements × {iterations} iterations successfully")
     except Exception as e:
         print(f"✗ Failed: {e}")
         raise
@@ -156,6 +193,13 @@ def main():
         help=f'Comma-separated list sizes to benchmark (default: {",".join(str(s) for s in DEFAULT_SIZES)})'
     )
     parser.add_argument(
+        '--iterations',
+        type=int,
+        default=DEFAULT_ITERATIONS,
+        metavar='N',
+        help=f'Number of iterations per size (default: {DEFAULT_ITERATIONS})'
+    )
+    parser.add_argument(
         '--seed',
         type=int,
         default=42,
@@ -174,16 +218,19 @@ def main():
             print(f"Error: --sizes must be comma-separated integers, got: {args.sizes}")
             raise SystemExit(1)
 
+    sort_src = load_sort_source()
+
     print("Menai sort-list benchmark")
     print("=" * 50)
-    print(f"Sizes: {sizes}")
-    print(f"Random seed: {args.seed}")
+    print(f"Menai file  : {MENAI_FILE}")
+    print(f"Sizes       : {sizes}")
+    print(f"Iterations  : {args.iterations} per size")
+    print(f"Random seed : {args.seed}")
 
-    results = run_benchmarks(sizes)
+    results = run_benchmarks(sort_src, sizes, args.iterations)
 
-    # Summary
     print("\nSummary:")
-    successful = [(s, t) for s, t, ok in results if ok]
+    successful = [(s, t) for s, t, _, ok in results if ok]
     if len(successful) >= 2:
         s1, t1 = successful[-2]
         s2, t2 = successful[-1]
@@ -195,7 +242,7 @@ def main():
 
     if args.profile or args.output:
         profile_size = args.profile_size or sizes[-1]
-        run_profile(profile_size, args.output, args.top, args.sort)
+        run_profile(sort_src, profile_size, args.iterations, args.output, args.top, args.sort)
 
 
 if __name__ == '__main__':
