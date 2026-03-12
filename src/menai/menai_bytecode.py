@@ -64,14 +64,14 @@ class Opcode(IntEnum):
     RAISE_ERROR = _op(23, 1)            # RAISE_ERROR const_index
 
     # Functions
-    MAKE_CLOSURE = _op(30, 1)           # r_dest = MAKE_CLOSURE code_idx
-    PATCH_CLOSURE = _op(31, 3)          # PATCH_CLOSURE closure_reg, capture_idx, r_value_reg
+    MAKE_CLOSURE = _op(30, 1)           # r_dest = MAKE_CLOSURE code_objects[src0]
+    PATCH_CLOSURE = _op(31, 3)          # r_src0.captures[src1] = r_src2
     CALL = _op(32, 2)                   # r_dest = CALL r_src0 src1 — func in src0, arity in src1, result to dest
     TAIL_CALL = _op(33, 2)              # TAIL_CALL r_src0 src1 — func in src0, arity in src1, no dest
     APPLY = _op(34, 1)                  # r_dest = APPLY r_src0 — func in src0, arg_list on stack, result to dest
     TAIL_APPLY = _op(35, 1)             # TAIL_APPLY r_src0 — func in src0, arg_list on stack, no dest
-    ENTER = _op(36, 1)                  # ENTER n (pop N args into locals 0..N-1)
-    RETURN = _op(37, 1)                 # RETURN src0 — push frame.locals[src0] as return value
+    ENTER = _op(36, 1)                  # ENTER n — pop n args from stack into registers 0..n-1
+    RETURN = _op(37, 1)                 # RETURN r_src0 — return value in r_src0
 
     # Debugging
     EMIT_TRACE = _op(40, 1)             # EMIT_TRACE src0 — read register src0, emit to trace watcher
@@ -488,7 +488,7 @@ class Instruction:
             return f"JUMP_IF_TRUE r{self.src0}, @{self.src1}"
 
         if opcode == Opcode.MAKE_CLOSURE:
-            return f"r{self.dest} = MAKE_CLOSURE {self.src0}"
+            return f"r{self.dest} = MAKE_CLOSURE code_objects[{self.src0}]"
 
         if opcode == Opcode.PATCH_CLOSURE:
             return f"PATCH_CLOSURE r{self.src0}, {self.src1}, r{self.src2}"

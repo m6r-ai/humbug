@@ -49,35 +49,30 @@ def format_constant(const: object) -> str:
     return str(const)
 
 
+def clean_name(name: str) -> str:
+    """Strip the '(N param[s])' suffix the bytecode builder appends to closure names."""
+    if '(' in name:
+        return name[:name.index('(')].strip()
+    return name
+
+
 def describe_local(index: int, code: CodeObject) -> str:
     """
-    Return a human-readable description of a local variable slot.
+    Return a human-readable description of a register.
 
-    The frame layout is:
-      [0 .. param_count-1]                      parameters
-      [param_count .. param_count+len(free_vars)-1]  captured variables
-      [param_count+len(free_vars) .. local_count-1]  let/letrec locals
-
-    Parameter names come from code.param_names (populated by the codegen).
-    Captured variable names come from code.free_vars.
-    Body locals have no stored name so are shown as local[N].
+    Captured free-var slots are at fixed positions (param_count ..
+    param_count+len(free_vars)-1) and are always named.  All other
+    registers are shown as rN — we cannot assume any particular register
+    holds a parameter, since the allocator may assign params to any slot.
     """
     param_count = code.param_count
     capture_count = len(code.free_vars)
 
-    if index < param_count:
-        # Parameter slot — use stored name if available
-        if index < len(code.param_names):
-            return f"param '{code.param_names[index]}'"
-
-        return f"param[{index}]"
-
     captured_index = index - param_count
-    if captured_index < capture_count:
+    if 0 <= captured_index < capture_count:
         return f"captured '{code.free_vars[captured_index]}'"
 
-    local_index = index - param_count - capture_count
-    return f"local[{local_index}]"
+    return f"r{index}"
 
 
 def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
@@ -94,36 +89,29 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
             const_str = format_constant(const)
             if len(const_str) > 40:
                 const_str = const_str[:37] + "..."
-            annotation = f"  ; {describe_local(instr.dest, code)} = {const_str}"
+            annotation = f"  ; r{instr.dest} = {const_str}"
 
     elif opcode == Opcode.LOAD_NONE:
-        annotation = f"  ; {describe_local(instr.dest, code)} = #none"
+        annotation = f"  ; r{instr.dest} = #none"
 
     elif opcode in (Opcode.LOAD_TRUE, Opcode.LOAD_FALSE):
         val = "#t" if opcode == Opcode.LOAD_TRUE else "#f"
-        annotation = f"  ; {describe_local(instr.dest, code)} = {val}"
+        annotation = f"  ; r{instr.dest} = {val}"
 
     elif opcode == Opcode.LOAD_EMPTY_LIST:
-        annotation = f"  ; {describe_local(instr.dest, code)} = []"
+        annotation = f"  ; r{instr.dest} = []"
 
     elif opcode == Opcode.LOAD_NAME:
         if src0 < len(code.names):
-            annotation = f"  ; {describe_local(instr.dest, code)} = global '{code.names[src0]}'"
-
-    elif opcode == Opcode.PUSH:
-        annotation = f"  ; Push {describe_local(src0, code)} onto call stack"
-
-    elif opcode == Opcode.POP:
-        annotation = f"  ; Pop call stack into {describe_local(instr.dest, code)}"
+            annotation = f"  ; r{instr.dest} = global '{code.names[src0]}'"
 
     elif opcode == Opcode.ENTER:
         n = src0
-        if n > 0 and code.param_names:
-            names = ', '.join(f"'{name}'" for name in code.param_names[:n])
-            annotation = f"  ; Store {n} params into locals: {names}"
-
-        else:
-            annotation = f"  ; Store {n} params into locals 0..{n - 1}"
+        pairs = ', '.join(
+            f"r{i} = '{code.param_names[i]}'" if i < len(code.param_names) else f"r{i} = arg"
+            for i in range(n)
+        )
+        annotation = f"  ; {pairs}"
 
     elif opcode == Opcode.MAKE_CLOSURE:
         if instr.src0 < len(code.code_objects):
@@ -137,25 +125,38 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
                 loc_parts.append(f"line {nested.source_line}")
 
             line_info = f" at {':'.join(loc_parts)}" if loc_parts else ""
-            capture_word = "capture" if instr.src1 == 1 else "captures"
-            annotation = f"  ; r{instr.dest} = closure for {name}{line_info} with {instr.src1} {capture_word}"
+            annotation = f"  ; r{instr.dest} = closure for '{clean_name(name)}'{line_info}"
 
     elif opcode == Opcode.PATCH_CLOSURE:
-        # src0 = closure register, src1 = value register, src2 = capture index
-        closure_desc = describe_local(instr.src0, code)
-        value_desc = describe_local(instr.src1, code)
-        # Find the free_var name by scanning for MAKE_CLOSURE that targets src0.
+        # src0 = closure register, src1 = capture index, src2 = value register.
+        # Scan backwards for the MAKE_CLOSURE that produced each register so we
+        # can name the closure and the free-var being filled.
+        closure_name = None
         free_var_name = None
         for j, scan_instr in enumerate(code.instructions):
             if scan_instr.opcode == Opcode.MAKE_CLOSURE and scan_instr.dest == instr.src0:
                 nested = code.code_objects[scan_instr.src0]
-                if instr.src2 < len(nested.free_vars):
-                    free_var_name = nested.free_vars[instr.src2]
+                closure_name = clean_name(nested.name) if nested.name else f"r{instr.src0}"
+                if instr.src1 < len(nested.free_vars):
+                    free_var_name = nested.free_vars[instr.src1]
 
                 break
 
-        capture_desc = f"'{free_var_name}'" if free_var_name else f"slot {instr.src2}"
-        annotation = f"  ; Patch {closure_desc} capture {capture_desc} from {value_desc}"
+        # Name the value being patched in: use the closure's own name if the
+        # value register also holds a known closure, otherwise fall back to
+        # describe_local.
+        value_closure_name = None
+        for j, scan_instr in enumerate(code.instructions):
+            if scan_instr.opcode == Opcode.MAKE_CLOSURE and scan_instr.dest == instr.src2:
+                value_closure_name = clean_name(code.code_objects[scan_instr.src0].name)
+                break
+
+        lhs_closure = closure_name or f"r{instr.src0}"
+        lhs_capture = f"'{free_var_name}'" if free_var_name else f"capture[{instr.src1}]"
+        rhs_sym = value_closure_name
+        rhs_reg = describe_local(instr.src2, code)
+        rhs = f"'{rhs_sym}'" if rhs_sym else rhs_reg
+        annotation = f"  ; '{lhs_closure}'.{lhs_capture} = {rhs}"
 
     elif opcode == Opcode.EMIT_TRACE:
         annotation = f"  ; Emit {describe_local(instr.src0, code)} to trace watcher"
@@ -173,9 +174,6 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
 
     elif opcode == Opcode.TAIL_APPLY:
         annotation = f"  ; Tail apply r{instr.src0} to arg list"
-
-    elif opcode == Opcode.RETURN:
-        annotation = f"  ; Return value from r{instr.src0}"
 
     elif opcode == Opcode.LOAD_TRUE:
         annotation = "  ; Load boolean true"
@@ -230,7 +228,7 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
     output.append(f"\n{indent}{'='*70}")
     output.append(f"{indent}Function: {display_name}")
     output.append(f"{indent}Instructions: {len(code.instructions)}")
-    output.append(f"{indent}Locals: {code.local_count}")
+    output.append(f"{indent}Registers: {code.local_count}")
     output.append(f"{indent}Constants: {len(code.constants)}")
     output.append(f"{indent}Code Objects: {len(code.code_objects)}")
     output.append(f"{indent}{'='*70}")
@@ -252,7 +250,7 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
         output.append(f"{indent}Code Objects Table:")
         output.append(f"{indent}{'-'*70}")
         for i, nested in enumerate(code.code_objects):
-            nested_name = nested.name or f"<lambda-{i}>"
+            nested_name = clean_name(nested.name) if nested.name else f"<lambda-{i}>"
             loc_parts = []
             if nested.source_file:
                 loc_parts.append(nested.source_file)
@@ -308,7 +306,7 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
 
     # Recursively disassemble nested code objects
     for i, nested_code in enumerate(code.code_objects):
-        nested_name = nested_code.name or f"<nested-{i}>"
+        nested_name = clean_name(nested_code.name) if nested_code.name else f"<nested-{i}>"
         nested_output = disassemble_with_nested(nested_code, depth + 1, nested_name)
         output.extend(nested_output)
 
@@ -325,7 +323,7 @@ def analyze_function_flow(code: CodeObject) -> Dict[int, str]:
             var_idx = instr.dest
             if closure_idx < len(code.code_objects):
                 nested_code = code.code_objects[closure_idx]
-                func_name = nested_code.name or f"<closure-{closure_idx}>"
+                func_name = clean_name(nested_code.name) if nested_code.name else f"<closure-{closure_idx}>"
                 loc_parts = []
                 if nested_code.source_file:
                     loc_parts.append(nested_code.source_file)
