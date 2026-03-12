@@ -397,7 +397,6 @@ class MenaiVM:
                     if n > max_locals:
                         max_locals = n
         self.regs = cast(List[MenaiValue], [None] * (self._max_frame_depth + 1) * max_locals)
-        self._reg_window = max_locals  # slots per frame
 
         # Set up the first real frame at depth 1 (depth 0 is the sentinel).
         self.frame_depth = 1
@@ -405,7 +404,7 @@ class MenaiVM:
         frame.code = code
         frame.code_len = len(code.instructions)
         frame.ip = 0
-        frame.base = max_locals  # sentinel occupies slot 0
+        frame.base = 0  # sentinel sits at base 0 with local_count 0; first real frame starts at 0
         frame.return_dest = 0
         frame.is_sentinel = False
         self.current_frame = frame
@@ -690,7 +689,7 @@ class MenaiVM:
         new_frame.code = code
         new_frame.code_len = len(code.instructions)
         new_frame.ip = 0
-        new_frame.base = new_depth * self._reg_window
+        new_frame.base = frame.base + frame.code.local_count
         new_frame.return_dest = instr.dest
         new_frame.is_sentinel = False
         if func.captured_values:
@@ -759,7 +758,7 @@ class MenaiVM:
         new_frame.code = code
         new_frame.code_len = len(code.instructions)
         new_frame.ip = 0
-        new_frame.base = new_depth * self._reg_window
+        new_frame.base = frame.base + frame.code.local_count
         new_frame.return_dest = instr.dest
         new_frame.is_sentinel = False
         if func.captured_values:
