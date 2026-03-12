@@ -2,7 +2,6 @@
 
 import cmath
 import difflib
-from dataclasses import dataclass
 import math
 from typing import List, Dict, Any, cast, Protocol
 
@@ -26,16 +25,13 @@ class MenaiTraceWatcher(Protocol):
         """
 
 
-@dataclass(slots=True)
-class TailCall:
-    """
-    Marker for tail call optimization.
+# Sentinel returned by _op_call, _op_apply, and _op_return (non-top-level) to
+# signal that the active frame has changed and the loop should re-sync from
+# self.frames[-1].  Using a module-level singleton avoids per-call allocation.
+class _FrameChange:
+    pass
 
-    When a handler returns this, the execution loop will replace the current
-    frame with a new frame for the target function, achieving true tail call
-    optimization with constant stack space.
-    """
-    func: MenaiFunction
+_FRAME_CHANGE = _FrameChange()
 
 
 class Frame:
@@ -44,12 +40,14 @@ class Frame:
 
     Each frame has its own locals and instruction pointer.
     """
-    __slots__ = ('code', 'ip', 'locals')
+    __slots__ = ('code', 'code_len', 'ip', 'locals', 'return_dest')
 
     def __init__(self, code: CodeObject) -> None:
         self.code = code
+        self.code_len = len(code.instructions)
         self.ip = 0
         self.locals = cast(List[MenaiValue], [None] * code.local_count)
+        self.return_dest: int = 0
 
 
 class MenaiVM:
@@ -381,19 +379,19 @@ class MenaiVM:
 
     def _execute_frame(self, frame: Frame) -> MenaiValue:
         """
-        Execute a frame using jump table dispatch with tail call optimization.
+        Execute bytecode using a single flat dispatch loop.
 
-        This method implements a trampoline pattern: when a handler returns a
-        TailCall marker, we replace the current frame with the target frame
-        and continue execution, achieving true tail call optimization with
-        constant stack space.
+        Non-tail calls push a new frame and continue the loop (no Python-level
+        recursion).  RETURN pops the current frame and writes the result into
+        the caller's destination register, then continues.  The loop exits only
+        when RETURN fires with the sentinel frame as the sole remaining frame.
+
+        TAIL_CALL / TAIL_APPLY replace the current frame in-place and return
+        _FRAME_CHANGE, identical to call and return transitions.
 
         Returns:
             Result value when frame returns
         """
-        code = frame.code
-        instructions = code.instructions
-
         # Cache dispatch table in local variable for faster access
         dispatch = self._dispatch_table
 
@@ -404,7 +402,7 @@ class MenaiVM:
         # Using a local variable is faster than accessing self._instruction_count
         instruction_count = 0
         instructions = frame.code.instructions
-        instructions_len = len(instructions)  # Cache length for loop condition
+        instructions_len = frame.code_len
 
         while True:
             # Periodically check for cancellation
@@ -416,7 +414,6 @@ class MenaiVM:
 
                 instruction_count = 0
 
-            # Re-fetch instructions each iteration in case frame.code changes (mutual recursion TCO)
             if frame.ip >= instructions_len:
                 # Frame finished without explicit return
                 raise MenaiEvalError("Frame execution ended without RETURN instruction")
@@ -433,46 +430,19 @@ class MenaiVM:
             # Call the handler
             result = handler(frame, instr)
             if result is None:
-                # Fast path: continue execution
+                # Common fast path: handler completed normally.
                 continue
 
-            # Check if it's a tail call
-            if isinstance(result, TailCall):
-                # Optimization: reuse frame for self-recursion
-                func = result.func
-                if func.bytecode == frame.code:
-                    frame.ip = 0
-
-                    # Update captured values and parent frame in case this is a
-                    # different closure instance with the same bytecode (e.g. a
-                    # lambda factory returning a new closure on each call).
-                    # Without this, reused frames would retain stale captured
-                    # values from the original closure.
-                    if func.captured_values:
-                        for i, captured_val in enumerate(func.captured_values):
-                            frame.locals[frame.code.param_count + i] = captured_val
-
-                    continue
-
-                # Replace frame for general tail call
-                code = func.bytecode
-
-                # Create new frame
-                frame.code = code
-                frame.ip = 0
-                frame.locals = cast(List[MenaiValue], [None] * code.local_count)
-
-                # Store captured values in locals (after parameters)
-                if func.captured_values:
-                    for i, captured_val in enumerate(func.captured_values):
-                        frame.locals[code.param_count + i] = captured_val
-
+            if result is _FRAME_CHANGE:
+                # Frame changed (call, return, or tail call); re-sync.
+                frame = self.frames[-1]
                 instructions = frame.code.instructions
-                instructions_len = len(instructions)
+                instructions_len = frame.code_len
                 continue
 
-            # Otherwise it's a return value (from RETURN opcode)
-            return result
+            # MenaiValue returned only by _op_return when the sentinel frame is
+            # the sole remaining frame — this is the top-level result.
+            return cast(MenaiValue, result)
 
     def _op_load_none(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
@@ -679,9 +649,9 @@ class MenaiVM:
         closure.captured_values[instr.src1] = frame.locals[instr.src2]
         return None
 
-    def _op_call(  # pylint: disable=useless-return
+    def _op_call(
         self, frame: Frame, instr: Instruction
-    ) -> MenaiValue | None:
+    ) -> _FrameChange:
         """CALL dest, src0, src1: Call func in register src0 with src1 args on stack; result to dest."""
         func = frame.locals[instr.src0]
         if not isinstance(func, MenaiFunction):
@@ -696,6 +666,7 @@ class MenaiVM:
         code = func.bytecode
 
         new_frame = Frame(code)
+        new_frame.return_dest = instr.dest
 
         if func.captured_values:
             for i, captured_val in enumerate(func.captured_values):
@@ -703,19 +674,12 @@ class MenaiVM:
 
         self.frames.append(new_frame)
         self.current_frame = new_frame
-        frame.locals[instr.dest] = self._execute_frame(new_frame)
-        return None
+        return _FRAME_CHANGE
 
-    def _op_tail_call(  # pylint: disable=useless-return
+    def _op_tail_call(
         self, frame: Frame, instr: Instruction
-    ) -> TailCall | None:
-        """
-        TAIL_CALL: Perform tail call with optimization.
-
-        Returns a TailCall marker that the execution loop will handle by
-        replacing the current frame with the target frame, achieving true
-        tail call optimization with constant stack space for all tail calls.
-        """
+    ) -> _FrameChange:
+        """TAIL_CALL src0, src1: Replace current frame with func in src0; args on stack."""
         func = frame.locals[instr.src0]
         if not isinstance(func, MenaiFunction):
             raise MenaiEvalError(
@@ -726,11 +690,20 @@ class MenaiVM:
             )
 
         self._check_and_pack_args(func, instr.src1)
-        return TailCall(func)
+        code = func.bytecode
+        frame.code = code
+        frame.code_len = len(code.instructions)
+        frame.ip = 0
+        frame.locals = cast(List[MenaiValue], [None] * code.local_count)
+        if func.captured_values:
+            for i, captured_val in enumerate(func.captured_values):
+                frame.locals[code.param_count + i] = captured_val
 
-    def _op_apply(  # pylint: disable=useless-return
+        return _FRAME_CHANGE
+
+    def _op_apply(
         self, frame: Frame, instr: Instruction
-    ) -> MenaiValue | None:
+    ) -> _FrameChange:
         """APPLY dest, src0: Apply func in register src0 to arg_list on stack top; result to dest."""
         arg_list = self.stack.pop()
         func = frame.locals[instr.src0]
@@ -755,18 +728,18 @@ class MenaiVM:
         self._check_and_pack_args(func, arity)
         code = func.bytecode
         new_frame = Frame(code)
+        new_frame.return_dest = instr.dest
         if func.captured_values:
             for i, captured_val in enumerate(func.captured_values):
                 new_frame.locals[code.param_count + i] = captured_val
 
         self.frames.append(new_frame)
         self.current_frame = new_frame
-        frame.locals[instr.dest] = self._execute_frame(new_frame)
-        return None
+        return _FRAME_CHANGE
 
     def _op_tail_apply(
         self, frame: Frame, instr: Instruction
-    ) -> TailCall:
+    ) -> _FrameChange:
         """TAIL_APPLY src0: Tail apply func in register src0 to arg_list on stack top."""
         arg_list = self.stack.pop()
         func = frame.locals[instr.src0]
@@ -789,15 +762,38 @@ class MenaiVM:
 
         arity = len(arg_list.elements)
         self._check_and_pack_args(func, arity)
-        return TailCall(func)
+        code = func.bytecode
+        frame.code = code
+        frame.code_len = len(code.instructions)
+        frame.ip = 0
+        frame.locals = cast(List[MenaiValue], [None] * code.local_count)
+        if func.captured_values:
+            for i, captured_val in enumerate(func.captured_values):
+                frame.locals[code.param_count + i] = captured_val
+
+        return _FRAME_CHANGE
 
     def _op_return(
         self, frame: Frame, instr: Instruction
-    ) -> MenaiValue | None:
-        """RETURN src0: Push frame.locals[src0] as return value, then pop frame."""
+    ) -> MenaiValue | _FrameChange:
+        """RETURN src0: Pop frame, write return value into caller's dest register.
+
+        If the caller is the sentinel frame, return the value to the loop so it
+        can exit.  Otherwise write into caller.locals[return_dest] and return
+        _FRAME_CHANGE so the loop re-syncs frame from self.frames[-1].
+        """
+        return_value = cast(MenaiValue, frame.locals[instr.src0])
         self.frames.pop()
-        self.current_frame = self.frames[-1]
-        return cast(MenaiValue, frame.locals[instr.src0])
+        caller = self.frames[-1]
+        self.current_frame = caller
+
+        if caller.code.name == "<main>":
+            # Returning to the sentinel: this is the final top-level result.
+            return return_value
+
+        # Returning to a real caller: store result, signal the loop to re-sync frame.
+        caller.locals[frame.return_dest] = return_value
+        return _FRAME_CHANGE
 
     def _op_emit_trace(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
