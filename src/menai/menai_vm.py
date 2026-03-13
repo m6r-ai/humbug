@@ -2788,7 +2788,7 @@ class MenaiVM:
         if not isinstance(b, MenaiDict):
             raise MenaiEvalError(f"Function 'dict=?' requires dict arguments, got {b.type_name()}")
 
-        self.regs[base + instr.dest] = MenaiBoolean(a == b)
+        self.regs[base + instr.dest] = MenaiBoolean(a.pairs == b.pairs)
         return None
 
     def _op_dict_neq_p(  # pylint: disable=useless-return
@@ -2804,7 +2804,7 @@ class MenaiVM:
         if not isinstance(b, MenaiDict):
             raise MenaiEvalError(f"Function 'dict!=?' requires dict arguments, got {b.type_name()}")
 
-        self.regs[base + instr.dest] = MenaiBoolean(a != b)
+        self.regs[base + instr.dest] = MenaiBoolean(a.pairs != b.pairs)
         return None
 
     def _op_dict_keys(  # pylint: disable=useless-return
