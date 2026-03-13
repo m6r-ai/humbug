@@ -183,12 +183,12 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
         output.append(f"{indent}Initial Register Map:")
         output.append(f"{indent}{'-'*70}")
         for i, pname in enumerate(code.param_names):
-            id = f"rp{i}"
-            output.append(f"{indent}{id:>6}: '{pname}'")
+            rid = f"rp{i}"
+            output.append(f"{indent}{rid:>6}: '{pname}'")
 
         for i, fname in enumerate(code.free_vars):
-            id = f"rc{i}"
-            output.append(f"{indent}{id:>6}: '{fname}'")
+            rid = f"rc{i}"
+            output.append(f"{indent}{rid:>6}: '{fname}'")
 
         output.append(f"{indent}{'-'*70}")
 
@@ -199,8 +199,8 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
         output.append(f"{indent}{'-'*70}")
         for i, const in enumerate(code.constants):
             const_str = format_constant(const)
-            id = f"c{i}"
-            output.append(f"{indent}{id:>6}: {const_str}")
+            cid = f"c{i}"
+            output.append(f"{indent}{cid:>6}: {const_str}")
 
         output.append(f"{indent}{'-'*70}")
         output.append(f"{indent}")
@@ -219,8 +219,8 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
                 loc_parts.append(f"line {nested.source_line}")
 
             loc_str = f" [{':'.join(loc_parts)}]" if loc_parts else ""
-            id = f"co{i}"
-            output.append(f"{indent}{id:>6}: {nested_name}{loc_str}")
+            coid = f"co{i}"
+            output.append(f"{indent}{coid:>6}: {nested_name}{loc_str}")
 
         output.append(f"{indent}{'-'*70}")
         output.append(f"{indent}")
@@ -237,7 +237,9 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
         for instr in code.instructions
         if instr.opcode in (Opcode.JUMP, Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE)
     }
-    conditional_jump_opcodes = {Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE}
+    control_flow_opcodes = {
+        Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE, Opcode.CALL, Opcode.TAIL_CALL, Opcode.APPLY, Opcode.TAIL_APPLY
+    }
 
     for i, instr in enumerate(code.instructions):
         is_target = i in jump_targets
@@ -258,9 +260,9 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
         else:
             output.append(f"{indent}{target_marker}{instr_str}")
 
-        # Blank line after a conditional jump, unless the next instruction is
+        # Blank line after a control flow opcode, unless the next instruction is
         # already a jump target (which will insert its own blank line above).
-        if instr.opcode in conditional_jump_opcodes and (i + 1) not in jump_targets:
+        if instr.opcode in control_flow_opcodes and (i + 1) not in jump_targets:
             output.append(f"{indent}")
 
     output.append(f"{indent}{'-'*70}")
