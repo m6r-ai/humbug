@@ -31,6 +31,29 @@ from menai.menai_value import MenaiValue
 from menai.menai_bytecode import Opcode, CodeObject, Instruction, reg_name
 
 
+_ANSI_CYAN = "\033[36m"
+_ANSI_YELLOW = "\033[33m"
+_ANSI_GREEN = "\033[32m"
+_ANSI_GREY = "\033[90m"
+_ANSI_RESET = "\033[0m"
+
+
+def _cyan(text: str, color: bool) -> str:
+    return f"{_ANSI_CYAN}{text}{_ANSI_RESET}" if color else text
+
+
+def _yellow(text: str, color: bool) -> str:
+    return f"{_ANSI_YELLOW}{text}{_ANSI_RESET}" if color else text
+
+
+def _grey(text: str, color: bool) -> str:
+    return f"{_ANSI_GREY}{text}{_ANSI_RESET}" if color else text
+
+
+def _green(text: str, color: bool) -> str:
+    return f"{_ANSI_GREEN}{text}{_ANSI_RESET}" if color else text
+
+
 def format_constant(const: object) -> str:
     """Format a constant for display."""
     if isinstance(const, str):
@@ -148,7 +171,7 @@ def format_instruction(instr: Instruction, index: int, code: CodeObject) -> str:
     return instr_str.ljust(48)
 
 
-def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None = None) -> List[str]:
+def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None = None, color: bool = False) -> List[str]:
     """Recursively disassemble code object and all nested code objects."""
     indent = "  " * depth
     display_name = name or code.name or "<top-level>"
@@ -165,14 +188,14 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
         display_name = f"{display_name} [{':'.join(loc_parts)}]"
 
     output = []
-    output.append(f"{indent}{'-'*70}")
-    output.append(f"{indent}Function: {display_name}")
-    output.append(f"{indent}{'-'*70}")
+    output.append(f"{indent}{'-'*70}")                                    # plain: function opener
+    output.append(f"{indent}{_yellow('Function: ' + display_name, color)}")
+    output.append(_grey(f"{indent}{'-'*70}", color))
 
     # Show code objects table
     if code.code_objects:
-        output.append(f"{indent}Code Objects: {len(code.code_objects)}")
-        output.append(f"{indent}{'-'*70}")
+        output.append(f"{indent}{_green('Code Objects: ' + str(len(code.code_objects)), color)}")
+        output.append(_grey(f"{indent}{'-'*70}", color))
         for i, nested in enumerate(code.code_objects):
             nested_name = clean_name(nested.name) if nested.name else f"<lambda-{i}>"
             loc_parts = []
@@ -184,51 +207,51 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
 
             loc_str = f" [{':'.join(loc_parts)}]" if loc_parts else ""
             coid = f"x{i}"
-            output.append(f"{indent}{coid:>6}: {nested_name}{loc_str}")
+            output.append(f"{indent}{_cyan(f'{coid:>6}: {nested_name}{loc_str}', color)}")
 
-        output.append(f"{indent}{'-'*70}")
+        output.append(_grey(f"{indent}{'-'*70}", color))
 
     # Show constants table
     if code.constants:
-        output.append(f"{indent}Constants: {len(code.constants)}")
-        output.append(f"{indent}{'-'*70}")
+        output.append(f"{indent}{_green('Constants: ' + str(len(code.constants)), color)}")
+        output.append(_grey(f"{indent}{'-'*70}", color))
         for i, const in enumerate(code.constants):
             const_str = format_constant(const)
             cid = f"k{i}"
-            output.append(f"{indent}{cid:>6}: {const_str}")
+            output.append(f"{indent}{_cyan(f'{cid:>6}: {const_str}', color)}")
 
-        output.append(f"{indent}{'-'*70}")
+        output.append(_grey(f"{indent}{'-'*70}", color))
 
     # Show register map for params and captures (only when present)
     param_count = code.param_count
     if param_count:
-        output.append(f"{indent}Inputs: {code.param_count}")
-        output.append(f"{indent}{'-'*70}")
+        output.append(f"{indent}{_green('Inputs: ' + str(code.param_count), color)}")
+        output.append(_grey(f"{indent}{'-'*70}", color))
         for i, pname in enumerate(code.param_names):
             rid = f"i{i}"
-            output.append(f"{indent}{rid:>6}: '{pname}'")
+            output.append(f"{indent}{_cyan(f"{rid:>6}: '{pname}'", color)}")
 
-        output.append(f"{indent}{'-'*70}")
+        output.append(_grey(f"{indent}{'-'*70}", color))
 
     # Show register map for params and captures (only when present)
     capture_count = len(code.free_vars)
     if capture_count:
-        output.append(f"{indent}Captured: {len(code.free_vars)}")
-        output.append(f"{indent}{'-'*70}")
+        output.append(f"{indent}{_green('Captured: ' + str(len(code.free_vars)), color)}")
+        output.append(_grey(f"{indent}{'-'*70}", color))
         for i, fname in enumerate(code.free_vars):
             rid = f"c{i}"
-            output.append(f"{indent}{rid:>6}: '{fname}'")
+            output.append(f"{indent}{_cyan(f"{rid:>6}: '{fname}'", color)}")
 
-        output.append(f"{indent}{'-'*70}")
+        output.append(_grey(f"{indent}{'-'*70}", color))
 
     locals_count = code.local_count - param_count - capture_count
     if locals_count:
-        output.append(f"{indent}Locals: {locals_count}")
-        output.append(f"{indent}{'-'*70}")
+        output.append(f"{indent}{_green('Locals: ' + str(locals_count), color)}")
+        output.append(_grey(f"{indent}{'-'*70}", color))
 
     # Show annotated disassembly
-    output.append(f"{indent}Instructions: {len(code.instructions)}")
-    output.append(f"{indent}{'-'*70}")
+    output.append(f"{indent}{_green('Instructions: ' + str(len(code.instructions)), color)}")
+    output.append(_grey(f"{indent}{'-'*70}", color))
 
     # Pre-pass: collect all jump target indices.
     # JUMP target is in src0; JUMP_IF_FALSE/TRUE target is in src1.
@@ -250,13 +273,13 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
         annotation = annotate_instruction(instr, code)
         instr_str = format_instruction(instr, i, code)
 
-        # For jump target lines, replace the last two characters of the indent
-        # with "► " so the marker sits flush at the indent boundary and all
-        # subsequent columns remain aligned with non-target lines.
+        # For jump target lines, prepend "► " so the marker sits flush at the
+        # indent boundary and all subsequent columns remain aligned with
+        # non-target lines.
         target_marker = "► " if is_target else "  "
 
         if annotation:
-            output.append(f"{indent}{target_marker}{instr_str}{annotation}")
+            output.append(f"{indent}{target_marker}{instr_str}{_green(annotation, color)}")
 
         else:
             output.append(f"{indent}{target_marker}{instr_str}")
@@ -266,13 +289,13 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
         if instr.opcode in control_flow_opcodes and (i + 1) not in jump_targets:
             output.append(f"{indent}")
 
-    output.append(f"{indent}{'-'*70}")
+    output.append(f"{indent}{'-'*70}")                                    # plain: function closer
     output.append(f"{indent}")
 
     # Recursively disassemble nested code objects
     for i, nested_code in enumerate(code.code_objects):
         nested_name = clean_name(nested_code.name) if nested_code.name else f"<nested-{i}>"
-        nested_output = disassemble_with_nested(nested_code, depth + 1, nested_name)
+        nested_output = disassemble_with_nested(nested_code, depth + 1, nested_name, color)
         output.extend(nested_output)
 
     return output
@@ -381,10 +404,12 @@ def main() -> int:
     )
     parser.add_argument('file', help='Menai source file to disassemble')
     parser.add_argument('--output', '-o', help='Output file (default: stdout)')
-    parser.add_argument('--trace', '-t', action='store_true',
-                       help='Also generate function call trace')
+    parser.add_argument('--trace', '-t', action='store_true', help='Also generate function call trace')
+    parser.add_argument('--no-color', action='store_true', help='Disable ANSI colour output')
+    parser.add_argument('--color', '-c', action='store_true', help='Force ANSI colour output')
 
     args = parser.parse_args()
+    color = (not args.no_color and not args.output and sys.stdout.isatty()) or args.color
 
     # Read source file
     source_path = Path(args.file)
@@ -420,7 +445,7 @@ def main() -> int:
         return 1
 
     # Generate disassembly
-    output_lines = disassemble_with_nested(code, name=args.file)
+    output_lines = disassemble_with_nested(code, name=args.file, color=color)
 
     # Add trace if requested
     if args.trace:
