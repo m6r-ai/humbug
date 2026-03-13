@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple
 
 from menai.menai_value import MenaiValue
 
@@ -458,6 +458,14 @@ class Instruction:
         """
         return Opcode(self.opcode).arg_count()
 
+    def __repr__(self) -> str:
+        """Return a human-readable disassembly using raw slot indices (r0, r1, …).
+
+        For fully symbolic register names (rp*, rc*, rs*, ro*) use
+        ``format(code)`` with a CodeObject.
+        """
+        return self._disassemble(lambda slot: f"r{slot}")
+
     def format(self, code: 'CodeObject') -> str:
         """Return a symbolic disassembly string using register names derived from code.
 
@@ -467,17 +475,17 @@ class Instruction:
           rs0..rs(L-1)   scratch locals slots P+F..P+F+L-1
           ro0..ro(O-1)   outgoing args  slots P+F+L..P+F+L+O-1
 
-        Falls back to repr(self) for any slot that falls outside all ranges
-        (should not occur in valid bytecode).
         """
-        def rn(slot: int) -> str:
-            return reg_name(slot, code)
+        return self._disassemble(lambda slot: reg_name(slot, code))
 
+    def _disassemble(self, rn: 'Callable[[int], str]') -> str:
+        """Format this instruction using rn to convert slot indices to names."""
         opcode = Opcode(self.opcode)
         name = opcode.name
 
         if opcode in (Opcode.LOAD_NONE, Opcode.LOAD_TRUE,
-                      Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST):
+                      Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST,
+                      Opcode.LOAD_EMPTY_DICT):
             return f"{rn(self.dest)} = {name}"
 
         if opcode == Opcode.LOAD_CONST:
