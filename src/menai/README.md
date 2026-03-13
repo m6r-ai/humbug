@@ -53,7 +53,7 @@ MenaiIROptimizer       – IR-level dead binding elimination (fixed-point loop)
 MenaiCodegen           – generate bytecode (MenaiBytecode / CodeObject)
     │
     ▼
-MenaiVM                – stack-based bytecode virtual machine
+MenaiVM                – infinite-register bytecode virtual machine
 ```
 
 Modules are resolved and cached before optimization passes run, allowing

@@ -7,7 +7,6 @@ runtime checks from the hot VM execution loop.
 
 The validator checks:
 - Structural invariants (valid jumps, indices in bounds)
-- Stack depth consistency across all paths
 - Variable access validity
 - Control flow correctness (all paths return)
 - Function/closure well-formedness
@@ -25,11 +24,8 @@ class ValidationErrorType(Enum):
     """Types of validation errors."""
     INVALID_JUMP_TARGET = "invalid_jump_target"
     INDEX_OUT_OF_BOUNDS = "index_out_of_bounds"
-    STACK_UNDERFLOW = "stack_underflow"
-    STACK_INCONSISTENT = "stack_inconsistent"
     MISSING_RETURN = "missing_return"
     INVALID_OPCODE = "invalid_opcode"
-    UNREACHABLE_CODE = "unreachable_code"
     INVALID_VARIABLE_ACCESS = "invalid_variable_access"
     UNINITIALIZED_VARIABLE = "uninitialized_variable"
 
@@ -57,26 +53,12 @@ class ValidationError(Exception):
 
 
 @dataclass
-class StackState:
-    """Represents stack depth at a program point.
-
-    We track min/max depth to handle different paths through the code.
-    """
-    depth: int
-
-    def __repr__(self) -> str:
-        return f"Stack({self.depth})"
-
-
-@dataclass
 class BasicBlock:
     """A basic block in the control flow graph."""
     start_index: int
     end_index: int  # Inclusive
     successors: List[int] = field(default_factory=list)  # Instruction indices
     predecessors: List[int] = field(default_factory=list)  # Instruction indices
-    stack_depth_in: int | None = None  # Stack depth on entry
-    stack_depth_out: int | None = None  # Stack depth on exit
     visited: bool = False
 
 

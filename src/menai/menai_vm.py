@@ -95,8 +95,6 @@ def _parallel_move_regs(regs: List[MenaiValue], src_base: int, dst_base: int, n:
 class MenaiVM:
     """
     Virtual machine for executing Menai bytecode.
-
-    Uses a stack-based architecture with lexically-scoped frames.
     """
 
     def __init__(self, validate: bool = True) -> None:
