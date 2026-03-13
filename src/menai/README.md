@@ -29,31 +29,43 @@ Menai uses an optimizing compiler pipeline feeding into a bytecode VM:
 Source code
     │
     ▼
-MenaiLexer             – tokenization
+MenaiLexer                – tokenization
     │
     ▼
-MenaiASTBuilder        – S-expression parsing to AST (MenaiASTNode)
+MenaiASTBuilder           – S-expression parsing to AST (MenaiASTNode)
     │
     ▼
-MenaiSemanticAnalyzer  – type checking, scope analysis, free variable detection
+MenaiASTSemanticAnalyzer  – type checking, scope analysis, free variable detection
     │
     ▼
-MenaiDesugarer         – expand syntactic sugar (let, let*, letrec, quote, etc.)
+MenaiASTModuleResolver    – resolve and inline imports (recursive module compilation)
     │
     ▼
-MenaiASTConstantFolder – constant folding optimization pass
+MenaiASTDesugarer         – expand syntactic sugar (let, let*, letrec, quote, etc.)
     │
     ▼
-MenaiIRBuilder         – lower AST to IR (MenaiIRNode)
+MenaiASTConstantFolder    – constant folding optimization pass
     │
     ▼
-MenaiIROptimizer       – IR-level dead binding elimination (fixed-point loop)
+MenaiIRBuilder            – lower AST to IR (MenaiIRNode)
     │
     ▼
-MenaiCodegen           – generate bytecode (MenaiBytecode / CodeObject)
+MenaiIROptimizer          – IR-level dead binding elimination (fixed-point loop)
     │
     ▼
-MenaiVM                – infinite-register bytecode virtual machine
+MenaiCFGBuilder           – lower IR to SSA control-flow graph (MenaiCFGFunction)
+    │
+    ▼
+MenaiCFG passes           – CollapsePhiChains, BranchConstProp, SimplifyBlocks
+    │
+    ▼
+MenaiVCodeBuilder         – lower CFG to linear VCode (phi-free, virtual registers)
+    │
+    ▼
+MenaiBytecodeBuilder      – slot allocation, peephole optimisation, emit CodeObject
+    │
+    ▼
+MenaiVM                   – register-based bytecode virtual machine
 ```
 
 Modules are resolved and cached before optimization passes run, allowing
