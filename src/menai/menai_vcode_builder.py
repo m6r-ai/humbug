@@ -348,7 +348,9 @@ class MenaiVCodeBuilder:
             dst = self._reg(instr.result)
             captures = [self._reg(c) for c in instr.captures]
             child_vcode = self._lower_function(instr.function)
-            instrs.append(MenaiVCodeMakeClosure(dst=dst, function=child_vcode, captures=captures, needs_patching=instr.needs_patching))
+            instrs.append(MenaiVCodeMakeClosure(
+                dst=dst, function=child_vcode, captures=captures, needs_patching=instr.needs_patching
+            ))
             return max(max_reg_id, dst.id, *(r.id for r in captures)) if captures else max(max_reg_id, dst.id)
 
         if isinstance(instr, MenaiCFGPatchClosureInstr):

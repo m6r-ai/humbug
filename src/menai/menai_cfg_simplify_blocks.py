@@ -75,10 +75,6 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
 
         return func, changed
 
-    # ------------------------------------------------------------------
-    # Sub-pass 1: empty-block bypass
-    # ------------------------------------------------------------------
-
     def _bypass_empty_blocks(self, func: MenaiCFGFunction) -> tuple[MenaiCFGFunction, bool]:
         """
         Bypass blocks that are pure indirections: no instructions, no
@@ -215,10 +211,6 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
         relink_predecessors(new_func)
         return new_func, True
 
-    # ------------------------------------------------------------------
-    # Sub-pass 2: trivial return inlining
-    # ------------------------------------------------------------------
-
     def _inline_trivial_returns(self, func: MenaiCFGFunction) -> tuple[MenaiCFGFunction, bool]:
         """
         Inline trivial terminal blocks into their unconditional-jump predecessors.
@@ -312,6 +304,7 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
                         MenaiCFGConstInstr(result=new_val, value=instr.value)
                     )
                     pred.terminator = MenaiCFGReturnTerm(value=new_val)
+
                 elif isinstance(instr, MenaiCFGPhiInstr):
                     # Each predecessor already holds its contributing value.
                     # Look up the incoming entry for this predecessor.
@@ -323,6 +316,7 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
                         # Predecessor not listed in phi incomings — skip.
                         continue
                     pred.terminator = MenaiCFGReturnTerm(value=contributing)
+
                 else:
                     pred.terminator = MenaiCFGReturnTerm(value=return_term.value)
 
@@ -332,8 +326,7 @@ class MenaiCFGSimplifyBlocks(MenaiCFGOptimizationPass):
             # Remove target if every predecessor was a jump predecessor that
             # we just inlined, and no predecessor reaches target via a branch
             # or other non-jump edge.
-            if (len(actually_inlined) == len(jump_preds)
-                    and len(jump_preds) == len(target.predecessors)):
+            if (len(actually_inlined) == len(jump_preds) and len(jump_preds) == len(target.predecessors)):
                 inlined_block_ids.add(target.id)
 
         if not changed:
@@ -359,8 +352,7 @@ def _max_value_id(func: MenaiCFGFunction) -> int:
 
     def _check(vid: int) -> None:
         nonlocal max_id
-        if vid > max_id:
-            max_id = vid
+        max_id = max(max_id, vid)
 
     for block in func.blocks:
         for instr in block.instrs:

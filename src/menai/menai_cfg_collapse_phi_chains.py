@@ -43,7 +43,6 @@ from menai.menai_cfg import (
     MenaiCFGBlock,
     MenaiCFGFunction,
     MenaiCFGInstr,
-    MenaiCFGMakeClosureInstr,
     MenaiCFGPhiInstr,
     MenaiCFGValue,
     relink_predecessors,

@@ -512,4 +512,3 @@ class MenaiIRBuilder:
             is_builtin=False,
             builtin_name=None
         )
-

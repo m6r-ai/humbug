@@ -127,7 +127,8 @@ class MenaiASTBuilder:
                     received=f"Unexpected '{current_value}' at line {current_line}, column {current_col} after close",
                     expected="Either more elements before this ')' or end of input after it",
                     example="Correct: (+ 1 2)\\nIncorrect: (+ 1 2)) extra",
-                    suggestion=f"Check the ')' at line {self.last_close_line}, column {self.last_close_column} — it may close too early",
+                    suggestion=f"Check the ')' at line {self.last_close_line}, column {self.last_close_column} "
+                        f"— it may close too early",
                     context=context,
                     source=self.expression
                 )
