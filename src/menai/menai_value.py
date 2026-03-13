@@ -370,16 +370,22 @@ class MenaiDict(MenaiValue):
     @staticmethod
     def to_hashable_key(key: MenaiValue) -> Tuple[str, Any]:
         """Convert Menai key to hashable Python value."""
-        if isinstance(key, MenaiString):
+        if type(key) is MenaiString:  # pylint: disable=unidiomatic-typecheck
             return ('str', key.value)
 
-        if isinstance(key, (MenaiInteger, MenaiFloat, MenaiComplex)):
-            return ('num', key.value)
+        if type(key) is MenaiInteger:  # pylint: disable=unidiomatic-typecheck
+            return ('int', key.value)
 
-        if isinstance(key, MenaiBoolean):
+        if type(key) is MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            return ('flt', key.value)
+
+        if type(key) is MenaiComplex:  # pylint: disable=unidiomatic-typecheck
+            return ('cplx', key.value)
+
+        if type(key) is MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
             return ('bool', key.value)
 
-        if isinstance(key, MenaiSymbol):
+        if type(key) is MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
             return ('sym', key.name)
 
         raise MenaiEvalError(
