@@ -352,7 +352,7 @@ class MenaiVM:
         max_locals = self._max_local_count(code)
         if prelude_functions:
             for func in prelude_functions.values():
-                if isinstance(func, MenaiFunction):
+                if type(func) is MenaiFunction:  # pylint: disable=unidiomatic-typecheck
                     n = self._max_local_count(func.bytecode)
                     max_locals = max(max_locals, n)
 
@@ -514,7 +514,7 @@ class MenaiVM:
         # Validator guarantees src0 is in bounds and target is valid
         # Must keep type check (runtime-dependent)
         condition = self.regs[frame.base + instr.src0]
-        if not isinstance(condition, MenaiBoolean):
+        if type(condition) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError("If condition must be boolean")
 
         if not condition.value:
@@ -529,7 +529,7 @@ class MenaiVM:
         # Validator guarantees src0 is in bounds and target is valid
         # Must keep type check (runtime-dependent)
         condition = self.regs[frame.base + instr.src0]
-        if not isinstance(condition, MenaiBoolean):
+        if type(condition) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError("If condition must be boolean")
 
         if condition.value:
@@ -545,7 +545,7 @@ class MenaiVM:
         # Validator guarantees src0 is in bounds
         # Type check could be removed if we validate constant types, but keep for now
         error_msg = frame.code.constants[src0]
-        if not isinstance(error_msg, MenaiString):
+        if type(error_msg) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError("RAISE_ERROR requires a string constant")
 
         raise MenaiEvalError(error_msg.value)
@@ -587,10 +587,10 @@ class MenaiVM:
         """
         base = frame.base
         closure = self.regs[base + instr.src0]
-        if not isinstance(closure, MenaiFunction):
+        if type(closure) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError("PATCH_CLOSURE requires a function")
 
-        if not isinstance(closure.captured_values, list):
+        if type(closure.captured_values) is not list:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError("PATCH_CLOSURE requires closure with captured_values list")
 
         closure.captured_values[instr.src1] = self.regs[base + instr.src2]
@@ -606,7 +606,7 @@ class MenaiVM:
         """
         base = frame.base
         func = self.regs[base + instr.src0]
-        if not isinstance(func, MenaiFunction):
+        if type(func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="Cannot call non-function value",
                 received=f"Attempted to call: {func.describe()} ({func.type_name()})",
@@ -663,7 +663,7 @@ class MenaiVM:
         """TAIL_CALL src0, src1: Replace current frame with func in src0."""
         base = frame.base
         func = self.regs[base + instr.src0]
-        if not isinstance(func, MenaiFunction):
+        if type(func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="Cannot call non-function value",
                 received=f"Attempted to call: {func.describe()} ({func.type_name()})",
@@ -718,7 +718,7 @@ class MenaiVM:
         """APPLY dest, src0, src1: Apply func in src0 to arg_list in register src1; result to dest."""
         base = frame.base
         func = self.regs[base + instr.src0]
-        if not isinstance(func, MenaiFunction):
+        if type(func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="apply: first argument must be a function",
                 received=f"Got: {func.describe()} ({func.type_name()})",
@@ -726,7 +726,7 @@ class MenaiVM:
             )
 
         arg_list = self.regs[base + instr.src1]
-        if not isinstance(arg_list, MenaiList):
+        if type(arg_list) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="apply: second argument must be a list",
                 received=f"Got: {arg_list.describe()} ({arg_list.type_name()})",
@@ -789,7 +789,7 @@ class MenaiVM:
         """
         base = frame.base
         func = self.regs[base + instr.src0]
-        if not isinstance(func, MenaiFunction):
+        if type(func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="apply: first argument must be a function",
                 received=f"Got: {func.describe()} ({func.type_name()})",
@@ -797,7 +797,7 @@ class MenaiVM:
             )
 
         arg_list = self.regs[base + instr.src1]
-        if not isinstance(arg_list, MenaiList):
+        if type(arg_list) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="apply: second argument must be a list",
                 received=f"Got: {arg_list.describe()} ({arg_list.type_name()})",
@@ -882,7 +882,7 @@ class MenaiVM:
         """FUNCTION_P dest, src0: r_dest = (function? r_src0)"""
         base = frame.base
         value = self.regs[base + instr.src0]
-        self.regs[base + instr.dest] = MenaiBoolean(isinstance(value, MenaiFunction))
+        self.regs[base + instr.dest] = MenaiBoolean(type(value) is MenaiFunction)  # pylint: disable=unidiomatic-typecheck
         return None
 
     def _op_function_eq_p(  # pylint: disable=useless-return
@@ -891,14 +891,14 @@ class MenaiVM:
         """FUNCTION_EQ_P dest, src0, src1: r_dest = (function=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFunction):
+        if type(a) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function=?: arguments must be functions",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFunction):
+        if type(b) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function=?: arguments must be functions",
                 received=f"Second argument: {b.describe()} ({b.type_name()})"
@@ -913,14 +913,14 @@ class MenaiVM:
         """FUNCTION_NEQ_P dest, src0, src1: r_dest = (function!=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFunction):
+        if type(a) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function!=?: arguments must be functions",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFunction):
+        if type(b) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function!=?: arguments must be functions",
                 received=f"Second argument: {b.describe()} ({b.type_name()})"
@@ -935,7 +935,7 @@ class MenaiVM:
         """FUNCTION_MIN_ARITY dest, src0: r_dest = (function-min-arity r_src0)"""
         base = frame.base
         func = self.regs[base + instr.src0]
-        if not isinstance(func, MenaiFunction):
+        if type(func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function-min-arity: argument must be a function",
                 received=f"Got: {func.describe()} ({func.type_name()})"
@@ -952,7 +952,7 @@ class MenaiVM:
         """FUNCTION_VARIADIC_P dest, src0: r_dest = (function-variadic? r_src0)"""
         base = frame.base
         func = self.regs[base + instr.src0]
-        if not isinstance(func, MenaiFunction):
+        if type(func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function-variadic?: argument must be a function",
                 received=f"Got: {func.describe()} ({func.type_name()})"
@@ -967,14 +967,14 @@ class MenaiVM:
         """FUNCTION_ACCEPTS_P dest, src0, src1: r_dest = (function-accepts? r_src0 r_src1)"""
         base = frame.base
         func = self.regs[base + instr.src0]
-        if not isinstance(func, MenaiFunction):
+        if type(func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function-accepts?: first argument must be a function",
                 received=f"Got: {func.describe()} ({func.type_name()})"
             )
 
         n = self.regs[base + instr.src1]
-        if not isinstance(n, MenaiInteger):
+        if type(n) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function-accepts?: second argument must be an integer",
                 received=f"Got: {n.describe()} ({n.type_name()})"
@@ -997,7 +997,7 @@ class MenaiVM:
         """SYMBOL_P dest, src0: r_dest = (symbol? r_src0)"""
         base = frame.base
         value = self.regs[base + instr.src0]
-        self.regs[base + instr.dest] = MenaiBoolean(isinstance(value, MenaiSymbol))
+        self.regs[base + instr.dest] = MenaiBoolean(type(value) is MenaiSymbol)  # pylint: disable=unidiomatic-typecheck
         return None
 
     def _op_symbol_eq_p(  # pylint: disable=useless-return
@@ -1006,14 +1006,14 @@ class MenaiVM:
         """SYMBOL_EQ_P dest, src0, src1: r_dest = (symbol=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiSymbol):
+        if type(a) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="symbol=?: arguments must be symbols",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiSymbol):
+        if type(b) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="symbol=?: arguments must be symbols",
                 received=f"Second argument: {b.describe()} ({b.type_name()})"
@@ -1028,14 +1028,14 @@ class MenaiVM:
         """SYMBOL_NEQ_P dest, src0, src1: r_dest = (symbol!=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiSymbol):
+        if type(a) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="symbol!=?: arguments must be symbols",
                 received=f"First argument: {a.describe()} ({a.type_name()})"
             )
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiSymbol):
+        if type(b) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="symbol!=?: arguments must be symbols",
                 received=f"Second argument: {b.describe()} ({b.type_name()})"
@@ -1050,7 +1050,7 @@ class MenaiVM:
         """SYMBOL_TO_STRING dest, src0: r_dest = (symbol->string r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiSymbol):
+        if type(a) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="symbol->string: argument must be a symbol",
                 received=f"Got: {a.describe()} ({a.type_name()})"
@@ -1065,7 +1065,7 @@ class MenaiVM:
         """NONE_P dest, src0: r_dest = (none? r_src0)"""
         base = frame.base
         value = self.regs[base + instr.src0]
-        self.regs[base + instr.dest] = MenaiBoolean(isinstance(value, MenaiNone))
+        self.regs[base + instr.dest] = MenaiBoolean(type(value) is MenaiNone)  # pylint: disable=unidiomatic-typecheck
         return None
 
     def _op_boolean_p(  # pylint: disable=useless-return
@@ -1074,7 +1074,7 @@ class MenaiVM:
         """BOOLEAN_P dest, src0: r_dest = (boolean? r_src0)"""
         base = frame.base
         value = self.regs[base + instr.src0]
-        self.regs[base + instr.dest] = MenaiBoolean(isinstance(value, MenaiBoolean))
+        self.regs[base + instr.dest] = MenaiBoolean(type(value) is MenaiBoolean)  # pylint: disable=unidiomatic-typecheck
         return None
 
     def _op_boolean_eq_p(  # pylint: disable=useless-return
@@ -1083,11 +1083,11 @@ class MenaiVM:
         """BOOLEAN_EQ_P dest, src0, src1: r_dest = (boolean=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiBoolean):
+        if type(a) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'boolean=?' requires boolean arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiBoolean):
+        if type(b) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'boolean=?' requires boolean arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value == b.value)
@@ -1099,11 +1099,11 @@ class MenaiVM:
         """BOOLEAN_NEQ_P dest, src0, src1: r_dest = (boolean!=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiBoolean):
+        if type(a) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'boolean!=?' requires boolean arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiBoolean):
+        if type(b) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'boolean!=?' requires boolean arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value != b.value)
@@ -1115,7 +1115,7 @@ class MenaiVM:
         """BOOLEAN_NOT dest, src0: r_dest = (boolean-not r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiBoolean):
+        if type(a) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'boolean-not' requires boolean arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(not a.value)
@@ -1126,7 +1126,7 @@ class MenaiVM:
     ) -> MenaiValue | None:
         """INTEGER_P dest, src0: r_dest = (integer? r_src0)"""
         base = frame.base
-        self.regs[base + instr.dest] = MenaiBoolean(isinstance(self.regs[base + instr.src0], MenaiInteger))
+        self.regs[base + instr.dest] = MenaiBoolean(type(self.regs[base + instr.src0]) is MenaiInteger)  # pylint: disable=unidiomatic-typecheck
         return None
 
     def _op_integer_eq_p(  # pylint: disable=useless-return
@@ -1135,11 +1135,11 @@ class MenaiVM:
         """INTEGER_EQ_P dest, src0, src1: r_dest = (integer=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer=?' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer=?' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value == b.value)
@@ -1151,11 +1151,11 @@ class MenaiVM:
         """INTEGER_NEQ_P dest, src0, src1: r_dest = (integer!=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer!=?' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer!=?' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value != b.value)
@@ -1167,11 +1167,11 @@ class MenaiVM:
         """INTEGER_LT_P dest, src0, src1: r_dest = (integer<? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer<?' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer<?' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value < b.value)
@@ -1183,11 +1183,11 @@ class MenaiVM:
         """INTEGER_GT_P dest, src0, src1: r_dest = (integer>? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer>?' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer>?' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value > b.value)
@@ -1199,11 +1199,11 @@ class MenaiVM:
         """INTEGER_LTE_P dest, src0, src1: r_dest = (integer<=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer<=?' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer<=?' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value <= b.value)
@@ -1215,11 +1215,11 @@ class MenaiVM:
         """INTEGER_GTE_P dest, src0, src1: r_dest = (integer>=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer>=?' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer>=?' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value >= b.value)
@@ -1231,7 +1231,7 @@ class MenaiVM:
         """INTEGER_ABS dest, src0: r_dest = (integer-abs r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-abs' requires integer arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(abs(a.value))
@@ -1243,11 +1243,11 @@ class MenaiVM:
         """INTEGER_ADD dest, src0, src1: r_dest = (integer+ r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer+' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer+' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(a.value + b.value)
@@ -1259,11 +1259,11 @@ class MenaiVM:
         """INTEGER_SUB dest, src0, src1: r_dest = (integer- r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(a.value - b.value)
@@ -1275,11 +1275,11 @@ class MenaiVM:
         """INTEGER_MUL dest, src0, src1: r_dest = (integer* r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer*' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer*' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(a.value * b.value)
@@ -1291,11 +1291,11 @@ class MenaiVM:
         """INTEGER_DIV dest, src0, src1: r_dest = (integer/ r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer/' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer/' requires integer arguments, got {b.type_name()}")
 
         if b.value == 0:
@@ -1310,11 +1310,11 @@ class MenaiVM:
         """INTEGER_MOD dest, src0, src1: r_dest = (integer% r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer%' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer%' requires integer arguments, got {b.type_name()}")
 
         if b.value == 0:
@@ -1329,7 +1329,7 @@ class MenaiVM:
         """INTEGER_NEG dest, src0: r_dest = (integer-neg r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-neg' requires integer arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(-a.value)
@@ -1341,11 +1341,11 @@ class MenaiVM:
         """INTEGER_EXPN dest, src0, src1: r_dest = (integer-expn r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-expn' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-expn' requires integer arguments, got {b.type_name()}")
 
         if b.value < 0:
@@ -1360,7 +1360,7 @@ class MenaiVM:
         """INTEGER_BIT_NOT dest, src0: r_dest = (integer-bit-not r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-bit-not' requires integer arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(~a.value)
@@ -1372,11 +1372,11 @@ class MenaiVM:
         """INTEGER_BIT_SHIFT_LEFT dest, src0, src1: r_dest = (integer-bit-shift-left r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-bit-shift-left' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-bit-shift-left' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(a.value << b.value)
@@ -1388,11 +1388,11 @@ class MenaiVM:
         """INTEGER_BIT_SHIFT_RIGHT dest, src0, src1: r_dest = (integer-bit-shift-right r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-bit-shift-right' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-bit-shift-right' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(a.value >> b.value)
@@ -1404,11 +1404,11 @@ class MenaiVM:
         """INTEGER_BIT_OR dest, src0, src1: r_dest = (integer-bit-or r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-bit-or' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-bit-or' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(a.value | b.value)
@@ -1420,11 +1420,11 @@ class MenaiVM:
         """INTEGER_BIT_AND dest, src0, src1: r_dest = (integer-bit-and r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-bit-and' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-bit-and' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(a.value & b.value)
@@ -1436,11 +1436,11 @@ class MenaiVM:
         """INTEGER_BIT_XOR dest, src0, src1: r_dest = (integer-bit-xor r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-bit-xor' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-bit-xor' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(a.value ^ b.value)
@@ -1452,11 +1452,11 @@ class MenaiVM:
         """INTEGER_MIN dest, src0, src1: r_dest = (integer-min r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-min' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-min' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(a.value if a.value <= b.value else b.value)
@@ -1468,11 +1468,11 @@ class MenaiVM:
         """INTEGER_MAX dest, src0, src1: r_dest = (integer-max r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-max' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer-max' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(a.value if a.value >= b.value else b.value)
@@ -1484,7 +1484,7 @@ class MenaiVM:
         """INTEGER_TO_FLOAT dest, src0: r_dest = (integer->float r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer->float' requires integer arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(float(a.value))
@@ -1496,11 +1496,11 @@ class MenaiVM:
         """INTEGER_TO_COMPLEX dest, src0, src1: r_dest = (integer->complex r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer->complex' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer->complex' requires integer arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiComplex(complex(float(a.value), float(b.value)))
@@ -1512,11 +1512,11 @@ class MenaiVM:
         """INTEGER_TO_STRING dest, src0, src1: r_dest = (integer->string r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer->string' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'integer->string' requires integer arguments, got {b.type_name()}")
 
         a_val = a.value
@@ -1550,7 +1550,7 @@ class MenaiVM:
         """INTEGER_CODEPOINT_TO_STRING dest, src0: r_dest = (integer-codepoint->string r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 f"Function 'integer-codepoint->string' requires an integer argument, got {a.type_name()}"
             )
@@ -1569,7 +1569,7 @@ class MenaiVM:
     ) -> MenaiValue | None:
         """FLOAT_P dest, src0: r_dest = (float? r_src0)"""
         base = frame.base
-        self.regs[base + instr.dest] = MenaiBoolean(isinstance(self.regs[base + instr.src0], MenaiFloat))
+        self.regs[base + instr.dest] = MenaiBoolean(type(self.regs[base + instr.src0]) is MenaiFloat)  # pylint: disable=unidiomatic-typecheck
         return None
 
     def _op_float_eq_p(  # pylint: disable=useless-return
@@ -1578,11 +1578,11 @@ class MenaiVM:
         """FLOAT_EQ_P dest, src0, src1: r_dest = (float=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float=?' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float=?' requires float arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value == b.value)
@@ -1594,11 +1594,11 @@ class MenaiVM:
         """FLOAT_NEQ_P dest, src0, src1: r_dest = (float!=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float!=?' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float!=?' requires float arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value != b.value)
@@ -1610,11 +1610,11 @@ class MenaiVM:
         """FLOAT_LT_P dest, src0, src1: r_dest = (float<? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float<?' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float<?' requires float arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value < b.value)
@@ -1626,11 +1626,11 @@ class MenaiVM:
         """FLOAT_GT_P dest, src0, src1: r_dest = (float>? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float>?' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float>?' requires float arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value > b.value)
@@ -1642,11 +1642,11 @@ class MenaiVM:
         """FLOAT_LTE_P dest, src0, src1: r_dest = (float<=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float<=?' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float<=?' requires float arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value <= b.value)
@@ -1658,11 +1658,11 @@ class MenaiVM:
         """FLOAT_GTE_P dest, src0, src1: r_dest = (float>=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float>=?' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float>=?' requires float arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value >= b.value)
@@ -1674,7 +1674,7 @@ class MenaiVM:
         """FLOAT_ABS dest, src0: r_dest = (float-abs r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-abs' requires float arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(abs(a.value))
@@ -1686,11 +1686,11 @@ class MenaiVM:
         """FLOAT_ADD dest, src0, src1: r_dest = (float+ r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float+' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float+' requires float arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(a.value + b.value)
@@ -1702,11 +1702,11 @@ class MenaiVM:
         """FLOAT_SUB dest, src0, src1: r_dest = (float- r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-' requires float arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(a.value - b.value)
@@ -1718,11 +1718,11 @@ class MenaiVM:
         """FLOAT_MUL dest, src0, src1: r_dest = (float* r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float*' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float*' requires float arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(a.value * b.value)
@@ -1734,11 +1734,11 @@ class MenaiVM:
         """FLOAT_DIV dest, src0, src1: r_dest = (float/ r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float/' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float/' requires float arguments, got {b.type_name()}")
 
         if b.value == 0.0:
@@ -1753,11 +1753,11 @@ class MenaiVM:
         """FLOAT_FLOOR_DIV dest, src0, src1: r_dest = (float// r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float//' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float//' requires float arguments, got {b.type_name()}")
 
         if b.value == 0:
@@ -1772,11 +1772,11 @@ class MenaiVM:
         """FLOAT_MOD dest, src0, src1: r_dest = (float% r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float%' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float%' requires float arguments, got {b.type_name()}")
 
         if b.value == 0:
@@ -1791,7 +1791,7 @@ class MenaiVM:
         """FLOAT_NEG dest, src0: r_dest = (float-neg r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-neg' requires float arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(-a.value)
@@ -1803,7 +1803,7 @@ class MenaiVM:
         """FLOAT_EXP dest, src0: r_dest = (float-exp r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-exp' requires float arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(math.exp(a.value))
@@ -1815,11 +1815,11 @@ class MenaiVM:
         """FLOAT_EXPN dest, src0, src1: r_dest = (float-expn r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-expn' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-expn' requires float arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(a.value ** b.value)
@@ -1831,7 +1831,7 @@ class MenaiVM:
         """FLOAT_LOG dest, src0: r_dest = (float-log r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-log' requires float arguments, got {a.type_name()}")
 
         if a.value == 0.0:
@@ -1850,7 +1850,7 @@ class MenaiVM:
         """FLOAT_LOG10 dest, src0: r_dest = (float-log10 r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-log10' requires float arguments, got {a.type_name()}")
 
         if a.value == 0.0:
@@ -1869,7 +1869,7 @@ class MenaiVM:
         """FLOAT_LOG2 dest, src0: r_dest = (float-log2 r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-log2' requires float arguments, got {a.type_name()}")
 
         if a.value == 0.0:
@@ -1888,11 +1888,11 @@ class MenaiVM:
         """FLOAT_LOGN dest, src0, src1: r_dest = (float-logn r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-logn' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-logn' requires float arguments, got {b.type_name()}")
 
         if b.value <= 0.0 or b.value == 1.0:
@@ -1914,7 +1914,7 @@ class MenaiVM:
         """FLOAT_SIN dest, src0: r_dest = (float-sin r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-sin' requires float arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(math.sin(a.value))
@@ -1926,7 +1926,7 @@ class MenaiVM:
         """FLOAT_COS dest, src0: r_dest = (float-cos r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-cos' requires float arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(math.cos(a.value))
@@ -1938,7 +1938,7 @@ class MenaiVM:
         """FLOAT_TAN dest, src0: r_dest = (float-tan r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-tan' requires float arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(math.tan(a.value))
@@ -1950,7 +1950,7 @@ class MenaiVM:
         """FLOAT_SQRT dest, src0: r_dest = (float-sqrt r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-sqrt' requires float arguments, got {a.type_name()}")
 
         if a.value < 0.0:
@@ -1965,7 +1965,7 @@ class MenaiVM:
         """FLOAT_TO_INTEGER dest, src0: r_dest = (float->integer r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float->integer' requires float arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(int(a.value))
@@ -1977,11 +1977,11 @@ class MenaiVM:
         """FLOAT_TO_COMPLEX dest, src0, src1: r_dest = (float->complex r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float->complex' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float->complex' requires float arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiComplex(complex(a.value, b.value))
@@ -1993,7 +1993,7 @@ class MenaiVM:
         """FLOAT_TO_STRING dest, src0: r_dest = (float->string r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float->string' requires float arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiString(str(a.value))
@@ -2005,7 +2005,7 @@ class MenaiVM:
         """FLOAT_FLOOR dest, src0: r_dest = (float-floor r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-floor' requires float arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(float(math.floor(a.value)))
@@ -2017,7 +2017,7 @@ class MenaiVM:
         """FLOAT_CEIL dest, src0: r_dest = (float-ceil r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-ceil' requires float arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(float(math.ceil(a.value)))
@@ -2029,7 +2029,7 @@ class MenaiVM:
         """FLOAT_ROUND dest, src0: r_dest = (float-round r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-round' requires float arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(float(round(a.value)))
@@ -2041,11 +2041,11 @@ class MenaiVM:
         """FLOAT_MIN dest, src0, src1: r_dest = (float-min r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-min' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-min' requires float arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(a.value if a.value <= b.value else b.value)
@@ -2057,11 +2057,11 @@ class MenaiVM:
         """FLOAT_MAX dest, src0, src1: r_dest = (float-max r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiFloat):
+        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-max' requires float arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiFloat):
+        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'float-max' requires float arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(a.value if a.value >= b.value else b.value)
@@ -2072,7 +2072,7 @@ class MenaiVM:
     ) -> MenaiValue | None:
         """COMPLEX_P dest, src0: r_dest = (complex? r_src0)"""
         base = frame.base
-        self.regs[base + instr.dest] = MenaiBoolean(isinstance(self.regs[base + instr.src0], MenaiComplex))
+        self.regs[base + instr.dest] = MenaiBoolean(type(self.regs[base + instr.src0]) is MenaiComplex)  # pylint: disable=unidiomatic-typecheck
         return None
 
     def _op_complex_eq_p(  # pylint: disable=useless-return
@@ -2081,11 +2081,11 @@ class MenaiVM:
         """COMPLEX_EQ_P dest, src0, src1: r_dest = (complex=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex=?' requires complex arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiComplex):
+        if type(b) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex=?' requires complex arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value == b.value)
@@ -2097,11 +2097,11 @@ class MenaiVM:
         """COMPLEX_NEQ_P dest, src0, src1: r_dest = (complex!=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex!=?' requires complex arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiComplex):
+        if type(b) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex!=?' requires complex arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value != b.value)
@@ -2113,7 +2113,7 @@ class MenaiVM:
         """COMPLEX_REAL dest, src0: r_dest = (complex-real r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-real' requires complex arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(a.value.real)
@@ -2125,7 +2125,7 @@ class MenaiVM:
         """COMPLEX_IMAG dest, src0: r_dest = (complex-imag r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-imag' requires complex arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(a.value.imag)
@@ -2137,7 +2137,7 @@ class MenaiVM:
         """COMPLEX_ABS dest, src0: r_dest = (complex-abs r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-abs' requires complex arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiFloat(abs(a.value))
@@ -2149,11 +2149,11 @@ class MenaiVM:
         """COMPLEX_ADD dest, src0, src1: r_dest = (complex+ r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex+' requires complex arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiComplex):
+        if type(b) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex+' requires complex arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiComplex(a.value + b.value)
@@ -2165,11 +2165,11 @@ class MenaiVM:
         """COMPLEX_SUB dest, src0, src1: r_dest = (complex- r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-' requires complex arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiComplex):
+        if type(b) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-' requires complex arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiComplex(a.value - b.value)
@@ -2181,11 +2181,11 @@ class MenaiVM:
         """COMPLEX_MUL dest, src0, src1: r_dest = (complex* r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex*' requires complex arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiComplex):
+        if type(b) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex*' requires complex arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiComplex(a.value * b.value)
@@ -2197,11 +2197,11 @@ class MenaiVM:
         """COMPLEX_DIV dest, src0, src1: r_dest = (complex/ r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex/' requires complex arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiComplex):
+        if type(b) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex/' requires complex arguments, got {b.type_name()}")
 
         if b.value == 0:
@@ -2216,7 +2216,7 @@ class MenaiVM:
         """COMPLEX_NEG dest, src0: r_dest = (complex-neg r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-neg' requires complex arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiComplex(-a.value)
@@ -2228,7 +2228,7 @@ class MenaiVM:
         """COMPLEX_EXP dest, src0: r_dest = (complex-exp r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-exp' requires complex arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiComplex(cmath.exp(a.value))
@@ -2240,11 +2240,11 @@ class MenaiVM:
         """COMPLEX_EXPN dest, src0, src1: r_dest = (complex-expn r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-expn' requires complex arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiComplex):
+        if type(b) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-expn' requires complex arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiComplex(a.value ** b.value)
@@ -2256,7 +2256,7 @@ class MenaiVM:
         """COMPLEX_LOG dest, src0: r_dest = (complex-log r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-log' requires complex arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiComplex(cmath.log(a.value))
@@ -2268,7 +2268,7 @@ class MenaiVM:
         """COMPLEX_LOG10 dest, src0: r_dest = (complex-log10 r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-log10' requires complex arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiComplex(cmath.log10(a.value))
@@ -2280,11 +2280,11 @@ class MenaiVM:
         """COMPLEX_LOGN dest, src0, src1: r_dest = (complex-logn r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-logn' requires complex arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiComplex):
+        if type(b) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-logn' requires complex arguments, got {b.type_name()}")
 
         if b.value == 0j:
@@ -2299,7 +2299,7 @@ class MenaiVM:
         """COMPLEX_SIN dest, src0: r_dest = (complex-sin r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-sin' requires complex arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiComplex(cmath.sin(a.value))
@@ -2311,7 +2311,7 @@ class MenaiVM:
         """COMPLEX_COS dest, src0: r_dest = (complex-cos r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-cos' requires complex arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiComplex(cmath.cos(a.value))
@@ -2323,7 +2323,7 @@ class MenaiVM:
         """COMPLEX_TAN dest, src0: r_dest = (complex-tan r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-tan' requires complex arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiComplex(cmath.tan(a.value))
@@ -2335,7 +2335,7 @@ class MenaiVM:
         """COMPLEX_SQRT dest, src0: r_dest = (complex-sqrt r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex-sqrt' requires complex arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiComplex(cmath.sqrt(a.value))
@@ -2347,7 +2347,7 @@ class MenaiVM:
         """COMPLEX_TO_STRING dest, src0: r_dest = (complex->string r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiComplex):
+        if type(a) is not MenaiComplex:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'complex->string' requires complex arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiString(str(a.value).strip('()'))
@@ -2358,7 +2358,7 @@ class MenaiVM:
     ) -> MenaiValue | None:
         """STRING_P dest, src0: r_dest = (string? r_src0)"""
         base = frame.base
-        self.regs[base + instr.dest] = MenaiBoolean(isinstance(self.regs[base + instr.src0], MenaiString))
+        self.regs[base + instr.dest] = MenaiBoolean(type(self.regs[base + instr.src0]) is MenaiString)  # pylint: disable=unidiomatic-typecheck
         return None
 
     def _op_string_eq_p(  # pylint: disable=useless-return
@@ -2367,11 +2367,11 @@ class MenaiVM:
         """STRING_EQ_P dest, src0, src1: r_dest = (string=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string=?' requires string arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiString):
+        if type(b) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string=?' requires string arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value == b.value)
@@ -2383,11 +2383,11 @@ class MenaiVM:
         """STRING_NEQ_P dest, src0, src1: r_dest = (string!=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string!=?' requires string arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiString):
+        if type(b) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string!=?' requires string arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value != b.value)
@@ -2399,11 +2399,11 @@ class MenaiVM:
         """STRING_LT_P dest, src0, src1: r_dest = (string<? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string<?' requires string arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiString):
+        if type(b) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string<?' requires string arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value < b.value)
@@ -2415,11 +2415,11 @@ class MenaiVM:
         """STRING_GT_P dest, src0, src1: r_dest = (string>? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string>?' requires string arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiString):
+        if type(b) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string>?' requires string arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value > b.value)
@@ -2431,11 +2431,11 @@ class MenaiVM:
         """STRING_LTE_P dest, src0, src1: r_dest = (string<=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string<=?' requires string arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiString):
+        if type(b) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string<=?' requires string arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value <= b.value)
@@ -2447,11 +2447,11 @@ class MenaiVM:
         """STRING_GTE_P dest, src0, src1: r_dest = (string>=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string>=?' requires string arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiString):
+        if type(b) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string>=?' requires string arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value >= b.value)
@@ -2463,7 +2463,7 @@ class MenaiVM:
         """STRING_LENGTH dest, src0: r_dest = (string-length r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-length' requires string arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(len(a.value))
@@ -2475,7 +2475,7 @@ class MenaiVM:
         """STRING_UPCASE dest, src0: r_dest = (string-upcase r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-upcase' requires string arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiString(a.value.upper())
@@ -2487,7 +2487,7 @@ class MenaiVM:
         """STRING_DOWNCASE dest, src0: r_dest = (string-downcase r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-downcase' requires string arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiString(a.value.lower())
@@ -2499,7 +2499,7 @@ class MenaiVM:
         """STRING_TRIM dest, src0: r_dest = (string-trim r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-trim' requires string arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiString(a.value.strip())
@@ -2511,7 +2511,7 @@ class MenaiVM:
         """STRING_TRIM_LEFT dest, src0: r_dest = (string-trim-left r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-trim-left' requires string arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiString(a.value.lstrip())
@@ -2523,7 +2523,7 @@ class MenaiVM:
         """STRING_TRIM_RIGHT dest, src0: r_dest = (string-trim-right r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-trim-right' requires string arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiString(a.value.rstrip())
@@ -2535,11 +2535,11 @@ class MenaiVM:
         """STRING_TO_INTEGER dest, src0, src1: r_dest = (string->integer r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string->integer' requires string arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string->integer' requires integer arguments, got {b.type_name()}")
 
         s = a.value
@@ -2561,7 +2561,7 @@ class MenaiVM:
         """STRING_TO_NUMBER dest, src0: r_dest = (string->number r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string->number' requires string arguments, got {a.type_name()}")
 
         s = a.value
@@ -2588,11 +2588,11 @@ class MenaiVM:
         """STRING_TO_LIST dest, src0, src1: r_dest = (string->list r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string->list' requires string arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiString):
+        if type(b) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string->list' requires string arguments, got {b.type_name()}")
 
         if b.value == "":
@@ -2608,11 +2608,11 @@ class MenaiVM:
         """STRING_REF dest, src0, src1: r_dest = (string-ref r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-ref' requires string arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-ref' requires integer arguments, got {b.type_name()}")
 
         s = a.value
@@ -2629,11 +2629,11 @@ class MenaiVM:
         """STRING_PREFIX_P dest, src0, src1: r_dest = (string-prefix? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-prefix?' requires string arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiString):
+        if type(b) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-prefix?' requires string arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value.startswith(b.value))
@@ -2645,11 +2645,11 @@ class MenaiVM:
         """STRING_SUFFIX_P dest, src0, src1: r_dest = (string-suffix? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-suffix?' requires string arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiString):
+        if type(b) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-suffix?' requires string arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.value.endswith(b.value))
@@ -2661,15 +2661,15 @@ class MenaiVM:
         """STRING_SLICE dest, src0, src1, src2: r_dest = (string-slice r_src0 r_src1 r_src2)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-slice' requires string arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-slice' requires integer arguments, got {b.type_name()}")
 
         c = self.regs[base + instr.src2]
-        if not isinstance(c, MenaiInteger):
+        if type(c) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-slice' requires integer arguments, got {c.type_name()}")
 
         s = a.value
@@ -2700,15 +2700,15 @@ class MenaiVM:
         """STRING_REPLACE dest, src0, src1, src2: r_dest = (string-replace r_src0 r_src1 r_src2)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-replace' requires string arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiString):
+        if type(b) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-replace' requires string arguments, got {b.type_name()}")
 
         c = self.regs[base + instr.src2]
-        if not isinstance(c, MenaiString):
+        if type(c) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-replace' requires string arguments, got {c.type_name()}")
 
         self.regs[base + instr.dest] = MenaiString(a.value.replace(b.value, c.value))
@@ -2720,11 +2720,11 @@ class MenaiVM:
         """STRING_INDEX dest, src0, src1: r_dest = (string-index r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-index' requires string arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiString):
+        if type(b) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-index' requires string arguments, got {b.type_name()}")
 
         idx = a.value.find(b.value)
@@ -2737,7 +2737,7 @@ class MenaiVM:
         """STRING_TO_INTEGER_CODEPOINT dest, src0: r_dest = (string->integer-codepoint r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 f"Function 'string->integer-codepoint' requires a string argument, got {a.type_name()}"
             )
@@ -2757,11 +2757,11 @@ class MenaiVM:
         """STRING_CONCAT dest, src0, src1: r_dest = (string-concat r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiString):
+        if type(a) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-concat' requires string arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiString):
+        if type(b) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'string-concat' requires string arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiString(a.value + b.value)
@@ -2772,7 +2772,7 @@ class MenaiVM:
     ) -> MenaiValue | None:
         """DICT_P dest, src0: r_dest = (dict? r_src0)"""
         base = frame.base
-        self.regs[base + instr.dest] = MenaiBoolean(isinstance(self.regs[base + instr.src0], MenaiDict))
+        self.regs[base + instr.dest] = MenaiBoolean(type(self.regs[base + instr.src0]) is MenaiDict)  # pylint: disable=unidiomatic-typecheck
         return None
 
     def _op_dict_eq_p(  # pylint: disable=useless-return
@@ -2781,11 +2781,11 @@ class MenaiVM:
         """DICT_EQ_P dest, src0, src1: r_dest = (dict=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiDict):
+        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'dict=?' requires dict arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiDict):
+        if type(b) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'dict=?' requires dict arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.pairs == b.pairs)
@@ -2797,11 +2797,11 @@ class MenaiVM:
         """DICT_NEQ_P dest, src0, src1: r_dest = (dict!=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiDict):
+        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'dict!=?' requires dict arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiDict):
+        if type(b) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'dict!=?' requires dict arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a.pairs != b.pairs)
@@ -2813,7 +2813,7 @@ class MenaiVM:
         """DICT_KEYS dest, src0: r_dest = (dict-keys r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiDict):
+        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'dict-keys' requires dict arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiList(tuple(k for k, _ in a.pairs))
@@ -2825,7 +2825,7 @@ class MenaiVM:
         """DICT_VALUES dest, src0: r_dest = (dict-values r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiDict):
+        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'dict-values' requires dict arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiList(tuple(v for _, v in a.pairs))
@@ -2837,7 +2837,7 @@ class MenaiVM:
         """DICT_LENGTH dest, src0: r_dest = (dict-length r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiDict):
+        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'dict-length' requires dict arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiInteger(len(a.pairs))
@@ -2849,7 +2849,7 @@ class MenaiVM:
         """DICT_HAS_P dest, src0, src1: r_dest = (dict-has? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiDict):
+        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'dict-has?' requires dict arguments, got {a.type_name()}")
 
         try:
@@ -2867,7 +2867,7 @@ class MenaiVM:
         """DICT_REMOVE dest, src0, src1: r_dest = (dict-remove r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiDict):
+        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'dict-remove' requires dict arguments, got {a.type_name()}")
 
         try:
@@ -2889,11 +2889,11 @@ class MenaiVM:
         """DICT_MERGE dest, src0, src1: r_dest = (dict-merge r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiDict):
+        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'dict-merge' requires dict arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiDict):
+        if type(b) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'dict-merge' requires dict arguments, got {b.type_name()}")
 
         # Start with self's pairs
@@ -2932,7 +2932,7 @@ class MenaiVM:
         """DICT_SET dest, src0, src1, src2: r_dest = (dict-set r_src0 r_src1 r_src2)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiDict):
+        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'dict-set' requires dict arguments, got {a.type_name()}")
 
         try:
@@ -2969,7 +2969,7 @@ class MenaiVM:
         """DICT_GET dest, src0, src1, src2: r_dest = (dict-get r_src0 r_src1 r_src2)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiDict):
+        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'dict-get' requires dict arguments, got {a.type_name()}")
 
         try:
@@ -2991,7 +2991,7 @@ class MenaiVM:
     ) -> MenaiValue | None:
         """LIST_P dest, src0: r_dest = (list? r_src0)"""
         base = frame.base
-        self.regs[base + instr.dest] = MenaiBoolean(isinstance(self.regs[base + instr.src0], MenaiList))
+        self.regs[base + instr.dest] = MenaiBoolean(type(self.regs[base + instr.src0]) is MenaiList)  # pylint: disable=unidiomatic-typecheck
         return None
 
     def _op_list_eq_p(  # pylint: disable=useless-return
@@ -3000,11 +3000,11 @@ class MenaiVM:
         """LIST_EQ_P dest, src0, src1: r_dest = (list=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list=?' requires list arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiList):
+        if type(b) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list=?' requires list arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a == b)
@@ -3016,11 +3016,11 @@ class MenaiVM:
         """LIST_NEQ_P dest, src0, src1: r_dest = (list!=? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list!=?' requires list arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiList):
+        if type(b) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list!=?' requires list arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(a != b)
@@ -3032,7 +3032,7 @@ class MenaiVM:
         """LIST_PREPEND dest, src0, src1: r_dest = (list-prepend r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-prepend' requires list arguments, got {a.type_name()}")
 
         item = self.regs[base + instr.src1]
@@ -3045,7 +3045,7 @@ class MenaiVM:
         """LIST_APPEND dest, src0, src1: r_dest = (list-append r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-append' requires list arguments, got {a.type_name()}")
 
         item = self.regs[base + instr.src1]
@@ -3058,7 +3058,7 @@ class MenaiVM:
         """LIST_REVERSE dest, src0: r_dest = (list-reverse r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-reverse' requires list arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiList(tuple(reversed(a.elements)))
@@ -3070,7 +3070,7 @@ class MenaiVM:
         """LIST_FIRST dest, src0: r_dest = (list-first r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-first' requires list arguments, got {a.type_name()}")
 
         if not a.elements:
@@ -3085,7 +3085,7 @@ class MenaiVM:
         """LIST_REST dest, src0: r_dest = (list-rest r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-rest' requires list arguments, got {a.type_name()}")
 
         if not a.elements:
@@ -3100,7 +3100,7 @@ class MenaiVM:
         """LIST_LAST dest, src0: r_dest = (list-last r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-last' requires list arguments, got {a.type_name()}")
 
         if not a.elements:
@@ -3115,7 +3115,7 @@ class MenaiVM:
         """LIST_LENGTH dest, src0: r_dest = (list-length r_src0)"""
         base = frame.base
         value = self.regs[base + instr.src0]
-        if not isinstance(value, MenaiList):
+        if type(value) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 f"Function 'list-length' requires list argument, got {value.type_name()}"
             )
@@ -3129,11 +3129,11 @@ class MenaiVM:
         """LIST_REF dest, src0, src1: r_dest = (list-ref r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-ref' requires list arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 f"Function 'list-ref' requires integer index, got {b.type_name()}"
             )
@@ -3156,7 +3156,7 @@ class MenaiVM:
         """LIST_NULL_P dest, src0: r_dest = (list-null? r_src0)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-null?' requires list arguments, got {a.type_name()}")
 
         self.regs[base + instr.dest] = MenaiBoolean(len(a.elements) == 0)
@@ -3168,7 +3168,7 @@ class MenaiVM:
         """LIST_MEMBER_P dest, src0, src1: r_dest = (list-member? r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-member?' requires list arguments, got {a.type_name()}")
 
         item = cast(MenaiValue, self.regs[base + instr.src1])
@@ -3181,7 +3181,7 @@ class MenaiVM:
         """LIST_INDEX dest, src0, src1: r_dest = (list-index r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-index' requires list arguments, got {a.type_name()}")
 
         item = cast(MenaiValue, self.regs[base + instr.src1])
@@ -3200,15 +3200,15 @@ class MenaiVM:
         base = frame.base
         a = self.regs[base + instr.src0]
 
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-slice' requires list arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-slice' requires integer arguments, got {b.type_name()}")
 
         c = self.regs[base + instr.src2]
-        if not isinstance(c, MenaiInteger):
+        if type(c) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-slice' requires integer arguments, got {c.type_name()}")
 
         list_val = a
@@ -3239,7 +3239,7 @@ class MenaiVM:
         """LIST_REMOVE dest, src0, src1: r_dest = (list-remove r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-remove' requires list arguments, got {a.type_name()}")
 
         item = cast(MenaiValue, self.regs[base + instr.src1])
@@ -3253,11 +3253,11 @@ class MenaiVM:
         """LIST_CONCAT dest, src0, src1: r_dest = (list-concat r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-concat' requires list arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiList):
+        if type(b) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list-concat' requires list arguments, got {b.type_name()}")
 
         self.regs[base + instr.dest] = MenaiList(a.elements + b.elements)
@@ -3269,16 +3269,16 @@ class MenaiVM:
         """LIST_TO_STRING dest, src0, src1: r_dest = (list->string r_src0 r_src1)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiList):
+        if type(a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list->string' requires list arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiString):
+        if type(b) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'list->string' requires string arguments, got {b.type_name()}")
 
         parts = []
         for item in a.elements:
-            if not isinstance(item, MenaiString):
+            if type(item) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
                 raise MenaiEvalError(f"list->string requires list of strings, found {item.type_name()}")
 
             parts.append(item.value)
@@ -3292,15 +3292,15 @@ class MenaiVM:
         """RANGE dest, src0, src1, src2: r_dest = (range r_src0 r_src1 r_src2)"""
         base = frame.base
         a = self.regs[base + instr.src0]
-        if not isinstance(a, MenaiInteger):
+        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'range' requires integer arguments, got {a.type_name()}")
 
         b = self.regs[base + instr.src1]
-        if not isinstance(b, MenaiInteger):
+        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'range' requires integer arguments, got {b.type_name()}")
 
         c = self.regs[base + instr.src2]
-        if not isinstance(c, MenaiInteger):
+        if type(c) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(f"Function 'range' requires integer arguments, got {c.type_name()}")
 
         start = a.value
