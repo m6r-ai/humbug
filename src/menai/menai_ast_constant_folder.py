@@ -233,11 +233,14 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
 
             # Check if it's a foldable builtin
             if op_name in self.FOLDABLE_BUILTINS:
-                return self._try_fold_builtin(op_name, list(expr.elements[1:]))
+                return self._try_fold_builtin(op_name, list(expr.elements[1:]), expr)
 
         # Not a foldable call - recursively optimize arguments
         optimized_elements = [self.optimize(elem) for elem in expr.elements]
-        return MenaiASTList(tuple(optimized_elements))
+        return MenaiASTList(
+            tuple(optimized_elements),
+            line=expr.line, column=expr.column, source_file=expr.source_file,
+        )
 
     def _optimize_error(self, expr: MenaiASTList) -> MenaiASTNode:
         """
@@ -246,7 +249,10 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         Currently, we just recursively optimize all elements.
         """
         optimized_elements = [self.optimize(elem) for elem in expr.elements]
-        return MenaiASTList(tuple(optimized_elements))
+        return MenaiASTList(
+            tuple(optimized_elements),
+            line=expr.line, column=expr.column, source_file=expr.source_file,
+        )
 
     def _optimize_if(self, expr: MenaiASTList) -> MenaiASTNode:
         """
@@ -272,7 +278,10 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
         # Can't eliminate, but optimize all branches
         opt_then = self.optimize(then_expr)
         opt_else = self.optimize(else_expr)
-        return MenaiASTList((expr.elements[0], opt_condition, opt_then, opt_else))
+        return MenaiASTList(
+            (expr.elements[0], opt_condition, opt_then, opt_else),
+            line=expr.line, column=expr.column, source_file=expr.source_file,
+        )
 
     def _optimize_let(self, expr: MenaiASTList) -> MenaiASTNode:
         """
@@ -291,26 +300,38 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
             assert isinstance(binding, MenaiASTList) and len(binding.elements) == 2
             var, val = binding.elements
             opt_val = self.optimize(val)
-            opt_bindings.append(MenaiASTList((var, opt_val)))
+            opt_bindings.append(MenaiASTList(
+                (var, opt_val),
+                line=binding.line, column=binding.column, source_file=binding.source_file,
+            ))
 
-        opt_bindings_list = MenaiASTList(tuple(opt_bindings))
+        opt_bindings_list = MenaiASTList(
+            tuple(opt_bindings),
+            line=bindings_list.line, column=bindings_list.column, source_file=bindings_list.source_file,
+        )
 
         # Optimize body
         opt_body = self.optimize(body)
-        return MenaiASTList((form_symbol, opt_bindings_list, opt_body))
+        return MenaiASTList(
+            (form_symbol, opt_bindings_list, opt_body),
+            line=expr.line, column=expr.column, source_file=expr.source_file,
+        )
 
     def _optimize_lambda(self, expr: MenaiASTList) -> MenaiASTNode:
         """Optimize 'lambda' special form: (lambda (params) body)"""
         assert len(expr.elements) == 3  # Earlier semantic analysis should ensure this
         lambda_symbol, params, body = expr.elements
         opt_body = self.optimize(body)
-        return MenaiASTList((lambda_symbol, params, opt_body))
+        return MenaiASTList(
+            (lambda_symbol, params, opt_body),
+            line=expr.line, column=expr.column, source_file=expr.source_file,
+        )
 
     def _optimize_quote(self, expr: MenaiASTList) -> MenaiASTNode:
         """Optimize 'quote' special form - quoted expressions are not evaluated."""
         return expr
 
-    def _try_fold_builtin(self, op_name: str, args: List[MenaiASTNode]) -> MenaiASTNode:
+    def _try_fold_builtin(self, op_name: str, args: List[MenaiASTNode], source_expr: MenaiASTList) -> MenaiASTNode:
         """
         Try to fold a builtin operation.
 
@@ -356,7 +377,10 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
                 pass
 
         # Couldn't fold - return expression with optimized arguments
-        return MenaiASTList((MenaiASTSymbol(op_name),) + tuple(opt_args))
+        return MenaiASTList(
+            (MenaiASTSymbol(op_name),) + tuple(opt_args),
+            line=source_expr.line, column=source_expr.column, source_file=source_expr.source_file,
+        )
 
     def _fold_boolean_eq(self, args: List[MenaiASTNode]) -> MenaiASTNode | None:
         """Fold boolean=?: all args must be booleans."""

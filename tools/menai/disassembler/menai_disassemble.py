@@ -437,7 +437,7 @@ def main() -> int:
 
     try:
         compiler = MenaiCompiler(module_loader=menai)
-        code = compiler.compile(source)
+        code = compiler.compile(source, name=str(source_path))
 
     except Exception as e:
         print(f"Error compiling: {e}", file=sys.stderr)
