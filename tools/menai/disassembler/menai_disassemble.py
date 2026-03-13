@@ -165,49 +165,13 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
         display_name = f"{display_name} [{':'.join(loc_parts)}]"
 
     output = []
-    output.append(f"\n{indent}{'='*70}")
+    output.append(f"{indent}{'-'*70}")
     output.append(f"{indent}Function: {display_name}")
-    output.append(f"{indent}Instructions: {len(code.instructions)}")
-    output.append(f"{indent}Arguments: {code.param_count}")
-    output.append(f"{indent}Captured: {len(code.free_vars)}")
-    output.append(f"{indent}Locals: {code.local_count - code.param_count - len(code.free_vars)}")
-    output.append(f"{indent}Constants: {len(code.constants)}")
-    output.append(f"{indent}Code Objects: {len(code.code_objects)}")
-    output.append(f"{indent}{'='*70}")
-
-    # Show register map for params and captures (only when present)
-    param_count = code.param_count
-    capture_count = len(code.free_vars)
-    if param_count or capture_count:
-        output.append(f"{indent}")
-        output.append(f"{indent}Initial Register Map:")
-        output.append(f"{indent}{'-'*70}")
-        for i, pname in enumerate(code.param_names):
-            rid = f"rp{i}"
-            output.append(f"{indent}{rid:>6}: '{pname}'")
-
-        for i, fname in enumerate(code.free_vars):
-            rid = f"rc{i}"
-            output.append(f"{indent}{rid:>6}: '{fname}'")
-
-        output.append(f"{indent}{'-'*70}")
-
-    # Show constants table
-    if code.constants:
-        output.append(f"{indent}")
-        output.append(f"{indent}Constants Table:")
-        output.append(f"{indent}{'-'*70}")
-        for i, const in enumerate(code.constants):
-            const_str = format_constant(const)
-            cid = f"c{i}"
-            output.append(f"{indent}{cid:>6}: {const_str}")
-
-        output.append(f"{indent}{'-'*70}")
-        output.append(f"{indent}")
+    output.append(f"{indent}{'-'*70}")
 
     # Show code objects table
     if code.code_objects:
-        output.append(f"{indent}Code Objects Table:")
+        output.append(f"{indent}Code Objects: {len(code.code_objects)}")
         output.append(f"{indent}{'-'*70}")
         for i, nested in enumerate(code.code_objects):
             nested_name = clean_name(nested.name) if nested.name else f"<lambda-{i}>"
@@ -219,14 +183,51 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
                 loc_parts.append(f"line {nested.source_line}")
 
             loc_str = f" [{':'.join(loc_parts)}]" if loc_parts else ""
-            coid = f"co{i}"
+            coid = f"x{i}"
             output.append(f"{indent}{coid:>6}: {nested_name}{loc_str}")
 
         output.append(f"{indent}{'-'*70}")
-        output.append(f"{indent}")
+
+    # Show constants table
+    if code.constants:
+        output.append(f"{indent}Constants: {len(code.constants)}")
+        output.append(f"{indent}{'-'*70}")
+        for i, const in enumerate(code.constants):
+            const_str = format_constant(const)
+            cid = f"k{i}"
+            output.append(f"{indent}{cid:>6}: {const_str}")
+
+        output.append(f"{indent}{'-'*70}")
+
+    # Show register map for params and captures (only when present)
+    param_count = code.param_count
+    if param_count:
+        output.append(f"{indent}Inputs: {code.param_count}")
+        output.append(f"{indent}{'-'*70}")
+        for i, pname in enumerate(code.param_names):
+            rid = f"i{i}"
+            output.append(f"{indent}{rid:>6}: '{pname}'")
+
+        output.append(f"{indent}{'-'*70}")
+
+    # Show register map for params and captures (only when present)
+    capture_count = len(code.free_vars)
+    if capture_count:
+        output.append(f"{indent}Captured: {len(code.free_vars)}")
+        output.append(f"{indent}{'-'*70}")
+        for i, fname in enumerate(code.free_vars):
+            rid = f"c{i}"
+            output.append(f"{indent}{rid:>6}: '{fname}'")
+
+        output.append(f"{indent}{'-'*70}")
+
+    locals_count = code.local_count - param_count - capture_count
+    if locals_count:
+        output.append(f"{indent}Locals: {locals_count}")
+        output.append(f"{indent}{'-'*70}")
 
     # Show annotated disassembly
-    output.append(f"{indent}Instructions:")
+    output.append(f"{indent}Instructions: {len(code.instructions)}")
     output.append(f"{indent}{'-'*70}")
 
     # Pre-pass: collect all jump target indices.
@@ -238,7 +239,7 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
         if instr.opcode in (Opcode.JUMP, Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE)
     }
     control_flow_opcodes = {
-        Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE, Opcode.CALL, Opcode.TAIL_CALL, Opcode.APPLY, Opcode.TAIL_APPLY
+        Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE, Opcode.CALL, Opcode.APPLY
     }
 
     for i, instr in enumerate(code.instructions):

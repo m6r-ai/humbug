@@ -411,24 +411,24 @@ def reg_name(slot: int, code: 'CodeObject') -> str:
     """Return the symbolic register name for a slot index within a CodeObject.
 
     Slot layout (all boundaries are fields on CodeObject):
-      rp0..rp(P-1)   params         slots 0..P-1
-      rc0..rc(F-1)   captures       slots P..P+F-1
-      rs0..rs(L-1)   scratch locals slots P+F..P+F+L-1
-      ro0..ro(O-1)   outgoing args  slots P+F+L..P+F+L+O-1
+      i0..i(P-1)   inputs     slots 0..P-1
+      c0..c(F-1)   captures   slots P..P+F-1
+      l0..l(L-1)   locals     slots P+F..P+F+L-1
+      o0..o(O-1)   outputs    slots P+F+L..P+F+L+O-1
     """
     p = code.param_count
     f = len(code.free_vars)
     l = code.local_count - p - f
     if slot < p:
-        return f"rp{slot}"
+        return f"i{slot}"
 
     if slot < p + f:
-        return f"rc{slot - p}"
+        return f"c{slot - p}"
 
     if slot < p + f + l:
-        return f"rs{slot - p - f}"
+        return f"l{slot - p - f}"
 
-    return f"ro{slot - p - f - l}"
+    return f"o{slot - p - f - l}"
 
 
 @dataclass(slots=True)
@@ -489,7 +489,7 @@ class Instruction:
             return f"{rn(self.dest)} = {name}"
 
         if opcode == Opcode.LOAD_CONST:
-            return f"{rn(self.dest)} = LOAD_CONST c{self.src0}"
+            return f"{rn(self.dest)} = LOAD_CONST k{self.src0}"
 
         if opcode == Opcode.LOAD_NAME:
             return f"{rn(self.dest)} = LOAD_NAME n{self.src0}"
@@ -507,7 +507,7 @@ class Instruction:
             return f"JUMP_IF_TRUE {rn(self.src0)}, @{self.src1}"
 
         if opcode == Opcode.MAKE_CLOSURE:
-            return f"{rn(self.dest)} = MAKE_CLOSURE co{self.src0}"
+            return f"{rn(self.dest)} = MAKE_CLOSURE x{self.src0}"
 
         if opcode == Opcode.PATCH_CLOSURE:
             return f"PATCH_CLOSURE {rn(self.src0)}, {self.src1}, {rn(self.src2)}"
