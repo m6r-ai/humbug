@@ -51,47 +51,6 @@ class Frame:
         self.is_sentinel: bool = False
 
 
-def _parallel_move_regs(regs: List[MenaiValue], src_base: int, dst_base: int, n: int) -> None:
-    """
-    Move n values from regs[src_base..src_base+n-1] to regs[dst_base..dst_base+n-1]
-    using parallel (simultaneous) assignment semantics to handle cycles correctly.
-
-    Used by TAIL_CALL and TAIL_APPLY to move arguments from the outgoing zone
-    (src_base = frame.base + local_count) down to the frame's parameter slots
-    (dst_base = frame.base).
-    """
-    if n == 0:
-        return
-
-    # Build (dst, src) pairs as absolute indices, filtering no-ops.
-    pending: dict = {}
-    for i in range(n):
-        dst = dst_base + i
-        src = src_base + i
-        if dst != src:
-            pending[dst] = src
-
-    while pending:
-        srcs = set(pending.values())
-        ready = [dst for dst in pending if dst not in srcs]
-        if ready:
-            for dst in ready:
-                regs[dst] = regs[pending.pop(dst)]
-
-        else:
-            # Cycle: save one value to a Python temp to break it.
-            cycle_dst = next(iter(pending))
-            temp = regs[pending[cycle_dst]]
-            cur = pending[cycle_dst]
-            while cur != cycle_dst:
-                next_src = pending.pop(cur)
-                regs[cur] = regs[next_src]
-                cur = next_src
-
-            pending.pop(cycle_dst)
-            regs[cycle_dst] = temp
-
-
 class MenaiVM:
     """
     Virtual machine for executing Menai bytecode.
@@ -339,36 +298,6 @@ class MenaiVM:
         table[Opcode.RANGE] = self._op_range
         return table
 
-    def _pack_variadic_args(self, func: MenaiFunction, arity: int, base: int) -> None:
-        """
-        Arity-check and in-register variadic-pack for CALL and TAIL_CALL.
-
-        Args are already in self.regs[base .. base+arity-1].
-        For variadic functions, packs excess args into a list in the last slot.
-        Raises MenaiEvalError on arity mismatch.
-        """
-        expected_arity = func.bytecode.param_count
-        if func.bytecode.is_variadic:
-            min_arity = expected_arity - 1
-            if arity < min_arity:
-                func_name = func.name or "<lambda>"
-                raise MenaiEvalError(
-                    message=f"Function '{func_name}' expects at least {min_arity} arguments, got {arity}",
-                    suggestion=f"Provide at least {min_arity} argument{'s' if min_arity != 1 else ''}"
-                )
-
-            rest_count = arity - min_arity
-            rest_elements = tuple(cast(MenaiValue, self.regs[base + min_arity + k]) for k in range(rest_count))
-            self.regs[base + min_arity] = MenaiList(rest_elements)
-            return
-
-        if arity != expected_arity:
-            func_name = func.name or "<lambda>"
-            raise MenaiEvalError(
-                message=f"Function '{func_name}' expects {expected_arity} arguments, got {arity}",
-                suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
-            )
-
     def _max_local_count(
         self,
         code: CodeObject,
@@ -425,8 +354,7 @@ class MenaiVM:
             for func in prelude_functions.values():
                 if isinstance(func, MenaiFunction):
                     n = self._max_local_count(func.bytecode)
-                    if n > max_locals:
-                        max_locals = n
+                    max_locals = max(max_locals, n)
 
         self.regs = cast(List[MenaiValue], [None] * (self._max_frame_depth + 1) * max_locals)
 
@@ -698,7 +626,30 @@ class MenaiVM:
         new_frame.base = base + frame.code.local_count
         new_frame.return_dest = instr.dest
         new_frame.is_sentinel = False
-        self._pack_variadic_args(func, instr.src1, new_frame.base)
+
+        # Pack variadic args if needed, and check arity.
+        arity = instr.src1
+        expected_arity = func.bytecode.param_count
+        if func.bytecode.is_variadic:
+            min_arity = expected_arity - 1
+            if arity < min_arity:
+                func_name = func.name or "<lambda>"
+                raise MenaiEvalError(
+                    message=f"Function '{func_name}' expects at least {min_arity} arguments, got {arity}",
+                    suggestion=f"Provide at least {min_arity} argument{'s' if min_arity != 1 else ''}"
+                )
+
+            rest_count = arity - min_arity
+            rest_elements = tuple(cast(MenaiValue, self.regs[new_frame.base + min_arity + k]) for k in range(rest_count))
+            self.regs[new_frame.base + min_arity] = MenaiList(rest_elements)
+
+        elif arity != expected_arity:
+            func_name = func.name or "<lambda>"
+            raise MenaiEvalError(
+                message=f"Function '{func_name}' expects {expected_arity} arguments, got {arity}",
+                suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
+            )
+
         if func.captured_values:
             for i, captured_val in enumerate(func.captured_values):
                 self.regs[new_frame.base + code.param_count + i] = captured_val
@@ -724,9 +675,33 @@ class MenaiVM:
         local_count = frame.code.local_count
         n_args = instr.src1
 
-        # Parallel-move args from outgoing zone down to base slots 0..n-1.
-        _parallel_move_regs(self.regs, base + local_count, base, n_args)
-        self._pack_variadic_args(func, n_args, base)
+        # Move args from outgoing zone down to base slots 0..n-1.
+        regs = self.regs
+        for i in range(n_args):
+            regs[base + i] = regs[base + local_count + i]
+
+        # Pack variadic args if needed, and check arity.
+        arity = n_args
+        expected_arity = func.bytecode.param_count
+        if func.bytecode.is_variadic:
+            min_arity = expected_arity - 1
+            if arity < min_arity:
+                func_name = func.name or "<lambda>"
+                raise MenaiEvalError(
+                    message=f"Function '{func_name}' expects at least {min_arity} arguments, got {arity}",
+                    suggestion=f"Provide at least {min_arity} argument{'s' if min_arity != 1 else ''}"
+                )
+
+            rest_count = arity - min_arity
+            rest_elements = tuple(cast(MenaiValue, self.regs[base + min_arity + k]) for k in range(rest_count))
+            self.regs[base + min_arity] = MenaiList(rest_elements)
+
+        elif arity != expected_arity:
+            func_name = func.name or "<lambda>"
+            raise MenaiEvalError(
+                message=f"Function '{func_name}' expects {expected_arity} arguments, got {arity}",
+                suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
+            )
 
         frame.code = code
         frame.code_len = len(code.instructions)
@@ -775,7 +750,28 @@ class MenaiVM:
         for i, element in enumerate(arg_list.elements):
             self.regs[callee_base + i] = element
 
-        self._pack_variadic_args(func, arity, callee_base)
+        # Pack variadic args if needed, and check arity.
+        expected_arity = func.bytecode.param_count
+        if func.bytecode.is_variadic:
+            min_arity = expected_arity - 1
+            if arity < min_arity:
+                func_name = func.name or "<lambda>"
+                raise MenaiEvalError(
+                    message=f"Function '{func_name}' expects at least {min_arity} arguments, got {arity}",
+                    suggestion=f"Provide at least {min_arity} argument{'s' if min_arity != 1 else ''}"
+                )
+
+            rest_count = arity - min_arity
+            rest_elements = tuple(cast(MenaiValue, self.regs[callee_base + min_arity + k]) for k in range(rest_count))
+            self.regs[callee_base + min_arity] = MenaiList(rest_elements)
+
+        elif arity != expected_arity:
+            func_name = func.name or "<lambda>"
+            raise MenaiEvalError(
+                message=f"Function '{func_name}' expects {expected_arity} arguments, got {arity}",
+                suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
+            )
+
         if func.captured_values:
             for i, captured_val in enumerate(func.captured_values):
                 self.regs[callee_base + code.param_count + i] = captured_val
@@ -810,14 +806,32 @@ class MenaiVM:
 
         arity = len(arg_list.elements)
         code = func.bytecode
-        local_count = frame.code.local_count
 
-        # Scatter into outgoing zone then move down (parallel semantics).
+        # Unpack our args list into this frame's incoming args
         for i, element in enumerate(arg_list.elements):
-            self.regs[base + local_count + i] = element
+            self.regs[base + i] = element
 
-        _parallel_move_regs(self.regs, base + local_count, base, arity)
-        self._pack_variadic_args(func, arity, base)
+        # Pack variadic args if needed, and check arity.
+        expected_arity = func.bytecode.param_count
+        if func.bytecode.is_variadic:
+            min_arity = expected_arity - 1
+            if arity < min_arity:
+                func_name = func.name or "<lambda>"
+                raise MenaiEvalError(
+                    message=f"Function '{func_name}' expects at least {min_arity} arguments, got {arity}",
+                    suggestion=f"Provide at least {min_arity} argument{'s' if min_arity != 1 else ''}"
+                )
+
+            rest_count = arity - min_arity
+            rest_elements = tuple(cast(MenaiValue, self.regs[base + min_arity + k]) for k in range(rest_count))
+            self.regs[base + min_arity] = MenaiList(rest_elements)
+
+        elif arity != expected_arity:
+            func_name = func.name or "<lambda>"
+            raise MenaiEvalError(
+                message=f"Function '{func_name}' expects {expected_arity} arguments, got {arity}",
+                suggestion=f"Provide exactly {expected_arity} argument{'s' if expected_arity != 1 else ''}"
+            )
 
         frame.code = code
         frame.code_len = len(code.instructions)

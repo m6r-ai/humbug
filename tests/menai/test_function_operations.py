@@ -98,6 +98,14 @@ class TestApplyTailCall:
             "  (if #t (apply add (list 3 4)) 0))"
         ) == 7
 
+    def test_tail_apply_closure(self, menai):
+        # f captures `offset` from its enclosing scope; apply must copy captured_values
+        # into the callee frame via the TAIL_APPLY captured_values branch.
+        assert menai.evaluate(
+            "(let* ((offset 100) (f (lambda (x) (integer+ x offset))))"
+            "  (apply f (list 5)))"
+        ) == 105
+
 
 # ---------------------------------------------------------------------------
 # apply — error cases
@@ -123,6 +131,103 @@ class TestApplyErrors:
             # (lambda (x . rest) ...) needs at least 1 arg
             menai.evaluate(
                 "(let ((f (lambda (x . rest) x))) (apply f (list)))"
+            )
+
+
+# ---------------------------------------------------------------------------
+# apply — non-tail call (APPLY opcode)
+# ---------------------------------------------------------------------------
+
+class TestApplyNonTail:
+    def test_non_tail_apply_fixed_arity(self, menai):
+        # apply result consumed by integer-abs, forcing APPLY rather than TAIL_APPLY.
+        assert menai.evaluate(
+            "(let ((f (lambda (x y) (integer+ x y))))"
+            "  (integer-abs (apply f (list 3 4))))"
+        ) == 7
+
+    def test_non_tail_apply_single_arg(self, menai):
+        assert menai.evaluate(
+            "(let ((f (lambda (x) (integer-neg x))))"
+            "  (integer-abs (apply f (list -9))))"
+        ) == 9
+
+    def test_non_tail_apply_fully_variadic(self, menai):
+        assert menai.evaluate(
+            "(let ((f (lambda (. args) (list-length args))))"
+            "  (integer-abs (apply f (list 1 2 3))))"
+        ) == 3
+
+    def test_non_tail_apply_fully_variadic_empty(self, menai):
+        assert menai.evaluate(
+            "(let ((f (lambda (. args) (list-length args))))"
+            "  (integer-abs (apply f (list))))"
+        ) == 0
+
+    def test_non_tail_apply_mixed_variadic(self, menai):
+        # (lambda (x . rest) ...) called with several args via non-tail apply
+        assert menai.evaluate(
+            "(let ((f (lambda (x . rest) (integer+ x (list-length rest)))))"
+            "  (integer-abs (apply f (list 10 1 2 3))))"
+        ) == 13
+
+    def test_non_tail_apply_result_used_in_arithmetic(self, menai):
+        # Result of non-tail apply participates in a further computation.
+        assert menai.evaluate(
+            "(let ((f (lambda (x y) (integer* x y))))"
+            "  (integer+ (apply f (list 3 4)) 1))"
+        ) == 13
+
+    def test_non_tail_apply_closure(self, menai):
+        # f captures `offset` from its enclosing scope; apply must copy captured_values
+        # into the callee frame via the APPLY captured_values branch.
+        assert menai.evaluate(
+            "(let* ((offset 100) (f (lambda (x) (integer+ x offset))))"
+            "  (integer-abs (apply f (list 5))))"
+        ) == 105
+
+
+# ---------------------------------------------------------------------------
+# apply — non-tail call (APPLY opcode) error cases
+# ---------------------------------------------------------------------------
+
+class TestApplyNonTailErrors:
+    def test_non_tail_apply_non_function(self, menai):
+        # Non-function first arg in non-tail position.
+        with pytest.raises(Exception, match="apply"):
+            menai.evaluate(
+                "(integer-abs (apply 42 (list 1 2)))"
+            )
+
+    def test_non_tail_apply_non_list(self, menai):
+        # Non-list second arg in non-tail position.
+        with pytest.raises(Exception, match="apply"):
+            menai.evaluate(
+                "(integer-abs (apply integer-abs 99))"
+            )
+
+    def test_non_tail_apply_too_few_args_fixed(self, menai):
+        # f expects 2 args; list has 1.
+        with pytest.raises(Exception):
+            menai.evaluate(
+                "(let ((f (lambda (x y) (integer+ x y))))"
+                "  (integer-abs (apply f (list 1))))"
+            )
+
+    def test_non_tail_apply_too_many_args_fixed(self, menai):
+        # f expects 1 arg; list has 2.
+        with pytest.raises(Exception):
+            menai.evaluate(
+                "(let ((f (lambda (x) (integer-abs x))))"
+                "  (integer-abs (apply f (list 1 2))))"
+            )
+
+    def test_non_tail_apply_too_few_args_variadic(self, menai):
+        # f requires at least 2 args (x and y fixed, rest variadic); list has 1.
+        with pytest.raises(Exception):
+            menai.evaluate(
+                "(let ((f (lambda (x y . rest) (integer+ x y))))"
+                "  (integer-abs (apply f (list 1))))"
             )
 
 
@@ -346,6 +451,40 @@ class TestFunctionEquality:
     def test_function_neq_non_function_raises(self, menai):
         with pytest.raises(Exception, match="function!=\\?"):
             menai.evaluate("(function!=? 42 integer+)")
+
+
+# ---------------------------------------------------------------------------
+# First-class call (CALL opcode) — non-tail-position arity errors
+# ---------------------------------------------------------------------------
+
+class TestFirstClassCallArityErrors:
+    def test_non_tail_call_too_few_args_fixed(self, menai):
+        # f expects 2 args; called with 1 in non-tail position (result fed to integer-abs).
+        # Exercises the arity-check branch of _op_call for fixed-arity under-application.
+        with pytest.raises(Exception):
+            menai.evaluate(
+                "(let ((f (lambda (x y) (integer+ x y))))"
+                "  (integer-abs (f 1)))"
+            )
+
+    def test_non_tail_call_too_many_args_fixed(self, menai):
+        # f expects 1 arg; called with 2 in non-tail position (result fed to integer-abs).
+        # Exercises the arity-check branch of _op_call for fixed-arity over-application.
+        with pytest.raises(Exception):
+            menai.evaluate(
+                "(let ((f (lambda (x) (integer-abs x))))"
+                "  (integer-abs (f 1 2)))"
+            )
+
+    def test_non_tail_call_too_few_args_variadic(self, menai):
+        # f requires at least 2 args (x and y are fixed; rest is variadic).
+        # Called with only 1 arg in non-tail position (result fed to integer-abs).
+        # Exercises the min-arity check of _op_call for variadic under-application.
+        with pytest.raises(Exception):
+            menai.evaluate(
+                "(let ((f (lambda (x y . rest) (integer+ x y))))"
+                "  (integer-abs (f 1)))"
+            )
 
 
 # ---------------------------------------------------------------------------
