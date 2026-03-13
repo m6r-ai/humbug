@@ -565,14 +565,14 @@ class TestBytecodeValidator:
         assert exc_info.value.error_type == ValidationErrorType.INVALID_VARIABLE_ACCESS
 
     def test_non_move_dest_in_outgoing_zone_rejected(self):
-        """Test that a non-MOVE op writing to the outgoing zone is caught.
+        """Test that any op writing beyond total_slots is caught.
 
-        LOAD_CONST dest must be < local_count, not local_count + outgoing_arg_slots.
-        local_count=1, outgoing_arg_slots=1 → LOAD_CONST dest=1 is out of bounds.
+        Any dest-writing op may write into the outgoing zone (dest < total_slots).
+        local_count=1, outgoing_arg_slots=1 → total_slots=2, so LOAD_CONST dest=2 is out of bounds.
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),  # dest=1 >= local_count=1 → error
+                Instruction(Opcode.LOAD_CONST, dest=2, src0=0),  # dest=2 >= total_slots=2 → error
                 Instruction(Opcode.RETURN, src0=0),
             ],
             constants=[MenaiInteger(42)],

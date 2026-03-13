@@ -191,8 +191,8 @@ class MenaiBytecodeBuilder:
             names=ctx.names,
             code_objects=ctx.code_objects,
             param_count=0,
-            local_count=slot_map.slot_count,
-            outgoing_arg_slots=ctx.max_outgoing_args,
+            local_count=slot_map.local_count,
+            outgoing_arg_slots=max(slot_map.slot_count - slot_map.local_count, ctx.max_outgoing_args),
             name=name,
         )
 
@@ -254,11 +254,12 @@ class MenaiBytecodeBuilder:
                 continue
 
             if isinstance(instr, MenaiVCodeCall):
-                # Write arguments into the outgoing zone: slots [local_count .. local_count+n-1].
-                # These are physically the callee's parameter slots once the new frame is pushed.
-                local_count = ctx.slot_map.slot_count
+                local_count = ctx.slot_map.local_count
                 for j, arg in enumerate(instr.args):
-                    ctx.emit(Opcode.MOVE, ctx.slot_of(arg), dest=local_count + j)
+                    src = ctx.slot_of(arg)
+                    dst = local_count + j
+                    if src != dst:
+                        ctx.emit(Opcode.MOVE, src, dest=dst)
 
                 n_args = len(instr.args)
                 ctx.max_outgoing_args = max(ctx.max_outgoing_args, n_args)
@@ -267,11 +268,12 @@ class MenaiBytecodeBuilder:
                 continue
 
             if isinstance(instr, MenaiVCodeTailCall):
-                # Write arguments into the outgoing zone; the VM will move them to
-                # base+0..base+n-1 before resetting the frame (parallel-move semantics).
-                local_count = ctx.slot_map.slot_count
+                local_count = ctx.slot_map.local_count
                 for j, arg in enumerate(instr.args):
-                    ctx.emit(Opcode.MOVE, ctx.slot_of(arg), dest=local_count + j)
+                    src = ctx.slot_of(arg)
+                    dst = local_count + j
+                    if src != dst:
+                        ctx.emit(Opcode.MOVE, src, dest=dst)
 
                 n_args = len(instr.args)
                 ctx.max_outgoing_args = max(ctx.max_outgoing_args, n_args)
@@ -450,8 +452,8 @@ class MenaiBytecodeBuilder:
             free_vars=func.free_vars,
             param_names=func.params,
             param_count=param_count,
-            local_count=slot_map.slot_count,
-            outgoing_arg_slots=child_ctx.max_outgoing_args,
+            local_count=slot_map.local_count,
+            outgoing_arg_slots=max(slot_map.slot_count - slot_map.local_count, child_ctx.max_outgoing_args),
             is_variadic=func.is_variadic,
             name=lambda_name,
             source_line=func.source_line,

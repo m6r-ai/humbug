@@ -170,13 +170,13 @@ class BytecodeValidator:
                     )
 
             # Validate dest register bounds for all opcodes that write a dest register.
-            # MOVE dest may reach into the outgoing zone; all other dest-writing ops must stay within local_count.
+            # Any dest-writing op may write into the outgoing zone (dest < total_slots).
+            # The outgoing zone is populated by argument-placement instructions before a CALL.
             if opcode not in self.NO_DEST_OPCODES:
-                max_dest = total_slots if opcode == Opcode.MOVE else code.local_count
-                if instr.dest < 0 or instr.dest >= max_dest:
+                if instr.dest < 0 or instr.dest >= total_slots:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"Destination register {instr.dest} out of bounds (limit: {max_dest})",
+                        f"Destination register {instr.dest} out of bounds (total_slots: {total_slots})",
                         instruction_index=i,
                         opcode=opcode
                     )

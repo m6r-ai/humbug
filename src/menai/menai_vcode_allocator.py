@@ -28,6 +28,10 @@ finding the actual last use index in the flat list regardless of labels.
 MenaiVCodeMove instructions where src and dst are assigned the same slot
 are no-ops and will be eliminated by the peephole pass.
 
+Call argument registers whose last use is the call itself, and whose
+definition has no intervening call barrier, are reassigned directly to the
+outgoing zone (local_count + arg_index) in Phase 3.
+
 Param/free-var register ids
 ----------------------------
 The CFG builder assigns SSA value ids to params and free vars first, in
@@ -67,6 +71,8 @@ class SlotMap:
     """Result of slot allocation for one MenaiVCodeFunction."""
     slots: Dict[int, int]   # register id → slot index
     slot_count: int         # total slots needed (= local_count in CodeObject)
+    local_count: int = 0    # scratch + fixed slots before the outgoing zone
+                            # (= slot_count when there are no outgoing slots)
 
     def slot_of(self, reg: MenaiVCodeReg) -> int:
         """Return the slot assigned to reg.  Asserts it exists."""
@@ -93,12 +99,31 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
     slots: Dict[int, int] = {}
     next_new_slot = 0
 
+    # Pre-compute sets needed for Phase 3 safety checks.
+    # call_result_reg_ids: registers written by CALL or APPLY — the VM writes
+    # return values to these slots; they must stay within local_count.
+    call_result_reg_ids: Set[int] = {
+        instr.dst.id for instr in func.instrs
+        if isinstance(instr, (MenaiVCodeCall, MenaiVCodeApply))
+    }
+
+    # closure_reg_ids: registers written by MAKE_CLOSURE — PATCH_CLOSURE
+    # requires its closure operand within local_count.
+    closure_reg_ids: Set[int] = {
+        instr.dst.id for instr in func.instrs
+        if isinstance(instr, MenaiVCodeMakeClosure)
+    }
+
     # Phase 1: scan the flat instruction list to find the last-use index for
     # every register.
     last_use: Dict[int, int] = {}
+    def_index: Dict[int, int] = {}
 
     for idx, instr in enumerate(func.instrs):
-        _, uses = _defs_uses(instr)
+        defs, uses = _defs_uses(instr)
+        for reg_id in defs:
+            def_index[reg_id] = idx
+
         for reg_id in uses:
             last_use[reg_id] = idx
 
@@ -192,7 +217,61 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
         if s >= slot_count:
             slot_count = s + 1
 
-    return SlotMap(slots=slots, slot_count=slot_count)
+    local_count = slot_count
+
+    # Phase 3: back-propagate outgoing slot assignments.  For each call/tail-call
+    # argument that meets all safety conditions, reassign its scratch slot to
+    # local_count + arg_index so the bytecode emitter needs no MOVE instruction.
+    #
+    # Safety conditions:
+    #   1. Not a fixed register (param or free var) — those have fixed slots.
+    #   2. Not a call/apply result register — VM writes return values within
+    #      local_count; we cannot redirect those writes to the outgoing zone.
+    #   3. Not a closure register — PATCH_CLOSURE requires its operands within
+    #      local_count.
+    #   4. The call is the last use of the register — the outgoing zone is
+    #      clobbered when the call returns, so no later read is safe.
+    #   5. No call or apply between the register's definition and this call —
+    #      a prior call would have already written local_count + arg_index.
+    max_outgoing_index = -1
+    for call_idx, instr in enumerate(func.instrs):
+        if not isinstance(instr, (MenaiVCodeCall, MenaiVCodeTailCall)):
+            continue
+
+        for arg_index, arg in enumerate(instr.args):
+            reg_id = arg.id
+
+            if reg_id < fixed_count:
+                continue
+
+            if reg_id in call_result_reg_ids:
+                continue
+
+            if reg_id in closure_reg_ids:
+                continue
+
+            if last_use.get(reg_id, -1) != call_idx:
+                continue
+
+            # Condition 5: scan for a call/apply barrier between def and use.
+            reg_def = def_index.get(reg_id, 0)
+            barrier = False
+            for scan_idx in range(reg_def + 1, call_idx):
+                if isinstance(func.instrs[scan_idx], (MenaiVCodeCall, MenaiVCodeApply,
+                                                       MenaiVCodeTailCall, MenaiVCodeTailApply)):
+                    barrier = True
+                    break
+
+            if barrier:
+                continue
+
+            slots[reg_id] = local_count + arg_index
+            max_outgoing_index = max(max_outgoing_index, arg_index)
+
+    if max_outgoing_index >= 0:
+        slot_count = local_count + max_outgoing_index + 1
+
+    return SlotMap(slots=slots, slot_count=slot_count, local_count=local_count)
 
 
 def _defs_uses(instr: MenaiVCodeInstr) -> Tuple[List[int], List[int]]:
