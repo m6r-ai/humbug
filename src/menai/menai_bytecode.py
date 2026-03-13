@@ -11,10 +11,6 @@ def _op(n: int, arg_count: int = 0) -> Tuple[int, int]:
     """Helper to construct an Opcode value: (integer_value, arg_count).
 
     arg_count is the number of instruction-stream arguments the opcode encodes
-    (i.e. fields read from the bytecode stream, not operands popped from the stack):
-      0 — all operands come from the value stack (the common case for primitives)
-      1 — one immediate argument follows the opcode in the stream
-      2 — two immediate arguments follow the opcode in the stream
     """
     return (n, arg_count)
 
@@ -53,10 +49,6 @@ class Opcode(IntEnum):
     LOAD_NAME = _op(6, 1)               # r_dest = globals[names[src0]]
     MOVE = _op(7, 1)                    # r_dest = r_src0  (register copy)
 
-    # Stack / register transfer
-    PUSH = _op(10, 1)                   # PUSH src0  — push register src0 onto the call stack
-    POP = _op(11)                       # r_dest = POP — pop call stack top into register dest
-
     # Control flow
     JUMP = _op(20, 1)                   # Unconditional jump: JUMP offset
     JUMP_IF_FALSE = _op(21, 2)          # JUMP_IF_FALSE r_src0, @src1 — jump to src1 if r_src0 is false
@@ -68,9 +60,8 @@ class Opcode(IntEnum):
     PATCH_CLOSURE = _op(31, 3)          # r_src0.captures[src1] = r_src2
     CALL = _op(32, 2)                   # r_dest = CALL r_src0 src1 — func in src0, arity in src1, result to dest
     TAIL_CALL = _op(33, 2)              # TAIL_CALL r_src0 src1 — func in src0, arity in src1, no dest
-    APPLY = _op(34, 1)                  # r_dest = APPLY r_src0 — func in src0, arg_list on stack, result to dest
-    TAIL_APPLY = _op(35, 1)             # TAIL_APPLY r_src0 — func in src0, arg_list on stack, no dest
-    ENTER = _op(36, 1)                  # ENTER n — pop n args from stack into registers 0..n-1
+    APPLY = _op(34, 2)                  # r_dest = APPLY r_src0 r_src1 — func in src0, arg_list reg in src1, result to dest
+    TAIL_APPLY = _op(35, 2)             # TAIL_APPLY r_src0 r_src1 — func in src0, arg_list reg in src1, no dest
     RETURN = _op(37, 1)                 # RETURN r_src0 — return value in r_src0
 
     # Debugging
@@ -425,7 +416,7 @@ class Instruction:
       dest  — destination register written by this instruction (0 if unused)
       src0  — first source register or instruction-stream immediate
       src1  — second source register or instruction-stream immediate
-      src2  — third source register (unused in current stack-machine phase)
+      src2  — third source register or instruction-stream immediate
     """
     opcode: int  # Plain int (Opcode integer value) for fast VM dispatch table indexing
     dest: int = 0   # destination register (written by MAKE_CLOSURE, POP, and load ops)
@@ -455,15 +446,6 @@ class Instruction:
         """
         opcode = Opcode(self.opcode)
         name = opcode.name
-
-        if opcode == Opcode.ENTER:
-            return f"ENTER {self.src0}"
-
-        if opcode == Opcode.POP:
-            return f"r{self.dest} = POP"
-
-        if opcode == Opcode.PUSH:
-            return f"PUSH r{self.src0}"
 
         if opcode in (Opcode.LOAD_NONE, Opcode.LOAD_TRUE,
                       Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST):
@@ -503,10 +485,10 @@ class Instruction:
             return f"TAIL_CALL r{self.src0}, {self.src1}"
 
         if opcode == Opcode.APPLY:
-            return f"r{self.dest} = APPLY r{self.src0}"
+            return f"r{self.dest} = APPLY r{self.src0} r{self.src1}"
 
         if opcode == Opcode.TAIL_APPLY:
-            return f"TAIL_APPLY r{self.src0}"
+            return f"TAIL_APPLY r{self.src0} r{self.src1}"
 
         if opcode == Opcode.EMIT_TRACE:
             return f"EMIT_TRACE r{self.src0}"
@@ -544,6 +526,7 @@ class CodeObject:
     param_names: List[str] = field(default_factory=list)  # Parameter names (in order, parallel to param_count)
     param_count: int = 0  # Number of parameters (for functions)
     local_count: int = 0  # Number of local variables
+    outgoing_arg_slots: int = 0  # Max args passed in any single call
     is_variadic: bool = False  # True if last param is a rest parameter (packs excess args into a list)
     name: str = "<module>"  # Name for debugging
     source_line: int = 0  # Line number in source code where this function is defined

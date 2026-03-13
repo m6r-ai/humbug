@@ -78,6 +78,7 @@ class _EmitContext:
     constant_map: Dict[tuple, int] = field(default_factory=dict)
     name_map: Dict[str, int] = field(default_factory=dict)
     slot_map: SlotMap = field(default_factory=lambda: SlotMap(slots={}, slot_count=0))
+    max_outgoing_args: int = 0
 
     def slot_of(self, reg: MenaiVCodeReg) -> int:
         """Get the slot index assigned to reg."""
@@ -191,6 +192,7 @@ class MenaiBytecodeBuilder:
             code_objects=ctx.code_objects,
             param_count=0,
             local_count=slot_map.slot_count,
+            outgoing_arg_slots=ctx.max_outgoing_args,
             name=name,
         )
 
@@ -252,30 +254,41 @@ class MenaiBytecodeBuilder:
                 continue
 
             if isinstance(instr, MenaiVCodeCall):
-                for arg in instr.args:
-                    ctx.emit(Opcode.PUSH, ctx.slot_of(arg))
+                # Write arguments into the outgoing zone: slots [local_count .. local_count+n-1].
+                # These are physically the callee's parameter slots once the new frame is pushed.
+                local_count = ctx.slot_map.slot_count
+                for j, arg in enumerate(instr.args):
+                    ctx.emit(Opcode.MOVE, ctx.slot_of(arg), dest=local_count + j)
 
-                ctx.emit(Opcode.CALL, ctx.slot_of(instr.func), len(instr.args), dest=ctx.slot_of(instr.dst))
+                n_args = len(instr.args)
+                ctx.max_outgoing_args = max(ctx.max_outgoing_args, n_args)
+                ctx.emit(Opcode.CALL, ctx.slot_of(instr.func), n_args, dest=ctx.slot_of(instr.dst))
                 i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeTailCall):
-                for arg in instr.args:
-                    ctx.emit(Opcode.PUSH, ctx.slot_of(arg))
+                # Write arguments into the outgoing zone; the VM will move them to
+                # base+0..base+n-1 before resetting the frame (parallel-move semantics).
+                local_count = ctx.slot_map.slot_count
+                for j, arg in enumerate(instr.args):
+                    ctx.emit(Opcode.MOVE, ctx.slot_of(arg), dest=local_count + j)
 
-                ctx.emit(Opcode.TAIL_CALL, ctx.slot_of(instr.func), len(instr.args))
+                n_args = len(instr.args)
+                ctx.max_outgoing_args = max(ctx.max_outgoing_args, n_args)
+                ctx.emit(Opcode.TAIL_CALL, ctx.slot_of(instr.func), n_args)
                 i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeApply):
-                ctx.emit(Opcode.PUSH, ctx.slot_of(instr.arg_list))
                 ctx.emit(Opcode.APPLY, ctx.slot_of(instr.func), dest=ctx.slot_of(instr.dst))
+                # src1 carries the arg_list register; the VM scatters it into the outgoing zone.
+                ctx.instructions[-1].src1 = ctx.slot_of(instr.arg_list)
                 i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeTailApply):
-                ctx.emit(Opcode.PUSH, ctx.slot_of(instr.arg_list))
                 ctx.emit(Opcode.TAIL_APPLY, ctx.slot_of(instr.func))
+                ctx.instructions[-1].src1 = ctx.slot_of(instr.arg_list)
                 i += 1
                 continue
 
@@ -417,9 +430,6 @@ class MenaiBytecodeBuilder:
         child_ctx = _EmitContext(slot_map=slot_map)
         param_count = len(func.params)
 
-        if param_count > 0:
-            child_ctx.emit(Opcode.ENTER, param_count)
-
         self._emit_vcode(func, child_ctx)
 
         if func.binding_name:
@@ -441,6 +451,7 @@ class MenaiBytecodeBuilder:
             param_names=func.params,
             param_count=param_count,
             local_count=slot_map.slot_count,
+            outgoing_arg_slots=child_ctx.max_outgoing_args,
             is_variadic=func.is_variadic,
             name=lambda_name,
             source_line=func.source_line,

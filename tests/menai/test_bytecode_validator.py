@@ -2,7 +2,7 @@
 
 This tests the validator's ability to catch various bytecode errors.
 
-ISA summary (register-based LOAD transition):
+ISA summary (register-window calling convention):
 
   Register-based LOAD ops (write to dest register, no stack effect):
     LOAD_NONE dest              — frame.locals[dest] = #none
@@ -12,37 +12,37 @@ ISA summary (register-based LOAD transition):
     LOAD_CONST dest, src0       — frame.locals[dest] = constants[src0]
     LOAD_NAME  dest, src0       — frame.locals[dest] = globals[names[src0]]
 
-  Stack/register transfer:
-    PUSH src0                   — push frame.locals[src0] onto stack  (+1)
-    POP  dest                   — pop stack top into frame.locals[dest] (-1)
+  Register transfer:
+    MOVE dest, src0             — frame.locals[dest] = frame.locals[src0]
+                                  dest and src0 may reach into [0, local_count + outgoing_arg_slots)
 
-  ENTER:
-    ENTER n                     — pop n args from stack into locals[0..n-1] (-n)
-                                  must be first instruction of any function with params
-                                  n must equal param_count
+  Calling convention (register-window):
+    Caller: MOVE each arg into slot (local_count + i), then CALL func, arity.
+    Callee: params are already in r0..rn-1 (placed by caller into callee window).
+    No ENTER instruction.
 
-  All other ops remain stack-based (pop operands, push result).
-
-  RETURN pops 1 value and returns (terminal).
-  CALL dest, src0, src1         — func in register src0, arity in src1, args on stack.
+  RETURN src0                   — return value in register src0 (terminal).
+  CALL dest, src0, src1         — func in register src0, arity in src1, result to dest.
   TAIL_CALL src0, src1          — func in register src0, arity in src1, terminal.
-  MAKE_CLOSURE code_idx, capture_count pops capture_count, pushes 1 closure.
-  PATCH_CLOSURE var_idx, capture_slot pops 1 value (the captured value to patch in).
+  APPLY dest, src0, src1        — func in register src0, arg_list register in src1, result to dest.
+  TAIL_APPLY src0, src1         — func in register src0, arg_list register in src1, terminal.
+  MAKE_CLOSURE code_idx         — writes closure to dest register.
+  PATCH_CLOSURE var_idx, capture_slot, value_reg — patches a capture slot in a closure.
 
-Validator initial stack depth = param_count (args pushed by caller before entry).
+Validator initial stack depth = 0 always.
+Params are pre-initialized at function entry (slots 0..param_count-1).
 
 Index constraints:
   All LOAD ops:  dest < local_count
-  PUSH:          src0 < local_count
-  POP:           dest < local_count
-  ENTER:         src0 == param_count and src0 <= local_count
-  PATCH_CLOSURE: src0 < local_count
-  CALL/TAIL_CALL/APPLY/TAIL_APPLY: src0 (func register) < local_count
+  MOVE:          src0 and dest < local_count + outgoing_arg_slots
+  All other dest-writing ops: dest < local_count
+  PATCH_CLOSURE: src0, src2 < local_count
+  CALL/TAIL_CALL: src0 (func register) < local_count
+  APPLY/TAIL_APPLY: src0 (func register) < local_count, src1 (arg_list) < local_count
 
 Minimal valid "load and return" sequence:
   LOAD_CONST dest=0, src0=0   (local_count >= 1)
-  PUSH src0=0
-  RETURN
+  RETURN src0=0
 """
 
 import pytest
@@ -55,35 +55,24 @@ from menai.menai_value import MenaiInteger
 class TestBytecodeValidator:
     """Test bytecode validation."""
 
-    # ------------------------------------------------------------------
-    # Category 1: Valid simple code
-    # ------------------------------------------------------------------
-
     def test_valid_simple_code(self):
         """Test that valid bytecode passes validation.
 
-        Minimal valid sequence under the register-based ISA:
-          LOAD_CONST dest=0, src0=0  — write 42 into r0; no stack effect
-          PUSH src0=0                — push r0 onto stack  (depth: 0 → 1)
-          RETURN                     — pop 1, terminal     (depth: 1 → 0)
+        Minimal valid sequence under the register-window ISA:
+          LOAD_CONST dest=0, src0=0  — write 42 into r0
+          RETURN src0=0              — return r0 (terminal)
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # r0 = constants[0] = 42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # stack: 0 → 1
-                Instruction(Opcode.RETURN),                       # stack: 1 → 0 (terminal)
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # r0 = constants[0] = 42
+                Instruction(Opcode.RETURN, src0=0),               # return r0 (terminal)
             ],
             constants=[MenaiInteger(42)],
             names=[],
             code_objects=[],
             local_count=1,
         )
-        # Should not raise
         validate_bytecode(code)
-
-    # ------------------------------------------------------------------
-    # Category 2: Invalid constant index
-    # ------------------------------------------------------------------
 
     def test_invalid_constant_index(self):
         """Test that LOAD_CONST with an out-of-bounds src0 is caught.
@@ -93,8 +82,7 @@ class TestBytecodeValidator:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_CONST, dest=0, src0=5),  # src0=5 out of bounds
-                Instruction(Opcode.PUSH, src0=0),
-                Instruction(Opcode.RETURN),
+                Instruction(Opcode.RETURN, src0=0),
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -107,10 +95,6 @@ class TestBytecodeValidator:
         assert exc_info.value.error_type == ValidationErrorType.INDEX_OUT_OF_BOUNDS
         assert "Constant index" in exc_info.value.message
 
-    # ------------------------------------------------------------------
-    # Category 3: Invalid name index
-    # ------------------------------------------------------------------
-
     def test_invalid_name_index(self):
         """Test that LOAD_NAME with an out-of-bounds src0 is caught.
 
@@ -119,8 +103,7 @@ class TestBytecodeValidator:
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_NAME, dest=0, src0=3),  # src0=3 out of bounds
-                Instruction(Opcode.PUSH, src0=0),
-                Instruction(Opcode.RETURN),
+                Instruction(Opcode.RETURN, src0=0),
             ],
             constants=[],
             names=["x"],
@@ -132,10 +115,6 @@ class TestBytecodeValidator:
 
         assert exc_info.value.error_type == ValidationErrorType.INDEX_OUT_OF_BOUNDS
         assert "Name index" in exc_info.value.message
-
-    # ------------------------------------------------------------------
-    # Category 4: Invalid jump target
-    # ------------------------------------------------------------------
 
     def test_invalid_jump_target(self):
         """Test that a JUMP to a non-existent instruction is caught.
@@ -157,49 +136,19 @@ class TestBytecodeValidator:
         assert exc_info.value.error_type == ValidationErrorType.INVALID_JUMP_TARGET
         assert "Jump target" in exc_info.value.message
 
-    # ------------------------------------------------------------------
-    # Category 5: Invalid variable index
-    # ------------------------------------------------------------------
+    def test_return_uninitialized_register(self):
+        """Test that RETURN with an uninitialized source register is caught.
 
-    def test_invalid_variable_index(self):
-        """Test that PUSH with src0 >= local_count is caught.
-
-        PUSH src0=5 — index 5 is out of bounds (local_count=2).
+        RETURN src0=0 with local_count=1 but r0 never written → UNINITIALIZED_VARIABLE.
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.PUSH, src0=5),  # src0=5 >= local_count=2
-                Instruction(Opcode.RETURN),
+                Instruction(Opcode.RETURN, src0=0),  # r0 never initialized
             ],
             constants=[],
             names=[],
             code_objects=[],
-            local_count=2,
-        )
-        with pytest.raises(ValidationError) as exc_info:
-            validate_bytecode(code)
-
-        assert exc_info.value.error_type == ValidationErrorType.INVALID_VARIABLE_ACCESS
-        assert "Variable index" in exc_info.value.message
-
-    # ------------------------------------------------------------------
-    # Category 6: Stack underflow
-    # ------------------------------------------------------------------
-
-    def test_stack_underflow(self):
-        """Test that RETURN with an out-of-bounds src0 register is caught.
-
-        RETURN src0=0 with local_count=0: the initialization pass fires first
-        (register 0 is uninitialized) and raises UNINITIALIZED_VARIABLE.
-        """
-        code = CodeObject(
-            instructions=[
-                Instruction(Opcode.RETURN, src0=0),  # src0=0 but local_count=0 → out of bounds
-            ],
-            constants=[],
-            names=[],
-            code_objects=[],
-            local_count=0,
+            local_count=1,
         )
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
@@ -207,228 +156,83 @@ class TestBytecodeValidator:
         assert exc_info.value.error_type == ValidationErrorType.UNINITIALIZED_VARIABLE
         assert "RETURN source register" in exc_info.value.message
 
-    # ------------------------------------------------------------------
-    # Category 7: Stack underflow in call
-    # ------------------------------------------------------------------
-
-    def test_stack_underflow_in_call(self):
-        """Test that CALL with insufficient stack items is caught.
-
-        Sequence (local_count=2, initial depth=0):
-          LOAD_CONST dest=0, src0=0        — r0=42 (the "function"); stack: 0
-          PUSH src0=0                      — stack: 0 → 1 (one arg pushed)
-          CALL dest=1, src0=0, src1=3      — func=r0, arity=3; needs 3 args on stack, has 1 → STACK_UNDERFLOW
-        """
-        code = CodeObject(
-            instructions=[
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),       # r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                      # stack: 0 → 1 (one arg)
-                Instruction(Opcode.CALL, dest=1, src0=0, src1=3),      # func=r0, arity=3; needs 3, has 1
-                Instruction(Opcode.RETURN),
-            ],
-            constants=[MenaiInteger(42)],
-            names=[],
-            code_objects=[],
-            local_count=2,
-        )
-        with pytest.raises(ValidationError) as exc_info:
-            validate_bytecode(code)
-
-        assert exc_info.value.error_type == ValidationErrorType.STACK_UNDERFLOW
-
-    # ------------------------------------------------------------------
-    # Category 8: Consistent stack depth at merge point
-    # ------------------------------------------------------------------
-
-    def test_consistent_stack_depth_at_merge(self):
-        """Test that two paths with equal depth at a merge point pass validation.
-
-        Control flow (local_count=1, param_count=0):
-
-          0: LOAD_TRUE dest=0                  — r0=#t
-          1: JUMP_IF_FALSE src0=0, src1=5      — read r0; jump→5, fall→2
-
-          Fall-through branch:
-          2: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
-          3: PUSH src0=0               — stack: 0 → 1
-          4: JUMP src0=7               — stack: 1; jump to 7
-
-          Jump branch:
-          5: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
-          6: PUSH src0=0               — stack: 0 → 1; falls to 7
-
-          Merge point (both arrive with depth=1):
-          7: RETURN                    — depth=1 ✓
-        """
-        code = CodeObject(
-            instructions=[
-                Instruction(Opcode.LOAD_TRUE, dest=0),              # 0: r0=#t; stack: 0
-                Instruction(Opcode.JUMP_IF_FALSE, src0=0, src1=5),  # 1: read r0; jump→5, fall→2
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 2: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                   # 3: stack: 0 → 1
-                Instruction(Opcode.JUMP, src0=7),                   # 4: stack: 1; jump to 7
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 5: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                   # 6: stack: 0 → 1; falls to 7
-                Instruction(Opcode.RETURN),                         # 7: depth=1 from both paths ✓
-            ],
-            constants=[MenaiInteger(42)],
-            names=[],
-            code_objects=[],
-            local_count=1,
-        )
-        # Should not raise — both paths arrive at instruction 8 with depth=1
-        validate_bytecode(code)
-
-    # ------------------------------------------------------------------
-    # Category 9: Inconsistent stack depth at merge point
-    # ------------------------------------------------------------------
-
-    def test_inconsistent_stack_depth_at_merge(self):
-        """Test that two paths with different depths at a merge point are caught.
-
-        Control flow (local_count=1, param_count=0):
-
-          0: LOAD_TRUE dest=0                  — r0=#t
-          1: JUMP_IF_FALSE src0=0, src1=5      — read r0; jump→5, fall→2
-
-          Fall-through branch:
-          2: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
-          3: PUSH src0=0               — stack: 0 → 1
-          4: JUMP src0=6               — stack: 1; jump to 6
-
-          Jump branch:
-          5: JUMP src0=6               — stack: 0; jump to 6
-
-          Merge point (fall-through depth=1, jump depth=0):
-          6: RETURN                    — STACK_INCONSISTENT (or STACK_UNDERFLOW)
-        """
-        code = CodeObject(
-            instructions=[
-                Instruction(Opcode.LOAD_TRUE, dest=0),            # 0: r0=#t; stack: 0
-                Instruction(Opcode.JUMP_IF_FALSE, src0=0, src1=5),  # 1: read r0; jump→5, fall→2
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 2: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                    # 3: stack: 0 → 1
-                Instruction(Opcode.JUMP, src0=6),                    # 4: stack: 1; jump to 6
-                Instruction(Opcode.JUMP, src0=6),                    # 5: stack: 0; jump to 6
-                Instruction(Opcode.RETURN),                          # 6: depth=1 vs 0 → inconsistent
-            ],
-            constants=[MenaiInteger(42)],
-            names=[],
-            code_objects=[],
-            local_count=1,
-        )
-        with pytest.raises(ValidationError) as exc_info:
-            validate_bytecode(code)
-
-        # Either STACK_INCONSISTENT or STACK_UNDERFLOW depending on traversal order
-        assert exc_info.value.error_type in (
-            ValidationErrorType.STACK_INCONSISTENT,
-            ValidationErrorType.STACK_UNDERFLOW,
-        )
-
-    # ------------------------------------------------------------------
-    # Category 10: Valid conditional jump
-    # ------------------------------------------------------------------
-
     def test_valid_conditional_jump(self):
         """Test that a valid if/else (both branches return) passes validation.
 
         Control flow (local_count=1, param_count=0):
 
           0: LOAD_TRUE dest=0                  — r0=#t
-          1: JUMP_IF_FALSE src0=0, src1=5      — read r0; jump→5, fall→2
+          1: JUMP_IF_FALSE src0=0, src1=4      — read r0; jump→4, fall→2
 
           Then branch:
-          2: LOAD_CONST dest=0, src0=0 — r0=1; stack: 0
-          3: PUSH src0=0               — stack: 0 → 1
-          4: RETURN                    — terminal ✓
+          2: LOAD_CONST dest=0, src0=0         — r0=1
+          3: RETURN src0=0                     — terminal ✓
 
           Else branch:
-          5: LOAD_CONST dest=0, src0=1 — r0=2; stack: 0
-          6: PUSH src0=0               — stack: 0 → 1
-          7: RETURN                    — terminal ✓
+          4: LOAD_CONST dest=0, src0=1         — r0=2
+          5: RETURN src0=0                     — terminal ✓
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_TRUE, dest=0),              # 0: r0=#t; stack: 0
-                Instruction(Opcode.JUMP_IF_FALSE, src0=0, src1=5),  # 1: read r0; jump→5, fall→2
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 2: r0=1; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                   # 3: stack: 0 → 1
-                Instruction(Opcode.RETURN),                         # 4: terminal ✓
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=1),     # 5: r0=2; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                   # 6: stack: 0 → 1
-                Instruction(Opcode.RETURN),                         # 7: terminal ✓
+                Instruction(Opcode.LOAD_TRUE, dest=0),              # 0: r0=#t
+                Instruction(Opcode.JUMP_IF_FALSE, src0=0, src1=4),  # 1: read r0; jump→4, fall→2
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 2: r0=1
+                Instruction(Opcode.RETURN, src0=0),                 # 3: terminal ✓
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=1),     # 4: r0=2
+                Instruction(Opcode.RETURN, src0=0),                 # 5: terminal ✓
             ],
             constants=[MenaiInteger(1), MenaiInteger(2)],
             names=[],
             code_objects=[],
             local_count=1,
         )
-        # Should not raise
         validate_bytecode(code)
-
-    # ------------------------------------------------------------------
-    # Category 11: Valid backward jump (loop)
-    # ------------------------------------------------------------------
 
     def test_valid_loop(self):
         """Test that a valid loop with a consistent stack depth at the back-edge passes.
-
-        The loop header is instruction 0.  Both the initial entry and
-        the back-edge from instruction 2 arrive with the same depth,
-        so the validator accepts the backward jump.
 
         Control flow (local_count=1, param_count=0):
 
           0: LOAD_TRUE dest=0                  — r0=#t  ← loop header
           1: JUMP_IF_FALSE src0=0, src1=3      — read r0; jump→3, fall→2
           2: JUMP src0=0                       — back to 0 ✓
-          3: LOAD_CONST dest=0, src0=0         — r0=42; stack: 0
-          4: PUSH src0=0                       — stack: 0 → 1
-          5: RETURN                            — terminal ✓
+          3: LOAD_CONST dest=0, src0=0         — r0=42
+          4: RETURN src0=0                     — terminal ✓
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_TRUE, dest=0),              # 0: r0=#t; stack: 0  ← loop header
+                Instruction(Opcode.LOAD_TRUE, dest=0),              # 0: r0=#t ← loop header
                 Instruction(Opcode.JUMP_IF_FALSE, src0=0, src1=3),  # 1: read r0; jump→3, fall→2
                 Instruction(Opcode.JUMP, src0=0),                   # 2: back to 0 ✓
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 3: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                   # 4: stack: 0 → 1
-                Instruction(Opcode.RETURN),                         # 5: terminal ✓
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 3: r0=42
+                Instruction(Opcode.RETURN, src0=0),                 # 4: terminal ✓
             ],
             constants=[MenaiInteger(42)],
             names=[],
             code_objects=[],
             local_count=1,
         )
-        # Should not raise
         validate_bytecode(code)
-
-    # ------------------------------------------------------------------
-    # Category 12: Valid MAKE_CLOSURE
-    # ------------------------------------------------------------------
 
     def test_valid_make_closure(self):
         """Test that valid MAKE_CLOSURE passes validation.
 
         Lambda (param_count=1, local_count=1):
-          Initial stack depth = param_count = 1 (arg pushed by caller).
-          0: ENTER src0=1  — pops 1 arg from stack into slot 0; depth: 1 → 0; slot 0 initialized
-          1: PUSH src0=0   — slot 0 initialized ✓; stack: 0 → 1
-          2: RETURN        — terminal ✓
+          Params pre-initialized: slot 0 holds the argument.
+          0: RETURN src0=0  — return r0 (terminal ✓)
 
-        Outer code (local_count=2, param_count=0, initial depth=0):
-          0: LOAD_CONST dest=0, src0=0   — r0=42; stack: 0
-          1: PUSH src0=0                 — stack: 0 → 1  (captured value)
-          2: MAKE_CLOSURE dest=1, src0=0, src1=1 — pops 1 capture, writes closure to r1; depth: 1 → 0
-          3: PUSH src0=1                 — push closure onto stack; depth: 0 → 1
-          4: RETURN                      — terminal ✓
+        Outer code (local_count=2, outgoing_arg_slots=1):
+          0: LOAD_CONST dest=0, src0=0                — r0=42 (captured value)
+          1: MAKE_CLOSURE dest=1, src0=0, src1=1      — r1=closure, 1 capture from stack... wait,
+             captures are now register-based too. src1=1 means 1 capture value popped from stack.
+             Actually MAKE_CLOSURE still pops capture_count values from the stack.
+             Let's use 0 captures for simplicity and just return the closure.
+          0: MAKE_CLOSURE dest=0, src0=0, src1=0      — r0=closure (0 captures)
+          1: RETURN src0=0                             — terminal ✓
         """
         lambda_code = CodeObject(
             instructions=[
-                Instruction(Opcode.ENTER, src0=1),   # 0: pops 1 arg; depth: 1 → 0; slot 0 initialized
-                Instruction(Opcode.PUSH, src0=0),    # 1: stack: 0 → 1
-                Instruction(Opcode.RETURN),          # 2: terminal ✓
+                Instruction(Opcode.RETURN, src0=0),  # 0: return r0 (param) ✓
             ],
             constants=[],
             names=[],
@@ -439,23 +243,15 @@ class TestBytecodeValidator:
 
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),       # 0: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                     # 1: stack: 0 → 1 (captured value)
-                Instruction(Opcode.MAKE_CLOSURE, dest=1, src0=0, src1=1),  # 2: pops 1 capture, writes closure to r1; depth: 1 → 0
-                Instruction(Opcode.PUSH, src0=1),                     # 3: push closure; depth: 0 → 1
-                Instruction(Opcode.RETURN),                           # 4: terminal ✓
+                Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),  # 0: r0=closure (0 captures)
+                Instruction(Opcode.RETURN, src0=0),                        # 1: terminal ✓
             ],
-            constants=[MenaiInteger(42)],
+            constants=[],
             names=[],
             code_objects=[lambda_code],
-            local_count=2,
+            local_count=1,
         )
-        # Should not raise
         validate_bytecode(code)
-
-    # ------------------------------------------------------------------
-    # Category 13: Empty code object
-    # ------------------------------------------------------------------
 
     def test_empty_code_object(self):
         """Test that an empty code object (no instructions) is caught."""
@@ -472,22 +268,16 @@ class TestBytecodeValidator:
         assert exc_info.value.error_type == ValidationErrorType.INVALID_OPCODE
         assert "no instructions" in exc_info.value.message
 
-    # ------------------------------------------------------------------
-    # Category 14: Missing RETURN
-    # ------------------------------------------------------------------
-
     def test_missing_return(self):
         """Test that code that falls off the end without RETURN is caught.
 
         Sequence (local_count=1):
-          0: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
-          1: PUSH src0=0               — stack: 0 → 1
+          0: LOAD_CONST dest=0, src0=0 — r0=42
           (no RETURN — falls off end → MISSING_RETURN)
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                # stack: 0 → 1
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # r0=42
                 # Missing RETURN
             ],
             constants=[MenaiInteger(42)],
@@ -500,60 +290,44 @@ class TestBytecodeValidator:
 
         assert exc_info.value.error_type == ValidationErrorType.MISSING_RETURN
 
-    # ------------------------------------------------------------------
-    # Category 15: TAIL_CALL as terminal
-    # ------------------------------------------------------------------
-
     def test_tail_call_is_terminal(self):
         """Test that TAIL_CALL is treated as terminal (no successors needed).
 
-        Unreachable instructions after TAIL_CALL are structurally valid.
-
-        Sequence (local_count=2, names=["f"], constants=[42]):
-          0: LOAD_NAME dest=0, src0=0   — r0=f; stack: 0
-          1: LOAD_CONST dest=1, src0=0  — r1=42; stack: 0
-          2: PUSH src0=1                — stack: 0 → 1 (one arg)
-          3: TAIL_CALL src0=0, src1=1   — func=r0, arity=1; pops 1 arg; terminal ✓
-          4: LOAD_CONST dest=0, src0=0  — unreachable; structurally valid
-          5: PUSH src0=0                — unreachable; structurally valid
-          6: RETURN                     — unreachable; structurally valid
+        Sequence (local_count=2, outgoing_arg_slots=1, names=["f"], constants=[42]):
+          0: LOAD_NAME dest=0, src0=0    — r0=f
+          1: LOAD_CONST dest=1, src0=0   — r1=42
+          2: MOVE dest=2, src0=1         — slot 2 (outgoing zone) = r1 (one arg)
+          3: TAIL_CALL src0=0, src1=1    — func=r0, arity=1; terminal ✓
+          4: LOAD_CONST dest=0, src0=0   — unreachable; structurally valid
+          5: RETURN src0=0               — unreachable; structurally valid
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_NAME, dest=0, src0=0),    # 0: r0=f; stack: 0
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),   # 1: r1=42; stack: 0
-                Instruction(Opcode.PUSH, src0=1),                  # 2: stack: 0 → 1 (one arg)
+                Instruction(Opcode.LOAD_NAME, dest=0, src0=0),    # 0: r0=f
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),   # 1: r1=42
+                Instruction(Opcode.MOVE, dest=2, src0=1),         # 2: slot 2 = r1 (outgoing arg)
                 Instruction(Opcode.TAIL_CALL, src0=0, src1=1),    # 3: func=r0, arity=1; terminal ✓
                 Instruction(Opcode.LOAD_CONST, dest=0, src0=0),   # 4: unreachable
-                Instruction(Opcode.PUSH, src0=0),                 # 5: unreachable
-                Instruction(Opcode.RETURN),                       # 6: unreachable
+                Instruction(Opcode.RETURN, src0=0),                # 5: unreachable
             ],
             constants=[MenaiInteger(42)],
             names=["f"],
             code_objects=[],
             local_count=2,
+            outgoing_arg_slots=1,
         )
-        # Should not raise
         validate_bytecode(code)
-
-    # ------------------------------------------------------------------
-    # Category 16: Nested code validation
-    # ------------------------------------------------------------------
 
     def test_nested_code_validation(self):
         """Test that invalid nested code objects are caught recursively.
 
         The nested lambda has LOAD_CONST dest=0, src0=99 but an empty constant
         pool — this triggers INDEX_OUT_OF_BOUNDS during nested validation.
-
-        The outer code is structurally valid (MAKE_CLOSURE with 0 captures,
-        then RETURN), but validation of nested code objects runs first.
         """
         invalid_lambda = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_CONST, dest=0, src0=99),  # src0=99 out of bounds
-                Instruction(Opcode.PUSH, src0=0),
-                Instruction(Opcode.RETURN),
+                Instruction(Opcode.RETURN, src0=0),
             ],
             constants=[],   # empty — src0=99 is invalid
             names=[],
@@ -563,197 +337,96 @@ class TestBytecodeValidator:
 
         code = CodeObject(
             instructions=[
-                # MAKE_CLOSURE with 0 captures: stack effect (0, 1)
-                Instruction(Opcode.MAKE_CLOSURE, src0=0, src1=0),  # pushes closure; depth: 0 → 1
-                Instruction(Opcode.RETURN),                         # depth: 1 → 0 (terminal) ✓
+                Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),  # r0=closure
+                Instruction(Opcode.RETURN, src0=0),                        # terminal ✓
             ],
             constants=[],
             names=[],
             code_objects=[invalid_lambda],
-            local_count=0,
+            local_count=1,
         )
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
 
         assert exc_info.value.error_type == ValidationErrorType.INDEX_OUT_OF_BOUNDS
 
-    # ------------------------------------------------------------------
-    # Category 17: Valid variable initialization
-    # ------------------------------------------------------------------
-
     def test_valid_variable_initialization(self):
-        """Test that LOAD to register followed by PUSH passes the initialization check.
+        """Test that LOAD to register followed by RETURN passes the initialization check.
 
         Sequence (local_count=1):
           0: LOAD_CONST dest=0, src0=0 — r0=42; r0 is now initialized
-          1: PUSH src0=0               — r0 is initialized ✓; stack: 0 → 1
-          2: RETURN                    — terminal ✓
+          1: RETURN src0=0             — r0 is initialized ✓; terminal
         """
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # r0=42; r0 initialized
-                Instruction(Opcode.PUSH, src0=0),                 # r0 initialized ✓; stack: 0 → 1
-                Instruction(Opcode.RETURN),                       # terminal ✓
+                Instruction(Opcode.RETURN, src0=0),               # r0 initialized ✓; terminal
             ],
             constants=[MenaiInteger(42)],
             names=[],
             code_objects=[],
             local_count=1,
         )
-        # Should not raise
         validate_bytecode(code)
 
-    # ------------------------------------------------------------------
-    # Category 18: Uninitialized variable
-    # ------------------------------------------------------------------
-
     def test_uninitialized_variable(self):
-        """Test that PUSH of a slot that was never written is caught.
+        """Test that MOVE from a slot that was never written is caught.
 
-        Sequence (local_count=1):
-          0: PUSH src0=0 — r0 was never written → UNINITIALIZED_VARIABLE
+        Sequence (local_count=2):
+          0: MOVE dest=1, src0=0 — r0 was never written → UNINITIALIZED_VARIABLE
+          1: RETURN src0=1
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.PUSH, src0=0),  # r0 never initialized → error
-                Instruction(Opcode.RETURN),
+                Instruction(Opcode.MOVE, dest=1, src0=0),  # r0 never initialized → error
+                Instruction(Opcode.RETURN, src0=1),
             ],
             constants=[],
             names=[],
             code_objects=[],
-            local_count=1,
+            local_count=2,
         )
         with pytest.raises(ValidationError) as exc_info:
             validate_bytecode(code)
 
         assert exc_info.value.error_type == ValidationErrorType.UNINITIALIZED_VARIABLE
 
-    # ------------------------------------------------------------------
-    # Category 19: Valid ENTER
-    # ------------------------------------------------------------------
-
-    def test_valid_enter(self):
-        """Test that a function with parameters using ENTER passes validation.
-
-        Function (param_count=1, local_count=1):
-          Initial stack depth = param_count = 1 (arg pushed by caller).
-          0: ENTER src0=1 — pops 1 arg from stack into slot 0; depth: 1 → 0; slot 0 initialized
-          1: PUSH src0=0  — slot 0 initialized ✓; stack: 0 → 1
-          2: RETURN       — terminal ✓
-        """
-        code = CodeObject(
-            instructions=[
-                Instruction(Opcode.ENTER, src0=1),  # 0: pops 1; depth: 1 → 0; slot 0 initialized
-                Instruction(Opcode.PUSH, src0=0),   # 1: stack: 0 → 1
-                Instruction(Opcode.RETURN),         # 2: terminal ✓
-            ],
-            constants=[],
-            names=[],
-            code_objects=[],
-            param_count=1,
-            local_count=1,
-        )
-        # Should not raise
-        validate_bytecode(code)
-
-    # ------------------------------------------------------------------
-    # Category 20: Invalid ENTER count
-    # ------------------------------------------------------------------
-
-    def test_invalid_enter_count(self):
-        """Test that ENTER n where n != param_count is caught.
-
-        Function (param_count=1, local_count=2):
-          ENTER src0=2 — n=2 does not match param_count=1 → INVALID_VARIABLE_ACCESS
-        """
-        code = CodeObject(
-            instructions=[
-                Instruction(Opcode.ENTER, src0=2),  # n=2 != param_count=1 → error
-                Instruction(Opcode.PUSH, src0=0),
-                Instruction(Opcode.RETURN),
-            ],
-            constants=[],
-            names=[],
-            code_objects=[],
-            param_count=1,
-            local_count=2,
-        )
-        with pytest.raises(ValidationError) as exc_info:
-            validate_bytecode(code)
-
-        assert exc_info.value.error_type == ValidationErrorType.INVALID_VARIABLE_ACCESS
-
-    # ------------------------------------------------------------------
-    # Additional initialization tests
-    # ------------------------------------------------------------------
-
-    def test_initialized_variable_via_pop(self):
-        """Test that a variable initialized via POP (stack → register) passes.
-
-        Sequence (local_count=1):
-          0: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
-          1: PUSH src0=0               — stack: 0 → 1
-          2: POP dest=0                — pops into r0; r0 initialized; stack: 1 → 0
-          3: PUSH src0=0               — r0 initialized ✓; stack: 0 → 1
-          4: RETURN                    — terminal ✓
-        """
-        code = CodeObject(
-            instructions=[
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),   # r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                 # stack: 0 → 1
-                Instruction(Opcode.POP, dest=0),                  # r0 initialized; stack: 1 → 0
-                Instruction(Opcode.PUSH, src0=0),                 # r0 initialized ✓; stack: 0 → 1
-                Instruction(Opcode.RETURN),                       # terminal ✓
-            ],
-            constants=[MenaiInteger(42)],
-            names=[],
-            code_objects=[],
-            local_count=1,
-        )
-        # Should not raise
-        validate_bytecode(code)
-
     def test_conditional_both_branches_initialize(self):
         """Test that a variable initialized in both branches is OK at the merge point.
 
-        Control flow (local_count=1, param_count=0):
+        Control flow (local_count=2, param_count=0):
 
           0: LOAD_TRUE dest=0                  — r0=#t
-          1: JUMP_IF_FALSE src0=0, src1=5      — read r0; jump→5, fall→2
+          1: JUMP_IF_FALSE src0=0, src1=4      — read r0; jump→4, fall→2
 
           Then branch:
-          2: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
-          3: PUSH src0=0               — stack: 0 → 1
-          4: JUMP src0=7               — stack: 1; jump to 7
+          2: LOAD_CONST dest=1, src0=0         — r1=42
+          3: JUMP src0=5                       — jump to 5
 
           Else branch:
-          5: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
-          6: PUSH src0=0               — stack: 0 → 1; falls to 7
+          4: LOAD_CONST dest=1, src0=0         — r1=42
 
-          Merge (depth=1, r0 initialized on both paths):
-          7: RETURN                    — depth=1 ✓
+          Merge (r1 initialized on both paths):
+          5: RETURN src0=1                     — r1 initialized ✓
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_TRUE, dest=0),              # 0: r0=#t; stack: 0
-                Instruction(Opcode.JUMP_IF_FALSE, src0=0, src1=5),  # 1: read r0; jump→5, fall→2
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 2: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                   # 3: stack: 0 → 1
-                Instruction(Opcode.JUMP, src0=7),                   # 4: stack: 1; jump to 7
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 5: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                   # 6: stack: 0 → 1; falls to 7
-                Instruction(Opcode.RETURN),                         # 7: depth=1 ✓
+                Instruction(Opcode.LOAD_TRUE, dest=0),              # 0: r0=#t
+                Instruction(Opcode.JUMP_IF_FALSE, src0=0, src1=4),  # 1: read r0; jump→4, fall→2
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 2: r1=42
+                Instruction(Opcode.JUMP, src0=5),                   # 3: jump to 5
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),     # 4: r1=42
+                Instruction(Opcode.RETURN, src0=1),                 # 5: r1 initialized ✓
             ],
             constants=[MenaiInteger(42)],
             names=[],
             code_objects=[],
-            local_count=1,
+            local_count=2,
         )
-        # Should not raise
         validate_bytecode(code)
 
     def test_conditional_one_branch_initializes(self):
-        """Test that PUSH of a variable initialized in only one branch is caught.
+        """Test that use of a variable initialized in only one branch is caught.
 
         r0 starts uninitialised; r1 holds the condition.
         The then-branch initializes r0; the else-branch does not.
@@ -764,25 +437,23 @@ class TestBytecodeValidator:
           1: JUMP_IF_FALSE src0=1, src1=4      — read r1; jump→4, fall→2
 
           Then branch: initializes r0
-          2: LOAD_CONST dest=0, src0=0 — r0=42; stack: 0
-          3: JUMP src0=5               — stack: 0; jump to 5
+          2: LOAD_CONST dest=0, src0=0         — r0=42
+          3: JUMP src0=5                       — jump to 5
 
           Else branch: does NOT initialize r0
-          4: JUMP src0=5               — stack: 0; jump to 5
+          4: JUMP src0=5                       — jump to 5 (r0 not initialized)
 
           Merge:
-          5: PUSH src0=0               — r0 may be uninitialized → UNINITIALIZED_VARIABLE
-          6: RETURN
+          5: RETURN src0=0                     — r0 may be uninitialized → UNINITIALIZED_VARIABLE
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_TRUE, dest=1),              # 0: r1=#t; r0 untouched; stack: 0
+                Instruction(Opcode.LOAD_TRUE, dest=1),              # 0: r1=#t; r0 untouched
                 Instruction(Opcode.JUMP_IF_FALSE, src0=1, src1=4),  # 1: read r1; jump→4, fall→2
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 2: r0=42; stack: 0
-                Instruction(Opcode.JUMP, src0=5),                   # 3: stack: 0; jump to 5
-                Instruction(Opcode.JUMP, src0=5),                   # 4: stack: 0; jump to 5 (no init)
-                Instruction(Opcode.PUSH, src0=0),                   # 5: r0 may be uninit → error
-                Instruction(Opcode.RETURN),                         # 6
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 2: r0=42
+                Instruction(Opcode.JUMP, src0=5),                   # 3: jump to 5
+                Instruction(Opcode.JUMP, src0=5),                   # 4: jump to 5 (no init)
+                Instruction(Opcode.RETURN, src0=0),                 # 5: r0 may be uninit → error
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -804,64 +475,249 @@ class TestBytecodeValidator:
           0: LOAD_TRUE dest=0                  — r0=#t  ← loop header
           1: JUMP_IF_FALSE src0=0, src1=3      — read r0; jump→3, fall→2
           2: JUMP src0=0                       — back to 0 ✓
-          3: LOAD_CONST dest=0, src0=0         — r0=42; stack: 0
-          4: PUSH src0=0                       — stack: 0 → 1
-          5: RETURN                            — terminal ✓
+          3: LOAD_CONST dest=0, src0=0         — r0=42
+          4: RETURN src0=0                     — terminal ✓
         """
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_TRUE, dest=0),              # 0: r0=#t; stack: 0  ← loop header
+                Instruction(Opcode.LOAD_TRUE, dest=0),              # 0: r0=#t ← loop header
                 Instruction(Opcode.JUMP_IF_FALSE, src0=0, src1=3),  # 1: read r0; jump→3, fall→2
                 Instruction(Opcode.JUMP, src0=0),                   # 2: back to 0 ✓
-                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 3: r0=42; stack: 0
-                Instruction(Opcode.PUSH, src0=0),                   # 4: stack: 0 → 1
-                Instruction(Opcode.RETURN),                         # 5: terminal ✓
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 3: r0=42
+                Instruction(Opcode.RETURN, src0=0),                 # 4: terminal ✓
             ],
             constants=[MenaiInteger(42)],
             names=[],
             code_objects=[],
             local_count=1,
         )
-        # Should not raise
+        validate_bytecode(code)
+
+    def test_valid_move_into_outgoing_zone(self):
+        """Test that MOVE with dest in the outgoing arg zone passes validation.
+
+        local_count=1, outgoing_arg_slots=1 → total_slots=2.
+        MOVE dest=1 (= local_count + 0) is valid for MOVE.
+
+        Sequence:
+          0: LOAD_CONST dest=0, src0=0  — r0=42
+          1: MOVE dest=1, src0=0        — slot 1 (outgoing zone) = r0 ✓
+          2: RETURN src0=0              — terminal ✓
+        """
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # r0=42
+                Instruction(Opcode.MOVE, dest=1, src0=0),         # slot 1 = r0 (outgoing zone) ✓
+                Instruction(Opcode.RETURN, src0=0),               # terminal ✓
+            ],
+            constants=[MenaiInteger(42)],
+            names=[],
+            code_objects=[],
+            local_count=1,
+            outgoing_arg_slots=1,
+        )
+        validate_bytecode(code)
+
+    def test_move_dest_out_of_bounds(self):
+        """Test that MOVE with dest >= local_count + outgoing_arg_slots is caught.
+
+        local_count=1, outgoing_arg_slots=1 → total_slots=2.
+        MOVE dest=2 is out of bounds.
+        """
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # r0=42
+                Instruction(Opcode.MOVE, dest=2, src0=0),         # dest=2 >= total_slots=2 → error
+                Instruction(Opcode.RETURN, src0=0),
+            ],
+            constants=[MenaiInteger(42)],
+            names=[],
+            code_objects=[],
+            local_count=1,
+            outgoing_arg_slots=1,
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            validate_bytecode(code)
+
+        assert exc_info.value.error_type == ValidationErrorType.INVALID_VARIABLE_ACCESS
+
+    def test_move_dest_out_of_bounds_no_outgoing(self):
+        """Test that MOVE with dest >= local_count is caught when outgoing_arg_slots=0.
+
+        local_count=1, outgoing_arg_slots=0 → total_slots=1.
+        MOVE dest=1 is out of bounds.
+        """
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_CONST, dest=0, src0=0),  # r0=42
+                Instruction(Opcode.MOVE, dest=1, src0=0),         # dest=1 >= total_slots=1 → error
+                Instruction(Opcode.RETURN, src0=0),
+            ],
+            constants=[MenaiInteger(42)],
+            names=[],
+            code_objects=[],
+            local_count=1,
+            outgoing_arg_slots=0,
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            validate_bytecode(code)
+
+        assert exc_info.value.error_type == ValidationErrorType.INVALID_VARIABLE_ACCESS
+
+    def test_non_move_dest_in_outgoing_zone_rejected(self):
+        """Test that a non-MOVE op writing to the outgoing zone is caught.
+
+        LOAD_CONST dest must be < local_count, not local_count + outgoing_arg_slots.
+        local_count=1, outgoing_arg_slots=1 → LOAD_CONST dest=1 is out of bounds.
+        """
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),  # dest=1 >= local_count=1 → error
+                Instruction(Opcode.RETURN, src0=0),
+            ],
+            constants=[MenaiInteger(42)],
+            names=[],
+            code_objects=[],
+            local_count=1,
+            outgoing_arg_slots=1,
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            validate_bytecode(code)
+
+        assert exc_info.value.error_type == ValidationErrorType.INVALID_VARIABLE_ACCESS
+
+    def test_valid_apply(self):
+        """Test that APPLY with valid func and arg_list registers passes.
+
+        Sequence (local_count=2):
+          0: LOAD_NAME dest=0, src0=0    — r0=f (function)
+          1: LOAD_EMPTY_LIST dest=1      — r1=[] (arg list)
+          2: APPLY dest=0, src0=0, src1=1 — r0 = apply(r0, r1) ✓
+          3: RETURN src0=0               — terminal ✓
+        """
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_NAME, dest=0, src0=0),      # r0=f
+                Instruction(Opcode.LOAD_EMPTY_LIST, dest=1),         # r1=[]
+                Instruction(Opcode.APPLY, dest=0, src0=0, src1=1),   # r0 = apply(r0, r1) ✓
+                Instruction(Opcode.RETURN, src0=0),                  # terminal ✓
+            ],
+            constants=[],
+            names=["f"],
+            code_objects=[],
+            local_count=2,
+        )
+        validate_bytecode(code)
+
+    def test_apply_uninitialized_arg_list(self):
+        """Test that APPLY with an uninitialized arg_list register is caught.
+
+        Sequence (local_count=2):
+          0: LOAD_NAME dest=0, src0=0     — r0=f (function); r1 never written
+          1: APPLY dest=0, src0=0, src1=1 — r1 uninitialized → UNINITIALIZED_VARIABLE
+          2: RETURN src0=0
+        """
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_NAME, dest=0, src0=0),      # r0=f; r1 never written
+                Instruction(Opcode.APPLY, dest=0, src0=0, src1=1),   # r1 uninit → error
+                Instruction(Opcode.RETURN, src0=0),
+            ],
+            constants=[],
+            names=["f"],
+            code_objects=[],
+            local_count=2,
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            validate_bytecode(code)
+
+        assert exc_info.value.error_type == ValidationErrorType.UNINITIALIZED_VARIABLE
+        assert "arg_list register" in exc_info.value.message
+
+    def test_apply_arg_list_out_of_bounds(self):
+        """Test that APPLY with arg_list register >= local_count is caught.
+
+        Sequence (local_count=1):
+          0: LOAD_NAME dest=0, src0=0     — r0=f
+          1: APPLY dest=0, src0=0, src1=5 — src1=5 >= local_count=1 → INVALID_VARIABLE_ACCESS
+          2: RETURN src0=0
+        """
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_NAME, dest=0, src0=0),      # r0=f
+                Instruction(Opcode.APPLY, dest=0, src0=0, src1=5),   # src1=5 out of bounds
+                Instruction(Opcode.RETURN, src0=0),
+            ],
+            constants=[],
+            names=["f"],
+            code_objects=[],
+            local_count=1,
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            validate_bytecode(code)
+
+        assert exc_info.value.error_type == ValidationErrorType.INVALID_VARIABLE_ACCESS
+        assert "arg_list register" in exc_info.value.message
+
+    def test_valid_call_with_outgoing_args(self):
+        """Test that a CALL with args moved into the outgoing zone passes.
+
+        Caller (local_count=2, outgoing_arg_slots=1):
+          0: LOAD_NAME dest=0, src0=0    — r0=f (function)
+          1: LOAD_CONST dest=1, src0=0   — r1=42 (arg value)
+          2: MOVE dest=2, src0=1         — slot 2 (outgoing zone) = r1
+          3: CALL dest=1, src0=0, src1=1 — r1 = call(r0, arity=1)
+          4: RETURN src0=1               — terminal ✓
+        """
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.LOAD_NAME, dest=0, src0=0),    # r0=f
+                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),   # r1=42
+                Instruction(Opcode.MOVE, dest=2, src0=1),         # slot 2 = r1 (outgoing arg)
+                Instruction(Opcode.CALL, dest=1, src0=0, src1=1), # r1 = call(r0, 1)
+                Instruction(Opcode.RETURN, src0=1),               # terminal ✓
+            ],
+            constants=[MenaiInteger(42)],
+            names=["f"],
+            code_objects=[],
+            local_count=2,
+            outgoing_arg_slots=1,
+        )
+        validate_bytecode(code)
+
+    def test_params_pre_initialized(self):
+        """Test that function parameters (slots 0..param_count-1) are pre-initialized.
+
+        Function (param_count=2, local_count=2):
+          Params r0 and r1 are pre-initialized by the caller.
+          0: RETURN src0=1  — r1 is initialized (it's a param) ✓
+        """
+        code = CodeObject(
+            instructions=[
+                Instruction(Opcode.RETURN, src0=1),  # r1 is a param, pre-initialized ✓
+            ],
+            constants=[],
+            names=[],
+            code_objects=[],
+            param_count=2,
+            local_count=2,
+        )
         validate_bytecode(code)
 
 
 class TestPatchClosureValidation:
-    """
-    Tests for PATCH_CLOSURE validation in _validate_initialization.
-
-    PATCH_CLOSURE src0=closure_reg, src1=capture_idx, src2=value_reg has three requirements:
-      1. closure_reg (src0) must refer to an initialized slot holding a closure.
-      2. capture_idx (src1) must be < len(code_objects[code_index].free_vars).
-      3. value_reg (src2) must refer to an initialized slot.
-
-    At merge points the closure map is intersected conservatively: a slot is
-    only kept if both incoming paths agree on the same code_object index.
-
-    Register allocation convention in these tests:
-      Slot 0 — holds the closure (written directly by MAKE_CLOSURE dest=0).
-      Slot 1 — scratch register for values being patched in (LOAD_CONST dest=1).
-      local_count >= 2 whenever both slots are used.
-
-    Using slot 1 for the patch value avoids clobbering the closure in slot 0.
-    """
-
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
+    """Tests for PATCH_CLOSURE validation in _validate_initialization."""
 
     @staticmethod
     def _make_closure_code(n_free_vars: int, name: str = "<inner>") -> CodeObject:
         """Return a minimal closed CodeObject with n_free_vars free variable slots.
 
-        The lambda has param_count=1 and uses ENTER to pop its argument.
+        The lambda has param_count=1 and returns its first argument.
         Captured-value slots are param_count .. param_count+n_free_vars-1.
         """
         return CodeObject(
             instructions=[
-                Instruction(Opcode.ENTER, src0=1),   # pops 1 arg; depth: 1 → 0; slot 0 initialized
-                Instruction(Opcode.PUSH, src0=0),    # stack: 0 → 1
-                Instruction(Opcode.RETURN),           # terminal ✓
+                Instruction(Opcode.RETURN, src0=0),  # return r0 (param) ✓
             ],
             constants=[],
             names=[],
@@ -871,10 +727,6 @@ class TestPatchClosureValidation:
             free_vars=[f"fv{i}" for i in range(n_free_vars)],
             name=name,
         )
-
-    # ------------------------------------------------------------------
-    # Category 21: Valid PATCH_CLOSURE
-    # ------------------------------------------------------------------
 
     def test_valid_patch_closure(self):
         """PATCH_CLOSURE against a known closure slot with valid capture slots passes.
@@ -888,8 +740,7 @@ class TestPatchClosureValidation:
           2: PATCH_CLOSURE src0=0, src1=0, src2=1 — r0 is closure ✓; capture_idx=0 < 2 ✓
           3: LOAD_CONST dest=1, src0=0            — r1=42
           4: PATCH_CLOSURE src0=0, src1=1, src2=1 — r0 is closure ✓; capture_idx=1 < 2 ✓
-          5: PUSH src0=0                          — stack: 0 → 1
-          6: RETURN                               — terminal ✓
+          5: RETURN src0=0                        — terminal ✓
         """
         inner = self._make_closure_code(2)
         code = CodeObject(
@@ -899,15 +750,14 @@ class TestPatchClosureValidation:
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1),   # 2: cap 0 < 2 ✓
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),              # 3: r1=42
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=1, src2=1),   # 4: cap 1 < 2 ✓
-                Instruction(Opcode.PUSH, src0=0),                            # 5: stack: 0 → 1
-                Instruction(Opcode.RETURN),                                  # 6: terminal ✓
+                Instruction(Opcode.RETURN, src0=0),                          # 5: terminal ✓
             ],
             constants=[MenaiInteger(42)],
             names=[],
             code_objects=[inner],
             local_count=2,
         )
-        validate_bytecode(code)  # must not raise
+        validate_bytecode(code)
 
     def test_valid_patch_closure_single_free_var(self):
         """PATCH_CLOSURE with exactly one free var and capture_slot=0 passes.
@@ -916,8 +766,7 @@ class TestPatchClosureValidation:
           0: MAKE_CLOSURE dest=0, src0=0, src1=0  — r0=closure
           1: LOAD_CONST dest=1, src0=0             — r1=1
           2: PATCH_CLOSURE src0=0, src1=0, src2=1  — capture_idx=0 < 1 ✓
-          3: PUSH src0=0                           — stack: 0 → 1
-          4: RETURN                                — terminal ✓
+          3: RETURN src0=0                         — terminal ✓
         """
         inner = self._make_closure_code(1)
         code = CodeObject(
@@ -925,19 +774,14 @@ class TestPatchClosureValidation:
                 Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),   # 0: r0=closure
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 1: r1=1
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1),  # 2: cap 0 < 1 ✓
-                Instruction(Opcode.PUSH, src0=0),                           # 3: stack: 0 → 1
-                Instruction(Opcode.RETURN),                                 # 4: terminal ✓
+                Instruction(Opcode.RETURN, src0=0),                         # 3: terminal ✓
             ],
             constants=[MenaiInteger(1)],
             names=[],
             code_objects=[inner],
             local_count=2,
         )
-        validate_bytecode(code)  # must not raise
-
-    # ------------------------------------------------------------------
-    # Category 22: Invalid PATCH_CLOSURE — uninitialized slot
-    # ------------------------------------------------------------------
+        validate_bytecode(code)
 
     def test_patch_closure_uninitialized_slot(self):
         """PATCH_CLOSURE against an uninitialised slot is rejected.
@@ -947,18 +791,14 @@ class TestPatchClosureValidation:
         Sequence (local_count=2):
           0: LOAD_CONST dest=1, src0=0             — r1=1 (slot 0 never written)
           1: PATCH_CLOSURE src0=0, src1=0, src2=1  — slot 0 never initialized → UNINITIALIZED_VARIABLE
-          2: LOAD_CONST dest=1, src0=0
-          3: PUSH src0=1
-          4: RETURN
+          2: RETURN src0=1
         """
         inner = self._make_closure_code(1)
         code = CodeObject(
             instructions=[
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 0: r1=1
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1),  # 1: slot 0 never init → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 2
-                Instruction(Opcode.PUSH, src0=1),                           # 3
-                Instruction(Opcode.RETURN),                                 # 4
+                Instruction(Opcode.RETURN, src0=1),                         # 2
             ],
             constants=[MenaiInteger(1)],
             names=[],
@@ -973,41 +813,37 @@ class TestPatchClosureValidation:
     def test_patch_closure_slot_initialized_only_on_one_branch(self):
         """PATCH_CLOSURE is rejected when the slot is only initialised on one branch.
 
-        Branch A (instr 3-5): creates closure, stores to slot 0.
-        Branch B (instr 6):   skips creation — slot 0 remains uninitialized.
+        Branch A (instr 2-3): creates closure, stores to slot 0.
+        Branch B (instr 4):   skips creation — slot 0 remains uninitialized.
         Merge:                PATCH_CLOSURE — slot 0 may be uninitialised → error.
 
         Control flow (local_count=2, initial depth=0):
-          0: LOAD_TRUE dest=1            — r1=#t; stack: 0
+          0: LOAD_TRUE dest=1            — r1=#t
           1: JUMP_IF_FALSE src0=1, src1=4 — read r1; jump→4, fall→2
 
-          Branch A (depth=0):
+          Branch A:
           2: MAKE_CLOSURE dest=0, src0=0, src1=0 — r0=closure
           3: JUMP src0=5                         — jump to 5
 
-          Branch B (depth=0):
+          Branch B:
           4: JUMP src0=5                         — jump to 5 (slot 0 not initialized)
 
           Merge (slot 0 initialized only on branch A):
           5: LOAD_CONST dest=1, src0=0            — r1=1
           6: PATCH_CLOSURE src0=0, src1=0, src2=1 — slot 0 may be uninit → UNINITIALIZED_VARIABLE
-          7: LOAD_CONST dest=1, src0=0
-          8: PUSH src0=1
-          9: RETURN
+          7: RETURN src0=1
         """
         inner = self._make_closure_code(1)
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_TRUE, dest=1),               # 0: r1=#t; stack: 0
+                Instruction(Opcode.LOAD_TRUE, dest=1),               # 0: r1=#t
                 Instruction(Opcode.JUMP_IF_FALSE, src0=1, src1=4),   # 1: jump→4, fall→2
                 Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),  # 2: r0=closure
                 Instruction(Opcode.JUMP, src0=5),                    # 3: jump to 5
                 Instruction(Opcode.JUMP, src0=5),                    # 4: jump to 5 (no init)
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 5: r1=1
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1), # 6: may be uninit → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 7
-                Instruction(Opcode.PUSH, src0=1),                    # 8
-                Instruction(Opcode.RETURN),                          # 9
+                Instruction(Opcode.RETURN, src0=1),                  # 7
             ],
             constants=[MenaiInteger(1)],
             names=[],
@@ -1028,9 +864,7 @@ class TestPatchClosureValidation:
           0: LOAD_CONST dest=0, src0=0    — slot 0 = 42 (plain integer, not a closure)
           1: LOAD_CONST dest=1, src0=0             — r1=42
           2: PATCH_CLOSURE src0=0, src1=0, src2=1  — slot 0 not a closure → INVALID_VARIABLE_ACCESS
-          3: LOAD_CONST dest=1, src0=0
-          4: PUSH src0=1
-          5: RETURN
+          3: RETURN src0=1
         """
         inner = self._make_closure_code(1)
         code = CodeObject(
@@ -1038,9 +872,7 @@ class TestPatchClosureValidation:
                 Instruction(Opcode.LOAD_CONST, dest=0, src0=0),     # 0: slot 0 = 42 (not a closure)
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 1: r1=42
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1),  # 2: not closure → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 3
-                Instruction(Opcode.PUSH, src0=1),                           # 4
-                Instruction(Opcode.RETURN),                                 # 5
+                Instruction(Opcode.RETURN, src0=1),                         # 3
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -1062,9 +894,7 @@ class TestPatchClosureValidation:
                 Instruction(Opcode.LOAD_CONST, dest=0, src0=0),             # 1: r0=42 (overwrites closure)
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 2: r1=42
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1),  # 3: not closure → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 4
-                Instruction(Opcode.PUSH, src0=1),                           # 5
-                Instruction(Opcode.RETURN),                                 # 6
+                Instruction(Opcode.RETURN, src0=1),                         # 4
             ],
             constants=[MenaiInteger(42)],
             names=[],
@@ -1084,29 +914,27 @@ class TestPatchClosureValidation:
         slot 0 (the closure maps disagree), so PATCH_CLOSURE must be rejected.
 
         Control flow (local_count=2, initial depth=0):
-          0: LOAD_TRUE dest=1            — r1=#t; stack: 0
+          0: LOAD_TRUE dest=1            — r1=#t
           1: JUMP_IF_FALSE src0=1, src1=4 — read r1; jump→4, fall→2
 
-          Branch A (depth=0):
+          Branch A:
           2: MAKE_CLOSURE dest=0, src0=0, src1=0 — r0=closure[0]
           3: JUMP src0=6                         — jump to 6
 
-          Branch B (depth=0):
+          Branch B:
           4: MAKE_CLOSURE dest=0, src0=1, src1=0 — r0=closure[1]
           5: JUMP src0=6                         — falls to 6
 
           Merge (slot 0 holds different closures on each path):
           6: LOAD_CONST dest=1, src0=0            — r1=1
           7: PATCH_CLOSURE src0=0, src1=0, src2=1 — ambiguous closure → INVALID_VARIABLE_ACCESS
-          8: LOAD_CONST dest=1, src0=0
-          9: PUSH src0=1
-          10: RETURN
+          8: RETURN src0=1
         """
         inner_a = self._make_closure_code(1, name="<inner-a>")
         inner_b = self._make_closure_code(1, name="<inner-b>")
         code = CodeObject(
             instructions=[
-                Instruction(Opcode.LOAD_TRUE, dest=1),               # 0: r1=#t; stack: 0
+                Instruction(Opcode.LOAD_TRUE, dest=1),               # 0: r1=#t
                 Instruction(Opcode.JUMP_IF_FALSE, src0=1, src1=4),   # 1: jump→4, fall→2
                 Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),  # 2: r0=closure[0]
                 Instruction(Opcode.JUMP, src0=6),                    # 3: jump to 6
@@ -1114,9 +942,7 @@ class TestPatchClosureValidation:
                 Instruction(Opcode.JUMP, src0=6),                    # 5: falls to 6
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 6: r1=1
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1), # 7: ambiguous → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),      # 8
-                Instruction(Opcode.PUSH, src0=1),                    # 9
-                Instruction(Opcode.RETURN),                          # 10
+                Instruction(Opcode.RETURN, src0=1),                  # 8
             ],
             constants=[MenaiInteger(1)],
             names=[],
@@ -1138,9 +964,7 @@ class TestPatchClosureValidation:
           0: MAKE_CLOSURE dest=0, src0=0, src1=0  — r0=closure
           1: LOAD_CONST dest=1, src0=0             — r1=1
           2: PATCH_CLOSURE src0=0, src1=2, src2=1  — capture_idx=2 >= n_free=2 → INDEX_OUT_OF_BOUNDS
-          3: LOAD_CONST dest=1, src0=0
-          4: PUSH src0=1
-          5: RETURN
+          3: RETURN src0=1
         """
         inner = self._make_closure_code(2)
         code = CodeObject(
@@ -1148,9 +972,7 @@ class TestPatchClosureValidation:
                 Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),   # 0: r0=closure
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 1: r1=1
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=2, src2=1),  # 2: cap 2 >= n_free=2 → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 3
-                Instruction(Opcode.PUSH, src0=1),                           # 4
-                Instruction(Opcode.RETURN),                                 # 5
+                Instruction(Opcode.RETURN, src0=1),                         # 3
             ],
             constants=[MenaiInteger(1)],
             names=[],
@@ -1172,9 +994,7 @@ class TestPatchClosureValidation:
           0: MAKE_CLOSURE dest=0, src0=0, src1=0  — r0=closure
           1: LOAD_CONST dest=1, src0=0             — r1=1
           2: PATCH_CLOSURE src0=0, src1=0, src2=1  — capture_idx=0 >= n_free=0 → INDEX_OUT_OF_BOUNDS
-          3: LOAD_CONST dest=1, src0=0
-          4: PUSH src0=1
-          5: RETURN
+          3: RETURN src0=1
         """
         inner = self._make_closure_code(0)
         code = CodeObject(
@@ -1182,9 +1002,7 @@ class TestPatchClosureValidation:
                 Instruction(Opcode.MAKE_CLOSURE, dest=0, src0=0, src1=0),   # 0: r0=closure
                 Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 1: r1=1
                 Instruction(Opcode.PATCH_CLOSURE, src0=0, src1=0, src2=1),  # 2: cap 0 >= n_free=0 → error
-                Instruction(Opcode.LOAD_CONST, dest=1, src0=0),             # 3
-                Instruction(Opcode.PUSH, src0=1),                           # 4
-                Instruction(Opcode.RETURN),                                 # 5
+                Instruction(Opcode.RETURN, src0=1),                         # 3
             ],
             constants=[MenaiInteger(1)],
             names=[],

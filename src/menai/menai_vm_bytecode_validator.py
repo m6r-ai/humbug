@@ -91,224 +91,11 @@ class BytecodeValidator:
     # Opcodes that do not write a destination register — dest field is unused.
     # Every opcode not in this set writes its result to instr.dest.
     NO_DEST_OPCODES: frozenset = frozenset({
-        Opcode.PUSH, Opcode.TAIL_CALL, Opcode.TAIL_APPLY,
-        Opcode.PATCH_CLOSURE, Opcode.ENTER, Opcode.RETURN,
+        Opcode.TAIL_CALL, Opcode.TAIL_APPLY,
+        Opcode.PATCH_CLOSURE, Opcode.RETURN,
         Opcode.EMIT_TRACE, Opcode.JUMP, Opcode.JUMP_IF_FALSE,
         Opcode.JUMP_IF_TRUE, Opcode.RAISE_ERROR,
     })
-
-    def __init__(self) -> None:
-        """Initialize validator."""
-        # Track which opcodes affect stack depth and how
-        self._init_opcode_metadata()
-
-    def _init_opcode_metadata(self) -> None:
-        """Initialize metadata about opcodes for validation."""
-        # Stack effect: how many items are popped (-) and pushed (+)
-        # Format: (pop_count, push_count)
-        self.stack_effects: Dict[int, Tuple[int, int]] = {
-            # Register-based load ops: always write to dest, no stack effect.
-            Opcode.LOAD_NONE: (0, 0),
-            Opcode.LOAD_TRUE: (0, 0),
-            Opcode.LOAD_FALSE: (0, 0),
-            Opcode.LOAD_EMPTY_LIST: (0, 0),
-            Opcode.LOAD_EMPTY_DICT: (0, 0),
-            Opcode.LOAD_CONST: (0, 0),
-            Opcode.LOAD_NAME: (0, 0),
-            Opcode.MOVE: (0, 0),
-
-            # Stack/register transfer: PUSH pushes 1 from a register, POP pops 1 into a register
-            Opcode.PUSH: (0, 1),
-            Opcode.POP: (1, 0),
-
-            # Control flow - no stack effects (conditionals now read from a register)
-            Opcode.JUMP: (0, 0),
-            Opcode.JUMP_IF_FALSE: (0, 0),
-            Opcode.JUMP_IF_TRUE: (0, 0),
-            Opcode.RAISE_ERROR: (0, 0),  # Doesn't return, but doesn't matter
-
-            # Functions
-            Opcode.MAKE_CLOSURE: (0, 0),
-            Opcode.PATCH_CLOSURE: (0, 0),
-            Opcode.CALL: (-1, 0),
-            Opcode.TAIL_CALL: (-1, 0),
-            Opcode.APPLY: (1, 0),
-            Opcode.TAIL_APPLY: (1, 0),
-            # ENTER effect is n-dependent; handled in _get_stack_effect
-            Opcode.RETURN: (0, 0),
-
-            # Trace debug
-            Opcode.EMIT_TRACE: (0, 0),
-
-            # Function operations
-            Opcode.FUNCTION_P: (0, 0),
-            Opcode.FUNCTION_MIN_ARITY: (0, 0),
-            Opcode.FUNCTION_VARIADIC_P: (0, 0),
-            Opcode.FUNCTION_ACCEPTS_P: (0, 0),
-            Opcode.FUNCTION_EQ_P: (0, 0),
-            Opcode.FUNCTION_NEQ_P: (0, 0),
-
-            # Symbol
-            Opcode.SYMBOL_P: (0, 0),
-            Opcode.SYMBOL_EQ_P: (0, 0),
-            Opcode.SYMBOL_NEQ_P: (0, 0),
-            Opcode.SYMBOL_TO_STRING: (0, 0),
-
-            # None operations
-            Opcode.NONE_P: (0, 0),
-
-            # Boolean operations
-            Opcode.BOOLEAN_P: (0, 0),
-            Opcode.BOOLEAN_EQ_P: (0, 0),
-            Opcode.BOOLEAN_NEQ_P: (0, 0),
-            Opcode.BOOLEAN_NOT: (0, 0),
-
-            # Integer operations
-            Opcode.INTEGER_P: (0, 0),
-            Opcode.INTEGER_EQ_P: (0, 0),
-            Opcode.INTEGER_NEQ_P: (0, 0),
-            Opcode.INTEGER_LT_P: (0, 0),
-            Opcode.INTEGER_GT_P: (0, 0),
-            Opcode.INTEGER_LTE_P: (0, 0),
-            Opcode.INTEGER_GTE_P: (0, 0),
-            Opcode.INTEGER_ABS: (0, 0),
-            Opcode.INTEGER_ADD: (0, 0),
-            Opcode.INTEGER_SUB: (0, 0),
-            Opcode.INTEGER_MUL: (0, 0),
-            Opcode.INTEGER_DIV: (0, 0),
-            Opcode.INTEGER_MOD: (0, 0),
-            Opcode.INTEGER_NEG: (0, 0),
-            Opcode.INTEGER_EXPN: (0, 0),
-            Opcode.INTEGER_BIT_NOT: (0, 0),
-            Opcode.INTEGER_BIT_SHIFT_LEFT: (0, 0),
-            Opcode.INTEGER_BIT_SHIFT_RIGHT: (0, 0),
-            Opcode.INTEGER_BIT_OR: (0, 0),
-            Opcode.INTEGER_BIT_AND: (0, 0),
-            Opcode.INTEGER_BIT_XOR: (0, 0),
-            Opcode.INTEGER_MIN: (0, 0),
-            Opcode.INTEGER_MAX: (0, 0),
-            Opcode.INTEGER_TO_FLOAT: (0, 0),
-            Opcode.INTEGER_TO_COMPLEX: (0, 0),
-            Opcode.INTEGER_TO_STRING: (0, 0),
-
-            # Floating point operations
-            Opcode.FLOAT_P: (0, 0),
-            Opcode.FLOAT_EQ_P: (0, 0),
-            Opcode.FLOAT_NEQ_P: (0, 0),
-            Opcode.FLOAT_LT_P: (0, 0),
-            Opcode.FLOAT_GT_P: (0, 0),
-            Opcode.FLOAT_LTE_P: (0, 0),
-            Opcode.FLOAT_GTE_P: (0, 0),
-            Opcode.FLOAT_ABS: (0, 0),
-            Opcode.FLOAT_ADD: (0, 0),
-            Opcode.FLOAT_SUB: (0, 0),
-            Opcode.FLOAT_MUL: (0, 0),
-            Opcode.FLOAT_DIV: (0, 0),
-            Opcode.FLOAT_FLOOR_DIV: (0, 0),
-            Opcode.FLOAT_MOD: (0, 0),
-            Opcode.FLOAT_NEG: (0, 0),
-            Opcode.FLOAT_EXP: (0, 0),
-            Opcode.FLOAT_EXPN: (0, 0),
-            Opcode.FLOAT_LOG: (0, 0),
-            Opcode.FLOAT_LOG10: (0, 0),
-            Opcode.FLOAT_LOG2: (0, 0),
-            Opcode.FLOAT_LOGN: (0, 0),
-            Opcode.FLOAT_SIN: (0, 0),
-            Opcode.FLOAT_COS: (0, 0),
-            Opcode.FLOAT_TAN: (0, 0),
-            Opcode.FLOAT_SQRT: (0, 0),
-            Opcode.FLOAT_FLOOR: (0, 0),
-            Opcode.FLOAT_CEIL: (0, 0),
-            Opcode.FLOAT_ROUND: (0, 0),
-            Opcode.FLOAT_MIN: (0, 0),
-            Opcode.FLOAT_MAX: (0, 0),
-            Opcode.FLOAT_TO_INTEGER: (0, 0),
-            Opcode.FLOAT_TO_COMPLEX: (0, 0),
-            Opcode.FLOAT_TO_STRING: (0, 0),
-
-            # Complex number operations
-            Opcode.COMPLEX_P: (0, 0),
-            Opcode.COMPLEX_EQ_P: (0, 0),
-            Opcode.COMPLEX_NEQ_P: (0, 0),
-            Opcode.COMPLEX_REAL: (0, 0),
-            Opcode.COMPLEX_IMAG: (0, 0),
-            Opcode.COMPLEX_ABS: (0, 0),
-            Opcode.COMPLEX_ADD: (0, 0),
-            Opcode.COMPLEX_SUB: (0, 0),
-            Opcode.COMPLEX_MUL: (0, 0),
-            Opcode.COMPLEX_DIV: (0, 0),
-            Opcode.COMPLEX_NEG: (0, 0),
-            Opcode.COMPLEX_EXP: (0, 0),
-            Opcode.COMPLEX_EXPN: (0, 0),
-            Opcode.COMPLEX_LOG: (0, 0),
-            Opcode.COMPLEX_LOG10: (0, 0),
-            Opcode.COMPLEX_LOGN: (0, 0),
-            Opcode.COMPLEX_SIN: (0, 0),
-            Opcode.COMPLEX_COS: (0, 0),
-            Opcode.COMPLEX_TAN: (0, 0),
-            Opcode.COMPLEX_SQRT: (0, 0),
-            Opcode.COMPLEX_TO_STRING: (0, 0),
-
-            # String
-            Opcode.STRING_P: (0, 0),
-            Opcode.STRING_EQ_P: (0, 0),
-            Opcode.STRING_NEQ_P: (0, 0),
-            Opcode.STRING_LT_P: (0, 0),
-            Opcode.STRING_GT_P: (0, 0),
-            Opcode.STRING_LTE_P: (0, 0),
-            Opcode.STRING_GTE_P: (0, 0),
-            Opcode.STRING_LENGTH: (0, 0),
-            Opcode.STRING_UPCASE: (0, 0),
-            Opcode.STRING_DOWNCASE: (0, 0),
-            Opcode.STRING_TRIM: (0, 0),
-            Opcode.STRING_TRIM_LEFT: (0, 0),
-            Opcode.STRING_TRIM_RIGHT: (0, 0),
-            Opcode.STRING_TO_INTEGER: (0, 0),
-            Opcode.STRING_TO_NUMBER: (0, 0),
-            Opcode.STRING_TO_LIST: (0, 0),
-            Opcode.STRING_REF: (0, 0),
-            Opcode.STRING_PREFIX_P: (0, 0),
-            Opcode.STRING_SUFFIX_P: (0, 0),
-            Opcode.STRING_SLICE: (0, 0),
-            Opcode.STRING_REPLACE: (0, 0),
-            Opcode.STRING_INDEX: (0, 0),
-            Opcode.STRING_CONCAT: (0, 0),
-
-            # Alist
-            Opcode.DICT_P: (0, 0),
-            Opcode.DICT_EQ_P: (0, 0),
-            Opcode.DICT_NEQ_P: (0, 0),
-            Opcode.DICT_KEYS: (0, 0),
-            Opcode.DICT_VALUES: (0, 0),
-            Opcode.DICT_LENGTH: (0, 0),
-            Opcode.DICT_HAS_P: (0, 0),
-            Opcode.DICT_REMOVE: (0, 0),
-            Opcode.DICT_MERGE: (0, 0),
-            Opcode.DICT_SET: (0, 0),
-            Opcode.DICT_GET: (0, 0),
-
-            # List operations
-            Opcode.LIST_P: (0, 0),
-            Opcode.LIST_EQ_P: (0, 0),
-            Opcode.LIST_NEQ_P: (0, 0),
-            Opcode.LIST_PREPEND: (0, 0),
-            Opcode.LIST_REVERSE: (0, 0),
-            Opcode.LIST_FIRST: (0, 0),
-            Opcode.LIST_REST: (0, 0),
-            Opcode.LIST_LAST: (0, 0),
-            Opcode.LIST_LENGTH: (0, 0),
-            Opcode.LIST_REF: (0, 0),
-            Opcode.LIST_NULL_P: (0, 0),
-            Opcode.LIST_MEMBER_P: (0, 0),
-            Opcode.LIST_INDEX: (0, 0),
-            Opcode.LIST_APPEND: (0, 0),
-            Opcode.LIST_SLICE: (0, 0),
-            Opcode.LIST_REMOVE: (0, 0),
-            Opcode.LIST_CONCAT: (0, 0),
-            Opcode.LIST_TO_STRING: (0, 0),
-
-            Opcode.RANGE: (0, 0),
-    }
 
     def validate(self, code: CodeObject) -> None:
         """
@@ -327,7 +114,6 @@ class BytecodeValidator:
         self._validate_structure(code)
         self._validate_indices(code)
         self._validate_control_flow(code)
-        self._validate_stack_depth(code)
         self._validate_initialization(code)
 
     def _validate_structure(self, code: CodeObject) -> None:
@@ -353,6 +139,7 @@ class BytecodeValidator:
 
     def _validate_indices(self, code: CodeObject) -> None:
         """Validate all indices (constants, names, code objects, variables)."""
+        total_slots = code.local_count + code.outgoing_arg_slots
         for i, instr in enumerate(code.instructions):
             opcode = instr.opcode
 
@@ -389,30 +176,30 @@ class BytecodeValidator:
                         opcode=opcode
                     )
 
-            # Validate register indices (must be < local_count).
-            # PUSH reads src0; all dest-writing ops are validated below.
-            if opcode in (Opcode.PUSH, Opcode.MOVE):
+            # Validate MOVE: src and dest may reach into the outgoing zone.
+            if opcode == Opcode.MOVE:
                 var_index = instr.src0
-                if var_index < 0 or var_index >= code.local_count:
+                if var_index < 0 or var_index >= total_slots:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"Variable index {var_index} out of bounds (local_count: {code.local_count})",
+                        f"MOVE source {var_index} out of bounds (total_slots: {total_slots})",
                         instruction_index=i,
                         opcode=opcode
                     )
 
             # Validate dest register bounds for all opcodes that write a dest register.
+            # MOVE dest may reach into the outgoing zone; all other dest-writing ops must stay within local_count.
             if opcode not in self.NO_DEST_OPCODES:
-                if instr.dest < 0 or instr.dest >= code.local_count:
+                max_dest = total_slots if opcode == Opcode.MOVE else code.local_count
+                if instr.dest < 0 or instr.dest >= max_dest:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"Destination register {instr.dest} out of bounds (local_count: {code.local_count})",
+                        f"Destination register {instr.dest} out of bounds (limit: {max_dest})",
                         instruction_index=i,
                         opcode=opcode
                     )
 
-            # Validate ENTER: n must match param_count and fit within local_count
-            # Validate func register (src0) for call/apply opcodes
+            # Validate func register (src0) for call/apply opcodes.
             if opcode in (Opcode.CALL, Opcode.TAIL_CALL, Opcode.APPLY, Opcode.TAIL_APPLY):
                 func_reg = instr.src0
                 if func_reg < 0 or func_reg >= code.local_count:
@@ -423,26 +210,18 @@ class BytecodeValidator:
                         opcode=opcode
                     )
 
-            # Validate ENTER: n must match param_count and fit within local_count
-            if opcode == Opcode.ENTER:
-                n = instr.src0
-                if n != code.param_count:
-                    raise ValidationError(
-                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"ENTER count {n} does not match param_count {code.param_count}",
-                        instruction_index=i,
-                        opcode=opcode
-                    )
-
-                if n > code.local_count:
-                    raise ValidationError(
-                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
-                        f"ENTER count {n} exceeds local_count {code.local_count}",
-                        instruction_index=i,
-                        opcode=opcode
-                    )
-
             # Validate PATCH_CLOSURE: all three register operands must be valid
+            # Validate APPLY/TAIL_APPLY: src1 is the arg_list register, must be within local_count.
+            if opcode in (Opcode.APPLY, Opcode.TAIL_APPLY):
+                arg_list_reg = instr.src1
+                if arg_list_reg < 0 or arg_list_reg >= code.local_count:
+                    raise ValidationError(
+                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
+                        f"APPLY arg_list register {arg_list_reg} out of bounds (local_count: {code.local_count})",
+                        instruction_index=i,
+                        opcode=opcode
+                    )
+
             if opcode == Opcode.PATCH_CLOSURE:
                 for field_name, reg in (('src0 (closure)', instr.src0), ('src2 (value)', instr.src2)):
                     if reg < 0 or reg >= code.local_count:
@@ -521,72 +300,6 @@ class BytecodeValidator:
                     context=f"Block [{block.start_index}..{block.end_index}]"
                 )
 
-    def _validate_stack_depth(self, code: CodeObject) -> None:
-        """
-        Validate stack depth consistency across all paths.
-
-        This performs abstract interpretation to track stack depth through
-        all execution paths and ensures:
-        1. No stack underflows
-        2. Stack depth is consistent at merge points (jump targets)
-        """
-        # Track stack depth at each instruction
-        stack_depths: Dict[int, int] = {}
-
-        # Worklist algorithm for dataflow analysis
-        # For functions with parameters, the initial stack depth is param_count
-        # (parameters are pushed by caller before entering function)
-        initial_depth = code.param_count
-
-        worklist: List[int] = [0]  # Start at instruction 0
-        stack_depths[0] = initial_depth
-
-        while worklist:
-            instr_idx = worklist.pop(0)
-
-            if instr_idx not in stack_depths:
-                # This instruction is unreachable
-                continue
-
-            current_depth = stack_depths[instr_idx]
-            instr = code.instructions[instr_idx]
-
-            # Calculate stack effect of this instruction
-            pop_count, push_count = self._get_stack_effect(instr)
-
-            # Check for stack underflow
-            if current_depth < pop_count:
-                raise ValidationError(
-                    ValidationErrorType.STACK_UNDERFLOW,
-                    f"Stack underflow: depth={current_depth}, need={pop_count}",
-                    instruction_index=instr_idx,
-                    opcode=instr.opcode
-                )
-
-            # Calculate new stack depth
-            new_depth = current_depth - pop_count + push_count
-
-            # Find successors
-            successors = self._get_successors(instr_idx, instr, code)
-
-            # Propagate depth to successors
-            for succ_idx in successors:
-                if succ_idx in stack_depths:
-                    # Already visited - check consistency
-                    if stack_depths[succ_idx] != new_depth:
-                        raise ValidationError(
-                            ValidationErrorType.STACK_INCONSISTENT,
-                            f"Inconsistent stack depth at merge point: "
-                            f"expected {stack_depths[succ_idx]}, got {new_depth}",
-                            instruction_index=succ_idx,
-                            context=f"Predecessor at {instr_idx}"
-                        )
-
-                else:
-                    # First time visiting - record depth and add to worklist
-                    stack_depths[succ_idx] = new_depth
-                    worklist.append(succ_idx)
-
     def _validate_initialization(self, code: CodeObject) -> None:
         """
         Validate that all variables are initialized before use.
@@ -615,10 +328,13 @@ class BytecodeValidator:
         #                            dict of slot -> code_object_index for closure slots)
         initialized_at: Dict[int, Tuple[Set[int], Dict[int, int]]] = {}
 
-        # Captured-value slots (param_count .. param_count+len(free_vars)-1) are frame
-        # invariants pre-populated by the VM before the first instruction runs.
-        # They survive back-edge merges via initial_initialized being unioned in on every step.
+        # Parameter slots (0..param_count-1) and captured-value slots
+        # (param_count..param_count+len(free_vars)-1) are both pre-populated
+        # by the caller/VM before the first instruction runs.
+        # They survive back-edge merges by being unioned in on every step.
         initial_initialized: Set[int] = set()
+        if code.param_count > 0:
+            initial_initialized.update(range(code.param_count))
         n_captured = len(code.free_vars)
         if n_captured > 0:
             initial_initialized.update(range(code.param_count, code.param_count + n_captured))
@@ -637,19 +353,6 @@ class BytecodeValidator:
             instr = code.instructions[instr_idx]
             opcode = instr.opcode
 
-            # Check PUSH - source register must be initialized
-            if opcode == Opcode.PUSH:
-                var_index = instr.src0
-                if var_index not in current_initialized:
-                    raise ValidationError(
-                        ValidationErrorType.UNINITIALIZED_VARIABLE,
-                        f"Variable at index {var_index} may be uninitialized",
-                        instruction_index=instr_idx,
-                        opcode=opcode,
-                        context=f"Initialized variables: {sorted(current_initialized)}"
-                    )
-
-            # Check EMIT_TRACE - source register must be initialized
             # Check MOVE - source register must be initialized
             if opcode == Opcode.MOVE:
                 var_index = instr.src0
@@ -736,13 +439,25 @@ class BytecodeValidator:
                         context=f"Closure is code_objects[{code_obj_index}] ({target_code.name!r})"
                     )
 
-            # Check CALL/TAIL_CALL/APPLY/TAIL_APPLY — func register (src0) must be initialized
+            # Check CALL/TAIL_CALL/APPLY/TAIL_APPLY — func register (src0) must be initialized.
+            # For APPLY/TAIL_APPLY also check the arg_list register (src1).
             if opcode in (Opcode.CALL, Opcode.TAIL_CALL, Opcode.APPLY, Opcode.TAIL_APPLY):
                 func_reg = instr.src0
                 if func_reg not in current_initialized:
                     raise ValidationError(
                         ValidationErrorType.UNINITIALIZED_VARIABLE,
                         f"Function register {func_reg} may be uninitialized",
+                        instruction_index=instr_idx,
+                        opcode=opcode,
+                        context=f"Initialized variables: {sorted(current_initialized)}"
+                    )
+
+            if opcode in (Opcode.APPLY, Opcode.TAIL_APPLY):
+                arg_list_reg = instr.src1
+                if arg_list_reg not in current_initialized:
+                    raise ValidationError(
+                        ValidationErrorType.UNINITIALIZED_VARIABLE,
+                        f"APPLY arg_list register {arg_list_reg} may be uninitialized",
                         instruction_index=instr_idx,
                         opcode=opcode,
                         context=f"Initialized variables: {sorted(current_initialized)}"
@@ -759,9 +474,6 @@ class BytecodeValidator:
             elif opcode not in self.NO_DEST_OPCODES:
                 current_initialized.add(instr.dest)
                 current_closures.pop(instr.dest, None)
-
-            if opcode == Opcode.ENTER:
-                current_initialized.update(range(instr.src0))
 
             if initial_initialized:
                 current_initialized |= initial_initialized
@@ -789,34 +501,6 @@ class BytecodeValidator:
                         current_closures.copy() if need_copy else current_closures,
                     )
                     worklist.append(succ_idx)
-
-    def _get_stack_effect(self, instr: Instruction) -> Tuple[int, int]:
-        """
-        Get stack effect (pop_count, push_count) for an instruction.
-
-        Returns:
-            (pop_count, push_count) tuple
-        """
-        opcode = instr.opcode
-
-        if opcode == Opcode.MAKE_CLOSURE:
-            capture_count = instr.src1
-            return (capture_count, 0)
-
-        if opcode == Opcode.CALL:
-            arity = instr.src1
-            return (arity, 0)
-
-        if opcode == Opcode.TAIL_CALL:
-            arity = instr.src1
-            return (arity, 0)
-
-        if opcode == Opcode.ENTER:
-            n = instr.src0
-            return (n, 0)
-
-        # Default case
-        return self.stack_effects.get(opcode, (0, 0))
 
     def _get_successors(self, instr_idx: int, instr: Instruction, code: CodeObject) -> List[int]:
         """Get successor instruction indices for an instruction."""

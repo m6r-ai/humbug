@@ -50,6 +50,48 @@ class Frame:
         self.return_dest: int = 0
         self.is_sentinel: bool = False
 
+
+def _parallel_move_regs(regs: List[MenaiValue], src_base: int, dst_base: int, n: int) -> None:
+    """
+    Move n values from regs[src_base..src_base+n-1] to regs[dst_base..dst_base+n-1]
+    using parallel (simultaneous) assignment semantics to handle cycles correctly.
+
+    Used by TAIL_CALL and TAIL_APPLY to move arguments from the outgoing zone
+    (src_base = frame.base + local_count) down to the frame's parameter slots
+    (dst_base = frame.base).
+    """
+    if n == 0:
+        return
+
+    # Build (dst, src) pairs as absolute indices, filtering no-ops.
+    pending: dict = {}
+    for i in range(n):
+        dst = dst_base + i
+        src = src_base + i
+        if dst != src:
+            pending[dst] = src
+
+    while pending:
+        srcs = set(pending.values())
+        ready = [dst for dst in pending if dst not in srcs]
+        if ready:
+            for dst in ready:
+                regs[dst] = regs[pending.pop(dst)]
+
+        else:
+            # Cycle: save one value to a Python temp to break it.
+            cycle_dst = next(iter(pending))
+            temp = regs[pending[cycle_dst]]
+            cur = pending[cycle_dst]
+            while cur != cycle_dst:
+                next_src = pending.pop(cur)
+                regs[cur] = regs[next_src]
+                cur = next_src
+
+            pending.pop(cycle_dst)
+            regs[cycle_dst] = temp
+
+
 class MenaiVM:
     """
     Virtual machine for executing Menai bytecode.
@@ -58,7 +100,6 @@ class MenaiVM:
     """
 
     def __init__(self, validate: bool = True) -> None:
-        self.stack: List[MenaiValue] = []
         self.regs: List[MenaiValue] = []
 
         # Maximum call depth; exceeded programs raise a stack-overflow error.
@@ -135,8 +176,6 @@ class MenaiVM:
         table[Opcode.LOAD_EMPTY_DICT] = self._op_load_empty_dict
         table[Opcode.LOAD_CONST] = self._op_load_const
         table[Opcode.LOAD_NAME] = self._op_load_name
-        table[Opcode.PUSH] = self._op_push
-        table[Opcode.POP] = self._op_pop
         table[Opcode.MOVE] = self._op_move
         table[Opcode.JUMP] = self._op_jump
         table[Opcode.JUMP_IF_FALSE] = self._op_jump_if_false
@@ -148,7 +187,6 @@ class MenaiVM:
         table[Opcode.TAIL_CALL] = self._op_tail_call
         table[Opcode.APPLY] = self._op_apply
         table[Opcode.TAIL_APPLY] = self._op_tail_apply
-        table[Opcode.ENTER] = self._op_enter
         table[Opcode.RETURN] = self._op_return
         table[Opcode.EMIT_TRACE] = self._op_emit_trace
         table[Opcode.FUNCTION_P] = self._op_function_p
@@ -303,18 +341,16 @@ class MenaiVM:
         table[Opcode.RANGE] = self._op_range
         return table
 
-    def _check_and_pack_args(self, func: MenaiFunction, arity: int) -> None:
+    def _pack_variadic_args(self, func: MenaiFunction, arity: int, base: int) -> None:
         """
-        Shared arity-check and variadic-pack logic for CALL, TAIL_CALL, APPLY, TAIL_APPLY.
+        Arity-check and in-register variadic-pack for CALL and TAIL_CALL.
 
-        Verifies that `arity` satisfies `func`'s parameter requirements and, for
-        variadic functions, packs excess arguments into a list on the stack.
+        Args are already in self.regs[base .. base+arity-1].
+        For variadic functions, packs excess args into a list in the last slot.
         Raises MenaiEvalError on arity mismatch.
         """
         expected_arity = func.bytecode.param_count
         if func.bytecode.is_variadic:
-            # Variadic: must have at least (param_count - 1) fixed args.
-            # The last local receives all remaining args packed into a list.
             min_arity = expected_arity - 1
             if arity < min_arity:
                 func_name = func.name or "<lambda>"
@@ -324,13 +360,8 @@ class MenaiVM:
                 )
 
             rest_count = arity - min_arity
-            if rest_count == 0:
-                self.stack.append(MenaiList(()))
-                return
-
-            rest_elements = tuple(self.stack[-rest_count:])
-            del self.stack[-rest_count:]
-            self.stack.append(MenaiList(rest_elements))
+            rest_elements = tuple(cast(MenaiValue, self.regs[base + min_arity + k]) for k in range(rest_count))
+            self.regs[base + min_arity] = MenaiList(rest_elements)
             return
 
         if arity != expected_arity:
@@ -344,12 +375,17 @@ class MenaiVM:
         self,
         code: CodeObject,
     ) -> int:
-        """Walk the code-object tree and return the maximum local_count across all code objects."""
-        max_locals = code.local_count
+        """
+        Walk the code-object tree and return the maximum (local_count + outgoing_arg_slots) across all code objects.
+
+        The outgoing zone sits above local_count in the same frame window, so the window
+        size that must be allocated per depth level is local_count + outgoing_arg_slots.
+        """
+        max_locals = code.local_count + code.outgoing_arg_slots
         stack = list(code.code_objects)
         while stack:
             co = stack.pop()
-            max_locals = max(max_locals, co.local_count)
+            max_locals = max(max_locals, co.local_count + co.outgoing_arg_slots)
 
             stack.extend(co.code_objects)
 
@@ -382,9 +418,6 @@ class MenaiVM:
 
         # Reset state
         self._cancelled = False
-
-        # Reset execution state
-        self.stack = []
 
         # Allocate the flat register array: one window per depth level, sized to the
         # maximum local_count across all code objects reachable from `code` and from
@@ -532,22 +565,6 @@ class MenaiVM:
         self.regs[frame.base + instr.dest] = self.globals[name]
         return None
 
-    def _op_push(  # pylint: disable=useless-return
-        self, frame: Frame, instr: Instruction
-    ) -> MenaiValue | None:
-        """PUSH src0: Push the value in register src0 onto the call stack."""
-        # Validator guarantees src0 is in bounds AND variable is initialized
-        self.stack.append(cast(MenaiValue, self.regs[frame.base + instr.src0]))
-        return None
-
-    def _op_pop(  # pylint: disable=useless-return
-        self, frame: Frame, instr: Instruction
-    ) -> MenaiValue | None:
-        """POP dest: Pop the call stack top into register dest."""
-        # Validator guarantees dest is in bounds and stack has value
-        self.regs[frame.base + instr.dest] = self.stack.pop()
-        return None
-
     def _op_move(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
@@ -555,23 +572,6 @@ class MenaiVM:
         # Validator guarantees src0 is in bounds and initialized, dest is in bounds
         base = frame.base
         self.regs[base + instr.dest] = self.regs[base + instr.src0]
-        return None
-
-    def _op_enter(  # pylint: disable=useless-return
-        self, frame: Frame, instr: Instruction
-    ) -> MenaiValue | None:
-        """
-        ENTER n: Pop n arguments from stack into locals 0..n-1.
-
-        Arguments are pushed left-to-right by the caller, so the last parameter
-        is on top of the stack. We pop in reverse order so that param 0 ends up
-        in locals[0], param 1 in locals[1], etc.
-        """
-        # Validator guarantees n >= 1 and stack has at least n values
-        base = frame.base
-        for i in range(instr.src0 - 1, -1, -1):
-            self.regs[base + i] = self.stack.pop()
-
         return None
 
     def _op_jump(  # pylint: disable=useless-return
@@ -673,7 +673,11 @@ class MenaiVM:
     def _op_call(
         self, frame: Frame, instr: Instruction
     ) -> _FrameChange:
-        """CALL dest, src0, src1: Call func in register src0 with src1 args on stack; result to dest."""
+        """CALL dest, src0, src1: Call func in src0 with src1 args already in callee window; result to dest.
+
+        The caller has written the arguments into regs[base+local_count .. base+local_count+src1-1].
+        Those slots are exactly the callee's r0..r(src1-1) once the new frame is pushed.
+        """
         base = frame.base
         func = self.regs[base + instr.src0]
         if not isinstance(func, MenaiFunction):
@@ -684,9 +688,7 @@ class MenaiVM:
                 suggestion="Only functions can be called"
             )
 
-        self._check_and_pack_args(func, instr.src1)
         code = func.bytecode
-
         new_depth = self.frame_depth + 1
         if new_depth > self._max_frame_depth:
             raise MenaiEvalError("Maximum call depth exceeded")
@@ -698,6 +700,7 @@ class MenaiVM:
         new_frame.base = base + frame.code.local_count
         new_frame.return_dest = instr.dest
         new_frame.is_sentinel = False
+        self._pack_variadic_args(func, instr.src1, new_frame.base)
         if func.captured_values:
             for i, captured_val in enumerate(func.captured_values):
                 self.regs[new_frame.base + code.param_count + i] = captured_val
@@ -708,7 +711,7 @@ class MenaiVM:
     def _op_tail_call(
         self, frame: Frame, instr: Instruction
     ) -> _FrameChange:
-        """TAIL_CALL src0, src1: Replace current frame with func in src0; args on stack."""
+        """TAIL_CALL src0, src1: Replace current frame with func in src0."""
         base = frame.base
         func = self.regs[base + instr.src0]
         if not isinstance(func, MenaiFunction):
@@ -719,8 +722,14 @@ class MenaiVM:
                 suggestion="Only functions can be called"
             )
 
-        self._check_and_pack_args(func, instr.src1)
         code = func.bytecode
+        local_count = frame.code.local_count
+        n_args = instr.src1
+
+        # Parallel-move args from outgoing zone down to base slots 0..n-1.
+        _parallel_move_regs(self.regs, base + local_count, base, n_args)
+        self._pack_variadic_args(func, n_args, base)
+
         frame.code = code
         frame.code_len = len(code.instructions)
         frame.ip = 0
@@ -733,8 +742,7 @@ class MenaiVM:
     def _op_apply(
         self, frame: Frame, instr: Instruction
     ) -> _FrameChange:
-        """APPLY dest, src0: Apply func in register src0 to arg_list on stack top; result to dest."""
-        arg_list = self.stack.pop()
+        """APPLY dest, src0, src1: Apply func in src0 to arg_list in register src1; result to dest."""
         base = frame.base
         func = self.regs[base + instr.src0]
         if not isinstance(func, MenaiFunction):
@@ -744,6 +752,7 @@ class MenaiVM:
                 suggestion="Use (apply f args) where f is a lambda or builtin"
             )
 
+        arg_list = self.regs[base + instr.src1]
         if not isinstance(arg_list, MenaiList):
             raise MenaiEvalError(
                 message="apply: second argument must be a list",
@@ -751,11 +760,7 @@ class MenaiVM:
                 suggestion="Use (apply f (list arg1 arg2 ...))"
             )
 
-        for element in arg_list.elements:
-            self.stack.append(element)
-
         arity = len(arg_list.elements)
-        self._check_and_pack_args(func, arity)
         code = func.bytecode
         new_depth = self.frame_depth + 1
         if new_depth > self._max_frame_depth:
@@ -768,9 +773,14 @@ class MenaiVM:
         new_frame.base = base + frame.code.local_count
         new_frame.return_dest = instr.dest
         new_frame.is_sentinel = False
+        callee_base = new_frame.base
+        for i, element in enumerate(arg_list.elements):
+            self.regs[callee_base + i] = element
+
+        self._pack_variadic_args(func, arity, callee_base)
         if func.captured_values:
             for i, captured_val in enumerate(func.captured_values):
-                self.regs[new_frame.base + code.param_count + i] = captured_val
+                self.regs[callee_base + code.param_count + i] = captured_val
 
         self.frame_depth = new_depth
         return _FRAME_CHANGE
@@ -778,8 +788,11 @@ class MenaiVM:
     def _op_tail_apply(
         self, frame: Frame, instr: Instruction
     ) -> _FrameChange:
-        """TAIL_APPLY src0: Tail apply func in register src0 to arg_list on stack top."""
-        arg_list = self.stack.pop()
+        """TAIL_APPLY src0, src1: Tail apply func in src0 to arg_list in register src1.
+
+        Scatters list elements into regs[base+local_count..], moves them down to base+0..,
+        then resets the frame in place.
+        """
         base = frame.base
         func = self.regs[base + instr.src0]
         if not isinstance(func, MenaiFunction):
@@ -789,6 +802,7 @@ class MenaiVM:
                 suggestion="Use (apply f args) where f is a lambda or builtin"
             )
 
+        arg_list = self.regs[base + instr.src1]
         if not isinstance(arg_list, MenaiList):
             raise MenaiEvalError(
                 message="apply: second argument must be a list",
@@ -796,12 +810,17 @@ class MenaiVM:
                 suggestion="Use (apply f (list arg1 arg2 ...))"
             )
 
-        for element in arg_list.elements:
-            self.stack.append(element)
-
         arity = len(arg_list.elements)
-        self._check_and_pack_args(func, arity)
         code = func.bytecode
+        local_count = frame.code.local_count
+
+        # Scatter into outgoing zone then move down (parallel semantics).
+        for i, element in enumerate(arg_list.elements):
+            self.regs[base + local_count + i] = element
+
+        _parallel_move_regs(self.regs, base + local_count, base, arity)
+        self._pack_variadic_args(func, arity, base)
+
         frame.code = code
         frame.code_len = len(code.instructions)
         frame.ip = 0
