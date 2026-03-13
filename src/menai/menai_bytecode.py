@@ -406,6 +406,31 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'range': (Opcode.RANGE, 3),
 }
 
+
+def reg_name(slot: int, code: 'CodeObject') -> str:
+    """Return the symbolic register name for a slot index within a CodeObject.
+
+    Slot layout (all boundaries are fields on CodeObject):
+      rp0..rp(P-1)   params         slots 0..P-1
+      rc0..rc(F-1)   captures       slots P..P+F-1
+      rs0..rs(L-1)   scratch locals slots P+F..P+F+L-1
+      ro0..ro(O-1)   outgoing args  slots P+F+L..P+F+L+O-1
+    """
+    p = code.param_count
+    f = len(code.free_vars)
+    l = code.local_count - p - f
+    if slot < p:
+        return f"rp{slot}"
+
+    if slot < p + f:
+        return f"rc{slot - p}"
+
+    if slot < p + f + l:
+        return f"rs{slot - p - f}"
+
+    return f"ro{slot - p - f - l}"
+
+
 @dataclass(slots=True)
 class Instruction:
     """Single bytecode instruction.
@@ -433,73 +458,77 @@ class Instruction:
         """
         return Opcode(self.opcode).arg_count()
 
-    def __repr__(self) -> str:
-        """Human-readable representation using register-ISA disassembly style.
+    def format(self, code: 'CodeObject') -> str:
+        """Return a symbolic disassembly string using register names derived from code.
 
-        Opcodes that write to a destination register are shown as:
-            rN = OPCODE ...
-        Opcodes that only consume or have no result are shown as:
-            OPCODE ...
+        Register naming convention:
+          rp0..rp(P-1)   params         slots 0..P-1
+          rc0..rc(F-1)   captures       slots P..P+F-1
+          rs0..rs(L-1)   scratch locals slots P+F..P+F+L-1
+          ro0..ro(O-1)   outgoing args  slots P+F+L..P+F+L+O-1
 
-        All load ops (LOAD_NONE, LOAD_TRUE, LOAD_FALSE, LOAD_EMPTY_LIST,
-        LOAD_CONST, LOAD_NAME) always write to dest.
+        Falls back to repr(self) for any slot that falls outside all ranges
+        (should not occur in valid bytecode).
         """
+        def rn(slot: int) -> str:
+            return reg_name(slot, code)
+
         opcode = Opcode(self.opcode)
         name = opcode.name
 
         if opcode in (Opcode.LOAD_NONE, Opcode.LOAD_TRUE,
                       Opcode.LOAD_FALSE, Opcode.LOAD_EMPTY_LIST):
-            return f"r{self.dest} = {name}"
+            return f"{rn(self.dest)} = {name}"
 
         if opcode == Opcode.LOAD_CONST:
-            return f"r{self.dest} = LOAD_CONST {self.src0}"
+            return f"{rn(self.dest)} = LOAD_CONST c{self.src0}"
 
         if opcode == Opcode.LOAD_NAME:
-            return f"r{self.dest} = LOAD_NAME {self.src0}"
+            return f"{rn(self.dest)} = LOAD_NAME n{self.src0}"
 
         if opcode == Opcode.MOVE:
-            return f"r{self.dest} = MOVE r{self.src0}"
+            return f"{rn(self.dest)} = MOVE {rn(self.src0)}"
 
         if opcode == Opcode.JUMP:
             return f"JUMP @{self.src0}"
 
         if opcode == Opcode.JUMP_IF_FALSE:
-            return f"JUMP_IF_FALSE r{self.src0}, @{self.src1}"
+            return f"JUMP_IF_FALSE {rn(self.src0)}, @{self.src1}"
 
         if opcode == Opcode.JUMP_IF_TRUE:
-            return f"JUMP_IF_TRUE r{self.src0}, @{self.src1}"
+            return f"JUMP_IF_TRUE {rn(self.src0)}, @{self.src1}"
 
         if opcode == Opcode.MAKE_CLOSURE:
-            return f"r{self.dest} = MAKE_CLOSURE code_objects[{self.src0}]"
+            return f"{rn(self.dest)} = MAKE_CLOSURE co{self.src0}"
 
         if opcode == Opcode.PATCH_CLOSURE:
-            return f"PATCH_CLOSURE r{self.src0}, {self.src1}, r{self.src2}"
+            return f"PATCH_CLOSURE {rn(self.src0)}, {self.src1}, {rn(self.src2)}"
 
         if opcode == Opcode.RETURN:
-            return f"RETURN r{self.src0}"
+            return f"RETURN {rn(self.src0)}"
 
         if opcode == Opcode.CALL:
-            return f"r{self.dest} = CALL r{self.src0}, {self.src1}"
+            return f"{rn(self.dest)} = CALL {rn(self.src0)}, {self.src1}"
 
         if opcode == Opcode.TAIL_CALL:
-            return f"TAIL_CALL r{self.src0}, {self.src1}"
+            return f"TAIL_CALL {rn(self.src0)}, {self.src1}"
 
         if opcode == Opcode.APPLY:
-            return f"r{self.dest} = APPLY r{self.src0} r{self.src1}"
+            return f"{rn(self.dest)} = APPLY {rn(self.src0)} {rn(self.src1)}"
 
         if opcode == Opcode.TAIL_APPLY:
-            return f"TAIL_APPLY r{self.src0} r{self.src1}"
+            return f"TAIL_APPLY {rn(self.src0)} {rn(self.src1)}"
 
         if opcode == Opcode.EMIT_TRACE:
-            return f"EMIT_TRACE r{self.src0}"
+            return f"EMIT_TRACE {rn(self.src0)}"
 
         if opcode == Opcode.RAISE_ERROR:
-            return f"RAISE_ERROR r{self.src0}"
+            return f"RAISE_ERROR c{self.src0}"
 
         n = self.arg_count()
-        srcs = [f"r{self.src0}", f"r{self.src1}", f"r{self.src2}"][:n]
+        srcs = [rn(self.src0), rn(self.src1), rn(self.src2)][:n]
         src_str = (", ".join(srcs) + " " if srcs else "")
-        return f"r{self.dest} = {name} {src_str}".rstrip()
+        return f"{rn(self.dest)} = {name} {src_str}".rstrip()
 
 
 @dataclass(slots=True)

@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from menai import Menai
 from menai.menai_compiler import MenaiCompiler
 from menai.menai_value import MenaiValue
-from menai.menai_bytecode import Opcode, CodeObject, Instruction
+from menai.menai_bytecode import Opcode, CodeObject, Instruction, reg_name
 
 
 def format_constant(const: object) -> str:
@@ -56,30 +56,10 @@ def clean_name(name: str) -> str:
     return name
 
 
-def describe_local(index: int, code: CodeObject) -> str:
-    """
-    Return a human-readable description of a register.
-
-    Captured free-var slots are at fixed positions (param_count ..
-    param_count+len(free_vars)-1) and are always named.  All other
-    registers are shown as rN — we cannot assume any particular register
-    holds a parameter, since the allocator may assign params to any slot.
-    """
-    param_count = code.param_count
-    capture_count = len(code.free_vars)
-
-    captured_index = index - param_count
-    if 0 <= captured_index < capture_count:
-        return f"captured '{code.free_vars[captured_index]}'"
-
-    return f"r{index}"
-
-
 def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
     """Add annotation to instruction showing what it does."""
     opcode = instr.opcode
     src0 = instr.src0
-    src1 = instr.src1
 
     annotation = ""
 
@@ -89,29 +69,22 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
             const_str = format_constant(const)
             if len(const_str) > 40:
                 const_str = const_str[:37] + "..."
-            annotation = f"  ; r{instr.dest} = {const_str}"
+
+            annotation = f"  ; {const_str}"
 
     elif opcode == Opcode.LOAD_NONE:
-        annotation = f"  ; r{instr.dest} = #none"
+        annotation = "  ; #none"
 
     elif opcode in (Opcode.LOAD_TRUE, Opcode.LOAD_FALSE):
         val = "#t" if opcode == Opcode.LOAD_TRUE else "#f"
-        annotation = f"  ; r{instr.dest} = {val}"
+        annotation = f"  ; {val}"
 
     elif opcode == Opcode.LOAD_EMPTY_LIST:
-        annotation = f"  ; r{instr.dest} = []"
+        annotation = "  ; []"
 
     elif opcode == Opcode.LOAD_NAME:
         if src0 < len(code.names):
-            annotation = f"  ; r{instr.dest} = global '{code.names[src0]}'"
-
-    elif opcode == Opcode.ENTER:
-        n = src0
-        pairs = ', '.join(
-            f"r{i} = '{code.param_names[i]}'" if i < len(code.param_names) else f"r{i} = arg"
-            for i in range(n)
-        )
-        annotation = f"  ; {pairs}"
+            annotation = f"  ; '{code.names[src0]}'"
 
     elif opcode == Opcode.MAKE_CLOSURE:
         if instr.src0 < len(code.code_objects):
@@ -125,7 +98,7 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
                 loc_parts.append(f"line {nested.source_line}")
 
             line_info = f" at {':'.join(loc_parts)}" if loc_parts else ""
-            annotation = f"  ; r{instr.dest} = closure for '{clean_name(name)}'{line_info}"
+            annotation = f"  ; closure for '{clean_name(name)}'{line_info}"
 
     elif opcode == Opcode.PATCH_CLOSURE:
         # src0 = closure register, src1 = capture index, src2 = value register.
@@ -133,61 +106,32 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
         # can name the closure and the free-var being filled.
         closure_name = None
         free_var_name = None
-        for j, scan_instr in enumerate(code.instructions):
+        for scan_instr in code.instructions:
             if scan_instr.opcode == Opcode.MAKE_CLOSURE and scan_instr.dest == instr.src0:
                 nested = code.code_objects[scan_instr.src0]
-                closure_name = clean_name(nested.name) if nested.name else f"r{instr.src0}"
+                closure_name = clean_name(nested.name) if nested.name else reg_name(instr.src0, code)
                 if instr.src1 < len(nested.free_vars):
                     free_var_name = nested.free_vars[instr.src1]
 
                 break
 
         # Name the value being patched in: use the closure's own name if the
-        # value register also holds a known closure, otherwise fall back to
-        # describe_local.
+        # value register also holds a known closure, otherwise use reg_name.
         value_closure_name = None
-        for j, scan_instr in enumerate(code.instructions):
+        for scan_instr in code.instructions:
             if scan_instr.opcode == Opcode.MAKE_CLOSURE and scan_instr.dest == instr.src2:
                 value_closure_name = clean_name(code.code_objects[scan_instr.src0].name)
                 break
 
-        lhs_closure = closure_name or f"r{instr.src0}"
+        lhs_closure = closure_name or reg_name(instr.src0, code)
         lhs_capture = f"'{free_var_name}'" if free_var_name else f"capture[{instr.src1}]"
         rhs_sym = value_closure_name
-        rhs_reg = describe_local(instr.src2, code)
+        rhs_reg = reg_name(instr.src2, code)
         rhs = f"'{rhs_sym}'" if rhs_sym else rhs_reg
         annotation = f"  ; '{lhs_closure}'.{lhs_capture} = {rhs}"
 
     elif opcode == Opcode.EMIT_TRACE:
-        annotation = f"  ; Emit {describe_local(instr.src0, code)} to trace watcher"
-
-    elif opcode == Opcode.CALL:
-        arg_word = "arg" if instr.src1 == 1 else "args"
-        annotation = f"  ; Call r{instr.src0} with {instr.src1} {arg_word}, result -> r{instr.dest}"
-
-    elif opcode == Opcode.TAIL_CALL:
-        arg_word = "arg" if instr.src1 == 1 else "args"
-        annotation = f"  ; Tail call r{instr.src0} with {instr.src1} {arg_word}"
-
-    elif opcode == Opcode.APPLY:
-        annotation = f"  ; Apply r{instr.src0} to arg list, result -> r{instr.dest}"
-
-    elif opcode == Opcode.TAIL_APPLY:
-        annotation = f"  ; Tail apply r{instr.src0} to arg list"
-
-    elif opcode == Opcode.LOAD_TRUE:
-        annotation = "  ; Load boolean true"
-
-    elif opcode == Opcode.LOAD_FALSE:
-        annotation = "  ; Load boolean false"
-
-    elif opcode == Opcode.LOAD_EMPTY_LIST:
-        annotation = "  ; Load empty list"
-
-    elif opcode == Opcode.LOAD_NAME:
-        if src0 < len(code.names):
-            name = code.names[src0]
-            annotation = f"  ; Load name: {name}"
+        annotation = f"  ; Emit {reg_name(instr.src0, code)} to trace watcher"
 
     elif opcode == Opcode.RAISE_ERROR:
         if src0 < len(code.constants):
@@ -197,15 +141,11 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
     return annotation
 
 
-def format_instruction(instr: Instruction, index: int) -> str:
-    """Format instruction using register-ISA disassembly style.
-
-    Delegates to Instruction.__repr__ for the opcode/operand formatting,
-    which handles dest= and src= fields correctly for each opcode.
-    """
-    instr_str = f"{index:4}: {repr(instr)}"
-    # Pad to fixed width so annotations align
-    return instr_str.ljust(40)
+def format_instruction(instr: Instruction, index: int, code: CodeObject) -> str:
+    """Format an instruction with symbolic register names derived from code."""
+    instr_str = f"{index:4}: {instr.format(code)}"
+    # Pad to fixed width so annotations align; 48 chars covers the longest opcodes
+    return instr_str.ljust(48)
 
 
 def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None = None) -> List[str]:
@@ -235,6 +175,23 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
     output.append(f"{indent}Code Objects: {len(code.code_objects)}")
     output.append(f"{indent}{'='*70}")
 
+    # Show register map for params and captures (only when present)
+    param_count = code.param_count
+    capture_count = len(code.free_vars)
+    if param_count or capture_count:
+        output.append(f"{indent}")
+        output.append(f"{indent}Initial Register Map:")
+        output.append(f"{indent}{'-'*70}")
+        for i, pname in enumerate(code.param_names):
+            id = f"rp{i}"
+            output.append(f"{indent}{id:>6}: '{pname}'")
+
+        for i, fname in enumerate(code.free_vars):
+            id = f"rc{i}"
+            output.append(f"{indent}{id:>6}: '{fname}'")
+
+        output.append(f"{indent}{'-'*70}")
+
     # Show constants table
     if code.constants:
         output.append(f"{indent}")
@@ -242,7 +199,8 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
         output.append(f"{indent}{'-'*70}")
         for i, const in enumerate(code.constants):
             const_str = format_constant(const)
-            output.append(f"{indent}  [{i:3}] {const_str}")
+            id = f"c{i}"
+            output.append(f"{indent}{id:>6}: {const_str}")
 
         output.append(f"{indent}{'-'*70}")
         output.append(f"{indent}")
@@ -261,7 +219,8 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
                 loc_parts.append(f"line {nested.source_line}")
 
             loc_str = f" [{':'.join(loc_parts)}]" if loc_parts else ""
-            output.append(f"{indent}  [{i:3}] {nested_name}{loc_str}")
+            id = f"co{i}"
+            output.append(f"{indent}{id:>6}: {nested_name}{loc_str}")
 
         output.append(f"{indent}{'-'*70}")
         output.append(f"{indent}")
@@ -286,7 +245,7 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
             output.append(f"{indent}")
 
         annotation = annotate_instruction(instr, code)
-        instr_str = format_instruction(instr, i)
+        instr_str = format_instruction(instr, i, code)
 
         # For jump target lines, replace the last two characters of the indent
         # with "► " so the marker sits flush at the indent boundary and all
@@ -295,6 +254,7 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
 
         if annotation:
             output.append(f"{indent}{target_marker}{instr_str}{annotation}")
+
         else:
             output.append(f"{indent}{target_marker}{instr_str}")
 
@@ -319,7 +279,7 @@ def analyze_function_flow(code: CodeObject) -> Dict[int, str]:
     """Track which functions are stored in which variables."""
     var_map = {}
 
-    for i, instr in enumerate(code.instructions):
+    for instr in code.instructions:
         if instr.opcode == Opcode.MAKE_CLOSURE:
             closure_idx = instr.src0
             var_idx = instr.dest

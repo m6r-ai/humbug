@@ -7,11 +7,9 @@ bytecode emitter uses to assign concrete local variable slots.
 
 Algorithm
 ---------
-Params are pre-assigned to slots 0..P-1 and free vars to slots P..P+F-1.
-Once their last use has passed, those slots are freed and become eligible
-for reuse by later definitions, just like any other register.
-
-A single-pass linear scan is used for all registers:
+Params are pre-assigned to slots 0..P-1 and free vars to slots P..P+F-1 and
+those slots are never reused — they remain live for the entire function body.
+A single-pass linear scan is used for all other registers:
 
 1. Scan the flat instruction list to find the last-use index for every
    register.
@@ -110,7 +108,8 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
     for reg_id in fixed_reg_ids:
         slots[reg_id] = reg_id
 
-    # Phase 2: linear scan allocation for all other registers.
+    # Phase 2: linear scan allocation for all other registers.  Fixed slots
+    # (params and free vars) are permanently live and never released for reuse.
     live: Set[int] = set(fixed_reg_ids)
 
     def _free_slot() -> int:
@@ -128,7 +127,7 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
 
     def _kill_if_dead(reg_id: int, current_idx: int) -> None:
         """Remove reg_id from the live set if its last use is at or before current_idx."""
-        if last_use.get(reg_id, -1) <= current_idx:
+        if reg_id >= fixed_count and last_use.get(reg_id, -1) <= current_idx:
             live.discard(reg_id)
 
     for idx, instr in enumerate(func.instrs):
