@@ -433,49 +433,63 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """LOAD_NONE dest: Write #none into register dest."""
-        self.regs[frame.base + instr.dest] = Menai_NONE
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        regs[f.base + instr.dest] = Menai_NONE
         return None
 
     def _op_load_true(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """LOAD_TRUE dest: Write boolean true into register dest."""
-        self.regs[frame.base + instr.dest] = Menai_BOOLEAN_TRUE
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        regs[f.base + instr.dest] = Menai_BOOLEAN_TRUE
         return None
 
     def _op_load_false(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """LOAD_FALSE dest: Write boolean false into register dest."""
-        self.regs[frame.base + instr.dest] = Menai_BOOLEAN_FALSE
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        regs[f.base + instr.dest] = Menai_BOOLEAN_FALSE
         return None
 
     def _op_load_empty_list(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """LOAD_EMPTY_LIST dest: Write empty list into register dest."""
-        self.regs[frame.base + instr.dest] = Menai_LIST_EMPTY
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        regs[f.base + instr.dest] = Menai_LIST_EMPTY
         return None
 
     def _op_load_empty_dict(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """LOAD_EMPTY_DICT dest: Write empty dict into register dest."""
-        self.regs[frame.base + instr.dest] = Menai_DICT_EMPTY
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        regs[f.base + instr.dest] = Menai_DICT_EMPTY
         return None
 
     def _op_load_const(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """LOAD_CONST dest, src0: Write constant[src0] into register dest."""
-        self.regs[frame.base + instr.dest] = frame.code.constants[instr.src0]
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        regs[f.base + instr.dest] = f.code.constants[instr.src0]
         return None
 
     def _op_load_name(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """LOAD_NAME dest, src0: Load global[names[src0]] into register dest."""
-        name = frame.code.names[instr.src0]
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        name = f.code.names[instr.src0]
 
         # Load from globals
         if name not in self.globals:
@@ -498,7 +512,7 @@ class MenaiVM:
                 example=f"(let (({name} some-value)) ...)"
             )
 
-        self.regs[frame.base + instr.dest] = self.globals[name]
+        regs[f.base + instr.dest] = self.globals[name]
         return None
 
     def _op_move(  # pylint: disable=useless-return
@@ -506,15 +520,18 @@ class MenaiVM:
     ) -> MenaiValue | None:
         """MOVE dest, src0: Copy the value in register src0 into register dest."""
         # Validator guarantees src0 is in bounds and initialized, dest is in bounds
-        base = frame.base
-        self.regs[base + instr.dest] = self.regs[base + instr.src0]
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        regs[base + instr.dest] = regs[base + instr.src0]
         return None
 
     def _op_jump(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """JUMP: Unconditional jump to instruction."""
-        frame.ip = instr.src0
+        cdef Frame f = frame
+        f.ip = instr.src0
         return None
 
     def _op_jump_if_false(  # pylint: disable=useless-return
@@ -523,12 +540,16 @@ class MenaiVM:
         """JUMP_IF_FALSE r_src0, @target: Read condition from register src0, jump if false."""
         # Validator guarantees src0 is in bounds and target is valid
         # Must keep type check (runtime-dependent)
-        condition = self.regs[frame.base + instr.src0]
-        if type(condition) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef MenaiBoolean condition
+        raw = regs[f.base + instr.src0]
+        if type(raw) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError("If condition must be boolean")
 
+        condition = <MenaiBoolean>raw
         if not condition.value:
-            frame.ip = instr.src1
+            f.ip = instr.src1
 
         return None
 
@@ -538,12 +559,16 @@ class MenaiVM:
         """JUMP_IF_TRUE r_src0, @target: Read condition from register src0, jump if true."""
         # Validator guarantees src0 is in bounds and target is valid
         # Must keep type check (runtime-dependent)
-        condition = self.regs[frame.base + instr.src0]
-        if type(condition) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef MenaiBoolean condition
+        raw = regs[f.base + instr.src0]
+        if type(raw) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError("If condition must be boolean")
 
+        condition = <MenaiBoolean>raw
         if condition.value:
-            frame.ip = instr.src1
+            f.ip = instr.src1
 
         return None
 
@@ -909,8 +934,9 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FUNCTION_P dest, src0: r_dest = (function? r_src0)"""
-        base = frame.base
-        regs = self.regs
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
         value = regs[base + instr.src0]
         regs[base + instr.dest] = Menai_BOOLEAN_TRUE if type(value) is MenaiFunction else Menai_BOOLEAN_FALSE  # pylint: disable=unidiomatic-typecheck
         return None
@@ -919,22 +945,26 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FUNCTION_EQ_P dest, src0, src1: r_dest = (function=? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFunction a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function=?: arguments must be functions",
-                received=f"First argument: {a.describe()} ({a.type_name()})"
+                received=f"First argument: {raw_a.describe()} ({raw_a.type_name()})"
             )
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
+        a = <MenaiFunction>raw_a
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function=?: arguments must be functions",
-                received=f"Second argument: {b.describe()} ({b.type_name()})"
+                received=f"Second argument: {raw_b.describe()} ({raw_b.type_name()})"
             )
 
+        b = <MenaiFunction>raw_b
         regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a is b else Menai_BOOLEAN_FALSE
         return None
 
@@ -942,22 +972,26 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FUNCTION_NEQ_P dest, src0, src1: r_dest = (function!=? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFunction a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function!=?: arguments must be functions",
-                received=f"First argument: {a.describe()} ({a.type_name()})"
+                received=f"First argument: {raw_a.describe()} ({raw_a.type_name()})"
             )
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
+        a = <MenaiFunction>raw_a
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function!=?: arguments must be functions",
-                received=f"Second argument: {b.describe()} ({b.type_name()})"
+                received=f"Second argument: {raw_b.describe()} ({raw_b.type_name()})"
             )
 
+        b = <MenaiFunction>raw_b
         regs[base + instr.dest] = Menai_BOOLEAN_FALSE if a is b else Menai_BOOLEAN_TRUE
         return None
 
@@ -965,15 +999,18 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FUNCTION_MIN_ARITY dest, src0: r_dest = (function-min-arity r_src0)"""
-        base = frame.base
-        regs = self.regs
-        func = regs[base + instr.src0]
-        if type(func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFunction func
+        raw = regs[base + instr.src0]
+        if type(raw) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function-min-arity: argument must be a function",
-                received=f"Got: {func.describe()} ({func.type_name()})"
+                received=f"Got: {raw.describe()} ({raw.type_name()})"
             )
 
+        func = <MenaiFunction>raw
         code = func.bytecode
         min_arity = (code.param_count - 1) if code.is_variadic else code.param_count
         regs[base + instr.dest] = MenaiInteger(min_arity)
@@ -983,15 +1020,18 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FUNCTION_VARIADIC_P dest, src0: r_dest = (function-variadic? r_src0)"""
-        base = frame.base
-        regs = self.regs
-        func = regs[base + instr.src0]
-        if type(func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFunction func
+        raw = regs[base + instr.src0]
+        if type(raw) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function-variadic?: argument must be a function",
-                received=f"Got: {func.describe()} ({func.type_name()})"
+                received=f"Got: {raw.describe()} ({raw.type_name()})"
             )
 
+        func = <MenaiFunction>raw
         regs[base + instr.dest] = Menai_BOOLEAN_TRUE if func.bytecode.is_variadic else Menai_BOOLEAN_FALSE
         return None
 
@@ -999,22 +1039,27 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FUNCTION_ACCEPTS_P dest, src0, src1: r_dest = (function-accepts? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        func = regs[base + instr.src0]
-        if type(func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFunction func
+        cdef MenaiInteger n
+        raw_func = regs[base + instr.src0]
+        if type(raw_func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function-accepts?: first argument must be a function",
-                received=f"Got: {func.describe()} ({func.type_name()})"
+                received=f"Got: {raw_func.describe()} ({raw_func.type_name()})"
             )
 
-        n = regs[base + instr.src1]
-        if type(n) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
+        func = <MenaiFunction>raw_func
+        raw_n = regs[base + instr.src1]
+        if type(raw_n) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="function-accepts?: second argument must be an integer",
-                received=f"Got: {n.describe()} ({n.type_name()})"
+                received=f"Got: {raw_n.describe()} ({raw_n.type_name()})"
             )
 
+        n = <MenaiInteger>raw_n
         code = func.bytecode
         if code.is_variadic:
             min_arity = code.param_count - 1
@@ -1030,8 +1075,9 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """SYMBOL_P dest, src0: r_dest = (symbol? r_src0)"""
-        base = frame.base
-        regs = self.regs
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
         value = regs[base + instr.src0]
         regs[base + instr.dest] = Menai_BOOLEAN_TRUE if type(value) is MenaiSymbol else Menai_BOOLEAN_FALSE  # pylint: disable=unidiomatic-typecheck
         return None
@@ -1040,22 +1086,26 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """SYMBOL_EQ_P dest, src0, src1: r_dest = (symbol=? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiSymbol a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="symbol=?: arguments must be symbols",
-                received=f"First argument: {a.describe()} ({a.type_name()})"
+                received=f"First argument: {raw_a.describe()} ({raw_a.type_name()})"
             )
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
+        a = <MenaiSymbol>raw_a
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="symbol=?: arguments must be symbols",
-                received=f"Second argument: {b.describe()} ({b.type_name()})"
+                received=f"Second argument: {raw_b.describe()} ({raw_b.type_name()})"
             )
 
+        b = <MenaiSymbol>raw_b
         regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a.name == b.name else Menai_BOOLEAN_FALSE
         return None
 
@@ -1063,22 +1113,26 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """SYMBOL_NEQ_P dest, src0, src1: r_dest = (symbol!=? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiSymbol a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="symbol!=?: arguments must be symbols",
-                received=f"First argument: {a.describe()} ({a.type_name()})"
+                received=f"First argument: {raw_a.describe()} ({raw_a.type_name()})"
             )
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
+        a = <MenaiSymbol>raw_a
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="symbol!=?: arguments must be symbols",
-                received=f"Second argument: {b.describe()} ({b.type_name()})"
+                received=f"Second argument: {raw_b.describe()} ({raw_b.type_name()})"
             )
 
+        b = <MenaiSymbol>raw_b
         regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a.name != b.name else Menai_BOOLEAN_FALSE
         return None
 
@@ -1086,15 +1140,18 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """SYMBOL_TO_STRING dest, src0: r_dest = (symbol->string r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiSymbol a
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
                 message="symbol->string: argument must be a symbol",
-                received=f"Got: {a.describe()} ({a.type_name()})"
+                received=f"Got: {raw_a.describe()} ({raw_a.type_name()})"
             )
 
+        a = <MenaiSymbol>raw_a
         regs[base + instr.dest] = MenaiString(a.name)
         return None
 
