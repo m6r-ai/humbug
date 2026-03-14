@@ -1744,16 +1744,20 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """INTEGER_TO_STRING dest, src0, src1: r_dest = (integer->string r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'integer->string' requires integer arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiInteger a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'integer->string' requires integer arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'integer->string' requires integer arguments, got {b.type_name()}")
+        a = <MenaiInteger>raw_a
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'integer->string' requires integer arguments, got {raw_b.type_name()}")
 
+        b = <MenaiInteger>raw_b
         a_val = a.value
         radix = b.value
         if radix not in (2, 8, 10, 16):
@@ -4093,20 +4097,25 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """RANGE dest, src0, src1, src2: r_dest = (range r_src0 r_src1 r_src2)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'range' requires integer arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiInteger a, b, c
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'range' requires integer arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'range' requires integer arguments, got {b.type_name()}")
+        a = <MenaiInteger>raw_a
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'range' requires integer arguments, got {raw_b.type_name()}")
 
-        c = regs[base + instr.src2]
-        if type(c) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'range' requires integer arguments, got {c.type_name()}")
+        b = <MenaiInteger>raw_b
+        raw_c = regs[base + instr.src2]
+        if type(raw_c) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'range' requires integer arguments, got {raw_c.type_name()}")
 
+        c = <MenaiInteger>raw_c
         start = a.value
         end = b.value
         step = c.value
