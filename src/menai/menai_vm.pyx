@@ -1159,8 +1159,9 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """NONE_P dest, src0: r_dest = (none? r_src0)"""
-        base = frame.base
-        regs = self.regs
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
         value = regs[base + instr.src0]
         regs[base + instr.dest] = Menai_BOOLEAN_TRUE if type(value) is MenaiNone else Menai_BOOLEAN_FALSE  # pylint: disable=unidiomatic-typecheck
         return None
@@ -1169,8 +1170,9 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """BOOLEAN_P dest, src0: r_dest = (boolean? r_src0)"""
-        base = frame.base
-        regs = self.regs
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
         value = regs[base + instr.src0]
         regs[base + instr.dest] = Menai_BOOLEAN_TRUE if type(value) is MenaiBoolean else Menai_BOOLEAN_FALSE  # pylint: disable=unidiomatic-typecheck
         return None
@@ -1179,16 +1181,20 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """BOOLEAN_EQ_P dest, src0, src1: r_dest = (boolean=? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'boolean=?' requires boolean arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiBoolean a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'boolean=?' requires boolean arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'boolean=?' requires boolean arguments, got {b.type_name()}")
+        a = <MenaiBoolean>raw_a
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'boolean=?' requires boolean arguments, got {raw_b.type_name()}")
 
+        b = <MenaiBoolean>raw_b
         regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a.value == b.value else Menai_BOOLEAN_FALSE
         return None
 
@@ -1196,16 +1202,20 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """BOOLEAN_NEQ_P dest, src0, src1: r_dest = (boolean!=? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'boolean!=?' requires boolean arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiBoolean a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'boolean!=?' requires boolean arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'boolean!=?' requires boolean arguments, got {b.type_name()}")
+        a = <MenaiBoolean>raw_a
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'boolean!=?' requires boolean arguments, got {raw_b.type_name()}")
 
+        b = <MenaiBoolean>raw_b
         regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a.value != b.value else Menai_BOOLEAN_FALSE
         return None
 
@@ -1213,12 +1223,15 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """BOOLEAN_NOT dest, src0: r_dest = (boolean-not r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'boolean-not' requires boolean arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiBoolean a
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiBoolean:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'boolean-not' requires boolean arguments, got {raw_a.type_name()}")
 
+        a = <MenaiBoolean>raw_a
         regs[base + instr.dest] = Menai_BOOLEAN_FALSE if a.value else Menai_BOOLEAN_TRUE
         return None
 
