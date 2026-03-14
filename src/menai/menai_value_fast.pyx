@@ -1,7 +1,8 @@
 # cython: language_level=3
 # cython: boundscheck=False
 # cython: wraparound=False
-"""Cython-accelerated Menai runtime value types for the VM.
+"""
+Cython-accelerated Menai runtime value types for the VM.
 
 These are the VM-only counterparts of the pure-Python types in menai_value.py.
 The compiler pipeline continues to use menai_value.py unchanged.  At the start
@@ -32,10 +33,6 @@ __traverse__ and __clear__ so the cyclic GC can collect closure cycles.
 from menai.menai_error import MenaiEvalError
 
 
-# ---------------------------------------------------------------------------
-# Abstract base
-# ---------------------------------------------------------------------------
-
 cdef class MenaiValue:
     """Abstract base for all VM runtime values."""
 
@@ -48,10 +45,6 @@ cdef class MenaiValue:
     def describe(self):
         raise NotImplementedError
 
-
-# ---------------------------------------------------------------------------
-# MenaiNone
-# ---------------------------------------------------------------------------
 
 cdef class MenaiNone(MenaiValue):
     """Represents the absence of a value (#none)."""
@@ -74,10 +67,6 @@ cdef class MenaiNone(MenaiValue):
     def __eq__(self, other):
         return type(other) is MenaiNone
 
-
-# ---------------------------------------------------------------------------
-# MenaiBoolean
-# ---------------------------------------------------------------------------
 
 cdef class MenaiBoolean(MenaiValue):
     """Represents boolean values (#t / #f)."""
@@ -103,12 +92,9 @@ cdef class MenaiBoolean(MenaiValue):
     def __eq__(self, other):
         if type(other) is not MenaiBoolean:
             return False
+
         return self.value == (<MenaiBoolean>other).value
 
-
-# ---------------------------------------------------------------------------
-# MenaiInteger
-# ---------------------------------------------------------------------------
 
 cdef class MenaiInteger(MenaiValue):
     """Represents integer values.  Payload stored as a Python int (arbitrary precision)."""
@@ -134,12 +120,9 @@ cdef class MenaiInteger(MenaiValue):
     def __eq__(self, other):
         if type(other) is not MenaiInteger:
             return False
+
         return self.value == (<MenaiInteger>other).value  # Python int comparison
 
-
-# ---------------------------------------------------------------------------
-# MenaiFloat
-# ---------------------------------------------------------------------------
 
 cdef class MenaiFloat(MenaiValue):
     """Represents floating-point values.  Payload stored as a C double."""
@@ -165,12 +148,9 @@ cdef class MenaiFloat(MenaiValue):
     def __eq__(self, other):
         if type(other) is not MenaiFloat:
             return False
+
         return self.value == (<MenaiFloat>other).value
 
-
-# ---------------------------------------------------------------------------
-# MenaiComplex
-# ---------------------------------------------------------------------------
 
 cdef class MenaiComplex(MenaiValue):
     """Represents complex number values.  Payload held as a Python complex."""
@@ -194,14 +174,18 @@ cdef class MenaiComplex(MenaiValue):
                 as_int = int(x)
                 if x == as_int:
                     return str(as_int)
+
             except (ValueError, OverflowError):
                 pass
+
             return str(x)
 
         if r == 0.0 and i == 0.0:
             return "0+0j"
+
         if r == 0.0:
             return f"{_fmt(i)}j"
+
         real_str = _fmt(r)
         imag_str = f"+{_fmt(i)}j" if i >= 0.0 else f"{_fmt(i)}j"
         return f"{real_str}{imag_str}"
@@ -215,12 +199,9 @@ cdef class MenaiComplex(MenaiValue):
     def __eq__(self, other):
         if type(other) is not MenaiComplex:
             return False
+
         return self.value == (<MenaiComplex>other).value
 
-
-# ---------------------------------------------------------------------------
-# MenaiString
-# ---------------------------------------------------------------------------
 
 cdef class MenaiString(MenaiValue):
     """Represents string values."""
@@ -246,6 +227,7 @@ cdef class MenaiString(MenaiValue):
     def __eq__(self, other):
         if type(other) is not MenaiString:
             return False
+
         return self.value == (<MenaiString>other).value
 
 
@@ -255,24 +237,27 @@ cdef str _escape_string(str s):
     for char in s:
         if char == '"':
             result.append('\\"')
+
         elif char == '\\':
             result.append('\\\\')
+
         elif char == '\n':
             result.append('\\n')
+
         elif char == '\t':
             result.append('\\t')
+
         elif char == '\r':
             result.append('\\r')
+
         elif ord(char) < 32:
             result.append(f'\\u{ord(char):04x}')
+
         else:
             result.append(char)
+
     return ''.join(result)
 
-
-# ---------------------------------------------------------------------------
-# MenaiSymbol
-# ---------------------------------------------------------------------------
 
 cdef class MenaiSymbol(MenaiValue):
     """Represents symbol values (produced by quote)."""
@@ -301,12 +286,9 @@ cdef class MenaiSymbol(MenaiValue):
     def __eq__(self, other):
         if type(other) is not MenaiSymbol:
             return False
+
         return self.name == (<MenaiSymbol>other).name
 
-
-# ---------------------------------------------------------------------------
-# MenaiList
-# ---------------------------------------------------------------------------
 
 cdef class MenaiList(MenaiValue):
     """Represents immutable lists.  Elements stored in a Python tuple."""
@@ -323,6 +305,7 @@ cdef class MenaiList(MenaiValue):
     def describe(self):
         if len(self.elements) == 0:
             return "()"
+
         return "(" + " ".join(e.describe() for e in self.elements) + ")"
 
     def __repr__(self):
@@ -334,12 +317,9 @@ cdef class MenaiList(MenaiValue):
     def __eq__(self, other):
         if type(other) is not MenaiList:
             return False
+
         return self.elements == (<MenaiList>other).elements
 
-
-# ---------------------------------------------------------------------------
-# MenaiDict
-# ---------------------------------------------------------------------------
 
 cdef class MenaiDict(MenaiValue):
     """Represents immutable key-value dictionaries.
@@ -353,6 +333,7 @@ cdef class MenaiDict(MenaiValue):
         cdef dict lk = {}
         for key, value in self.pairs:
             lk[_hashable_key(key)] = (key, value)
+
         self.lookup = lk
 
     def to_python(self):
@@ -360,11 +341,15 @@ cdef class MenaiDict(MenaiValue):
         for key, value in self.pairs:
             if type(key) is MenaiString:
                 py_key = (<MenaiString>key).value
+
             elif type(key) is MenaiSymbol:
                 py_key = (<MenaiSymbol>key).name
+
             else:
                 py_key = str(key.to_python())
+
             result[py_key] = value.to_python()
+
         return result
 
     def type_name(self):
@@ -373,6 +358,7 @@ cdef class MenaiDict(MenaiValue):
     def describe(self):
         if len(self.pairs) == 0:
             return "{}"
+
         parts = [f"({k.describe()} {v.describe()})" for k, v in self.pairs]
         return "{" + " ".join(parts) + "}"
 
@@ -385,6 +371,7 @@ cdef class MenaiDict(MenaiValue):
     def __eq__(self, other):
         if type(other) is not MenaiDict:
             return False
+
         return self.pairs == (<MenaiDict>other).pairs
 
     @staticmethod
@@ -401,16 +388,22 @@ cdef object _hashable_key(object key):
     cdef type t = type(key)
     if t is MenaiString:
         return ('str', (<MenaiString>key).value)
+
     if t is MenaiInteger:
         return ('int', (<MenaiInteger>key).value)
+
     if t is MenaiFloat:
         return ('flt', (<MenaiFloat>key).value)
+
     if t is MenaiComplex:
         return ('cplx', (<MenaiComplex>key).value)
+
     if t is MenaiBoolean:
         return ('bool', (<MenaiBoolean>key).value)
+
     if t is MenaiSymbol:
         return ('sym', (<MenaiSymbol>key).name)
+
     raise MenaiEvalError(
         message="Dict keys must be strings, numbers, booleans, or symbols",
         received=f"Key type: {key.type_name()}",
@@ -418,10 +411,6 @@ cdef object _hashable_key(object key):
         suggestion="Use strings for most keys"
     )
 
-
-# ---------------------------------------------------------------------------
-# MenaiFunction
-# ---------------------------------------------------------------------------
 
 cdef class MenaiFunction(MenaiValue):
     """Represents a first-class function (lambda or builtin).
@@ -433,8 +422,7 @@ cdef class MenaiFunction(MenaiValue):
     cycles (closures that capture other closures that capture them back).
     """
 
-    def __init__(self, parameters=(), name=None, bytecode=None,
-                 captured_values=None, is_variadic=False):
+    def __init__(self, parameters=(), name=None, bytecode=None, captured_values=None, is_variadic=False):
         self.parameters = tuple(parameters)
         self.name = name
         self.bytecode = bytecode
@@ -453,8 +441,10 @@ cdef class MenaiFunction(MenaiValue):
             regular = ', '.join(self.parameters[:n - 1]) if n > 1 else ''
             rest = self.parameters[n - 1]
             param_str = f"{regular} . {rest}".strip(' .')
+
         else:
             param_str = ', '.join(self.parameters)
+
         return f"<lambda ({param_str})>"
 
     def __repr__(self):
@@ -470,8 +460,10 @@ cdef class MenaiFunction(MenaiValue):
         """Tell the cyclic GC about Python object references held by this closure."""
         if self.bytecode is not None:
             visit(self.bytecode, arg)
+
         if self.captured_values is not None:
             visit(self.captured_values, arg)
+
         return 0
 
     def __clear__(self):
@@ -480,20 +472,13 @@ cdef class MenaiFunction(MenaiValue):
         self.captured_values = []
 
 
-# ---------------------------------------------------------------------------
 # Module-level singletons
-# ---------------------------------------------------------------------------
-
 Menai_NONE = MenaiNone()
 Menai_BOOLEAN_TRUE = MenaiBoolean(True)
 Menai_BOOLEAN_FALSE = MenaiBoolean(False)
 Menai_LIST_EMPTY = MenaiList(())
 Menai_DICT_EMPTY = MenaiDict(())
 
-
-# ---------------------------------------------------------------------------
-# Conversion: compiler-world values -> VM-world values
-# ---------------------------------------------------------------------------
 
 def convert_value(src):
     """Convert a single compiler-world MenaiValue to its fast VM equivalent.
@@ -510,24 +495,33 @@ def convert_value(src):
     t = type(src)
     if t is _slow.MenaiInteger:
         return MenaiInteger(src.value)
+
     if t is _slow.MenaiFloat:
         return MenaiFloat(src.value)
+
     if t is _slow.MenaiBoolean:
         return Menai_BOOLEAN_TRUE if src.value else Menai_BOOLEAN_FALSE
+
     if t is _slow.MenaiNone:
         return Menai_NONE
+
     if t is _slow.MenaiString:
         return MenaiString(src.value)
+
     if t is _slow.MenaiSymbol:
         return MenaiSymbol(src.name)
+
     if t is _slow.MenaiComplex:
         return MenaiComplex(src.value)
+
     if t is _slow.MenaiList:
         return MenaiList(tuple(convert_value(e) for e in src.elements))
+
     if t is _slow.MenaiDict:
         return MenaiDict(tuple(
             (convert_value(k), convert_value(v)) for k, v in src.pairs
         ))
+
     if t is _slow.MenaiFunction:
         # Zero-capture lambdas are stored as LOAD_CONST constants by the
         # bytecode builder.  Convert to a fast MenaiFunction; the nested
@@ -539,6 +533,7 @@ def convert_value(src):
             captured_values=list(src.captured_values),
             is_variadic=src.is_variadic,
         )
+
     raise TypeError(f"convert_value: unexpected type {t!r}")
 
 
@@ -552,4 +547,59 @@ def convert_code_object(code):
     code.constants = [convert_value(v) for v in code.constants]
     for child in code.code_objects:
         convert_code_object(child)
+
     return code
+
+
+def to_slow(src):
+    """Convert a single fast VM MenaiValue to its slow compiler-world equivalent.
+
+    Called on the return value of execute() so that no fast types escape the VM
+    boundary.  All code outside menai_vm.pyx sees only menai_value.py types.
+
+    If src is already a slow menai_value.py type (e.g. a prelude MenaiFunction
+    that was stored in globals and never converted to a fast type), it is
+    returned unchanged.
+    """
+    import menai.menai_value as _slow
+    if isinstance(src, _slow.MenaiValue):
+        return src
+
+    if type(src) is MenaiNone:
+        return _slow.MenaiNone()
+
+    if type(src) is MenaiBoolean:
+        return _slow.MenaiBoolean(bool(src.value))
+
+    if type(src) is MenaiInteger:
+        return _slow.MenaiInteger(src.value)
+
+    if type(src) is MenaiFloat:
+        return _slow.MenaiFloat(src.value)
+
+    if type(src) is MenaiComplex:
+        return _slow.MenaiComplex(src.value)
+
+    if type(src) is MenaiString:
+        return _slow.MenaiString(src.value)
+
+    if type(src) is MenaiSymbol:
+        return _slow.MenaiSymbol(src.name)
+
+    if type(src) is MenaiList:
+        return _slow.MenaiList(tuple(to_slow(e) for e in src.elements))
+
+    if type(src) is MenaiDict:
+        return _slow.MenaiDict(tuple(
+            (to_slow(k), to_slow(v)) for k, v in src.pairs
+        ))
+
+    if type(src) is MenaiFunction:
+        return _slow.MenaiFunction(
+            parameters=src.parameters,
+            name=src.name,
+            bytecode=src.bytecode,
+            captured_values=list(src.captured_values),
+            is_variadic=src.is_variadic,
+        )
+    raise TypeError(f"to_slow: unexpected fast type {type(src)!r}")

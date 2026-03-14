@@ -15,7 +15,7 @@ from menai.menai_value_fast import (
     MenaiInteger, MenaiComplex, MenaiFloat, MenaiSymbol, MenaiNone,
     Menai_NONE, Menai_BOOLEAN_TRUE, Menai_BOOLEAN_FALSE, Menai_DICT_EMPTY, Menai_LIST_EMPTY
 )
-from menai.menai_value_fast import convert_code_object
+from menai.menai_value_fast import convert_code_object, convert_value, to_slow
 from menai.menai_value_fast cimport (
     MenaiValue, MenaiBoolean, MenaiString, MenaiList, MenaiDict, MenaiFunction,
     MenaiInteger, MenaiComplex, MenaiFloat, MenaiSymbol, MenaiNone
@@ -330,7 +330,7 @@ class MenaiVM:
         code: CodeObject,
         constants: Dict[str, MenaiValue],
         prelude_functions: Dict[str, MenaiFunction] | None = None
-    ) -> MenaiValue:
+    ) -> object:
         """
         Execute a code object and return the result.
 
@@ -349,9 +349,9 @@ class MenaiVM:
         # Convert compiler-world constants to fast cdef class values, once.
         convert_code_object(code)
 
-        self.globals = constants.copy()
+        self.globals = {k: convert_value(v) for k, v in constants.items()}
         if prelude_functions:
-            self.globals.update(prelude_functions)
+            self.globals.update({k: convert_value(v) for k, v in prelude_functions.items()})
 
         # Reset state
         self._cancelled = False
@@ -421,7 +421,7 @@ class MenaiVM:
 
             # MenaiValue returned only by _op_return when the sentinel frame is
             # the sole remaining frame — this is the top-level result.
-            return cast(MenaiValue, result)
+            return to_slow(result)
 
     def _op_not_implemented(
         self, frame: Frame, instr: Instruction
