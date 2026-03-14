@@ -3094,8 +3094,9 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_P dest, src0: r_dest = (dict? r_src0)"""
-        base = frame.base
-        regs = self.regs
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
         regs[base + instr.dest] = (
             Menai_BOOLEAN_TRUE if type(regs[base + instr.src0]) is MenaiDict else Menai_BOOLEAN_FALSE  # pylint: disable=unidiomatic-typecheck
         )
@@ -3105,16 +3106,20 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_EQ_P dest, src0, src1: r_dest = (dict=? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'dict=?' requires dict arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiDict a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'dict=?' requires dict arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'dict=?' requires dict arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'dict=?' requires dict arguments, got {raw_b.type_name()}")
 
+        a = <MenaiDict>raw_a
+        b = <MenaiDict>raw_b
         regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a.pairs == b.pairs else Menai_BOOLEAN_FALSE
         return None
 
@@ -3122,16 +3127,20 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_NEQ_P dest, src0, src1: r_dest = (dict!=? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'dict!=?' requires dict arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiDict a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'dict!=?' requires dict arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'dict!=?' requires dict arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'dict!=?' requires dict arguments, got {raw_b.type_name()}")
 
+        a = <MenaiDict>raw_a
+        b = <MenaiDict>raw_b
         regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a.pairs != b.pairs else Menai_BOOLEAN_FALSE
         return None
 
@@ -3139,12 +3148,15 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_KEYS dest, src0: r_dest = (dict-keys r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'dict-keys' requires dict arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiDict a
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'dict-keys' requires dict arguments, got {raw_a.type_name()}")
 
+        a = <MenaiDict>raw_a
         regs[base + instr.dest] = MenaiList(tuple(k for k, _ in a.pairs))
         return None
 
@@ -3152,12 +3164,15 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_VALUES dest, src0: r_dest = (dict-values r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'dict-values' requires dict arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiDict a
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'dict-values' requires dict arguments, got {raw_a.type_name()}")
 
+        a = <MenaiDict>raw_a
         regs[base + instr.dest] = MenaiList(tuple(v for _, v in a.pairs))
         return None
 
@@ -3165,12 +3180,15 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_LENGTH dest, src0: r_dest = (dict-length r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'dict-length' requires dict arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiDict a
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'dict-length' requires dict arguments, got {raw_a.type_name()}")
 
+        a = <MenaiDict>raw_a
         regs[base + instr.dest] = MenaiInteger(len(a.pairs))
         return None
 
@@ -3178,12 +3196,15 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_HAS_P dest, src0, src1: r_dest = (dict-has? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'dict-has?' requires dict arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiDict a
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'dict-has?' requires dict arguments, got {raw_a.type_name()}")
 
+        a = <MenaiDict>raw_a
         try:
             hashable_key = a.to_hashable_key(regs[base + instr.src1])
             regs[base + instr.dest] = Menai_BOOLEAN_TRUE if hashable_key in a.lookup else Menai_BOOLEAN_FALSE
@@ -3197,12 +3218,15 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_REMOVE dest, src0, src1: r_dest = (dict-remove r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'dict-remove' requires dict arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiDict a
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'dict-remove' requires dict arguments, got {raw_a.type_name()}")
 
+        a = <MenaiDict>raw_a
         try:
             hashable_key = a.to_hashable_key(regs[base + instr.src1])
             new_pairs = tuple(
@@ -3220,15 +3244,20 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_MERGE dest, src0, src1: r_dest = (dict-merge r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'dict-merge' requires dict arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiDict a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'dict-merge' requires dict arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'dict-merge' requires dict arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'dict-merge' requires dict arguments, got {raw_b.type_name()}")
+
+        a = <MenaiDict>raw_a
+        b = <MenaiDict>raw_b
 
         # Start with self's pairs
         result_dict = {}
@@ -3264,12 +3293,15 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_SET dest, src0, src1, src2: r_dest = (dict-set r_src0 r_src1 r_src2)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'dict-set' requires dict arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiDict a
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'dict-set' requires dict arguments, got {raw_a.type_name()}")
 
+        a = <MenaiDict>raw_a
         try:
             hashable_key = a.to_hashable_key(regs[base + instr.src1])
 
@@ -3302,12 +3334,15 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """DICT_GET dest, src0, src1, src2: r_dest = (dict-get r_src0 r_src1 r_src2)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'dict-get' requires dict arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiDict a
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiDict:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'dict-get' requires dict arguments, got {raw_a.type_name()}")
 
+        a = <MenaiDict>raw_a
         try:
             hashable_key = a.to_hashable_key(regs[base + instr.src1])
             if hashable_key in a.lookup:
