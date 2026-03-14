@@ -9,10 +9,16 @@ from typing import Any, Callable, Dict, List, Optional
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from menai import Menai, MenaiError
-from menai.menai_value import (
-    MenaiBoolean, MenaiDict, MenaiFloat, MenaiInteger, MenaiList, MenaiNone,
-    MenaiString, MenaiValue
-)
+try:
+    from menai.menai_value_fast import (
+        MenaiBoolean, MenaiDict, MenaiFloat, MenaiInteger, MenaiList, MenaiNone,
+        MenaiString, MenaiValue
+    )
+except ImportError:
+    from menai.menai_value import (  # type: ignore[assignment]
+        MenaiBoolean, MenaiDict, MenaiFloat, MenaiInteger, MenaiList, MenaiNone,
+        MenaiString, MenaiValue
+    )
 
 from pipeline_step import MenaiStep, Pipeline, PipelineStep, ToolStep, resolve_step_expression
 from pipeline_tools import (
