@@ -9,7 +9,8 @@ New features:
   already exists but is in the same column as the AI conversation then the column
   manager will now move it to a new column so it can be seen side-by-side.
 - Added new optimization passes to the Menai compiler that will handle `or` and `and` sequences more effectively.
-- Reworked the Menai VM to reduce overheads (improve performance by 20%).
+- Reworked the Menai VM to reduce overheads (improve performance by up to 2x).
+- Added option to produce colour output within the Menai disassembler.
 
 Bug fixes:
 
