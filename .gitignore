@@ -30,3 +30,9 @@
 # Ignore benchmark test results
 /tools/aifpl_benchmark/benchmark_results.json
 /tools/aifpl_bytecode_analyzer/optimization_report.md
+
+# Ignore Cython build artefacts (compiled per-machine, not source)
+src/menai/*.so
+src/menai/*.pyd
+src/menai/menai_vm_fast.c
+build/cython/

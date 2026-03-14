@@ -112,10 +112,6 @@ class MenaiNone(MenaiValue):
         return "#none"
 
 
-# Module-level singleton — there is only one #none value.
-Menai_NONE = MenaiNone()
-
-
 @dataclass(slots=True, unsafe_hash=True)
 class MenaiBoolean(MenaiValue):
     """Represents boolean values."""
@@ -394,3 +390,11 @@ class MenaiDict(MenaiValue):
             example='(dict ("name" "Alice") ("age" 30))',
             suggestion="Use strings for most keys"
         )
+
+
+# Module-level singletons — there is only one #none value.
+Menai_NONE = MenaiNone()
+Menai_BOOLEAN_TRUE = MenaiBoolean(True)
+Menai_BOOLEAN_FALSE = MenaiBoolean(False)
+Menai_LIST_EMPTY = MenaiList(())
+Menai_DICT_EMPTY = MenaiDict(())

@@ -3,7 +3,10 @@
 import pytest
 
 from menai.menai_bytecode import CodeObject, Instruction, Opcode
-from menai.menai_value import MenaiInteger, MenaiString, MenaiBoolean, MenaiNone, Menai_NONE
+try:
+    from menai.menai_value_fast import MenaiInteger, MenaiString, MenaiBoolean, MenaiNone, Menai_NONE
+except ImportError:
+    from menai.menai_value import MenaiInteger, MenaiString, MenaiBoolean, MenaiNone, Menai_NONE  # type: ignore[assignment]
 from menai.menai_vm import MenaiVM
 from menai.menai_vm_bytecode_validator import BytecodeValidator, ValidationError, ValidationErrorType
 

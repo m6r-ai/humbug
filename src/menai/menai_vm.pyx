@@ -1,3 +1,6 @@
+# cython: language_level=3
+# cython: boundscheck=False
+# cython: wraparound=False
 """Menai Virtual Machine - executes bytecode."""
 
 import cmath
@@ -7,11 +10,12 @@ from typing import List, Dict, Any, cast, Protocol
 
 from menai.menai_bytecode import CodeObject, Opcode, Instruction
 from menai.menai_error import MenaiEvalError, MenaiCancelledException
-from menai.menai_value import (
+from menai.menai_value_fast import (
     MenaiValue, MenaiBoolean, MenaiString, MenaiList, MenaiDict, MenaiFunction,
     MenaiInteger, MenaiComplex, MenaiFloat, MenaiSymbol, MenaiNone,
     Menai_NONE, Menai_BOOLEAN_TRUE, Menai_BOOLEAN_FALSE, Menai_DICT_EMPTY, Menai_LIST_EMPTY
 )
+from menai.menai_value_fast import convert_code_object
 from menai.menai_vm_bytecode_validator import validate_bytecode
 
 
@@ -339,6 +343,9 @@ class MenaiVM:
         # Validate bytecode before execution (if enabled)
         if self.validate_bytecode:
             validate_bytecode(code)
+
+        # Convert compiler-world constants to fast cdef class values, once.
+        convert_code_object(code)
 
         self.globals = constants.copy()
         if prelude_functions:
@@ -3118,7 +3125,8 @@ class MenaiVM:
         if not a.elements:
             raise MenaiEvalError("Function 'list-last' requires a non-empty list")
 
-        self.regs[base + instr.dest] = a.elements[-1]
+        n = len(a.elements)
+        self.regs[base + instr.dest] = a.elements[n - 1]
         return None
 
     def _op_list_length(  # pylint: disable=useless-return

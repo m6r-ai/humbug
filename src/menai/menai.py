@@ -9,7 +9,10 @@ from contextlib import contextmanager
 
 from menai.menai_compiler import MenaiCompiler
 from menai.menai_ast import MenaiASTNode
-from menai.menai_value import MenaiDict, MenaiFunction, MenaiFloat, MenaiString, MenaiValue
+try:
+    from menai.menai_value_fast import MenaiDict, MenaiFunction, MenaiFloat, MenaiString, MenaiValue
+except ImportError:
+    from menai.menai_value import MenaiDict, MenaiFunction, MenaiFloat, MenaiString, MenaiValue  # type: ignore[assignment]
 from menai.menai_vm import MenaiVM, MenaiTraceWatcher
 from menai.menai_error import MenaiModuleNotFoundError, MenaiModuleError, MenaiCircularImportError
 
