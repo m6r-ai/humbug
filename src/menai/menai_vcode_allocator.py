@@ -105,13 +105,6 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
     next_new_slot = 0
 
     # Pre-compute sets needed for Phase 3 safety checks.
-    # call_result_reg_ids: registers written by CALL or APPLY — the VM writes
-    # return values to these slots; they must stay within local_count.
-    call_result_reg_ids: Set[int] = {
-        instr.dst.id for instr in func.instrs
-        if isinstance(instr, (MenaiVCodeCall, MenaiVCodeApply))
-    }
-
     # closure_reg_ids: registers written by MAKE_CLOSURE — PATCH_CLOSURE
     # requires its closure operand within local_count.
     closure_reg_ids: Set[int] = {
@@ -230,14 +223,14 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
     #
     # Safety conditions:
     #   1. Not a fixed register (param or free var) — those have fixed slots.
-    #   2. Not a call/apply result register — VM writes return values within
-    #      local_count; we cannot redirect those writes to the outgoing zone.
-    #   3. Not a closure register — PATCH_CLOSURE requires its operands within
+    #   2. Not a closure register — PATCH_CLOSURE requires its operands within
     #      local_count.
-    #   4. The call is the last use of the register — the outgoing zone is
+    #   3. The call is the last use of the register — the outgoing zone is
     #      clobbered when the call returns, so no later read is safe.
-    #   5. No call or apply between the register's definition and this call —
+    #   4. No call or apply between the register's definition and this call —
     #      a prior call would have already written local_count + arg_index.
+    #      For call/apply result registers the defining call itself is not a
+    #      barrier — the scan starts strictly after the definition index.
     max_outgoing_index = -1
     for call_idx, instr in enumerate(func.instrs):
         if not isinstance(instr, (MenaiVCodeCall, MenaiVCodeTailCall)):
@@ -249,16 +242,13 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
             if reg_id < fixed_count:
                 continue
 
-            if reg_id in call_result_reg_ids:
-                continue
-
             if reg_id in closure_reg_ids:
                 continue
 
             if last_use.get(reg_id, -1) != call_idx:
                 continue
 
-            # Condition 5: scan for a call/apply barrier between def and use.
+            # Condition 4: scan for a call/apply barrier between def and use.
             reg_def = def_index.get(reg_id, 0)
             barrier = False
             for scan_idx in range(reg_def + 1, call_idx):
@@ -286,11 +276,10 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
     #
     # Safety conditions (parallel to Phase 3):
     #   1. Not a fixed register (param or free var).
-    #   2. Not a call/apply result register.
-    #   3. Not a closure register.
-    #   4. The self-loop move is the last use of the register.
-    #   5. No call or apply between the register's definition and this move.
-    #   6. No instruction between the definition and this move reads from param_slot.
+    #   2. Not a closure register.
+    #   3. The self-loop move is the last use of the register.
+    #   4. No call or apply between the register's definition and this move.
+    #   5. No instruction between the definition and this move reads from param_slot.
     for jump_idx, instr in enumerate(func.instrs):
         if not isinstance(instr, MenaiVCodeJump) or instr.label != "__entry__":
             continue
@@ -308,9 +297,6 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
             param_slot = slots[move.dst.id]
 
             if reg_id < fixed_count:
-                continue
-
-            if reg_id in call_result_reg_ids:
                 continue
 
             if reg_id in closure_reg_ids:
