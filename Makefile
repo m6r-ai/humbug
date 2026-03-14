@@ -33,11 +33,9 @@ SO_FILES := $(patsubst src/menai/%.pyx, src/menai/%$(EXT_SUFFIX), $(PYX_SOURCES)
 
 build: $(SO_FILES)
 
-build/.cython_stamp: $(PYX_SOURCES) src/menai/menai_value_fast.pxd
+$(SO_FILES): $(PYX_SOURCES) src/menai/menai_value_fast.pxd
 	$(PYTHON) setup.py build_ext --inplace
 	@mkdir -p build && touch $@
-
-$(SO_FILES): build/.cython_stamp
 
 #
 # Run the full test suite.
