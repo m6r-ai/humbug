@@ -32,6 +32,10 @@ Call argument registers whose last use is the call itself, and whose
 definition has no intervening call barrier, are reassigned directly to the
 outgoing zone (local_count + arg_index) in Phase 3.
 
+Self-loop argument registers whose last use is the self-loop move itself,
+and whose definition has no intervening call barrier, are reassigned directly
+to the target param slot (arg_index) in Phase 3b, eliminating the MOVE.
+
 Param/free-var register ids
 ----------------------------
 The CFG builder assigns SSA value ids to params and free vars first, in
@@ -50,6 +54,7 @@ from menai.menai_vcode import (
     MenaiVCodeCall,
     MenaiVCodeFunction,
     MenaiVCodeInstr,
+    MenaiVCodeJump,
     MenaiVCodeJumpIfFalse,
     MenaiVCodeJumpIfTrue,
     MenaiVCodeLabel,
@@ -270,6 +275,68 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
 
     if max_outgoing_index >= 0:
         slot_count = local_count + max_outgoing_index + 1
+
+    # Phase 3b: back-propagate param slot assignments for self-loop moves.
+    # A self-loop is emitted as a group of MenaiVCodeMove instructions
+    # (one per param) immediately followed by JUMP __entry__.  For each move
+    # whose source register meets the same safety conditions as Phase 3, we
+    # reassign the source register's slot directly to the target param slot
+    # so the definition writes straight into the param slot and the MOVE
+    # becomes a same-slot no-op, eliminated by the peephole pass.
+    #
+    # Safety conditions (parallel to Phase 3):
+    #   1. Not a fixed register (param or free var).
+    #   2. Not a call/apply result register.
+    #   3. Not a closure register.
+    #   4. The self-loop move is the last use of the register.
+    #   5. No call or apply between the register's definition and this move.
+    #   6. No instruction between the definition and this move reads from param_slot.
+    for jump_idx, instr in enumerate(func.instrs):
+        if not isinstance(instr, MenaiVCodeJump) or instr.label != "__entry__":
+            continue
+
+        # Collect the contiguous MOVE group immediately before this JUMP.
+        move_start = jump_idx - 1
+        while move_start >= 0 and isinstance(func.instrs[move_start], MenaiVCodeMove):
+            move_start -= 1
+        move_start += 1
+
+        for move_idx in range(move_start, jump_idx):
+            move = func.instrs[move_idx]
+            assert isinstance(move, MenaiVCodeMove)
+            reg_id = move.src.id
+            param_slot = slots[move.dst.id]
+
+            if reg_id < fixed_count:
+                continue
+
+            if reg_id in call_result_reg_ids:
+                continue
+
+            if reg_id in closure_reg_ids:
+                continue
+
+            if last_use.get(reg_id, -1) != move_idx:
+                continue
+
+            reg_def = def_index.get(reg_id, 0)
+            barrier = False
+            for scan_idx in range(reg_def + 1, move_idx):
+                scan_instr = func.instrs[scan_idx]
+                if isinstance(scan_instr, (MenaiVCodeCall, MenaiVCodeApply,
+                                           MenaiVCodeTailCall, MenaiVCodeTailApply)):
+                    barrier = True
+                    break
+
+                _, scan_uses = _defs_uses(scan_instr)
+                if any(slots.get(u, -1) == param_slot for u in scan_uses):
+                    barrier = True
+                    break
+
+            if barrier:
+                continue
+
+            slots[reg_id] = param_slot
 
     return SlotMap(slots=slots, slot_count=slot_count, local_count=local_count)
 
