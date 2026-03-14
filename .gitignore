@@ -34,5 +34,7 @@
 # Ignore Cython build artefacts (compiled per-machine, not source)
 src/menai/*.so
 src/menai/*.pyd
-src/menai/menai_vm_fast.c
 build/cython/
+build/.cython_stamp
+src/menai/menai_value_fast.c
+src/menai/menai_vm.c

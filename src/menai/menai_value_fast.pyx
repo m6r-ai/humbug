@@ -82,8 +82,6 @@ cdef class MenaiNone(MenaiValue):
 cdef class MenaiBoolean(MenaiValue):
     """Represents boolean values (#t / #f)."""
 
-    cdef public bint value
-
     def __init__(self, bint value):
         self.value = value
 
@@ -114,8 +112,6 @@ cdef class MenaiBoolean(MenaiValue):
 
 cdef class MenaiInteger(MenaiValue):
     """Represents integer values.  Payload stored as a Python int (arbitrary precision)."""
-
-    cdef public object value
 
     def __init__(self, value):
         self.value = value
@@ -148,8 +144,6 @@ cdef class MenaiInteger(MenaiValue):
 cdef class MenaiFloat(MenaiValue):
     """Represents floating-point values.  Payload stored as a C double."""
 
-    cdef public double value
-
     def __init__(self, double value):
         self.value = value
 
@@ -180,8 +174,6 @@ cdef class MenaiFloat(MenaiValue):
 
 cdef class MenaiComplex(MenaiValue):
     """Represents complex number values.  Payload held as a Python complex."""
-
-    cdef public object value   # Python complex object
 
     def __init__(self, value):
         self.value = value
@@ -232,8 +224,6 @@ cdef class MenaiComplex(MenaiValue):
 
 cdef class MenaiString(MenaiValue):
     """Represents string values."""
-
-    cdef public str value
 
     def __init__(self, str value):
         self.value = value
@@ -287,8 +277,6 @@ cdef str _escape_string(str s):
 cdef class MenaiSymbol(MenaiValue):
     """Represents symbol values (produced by quote)."""
 
-    cdef public str name
-
     def __init__(self, str name):
         self.name = name
 
@@ -322,8 +310,6 @@ cdef class MenaiSymbol(MenaiValue):
 
 cdef class MenaiList(MenaiValue):
     """Represents immutable lists.  Elements stored in a Python tuple."""
-
-    cdef public tuple elements
 
     def __init__(self, elements=()):
         self.elements = tuple(elements)
@@ -361,9 +347,6 @@ cdef class MenaiDict(MenaiValue):
     pairs  — tuple of (key, value) pairs; preserves insertion order.
     lookup — Python dict mapping hashable keys to (key, value) pairs; O(1) access.
     """
-
-    cdef public tuple pairs
-    cdef public dict lookup
 
     def __init__(self, pairs=()):
         self.pairs = tuple(pairs)
@@ -449,12 +432,6 @@ cdef class MenaiFunction(MenaiValue):
     Declares __traverse__ and __clear__ so the cyclic GC can collect closure
     cycles (closures that capture other closures that capture them back).
     """
-
-    cdef public tuple parameters
-    cdef public object name          # str | None
-    cdef public object bytecode      # CodeObject | None
-    cdef public list captured_values
-    cdef public bint is_variadic
 
     def __init__(self, parameters=(), name=None, bytecode=None,
                  captured_values=None, is_variadic=False):
