@@ -113,11 +113,11 @@ Test structure mirrors `src/` organization:
 ## `tools/` Directory
 
 Development and debugging utilities:
-- `menai_benchmark/` - Menai performance benchmarking
-- `menai_bytecode_analyzer/` - Bytecode inspection
-- `menai_checker/` - Static analysis
-- `menai_disassembler/` - Bytecode disassembly
-- `menai_pretty_print/` - Code formatting
+- `menai/benchmark/` - Menai performance benchmarking
+- `menai/bytecode_analyzer/` - Bytecode inspection
+- `menai/checker/` - Static analysis
+- `menai/disassembler/` - Bytecode disassembly
+- `menai/pretty_print/` - Code formatting
 - `dependency_checker/` - Module dependency validation
 - `planner/` - Project planning
 

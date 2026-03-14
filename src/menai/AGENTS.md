@@ -2,19 +2,19 @@
 
 ## Purpose
 
-This document exists to convey **design intent, non-obvious invariants, and architectural
-decisions** that cannot be read directly from the code.  It is a guide for AI agents
+This document exists to convey design intent, non-obvious invariants, and architectural
+decisions that cannot be read directly from the code.  It is a guide for AI agents
 working on this codebase.
 
 ### What this document is NOT
 
-This document does **not** describe what the code currently does in detail.  It does not
+This document does NOT describe what the code currently does in detail.  It does not
 reproduce pipeline diagrams, file-by-file role tables, pass-order lists, or any other
 information that is already expressed clearly in the source.  That kind of content becomes
 a maintenance liability: it drifts out of date as the code evolves and then actively
 misleads the next reader.
 
-**If you update the code, do not add derived technical descriptions here.**  If you feel
+If you update the code, DO NOT add derived technical descriptions here.  If you feel
 the urge to document how something works, put that documentation in the source file itself
 (module docstring, class docstring, inline comment) where it will be read alongside the
 code it describes and is more likely to be kept correct.
@@ -24,32 +24,23 @@ non-obvious invariant to record that cannot be expressed in the code itself.
 
 ## Where to start
 
-- **Pipeline**: read `menai_compiler.py` — it is the authoritative, always-current
+- Pipeline: read `menai_compiler.py` — it is the authoritative, always-current
   description of the compilation pipeline and pass order.
-- **Language semantics**: use the AI tool description (available via the `help` tool).
-  Do not rely on README.md for semantics.  When in doubt, test with the Menai tool directly.
-- **Individual passes**: each source file has a module-level docstring that describes
+- Language semantics: use the AI tool description (available via the `help` tool).
+  Do not rely on README.md for semantics. Do NOT assume that because it looks a bit like
+  Scheme or Lisp that it's actually the same.
+- Individual passes: each source file has a module-level docstring that describes
   what that pass does, its invariants, and its position in the pipeline.
+
+## APIs
+
+Many of the internal APIs are non-obvious.  DO NOT attempt to guess what they might be.
+If you need to use an API read the source code to understand it first.
 
 ## Architectural invariants
 
 These are constraints that must hold across the whole compiler.  They are recorded here
 because they span multiple files and are easy to violate accidentally.
-
-### Variables are symbolic until the final addressing pass
-
-All IR transformation passes — work exclusively with **symbolic** `MenaiIRVariable` nodes
-(`depth=-1, index=-1`).  The single final addressing pass resolves all variables and
-allocates all slots immediately before code generation.
-
-**No pass upstream of the addresser may read or depend on `depth` or `index`.**  Any pass
-that introduces new variable references must emit them with `depth=-1, index=-1`.
-
-The reason: keeping variables symbolic means every transformation pass can freely
-restructure the IR tree (reorder bindings, inline expressions, introduce new let-bindings)
-without ever producing stale or incorrect addresses.  A single clean addressing pass at
-the end is far simpler and more reliable than trying to maintain correct addresses
-incrementally through a sequence of tree rewrites.
 
 ### The IR tree is immutable — passes return new trees
 
@@ -73,7 +64,7 @@ The desugarer guarantees that by the time `letrec` reaches the IR builder, every
 `letrec` is a single strongly-connected component of mutually-recursive bindings.
 Non-recursive bindings are hoisted to `let` forms.
 
-**However, not every binding in a `letrec` group is necessarily a lambda.**  A
+However, not every binding in a `letrec` group is necessarily a lambda.  A
 non-lambda binding (e.g. `(letrec ((x (list (lambda () x)))) x)`) can appear in a
 `letrec` group when its RHS contains a nested lambda that closes over the binding
 name — the dependency analyzer sees a cycle and correctly keeps it in `letrec`.
@@ -82,18 +73,18 @@ dedicated Phase 2b / Phase 3b in `_build_letrec`: non-lambda binding values are
 evaluated after all sibling lambda closures exist (so nested lambdas can capture
 them), and any nested lambdas with sibling captures are patched afterward.
 
-IR passes downstream of the IR builder may **not** assume all `letrec` bindings are lambdas.
+IR passes downstream of the IR builder may not assume all `letrec` bindings are lambdas.
 
 ### The prelude and the builtin registry must stay consistent
 
 There are two categories of builtin that must not be confused:
 
-- **Opcode-backed builtins** have an entry in `BUILTIN_OPCODE_ARITIES` in
+- Opcode-backed builtins have an entry in `BUILTIN_OPCODE_ARITIES` in
   `menai_builtin_registry.py`.  The registry asserts that every entry in this table has a
   corresponding opcode in `BUILTIN_OPCODE_MAP`.  Adding a name here without an opcode
   will cause an assertion failure at startup.
-- **Prelude-only functions** (e.g. `map-list`, `filter-list`, `fold-list`) are implemented
-  as Menai lambdas in `_PRELUDE_SOURCE` in `menai.py`.  They must **not** be added to
+- Prelude-only functions (e.g. `map-list`, `filter-list`, `fold-list`) are implemented
+  as Menai lambdas in `_PRELUDE_SOURCE` in `menai.py`.  They MUST NOT be added to
   `BUILTIN_OPCODE_ARITIES`.
 
 ## Design decisions
@@ -108,8 +99,7 @@ expressive.  Do not add `cond`.
 ### Symbols are not strings
 
 `symbol` values are produced only by `quote` and exist solely to support homoiconicity
-(code-as-data).  There is intentionally no `symbol->string` or `string->symbol`
-conversion.  Use strings for dict keys and general-purpose identifiers.
+(code-as-data).
 
 ### Proper lists only
 
@@ -122,3 +112,8 @@ at the cons-cell level.
 
 There is no implicit coercion between `integer`, `float`, and `complex`.  All arithmetic
 operators are type-specific (e.g. `integer+`, `float*`).  This is intentional.
+
+## Tools
+
+You can find tools related to Menai in tools/menai.
+
