@@ -1807,8 +1807,9 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_P dest, src0: r_dest = (float? r_src0)"""
-        base = frame.base
-        regs = self.regs
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
         regs[base + instr.dest] = (
             Menai_BOOLEAN_TRUE if type(regs[base + instr.src0]) is MenaiFloat else Menai_BOOLEAN_FALSE  # pylint: disable=unidiomatic-typecheck
         )
@@ -1818,527 +1819,721 @@ class MenaiVM:
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_EQ_P dest, src0, src1: r_dest = (float=? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float=?' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float=?' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float=?' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float=?' requires float arguments, got {raw_b.type_name()}")
 
-        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a.value == b.value else Menai_BOOLEAN_FALSE
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if av == bv else Menai_BOOLEAN_FALSE
         return None
 
     def _op_float_neq_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_NEQ_P dest, src0, src1: r_dest = (float!=? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float!=?' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float!=?' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float!=?' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float!=?' requires float arguments, got {raw_b.type_name()}")
 
-        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a.value != b.value else Menai_BOOLEAN_FALSE
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if av != bv else Menai_BOOLEAN_FALSE
         return None
 
     def _op_float_lt_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_LT_P dest, src0, src1: r_dest = (float<? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float<?' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float<?' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float<?' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float<?' requires float arguments, got {raw_b.type_name()}")
 
-        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a.value < b.value else Menai_BOOLEAN_FALSE
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if av < bv else Menai_BOOLEAN_FALSE
         return None
 
     def _op_float_gt_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_GT_P dest, src0, src1: r_dest = (float>? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float>?' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float>?' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float>?' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float>?' requires float arguments, got {raw_b.type_name()}")
 
-        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a.value > b.value else Menai_BOOLEAN_FALSE
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if av > bv else Menai_BOOLEAN_FALSE
         return None
 
     def _op_float_lte_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_LTE_P dest, src0, src1: r_dest = (float<=? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float<=?' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float<=?' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float<=?' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float<=?' requires float arguments, got {raw_b.type_name()}")
 
-        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a.value <= b.value else Menai_BOOLEAN_FALSE
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if av <= bv else Menai_BOOLEAN_FALSE
         return None
 
     def _op_float_gte_p(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_GTE_P dest, src0, src1: r_dest = (float>=? r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float>=?' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float>=?' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float>=?' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float>=?' requires float arguments, got {raw_b.type_name()}")
 
-        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a.value >= b.value else Menai_BOOLEAN_FALSE
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if av >= bv else Menai_BOOLEAN_FALSE
         return None
 
     def _op_float_abs(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_ABS dest, src0: r_dest = (float-abs r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-abs' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a
+        cdef double av
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-abs' requires float arguments, got {raw_a.type_name()}")
 
-        regs[base + instr.dest] = MenaiFloat(abs(a.value))
+        a = <MenaiFloat>raw_a
+        av = a.value
+        regs[base + instr.dest] = MenaiFloat(av if av >= 0.0 else -av)
         return None
 
     def _op_float_add(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_ADD dest, src0, src1: r_dest = (float+ r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float+' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float+' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float+' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float+' requires float arguments, got {raw_b.type_name()}")
 
-        regs[base + instr.dest] = MenaiFloat(a.value + b.value)
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        regs[base + instr.dest] = MenaiFloat(av + bv)
         return None
 
     def _op_float_sub(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_SUB dest, src0, src1: r_dest = (float- r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-' requires float arguments, got {raw_b.type_name()}")
 
-        regs[base + instr.dest] = MenaiFloat(a.value - b.value)
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        regs[base + instr.dest] = MenaiFloat(av - bv)
         return None
 
     def _op_float_mul(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_MUL dest, src0, src1: r_dest = (float* r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float*' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float*' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float*' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float*' requires float arguments, got {raw_b.type_name()}")
 
-        regs[base + instr.dest] = MenaiFloat(a.value * b.value)
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        regs[base + instr.dest] = MenaiFloat(av * bv)
         return None
 
     def _op_float_div(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_DIV dest, src0, src1: r_dest = (float/ r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float/' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float/' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float/' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float/' requires float arguments, got {raw_b.type_name()}")
 
-        if b.value == 0.0:
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        if bv == 0.0:
             raise MenaiEvalError("Division by zero in 'float/'")
 
-        regs[base + instr.dest] = MenaiFloat(a.value / b.value)
+        regs[base + instr.dest] = MenaiFloat(av / bv)
         return None
 
     def _op_float_floor_div(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_FLOOR_DIV dest, src0, src1: r_dest = (float// r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float//' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float//' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float//' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float//' requires float arguments, got {raw_b.type_name()}")
 
-        if b.value == 0:
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        if bv == 0.0:
             raise MenaiEvalError("Division by zero")
 
-        regs[base + instr.dest] = MenaiFloat(float(a.value // b.value))
+        regs[base + instr.dest] = MenaiFloat(av // bv)
         return None
 
     def _op_float_mod(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_MOD dest, src0, src1: r_dest = (float% r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float%' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float%' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float%' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float%' requires float arguments, got {raw_b.type_name()}")
 
-        if b.value == 0:
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        if bv == 0.0:
             raise MenaiEvalError("Modulo by zero")
 
-        regs[base + instr.dest] = MenaiFloat(a.value % b.value)
+        regs[base + instr.dest] = MenaiFloat(av % bv)
         return None
 
     def _op_float_neg(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_NEG dest, src0: r_dest = (float-neg r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-neg' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a
+        cdef double av
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-neg' requires float arguments, got {raw_a.type_name()}")
 
-        regs[base + instr.dest] = MenaiFloat(-a.value)
+        a = <MenaiFloat>raw_a
+        av = a.value
+        regs[base + instr.dest] = MenaiFloat(-av)
         return None
 
     def _op_float_exp(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_EXP dest, src0: r_dest = (float-exp r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-exp' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a
+        cdef double av
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-exp' requires float arguments, got {raw_a.type_name()}")
 
-        regs[base + instr.dest] = MenaiFloat(math.exp(a.value))
+        a = <MenaiFloat>raw_a
+        av = a.value
+        regs[base + instr.dest] = MenaiFloat(math.exp(av))
         return None
 
     def _op_float_expn(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_EXPN dest, src0, src1: r_dest = (float-expn r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-expn' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-expn' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-expn' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-expn' requires float arguments, got {raw_b.type_name()}")
 
-        regs[base + instr.dest] = MenaiFloat(a.value ** b.value)
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        regs[base + instr.dest] = MenaiFloat(math.pow(av, bv))
         return None
 
     def _op_float_log(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_LOG dest, src0: r_dest = (float-log r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-log' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a
+        cdef double av
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-log' requires float arguments, got {raw_a.type_name()}")
 
-        if a.value == 0.0:
+        a = <MenaiFloat>raw_a
+        av = a.value
+        if av == 0.0:
             regs[base + instr.dest] = MenaiFloat(float('-inf'))
             return None
 
-        if a.value < 0.0:
+        if av < 0.0:
             raise MenaiEvalError("Function 'float-log' requires a non-negative argument")
 
-        regs[base + instr.dest] = MenaiFloat(math.log(a.value))
+        regs[base + instr.dest] = MenaiFloat(math.log(av))
         return None
 
     def _op_float_log10(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_LOG10 dest, src0: r_dest = (float-log10 r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-log10' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a
+        cdef double av
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-log10' requires float arguments, got {raw_a.type_name()}")
 
-        if a.value == 0.0:
+        a = <MenaiFloat>raw_a
+        av = a.value
+        if av == 0.0:
             regs[base + instr.dest] = MenaiFloat(float('-inf'))
             return None
 
-        if a.value < 0.0:
+        if av < 0.0:
             raise MenaiEvalError("Function 'float-log10' requires a non-negative argument")
 
-        regs[base + instr.dest] = MenaiFloat(math.log10(a.value))
+        regs[base + instr.dest] = MenaiFloat(math.log10(av))
         return None
 
     def _op_float_log2(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_LOG2 dest, src0: r_dest = (float-log2 r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-log2' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a
+        cdef double av
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-log2' requires float arguments, got {raw_a.type_name()}")
 
-        if a.value == 0.0:
+        a = <MenaiFloat>raw_a
+        av = a.value
+        if av == 0.0:
             regs[base + instr.dest] = MenaiFloat(float('-inf'))
             return None
 
-        if a.value < 0.0:
+        if av < 0.0:
             raise MenaiEvalError("Function 'float-log2' requires a non-negative argument")
 
-        regs[base + instr.dest] = MenaiFloat(math.log2(a.value))
+        regs[base + instr.dest] = MenaiFloat(math.log2(av))
         return None
 
     def _op_float_logn(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_LOGN dest, src0, src1: r_dest = (float-logn r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-logn' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-logn' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-logn' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-logn' requires float arguments, got {raw_b.type_name()}")
 
-        if b.value <= 0.0 or b.value == 1.0:
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        if bv <= 0.0 or bv == 1.0:
             raise MenaiEvalError("Function 'float-logn' requires a positive base not equal to 1")
 
-        if a.value == 0.0:
+        if av == 0.0:
             regs[base + instr.dest] = MenaiFloat(float('-inf'))
             return None
 
-        if a.value < 0.0:
+        if av < 0.0:
             raise MenaiEvalError("Function 'float-logn' requires a non-negative argument")
 
-        regs[base + instr.dest] = MenaiFloat(math.log(a.value, b.value))
+        regs[base + instr.dest] = MenaiFloat(math.log(av, bv))
         return None
 
     def _op_float_sin(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_SIN dest, src0: r_dest = (float-sin r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-sin' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a
+        cdef double av
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-sin' requires float arguments, got {raw_a.type_name()}")
 
-        regs[base + instr.dest] = MenaiFloat(math.sin(a.value))
+        a = <MenaiFloat>raw_a
+        av = a.value
+        regs[base + instr.dest] = MenaiFloat(math.sin(av))
         return None
 
     def _op_float_cos(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_COS dest, src0: r_dest = (float-cos r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-cos' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a
+        cdef double av
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-cos' requires float arguments, got {raw_a.type_name()}")
 
-        regs[base + instr.dest] = MenaiFloat(math.cos(a.value))
+        a = <MenaiFloat>raw_a
+        av = a.value
+        regs[base + instr.dest] = MenaiFloat(math.cos(av))
         return None
 
     def _op_float_tan(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_TAN dest, src0: r_dest = (float-tan r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-tan' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a
+        cdef double av
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-tan' requires float arguments, got {raw_a.type_name()}")
 
-        regs[base + instr.dest] = MenaiFloat(math.tan(a.value))
+        a = <MenaiFloat>raw_a
+        av = a.value
+        regs[base + instr.dest] = MenaiFloat(math.tan(av))
         return None
 
     def _op_float_sqrt(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_SQRT dest, src0: r_dest = (float-sqrt r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-sqrt' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a
+        cdef double av
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-sqrt' requires float arguments, got {raw_a.type_name()}")
 
-        if a.value < 0.0:
+        a = <MenaiFloat>raw_a
+        av = a.value
+        if av < 0.0:
             raise MenaiEvalError("Function 'float-sqrt' requires a non-negative argument")
 
-        regs[base + instr.dest] = MenaiFloat(math.sqrt(a.value))
+        regs[base + instr.dest] = MenaiFloat(math.sqrt(av))
         return None
 
     def _op_float_to_integer(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_TO_INTEGER dest, src0: r_dest = (float->integer r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float->integer' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a
+        cdef double av
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float->integer' requires float arguments, got {raw_a.type_name()}")
 
-        regs[base + instr.dest] = MenaiInteger(int(a.value))
+        a = <MenaiFloat>raw_a
+        av = a.value
+        regs[base + instr.dest] = MenaiInteger(int(av))
         return None
 
     def _op_float_to_complex(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_TO_COMPLEX dest, src0, src1: r_dest = (float->complex r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float->complex' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float->complex' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float->complex' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float->complex' requires float arguments, got {raw_b.type_name()}")
 
-        regs[base + instr.dest] = MenaiComplex(complex(a.value, b.value))
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        regs[base + instr.dest] = MenaiComplex(complex(av, bv))
         return None
 
     def _op_float_to_string(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_TO_STRING dest, src0: r_dest = (float->string r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float->string' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a
+        cdef double av
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float->string' requires float arguments, got {raw_a.type_name()}")
 
-        regs[base + instr.dest] = MenaiString(str(a.value))
+        a = <MenaiFloat>raw_a
+        av = a.value
+        regs[base + instr.dest] = MenaiString(str(av))
         return None
 
     def _op_float_floor(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_FLOOR dest, src0: r_dest = (float-floor r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-floor' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a
+        cdef double av
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-floor' requires float arguments, got {raw_a.type_name()}")
 
-        regs[base + instr.dest] = MenaiFloat(float(math.floor(a.value)))
+        a = <MenaiFloat>raw_a
+        av = a.value
+        regs[base + instr.dest] = MenaiFloat(math.floor(av))
         return None
 
     def _op_float_ceil(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_CEIL dest, src0: r_dest = (float-ceil r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-ceil' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a
+        cdef double av
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-ceil' requires float arguments, got {raw_a.type_name()}")
 
-        regs[base + instr.dest] = MenaiFloat(float(math.ceil(a.value)))
+        a = <MenaiFloat>raw_a
+        av = a.value
+        regs[base + instr.dest] = MenaiFloat(math.ceil(av))
         return None
 
     def _op_float_round(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_ROUND dest, src0: r_dest = (float-round r_src0)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-round' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a
+        cdef double av
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-round' requires float arguments, got {raw_a.type_name()}")
 
-        regs[base + instr.dest] = MenaiFloat(float(round(a.value)))
+        a = <MenaiFloat>raw_a
+        av = a.value
+        regs[base + instr.dest] = MenaiFloat(round(av))
         return None
 
     def _op_float_min(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_MIN dest, src0, src1: r_dest = (float-min r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-min' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-min' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-min' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-min' requires float arguments, got {raw_b.type_name()}")
 
-        regs[base + instr.dest] = MenaiFloat(a.value if a.value <= b.value else b.value)
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        regs[base + instr.dest] = MenaiFloat(av if av <= bv else bv)
         return None
 
     def _op_float_max(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
         """FLOAT_MAX dest, src0, src1: r_dest = (float-max r_src0 r_src1)"""
-        base = frame.base
-        regs = self.regs
-        a = regs[base + instr.src0]
-        if type(a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-max' requires float arguments, got {a.type_name()}")
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiFloat a, b
+        cdef double av, bv
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-max' requires float arguments, got {raw_a.type_name()}")
 
-        b = regs[base + instr.src1]
-        if type(b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(f"Function 'float-max' requires float arguments, got {b.type_name()}")
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiFloat:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'float-max' requires float arguments, got {raw_b.type_name()}")
 
-        regs[base + instr.dest] = MenaiFloat(a.value if a.value >= b.value else b.value)
+        a = <MenaiFloat>raw_a
+        b = <MenaiFloat>raw_b
+        av = a.value
+        bv = b.value
+        regs[base + instr.dest] = MenaiFloat(av if av >= bv else bv)
         return None
 
     def _op_complex_p(  # pylint: disable=useless-return
