@@ -1,0 +1,17 @@
+(let ((sudoku (import "sudoku-solver")))
+  (let ((solve-fn (dict-get sudoku "solve"))
+        (display-board-fn (dict-get sudoku "display-board")))
+    (let ((puzzle (list
+            (list 5 3 0 0 7 0 0 0 0)
+            (list 6 0 0 1 9 5 0 0 0)
+            (list 0 9 8 0 0 0 0 6 0)
+            (list 8 0 0 0 6 0 0 0 3)
+            (list 4 0 0 8 0 3 0 0 1)
+            (list 7 0 0 0 2 0 0 0 6)
+            (list 0 6 0 0 0 0 2 8 0)
+            (list 0 0 0 4 1 9 0 0 5)
+            (list 0 0 0 0 8 0 0 7 9))))
+      (let ((solution (solve-fn puzzle)))
+        (if (none? solution)
+          "No solution found"
+          (display-board-fn solution))))))

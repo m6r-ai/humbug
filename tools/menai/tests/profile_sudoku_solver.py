@@ -23,7 +23,6 @@ import pstats
 import sys
 import time
 from io import StringIO
-from pathlib import Path
 
 from menai import Menai
 
@@ -129,36 +128,17 @@ def board_to_menai(flat: list[int]) -> str:
     return "(list\n    " + "\n    ".join(rows) + ")"
 
 
-def make_solve_expression(flat: list[int], solver_file: str) -> str:
-    """Build a Menai expression that loads the solver and solves one puzzle."""
+def make_solve_expression(flat: list[int]) -> str:
+    """Build a Menai expression that imports the solver module and solves one puzzle."""
     board_expr = board_to_menai(flat)
-    # We inline the solver source rather than using (import ...) so the profiler
-    # captures the full compilation + evaluation cost in one shot.
-    solver_src = Path(solver_file).read_text(encoding="utf-8")
-
-    # The solver file ends with a let block that runs a hardcoded puzzle.
-    # We strip that final let block and replace it with our own puzzle.
-    # Strategy: locate the last top-level `(let ((puzzle` and replace from there.
-    cut = solver_src.rfind("  ; A classic sample puzzle")
-    if cut == -1:
-        cut = solver_src.rfind("  (let ((puzzle")
-    if cut == -1:
-        raise ValueError(
-            "Cannot find puzzle injection point in solver file. "
-            "Expected a comment '  ; A classic sample puzzle' or '  (let ((puzzle'."
-        )
-
-    solver_body = solver_src[:cut].rstrip()
-    # solver_body ends with the last letrec binding.  Supply the letrec body
-    # (a plain solve call) plus the closing paren for the letrec form itself.
     return (
-        solver_body
-        + f"\n\n  (solve {board_expr}))\n"
+        f'(let ((sudoku (import "sudoku-solver")))\n'
+        f'  (let ((solve-fn (dict-get sudoku "solve")))\n'
+        f'    (solve-fn {board_expr})))\n'
     )
 
 
 def run_benchmarks(
-    solver_file: str,
     repeat: int,
     puzzles: list[tuple[str, str, list[int]]],
 ) -> list[tuple[str, float, bool]]:
@@ -173,7 +153,7 @@ def run_benchmarks(
     print("-" * 72)
 
     for label, _, flat in puzzles:
-        expr = make_solve_expression(flat, solver_file)
+        expr = make_solve_expression(flat)
         try:
             start = time.perf_counter()
             for _ in range(repeat):
@@ -194,7 +174,6 @@ def run_benchmarks(
 
 
 def run_profile(
-    solver_file: str,
     output_file: str | None,
     top_n: int,
     sort_by: str,
@@ -202,7 +181,7 @@ def run_profile(
 ) -> None:
     """Run cProfile on one puzzle and print the results."""
     label, _, flat = puzzle
-    expr = make_solve_expression(flat, solver_file)
+    expr = make_solve_expression(flat)
 
     menai = Menai()
     # Warm up so we don't profile prelude compilation
@@ -261,12 +240,6 @@ def main() -> None:
         epilog=__doc__,
     )
     parser.add_argument(
-        "--solver-file",
-        default="sudoku-solver.menai",
-        metavar="FILE",
-        help="Path to the solver Menai file (default: sudoku-solver.menai)",
-    )
-    parser.add_argument(
         "--profile",
         action="store_true",
         help="Run cProfile after benchmarking (uses hardest puzzle by default)",
@@ -313,20 +286,14 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    solver_path = Path(args.solver_file)
-    if not solver_path.exists():
-        print(f"Error: solver file not found: {args.solver_file}")
-        sys.exit(1)
-
     puzzles = puzzles_up_to(args.difficulty)
 
     print("Menai sudoku solver benchmark")
     print("=" * 72)
-    print(f"Solver file : {solver_path.resolve()}")
     print(f"Difficulty  : up to {args.difficulty}  ({len(puzzles)} puzzle(s))")
     print(f"Repeat      : {args.repeat}x per puzzle")
 
-    results = run_benchmarks(args.solver_file, args.repeat, puzzles)
+    results = run_benchmarks(args.repeat, puzzles)
 
     # Scaling summary
     solved = [(lbl, t) for lbl, t, ok in results if ok]
@@ -344,7 +311,7 @@ def main() -> None:
         else:
             # Default: hardest puzzle that was actually benchmarked
             profile_puzzle = puzzles[-1]
-        run_profile(args.solver_file, args.output, args.top, args.sort, profile_puzzle)
+        run_profile(args.output, args.top, args.sort, profile_puzzle)
 
 
 if __name__ == "__main__":
