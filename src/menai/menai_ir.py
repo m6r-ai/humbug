@@ -139,6 +139,18 @@ class MenaiIRBuildDict:
 
 
 @dataclass
+class MenaiIRBuildSet:
+    """Plan for compiling a (set e1 e2 ... eN) literal.
+
+    Carries a flat list of element plans.  The VM codegen lowers it to
+    LOAD_EMPTY_SET followed by N SET_ADD register ops, accumulating the
+    result in a single register slot.  Duplicate elements are resolved at
+    runtime by SET_ADD (which is a no-op for already-present members).
+    """
+    element_plans: List['MenaiIRExpr']
+
+
+@dataclass
 class MenaiIRTrace:
     """Plan for compiling a trace expression."""
     message_plans: List['MenaiIRExpr']  # Messages to emit
@@ -159,6 +171,7 @@ MenaiIRExpr = (
     MenaiIREmptyList |
     MenaiIRBuildList |
     MenaiIRBuildDict |
+    MenaiIRBuildSet |
     MenaiIRReturn |
     MenaiIRTrace
 )

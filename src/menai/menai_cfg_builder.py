@@ -36,6 +36,7 @@ from menai.menai_ir import (
     MenaiIREmptyList,
     MenaiIRBuildList,
     MenaiIRBuildDict,
+    MenaiIRBuildSet,
     MenaiIRError,
     MenaiIRExpr,
     MenaiIRIf,
@@ -47,7 +48,7 @@ from menai.menai_ir import (
     MenaiIRTrace,
     MenaiIRVariable,
 )
-from menai.menai_value import MenaiDict, MenaiList
+from menai.menai_value import MenaiDict, MenaiList, MenaiSet
 
 
 @dataclass
@@ -221,6 +222,9 @@ class MenaiCFGBuilder:
 
         if isinstance(ir, MenaiIRBuildDict):
             return self._build_dict(ir, block, scope, state)
+
+        if isinstance(ir, MenaiIRBuildSet):
+            return self._build_set(ir, block, scope, state)
 
         if isinstance(ir, MenaiIRReturn):
             # MenaiIRReturn is the IR tree's explicit return wrapper.
@@ -721,6 +725,34 @@ class MenaiCFGBuilder:
                 result=new_acc,
                 op='dict-set',
                 args=[acc_val, key_val, val_val],
+            ))
+            acc_val = new_acc
+
+        return acc_val, block
+
+    def _build_set(
+        self,
+        ir: MenaiIRBuildSet,
+        block: MenaiCFGBlock,
+        scope: MenaiCFGScope,
+        state: _FunctionState,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """
+        Build a set literal iteratively.
+
+        Emits LOAD_EMPTY_SET into an accumulator slot, then for each element
+        emits a SET_ADD builtin op into the accumulator.
+        """
+        acc_val = state.new_value("set_acc")
+        block.instrs.append(MenaiCFGConstInstr(result=acc_val, value=MenaiSet()))
+
+        for elem_plan in ir.element_plans:
+            elem_val, block = self._build_expr(elem_plan, block, scope, state, tail=False)
+            new_acc = state.new_value("set_acc")
+            block.instrs.append(MenaiCFGBuiltinInstr(
+                result=new_acc,
+                op='set-add',
+                args=[acc_val, elem_val],
             ))
             acc_val = new_acc
 

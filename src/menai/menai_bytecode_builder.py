@@ -35,6 +35,7 @@ from menai.menai_value import (
     MenaiInteger,
     MenaiList,
     MenaiNone,
+    MenaiSet,
     MenaiString,
     MenaiValue,
 )
@@ -114,6 +115,10 @@ class _EmitContext:
 
         if isinstance(value, MenaiDict) and len(value.pairs) == 0:
             self.emit(Opcode.LOAD_EMPTY_DICT, dest=dest)
+            return
+
+        if isinstance(value, MenaiSet) and len(value.elements) == 0:
+            self.emit(Opcode.LOAD_EMPTY_SET, dest=dest)
             return
 
         const_idx = self.add_constant(value)

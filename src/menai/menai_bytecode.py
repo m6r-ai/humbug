@@ -45,9 +45,10 @@ class Opcode(IntEnum):
     LOAD_FALSE = _op(2)                 # r_dest = #f
     LOAD_EMPTY_LIST = _op(3)            # r_dest = []
     LOAD_EMPTY_DICT = _op(4)            # r_dest = {}
-    LOAD_CONST = _op(5, 1)              # r_dest = constants[src0]
-    LOAD_NAME = _op(6, 1)               # r_dest = globals[names[src0]]
-    MOVE = _op(7, 1)                    # r_dest = r_src0  (register copy)
+    LOAD_EMPTY_SET = _op(5)             # r_dest = #{}
+    LOAD_CONST = _op(6, 1)              # r_dest = constants[src0]
+    LOAD_NAME = _op(7, 1)               # r_dest = globals[names[src0]]
+    MOVE = _op(8, 1)                    # r_dest = r_src0  (register copy)
 
     # Control flow
     JUMP = _op(20, 1)                   # Unconditional jump: JUMP offset
@@ -208,40 +209,55 @@ class Opcode(IntEnum):
                                         # r_dest = (string->integer-codepoint r_src0)
 
     # Alist operations
-    DICT_P = _op(281, 1)                # r_dest = (dict? r_src0)
-    DICT_EQ_P = _op(282, 2)             # r_dest = (dict=? r_src0 r_src1)
-    DICT_NEQ_P = _op(283, 2)            # r_dest = (dict!=? r_src0 r_src1)
-    DICT_KEYS = _op(284, 1)             # r_dest = (dict-keys r_src0)
-    DICT_VALUES = _op(285, 1)           # r_dest = (dict-values r_src0)
-    DICT_LENGTH = _op(286, 1)           # r_dest = (dict-length r_src0)
-    DICT_HAS_P = _op(287, 2)            # r_dest = (dict-has? r_src0 r_src1)
-    DICT_REMOVE = _op(288, 2)           # r_dest = (dict-remove r_src0 r_src1)
-    DICT_MERGE = _op(289, 2)            # r_dest = (dict-merge r_src0 r_src1)
-    DICT_SET = _op(290, 3)              # r_dest = (dict-set r_src0 r_src1 r_src2)
-    DICT_GET = _op(291, 3)              # r_dest = (dict-get r_src0 r_src1 r_src2)
+    DICT_P = _op(280, 1)                # r_dest = (dict? r_src0)
+    DICT_EQ_P = _op(281, 2)             # r_dest = (dict=? r_src0 r_src1)
+    DICT_NEQ_P = _op(282, 2)            # r_dest = (dict!=? r_src0 r_src1)
+    DICT_KEYS = _op(283, 1)             # r_dest = (dict-keys r_src0)
+    DICT_VALUES = _op(284, 1)           # r_dest = (dict-values r_src0)
+    DICT_LENGTH = _op(285, 1)           # r_dest = (dict-length r_src0)
+    DICT_HAS_P = _op(286, 2)            # r_dest = (dict-has? r_src0 r_src1)
+    DICT_REMOVE = _op(287, 2)           # r_dest = (dict-remove r_src0 r_src1)
+    DICT_MERGE = _op(288, 2)            # r_dest = (dict-merge r_src0 r_src1)
+    DICT_SET = _op(289, 3)              # r_dest = (dict-set r_src0 r_src1 r_src2)
+    DICT_GET = _op(290, 3)              # r_dest = (dict-get r_src0 r_src1 r_src2)
 
     # List operations
-    LIST_P = _op(321, 1)                # r_dest = (list? r_src0)
-    LIST_EQ_P = _op(322, 2)             # r_dest = (list=? r_src0 r_src1)
-    LIST_NEQ_P = _op(323, 2)            # r_dest = (list!=? r_src0 r_src1)
-    LIST_PREPEND = _op(324, 2)          # r_dest = (list-prepend r_src0 r_src1)
-    LIST_APPEND = _op(325, 2)           # r_dest = (list-append r_src0 r_src1)
-    LIST_REVERSE = _op(326, 1)          # r_dest = (list-reverse r_src0)
-    LIST_FIRST = _op(327, 1)            # r_dest = (list-first r_src0)
-    LIST_REST = _op(328, 1)             # r_dest = (list-rest r_src0)
-    LIST_LAST = _op(329, 1)             # r_dest = (list-last r_src0)
-    LIST_LENGTH = _op(330, 1)           # r_dest = (list-length r_src0)
-    LIST_REF = _op(331, 2)              # r_dest = (list-ref r_src0 r_src1)
-    LIST_NULL_P = _op(332, 1)           # r_dest = (list-null? r_src0)
-    LIST_MEMBER_P = _op(333, 2)         # r_dest = (list-member? r_src0 r_src1)
-    LIST_INDEX = _op(334, 2)            # r_dest = (list-index r_src0 r_src1)
-    LIST_SLICE = _op(335, 3)            # r_dest = (list-slice r_src0 r_src1 r_src2)
-    LIST_REMOVE = _op(336, 2)           # r_dest = (list-remove r_src0 r_src1)
-    LIST_CONCAT = _op(337, 2)           # r_dest = (list-concat r_src0 r_src1)
-    LIST_TO_STRING = _op(338, 2)        # r_dest = (list->string r_src0 r_src1)
+    LIST_P = _op(300, 1)                # r_dest = (list? r_src0)
+    LIST_EQ_P = _op(301, 2)             # r_dest = (list=? r_src0 r_src1)
+    LIST_NEQ_P = _op(302, 2)            # r_dest = (list!=? r_src0 r_src1)
+    LIST_PREPEND = _op(303, 2)          # r_dest = (list-prepend r_src0 r_src1)
+    LIST_APPEND = _op(304, 2)           # r_dest = (list-append r_src0 r_src1)
+    LIST_REVERSE = _op(305, 1)          # r_dest = (list-reverse r_src0)
+    LIST_FIRST = _op(306, 1)            # r_dest = (list-first r_src0)
+    LIST_REST = _op(307, 1)             # r_dest = (list-rest r_src0)
+    LIST_LAST = _op(308, 1)             # r_dest = (list-last r_src0)
+    LIST_LENGTH = _op(309, 1)           # r_dest = (list-length r_src0)
+    LIST_REF = _op(310, 2)              # r_dest = (list-ref r_src0 r_src1)
+    LIST_NULL_P = _op(311, 1)           # r_dest = (list-null? r_src0)
+    LIST_MEMBER_P = _op(312, 2)         # r_dest = (list-member? r_src0 r_src1)
+    LIST_INDEX = _op(313, 2)            # r_dest = (list-index r_src0 r_src1)
+    LIST_SLICE = _op(314, 3)            # r_dest = (list-slice r_src0 r_src1 r_src2)
+    LIST_REMOVE = _op(315, 2)           # r_dest = (list-remove r_src0 r_src1)
+    LIST_CONCAT = _op(316, 2)           # r_dest = (list-concat r_src0 r_src1)
+    LIST_TO_STRING = _op(317, 2)        # r_dest = (list->string r_src0 r_src1)
+    LIST_TO_SET = _op(318, 1)           # r_dest = (list->set r_src0)
+
+    # Set operations
+    SET_P = _op(340, 1)                 # r_dest = (set? r_src0)
+    SET_EQ_P = _op(341, 2)              # r_dest = (set=? r_src0 r_src1)
+    SET_NEQ_P = _op(342, 2)             # r_dest = (set!=? r_src0 r_src1)
+    SET_MEMBER_P = _op(343, 2)          # r_dest = (set-member? r_src0 r_src1)
+    SET_ADD = _op(344, 2)               # r_dest = (set-add r_src0 r_src1)
+    SET_REMOVE = _op(345, 2)            # r_dest = (set-remove r_src0 r_src1)
+    SET_LENGTH = _op(346, 1)            # r_dest = (set-length r_src0)
+    SET_UNION = _op(347, 2)             # r_dest = (set-union r_src0 r_src1)
+    SET_INTERSECTION = _op(348, 2)      # r_dest = (set-intersection r_src0 r_src1)
+    SET_DIFFERENCE = _op(349, 2)        # r_dest = (set-difference r_src0 r_src1)
+    SET_SUBSET_P = _op(350, 2)          # r_dest = (set-subset? r_src0 r_src1)
+    SET_TO_LIST = _op(351, 1)           # r_dest = (set->list r_src0)
 
     # Generate integer range list
-    RANGE = _op(360, 3)                 # r_dest = (range r_src0 r_src1 r_src2)
+    RANGE = _op(380, 3)                 # r_dest = (range r_src0 r_src1 r_src2)
 
 
 # Maps builtin function name → (opcode, arity) for all fixed-arity builtins.
@@ -392,6 +408,7 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'list-remove': (Opcode.LIST_REMOVE, 2),
     'list-concat': (Opcode.LIST_CONCAT, 2),
     'list->string': (Opcode.LIST_TO_STRING, 2),
+    'list->set': (Opcode.LIST_TO_SET, 1),
     'dict?': (Opcode.DICT_P, 1),
     'dict=?': (Opcode.DICT_EQ_P, 2),
     'dict!=?': (Opcode.DICT_NEQ_P, 2),
@@ -403,6 +420,18 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'dict-merge': (Opcode.DICT_MERGE, 2),
     'dict-set': (Opcode.DICT_SET, 3),
     'dict-get': (Opcode.DICT_GET, 3),
+    'set?': (Opcode.SET_P, 1),
+    'set=?': (Opcode.SET_EQ_P, 2),
+    'set!=?': (Opcode.SET_NEQ_P, 2),
+    'set-member?': (Opcode.SET_MEMBER_P, 2),
+    'set-add': (Opcode.SET_ADD, 2),
+    'set-remove': (Opcode.SET_REMOVE, 2),
+    'set-length': (Opcode.SET_LENGTH, 1),
+    'set-union': (Opcode.SET_UNION, 2),
+    'set-intersection': (Opcode.SET_INTERSECTION, 2),
+    'set-difference': (Opcode.SET_DIFFERENCE, 2),
+    'set-subset?': (Opcode.SET_SUBSET_P, 2),
+    'set->list': (Opcode.SET_TO_LIST, 1),
     'range': (Opcode.RANGE, 3),
 }
 

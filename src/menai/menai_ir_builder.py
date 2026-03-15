@@ -8,7 +8,7 @@ from menai.menai_error import MenaiEvalError
 from menai.menai_ir import (
     MenaiIRExpr, MenaiIRConstant, MenaiIRVariable, MenaiIRIf, MenaiIRLet, MenaiIRLetrec,
     MenaiIRLambda, MenaiIRCall, MenaiIRQuote, MenaiIRError, MenaiIREmptyList,
-    MenaiIRReturn, MenaiIRTrace, MenaiIRBuildList, MenaiIRBuildDict
+    MenaiIRReturn, MenaiIRTrace, MenaiIRBuildList, MenaiIRBuildDict, MenaiIRBuildSet
 )
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex,
@@ -115,11 +115,11 @@ class MenaiIRBuilder:
         # Only $-prefixed names are treated as opcode-backed builtins by the IR
         # builder.  Public names (integer+, float=?, etc.) are prelude functions
         # and resolve as globals.
-        # Exceptions: 'list' and 'dict' are variadic BUILD_OPs intercepted here
-        # to emit MenaiIRBuildList / MenaiIRBuildDict flat nodes.  They are not
+        # Exceptions: 'list', 'dict', and 'set' are variadic BUILD_OPs intercepted here
+        # to emit MenaiIRBuildList / MenaiIRBuildDict / MenaiIRBuildSet flat nodes.  They are not
         # in BUILTIN_OPCODE_MAP (no fixed arity) and cannot be $-prefixed.
         self._builtin_names: frozenset = frozenset('$' + name for name in BUILTIN_OPCODE_MAP)
-        self._builtin_names |= frozenset({'list', 'dict'})
+        self._builtin_names |= frozenset({'list', 'dict', 'set'})
 
     def build(self, expr: MenaiASTNode) -> MenaiIRExpr:
         """
@@ -489,9 +489,14 @@ class MenaiIRBuilder:
                     builtin_name=None,
                 )
 
+            # (set e1 ... eN) — emit a flat MenaiIRBuildSet node.
+            if dollar_name == 'set':
+                element_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
+                return MenaiIRBuildSet(element_plans=element_plans)
+
             # Strip the $ prefix — the rest of the pipeline (codegen etc.)
             # uses the bare opcode name.
-            # 'list' and 'dict' are plain builtin names (no $ prefix).
+            # 'list', 'dict', and 'set' are plain builtin names (no $ prefix).
             builtin_name = dollar_name[1:] if dollar_name.startswith('$') else dollar_name
             arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
             return MenaiIRCall(

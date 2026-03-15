@@ -392,9 +392,70 @@ class MenaiDict(MenaiValue):
         )
 
 
+class MenaiSet(MenaiValue):
+    """
+    Represents sets - immutable unordered collections of unique hashable values.
+
+    Internally uses a frozenset of hashable keys for O(1) membership testing
+    while maintaining insertion order in a tuple for deterministic iteration
+    and display.  Duplicate elements are silently dropped on construction.
+    Valid element types are the same as dict keys: strings, numbers, booleans,
+    and symbols.
+    """
+    __slots__ = ('elements', 'members')
+
+    def __init__(self, elements: Tuple['MenaiValue', ...] = ()) -> None:
+        seen: set = set()
+        deduped = []
+        for elem in elements:
+            hk = MenaiDict.to_hashable_key(elem)
+            if hk not in seen:
+                seen.add(hk)
+                deduped.append(elem)
+
+        self.elements: Tuple['MenaiValue', ...] = tuple(deduped)
+        self.members: frozenset = frozenset(
+            MenaiDict.to_hashable_key(e) for e in self.elements
+        )
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, MenaiSet):
+            return False
+
+        return self.members == other.members
+
+    def __hash__(self) -> int:
+        return hash(self.members)
+
+    def to_python(self) -> set:
+        """Convert to Python set."""
+        result = set()
+        for elem in self.elements:
+            if isinstance(elem, MenaiString):
+                result.add(elem.value)
+
+            elif isinstance(elem, MenaiSymbol):
+                result.add(elem.name)
+
+            else:
+                result.add(elem.to_python())
+
+        return result
+
+    def type_name(self) -> str:
+        return "set"
+
+    def describe(self) -> str:
+        if not self.elements:
+            return "#{}"
+
+        return "#{" + " ".join(e.describe() for e in self.elements) + "}"
+
+
 # Module-level singletons — there is only one #none value.
 Menai_NONE = MenaiNone()
 Menai_BOOLEAN_TRUE = MenaiBoolean(True)
 Menai_BOOLEAN_FALSE = MenaiBoolean(False)
 Menai_LIST_EMPTY = MenaiList(())
 Menai_DICT_EMPTY = MenaiDict(())
+Menai_SET_EMPTY = MenaiSet(())
