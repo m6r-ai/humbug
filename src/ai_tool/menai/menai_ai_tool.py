@@ -321,6 +321,7 @@ Syntax: (operator arg1 arg2 ...)
 - (list-slice (list 1 2 3 4 5) 2) → (3 4 5), (list-slice (list 1 2 3 4 5) 1 3) → (2 3)
 - (list->string (list "h" "e" "l" "l" "o")) → "hello" (no separator: concatenates directly; all elements must be strings)
 - (list->string (list "a" "b" "c") ",") → "a,b,c" (separator inserted between elements; separator may be multi-character)
+- (list->set lst) → convert list to set (deduplicates, retains first occurrence order)
 
 ## Dictionaries (dicts):
 
@@ -337,6 +338,24 @@ Syntax: (operator arg1 arg2 ...)
 - Nested dicts: (dict (list "user" (dict (list "name" "Bob") (list "id" 123))))
 - Pattern matching: (match data ((? dict? a) ...) (_ ...))
 - Maintains insertion order, optimized for data processing workflows
+
+## Sets:
+
+- Immutable unordered collections of unique hashable values with O(1) membership testing
+- Valid element types: string, integer, float, complex, boolean, symbol (lists, dicts, functions, #none are not hashable)
+- Type predicate: (set? x) → #t
+- Equality: (set=? s1 s2), (set!=? s1 s2) — order-insensitive; two sets are equal if they contain the same elements
+- Output format: sets display as #{1 2 3} — this is display-only; construction always uses (set ...)
+- Construction: (set 1 2 3), (set) → empty set #{}, duplicates are silently dropped
+- Membership: (set-member? s x) → #t if x is in s
+- Query: (set-length s) → number of elements
+- Functional update (returns new set — pure): (set-add s x) → new set with x added (no-op if already present), (set-remove s x) → new set with x removed (no-op if absent)
+- Set algebra: (set-union s1 s2), (set-intersection s1 s2), (set-difference s1 s2) → s1 minus s2
+- Subset test: (set-subset? s1 s2) → #t if every element of s1 is in s2
+- Conversion: (set->list s) → list of elements (insertion order), (list->set lst) → set from list (deduplicates)
+- Higher-order: (map-set func s) → apply func to each element, return new set; (filter-set pred s) → new set of elements satisfying pred; (fold-set func init s) → left fold over elements
+- Pattern matching: (match x ((? set? s) ...) (_ ...))
+- Sets have no ordering operators and no positional access; use (set->list s) then list operations for iteration
 
 ## Symbol operations:
 
@@ -485,7 +504,7 @@ Syntax: (operator arg1 arg2 ...)
 - Conditions must be boolean: (if #t ...) works, (if 1 ...) doesn't - there is no concept of "truthiness"
 - #none is not a boolean and cannot be used as a condition; use (none? x) to test for absence
 - The user CANNOT see Menai expressions or Menai results used with this tool directly; if you want to show either, you must format it as a message to the user.
-- Naming convention: direct operations are named, say, `list-X` with the list as the first argument; higher-order operations are named `X-list` with the function/predicate first and the list last. The same convention applies to dicts: `dict-X` for direct operations, `X-dict` for higher-order operations.
+- Naming convention: direct operations are named, say, `list-X` with the list as the first argument; higher-order operations are named `X-list` with the function/predicate first and the list last. The same convention applies to dicts (`dict-X` / `X-dict`) and sets (`set-X` / `X-set`).
 
 """
 
