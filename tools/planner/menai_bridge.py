@@ -54,6 +54,11 @@ class MenaiBridge:
             elements = [self.python_to_menai(item) for item in value]
             return f"(list {' '.join(elements)})"
         
+        elif isinstance(value, set):
+            # Convert to Menai set
+            elements = [self.python_to_menai(item) for item in value]
+            return f"(set {' '.join(elements)})"
+
         elif isinstance(value, dict):
             # Convert to Menai dict
             pairs = []

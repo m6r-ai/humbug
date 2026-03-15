@@ -21,15 +21,15 @@
     (dict
       (list "id"           "test-5day")
       (list "type"         "5-day")
-      (list "working-days" (list "mon" "tue" "wed" "thu" "fri"))
-      (list "holidays"     (list "2025-12-25" "2025-12-26" "2026-01-01"))))
+      (list "working-days" (set "mon" "tue" "wed" "thu" "fri"))
+      (list "holidays"     (set "2025-12-25" "2025-12-26" "2026-01-01"))))
 
   (cal-7day
     (dict
       (list "id"           "test-7day")
       (list "type"         "7-day")
-      (list "working-days" (list "mon" "tue" "wed" "thu" "fri" "sat" "sun"))
-      (list "holidays"     (list))))
+      (list "working-days" (set "mon" "tue" "wed" "thu" "fri" "sat" "sun"))
+      (list "holidays"     (set))))
 
   ; ============================================================================
   ; TEST 1: Date parsing and formatting

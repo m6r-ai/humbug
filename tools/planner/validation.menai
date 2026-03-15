@@ -130,9 +130,9 @@
                          (list-append errors (string-concat "To-task not found: " to-task))
                          errors))
              ; Check dependency type
-             (valid-types (list "finish-to-start" "start-to-start" 
+             (valid-types (set "finish-to-start" "start-to-start"
                                "finish-to-finish" "start-to-finish"))
-             (errors (if (boolean-not (list-member? valid-types dep-type))
+             (errors (if (boolean-not (set-member? valid-types dep-type))
                          (list-append errors (string-concat "Invalid dependency type: " dep-type))
                          errors))
              ; Check for self-dependency
@@ -210,10 +210,10 @@
                      duplicates
                      (let* ((current-id (list-first ids))
                             (rest-ids (list-rest ids)))
-                       (if (list-member? seen current-id)
+                       (if (set-member? seen current-id)
                            (check-duplicates rest-ids seen (list-append duplicates current-id))
-                           (check-duplicates rest-ids (list-append seen current-id) duplicates)))))))
-        (check-duplicates task-ids (list) (list)))))
+                           (check-duplicates rest-ids (set-add seen current-id) duplicates)))))))
+        (check-duplicates task-ids (set) (list)))))
 
   ; Find orphaned tasks (tasks with no predecessors or successors)
   (find-orphaned-tasks
@@ -227,10 +227,10 @@
   ; Find tasks with missing calendar references
   (find-tasks-with-invalid-calendars
     (lambda (tasks calendars)
-      (let ((calendar-ids (map-list (lambda (c) (dict-get c "id")) calendars)))
+      (let ((calendar-ids (list->set (map-list (lambda (c) (dict-get c "id")) calendars))))
         (filter-list (lambda (task)
                        (let ((cal-id (dict-get task "calendar-id")))
-                         (boolean-not (list-member? calendar-ids cal-id))))
+                         (boolean-not (set-member? calendar-ids cal-id))))
                      tasks))))
 )
 

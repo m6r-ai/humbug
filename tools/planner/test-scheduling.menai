@@ -13,8 +13,8 @@
       (list "id"           "cal1")
       (list "name"         "5-day week")
       (list "type"         "5-day")
-      (list "working-days" (list "mon" "tue" "wed" "thu" "fri"))
-      (list "holidays"     (list))))
+      (list "working-days" (set "mon" "tue" "wed" "thu" "fri"))
+      (list "holidays"     (set))))
 
   (make-task
     (lambda (id name duration)

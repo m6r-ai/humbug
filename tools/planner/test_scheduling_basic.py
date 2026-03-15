@@ -90,8 +90,8 @@ def create_simple_project():
                 "id": "cal1",
                 "name": "5-day week",
                 "type": "5-day",
-                "working-days": ["mon", "tue", "wed", "thu", "fri"],
-                "holidays": [],
+                "working-days": {"mon", "tue", "wed", "thu", "fri"},
+                "holidays": set(),
             }
         ],
     }

@@ -41,6 +41,9 @@ def dict_to_dict(d):
         if isinstance(v, list):
             items = [f'"{item}"' if isinstance(item, str) else str(item) for item in v]
             v_str = f'(list {" ".join(items)})'
+        elif isinstance(v, set):
+            items = [f'"{item}"' if isinstance(item, str) else str(item) for item in v]
+            v_str = f'(set {" ".join(items)})'
         elif isinstance(v, str):
             v_str = f'"{v}"'
         else:
@@ -60,16 +63,16 @@ def main():
     test_calendar = {
         "id": "test-5day",
         "type": "5-day",
-        "working-days": ["mon", "tue", "wed", "thu", "fri"],
-        "holidays": ["2025-12-25", "2025-12-26", "2026-01-01"]
+        "working-days": {"mon", "tue", "wed", "thu", "fri"},
+        "holidays": {"2025-12-25", "2025-12-26", "2026-01-01"}
     }
     
     # Define 7-day calendar
     calendar_7day = {
         "id": "test-7day",
         "type": "7-day",
-        "working-days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-        "holidays": []
+        "working-days": {"mon", "tue", "wed", "thu", "fri", "sat", "sun"},
+        "holidays": set()
     }
     
     # === TEST 1: Date parsing and formatting ===

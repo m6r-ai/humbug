@@ -78,13 +78,13 @@
   (is-holiday?
     (lambda (date-str calendar)
       (let ((holidays (dict-get calendar "holidays")))
-        (list-member? holidays date-str))))
+        (set-member? holidays date-str))))
 
   ; Check if a day-of-week is a working day in the calendar
   (is-working-day-of-week?
     (lambda (day-name calendar)
       (let ((working-days (dict-get calendar "working-days")))
-        (list-member? working-days day-name))))
+        (set-member? working-days day-name))))
 
   ; Check if a specific date is a working day
   (is-working-day?

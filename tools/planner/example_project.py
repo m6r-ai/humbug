@@ -31,22 +31,22 @@ def create_example_project() -> Dict[str, Any]:
             "id": "standard-5day",
             "name": "Standard Work Week",
             "type": "5-day",
-            "working-days": ["mon", "tue", "wed", "thu", "fri"],
-            "holidays": ["2025-12-25", "2025-12-26", "2026-01-01"]
+            "working-days": {"mon", "tue", "wed", "thu", "fri"},
+            "holidays": {"2025-12-25", "2025-12-26", "2026-01-01"}
         },
         {
             "id": "deployment-7day",
             "name": "Deployment Calendar (24/7)",
             "type": "7-day",
-            "working-days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-            "holidays": []
+            "working-days": {"mon", "tue", "wed", "thu", "fri", "sat", "sun"},
+            "holidays": set()
         },
         {
             "id": "vendor-calendar",
             "name": "Vendor ACME Calendar",
             "type": "5-day",
-            "working-days": ["mon", "tue", "wed", "thu", "fri"],
-            "holidays": ["2025-12-25", "2025-12-26", "2026-01-01", "2026-07-04"]
+            "working-days": {"mon", "tue", "wed", "thu", "fri"},
+            "holidays": {"2025-12-25", "2025-12-26", "2026-01-01", "2026-07-04"}
         }
     ]
     

@@ -16,24 +16,24 @@
       (list "id"           "standard-5day")
       (list "name"         "Standard Work Week")
       (list "type"         "5-day")
-      (list "working-days" (list "mon" "tue" "wed" "thu" "fri"))
-      (list "holidays"     (list "2025-12-25" "2025-12-26" "2026-01-01"))))
+      (list "working-days" (set "mon" "tue" "wed" "thu" "fri"))
+      (list "holidays"     (set "2025-12-25" "2025-12-26" "2026-01-01"))))
 
   (cal-deploy
     (dict
       (list "id"           "deployment-7day")
       (list "name"         "Deployment Calendar (24/7)")
       (list "type"         "7-day")
-      (list "working-days" (list "mon" "tue" "wed" "thu" "fri" "sat" "sun"))
-      (list "holidays"     (list))))
+      (list "working-days" (set "mon" "tue" "wed" "thu" "fri" "sat" "sun"))
+      (list "holidays"     (set))))
 
   (cal-vendor
     (dict
       (list "id"           "vendor-calendar")
       (list "name"         "Vendor ACME Calendar")
       (list "type"         "5-day")
-      (list "working-days" (list "mon" "tue" "wed" "thu" "fri"))
-      (list "holidays"     (list "2025-12-25" "2025-12-26" "2026-01-01" "2026-07-04"))))
+      (list "working-days" (set "mon" "tue" "wed" "thu" "fri"))
+      (list "holidays"     (set "2025-12-25" "2025-12-26" "2026-01-01" "2026-07-04"))))
 
   (make-task-5day
     (lambda (id name duration status progress)
