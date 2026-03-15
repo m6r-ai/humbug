@@ -151,7 +151,8 @@ Runtime values are instances of the `MenaiValue` hierarchy:
 | `MenaiBoolean`  | `boolean`   |
 | `MenaiSymbol`   | `symbol`    |
 | `MenaiList`     | `list`      |
-| `MenaiDict`    | `dict`     |
+| `MenaiDict`     | `dict`      |
+| `MenaiSet`      | `set`       |
 | `MenaiFunction` | `function`  |
 
 ## Module system
