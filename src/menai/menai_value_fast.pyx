@@ -322,7 +322,8 @@ cdef class MenaiList(MenaiValue):
 
 
 cdef class MenaiDict(MenaiValue):
-    """Represents immutable key-value dictionaries.
+    """
+    Represents immutable key-value dictionaries.
 
     pairs  — tuple of (key, value) pairs; preserves insertion order.
     lookup — Python dict mapping hashable keys to (key, value) pairs; O(1) access.
@@ -380,8 +381,68 @@ cdef class MenaiDict(MenaiValue):
         return _hashable_key(key)
 
 
+cdef class MenaiSet(MenaiValue):
+    """
+    Represents sets - immutable unordered collections of unique hashable values.
+
+    Internally uses a frozenset of hashable keys for O(1) membership testing
+    while maintaining insertion order in a tuple for deterministic iteration
+    and display.  Duplicate elements are silently dropped on construction.
+    Valid element types are the same as dict keys: strings, numbers, booleans,
+    and symbols.
+    """
+
+    def __init__(self, elements = ()):
+        seen: set = set()
+        deduped = []
+        for elem in elements:
+            hk = MenaiDict.to_hashable_key(elem)
+            if hk not in seen:
+                seen.add(hk)
+                deduped.append(elem)
+
+        self.elements: Tuple['MenaiValue', ...] = tuple(deduped)
+        self.members: frozenset = frozenset(
+            MenaiDict.to_hashable_key(e) for e in self.elements
+        )
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, MenaiSet):
+            return False
+
+        return self.members == other.members
+
+    def __hash__(self) -> int:
+        return hash(self.members)
+
+    def to_python(self) -> set:
+        """Convert to Python set."""
+        result = set()
+        for elem in self.elements:
+            if isinstance(elem, MenaiString):
+                result.add(elem.value)
+
+            elif isinstance(elem, MenaiSymbol):
+                result.add(elem.name)
+
+            else:
+                result.add(elem.to_python())
+
+        return result
+
+    def type_name(self) -> str:
+        return "set"
+
+    def describe(self) -> str:
+        if not self.elements:
+            return "#{}"
+
+        return "#{" + " ".join(e.describe() for e in self.elements) + "}"
+
+
 cdef object _hashable_key(object key):
-    """Convert a MenaiValue key to a hashable Python value for dict lookup.
+    """
+    Convert a MenaiValue key to a hashable Python value for dict lookup.
 
     Uses direct C-level field reads for the common scalar types.
     """
@@ -413,7 +474,8 @@ cdef object _hashable_key(object key):
 
 
 cdef class MenaiFunction(MenaiValue):
-    """Represents a first-class function (lambda or builtin).
+    """
+    Represents a first-class function (lambda or builtin).
 
     captured_values is a plain Python list so that PATCH_CLOSURE can write
     into it after the closure is created (letrec mutual-recursion wiring).
@@ -478,10 +540,12 @@ Menai_BOOLEAN_TRUE = MenaiBoolean(True)
 Menai_BOOLEAN_FALSE = MenaiBoolean(False)
 Menai_LIST_EMPTY = MenaiList(())
 Menai_DICT_EMPTY = MenaiDict(())
+Menai_SET_EMPTY = MenaiSet(())
 
 
 def convert_value(src):
-    """Convert a single compiler-world MenaiValue to its fast VM equivalent.
+    """
+    Convert a single compiler-world MenaiValue to its fast VM equivalent.
 
     Called once per constant at the start of execute() to translate the
     CodeObject.constants lists from plain Python values to cdef class values.
@@ -521,6 +585,9 @@ def convert_value(src):
         return MenaiDict(tuple(
             (convert_value(k), convert_value(v)) for k, v in src.pairs
         ))
+
+    if t is _slow.MenaiSet:
+        return MenaiSet(tuple(convert_value(e) for e in src.elements))
 
     if t is _slow.MenaiFunction:
         # Zero-capture lambdas are stored as LOAD_CONST constants by the
@@ -593,6 +660,9 @@ def to_slow(src):
         return _slow.MenaiDict(tuple(
             (to_slow(k), to_slow(v)) for k, v in src.pairs
         ))
+
+    if type(src) is MenaiSet:
+        return _slow.MenaiSet(tuple(to_slow(e) for e in src.elements))
 
     if type(src) is MenaiFunction:
         return _slow.MenaiFunction(

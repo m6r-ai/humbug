@@ -12,13 +12,13 @@ from menai.menai_bytecode import CodeObject, Opcode, Instruction
 from menai.menai_error import MenaiEvalError, MenaiCancelledException
 from menai.menai_value_fast import (
     MenaiValue, MenaiBoolean, MenaiString, MenaiList, MenaiDict, MenaiFunction,
-    MenaiInteger, MenaiComplex, MenaiFloat, MenaiSymbol, MenaiNone,
-    Menai_NONE, Menai_BOOLEAN_TRUE, Menai_BOOLEAN_FALSE, Menai_DICT_EMPTY, Menai_LIST_EMPTY
+    MenaiInteger, MenaiComplex, MenaiFloat, MenaiSymbol, MenaiNone, MenaiSet,
+    Menai_NONE, Menai_BOOLEAN_TRUE, Menai_BOOLEAN_FALSE, Menai_DICT_EMPTY, Menai_LIST_EMPTY, Menai_SET_EMPTY
 )
 from menai.menai_value_fast import convert_code_object, convert_value, to_slow
 from menai.menai_value_fast cimport (
     MenaiValue, MenaiBoolean, MenaiString, MenaiList, MenaiDict, MenaiFunction,
-    MenaiInteger, MenaiComplex, MenaiFloat, MenaiSymbol, MenaiNone
+    MenaiInteger, MenaiComplex, MenaiFloat, MenaiSymbol, MenaiNone, MenaiSet
 )
 from menai.menai_vm_bytecode_validator import validate_bytecode
 
@@ -138,6 +138,7 @@ class MenaiVM:
         table[Opcode.LOAD_FALSE] = self._op_load_false
         table[Opcode.LOAD_EMPTY_LIST] = self._op_load_empty_list
         table[Opcode.LOAD_EMPTY_DICT] = self._op_load_empty_dict
+        table[Opcode.LOAD_EMPTY_SET] = self._op_load_empty_set
         table[Opcode.LOAD_CONST] = self._op_load_const
         table[Opcode.LOAD_NAME] = self._op_load_name
         table[Opcode.MOVE] = self._op_move
@@ -302,6 +303,19 @@ class MenaiVM:
         table[Opcode.LIST_REMOVE] = self._op_list_remove
         table[Opcode.LIST_CONCAT] = self._op_list_concat
         table[Opcode.LIST_TO_STRING] = self._op_list_to_string
+        table[Opcode.LIST_TO_SET] = self._op_list_to_set
+        table[Opcode.SET_P] = self._op_set_p
+        table[Opcode.SET_EQ_P] = self._op_set_eq_p
+        table[Opcode.SET_NEQ_P] = self._op_set_neq_p
+        table[Opcode.SET_MEMBER_P] = self._op_set_member_p
+        table[Opcode.SET_ADD] = self._op_set_add
+        table[Opcode.SET_REMOVE] = self._op_set_remove
+        table[Opcode.SET_LENGTH] = self._op_set_length
+        table[Opcode.SET_UNION] = self._op_set_union
+        table[Opcode.SET_INTERSECTION] = self._op_set_intersection
+        table[Opcode.SET_DIFFERENCE] = self._op_set_difference
+        table[Opcode.SET_SUBSET_P] = self._op_set_subset_p
+        table[Opcode.SET_TO_LIST] = self._op_set_to_list
         table[Opcode.RANGE] = self._op_range
         return table
 
@@ -472,6 +486,15 @@ class MenaiVM:
         cdef Frame f = frame
         cdef list regs = self.regs
         regs[f.base + instr.dest] = Menai_DICT_EMPTY
+        return None
+
+    def _op_load_empty_set(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """LOAD_EMPTY_SET dest: r_dest = #{}"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        regs[f.base + instr.dest] = Menai_SET_EMPTY
         return None
 
     def _op_load_const(  # pylint: disable=useless-return
@@ -4091,6 +4114,283 @@ class MenaiVM:
             parts.append(item.value)
 
         regs[base + instr.dest] = MenaiString(b.value.join(parts))
+        return None
+
+    def _op_list_to_set(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """LIST_TO_SET dest, src0: r_dest = (list->set r_src0)"""
+        cdef Frame f = frame
+        cdef base = f.base
+        cdef list regs = self.regs
+        cdef MenaiList a
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'list->set' requires a list argument, got {raw_a.type_name()}")
+
+        try:
+            a = <MenaiList>raw_a
+            regs[base + instr.dest] = MenaiSet(a.elements)
+
+        except MenaiEvalError as e:
+            raise MenaiEvalError(f"Function 'list->set' invalid element: {e.message}") from e
+
+        return None
+
+    def _op_set_p(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """SET_P dest, src0: r_dest = (set? r_src0)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        regs[base + instr.dest] = (
+            Menai_BOOLEAN_TRUE if type(regs[base + instr.src0]) is MenaiSet else Menai_BOOLEAN_FALSE  # pylint: disable=unidiomatic-typecheck
+        )
+        return None
+
+    def _op_set_eq_p(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """SET_EQ_P dest, src0, src1: r_dest = (set=? r_src0 r_src1)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiSet a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set=?' requires set arguments, got {raw_a.type_name()}")
+
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set=?' requires set arguments, got {raw_b.type_name()}")
+
+        a = <MenaiSet>raw_a
+        b = <MenaiSet>raw_b
+        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a.members == b.members else Menai_BOOLEAN_FALSE
+        return None
+
+    def _op_set_neq_p(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """SET_NEQ_P dest, src0, src1: r_dest = (set!=? r_src0 r_src1)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiSet a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set!=?' requires set arguments, got {raw_a.type_name()}")
+
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set!=?' requires set arguments, got {raw_b.type_name()}")
+
+        a = <MenaiSet>raw_a
+        b = <MenaiSet>raw_b
+        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a.members != b.members else Menai_BOOLEAN_FALSE
+        return None
+
+    def _op_set_member_p(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """SET_MEMBER_P dest, src0, src1: r_dest = (set-member? r_src0 r_src1)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiSet a
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set-member?' requires a set argument, got {raw_a.type_name()}")
+
+        a = <MenaiSet>raw_a
+        try:
+            hk = MenaiDict.to_hashable_key(regs[base + instr.src1])
+            regs[base + instr.dest] = Menai_BOOLEAN_TRUE if hk in a.members else Menai_BOOLEAN_FALSE
+
+        except MenaiEvalError as e:
+            raise MenaiEvalError(f"Function 'set-member?' invalid element: {e.message}") from e
+
+        return None
+
+    def _op_set_add(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """SET_ADD dest, src0, src1: r_dest = (set-add r_src0 r_src1)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiSet a
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set-add' requires a set argument, got {raw_a.type_name()}")
+
+        a = <MenaiSet>raw_a
+        elem = regs[base + instr.src1]
+        try:
+            hk = MenaiDict.to_hashable_key(elem)
+            if hk in a.members:
+                regs[base + instr.dest] = a
+
+            else:
+                regs[base + instr.dest] = MenaiSet(a.elements + (elem,))
+
+        except MenaiEvalError as e:
+            raise MenaiEvalError(f"Function 'set-add' invalid element: {e.message}") from e
+
+        return None
+
+    def _op_set_remove(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """SET_REMOVE dest, src0, src1: r_dest = (set-remove r_src0 r_src1)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiSet a
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set-remove' requires a set argument, got {raw_a.type_name()}")
+
+        a = <MenaiSet>raw_a
+        try:
+            hk = MenaiDict.to_hashable_key(regs[base + instr.src1])
+            regs[base + instr.dest] = MenaiSet(tuple(e for e in a.elements if MenaiDict.to_hashable_key(e) != hk))
+
+        except MenaiEvalError as e:
+            raise MenaiEvalError(f"Function 'set-remove' invalid element: {e.message}") from e
+
+        return None
+
+    def _op_set_length(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """SET_LENGTH dest, src0: r_dest = (set-length r_src0)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiSet a
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set-length' requires a set argument, got {raw_a.type_name()}")
+
+        a = <MenaiSet>raw_a
+        regs[base + instr.dest] = MenaiInteger(len(a.elements))
+        return None
+
+    def _op_set_union(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """SET_UNION dest, src0, src1: r_dest = (set-union r_src0 r_src1)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiSet a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set-union' requires set arguments, got {raw_a.type_name()}")
+
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set-union' requires set arguments, got {raw_b.type_name()}")
+
+        a = <MenaiSet>raw_a
+        b = <MenaiSet>raw_b
+        # Start with all elements of a, then add elements of b not already present
+        new_elems = list(a.elements)
+        seen = set(a.members)
+        for elem in b.elements:
+            hk = MenaiDict.to_hashable_key(elem)
+            if hk not in seen:
+                new_elems.append(elem)
+                seen.add(hk)
+
+        regs[base + instr.dest] = MenaiSet(tuple(new_elems))
+        return None
+
+    def _op_set_intersection(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """SET_INTERSECTION dest, src0, src1: r_dest = (set-intersection r_src0 r_src1)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiSet a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set-intersection' requires set arguments, got {raw_a.type_name()}")
+
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set-intersection' requires set arguments, got {raw_b.type_name()}")
+
+        a = <MenaiSet>raw_a
+        b = <MenaiSet>raw_b
+        # Preserve insertion order from a, keeping only elements also in b
+        regs[base + instr.dest] = MenaiSet(tuple(
+            e for e in a.elements if MenaiDict.to_hashable_key(e) in b.members
+        ))
+        return None
+
+    def _op_set_difference(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """SET_DIFFERENCE dest, src0, src1: r_dest = (set-difference r_src0 r_src1)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiSet a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set-difference' requires set arguments, got {raw_a.type_name()}")
+
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set-difference' requires set arguments, got {raw_b.type_name()}")
+
+        a = <MenaiSet>raw_a
+        b = <MenaiSet>raw_b
+        # Elements in a that are not in b
+        regs[base + instr.dest] = MenaiSet(tuple(
+            e for e in a.elements if MenaiDict.to_hashable_key(e) not in b.members
+        ))
+        return None
+
+    def _op_set_subset_p(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """SET_SUBSET_P dest, src0, src1: r_dest = (set-subset? r_src0 r_src1)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiSet a, b
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set-subset?' requires set arguments, got {raw_a.type_name()}")
+
+        raw_b = regs[base + instr.src1]
+        if type(raw_b) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set-subset?' requires set arguments, got {raw_b.type_name()}")
+
+        a = <MenaiSet>raw_a
+        b = <MenaiSet>raw_b
+        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if a.members <= b.members else Menai_BOOLEAN_FALSE
+        return None
+
+    def _op_set_to_list(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """SET_TO_LIST dest, src0: r_dest = (set->list r_src0)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        cdef MenaiSet a
+        raw_a = regs[base + instr.src0]
+        if type(raw_a) is not MenaiSet:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(f"Function 'set->list' requires a set argument, got {raw_a.type_name()}")
+
+        a = <MenaiSet>raw_a
+        regs[base + instr.dest] = MenaiList(a.elements)
         return None
 
     def _op_range(  # pylint: disable=useless-return

@@ -38,6 +38,10 @@ cdef class MenaiDict(MenaiValue):
     cdef public tuple pairs
     cdef public dict lookup
 
+cdef class MenaiSet(MenaiValue):
+    cdef public tuple elements
+    cdef public frozenset members
+
 cdef class MenaiFunction(MenaiValue):
     cdef public tuple parameters
     cdef public object name

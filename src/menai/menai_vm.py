@@ -297,7 +297,7 @@ class MenaiVM:
         table[Opcode.LIST_REMOVE] = self._op_list_remove
         table[Opcode.LIST_CONCAT] = self._op_list_concat
         table[Opcode.LIST_TO_STRING] = self._op_list_to_string
-        table[Opcode.RANGE] = self._op_range
+        table[Opcode.LIST_TO_SET] = self._op_list_to_set
         table[Opcode.SET_P] = self._op_set_p
         table[Opcode.SET_EQ_P] = self._op_set_eq_p
         table[Opcode.SET_NEQ_P] = self._op_set_neq_p
@@ -310,7 +310,7 @@ class MenaiVM:
         table[Opcode.SET_DIFFERENCE] = self._op_set_difference
         table[Opcode.SET_SUBSET_P] = self._op_set_subset_p
         table[Opcode.SET_TO_LIST] = self._op_set_to_list
-        table[Opcode.LIST_TO_SET] = self._op_list_to_set
+        table[Opcode.RANGE] = self._op_range
         return table
 
     def _max_local_count(
