@@ -228,7 +228,8 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
     #   3. The call is the last use of the register — the outgoing zone is
     #      clobbered when the call returns, so no later read is safe.
     #   4. No call or apply between the register's definition and this call —
-    #      a prior call would have already written local_count + arg_index.
+    #      a prior call or make-struct would have already written
+    #      local_count + arg_index.
     #      For call/apply result registers the defining call itself is not a
     #      barrier — the scan starts strictly after the definition index.
     max_outgoing_index = -1
@@ -252,8 +253,10 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
             reg_def = def_index.get(reg_id, 0)
             barrier = False
             for scan_idx in range(reg_def + 1, call_idx):
-                if isinstance(func.instrs[scan_idx], (MenaiVCodeCall, MenaiVCodeApply,
-                                                       MenaiVCodeTailCall, MenaiVCodeTailApply)):
+                scan_instr = func.instrs[scan_idx]
+                if isinstance(scan_instr, (MenaiVCodeCall, MenaiVCodeApply,
+                                           MenaiVCodeTailCall, MenaiVCodeTailApply)) or (
+                        isinstance(scan_instr, MenaiVCodeBuiltin) and scan_instr.op == 'make-struct'):
                     barrier = True
                     break
 
@@ -310,7 +313,8 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
             for scan_idx in range(reg_def + 1, move_idx):
                 scan_instr = func.instrs[scan_idx]
                 if isinstance(scan_instr, (MenaiVCodeCall, MenaiVCodeApply,
-                                           MenaiVCodeTailCall, MenaiVCodeTailApply)):
+                                           MenaiVCodeTailCall, MenaiVCodeTailApply)) or (
+                        isinstance(scan_instr, MenaiVCodeBuiltin) and scan_instr.op == 'make-struct'):
                     barrier = True
                     break
 

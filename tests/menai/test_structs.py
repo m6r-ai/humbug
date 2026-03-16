@@ -708,3 +708,139 @@ class TestStructErrors:
             menai.evaluate(
                 "(let ((Point (struct (x y))) (p (Point 1 2))) (struct=? p 42))"
             )
+
+
+# ---------------------------------------------------------------------------
+# 12. First-class use of struct operations
+# ---------------------------------------------------------------------------
+
+class TestStructFirstClass:
+    """Test struct operations used as first-class functions."""
+
+    def test_struct_predicate_as_first_class_filter(self, menai):
+        """struct? used as a first-class predicate with filter-list."""
+        result = menai.evaluate_and_format('''
+        (let ((Point (struct (x y)))
+              (items (list (Point 1 2) 42 (Point 3 4) "hello")))
+          (filter-list struct? items))
+        ''')
+        assert result == '((Point 1 2) (Point 3 4))'
+
+    def test_struct_predicate_stored_in_variable(self, menai):
+        """struct? can be stored in a variable and called indirectly."""
+        result = menai.evaluate_and_format('''
+        (let ((Point (struct (x y)))
+              (p (Point 1 2))
+              (pred struct?))
+          (pred p))
+        ''')
+        assert result == '#t'
+
+    def test_struct_type_predicate_as_first_class(self, menai):
+        """struct-type? used as a first-class function."""
+        result = menai.evaluate_and_format('''
+        (let ((Point (struct (x y)))
+              (p (Point 1 2))
+              (check struct-type?))
+          (check Point p))
+        ''')
+        assert result == '#t'
+
+    def test_struct_get_as_first_class(self, menai):
+        """struct-get used as a first-class function passed to map-list."""
+        result = menai.evaluate_and_format('''
+        (let ((Point (struct (x y)))
+              (points (list (Point 1 2) (Point 3 4) (Point 5 6))))
+          (map-list (lambda (p) (struct-get p 'x)) points))
+        ''')
+        assert result == '(1 3 5)'
+
+    def test_struct_get_stored_in_variable(self, menai):
+        """struct-get stored in a variable and called indirectly."""
+        result = menai.evaluate_and_format('''
+        (let ((Point (struct (x y)))
+              (p (Point 10 20))
+              (getter struct-get))
+          (getter p 'y))
+        ''')
+        assert result == '20'
+
+    def test_struct_set_as_first_class(self, menai):
+        """struct-set used as a first-class function."""
+        result = menai.evaluate_and_format('''
+        (let ((Point (struct (x y)))
+              (p (Point 1 2))
+              (updater struct-set))
+          (updater p 'x 99))
+        ''')
+        assert result == '(Point 99 2)'
+
+    def test_struct_set_stored_in_variable(self, menai):
+        """struct-set stored in a variable and used to update multiple structs."""
+        result = menai.evaluate_and_format('''
+        (let ((Point (struct (x y)))
+              (points (list (Point 1 2) (Point 3 4)))
+              (updater struct-set))
+          (map-list (lambda (p) (updater p 'x 0)) points))
+        ''')
+        assert result == '((Point 0 2) (Point 0 4))'
+
+    def test_struct_eq_as_first_class(self, menai):
+        """struct=? used as a first-class equality function."""
+        result = menai.evaluate_and_format('''
+        (let* ((Point (struct (x y)))
+               (p1 (Point 1 2))
+               (p2 (Point 1 2))
+               (eq struct=?))
+          (eq p1 p2))
+        ''')
+        assert result == '#t'
+
+    def test_struct_neq_as_first_class(self, menai):
+        """struct!=? used as a first-class inequality function."""
+        result = menai.evaluate_and_format('''
+        (let* ((Point (struct (x y)))
+               (p1 (Point 1 2))
+               (p2 (Point 3 4))
+               (neq struct!=?))
+          (neq p1 p2))
+        ''')
+        assert result == '#t'
+
+    def test_struct_type_as_first_class(self, menai):
+        """struct-type used as a first-class function."""
+        result = menai.evaluate_and_format('''
+        (let ((Point (struct (x y)))
+              (p (Point 1 2))
+              (get-type struct-type))
+          (struct-type-name (get-type p)))
+        ''')
+        assert result == '"Point"'
+
+    def test_struct_type_name_as_first_class(self, menai):
+        """struct-type-name used as a first-class function."""
+        result = menai.evaluate_and_format('''
+        (let ((Point (struct (x y)))
+              (Vec (struct (dx dy)))
+              (name-of struct-type-name))
+          (list (name-of Point) (name-of Vec)))
+        ''')
+        assert result == '("Point" "Vec")'
+
+    def test_struct_fields_as_first_class(self, menai):
+        """struct-fields used as a first-class function."""
+        result = menai.evaluate_and_format('''
+        (let ((Point (struct (x y)))
+              (get-fields struct-fields))
+          (get-fields Point))
+        ''')
+        assert result == '(x y)'
+
+    def test_struct_operations_passed_to_higher_order_function(self, menai):
+        """Struct operations can be passed as arguments to user-defined higher-order functions."""
+        result = menai.evaluate_and_format('''
+        (let* ((Point (struct (x y)))
+               (apply-to (lambda (f a b) (f a b))))
+          (apply-to struct=? (Point 1 2) (Point 1 2)))
+        ''')
+        assert result == '#t'
