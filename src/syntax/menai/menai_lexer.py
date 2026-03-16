@@ -415,6 +415,6 @@ class MenaiLexer(Lexer):
             True if the value is a special form, False otherwise
         """
         special_forms = {
-            'and', 'if', 'let', 'let*', 'letrec', 'lambda', 'or', 'quote', 'match', 'import', 'trace'
+            'and', 'if', 'let', 'let*', 'letrec', 'lambda', 'or', 'quote', 'match', 'import', 'trace', 'struct', 'apply'
         }
         return value.lower() in special_forms

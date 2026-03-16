@@ -384,6 +384,18 @@ class MenaiDict(MenaiValue):
         if type(key) is MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
             return ('sym', key.name)
 
+        # MenaiStruct is hashable if all its fields are hashable scalars.
+        # MenaiStruct is defined later in this module; isinstance works at runtime.
+        if isinstance(key, MenaiStruct):
+            try:
+                return ('struct', hash(key))
+
+            except TypeError as e:
+                raise MenaiEvalError(
+                    message=str(e),
+                    received=f"Key type: {key.type_name()}",
+                ) from e
+
         raise MenaiEvalError(
             message="Dict keys must be strings, numbers, booleans, or symbols",
             received=f"Key type: {key.type_name()}",
@@ -450,6 +462,90 @@ class MenaiSet(MenaiValue):
             return "#{}"
 
         return "#{" + " ".join(e.describe() for e in self.elements) + "}"
+
+
+class MenaiStructType(MenaiValue):
+    """
+    Represents a struct type descriptor — the value produced by (struct (x y)).
+
+    Carries the type name, a unique integer tag for fast VM identity checks, and
+    the ordered field names.  The tag is assigned at compile time and is stable
+    within a single compilation; it does not need to be stable across compilations
+    because MenaiStructType values are never serialised.
+
+    MenaiStructType is itself a callable value: calling it constructs an instance.
+    The VM handles this via the STRUCT_MAKE opcode rather than the normal CALL path.
+    """
+    __slots__ = ('name', 'tag', 'field_names', '_field_index')
+
+    def __init__(self, name: str, tag: int, field_names: Tuple[str, ...]) -> None:
+        self.name: str = name
+        self.tag: int = tag
+        self.field_names: Tuple[str, ...] = field_names
+        self._field_index: dict = {fname: idx for idx, fname in enumerate(field_names)}
+
+    def field_index(self, name: str) -> int:
+        """Return the 0-based index for a field name, raising KeyError if absent."""
+        return self._field_index[name]
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, MenaiStructType):
+            return False
+
+        return self.tag == other.tag
+
+    def __hash__(self) -> int:
+        return hash(self.tag)
+
+    def to_python(self) -> str:
+        return f"<struct-type {self.name}>"
+
+    def type_name(self) -> str:
+        return "struct-type"
+
+    def describe(self) -> str:
+        fields = " ".join(self.field_names)
+        return f"<struct-type {self.name} ({fields})>"
+
+
+class MenaiStruct(MenaiValue):
+    """
+    Represents a struct instance — the value produced by calling a struct constructor.
+
+    Fields are stored as a plain tuple for O(1) indexed access.  The struct_type
+    reference allows type identity checks (struct-type?) and introspection
+    (struct-type, struct-fields) without storing redundant metadata on every instance.
+    """
+    __slots__ = ('struct_type', 'fields')
+
+    def __init__(self, struct_type: MenaiStructType, fields: Tuple['MenaiValue', ...]) -> None:
+        self.struct_type: MenaiStructType = struct_type
+        self.fields: Tuple['MenaiValue', ...] = fields
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, MenaiStruct):
+            return False
+
+        return self.struct_type.tag == other.struct_type.tag and self.fields == other.fields
+
+    def __hash__(self) -> int:
+        _hashable_types = {'integer', 'float', 'complex', 'string', 'boolean', 'symbol'}
+        if all(f.type_name() in _hashable_types for f in self.fields):
+            return hash((self.struct_type.tag, self.fields))
+
+        raise TypeError(f"struct '{self.struct_type.name}' is not hashable: contains unhashable fields")
+
+    def to_python(self) -> dict:
+        """Convert to Python dict keyed by field name."""
+        return {name: self.fields[i].to_python()
+                for i, name in enumerate(self.struct_type.field_names)}
+
+    def type_name(self) -> str:
+        return "struct"
+
+    def describe(self) -> str:
+        parts = " ".join(f.describe() for f in self.fields)
+        return f"({self.struct_type.name} {parts})" if parts else f"({self.struct_type.name})"
 
 
 # Module-level singletons — there is only one #none value.

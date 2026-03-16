@@ -37,6 +37,7 @@ from menai.menai_value import (
     MenaiNone,
     MenaiSet,
     MenaiString,
+    MenaiStructType,
     MenaiValue,
 )
 from menai.menai_vcode import (
@@ -119,6 +120,11 @@ class _EmitContext:
 
         if isinstance(value, MenaiSet) and len(value.elements) == 0:
             self.emit(Opcode.LOAD_EMPTY_SET, dest=dest)
+            return
+
+        if isinstance(value, MenaiStructType):
+            const_idx = self.add_constant(value)
+            self.emit(Opcode.LOAD_STRUCT_TYPE, const_idx, dest=dest)
             return
 
         const_idx = self.add_constant(value)
@@ -377,6 +383,22 @@ class MenaiBytecodeBuilder:
         op = instr.op
         args = instr.args
         dest = ctx.slot_of(instr.dst)
+
+        if op == 'struct-make':
+            # args[0] is the struct type register, args[1..] are field values.
+            # Place all args in the outgoing zone, then emit STRUCT_MAKE with
+            # src0=local_count (where the type lives) and src1=n_fields.
+            local_count = ctx.slot_map.local_count
+            n_fields = len(args) - 1
+            for j, arg in enumerate(args):
+                src = ctx.slot_of(arg)
+                dst_slot = local_count + j
+                if src != dst_slot:
+                    ctx.emit(Opcode.MOVE, src, dest=dst_slot)
+
+            ctx.max_outgoing_args = max(ctx.max_outgoing_args, len(args))
+            ctx.emit(Opcode.STRUCT_MAKE, local_count, n_fields, dest=dest)
+            return
 
         opcode, _ = BUILTIN_OPCODE_MAP.get(op, (None, None))
         if opcode is None:

@@ -256,6 +256,19 @@ class Opcode(IntEnum):
     SET_SUBSET_P = _op(350, 2)          # r_dest = (set-subset? r_src0 r_src1)
     SET_TO_LIST = _op(351, 1)           # r_dest = (set->list r_src0)
 
+    # Struct operations
+    STRUCT_MAKE      = _op(360, 2)      # STRUCT_MAKE type_idx arity — pops arity field regs, pushes MenaiStruct
+    STRUCT_P         = _op(361, 1)      # r_dest = (struct? r_src0)
+    STRUCT_TYPE_P    = _op(362, 2)      # r_dest = (struct-type? r_type r_src0) — tag check
+    STRUCT_GET       = _op(363, 2)      # r_dest = (struct-get r_src0 field_idx) — indexed field access
+    STRUCT_SET       = _op(364, 3)      # r_dest = (struct-set r_src0 field_idx r_src1) — functional update
+    STRUCT_EQ_P      = _op(365, 2)      # r_dest = (struct=? r_src0 r_src1)
+    STRUCT_NEQ_P     = _op(366, 2)      # r_dest = (struct!=? r_src0 r_src1)
+    STRUCT_TYPE      = _op(367, 1)      # r_dest = (struct-type r_src0) → MenaiStructType value
+    STRUCT_TYPE_NAME = _op(368, 1)      # r_dest = (struct-type-name r_src0) → string
+    STRUCT_FIELDS    = _op(369, 1)      # r_dest = (struct-fields r_src0) → list of symbols
+    LOAD_STRUCT_TYPE = _op(370, 1)      # r_dest = struct_types[src0] — load a MenaiStructType constant
+
     # Generate integer range list
     RANGE = _op(380, 3)                 # r_dest = (range r_src0 r_src1 r_src2)
 
@@ -432,6 +445,15 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
     'set-difference': (Opcode.SET_DIFFERENCE, 2),
     'set-subset?': (Opcode.SET_SUBSET_P, 2),
     'set->list': (Opcode.SET_TO_LIST, 1),
+    'struct?': (Opcode.STRUCT_P, 1),
+    'struct-type?': (Opcode.STRUCT_TYPE_P, 2),
+    'struct-get': (Opcode.STRUCT_GET, 2),
+    'struct-set': (Opcode.STRUCT_SET, 3),
+    'struct=?': (Opcode.STRUCT_EQ_P, 2),
+    'struct!=?': (Opcode.STRUCT_NEQ_P, 2),
+    'struct-type': (Opcode.STRUCT_TYPE, 1),
+    'struct-type-name': (Opcode.STRUCT_TYPE_NAME, 1),
+    'struct-fields': (Opcode.STRUCT_FIELDS, 1),
     'range': (Opcode.RANGE, 3),
 }
 

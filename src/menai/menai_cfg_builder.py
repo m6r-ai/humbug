@@ -33,12 +33,13 @@ from menai.menai_cfg import (
 from menai.menai_ir import (
     MenaiIRCall,
     MenaiIRConstant,
-    MenaiIREmptyList,
-    MenaiIRBuildList,
     MenaiIRBuildDict,
+    MenaiIRBuildList,
     MenaiIRBuildSet,
-    MenaiIRError,
+    MenaiIRBuildStruct,
+    MenaiIREmptyList,
     MenaiIRExpr,
+    MenaiIRError,
     MenaiIRIf,
     MenaiIRLambda,
     MenaiIRLet,
@@ -225,6 +226,9 @@ class MenaiCFGBuilder:
 
         if isinstance(ir, MenaiIRBuildSet):
             return self._build_set(ir, block, scope, state)
+
+        if isinstance(ir, MenaiIRBuildStruct):
+            return self._build_struct(ir, block, scope, state)
 
         if isinstance(ir, MenaiIRReturn):
             # MenaiIRReturn is the IR tree's explicit return wrapper.
@@ -757,6 +761,42 @@ class MenaiCFGBuilder:
             acc_val = new_acc
 
         return acc_val, block
+
+    def _build_struct(
+        self,
+        ir: MenaiIRBuildStruct,
+        block: MenaiCFGBlock,
+        scope: MenaiCFGScope,
+        state: _FunctionState,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """
+        Build a struct constructor call.
+
+        Emits a LOAD_STRUCT_TYPE constant instruction to load the MenaiStructType
+        descriptor, evaluates each field value plan, then emits a STRUCT_MAKE
+        builtin instruction that takes the type value and all field values and
+        produces a new MenaiStruct instance.
+        """
+        # Load the struct type descriptor as a constant.
+        type_val = state.new_value(f"struct_type_{ir.struct_type.name}")
+        block.instrs.append(MenaiCFGConstInstr(
+            result=type_val,
+            value=ir.struct_type,
+        ))
+
+        # Evaluate each field value plan.
+        field_vals: List[MenaiCFGValue] = [type_val]
+        for field_plan in ir.field_plans:
+            field_val, block = self._build_expr(field_plan, block, scope, state, tail=False)
+            field_vals.append(field_val)
+
+        result = state.new_value(f"struct_{ir.struct_type.name}")
+        block.instrs.append(MenaiCFGBuiltinInstr(
+            result=result,
+            op='struct-make',
+            args=field_vals,
+        ))
+        return result, block
 
     def _build_builtin_call(
         self,

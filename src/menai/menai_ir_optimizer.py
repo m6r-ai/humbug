@@ -12,6 +12,7 @@ from menai.menai_ir import (
     MenaiIRExpr,
     MenaiIRCall,
     MenaiIRConstant,
+    MenaiIRBuildStruct,
     MenaiIRBuildList,
     MenaiIRBuildDict,
     MenaiIRBuildSet,
@@ -95,6 +96,12 @@ class MenaiIROptimizer(MenaiIROptimizationPass):
         if isinstance(ir, MenaiIRBuildSet):
             return MenaiIRBuildSet(
                 element_plans=[self._opt(e, frame_stack) for e in ir.element_plans],
+            )
+
+        if isinstance(ir, MenaiIRBuildStruct):
+            return MenaiIRBuildStruct(
+                struct_type=ir.struct_type,
+                field_plans=[self._opt(f, frame_stack) for f in ir.field_plans],
             )
 
         if isinstance(ir, MenaiIRReturn):

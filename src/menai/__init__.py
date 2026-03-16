@@ -12,13 +12,14 @@ from menai.menai_error import (
 # AST types
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex,
-    MenaiASTString, MenaiASTBoolean, MenaiASTSymbol, MenaiASTList
+    MenaiASTString, MenaiASTBoolean, MenaiASTSymbol, MenaiASTList, MenaiASTStruct
 )
 
 # Value types
 from menai.menai_value import (
     MenaiValue, MenaiInteger, MenaiFloat, MenaiComplex,
-    MenaiString, MenaiBoolean, MenaiSymbol, MenaiList, MenaiDict, MenaiFunction
+    MenaiString, MenaiBoolean, MenaiSymbol, MenaiList, MenaiDict, MenaiFunction,
+    MenaiSet, MenaiStructType, MenaiStruct
 )
 
 # Lower-level components (for advanced usage)
@@ -41,11 +42,12 @@ __all__ = [
 
     # AST node types
     "MenaiASTNode", "MenaiASTInteger", "MenaiASTFloat", "MenaiASTComplex",
-    "MenaiASTString", "MenaiASTBoolean", "MenaiASTSymbol", "MenaiASTList",
+    "MenaiASTString", "MenaiASTBoolean", "MenaiASTSymbol", "MenaiASTList", "MenaiASTStruct",
 
     # Value types
     "MenaiValue", "MenaiInteger", "MenaiFloat", "MenaiComplex",
     "MenaiString", "MenaiBoolean", "MenaiSymbol", "MenaiList", "MenaiDict", "MenaiFunction",
+    "MenaiSet", "MenaiStructType", "MenaiStruct",
 
     # Lower-level components
     "MenaiToken", "MenaiTokenType", "MenaiLexer", "MenaiASTBuilder",
