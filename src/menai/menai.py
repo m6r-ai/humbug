@@ -864,11 +864,15 @@ class Menai:
                                        (loop ($list-rest keys) acc)))))))
                     (loop ($dict-keys al) (dict)))))
    (map-set (lambda (f s)
-               (list->set (map-list f (set->list s)))))
+              (list->set (map-list f (set->list s)))))
    (filter-set (lambda (pred s)
-                  (list->set (filter-list pred (set->list s)))))
+                 (list->set (filter-list pred (set->list s)))))
    (fold-set (lambda (f init s)
-                (fold-list f init (set->list s))))
+               (fold-list f init (set->list s))))
+   (any-set? (lambda (pred s)
+               (any-list? pred (set->list s))))
+   (all-set? (lambda (pred s)
+               (all-list? pred (set->list s))))
    (range (lambda (start end . rest)
             ($range start
                     end
@@ -1051,6 +1055,8 @@ class Menai:
         (list "map-set" map-set)
         (list "filter-set" filter-set)
         (list "fold-set" fold-set)
+        (list "any-set?" any-set?)
+        (list "all-set?" all-set?)
         (list "range" range)))
 """
 

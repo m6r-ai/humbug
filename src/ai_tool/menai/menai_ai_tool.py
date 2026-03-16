@@ -354,6 +354,7 @@ Syntax: (operator arg1 arg2 ...)
 - Subset test: (set-subset? s1 s2) → #t if every element of s1 is in s2
 - Conversion: (set->list s) → list of elements (insertion order), (list->set lst) → set from list (deduplicates)
 - Higher-order: (map-set func s) → apply func to each element, return new set; (filter-set pred s) → new set of elements satisfying pred; (fold-set func init s) → left fold over elements
+- Predicates: (any-set? pred s) → #t if at least one element satisfies pred, #f otherwise; note: (any-set? pred (set)) → #f; (all-set? pred s) → #t if all elements satisfy pred, #f otherwise; note: (all-set? pred (set)) → #t (vacuously true)
 - Pattern matching: (match x ((? set? s) ...) (_ ...))
 - Sets have no ordering operators and no positional access; use (set->list s) then list operations for iteration
 

@@ -574,3 +574,81 @@ class TestSetFirstClassValues:
             "(set=? ((lambda (a b) (set-union a b)) (set 1 2) (set 3 4)) (set 1 2 3 4))"
         )
         assert result is True
+
+
+class TestAnySet:
+    """Test any-set? predicate."""
+
+    def test_any_set_true(self, tool):
+        """Test any-set? returns #t when at least one element satisfies predicate."""
+        result = tool.evaluate("(any-set? (lambda (x) (integer>? x 2)) (set 1 2 3))")
+        assert result is True
+
+    def test_any_set_false(self, tool):
+        """Test any-set? returns #f when no element satisfies predicate."""
+        result = tool.evaluate("(any-set? (lambda (x) (integer>? x 10)) (set 1 2 3))")
+        assert result is False
+
+    def test_any_set_empty(self, tool):
+        """Test any-set? returns #f on empty set."""
+        result = tool.evaluate("(any-set? (lambda (x) #t) (set))")
+        assert result is False
+
+    def test_any_set_single_element_match(self, tool):
+        """Test any-set? with a single matching element."""
+        result = tool.evaluate("(any-set? (lambda (x) (integer=? x 42)) (set 42))")
+        assert result is True
+
+    def test_any_set_single_element_no_match(self, tool):
+        """Test any-set? with a single non-matching element."""
+        result = tool.evaluate("(any-set? (lambda (x) (integer=? x 99)) (set 42))")
+        assert result is False
+
+    def test_any_set_all_match(self, tool):
+        """Test any-set? returns #t when all elements satisfy predicate."""
+        result = tool.evaluate("(any-set? (lambda (x) (integer>? x 0)) (set 1 2 3))")
+        assert result is True
+
+    def test_any_set_string_elements(self, tool):
+        """Test any-set? with string elements."""
+        result = tool.evaluate('(any-set? (lambda (x) (string=? x "b")) (set "a" "b" "c"))')
+        assert result is True
+
+
+class TestAllSet:
+    """Test all-set? predicate."""
+
+    def test_all_set_true(self, tool):
+        """Test all-set? returns #t when all elements satisfy predicate."""
+        result = tool.evaluate("(all-set? (lambda (x) (integer>? x 0)) (set 1 2 3))")
+        assert result is True
+
+    def test_all_set_false(self, tool):
+        """Test all-set? returns #f when at least one element does not satisfy predicate."""
+        result = tool.evaluate("(all-set? (lambda (x) (integer>? x 1)) (set 1 2 3))")
+        assert result is False
+
+    def test_all_set_empty(self, tool):
+        """Test all-set? returns #t vacuously on empty set."""
+        result = tool.evaluate("(all-set? (lambda (x) #f) (set))")
+        assert result is True
+
+    def test_all_set_single_element_match(self, tool):
+        """Test all-set? with a single matching element."""
+        result = tool.evaluate("(all-set? (lambda (x) (integer=? x 42)) (set 42))")
+        assert result is True
+
+    def test_all_set_single_element_no_match(self, tool):
+        """Test all-set? with a single non-matching element."""
+        result = tool.evaluate("(all-set? (lambda (x) (integer=? x 99)) (set 42))")
+        assert result is False
+
+    def test_all_set_string_elements(self, tool):
+        """Test all-set? with string elements."""
+        result = tool.evaluate('(all-set? (lambda (x) (integer>? (string-length x) 0)) (set "a" "bb" "ccc"))')
+        assert result is True
+
+    def test_all_set_one_fails(self, tool):
+        """Test all-set? returns #f when exactly one element fails."""
+        result = tool.evaluate("(all-set? (lambda (x) (integer>? x 0)) (set 1 2 0 3))")
+        assert result is False
