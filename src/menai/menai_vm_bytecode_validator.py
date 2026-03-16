@@ -126,7 +126,7 @@ class BytecodeValidator:
             opcode = instr.opcode
 
             # Validate constant pool indices
-            if opcode in (Opcode.LOAD_CONST, Opcode.RAISE_ERROR, Opcode.LOAD_STRUCT_TYPE):
+            if opcode in (Opcode.LOAD_CONST, Opcode.RAISE_ERROR):
                 const_index = instr.src0
                 if const_index < 0 or const_index >= len(code.constants):
                     raise ValidationError(

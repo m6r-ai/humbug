@@ -37,7 +37,6 @@ from menai.menai_value import (
     MenaiNone,
     MenaiSet,
     MenaiString,
-    MenaiStructType,
     MenaiValue,
 )
 from menai.menai_vcode import (
@@ -120,11 +119,6 @@ class _EmitContext:
 
         if isinstance(value, MenaiSet) and len(value.elements) == 0:
             self.emit(Opcode.LOAD_EMPTY_SET, dest=dest)
-            return
-
-        if isinstance(value, MenaiStructType):
-            const_idx = self.add_constant(value)
-            self.emit(Opcode.LOAD_STRUCT_TYPE, const_idx, dest=dest)
             return
 
         const_idx = self.add_constant(value)

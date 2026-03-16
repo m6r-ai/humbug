@@ -269,7 +269,6 @@ class Opcode(IntEnum):
     STRUCT_TYPE      = _op(369, 1)      # r_dest = (struct-type r_src0) → MenaiStructType value
     STRUCT_TYPE_NAME = _op(370, 1)      # r_dest = (struct-type-name r_src0) → string
     STRUCT_FIELDS    = _op(371, 1)      # r_dest = (struct-fields r_src0) → list of symbols
-    LOAD_STRUCT_TYPE = _op(372, 1)      # r_dest = struct_types[src0] — load a MenaiStructType constant
 
     # Generate integer range list
     RANGE = _op(380, 3)                 # r_dest = (range r_src0 r_src1 r_src2)

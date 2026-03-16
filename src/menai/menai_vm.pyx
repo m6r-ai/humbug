@@ -329,7 +329,6 @@ class MenaiVM:
         table[Opcode.STRUCT_TYPE] = self._op_struct_type
         table[Opcode.STRUCT_TYPE_NAME] = self._op_struct_type_name
         table[Opcode.STRUCT_FIELDS] = self._op_struct_fields
-        table[Opcode.LOAD_STRUCT_TYPE] = self._op_load_struct_type
         table[Opcode.RANGE] = self._op_range
         return table
 
@@ -4662,16 +4661,6 @@ class MenaiVM:
 
         from menai.menai_value import MenaiSymbol as SlowSymbol
         regs[base + instr.dest] = MenaiList(tuple(SlowSymbol(field) for field in val.field_names))
-        return None
-
-    def _op_load_struct_type(  # pylint: disable=useless-return
-        self, frame: Frame, instr: Instruction
-    ) -> MenaiValue | None:
-        """LOAD_STRUCT_TYPE dest, src0: r_dest = constants[src0]"""
-        cdef Frame f = frame
-        cdef list regs = self.regs
-        cdef int base = f.base
-        regs[base + instr.dest] = f.code.constants[instr.src0]
         return None
 
     def _op_range(  # pylint: disable=useless-return
