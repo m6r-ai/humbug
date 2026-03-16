@@ -474,7 +474,7 @@ class MenaiStructType(MenaiValue):
     because MenaiStructType values are never serialised.
 
     MenaiStructType is itself a callable value: calling it constructs an instance.
-    The VM handles this via the STRUCT_MAKE opcode rather than the normal CALL path.
+    The VM handles this via the MAKE_STRUCT opcode rather than the normal CALL path.
     """
     __slots__ = ('name', 'tag', 'field_names', '_field_index')
 

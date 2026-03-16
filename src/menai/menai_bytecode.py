@@ -257,7 +257,7 @@ class Opcode(IntEnum):
     SET_TO_LIST = _op(351, 1)           # r_dest = (set->list r_src0)
 
     # Struct operations
-    STRUCT_MAKE      = _op(360, 2)      # STRUCT_MAKE type_idx arity — pops arity field regs, pushes MenaiStruct
+    MAKE_STRUCT      = _op(360, 2)      # MAKE_STRUCT type_idx arity — pops arity field regs, pushes MenaiStruct
     STRUCT_P         = _op(361, 1)      # r_dest = (struct? r_src0)
     STRUCT_TYPE_P    = _op(362, 2)      # r_dest = (struct-type? r_type r_src0) — tag check
     STRUCT_GET       = _op(363, 2)      # r_dest = (struct-get r_src0 field_idx) — indexed field access

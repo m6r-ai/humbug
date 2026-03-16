@@ -1666,9 +1666,9 @@ class MenaiASTDesugarer:
         """Desugar a struct constructor call (TypeName field1 field2 ...).
 
         Validates arity against the struct definition and emits a
-        ($struct-make type_sym field1 field2 ...) call where type_sym is the
-        struct type binding name.  The IR builder will lower this to
-        LOAD_STRUCT_TYPE + STRUCT_MAKE opcodes.
+        (MenaiASTStruct field1 field2 ...) list where the MenaiASTStruct node
+        sits directly in the function position.  The IR builder recognises this
+        and produces MenaiIRBuildStruct without any magic symbol indirection.
 
         Args:
             expr: The constructor call AST, e.g. (Point 1 2)
@@ -1692,7 +1692,7 @@ class MenaiASTDesugarer:
 
         desugared_args = [self.desugar(arg) for arg in expr.elements[1:]]
         return self._make_list(
-            (self._make_symbol('$struct-make', expr), struct_node) + tuple(desugared_args),
+            (struct_node,) + tuple(desugared_args),
             expr
         )
 

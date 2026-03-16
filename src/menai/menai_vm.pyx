@@ -317,7 +317,7 @@ class MenaiVM:
         table[Opcode.SET_DIFFERENCE] = self._op_set_difference
         table[Opcode.SET_SUBSET_P] = self._op_set_subset_p
         table[Opcode.SET_TO_LIST] = self._op_set_to_list
-        table[Opcode.STRUCT_MAKE] = self._op_struct_make
+        table[Opcode.MAKE_STRUCT] = self._op_make_struct
         table[Opcode.STRUCT_P] = self._op_struct_p
         table[Opcode.STRUCT_TYPE_P] = self._op_struct_type_p
         table[Opcode.STRUCT_GET] = self._op_struct_get
@@ -4406,10 +4406,10 @@ class MenaiVM:
         regs[base + instr.dest] = MenaiList(a.elements)
         return None
 
-    def _op_struct_make(  # pylint: disable=useless-return
+    def _op_make_struct(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
-        """STRUCT_MAKE dest, src0, src1: construct a struct.
+        """MAKE_STRUCT dest, src0, src1: construct a struct.
 
         src0 is the absolute slot index of the MenaiStructType descriptor.
         src1 is the field count.  Field values are in slots src0+1..src0+n_fields.
@@ -4421,7 +4421,7 @@ class MenaiVM:
         struct_type = regs[base + type_slot]
         if type(struct_type) is not MenaiStructType:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
-                f"'struct-make' requires a struct type as first argument, got {struct_type.type_name()}"
+                f"'make-struct' requires a struct type as first argument, got {struct_type.type_name()}"
             )
 
         n_fields = instr.src1

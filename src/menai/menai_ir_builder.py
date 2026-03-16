@@ -121,7 +121,7 @@ class MenaiIRBuilder:
         # to emit MenaiIRBuildList / MenaiIRBuildDict / MenaiIRBuildSet flat nodes.  They are not
         # in BUILTIN_OPCODE_MAP (no fixed arity) and cannot be $-prefixed.
         self._builtin_names: frozenset = frozenset('$' + name for name in BUILTIN_OPCODE_MAP)
-        self._builtin_names |= frozenset({'list', 'dict', 'set', '$struct-make'})
+        self._builtin_names |= frozenset({'list', 'dict', 'set'})
 
     def build(self, expr: MenaiASTNode) -> MenaiIRExpr:
         """
@@ -457,6 +457,16 @@ class MenaiIRBuilder:
 
         func_type = type(func_expr)
 
+        # (MenaiASTStruct field1 field2 ...) — struct constructor call.
+        # The desugarer places the MenaiASTStruct node directly in function position.
+        if func_type is MenaiASTStruct:
+            struct_node = cast(MenaiASTStruct, func_expr)
+            field_plans = [
+                self._analyze_expression(arg, ctx, in_tail_position=False)
+                for arg in arg_exprs
+            ]
+            return MenaiIRBuildStruct(struct_type=struct_node.to_runtime_value(), field_plans=field_plans)
+
         if func_type is MenaiASTSymbol and cast(MenaiASTSymbol, func_expr).name in self._builtin_names:
             dollar_name = cast(MenaiASTSymbol, func_expr).name
             # (list e1 ... eN) — emit a flat MenaiIRBuildList node.
@@ -498,20 +508,6 @@ class MenaiIRBuilder:
             if dollar_name == 'set':
                 element_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
                 return MenaiIRBuildSet(element_plans=element_plans)
-
-            # ($struct-make <MenaiASTStruct> field1 field2 ...) — struct constructor.
-            # The second argument is the MenaiASTStruct node (not a regular expression),
-            # so we intercept it here before the generic arg-analysis path.
-            if dollar_name == '$struct-make':
-                assert len(arg_exprs) >= 1 and isinstance(arg_exprs[0], MenaiASTStruct), \
-                    "First arg to $struct-make must be a MenaiASTStruct node"
-                struct_node = cast(MenaiASTStruct, arg_exprs[0])
-                struct_type = struct_node.to_runtime_value()
-                field_plans = [
-                    self._analyze_expression(arg, ctx, in_tail_position=False)
-                    for arg in arg_exprs[1:]
-                ]
-                return MenaiIRBuildStruct(struct_type=struct_type, field_plans=field_plans)
 
             # Strip the $ prefix — the rest of the pipeline (codegen etc.)
             # uses the bare opcode name.

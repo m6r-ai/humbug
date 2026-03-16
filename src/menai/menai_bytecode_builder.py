@@ -378,9 +378,9 @@ class MenaiBytecodeBuilder:
         args = instr.args
         dest = ctx.slot_of(instr.dst)
 
-        if op == 'struct-make':
+        if op == 'make-struct':
             # args[0] is the struct type register, args[1..] are field values.
-            # Place all args in the outgoing zone, then emit STRUCT_MAKE with
+            # Place all args in the outgoing zone, then emit MAKE_STRUCT with
             # src0=local_count (where the type lives) and src1=n_fields.
             local_count = ctx.slot_map.local_count
             n_fields = len(args) - 1
@@ -391,7 +391,7 @@ class MenaiBytecodeBuilder:
                     ctx.emit(Opcode.MOVE, src, dest=dst_slot)
 
             ctx.max_outgoing_args = max(ctx.max_outgoing_args, len(args))
-            ctx.emit(Opcode.STRUCT_MAKE, local_count, n_fields, dest=dest)
+            ctx.emit(Opcode.MAKE_STRUCT, local_count, n_fields, dest=dest)
             return
 
         opcode, _ = BUILTIN_OPCODE_MAP.get(op, (None, None))

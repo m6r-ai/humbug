@@ -793,7 +793,7 @@ class MenaiCFGBuilder:
         result = state.new_value(f"struct_{ir.struct_type.name}")
         block.instrs.append(MenaiCFGBuiltinInstr(
             result=result,
-            op='struct-make',
+            op='make-struct',
             args=field_vals,
         ))
         return result, block

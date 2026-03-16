@@ -163,7 +163,7 @@ class MenaiIRBuildStruct:
 
     Carries the MenaiStructType descriptor (known at compile time) and a flat
     list of field value plans.  The VM codegen lowers it to LOAD_STRUCT_TYPE
-    followed by STRUCT_MAKE, which pops the N field registers and pushes the
+    followed by MAKE_STRUCT, which pops the N field registers and pushes the
     new MenaiStruct instance.
     """
     struct_type: MenaiStructType
