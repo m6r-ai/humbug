@@ -321,7 +321,9 @@ class MenaiVM:
         table[Opcode.STRUCT_P] = self._op_struct_p
         table[Opcode.STRUCT_TYPE_P] = self._op_struct_type_p
         table[Opcode.STRUCT_GET] = self._op_struct_get
+        table[Opcode.STRUCT_GET_IMM] = self._op_struct_get_imm
         table[Opcode.STRUCT_SET] = self._op_struct_set
+        table[Opcode.STRUCT_SET_IMM] = self._op_struct_set_imm
         table[Opcode.STRUCT_EQ_P] = self._op_struct_eq_p
         table[Opcode.STRUCT_NEQ_P] = self._op_struct_neq_p
         table[Opcode.STRUCT_TYPE] = self._op_struct_type
@@ -4489,6 +4491,28 @@ class MenaiVM:
         regs[base + instr.dest] = val.fields[field_index]
         return None
 
+    def _op_struct_get_imm(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """STRUCT_GET dest, src0, src1: indexed field access"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        val = regs[base + instr.src0]
+        if type(val) is not MenaiStruct:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-get-imm' requires a struct argument, got {val.type_name()}"
+            )
+
+        field_index = regs[base + instr.src1]
+        if type(field_index) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-get-imm' requires a integer as field index, got {field_index.type_name()}"
+            )
+
+        regs[base + instr.dest] = val.fields[field_index.value]
+        return None
+
     def _op_struct_set(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
@@ -4518,6 +4542,30 @@ class MenaiVM:
 
         new_value = regs[base + instr.src2]
         new_fields = val.fields[:field_index] + (new_value,) + val.fields[field_index + 1:]
+        regs[base + instr.dest] = MenaiStruct(struct_type=val.struct_type, fields=new_fields)
+        return None
+
+    def _op_struct_set_imm(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """STRUCT_SET dest, src0, src1, src2: functional update"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        val = regs[base + instr.src0]
+        if type(val) is not MenaiStruct:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-set' requires a struct argument, got {val.type_name()}"
+            )
+
+        field_index = regs[base + instr.src1]
+        if type(field_index) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-set' requires an integer as field index, got {field_index.type_name()}"
+            )
+
+        new_value = regs[base + instr.src2]
+        new_fields = val.fields[:field_index.value] + (new_value,) + val.fields[field_index.value + 1:]
         regs[base + instr.dest] = MenaiStruct(struct_type=val.struct_type, fields=new_fields)
         return None
 

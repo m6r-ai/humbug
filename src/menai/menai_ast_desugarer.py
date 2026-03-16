@@ -1728,14 +1728,11 @@ class MenaiASTDesugarer:
 
         for i, field_pattern in enumerate(field_patterns):
             elem_temp = self._gen_temp()
-            field_name = struct_node.field_names[i]
             field_get = MenaiASTList((
-                MenaiASTSymbol('$struct-get'),
+                MenaiASTSymbol('$struct-get-imm'),
                 MenaiASTSymbol(temp_var),
-                self._make_list((
-                    self._make_symbol('quote', pattern),
-                    self._make_symbol(field_name, pattern),
-                ), pattern),
+                MenaiASTInteger(i, line=pattern.line, column=pattern.column,
+                                source_file=pattern.source_file),
             ))
             element_info.append((field_pattern, elem_temp, field_get))
 
