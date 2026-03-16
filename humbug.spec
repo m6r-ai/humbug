@@ -3,6 +3,7 @@
 # PyInstaller config file
 #
 import os
+import sys
 from PyInstaller.utils.hooks import collect_data_files
 import certifi
 
@@ -35,44 +36,66 @@ a = Analysis(
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    [],
-    exclude_binaries=True,
-    name='Humbug',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    console=False,
-    icon='icons\\Humbug.ico',
-    target_arch=None,
-    codesign_identity=codesign_id,
-    entitlements_file=None
-)
+if sys.platform == 'win32':
+    # Single-file exe for Windows — no _internal folder needed
+    exe = EXE(
+        pyz,
+        a.scripts,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        exclude_binaries=False,
+        name='Humbug',
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=True,
+        console=False,
+        icon='icons\\Humbug.ico',
+        target_arch=None,
+        codesign_identity=codesign_id,
+        entitlements_file=None
+    )
+else:
+    exe = EXE(
+        pyz,
+        a.scripts,
+        [],
+        exclude_binaries=True,
+        name='Humbug',
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=True,
+        console=False,
+        icon='icons/Humbug.icns',
+        target_arch=None,
+        codesign_identity=codesign_id,
+        entitlements_file=None
+    )
 
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='Humbug'
-)
+    coll = COLLECT(
+        exe,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        strip=False,
+        upx=True,
+        upx_exclude=[],
+        name='Humbug'
+    )
 
-app = BUNDLE(
-    coll,
-    name='Humbug.app',
-    icon='icons/Humbug.icns',
-    bundle_identifier='ai.m6r.humbug',
-    info_plist={
-        'CFBundleDisplayName': 'Humbug',
-        'CFBundleShortVersionString': '41',
-        'CFBundleVersion': '41',
-        'NSPrincipalClass': 'NSApplication',
-        'NSAppleScriptEnabled': False
-    }
-)
+if sys.platform != 'win32':
+    app = BUNDLE(
+        coll,
+        name='Humbug.app',
+        icon='icons/Humbug.icns',
+        bundle_identifier='ai.m6r.humbug',
+        info_plist={
+            'CFBundleDisplayName': 'Humbug',
+            'CFBundleShortVersionString': '41',
+            'CFBundleVersion': '41',
+            'NSPrincipalClass': 'NSApplication',
+            'NSAppleScriptEnabled': False
+        }
+    )
