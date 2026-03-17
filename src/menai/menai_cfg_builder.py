@@ -21,6 +21,7 @@ from menai.menai_cfg import (
     MenaiCFGMakeClosureInstr,
     MenaiCFGPatchClosureInstr,
     MenaiCFGParamInstr,
+    MenaiCFGMakeStructInstr,
     MenaiCFGPhiInstr,
     MenaiCFGRaiseTerm,
     MenaiCFGReturnTerm,
@@ -772,28 +773,18 @@ class MenaiCFGBuilder:
         """
         Build a struct constructor call.
 
-        Emits a LOAD_STRUCT_TYPE constant instruction to load the MenaiStructType
-        descriptor, evaluates each field value plan, then emits a STRUCT_MAKE
-        builtin instruction that takes the type value and all field values and
-        produces a new MenaiStruct instance.
+        Evaluates each field value plan then emits a MenaiCFGMakeStructInstr
+        carrying the compile-time MenaiStructType descriptor directly.
         """
-        # Load the struct type descriptor as a constant.
-        type_val = state.new_value(f"struct_type_{ir.struct_type.name}")
-        block.instrs.append(MenaiCFGConstInstr(
-            result=type_val,
-            value=ir.struct_type,
-        ))
-
-        # Evaluate each field value plan.
-        field_vals: List[MenaiCFGValue] = [type_val]
+        field_vals: List[MenaiCFGValue] = []
         for field_plan in ir.field_plans:
             field_val, block = self._build_expr(field_plan, block, scope, state, tail=False)
             field_vals.append(field_val)
 
         result = state.new_value(f"struct_{ir.struct_type.name}")
-        block.instrs.append(MenaiCFGBuiltinInstr(
+        block.instrs.append(MenaiCFGMakeStructInstr(
             result=result,
-            op='make-struct',
+            struct_type=ir.struct_type,
             args=field_vals,
         ))
         return result, block

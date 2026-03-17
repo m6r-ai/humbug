@@ -53,6 +53,7 @@ from menai.menai_vcode import (
     MenaiVCodeMakeClosure,
     MenaiVCodeMove,
     MenaiVCodePatchClosure,
+    MenaiVCodeMakeStruct,
     MenaiVCodeRaise,
     MenaiVCodeReg,
     MenaiVCodeReturn,
@@ -258,6 +259,23 @@ class MenaiBytecodeBuilder:
                 i += 1
                 continue
 
+            if isinstance(instr, MenaiVCodeMakeStruct):
+                local_count = ctx.slot_map.local_count
+                n_fields = len(instr.args)
+                # Stage the struct type descriptor into the outgoing zone slot 0,
+                # then stage each field value into slots 1..n_fields.
+                type_const_idx = ctx.add_constant(instr.struct_type)
+                ctx.emit(Opcode.LOAD_CONST, type_const_idx, dest=local_count)
+                for j, arg in enumerate(instr.args):
+                    src = ctx.slot_of(arg)
+                    dst_slot = local_count + 1 + j
+                    if src != dst_slot:
+                        ctx.emit(Opcode.MOVE, src, dest=dst_slot)
+                ctx.max_outgoing_args = max(ctx.max_outgoing_args, 1 + n_fields)
+                ctx.emit(Opcode.MAKE_STRUCT, local_count, n_fields, dest=ctx.slot_of(instr.dst))
+                i += 1
+                continue
+
             if isinstance(instr, MenaiVCodeCall):
                 local_count = ctx.slot_map.local_count
                 for j, arg in enumerate(instr.args):
@@ -377,22 +395,6 @@ class MenaiBytecodeBuilder:
         op = instr.op
         args = instr.args
         dest = ctx.slot_of(instr.dst)
-
-        if op == 'make-struct':
-            # args[0] is the struct type register, args[1..] are field values.
-            # Place all args in the outgoing zone, then emit MAKE_STRUCT with
-            # src0=local_count (where the type lives) and src1=n_fields.
-            local_count = ctx.slot_map.local_count
-            n_fields = len(args) - 1
-            for j, arg in enumerate(args):
-                src = ctx.slot_of(arg)
-                dst_slot = local_count + j
-                if src != dst_slot:
-                    ctx.emit(Opcode.MOVE, src, dest=dst_slot)
-
-            ctx.max_outgoing_args = max(ctx.max_outgoing_args, len(args))
-            ctx.emit(Opcode.MAKE_STRUCT, local_count, n_fields, dest=dest)
-            return
 
         opcode, _ = BUILTIN_OPCODE_MAP.get(op, (None, None))
         if opcode is None:

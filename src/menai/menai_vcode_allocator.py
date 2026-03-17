@@ -63,6 +63,7 @@ from menai.menai_vcode import (
     MenaiVCodeMakeClosure,
     MenaiVCodeMove,
     MenaiVCodePatchClosure,
+    MenaiVCodeMakeStruct,
     MenaiVCodeReg,
     MenaiVCodeReturn,
     MenaiVCodeTailApply,
@@ -228,7 +229,7 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
     #   3. The call is the last use of the register — the outgoing zone is
     #      clobbered when the call returns, so no later read is safe.
     #   4. No call or apply between the register's definition and this call —
-    #      a prior call or make-struct would have already written
+    #      a prior call, apply, or struct construction would have already written
     #      local_count + arg_index.
     #      For call/apply result registers the defining call itself is not a
     #      barrier — the scan starts strictly after the definition index.
@@ -255,8 +256,8 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
             for scan_idx in range(reg_def + 1, call_idx):
                 scan_instr = func.instrs[scan_idx]
                 if isinstance(scan_instr, (MenaiVCodeCall, MenaiVCodeApply,
-                                           MenaiVCodeTailCall, MenaiVCodeTailApply)) or (
-                        isinstance(scan_instr, MenaiVCodeBuiltin) and scan_instr.op == 'make-struct'):
+                                           MenaiVCodeTailCall, MenaiVCodeTailApply,
+                                           MenaiVCodeMakeStruct)):
                     barrier = True
                     break
 
@@ -313,8 +314,8 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
             for scan_idx in range(reg_def + 1, move_idx):
                 scan_instr = func.instrs[scan_idx]
                 if isinstance(scan_instr, (MenaiVCodeCall, MenaiVCodeApply,
-                                           MenaiVCodeTailCall, MenaiVCodeTailApply)) or (
-                        isinstance(scan_instr, MenaiVCodeBuiltin) and scan_instr.op == 'make-struct'):
+                                           MenaiVCodeTailCall, MenaiVCodeTailApply,
+                                           MenaiVCodeMakeStruct)):
                     barrier = True
                     break
 
@@ -371,6 +372,9 @@ def _defs_uses(instr: MenaiVCodeInstr) -> Tuple[List[int], List[int]]:
 
     if isinstance(instr, MenaiVCodePatchClosure):
         return [], [instr.closure.id, instr.value.id]
+
+    if isinstance(instr, MenaiVCodeMakeStruct):
+        return [instr.dst.id], [r.id for r in instr.args]
 
     if isinstance(instr, MenaiVCodeTrace):
         return [instr.dst.id], [r.id for r in instr.messages] + [instr.value.id]

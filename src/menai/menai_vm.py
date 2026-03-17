@@ -3734,7 +3734,7 @@ class MenaiVM:
         struct_type = regs[base + type_slot]
         if type(struct_type) is not MenaiStructType:  # pylint: disable=unidiomatic-typecheck
             raise MenaiEvalError(
-                f"'make-struct' requires a struct type as first argument, got {struct_type.type_name()}"
+                f"struct constructor requires a struct type as first argument, got {struct_type.type_name()}"
             )
 
         n_fields = instr.src1

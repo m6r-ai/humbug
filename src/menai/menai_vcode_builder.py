@@ -58,6 +58,7 @@ from menai.menai_cfg import (
     MenaiCFGMakeClosureInstr,
     MenaiCFGParamInstr,
     MenaiCFGPatchClosureInstr,
+    MenaiCFGMakeStructInstr,
     MenaiCFGPhiInstr,
     MenaiCFGRaiseTerm,
     MenaiCFGReturnTerm,
@@ -82,6 +83,7 @@ from menai.menai_vcode import (
     MenaiVCodeMakeClosure,
     MenaiVCodeMove,
     MenaiVCodePatchClosure,
+    MenaiVCodeMakeStruct,
     MenaiVCodeRaise,
     MenaiVCodeReg,
     MenaiVCodeReturn,
@@ -358,6 +360,12 @@ class MenaiVCodeBuilder:
             value = self._reg(instr.value)
             instrs.append(MenaiVCodePatchClosure(closure=closure, capture_index=instr.capture_index, value=value))
             return max(max_reg_id, closure.id, value.id)
+
+        if isinstance(instr, MenaiCFGMakeStructInstr):
+            dst = self._reg(instr.result)
+            args = [self._reg(a) for a in instr.args]
+            instrs.append(MenaiVCodeMakeStruct(dst=dst, struct_type=instr.struct_type, args=args))
+            return max(max_reg_id, dst.id, *(r.id for r in args)) if args else max(max_reg_id, dst.id)
 
         if isinstance(instr, MenaiCFGTraceInstr):
             dst = self._reg(instr.result)
