@@ -20,7 +20,7 @@ Key properties
 from dataclasses import dataclass, field
 from typing import List, Optional
 
-from menai.menai_value import MenaiValue
+from menai.menai_value import MenaiValue, MenaiStructType
 
 
 @dataclass(frozen=True)
@@ -142,6 +142,22 @@ class MenaiVCodeMakeClosure:
 
 
 @dataclass
+class MenaiVCodeMakeStruct:
+    """
+    dst = make_struct(struct_type, args...)
+
+    Constructs a new MenaiStruct of type `struct_type` from a list of field
+    values.  `struct_type` is the compile-time MenaiStructType descriptor,
+    stored directly on the instruction rather than in a register.  The
+    bytecode emitter stages the type descriptor and field values into the
+    outgoing zone and emits MAKE_STRUCT.
+    """
+    dst: MenaiVCodeReg
+    struct_type: MenaiStructType
+    args: List[MenaiVCodeReg]
+
+
+@dataclass
 class MenaiVCodePatchClosure:
     """
     patch_closure(closure, capture_index, value)
@@ -212,6 +228,7 @@ MenaiVCodeInstr = (
     | MenaiVCodeTailApply
     | MenaiVCodeMakeClosure
     | MenaiVCodePatchClosure
+    | MenaiVCodeMakeStruct
     | MenaiVCodeTrace
     | MenaiVCodeJump
     | MenaiVCodeJumpIfTrue
@@ -303,6 +320,9 @@ def _fmt_instr(instr: MenaiVCodeInstr) -> str:
 
     if isinstance(instr, MenaiVCodePatchClosure):
         return f"PATCH_CLOSURE {instr.closure} [{instr.capture_index}] = {instr.value}"
+
+    if isinstance(instr, MenaiVCodeMakeStruct):
+        return f"{instr.dst} = MAKE_STRUCT {instr.struct_type.name!r} {_fmt_regs(instr.args)}"
 
     if isinstance(instr, MenaiVCodeTrace):
         return f"{instr.dst} = TRACE {_fmt_regs(instr.messages)} {instr.value}"

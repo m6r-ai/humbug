@@ -8,11 +8,13 @@ from menai.menai_error import MenaiEvalError
 from menai.menai_ir import (
     MenaiIRExpr, MenaiIRConstant, MenaiIRVariable, MenaiIRIf, MenaiIRLet, MenaiIRLetrec,
     MenaiIRLambda, MenaiIRCall, MenaiIRQuote, MenaiIRError, MenaiIREmptyList,
-    MenaiIRReturn, MenaiIRTrace, MenaiIRBuildList, MenaiIRBuildDict, MenaiIRBuildSet
+    MenaiIRReturn, MenaiIRTrace, MenaiIRBuildList, MenaiIRBuildDict, MenaiIRBuildSet,
+    MenaiIRBuildStruct
 )
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex,
-    MenaiASTString, MenaiASTBoolean, MenaiASTNone, MenaiASTSymbol, MenaiASTList, MenaiASTDict
+    MenaiASTString, MenaiASTBoolean, MenaiASTNone, MenaiASTSymbol, MenaiASTList, MenaiASTDict,
+    MenaiASTStruct
 )
 
 
@@ -161,6 +163,9 @@ class MenaiIRBuilder:
 
         if expr_type is MenaiASTDict:
             return MenaiIRConstant(value=cast(MenaiASTDict, expr).to_runtime_value())
+
+        if expr_type is MenaiASTStruct:
+            return MenaiIRConstant(value=cast(MenaiASTStruct, expr).to_runtime_value())
 
         raise MenaiEvalError(
             message=f"Cannot analyze expression of type {type(expr).__name__}",
@@ -451,6 +456,16 @@ class MenaiIRBuilder:
         arg_exprs = list(expr.elements[1:])
 
         func_type = type(func_expr)
+
+        # (MenaiASTStruct field1 field2 ...) — struct constructor call.
+        # The desugarer places the MenaiASTStruct node directly in function position.
+        if func_type is MenaiASTStruct:
+            struct_node = cast(MenaiASTStruct, func_expr)
+            field_plans = [
+                self._analyze_expression(arg, ctx, in_tail_position=False)
+                for arg in arg_exprs
+            ]
+            return MenaiIRBuildStruct(struct_type=struct_node.to_runtime_value(), field_plans=field_plans)
 
         if func_type is MenaiASTSymbol and cast(MenaiASTSymbol, func_expr).name in self._builtin_names:
             dollar_name = cast(MenaiASTSymbol, func_expr).name

@@ -358,6 +358,26 @@ Syntax: (operator arg1 arg2 ...)
 - Pattern matching: (match x ((? set? s) ...) (_ ...))
 - Sets have no ordering operators and no positional access; use (set->list s) then list operations for iteration
 
+## Structs:
+
+- Nominal typed record values — two struct types with the same fields are distinct types
+- Declaration: (struct (field1 field2 ...)) — valid as the RHS of a let, let*, or letrec binding
+- (let ((Point (struct (x y)))) ...) → binds Point to a struct-type value; the binding name becomes the type name
+- Construction: call the struct-type value directly with positional field values: (Point 1 2) → a Point instance
+- Type predicate (any struct): (struct? p) → #t for any struct instance
+- Type predicate (specific type): (struct-type? Point p) → #t if p is a Point instance specifically
+- Field access: (struct-get p 'x) → value of field x; field name must be a symbol
+- Functional update (returns new struct — pure): (struct-set p 'x 10) → new Point with x=10, y unchanged
+- Equality: (struct=? p1 p2) → #t if same type tag and all fields equal; (struct!=? p1 p2) → negation
+- Introspection: (struct-type-name Point) → "Point" (takes a struct-type value, not an instance)
+- Introspection: (struct-fields Point) → ('x 'y) list of field name symbols (takes a struct-type value)
+- Introspection: (struct-type p) → returns the struct-type value (e.g. Point) for a given instance
+- Display format: (Point 1 2) — this is display-only; construction always uses (TypeName field1 field2 ...)
+- Pattern matching predicate form: (match p ((? (struct-type? Point) p) (struct-get p 'x)) (_ 0))
+- Pattern matching destructuring form: (match p ((Point x y) (integer+ x y)) (_ 0)) — compiler resolves field bindings at compile time
+- Hashability: structs are hashable (usable as set members or dict keys) if all their fields are hashable scalars
+- Structs are nominal: (let ((Point (struct (x y))) (Vec (struct (x y)))) ...) — Point and Vec are distinct types even with identical fields
+
 ## Symbol operations:
 
 - Type predicate: (symbol? x) → #t if x is a symbol (produced by quote)
@@ -428,7 +448,8 @@ Syntax: (operator arg1 arg2 ...)
 - (letrec ((var1 val1) (var2 val2) ...) body) → recursive binding
 - (letrec ((fact (lambda (n) (if (integer<=? n 1) 1 (integer* n (fact (integer- n 1))))))) (fact 5)) → 120
 - Supports self-recursion and mutual recursion
-- Use only when you need functions that reference themselves
+- Struct definitions are also permitted in letrec and are hoisted to let automatically — use this when defining a module that exports a struct type alongside its associated functions
+- Use only when you need functions that reference themselves or when defining a module API
 
 ## Quote - data literals and code as data
 

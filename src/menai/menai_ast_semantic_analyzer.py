@@ -18,6 +18,7 @@ from typing import List, cast
 from menai.menai_ast import MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTString
 from menai.menai_builtin_registry import MenaiBuiltinRegistry
 from menai.menai_error import MenaiEvalError
+from menai.menai_ast import MenaiASTStruct
 
 
 class MenaiASTSemanticAnalyzer:
@@ -31,6 +32,7 @@ class MenaiASTSemanticAnalyzer:
     def __init__(self) -> None:
         """Initialize the semantic analyzer."""
         self.source = ""
+        self._next_struct_tag: int = 0
 
     def analyze(self, expr: MenaiASTNode, source: str = "") -> MenaiASTNode:
         """
@@ -98,6 +100,9 @@ class MenaiASTSemanticAnalyzer:
             if name == 'import':
                 return self._analyze_import(expr)
 
+            if name == 'struct':
+                return self._reject_struct_outside_let(expr)
+
             if name == 'apply':
                 return self._analyze_apply(expr)
 
@@ -163,6 +168,7 @@ class MenaiASTSemanticAnalyzer:
 
         # Validate each binding
         var_names: List[str] = []
+        new_bindings: List[MenaiASTNode] = []
         for i, binding in enumerate(bindings_list.elements):
             if not isinstance(binding, MenaiASTList):
                 raise MenaiEvalError(
@@ -191,6 +197,20 @@ class MenaiASTSemanticAnalyzer:
 
             name_expr, value_expr = binding.elements
 
+            # Check if this binding's value is a struct definition
+            if (isinstance(name_expr, MenaiASTSymbol) and
+                    isinstance(value_expr, MenaiASTList) and
+                    not value_expr.is_empty() and
+                    isinstance(value_expr.elements[0], MenaiASTSymbol) and
+                    value_expr.elements[0].name == 'struct'):
+                struct_node = self._analyze_struct(value_expr, name_expr.name)
+                new_bindings.append(MenaiASTList(
+                    elements=(name_expr, struct_node),
+                    line=binding.line, column=binding.column, source_file=binding.source_file
+                ))
+                var_names.append(name_expr.name)
+                continue
+
             if not isinstance(name_expr, MenaiASTSymbol):
                 raise MenaiEvalError(
                     message=f"Let binding {i+1} variable must be a symbol",
@@ -206,7 +226,11 @@ class MenaiASTSemanticAnalyzer:
             var_names.append(name_expr.name)
 
             # Recursively analyze the value expression
-            self.analyze(value_expr, self.source)
+            analyzed_value = self.analyze(value_expr, self.source)
+            new_bindings.append(MenaiASTList(
+                elements=(name_expr, analyzed_value),
+                line=binding.line, column=binding.column, source_file=binding.source_file
+            ))
 
         # Check for duplicate binding names
         if len(var_names) != len(set(var_names)):
@@ -225,7 +249,15 @@ class MenaiASTSemanticAnalyzer:
         # Analyze body
         self.analyze(body, self.source)
 
-        return expr
+        new_bindings_list = MenaiASTList(
+            elements=tuple(new_bindings),
+            line=bindings_list.line, column=bindings_list.column,
+            source_file=bindings_list.source_file
+        )
+        return MenaiASTList(
+            elements=(expr.elements[0], new_bindings_list, body),
+            line=expr.line, column=expr.column, source_file=expr.source_file
+        )
 
     def _analyze_let_star(self, expr: MenaiASTList) -> MenaiASTList:
         """Validate let* expression: (let* ((var val) ...) body)"""
@@ -270,6 +302,7 @@ class MenaiASTSemanticAnalyzer:
 
         # Validate each binding
         var_names: List[str] = []
+        new_bindings: List[MenaiASTNode] = []
         for i, binding in enumerate(bindings_list.elements):
             if not isinstance(binding, MenaiASTList):
                 raise MenaiEvalError(
@@ -298,6 +331,20 @@ class MenaiASTSemanticAnalyzer:
 
             name_expr, value_expr = binding.elements
 
+            # Check if this binding's value is a struct definition
+            if (isinstance(name_expr, MenaiASTSymbol) and
+                    isinstance(value_expr, MenaiASTList) and
+                    not value_expr.is_empty() and
+                    isinstance(value_expr.elements[0], MenaiASTSymbol) and
+                    value_expr.elements[0].name == 'struct'):
+                struct_node = self._analyze_struct(value_expr, name_expr.name)
+                new_bindings.append(MenaiASTList(
+                    elements=(name_expr, struct_node),
+                    line=binding.line, column=binding.column, source_file=binding.source_file
+                ))
+                var_names.append(name_expr.name)
+                continue
+
             if not isinstance(name_expr, MenaiASTSymbol):
                 raise MenaiEvalError(
                     message=f"Let* binding {i+1} variable must be a symbol",
@@ -313,7 +360,11 @@ class MenaiASTSemanticAnalyzer:
             var_names.append(name_expr.name)
 
             # Recursively analyze the value expression
-            self.analyze(value_expr, self.source)
+            analyzed_value = self.analyze(value_expr, self.source)
+            new_bindings.append(MenaiASTList(
+                elements=(name_expr, analyzed_value),
+                line=binding.line, column=binding.column, source_file=binding.source_file
+            ))
 
         # Note: Unlike 'let', we allow duplicate binding names (shadowing) in let*.
         # This is because let* has sequential semantics where later bindings
@@ -323,7 +374,15 @@ class MenaiASTSemanticAnalyzer:
         # Analyze body
         self.analyze(body, self.source)
 
-        return expr
+        new_bindings_list = MenaiASTList(
+            elements=tuple(new_bindings),
+            line=bindings_list.line, column=bindings_list.column,
+            source_file=bindings_list.source_file
+        )
+        return MenaiASTList(
+            elements=(expr.elements[0], new_bindings_list, body),
+            line=expr.line, column=expr.column, source_file=expr.source_file
+        )
 
     def _analyze_letrec(self, expr: MenaiASTList) -> MenaiASTList:
         """Validate letrec expression: (letrec ((var val) ...) body)"""
@@ -361,6 +420,7 @@ class MenaiASTSemanticAnalyzer:
 
         # Validate each binding
         var_names: List[str] = []
+        new_bindings: List[MenaiASTNode] = []
         for i, binding in enumerate(bindings_list.elements):
             if not isinstance(binding, MenaiASTList):
                 raise MenaiEvalError(
@@ -388,6 +448,21 @@ class MenaiASTSemanticAnalyzer:
 
             name_expr, value_expr = binding.elements
 
+            # Struct definitions are permitted in letrec: they have no recursive
+            # semantics and the desugarer hoists them to let automatically.
+            if (isinstance(name_expr, MenaiASTSymbol) and
+                    isinstance(value_expr, MenaiASTList) and
+                    not value_expr.is_empty() and
+                    isinstance(value_expr.elements[0], MenaiASTSymbol) and
+                    value_expr.elements[0].name == 'struct'):
+                struct_node = self._analyze_struct(value_expr, name_expr.name)
+                new_bindings.append(MenaiASTList(
+                    elements=(name_expr, struct_node),
+                    line=binding.line, column=binding.column, source_file=binding.source_file
+                ))
+                var_names.append(name_expr.name)
+                continue
+
             if not isinstance(name_expr, MenaiASTSymbol):
                 raise MenaiEvalError(
                     message=f"Letrec binding {i+1} variable must be a symbol",
@@ -403,7 +478,11 @@ class MenaiASTSemanticAnalyzer:
             var_names.append(name_expr.name)
 
             # Recursively analyze the value expression
-            self.analyze(value_expr, self.source)
+            analyzed_value = self.analyze(value_expr, self.source)
+            new_bindings.append(MenaiASTList(
+                elements=(name_expr, analyzed_value),
+                line=binding.line, column=binding.column, source_file=binding.source_file
+            ))
 
         # Check for duplicate binding names
         if len(var_names) != len(set(var_names)):
@@ -422,7 +501,15 @@ class MenaiASTSemanticAnalyzer:
         # Analyze body
         self.analyze(body, self.source)
 
-        return expr
+        new_bindings_list = MenaiASTList(
+            elements=tuple(new_bindings),
+            line=bindings_list.line, column=bindings_list.column,
+            source_file=bindings_list.source_file
+        )
+        return MenaiASTList(
+            elements=(expr.elements[0], new_bindings_list, body),
+            line=expr.line, column=expr.column, source_file=expr.source_file
+        )
 
     def _analyze_lambda(self, expr: MenaiASTList) -> MenaiASTList:
         """Validate lambda expression: (lambda (params...) body)"""
@@ -884,3 +971,95 @@ class MenaiASTSemanticAnalyzer:
             self.analyze(elem, self.source)
 
         return expr
+
+    def _analyze_struct(self, expr: MenaiASTList, binding_name: str) -> MenaiASTStruct:
+        """Validate and transform a (struct (field ...)) form into a MenaiASTStruct node.
+
+        Called only when (struct ...) appears as the RHS of a let or let* binding.
+        Assigns a fresh compile-time tag and extracts the field names.
+
+        Args:
+            expr: The raw (struct (field ...)) AST list node
+            binding_name: The name of the enclosing let binding (becomes the type name)
+
+        Returns:
+            A MenaiASTStruct node with name, tag, and field_names populated
+        """
+        if len(expr.elements) != 2:
+            raise MenaiEvalError(
+                message="Struct definition has wrong number of elements",
+                received=f"Got {len(expr.elements) - 1} argument(s)",
+                expected="Exactly 1 argument: (struct (field1 field2 ...))",
+                example="(let ((Point (struct (x y)))) ...)",
+                suggestion="Provide exactly one field list to struct",
+                line=expr.line,
+                column=expr.column,
+                source=self.source
+            )
+
+        _, fields_expr = expr.elements
+
+        if not isinstance(fields_expr, MenaiASTList):
+            raise MenaiEvalError(
+                message="Struct field list must be a list",
+                received=f"Got {fields_expr.type_name()}",
+                expected="A list of field name symbols: (field1 field2 ...)",
+                example="(let ((Point (struct (x y)))) ...)",
+                suggestion="Wrap field names in parentheses: (struct (field1 field2 ...))",
+                line=fields_expr.line,
+                column=fields_expr.column,
+                source=self.source
+            )
+
+        field_names: List[str] = []
+        for i, field in enumerate(fields_expr.elements):
+            if not isinstance(field, MenaiASTSymbol):
+                raise MenaiEvalError(
+                    message=f"Struct field {i+1} must be a symbol",
+                    received=f"Got {field.type_name()}",
+                    expected="Unquoted symbol (field name)",
+                    example="(struct (x y)) not (struct (\"x\" \"y\"))",
+                    suggestion="Use unquoted names for struct fields",
+                    line=field.line,
+                    column=field.column,
+                    source=self.source
+                )
+
+            if field.name in field_names:
+                raise MenaiEvalError(
+                    message=f"Struct field name '{field.name}' is duplicated",
+                    received=f"Field '{field.name}' appears more than once",
+                    expected="All field names must be unique",
+                    example="(struct (x y)) not (struct (x x))",
+                    suggestion="Use distinct names for each field",
+                    line=field.line,
+                    column=field.column,
+                    source=self.source
+                )
+
+            field_names.append(field.name)
+
+        tag = self._next_struct_tag
+        self._next_struct_tag += 1
+
+        return MenaiASTStruct(
+            name=binding_name,
+            tag=tag,
+            field_names=tuple(field_names),
+            line=expr.line,
+            column=expr.column,
+            source_file=expr.source_file
+        )
+
+    def _reject_struct_outside_let(self, expr: MenaiASTList) -> MenaiASTList:
+        """Reject (struct ...) used outside a let/let* binding position."""
+        raise MenaiEvalError(
+            message="Struct definition must be the value in a let or let* binding",
+            received="(struct ...) used outside a let or let* binding",
+            expected="(let ((TypeName (struct (field1 field2 ...)))) ...)",
+            example="(let ((Point (struct (x y)))) (Point 1 2))",
+            suggestion="Wrap struct definitions in a let or let* binding",
+            line=expr.line,
+            column=expr.column,
+            source=self.source
+        )

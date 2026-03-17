@@ -17,7 +17,8 @@ from typing import List, Set, Tuple, Any, cast
 
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTSymbol, MenaiASTList, MenaiASTInteger,
-    MenaiASTFloat, MenaiASTComplex, MenaiASTString, MenaiASTBoolean, MenaiASTNone
+    MenaiASTFloat, MenaiASTComplex, MenaiASTString, MenaiASTBoolean, MenaiASTNone,
+    MenaiASTStruct
 )
 from menai.menai_ast_dependency_analyzer import MenaiASTDependencyAnalyzer
 from menai.menai_builtin_registry import MenaiBuiltinRegistry
@@ -29,6 +30,7 @@ class MenaiASTDesugarer:
 
     def __init__(self) -> None:
         self.temp_counter = 0  # For generating unique temp variable names
+        self._struct_registry: dict[str, MenaiASTStruct] = {}  # name -> MenaiASTStruct
 
     def _make_symbol(self, name: str, source_node: MenaiASTNode) -> MenaiASTSymbol:
         """Create a symbol with source location from another node."""
@@ -178,6 +180,9 @@ class MenaiASTDesugarer:
         """
         # Lists need inspection - anything else does not
         if not isinstance(expr, MenaiASTList):
+            # MenaiASTStruct nodes are already fully resolved — pass through as-is
+            if isinstance(expr, MenaiASTStruct):
+                self._struct_registry[expr.name] = expr
             return expr
 
         if expr.is_empty():
@@ -344,6 +349,11 @@ class MenaiASTDesugarer:
             ]:
                 return self._desugar_strict_inequality(expr)
 
+            # Struct constructor call: (TypeName field1 field2 ...)
+            # Detected when the function position is a known struct type name
+            if name in self._struct_registry:
+                return self._desugar_struct_constructor(expr, self._struct_registry[name])
+
         # Regular function call - desugar all elements
         return self._desugar_call(expr)
 
@@ -374,6 +384,15 @@ class MenaiASTDesugarer:
         body = expr.elements[2]
 
         assert isinstance(bindings_list, MenaiASTList), "Binding list should be a list (validated by semantic analyzer)"
+
+        # Pre-register any struct type bindings so that the body (and sibling
+        # bindings, since let is parallel) can reference them by name.
+        for binding in bindings_list.elements:
+            assert isinstance(binding, MenaiASTList) and len(binding.elements) == 2
+            var_name, value_expr = binding.elements
+            assert isinstance(var_name, MenaiASTSymbol)
+            if isinstance(value_expr, MenaiASTStruct):
+                self._struct_registry[var_name.name] = value_expr
 
         # Desugar each binding value
         desugared_bindings = []
@@ -438,6 +457,12 @@ class MenaiASTDesugarer:
             name_expr, value_expr = binding.elements
             assert isinstance(name_expr, MenaiASTSymbol)
             raw_pairs.append((name_expr.name, value_expr))
+
+        # Pre-register any struct type bindings so constructor calls and match
+        # patterns in sibling bindings and the body are resolved correctly.
+        for name, value_expr in raw_pairs:
+            if isinstance(value_expr, MenaiASTStruct):
+                self._struct_registry[name] = value_expr
 
         raw_dict = dict(raw_pairs)
 
@@ -527,6 +552,20 @@ class MenaiASTDesugarer:
 
         _, bindings_list, body = expr.elements
         assert isinstance(bindings_list, MenaiASTList), "Binding list should be a list (validated by semantic analyzer)"
+
+        # Pre-scan bindings in forward order to register any struct type definitions
+        # before desugaring the body or any subsequent binding values.  This is
+        # necessary because let* has sequential semantics: later bindings can
+        # reference struct types defined earlier, and the body can reference all
+        # of them.  Without the pre-scan, struct types would only be registered
+        # as their binding values are desugared (in reverse order), causing
+        # constructor calls in later bindings or the body to be missed.
+        for binding in bindings_list.elements:
+            assert isinstance(binding, MenaiASTList) and len(binding.elements) == 2
+            var_name, value_expr = binding.elements
+            assert isinstance(var_name, MenaiASTSymbol)
+            if isinstance(value_expr, MenaiASTStruct):
+                self._struct_registry[var_name.name] = value_expr
 
         # If no bindings, just return the body
         if len(bindings_list.elements) == 0:
@@ -1243,6 +1282,17 @@ class MenaiASTDesugarer:
         Returns:
             (test_expression, bindings)
         """
+        # Struct destructuring pattern: (TypeName field1 field2 ...)
+        # Detected when the first element is a symbol naming a known struct type
+        if (not pattern.is_empty() and
+                isinstance(pattern.elements[0], MenaiASTSymbol) and
+                pattern.elements[0].name in self._struct_registry):
+            struct_node = self._struct_registry[pattern.elements[0].name]
+            n_patterns = len(pattern.elements) - 1
+            n_fields = len(struct_node.field_names)
+            if n_patterns == n_fields:
+                return self._desugar_struct_pattern(pattern, temp_var, struct_node)
+
         # Empty list pattern: ()
         if pattern.is_empty():
             # Test: (null? temp_var)
@@ -1613,3 +1663,84 @@ class MenaiASTDesugarer:
         """Generate unique temporary variable name."""
         self.temp_counter += 1
         return f"#:match-tmp-{self.temp_counter}"
+
+    def _desugar_struct_constructor(
+        self,
+        expr: MenaiASTList,
+        struct_node: MenaiASTStruct
+    ) -> MenaiASTNode:
+        """Desugar a struct constructor call (TypeName field1 field2 ...).
+
+        Validates arity against the struct definition and emits a
+        (MenaiASTStruct field1 field2 ...) list where the MenaiASTStruct node
+        sits directly in the function position.  The IR builder recognises this
+        and produces MenaiIRBuildStruct without any magic symbol indirection.
+
+        Args:
+            expr: The constructor call AST, e.g. (Point 1 2)
+            struct_node: The MenaiASTStruct for this type
+
+        Returns:
+            Desugared constructor call
+        """
+        n_args = len(expr.elements) - 1
+        n_fields = len(struct_node.field_names)
+
+        if n_args != n_fields:
+            raise MenaiEvalError(
+                message=f"Struct constructor '{struct_node.name}' called with wrong number of arguments",
+                received=f"Got {n_args} argument{'s' if n_args != 1 else ''}",
+                expected=f"Exactly {n_fields} argument{'s' if n_fields != 1 else ''} for fields: {list(struct_node.field_names)}",
+                example=f"({struct_node.name} {' '.join(struct_node.field_names)})",
+                line=expr.line,
+                column=expr.column,
+            )
+
+        desugared_args = [self.desugar(arg) for arg in expr.elements[1:]]
+        return self._make_list(
+            (struct_node,) + tuple(desugared_args),
+            expr
+        )
+
+    def _desugar_struct_pattern(
+        self,
+        pattern: MenaiASTList,
+        temp_var: str,
+        struct_node: MenaiASTStruct
+    ) -> Tuple[MenaiASTNode, List[Tuple[str, Any]]]:
+        """Desugar a struct destructuring pattern (TypeName field1 field2 ...).
+
+        Emits a ($struct-type? TypeName tmp) type check as the test, then
+        uses the same list-pattern machinery to extract and bind each field
+        via ($struct-get tmp field_idx).
+
+        Args:
+            pattern: The struct pattern, e.g. (Point x y)
+            temp_var: Name of temp variable holding the match value
+            struct_node: The MenaiASTStruct for this type
+
+        Returns:
+            (test_expression, bindings) using the list-pattern marker convention
+        """
+        type_sym = self._make_symbol(struct_node.name, pattern)
+        type_test = MenaiASTList((
+            MenaiASTSymbol('$struct-type?'),
+            type_sym,
+            MenaiASTSymbol(temp_var),
+        ))
+
+        field_patterns = list(pattern.elements[1:])
+        element_info: List[Tuple[MenaiASTNode, str, MenaiASTNode]] = []
+
+        for i, field_pattern in enumerate(field_patterns):
+            elem_temp = self._gen_temp()
+            field_get = MenaiASTList((
+                MenaiASTSymbol('$struct-get-imm'),
+                MenaiASTSymbol(temp_var),
+                MenaiASTInteger(i, line=pattern.line, column=pattern.column,
+                                source_file=pattern.source_file),
+            ))
+            element_info.append((field_pattern, elem_temp, field_get))
+
+        marker_name = f'__LIST_PATTERN_{self._gen_temp()}__'
+        return (type_test, [(marker_name, element_info)])

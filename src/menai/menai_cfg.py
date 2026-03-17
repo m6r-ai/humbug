@@ -9,7 +9,7 @@ consume this representation.
 from dataclasses import dataclass, field
 from typing import List, Tuple, Callable
 
-from menai.menai_value import MenaiValue
+from menai.menai_value import MenaiValue, MenaiStructType
 
 
 @dataclass
@@ -161,6 +161,22 @@ class MenaiCFGMakeClosureInstr:
 
 
 @dataclass
+class MenaiCFGMakeStructInstr:
+    """
+    %result = make_struct <struct_type> [%field, ...]
+
+    Constructs a new MenaiStruct of type `struct_type` from a list of field
+    values.  `struct_type` is known at compile time and is stored directly on
+    the instruction rather than being loaded into a register.  The VM codegen
+    lowers this to MAKE_STRUCT, staging the type descriptor and field values
+    into the outgoing zone.
+    """
+    result: MenaiCFGValue
+    struct_type: MenaiStructType
+    args: List[MenaiCFGValue]
+
+
+@dataclass
 class MenaiCFGPatchClosureInstr:
     """
     patch_closure %closure, capture_index, %value
@@ -223,6 +239,7 @@ MenaiCFGInstr = (
     | MenaiCFGBuiltinInstr
     | MenaiCFGCallInstr
     | MenaiCFGApplyInstr
+    | MenaiCFGMakeStructInstr
     | MenaiCFGMakeClosureInstr
     | MenaiCFGPatchClosureInstr
     | MenaiCFGPhiInstr
@@ -430,6 +447,9 @@ def _fmt_instr(instr: MenaiCFGInstr) -> str:
         name = instr.function.binding_name or "<lambda>"
         return f"{instr.result} = make_closure {name!r} {_fmt_values(instr.captures)}"
 
+    if isinstance(instr, MenaiCFGMakeStructInstr):
+        return f"{instr.result} = make_struct {instr.struct_type.name!r} {_fmt_values(instr.args)}"
+
     if isinstance(instr, MenaiCFGPhiInstr):
         parts = ", ".join(f"{v} <- block{b.id}" for v, b in instr.incoming)
         return f"{instr.result} = phi [{parts}]"
@@ -540,6 +560,9 @@ def value_ids_in_instr(instr: 'MenaiCFGInstr') -> List[int]:
     if isinstance(instr, MenaiCFGMakeClosureInstr):
         return [c.id for c in instr.captures]
 
+    if isinstance(instr, MenaiCFGMakeStructInstr):
+        return [a.id for a in instr.args]
+
     if isinstance(instr, MenaiCFGPatchClosureInstr):
         return [instr.closure.id, instr.value.id]
 
@@ -547,7 +570,7 @@ def value_ids_in_instr(instr: 'MenaiCFGInstr') -> List[int]:
         return [m.id for m in instr.messages] + [instr.value.id]
 
     # MenaiCFGConstInstr, MenaiCFGGlobalInstr, MenaiCFGParamInstr,
-    # MenaiCFGFreeVarInstr: no input value references.
+    # MenaiCFGFreeVarInstr, MenaiCFGPhiInstr: no input value references here.
     return []
 
 

@@ -10,7 +10,7 @@ var_type; slot allocation is handled by MenaiCFGBuilder.
 from dataclasses import dataclass
 from typing import List, Tuple
 
-from menai.menai_value import MenaiValue
+from menai.menai_value import MenaiValue, MenaiStructType
 
 
 @dataclass
@@ -157,6 +157,19 @@ class MenaiIRTrace:
     value_plan: 'MenaiIRExpr'           # Expression to evaluate and return
 
 
+@dataclass
+class MenaiIRBuildStruct:
+    """Plan for compiling a struct constructor call (TypeName f1 f2 ... fN).
+
+    Carries the MenaiStructType descriptor (known at compile time) and a flat
+    list of field value plans.  The VM codegen lowers it to LOAD_STRUCT_TYPE
+    followed by MAKE_STRUCT, which pops the N field registers and pushes the
+    new MenaiStruct instance.
+    """
+    struct_type: MenaiStructType
+    field_plans: List['MenaiIRExpr']
+
+
 # Union type for all expression plans
 MenaiIRExpr = (
     MenaiIRConstant |
@@ -172,6 +185,7 @@ MenaiIRExpr = (
     MenaiIRBuildList |
     MenaiIRBuildDict |
     MenaiIRBuildSet |
+    MenaiIRBuildStruct |
     MenaiIRReturn |
     MenaiIRTrace
 )

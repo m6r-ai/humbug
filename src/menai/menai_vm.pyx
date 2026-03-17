@@ -16,6 +16,7 @@ from menai.menai_value_fast import (
     Menai_NONE, Menai_BOOLEAN_TRUE, Menai_BOOLEAN_FALSE, Menai_DICT_EMPTY, Menai_LIST_EMPTY, Menai_SET_EMPTY
 )
 from menai.menai_value_fast import convert_code_object, convert_value, to_slow
+from menai.menai_value import MenaiStructType, MenaiStruct
 from menai.menai_value_fast cimport (
     MenaiValue, MenaiBoolean, MenaiString, MenaiList, MenaiDict, MenaiFunction,
     MenaiInteger, MenaiComplex, MenaiFloat, MenaiSymbol, MenaiNone, MenaiSet
@@ -316,6 +317,18 @@ class MenaiVM:
         table[Opcode.SET_DIFFERENCE] = self._op_set_difference
         table[Opcode.SET_SUBSET_P] = self._op_set_subset_p
         table[Opcode.SET_TO_LIST] = self._op_set_to_list
+        table[Opcode.MAKE_STRUCT] = self._op_make_struct
+        table[Opcode.STRUCT_P] = self._op_struct_p
+        table[Opcode.STRUCT_TYPE_P] = self._op_struct_type_p
+        table[Opcode.STRUCT_GET] = self._op_struct_get
+        table[Opcode.STRUCT_GET_IMM] = self._op_struct_get_imm
+        table[Opcode.STRUCT_SET] = self._op_struct_set
+        table[Opcode.STRUCT_SET_IMM] = self._op_struct_set_imm
+        table[Opcode.STRUCT_EQ_P] = self._op_struct_eq_p
+        table[Opcode.STRUCT_NEQ_P] = self._op_struct_neq_p
+        table[Opcode.STRUCT_TYPE] = self._op_struct_type
+        table[Opcode.STRUCT_TYPE_NAME] = self._op_struct_type_name
+        table[Opcode.STRUCT_FIELDS] = self._op_struct_fields
         table[Opcode.RANGE] = self._op_range
         return table
 
@@ -4391,6 +4404,263 @@ class MenaiVM:
 
         a = <MenaiSet>raw_a
         regs[base + instr.dest] = MenaiList(a.elements)
+        return None
+
+    def _op_make_struct(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """MAKE_STRUCT dest, src0, src1: construct a struct.
+
+        src0 is the absolute slot index of the MenaiStructType descriptor.
+        src1 is the field count.  Field values are in slots src0+1..src0+n_fields.
+        """
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        type_slot = instr.src0
+        struct_type = regs[base + type_slot]
+        if type(struct_type) is not MenaiStructType:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"struct constructor requires a struct type as first argument, got {struct_type.type_name()}"
+            )
+
+        n_fields = instr.src1
+        field_values = tuple(regs[base + type_slot + i] for i in range(1, n_fields + 1))
+        regs[base + instr.dest] = MenaiStruct(struct_type=struct_type, fields=field_values)
+        return None
+
+    def _op_struct_p(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """STRUCT_P dest, src0: r_dest = (struct? r_src0)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if type(regs[base + instr.src0]) is MenaiStruct else Menai_BOOLEAN_FALSE  # pylint: disable=unidiomatic-typecheck
+        return None
+
+    def _op_struct_type_p(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """STRUCT_TYPE_P dest, src0, src1: r_dest = (struct-type? r_src0 r_src1)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        struct_type = regs[base + instr.src0]
+        if type(struct_type) is not MenaiStructType:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-type?' requires a struct type as first argument, got {struct_type.type_name()}"
+            )
+
+        val = regs[base + instr.src1]
+        result = (
+            type(val) is MenaiStruct  # pylint: disable=unidiomatic-typecheck
+            and val.struct_type.tag == struct_type.tag
+        )
+        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if result else Menai_BOOLEAN_FALSE
+        return None
+
+    def _op_struct_get(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """STRUCT_GET dest, src0, src1: indexed field access"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        val = regs[base + instr.src0]
+        if type(val) is not MenaiStruct:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-get' requires a struct argument, got {val.type_name()}"
+            )
+
+        field_sym = regs[base + instr.src1]
+        if type(field_sym) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-get' requires a symbol as field name, got {field_sym.type_name()}"
+            )
+
+        try:
+            field_index = val.struct_type.field_index(field_sym.name)
+
+        except KeyError as e:
+            raise MenaiEvalError(
+                f"'struct-get': struct '{val.struct_type.name}' has no field '{field_sym.name}'"
+            ) from e
+
+        regs[base + instr.dest] = val.fields[field_index]
+        return None
+
+    def _op_struct_get_imm(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """STRUCT_GET dest, src0, src1: indexed field access"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        val = regs[base + instr.src0]
+        if type(val) is not MenaiStruct:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-get-imm' requires a struct argument, got {val.type_name()}"
+            )
+
+        field_index = regs[base + instr.src1]
+        if type(field_index) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-get-imm' requires a integer as field index, got {field_index.type_name()}"
+            )
+
+        regs[base + instr.dest] = val.fields[field_index.value]
+        return None
+
+    def _op_struct_set(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """STRUCT_SET dest, src0, src1, src2: functional update"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        val = regs[base + instr.src0]
+        if type(val) is not MenaiStruct:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-set' requires a struct argument, got {val.type_name()}"
+            )
+
+        field_sym = regs[base + instr.src1]
+        if type(field_sym) is not MenaiSymbol:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-set' requires a symbol as field name, got {field_sym.type_name()}"
+            )
+
+        try:
+            field_index = val.struct_type.field_index(field_sym.name)
+
+        except KeyError as e:
+            raise MenaiEvalError(
+                f"'struct-set': struct '{val.struct_type.name}' has no field '{field_sym.name}'"
+            ) from e
+
+        new_value = regs[base + instr.src2]
+        new_fields = val.fields[:field_index] + (new_value,) + val.fields[field_index + 1:]
+        regs[base + instr.dest] = MenaiStruct(struct_type=val.struct_type, fields=new_fields)
+        return None
+
+    def _op_struct_set_imm(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """STRUCT_SET dest, src0, src1, src2: functional update"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        val = regs[base + instr.src0]
+        if type(val) is not MenaiStruct:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-set' requires a struct argument, got {val.type_name()}"
+            )
+
+        field_index = regs[base + instr.src1]
+        if type(field_index) is not MenaiInteger:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-set' requires an integer as field index, got {field_index.type_name()}"
+            )
+
+        new_value = regs[base + instr.src2]
+        new_fields = val.fields[:field_index.value] + (new_value,) + val.fields[field_index.value + 1:]
+        regs[base + instr.dest] = MenaiStruct(struct_type=val.struct_type, fields=new_fields)
+        return None
+
+    def _op_struct_eq_p(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """STRUCT_EQ_P dest, src0, src1: r_dest = (struct=? r_src0 r_src1)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        a = regs[base + instr.src0]
+        if type(a) is not MenaiStruct:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct=?' requires struct arguments, got {a.type_name()}"
+            )
+
+        b = regs[base + instr.src1]
+        if type(b) is not MenaiStruct:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct=?' requires struct arguments, got {b.type_name()}"
+            )
+
+        result = a.struct_type.tag == b.struct_type.tag and a.fields == b.fields
+        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if result else Menai_BOOLEAN_FALSE
+        return None
+
+    def _op_struct_neq_p(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """STRUCT_NEQ_P dest, src0, src1: r_dest = (struct!=? r_src0 r_src1)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        a = regs[base + instr.src0]
+        if type(a) is not MenaiStruct:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct!=?' requires struct arguments, got {a.type_name()}"
+            )
+
+        b = regs[base + instr.src1]
+        if type(b) is not MenaiStruct:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct!=?' requires struct arguments, got {b.type_name()}"
+            )
+
+        result = a.struct_type.tag != b.struct_type.tag or a.fields != b.fields
+        regs[base + instr.dest] = Menai_BOOLEAN_TRUE if result else Menai_BOOLEAN_FALSE
+        return None
+
+    def _op_struct_type(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """STRUCT_TYPE dest, src0: r_dest = (struct-type r_src0)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        val = regs[base + instr.src0]
+        if type(val) is not MenaiStruct:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-type' requires a struct argument, got {val.type_name()}"
+            )
+
+        regs[base + instr.dest] = val.struct_type
+        return None
+
+    def _op_struct_type_name(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """STRUCT_TYPE_NAME dest, src0: r_dest = (struct-type-name r_src0)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        val = regs[base + instr.src0]
+        if type(val) is not MenaiStructType:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-type-name' requires a struct type argument, got {val.type_name()}"
+            )
+
+        regs[base + instr.dest] = MenaiString(val.name)
+        return None
+
+    def _op_struct_fields(  # pylint: disable=useless-return
+        self, frame: Frame, instr: Instruction
+    ) -> MenaiValue | None:
+        """STRUCT_FIELDS dest, src0: r_dest = (struct-fields r_src0)"""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        cdef int base = f.base
+        val = regs[base + instr.src0]
+        if type(val) is not MenaiStructType:  # pylint: disable=unidiomatic-typecheck
+            raise MenaiEvalError(
+                f"'struct-fields' requires a struct type argument, got {val.type_name()}"
+            )
+
+        from menai.menai_value import MenaiSymbol as SlowSymbol
+        regs[base + instr.dest] = MenaiList(tuple(SlowSymbol(field) for field in val.field_names))
         return None
 
     def _op_range(  # pylint: disable=useless-return

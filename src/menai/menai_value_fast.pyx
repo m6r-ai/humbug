@@ -465,6 +465,16 @@ cdef object _hashable_key(object key):
     if t is MenaiSymbol:
         return ('sym', (<MenaiSymbol>key).name)
 
+    # MenaiStruct is a slow (Python) type — check with isinstance and delegate
+    # to its own __hash__ for the hashable-fields case.
+    import menai.menai_value as _slow
+    if isinstance(key, _slow.MenaiStruct):
+        try:
+            return ('struct', hash(key))
+
+        except TypeError as e:
+            raise MenaiEvalError(message=str(e)) from e
+
     raise MenaiEvalError(
         message="Dict keys must be strings, numbers, booleans, or symbols",
         received=f"Key type: {key.type_name()}",
@@ -589,6 +599,12 @@ def convert_value(src):
     if t is _slow.MenaiSet:
         return MenaiSet(tuple(convert_value(e) for e in src.elements))
 
+    if t is _slow.MenaiStructType:
+        return src  # No fast equivalent; pass through unchanged
+
+    if t is _slow.MenaiStruct:
+        return src  # No fast equivalent; pass through unchanged
+
     if t is _slow.MenaiFunction:
         # Zero-capture lambdas are stored as LOAD_CONST constants by the
         # bytecode builder.  Convert to a fast MenaiFunction; the nested
@@ -663,6 +679,12 @@ def to_slow(src):
 
     if type(src) is MenaiSet:
         return _slow.MenaiSet(tuple(to_slow(e) for e in src.elements))
+
+    if type(src) is _slow.MenaiStructType:
+        return src  # Already a slow type
+
+    if type(src) is _slow.MenaiStruct:
+        return src  # Already a slow type
 
     if type(src) is MenaiFunction:
         return _slow.MenaiFunction(

@@ -11,7 +11,8 @@ from typing import Any, Tuple
 
 from menai.menai_value import (
     MenaiValue, MenaiInteger, MenaiFloat, MenaiComplex,
-    MenaiString, MenaiBoolean, MenaiSymbol, MenaiList, MenaiDict, MenaiNone, Menai_NONE
+    MenaiString, MenaiBoolean, MenaiSymbol, MenaiList, MenaiDict, MenaiNone, Menai_NONE,
+    MenaiStructType
 )
 
 
@@ -286,3 +287,40 @@ class MenaiASTDict(MenaiASTNode):
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, MenaiASTDict) and self.pairs == other.pairs
+
+
+@dataclass(frozen=True)
+class MenaiASTStruct(MenaiASTNode):
+    """
+    Represents a (struct (field ...)) special form in the AST.
+
+    Produced by the semantic analyser when it encounters (struct (x y)) as the
+    RHS of a let or let* binding.  The binding name and tag are resolved at that
+    point and stored here so that all downstream passes have direct access without
+    needing to re-examine the enclosing let.
+
+    field_names is an ordered tuple of field name strings matching the declaration
+    order — this is the authoritative field index mapping for the entire pipeline.
+    The desugarer and IR builder use it to emit direct indexed opcodes rather than
+    hash-based lookups.
+    """
+    name: str = ""
+    tag: int = 0
+    field_names: Tuple[str, ...] = ()
+
+    def to_runtime_value(self) -> MenaiStructType:
+        """Produce the MenaiStructType runtime value for this struct definition."""
+        return MenaiStructType(self.name, self.tag, self.field_names)
+
+    def type_name(self) -> str:
+        return "struct-type"
+
+    def describe(self) -> str:
+        fields = " ".join(self.field_names)
+        return f"(struct ({fields}))"
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, MenaiASTStruct):
+            return False
+
+        return self.tag == other.tag

@@ -12,7 +12,9 @@ New features:
 - Reworked the Menai VM to reduce overheads (improves performance by up to 2x).
 - Added option to produce colour output within the Menai disassembler.
 - Added cython Menai VM for use on MacOS (improves performance by an addition 2.3x to 2.5x)
-- Added set operations to the Menai language.
+- Added `set` operations to the Menai language.
+- Updated Claude 4.6 models to reflect the 1M token context windows now supported.
+- Added `struct` operations to the Menai language.
 
 Bug fixes:
 

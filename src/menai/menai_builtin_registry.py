@@ -196,6 +196,17 @@ class MenaiBuiltinRegistry:
         'set-difference': (2, 2),
         'set-subset?': (2, 2),
         'set->list': (1, 1),
+        'struct?': (1, 1),
+        'struct-type?': (2, 2),
+        'struct-get': (2, 2),
+        'struct-get-imm': (2, 2),
+        'struct-set': (3, 3),
+        'struct-set-imm': (3, 3),
+        'struct=?': (2, 2),
+        'struct!=?': (2, 2),
+        'struct-type': (1, 1),
+        'struct-type-name': (1, 1),
+        'struct-fields': (1, 1),
         'range': (2, 3),
     }
 

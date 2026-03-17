@@ -21,6 +21,7 @@ from menai.menai_cfg import (
     MenaiCFGMakeClosureInstr,
     MenaiCFGPatchClosureInstr,
     MenaiCFGParamInstr,
+    MenaiCFGMakeStructInstr,
     MenaiCFGPhiInstr,
     MenaiCFGRaiseTerm,
     MenaiCFGReturnTerm,
@@ -33,12 +34,13 @@ from menai.menai_cfg import (
 from menai.menai_ir import (
     MenaiIRCall,
     MenaiIRConstant,
-    MenaiIREmptyList,
-    MenaiIRBuildList,
     MenaiIRBuildDict,
+    MenaiIRBuildList,
     MenaiIRBuildSet,
-    MenaiIRError,
+    MenaiIRBuildStruct,
+    MenaiIREmptyList,
     MenaiIRExpr,
+    MenaiIRError,
     MenaiIRIf,
     MenaiIRLambda,
     MenaiIRLet,
@@ -225,6 +227,9 @@ class MenaiCFGBuilder:
 
         if isinstance(ir, MenaiIRBuildSet):
             return self._build_set(ir, block, scope, state)
+
+        if isinstance(ir, MenaiIRBuildStruct):
+            return self._build_struct(ir, block, scope, state)
 
         if isinstance(ir, MenaiIRReturn):
             # MenaiIRReturn is the IR tree's explicit return wrapper.
@@ -757,6 +762,32 @@ class MenaiCFGBuilder:
             acc_val = new_acc
 
         return acc_val, block
+
+    def _build_struct(
+        self,
+        ir: MenaiIRBuildStruct,
+        block: MenaiCFGBlock,
+        scope: MenaiCFGScope,
+        state: _FunctionState,
+    ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
+        """
+        Build a struct constructor call.
+
+        Evaluates each field value plan then emits a MenaiCFGMakeStructInstr
+        carrying the compile-time MenaiStructType descriptor directly.
+        """
+        field_vals: List[MenaiCFGValue] = []
+        for field_plan in ir.field_plans:
+            field_val, block = self._build_expr(field_plan, block, scope, state, tail=False)
+            field_vals.append(field_val)
+
+        result = state.new_value(f"struct_{ir.struct_type.name}")
+        block.instrs.append(MenaiCFGMakeStructInstr(
+            result=result,
+            struct_type=ir.struct_type,
+            args=field_vals,
+        ))
+        return result, block
 
     def _build_builtin_call(
         self,
