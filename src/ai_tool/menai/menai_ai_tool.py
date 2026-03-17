@@ -361,7 +361,7 @@ Syntax: (operator arg1 arg2 ...)
 ## Structs:
 
 - Nominal typed record values — two struct types with the same fields are distinct types
-- Declaration: (struct (field1 field2 ...)) — valid only as the RHS of a let or let* binding, not in letrec
+- Declaration: (struct (field1 field2 ...)) — valid as the RHS of a let, let*, or letrec binding
 - (let ((Point (struct (x y)))) ...) → binds Point to a struct-type value; the binding name becomes the type name
 - Construction: call the struct-type value directly with positional field values: (Point 1 2) → a Point instance
 - Type predicate (any struct): (struct? p) → #t for any struct instance
@@ -377,7 +377,6 @@ Syntax: (operator arg1 arg2 ...)
 - Pattern matching destructuring form: (match p ((Point x y) (integer+ x y)) (_ 0)) — compiler resolves field bindings at compile time
 - Hashability: structs are hashable (usable as set members or dict keys) if all their fields are hashable scalars
 - Structs are nominal: (let ((Point (struct (x y))) (Vec (struct (x y)))) ...) — Point and Vec are distinct types even with identical fields
-- Not valid in letrec: struct declarations must appear in let or let*
 
 ## Symbol operations:
 
@@ -449,7 +448,8 @@ Syntax: (operator arg1 arg2 ...)
 - (letrec ((var1 val1) (var2 val2) ...) body) → recursive binding
 - (letrec ((fact (lambda (n) (if (integer<=? n 1) 1 (integer* n (fact (integer- n 1))))))) (fact 5)) → 120
 - Supports self-recursion and mutual recursion
-- Use only when you need functions that reference themselves
+- Struct definitions are also permitted in letrec and are hoisted to let automatically — use this when defining a module that exports a struct type alongside its associated functions
+- Use only when you need functions that reference themselves or when defining a module API
 
 ## Quote - data literals and code as data
 
