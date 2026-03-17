@@ -420,6 +420,7 @@ class MenaiASTSemanticAnalyzer:
 
         # Validate each binding
         var_names: List[str] = []
+        new_bindings: List[MenaiASTNode] = []
         for i, binding in enumerate(bindings_list.elements):
             if not isinstance(binding, MenaiASTList):
                 raise MenaiEvalError(
@@ -447,21 +448,20 @@ class MenaiASTSemanticAnalyzer:
 
             name_expr, value_expr = binding.elements
 
-            # Reject struct definitions in letrec
-            if (isinstance(value_expr, MenaiASTList) and
+            # Struct definitions are permitted in letrec: they have no recursive
+            # semantics and the desugarer hoists them to let automatically.
+            if (isinstance(name_expr, MenaiASTSymbol) and
+                    isinstance(value_expr, MenaiASTList) and
                     not value_expr.is_empty() and
                     isinstance(value_expr.elements[0], MenaiASTSymbol) and
                     value_expr.elements[0].name == 'struct'):
-                raise MenaiEvalError(
-                    message="Struct types cannot be defined in letrec",
-                    received=f"(struct ...) in letrec binding '{name_expr.name}'",
-                    expected="Struct definitions must use let or let*",
-                    example="(let ((Point (struct (x y)))) ...)",
-                    suggestion="Move struct definitions to a let or let* binding",
-                    line=value_expr.line,
-                    column=value_expr.column,
-                    source=self.source
-                )
+                struct_node = self._analyze_struct(value_expr, name_expr.name)
+                new_bindings.append(MenaiASTList(
+                    elements=(name_expr, struct_node),
+                    line=binding.line, column=binding.column, source_file=binding.source_file
+                ))
+                var_names.append(name_expr.name)
+                continue
 
             if not isinstance(name_expr, MenaiASTSymbol):
                 raise MenaiEvalError(
@@ -478,7 +478,11 @@ class MenaiASTSemanticAnalyzer:
             var_names.append(name_expr.name)
 
             # Recursively analyze the value expression
-            self.analyze(value_expr, self.source)
+            analyzed_value = self.analyze(value_expr, self.source)
+            new_bindings.append(MenaiASTList(
+                elements=(name_expr, analyzed_value),
+                line=binding.line, column=binding.column, source_file=binding.source_file
+            ))
 
         # Check for duplicate binding names
         if len(var_names) != len(set(var_names)):
@@ -497,7 +501,15 @@ class MenaiASTSemanticAnalyzer:
         # Analyze body
         self.analyze(body, self.source)
 
-        return expr
+        new_bindings_list = MenaiASTList(
+            elements=tuple(new_bindings),
+            line=bindings_list.line, column=bindings_list.column,
+            source_file=bindings_list.source_file
+        )
+        return MenaiASTList(
+            elements=(expr.elements[0], new_bindings_list, body),
+            line=expr.line, column=expr.column, source_file=expr.source_file
+        )
 
     def _analyze_lambda(self, expr: MenaiASTList) -> MenaiASTList:
         """Validate lambda expression: (lambda (params...) body)"""

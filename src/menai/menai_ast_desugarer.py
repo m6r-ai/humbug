@@ -458,6 +458,12 @@ class MenaiASTDesugarer:
             assert isinstance(name_expr, MenaiASTSymbol)
             raw_pairs.append((name_expr.name, value_expr))
 
+        # Pre-register any struct type bindings so constructor calls and match
+        # patterns in sibling bindings and the body are resolved correctly.
+        for name, value_expr in raw_pairs:
+            if isinstance(value_expr, MenaiASTStruct):
+                self._struct_registry[name] = value_expr
+
         raw_dict = dict(raw_pairs)
 
         # Compute topological binding groups (already in dependency order).

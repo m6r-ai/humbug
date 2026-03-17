@@ -644,6 +644,62 @@ class TestStructModuleExport:
         assert result == '7'
 
 
+    def test_struct_defined_in_letrec_module(self, tmp_path):
+        """A struct defined in a letrec module body is exported and usable."""
+        (tmp_path / "shapes.menai").write_text("""
+(letrec ((Point (struct (x y)))
+         (make-point (lambda (a b) (Point a b)))
+         (point-x (lambda (p) (match p ((Point x _) x))))
+         (point-y (lambda (p) (match p ((Point _ y) y)))))
+  (dict
+    (list "Point" Point)
+    (list "make-point" make-point)
+    (list "point-x" point-x)
+    (list "point-y" point-y)))
+""")
+        m = Menai(module_path=[str(tmp_path)])
+        result = m.evaluate("""
+(let ((shapes (import "shapes")))
+  (let ((make-point (dict-get shapes "make-point"))
+        (point-x    (dict-get shapes "point-x"))
+        (point-y    (dict-get shapes "point-y")))
+    (let ((p (make-point 3 4)))
+      (integer+ (point-x p) (point-y p)))))
+""")
+        assert result == 7
+
+    def test_struct_constructor_from_letrec_module(self, tmp_path):
+        """The exported struct type itself can be used as a constructor by the importer."""
+        (tmp_path / "shapes.menai").write_text("""
+(letrec ((Point (struct (x y))))
+  (dict (list "Point" Point)))
+""")
+        m = Menai(module_path=[str(tmp_path)])
+        result = m.evaluate_and_format("""
+(let ((shapes (import "shapes")))
+  (let ((Point (dict-get shapes "Point")))
+    (Point 5 6)))
+""")
+        assert result == '(Point 5 6)'
+
+    def test_pattern_matching_on_struct_from_letrec_module(self, tmp_path):
+        """Pattern matching works on instances of a struct type exported from a letrec module."""
+        (tmp_path / "shapes.menai").write_text("""
+(letrec ((Point (struct (x y))))
+  (dict (list "Point" Point)))
+""")
+        m = Menai(module_path=[str(tmp_path)])
+        result = m.evaluate("""
+(let ((shapes (import "shapes")))
+  (let ((Point (dict-get shapes "Point")))
+    (let ((p (Point 10 20)))
+      (match p
+        ((Point a b) (integer+ a b))
+        (_ 0)))))
+""")
+        assert result == 30
+
+
 # ---------------------------------------------------------------------------
 # 11. Error cases
 # ---------------------------------------------------------------------------
@@ -661,10 +717,20 @@ class TestStructErrors:
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
             menai.evaluate('(let ((Point (struct (x y)))) (Point 1 2 3))')
 
-    def test_struct_in_letrec_raises_error(self, menai):
-        """Defining a struct type inside letrec raises an error."""
-        with pytest.raises(MenaiEvalError, match="[Ss]truct"):
-            menai.evaluate('(letrec ((Point (struct (x y)))) (Point 1 2))')
+    def test_struct_in_letrec_works(self, menai):
+        """Struct definitions are permitted in letrec and are hoisted to let."""
+        result = menai.evaluate('(letrec ((Point (struct (x y)))) (Point 1 2))')
+        assert str(result) != ''
+
+    def test_struct_in_letrec_with_sibling_lambdas(self, menai):
+        """Struct defined in letrec is visible to sibling lambda bindings and the body."""
+        result = menai.evaluate(
+            '(letrec ((Point (struct (x y)))'
+            '         (make (lambda (a b) (Point a b)))'
+            '         (get-x (lambda (p) (match p ((Point x _) x)))))'
+            '  (get-x (make 42 99)))'
+        )
+        assert str(result) == '42'
 
     def test_struct_outside_let_raises_error(self, menai):
         """Using (struct ...) outside a let/let* binding position raises an error."""
