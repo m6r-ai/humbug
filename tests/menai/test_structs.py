@@ -910,3 +910,112 @@ class TestStructFirstClass:
           (apply-to struct=? (Point 1 2) (Point 1 2)))
         ''')
         assert result == '#t'
+
+
+# ---------------------------------------------------------------------------
+# 13. Dynamic struct type construction (struct type as runtime value)
+# ---------------------------------------------------------------------------
+
+class TestStructDynamicConstruction:
+    """Test calling a struct type that is a runtime value rather than a statically-known name.
+
+    When the compiler cannot see that a value is a struct type at compile time
+    (e.g. it was retrieved from a dict, list, or returned from a lambda), it
+    emits a CALL instruction rather than MAKE_STRUCT.  The VM must handle
+    MenaiStructType in CALL and TAIL_CALL position.
+    """
+
+    def test_constructor_retrieved_from_dict(self, menai):
+        """A struct type stored in a dict and retrieved at runtime can construct instances."""
+        result = menai.evaluate_and_format('''
+        (let* ((point (struct (x y)))
+               (d     (dict (list "point" point)))
+               (ctor  (dict-get d "point")))
+          (ctor 3 4))
+        ''')
+        assert result == '(point 3 4)'
+
+    def test_constructor_retrieved_from_list(self, menai):
+        """A struct type stored in a list and retrieved at runtime can construct instances."""
+        result = menai.evaluate_and_format('''
+        (let* ((point (struct (x y)))
+               (lst   (list point))
+               (ctor  (list-first lst)))
+          (ctor 5 6))
+        ''')
+        assert result == '(point 5 6)'
+
+    def test_constructor_returned_from_lambda(self, menai):
+        """A struct type returned from a lambda call can construct instances."""
+        result = menai.evaluate_and_format('''
+        (let* ((point    (struct (x y)))
+               (get-ctor (lambda () point))
+               (ctor     (get-ctor)))
+          (ctor 7 8))
+        ''')
+        assert result == '(point 7 8)'
+
+    def test_field_access_on_dynamically_constructed_instance(self, menai):
+        """struct-get works on an instance built via a dynamically-called constructor."""
+        result = menai.evaluate_and_format('''
+        (let* ((point (struct (x y)))
+               (d     (dict (list "point" point)))
+               (ctor  (dict-get d "point"))
+               (p     (ctor 10 20)))
+          (struct-get p 'y))
+        ''')
+        assert result == '20'
+
+    def test_type_predicate_on_dynamically_constructed_instance(self, menai):
+        """struct-type? works correctly on an instance built via a dynamically-called constructor."""
+        result = menai.evaluate_and_format('''
+        (let* ((point (struct (x y)))
+               (d     (dict (list "point" point)))
+               (ctor  (dict-get d "point"))
+               (p     (ctor 1 2)))
+          (struct-type? point p))
+        ''')
+        assert result == '#t'
+
+    def test_constructor_in_tail_position(self, menai):
+        """A dynamically-retrieved struct constructor called in tail position works correctly."""
+        result = menai.evaluate_and_format('''
+        (let* ((point (struct (x y)))
+               (d     (dict (list "point" point)))
+               (make  (lambda (a b)
+                        (let ((ctor (dict-get d "point")))
+                          (ctor a b)))))
+          (make 11 22))
+        ''')
+        assert result == '(point 11 22)'
+
+    def test_constructor_used_with_map_list(self, menai):
+        """A dynamically-retrieved struct constructor can be passed to map-list."""
+        result = menai.evaluate_and_format('''
+        (let* ((point (struct (x y)))
+               (d     (dict (list "point" point)))
+               (ctor  (dict-get d "point"))
+               (pairs (list (list 1 2) (list 3 4) (list 5 6))))
+          (map-list (lambda (pair) (ctor (list-ref pair 0) (list-ref pair 1))) pairs))
+        ''')
+        assert result == '((point 1 2) (point 3 4) (point 5 6))'
+
+    def test_wrong_arity_dynamic_constructor_too_few(self, menai):
+        """Calling a dynamically-retrieved struct constructor with too few args raises an error."""
+        with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
+            menai.evaluate('''
+            (let* ((point (struct (x y)))
+                   (d     (dict (list "point" point)))
+                   (ctor  (dict-get d "point")))
+              (ctor 1))
+            ''')
+
+    def test_wrong_arity_dynamic_constructor_too_many(self, menai):
+        """Calling a dynamically-retrieved struct constructor with too many args raises an error."""
+        with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
+            menai.evaluate('''
+            (let* ((point (struct (x y)))
+                   (d     (dict (list "point" point)))
+                   (ctor  (dict-get d "point")))
+              (ctor 1 2 3))
+            ''')
