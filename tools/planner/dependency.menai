@@ -1,0 +1,116 @@
+; dependency.menai
+; Dependency struct definition and dependency-level operations
+
+(let* (
+  (calendar-mod     (import "tools/planner/calendar"))
+  (add-working-days (dict-get calendar-mod "add-working-days"))
+  (dependency       (struct (from-task to-task type lag-days))))
+
+(letrec (
+  ; Get all predecessor task IDs for a given task
+  (get-predecessors
+    (lambda (task-id dependencies)
+      (map-list (lambda (dep) (struct-get dep 'from-task))
+                (filter-list (lambda (dep) (string=? (struct-get dep 'to-task) task-id))
+                             dependencies))))
+
+  ; Get all successor task IDs for a given task
+  (get-successors
+    (lambda (task-id dependencies)
+      (map-list (lambda (dep) (struct-get dep 'to-task))
+                (filter-list (lambda (dep) (string=? (struct-get dep 'from-task) task-id))
+                             dependencies))))
+
+  ; Get all dependencies where this task is the successor
+  (get-predecessor-dependencies
+    (lambda (task-id dependencies)
+      (filter-list (lambda (dep) (string=? (struct-get dep 'to-task) task-id))
+                   dependencies)))
+
+  ; Get all dependencies where this task is the predecessor
+  (get-successor-dependencies
+    (lambda (task-id dependencies)
+      (filter-list (lambda (dep) (string=? (struct-get dep 'from-task) task-id))
+                   dependencies)))
+
+  ; Check if a task ID exists in a list of tasks
+  (task-exists?
+    (lambda (task-id tasks)
+      (any-list? (lambda (t) (string=? (struct-get t 'id) task-id))
+                 tasks)))
+
+  ; Apply a dependency constraint in the forward pass (earliest dates direction)
+  ; Returns a dict with "start-constraint" and/or "finish-constraint"
+  (apply-forward-constraint
+    (lambda (dep predecessor-task successor-cal)
+      (let ((dep-type    (struct-get dep 'type))
+            (lag-days    (struct-get dep 'lag-days))
+            (pred-start  (struct-get predecessor-task 'earliest-start))
+            (pred-finish (struct-get predecessor-task 'earliest-finish)))
+        (match dep-type
+          ("finish-to-start"
+            (dict (list "start-constraint"  (add-working-days pred-finish lag-days successor-cal))))
+          ("start-to-start"
+            (dict (list "start-constraint"  (add-working-days pred-start  lag-days successor-cal))))
+          ("finish-to-finish"
+            (dict (list "finish-constraint" (add-working-days pred-finish lag-days successor-cal))))
+          ("start-to-finish"
+            (dict (list "finish-constraint" (add-working-days pred-start  lag-days successor-cal))))
+          (_ (dict))))))
+
+  ; Apply a dependency constraint in the backward pass (latest dates direction)
+  ; Returns a date string constraint on the predecessor's latest finish, or #f if not applicable
+  (apply-backward-constraint
+    (lambda (dep successor-task predecessor-cal)
+      (let ((dep-type           (struct-get dep 'type))
+            (lag-days           (struct-get dep 'lag-days))
+            (succ-latest-start  (struct-get successor-task 'latest-start))
+            (succ-latest-finish (struct-get successor-task 'latest-finish)))
+        (match dep-type
+          ("finish-to-start"
+            (add-working-days succ-latest-start  (integer-neg lag-days) predecessor-cal))
+          ("finish-to-finish"
+            (add-working-days succ-latest-finish (integer-neg lag-days) predecessor-cal))
+          ("start-to-start"   #f)
+          ("start-to-finish"  #f)
+          (_ #f)))))
+
+  ; Validate a single dependency, returning a dict with "from-task", "to-task", "valid", "errors"
+  (validate-dependency
+    (lambda (dep tasks)
+      (let* ((from-task  (struct-get dep 'from-task))
+             (to-task    (struct-get dep 'to-task))
+             (dep-type   (struct-get dep 'type))
+             (errors (list))
+             (errors (if (boolean-not (task-exists? from-task tasks))
+                         (list-append errors (string-concat "From-task not found: " from-task))
+                         errors))
+             (errors (if (boolean-not (task-exists? to-task tasks))
+                         (list-append errors (string-concat "To-task not found: " to-task))
+                         errors))
+             (valid-types (set "finish-to-start" "start-to-start"
+                               "finish-to-finish" "start-to-finish"))
+             (errors (if (boolean-not (set-member? valid-types dep-type))
+                         (list-append errors (string-concat "Invalid dependency type: " dep-type))
+                         errors))
+             (errors (if (string=? from-task to-task)
+                         (list-append errors (string-concat "Task depends on itself: " from-task))
+                         errors)))
+        (dict
+          (list "from-task" from-task)
+          (list "to-task"   to-task)
+          (list "valid"     (integer=? (list-length errors) 0))
+          (list "errors"    errors)))))
+)
+
+(dict
+  (list "dependency"                   dependency)
+  (list "get-predecessors"             get-predecessors)
+  (list "get-successors"               get-successors)
+  (list "get-predecessor-dependencies" get-predecessor-dependencies)
+  (list "get-successor-dependencies"   get-successor-dependencies)
+  (list "task-exists?"                 task-exists?)
+  (list "apply-forward-constraint"     apply-forward-constraint)
+  (list "apply-backward-constraint"    apply-backward-constraint)
+  (list "validate-dependency"          validate-dependency))
+))

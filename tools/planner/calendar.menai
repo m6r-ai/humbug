@@ -1,9 +1,12 @@
 ; calendar.menai
 ; Calendar arithmetic for project planning
 ;
-; Returns an dict of calendar functions
+; Returns a dict of calendar functions
 
 (letrec (
+  ; Calendar structure
+  (calendar (struct (id name type working-days holidays)))
+
   ; ============================================================================
   ; DATE UTILITIES
   ; ============================================================================
@@ -76,23 +79,21 @@
 
   ; Check if a date is a holiday in the given calendar
   (is-holiday?
-    (lambda (date-str calendar)
-      (let ((holidays (dict-get calendar "holidays")))
-        (set-member? holidays date-str))))
+    (lambda (date-str cal)
+      (set-member? (struct-get cal 'holidays) date-str)))
 
   ; Check if a day-of-week is a working day in the calendar
   (is-working-day-of-week?
-    (lambda (day-name calendar)
-      (let ((working-days (dict-get calendar "working-days")))
-        (set-member? working-days day-name))))
+    (lambda (dow-name cal)
+      (set-member? (struct-get cal 'working-days) dow-name)))
 
   ; Check if a specific date is a working day
   (is-working-day?
-    (lambda (date-str calendar)
+    (lambda (date-str cal)
       (let* ((dow (day-of-week date-str))
              (dow-name (day-name dow)))
-        (and (is-working-day-of-week? dow-name calendar)
-             (boolean-not (is-holiday? date-str calendar))))))
+        (and (is-working-day-of-week? dow-name cal)
+             (boolean-not (is-holiday? date-str cal))))))
 
   ; ============================================================================
   ; DATE ARITHMETIC (CALENDAR DAYS)
@@ -171,28 +172,28 @@
 
   ; Add one working day to a date (skip weekends and holidays)
   (add-one-working-day
-    (lambda (date-str calendar)
+    (lambda (date-str cal)
       (let ((next-date (add-one-day date-str)))
-        (if (is-working-day? next-date calendar)
+        (if (is-working-day? next-date cal)
             next-date
-            (add-one-working-day next-date calendar)))))
+            (add-one-working-day next-date cal)))))
 
   ; Subtract one working day from a date
   (subtract-one-working-day
-    (lambda (date-str calendar)
+    (lambda (date-str cal)
       (let ((prev-date (subtract-one-day date-str)))
-        (if (is-working-day? prev-date calendar)
+        (if (is-working-day? prev-date cal)
             prev-date
-            (subtract-one-working-day prev-date calendar)))))
+            (subtract-one-working-day prev-date cal)))))
 
   ; Add N working days to a date (can be negative)
   (add-working-days
-    (lambda (date-str days calendar)
+    (lambda (date-str days cal)
       (if (integer=? days 0)
           date-str
           (if (integer>? days 0)
-              (add-working-days (add-one-working-day date-str calendar) (integer- days 1) calendar)
-              (add-working-days (subtract-one-working-day date-str calendar) (integer+ days 1) calendar)))))
+              (add-working-days (add-one-working-day date-str cal) (integer- days 1) cal)
+              (add-working-days (subtract-one-working-day date-str cal) (integer+ days 1) cal)))))
 
   ; ============================================================================
   ; DURATION CALCULATIONS
@@ -200,16 +201,16 @@
 
   ; Count working days between two dates (inclusive of start, exclusive of end)
   (working-days-between
-    (lambda (start-date end-date calendar)
+    (lambda (start-date end-date cal)
       (letrec ((count-helper
-                 (lambda (current-date end-date calendar count)
+                 (lambda (current-date end-date cal count)
                    (if (string=? current-date end-date)
                        count
                        (let ((next-date (add-one-day current-date))
-                             (is-working (is-working-day? current-date calendar)))
-                         (count-helper next-date end-date calendar
+                             (is-working (is-working-day? current-date cal)))
+                         (count-helper next-date end-date cal
                                        (if is-working (integer+ count 1) count)))))))
-        (count-helper start-date end-date calendar 0))))
+        (count-helper start-date end-date cal 0))))
 
   ; Count calendar days between two dates (inclusive of start, exclusive of end)
   (calendar-days-between
@@ -271,26 +272,27 @@
 
   ; Calculate end date from start date and duration
   (calculate-end-date
-    (lambda (start-date duration-days calendar)
+    (lambda (start-date duration-days cal)
       (if (integer=? duration-days 0)
           start-date
-          (add-working-days start-date duration-days calendar))))
+          (add-working-days start-date duration-days cal))))
 
   ; Calculate start date from end date and duration
   (calculate-start-date
-    (lambda (end-date duration-days calendar)
+    (lambda (end-date duration-days cal)
       (if (integer=? duration-days 0)
           end-date
-          (add-working-days end-date (integer-neg duration-days) calendar))))
+          (add-working-days end-date (integer-neg duration-days) cal))))
 
   ; Calculate duration from start and end dates
   (calculate-duration
-    (lambda (start-date end-date calendar)
-      (working-days-between start-date end-date calendar)))
+    (lambda (start-date end-date cal)
+      (working-days-between start-date end-date cal)))
 )
 
 ; Return dict of all calendar functions
 (dict
+  (list "calendar" calendar)
   (list "parse-date" parse-date)
   (list "format-date" format-date)
   (list "day-of-week" day-of-week)

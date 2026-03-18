@@ -107,7 +107,8 @@ def main():
     
     # Create simple project
     project = create_simple_project()
-    project_expr = bridge.python_to_menai(project)
+    preamble = MenaiBridge.struct_preamble()
+    project_expr = bridge.python_to_menai_project(project)
     
     print("\nProject structure:")
     print(f"  Start date: {project['project-start']}")
@@ -120,11 +121,11 @@ def main():
     print_section("TEST 1: Forward Pass")
     
     result = menai.evaluate(f'''
-        (let* ((scheduling (import "tools/planner/scheduling"))
-              (forward-pass (dict-get scheduling "forward-pass"))
-              (project {project_expr}))
-          (forward-pass project))
-    ''')
+{preamble}
+  (let* ((scheduling  (import "tools/planner/scheduling"))
+         (forward-pass (dict-get scheduling "forward-pass"))
+         (project      {project_expr}))
+    (forward-pass project)))''')
     
     tasks = result.get('tasks', [])
     print(f"\n  Scheduled {len(tasks)} tasks:")
@@ -172,11 +173,11 @@ def main():
     print_section("TEST 2: Full CPM Analysis")
     
     result = menai.evaluate(f'''
-        (let* ((scheduling (import "tools/planner/scheduling"))
-              (schedule-project (dict-get scheduling "schedule-project"))
-              (project {project_expr}))
-          (schedule-project project))
-    ''')
+{preamble}
+  (let* ((scheduling      (import "tools/planner/scheduling"))
+         (schedule-project (dict-get scheduling "schedule-project"))
+         (project          {project_expr}))
+    (schedule-project project)))''')
     
     tasks = result.get('tasks', [])
     critical_path = result.get('critical-path', [])
@@ -217,17 +218,17 @@ def main():
     project_ss['dependencies'][0]['type'] = 'start-to-start'
     project_ss['dependencies'][0]['lag-days'] = 2
     
-    project_ss_expr = bridge.python_to_menai(project_ss)
+    project_ss_expr = bridge.python_to_menai_project(project_ss)
     
     print("\n  Modified: T1 --[SS, lag=2]--> T2")
     print("  T2 should start 2 days after T1 starts")
     
     result = menai.evaluate(f'''
-        (let* ((scheduling (import "tools/planner/scheduling"))
-              (forward-pass (dict-get scheduling "forward-pass"))
-              (project {project_ss_expr}))
-          (forward-pass project))
-    ''')
+{preamble}
+  (let* ((scheduling  (import "tools/planner/scheduling"))
+         (forward-pass (dict-get scheduling "forward-pass"))
+         (project      {project_ss_expr}))
+    (forward-pass project)))''')
     
     tasks = result.get('tasks', [])
     if len(tasks) >= 2:

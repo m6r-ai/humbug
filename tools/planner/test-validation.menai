@@ -2,8 +2,14 @@
 ; Tests for the validation module, mirroring test_validation_simple.py
 
 (let* (
-  (validation     (import "tools/planner/validation"))
-  (get-predecessors    (dict-get validation "get-predecessors"))
+  (calendar-mod (import "tools/planner/calendar"))
+  (task-mod     (import "tools/planner/task"))
+  (dep-mod      (import "tools/planner/dependency"))
+  (validation   (import "tools/planner/validation"))
+  (calendar     (dict-get calendar-mod "calendar"))
+  (task         (dict-get task-mod "task"))
+  (dependency   (dict-get dep-mod "dependency"))
+  (get-predecessors    (dict-get dep-mod "get-predecessors"))
   (detect-cycles       (dict-get validation "detect-cycles"))
   (find-orphaned-tasks (dict-get validation "find-orphaned-tasks"))
 
@@ -12,133 +18,72 @@
   ; --------------------------------------------------------------------------
 
   (cal-standard
-    (dict
-      (list "id"           "standard-5day")
-      (list "name"         "Standard Work Week")
-      (list "type"         "5-day")
-      (list "working-days" (set "mon" "tue" "wed" "thu" "fri"))
-      (list "holidays"     (set "2025-12-25" "2025-12-26" "2026-01-01"))))
+    (calendar "standard-5day" "Standard Work Week" "5-day"
+              (set "mon" "tue" "wed" "thu" "fri")
+              (set "2025-12-25" "2025-12-26" "2026-01-01")))
 
   (cal-deploy
-    (dict
-      (list "id"           "deployment-7day")
-      (list "name"         "Deployment Calendar (24/7)")
-      (list "type"         "7-day")
-      (list "working-days" (set "mon" "tue" "wed" "thu" "fri" "sat" "sun"))
-      (list "holidays"     (set))))
+    (calendar "deployment-7day" "Deployment Calendar (24/7)" "7-day"
+              (set "mon" "tue" "wed" "thu" "fri" "sat" "sun")
+              (set)))
 
   (cal-vendor
-    (dict
-      (list "id"           "vendor-calendar")
-      (list "name"         "Vendor ACME Calendar")
-      (list "type"         "5-day")
-      (list "working-days" (set "mon" "tue" "wed" "thu" "fri"))
-      (list "holidays"     (set "2025-12-25" "2025-12-26" "2026-01-01" "2026-07-04"))))
+    (calendar "vendor-calendar" "Vendor ACME Calendar" "5-day"
+              (set "mon" "tue" "wed" "thu" "fri")
+              (set "2025-12-25" "2025-12-26" "2026-01-01" "2026-07-04")))
 
   (make-task-5day
     (lambda (id name duration status progress)
-      (dict
-        (list "id"            id)
-        (list "name"          name)
-        (list "duration-days" duration)
-        (list "calendar-id"   "standard-5day")
-        (list "schedule-mode" "duration-based")
-        (list "start-date"    #f)
-        (list "end-date"      #f)
-        (list "status"        status)
-        (list "progress"      progress))))
+      (task id name duration "standard-5day" "duration-based" #f #f status progress
+            #f #f #f #f #f)))
 
   (make-task-7day
     (lambda (id name duration status progress)
-      (dict
-        (list "id"            id)
-        (list "name"          name)
-        (list "duration-days" duration)
-        (list "calendar-id"   "deployment-7day")
-        (list "schedule-mode" "duration-based")
-        (list "start-date"    #f)
-        (list "end-date"      #f)
-        (list "status"        status)
-        (list "progress"      progress))))
+      (task id name duration "deployment-7day" "duration-based" #f #f status progress
+            #f #f #f #f #f)))
 
   (make-task-vendor
     (lambda (id name duration)
-      (dict
-        (list "id"            id)
-        (list "name"          name)
-        (list "duration-days" duration)
-        (list "calendar-id"   "vendor-calendar")
-        (list "schedule-mode" "duration-based")
-        (list "start-date"    #f)
-        (list "end-date"      #f)
-        (list "status"        "not-started")
-        (list "progress"      0.0))))
+      (task id name duration "vendor-calendar" "duration-based" #f #f "not-started" 0.0
+            #f #f #f #f #f)))
 
   (example-tasks
     (list
       ; Design phase
-      (dict
-        (list "id"            "T001")
-        (list "name"          "System Architecture Design")
-        (list "duration-days" 10)
-        (list "calendar-id"   "standard-5day")
-        (list "schedule-mode" "duration-based")
-        (list "start-date"    "2025-02-01")
-        (list "end-date"      #f)
-        (list "status"        "complete")
-        (list "progress"      1.0))
-      (dict
-        (list "id"            "T002")
-        (list "name"          "API Design and Specification")
-        (list "duration-days" 5)
-        (list "calendar-id"   "standard-5day")
-        (list "schedule-mode" "duration-based")
-        (list "start-date"    "2025-02-08")
-        (list "end-date"      #f)
-        (list "status"        "complete")
-        (list "progress"      1.0))
-      (dict
-        (list "id"            "T003")
-        (list "name"          "Database Schema Design")
-        (list "duration-days" 5)
-        (list "calendar-id"   "standard-5day")
-        (list "schedule-mode" "duration-based")
-        (list "start-date"    "2025-02-08")
-        (list "end-date"      #f)
-        (list "status"        "complete")
-        (list "progress"      1.0))
+      (task "T001" "System Architecture Design"    10 "standard-5day" "duration-based"
+            "2025-02-01" #f "complete" 1.0 #f #f #f #f #f)
+      (task "T002" "API Design and Specification"   5 "standard-5day" "duration-based"
+            "2025-02-08" #f "complete" 1.0 #f #f #f #f #f)
+      (task "T003" "Database Schema Design"         5 "standard-5day" "duration-based"
+            "2025-02-08" #f "complete" 1.0 #f #f #f #f #f)
       ; Backend development
-      (make-task-5day "T004" "Backend API Implementation"     15 "in-progress" 0.4)
-      (make-task-5day "T005" "Database Implementation"        10 "in-progress" 0.3)
-      (make-task-5day "T006" "Authentication & Authorization"  8 "not-started" 0.0)
+      (make-task-5day "T004" "Backend API Implementation"      15 "in-progress" 0.4)
+      (make-task-5day "T005" "Database Implementation"         10 "in-progress" 0.3)
+      (make-task-5day "T006" "Authentication & Authorization"   8 "not-started"  0.0)
       ; Frontend
-      (make-task-5day "T007" "Frontend Framework Setup"        5 "not-started" 0.0)
+      (make-task-5day "T007" "Frontend Framework Setup"         5 "not-started"  0.0)
       ; External vendor
-      (make-task-vendor "T008" "Payment Gateway Integration (Vendor)"      15)
-      (make-task-vendor "T009" "Payment Gateway API Documentation (Vendor)" 3)
-      (make-task-5day   "T010" "Payment Integration Testing"               5 "not-started" 0.0)
+      (make-task-vendor "T008" "Payment Gateway Integration (Vendor)"       15)
+      (make-task-vendor "T009" "Payment Gateway API Documentation (Vendor)"  3)
+      (make-task-5day   "T010" "Payment Integration Testing"                 5 "not-started" 0.0)
       ; Infrastructure
-      (make-task-5day "T011" "Cloud Infrastructure Setup"   8 "not-started" 0.0)
-      (make-task-5day "T012" "CI/CD Pipeline Setup"         6 "not-started" 0.0)
-      (make-task-5day "T013" "Monitoring and Logging Setup" 4 "not-started" 0.0)
+      (make-task-5day "T011" "Cloud Infrastructure Setup"    8 "not-started" 0.0)
+      (make-task-5day "T012" "CI/CD Pipeline Setup"          6 "not-started" 0.0)
+      (make-task-5day "T013" "Monitoring and Logging Setup"  4 "not-started" 0.0)
       ; External cloud vendor
-      (make-task-7day "T014" "CDN Configuration (Vendor)"   3 "not-started" 0.0)
+      (make-task-7day "T014" "CDN Configuration (Vendor)"    3 "not-started" 0.0)
       ; Testing
       (make-task-5day "T015" "Integration Testing"  10 "not-started" 0.0)
       (make-task-5day "T016" "Performance Testing"   7 "not-started" 0.0)
       (make-task-5day "T017" "Security Testing"      5 "not-started" 0.0)
       ; Deployment
-      (make-task-7day "T018" "Staging Deployment"          2 "not-started" 0.0)
-      (make-task-7day "T019" "Production Deployment"       1 "not-started" 0.0)
-      (make-task-7day "T020" "Post-Deployment Monitoring"  2 "not-started" 0.0)))
+      (make-task-7day "T018" "Staging Deployment"         2 "not-started" 0.0)
+      (make-task-7day "T019" "Production Deployment"      1 "not-started" 0.0)
+      (make-task-7day "T020" "Post-Deployment Monitoring" 2 "not-started" 0.0)))
 
   (make-dep
     (lambda (from to type lag)
-      (dict
-        (list "from-task" from)
-        (list "to-task"   to)
-        (list "type"      type)
-        (list "lag-days"  lag))))
+      (dependency from to type lag)))
 
   (example-deps
     (list
@@ -180,7 +125,6 @@
   ; TEST 1: Get predecessors of T004
   ; ============================================================================
   (t1-preds (get-predecessors "T004" example-deps))
-  ; T004 has one predecessor: T002 (finish-to-start)
   (t1-ok    (integer=? (list-length t1-preds) 1))
 
   ; ============================================================================
@@ -194,9 +138,9 @@
   ; ============================================================================
   (bad-tasks
     (list
-      (dict (list "id" "T001") (list "name" "Task 1"))
-      (dict (list "id" "T002") (list "name" "Task 2"))
-      (dict (list "id" "T003") (list "name" "Task 3"))))
+      (task "T001" "Task 1" 1 "cal1" "duration-based" #f #f "not-started" 0.0 #f #f #f #f #f)
+      (task "T002" "Task 2" 1 "cal1" "duration-based" #f #f "not-started" 0.0 #f #f #f #f #f)
+      (task "T003" "Task 3" 1 "cal1" "duration-based" #f #f "not-started" 0.0 #f #f #f #f #f)))
 
   (bad-deps
     (list
@@ -212,13 +156,12 @@
   ; ============================================================================
   (orphan-tasks
     (list
-      (dict (list "id" "T001") (list "name" "Task 1"))
-      (dict (list "id" "T002") (list "name" "Task 2"))
-      (dict (list "id" "T003") (list "name" "Orphan Task"))))
+      (task "T001" "Task 1" 1 "cal1" "duration-based" #f #f "not-started" 0.0 #f #f #f #f #f)
+      (task "T002" "Task 2" 1 "cal1" "duration-based" #f #f "not-started" 0.0 #f #f #f #f #f)
+      (task "T003" "Orphan" 1 "cal1" "duration-based" #f #f "not-started" 0.0 #f #f #f #f #f)))
 
   (orphan-deps
-    (list
-      (make-dep "T001" "T002" "finish-to-start" 0)))
+    (list (make-dep "T001" "T002" "finish-to-start" 0)))
 
   (t4-orphans (find-orphaned-tasks orphan-tasks orphan-deps))
   (t4-ok      (integer>? (list-length t4-orphans) 0))
