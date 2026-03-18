@@ -27,6 +27,7 @@ class MindspaceView(QWidget):
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
     file_opened_in_preview = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in preview
+    new_conversation_requested = Signal(str)  # Emits target folder path when user requests new conversation in folder
     settings_requested = Signal()  # Emits when settings button is clicked
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -126,6 +127,7 @@ class MindspaceView(QWidget):
         self._conversations_view.file_moved.connect(self.file_moved.emit)
         self._conversations_view.file_edited.connect(self.file_edited.emit)
         self._conversations_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
+        self._conversations_view.new_conversation_requested.connect(self.new_conversation_requested.emit)
 
         # Connect preview view signals - preview view clicks go to preview
         self._preview_view.file_clicked.connect(self.file_clicked.emit)

@@ -33,6 +33,7 @@ class MindspaceConversationsView(QWidget):
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
     file_opened_in_preview = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in preview
+    new_conversation_requested = Signal(str)  # Emits target folder path when user requests new conversation in folder
     toggled = Signal(bool)  # Emitted when expand/collapse state changes (expanded state)
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -727,6 +728,10 @@ class MindspaceConversationsView(QWidget):
         strings = self._language_manager.strings()
 
         # Conversations root actions
+        new_conversation_action = menu.addAction(strings.new_conversation)
+        new_conversation_action.triggered.connect(
+            lambda: self.new_conversation_requested.emit(cast(str, self._conversations_path))
+        )
         new_folder_action = menu.addAction(strings.new_folder)
         new_folder_action.triggered.connect(
             lambda: self._start_new_folder_creation(cast(str, self._conversations_path))
@@ -805,6 +810,8 @@ class MindspaceConversationsView(QWidget):
                 preview_view_action = menu.addAction(strings.preview)
                 preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
                 duplicate_action = None
+                new_conversation_action = menu.addAction(strings.new_conversation)
+                new_conversation_action.triggered.connect(lambda checked=False, p=path: self.new_conversation_requested.emit(p))
                 new_folder_action = menu.addAction(strings.new_folder)
                 new_folder_action.triggered.connect(lambda: self._start_new_folder_creation(path))
                 rename_action = menu.addAction(strings.rename)

@@ -1,5 +1,6 @@
 """File tree view implementation for mindspace files."""
 
+import json
 import os
 from typing import cast
 
@@ -38,6 +39,41 @@ class MindspaceFilesModel(QSortFilterProxyModel):
             return base_flags | Qt.ItemFlag.ItemIsEditable
 
         return base_flags
+
+    def _get_first_user_message(self, file_path: str) -> str | None:
+        """Read the first user message from a .conv file to use as display title."""
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            messages = data.get('conversation', data) if isinstance(data, dict) else data
+            for message in messages:
+                if isinstance(message, dict) and message.get('type') == 'user_message':
+                    content = message.get('content', '').strip()
+                    if content:
+                        title = content.splitlines()[0][:50].strip()
+                        if title:
+                            return title
+        except (OSError, json.JSONDecodeError, KeyError, TypeError):
+            pass
+        return None
+
+    def data(
+        self,
+        index: QModelIndex | QPersistentModelIndex,
+        role: int = Qt.ItemDataRole.DisplayRole
+    ) -> object:
+        """Override data to show derived titles for .conv files."""
+        if role == Qt.ItemDataRole.DisplayRole and index.isValid():
+            source_index = self.mapToSource(index)
+            source_model = cast(QFileSystemModel, self.sourceModel())
+            file_path = source_model.filePath(source_index)
+            if file_path.endswith('.conv') and os.path.isfile(file_path):
+                title = self._get_first_user_message(file_path)
+                if title:
+                    return title
+                # Fall back to filename without extension
+                return os.path.splitext(os.path.basename(file_path))[0]
+        return super().data(index, role)
 
     def filterAcceptsRow(self, source_row: int, source_parent: QModelIndex | QPersistentModelIndex) -> bool:
         """Filter out .humbug directory."""

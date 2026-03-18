@@ -97,7 +97,7 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
 
                     # Check if this is a conversation file and hide its extension
                     if self._is_conversation_file_for_display(file_path):
-                        return self._get_display_name(filename)
+                        return self._get_display_name(filename, file_path)
 
         # For all other roles (including EditRole), return the original data
         return super().data(index, role)
@@ -121,20 +121,60 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
         _, ext = os.path.splitext(file_path.lower())
         return ext in ['.conv', '.json']
 
-    def _get_display_name(self, filename: str) -> str:
+    def _get_first_user_message(self, file_path: str) -> str | None:
+        """
+        Extract the first user message from a conversation file as a title.
+
+        Args:
+            file_path: Full path to the conversation file
+
+        Returns:
+            First line of the first user message, or None if not found
+        """
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            messages = []
+            if isinstance(data, dict) and 'conversation' in data:
+                messages = data['conversation']
+            elif isinstance(data, list):
+                messages = data
+
+            for message in messages:
+                if isinstance(message, dict) and message.get('type') == 'user_message':
+                    content = message.get('content', '').strip()
+                    if content:
+                        title = content.splitlines()[0][:50].strip()
+                        if title:
+                            return title
+
+        except (OSError, json.JSONDecodeError, KeyError):
+            pass
+
+        return None
+
+    def _get_display_name(self, filename: str, file_path: str = "") -> str:
         """
         Get the display name for a conversation file (without extension).
 
         Args:
             filename: Original filename
+            file_path: Full path to the file (used to derive title from content)
 
         Returns:
-            Display name with conversation file extension removed
+            Display name: first user message if available, else filename without extension
         """
         if not filename:
             return filename
 
-        # Remove the final .conv or .json extension
+        # Try to get a meaningful title from conversation content
+        if file_path:
+            title = self._get_first_user_message(file_path)
+            if title:
+                return title
+
+        # Fall back to filename without extension
         if filename.lower().endswith('.conv'):
             return filename[:-5]  # Remove '.conv'
 

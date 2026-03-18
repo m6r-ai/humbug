@@ -1439,7 +1439,8 @@ class ColumnManager(QWidget):
         history: AIConversationHistory | None = None,
         model: str | None = None,
         temperature: float | None = None,
-        reasoning: AIReasoningCapability | None = None
+        reasoning: AIReasoningCapability | None = None,
+        folder: str | None = None
     ) -> ConversationTab:
         """Create a new conversation tab and return its ID."""
         # Generate timestamp for ID
@@ -1447,7 +1448,12 @@ class ColumnManager(QWidget):
         conversation_title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
         prefix = "dAI-" if child else ""
         conversation_title = f"{prefix}{conversation_title}"
-        filename = os.path.join("conversations", f"{conversation_title}.conv")
+        if folder is not None:
+            # folder is an absolute path; compute path relative to mindspace
+            relative_folder = self._mindspace_manager.get_relative_path(folder)
+            filename = os.path.join(relative_folder, f"{conversation_title}.conv")
+        else:
+            filename = os.path.join("conversations", f"{conversation_title}.conv")
         full_path = self._mindspace_manager.get_absolute_path(filename)
 
         try:
@@ -1459,6 +1465,9 @@ class ColumnManager(QWidget):
 
         conversation_tab.fork_requested.connect(self._on_conversation_fork_requested)
         conversation_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
+        conversation_tab.conversation_completed.connect(
+            lambda _result, tab=conversation_tab: self._update_conversation_tab_title(tab)
+        )
 
         # Set model based on mindspace settings
         settings = cast(MindspaceSettings, self._mindspace_manager.settings())
@@ -1503,9 +1512,20 @@ class ColumnManager(QWidget):
             conversation_tab = ConversationTab("", abs_path, self)
             conversation_tab.fork_requested.connect(self._on_conversation_fork_requested)
             conversation_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
+            conversation_tab.conversation_completed.connect(
+                lambda _result, tab=conversation_tab: self._update_conversation_tab_title(tab)
+            )
             conversation_title = os.path.splitext(os.path.basename(abs_path))[0]
             conversation_tab.set_ephemeral(ephemeral)
             self._add_tab(conversation_tab, conversation_title)
+            # If the conversation already has messages, update the title immediately
+            derived = self._derive_conversation_title(conversation_tab)
+            if derived:
+                tab_id = conversation_tab.tab_id()
+                label = self._tab_labels.get(tab_id)
+                if label:
+                    label.set_text(derived)
+                    self._update_tab_bar_for_label_change(conversation_tab)
             return conversation_tab
 
         except ConversationError as e:
@@ -1519,6 +1539,43 @@ class ColumnManager(QWidget):
             return False
 
         return True
+
+    def _derive_conversation_title(self, conversation_tab: ConversationTab) -> str | None:
+        """Derive a short title from the first user message in a conversation."""
+        import json
+        try:
+            with open(conversation_tab.path(), 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            messages = []
+            if isinstance(data, dict) and 'conversation' in data:
+                messages = data['conversation']
+            elif isinstance(data, list):
+                messages = data
+
+            for message in messages:
+                if isinstance(message, dict) and message.get('type') == 'user_message':
+                    content = message.get('content', '').strip()
+                    if content:
+                        title = content.splitlines()[0][:50].strip()
+                        if title:
+                            return title
+
+        except (OSError, json.JSONDecodeError, KeyError):
+            pass
+
+        return None
+
+    def _update_conversation_tab_title(self, conversation_tab: ConversationTab) -> None:
+        """Update the tab label with a title derived from the first user message."""
+        title = self._derive_conversation_title(conversation_tab)
+        if not title:
+            return
+        tab_id = conversation_tab.tab_id()
+        label = self._tab_labels.get(tab_id)
+        if label:
+            label.set_text(title)
+            self._update_tab_bar_for_label_change(conversation_tab)
 
     def _on_conversation_fork_requested(self) -> None:
         """Handle the fork conversation request signal."""
