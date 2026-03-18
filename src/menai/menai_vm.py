@@ -638,12 +638,28 @@ class MenaiVM:
         regs = self.regs
         func = regs[base + instr.src0]
         if type(func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(
-                message="Cannot call non-function value",
-                received=f"Attempted to call: {func.describe()} ({func.type_name()})",
-                expected="Function (lambda or builtin)",
-                suggestion="Only functions can be called"
-            )
+            if type(func) is not MenaiStructType:  # pylint: disable=unidiomatic-typecheck
+                raise MenaiEvalError(
+                    message="Cannot call non-function value",
+                    received=f"Attempted to call: {func.describe()} ({func.type_name()})",
+                    expected="Function (lambda or builtin)",
+                    suggestion="Only functions can be called"
+                )
+
+            n_fields = len(func.field_names)
+            arity = instr.src1
+            if arity != n_fields:
+                raise MenaiEvalError(
+                    message=f"Struct constructor '{func.name}' called with wrong number of arguments",
+                    received=f"Got {arity} argument{'s' if arity != 1 else ''}",
+                    expected=f"Exactly {n_fields} argument{'s' if n_fields != 1 else ''} for fields: {list(func.field_names)}",
+                    example=f"({func.name} {' '.join(func.field_names)})"
+                )
+
+            callee_base = base + frame.code.local_count
+            field_values = tuple(regs[callee_base + i] for i in range(n_fields))
+            regs[base + instr.dest] = MenaiStruct(struct_type=func, fields=field_values)
+            return None
 
         code = func.bytecode
         new_depth = self.frame_depth + 1
@@ -696,12 +712,34 @@ class MenaiVM:
         regs = self.regs
         func = regs[base + instr.src0]
         if type(func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(
-                message="Cannot call non-function value",
-                received=f"Attempted to call: {func.describe()} ({func.type_name()})",
-                expected="Function (lambda or builtin)",
-                suggestion="Only functions can be called"
-            )
+            if type(func) is not MenaiStructType:  # pylint: disable=unidiomatic-typecheck
+                raise MenaiEvalError(
+                    message="Cannot call non-function value",
+                    received=f"Attempted to call: {func.describe()} ({func.type_name()})",
+                    expected="Function (lambda or builtin)",
+                    suggestion="Only functions can be called"
+                )
+
+            n_fields = len(func.field_names)
+            n_args = instr.src1
+            if n_args != n_fields:
+                raise MenaiEvalError(
+                    message=f"Struct constructor '{func.name}' called with wrong number of arguments",
+                    received=f"Got {n_args} argument{'s' if n_args != 1 else ''}",
+                    expected=f"Exactly {n_fields} argument{'s' if n_fields != 1 else ''} for fields: {list(func.field_names)}",
+                    example=f"({func.name} {' '.join(func.field_names)})"
+                )
+
+            local_count = frame.code.local_count
+            field_values = tuple(regs[base + local_count + i] for i in range(n_fields))
+            result = MenaiStruct(struct_type=func, fields=field_values)
+            self.frame_depth -= 1
+            caller = self._frames[self.frame_depth]
+            if caller.is_sentinel:
+                return result
+
+            regs[caller.base + frame.return_dest] = result
+            return _FRAME_CHANGE
 
         code = func.bytecode
         local_count = frame.code.local_count
@@ -751,11 +789,33 @@ class MenaiVM:
         regs = self.regs
         func = regs[base + instr.src0]
         if type(func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(
-                message="apply: first argument must be a function",
-                received=f"Got: {func.describe()} ({func.type_name()})",
-                suggestion="Use (apply f args) where f is a lambda or builtin"
-            )
+            if type(func) is not MenaiStructType:  # pylint: disable=unidiomatic-typecheck
+                raise MenaiEvalError(
+                    message="apply: first argument must be a function",
+                    received=f"Got: {func.describe()} ({func.type_name()})",
+                    suggestion="Use (apply f args) where f is a lambda or builtin"
+                )
+
+            arg_list = regs[base + instr.src1]
+            if type(arg_list) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
+                raise MenaiEvalError(
+                    message="apply: second argument must be a list",
+                    received=f"Got: {arg_list.describe()} ({arg_list.type_name()})",
+                    suggestion="Use (apply f (list arg1 arg2 ...))"
+                )
+
+            n_fields = len(func.field_names)
+            arity = len(arg_list.elements)
+            if arity != n_fields:
+                raise MenaiEvalError(
+                    message=f"Struct constructor '{func.name}' called with wrong number of arguments",
+                    received=f"Got {arity} argument{'s' if arity != 1 else ''}",
+                    expected=f"Exactly {n_fields} argument{'s' if n_fields != 1 else ''} for fields: {list(func.field_names)}",
+                    example=f"({func.name} {' '.join(func.field_names)})"
+                )
+
+            regs[base + instr.dest] = MenaiStruct(struct_type=func, fields=tuple(arg_list.elements))
+            return None
 
         arg_list = regs[base + instr.src1]
         if type(arg_list) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
@@ -823,11 +883,39 @@ class MenaiVM:
         regs = self.regs
         func = regs[base + instr.src0]
         if type(func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(
-                message="apply: first argument must be a function",
-                received=f"Got: {func.describe()} ({func.type_name()})",
-                suggestion="Use (apply f args) where f is a lambda or builtin"
-            )
+            if type(func) is not MenaiStructType:  # pylint: disable=unidiomatic-typecheck
+                raise MenaiEvalError(
+                    message="apply: first argument must be a function",
+                    received=f"Got: {func.describe()} ({func.type_name()})",
+                    suggestion="Use (apply f args) where f is a lambda or builtin"
+                )
+
+            arg_list = regs[base + instr.src1]
+            if type(arg_list) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
+                raise MenaiEvalError(
+                    message="apply: second argument must be a list",
+                    received=f"Got: {arg_list.describe()} ({arg_list.type_name()})",
+                    suggestion="Use (apply f (list arg1 arg2 ...))"
+                )
+
+            n_fields = len(func.field_names)
+            arity = len(arg_list.elements)
+            if arity != n_fields:
+                raise MenaiEvalError(
+                    message=f"Struct constructor '{func.name}' called with wrong number of arguments",
+                    received=f"Got {arity} argument{'s' if arity != 1 else ''}",
+                    expected=f"Exactly {n_fields} argument{'s' if n_fields != 1 else ''} for fields: {list(func.field_names)}",
+                    example=f"({func.name} {' '.join(func.field_names)})"
+                )
+
+            result = MenaiStruct(struct_type=func, fields=tuple(arg_list.elements))
+            self.frame_depth -= 1
+            caller = self._frames[self.frame_depth]
+            if caller.is_sentinel:
+                return result
+
+            regs[caller.base + frame.return_dest] = result
+            return _FRAME_CHANGE
 
         arg_list = regs[base + instr.src1]
         if type(arg_list) is not MenaiList:  # pylint: disable=unidiomatic-typecheck

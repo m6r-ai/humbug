@@ -1,0 +1,63 @@
+; task.menai
+; Task struct definition and single-task operations
+
+(letrec (
+  (task (struct (id name duration-days calendar-id schedule-mode
+                 start-date end-date status progress
+                 earliest-start earliest-finish
+                 latest-start latest-finish slack-days)))
+
+  ; Get the calendar for a task from a list of calendars
+  (get-task-calendar
+    (lambda (t calendars)
+      (find-list (lambda (c) (string=? (struct-get c 'id) (struct-get t 'calendar-id)))
+                 calendars)))
+
+  ; Update a task with computed earliest dates
+  (update-earliest-dates
+    (lambda (t earliest-start earliest-finish)
+      (struct-set (struct-set t 'earliest-start earliest-start)
+                  'earliest-finish earliest-finish)))
+
+  ; Update a task with computed latest dates
+  (update-latest-dates
+    (lambda (t latest-start latest-finish)
+      (struct-set (struct-set t 'latest-finish latest-finish)
+                  'latest-start latest-start)))
+
+  ; Update a task with computed slack
+  (update-slack
+    (lambda (t slack-days)
+      (struct-set t 'slack-days slack-days)))
+
+  ; Validate a single task, returning a dict with "task-id", "valid", "errors", "warnings"
+  (validate-task
+    (lambda (t)
+      (let* ((errors (list))
+             (mode   (struct-get t 'schedule-mode))
+             (errors (match mode
+                       ("fixed-dates"
+                         (if (and (string? (struct-get t 'start-date))
+                                  (string? (struct-get t 'end-date)))
+                             errors
+                             (list-append errors "fixed-dates mode requires start-date and end-date")))
+                       ("duration-based"
+                         (if (integer? (struct-get t 'duration-days))
+                             errors
+                             (list-append errors "duration-based mode requires duration-days")))
+                       ("unscheduled" errors)
+                       (_ (list-append errors (string-concat "Unknown schedule-mode: " mode))))))
+        (dict
+          (list "task-id"   (struct-get t 'id))
+          (list "valid"     (integer=? (list-length errors) 0))
+          (list "errors"    errors)
+          (list "warnings"  (list))))))
+)
+
+(dict
+  (list "task"                  task)
+  (list "get-task-calendar"     get-task-calendar)
+  (list "update-earliest-dates" update-earliest-dates)
+  (list "update-latest-dates"   update-latest-dates)
+  (list "update-slack"          update-slack)
+  (list "validate-task"         validate-task)))

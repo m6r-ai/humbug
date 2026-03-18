@@ -3,33 +3,36 @@
 
 (let* (
   (calendar-mod (import "tools/planner/calendar"))
+  (calendar     (dict-get calendar-mod "calendar"))
 
-  (parse-date      (dict-get calendar-mod "parse-date"))
-  (format-date     (dict-get calendar-mod "format-date"))
-  (day-of-week     (dict-get calendar-mod "day-of-week"))
-  (day-name        (dict-get calendar-mod "day-name"))
-  (is-working-day? (dict-get calendar-mod "is-working-day?"))
-  (add-calendar-days   (dict-get calendar-mod "add-calendar-days"))
-  (add-working-days    (dict-get calendar-mod "add-working-days"))
+  (parse-date       (dict-get calendar-mod "parse-date"))
+  (format-date      (dict-get calendar-mod "format-date"))
+  (day-of-week      (dict-get calendar-mod "day-of-week"))
+  (day-name         (dict-get calendar-mod "day-name"))
+  (is-working-day?  (dict-get calendar-mod "is-working-day?"))
+  (add-calendar-days    (dict-get calendar-mod "add-calendar-days"))
+  (add-working-days     (dict-get calendar-mod "add-working-days"))
   (working-days-between (dict-get calendar-mod "working-days-between"))
-  (compare-dates       (dict-get calendar-mod "compare-dates"))
-  (calculate-end-date  (dict-get calendar-mod "calculate-end-date"))
+  (compare-dates        (dict-get calendar-mod "compare-dates"))
+  (calculate-end-date   (dict-get calendar-mod "calculate-end-date"))
   (calculate-start-date (dict-get calendar-mod "calculate-start-date"))
-  (calculate-duration  (dict-get calendar-mod "calculate-duration"))
+  (calculate-duration   (dict-get calendar-mod "calculate-duration"))
 
   (cal-5day
-    (dict
-      (list "id"           "test-5day")
-      (list "type"         "5-day")
-      (list "working-days" (set "mon" "tue" "wed" "thu" "fri"))
-      (list "holidays"     (set "2025-12-25" "2025-12-26" "2026-01-01"))))
+    (calendar
+      "test-5day"
+      "5-day calendar"
+      "5-day"
+      (set "mon" "tue" "wed" "thu" "fri")
+      (set "2025-12-25" "2025-12-26" "2026-01-01")))
 
   (cal-7day
-    (dict
-      (list "id"           "test-7day")
-      (list "type"         "7-day")
-      (list "working-days" (set "mon" "tue" "wed" "thu" "fri" "sat" "sun"))
-      (list "holidays"     (set))))
+    (calendar
+      "test-7day"
+      "7-day calendar"
+      "7-day"
+      (set "mon" "tue" "wed" "thu" "fri" "sat" "sun")
+      (set)))
 
   ; ============================================================================
   ; TEST 1: Date parsing and formatting
@@ -130,16 +133,16 @@
 )
 
 (dict
-  (list "test-1-parse-format"        t1-ok)
-  (list "test-2-day-of-week"         t2-ok)
-  (list "test-3-working-day"         t3-ok)
-  (list "test-4-add-calendar-days"   t4-ok)
-  (list "test-5-add-working-5day"    t5-ok)
-  (list "test-6-add-working-7day"    t6-ok)
+  (list "test-1-parse-format"         t1-ok)
+  (list "test-2-day-of-week"          t2-ok)
+  (list "test-3-working-day"          t3-ok)
+  (list "test-4-add-calendar-days"    t4-ok)
+  (list "test-5-add-working-5day"     t5-ok)
+  (list "test-6-add-working-7day"     t6-ok)
   (list "test-7-working-days-between" t7-ok)
-  (list "test-8-compare-dates"       t8-ok)
-  (list "test-9-end-date"            t9-ok)
-  (list "test-10-start-date"         t10-ok)
-  (list "test-11-duration"           t11-ok)
-  (list "all-passed"                 all-ok))
+  (list "test-8-compare-dates"        t8-ok)
+  (list "test-9-end-date"             t9-ok)
+  (list "test-10-start-date"          t10-ok)
+  (list "test-11-duration"            t11-ok)
+  (list "all-passed"                  all-ok))
 )

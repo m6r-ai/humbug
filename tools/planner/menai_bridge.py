@@ -16,6 +16,33 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from menai import Menai
 
 
+# Field lists for the planner struct types, in declaration order.
+# A Python dict is converted to a struct constructor call when its keys
+# exactly match one of these sets.
+_TASK_FIELDS = (
+    "id", "name", "duration-days", "calendar-id", "schedule-mode",
+    "start-date", "end-date", "status", "progress",
+    "earliest-start", "earliest-finish",
+    "latest-start", "latest-finish", "slack-days",
+)
+_TASK_KEYS = frozenset(_TASK_FIELDS)
+
+_DEPENDENCY_FIELDS = ("from-task", "to-task", "type", "lag-days")
+_DEPENDENCY_KEYS = frozenset(_DEPENDENCY_FIELDS)
+
+_CALENDAR_FIELDS = ("id", "name", "type", "working-days", "holidays")
+_CALENDAR_KEYS = frozenset(_CALENDAR_FIELDS)
+
+# Struct module imports needed to construct the types at runtime
+_STRUCT_IMPORTS = '''(let* (
+  (cal-mod  (import "tools/planner/calendar"))
+  (task-mod (import "tools/planner/task"))
+  (dep-mod  (import "tools/planner/dependency"))
+  (make-calendar   (dict-get cal-mod  "calendar"))
+  (make-task       (dict-get task-mod "task"))
+  (make-dependency (dict-get dep-mod  "dependency")))'''
+
+
 class MenaiBridge:
     """Bridge for converting between Python and Menai data structures."""
     
@@ -24,6 +51,52 @@ class MenaiBridge:
         Initialize Menai bridge.
         """
         self.menai = Menai()
+
+    @staticmethod
+    def struct_preamble() -> str:
+        """
+        Return a Menai let* preamble that imports and binds the planner struct
+        constructors.  Embed this at the start of any expression that needs to
+        construct task, dependency, or calendar structs.
+
+        Usage:
+            preamble = MenaiBridge.struct_preamble()
+            expr = f\"\"\"{preamble}
+              ... your bindings ...
+              body)\"\"\")
+        """
+        return _STRUCT_IMPORTS
+
+    def python_to_menai_task(self, value: dict) -> str:
+        """Convert a Python task dict to a Menai task struct constructor call."""
+        fields = [self.python_to_menai(value.get(f)) for f in _TASK_FIELDS]
+        return f'(make-task {" ".join(fields)})'
+
+    def python_to_menai_dependency(self, value: dict) -> str:
+        """Convert a Python dependency dict to a Menai dependency struct constructor call."""
+        fields = [self.python_to_menai(value[f]) for f in _DEPENDENCY_FIELDS]
+        return f'(make-dependency {" ".join(fields)})'
+
+    def python_to_menai_calendar(self, value: dict) -> str:
+        """Convert a Python calendar dict to a Menai calendar struct constructor call."""
+        fields = [self.python_to_menai(value[f]) for f in _CALENDAR_FIELDS]
+        return f'(make-calendar {" ".join(fields)})'
+
+    def python_to_menai_project(self, project: dict) -> str:
+        """
+        Convert a Python project dict to a Menai expression with tasks,
+        dependencies, and calendars as structs.  Must be used inside an
+        expression that has the struct_preamble bindings in scope.
+        """
+        tasks = f'(list {" ".join(self.python_to_menai_task(t) for t in project["tasks"])})'
+        deps  = f'(list {" ".join(self.python_to_menai_dependency(d) for d in project["dependencies"])})'
+        cals  = f'(list {" ".join(self.python_to_menai_calendar(c) for c in project.get("calendars", []))})'
+        other = {k: v for k, v in project.items() if k not in ("tasks", "dependencies", "calendars")}
+        other_pairs = " ".join(
+            f'(list {self.python_to_menai(k)} {self.python_to_menai(v)})'
+            for k, v in other.items()
+        )
+        return f'(dict (list "tasks" {tasks}) (list "dependencies" {deps}) (list "calendars" {cals}) {other_pairs})'
 
     def python_to_menai(self, value: Any) -> str:
         """
@@ -60,7 +133,8 @@ class MenaiBridge:
             return f"(set {' '.join(elements)})"
 
         elif isinstance(value, dict):
-            # Convert to Menai dict
+            # Convert to a generic Menai dict.
+            # Use python_to_menai_task/dependency/calendar for struct types.
             pairs = []
             for key, val in value.items():
                 key_expr = self.python_to_menai(key)

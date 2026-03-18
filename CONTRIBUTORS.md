@@ -14,4 +14,6 @@ Cameron McFarlane [Camium02](https://github.com/Camium02)
 
 Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Added scripts to generate a .exe setup wizard for Windows installation
-* Contributed to the resolution of usability issues
+* UI improvements.
+* Added New folder and new conversation option on right click.
+

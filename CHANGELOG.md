@@ -15,6 +15,7 @@ New features:
 - Added `set` operations to the Menai language.
 - Updated Claude 4.6 models to reflect the 1M token context windows now supported.
 - Added `struct` operations to the Menai language.
+- The UI for the input box is now slightly different, putting the buttons at the bottom of the box ro a better UX.
 
 Bug fixes:
 

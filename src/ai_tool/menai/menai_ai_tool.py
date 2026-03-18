@@ -362,21 +362,21 @@ Syntax: (operator arg1 arg2 ...)
 
 - Nominal typed record values — two struct types with the same fields are distinct types
 - Declaration: (struct (field1 field2 ...)) — valid as the RHS of a let, let*, or letrec binding
-- (let ((Point (struct (x y)))) ...) → binds Point to a struct-type value; the binding name becomes the type name
-- Construction: call the struct-type value directly with positional field values: (Point 1 2) → a Point instance
+- (let ((point (struct (x y)))) ...) → binds point to a struct-type value; the binding name becomes the type name
+- Construction: call the struct-type value directly with positional field values: (point 1 2) → a point instance
 - Type predicate (any struct): (struct? p) → #t for any struct instance
-- Type predicate (specific type): (struct-type? Point p) → #t if p is a Point instance specifically
+- Type predicate (specific type): (struct-type? point p) → #t if p is a point instance specifically
 - Field access: (struct-get p 'x) → value of field x; field name must be a symbol
-- Functional update (returns new struct — pure): (struct-set p 'x 10) → new Point with x=10, y unchanged
+- Functional update (returns new struct — pure): (struct-set p 'x 10) → new point with x=10, y unchanged
 - Equality: (struct=? p1 p2) → #t if same type tag and all fields equal; (struct!=? p1 p2) → negation
-- Introspection: (struct-type-name Point) → "Point" (takes a struct-type value, not an instance)
-- Introspection: (struct-fields Point) → ('x 'y) list of field name symbols (takes a struct-type value)
-- Introspection: (struct-type p) → returns the struct-type value (e.g. Point) for a given instance
-- Display format: (Point 1 2) — this is display-only; construction always uses (TypeName field1 field2 ...)
-- Pattern matching predicate form: (match p ((? (struct-type? Point) p) (struct-get p 'x)) (_ 0))
-- Pattern matching destructuring form: (match p ((Point x y) (integer+ x y)) (_ 0)) — compiler resolves field bindings at compile time
+- Introspection: (struct-type-name point) → "point" (takes a struct-type value, not an instance)
+- Introspection: (struct-fields point) → ('x 'y) list of field name symbols (takes a struct-type value)
+- Introspection: (struct-type p) → returns the struct-type value (e.g. point) for a given instance
+- Display format: (point 1 2) — this is display-only; construction always uses (TypeName field1 field2 ...)
+- Pattern matching predicate form: (match p ((? (struct-type? point) p) (struct-get p 'x)) (_ 0))
+- Pattern matching destructuring form: (match p ((point x y) (integer+ x y)) (_ 0)) — compiler resolves field bindings at compile time
 - Hashability: structs are hashable (usable as set members or dict keys) if all their fields are hashable scalars
-- Structs are nominal: (let ((Point (struct (x y))) (Vec (struct (x y)))) ...) — Point and Vec are distinct types even with identical fields
+- Structs are nominal: (let ((point (struct (x y))) (Vec (struct (x y)))) ...) — point and Vec are distinct types even with identical fields
 
 ## Symbol operations:
 

@@ -44,19 +44,19 @@ class ConversationInput(ConversationMessage):
         self._stop_button.setObjectName("_stop_button")
         self._stop_button.clicked.connect(self._on_stop_button_clicked)
         self._stop_button.hide()
-        self._header_layout.addWidget(self._stop_button)
+        self._banner_layout.addWidget(self._stop_button)
 
         # Create submit button
         self._submit_button = QToolButton(self)
         self._submit_button.setObjectName("_submit_button")
         self._submit_button.clicked.connect(self._on_submit_button_clicked)
-        self._header_layout.addWidget(self._submit_button)
+        self._banner_layout.addWidget(self._submit_button)
 
         # Create settings button
         self._settings_button = QToolButton(self)
         self._settings_button.setObjectName("_settings_button")
         self._settings_button.clicked.connect(self._on_settings_button_clicked)
-        self._header_layout.addWidget(self._settings_button)
+        self._banner_layout.addWidget(self._settings_button)
 
         # Connect text changes to update button state
         self._text_area.textChanged.connect(self._on_text_changed)
@@ -66,11 +66,11 @@ class ConversationInput(ConversationMessage):
     def set_model(self, model: str) -> None:
         """Set the model name for the input prompt."""
         self._current_model = model
-        self._update_header_text()
+        self._update_banner_text()
 
     def _on_language_changed(self) -> None:
         """Handle language change event."""
-        self._update_header_text()
+        self._update_banner_text()
 
         strings = self._language_manager.strings()
 
@@ -86,7 +86,7 @@ class ConversationInput(ConversationMessage):
     def set_streaming(self, streaming: bool) -> None:
         """Update the streaming state and header text."""
         self._is_streaming = streaming
-        self._update_header_text()
+        self._update_banner_text()
         self._update_button_states()
 
     def _get_submit_key_text(self) -> str:
@@ -120,7 +120,7 @@ class ConversationInput(ConversationMessage):
             self._stop_button.setIcon(QIcon(self._style_manager.scale_icon("stop", icon_base_size)))
             self._stop_button.setIconSize(icon_size)
 
-    def _update_header_text(self) -> None:
+    def _update_banner_text(self) -> None:
         """Update the header text based on current state."""
         strings = self._language_manager.strings()
         if self._is_streaming:
@@ -130,7 +130,7 @@ class ConversationInput(ConversationMessage):
         else:
             submit_key = self._get_submit_key_text()
             self._role_label.setText(strings.input_prompt.format(model=self._current_model, key=submit_key))
-            self.setProperty("message_source", "user")
+            self.setProperty("message_source", "user_input")
 
         self._role_label.style().unpolish(self._role_label)
         self._role_label.style().polish(self._role_label)
@@ -190,7 +190,7 @@ class ConversationInput(ConversationMessage):
     def cursor_rect(self) -> QRect:
         """Get the cursor rectangle from the input area."""
         text_cursor = self._text_area.cursorRect()
-        offset = self._header.height()
+        offset = self._banner.height()
         cursor = QRect(text_cursor.x(), offset + text_cursor.y(), text_cursor.width(), text_cursor.height())
         return cursor
 

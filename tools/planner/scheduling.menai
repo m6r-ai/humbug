@@ -1,424 +1,251 @@
 ; scheduling.menai
-; Critical Path Method (CPM) scheduling functions
-;
-; Full implementation with all dependency types (FS, SS, FF, SF) and lag times
-; Refactored to eliminate unnecessary nesting by using Menai's sequential let bindings
+; Critical Path Method (CPM) scheduling algorithm
 
-(let* (
-  ; Import modules
-  (calendar (import "tools/planner/calendar"))
-  (validation (import "tools/planner/validation"))
-  
-  ; Extract calendar functions
-  (add-working-days (dict-get calendar "add-working-days"))
-  (calculate-end-date (dict-get calendar "calculate-end-date"))
-  (calculate-start-date (dict-get calendar "calculate-start-date"))
-  (working-days-between (dict-get calendar "working-days-between"))
-  (date-before? (dict-get calendar "date-before?"))
-  (date-after? (dict-get calendar "date-after?"))
-  (compare-dates (dict-get calendar "compare-dates"))
-  
-  ; Extract validation functions
-  (get-predecessors (dict-get validation "get-predecessors"))
-  (get-successors (dict-get validation "get-successors"))
-  (task-exists? (dict-get validation "task-exists?"))
-)
+(letrec (
+  (calendar-mod (import "tools/planner/calendar"))
+  (task-mod     (import "tools/planner/task"))
+  (dep-mod      (import "tools/planner/dependency"))
 
-  (letrec (
-    ; ==========================================================================
-    ; HELPER FUNCTIONS
-    ; ==========================================================================
-    
-    ; Find a task by ID
-    (find-task
-      (lambda (task-id tasks)
-        (find-list (lambda (t) (string=? (dict-get t "id") task-id))
-                   tasks)))
-    
-    ; Get calendar for a task
-    (get-task-calendar
-      (lambda (task calendars)
-        (let ((calendar-id (dict-get task "calendar-id")))
-          (find-list (lambda (c) (string=? (dict-get c "id") calendar-id))
-                     calendars))))
-    
-    ; Get all dependencies where this task is the successor
-    (get-predecessor-dependencies
-      (lambda (task-id dependencies)
-        (filter-list (lambda (dep) (string=? (dict-get dep "to-task") task-id))
-                     dependencies)))
-    
-    ; Get all dependencies where this task is the predecessor
-    (get-successor-dependencies
-      (lambda (task-id dependencies)
-        (filter-list (lambda (dep) (string=? (dict-get dep "from-task") task-id))
-                     dependencies)))
-    
-    ; Get the later of two dates
-    (max-date
-      (lambda (date1 date2)
-        (if (date-after? date1 date2) date1 date2)))
-    
-    ; Get the earlier of two dates
-    (min-date
-      (lambda (date1 date2)
-        (if (date-before? date1 date2) date1 date2)))
-    
-    ; ==========================================================================
-    ; DEPENDENCY CONSTRAINT APPLICATION
-    ; ==========================================================================
-    
-    ; Apply a single dependency constraint in forward pass
-    ; Returns an dict with "start-constraint" and/or "finish-constraint"
-    (apply-forward-constraint
-      (lambda (dependency predecessor-task successor-calendar)
-        (let ((dep-type (dict-get dependency "type"))
-              (lag-days (dict-get dependency "lag-days"))
-              (pred-start (dict-get predecessor-task "earliest-start"))
-              (pred-finish (dict-get predecessor-task "earliest-finish")))
-          
-          (match dep-type
-            ; Finish-to-Start: Successor starts after predecessor finishes
-            ("finish-to-start"
-              (dict
-                (list "start-constraint" (add-working-days pred-finish lag-days successor-calendar))))
-            
-            ; Start-to-Start: Successor starts after predecessor starts
-            ("start-to-start"
-              (dict
-                (list "start-constraint" (add-working-days pred-start lag-days successor-calendar))))
-            
-            ; Finish-to-Finish: Successor finishes after predecessor finishes
-            ("finish-to-finish"
-              (dict
-                (list "finish-constraint" (add-working-days pred-finish lag-days successor-calendar))))
-            
-            ; Start-to-Finish: Successor finishes after predecessor starts
-            ("start-to-finish"
-              (dict
-                (list "finish-constraint" (add-working-days pred-start lag-days successor-calendar))))
-            
-            ; Unknown type
-            (_ (dict))))))
-    
-    ; Helper: Find the latest (max) date from a list of constraints
-    (find-latest-constraint
-      (lambda (constraints key-name)
-        (if (integer=? (list-length constraints) 0)
-            #f
-            (fold-list max-date
-                       (dict-get (list-first constraints) key-name)
-                       (map-list (lambda (c) (dict-get c key-name))
-                                 (list-rest constraints))))))
-    
-    ; Helper: Reconcile finish constraints with calculated finish
-    (reconcile-finish-constraint
-      (lambda (earliest-start finish-from-start required-finish duration task-calendar)
-        (if (date-after? finish-from-start required-finish)
-            ; Start earlier to meet finish constraint
-            (let ((adjusted-start (calculate-start-date required-finish duration task-calendar)))
-              (dict
-                (list "earliest-start" (max-date earliest-start adjusted-start))
-                (list "earliest-finish" required-finish)))
-            ; Finish-from-start is OK
+  ; Struct types
+  (task       (dict-get task-mod "task"))
+
+  ; Calendar functions
+  (add-working-days     (dict-get calendar-mod "add-working-days"))
+  (calculate-end-date   (dict-get calendar-mod "calculate-end-date"))
+  (calculate-start-date (dict-get calendar-mod "calculate-start-date"))
+  (working-days-between (dict-get calendar-mod "working-days-between"))
+  (date-before?         (dict-get calendar-mod "date-before?"))
+  (date-after?          (dict-get calendar-mod "date-after?"))
+
+  ; Task operations
+  (get-task-calendar       (dict-get task-mod "get-task-calendar"))
+  (update-earliest-dates   (dict-get task-mod "update-earliest-dates"))
+  (update-latest-dates     (dict-get task-mod "update-latest-dates"))
+  (update-slack            (dict-get task-mod "update-slack"))
+
+  ; Dependency operations
+  (get-predecessors            (dict-get dep-mod "get-predecessors"))
+  (get-successors              (dict-get dep-mod "get-successors"))
+  (get-predecessor-dependencies (dict-get dep-mod "get-predecessor-dependencies"))
+  (get-successor-dependencies  (dict-get dep-mod "get-successor-dependencies"))
+  (apply-forward-constraint    (dict-get dep-mod "apply-forward-constraint"))
+  (apply-backward-constraint   (dict-get dep-mod "apply-backward-constraint"))
+
+  ; ==========================================================================
+  ; HELPERS
+  ; ==========================================================================
+
+  (find-task
+    (lambda (task-id tasks)
+      (find-list (lambda (t) (string=? (struct-get t 'id) task-id))
+                 tasks)))
+
+  (max-date
+    (lambda (date1 date2)
+      (if (date-after? date1 date2) date1 date2)))
+
+  (min-date
+    (lambda (date1 date2)
+      (if (date-before? date1 date2) date1 date2)))
+
+  ; Find the latest (max) date across a list of constraint dicts for a given key
+  (find-latest-constraint
+    (lambda (constraints key-name)
+      (fold-list max-date
+                 (dict-get (list-first constraints) key-name)
+                 (map-list (lambda (c) (dict-get c key-name))
+                           (list-rest constraints)))))
+
+  ; Reconcile finish constraints with a calculated finish date
+  (reconcile-finish-constraint
+    (lambda (earliest-start finish-from-start required-finish duration task-cal)
+      (if (date-after? finish-from-start required-finish)
+          (let ((adjusted-start (calculate-start-date required-finish duration task-cal)))
             (dict
-              (list "earliest-start" earliest-start)
-              (list "earliest-finish" (max-date finish-from-start required-finish))))))
-    
-    ; Calculate earliest start and finish for a task considering all constraints
-    (calculate-earliest-dates
-      (lambda (task dependencies calendars scheduled-tasks)
-        (let* ((task-id (dict-get task "id"))
-              (task-calendar (get-task-calendar task calendars))
-              (duration (dict-get task "duration-days"))
-              (pred-deps (get-predecessor-dependencies task-id dependencies))
-              (has-start-date (string? (dict-get task "start-date"))))
-          
-          ; If no predecessors and has start-date, use it (simple case)
-          (if (and (integer=? (list-length pred-deps) 0) has-start-date)
-              (let ((start (dict-get task "start-date"))
-                    (finish (calculate-end-date (dict-get task "start-date") duration task-calendar)))
-                (dict
-                  (list "earliest-start" start)
-                  (list "earliest-finish" finish)))
-              
-              ; Has predecessors or no start date - apply constraints
-              (let* ((constraints
-                      (map-list (lambda (dep)
-                                  (let* ((pred-id (dict-get dep "from-task"))
-                                        (pred (find-task (dict-get dep "from-task") scheduled-tasks)))
-                                    (if (match pred
-                                          ((? dict? p) #t) (_ #f))
-                                        (apply-forward-constraint dep pred task-calendar)
-                                        (dict))))
-                                pred-deps))
-                    (start-constraints
-                      (filter-list (lambda (c) (dict-has? c "start-constraint")) constraints))
-                    (finish-constraints
-                      (filter-list (lambda (c) (dict-has? c "finish-constraint")) constraints)))
-                
-                ; Determine earliest start from constraints or task start-date
-                (let* ((earliest-start
-                        (if (integer>? (list-length start-constraints) 0)
-                            (find-latest-constraint start-constraints "start-constraint")
-                            (if has-start-date
-                                (dict-get task "start-date")
-                                "2025-01-01")))
-                      (finish-from-start
-                        (calculate-end-date 
-                          (if (integer>? (list-length start-constraints) 0)
-                              (find-latest-constraint start-constraints "start-constraint")
-                              (if has-start-date
-                                  (dict-get task "start-date")
-                                  "2025-01-01"))
-                          duration 
-                          task-calendar)))
-                  
-                  ; Check finish constraints and reconcile if needed
-                  (if (integer>? (list-length finish-constraints) 0)
-                      (let ((required-finish (find-latest-constraint finish-constraints "finish-constraint")))
-                        (reconcile-finish-constraint earliest-start finish-from-start 
-                                                    required-finish duration task-calendar))
-                      ; No finish constraint - use calculated values
-                      (dict
-                        (list "earliest-start" earliest-start)
-                        (list "earliest-finish" finish-from-start)))))))))
-    
-    ; Helper: Update task with earliest dates
-    (update-task-with-earliest-dates
-      (lambda (task dates)
-        (let* ((task-with-start (dict-set task "earliest-start" (dict-get dates "earliest-start")))
-              (task-with-dates (dict-set task-with-start "earliest-finish" (dict-get dates "earliest-finish"))))
-          task-with-dates)))
-    
-    ; ==========================================================================
-    ; FORWARD PASS
-    ; ==========================================================================
-    
-    ; Forward pass - calculate earliest dates
-    (forward-pass
-      (lambda (project)
-        (let ((tasks (dict-get project "tasks"))
-              (dependencies (dict-get project "dependencies"))
-              (calendars (dict-get project "calendars")))
-          
-          ; Iteratively schedule tasks when all predecessors are scheduled
-          (letrec ((schedule-tasks
-                     (lambda (remaining scheduled)
-                       (if (list-null? remaining)
-                           scheduled
-                           
-                           ; Find a task whose predecessors are all scheduled
-                           (let ((next-task
-                                   (find-list (lambda (task)
-                                                (let* ((task-id (dict-get task "id"))
-                                                      (pred-ids (get-predecessors task-id dependencies)))
-                                                  (all-list? (lambda (pred-id)
-                                                               (any-list? (lambda (st)
-                                                                            (string=? (dict-get st "id") pred-id))
-                                                                          scheduled))
-                                                             pred-ids)))
-                                              remaining)))
-                             
-                             (if (match next-task
-                                   ((? dict? t) #t) (_ #f))
-                                 ; Schedule this task - flattened!
-                                 (let* ((dates (calculate-earliest-dates next-task dependencies calendars scheduled))
-                                       (updated-task (update-task-with-earliest-dates next-task dates)))
-                                   (schedule-tasks
-                                     (list-remove remaining next-task)
-                                     (list-concat scheduled (list updated-task))))
-                                 
-                                 ; No task ready - might have circular dependency
-                                 scheduled))))))
-            
-            ; Start scheduling and update project
-            (let ((scheduled-tasks (schedule-tasks tasks (list))))
-              (dict-set project "tasks" scheduled-tasks))))))
-    
-    ; ==========================================================================
-    ; BACKWARD PASS
-    ; ==========================================================================
-    
-    ; Apply a single dependency constraint in backward pass
-    ; Returns a date constraint for the predecessor's latest finish
-    (apply-backward-constraint
-      (lambda (dependency successor-task predecessor-calendar)
-        (let ((dep-type (dict-get dependency "type"))
-              (lag-days (dict-get dependency "lag-days"))
-              (succ-latest-start (dict-get successor-task "latest-start"))
-              (succ-latest-finish (dict-get successor-task "latest-finish")))
-          
-          (match dep-type
-            ; Finish-to-Start: Predecessor must finish before successor starts
-            ("finish-to-start"
-              (add-working-days succ-latest-start (integer-neg lag-days) predecessor-calendar))
-            
-            ; Start-to-Start: Predecessor must start before successor starts
-            ; Return finish date by adding duration to constrained start
-            ("start-to-start"
-              ; This constrains predecessor start, not finish - handle in caller
-              #f)
-            
-            ; Finish-to-Finish: Predecessor must finish before successor finishes
-            ("finish-to-finish"
-              (add-working-days succ-latest-finish (integer-neg lag-days) predecessor-calendar))
-            
-            ; Start-to-Finish: Predecessor must start before successor finishes
-            ("start-to-finish"
-              #f)
-            
-            ; Unknown
-            (_ #f)))))
-    
-    ; Calculate latest finish for a task based on successors
-    (calculate-latest-finish
-      (lambda (task dependencies calendars scheduled-tasks project-end)
-        (let* ((task-id (dict-get task "id"))
-              (task-calendar (get-task-calendar task calendars))
-              (succ-deps (get-successor-dependencies task-id dependencies)))
-          
-          ; If no successors, use project end date
-          (if (integer=? (list-length succ-deps) 0)
-              project-end
-              
-              ; Has successors - find most constraining
-              (let* ((constraints
-                      (map-list (lambda (dep)
-                                  (let* ((succ-id (dict-get dep "to-task"))
-                                        (succ (find-task succ-id scheduled-tasks)))
-                                    (if (match succ
-                                          ((? dict? s) #t) (_ #f))
-                                        (apply-backward-constraint dep succ task-calendar)
-                                        #f)))
-                                succ-deps))
-                    (valid-constraints (filter-list (lambda (c) (match c
-                                                                  ((? string? s) #t) (_ #f)))
-                                                    constraints)))
-                
-                ; Find earliest (most constraining) date
-                (if (integer>? (list-length valid-constraints) 0)
-                    (fold-list min-date (list-first valid-constraints) (list-rest valid-constraints))
-                    project-end))))))
-    
-    ; Helper: Update task with latest dates
-    (update-task-with-latest-dates
-      (lambda (task l-start l-finish)
-        (let* ((task-with-finish (dict-set task "latest-finish" l-finish))
-              (task-with-dates (dict-set task-with-finish "latest-start" l-start)))
-          task-with-dates)))
-    
-    ; Backward pass - calculate latest dates
-    (backward-pass
-      (lambda (project)
-        (let* ((tasks (dict-get project "tasks"))
-              (dependencies (dict-get project "dependencies"))
-              (calendars (dict-get project "calendars"))
-              (project-end
-                (fold-list max-date
-                           (dict-get (list-first tasks) "earliest-finish")
-                           (map-list (lambda (t) (dict-get t "earliest-finish"))
-                                     (list-rest tasks)))))
-          
-          ; Process tasks in reverse - successors first
-          (letrec ((schedule-backward
-                     (lambda (remaining scheduled)
-                       (if (list-null? remaining)
-                           scheduled
-                           
-                           ; Find task with all successors scheduled
-                           (let ((next-task
-                                   (find-list (lambda (task)
-                                                (let* ((task-id (dict-get task "id"))
-                                                      (succ-ids (get-successors task-id dependencies)))
-                                                  (all-list? (lambda (succ-id)
-                                                               (any-list? (lambda (st)
-                                                                            (string=? (dict-get st "id") succ-id))
-                                                                          scheduled))
-                                                             succ-ids)))
-                                              remaining)))
-                             
-                             (if (match next-task
-                                   ((? dict? t) #t) (_ #f))
-                                 ; Schedule this task - flattened!
-                                 (let* ((task-calendar (get-task-calendar next-task calendars))
-                                       (duration (dict-get next-task "duration-days"))
-                                       (l-finish (calculate-latest-finish next-task dependencies 
+              (list "earliest-start"  (max-date earliest-start adjusted-start))
+              (list "earliest-finish" required-finish)))
+          (dict
+            (list "earliest-start"  earliest-start)
+            (list "earliest-finish" (max-date finish-from-start required-finish))))))
+
+  ; ==========================================================================
+  ; FORWARD PASS
+  ; ==========================================================================
+
+  (calculate-earliest-dates
+    (lambda (t dependencies calendars scheduled-tasks)
+      (let* ((task-id        (struct-get t 'id))
+             (task-cal       (get-task-calendar t calendars))
+             (duration       (struct-get t 'duration-days))
+             (pred-deps      (get-predecessor-dependencies task-id dependencies))
+             (has-start-date (string? (struct-get t 'start-date))))
+
+        (if (and (integer=? (list-length pred-deps) 0) has-start-date)
+            (dict
+              (list "earliest-start"  (struct-get t 'start-date))
+              (list "earliest-finish" (calculate-end-date (struct-get t 'start-date) duration task-cal)))
+
+            (let* ((constraints
+                    (map-list (lambda (dep)
+                                (let ((pred (find-task (struct-get dep 'from-task) scheduled-tasks)))
+                                  (if (struct-type? task pred)
+                                      (apply-forward-constraint dep pred task-cal)
+                                      (dict))))
+                              pred-deps))
+                   (start-constraints
+                    (filter-list (lambda (c) (dict-has? c "start-constraint")) constraints))
+                   (finish-constraints
+                    (filter-list (lambda (c) (dict-has? c "finish-constraint")) constraints))
+                   (earliest-start
+                    (if (integer>? (list-length start-constraints) 0)
+                        (find-latest-constraint start-constraints "start-constraint")
+                        (if has-start-date (struct-get t 'start-date) "2025-01-01")))
+                   (finish-from-start
+                    (calculate-end-date
+                      (if (integer>? (list-length start-constraints) 0)
+                          (find-latest-constraint start-constraints "start-constraint")
+                          (if has-start-date (struct-get t 'start-date) "2025-01-01"))
+                      duration
+                      task-cal)))
+
+              (if (integer>? (list-length finish-constraints) 0)
+                  (reconcile-finish-constraint earliest-start finish-from-start
+                                              (find-latest-constraint finish-constraints "finish-constraint")
+                                              duration task-cal)
+                  (dict
+                    (list "earliest-start"  earliest-start)
+                    (list "earliest-finish" finish-from-start))))))))
+
+  (forward-pass
+    (lambda (project)
+      (let ((tasks        (dict-get project "tasks"))
+            (dependencies (dict-get project "dependencies"))
+            (calendars    (dict-get project "calendars")))
+        (letrec ((schedule-tasks
+                   (lambda (remaining scheduled)
+                     (if (list-null? remaining)
+                         scheduled
+                         (let ((next-task
+                                 (find-list
+                                   (lambda (t)
+                                     (all-list? (lambda (pred-id)
+                                                  (any-list? (lambda (st)
+                                                               (string=? (struct-get st 'id) pred-id))
+                                                             scheduled))
+                                                (get-predecessors (struct-get t 'id) dependencies)))
+                                   remaining)))
+                           (if (struct-type? task next-task)
+                               (let* ((dates (calculate-earliest-dates next-task dependencies calendars scheduled))
+                                      (updated (update-earliest-dates next-task
+                                                                      (dict-get dates "earliest-start")
+                                                                      (dict-get dates "earliest-finish"))))
+                                 (schedule-tasks
+                                   (list-remove remaining next-task)
+                                   (list-concat scheduled (list updated))))
+                               scheduled))))))
+          (dict-set project "tasks" (schedule-tasks tasks (list)))))))
+
+  ; ==========================================================================
+  ; BACKWARD PASS
+  ; ==========================================================================
+
+  (calculate-latest-finish
+    (lambda (t dependencies calendars scheduled-tasks project-end)
+      (let* ((task-id   (struct-get t 'id))
+             (task-cal  (get-task-calendar t calendars))
+             (succ-deps (get-successor-dependencies task-id dependencies)))
+        (if (integer=? (list-length succ-deps) 0)
+            project-end
+            (let* ((constraints
+                    (map-list (lambda (dep)
+                                (let ((succ (find-task (struct-get dep 'to-task) scheduled-tasks)))
+                                  (if (struct-type? task succ)
+                                      (apply-backward-constraint dep succ task-cal)
+                                      #f)))
+                              succ-deps))
+                   (valid-constraints (filter-list string? constraints)))
+              (if (integer>? (list-length valid-constraints) 0)
+                  (fold-list min-date (list-first valid-constraints) (list-rest valid-constraints))
+                  project-end))))))
+
+  (backward-pass
+    (lambda (project)
+      (let* ((tasks        (dict-get project "tasks"))
+             (dependencies (dict-get project "dependencies"))
+             (calendars    (dict-get project "calendars"))
+             (project-end
+               (fold-list max-date
+                          (struct-get (list-first tasks) 'earliest-finish)
+                          (map-list (lambda (t) (struct-get t 'earliest-finish))
+                                    (list-rest tasks)))))
+        (letrec ((schedule-backward
+                   (lambda (remaining scheduled)
+                     (if (list-null? remaining)
+                         scheduled
+                         (let ((next-task
+                                 (find-list
+                                   (lambda (t)
+                                     (all-list? (lambda (succ-id)
+                                                  (any-list? (lambda (st)
+                                                               (string=? (struct-get st 'id) succ-id))
+                                                             scheduled))
+                                                (get-successors (struct-get t 'id) dependencies)))
+                                   remaining)))
+                           (if (struct-type? task next-task)
+                               (let* ((l-finish (calculate-latest-finish next-task dependencies
                                                                          calendars scheduled project-end))
-                                       (l-start (calculate-start-date l-finish 
-                                                                     (dict-get next-task "duration-days")
-                                                                     (get-task-calendar next-task calendars)))
-                                       (updated-task (update-task-with-latest-dates next-task l-start l-finish)))
-                                   (schedule-backward
-                                     (list-remove remaining next-task)
-                                     (list-concat scheduled (list updated-task))))
-                                 
-                                 ; No task ready
-                                 scheduled))))))
-            
-            ; Start backward scheduling and update project
-            (let ((scheduled-tasks (schedule-backward tasks (list))))
-              (dict-set project "tasks" scheduled-tasks))))))
-    
-    ; ==========================================================================
-    ; SLACK CALCULATION
-    ; ==========================================================================
-    
-    ; Calculate slack for all tasks
-    (calculate-slack
-      (lambda (project)
-        (let* ((tasks (dict-get project "tasks"))
-              (calendars (dict-get project "calendars"))
-              (tasks-with-slack
-                (map-list (lambda (task)
-                            (let ((slack (working-days-between 
-                                           (dict-get task "earliest-start")
-                                           (dict-get task "latest-start")
-                                           (get-task-calendar task calendars))))
-                              (dict-set task "slack-days" slack)))
-                          tasks)))
-          
-          (dict-set project "tasks" tasks-with-slack))))
-    
-    ; ==========================================================================
-    ; CRITICAL PATH
-    ; ==========================================================================
-    
-    ; Identify critical path
-    (identify-critical-path
-      (lambda (project tolerance)
-        (let* ((tasks (dict-get project "tasks"))
-              (critical-tasks
-                (filter-list (lambda (task)
-                               (integer<=? (dict-get task "slack-days") tolerance))
-                             tasks))
-              (critical-ids
-                (map-list (lambda (task) (dict-get task "id"))
-                          critical-tasks)))
-          
-          (dict-set project "critical-path" critical-ids))))
-    
-    ; ==========================================================================
-    ; COMPLETE SCHEDULING
-    ; ==========================================================================
-    
-    ; Run complete CPM analysis
-    (schedule-project
-      (lambda (project)
-        (let* ((after-forward (forward-pass project))
-              (after-backward (backward-pass after-forward))
-              (after-slack (calculate-slack after-backward))
-              (with-critical-path (identify-critical-path after-slack 0)))
-          with-critical-path)))
-  
-  )  ; End of letrec bindings
-  
-  ; Return dict of scheduling functions
-  (dict
-    (list "forward-pass" forward-pass)
-    (list "backward-pass" backward-pass)
-    (list "calculate-slack" calculate-slack)
-    (list "identify-critical-path" identify-critical-path)
-    (list "schedule-project" schedule-project))
-  )
-)
+                                      (l-start  (calculate-start-date l-finish
+                                                                       (struct-get next-task 'duration-days)
+                                                                       (get-task-calendar next-task calendars)))
+                                      (updated  (update-latest-dates next-task l-start l-finish)))
+                                 (schedule-backward
+                                   (list-remove remaining next-task)
+                                   (list-concat scheduled (list updated))))
+                               scheduled))))))
+          (dict-set project "tasks" (schedule-backward tasks (list)))))))
+
+  ; ==========================================================================
+  ; SLACK AND CRITICAL PATH
+  ; ==========================================================================
+
+  (calculate-slack
+    (lambda (project)
+      (let* ((tasks     (dict-get project "tasks"))
+             (calendars (dict-get project "calendars")))
+        (dict-set project "tasks"
+          (map-list (lambda (t)
+                      (update-slack t
+                        (working-days-between
+                          (struct-get t 'earliest-start)
+                          (struct-get t 'latest-start)
+                          (get-task-calendar t calendars))))
+                    tasks)))))
+
+  (identify-critical-path
+    (lambda (project tolerance)
+      (let* ((tasks (dict-get project "tasks"))
+             (critical-ids
+               (map-list (lambda (t) (struct-get t 'id))
+                         (filter-list (lambda (t)
+                                        (integer<=? (struct-get t 'slack-days) tolerance))
+                                      tasks))))
+        (dict-set project "critical-path" critical-ids))))
+
+  ; ==========================================================================
+  ; COMPLETE CPM ANALYSIS
+  ; ==========================================================================
+
+  (schedule-project
+    (lambda (project)
+      (identify-critical-path
+        (calculate-slack
+          (backward-pass
+            (forward-pass project)))
+        0))))
+
+(dict
+  (list "forward-pass"           forward-pass)
+  (list "backward-pass"          backward-pass)
+  (list "calculate-slack"        calculate-slack)
+  (list "identify-critical-path" identify-critical-path)
+  (list "schedule-project"       schedule-project)))

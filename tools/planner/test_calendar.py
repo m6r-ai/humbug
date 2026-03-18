@@ -23,33 +23,21 @@ def print_test(name: str):
 def test_with_calendar(menai, expr, calendar=None):
     """Helper to evaluate expression with calendar module and optional calendar data."""
     if calendar:
-        # Convert Python dict to Menai dict string
-        cal_str = dict_to_dict(calendar)
-        full_expr = f'''(let ((calendar-mod (import "tools/planner/calendar"))
-                             (calendar {cal_str}))
+        # Build a calendar struct using the constructor exported from the module
+        working_days = " ".join(f'"{d}"' for d in sorted(calendar["working-days"]))
+        holidays = " ".join(f'"{h}"' for h in sorted(calendar.get("holidays", set())))
+        cal_id = calendar["id"]
+        cal_name = calendar.get("name", cal_id)
+        cal_type = calendar["type"]
+        full_expr = f'''(let* ((calendar-mod (import "tools/planner/calendar"))
+                              (make-calendar (dict-get calendar-mod "calendar"))
+                              (calendar (make-calendar "{cal_id}" "{cal_name}" "{cal_type}"
+                                                       (set {working_days}) (set {holidays}))))
                           {expr})'''
     else:
         full_expr = f'''(let ((calendar-mod (import "tools/planner/calendar")))
                           {expr})'''
     return menai.evaluate(full_expr)
-
-
-def dict_to_dict(d):
-    """Convert Python dict to Menai dict expression string."""
-    pairs = []
-    for k, v in d.items():
-        if isinstance(v, list):
-            items = [f'"{item}"' if isinstance(item, str) else str(item) for item in v]
-            v_str = f'(list {" ".join(items)})'
-        elif isinstance(v, set):
-            items = [f'"{item}"' if isinstance(item, str) else str(item) for item in v]
-            v_str = f'(set {" ".join(items)})'
-        elif isinstance(v, str):
-            v_str = f'"{v}"'
-        else:
-            v_str = str(v)
-        pairs.append(f'(list "{k}" {v_str})')
-    return f'(dict {" ".join(pairs)})'
 
 
 def main():

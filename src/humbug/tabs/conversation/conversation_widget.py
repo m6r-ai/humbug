@@ -1727,6 +1727,7 @@ class ConversationWidget(QWidget):
                 padding: -2px;
             }}
             #ConversationMessage[message_source="user"],
+            #ConversationMessage[message_source="user_input"],
             #ConversationMessage[message_source="ai_streaming"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
                 border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
@@ -1737,7 +1738,7 @@ class ConversationWidget(QWidget):
                 border: 2px solid transparent;
             }}
 
-            #ConversationMessage #_header,
+            #ConversationMessage #_banner,
             #ConversationMessage #_sections_container {{
                 background-color: transparent;
                 border: none;
@@ -1776,6 +1777,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage[message_source="system"] #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_SYSTEM_ERROR)};
             }}
+            #ConversationMessage[message_source="user_input"] #_role_label,
             #ConversationMessage[message_source="user_queued"] #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_QUEUED)};
             }}
@@ -2002,7 +2004,7 @@ class ConversationWidget(QWidget):
                 border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
             }}
 
-            #ConversationMessage #ConversationMessageSection #_header_container {{
+            #ConversationMessage #ConversationMessageSection #_banner_container {{
                 background-color: transparent;
                 border: none;
                 border-radius: 0;

@@ -247,7 +247,7 @@ class MenaiASTSemanticAnalyzer:
             )
 
         # Analyze body
-        self.analyze(body, self.source)
+        analyzed_body = self.analyze(body, self.source)
 
         new_bindings_list = MenaiASTList(
             elements=tuple(new_bindings),
@@ -255,7 +255,7 @@ class MenaiASTSemanticAnalyzer:
             source_file=bindings_list.source_file
         )
         return MenaiASTList(
-            elements=(expr.elements[0], new_bindings_list, body),
+            elements=(expr.elements[0], new_bindings_list, analyzed_body),
             line=expr.line, column=expr.column, source_file=expr.source_file
         )
 
@@ -372,7 +372,7 @@ class MenaiASTSemanticAnalyzer:
         # That's the whole point of let* - sequential bindings are allowed and expected.
 
         # Analyze body
-        self.analyze(body, self.source)
+        analyzed_body = self.analyze(body, self.source)
 
         new_bindings_list = MenaiASTList(
             elements=tuple(new_bindings),
@@ -380,7 +380,7 @@ class MenaiASTSemanticAnalyzer:
             source_file=bindings_list.source_file
         )
         return MenaiASTList(
-            elements=(expr.elements[0], new_bindings_list, body),
+            elements=(expr.elements[0], new_bindings_list, analyzed_body),
             line=expr.line, column=expr.column, source_file=expr.source_file
         )
 
@@ -499,7 +499,7 @@ class MenaiASTSemanticAnalyzer:
             )
 
         # Analyze body
-        self.analyze(body, self.source)
+        analyzed_body = self.analyze(body, self.source)
 
         new_bindings_list = MenaiASTList(
             elements=tuple(new_bindings),
@@ -507,7 +507,7 @@ class MenaiASTSemanticAnalyzer:
             source_file=bindings_list.source_file
         )
         return MenaiASTList(
-            elements=(expr.elements[0], new_bindings_list, body),
+            elements=(expr.elements[0], new_bindings_list, analyzed_body),
             line=expr.line, column=expr.column, source_file=expr.source_file
         )
 

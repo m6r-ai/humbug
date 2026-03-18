@@ -97,7 +97,8 @@ class MenaiASTBuilder:
                 expected="Valid Menai expression",
                 example="(+ 1 2) or 42 or \"hello\"",
                 suggestion="Provide a complete expression to evaluate",
-                context="Expression cannot be empty or contain only whitespace"
+                context="Expression cannot be empty or contain only whitespace",
+                source_file=self.source_file,
             )
 
         expr = self._parse_expression()
@@ -130,7 +131,8 @@ class MenaiASTBuilder:
                     suggestion=f"Check the ')' at line {self.last_close_line}, column {self.last_close_column} "
                         f"— it may close too early",
                     context=context,
-                    source=self.expression
+                    source=self.expression,
+                    source_file=self.source_file,
                 )
 
             raise MenaiASTBuildError(
@@ -142,7 +144,8 @@ class MenaiASTBuilder:
                 example="Correct: (+ 1 2)\\nIncorrect: (+ 1 2) extra",
                 suggestion="Remove extra tokens or combine into single expression",
                 context="Each evaluation can only handle one complete expression",
-                source=self.expression
+                source=self.expression,
+                source_file=self.source_file,
             )
 
         return expr
@@ -201,7 +204,8 @@ class MenaiASTBuilder:
             example="Valid starts: 42, \"hello\", #t, symbol, (, '",
             suggestion="List expressions must start with '(' and quoted expressions with '",
             context=f"Token '{token_value}' cannot start an expression",
-            source=self.expression
+            source=self.expression,
+            source_file=self.source_file,
         )
 
     def _push_paren_frame(self, line: int, column: int) -> ParenStackFrame:
@@ -434,7 +438,8 @@ class MenaiASTBuilder:
             example="Correct: (+ 1 2)\nIncorrect: (+ 1 2",
             suggestion="Close each incomplete expression with ')', working from innermost to outermost",
             context=context_msg,
-            source=self.expression
+            source=self.expression,
+            source_file=self.source_file,
         )
 
     def _parse_list(self) -> MenaiASTList:
@@ -729,7 +734,8 @@ class MenaiASTBuilder:
             suggestion="Close each incomplete expression with ')', working from innermost to outermost",
             context=context_msg,
             example="(let (\n  (x 5)\n  (y (integer+ x 2))\n) body)",
-            source=self.expression
+            source=self.expression,
+            source_file=self.source_file,
         )
 
     def _parse_quoted_expression(self) -> MenaiASTList:
@@ -757,7 +763,8 @@ class MenaiASTBuilder:
                 example="Correct: '(a b c) or 'symbol\\nIncorrect: ' (nothing after)",
                 suggestion="Add an expression after the ' symbol",
                 context="Quote symbol must be followed by something to quote",
-                source=self.expression
+                source=self.expression,
+                source_file=self.source_file,
             )
 
         # Parse the expression to be quoted

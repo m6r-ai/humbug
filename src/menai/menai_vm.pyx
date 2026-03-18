@@ -683,12 +683,28 @@ class MenaiVM:
         cdef int new_depth, arity, expected_arity, min_arity, rest_count, callee_base, i
         raw = regs[base + instr.src0]
         if type(raw) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(
-                message="Cannot call non-function value",
-                received=f"Attempted to call: {raw.describe()} ({raw.type_name()})",
-                expected="Function (lambda or builtin)",
-                suggestion="Only functions can be called"
-            )
+            if type(raw) is not MenaiStructType:  # pylint: disable=unidiomatic-typecheck
+                raise MenaiEvalError(
+                    message="Cannot call non-function value",
+                    received=f"Attempted to call: {raw.describe()} ({raw.type_name()})",
+                    expected="Function (lambda or builtin)",
+                    suggestion="Only functions can be called"
+                )
+
+            n_fields = len(raw.field_names)
+            arity = instr.src1
+            if arity != n_fields:
+                raise MenaiEvalError(
+                    message=f"Struct constructor '{raw.name}' called with wrong number of arguments",
+                    received=f"Got {arity} argument{'s' if arity != 1 else ''}",
+                    expected=f"Exactly {n_fields} argument{'s' if n_fields != 1 else ''} for fields: {list(raw.field_names)}",
+                    example=f"({raw.name} {' '.join(raw.field_names)})"
+                )
+
+            callee_base = base + f.code.local_count
+            field_values = tuple(regs[callee_base + i] for i in range(n_fields))
+            regs[base + instr.dest] = MenaiStruct(struct_type=raw, fields=field_values)
+            return None
 
         func = <MenaiFunction>raw
         code = func.bytecode
@@ -744,12 +760,34 @@ class MenaiVM:
         cdef int n_args, arity, expected_arity, min_arity, rest_count, local_count, i
         raw = regs[base + instr.src0]
         if type(raw) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(
-                message="Cannot call non-function value",
-                received=f"Attempted to call: {raw.describe()} ({raw.type_name()})",
-                expected="Function (lambda or builtin)",
-                suggestion="Only functions can be called"
-            )
+            if type(raw) is not MenaiStructType:  # pylint: disable=unidiomatic-typecheck
+                raise MenaiEvalError(
+                    message="Cannot call non-function value",
+                    received=f"Attempted to call: {raw.describe()} ({raw.type_name()})",
+                    expected="Function (lambda or builtin)",
+                    suggestion="Only functions can be called"
+                )
+
+            n_fields = len(raw.field_names)
+            n_args = instr.src1
+            if n_args != n_fields:
+                raise MenaiEvalError(
+                    message=f"Struct constructor '{raw.name}' called with wrong number of arguments",
+                    received=f"Got {n_args} argument{'s' if n_args != 1 else ''}",
+                    expected=f"Exactly {n_fields} argument{'s' if n_fields != 1 else ''} for fields: {list(raw.field_names)}",
+                    example=f"({raw.name} {' '.join(raw.field_names)})"
+                )
+
+            local_count = f.code.local_count
+            field_values = tuple(regs[base + local_count + i] for i in range(n_fields))
+            result = MenaiStruct(struct_type=raw, fields=field_values)
+            self.frame_depth -= 1
+            caller = self._frames[self.frame_depth]
+            if caller.is_sentinel:
+                return result
+
+            regs[caller.base + f.return_dest] = result
+            return _FRAME_CHANGE
 
         func = <MenaiFunction>raw
         code = func.bytecode
@@ -802,11 +840,33 @@ class MenaiVM:
         cdef int new_depth, arity, expected_arity, min_arity, rest_count, callee_base, i
         raw_func = regs[base + instr.src0]
         if type(raw_func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(
-                message="apply: first argument must be a function",
-                received=f"Got: {raw_func.describe()} ({raw_func.type_name()})",
-                suggestion="Use (apply f args) where f is a lambda or builtin"
-            )
+            if type(raw_func) is not MenaiStructType:  # pylint: disable=unidiomatic-typecheck
+                raise MenaiEvalError(
+                    message="apply: first argument must be a function",
+                    received=f"Got: {raw_func.describe()} ({raw_func.type_name()})",
+                    suggestion="Use (apply f args) where f is a lambda or builtin"
+                )
+
+            raw_args = regs[base + instr.src1]
+            if type(raw_args) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
+                raise MenaiEvalError(
+                    message="apply: second argument must be a list",
+                    received=f"Got: {raw_args.describe()} ({raw_args.type_name()})",
+                    suggestion="Use (apply f (list arg1 arg2 ...))"
+                )
+
+            n_fields = len(raw_func.field_names)
+            arity = len(raw_args.elements)
+            if arity != n_fields:
+                raise MenaiEvalError(
+                    message=f"Struct constructor '{raw_func.name}' called with wrong number of arguments",
+                    received=f"Got {arity} argument{'s' if arity != 1 else ''}",
+                    expected=f"Exactly {n_fields} argument{'s' if n_fields != 1 else ''} for fields: {list(raw_func.field_names)}",
+                    example=f"({raw_func.name} {' '.join(raw_func.field_names)})"
+                )
+
+            regs[base + instr.dest] = MenaiStruct(struct_type=raw_func, fields=tuple(raw_args.elements))
+            return None
 
         func = <MenaiFunction>raw_func
         raw_args = regs[base + instr.src1]
@@ -879,11 +939,39 @@ class MenaiVM:
         cdef int arity, expected_arity, min_arity, rest_count, i
         raw_func = regs[base + instr.src0]
         if type(raw_func) is not MenaiFunction:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError(
-                message="apply: first argument must be a function",
-                received=f"Got: {raw_func.describe()} ({raw_func.type_name()})",
-                suggestion="Use (apply f args) where f is a lambda or builtin"
-            )
+            if type(raw_func) is not MenaiStructType:  # pylint: disable=unidiomatic-typecheck
+                raise MenaiEvalError(
+                    message="apply: first argument must be a function",
+                    received=f"Got: {raw_func.describe()} ({raw_func.type_name()})",
+                    suggestion="Use (apply f args) where f is a lambda or builtin"
+                )
+
+            raw_args = regs[base + instr.src1]
+            if type(raw_args) is not MenaiList:  # pylint: disable=unidiomatic-typecheck
+                raise MenaiEvalError(
+                    message="apply: second argument must be a list",
+                    received=f"Got: {raw_args.describe()} ({raw_args.type_name()})",
+                    suggestion="Use (apply f (list arg1 arg2 ...))"
+                )
+
+            n_fields = len(raw_func.field_names)
+            arity = len(raw_args.elements)
+            if arity != n_fields:
+                raise MenaiEvalError(
+                    message=f"Struct constructor '{raw_func.name}' called with wrong number of arguments",
+                    received=f"Got {arity} argument{'s' if arity != 1 else ''}",
+                    expected=f"Exactly {n_fields} argument{'s' if n_fields != 1 else ''} for fields: {list(raw_func.field_names)}",
+                    example=f"({raw_func.name} {' '.join(raw_func.field_names)})"
+                )
+
+            result = MenaiStruct(struct_type=raw_func, fields=tuple(raw_args.elements))
+            self.frame_depth -= 1
+            caller = self._frames[self.frame_depth]
+            if caller.is_sentinel:
+                return result
+
+            regs[caller.base + f.return_dest] = result
+            return _FRAME_CHANGE
 
         func = <MenaiFunction>raw_func
         raw_args = regs[base + instr.src1]
