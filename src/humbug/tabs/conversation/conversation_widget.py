@@ -1688,7 +1688,8 @@ class ConversationWidget(QWidget):
             }}
 
             #ConversationMessage #_header,
-            #ConversationMessage #_sections_container {{
+            #ConversationMessage #_sections_container,
+            #ConversationMessage #_footer {{
                 background-color: transparent;
                 border: none;
                 border-radius: 0;
