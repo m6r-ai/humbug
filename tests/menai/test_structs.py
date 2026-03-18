@@ -1019,3 +1019,65 @@ class TestStructDynamicConstruction:
                    (ctor  (dict-get d "point")))
               (ctor 1 2 3))
             ''')
+
+
+# ---------------------------------------------------------------------------
+# 14. Dynamic struct construction via apply
+# ---------------------------------------------------------------------------
+
+class TestStructDynamicApply:
+    """Test apply with a struct type that is a runtime value.
+
+    apply uses APPLY/TAIL_APPLY opcodes which are distinct from CALL/TAIL_CALL
+    and require the same MenaiStructType handling.
+    """
+
+    def test_apply_with_struct_type_from_dict(self, menai):
+        """apply works when the callable is a struct type retrieved from a dict."""
+        result = menai.evaluate_and_format('''
+        (let* ((point (struct (x y)))
+               (d     (dict (list "point" point)))
+               (ctor  (dict-get d "point")))
+          (apply ctor (list 3 4)))
+        ''')
+        assert result == '(point 3 4)'
+
+    def test_apply_with_statically_known_struct_type(self, menai):
+        """apply works with a statically-known struct type."""
+        result = menai.evaluate_and_format('''
+        (let ((point (struct (x y))))
+          (apply point (list 5 6)))
+        ''')
+        assert result == '(point 5 6)'
+
+    def test_apply_struct_type_in_tail_position(self, menai):
+        """apply with a dynamically-retrieved struct type in tail position works correctly."""
+        result = menai.evaluate_and_format('''
+        (let* ((point (struct (x y)))
+               (d     (dict (list "point" point)))
+               (make  (lambda (args)
+                        (let ((ctor (dict-get d "point")))
+                          (apply ctor args)))))
+          (make (list 7 8)))
+        ''')
+        assert result == '(point 7 8)'
+
+    def test_apply_struct_type_wrong_arity_too_few(self, menai):
+        """apply with a struct type and too few args raises an error."""
+        with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
+            menai.evaluate('''
+            (let* ((point (struct (x y)))
+                   (d     (dict (list "point" point)))
+                   (ctor  (dict-get d "point")))
+              (apply ctor (list 1)))
+            ''')
+
+    def test_apply_struct_type_wrong_arity_too_many(self, menai):
+        """apply with a struct type and too many args raises an error."""
+        with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
+            menai.evaluate('''
+            (let* ((point (struct (x y)))
+                   (d     (dict (list "point" point)))
+                   (ctor  (dict-get d "point")))
+              (apply ctor (list 1 2 3)))
+            ''')
