@@ -5,7 +5,7 @@ from typing import Dict
 
 from PySide6.QtCore import Signal, Qt, QRect, QSize
 from PySide6.QtGui import QTextCursor, QTextDocument, QIcon
-from PySide6.QtWidgets import QWidget, QToolButton
+from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout
 
 from ai import AIMessageSource
 
@@ -39,24 +39,34 @@ class ConversationInput(ConversationMessage):
         self._text_area.cursorPositionChanged.connect(self.cursor_position_changed)
         self._text_area.page_key_scroll_requested.connect(self.page_key_scroll_requested)
 
+        # Create footer area with buttons aligned to the bottom-right
+        self._footer = QWidget(self)
+        self._footer.setObjectName("_footer")
+        self._footer_layout = QHBoxLayout(self._footer)
+        self._footer_layout.setContentsMargins(0, 0, 0, 0)
+        self._footer_layout.setSpacing(4)
+        self._footer_layout.addStretch()
+
         # Create stop button (initially hidden)
         self._stop_button = QToolButton(self)
         self._stop_button.setObjectName("_stop_button")
         self._stop_button.clicked.connect(self._on_stop_button_clicked)
         self._stop_button.hide()
-        self._header_layout.addWidget(self._stop_button)
+        self._footer_layout.addWidget(self._stop_button)
 
         # Create submit button
         self._submit_button = QToolButton(self)
         self._submit_button.setObjectName("_submit_button")
         self._submit_button.clicked.connect(self._on_submit_button_clicked)
-        self._header_layout.addWidget(self._submit_button)
+        self._footer_layout.addWidget(self._submit_button)
 
         # Create settings button
         self._settings_button = QToolButton(self)
         self._settings_button.setObjectName("_settings_button")
         self._settings_button.clicked.connect(self._on_settings_button_clicked)
-        self._header_layout.addWidget(self._settings_button)
+        self._footer_layout.addWidget(self._settings_button)
+
+        self._layout.addWidget(self._footer)
 
         # Connect text changes to update button state
         self._text_area.textChanged.connect(self._on_text_changed)
