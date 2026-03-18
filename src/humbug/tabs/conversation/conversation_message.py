@@ -94,11 +94,11 @@ class ConversationMessage(QFrame):
             self.hide()
 
         # Create header area with horizontal layout
-        self._header = QWidget(self)
-        self._header.setObjectName("_header")
-        self._header_layout = QHBoxLayout(self._header)
-        self._header_layout.setContentsMargins(0, 0, 0, 0)
-        self._header_layout.setSpacing(4)
+        self._banner = QWidget(self)
+        self._banner.setObjectName("_banner")
+        self._banner_layout = QHBoxLayout(self._banner)
+        self._banner_layout.setContentsMargins(0, 0, 0, 0)
+        self._banner_layout.setSpacing(4)
 
         # Add expand/collapse button for all messages (input and non-input)
         self._expand_button: QToolButton | None = None
@@ -107,7 +107,7 @@ class ConversationMessage(QFrame):
             self._expand_button = QToolButton()
             self._expand_button.setObjectName("_expand_button")
             self._expand_button.clicked.connect(self._toggle_expanded)
-            self._header_layout.addWidget(self._expand_button)
+            self._banner_layout.addWidget(self._expand_button)
 
         # Tool calls and tool results should be collapsed by default
         default_expanded = style not in (AIMessageSource.TOOL_CALL, AIMessageSource.TOOL_RESULT)
@@ -118,11 +118,11 @@ class ConversationMessage(QFrame):
         self._pending_context: str | None = None
 
         # Create role and timestamp labels
-        self._role_label = QLabel(self._header)
+        self._role_label = QLabel(self._banner)
         self._role_label.setObjectName("_role_label")
         self._role_label.setIndent(0)
-        self._header_layout.addWidget(self._role_label)
-        self._header_layout.addStretch()
+        self._banner_layout.addWidget(self._role_label)
+        self._banner_layout.addStretch()
 
         role_sources = {
             AIMessageSource.USER: "user",
@@ -150,26 +150,26 @@ class ConversationMessage(QFrame):
             self._fork_message_button = QToolButton()
             self._fork_message_button.setObjectName("_fork_button")
             self._fork_message_button.clicked.connect(self._fork_message)
-            self._header_layout.addWidget(self._fork_message_button)
+            self._banner_layout.addWidget(self._fork_message_button)
 
         # Add delete button only for user messages
         elif style == AIMessageSource.USER and not self._is_input:
             self._delete_message_button = QToolButton()
             self._delete_message_button.setObjectName("_delete_button")
             self._delete_message_button.clicked.connect(self._delete_message)
-            self._header_layout.addWidget(self._delete_message_button)
+            self._banner_layout.addWidget(self._delete_message_button)
 
         # We have copy and save buttons for several message sources
         if style in (AIMessageSource.USER, AIMessageSource.AI, AIMessageSource.REASONING) and not self._is_input:
             self._copy_message_button = QToolButton()
             self._copy_message_button.setObjectName("_copy_button")
             self._copy_message_button.clicked.connect(self._copy_message)
-            self._header_layout.addWidget(self._copy_message_button)
+            self._banner_layout.addWidget(self._copy_message_button)
 
             self._save_message_button = QToolButton()
             self._save_message_button.setObjectName("_save_button")
             self._save_message_button.clicked.connect(self._save_message)
-            self._header_layout.addWidget(self._save_message_button)
+            self._banner_layout.addWidget(self._save_message_button)
 
         # Container for message sections
         self._sections_container = QWidget(self)
@@ -181,8 +181,14 @@ class ConversationMessage(QFrame):
 
         # Create layout
         self._layout = QVBoxLayout(self)
-        self._layout.addWidget(self._header)
-        self._layout.addWidget(self._sections_container)
+
+        if not is_input:
+            self._layout.addWidget(self._banner)
+            self._layout.addWidget(self._sections_container)
+
+        else:
+            self._layout.addWidget(self._sections_container)
+            self._layout.addWidget(self._banner)
 
         # Tool approval widgets
         self._approval_widget: QWidget | None = None

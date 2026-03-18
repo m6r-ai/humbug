@@ -1687,7 +1687,7 @@ class ConversationWidget(QWidget):
                 border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
             }}
 
-            #ConversationMessage #_header,
+            #ConversationMessage #_banner,
             #ConversationMessage #_sections_container {{
                 background-color: transparent;
                 border: none;
@@ -1906,7 +1906,7 @@ class ConversationWidget(QWidget):
                 border: 1px solid {style_manager.get_color_str(ColorRole.CODE_BORDER)};
             }}
 
-            #ConversationMessage #ConversationMessageSection #_header_container {{
+            #ConversationMessage #ConversationMessageSection #_banner_container {{
                 background-color: transparent;
                 border: none;
                 border-radius: 0;
