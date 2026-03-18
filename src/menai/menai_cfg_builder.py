@@ -240,7 +240,7 @@ class MenaiCFGBuilder:
             return self._build_trace(ir, block, scope, state)
 
         if isinstance(ir, MenaiIRError):
-            return self._build_error(ir, block, state)
+            return self._build_error(ir, block, scope, state)
 
         raise TypeError(f"MenaiCFGBuilder: unhandled IR node {type(ir).__name__}")
 
@@ -281,11 +281,12 @@ class MenaiCFGBuilder:
         return val, block
 
     def _build_error(
-        self, ir: MenaiIRError, block: MenaiCFGBlock, state: _FunctionState
+        self, ir: MenaiIRError, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
-        # error terminates the block; the returned value is a placeholder
-        # that will never be used (the block has no successors).
-        block.terminator = MenaiCFGRaiseTerm(message=ir.message)
+        # Evaluate the message expression, then terminate the block.
+        # The returned placeholder value is never used (the block has no successors).
+        msg_val, block = self._build_expr(ir.message, block, scope, state, tail=False)
+        block.terminator = MenaiCFGRaiseTerm(message=msg_val)
         placeholder = state.new_value("error")
         return placeholder, block
 

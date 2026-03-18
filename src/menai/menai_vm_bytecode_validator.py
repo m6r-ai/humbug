@@ -126,7 +126,7 @@ class BytecodeValidator:
             opcode = instr.opcode
 
             # Validate constant pool indices
-            if opcode in (Opcode.LOAD_CONST, Opcode.RAISE_ERROR):
+            if opcode == Opcode.LOAD_CONST:
                 const_index = instr.src0
                 if const_index < 0 or const_index >= len(code.constants):
                     raise ValidationError(
@@ -188,6 +188,17 @@ class BytecodeValidator:
                     raise ValidationError(
                         ValidationErrorType.INVALID_VARIABLE_ACCESS,
                         f"Function register {func_reg} out of bounds (local_count: {code.local_count})",
+                        instruction_index=i,
+                        opcode=opcode
+                    )
+
+            # Validate RAISE_ERROR: src0 is a register holding the message string.
+            if opcode == Opcode.RAISE_ERROR:
+                msg_reg = instr.src0
+                if msg_reg < 0 or msg_reg >= code.local_count:
+                    raise ValidationError(
+                        ValidationErrorType.INVALID_VARIABLE_ACCESS,
+                        f"RAISE_ERROR message register {msg_reg} out of bounds (local_count: {code.local_count})",
                         instruction_index=i,
                         opcode=opcode
                     )
@@ -365,6 +376,18 @@ class BytecodeValidator:
                     raise ValidationError(
                         ValidationErrorType.UNINITIALIZED_VARIABLE,
                         f"RETURN source register {var_index} may be uninitialized",
+                        instruction_index=instr_idx,
+                        opcode=opcode,
+                        context=f"Initialized variables: {sorted(current_initialized)}"
+                    )
+
+            # Check RAISE_ERROR - message register must be initialized
+            if opcode == Opcode.RAISE_ERROR:
+                var_index = instr.src0
+                if var_index not in current_initialized:
+                    raise ValidationError(
+                        ValidationErrorType.UNINITIALIZED_VARIABLE,
+                        f"RAISE_ERROR message register {var_index} may be uninitialized",
                         instruction_index=instr_idx,
                         opcode=opcode,
                         context=f"Initialized variables: {sorted(current_initialized)}"

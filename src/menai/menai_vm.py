@@ -569,14 +569,13 @@ class MenaiVM:
     def _op_raise_error(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
-        """RAISE_ERROR: Raise error with message from constant pool."""
-        src0 = instr.src0
-        # Validator guarantees src0 is in bounds
-        # Type check could be removed if we validate constant types, but keep for now
-        error_msg = frame.code.constants[src0]
+        """RAISE_ERROR r_src0: Raise error with message string from register src0."""
+        error_msg = self.regs[frame.base + instr.src0]
         if type(error_msg) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError("RAISE_ERROR requires a string constant")
-
+            raise MenaiEvalError(
+                message="error: message must be a string",
+                received=f"Got: {error_msg.describe()} ({error_msg.type_name()})"
+            )
         raise MenaiEvalError(error_msg.value)
 
     def _op_make_closure(  # pylint: disable=useless-return

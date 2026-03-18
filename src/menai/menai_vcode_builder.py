@@ -282,7 +282,9 @@ class MenaiVCodeBuilder:
                 instrs.append(MenaiVCodeJump(label="__entry__"))
 
             elif isinstance(term, MenaiCFGRaiseTerm):
-                instrs.append(MenaiVCodeRaise(message=term.message))
+                msg_reg = self._reg(term.message)
+                instrs.append(MenaiVCodeRaise(message=msg_reg))
+                max_reg_id = max(max_reg_id, term.message.id)
 
             else:
                 raise TypeError(

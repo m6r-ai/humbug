@@ -309,11 +309,11 @@ class MenaiCFGSelfLoopTerm:
 @dataclass
 class MenaiCFGRaiseTerm:
     """
-    Raise a runtime error with a constant message string.
+    Raise a runtime error with a message string from a register.
 
     Lowered to RAISE_ERROR by the VM codegen.
     """
-    message: MenaiValue
+    message: MenaiCFGValue
 
 
 # Union of all terminator types.
@@ -482,7 +482,7 @@ def _fmt_term(term: MenaiCFGTerminator) -> str:
         return f"self_loop {_fmt_values(term.args)}"
 
     if isinstance(term, MenaiCFGRaiseTerm):
-        return f"raise {term.message!r}"
+        return f"raise {term.message}"
 
     return f"<unknown term {type(term).__name__}>"
 
@@ -591,5 +591,8 @@ def value_ids_in_term(term: 'MenaiCFGTerminator') -> List[int]:
     if isinstance(term, MenaiCFGSelfLoopTerm):
         return [a.id for a in term.args]
 
-    # MenaiCFGJumpTerm, MenaiCFGRaiseTerm: no value references.
+    if isinstance(term, MenaiCFGRaiseTerm):
+        return [term.message.id]
+
+    # MenaiCFGJumpTerm: no value references.
     return []
