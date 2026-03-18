@@ -1,12 +1,11 @@
 ; dependency.menai
 ; Dependency struct definition and dependency-level operations
 
-(let* (
+(letrec (
   (calendar-mod     (import "tools/planner/calendar"))
   (add-working-days (dict-get calendar-mod "add-working-days"))
-  (dependency       (struct (from-task to-task type lag-days))))
+  (dependency       (struct (from-task to-task type lag-days)))
 
-(letrec (
   ; Get all predecessor task IDs for a given task
   (get-predecessors
     (lambda (task-id dependencies)
@@ -112,5 +111,4 @@
   (list "task-exists?"                 task-exists?)
   (list "apply-forward-constraint"     apply-forward-constraint)
   (list "apply-backward-constraint"    apply-backward-constraint)
-  (list "validate-dependency"          validate-dependency))
-))
+  (list "validate-dependency"          validate-dependency)))

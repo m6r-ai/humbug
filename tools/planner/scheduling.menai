@@ -1,7 +1,7 @@
 ; scheduling.menai
 ; Critical Path Method (CPM) scheduling algorithm
 
-(let* (
+(letrec (
   (calendar-mod (import "tools/planner/calendar"))
   (task-mod     (import "tools/planner/task"))
   (dep-mod      (import "tools/planner/dependency"))
@@ -29,9 +29,8 @@
   (get-predecessor-dependencies (dict-get dep-mod "get-predecessor-dependencies"))
   (get-successor-dependencies  (dict-get dep-mod "get-successor-dependencies"))
   (apply-forward-constraint    (dict-get dep-mod "apply-forward-constraint"))
-  (apply-backward-constraint   (dict-get dep-mod "apply-backward-constraint")))
+  (apply-backward-constraint   (dict-get dep-mod "apply-backward-constraint"))
 
-(letrec (
   ; ==========================================================================
   ; HELPERS
   ; ==========================================================================
@@ -242,13 +241,11 @@
         (calculate-slack
           (backward-pass
             (forward-pass project)))
-        0)))
-)
+        0))))
 
 (dict
   (list "forward-pass"           forward-pass)
   (list "backward-pass"          backward-pass)
   (list "calculate-slack"        calculate-slack)
   (list "identify-critical-path" identify-critical-path)
-  (list "schedule-project"       schedule-project))
-))
+  (list "schedule-project"       schedule-project)))

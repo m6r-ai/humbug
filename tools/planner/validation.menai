@@ -1,7 +1,7 @@
 ; validation.menai
 ; Project-level validation and consistency checks
 
-(let* (
+(letrec (
   (task-mod   (import "tools/planner/task"))
   (dep-mod    (import "tools/planner/dependency"))
   (task       (dict-get task-mod "task"))
@@ -9,9 +9,8 @@
   (get-successors      (dict-get dep-mod "get-successors"))
   (get-predecessors    (dict-get dep-mod "get-predecessors"))
   (task-exists?        (dict-get dep-mod "task-exists?"))
-  (validate-dependency (dict-get dep-mod "validate-dependency")))
+  (validate-dependency (dict-get dep-mod "validate-dependency"))
 
-(letrec (
   ; ============================================================================
   ; CIRCULAR DEPENDENCY DETECTION
   ; ============================================================================
@@ -129,5 +128,4 @@
   (list "validate-project"                validate-project)
   (list "find-duplicate-task-ids"         find-duplicate-task-ids)
   (list "find-orphaned-tasks"             find-orphaned-tasks)
-  (list "find-tasks-with-invalid-calendars" find-tasks-with-invalid-calendars))
-))
+  (list "find-tasks-with-invalid-calendars" find-tasks-with-invalid-calendars)))
