@@ -1439,7 +1439,8 @@ class ColumnManager(QWidget):
         history: AIConversationHistory | None = None,
         model: str | None = None,
         temperature: float | None = None,
-        reasoning: AIReasoningCapability | None = None
+        reasoning: AIReasoningCapability | None = None,
+        folder: str | None = None
     ) -> ConversationTab:
         """Create a new conversation tab and return its ID."""
         # Generate timestamp for ID
@@ -1447,7 +1448,12 @@ class ColumnManager(QWidget):
         conversation_title = timestamp.strftime("%Y-%m-%d-%H-%M-%S-%f")[:23]
         prefix = "dAI-" if child else ""
         conversation_title = f"{prefix}{conversation_title}"
-        filename = os.path.join("conversations", f"{conversation_title}.conv")
+        if folder is not None:
+            # folder is an absolute path; compute path relative to mindspace
+            relative_folder = self._mindspace_manager.get_relative_path(folder)
+            filename = os.path.join(relative_folder, f"{conversation_title}.conv")
+        else:
+            filename = os.path.join("conversations", f"{conversation_title}.conv")
         full_path = self._mindspace_manager.get_absolute_path(filename)
 
         try:
