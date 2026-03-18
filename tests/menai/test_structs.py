@@ -1081,3 +1081,72 @@ class TestStructDynamicApply:
                    (ctor  (dict-get d "point")))
               (apply ctor (list 1 2 3)))
             ''')
+
+
+# ---------------------------------------------------------------------------
+# 15. Struct in letrec nested inside an enclosing binding form
+#
+# Regression tests for a bug where the semantic analyser discarded the
+# analysed body of let/let*/letrec, causing (struct ...) inside a nested
+# letrec body to reach the compiler as a raw list rather than a
+# MenaiASTStruct node.  The struct field names were then treated as free
+# variable references, producing "Undefined variable" errors at runtime.
+# ---------------------------------------------------------------------------
+
+class TestStructInNestedLetrec:
+    """Struct defined in a letrec that is the body of an enclosing let/let*/letrec."""
+
+    def test_struct_in_letrec_body_of_let(self, menai):
+        """Struct in letrec nested inside a let body is correctly compiled."""
+        result = menai.evaluate_and_format('''
+        (let ((x 1))
+          (letrec ((point (struct (a b))))
+            (point x 2)))
+        ''')
+        assert result == '(point 1 2)'
+
+    def test_struct_in_letrec_body_of_let_star(self, menai):
+        """Struct in letrec nested inside a let* body is correctly compiled."""
+        result = menai.evaluate_and_format('''
+        (let* ((x 1) (y 2))
+          (letrec ((point (struct (a b))))
+            (point x y)))
+        ''')
+        assert result == '(point 1 2)'
+
+    def test_struct_in_letrec_body_of_letrec(self, menai):
+        """Struct in letrec nested inside another letrec body is correctly compiled."""
+        result = menai.evaluate_and_format('''
+        (letrec ((f (lambda (n) (integer+ n 1))))
+          (letrec ((point (struct (a b))))
+            (point (f 0) (f 1))))
+        ''')
+        assert result == '(point 1 2)'
+
+    def test_struct_fields_accessible_in_nested_letrec(self, menai):
+        """struct-get works on instances built in a nested letrec."""
+        result = menai.evaluate_and_format('''
+        (let ((offset 10))
+          (letrec ((point (struct (x y)))
+                   (get-x (lambda (p) (struct-get p 'x))))
+            (get-x (point offset 20))))
+        ''')
+        assert result == '10'
+
+    def test_struct_with_hyphenated_fields_in_nested_letrec(self, menai):
+        """Struct with hyphenated field names in a nested letrec compiles correctly."""
+        result = menai.evaluate_and_format('''
+        (let ((x 1))
+          (letrec ((dep (struct (from-task to-task dep-type lag-days))))
+            (struct-fields dep)))
+        ''')
+        assert result == '(from-task to-task dep-type lag-days)'
+
+    def test_struct_constructor_callable_in_nested_letrec(self, menai):
+        """Struct constructor is callable when struct is defined in a nested letrec."""
+        result = menai.evaluate_and_format('''
+        (let* ((from "T1") (to "T2"))
+          (letrec ((dep (struct (from-task to-task type lag-days))))
+            (dep from to "finish-to-start" 0)))
+        ''')
+        assert result == '(dep "T1" "T2" "finish-to-start" 0)'
