@@ -1,0 +1,63 @@
+; Tests for json_parser.menai
+
+(let ((json    (import "json_parser"))
+      (t       (import "menai_test")))
+  (let ((parse         (dict-get json "parse"))
+        (assert-equal  (dict-get t   "assert-equal")))
+    (dict
+      (list "tests" (list
+
+        (list "objects" (list
+          (list "empty object"
+                (lambda () (assert-equal (parse "{}") (dict))))
+          (list "single key"
+                (lambda () (assert-equal (parse "{\"a\": 1}") (dict (list "a" 1)))))
+          (list "nested object"
+                (lambda () (assert-equal (parse "{\"a\": {\"b\": 2}}")
+                                         (dict (list "a" (dict (list "b" 2)))))))
+        ))
+
+        (list "arrays" (list
+          (list "empty array"
+                (lambda () (assert-equal (parse "[]") (list))))
+          (list "integer array"
+                (lambda () (assert-equal (parse "[1, 2, 3]") (list 1 2 3))))
+          (list "nested array"
+                (lambda () (assert-equal (parse "[[1, 2], [3, 4]]")
+                                         (list (list 1 2) (list 3 4)))))
+        ))
+
+        (list "strings" (list
+          (list "empty string"
+                (lambda () (assert-equal (parse "\"\"") "")))
+          (list "simple string"
+                (lambda () (assert-equal (parse "\"hello\"") "hello")))
+          (list "escapes" (list
+            (list "newline"
+                  (lambda () (assert-equal (parse "\"\\n\"") "\n")))
+            (list "tab"
+                  (lambda () (assert-equal (parse "\"\\t\"") "\t")))
+            (list "unicode"
+                  (lambda () (assert-equal (parse "\"\\u0041\"") "A")))
+          ))
+        ))
+
+        (list "numbers" (list
+          (list "integer"
+                (lambda () (assert-equal (parse "42") 42)))
+          (list "negative integer"
+                (lambda () (assert-equal (parse "-7") -7)))
+          (list "float"
+                (lambda () (assert-equal (parse "3.14") 3.14)))
+        ))
+
+        (list "literals" (list
+          (list "true"
+                (lambda () (assert-equal (parse "true") #t)))
+          (list "false"
+                (lambda () (assert-equal (parse "false") #f)))
+          (list "null"
+                (lambda () (assert-equal (parse "null") #none)))
+        ))
+
+      )))))
