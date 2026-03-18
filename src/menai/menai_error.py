@@ -17,6 +17,7 @@ class MenaiError(Exception):
         line: int | None = None,
         column: int | None = None,
         source: str | None = None,
+        source_file: str | None = None,
         show_context: bool = True
     ):
         """
@@ -33,6 +34,7 @@ class MenaiError(Exception):
             column: Column number (1-indexed)
             source: Source code for context display
             show_context: Whether to show source code context
+            source_file: Source file name for location display
         """
         self.message = message
         self.context = context
@@ -43,6 +45,7 @@ class MenaiError(Exception):
         self.line = line
         self.column = column
         self.source = source
+        self.source_file = source_file
         self.show_context = show_context
 
         super().__init__(self._format_detailed_message())
@@ -135,7 +138,11 @@ class MenaiError(Exception):
 
         # Add position information if available
         if self.line is not None and self.column is not None:
-            parts.append(f"Location: Line {self.line}, Column {self.column}")
+            if self.source_file:
+                parts.append(f"Location: {self.source_file}, Line {self.line}, Column {self.column}")
+
+            else:
+                parts.append(f"Location: Line {self.line}, Column {self.column}")
 
         # Add source code context if available
         if self.show_context and self.source is not None:
