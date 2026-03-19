@@ -285,6 +285,7 @@ def get_english_strings() -> LanguageStrings:
         tooltip_save_message="Save message as markdown",
         tooltip_fork_message="Fork conversation after this message",
         tooltip_delete_from_message="Delete conversation from this point",
+        tooltip_edit_message="Edit this message",
         tooltip_edit_file="Edit this file",
         tooltip_submit_message="Submit message",
         tooltip_stop_message="Stop current processing",
