@@ -1452,8 +1452,10 @@ class ColumnManager(QWidget):
             # folder is an absolute path; compute path relative to mindspace
             relative_folder = self._mindspace_manager.get_relative_path(folder)
             filename = os.path.join(relative_folder, f"{conversation_title}.conv")
+
         else:
             filename = os.path.join("conversations", f"{conversation_title}.conv")
+
         full_path = self._mindspace_manager.get_absolute_path(filename)
 
         try:

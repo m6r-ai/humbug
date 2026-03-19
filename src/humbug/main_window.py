@@ -337,7 +337,7 @@ class MainWindow(QMainWindow):
         self._mindspace_view.file_opened_in_preview.connect(self._on_mindspace_view_file_opened_in_preview)
         self._mindspace_view.open_mindspace_requested.connect(self._open_mindspace)
         self._mindspace_view.settings_requested.connect(self._show_mindspace_settings_dialog)
-        self._mindspace_view.new_conversation_requested.connect(self._new_conversation_in_folder)
+        self._mindspace_view.new_conversation_requested.connect(self._on_mindspace_view_new_conversation_in_folder)
         self._splitter.addWidget(self._mindspace_view)
 
         # Create tab manager in splitter
@@ -1141,7 +1141,7 @@ class MainWindow(QMainWindow):
         )
         return conversation_tab
 
-    def _new_conversation_in_folder(self, folder_path: str) -> None:
+    def _on_mindspace_view_new_conversation_in_folder(self, folder_path: str) -> None:
         """Create a new conversation in a specific folder."""
         if not self._mindspace_manager.has_mindspace():
             return
