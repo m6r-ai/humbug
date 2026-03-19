@@ -627,7 +627,7 @@ class MenaiVM:
 
     def _op_call(
         self, frame: Frame, instr: Instruction
-    ) -> _FrameChange:
+    ) -> _FrameChange | MenaiValue | None:
         """CALL dest, src0, src1: Call func in src0 with src1 args already in callee window; result to dest.
 
         The caller has written the arguments into regs[base+local_count .. base+local_count+src1-1].
@@ -705,7 +705,7 @@ class MenaiVM:
 
     def _op_tail_call(
         self, frame: Frame, instr: Instruction
-    ) -> _FrameChange:
+    ) -> _FrameChange | MenaiValue:
         """TAIL_CALL src0, src1: Replace current frame with func in src0."""
         base = frame.base
         regs = self.regs
@@ -782,7 +782,7 @@ class MenaiVM:
 
     def _op_apply(
         self, frame: Frame, instr: Instruction
-    ) -> _FrameChange:
+    ) -> _FrameChange | MenaiValue | None:
         """APPLY dest, src0, src1: Apply func in src0 to arg_list in register src1; result to dest."""
         base = frame.base
         regs = self.regs
@@ -872,7 +872,7 @@ class MenaiVM:
 
     def _op_tail_apply(
         self, frame: Frame, instr: Instruction
-    ) -> _FrameChange:
+    ) -> _FrameChange | MenaiValue:
         """TAIL_APPLY src0, src1: Tail apply func in src0 to arg_list in register src1.
 
         Scatters list elements into regs[base+local_count..], moves them down to base+0..,
