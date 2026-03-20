@@ -6,7 +6,7 @@ from typing import Dict, List, cast
 from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer
 
-from ai import AIConversationHistory, AIConversationSettings, AIReasoningCapability
+from ai import AIConversation, AIConversationHistory, AIConversationSettings, AIReasoningCapability
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -1440,7 +1440,8 @@ class ColumnManager(QWidget):
         model: str | None = None,
         temperature: float | None = None,
         reasoning: AIReasoningCapability | None = None,
-        folder: str | None = None
+        folder: str | None = None,
+        ai_conversation: AIConversation | None = None
     ) -> ConversationTab:
         """Create a new conversation tab and return its ID."""
         # Generate timestamp for ID
@@ -1459,7 +1460,7 @@ class ColumnManager(QWidget):
         full_path = self._mindspace_manager.get_absolute_path(filename)
 
         try:
-            conversation_tab = ConversationTab("", full_path, self)
+            conversation_tab = ConversationTab("", full_path, self, ai_conversation=ai_conversation)
 
         except ConversationError as e:
             self._logger.exception("Failed to create new conversation: %s", str(e))
@@ -1484,7 +1485,10 @@ class ColumnManager(QWidget):
             temperature=temperature if AIConversationSettings.supports_temperature(model) else None,
             reasoning=reasoning
         )
-        conversation_tab.update_conversation_settings(conversation_settings)
+
+        if ai_conversation is None:
+            conversation_tab.update_conversation_settings(conversation_settings)
+
         if history:
             conversation_tab.set_conversation_history(history)
 

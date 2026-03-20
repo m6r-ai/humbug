@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Signal
 
-from ai import AIConversationHistory, AIConversationSettings
+from ai import AIConversation, AIConversationHistory, AIConversationSettings
 
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
@@ -32,7 +32,7 @@ class ConversationTab(TabBase):
         tab_id: str,
         path: str,
         parent: QWidget | None = None,
-        use_existing_ai_conversation: bool = False
+        ai_conversation: AIConversation | None = None
     ) -> None:
         """
         Initialize the unified conversation tab.
@@ -41,6 +41,7 @@ class ConversationTab(TabBase):
             tab_id: Unique identifier for this tab, or a UUID will be generated if not provided.
             path: Full path to transcript file
             parent: Optional parent widget
+            ai_conversation: An existing AIConversation to adopt, or None to create a new one
         """
         super().__init__(tab_id, parent)
         self._logger = logging.getLogger("ConversationTab")
@@ -60,10 +61,7 @@ class ConversationTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create conversation widget
-        self._conversation_widget = ConversationWidget(
-            path, self, use_existing_ai_conversation
-        )
-
+        self._conversation_widget = ConversationWidget(path, self, ai_conversation=ai_conversation)
         self._conversation_widget.fork_requested.connect(self.fork_requested)
         self._conversation_widget.fork_from_index_requested.connect(self.fork_from_index_requested)
         self._conversation_widget.conversation_settings_requested.connect(
@@ -147,8 +145,8 @@ class ConversationTab(TabBase):
     def restore_from_state(cls, state: TabState, parent: QWidget) -> 'ConversationTab':
         """Create and restore a conversation tab from serialized state."""
 
-        use_existing_ai_conversation = bool(state.metadata and state.metadata.get('temp_state'))
-        tab = cls(state.tab_id, state.path, parent, use_existing_ai_conversation)
+        ai_conversation = state.metadata.get('ai_conversation_ref') if state.metadata else None
+        tab = cls(state.tab_id, state.path, parent, ai_conversation=ai_conversation)
         if state.is_ephemeral:
             tab._is_ephemeral = True
 
