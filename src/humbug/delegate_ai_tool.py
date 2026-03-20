@@ -418,6 +418,12 @@ class DelegateAITool(AITool):
 
             # Submit the prompt directly to the child AIConversation
             requester = parent_ai_conversation.conversation_settings().model
+
+            # Protect the parent conversation tab so the child display tab lands in a different column
+            parent_tab = self._column_manager.find_tab_by_ai_conversation(parent_ai_conversation)
+            if parent_tab:
+                self._column_manager.protect_tab(parent_tab.tab_id())
+
             await child_ai_conversation.submit_message(requester, task_prompt)
 
             # Create the display tab, passing the already-running AIConversation
@@ -430,6 +436,9 @@ class DelegateAITool(AITool):
                 raise AIToolExecutionError(
                     f"Failed to create display tab for delegation: {str(e)}"
                 ) from e
+
+            if parent_tab:
+                self._column_manager.unprotect_tab(parent_tab.tab_id())
 
             tab_guid = conversation_tab.tab_id()
             session_id = self._mindspace_manager.get_mindspace_relative_path(conversation_tab.path())

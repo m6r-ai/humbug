@@ -184,6 +184,10 @@ class ConversationTab(TabBase):
 
         self.update_status()
 
+    def ai_conversation(self) -> AIConversation:
+        """Get the AIConversation instance."""
+        return self._conversation_widget.ai_conversation()
+
     def conversation_settings(self) -> AIConversationSettings:
         """Get the current conversation settings."""
         return self._conversation_widget.conversation_settings()

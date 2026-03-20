@@ -1145,6 +1145,15 @@ class ConversationWidget(QWidget):
         self.status_updated.emit()
         self._input.set_model(new_settings.model)
 
+    def ai_conversation(self) -> AIConversation:
+        """
+        Get the AIConversation instance.
+
+        Returns:
+            The AIConversation instance
+        """
+        return self._ai_conversation
+
     def conversation_settings(self) -> AIConversationSettings:
         """
         Get current conversation settings.

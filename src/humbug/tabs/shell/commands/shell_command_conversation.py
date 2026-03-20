@@ -1,17 +1,18 @@
 """Command for creating a new conversation tab from the system shell."""
 
 import logging
-from typing import List, Dict
+from typing import List, Dict, cast
 
 from ai import AIConversationSettings, AIReasoningCapability
 from syntax import Token, TokenType
 
-from humbug.tabs.column_manager import ColumnManager
-from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.mindspace.mindspace_error import MindspaceError
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
+from humbug.tabs.column_manager import ColumnManager
+from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_event_source import ShellEventSource
+from humbug.tabs.tab_base import TabBase
 from humbug.user.user_manager import UserManager
 
 
@@ -112,7 +113,9 @@ class ShellCommandConversation(ShellCommand):
                 reasoning = model_config.reasoning_capabilities
 
         # Create new conversation with model if specified
-        self._column_manager.protect_current_tab(True)
+        current_tab = cast(TabBase, self._column_manager.get_current_tab())
+        self._column_manager.protect_tab(current_tab.tab_id())
+
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
             conversation_tab = self._column_manager.new_conversation(False, None, model, temperature_val, reasoning)
@@ -126,7 +129,7 @@ class ShellCommandConversation(ShellCommand):
             return False
 
         finally:
-            self._column_manager.protect_current_tab(False)
+            self._column_manager.unprotect_tab(current_tab.tab_id())
 
         self._history_manager.add_message(
             ShellEventSource.SUCCESS,
