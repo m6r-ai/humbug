@@ -13,13 +13,14 @@ from menai.menai_error import MenaiEvalError, MenaiCancelledException
 from menai.menai_value_fast import (
     MenaiValue, MenaiBoolean, MenaiString, MenaiList, MenaiDict, MenaiFunction,
     MenaiInteger, MenaiComplex, MenaiFloat, MenaiSymbol, MenaiNone, MenaiSet,
+    MenaiStructType, MenaiStruct,
     Menai_NONE, Menai_BOOLEAN_TRUE, Menai_BOOLEAN_FALSE, Menai_DICT_EMPTY, Menai_LIST_EMPTY, Menai_SET_EMPTY
 )
 from menai.menai_value_fast import convert_code_object, convert_value, to_slow
-from menai.menai_value import MenaiStructType, MenaiStruct
 from menai.menai_value_fast cimport (
     MenaiValue, MenaiBoolean, MenaiString, MenaiList, MenaiDict, MenaiFunction,
-    MenaiInteger, MenaiComplex, MenaiFloat, MenaiSymbol, MenaiNone, MenaiSet
+    MenaiInteger, MenaiComplex, MenaiFloat, MenaiSymbol, MenaiNone, MenaiSet,
+    MenaiStructType, MenaiStruct
 )
 from menai.menai_vm_bytecode_validator import validate_bytecode
 
@@ -4748,8 +4749,7 @@ class MenaiVM:
                 f"'struct-fields' requires a struct type argument, got {val.type_name()}"
             )
 
-        from menai.menai_value import MenaiSymbol as SlowSymbol
-        regs[base + instr.dest] = MenaiList(tuple(SlowSymbol(field) for field in val.field_names))
+        regs[base + instr.dest] = MenaiList(tuple(MenaiSymbol(field) for field in val.field_names))
         return None
 
     def _op_range(  # pylint: disable=useless-return

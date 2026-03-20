@@ -48,3 +48,13 @@ cdef class MenaiFunction(MenaiValue):
     cdef public object bytecode
     cdef public list captured_values
     cdef public bint is_variadic
+
+cdef class MenaiStructType(MenaiValue):
+    cdef public str name
+    cdef public int tag
+    cdef public tuple field_names
+    cdef public dict _field_index
+
+cdef class MenaiStruct(MenaiValue):
+    cdef public object struct_type
+    cdef public tuple fields
