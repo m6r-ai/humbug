@@ -391,6 +391,7 @@ class ConversationWidget(QWidget):
         msg_widget.scroll_requested.connect(self._on_scroll_requested)
         msg_widget.mouse_released.connect(self._stop_scroll)
         msg_widget.fork_requested.connect(self._on_message_fork_requested)
+        msg_widget.edit_confirmed.connect(self._on_message_edit_confirmed)
         msg_widget.delete_requested.connect(self._on_message_delete_requested)
         msg_widget.expand_requested.connect(self._on_message_expand_requested)
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
@@ -1671,6 +1672,7 @@ class ConversationWidget(QWidget):
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
         border_radius = int(style_manager.message_bubble_spacing() * zoom_factor)
+        label_font_size = style_manager.base_font_size() * zoom_factor * 0.8
 
         # The -2px padding above is to offset the 2px border so that the content area remains the same size
         return f"""
@@ -1734,6 +1736,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_copy_button,
             #ConversationMessage #_save_button,
             #ConversationMessage #_fork_button,
+            #ConversationMessage #_edit_button,
             #ConversationMessage #_delete_button,
             #ConversationMessage #_stop_button,
             #ConversationMessage #_submit_button,
@@ -1748,6 +1751,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_copy_button:hover,
             #ConversationMessage #_save_button:hover,
             #ConversationMessage #_fork_button:hover,
+            #ConversationMessage #_edit_button:hover,
             #ConversationMessage #_delete_button:hover,
             #ConversationMessage #_stop_button:hover,
             #ConversationMessage #_submit_button:hover,
@@ -1758,8 +1762,9 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_copy_button:pressed,
             #ConversationMessage #_save_button:pressed,
             #ConversationMessage #_fork_button:pressed,
+            #ConversationMessage #_edit_button:pressed,
             #ConversationMessage #_delete_button:pressed,
-            #ConversationMessage #_stop_button:presse,
+            #ConversationMessage #_stop_button:pressed,
             #ConversationMessage #_submit_button:pressed,
             #ConversationMessage #_settings_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
@@ -1774,6 +1779,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage[message_source="user"] #_copy_button:hover,
             #ConversationMessage[message_source="user"] #_save_button:hover,
             #ConversationMessage[message_source="user"] #_fork_button:hover,
+            #ConversationMessage[message_source="user"] #_edit_button:hover,
             #ConversationMessage[message_source="user"] #_delete_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
             }}
@@ -1781,6 +1787,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage[message_source="user"] #_copy_button:pressed,
             #ConversationMessage[message_source="user"] #_save_button:pressed,
             #ConversationMessage[message_source="user"] #_fork_button:pressed,
+            #ConversationMessage[message_source="user"] #_edit_button:pressed,
             #ConversationMessage[message_source="user"] #_delete_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_PRESSED)};
             }}
@@ -1809,6 +1816,41 @@ class ConversationWidget(QWidget):
 
             #ConversationMessage #_approval_context_widget #_approval_context_text_edit {{
                 background-color: transparent;
+            }}
+
+            #ConversationMessage #_edit_text_edit {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
+                border-radius: 4px;
+                padding: 6px;
+                font-size: {label_font_size / 0.8:.1f}pt;
+            }}
+
+            #ConversationMessage #_edit_confirm_button {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: none;
+                border-radius: 4px;
+                padding: 4px 12px;
+                font-size: {label_font_size:.1f}pt;
+            }}
+
+            #ConversationMessage #_edit_confirm_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
+            }}
+
+            #ConversationMessage #_edit_cancel_button {{
+                background-color: transparent;
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
+                border-radius: 4px;
+                padding: 4px 12px;
+                font-size: {label_font_size:.1f}pt;
+            }}
+
+            #ConversationMessage #_edit_cancel_button:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
             }}
 
             /* Scrollbars within approval contexts */
@@ -2106,6 +2148,83 @@ class ConversationWidget(QWidget):
 
         # Emit signal with the end index (inclusive)
         self.fork_from_index_requested.emit(fork_end_index)
+
+    def _on_message_edit_confirmed(self, new_text: str) -> None:
+        """Handle confirmed inline edit: truncate from that message onward and resubmit."""
+        if self._ai_conversation is None:
+            return
+
+        sender = self.sender()
+        if not isinstance(sender, ConversationMessage):
+            return
+
+        # Guard: only handle widgets that belong to THIS conversation
+        if sender not in self._messages:
+            return
+
+        widget_index = self._messages.index(sender)
+        if widget_index < 0 or widget_index >= len(self._messages):
+            return
+
+        if self._messages[widget_index].message_source() != AIMessageSource.USER:
+            return
+
+        if self._is_streaming:
+            self.cancel_current_tasks(False)
+            self._is_streaming = False
+            self._input.set_streaming(False)
+            self._stop_message_border_animation()
+            self._pending_messages.clear()
+            if self._update_timer.isActive():
+                self._update_timer.stop()
+
+            self.status_updated.emit()
+
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        history = ai_conversation.get_conversation_history()
+        all_messages = history.get_messages()
+
+        # Use message ID to find the correct position in history (independent of widget index)
+        message_id = sender.message_id()
+        hist_index = next((i for i, m in enumerate(all_messages) if m.id == message_id), -1)
+        if hist_index < 0 or all_messages[hist_index].source != AIMessageSource.USER:
+            return
+
+        preserved_history_messages = all_messages[:hist_index]
+        ai_conversation.load_message_history(preserved_history_messages)
+
+        preserved_messages = self._messages[:widget_index]
+
+        for i in range(len(self._messages) - 1, widget_index - 1, -1):
+            message_widget = self._messages[i]
+            if self._message_with_selection == message_widget:
+                self._message_with_selection = None
+
+            self._messages_layout.removeWidget(message_widget)
+            message_widget.deleteLater()
+
+        self._messages = preserved_messages
+
+        conversation_settings = ai_conversation.conversation_settings()
+        self._input.set_model(conversation_settings.model)
+
+        preserved_history = AIConversationHistory(preserved_history_messages, history.version(), history.parent())
+        try:
+            self._transcript_handler.write(preserved_history)
+
+            if self._animated_message and self._animated_message not in preserved_messages:
+                self._stop_message_border_animation()
+
+            self.status_updated.emit()
+            self._spotlighted_message_index = -1
+            self._auto_scroll = True
+
+            # Put new text in input and immediately submit
+            self._input.set_plain_text(new_text.strip())
+            self.submit()
+
+        except AIConversationTranscriptError as e:
+            self._logger.error("Failed to update transcript after edit: %s", str(e))
 
     def _on_message_delete_requested(self) -> None:
         """Handle request to delete conversation from a message onwards."""
