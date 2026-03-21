@@ -475,6 +475,15 @@ class ConversationMessage(QFrame):
         if self._edit_cancel_button:
             self._edit_cancel_button.setText("Cancel")
 
+        if self._edit_message_button:
+            self._edit_message_button.setToolTip(strings.tooltip_edit_message)
+
+        if self._edit_confirm_button:
+            self._edit_confirm_button.setText("Save & Submit")
+
+        if self._edit_cancel_button:
+            self._edit_cancel_button.setText("Cancel")
+
         if self._delete_message_button:
             self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
 
@@ -833,6 +842,59 @@ class ConversationMessage(QFrame):
     def _fork_message(self) -> None:
         """Fork the conversation at this message."""
         self.fork_requested.emit()
+
+    def _edit_message(self) -> None:
+        """Enter inline edit mode for this user message."""
+        if self._edit_area is not None:
+            return  # Already in edit mode
+
+        # Hide the rendered sections
+        self._sections_container.hide()
+
+        # Build the edit area
+        self._edit_area = QWidget(self)
+        self._edit_area.setObjectName("_edit_area")
+        edit_layout = QVBoxLayout(self._edit_area)
+        edit_layout.setContentsMargins(0, 4, 0, 4)
+        edit_layout.setSpacing(6)
+
+        # Text editor pre-filled with current content
+        text_edit = QTextEdit(self._edit_area)
+        text_edit.setObjectName("_edit_text_edit")
+        text_edit.setPlainText(self._message_content)
+        text_edit.setMinimumHeight(80)
+        text_edit.installEventFilter(self)
+        self._edit_text_edit = text_edit
+        edit_layout.addWidget(text_edit)
+
+        # Confirm / Cancel buttons
+        btn_row = QWidget(self._edit_area)
+        btn_row.setObjectName("_edit_btn_row")
+        btn_layout = QHBoxLayout(btn_row)
+        btn_layout.setContentsMargins(0, 0, 0, 0)
+        btn_layout.setSpacing(6)
+        btn_layout.addStretch()
+
+        cancel_btn = QPushButton(self._edit_area)
+        cancel_btn.setObjectName("_edit_cancel_button")
+        cancel_btn.clicked.connect(self._cancel_edit)
+        self._edit_cancel_button = cancel_btn
+        btn_layout.addWidget(cancel_btn)
+
+        confirm_btn = QPushButton(self._edit_area)
+        confirm_btn.setObjectName("_edit_confirm_button")
+        confirm_btn.clicked.connect(self._confirm_edit)
+        self._edit_confirm_button = confirm_btn
+        btn_layout.addWidget(confirm_btn)
+
+        edit_layout.addWidget(btn_row)
+        self._layout.addWidget(self._edit_area)
+
+        self._on_language_changed()  # set button labels
+        text_edit.setFocus()
+        cursor = text_edit.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)
+        text_edit.setTextCursor(cursor)
 
     def _edit_message(self) -> None:
         """Enter inline edit mode for this user message."""
