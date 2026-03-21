@@ -236,7 +236,7 @@ class ConversationWidget(QWidget):
             raise ConversationError(f"Failed to read conversation transcript: {str(e)}") from e
 
         self._load_message_history(conversation_history.get_messages(), ai_conversation is not None)
-        self._set_delegated_conversation_mode(os.path.basename(path).startswith("dAI-"))
+        self._is_delegated_conversation = os.path.basename(path).startswith("dAI-")
 
         # Any active tool approval
         self._pending_tool_call_approval: ConversationMessage | None = None
@@ -324,19 +324,6 @@ class ConversationWidget(QWidget):
             return
 
         self._deactivate_widget(widget)
-
-    def _set_delegated_conversation_mode(self, enabled: bool) -> None:
-        """
-        Enable or disable delegated conversation mode.
-
-        In delegated conversation mode, the user input is hidden to prevent
-        manual message submission.
-
-        Args:
-            enabled: True to enable delegated conversation mode, False to disable
-        """
-        self._is_delegated_conversation = enabled
-        self._input.setVisible(not enabled)
 
     def _create_completion_result(self) -> Dict[str, Any]:
         """
@@ -2402,7 +2389,7 @@ class ConversationWidget(QWidget):
         if "delegated_conversation" in metadata:
             delegated_conversation = metadata["delegated_conversation"]
 
-        self._set_delegated_conversation_mode(delegated_conversation)
+        self._is_delegated_conversation = delegated_conversation
 
         # Restore input content if specified
         if "content" in metadata:
