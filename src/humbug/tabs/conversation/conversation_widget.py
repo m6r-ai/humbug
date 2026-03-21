@@ -57,7 +57,7 @@ class ConversationWidget(QWidget):
         self,
         path: str,
         parent: QWidget | None = None,
-        use_existing_ai_conversation: bool = False
+        ai_conversation: AIConversation | None = None
     ) -> None:
         """
         Initialize the conversation widget.
@@ -65,7 +65,7 @@ class ConversationWidget(QWidget):
         Args:
             path: Full path to transcript file
             parent: Optional parent widget
-            use_existing_ai_conversation: Will we use an existing AI conversation?
+            ai_conversation: An existing AIConversation to adopt, or None to create a new one
         """
         super().__init__(parent)
         self._logger = logging.getLogger("ConversationWidget")
@@ -77,12 +77,14 @@ class ConversationWidget(QWidget):
         style_manager = StyleManager()
         self._style_manager = style_manager
 
-        self._ai_conversation = None
-        if not use_existing_ai_conversation:
+        if ai_conversation is not None:
+            self._ai_conversation = ai_conversation
+
+        else:
             self._ai_conversation = AIConversation()
 
-            # Register callbacks for AIConversation events
-            self._register_ai_conversation_callbacks()
+        # Register callbacks for AIConversation events
+        self._register_ai_conversation_callbacks()
 
         self._last_submitted_message: str = ""
 
@@ -233,8 +235,8 @@ class ConversationWidget(QWidget):
         except AIConversationTranscriptError as e:
             raise ConversationError(f"Failed to read conversation transcript: {str(e)}") from e
 
-        self._load_message_history(conversation_history.get_messages(), use_existing_ai_conversation)
-        self._set_delegated_conversation_mode(os.path.basename(path).startswith("dAI-"))
+        self._load_message_history(conversation_history.get_messages(), ai_conversation is not None)
+        self._is_delegated_conversation = os.path.basename(path).startswith("dAI-")
 
         # Any active tool approval
         self._pending_tool_call_approval: ConversationMessage | None = None
@@ -322,19 +324,6 @@ class ConversationWidget(QWidget):
             return
 
         self._deactivate_widget(widget)
-
-    def _set_delegated_conversation_mode(self, enabled: bool) -> None:
-        """
-        Enable or disable delegated conversation mode.
-
-        In delegated conversation mode, the user input is hidden to prevent
-        manual message submission.
-
-        Args:
-            enabled: True to enable delegated conversation mode, False to disable
-        """
-        self._is_delegated_conversation = enabled
-        self._input.setVisible(not enabled)
 
     def _create_completion_result(self) -> Dict[str, Any]:
         """
@@ -1143,6 +1132,15 @@ class ConversationWidget(QWidget):
         ai_conversation.update_conversation_settings(new_settings)
         self.status_updated.emit()
         self._input.set_model(new_settings.model)
+
+    def ai_conversation(self) -> AIConversation:
+        """
+        Get the AIConversation instance.
+
+        Returns:
+            The AIConversation instance
+        """
+        return self._ai_conversation
 
     def conversation_settings(self) -> AIConversationSettings:
         """
@@ -2510,13 +2508,11 @@ class ConversationWidget(QWidget):
         if "delegated_conversation" in metadata:
             delegated_conversation = metadata["delegated_conversation"]
 
-        self._set_delegated_conversation_mode(delegated_conversation)
+        self._is_delegated_conversation = delegated_conversation
 
         # Restore input content if specified
         if "content" in metadata:
-            content = metadata["content"]
-            if content:
-                self.set_input_text(metadata["content"])
+            self.set_input_text(metadata["content"])
 
         if "cursor" in metadata:
             self._set_cursor_position(metadata["cursor"])
@@ -2535,17 +2531,12 @@ class ConversationWidget(QWidget):
             for i, is_expanded in enumerate(expansion_states):
                 self._change_message_expansion(i, is_expanded)
 
-        # If we have a conversation reference then we're going to take that over!
-        if "ai_conversation_ref" in metadata:
-            ai_conversation: AIConversation = metadata["ai_conversation_ref"]
-            self._ai_conversation = ai_conversation
-            self._register_ai_conversation_callbacks()
-
-            # Update streaming state if the AI conversation is already streaming
+        if "is_streaming" in metadata:
+            # Restore streaming state from a tab move
             self._is_streaming = metadata["is_streaming"]
             self._input.set_streaming(self._is_streaming)
-            conversation_settings = ai_conversation.conversation_settings()
-            self._input.set_model(conversation_settings.model)
+            ai_conversation = cast(AIConversation, self._ai_conversation)
+            self._input.set_model(ai_conversation.conversation_settings().model)
 
             current_unfinished_message = metadata.get("current_unfinished_message")
             if current_unfinished_message:

@@ -24,6 +24,8 @@ Bug fixes:
 - Tightened up the logic for applying diffs to files.  Now also includes a more useful diagnostic for the AI to use.
 - Tightened up rules on delegating to another AI.
 - Fixed some annotations in the Menai disassembler.
+- Fixed a problem where moving a delegated child AI conversation would cause the parent to lose track of the conversation.
+- Re-enable the input box for delegate conversations so you can provide feedback to a child AI while it works.
 
 ## v40 (2026-03-09)
 

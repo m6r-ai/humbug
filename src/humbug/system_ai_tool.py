@@ -3,7 +3,7 @@ import json
 import os
 import platform
 import sys
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 
 from ai import AIConversationSettings
 from ai_tool import (
@@ -22,6 +22,7 @@ from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError
+from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.user.user_manager import UserManager
 
 
@@ -292,7 +293,7 @@ class SystemAITool(AITool):
     async def _open_editor_tab(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Open or create a file in an editor tab."""
@@ -309,12 +310,14 @@ class SystemAITool(AITool):
                 os.makedirs(directory, exist_ok=True)
 
             # Open the file in editor
-            self._column_manager.protect_current_tab(True)
+            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
+            self._column_manager.protect_tab(requester_tab.tab_id())
+
             try:
                 editor_tab = self._column_manager.open_file(file_path, False)
 
             finally:
-                self._column_manager.protect_current_tab(False)
+                self._column_manager.unprotect_tab(requester_tab.tab_id())
 
             relative_path = self._mindspace_manager.get_relative_path(file_path)
             tab_id = editor_tab.tab_id()
@@ -337,17 +340,19 @@ class SystemAITool(AITool):
     async def _new_terminal_tab(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Create a new terminal tab."""
         try:
-            self._column_manager.protect_current_tab(True)
+            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
+            self._column_manager.protect_tab(requester_tab.tab_id())
+
             try:
                 terminal_tab = self._column_manager.new_terminal()
 
             finally:
-                self._column_manager.protect_current_tab(False)
+                self._column_manager.unprotect_tab(requester_tab.tab_id())
 
             tab_id = terminal_tab.tab_id()
             self._mindspace_manager.add_interaction(
@@ -366,7 +371,7 @@ class SystemAITool(AITool):
     async def _open_conversation_tab(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Open an existing conversation tab."""
@@ -381,12 +386,14 @@ class SystemAITool(AITool):
             self._mindspace_manager.ensure_mindspace_dir("conversations")
 
             # Open conversation
-            self._column_manager.protect_current_tab(True)
+            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
+            self._column_manager.protect_tab(requester_tab.tab_id())
+
             try:
                 conversation_tab = self._column_manager.open_conversation(conversation_path, False)
 
             finally:
-                self._column_manager.protect_current_tab(False)
+                self._column_manager.unprotect_tab(requester_tab.tab_id())
 
             tab_id = conversation_tab.tab_id()
             self._mindspace_manager.add_interaction(
@@ -411,7 +418,7 @@ class SystemAITool(AITool):
     async def _new_conversation_tab(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Create a new conversation tab."""
@@ -444,7 +451,8 @@ class SystemAITool(AITool):
                 reasoning = model_config.reasoning_capabilities
 
         try:
-            self._column_manager.protect_current_tab(True)
+            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
+            self._column_manager.protect_tab(requester_tab.tab_id())
 
             # Create conversation
             try:
@@ -452,7 +460,7 @@ class SystemAITool(AITool):
                 conversation_tab = self._column_manager.new_conversation(False, None, model, temperature, reasoning)
 
             finally:
-                self._column_manager.protect_current_tab(False)
+                self._column_manager.unprotect_tab(requester_tab.tab_id())
 
             tab_id = conversation_tab.tab_id()
             self._mindspace_manager.add_interaction(
@@ -481,17 +489,19 @@ class SystemAITool(AITool):
     async def _show_system_shell_tab(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Show the system shell tab."""
         try:
-            self._column_manager.protect_current_tab(True)
+            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
+            self._column_manager.protect_tab(requester_tab.tab_id())
+
             try:
                 shell_tab = self._column_manager.show_system_shell()
 
             finally:
-                self._column_manager.protect_current_tab(False)
+                self._column_manager.unprotect_tab(requester_tab.tab_id())
 
             tab_id = shell_tab.tab_id()
             self._mindspace_manager.add_interaction(
@@ -510,17 +520,18 @@ class SystemAITool(AITool):
     async def _show_log_tab(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Show the mindspace log tab."""
         try:
-            self._column_manager.protect_current_tab(True)
+            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
+            self._column_manager.protect_tab(requester_tab.tab_id())
             try:
                 log_tab = self._column_manager.show_system_log()
 
             finally:
-                self._column_manager.protect_current_tab(False)
+                self._column_manager.unprotect_tab(requester_tab.tab_id())
 
             tab_id = log_tab.tab_id()
             self._mindspace_manager.add_interaction(
@@ -539,7 +550,7 @@ class SystemAITool(AITool):
     async def _open_preview_tab(
         self,
         tool_call: AIToolCall,
-        _requester_ref: Any,
+        requester_ref: Any,
         _request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """Open preview view for a specific location or mindspace root."""
@@ -555,12 +566,14 @@ class SystemAITool(AITool):
 
         try:
             # Open preview page
-            self._column_manager.protect_current_tab(True)
+            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
+            self._column_manager.protect_tab(requester_tab.tab_id())
+
             try:
                 preview_tab = self._column_manager.open_preview_page(preview_path, False)
 
             finally:
-                self._column_manager.protect_current_tab(False)
+                self._column_manager.unprotect_tab(requester_tab.tab_id())
 
             relative_path = self._mindspace_manager.get_relative_path(preview_path)
             location = relative_path if relative_path else "."

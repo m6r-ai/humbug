@@ -1,9 +1,9 @@
 import asyncio
 import json
 import logging
-from typing import Dict, Any, cast
+from typing import Dict, Any
 
-from ai import AIConversation, AIConversationSettings, AIManager, AIReasoningCapability
+from ai import AIConversation, AIConversationEvent, AIConversationSettings, AIManager, AIMessageSource, AIReasoningCapability
 from ai_tool import (
     AIToolDefinition, AIToolParameter, AITool, AIToolExecutionError,
     AIToolAuthorizationDenied, AIToolAuthorizationCallback,
@@ -15,7 +15,6 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_error import MindspaceError
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError
-from humbug.tabs.conversation.conversation_tab import ConversationTab
 
 
 class DelegateAITool(AITool):
@@ -242,7 +241,7 @@ class DelegateAITool(AITool):
 
         self._logger.debug("AI delegation requested with task: %s", task_prompt[:100])
 
-        ai_conversation = cast(AIConversation, requester_ref)
+        ai_conversation: AIConversation = requester_ref
 
         try:
             return await self._delegate_task(
@@ -259,46 +258,58 @@ class DelegateAITool(AITool):
 
     async def _delegate_task_continuation(
         self,
-        conversation_tab: ConversationTab,
+        child_ai_conversation: AIConversation,
+        tab_guid: str,
         tool_call: AIToolCall
     ) -> AIToolResult:
         """
         Wait for a delegated task to complete and return the formatted result.
 
         Args:
-            conversation_tab: The conversation tab to wait for
+            child_ai_conversation: The AIConversation of the delegated task
+            tab_guid: The GUID of the display tab to close on completion
             tool_call: The tool call that initiated the delegation
 
         Returns:
             Formatted result string containing the AI's response or error information
         """
-        # Set up completion tracking
-        completion_future: asyncio.Future[Dict[str, Any]] = asyncio.Future()
+        completion_future: asyncio.Future[None] = asyncio.Future()
 
-        def on_completion(result_dict: Dict[str, Any]) -> None:
-            """Handle conversation completion."""
+        async def on_completed() -> None:
+            """Handle AIConversation COMPLETED event."""
             if not completion_future.done():
-                completion_future.set_result(result_dict)
+                completion_future.set_result(None)
 
-        # Connect to completion signal
-        conversation_tab.conversation_completed.connect(on_completion)
+        async def on_error(retries_exhausted: bool, _message: Any) -> None:
+            """Handle AIConversation ERROR event."""
+            if retries_exhausted and not completion_future.done():
+                completion_future.set_result(None)
 
-        tab_id = conversation_tab.tab_id()
-        session_id = self._mindspace_manager.get_mindspace_relative_path(conversation_tab.path())
+        child_ai_conversation.register_callback(AIConversationEvent.COMPLETED, on_completed)
+        child_ai_conversation.register_callback(AIConversationEvent.ERROR, on_error)
 
-        # Wait for completion
-        result = await completion_future
+        # Wait for the child conversation to finish
+        await completion_future
 
-        self._column_manager.close_tab_by_id(conversation_tab.tab_id())
+        child_ai_conversation.unregister_callback(AIConversationEvent.COMPLETED, on_completed)
+        child_ai_conversation.unregister_callback(AIConversationEvent.ERROR, on_error)
 
-        # Return appropriate result
-        success = result.get("success", False)
-        if not success:
-            error_msg = result.get("error", "Unknown error")
+        # Get session_id from the tab before closing it
+        tab = self._column_manager.get_tab_by_id(tab_guid)
+        session_id = self._mindspace_manager.get_mindspace_relative_path(tab.path()) if tab else ""
+
+        self._column_manager.close_tab_by_id(tab_guid)
+
+        # Build result from the child AIConversation's history
+        messages = child_ai_conversation.get_conversation_history().get_messages()
+        last_message = messages[-1] if messages else None
+
+        if not last_message or not last_message.completed:
+            error_msg = "AI response was terminated early" if last_message else "No messages in conversation"
             self._logger.warning("Delegated AI task failed: %s", error_msg)
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"Delegated AI task failed\ntab ID: {tab_id}\nsession ID: {session_id}\nerror: {error_msg}"
+                f"Delegated AI task failed\ntab ID: {tab_guid}\nsession ID: {session_id}\nerror: {error_msg}"
             )
             return AIToolResult(
                 id=tool_call.id,
@@ -308,10 +319,24 @@ class DelegateAITool(AITool):
                 context="text"
             )
 
-        response_content = result.get("content", "")
-        usage_info = result.get("usage")
+        if last_message.source == AIMessageSource.SYSTEM:
+            error_msg = last_message.content
+            self._logger.warning("Delegated AI task failed: %s", error_msg)
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"Delegated AI task failed\ntab ID: {tab_guid}\nsession ID: {session_id}\nerror: {error_msg}"
+            )
+            return AIToolResult(
+                id=tool_call.id,
+                name="delegate_ai",
+                content="",
+                error=f"Delegated AI task failed, session_id: {session_id}: error: {error_msg}",
+                context="text"
+            )
 
-        # Create a structured response
+        response_content = last_message.content
+        usage_info = last_message.usage.to_dict() if last_message.usage else None
+
         result_object = {
             "session_id": session_id,
             "status": "completed",
@@ -321,7 +346,7 @@ class DelegateAITool(AITool):
 
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
-            f"Delegated AI task completed\ntab ID: {tab_id}\nsession ID: {session_id}\nresponse: {response_content[:50]}..."
+            f"Delegated AI task completed\ntab ID: {tab_guid}\nsession ID: {session_id}\nresponse: {response_content[:50]}..."
         )
 
         return AIToolResult(
@@ -334,7 +359,7 @@ class DelegateAITool(AITool):
     async def _delegate_task(
         self,
         tool_call: AIToolCall,
-        ai_conversation: AIConversation,
+        parent_ai_conversation: AIConversation,
         task_prompt: str,
         session_id: str | None,
         model: str | None,
@@ -346,7 +371,7 @@ class DelegateAITool(AITool):
 
         Args:
             tool_call: Tool call containing operation name and arguments
-            ai_conversation: AIConversation instance for the request
+            parent_ai_conversation: The parent AIConversation making the request
             task_prompt: The prompt to send to the delegated AI
             session_id: ID of the existing session (None for new session)
             model: AI model to use (None for default)
@@ -363,61 +388,72 @@ class DelegateAITool(AITool):
             # Ensure conversations directory exists
             self._mindspace_manager.ensure_mindspace_dir("conversations")
 
-            # Create or open conversation
-            conversation_tab = None
-            if session_id is None or session_id == "current":
-                # Create new conversation
-                history = ai_conversation.get_conversation_history() if session_id == "current" else None
+            # Build settings for the child conversation
+            mindspace_settings = self._mindspace_manager.settings()
+            child_model = model or (mindspace_settings.model if mindspace_settings else None) or \
+                parent_ai_conversation.conversation_settings().model
+            child_temperature = temperature
+            if child_temperature is None and mindspace_settings:
+                child_temperature = mindspace_settings.temperature
 
-                try:
-                    conversation_tab = self._column_manager.new_conversation(
-                        True, history, model, temperature, reasoning_capability
-                    )
+            child_reasoning = reasoning_capability
+            if child_reasoning is None and mindspace_settings:
+                child_reasoning = mindspace_settings.reasoning
 
-                except ColumnManagerError as e:
-                    raise AIToolExecutionError(
-                        f"Failed to create new conversation for delegation: {str(e)}"
-                    ) from e
+            child_settings = AIConversationSettings(
+                model=child_model,
+                temperature=child_temperature if AIConversationSettings.supports_temperature(child_model) else None,
+                reasoning=child_reasoning or AIReasoningCapability.NO_REASONING
+            )
 
-            else:
-                # Open existing conversation
-                conversation_tab = self._column_manager.open_conversation(session_id, False)
-                if conversation_tab is None:
-                    raise AIToolExecutionError(
-                        f"Session '{session_id}' does not exist or is not a valid conversation."
-                    )
+            # Create the child AIConversation and configure it
+            child_ai_conversation = AIConversation()
+            child_ai_conversation.update_conversation_settings(child_settings)
 
+            # Load parent history if session_id == "current"
+            continuing_session = session_id == "current"
+            if continuing_session:
+                history = parent_ai_conversation.get_conversation_history()
+                child_ai_conversation.load_message_history(history.get_messages())
+
+            # Submit the prompt directly to the child AIConversation
+            requester = parent_ai_conversation.conversation_settings().model
+
+            # Protect the parent conversation tab so the child display tab lands in a different column
+            parent_tab = self._column_manager.find_tab_by_ai_conversation(parent_ai_conversation)
+            if parent_tab:
+                self._column_manager.protect_tab(parent_tab.tab_id())
+
+            await child_ai_conversation.submit_message(requester, task_prompt)
+
+            # Create the display tab, passing the already-running AIConversation
+            try:
+                conversation_tab = self._column_manager.new_conversation(
+                    child=True,
+                    ai_conversation=child_ai_conversation
+                )
+            except ColumnManagerError as e:
+                raise AIToolExecutionError(
+                    f"Failed to create display tab for delegation: {str(e)}"
+                ) from e
+
+            if parent_tab:
+                self._column_manager.unprotect_tab(parent_tab.tab_id())
+
+            tab_guid = conversation_tab.tab_id()
             session_id = self._mindspace_manager.get_mindspace_relative_path(conversation_tab.path())
             assert session_id is not None, "Session ID should not be None after resolving path"
 
-            # Update conversation settings if model or temperature provided
-            conversation_settings = conversation_tab.conversation_settings()
-            if model:
-                conversation_settings.model = model
-
-            if temperature is not None:
-                conversation_settings.temperature = temperature
-
-            if reasoning_capability:
-                conversation_settings.reasoning = reasoning_capability
-
-            conversation_tab.update_conversation_settings(conversation_settings)
-
-            # Submit the task prompt
-            conversation_tab.set_input_text(task_prompt)
-            conversation_tab.submit_with_requester(ai_conversation.conversation_settings().model)
-
             # Log the delegation
-            tab_id = conversation_tab.tab_id()
-            session_info = "continuing session" if session_id else "new session"
+            session_info = "continuing session" if continuing_session else "new session"
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI delegated task ({session_info})\ntab ID: {tab_id}\nsession ID: {session_id}\nprompt: '{task_prompt[:50]}...'"
+                f"AI delegated task ({session_info})\ntab ID: {tab_guid}\nsession ID: {session_id}\nprompt: '{task_prompt[:50]}...'"
             )
 
             # Create a continuation task that waits for completion
             continuation_task = asyncio.create_task(
-                self._delegate_task_continuation(conversation_tab, tool_call)
+                self._delegate_task_continuation(child_ai_conversation, tab_guid, tool_call)
             )
 
             return AIToolResult(

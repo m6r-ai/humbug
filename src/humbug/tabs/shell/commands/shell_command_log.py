@@ -1,13 +1,14 @@
 """Command for opening the mindspace log."""
 
 import logging
-from typing import List
+from typing import List, cast
 
 from syntax import Token
 
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_event_source import ShellEventSource
+from humbug.tabs.tab_base import TabBase
 
 
 class ShellCommandLog(ShellCommand):
@@ -46,13 +47,14 @@ class ShellCommandLog(ShellCommand):
         Returns:
             True if command executed successfully, False otherwise
         """
-        self._column_manager.protect_current_tab(True)
+        current_tab = cast(TabBase, self._column_manager.get_current_tab())
+        self._column_manager.protect_tab(current_tab.tab_id())
 
         try:
             self._column_manager.show_system_log()
 
         finally:
-            self._column_manager.protect_current_tab(False)
+            self._column_manager.unprotect_tab(current_tab.tab_id())
 
         self._history_manager.add_message(
             ShellEventSource.SUCCESS,

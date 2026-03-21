@@ -31,6 +31,7 @@ __traverse__ and __clear__ so the cyclic GC can collect closure cycles.
 """
 
 from menai.menai_error import MenaiEvalError
+import menai.menai_value as _slow
 
 
 cdef class MenaiValue:
@@ -465,10 +466,7 @@ cdef object _hashable_key(object key):
     if t is MenaiSymbol:
         return ('sym', (<MenaiSymbol>key).name)
 
-    # MenaiStruct is a slow (Python) type — check with isinstance and delegate
-    # to its own __hash__ for the hashable-fields case.
-    import menai.menai_value as _slow
-    if isinstance(key, _slow.MenaiStruct):
+    if t is MenaiStruct:
         try:
             return ('struct', hash(key))
 
@@ -544,6 +542,81 @@ cdef class MenaiFunction(MenaiValue):
         self.captured_values = []
 
 
+cdef class MenaiStructType(MenaiValue):
+    """Represents a struct type descriptor — the value produced by (struct (x y))."""
+
+    def __init__(self, str name, int tag, tuple field_names):
+        self.name = name
+        self.tag = tag
+        self.field_names = field_names
+        self._field_index = {fname: idx for idx, fname in enumerate(field_names)}
+
+    def field_index(self, str name):
+        """Return the 0-based index for a field name, raising KeyError if absent."""
+        return self._field_index[name]
+
+    def to_python(self):
+        return f"<struct-type {self.name}>"
+
+    def type_name(self):
+        return "struct-type"
+
+    def describe(self):
+        fields = " ".join(self.field_names)
+        return f"<struct-type {self.name} ({fields})>"
+
+    def __repr__(self):
+        return f"MenaiStructType({self.name!r}, {self.tag!r}, {self.field_names!r})"
+
+    def __eq__(self, other):
+        if type(other) is not MenaiStructType:
+            return False
+
+        return self.tag == (<MenaiStructType>other).tag
+
+    def __hash__(self):
+        return hash(self.tag)
+
+
+cdef class MenaiStruct(MenaiValue):
+    """Represents a struct instance — the value produced by calling a struct constructor."""
+
+    def __init__(self, struct_type, tuple fields):
+        self.struct_type = struct_type
+        self.fields = fields
+
+    def to_python(self):
+        return {name: self.fields[i].to_python() for i, name in enumerate((<MenaiStructType>self.struct_type).field_names)}
+
+    def type_name(self):
+        return "struct"
+
+    def describe(self):
+        parts = " ".join(f.describe() for f in self.fields)
+        cdef str sname = (<MenaiStructType>self.struct_type).name
+        return f"({sname} {parts})" if parts else f"({sname})"
+
+    def __repr__(self):
+        return f"MenaiStruct({self.struct_type!r}, {self.fields!r})"
+
+    def __eq__(self, other):
+        if type(other) is not MenaiStruct:
+            return False
+
+        cdef MenaiStruct o = other
+        return ((<MenaiStructType>self.struct_type).tag == (<MenaiStructType>o.struct_type).tag
+                and self.fields == o.fields)
+
+    def __hash__(self):
+        _hashable_types = {'integer', 'float', 'complex', 'string', 'boolean', 'symbol'}
+        if all(f.type_name() in _hashable_types for f in self.fields):
+            return hash(((<MenaiStructType>self.struct_type).tag, self.fields))
+
+        raise TypeError(
+            f"struct '{(<MenaiStructType>self.struct_type).name}' is not hashable: contains unhashable fields"
+        )
+
+
 # Module-level singletons
 Menai_NONE = MenaiNone()
 Menai_BOOLEAN_TRUE = MenaiBoolean(True)
@@ -564,8 +637,6 @@ def convert_value(src):
     if isinstance(src, MenaiValue):
         return src
 
-    # Import here to avoid circular imports at module load time.
-    import menai.menai_value as _slow
     t = type(src)
     if t is _slow.MenaiInteger:
         return MenaiInteger(src.value)
@@ -600,10 +671,13 @@ def convert_value(src):
         return MenaiSet(tuple(convert_value(e) for e in src.elements))
 
     if t is _slow.MenaiStructType:
-        return src  # No fast equivalent; pass through unchanged
+        return MenaiStructType(src.name, src.tag, src.field_names)
 
     if t is _slow.MenaiStruct:
-        return src  # No fast equivalent; pass through unchanged
+        return MenaiStruct(
+            struct_type=convert_value(src.struct_type),
+            fields=tuple(convert_value(f) for f in src.fields),
+        )
 
     if t is _slow.MenaiFunction:
         # Zero-capture lambdas are stored as LOAD_CONST constants by the
@@ -639,12 +713,7 @@ def to_slow(src):
 
     Called on the return value of execute() so that no fast types escape the VM
     boundary.  All code outside menai_vm.pyx sees only menai_value.py types.
-
-    If src is already a slow menai_value.py type (e.g. a prelude MenaiFunction
-    that was stored in globals and never converted to a fast type), it is
-    returned unchanged.
     """
-    import menai.menai_value as _slow
     if isinstance(src, _slow.MenaiValue):
         return src
 
@@ -680,11 +749,14 @@ def to_slow(src):
     if type(src) is MenaiSet:
         return _slow.MenaiSet(tuple(to_slow(e) for e in src.elements))
 
-    if type(src) is _slow.MenaiStructType:
-        return src  # Already a slow type
+    if type(src) is MenaiStructType:
+        return _slow.MenaiStructType(src.name, src.tag, src.field_names)
 
-    if type(src) is _slow.MenaiStruct:
-        return src  # Already a slow type
+    if type(src) is MenaiStruct:
+        return _slow.MenaiStruct(
+            struct_type=to_slow(src.struct_type),
+            fields=tuple(to_slow(f) for f in src.fields),
+        )
 
     if type(src) is MenaiFunction:
         return _slow.MenaiFunction(
@@ -694,4 +766,5 @@ def to_slow(src):
             captured_values=list(src.captured_values),
             is_variadic=src.is_variadic,
         )
+
     raise TypeError(f"to_slow: unexpected fast type {type(src)!r}")

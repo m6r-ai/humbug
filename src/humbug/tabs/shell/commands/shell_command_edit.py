@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import List
+from typing import List, cast
 
 from syntax import Token, TokenType
 
@@ -11,6 +11,7 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_event_source import ShellEventSource
+from humbug.tabs.tab_base import TabBase
 
 
 class ShellCommandEdit(ShellCommand):
@@ -74,13 +75,14 @@ class ShellCommandEdit(ShellCommand):
                     )
                     return False
 
-        self._column_manager.protect_current_tab(True)
+        current_tab = cast(TabBase, self._column_manager.get_current_tab())
+        self._column_manager.protect_tab(current_tab.tab_id())
 
         try:
             editor_tab = self._column_manager.open_file(full_path, False)
 
         finally:
-            self._column_manager.protect_current_tab(False)
+            self._column_manager.unprotect_tab(current_tab.tab_id())
 
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
