@@ -209,7 +209,7 @@ class ConversationMessage(QFrame):
             self._edit_message_button = QToolButton()
             self._edit_message_button.setObjectName("_edit_button")
             self._edit_message_button.clicked.connect(self._edit_message)
-            self._header_layout.addWidget(self._edit_message_button)
+            self._banner_layout.addWidget(self._edit_message_button)
 
             self._delete_message_button = QToolButton()
             self._delete_message_button.setObjectName("_delete_button")
@@ -526,7 +526,7 @@ class ConversationMessage(QFrame):
             self._edit_message_button.setToolTip(strings.tooltip_edit_message)
 
         if self._edit_confirm_button:
-            self._edit_confirm_button.setText("Save & Submit")
+            self._edit_confirm_button.setText("Submit")
 
         if self._edit_cancel_button:
             self._edit_cancel_button.setText("Cancel")
@@ -902,8 +902,8 @@ class ConversationMessage(QFrame):
         self._edit_area = QWidget(self)
         self._edit_area.setObjectName("_edit_area")
         edit_layout = QVBoxLayout(self._edit_area)
-        edit_layout.setContentsMargins(0, 4, 0, 4)
-        edit_layout.setSpacing(6)
+        edit_layout.setContentsMargins(0, 0, 0, 0)
+        edit_layout.setSpacing(8)
 
         # Text editor pre-filled with current content
         text_edit = QTextEdit(self._edit_area)
@@ -1033,13 +1033,21 @@ class ConversationMessage(QFrame):
 
         zoom_factor = style_manager.zoom_factor()
         spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
-        self._layout.setSpacing(spacing)
-        self._layout.setContentsMargins(spacing, spacing, spacing, spacing)
+        inner_padding = int(spacing * 1.4)
+        banner_to_content_gap = int(spacing * 2.0)
+        self._layout.setSpacing(banner_to_content_gap)
+        self._layout.setContentsMargins(inner_padding, inner_padding, inner_padding, inner_padding)
         self._sections_layout.setSpacing(spacing)
 
         font = self.font()
         base_font_size = style_manager.base_font_size()
         font.setPointSizeF(base_font_size * zoom_factor)
+        font.setFamilies([
+            "Söhne", "Inter", "SF Pro Text", "SF Pro Display",
+            "-apple-system", "BlinkMacSystemFont", "Segoe UI",
+            "Helvetica Neue", "Arial",
+            "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "sans-serif"
+        ])
         self._role_label.setFont(font)
 
         # Set icons and sizes for buttons

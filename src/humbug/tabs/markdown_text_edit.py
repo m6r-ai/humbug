@@ -81,6 +81,7 @@ class MarkdownTextEdit(MinHeightTextEdit):
         self.setTabStopDistance(space_width * 8)
         self.document().setIndentWidth(space_width * 4)
 
+
         if self._highlighter:
             self._highlighter.rehighlight()
 

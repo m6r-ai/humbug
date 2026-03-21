@@ -1712,8 +1712,10 @@ class ConversationWidget(QWidget):
         """Build styles for the main message frame."""
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
-        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor)
-        label_font_size = style_manager.base_font_size() * zoom_factor * 0.8
+        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor * 1.2)
+        label_font_size = style_manager.base_font_size() * zoom_factor * 0.88
+        banner_sep_size = max(1, int(zoom_factor))
+        banner_sep_spacing = int(style_manager.message_bubble_spacing() * zoom_factor * 1.6)
 
         # The -2px padding above is to offset the 2px border so that the content area remains the same size
         return f"""
@@ -1728,7 +1730,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage[message_source="user_input"],
             #ConversationMessage[message_source="ai_streaming"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
             }}
             #ConversationMessage[message_source="ai"],
             #ConversationMessage[message_source="reasoning"] {{
@@ -1736,7 +1738,6 @@ class ConversationWidget(QWidget):
                 border: 2px solid transparent;
             }}
 
-            #ConversationMessage #_banner,
             #ConversationMessage #_sections_container {{
                 background-color: transparent;
                 border: none;
@@ -1745,13 +1746,37 @@ class ConversationWidget(QWidget):
                 margin: 0;
             }}
 
+            #ConversationMessage #_banner {{
+                background-color: transparent;
+                border: none;
+                border-radius: 0;
+                padding: 0 0 {banner_sep_spacing}px 0;
+                margin: 0;
+            }}
+            #ConversationMessage[message_source="system"] #_banner {{
+                border-bottom: {banner_sep_size}px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
+            }}
+            #ConversationMessage[message_source="ai"] #_banner,
+            #ConversationMessage[message_source="ai_connected"] #_banner,
+            #ConversationMessage[message_source="reasoning"] #_banner,
+            #ConversationMessage[message_source="tool_call"] #_banner,
+            #ConversationMessage[message_source="tool_result"] #_banner {{
+                border-bottom: none;
+            }}
+            #ConversationMessage[message_source="user_input"] #_banner,
+            #ConversationMessage[message_source="user_queued"] #_banner {{
+                border-bottom: none;
+                padding: 0;
+            }}
+
             #ConversationMessage #_role_label {{
                 margin: 0;
-                padding: 0;
+                padding: 1px 6px 1px 0;
                 border: none;
                 background-color: transparent;
                 font-size: {label_font_size:.1f}pt;
-                font-weight: 600;
+                font-weight: 700;
+                letter-spacing: 0.2px;
             }}
             #ConversationMessage[message_source="user"] #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
@@ -1790,10 +1815,11 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_submit_button,
             #ConversationMessage #_settings_button {{
                 background-color: transparent;
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_INACTIVE)};
                 border: none;
-                padding: 0px;
+                padding: 2px 4px;
                 margin: 0px;
+                border-radius: 4px;
             }}
 
             #ConversationMessage #_copy_button:hover,
@@ -1805,6 +1831,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_submit_button:hover,
             #ConversationMessage #_settings_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
 
             #ConversationMessage #_copy_button:pressed,
@@ -1816,6 +1843,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_submit_button:pressed,
             #ConversationMessage #_settings_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
 
             #ConversationMessage #_stop_button:disabled,
@@ -1830,6 +1858,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage[message_source="user"] #_edit_button:hover,
             #ConversationMessage[message_source="user"] #_delete_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
 
             #ConversationMessage[message_source="user"] #_copy_button:pressed,
@@ -1838,6 +1867,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage[message_source="user"] #_edit_button:pressed,
             #ConversationMessage[message_source="user"] #_delete_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_PRESSED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
 
             #ConversationMessage #_approval_widget {{
@@ -1866,39 +1896,59 @@ class ConversationWidget(QWidget):
                 background-color: transparent;
             }}
 
+            #ConversationMessage #_edit_area {{
+                background-color: transparent;
+                border: none;
+            }}
+
             #ConversationMessage #_edit_text_edit {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
                 border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
-                border-radius: 4px;
-                padding: 6px;
-                font-size: {label_font_size / 0.8:.1f}pt;
+                border-radius: 6px;
+                padding: 8px;
+                font-size: {label_font_size / 0.88:.1f}pt;
+            }}
+
+            #ConversationMessage #_edit_btn_row {{
+                background-color: transparent;
+                border: none;
             }}
 
             #ConversationMessage #_edit_confirm_button {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: #7090e0;
+                color: #ffffff;
                 border: none;
-                border-radius: 4px;
-                padding: 4px 12px;
+                border-radius: 6px;
+                padding: 6px 18px;
                 font-size: {label_font_size:.1f}pt;
+                font-weight: 600;
             }}
 
             #ConversationMessage #_edit_confirm_button:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
+                background-color: #5878c8;
+            }}
+
+            #ConversationMessage #_edit_confirm_button:pressed {{
+                background-color: #4060b0;
             }}
 
             #ConversationMessage #_edit_cancel_button {{
-                background-color: transparent;
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
-                border-radius: 4px;
-                padding: 4px 12px;
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
+                color: #ffffff;
+                border: none;
+                border-radius: 6px;
+                padding: 6px 18px;
                 font-size: {label_font_size:.1f}pt;
+                font-weight: 600;
             }}
 
             #ConversationMessage #_edit_cancel_button:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER)};
+            }}
+
+            #ConversationMessage #_edit_cancel_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
             }}
 
             /* Scrollbars within approval contexts */
@@ -1971,7 +2021,7 @@ class ConversationWidget(QWidget):
         """Build styles for message sections."""
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
-        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor / 2)
+        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor * 0.8)
         return f"""
             #ConversationMessage #ConversationMessageSection[section_style="text-system"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
@@ -2015,9 +2065,10 @@ class ConversationWidget(QWidget):
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
                 border: none;
-                padding: 0;
+                padding: 2px 4px;
                 margin: 0;
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                line-height: 1.5;
             }}
 
             /* Labels (syntax headers) within message sections */
@@ -2091,13 +2142,19 @@ class ConversationWidget(QWidget):
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
         spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
-        self._messages_layout.setSpacing(spacing)
-        self._messages_layout.setContentsMargins(spacing * 2, spacing, spacing * 2, spacing)
-        self._messages_container.setMaximumWidth(int(820 * zoom_factor))
+        msg_spacing = int(spacing * 1.8)
+        self._messages_layout.setSpacing(msg_spacing)
+        self._messages_layout.setContentsMargins(spacing * 3, msg_spacing, spacing * 3, msg_spacing)
+        self._messages_container.setMaximumWidth(int(900 * zoom_factor))
 
         font = self.font()
         base_font_size = style_manager.base_font_size()
         font.setPointSizeF(base_font_size * zoom_factor)
+        font.setFamilies([
+            "Söhne", "Inter", "SF Pro Text", "SF Pro Display",
+            "-apple-system", "BlinkMacSystemFont", "Segoe UI",
+            "Helvetica Neue", "Arial", "sans-serif"
+        ])
         self.setFont(font)
 
         stylesheet_parts = [
