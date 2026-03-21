@@ -54,7 +54,7 @@ class Opcode(IntEnum):
     JUMP = _op(20, 1)                   # Unconditional jump: JUMP offset
     JUMP_IF_FALSE = _op(21, 2)          # JUMP_IF_FALSE r_src0, @src1 — jump to src1 if r_src0 is false
     JUMP_IF_TRUE = _op(22, 2)           # JUMP_IF_TRUE r_src0, @src1 — jump to src1 if r_src0 is true
-    RAISE_ERROR = _op(23, 1)            # RAISE_ERROR const_index
+    RAISE_ERROR = _op(23, 1)            # RAISE_ERROR r_src0 — raise error with message string from register src0
 
     # Functions
     MAKE_CLOSURE = _op(30, 1)           # r_dest = MAKE_CLOSURE code_objects[src0]
@@ -585,7 +585,7 @@ class Instruction:
             return f"EMIT_TRACE {rn(self.src0)}"
 
         if opcode == Opcode.RAISE_ERROR:
-            return f"RAISE_ERROR c{self.src0}"
+            return f"RAISE_ERROR {rn(self.src0)}"
 
         n = self.arg_count()
         srcs = [rn(self.src0), rn(self.src1), rn(self.src2)][:n]

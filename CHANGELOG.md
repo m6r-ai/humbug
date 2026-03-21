@@ -16,6 +16,7 @@ New features:
 - Updated Claude 4.6 models to reflect the 1M token context windows now supported.
 - Added `struct` operations to the Menai language.
 - The UI for the input box is now slightly different, putting the buttons at the bottom of the box ro a better UX.
+- Added the ability to create a conversation from the mindspace conversations view.
 
 Bug fixes:
 
@@ -23,6 +24,8 @@ Bug fixes:
 - Tightened up the logic for applying diffs to files.  Now also includes a more useful diagnostic for the AI to use.
 - Tightened up rules on delegating to another AI.
 - Fixed some annotations in the Menai disassembler.
+- Fixed a problem where moving a delegated child AI conversation would cause the parent to lose track of the conversation.
+- Re-enable the input box for delegate conversations so you can provide feedback to a child AI while it works.
 
 ## v40 (2026-03-09)
 

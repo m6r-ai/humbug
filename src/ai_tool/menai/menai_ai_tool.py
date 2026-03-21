@@ -511,12 +511,13 @@ Syntax: (operator arg1 arg2 ...)
 
 ## Raising errors
 
-- (error "message") → special form that raises a runtime error with the given message
-- The argument must be a string literal (not a variable or expression)
+- (error msg) → special form that raises a runtime error; msg must be a string expression
+- msg can be a string literal, a variable, or any expression that evaluates to a string
 - Raises immediately; no value is ever returned
 - Valid in any expression position, including inside lambda bodies, let bindings, and match arms
 - Used to signal invalid arguments or unrecoverable conditions
 - Example: (if (integer<? n 0) (error "n must be non-negative") (float-sqrt (integer->float n)))
+- Example: (error (string-concat "invalid value: " (integer->string x)))
 
 ## Important notes
 

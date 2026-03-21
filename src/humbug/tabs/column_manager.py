@@ -6,7 +6,7 @@ from typing import Dict, List, cast
 from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer
 
-from ai import AIConversationHistory, AIConversationSettings, AIReasoningCapability
+from ai import AIConversation, AIConversationHistory, AIConversationSettings, AIReasoningCapability
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -115,26 +115,46 @@ class ColumnManager(QWidget):
         self._tab_labels: Dict[str, TabLabel] = {}
 
         # Are we protecting the current tab against being ovewrwritten?
-        self._protect_current_tab = False
-        self._protected_tab: TabBase | None = None
+        self._protected_tab_id: str | None = None
 
         self._current_status_tab: TabBase | None = None
 
-    def protect_current_tab(self, protect: bool) -> None:
-        """Set whether to protect the current tab from being overwritten."""
-        self._protect_current_tab = protect
+    def protect_tab(self, tab_id: str) -> None:
+        """
+        Protect a specific tab from being displaced by new tabs.
 
-        # If protecting, store the current tab
-        if protect:
-            self._protected_tab = self.get_current_tab()
+        Args:
+            tab_id: ID of the tab to protect
+        """
+        self._protected_tab_id = tab_id
+
+    def unprotect_tab(self, tab_id: str) -> None:
+        """
+        Remove protection from a previously protected tab.
+
+        Args:
+            tab_id: ID of the tab to unprotect
+        """
+        if self._protected_tab_id != tab_id:
             return
 
-        # Unprotecting - ensure the protected tab is kept active!
-        if not self._protected_tab:
-            return
+        self._protected_tab_id = None
 
-        self._set_current_tab(self._protected_tab, False)
-        self._protected_tab = None
+    def find_tab_by_ai_conversation(self, ai_conversation: AIConversation) -> TabBase | None:
+        """
+        Find a conversation tab by its AIConversation instance.
+
+        Args:
+            ai_conversation: The AIConversation instance to search for
+
+        Returns:
+            The matching ConversationTab, or None if not found
+        """
+        for tab in self._tabs.values():
+            if isinstance(tab, ConversationTab) and tab.ai_conversation() is ai_conversation:
+                return tab
+
+        return None
 
     def num_colunns(self) -> int:
         """Get the number of columns currently in use."""
@@ -929,17 +949,20 @@ class ColumnManager(QWidget):
         """
         Determine which column should receive a new tab.
 
-        If the current active tab is protected, use an adjacent column.
+        If a tab is protected, use a column that does not contain it.
 
         Returns:
             The column widget where the new tab should be added
         """
-        # If the current tab in not protected, we can use the normal behavior
-        if not self._protect_current_tab:
+        # If no tab is protected, use the normal behaviour
+        if not self._protected_tab_id:
             return self._active_column
 
-        # Get the current column index
-        current_column_number = self._tab_columns.index(self._active_column)
+        # Find the column containing the protected tab
+        protected_tab = self._tabs.get(self._protected_tab_id)
+        protected_column = self._find_column_for_tab(protected_tab) if protected_tab else None
+        current_column_number = self._tab_columns.index(protected_column) if \
+            protected_column else self._tab_columns.index(self._active_column)
 
         # If there's only one column, create a new one to the right
         if len(self._tab_columns) == 1:
@@ -969,10 +992,11 @@ class ColumnManager(QWidget):
         Args:
             tab: The tab to check and potentially move
         """
-        if not self._protect_current_tab or not self._protected_tab:
+        if not self._protected_tab_id:
             return
 
-        protected_column = self._find_column_for_tab(self._protected_tab)
+        protected_tab = self._tabs.get(self._protected_tab_id)
+        protected_column = self._find_column_for_tab(protected_tab) if protected_tab else None
         tab_column = self._find_column_for_tab(tab)
 
         if protected_column is None or tab_column is None:
@@ -1440,7 +1464,8 @@ class ColumnManager(QWidget):
         model: str | None = None,
         temperature: float | None = None,
         reasoning: AIReasoningCapability | None = None,
-        folder: str | None = None
+        folder: str | None = None,
+        ai_conversation: AIConversation | None = None
     ) -> ConversationTab:
         """Create a new conversation tab and return its ID."""
         # Generate timestamp for ID
@@ -1452,12 +1477,14 @@ class ColumnManager(QWidget):
             # folder is an absolute path; compute path relative to mindspace
             relative_folder = self._mindspace_manager.get_relative_path(folder)
             filename = os.path.join(relative_folder, f"{conversation_title}.conv")
+
         else:
             filename = os.path.join("conversations", f"{conversation_title}.conv")
+
         full_path = self._mindspace_manager.get_absolute_path(filename)
 
         try:
-            conversation_tab = ConversationTab("", full_path, self)
+            conversation_tab = ConversationTab("", full_path, self, ai_conversation=ai_conversation)
 
         except ConversationError as e:
             self._logger.exception("Failed to create new conversation: %s", str(e))
@@ -1485,7 +1512,10 @@ class ColumnManager(QWidget):
             temperature=temperature if AIConversationSettings.supports_temperature(model) else None,
             reasoning=reasoning
         )
-        conversation_tab.update_conversation_settings(conversation_settings)
+
+        if ai_conversation is None:
+            conversation_tab.update_conversation_settings(conversation_settings)
+
         if history:
             conversation_tab.set_conversation_history(history)
 
@@ -1638,10 +1668,11 @@ class ColumnManager(QWidget):
     def fork_conversation_from_index(self, message_index: int | None) -> None:
         """Create a new conversation tab with the history from an index in the current conversation."""
         try:
-            self.protect_current_tab(True)
             conversation_tab = self.get_current_tab()
             if not isinstance(conversation_tab, ConversationTab):
                 return
+
+            self.protect_tab(conversation_tab.tab_id())
 
             # Generate new file path using fork naming convention
             new_path = self._get_fork_file_name(conversation_tab.path())
@@ -1667,7 +1698,8 @@ class ColumnManager(QWidget):
             raise ColumnManagerError("Failed to fork conversation tab") from e
 
         finally:
-            self.protect_current_tab(False)
+            conversation_tab = cast(ConversationTab, self.get_current_tab())
+            self.unprotect_tab(conversation_tab.tab_id())
 
     def new_terminal(self, command: str | None = None) -> TerminalTab:
         """Create new terminal tab.

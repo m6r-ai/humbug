@@ -569,14 +569,13 @@ class MenaiVM:
     def _op_raise_error(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
-        """RAISE_ERROR: Raise error with message from constant pool."""
-        src0 = instr.src0
-        # Validator guarantees src0 is in bounds
-        # Type check could be removed if we validate constant types, but keep for now
-        error_msg = frame.code.constants[src0]
+        """RAISE_ERROR r_src0: Raise error with message string from register src0."""
+        error_msg = self.regs[frame.base + instr.src0]
         if type(error_msg) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError("RAISE_ERROR requires a string constant")
-
+            raise MenaiEvalError(
+                message="error: message must be a string",
+                received=f"Got: {error_msg.describe()} ({error_msg.type_name()})"
+            )
         raise MenaiEvalError(error_msg.value)
 
     def _op_make_closure(  # pylint: disable=useless-return
@@ -628,7 +627,7 @@ class MenaiVM:
 
     def _op_call(
         self, frame: Frame, instr: Instruction
-    ) -> _FrameChange:
+    ) -> _FrameChange | MenaiValue | None:
         """CALL dest, src0, src1: Call func in src0 with src1 args already in callee window; result to dest.
 
         The caller has written the arguments into regs[base+local_count .. base+local_count+src1-1].
@@ -706,7 +705,7 @@ class MenaiVM:
 
     def _op_tail_call(
         self, frame: Frame, instr: Instruction
-    ) -> _FrameChange:
+    ) -> _FrameChange | MenaiValue:
         """TAIL_CALL src0, src1: Replace current frame with func in src0."""
         base = frame.base
         regs = self.regs
@@ -783,7 +782,7 @@ class MenaiVM:
 
     def _op_apply(
         self, frame: Frame, instr: Instruction
-    ) -> _FrameChange:
+    ) -> _FrameChange | MenaiValue | None:
         """APPLY dest, src0, src1: Apply func in src0 to arg_list in register src1; result to dest."""
         base = frame.base
         regs = self.regs
@@ -873,7 +872,7 @@ class MenaiVM:
 
     def _op_tail_apply(
         self, frame: Frame, instr: Instruction
-    ) -> _FrameChange:
+    ) -> _FrameChange | MenaiValue:
         """TAIL_APPLY src0, src1: Tail apply func in src0 to arg_list in register src1.
 
         Scatters list elements into regs[base+local_count..], moves them down to base+0..,

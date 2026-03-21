@@ -211,8 +211,8 @@ class MenaiVCodeReturn:
 
 @dataclass
 class MenaiVCodeRaise:
-    """Raise a runtime error with a constant message string."""
-    message: MenaiValue
+    """Raise a runtime error with a message string from a register."""
+    message: MenaiVCodeReg
 
 
 # Union of all VCode instruction types.
@@ -340,6 +340,6 @@ def _fmt_instr(instr: MenaiVCodeInstr) -> str:
         return f"RETURN {instr.value}"
 
     if isinstance(instr, MenaiVCodeRaise):
-        return f"RAISE {instr.message!r}"
+        return f"RAISE {instr.message}"
 
     return f"<unknown instr {type(instr).__name__}>"

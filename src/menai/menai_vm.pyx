@@ -13,13 +13,14 @@ from menai.menai_error import MenaiEvalError, MenaiCancelledException
 from menai.menai_value_fast import (
     MenaiValue, MenaiBoolean, MenaiString, MenaiList, MenaiDict, MenaiFunction,
     MenaiInteger, MenaiComplex, MenaiFloat, MenaiSymbol, MenaiNone, MenaiSet,
+    MenaiStructType, MenaiStruct,
     Menai_NONE, Menai_BOOLEAN_TRUE, Menai_BOOLEAN_FALSE, Menai_DICT_EMPTY, Menai_LIST_EMPTY, Menai_SET_EMPTY
 )
 from menai.menai_value_fast import convert_code_object, convert_value, to_slow
-from menai.menai_value import MenaiStructType, MenaiStruct
 from menai.menai_value_fast cimport (
     MenaiValue, MenaiBoolean, MenaiString, MenaiList, MenaiDict, MenaiFunction,
-    MenaiInteger, MenaiComplex, MenaiFloat, MenaiSymbol, MenaiNone, MenaiSet
+    MenaiInteger, MenaiComplex, MenaiFloat, MenaiSymbol, MenaiNone, MenaiSet,
+    MenaiStructType, MenaiStruct
 )
 from menai.menai_vm_bytecode_validator import validate_bytecode
 
@@ -611,14 +612,15 @@ class MenaiVM:
     def _op_raise_error(  # pylint: disable=useless-return
         self, frame: Frame, instr: Instruction
     ) -> MenaiValue | None:
-        """RAISE_ERROR: Raise error with message from constant pool."""
-        src0 = instr.src0
-        # Validator guarantees src0 is in bounds
-        # Type check could be removed if we validate constant types, but keep for now
-        error_msg = frame.code.constants[src0]
+        """RAISE_ERROR r_src0: Raise error with message string from register src0."""
+        cdef Frame f = frame
+        cdef list regs = self.regs
+        error_msg = regs[f.base + instr.src0]
         if type(error_msg) is not MenaiString:  # pylint: disable=unidiomatic-typecheck
-            raise MenaiEvalError("RAISE_ERROR requires a string constant")
-
+            raise MenaiEvalError(
+                message="error: message must be a string",
+                received=f"Got: {error_msg.describe()} ({error_msg.type_name()})"
+            )
         raise MenaiEvalError(error_msg.value)
 
     def _op_make_closure(  # pylint: disable=useless-return
@@ -4747,8 +4749,7 @@ class MenaiVM:
                 f"'struct-fields' requires a struct type argument, got {val.type_name()}"
             )
 
-        from menai.menai_value import MenaiSymbol as SlowSymbol
-        regs[base + instr.dest] = MenaiList(tuple(SlowSymbol(field) for field in val.field_names))
+        regs[base + instr.dest] = MenaiList(tuple(MenaiSymbol(field) for field in val.field_names))
         return None
 
     def _op_range(  # pylint: disable=useless-return

@@ -811,7 +811,7 @@ class MindspaceConversationsView(QWidget):
                 preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
                 duplicate_action = None
                 new_conversation_action = menu.addAction(strings.new_conversation)
-                new_conversation_action.triggered.connect(lambda checked=False, p=path: self.new_conversation_requested.emit(p))
+                new_conversation_action.triggered.connect(lambda: self.new_conversation_requested.emit(path))
                 new_folder_action = menu.addAction(strings.new_folder)
                 new_folder_action.triggered.connect(lambda: self._start_new_folder_creation(path))
                 rename_action = menu.addAction(strings.rename)

@@ -83,12 +83,12 @@ class MainWindow(QMainWindow):
         # Humbug menu actions
         self._about_action = QAction(strings.about_humbug, self)
         self._about_action.setMenuRole(QAction.MenuRole.AboutRole)
-        self._about_action.triggered.connect(self._show_about_dialog)
+        self._about_action.triggered.connect(self._on_show_about_dialog)
 
         self._user_settings_action = QAction(strings.user_settings, self)
         self._user_settings_action.setMenuRole(QAction.MenuRole.PreferencesRole)
         self._user_settings_action.setShortcut(QKeySequence("Ctrl+,"))
-        self._user_settings_action.triggered.connect(self._show_user_settings_dialog)
+        self._user_settings_action.triggered.connect(self._on_show_user_settings_dialog)
 
         self._quit_action = QAction(strings.quit_humbug, self)
         self._quit_action.setMenuRole(QAction.MenuRole.QuitRole)
@@ -98,64 +98,64 @@ class MainWindow(QMainWindow):
         # File menu actions
         self._new_mindspace_action = QAction(strings.new_mindspace, self)
         self._new_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+N"))
-        self._new_mindspace_action.triggered.connect(self._new_mindspace)
+        self._new_mindspace_action.triggered.connect(self._on_new_mindspace)
 
         self._new_conv_action = QAction(strings.new_conversation, self)
         self._new_conv_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
-        self._new_conv_action.triggered.connect(self._new_conversation)
+        self._new_conv_action.triggered.connect(self._on_new_conversation)
 
         self._new_metaphor_conv_action = QAction(strings.new_metaphor_conversation, self)
         self._new_metaphor_conv_action.setShortcut(QKeySequence("Ctrl+Shift+M"))
-        self._new_metaphor_conv_action.triggered.connect(self._new_metaphor_conversation)
+        self._new_metaphor_conv_action.triggered.connect(self._on_new_metaphor_conversation)
 
         self._new_file_action = QAction(strings.new_file, self)
         self._new_file_action.setShortcut(QKeySequence.StandardKey.New)
-        self._new_file_action.triggered.connect(self._new_file)
+        self._new_file_action.triggered.connect(self._on_new_file)
 
         self._new_terminal_action = QAction(strings.new_terminal, self)
         self._new_terminal_action.setShortcut(QKeySequence("Ctrl+Alt+T"))
-        self._new_terminal_action.triggered.connect(self._new_terminal)
+        self._new_terminal_action.triggered.connect(self._on_new_terminal)
 
         self._open_mindspace_action = QAction(strings.open_mindspace, self)
         self._open_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+O"))
-        self._open_mindspace_action.triggered.connect(self._open_mindspace)
+        self._open_mindspace_action.triggered.connect(self._on_open_mindspace)
 
         self._open_preview_action = QAction(strings.open_preview, self)
         self._open_preview_action.setShortcut(QKeySequence("Ctrl+Shift+W"))
-        self._open_preview_action.triggered.connect(self._open_preview)
+        self._open_preview_action.triggered.connect(self._on_open_preview)
 
         self._open_conv_action = QAction(strings.open_conversation, self)
         self._open_conv_action.setShortcut(QKeySequence("Ctrl+Shift+O"))
-        self._open_conv_action.triggered.connect(self._open_conversation)
+        self._open_conv_action.triggered.connect(self._on_open_conversation)
 
         self._open_file_action = QAction(strings.open_file, self)
         self._open_file_action.setShortcut(QKeySequence.StandardKey.Open)
-        self._open_file_action.triggered.connect(self._open_file)
+        self._open_file_action.triggered.connect(self._on_open_file)
 
         self._fork_conv_action = QAction(strings.fork_conversation, self)
         self._fork_conv_action.setShortcut(QKeySequence("Ctrl+Shift+F"))
-        self._fork_conv_action.triggered.connect(self._fork_conversation)
+        self._fork_conv_action.triggered.connect(self._on_fork_conversation)
 
         self._save_action = QAction(strings.save, self)
         self._save_action.setShortcut(QKeySequence.StandardKey.Save)
-        self._save_action.triggered.connect(self._save_file)
+        self._save_action.triggered.connect(self._on_save_file)
 
         self._save_as_action = QAction(strings.save_as, self)
         self._save_as_action.setShortcut(QKeySequence.StandardKey.SaveAs)
-        self._save_as_action.triggered.connect(self._save_file_as)
+        self._save_as_action.triggered.connect(self._on_save_file_as)
 
         self._close_tab_action = QAction(strings.close_tab, self)
         self._close_tab_action.setShortcut(QKeySequence("Ctrl+W"))
-        self._close_tab_action.triggered.connect(self._close_tab)
+        self._close_tab_action.triggered.connect(self._on_close_tab)
 
         self._close_mindspace_action = QAction(strings.close_mindspace, self)
         self._close_mindspace_action.setShortcut(QKeySequence("Ctrl+Alt+W"))
-        self._close_mindspace_action.triggered.connect(self._close_mindspace)
+        self._close_mindspace_action.triggered.connect(self._on_close_mindspace)
 
         # Edit menu actions
         self._submit_message_action = QAction(strings.submit_message, self)
         self._submit_message_action.setShortcut(QKeySequence("Ctrl+J"))
-        self._submit_message_action.triggered.connect(self._submit_message)
+        self._submit_message_action.triggered.connect(self._on_submit_message)
 
         self._undo_action = QAction(strings.undo, self)
         self._undo_action.setShortcut(QKeySequence("Ctrl+Z"))
@@ -183,11 +183,11 @@ class MainWindow(QMainWindow):
 
         self._mindspace_settings_action = QAction(strings.mindspace_settings, self)
         self._mindspace_settings_action.setShortcut(QKeySequence("Ctrl+Alt+,"))
-        self._mindspace_settings_action.triggered.connect(self._show_mindspace_settings_dialog)
+        self._mindspace_settings_action.triggered.connect(self._on_show_mindspace_settings_dialog)
 
         self._conv_settings_action = QAction(strings.conversation_settings, self)
         self._conv_settings_action.setShortcut(QKeySequence("Ctrl+Shift+,"))
-        self._conv_settings_action.triggered.connect(self._show_conversation_settings_dialog)
+        self._conv_settings_action.triggered.connect(self._on_show_conversation_settings_dialog)
 
         # View menu actions - Theme menu will be created in _on_language_changed
         self._theme_menu: QMenu | None = None
@@ -207,15 +207,15 @@ class MainWindow(QMainWindow):
 
         self._show_system_log_action = QAction(strings.show_system_log, self)
         self._show_system_log_action.setShortcut(QKeySequence("Ctrl+Shift+L"))
-        self._show_system_log_action.triggered.connect(self._show_system_log)
+        self._show_system_log_action.triggered.connect(self._on_show_system_log)
 
         self._show_system_shell_action = QAction(strings.show_system_shell, self)
         self._show_system_shell_action.setShortcut(QKeySequence("Ctrl+Shift+Y"))
-        self._show_system_shell_action.triggered.connect(self._show_system_shell)
+        self._show_system_shell_action.triggered.connect(self._on_show_system_shell)
 
         self._show_all_columns_action = QAction(strings.show_all_columns, self)
         self._show_all_columns_action.setShortcut(QKeySequence("Ctrl+\\"))
-        self._show_all_columns_action.triggered.connect(self._show_all_columns)
+        self._show_all_columns_action.triggered.connect(self._on_show_all_columns)
 
         self._split_column_left_action = QAction(strings.split_column_left, self)
         self._split_column_left_action.setShortcut(QKeySequence("Ctrl+Shift+["))
@@ -237,11 +237,11 @@ class MainWindow(QMainWindow):
 
         self._next_message_action = QAction(strings.next_message, self)
         self._next_message_action.setShortcut(QKeySequence("Alt+Down"))
-        self._next_message_action.triggered.connect(self._navigate_next_message)
+        self._next_message_action.triggered.connect(self._on_navigate_next_message)
 
         self._previous_message_action = QAction(strings.previous_message, self)
         self._previous_message_action.setShortcut(QKeySequence("Alt+Up"))
-        self._previous_message_action.triggered.connect(self._navigate_previous_message)
+        self._previous_message_action.triggered.connect(self._on_navigate_previous_message)
 
         self._menu_bar = QMenuBar(self)
         self.setMenuBar(self._menu_bar)
@@ -335,19 +335,19 @@ class MainWindow(QMainWindow):
         self._mindspace_view.file_renamed.connect(self._on_mindspace_view_file_renamed)
         self._mindspace_view.file_edited.connect(self._on_mindspace_view_file_edited)
         self._mindspace_view.file_opened_in_preview.connect(self._on_mindspace_view_file_opened_in_preview)
-        self._mindspace_view.open_mindspace_requested.connect(self._open_mindspace)
-        self._mindspace_view.settings_requested.connect(self._show_mindspace_settings_dialog)
-        self._mindspace_view.new_conversation_requested.connect(self._new_conversation_in_folder)
+        self._mindspace_view.open_mindspace_requested.connect(self._on_open_mindspace)
+        self._mindspace_view.settings_requested.connect(self._on_show_mindspace_settings_dialog)
+        self._mindspace_view.new_conversation_requested.connect(self._on_mindspace_view_new_conversation_in_folder)
         self._splitter.addWidget(self._mindspace_view)
 
         # Create tab manager in splitter
         self._column_manager = ColumnManager(self)
         self._column_manager.tab_changed.connect(self._on_column_manager_tab_changed)
-        self._column_manager.fork_requested.connect(self._on_column_manager_fork_requested)
+        self._column_manager.fork_requested.connect(self._on_fork_conversation)
         self._column_manager.fork_from_index_requested.connect(self._on_column_manager_fork_from_index_requested)
         self._column_manager.open_preview_link_requested.connect(self._on_column_manager_open_preview_link_requested)
         self._column_manager.edit_file_requested.connect(self._on_column_manager_edit_file_requested)
-        self._column_manager.user_settings_requested.connect(self._show_user_settings_dialog)
+        self._column_manager.user_settings_requested.connect(self._on_show_user_settings_dialog)
         self._splitter.addWidget(self._column_manager)
 
         # Set initial mindspace view width
@@ -579,17 +579,17 @@ class MainWindow(QMainWindow):
         # Our logic for left and right reverses for right-to-left languages
         left_to_right = self._language_manager.left_to_right()
         self._split_column_left_action.triggered.disconnect()
-        self._split_column_left_action.triggered.connect(lambda: self._split_column(left_to_right))
+        self._split_column_left_action.triggered.connect(lambda: self._on_split_column(left_to_right))
         self._split_column_right_action.triggered.disconnect()
-        self._split_column_right_action.triggered.connect(lambda: self._split_column(not left_to_right))
+        self._split_column_right_action.triggered.connect(lambda: self._on_split_column(not left_to_right))
         self._merge_column_left_action.triggered.disconnect()
-        self._merge_column_left_action.triggered.connect(lambda: self._merge_column(left_to_right))
+        self._merge_column_left_action.triggered.connect(lambda: self._on_merge_column(left_to_right))
         self._merge_column_right_action.triggered.disconnect()
-        self._merge_column_right_action.triggered.connect(lambda: self._merge_column(not left_to_right))
+        self._merge_column_right_action.triggered.connect(lambda: self._on_merge_column(not left_to_right))
         self._swap_column_left_action.triggered.disconnect()
-        self._swap_column_left_action.triggered.connect(lambda: self._swap_column(left_to_right))
+        self._swap_column_left_action.triggered.connect(lambda: self._on_swap_column(left_to_right))
         self._swap_column_right_action.triggered.disconnect()
-        self._swap_column_right_action.triggered.connect(lambda: self._swap_column(not left_to_right))
+        self._swap_column_right_action.triggered.connect(lambda: self._on_swap_column(not left_to_right))
 
         self._on_style_changed()
 
@@ -695,7 +695,7 @@ class MainWindow(QMainWindow):
         except (FileNotFoundError, json.JSONDecodeError):
             pass
 
-    def _new_mindspace(self) -> None:
+    def _on_new_mindspace(self) -> None:
         """Show folder selection dialog and create new mindspace."""
         self._menu_timer.stop()
         strings = self._language_manager.strings()
@@ -742,7 +742,7 @@ class MainWindow(QMainWindow):
 
         self._open_mindspace_path(dir_path)
 
-    def _open_mindspace(self) -> None:
+    def _on_open_mindspace(self) -> None:
         """Open a new mindspace."""
         self._menu_timer.stop()
         strings = self._language_manager.strings()
@@ -791,7 +791,7 @@ class MainWindow(QMainWindow):
         # Restore the state of the newly opened mindspace
         self._restore_mindspace_state()
 
-    def _close_mindspace(self) -> None:
+    def _on_close_mindspace(self) -> None:
         if not self._mindspace_manager.has_mindspace():
             self._logger.error("No mindspace active, cannot close")
             return
@@ -871,19 +871,19 @@ class MainWindow(QMainWindow):
     def _find(self) -> None:
         self._column_manager.show_find()
 
-    def _show_about_dialog(self) -> None:
+    def _on_show_about_dialog(self) -> None:
         """Show the About dialog."""
         dialog = AboutDialog(self)
         dialog.exec()
 
-    def _new_terminal(self) -> None:
+    def _on_new_terminal(self) -> None:
         """Create a new terminal tab."""
         if not self._mindspace_manager.has_mindspace():
             return
 
         self._column_manager.new_terminal()
 
-    def _new_file(self) -> None:
+    def _on_new_file(self) -> None:
         """Create a new empty editor tab."""
         if not self._mindspace_manager.has_mindspace():
             return
@@ -935,7 +935,7 @@ class MainWindow(QMainWindow):
         """Handle file edited event from the mindspace view."""
         self._open_file_path(path, ephemeral)
 
-    def _open_file(self) -> None:
+    def _on_open_file(self) -> None:
         """Show open file dialog and create editor tab."""
         self._menu_timer.stop()
         strings = self._language_manager.strings()
@@ -971,41 +971,41 @@ class MainWindow(QMainWindow):
                 strings.could_not_open.format(path, str(e))
             )
 
-    def _save_file(self) -> None:
+    def _on_save_file(self) -> None:
         """Save the current file."""
         path = self._column_manager.save_file()
         self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
 
-    def _save_file_as(self) -> None:
+    def _on_save_file_as(self) -> None:
         """Save the current file with a new name."""
         path = self._column_manager.save_file_as()
         self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
 
-    def _open_preview(self) -> None:
+    def _on_open_preview(self) -> None:
         """Open the preview page in a new tab."""
         self._column_manager.open_preview_page(self._mindspace_manager.get_absolute_path("."), False)
 
-    def _show_system_log(self) -> None:
+    def _on_show_system_log(self) -> None:
         """Show the log tab."""
         self._column_manager.show_system_log()
 
-    def _show_system_shell(self) -> None:
+    def _on_show_system_shell(self) -> None:
         """Show the shell tab."""
         self._column_manager.show_system_shell()
 
-    def _show_all_columns(self) -> None:
+    def _on_show_all_columns(self) -> None:
         """Show all columns equally."""
         self._column_manager.show_all_columns()
 
-    def _split_column(self, split_left: bool) -> None:
+    def _on_split_column(self, split_left: bool) -> None:
         """Split the current column."""
         self._column_manager.split_column(split_left)
 
-    def _merge_column(self, merge_left: bool) -> None:
+    def _on_merge_column(self, merge_left: bool) -> None:
         """Merge the current column."""
         self._column_manager.merge_column(merge_left)
 
-    def _swap_column(self, swap_left: bool) -> None:
+    def _on_swap_column(self, swap_left: bool) -> None:
         """Swap the current column."""
         self._column_manager.swap_column(swap_left)
 
@@ -1096,7 +1096,7 @@ class MainWindow(QMainWindow):
         # The main window splitter uses custom painted handles, so we just need to trigger a repaint
         self._splitter.update()
 
-    def _new_conversation(self) -> ConversationTab | None:
+    def _on_new_conversation(self) -> ConversationTab | None:
         """Create new conversation tab."""
         if not self._mindspace_manager.has_mindspace():
             return None
@@ -1141,7 +1141,7 @@ class MainWindow(QMainWindow):
         )
         return conversation_tab
 
-    def _new_conversation_in_folder(self, folder_path: str) -> None:
+    def _on_mindspace_view_new_conversation_in_folder(self, folder_path: str) -> None:
         """Create a new conversation in a specific folder."""
         if not self._mindspace_manager.has_mindspace():
             return
@@ -1204,7 +1204,7 @@ class MainWindow(QMainWindow):
             external_denylist=user_settings.external_file_denylist
         )
 
-    def _new_metaphor_conversation(self) -> None:
+    def _on_new_metaphor_conversation(self) -> None:
         """Create new conversation from Metaphor file."""
         # Show file dialog
         self._menu_timer.stop()
@@ -1237,14 +1237,14 @@ class MainWindow(QMainWindow):
             self._column_manager.show_system_log()
             return
 
-        conversation_tab = self._new_conversation()
+        conversation_tab = self._on_new_conversation()
         if conversation_tab is None:
             return
 
         # Set input text
         conversation_tab.set_input_text(prompt)
 
-    def _open_conversation(self) -> None:
+    def _on_open_conversation(self) -> None:
         """Show open conversation dialog and create conversation tab."""
         self._menu_timer.stop()
         strings = self._language_manager.strings()
@@ -1278,7 +1278,7 @@ class MainWindow(QMainWindow):
             )
             return None
 
-    def _fork_conversation(self) -> None:
+    def _on_fork_conversation(self) -> None:
         """Create a new conversation tab with the history of the current conversation."""
         # Create task to fork conversation
         try:
@@ -1292,10 +1292,6 @@ class MainWindow(QMainWindow):
                 strings.conversation_error_title,
                 strings.error_forking_conversation.format(str(e))
             )
-
-    def _on_column_manager_fork_requested(self) -> None:
-        """Handle fork conversation requests."""
-        self._fork_conversation()
 
     def _on_column_manager_fork_from_index_requested(self, index: int) -> None:
         """Handle fork conversation requests from a specific index."""
@@ -1330,7 +1326,7 @@ class MainWindow(QMainWindow):
         """Handle requests to open a file in the editor."""
         self._open_file_path(path, False)
 
-    def _close_tab(self) -> None:
+    def _on_close_tab(self) -> None:
         """Close the current tab."""
         tab = self._column_manager.get_current_tab()
         if tab is None:
@@ -1343,19 +1339,19 @@ class MainWindow(QMainWindow):
             f"User closed tab\nTab ID: {tab.tab_id()}"
         )
 
-    def _submit_message(self) -> None:
+    def _on_submit_message(self) -> None:
         """Handle message submission."""
         self._column_manager.submit_message()
 
-    def _navigate_next_message(self) -> None:
+    def _on_navigate_next_message(self) -> None:
         """Navigate to the next message in conversation."""
         self._column_manager.navigate_next_message()
 
-    def _navigate_previous_message(self) -> None:
+    def _on_navigate_previous_message(self) -> None:
         """Navigate to the previous message in conversation."""
         self._column_manager.navigate_previous_message()
 
-    def _show_user_settings_dialog(self) -> None:
+    def _on_show_user_settings_dialog(self) -> None:
         """Show the user settings dialog."""
         dialog = UserSettingsDialog(self)
         dialog.set_settings(self._user_manager.settings())
@@ -1390,7 +1386,7 @@ class MainWindow(QMainWindow):
         dialog.settings_changed.connect(_on_settings_changed)
         dialog.exec()
 
-    def _show_mindspace_settings_dialog(self) -> None:
+    def _on_show_mindspace_settings_dialog(self) -> None:
         """Show the mindspace settings dialog."""
         if not self._mindspace_manager.has_mindspace():
             return
@@ -1416,7 +1412,7 @@ class MainWindow(QMainWindow):
         dialog.settings_changed.connect(_on_settings_changed)
         dialog.exec()
 
-    def _show_conversation_settings_dialog(self) -> None:
+    def _on_show_conversation_settings_dialog(self) -> None:
         """Show the conversation settings dialog."""
         self._column_manager.show_conversation_settings_dialog()
 

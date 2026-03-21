@@ -350,6 +350,13 @@ class AIConversation:
         Returns:
             True if authorized, False if denied
         """
+        # Before we request tool approval, check we don't have a queued message from the user.  If we do, we should process
+        # that first since it may impact the tool call or even make it irrelevant.
+        if self._pending_user_messages:
+            self._logger.debug("Processing %d queued messages before requesting tool authorization",
+                                len(self._pending_user_messages))
+            return False
+
         self._logger.debug("Tool '%s' requesting authorization: %s", tool_name, reason)
 
         # Create a tool call for authorization

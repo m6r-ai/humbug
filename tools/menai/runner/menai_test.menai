@@ -1,0 +1,95 @@
+; Menai test support module — injected by the test runner.
+;
+; Provides:
+;   assert-equal  — raises if two values are not equal (polymorphic)
+;   test-find     — navigates a node-list tree by path to return a leaf thunk
+
+(letrec (
+
+  ; Polymorphic equality: dispatches on the type of the first argument.
+  ; Two values are equal if they have the same type and the same value.
+  ; For lists and dicts, equality is structural (element-wise).
+  (value=?
+   (lambda (a b)
+     (match a
+       ((? boolean? x)    (and (boolean? b) (boolean=? x b)))
+       ((? integer? x)    (and (integer? b) (integer=? x b)))
+       ((? float? x)      (and (float? b)   (float=? x b)))
+       ((? complex? x)    (and (complex? b) (complex=? x b)))
+       ((? string? x)     (and (string? b)  (string=? x b)))
+       ((? symbol? x)     (and (symbol? b)  (symbol=? x b)))
+       ((? none? x)       (none? b))
+       ((? list? x)       (and (list? b) (list=? x b)))
+       ((? dict? x)       (and (dict? b) (dict=? x b)))
+       ((? set? x)        (and (set? b)  (set=? x b)))
+       (_ #f))))
+
+  ; Polymorphic describe: returns a string representation of any value.
+  (value-describe
+   (lambda (v)
+     (match v
+       ((? boolean? x)    (if x "#t" "#f"))
+       ((? integer? x)    (integer->string x))
+       ((? float? x)      (float->string x))
+       ((? complex? x)    (complex->string x))
+       ((? string? x)     (string-concat "\"" x "\""))
+       ((? symbol? x)     (symbol->string x))
+       ((? none? x)       "#none")
+       ((? list? x)
+        (if (list-null? x)
+            "()"
+            (string-concat "("
+              (list->string
+                (map-list value-describe x)
+                " ")
+              ")")))
+       ((? dict? x)
+        (string-concat "{"
+          (list->string
+            (map-list (lambda (k) (string-concat "(" (value-describe k) " " (value-describe (dict-get x k)) ")"))
+                      (dict-keys x))
+            " ")
+          "}"))
+       (_ "<value>"))))
+
+  (assert-equal
+   (lambda (expected actual)
+     (if (value=? expected actual)
+         #t
+         (error (string-concat
+                  "assert-equal failed\n  expected: "
+                  (value-describe expected)
+                  "\n  actual:   "
+                  (value-describe actual))))))
+
+  ; Walk a node-list by a list of name strings, returning the leaf thunk.
+  ; Raises if any segment of the path is not found or if the final node is
+  ; not a thunk (i.e. the path does not reach a leaf).
+  (test-find
+   (lambda (module path)
+     (let ((nodes (dict-get module "tests")))
+       (letrec ((walk (lambda (node-list remaining-path)
+                        (if (list-null? remaining-path)
+                            (error "test-find: path exhausted before reaching a leaf")
+                            (let ((segment (list-first remaining-path))
+                                  (rest    (list-rest remaining-path)))
+                              (letrec ((search (lambda (lst)
+                                                 (if (list-null? lst)
+                                                     (error (string-concat "test-find: no node named \"" segment "\""))
+                                                     (let ((node (list-first lst)))
+                                                       (if (string=? (list-first node) segment)
+                                                           (let ((thing (list-ref node 1)))
+                                                             (if (list-null? rest)
+                                                                 (if (function? thing)
+                                                                     thing
+                                                                     (error (string-concat "test-find: \"" segment "\" is a branch, not a leaf")))
+                                                                 (if (function? thing)
+                                                                     (error (string-concat "test-find: \"" segment "\" is a leaf, not a branch"))
+                                                                     (walk thing rest))))
+                                                           (search (list-rest lst))))))))
+                                (search node-list)))))))
+         (walk nodes path))))))
+
+(dict
+  (list "assert-equal"  assert-equal)
+  (list "test-find"     test-find)))

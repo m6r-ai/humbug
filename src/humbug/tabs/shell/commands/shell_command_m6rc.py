@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import Dict, List
+from typing import Dict, List, cast
 
 from ai import AIConversationSettings, AIReasoningCapability
 from metaphor import (
@@ -17,6 +17,7 @@ from humbug.tabs.column_manager import ColumnManager
 from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.shell.shell_command import ShellCommand
 from humbug.tabs.shell.shell_event_source import ShellEventSource
+from humbug.tabs.tab_base import TabBase
 from humbug.user.user_manager import UserManager
 
 
@@ -165,7 +166,9 @@ class ShellCommandM6rc(ShellCommand):
             self._mindspace_manager.add_interaction(MindspaceLogLevel.ERROR, error)
             return False
 
-        self._column_manager.protect_current_tab(True)
+        current_tab = cast(TabBase, self._column_manager.get_current_tab())
+        self._column_manager.protect_tab(current_tab.tab_id())
+
         try:
             self._mindspace_manager.ensure_mindspace_dir("conversations")
             conversation_tab = self._column_manager.new_conversation(False, None, model, temperature_val, reasoning)
@@ -179,7 +182,7 @@ class ShellCommandM6rc(ShellCommand):
             return False
 
         finally:
-            self._column_manager.protect_current_tab(False)
+            self._column_manager.unprotect_tab(current_tab.tab_id())
 
         conversation_tab.set_input_text(prompt)
 

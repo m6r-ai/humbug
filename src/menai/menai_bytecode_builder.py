@@ -350,8 +350,7 @@ class MenaiBytecodeBuilder:
                 continue
 
             if isinstance(instr, MenaiVCodeRaise):
-                const_idx = ctx.add_constant(instr.message)
-                ctx.emit(Opcode.RAISE_ERROR, const_idx)
+                ctx.emit(Opcode.RAISE_ERROR, ctx.slot_of(instr.message))
                 i += 1
                 continue
 

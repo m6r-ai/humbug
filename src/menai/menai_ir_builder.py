@@ -203,7 +203,7 @@ class MenaiIRBuilder:
                 return self._analyze_quote(expr)
 
             if name == 'error':
-                return self._analyze_error(expr)
+                return self._analyze_error(expr, ctx)
 
             if name == 'trace':
                 return self._analyze_trace(expr, ctx, in_tail_position)
@@ -219,11 +219,11 @@ class MenaiIRBuilder:
         quoted = expr.elements[1].to_runtime_value()
         return MenaiIRQuote(quoted_value=quoted)
 
-    def _analyze_error(self, expr: MenaiASTList) -> MenaiIRError:
+    def _analyze_error(self, expr: MenaiASTList, ctx: AnalysisContext) -> MenaiIRError:
         """Analyze an error expression."""
         assert len(expr.elements) == 2, "Error expression should have exactly 2 elements"
-        message = expr.elements[1].to_runtime_value()
-        return MenaiIRError(message=message)
+        message_plan = self._analyze_expression(expr.elements[1], ctx, in_tail_position=False)
+        return MenaiIRError(message=message_plan)
 
     def _analyze_trace(self, expr: MenaiASTList, ctx: AnalysisContext, in_tail_position: bool) -> MenaiIRTrace:
         """Analyze a trace expression."""
