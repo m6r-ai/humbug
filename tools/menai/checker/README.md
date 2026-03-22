@@ -21,7 +21,7 @@ No installation needed! The tool uses the Menai lexer from `src/menai`.
 ### Basic Check
 
 ```bash
-python -m tools.menai.checker.checker file.menai
+python -m tools.menai.checker.check file.menai
 ```
 
 **Output (default - shows full depth chart):**
@@ -66,23 +66,23 @@ Useful for large files - only display depth chart for specific lines:
 
 ```bash
 # Lines 100 to 200
-python -m tools.menai.checker.checker file.menai -l 100-200
+python -m tools.menai.checker.check file.menai -l 100-200
 
 # From line 100 to end
-python -m tools.menai.checker.checker file.menai -l 100-
+python -m tools.menai.checker.check file.menai -l 100-
 
 # From start to line 200
-python -m tools.menai.checker.checker file.menai -l -200
+python -m tools.menai.checker.check file.menai -l -200
 ```
 
 ### Combined Options
 
 ```bash
 # Check specific range with annotations
-python -m tools.menai.checker.checker file.menai -l 100-200 -a
+python -m tools.menai.checker.check file.menai -l 100-200 -a
 
 # Quick summary check
-python -m tools.menai.checker.checker file.menai -s
+python -m tools.menai.checker.check file.menai -s
 ```
 
 ### ANSI Color Output
@@ -90,7 +90,7 @@ python -m tools.menai.checker.checker file.menai -s
 Use `-c` or `--color` to enable colorized output:
 
 ```bash
-python -m tools.menai.checker.checker file.menai -a -c
+python -m tools.menai.checker.check file.menai -a -c
 ```
 
 **Color features:**
@@ -127,7 +127,7 @@ python -m tools.menai.checker.checker file.menai -a -c
 ### Example 1: Balanced File
 
 ```bash
-$ python -m tools.menai.checker.checker examples/balanced.menai
+$ python -m tools.menai.checker.check examples/balanced.menai
 ✓ Parentheses balanced in balanced.menai
   Total: 42 opens, 42 closes
   Maximum depth: 5
@@ -136,7 +136,7 @@ $ python -m tools.menai.checker.checker examples/balanced.menai
 ### Example 2: Missing Closing Paren
 
 ```bash
-$ python -m tools.menai.checker.checker examples/missing_close.menai
+$ python -m tools.menai.checker.check examples/missing_close.menai
 ✗ Parentheses UNBALANCED in missing_close.menai
   Total: 43 opens, 42 closes
   Missing 1 closing parenthesis
@@ -154,7 +154,7 @@ Unclosed expressions at end of file
 ### Example 3: With Annotations
 
 ```bash
-$ python -m tools.menai.checker.checker scheduling.menai -a -l 395-402
+$ python -m tools.menai.checker.check scheduling.menai -a -l 395-402
 ✓ Parentheses balanced in scheduling.menai
   Total: 502 opens, 502 closes
   Maximum depth: 25
@@ -196,7 +196,7 @@ Add to `.git/hooks/pre-commit`:
 ```bash
 #!/bin/bash
 for file in $(git diff --cached --name-only --diff-filter=ACM | grep '\.menai$'); do
-    python -m tools.menai.checker.checker "$file"
+    python -m tools.menai.checker.check "$file"
     if [ $? -ne 0 ]; then
         echo "Parenthesis balance check failed for $file"
         exit 1
@@ -218,7 +218,7 @@ jobs:
       - name: Check Menai parentheses
         run: |
           for file in $(find . -name "*.menai"); do
-            python -m tools.menai.checker.checker "$file" || exit 1
+            python -m tools.menai.checker.check "$file" || exit 1
           done
 ```
 
@@ -230,7 +230,7 @@ Make sure you're running from the project root directory, or adjust your `PYTHON
 
 ```bash
 export PYTHONPATH="${PYTHONPATH}:$(pwd)/src"
-python -m tools.menai.checker.checker file.menai
+python -m tools.menai.checker.check file.menai
 ```
 
 ### Lexer Errors
