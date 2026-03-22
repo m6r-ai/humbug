@@ -118,8 +118,8 @@
 
   (example-project
     (dict
-      (list "tasks"        example-tasks)
-      (list "dependencies" example-deps)))
+      "tasks"        example-tasks
+      "dependencies" example-deps))
 
   ; ============================================================================
   ; TEST 1: Get predecessors of T004
@@ -170,9 +170,9 @@
 )
 
 (dict
-  (list "test-1-get-predecessors"   t1-ok)
-  (list "test-2-cycles-example"     t2-ok)
-  (list "test-3-cycles-bad-project" t3-ok)
-  (list "test-4-orphaned-tasks"     t4-ok)
-  (list "all-passed"                all-ok))
+  "test-1-get-predecessors"   t1-ok
+  "test-2-cycles-example"     t2-ok
+  "test-3-cycles-bad-project" t3-ok
+  "test-4-orphaned-tasks"     t4-ok
+  "all-passed"                all-ok)
 )

@@ -507,7 +507,7 @@ class TestStructHashability:
         result = menai.evaluate_and_format('''
         (let ((Point (struct (x y)))
               (p (Point 1 2)))
-          (let ((d (dict (list p "origin"))))
+          (let ((d (dict p "origin")))
             (dict-get d p #none)))
         ''')
         assert result == '"origin"'
@@ -527,7 +527,7 @@ class TestStructHashability:
             menai.evaluate('''
             (let ((Container (struct (items)))
                   (c (Container (list 1 2 3))))
-              (dict (list c "value")))
+              (dict c "value"))
             ''')
 
 
@@ -603,7 +603,7 @@ class TestStructModuleExport:
     def test_struct_type_exported_and_constructor_usable(self, tmp_path):
         """A struct type exported from a module can be constructed in the importer."""
         (tmp_path / "shapes.menai").write_text(
-            '(let ((Point (struct (x y)))) (dict (list "Point" Point)))'
+            '(let ((Point (struct (x y)))) (dict "Point" Point))'
         )
         m = Menai(module_path=[str(tmp_path)])
         result = m.evaluate_and_format('''
@@ -616,7 +616,7 @@ class TestStructModuleExport:
     def test_struct_get_on_imported_struct(self, tmp_path):
         """struct-get works on instances of an imported struct type."""
         (tmp_path / "shapes.menai").write_text(
-            '(let ((Point (struct (x y)))) (dict (list "Point" Point)))'
+            '(let ((Point (struct (x y)))) (dict "Point" Point))'
         )
         m = Menai(module_path=[str(tmp_path)])
         result = m.evaluate_and_format('''
@@ -630,7 +630,7 @@ class TestStructModuleExport:
     def test_pattern_matching_on_imported_struct(self, tmp_path):
         """Pattern matching works on instances of an imported struct type."""
         (tmp_path / "shapes.menai").write_text(
-            '(let ((Point (struct (x y)))) (dict (list "Point" Point)))'
+            '(let ((Point (struct (x y)))) (dict "Point" Point))'
         )
         m = Menai(module_path=[str(tmp_path)])
         result = m.evaluate_and_format('''
@@ -652,10 +652,10 @@ class TestStructModuleExport:
          (point-x (lambda (p) (match p ((Point x _) x))))
          (point-y (lambda (p) (match p ((Point _ y) y)))))
   (dict
-    (list "Point" Point)
-    (list "make-point" make-point)
-    (list "point-x" point-x)
-    (list "point-y" point-y)))
+    "Point" Point
+    "make-point" make-point
+    "point-x" point-x
+    "point-y" point-y))
 """)
         m = Menai(module_path=[str(tmp_path)])
         result = m.evaluate("""
@@ -672,7 +672,7 @@ class TestStructModuleExport:
         """The exported struct type itself can be used as a constructor by the importer."""
         (tmp_path / "shapes.menai").write_text("""
 (letrec ((Point (struct (x y))))
-  (dict (list "Point" Point)))
+  (dict "Point" Point))
 """)
         m = Menai(module_path=[str(tmp_path)])
         result = m.evaluate_and_format("""
@@ -686,7 +686,7 @@ class TestStructModuleExport:
         """Pattern matching works on instances of a struct type exported from a letrec module."""
         (tmp_path / "shapes.menai").write_text("""
 (letrec ((Point (struct (x y))))
-  (dict (list "Point" Point)))
+  (dict "Point" Point))
 """)
         m = Menai(module_path=[str(tmp_path)])
         result = m.evaluate("""
@@ -929,7 +929,7 @@ class TestStructDynamicConstruction:
         """A struct type stored in a dict and retrieved at runtime can construct instances."""
         result = menai.evaluate_and_format('''
         (let* ((point (struct (x y)))
-               (d     (dict (list "point" point)))
+               (d     (dict "point" point))
                (ctor  (dict-get d "point")))
           (ctor 3 4))
         ''')
@@ -959,7 +959,7 @@ class TestStructDynamicConstruction:
         """struct-get works on an instance built via a dynamically-called constructor."""
         result = menai.evaluate_and_format('''
         (let* ((point (struct (x y)))
-               (d     (dict (list "point" point)))
+               (d     (dict "point" point))
                (ctor  (dict-get d "point"))
                (p     (ctor 10 20)))
           (struct-get p 'y))
@@ -970,7 +970,7 @@ class TestStructDynamicConstruction:
         """struct-type? works correctly on an instance built via a dynamically-called constructor."""
         result = menai.evaluate_and_format('''
         (let* ((point (struct (x y)))
-               (d     (dict (list "point" point)))
+               (d     (dict "point" point))
                (ctor  (dict-get d "point"))
                (p     (ctor 1 2)))
           (struct-type? point p))
@@ -981,7 +981,7 @@ class TestStructDynamicConstruction:
         """A dynamically-retrieved struct constructor called in tail position works correctly."""
         result = menai.evaluate_and_format('''
         (let* ((point (struct (x y)))
-               (d     (dict (list "point" point)))
+               (d     (dict "point" point))
                (make  (lambda (a b)
                         (let ((ctor (dict-get d "point")))
                           (ctor a b)))))
@@ -993,7 +993,7 @@ class TestStructDynamicConstruction:
         """A dynamically-retrieved struct constructor can be passed to map-list."""
         result = menai.evaluate_and_format('''
         (let* ((point (struct (x y)))
-               (d     (dict (list "point" point)))
+               (d     (dict "point" point))
                (ctor  (dict-get d "point"))
                (pairs (list (list 1 2) (list 3 4) (list 5 6))))
           (map-list (lambda (pair) (ctor (list-ref pair 0) (list-ref pair 1))) pairs))
@@ -1005,7 +1005,7 @@ class TestStructDynamicConstruction:
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
             menai.evaluate('''
             (let* ((point (struct (x y)))
-                   (d     (dict (list "point" point)))
+                   (d     (dict "point" point))
                    (ctor  (dict-get d "point")))
               (ctor 1))
             ''')
@@ -1015,7 +1015,7 @@ class TestStructDynamicConstruction:
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
             menai.evaluate('''
             (let* ((point (struct (x y)))
-                   (d     (dict (list "point" point)))
+                   (d     (dict "point" point))
                    (ctor  (dict-get d "point")))
               (ctor 1 2 3))
             ''')
@@ -1036,7 +1036,7 @@ class TestStructDynamicApply:
         """apply works when the callable is a struct type retrieved from a dict."""
         result = menai.evaluate_and_format('''
         (let* ((point (struct (x y)))
-               (d     (dict (list "point" point)))
+               (d     (dict "point" point))
                (ctor  (dict-get d "point")))
           (apply ctor (list 3 4)))
         ''')
@@ -1054,7 +1054,7 @@ class TestStructDynamicApply:
         """apply with a dynamically-retrieved struct type in tail position works correctly."""
         result = menai.evaluate_and_format('''
         (let* ((point (struct (x y)))
-               (d     (dict (list "point" point)))
+               (d     (dict "point" point))
                (make  (lambda (args)
                         (let ((ctor (dict-get d "point")))
                           (apply ctor args)))))
@@ -1067,7 +1067,7 @@ class TestStructDynamicApply:
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
             menai.evaluate('''
             (let* ((point (struct (x y)))
-                   (d     (dict (list "point" point)))
+                   (d     (dict "point" point))
                    (ctor  (dict-get d "point")))
               (apply ctor (list 1)))
             ''')
@@ -1077,7 +1077,7 @@ class TestStructDynamicApply:
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
             menai.evaluate('''
             (let* ((point (struct (x y)))
-                   (d     (dict (list "point" point)))
+                   (d     (dict "point" point))
                    (ctor  (dict-get d "point")))
               (apply ctor (list 1 2 3)))
             ''')

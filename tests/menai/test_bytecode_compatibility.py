@@ -156,14 +156,14 @@ class TestDicts:
     """Test dict operations."""
 
     def test_dict_creation(self, menai):
-        result = menai.evaluate('(dict (list "name" "Alice") (list "age" 30))')
+        result = menai.evaluate('(dict "name" "Alice" "age" 30)')
         # Result is an dict, check it's dict-like
         assert isinstance(result, dict)
         assert result["name"] == "Alice"
         assert result["age"] == 30
 
     def test_dict_get(self, menai):
-        result = menai.evaluate('(dict-get (dict (list "name" "Alice")) "name")')
+        result = menai.evaluate('(dict-get (dict "name" "Alice") "name")')
         assert result == "Alice"
 
 

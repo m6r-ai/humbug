@@ -133,16 +133,16 @@
 )
 
 (dict
-  (list "test-1-parse-format"         t1-ok)
-  (list "test-2-day-of-week"          t2-ok)
-  (list "test-3-working-day"          t3-ok)
-  (list "test-4-add-calendar-days"    t4-ok)
-  (list "test-5-add-working-5day"     t5-ok)
-  (list "test-6-add-working-7day"     t6-ok)
-  (list "test-7-working-days-between" t7-ok)
-  (list "test-8-compare-dates"        t8-ok)
-  (list "test-9-end-date"             t9-ok)
-  (list "test-10-start-date"          t10-ok)
-  (list "test-11-duration"            t11-ok)
-  (list "all-passed"                  all-ok))
+  "test-1-parse-format"         t1-ok
+  "test-2-day-of-week"          t2-ok
+  "test-3-working-day"          t3-ok
+  "test-4-add-calendar-days"    t4-ok
+  "test-5-add-working-5day"     t5-ok
+  "test-6-add-working-7day"     t6-ok
+  "test-7-working-days-between" t7-ok
+  "test-8-compare-dates"        t8-ok
+  "test-9-end-date"             t9-ok
+  "test-10-start-date"          t10-ok
+  "test-11-duration"            t11-ok
+  "all-passed"                  all-ok)
 )

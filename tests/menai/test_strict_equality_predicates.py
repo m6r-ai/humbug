@@ -204,22 +204,22 @@ class TestStrictEqualityPredicates:
         assert menai.evaluate('(dict=? (dict) (dict))') is True
 
         # Same key-value pairs
-        assert menai.evaluate('(dict=? (dict (list "a" 1)) (dict (list "a" 1)))') is True
+        assert menai.evaluate('(dict=? (dict "a" 1) (dict "a" 1))') is True
 
         # Different values
-        assert menai.evaluate('(dict=? (dict (list "a" 1)) (dict (list "a" 2)))') is False
+        assert menai.evaluate('(dict=? (dict "a" 1) (dict "a" 2))') is False
 
         # Multiple pairs
         code = '''(dict=?
-            (dict (list "name" "Alice") (list "age" 30))
-            (dict (list "name" "Alice") (list "age" 30)))'''
+            (dict "name" "Alice" "age" 30)
+            (dict "name" "Alice" "age" 30))'''
         assert menai.evaluate(code) is True
 
     def test_dict_eq_order_matters(self, menai):
         """Test dict=? is sensitive to order (structural equality)."""
         # Different order should be different (structural comparison)
         # Note: This tests the current implementation behavior
-        code1 = '(dict=? (dict (list "a" 1) (list "b" 2)) (dict (list "b" 2) (list "a" 1)))'
+        code1 = '(dict=? (dict "a" 1 "b" 2) (dict "b" 2 "a" 1))'
         result = menai.evaluate(code1)
         # This will be False because dicts compare structurally (order matters)
         assert result is False

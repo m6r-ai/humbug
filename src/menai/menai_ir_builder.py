@@ -474,35 +474,16 @@ class MenaiIRBuilder:
                 element_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
                 return MenaiIRBuildList(element_plans=element_plans)
 
-            # (dict (list k1 v1) ...) — emit MenaiIRBuildDict if all args are
-            # literal (list key value) forms; otherwise fall through to a regular
-            # call so the runtime prelude lambda handles non-literal arguments.
+            # (dict k1 v1 k2 v2 ...) — emit a flat MenaiIRBuildDict node.
+            # The semantic analyser guarantees an even argument count.
             if dollar_name == 'dict':
-                if not arg_exprs:
-                    return MenaiIRBuildDict(pair_plans=[])
-                all_literal = all(
-                    isinstance(arg, MenaiASTList) and
-                    len(arg.elements) == 3 and
-                    isinstance(arg.elements[0], MenaiASTSymbol) and
-                    arg.elements[0].name == 'list'
-                    for arg in arg_exprs
-                )
-                if all_literal:
-                    pair_plans = [
-                        (self._analyze_expression(cast(MenaiASTList, arg).elements[1], ctx, in_tail_position=False),
-                         self._analyze_expression(cast(MenaiASTList, arg).elements[2], ctx, in_tail_position=False))
-                        for arg in arg_exprs
-                    ]
-                    return MenaiIRBuildDict(pair_plans=pair_plans)
-                # Non-literal args: emit a regular call to the prelude lambda.
-                arg_plans = [self._analyze_expression(arg, ctx, in_tail_position=False) for arg in arg_exprs]
-                return MenaiIRCall(
-                    func_plan=MenaiIRVariable(name='dict', var_type='global'),
-                    arg_plans=arg_plans,
-                    is_tail_call=in_tail_position,
-                    is_builtin=False,
-                    builtin_name=None,
-                )
+                assert len(arg_exprs) % 2 == 0, "dict: odd arg count should have been caught by semantic analyser"
+                pair_plans = [
+                    (self._analyze_expression(arg_exprs[i], ctx, in_tail_position=False),
+                     self._analyze_expression(arg_exprs[i + 1], ctx, in_tail_position=False))
+                    for i in range(0, len(arg_exprs), 2)
+                ]
+                return MenaiIRBuildDict(pair_plans=pair_plans)
 
             # (set e1 ... eN) — emit a flat MenaiIRBuildSet node.
             if dollar_name == 'set':

@@ -190,7 +190,7 @@ class TestMixedTypeArms:
 
     def test_false_from_dict_in_mixed_match(self, menai):
         """Stored #f must be distinguishable from absent key."""
-        expr = '''(let ((v (dict-get (dict (list "key" #f)) "key")))
+        expr = '''(let ((v (dict-get (dict "key" #f) "key")))
                    (match v
                      (#none "missing")
                      (#f    "false")
@@ -199,7 +199,7 @@ class TestMixedTypeArms:
         assert ev(menai, expr) == '"false"'
 
     def test_value_from_dict_in_mixed_match(self, menai):
-        expr = '''(let ((v (dict-get (dict (list "key" 42)) "key")))
+        expr = '''(let ((v (dict-get (dict "key" 42) "key")))
                    (match v
                      (#none "missing")
                      (#f    "false")

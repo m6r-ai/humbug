@@ -192,7 +192,5 @@
                         (resume (list-first scalar-result) (list-ref scalar-result 1) stack))))))))))
 
 ; letrec body:
-(dict
-  (list "parse"
-        (lambda (json-string)
-           (dispatch json-string 0 (list))))))
+(dict "parse" (lambda (json-string)
+           (dispatch json-string 0 (list)))))

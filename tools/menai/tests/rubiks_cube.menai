@@ -350,13 +350,13 @@
        (cube-repr u d f b l r))))
 
   (dict
-    (list "solved-cube"     solved-cube)
-    (list "apply-move"      apply-move)
-    (list "apply-moves"     apply-moves)
-    (list "cube-solved?"    cube-solved?)
-    (list "heuristic"       heuristic)
-    (list "ida-star"        ida-star)
-    (list "print-cube"      print-cube)
-    (list "format-solution" format-solution)
-    (list "make-cube"       make-cube)
-    (list "all-moves"       all-moves)))
+    "solved-cube"     solved-cube
+    "apply-move"      apply-move
+    "apply-moves"     apply-moves
+    "cube-solved?"    cube-solved?
+    "heuristic"       heuristic
+    "ida-star"        ida-star
+    "print-cube"      print-cube
+    "format-solution" format-solution
+    "make-cube"       make-cube
+    "all-moves"       all-moves))

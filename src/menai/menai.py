@@ -656,19 +656,17 @@ class Menai:
                                   (if ($list-null? rest) "" ($list-first rest)))))
    (list->set (lambda (lst) ($list->set lst)))
    (dict (lambda (. args)
-           (letrec
-             ((loop (lambda (pairs acc)
-                      (if ($list-null? pairs)
-                          acc
-                          (if ($boolean-not ($list? ($list-first pairs)))
-                              (error "dict: each argument must be a 2-element list")
-                              (if ($integer!=? ($list-length ($list-first pairs)) 2)
-                                  (error "dict: each argument must be a 2-element list")
-                                  (loop ($list-rest pairs)
-                                        ($dict-set acc
-                                                   ($list-first ($list-first pairs))
-                                                   ($list-first ($list-rest ($list-first pairs)))))))))))
-             (loop args (dict)))))
+           (if ($integer!=? ($integer% ($list-length args) 2) 0)
+               (error "dict: requires an even number of arguments")
+               (letrec
+                 ((loop (lambda (lst acc)
+                           (if ($list-null? lst)
+                               acc
+                               (loop ($list-rest ($list-rest lst))
+                                     ($dict-set acc
+                                                ($list-first lst)
+                                                ($list-first ($list-rest lst))))))))
+                 (loop args (dict))))))
    (dict? (lambda (x) ($dict? x)))
    (dict=? (lambda (. args)
              (if ($integer<? ($list-length args) 2)
@@ -888,198 +886,198 @@ class Menai:
             ($range start
                     end
                     (if ($list-null? rest) 1 ($list-first rest))))))
-  (dict (list "function?" function?)
-        (list "function=?" function=?)
-        (list "function!=?" function!=?)
-        (list "function-min-arity" function-min-arity)
-        (list "function-variadic?" function-variadic?)
-        (list "function-accepts?" function-accepts?)
-        (list "symbol?" symbol?)
-        (list "symbol=?" symbol=?)
-        (list "symbol!=?" symbol!=?)
-        (list "symbol->string" symbol->string)
-        (list "none?" none?)
-        (list "boolean?" boolean?)
-        (list "boolean=?" boolean=?)
-        (list "boolean!=?" boolean!=?)
-        (list "boolean-not" boolean-not)
-        (list "integer?" integer?)
-        (list "integer=?" integer=?)
-        (list "integer!=?" integer!=?)
-        (list "integer<?" integer<?)
-        (list "integer>?" integer>?)
-        (list "integer<=?" integer<=?)
-        (list "integer>=?" integer>=?)
-        (list "integer+" integer+)
-        (list "integer-" integer-)
-        (list "integer*" integer*)
-        (list "integer/" integer/)
-        (list "integer%" integer%)
-        (list "integer-neg" integer-neg)
-        (list "integer-expn" integer-expn)
-        (list "integer-abs" integer-abs)
-        (list "integer-bit-or" integer-bit-or)
-        (list "integer-bit-and" integer-bit-and)
-        (list "integer-bit-xor" integer-bit-xor)
-        (list "integer-bit-not" integer-bit-not)
-        (list "integer-bit-shift-left" integer-bit-shift-left)
-        (list "integer-bit-shift-right" integer-bit-shift-right)
-        (list "integer-min" integer-min)
-        (list "integer-max" integer-max)
-        (list "integer->complex" integer->complex)
-        (list "integer->string" integer->string)
-        (list "integer->float" integer->float)
-        (list "integer-codepoint->string" integer-codepoint->string)
-        (list "float?" float?)
-        (list "float=?" float=?)
-        (list "float!=?" float!=?)
-        (list "float<?" float<?)
-        (list "float>?" float>?)
-        (list "float<=?" float<=?)
-        (list "float>=?" float>=?)
-        (list "float+" float+)
-        (list "float-" float-)
-        (list "float*" float*)
-        (list "float/" float/)
-        (list "float//" float//)
-        (list "float%" float%)
-        (list "float-neg" float-neg)
-        (list "float-exp" float-exp)
-        (list "float-expn" float-expn)
-        (list "float-log" float-log)
-        (list "float-log10" float-log10)
-        (list "float-log2" float-log2)
-        (list "float-logn" float-logn)
-        (list "float-sin" float-sin)
-        (list "float-cos" float-cos)
-        (list "float-tan" float-tan)
-        (list "float-sqrt" float-sqrt)
-        (list "float-abs" float-abs)
-        (list "float->integer" float->integer)
-        (list "float->complex" float->complex)
-        (list "float->string" float->string)
-        (list "float-floor" float-floor)
-        (list "float-ceil" float-ceil)
-        (list "float-round" float-round)
-        (list "float-min" float-min)
-        (list "float-max" float-max)
-        (list "complex?" complex?)
-        (list "complex=?" complex=?)
-        (list "complex!=?" complex!=?)
-        (list "complex+" complex+)
-        (list "complex-" complex-)
-        (list "complex*" complex*)
-        (list "complex/" complex/)
-        (list "complex-neg" complex-neg)
-        (list "complex-real" complex-real)
-        (list "complex-imag" complex-imag)
-        (list "complex-exp" complex-exp)
-        (list "complex-expn" complex-expn)
-        (list "complex-log" complex-log)
-        (list "complex-log10" complex-log10)
-        (list "complex-logn" complex-logn)
-        (list "complex-sin" complex-sin)
-        (list "complex-cos" complex-cos)
-        (list "complex-tan" complex-tan)
-        (list "complex-sqrt" complex-sqrt)
-        (list "complex-abs" complex-abs)
-        (list "complex->string" complex->string)
-        (list "string?" string?)
-        (list "string=?" string=?)
-        (list "string!=?" string!=?)
-        (list "string<?" string<?)
-        (list "string>?" string>?)
-        (list "string<=?" string<=?)
-        (list "string>=?" string>=?)
-        (list "string-concat" string-concat)
-        (list "string-length" string-length)
-        (list "string-upcase" string-upcase)
-        (list "string-downcase" string-downcase)
-        (list "string-trim" string-trim)
-        (list "string-trim-left" string-trim-left)
-        (list "string-trim-right" string-trim-right)
-        (list "string-replace" string-replace)
-        (list "string-index" string-index)
-        (list "string-prefix?" string-prefix?)
-        (list "string-suffix?" string-suffix?)
-        (list "string-ref" string-ref)
-        (list "string-slice" string-slice)
-        (list "string->number" string->number)
-        (list "string->integer" string->integer)
-        (list "string->integer-codepoint" string->integer-codepoint)
-        (list "string->list" string->list)
-        (list "list" list)
-        (list "list?" list?)
-        (list "list=?" list=?)
-        (list "list!=?" list!=?)
-        (list "list-prepend" list-prepend)
-        (list "list-append" list-append)
-        (list "list-concat" list-concat)
-        (list "list-reverse" list-reverse)
-        (list "list-first" list-first)
-        (list "list-rest" list-rest)
-        (list "list-length" list-length)
-        (list "list-last" list-last)
-        (list "list-member?" list-member?)
-        (list "list-null?" list-null?)
-        (list "list-index" list-index)
-        (list "list-slice" list-slice)
-        (list "list-remove" list-remove)
-        (list "list-ref" list-ref)
-        (list "list->string" list->string)
-        (list "list->set" list->set)
-        (list "dict" dict)
-        (list "dict?" dict?)
-        (list "dict=?" dict=?)
-        (list "dict!=?" dict!=?)
-        (list "dict-get" dict-get)
-        (list "dict-set" dict-set)
-        (list "dict-remove" dict-remove)
-        (list "dict-has?" dict-has?)
-        (list "dict-keys" dict-keys)
-        (list "dict-values" dict-values)
-        (list "dict-merge" dict-merge)
-        (list "dict-length" dict-length)
-        (list "set" set)
-        (list "set?" set?)
-        (list "set=?" set=?)
-        (list "set!=?" set!=?)
-        (list "set-member?" set-member?)
-        (list "set-add" set-add)
-        (list "set-remove" set-remove)
-        (list "set-length" set-length)
-        (list "set-union" set-union)
-        (list "set-intersection" set-intersection)
-        (list "set-difference" set-difference)
-        (list "set-subset?" set-subset?)
-        (list "set->list" set->list)
-        (list "struct?" struct?)
-        (list "struct-type?" struct-type?)
-        (list "struct-get" struct-get)
-        (list "struct-get-imm" struct-get-imm)
-        (list "struct-set" struct-set)
-        (list "struct-set-imm" struct-set-imm)
-        (list "struct=?" struct=?)
-        (list "struct!=?" struct!=?)
-        (list "struct-type" struct-type)
-        (list "struct-type-name" struct-type-name)
-        (list "struct-fields" struct-fields)
-        (list "map-list" map-list)
-        (list "filter-list" filter-list)
-        (list "fold-list" fold-list)
-        (list "find-list" find-list)
-        (list "any-list?" any-list?)
-        (list "all-list?" all-list?)
-        (list "zip-list" zip-list)
-        (list "sort-list" sort-list)
-        (list "map-dict" map-dict)
-        (list "filter-dict" filter-dict)
-        (list "map-set" map-set)
-        (list "filter-set" filter-set)
-        (list "fold-set" fold-set)
-        (list "any-set?" any-set?)
-        (list "all-set?" all-set?)
-        (list "range" range)))
+  (dict "function?" function?
+        "function=?" function=?
+        "function!=?" function!=?
+        "function-min-arity" function-min-arity
+        "function-variadic?" function-variadic?
+        "function-accepts?" function-accepts?
+        "symbol?" symbol?
+        "symbol=?" symbol=?
+        "symbol!=?" symbol!=?
+        "symbol->string" symbol->string
+        "none?" none?
+        "boolean?" boolean?
+        "boolean=?" boolean=?
+        "boolean!=?" boolean!=?
+        "boolean-not" boolean-not
+        "integer?" integer?
+        "integer=?" integer=?
+        "integer!=?" integer!=?
+        "integer<?" integer<?
+        "integer>?" integer>?
+        "integer<=?" integer<=?
+        "integer>=?" integer>=?
+        "integer+" integer+
+        "integer-" integer-
+        "integer*" integer*
+        "integer/" integer/
+        "integer%" integer%
+        "integer-neg" integer-neg
+        "integer-expn" integer-expn
+        "integer-abs" integer-abs
+        "integer-bit-or" integer-bit-or
+        "integer-bit-and" integer-bit-and
+        "integer-bit-xor" integer-bit-xor
+        "integer-bit-not" integer-bit-not
+        "integer-bit-shift-left" integer-bit-shift-left
+        "integer-bit-shift-right" integer-bit-shift-right
+        "integer-min" integer-min
+        "integer-max" integer-max
+        "integer->complex" integer->complex
+        "integer->string" integer->string
+        "integer->float" integer->float
+        "integer-codepoint->string" integer-codepoint->string
+        "float?" float?
+        "float=?" float=?
+        "float!=?" float!=?
+        "float<?" float<?
+        "float>?" float>?
+        "float<=?" float<=?
+        "float>=?" float>=?
+        "float+" float+
+        "float-" float-
+        "float*" float*
+        "float/" float/
+        "float//" float//
+        "float%" float%
+        "float-neg" float-neg
+        "float-exp" float-exp
+        "float-expn" float-expn
+        "float-log" float-log
+        "float-log10" float-log10
+        "float-log2" float-log2
+        "float-logn" float-logn
+        "float-sin" float-sin
+        "float-cos" float-cos
+        "float-tan" float-tan
+        "float-sqrt" float-sqrt
+        "float-abs" float-abs
+        "float->integer" float->integer
+        "float->complex" float->complex
+        "float->string" float->string
+        "float-floor" float-floor
+        "float-ceil" float-ceil
+        "float-round" float-round
+        "float-min" float-min
+        "float-max" float-max
+        "complex?" complex?
+        "complex=?" complex=?
+        "complex!=?" complex!=?
+        "complex+" complex+
+        "complex-" complex-
+        "complex*" complex*
+        "complex/" complex/
+        "complex-neg" complex-neg
+        "complex-real" complex-real
+        "complex-imag" complex-imag
+        "complex-exp" complex-exp
+        "complex-expn" complex-expn
+        "complex-log" complex-log
+        "complex-log10" complex-log10
+        "complex-logn" complex-logn
+        "complex-sin" complex-sin
+        "complex-cos" complex-cos
+        "complex-tan" complex-tan
+        "complex-sqrt" complex-sqrt
+        "complex-abs" complex-abs
+        "complex->string" complex->string
+        "string?" string?
+        "string=?" string=?
+        "string!=?" string!=?
+        "string<?" string<?
+        "string>?" string>?
+        "string<=?" string<=?
+        "string>=?" string>=?
+        "string-concat" string-concat
+        "string-length" string-length
+        "string-upcase" string-upcase
+        "string-downcase" string-downcase
+        "string-trim" string-trim
+        "string-trim-left" string-trim-left
+        "string-trim-right" string-trim-right
+        "string-replace" string-replace
+        "string-index" string-index
+        "string-prefix?" string-prefix?
+        "string-suffix?" string-suffix?
+        "string-ref" string-ref
+        "string-slice" string-slice
+        "string->number" string->number
+        "string->integer" string->integer
+        "string->integer-codepoint" string->integer-codepoint
+        "string->list" string->list
+        "list" list
+        "list?" list?
+        "list=?" list=?
+        "list!=?" list!=?
+        "list-prepend" list-prepend
+        "list-append" list-append
+        "list-concat" list-concat
+        "list-reverse" list-reverse
+        "list-first" list-first
+        "list-rest" list-rest
+        "list-length" list-length
+        "list-last" list-last
+        "list-member?" list-member?
+        "list-null?" list-null?
+        "list-index" list-index
+        "list-slice" list-slice
+        "list-remove" list-remove
+        "list-ref" list-ref
+        "list->string" list->string
+        "list->set" list->set
+        "dict" dict
+        "dict?" dict?
+        "dict=?" dict=?
+        "dict!=?" dict!=?
+        "dict-get" dict-get
+        "dict-set" dict-set
+        "dict-remove" dict-remove
+        "dict-has?" dict-has?
+        "dict-keys" dict-keys
+        "dict-values" dict-values
+        "dict-merge" dict-merge
+        "dict-length" dict-length
+        "set" set
+        "set?" set?
+        "set=?" set=?
+        "set!=?" set!=?
+        "set-member?" set-member?
+        "set-add" set-add
+        "set-remove" set-remove
+        "set-length" set-length
+        "set-union" set-union
+        "set-intersection" set-intersection
+        "set-difference" set-difference
+        "set-subset?" set-subset?
+        "set->list" set->list
+        "struct?" struct?
+        "struct-type?" struct-type?
+        "struct-get" struct-get
+        "struct-get-imm" struct-get-imm
+        "struct-set" struct-set
+        "struct-set-imm" struct-set-imm
+        "struct=?" struct=?
+        "struct!=?" struct!=?
+        "struct-type" struct-type
+        "struct-type-name" struct-type-name
+        "struct-fields" struct-fields
+        "map-list" map-list
+        "filter-list" filter-list
+        "fold-list" fold-list
+        "find-list" find-list
+        "any-list?" any-list?
+        "all-list?" all-list?
+        "zip-list" zip-list
+        "sort-list" sort-list
+        "map-dict" map-dict
+        "filter-dict" filter-dict
+        "map-set" map-set
+        "filter-set" filter-set
+        "fold-set" fold-set
+        "any-set?" any-set?
+        "all-set?" all-set?
+        "range" range))
 """
 
     # Mathematical constants

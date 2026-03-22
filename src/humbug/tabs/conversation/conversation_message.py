@@ -146,9 +146,9 @@ class ConversationMessage(QFrame):
         self._edit_message_button: QToolButton | None = None
         self._delete_message_button: QToolButton | None = None
 
-        # Add fork button only for AI messages
         style = self._message_source
-        if style == AIMessageSource.AI:
+        # Add fork and delete buttons only for user messages
+        if style == AIMessageSource.USER and not self._is_input:
             self._fork_message_button = QToolButton()
             self._fork_message_button.setObjectName("_fork_button")
             self._fork_message_button.clicked.connect(self._fork_message)

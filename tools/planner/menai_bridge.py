@@ -93,10 +93,10 @@ class MenaiBridge:
         cals  = f'(list {" ".join(self.python_to_menai_calendar(c) for c in project.get("calendars", []))})'
         other = {k: v for k, v in project.items() if k not in ("tasks", "dependencies", "calendars")}
         other_pairs = " ".join(
-            f'(list {self.python_to_menai(k)} {self.python_to_menai(v)})'
+            f'{self.python_to_menai(k)} {self.python_to_menai(v)}'
             for k, v in other.items()
         )
-        return f'(dict (list "tasks" {tasks}) (list "dependencies" {deps}) (list "calendars" {cals}) {other_pairs})'
+        return f'(dict "tasks" {tasks} "dependencies" {deps} "calendars" {cals} {other_pairs})'
 
     def python_to_menai(self, value: Any) -> str:
         """
@@ -139,7 +139,7 @@ class MenaiBridge:
             for key, val in value.items():
                 key_expr = self.python_to_menai(key)
                 val_expr = self.python_to_menai(val)
-                pairs.append(f"(list {key_expr} {val_expr})")
+                pairs.append(f"{key_expr} {val_expr}")
             return f"(dict {' '.join(pairs)})"
         
         else:

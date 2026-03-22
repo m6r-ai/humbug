@@ -17,6 +17,7 @@ New features:
 - Added `struct` operations to the Menai language.
 - The UI for the input box is now slightly different, putting the buttons at the bottom of the box ro a better UX.
 - Added the ability to create a conversation from the mindspace conversations view.
+- Removed top-level conversation fork option and moved message-level forking to user messages to simplify the UX.
 
 Bug fixes:
 

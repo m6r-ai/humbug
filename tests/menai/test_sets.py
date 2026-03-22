@@ -103,7 +103,7 @@ class TestSetTypePredicate:
 
     def test_dict_is_not_set(self, tool):
         """Test that a dict is not a set."""
-        result = tool.evaluate('(set? (dict (list "a" 1)))')
+        result = tool.evaluate('(set? (dict "a" 1))')
         assert result is False
 
 

@@ -273,13 +273,13 @@ class TestSymbolIntegration:
     def test_symbol_as_dict_key(self, menai):
         # Symbols can be used as dict keys
         assert menai.evaluate(
-            "(let ((a (dict (list 'foo 1) (list 'bar 2))))"
+            "(let ((a (dict 'foo 1 'bar 2)))"
             "  (dict-get a 'foo))"
         ) == 1
 
     def test_symbol_dict_key_lookup_miss(self, menai):
         assert menai.evaluate(
-            "(let ((a (dict (list 'foo 1))))"
+            "(let ((a (dict 'foo 1)))"
             "  (dict-get a 'bar \"missing\"))"
         ) == "missing"
 

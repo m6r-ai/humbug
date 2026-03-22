@@ -29,20 +29,20 @@
 
   (base-project
     (dict
-      (list "project-id"    "SIMPLE-TEST")
-      (list "name"          "Simple Test Project")
-      (list "project-start" "2025-03-03")
-      (list "tasks"
+      "project-id"    "SIMPLE-TEST"
+      "name"          "Simple Test Project"
+      "project-start" "2025-03-03"
+      "tasks"
         (list
           (make-task "T1" "Task 1" 5)
           (make-task "T2" "Task 2" 3)
-          (make-task "T3" "Task 3" 2)))
-      (list "dependencies"
+          (make-task "T3" "Task 3" 2))
+      "dependencies"
         (list
           (make-fs-dep "T1" "T2")
-          (make-fs-dep "T2" "T3")))
-      (list "calendars"
-        (list cal-5day))))
+          (make-fs-dep "T2" "T3"))
+      "calendars"
+        (list cal-5day)))
 
   ; ============================================================================
   ; TEST 1: Forward pass schedules all three tasks
@@ -78,20 +78,20 @@
 
   (ss-project
     (dict
-      (list "project-id"    "SS-TEST")
-      (list "name"          "SS Test Project")
-      (list "project-start" "2025-03-03")
-      (list "tasks"
+      "project-id"    "SS-TEST"
+      "name"          "SS Test Project"
+      "project-start" "2025-03-03"
+      "tasks"
         (list
           (make-task "T1" "Task 1" 5)
           (make-task "T2" "Task 2" 3)
-          (make-task "T3" "Task 3" 2)))
-      (list "dependencies"
+          (make-task "T3" "Task 3" 2))
+      "dependencies"
         (list
           ss-dep
-          (make-fs-dep "T2" "T3")))
-      (list "calendars"
-        (list cal-5day))))
+          (make-fs-dep "T2" "T3"))
+      "calendars"
+        (list cal-5day)))
 
   (t3-result (forward-pass ss-project))
   (t3-tasks  (dict-get t3-result "tasks"))
@@ -105,8 +105,8 @@
 )
 
 (dict
-  (list "test-1-forward-pass"   t1-ok)
-  (list "test-2-full-cpm"       t2-ok)
-  (list "test-3-ss-dependency"  t3-ok)
-  (list "all-passed"            all-ok))
+  "test-1-forward-pass"   t1-ok
+  "test-2-full-cpm"       t2-ok
+  "test-3-ss-dependency"  t3-ok
+  "all-passed"            all-ok)
 )
