@@ -1815,13 +1815,22 @@ class ConversationWidget(QWidget):
                 background-color: transparent;
             }}
 
+            #ConversationMessage #_edit_area {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border-radius: {border_radius}px;
+                border: 0;
+            }}
+
             #ConversationMessage #_edit_text_edit {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
-                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
-                border-radius: 4px;
-                padding: 6px;
-                font-size: {label_font_size / 0.8:.1f}pt;
+                background-color: transparent;
+                border: none;
+                padding: 2px 4px;
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+            }}
+
+            #ConversationMessage #_edit_btn_row {{
+                background-color: transparent;
             }}
 
             #ConversationMessage #_edit_confirm_button {{
