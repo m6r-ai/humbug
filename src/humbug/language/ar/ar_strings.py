@@ -41,7 +41,6 @@ def get_arabic_strings() -> LanguageStrings:
         open_conversation="فتح محادثة...",
         open_file="فتح ملف...",
         open_preview="فتح معاينة...",
-        fork_conversation="نسخ المحادثة",
         save="حفظ",
         save_as="حفظ باسم...",
         close_mindspace="إغلاق المساحة الذهنية",
@@ -95,7 +94,7 @@ def get_arabic_strings() -> LanguageStrings:
         find_match_count="{current} من {total}",
 
         # Input widget
-        processing_message="معالجة طلبك (Esc للإلغاء)",
+        processing_message="محادثة مع {model} (Esc للإلغاء، {key} للإرسال)",
         input_prompt="تحدث مع {model}... ({key} للإرسال)",
         command_prompt="الأمر... (Enter أو {key} للإرسال)",
 
@@ -284,7 +283,7 @@ def get_arabic_strings() -> LanguageStrings:
         tooltip_save_contents="حفظ المحتويات إلى ملف",
         tooltip_copy_message="نسخ الرسالة إلى الحافظة",
         tooltip_save_message="حفظ الرسالة كملف ماركداون",
-        tooltip_fork_message="تفريع المحادثة بعد هذه الرسالة",
+        tooltip_fork_message="تفريع المحادثة من هذه الرسالة",
         tooltip_delete_from_message="حذف المحادثة من هذه النقطة",
         tooltip_edit_file="تحرير هذا الملف",
         tooltip_submit_message="إرسال الرسالة",

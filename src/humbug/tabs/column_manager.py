@@ -41,7 +41,6 @@ class ColumnManager(QWidget):
 
     status_message = Signal(StatusMessage)
     tab_changed = Signal()
-    fork_requested = Signal()
     fork_from_index_requested = Signal(int)
     open_preview_link_requested = Signal(str)
     edit_file_requested = Signal(str)
@@ -1490,7 +1489,6 @@ class ColumnManager(QWidget):
             self._logger.exception("Failed to create new conversation: %s", str(e))
             raise ColumnManagerError("Failed to create new conversation tab") from e
 
-        conversation_tab.fork_requested.connect(self._on_conversation_fork_requested)
         conversation_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
 
         # Set model based on mindspace settings
@@ -1537,7 +1535,6 @@ class ColumnManager(QWidget):
 
         try:
             conversation_tab = ConversationTab("", abs_path, self)
-            conversation_tab.fork_requested.connect(self._on_conversation_fork_requested)
             conversation_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
             conversation_title = os.path.splitext(os.path.basename(abs_path))[0]
             conversation_tab.set_ephemeral(ephemeral)
@@ -1547,18 +1544,6 @@ class ColumnManager(QWidget):
         except ConversationError as e:
             self._logger.exception("Failed to open conversation: %s", str(e))
             raise ColumnManagerError("Failed to open conversation tab") from e
-
-    def can_fork_conversation(self) -> bool:
-        """Check if the current tab can be forked."""
-        tab = self.get_current_tab()
-        if not tab or not isinstance(tab, ConversationTab):
-            return False
-
-        return True
-
-    def _on_conversation_fork_requested(self) -> None:
-        """Handle the fork conversation request signal."""
-        self.fork_requested.emit()
 
     def _on_conversation_fork_from_index_requested(self, message_index: int) -> None:
         """Handle the fork conversation from index request signal."""
@@ -1633,12 +1618,11 @@ class ColumnManager(QWidget):
 
             else:
                 # Fork up to specified index (inclusive)
-                forked_messages = all_messages[:message_index + 1]
+                forked_messages = all_messages[:message_index]
 
             new_history = AIConversationHistory(forked_messages)
             new_tab.set_conversation_history(new_history)
 
-            new_tab.fork_requested.connect(self._on_conversation_fork_requested)
             new_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
             self._add_tab(new_tab, os.path.splitext(os.path.basename(new_tab.path()))[0])
 
@@ -1761,7 +1745,6 @@ class ColumnManager(QWidget):
         match state.type:
             case TabType.CONVERSATION:
                 conversation_tab = ConversationTab.restore_from_state(state, self)
-                conversation_tab.fork_requested.connect(self._on_conversation_fork_requested)
                 conversation_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
                 return conversation_tab
 

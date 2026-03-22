@@ -40,7 +40,6 @@ def get_english_strings() -> LanguageStrings:
         open_conversation="Open Conversation...",
         open_file="Open File...",
         open_preview="Open Preview...",
-        fork_conversation="Fork Conversation",
         save="Save",
         save_as="Save As...",
         close_mindspace="Close Mindspace",
@@ -94,7 +93,7 @@ def get_english_strings() -> LanguageStrings:
         find_match_count="{current} of {total}",
 
         # Input widget
-        processing_message="Processing your request (Esc to cancel)",
+        processing_message="Chat with {model} (Esc to cancel, {key} to submit)",
         input_prompt="Chat with {model}... ({key} to submit)",
         command_prompt="Command... (Enter or {key} to submit)",
 
@@ -283,7 +282,7 @@ def get_english_strings() -> LanguageStrings:
         tooltip_save_contents="Save contents to a file",
         tooltip_copy_message="Copy message to clipboard",
         tooltip_save_message="Save message as markdown",
-        tooltip_fork_message="Fork conversation after this message",
+        tooltip_fork_message="Fork conversation at this message",
         tooltip_delete_from_message="Delete conversation from this point",
         tooltip_edit_file="Edit this file",
         tooltip_submit_message="Submit message",

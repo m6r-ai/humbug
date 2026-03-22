@@ -40,7 +40,6 @@ def get_french_strings() -> LanguageStrings:
         open_conversation="Ouvrir conversation...",
         open_file="Ouvrir fichier...",
         open_preview="Ouvrir aperçu...",
-        fork_conversation="Dupliquer la conversation",
         save="Enregistrer",
         save_as="Enregistrer sous...",
         close_mindspace="Fermer l'espace mental",
@@ -94,7 +93,7 @@ def get_french_strings() -> LanguageStrings:
         find_match_count="{current} sur {total}",
 
         # Input widget
-        processing_message="Traitement de votre requête (Échap pour annuler)",
+        processing_message="Discuter avec {model}... (Échap pour annuler, {key} pour envoyer)",
         input_prompt="Discuter avec {model}... ({key} pour envoyer)",
         command_prompt="Commande... (Entrée ou {key} pour envoyer)",
 
@@ -283,7 +282,7 @@ def get_french_strings() -> LanguageStrings:
         tooltip_save_contents="Enregistrer le contenu dans un fichier",
         tooltip_copy_message="Copier le message dans le presse-papiers",
         tooltip_save_message="Enregistrer le message au format markdown",
-        tooltip_fork_message="Créer une nouvelle conversation après ce message",
+        tooltip_fork_message="Dupliquer la conversation à partir de ce message",
         tooltip_delete_from_message="Supprimer la conversation à partir d'ici",
         tooltip_edit_file="Modifier ce fichier",
         tooltip_submit_message="Envoyer le message",

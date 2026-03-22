@@ -123,12 +123,12 @@ class ConversationInput(ConversationMessage):
     def _update_banner_text(self) -> None:
         """Update the header text based on current state."""
         strings = self._language_manager.strings()
+        submit_key = self._get_submit_key_text()
         if self._is_streaming:
-            self._role_label.setText(strings.processing_message)
+            self._role_label.setText(strings.processing_message.format(model=self._current_model, key=submit_key))
             self.setProperty("message_source", "ai_streaming")
 
         else:
-            submit_key = self._get_submit_key_text()
             self._role_label.setText(strings.input_prompt.format(model=self._current_model, key=submit_key))
             self.setProperty("message_source", "user_input")
 
