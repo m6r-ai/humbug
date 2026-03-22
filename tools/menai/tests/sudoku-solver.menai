@@ -106,5 +106,5 @@
                      (list->string rows "\n"))))))
 
   (dict
-    (list "solve" solve)
-    (list "display-board" display-board)))
+    "solve" solve
+    "display-board" display-board))

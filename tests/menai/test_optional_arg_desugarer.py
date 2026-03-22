@@ -345,28 +345,28 @@ class TestDictGetEval:
     """dict-get evaluated end-to-end, covering both 2- and 3-argument forms."""
 
     def test_two_arg_key_found(self, menai):
-        result = menai.evaluate('(dict-get (dict (list "a" 1) (list "b" 2)) "a")')
+        result = menai.evaluate('(dict-get (dict "a" 1 "b" 2) "a")')
         assert result == 1
 
     def test_two_arg_key_missing_returns_none(self, menai):
-        result = menai.evaluate('(dict-get (dict (list "a" 1)) "missing")')
+        result = menai.evaluate('(dict-get (dict "a" 1) "missing")')
         assert result is None
 
     def test_three_arg_key_found(self, menai):
-        result = menai.evaluate('(dict-get (dict (list "a" 1)) "a" 99)')
+        result = menai.evaluate('(dict-get (dict "a" 1) "a" 99)')
         assert result == 1
 
     def test_three_arg_key_missing_returns_default(self, menai):
-        result = menai.evaluate('(dict-get (dict (list "a" 1)) "missing" 99)')
+        result = menai.evaluate('(dict-get (dict "a" 1) "missing" 99)')
         assert result == 99
 
     def test_two_arg_none_default_usable_as_sentinel(self, menai):
-        result = menai.evaluate('(none? (dict-get (dict (list "a" 1)) "missing"))')
+        result = menai.evaluate('(none? (dict-get (dict "a" 1) "missing"))')
         assert result is True
 
     def test_two_arg_in_nested_lookup(self, menai):
         result = menai.evaluate(
-            '(let ((outer (dict (list "inner" (dict (list "x" 42))))))'
+            '(let ((outer (dict "inner" (dict "x" 42))))'
             '  (dict-get (dict-get outer "inner") "x"))'
         )
         assert result == 42
@@ -517,11 +517,11 @@ class TestListSliceEval:
 class TestDictGetErrors:
     def test_too_few_args_rejected(self, menai):
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
-            menai.evaluate('(dict-get (dict (list "a" 1)))')
+            menai.evaluate('(dict-get (dict "a" 1))')
 
     def test_too_many_args_rejected(self, menai):
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
-            menai.evaluate('(dict-get (dict (list "a" 1)) "a" 0 "extra")')
+            menai.evaluate('(dict-get (dict "a" 1) "a" 0 "extra")')
 
     def test_non_dict_first_arg_raises(self, menai):
         with pytest.raises(MenaiEvalError, match="requires dict argument"):

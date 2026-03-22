@@ -19,7 +19,7 @@ class TestCacheInvalidation:
     def test_cache_reused_when_content_unchanged(self, tmp_path):
         """Test that cache is reused when file content hasn't changed."""
         module_file = tmp_path / "stable.menai"
-        module_file.write_text("(dict (list \"value\" 42))")
+        module_file.write_text("(dict \"value\" 42)")
 
         menai = Menai(module_path=[str(tmp_path)])
 
@@ -40,7 +40,7 @@ class TestCacheInvalidation:
     def test_cache_invalidated_when_content_changes(self, tmp_path):
         """Test that cache is invalidated when file content changes."""
         module_file = tmp_path / "changing.menai"
-        module_file.write_text("(dict (list \"value\" 1))")
+        module_file.write_text("(dict \"value\" 1)")
 
         menai = Menai(module_path=[str(tmp_path)])
 
@@ -53,7 +53,7 @@ class TestCacheInvalidation:
         hash1 = menai.module_hashes["changing"]
 
         # Modify file content
-        module_file.write_text("(dict (list \"value\" 2))")
+        module_file.write_text("(dict \"value\" 2)")
 
         # Second load - should detect change and reload
         result2 = menai.evaluate('''
@@ -69,7 +69,7 @@ class TestCacheInvalidation:
     def test_cache_invalidated_on_whitespace_only_change(self, tmp_path):
         """Test that cache is invalidated even for whitespace-only changes."""
         module_file = tmp_path / "whitespace.menai"
-        module_file.write_text("(dict (list \"x\" 1))")
+        module_file.write_text("(dict \"x\" 1)")
 
         menai = Menai(module_path=[str(tmp_path)])
 
@@ -78,7 +78,7 @@ class TestCacheInvalidation:
         hash1 = menai.module_hashes["whitespace"]
 
         # Change only whitespace
-        module_file.write_text("(dict  (list  \"x\"  1))")
+        module_file.write_text("(dict  \"x\"  1)")
 
         # Second load - should detect change (different hash)
         menai.evaluate('(import "whitespace")')
@@ -90,7 +90,7 @@ class TestCacheInvalidation:
     def test_cache_invalidated_on_comment_change(self, tmp_path):
         """Test that cache is invalidated when comments change."""
         module_file = tmp_path / "commented.menai"
-        module_file.write_text("; Comment v1\n(dict (list \"x\" 1))")
+        module_file.write_text("; Comment v1\n(dict \"x\" 1)")
 
         menai = Menai(module_path=[str(tmp_path)])
 
@@ -99,7 +99,7 @@ class TestCacheInvalidation:
         hash1 = menai.module_hashes["commented"]
 
         # Change comment
-        module_file.write_text("; Comment v2\n(dict (list \"x\" 1))")
+        module_file.write_text("; Comment v2\n(dict \"x\" 1)")
 
         # Second load - should detect change
         menai.evaluate('(import "commented")')
@@ -110,8 +110,8 @@ class TestCacheInvalidation:
 
     def test_multiple_modules_independent_invalidation(self, tmp_path):
         """Test that modules are invalidated independently."""
-        (tmp_path / "module_a.menai").write_text("(dict (list \"a\" 1))")
-        (tmp_path / "module_b.menai").write_text("(dict (list \"b\" 2))")
+        (tmp_path / "module_a.menai").write_text("(dict \"a\" 1)")
+        (tmp_path / "module_b.menai").write_text("(dict \"b\" 2)")
 
         menai = Menai(module_path=[str(tmp_path)])
 
@@ -122,7 +122,7 @@ class TestCacheInvalidation:
         hash_b1 = menai.module_hashes["module_b"]
 
         # Modify only module_a
-        (tmp_path / "module_a.menai").write_text("(dict (list \"a\" 99))")
+        (tmp_path / "module_a.menai").write_text("(dict \"a\" 99)")
 
         # Reload both
         menai.evaluate('(import "module_a")')
@@ -138,13 +138,13 @@ class TestCacheInvalidation:
         """Test cache invalidation with transitive imports."""
         # Base module
         (tmp_path / "base.menai").write_text("""
-(dict (list "value" 10))
+(dict "value" 10)
 """)
 
         # Wrapper imports base
         (tmp_path / "wrapper.menai").write_text("""
 (let ((base (import "base")))
-  (dict (list "get-value" (lambda () (dict-get base "value")))))
+  (dict "get-value" (lambda () (dict-get base "value"))))
 """)
 
         menai = Menai(module_path=[str(tmp_path)])
@@ -158,7 +158,7 @@ class TestCacheInvalidation:
 
         # Modify base module
         (tmp_path / "base.menai").write_text("""
-(dict (list "value" 20))
+(dict "value" 20)
 """)
 
         # Clear cache to force reload
@@ -192,8 +192,8 @@ class TestHashComputation:
 
     def test_identical_content_produces_identical_hash(self, tmp_path):
         """Test that identical content produces the same hash."""
-        (tmp_path / "file1.menai").write_text("(dict (list \"x\" 1))")
-        (tmp_path / "file2.menai").write_text("(dict (list \"x\" 1))")
+        (tmp_path / "file1.menai").write_text("(dict \"x\" 1)")
+        (tmp_path / "file2.menai").write_text("(dict \"x\" 1)")
 
         menai = Menai(module_path=[str(tmp_path)])
 
@@ -205,8 +205,8 @@ class TestHashComputation:
 
     def test_different_content_produces_different_hash(self, tmp_path):
         """Test that different content produces different hashes."""
-        (tmp_path / "diff1.menai").write_text("(dict (list \"x\" 1))")
-        (tmp_path / "diff2.menai").write_text("(dict (list \"x\" 2))")
+        (tmp_path / "diff1.menai").write_text("(dict \"x\" 1)")
+        (tmp_path / "diff2.menai").write_text("(dict \"x\" 2)")
 
         menai = Menai(module_path=[str(tmp_path)])
 
@@ -225,7 +225,7 @@ class TestHashComputation:
             large_content += f"  (func{i} (lambda (x) (integer* x {i})))\n"
         large_content += ")\n  (dict\n"
         for i in range(100):
-            large_content += f"    (list \"func{i}\" func{i})\n"
+            large_content += f"    \"func{i}\" func{i}\n"
         large_content += "  )\n)\n"
 
         module_file = tmp_path / "large.menai"
@@ -247,7 +247,7 @@ class TestManualCacheControl:
     def test_invalidate_module_removes_from_cache(self, tmp_path):
         """Test that invalidate_module removes module from cache."""
         module_file = tmp_path / "removable.menai"
-        module_file.write_text("(dict (list \"x\" 1))")
+        module_file.write_text("(dict \"x\" 1)")
 
         menai = Menai(module_path=[str(tmp_path)])
 
@@ -271,7 +271,7 @@ class TestManualCacheControl:
     def test_reload_module_forces_recompilation(self, tmp_path):
         """Test that reload_module forces recompilation."""
         module_file = tmp_path / "reloadable.menai"
-        module_file.write_text("(dict (list \"value\" 1))")
+        module_file.write_text("(dict \"value\" 1)")
 
         menai = Menai(module_path=[str(tmp_path)])
 
@@ -283,7 +283,7 @@ class TestManualCacheControl:
         assert result1 == 1
 
         # Modify file
-        module_file.write_text("(dict (list \"value\" 2))")
+        module_file.write_text("(dict \"value\" 2)")
 
         # Force reload
         menai.reload_module("reloadable")
@@ -320,7 +320,7 @@ class TestManualCacheControl:
         dir1.mkdir()
         dir2.mkdir()
 
-        (dir1 / "test.menai").write_text("(dict (list \"x\" 1))")
+        (dir1 / "test.menai").write_text("(dict \"x\" 1)")
 
         menai = Menai(module_path=[str(dir1)])
 
@@ -341,7 +341,7 @@ class TestCacheInvalidationEdgeCases:
     def test_file_deleted_after_caching(self, tmp_path):
         """Test behavior when cached module file is deleted."""
         module_file = tmp_path / "deletable.menai"
-        module_file.write_text("(dict (list \"x\" 1))")
+        module_file.write_text("(dict \"x\" 1)")
 
         menai = Menai(module_path=[str(tmp_path)])
 
@@ -364,7 +364,7 @@ class TestCacheInvalidationEdgeCases:
     def test_file_recreated_with_different_content(self, tmp_path):
         """Test cache invalidation when file is deleted and recreated."""
         module_file = tmp_path / "recreated.menai"
-        module_file.write_text("(dict (list \"value\" 1))")
+        module_file.write_text("(dict \"value\" 1)")
 
         menai = Menai(module_path=[str(tmp_path)])
 
@@ -377,7 +377,7 @@ class TestCacheInvalidationEdgeCases:
 
         # Delete and recreate with different content
         module_file.unlink()
-        module_file.write_text("(dict (list \"value\" 2))")
+        module_file.write_text("(dict \"value\" 2)")
 
         # Load again - should get new content
         result2 = menai.evaluate('''
@@ -421,7 +421,7 @@ class TestCacheInvalidationEdgeCases:
     def test_unicode_content_hashing(self, tmp_path):
         """Test that Unicode content is hashed correctly."""
         module_file = tmp_path / "unicode.menai"
-        module_file.write_text("; Comment: 你好世界 🌍\n(dict (list \"greeting\" \"hello\"))")
+        module_file.write_text("; Comment: 你好世界 🌍\n(dict \"greeting\" \"hello\")")
 
         menai = Menai(module_path=[str(tmp_path)])
 
@@ -430,7 +430,7 @@ class TestCacheInvalidationEdgeCases:
         assert "unicode" in menai.module_hashes
 
         # Modify Unicode content
-        module_file.write_text("; Comment: 再见世界 🌏\n(dict (list \"greeting\" \"hello\"))")
+        module_file.write_text("; Comment: 再见世界 🌏\n(dict \"greeting\" \"hello\")")
 
         # Should detect change
         hash1 = menai.module_hashes["unicode"]

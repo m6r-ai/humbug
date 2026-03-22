@@ -206,12 +206,12 @@ class TestAlistNeqP:
     """Tests for dict!=?"""
 
     def test_unequal_dicts(self, menai):
-        assert menai.evaluate('(dict!=? (dict (list "a" 1)) (dict (list "a" 2)))') is True
-        assert menai.evaluate('(dict!=? (dict) (dict (list "a" 1)))') is True
+        assert menai.evaluate('(dict!=? (dict "a" 1) (dict "a" 2))') is True
+        assert menai.evaluate('(dict!=? (dict) (dict "a" 1))') is True
 
     def test_equal_dicts(self, menai):
         assert menai.evaluate('(dict!=? (dict) (dict))') is False
-        assert menai.evaluate('(dict!=? (dict (list "a" 1)) (dict (list "a" 1)))') is False
+        assert menai.evaluate('(dict!=? (dict "a" 1) (dict "a" 1))') is False
 
     def test_rejects_non_dict(self, menai):
         with pytest.raises(MenaiEvalError, match="dict!=.*requires dict arguments.*list"):
@@ -546,7 +546,7 @@ class TestNeqPConsistencyWithEqP:
     def test_dict_neq_is_negation_of_eq(self, menai):
         cases = [
             ('(dict)', '(dict)'),
-            ('(dict (list "k" 1))', '(dict (list "k" 2))'),
+            ('(dict "k" 1)', '(dict "k" 2)'),
         ]
         for a, b in cases:
             eq = menai.evaluate(f'(dict=? {a} {b})')

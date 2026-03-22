@@ -568,7 +568,7 @@ class TestLetrecLambdasInDataStructures:
         # Lambda as value in dict
         helpers.assert_evaluates_to(
             menai,
-            '(letrec ((x (dict (list "func" (lambda () x))))) (dict-get x "func"))',
+            '(letrec ((x (dict "func" (lambda () x)))) (dict-get x "func"))',
             '<lambda ()>'  # Returns the lambda
         )
 
@@ -576,7 +576,7 @@ class TestLetrecLambdasInDataStructures:
         """Test calling lambda from dict."""
         helpers.assert_evaluates_to(
             menai,
-            '(letrec ((x (dict (list "func" (lambda () x))))) ((dict-get x "func")))',
+            '(letrec ((x (dict "func" (lambda () x)))) ((dict-get x "func")))',
             '{("func" <lambda ()>)}'  # Calling lambda returns x (the dict)
         )
 
@@ -656,6 +656,6 @@ class TestLetrecLambdasInDataStructuresBytecode:
         """Test bytecode compilation of lambda in dict."""
         helpers.assert_evaluates_to(
             menai,
-            '(letrec ((x (dict (list "func" (lambda () x))))) ((dict-get x "func")))',
+            '(letrec ((x (dict "func" (lambda () x)))) ((dict-get x "func")))',
             '{("func" <lambda ()>)}'
         )

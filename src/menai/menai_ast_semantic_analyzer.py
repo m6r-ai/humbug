@@ -966,6 +966,20 @@ class MenaiASTSemanticAnalyzer:
                         source=self.source
                     )
 
+        if isinstance(first, MenaiASTSymbol) and first.name == 'dict':
+            n_args = len(expr.elements) - 1
+            if n_args % 2 != 0:
+                raise MenaiEvalError(
+                    message="Function 'dict' requires an even number of arguments",
+                    received=f"Got {n_args} argument{'s' if n_args != 1 else ''}",
+                    expected="An even number of arguments: (dict k1 v1 k2 v2 ...)",
+                    example='(dict "name" "Alice" "age" 30)',
+                    suggestion="Each key must be followed by its value",
+                    line=expr.line,
+                    column=expr.column,
+                    source=self.source
+                )
+
         # Recursively analyze all elements (function and arguments)
         for elem in expr.elements:
             self.analyze(elem, self.source)

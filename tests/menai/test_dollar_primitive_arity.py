@@ -46,11 +46,11 @@ class TestDollarPrimitiveValidCalls:
 
     def test_ternary_dict_get(self, menai):
         """($dict-get d k default) — ternary opcode, 3 arguments."""
-        assert menai.evaluate('($dict-get (dict (list "a" 1)) "a" #none)') == 1
+        assert menai.evaluate('($dict-get (dict "a" 1) "a" #none)') == 1
 
     def test_ternary_dict_get_missing_key(self, menai):
         """($dict-get d k default) returns default when key absent."""
-        assert menai.evaluate('($dict-get (dict (list "a" 1)) "z" 99)') == 99
+        assert menai.evaluate('($dict-get (dict "a" 1) "z" 99)') == 99
 
     def test_ternary_range(self, menai):
         """($range 0 5 1) — ternary opcode, 3 arguments."""
@@ -86,12 +86,12 @@ class TestDollarPrimitiveTooFewArgs:
     def test_ternary_with_one_arg(self, menai):
         """($dict-get d) — ternary opcode called with 1 argument."""
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
-            menai.evaluate('($dict-get (dict (list "a" 1)))')
+            menai.evaluate('($dict-get (dict "a" 1))')
 
     def test_ternary_with_two_args(self, menai):
         """($dict-get d k) — ternary opcode called with 2 arguments."""
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
-            menai.evaluate('($dict-get (dict (list "a" 1)) "a")')
+            menai.evaluate('($dict-get (dict "a" 1) "a")')
 
     def test_ternary_range_with_two_args(self, menai):
         """($range 0 5) — ternary opcode called with 2 arguments."""
@@ -115,7 +115,7 @@ class TestDollarPrimitiveTooManyArgs:
     def test_ternary_with_four_args(self, menai):
         """($dict-get d k v extra) — ternary opcode called with 4 arguments."""
         with pytest.raises(MenaiEvalError, match="wrong number of arguments"):
-            menai.evaluate('($dict-get (dict (list "a" 1)) "a" #none "extra")')
+            menai.evaluate('($dict-get (dict "a" 1) "a" #none "extra")')
 
     def test_ternary_range_with_four_args(self, menai):
         """($range 0 5 1 99) — ternary opcode called with 4 arguments."""

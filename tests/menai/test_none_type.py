@@ -72,12 +72,12 @@ def test_dict_get_missing_key_none_predicate(menai):
 
 def test_dict_get_stored_false_returns_false(menai):
     """Stored #f must be distinguishable from absent key."""
-    assert evaluate(menai, '(dict-get (dict (list "x" #f)) "x")') == "#f"
+    assert evaluate(menai, '(dict-get (dict "x" #f) "x")') == "#f"
 
 
 def test_dict_get_stored_none_returns_none(menai):
     """#none can be stored as a value and retrieved."""
-    assert evaluate(menai, '(dict-get (dict (list "x" #none)) "x")') == "#none"
+    assert evaluate(menai, '(dict-get (dict "x" #none) "x")') == "#none"
 
 
 def test_dict_get_with_default_still_works(menai):
@@ -92,7 +92,7 @@ def test_dict_get_with_false_default(menai):
 
 def test_dict_get_existing_key_with_default(menai):
     """When key exists, value is returned not default."""
-    assert evaluate(menai, '(dict-get (dict (list "x" 42)) "x" 0)') == "42"
+    assert evaluate(menai, '(dict-get (dict "x" 42) "x" 0)') == "42"
 
 
 # ---------------------------------------------------------------------------
@@ -209,7 +209,7 @@ def test_match_none_from_dict_get(menai):
 
 
 def test_match_value_from_dict_get(menai):
-    assert evaluate(menai, '(match (dict-get (dict (list "k" 42)) "k") (#none "missing") ((? integer? n) n))') == "42"
+    assert evaluate(menai, '(match (dict-get (dict "k" 42) "k") (#none "missing") ((? integer? n) n))') == "42"
 
 
 # ---------------------------------------------------------------------------
@@ -221,7 +221,7 @@ def test_none_stored_in_list(menai):
 
 
 def test_none_stored_in_dict_value(menai):
-    assert evaluate(menai, '(dict-get (dict (list "k" #none)) "k")') == "#none"
+    assert evaluate(menai, '(dict-get (dict "k" #none) "k")') == "#none"
 
 
 def test_none_in_list_member(menai):

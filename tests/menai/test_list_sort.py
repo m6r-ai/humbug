@@ -88,10 +88,10 @@ class TestListSortStability:
             (sort-list
               (lambda (a b) (integer<? (dict-get a "key") (dict-get b "key")))
               (list
-                (dict (list "key" 2) (list "id" "first"))
-                (dict (list "key" 1) (list "id" "second"))
-                (dict (list "key" 2) (list "id" "third"))
-                (dict (list "key" 1) (list "id" "fourth"))))
+                (dict "key" 2 "id" "first")
+                (dict "key" 1 "id" "second")
+                (dict "key" 2 "id" "third")
+                (dict "key" 1 "id" "fourth")))
         """)
         ids = [entry["id"] for entry in result]
         assert ids == ["second", "fourth", "first", "third"]
@@ -124,9 +124,9 @@ class TestListSortCustomComparator:
             (sort-list
               (lambda (a b) (integer<? (dict-get a "age") (dict-get b "age")))
               (list
-                (dict (list "name" "Charlie") (list "age" 30))
-                (dict (list "name" "Alice") (list "age" 25))
-                (dict (list "name" "Bob") (list "age" 35))))
+                (dict "name" "Charlie" "age" 30)
+                (dict "name" "Alice" "age" 25)
+                (dict "name" "Bob" "age" 35)))
         """)
         names = [entry["name"] for entry in result]
         assert names == ["Alice", "Charlie", "Bob"]
