@@ -4,13 +4,13 @@
       "id": "read-header",
       "tool": "filesystem",
       "operation": "read_file",
-      "path": "tools/pipeline/examples/multi-input/header.txt"
+      "path": "tools/pipeline-runner/examples/multi-input/header.txt"
     },
     {
       "id": "read-body",
       "tool": "filesystem",
       "operation": "read_file",
-      "path": "tools/pipeline/examples/multi-input/body.txt"
+      "path": "tools/pipeline-runner/examples/multi-input/body.txt"
     },
     {
       "id": "combine",
@@ -19,7 +19,7 @@
         "header": "read-header",
         "body": "read-body"
       },
-      "expression": "(dict (list \"result\" (string-concat (dict-get inputs \"header\") (dict-get inputs \"body\"))))",
+      "expression": "(dict \"result\" (string-concat (dict-get inputs \"header\") (dict-get inputs \"body\")))",
       "outputs": {}
     },
     {

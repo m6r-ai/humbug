@@ -5,7 +5,7 @@
       "id": "read-input",
       "tool": "filesystem",
       "operation": "read_file",
-      "path": "tools/pipeline/examples/adjacent-collapse/input.txt"
+      "path": "tools/pipeline-runner/examples/adjacent-collapse/input.txt"
     },
     {
       "id": "trim-lines",
@@ -13,7 +13,7 @@
       "inputs": {
         "content": "read-input"
       },
-      "expression": "(let* ((lines (string->list (dict-get inputs \"content\") \"\\n\")) (trimmed (map-list string-trim lines))) (dict (list \"trimmed\" (list->string trimmed \"\\n\"))))",
+      "expression": "(let* ((lines (string->list (dict-get inputs \"content\") \"\\n\")) (trimmed (map-list string-trim lines))) (dict \"trimmed\" (list->string trimmed \"\\n\")))",
       "outputs": {}
     },
     {
@@ -22,7 +22,7 @@
       "inputs": {
         "trimmed": "trim-lines"
       },
-      "expression": "(let* ((lines (filter-list (lambda (s) (boolean-not (string=? s \"\"))) (string->list (dict-get inputs \"trimmed\") \"\\n\"))) (upcased (map-list string-upcase lines))) (dict (list \"result\" (string-concat (list->string upcased \"\\n\") \"\\n\"))))",
+      "expression": "(let* ((lines (filter-list (lambda (s) (boolean-not (string=? s \"\"))) (string->list (dict-get inputs \"trimmed\") \"\\n\"))) (upcased (map-list string-upcase lines))) (dict \"result\" (string-concat (list->string upcased \"\\n\") \"\\n\")))",
       "outputs": {}
     },
     {
