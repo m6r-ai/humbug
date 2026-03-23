@@ -5,6 +5,7 @@
 Bug fixes:
 
 - Improved filesystem and editor tool descriptions to help avoid problems related to escaping.
+- Fix problems with the Menai tool help
 
 ## v41 (2026-03-22)
 
