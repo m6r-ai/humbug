@@ -7,8 +7,9 @@ evaluates Menai code with data, and converts results back to Python.
 """
 
 import sys
+import json
 from pathlib import Path
-from typing import Any, Dict, List, Union
+from typing import Any, Dict
 
 # Add src to path so we can import menai
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
@@ -43,6 +44,78 @@ _STRUCT_IMPORTS = '''(let* (
   (make-dependency (dict-get dep-mod  "dependency")))'''
 
 
+def _leaf_ids_under(task_id: str, task_map: dict) -> list:
+    """
+    Return all leaf task IDs that are descendants of task_id.
+
+    A leaf is any task with an empty children list.
+    """
+    task = task_map.get(task_id)
+    if task is None:
+        return []
+    children = task.get("children", [])
+    if not children:
+        return [task_id]
+    leaves = []
+    for child_id in children:
+        leaves.extend(_leaf_ids_under(child_id, task_map))
+    return leaves
+
+
+def expand_summary_dependencies(project: dict) -> dict:
+    """
+    Return a CPM-ready copy of the project with summary tasks removed and
+    any dependencies that reference summary tasks expanded to their
+    equivalent leaf-task dependencies.
+
+    The original project dict is not modified.  Summary task data is
+    preserved there for rollup and re-export.
+
+    Expansion rules:
+      - dep from summary S -> task T  becomes  dep from each leaf of S -> T
+      - dep from task T -> summary S  becomes  dep from T -> each leaf of S
+      - dep from summary S1 -> summary S2  becomes  all leaves(S1) -> all leaves(S2)
+
+    Duplicate dependencies (same from/to/type) are removed.
+    """
+    task_map = {t["id"]: t for t in project["tasks"]}
+    summary_ids = {t["id"] for t in project["tasks"] if t.get("is-summary", False)}
+
+    expanded_deps = []
+    seen: set = set()
+
+    for dep in project.get("dependencies", []):
+        from_id = dep["from-task"]
+        to_id = dep["to-task"]
+        dep_type = dep["type"]
+        lag_days = dep["lag-days"]
+        source = dep.get("source", "msproject")
+
+        from_ids = _leaf_ids_under(from_id, task_map) if from_id in summary_ids else [from_id]
+        to_ids = _leaf_ids_under(to_id, task_map) if to_id in summary_ids else [to_id]
+
+        for f in from_ids:
+            for t in to_ids:
+                key = (f, t, dep_type)
+                if key not in seen:
+                    seen.add(key)
+                    expanded_deps.append({
+                        "from-task": f,
+                        "to-task": t,
+                        "type": dep_type,
+                        "lag-days": lag_days,
+                        "source": source,
+                    })
+
+    leaf_tasks = [t for t in project["tasks"] if not t.get("is-summary", False)]
+
+    return {
+        **project,
+        "tasks": leaf_tasks,
+        "dependencies": expanded_deps,
+    }
+
+
 class MenaiBridge:
     """Bridge for converting between Python and Menai data structures."""
     
@@ -69,18 +142,69 @@ class MenaiBridge:
 
     def python_to_menai_task(self, value: dict) -> str:
         """Convert a Python task dict to a Menai task struct constructor call."""
-        fields = [self.python_to_menai(value.get(f)) for f in _TASK_FIELDS]
+        def field_value(f):
+            v = value.get(f)
+            # duration-days must always be a float for the Menai calendar arithmetic
+            if f == "duration-days" and isinstance(v, int):
+                v = float(v)
+            return self.python_to_menai(v)
+        fields = [field_value(f) for f in _TASK_FIELDS]
         return f'(make-task {" ".join(fields)})'
 
     def python_to_menai_dependency(self, value: dict) -> str:
         """Convert a Python dependency dict to a Menai dependency struct constructor call."""
-        fields = [self.python_to_menai(value[f]) for f in _DEPENDENCY_FIELDS]
+        def field_value(f):
+            v = value[f]
+            # lag-days must always be a float for the Menai calendar arithmetic
+            if f == "lag-days" and isinstance(v, int):
+                v = float(v)
+            return self.python_to_menai(v)
+        fields = [field_value(f) for f in _DEPENDENCY_FIELDS]
         return f'(make-dependency {" ".join(fields)})'
 
     def python_to_menai_calendar(self, value: dict) -> str:
         """Convert a Python calendar dict to a Menai calendar struct constructor call."""
-        fields = [self.python_to_menai(value[f]) for f in _CALENDAR_FIELDS]
+        def field_value(f):
+            v = value[f]
+            # working-days and holidays must be sets for Menai set-member? to work.
+            # JSON round-trips these as lists, so normalise here.
+            if f in ("working-days", "holidays") and isinstance(v, list):
+                v = set(v)
+            return self.python_to_menai(v)
+        fields = [field_value(f) for f in _CALENDAR_FIELDS]
         return f'(make-calendar {" ".join(fields)})'
+
+    def load_project(self, json_path: str) -> dict:
+        """
+        Load a project from a JSON file produced by the MS Project importer.
+
+        Applies any normalisation required before passing to Menai:
+          - Ensures duration-days and lag-days are floats
+          - working-days / holidays are normalised to sets inside
+            python_to_menai_calendar, so no action needed here
+
+        Args:
+            json_path: Path to the planner JSON file.
+
+        Returns:
+            Full project dict ready for python_to_menai_project().
+            Summary tasks are retained; callers are responsible for
+            producing a CPM-ready view via expand_summary_dependencies().
+        """
+        with open(json_path, "r", encoding="utf-8") as f:
+            project = json.load(f)
+
+        for task in project["tasks"]:
+            d = task.get("duration-days")
+            if isinstance(d, int):
+                task["duration-days"] = float(d)
+
+        for dep in project.get("dependencies", []):
+            lag = dep.get("lag-days")
+            if isinstance(lag, int):
+                dep["lag-days"] = float(lag)
+
+        return project
 
     def python_to_menai_project(self, project: dict) -> str:
         """
@@ -268,85 +392,3 @@ def format_menai_result(result: Any, indent: int = 0) -> str:
     else:
         return str(result)
 
-
-if __name__ == "__main__":
-    """Test the bridge with example conversions."""
-    
-    bridge = MenaiBridge()
-    
-    print("=" * 80)
-    print("Menai BRIDGE TEST")
-    print("=" * 80)
-    
-    # Test 1: Simple values
-    print("\n1. Simple value conversion:")
-    print(f"   Python: 42")
-    print(f"   Menai:  {bridge.python_to_menai(42)}")
-    print(f"   Python: 'hello'")
-    print(f"   Menai:  {bridge.python_to_menai('hello')}")
-    print(f"   Python: True")
-    print(f"   Menai:  {bridge.python_to_menai(True)}")
-    
-    # Test 2: List conversion
-    print("\n2. List conversion:")
-    py_list = [1, 2, 3, 4, 5]
-    menai_list = bridge.python_to_menai(py_list)
-    print(f"   Python: {py_list}")
-    print(f"   Menai:  {menai_list}")
-    
-    # Test 3: Dict (dict) conversion
-    print("\n3. Dictionary (dict) conversion:")
-    py_dict = {"name": "Alice", "age": 30, "active": True}
-    menai_dict = bridge.python_to_menai(py_dict)
-    print(f"   Python: {py_dict}")
-    print(f"   Menai:  {menai_dict}")
-    
-    # Test 4: Nested structure (task-like)
-    print("\n4. Nested structure (task):")
-    task = {
-        "id": "T001",
-        "name": "Example Task",
-        "duration-days": 10,
-        "status": "in-progress",
-        "dependencies": ["T000"],
-        "metadata": {
-            "priority": "high",
-            "owner": "alice"
-        }
-    }
-    menai_task = bridge.python_to_menai(task)
-    print(f"   Python task: {task}")
-    print(f"   Menai task:  {menai_task[:100]}...")
-    
-    # Test 5: Evaluate with data
-    print("\n5. Evaluate Menai with Python data:")
-    result = bridge.evaluate_with_data(
-        "(+ x y z)",
-        {"x": 10, "y": 20, "z": 30}
-    )
-    print(f"   Expression: (+ x y z)")
-    print(f"   Data: x=10, y=20, z=30")
-    print(f"   Result: {result}")
-    
-    # Test 6: Evaluate dict operations
-    print("\n6. Evaluate dict operations:")
-    result = bridge.evaluate_with_data(
-        '(dict-get task "name")',
-        {"task": {"id": "T001", "name": "Test Task", "duration": 5}}
-    )
-    print(f'   Expression: (dict-get task "name")')
-    print(f"   Result: {result}")
-    
-    # Test 7: List operations
-    print("\n7. Evaluate list operations:")
-    result = bridge.evaluate_with_data(
-        "(map (lambda (x) (* x x)) numbers)",
-        {"numbers": [1, 2, 3, 4, 5]}
-    )
-    print(f"   Expression: (map (lambda (x) (* x x)) numbers)")
-    print(f"   Data: numbers=[1, 2, 3, 4, 5]")
-    print(f"   Result: {result}")
-    
-    print("\n" + "=" * 80)
-    print("All tests completed!")
-    print("=" * 80)

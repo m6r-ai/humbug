@@ -42,7 +42,7 @@
                              errors
                              (list-append errors "fixed-dates mode requires start-date and end-date")))
                        ("duration-based"
-                         (if (integer? (struct-get t 'duration-days))
+                         (if (float? (struct-get t 'duration-days))
                              errors
                              (list-append errors "duration-based mode requires duration-days")))
                        ("unscheduled" errors)

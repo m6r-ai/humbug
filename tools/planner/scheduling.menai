@@ -227,7 +227,7 @@
              (critical-ids
                (map-list (lambda (t) (struct-get t 'id))
                          (filter-list (lambda (t)
-                                        (integer<=? (struct-get t 'slack-days) tolerance))
+                                        (float<=? (struct-get t 'slack-days) tolerance))
                                       tasks))))
         (dict-set project "critical-path" critical-ids))))
 
@@ -241,7 +241,7 @@
         (calculate-slack
           (backward-pass
             (forward-pass project)))
-        0))))
+        0.0))))
 
 (dict
   "forward-pass"           forward-pass

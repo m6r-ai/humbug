@@ -38,7 +38,7 @@ def create_simple_project():
             {
                 "id": "T1",
                 "name": "Task 1",
-                "duration-days": 5,
+                "duration-days": 5.0,
                 "calendar-id": "cal1",
                 "schedule-mode": "duration-based",
                 "start-date": False,
@@ -49,7 +49,7 @@ def create_simple_project():
             {
                 "id": "T2",
                 "name": "Task 2",
-                "duration-days": 3,
+                "duration-days": 3.0,
                 "calendar-id": "cal1",
                 "schedule-mode": "duration-based",
                 "start-date": False,
@@ -60,7 +60,7 @@ def create_simple_project():
             {
                 "id": "T3",
                 "name": "Task 3",
-                "duration-days": 2,
+                "duration-days": 2.0,
                 "calendar-id": "cal1",
                 "schedule-mode": "duration-based",
                 "start-date": False,
@@ -75,13 +75,13 @@ def create_simple_project():
                 "from-task": "T1",
                 "to-task": "T2",
                 "type": "finish-to-start",
-                "lag-days": 0,
+                "lag-days": 0.0,
             },
             {
                 "from-task": "T2",
                 "to-task": "T3",
                 "type": "finish-to-start",
-                "lag-days": 0,
+                "lag-days": 0.0,
             },
         ],
         

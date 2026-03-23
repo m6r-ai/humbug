@@ -187,13 +187,20 @@
             (subtract-one-working-day prev-date cal)))))
 
   ; Add N working days to a date (can be negative)
+  ; days is a float; the fractional part is consumed within the final working
+  ; day and does not advance to the next date.
   (add-working-days
     (lambda (date-str days cal)
-      (if (integer=? days 0)
-          date-str
-          (if (integer>? days 0)
-              (add-working-days (add-one-working-day date-str cal) (integer- days 1) cal)
-              (add-working-days (subtract-one-working-day date-str cal) (integer+ days 1) cal)))))
+      (let ((whole-days (float->integer (if (float>? days 0.0)
+                                           (float-floor days)
+                                           (float-ceil  days)))))
+        (letrec ((step (lambda (date remaining)
+                         (if (integer=? remaining 0)
+                             date
+                             (if (integer>? remaining 0)
+                                 (step (add-one-working-day date cal) (integer- remaining 1))
+                                 (step (subtract-one-working-day date cal) (integer+ remaining 1)))))))
+          (step date-str whole-days)))))
 
   ; ============================================================================
   ; DURATION CALCULATIONS
@@ -209,8 +216,8 @@
                        (let ((next-date (add-one-day current-date))
                              (is-working (is-working-day? current-date cal)))
                          (count-helper next-date end-date cal
-                                       (if is-working (integer+ count 1) count)))))))
-        (count-helper start-date end-date cal 0))))
+                                       (if is-working (float+ count 1.0) count)))))))
+        (count-helper start-date end-date cal 0.0))))
 
   ; Count calendar days between two dates (inclusive of start, exclusive of end)
   (calendar-days-between
@@ -273,16 +280,16 @@
   ; Calculate end date from start date and duration
   (calculate-end-date
     (lambda (start-date duration-days cal)
-      (if (integer=? duration-days 0)
+      (if (float=? duration-days 0.0)
           start-date
           (add-working-days start-date duration-days cal))))
 
   ; Calculate start date from end date and duration
   (calculate-start-date
     (lambda (end-date duration-days cal)
-      (if (integer=? duration-days 0)
+      (if (float=? duration-days 0.0)
           end-date
-          (add-working-days end-date (integer-neg duration-days) cal))))
+          (add-working-days end-date (float-neg duration-days) cal))))
 
   ; Calculate duration from start and end dates
   (calculate-duration

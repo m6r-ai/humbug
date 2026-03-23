@@ -67,9 +67,9 @@
             (succ-latest-finish (struct-get successor-task 'latest-finish)))
         (match dep-type
           ("finish-to-start"
-            (add-working-days succ-latest-start  (integer-neg lag-days) predecessor-cal))
+            (add-working-days succ-latest-start  (float-neg lag-days) predecessor-cal))
           ("finish-to-finish"
-            (add-working-days succ-latest-finish (integer-neg lag-days) predecessor-cal))
+            (add-working-days succ-latest-finish (float-neg lag-days) predecessor-cal))
           ("start-to-start"   #f)
           ("start-to-finish"  #f)
           (_ #f)))))
