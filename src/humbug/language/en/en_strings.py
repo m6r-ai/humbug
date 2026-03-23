@@ -188,6 +188,7 @@ def get_english_strings() -> LanguageStrings:
         # File dialog titles
         file_dialog_open_metaphor="Open Metaphor File",
         file_dialog_open_conversation="Open Conversation",
+        file_dialog_attach_document="Attach Document",
         file_dialog_open_file="Open File",
         file_dialog_save_file="Save File",
         file_dialog_new_mindspace="Create New Mindspace",
@@ -286,6 +287,7 @@ def get_english_strings() -> LanguageStrings:
         tooltip_delete_from_message="Delete conversation from this point",
         tooltip_edit_message="Edit this message",
         tooltip_edit_file="Edit this file",
+        tooltip_attach_document="Attach a document",
         tooltip_submit_message="Submit message",
         tooltip_stop_message="Stop current processing",
         tooltip_settings_message="Open conversation settings",

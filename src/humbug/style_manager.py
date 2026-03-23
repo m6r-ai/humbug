@@ -1066,6 +1066,13 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
+            self._write_icon(f'paperclip-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M52 28 L28 52 C22 58 12 58 6 52 C0 46 0 36 6 30 L34 2 C38 -2 44 -2 48 2 C52 6 52 12 48 16 L22 42 C20 44 17 44 15 42 C13 40 13 37 15 35 L38 12"
+                          fill="none" stroke="{color}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            ''')
+
             self._create_active_inactive_theme_icons(True, suffix, color)
             self._create_active_inactive_theme_icons(False, suffix, inactive_color)
 

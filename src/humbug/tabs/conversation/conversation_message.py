@@ -1,6 +1,7 @@
 from datetime import datetime
 import logging
 import math
+import re
 from typing import Dict, List, Tuple, Any
 import colorsys
 
@@ -89,6 +90,8 @@ class ConversationMessage(QFrame):
     tool_call_approved = Signal(AIToolCall)
     tool_call_i_am_unsure = Signal()
     tool_call_rejected = Signal(str)
+    attachment_file_deleted = Signal(str)  # emits upload_path of deleted file
+    link_clicked = Signal(str)             # emits URL / href from rendered content
 
     def __init__(
         self,
@@ -233,6 +236,9 @@ class ConversationMessage(QFrame):
         self._edit_text_edit: MarkdownTextEdit | None = None
         self._edit_confirm_button: QToolButton | None = None
         self._edit_cancel_button: QToolButton | None = None
+        # Tracks document blocks during inline editing: (xml_block, filename, upload_path)
+        self._edit_doc_blocks: List[Tuple[str, str, str]] = []
+        self._edit_chips_container: QWidget | None = None
 
         # Container for message sections
         self._sections_container = QWidget(self)
@@ -583,6 +589,11 @@ class ConversationMessage(QFrame):
         # Set property that QSS will match against
         section.setProperty("section_style", style_class)
 
+        # Forward link clicks (e.g. attachment filenames) up to conversation level
+        text_area = section.text_area()
+        if hasattr(text_area, 'link_clicked'):
+            text_area.link_clicked.connect(self.link_clicked)
+
         return section
 
     def _handle_section_selection_changed(self, section: ConversationMessageSection, has_selection: bool) -> None:
@@ -766,6 +777,44 @@ class ConversationMessage(QFrame):
             ColorRole.MESSAGE_USER_BORDER if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BORDER
         )
 
+    @staticmethod
+    @staticmethod
+    def _to_display_text(text: str, for_edit: bool = False) -> str:
+        """Replace <document> blocks with a compact filename reference for display.
+
+        Args:
+            text: Raw message content possibly containing <document> blocks.
+            for_edit: When True, emit plain '📎 filename' without markdown markup.
+        """
+        def _replace(m: re.Match) -> str:
+            filename = m.group(1)
+            path = m.group(2) or ""
+            if for_edit:
+                return f"📎 {filename}"
+            if path:
+                return f"[**📎 {filename}**](humbug-file://{path})"
+            return f"**📎 {filename}**"
+
+        return re.sub(
+            r'<document filename="([^"]+)"(?:\s+path="([^"]*)")?>(.*?)</document>',
+            _replace,
+            text,
+            flags=re.DOTALL
+        ).strip()
+
+    @staticmethod
+    def _restore_documents(original: str, edited: str) -> str:
+        """Re-embed <document> XML blocks from original content into the edited text.
+
+        Replaces any '📎 filename' placeholders in the edited text with the
+        matching <document> block from the original message content.
+        """
+        docs = re.findall(r'(<document filename="([^"]+)"[^>]*>.*?</document>)', original, re.DOTALL)
+        result = edited
+        for xml_block, filename in docs:
+            result = result.replace(f"📎 {filename}", xml_block)
+        return result
+
     def set_content(self, text: str) -> None:
         """
         Set content with style, handling incremental updates for AI responses.
@@ -776,10 +825,11 @@ class ConversationMessage(QFrame):
             text: The message text content
         """
         self._message_content = text
+        display_text = self._to_display_text(text) if self._message_source == AIMessageSource.USER else text
 
         # Input widgets don't have multiple sections so handle them as a special case.
         if self._is_input:
-            self._sections[0].set_content(MarkdownASTTextNode(text))
+            self._sections[0].set_content(MarkdownASTTextNode(display_text))
             if text:
                 if not self._message_rendered:
                     self._message_rendered = True
@@ -789,8 +839,8 @@ class ConversationMessage(QFrame):
 
         # Check if we should defer rendering
         if not self._is_expanded:
-            # Store content for later rendering
-            self._pending_content = text
+            # Store content for later rendering (use display text so deferred render also looks clean)
+            self._pending_content = display_text
             self._pending_context = self._context
 
             # Show the message widget (even if collapsed)
@@ -801,7 +851,7 @@ class ConversationMessage(QFrame):
             return
 
         # Expanded - render immediately
-        self._render_content(text, self._context)
+        self._render_content(display_text, self._context)
 
     def _render_content(self, text: str, context: str | None) -> None:
         """
@@ -915,8 +965,19 @@ class ConversationMessage(QFrame):
         if self._expand_button is not None:
             self._expand_button.setEnabled(False)
 
-        # Build the edit area using the same MarkdownTextEdit approach as the input box,
-        # so code block syntax highlighting and other input behaviours work correctly.
+        # Extract document blocks so we can show chips instead of raw XML
+        self._edit_doc_blocks = [
+            (xml_block, filename, path or "")
+            for xml_block, filename, path, _content in re.findall(
+                r'(<document filename="([^"]+)"(?:\s+path="([^"]*)")?>(.*?)</document>)',
+                self._message_content, re.DOTALL
+            )
+        ]
+        # Pure text portion (strip attachment placeholder lines)
+        display_for_edit = self._to_display_text(self._message_content, for_edit=True)
+        edit_text = re.sub(r'^📎 [^\n]*\n?', '', display_for_edit, flags=re.MULTILINE).strip()
+
+        # Build the edit area
         zoom_factor = self._style_manager.zoom_factor()
         spacing = int(self._style_manager.message_bubble_spacing() * zoom_factor)
         self._edit_area = QWidget(self)
@@ -925,10 +986,17 @@ class ConversationMessage(QFrame):
         edit_layout.setContentsMargins(0, 0, 0, 0)
         edit_layout.setSpacing(spacing // 2)
 
-        # Use MarkdownTextEdit (is_input=True) to get syntax highlighting for code blocks
+        # Attachment chips row (shown only when documents are attached)
+        if self._edit_doc_blocks:
+            self._edit_chips_container = QWidget(self._edit_area)
+            self._edit_chips_container.setObjectName("_edit_chips_container")
+            edit_layout.addWidget(self._edit_chips_container)
+            self._rebuild_edit_chips()
+
+        # Text area — contains only the message text, not document placeholders
         text_edit = MarkdownTextEdit(True, self._edit_area)
         text_edit.setObjectName("_edit_text_edit")
-        text_edit.setPlainText(self._message_content)
+        text_edit.setPlainText(edit_text)
         text_edit.setMinimumHeight(80)
         text_edit.apply_style()
         text_edit.installEventFilter(self)
@@ -964,6 +1032,58 @@ class ConversationMessage(QFrame):
         cursor.movePosition(cursor.MoveOperation.End)
         text_edit.setTextCursor(cursor)
 
+    def _rebuild_edit_chips(self) -> None:
+        """Rebuild the attachment chips shown in the inline edit area."""
+        container = self._edit_chips_container
+        if container is None:
+            return
+
+        # Clear existing chips
+        old_layout = container.layout()
+        if old_layout is not None:
+            while old_layout.count():
+                item = old_layout.takeAt(0)
+                if item and item.widget():
+                    item.widget().deleteLater()
+            old_layout.deleteLater()
+
+        chips_layout = QHBoxLayout(container)
+        chips_layout.setContentsMargins(0, 2, 0, 2)
+        chips_layout.setSpacing(6)
+
+        for idx, (_xml, filename, _path) in enumerate(self._edit_doc_blocks):
+            chip = QWidget()
+            chip.setObjectName("_attachment_chip")
+            chip_layout = QHBoxLayout(chip)
+            chip_layout.setContentsMargins(6, 2, 4, 2)
+            chip_layout.setSpacing(4)
+
+            label = QLabel(f"📎 {filename}")
+            label.setObjectName("_chip_label")
+            chip_layout.addWidget(label)
+
+            del_btn = QPushButton("✕")
+            del_btn.setObjectName("_chip_remove")
+            del_btn.setFixedSize(16, 16)
+            del_btn.setFlat(True)
+            del_btn.clicked.connect(lambda _checked, i=idx: self._delete_edit_attachment(i))
+            chip_layout.addWidget(del_btn)
+
+            chips_layout.addWidget(chip)
+
+        chips_layout.addStretch()
+        container.setVisible(bool(self._edit_doc_blocks))
+
+    def _delete_edit_attachment(self, index: int) -> None:
+        """Remove an attachment chip from the edit area and delete the uploaded file."""
+        if not 0 <= index < len(self._edit_doc_blocks):
+            return
+        _xml, _filename, upload_path = self._edit_doc_blocks[index]
+        self._edit_doc_blocks.pop(index)
+        if upload_path:
+            self.attachment_file_deleted.emit(upload_path)
+        self._rebuild_edit_chips()
+
     def _cancel_edit(self) -> None:
         """Cancel inline editing and restore the rendered content."""
         if self._edit_area is None:
@@ -975,6 +1095,8 @@ class ConversationMessage(QFrame):
         self._edit_text_edit = None
         self._edit_confirm_button = None
         self._edit_cancel_button = None
+        self._edit_doc_blocks = []
+        self._edit_chips_container = None
         self._sections_container.show()
         for btn in (
             self._fork_message_button,
@@ -993,7 +1115,12 @@ class ConversationMessage(QFrame):
         if self._edit_text_edit is None:
             return
 
-        new_text = self._edit_text_edit.toPlainText()
+        message_text = self._edit_text_edit.toPlainText().strip()
+        # Reconstruct from remaining document chips + edited text
+        parts = [xml_block for xml_block, _fname, _path in self._edit_doc_blocks]
+        if message_text:
+            parts.append(message_text)
+        new_text = "\n\n".join(parts)
         self._cancel_edit()  # clean up edit UI before emitting
         self.edit_confirmed.emit(new_text)
 
@@ -1061,8 +1188,8 @@ class ConversationMessage(QFrame):
 
         zoom_factor = style_manager.zoom_factor()
         spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
-        inner_padding = int(spacing * 1.4)
-        banner_to_content_gap = int(spacing * 2.0)
+        inner_padding = int(spacing * 1.2)
+        banner_to_content_gap = int(spacing * 0.4)
         self._layout.setSpacing(banner_to_content_gap)
         self._layout.setContentsMargins(inner_padding, inner_padding, inner_padding, inner_padding)
         self._sections_layout.setSpacing(spacing)

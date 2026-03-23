@@ -3,13 +3,14 @@
 import asyncio
 import logging
 import os
+import shutil
 from typing import Dict, List, Tuple, Any, Set, cast
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
+    QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu, QFileDialog
 )
-from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
-from PySide6.QtGui import QCursor, QResizeEvent
+from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QUrl
+from PySide6.QtGui import QCursor, QResizeEvent, QDesktopServices
 
 from ai import (
     AIConversation, AIConversationEvent, AIConversationHistory,
@@ -178,6 +179,7 @@ class ConversationWidget(QWidget):
         self._input.submit_requested.connect(self.submit)
         self._input.stop_requested.connect(self._on_stop_requested)
         self._input.settings_requested.connect(self._on_input_settings_requested)
+        self._input.attach_requested.connect(self._on_attach_requested)
         self._input.modified.connect(self.conversation_modified)
 
         style_manager.style_changed.connect(self._on_style_changed)
@@ -394,6 +396,8 @@ class ConversationWidget(QWidget):
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
         msg_widget.tool_call_i_am_unsure.connect(self._on_tool_call_i_am_unsure)
         msg_widget.tool_call_rejected.connect(self._on_tool_call_rejected)
+        msg_widget.attachment_file_deleted.connect(self._on_attachment_file_deleted)
+        msg_widget.link_clicked.connect(self._on_link_clicked)
 
         self._messages.append(msg_widget)
 
@@ -1688,6 +1692,34 @@ class ConversationWidget(QWidget):
                 border: none;
             }}
 
+            #_attachments_bar, #_chips_scroll, #_chips_container {{
+                background-color: transparent;
+                border: none;
+            }}
+
+            #_attachment_chip {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER)};
+                border-radius: 4px;
+            }}
+
+            #_chip_label {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                font-size: {style_manager.base_font_size() * style_manager.zoom_factor() * 0.85:.1f}pt;
+            }}
+
+            #_chip_remove {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                background: transparent;
+                border: none;
+                padding: 0;
+                font-size: {style_manager.base_font_size() * style_manager.zoom_factor() * 0.75:.1f}pt;
+            }}
+
+            #_chip_remove:hover {{
+                color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
+            }}
+
             QScrollBar:vertical {{
                 background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
                 width: 8px;
@@ -1750,17 +1782,9 @@ class ConversationWidget(QWidget):
                 padding: 0;
                 margin: 0;
             }}
-            
-            #ConversationMessage[message_source="ai"] #_banner,
-            #ConversationMessage[message_source="ai_connected"] #_banner,
-            #ConversationMessage[message_source="reasoning"] #_banner,
-            #ConversationMessage[message_source="tool_call"] #_banner,
-            #ConversationMessage[message_source="tool_result"] #_banner {{
-                border-bottom: none;
-            }}
+
             #ConversationMessage[message_source="user_input"] #_banner,
             #ConversationMessage[message_source="user_queued"] #_banner {{
-                border-bottom: none;
                 padding: 0;
             }}
 
@@ -1806,6 +1830,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_fork_button,
             #ConversationMessage #_edit_button,
             #ConversationMessage #_delete_button,
+            #ConversationMessage #_attach_button,
             #ConversationMessage #_stop_button,
             #ConversationMessage #_submit_button,
             #ConversationMessage #_settings_button {{
@@ -1822,6 +1847,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_fork_button:hover,
             #ConversationMessage #_edit_button:hover,
             #ConversationMessage #_delete_button:hover,
+            #ConversationMessage #_attach_button:hover,
             #ConversationMessage #_stop_button:hover,
             #ConversationMessage #_submit_button:hover,
             #ConversationMessage #_settings_button:hover {{
@@ -1834,6 +1860,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_fork_button:pressed,
             #ConversationMessage #_edit_button:pressed,
             #ConversationMessage #_delete_button:pressed,
+            #ConversationMessage #_attach_button:pressed,
             #ConversationMessage #_stop_button:pressed,
             #ConversationMessage #_submit_button:pressed,
             #ConversationMessage #_settings_button:pressed {{
@@ -1904,6 +1931,10 @@ class ConversationWidget(QWidget):
                 padding: 0;
                 margin: 0;
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+            }}
+
+            #ConversationMessage #_edit_chips_container {{
+                background-color: transparent;
             }}
 
             #ConversationMessage #_edit_btn_row {{
@@ -2060,10 +2091,15 @@ class ConversationWidget(QWidget):
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
                 border: none;
-                padding: 2px 4px;
+                padding: 4px 6px;
                 margin: 0;
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
                 line-height: 1.5;
+            }}
+
+            /* Extra top breathing room for user message content */
+            #ConversationMessage[message_source="user"] #ConversationMessageSection QTextEdit {{
+                padding-top: 8px;
             }}
 
             /* Labels (syntax headers) within message sections */
@@ -2137,10 +2173,10 @@ class ConversationWidget(QWidget):
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
         spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
-        msg_spacing = int(spacing * 1.8)
+        msg_spacing = int(spacing * 1.4)
         self._messages_layout.setSpacing(msg_spacing)
-        self._messages_layout.setContentsMargins(spacing * 3, msg_spacing, spacing * 3, msg_spacing)
-        self._messages_container.setMaximumWidth(int(900 * zoom_factor))
+        self._messages_layout.setContentsMargins(spacing * 2, msg_spacing, spacing * 2, msg_spacing)
+        self._messages_container.setMaximumWidth(int(1100 * zoom_factor))
 
         font = self.font()
         base_font_size = style_manager.base_font_size()
@@ -2511,12 +2547,25 @@ class ConversationWidget(QWidget):
     ) -> None:
         """Submit current input text."""
         content = self._input.to_plain_text().strip()
-        if not content:
+        attachments = self._input.get_attachments()
+
+        if not content and not attachments:
             return
 
         ai_conversation = cast(AIConversation, self._ai_conversation)
-        sanitized_content = self._sanitize_input(content)
+
+        # Prepend attached document content wrapped in XML tags
+        parts = []
+        for filename, doc_content, upload_path in attachments:
+            path_attr = f' path="{upload_path}"' if upload_path else ""
+            parts.append(f'<document filename="{filename}"{path_attr}>\n{doc_content}\n</document>')
+        if content:
+            parts.append(content)
+        combined = "\n\n".join(parts)
+
+        sanitized_content = self._sanitize_input(combined)
         self._input.clear()
+        self._input.clear_attachments()
 
         # We need to decide if we're already streaming or if this is a new message.
         if self._is_streaming:
@@ -2555,6 +2604,91 @@ class ConversationWidget(QWidget):
     def _on_input_settings_requested(self) -> None:
         """Handle settings request from input widget."""
         self.conversation_settings_requested.emit()
+
+    def _on_attach_requested(self) -> None:
+        """Handle attach document request: open file dialog and attach selected file."""
+        strings = self._language_manager.strings()
+        supported = (
+            "Documents (*.pdf *.docx *.txt *.md *.rst *.csv *.json *.yaml *.yml *.xml *.html *.htm "
+            "*.py *.js *.ts *.jsx *.tsx *.java *.c *.cpp *.h *.hpp *.cs "
+            "*.go *.rs *.rb *.php *.swift *.kt *.sh *.bash *.zsh);;"
+            "PDF files (*.pdf);;"
+            "Word documents (*.docx);;"
+            "Text & code files (*.txt *.md *.rst *.csv *.json *.yaml *.yml *.xml *.html *.htm "
+            "*.py *.js *.ts *.jsx *.tsx *.java *.c *.cpp *.h *.hpp *.cs "
+            "*.go *.rs *.rb *.php *.swift *.kt *.sh *.bash *.zsh);;"
+            "All files (*)"
+        )
+        path, _ = QFileDialog.getOpenFileName(self, strings.file_dialog_attach_document, "", supported)
+        if not path:
+            return
+
+        filename = os.path.basename(path)
+        ext = os.path.splitext(path)[1].lower()
+
+        try:
+            if ext == ".pdf":
+                content = self._read_pdf(path)
+            elif ext == ".docx":
+                content = self._read_docx(path)
+            else:
+                with open(path, 'r', encoding='utf-8', errors='replace') as f:
+                    content = f.read()
+        except Exception as e:
+            self._logger.warning("Failed to read attachment %s: %s", path, str(e))
+            return
+
+        # Save a copy to files/uploads/ inside the mindspace
+        upload_path = ""
+        if self._mindspace_manager.has_mindspace():
+            try:
+                uploads_dir = self._mindspace_manager.ensure_mindspace_dir("files/uploads")
+                dest = os.path.join(uploads_dir, filename)
+                shutil.copy2(path, dest)
+                upload_path = self._mindspace_manager.get_relative_path(dest)
+            except Exception as e:
+                self._logger.warning("Failed to save attachment to uploads: %s", str(e))
+
+        self._input.add_attachment(filename, content, upload_path)
+
+    def _read_pdf(self, path: str) -> str:
+        """Extract text from a PDF file using pypdf."""
+        from pypdf import PdfReader
+        reader = PdfReader(path)
+        pages = []
+        for i, page in enumerate(reader.pages, 1):
+            text = page.extract_text() or ""
+            if text.strip():
+                pages.append(f"[Page {i}]\n{text}")
+        return "\n\n".join(pages)
+
+    def _read_docx(self, path: str) -> str:
+        """Extract text from a Word document using python-docx."""
+        from docx import Document
+        doc = Document(path)
+        paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+        return "\n\n".join(paragraphs)
+
+    def _on_attachment_file_deleted(self, upload_path: str) -> None:
+        """Delete an uploaded file from the mindspace when the user removes an attachment."""
+        if not upload_path or not self._mindspace_manager.has_mindspace():
+            return
+        try:
+            abs_path = self._mindspace_manager.get_absolute_path(upload_path)
+            if os.path.isfile(abs_path):
+                os.remove(abs_path)
+        except Exception as e:
+            self._logger.warning("Failed to delete uploaded file '%s': %s", upload_path, str(e))
+
+    def _on_link_clicked(self, url: str) -> None:
+        """Handle link clicks from message content (e.g. attachment filenames)."""
+        if url.startswith("humbug-file://"):
+            rel_path = url[len("humbug-file://"):]
+            if self._mindspace_manager.has_mindspace():
+                abs_path = self._mindspace_manager.get_absolute_path(rel_path)
+                QDesktopServices.openUrl(QUrl.fromLocalFile(abs_path))
+        else:
+            QDesktopServices.openUrl(QUrl(url))
 
     def get_conversation_history(self) -> AIConversationHistory:
         """Get the conversation history object."""

@@ -10,6 +10,8 @@ dependencies = [
     "aiohttp",
     "certifi",
     "pyside6",
+    "pypdf",
+    "python-docx",
     "qasync"
 ]
 

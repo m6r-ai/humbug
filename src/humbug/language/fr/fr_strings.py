@@ -188,6 +188,7 @@ def get_french_strings() -> LanguageStrings:
         # File dialog titles
         file_dialog_open_metaphor="Ouvrir un fichier Metaphor",
         file_dialog_open_conversation="Ouvrir une conversation",
+        file_dialog_attach_document="Joindre un document",
         file_dialog_open_file="Ouvrir un fichier",
         file_dialog_save_file="Enregistrer le fichier",
         file_dialog_new_mindspace="Créer un nouvel espace mental",
@@ -286,6 +287,7 @@ def get_french_strings() -> LanguageStrings:
         tooltip_delete_from_message="Supprimer la conversation à partir d'ici",
         tooltip_edit_message="Modifier ce message",
         tooltip_edit_file="Modifier ce fichier",
+        tooltip_attach_document="Joindre un document",
         tooltip_submit_message="Envoyer le message",
         tooltip_stop_message="Arrêter le traitement du message",
         tooltip_settings_message="Ouvrir les paramètres de la conversation",

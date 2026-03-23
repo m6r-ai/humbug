@@ -189,6 +189,7 @@ def get_arabic_strings() -> LanguageStrings:
         # File dialog titles
         file_dialog_open_metaphor="فتح ملف ميتافور",
         file_dialog_open_conversation="فتح محادثة",
+        file_dialog_attach_document="إرفاق مستند",
         file_dialog_open_file="فتح ملف",
         file_dialog_save_file="حفظ الملف",
         file_dialog_new_mindspace="إنشاء مساحة ذهنية جديدة",
@@ -287,6 +288,7 @@ def get_arabic_strings() -> LanguageStrings:
         tooltip_delete_from_message="حذف المحادثة من هذه النقطة",
         tooltip_edit_message="تحرير هذه الرسالة",
         tooltip_edit_file="تحرير هذا الملف",
+        tooltip_attach_document="إرفاق مستند",
         tooltip_submit_message="إرسال الرسالة",
         tooltip_stop_message="إيقاف المعالجة الحالية",
         tooltip_settings_message="فتح إعدادات المحادثة",
