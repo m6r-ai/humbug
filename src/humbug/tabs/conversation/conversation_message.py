@@ -839,8 +839,19 @@ class ConversationMessage(QFrame):
         if self._edit_area is not None:
             return  # Already in edit mode
 
-        # Hide the rendered sections
+        # Hide the rendered sections and banner action buttons
         self._sections_container.hide()
+        for btn in (
+            self._fork_message_button,
+            self._edit_message_button,
+            self._delete_message_button,
+            self._copy_message_button,
+            self._save_message_button,
+        ):
+            if btn is not None:
+                btn.hide()
+        if self._expand_button is not None:
+            self._expand_button.setEnabled(False)
 
         # Build the edit area using the same MarkdownTextEdit approach as the input box,
         # so code block syntax highlighting and other input behaviours work correctly.
@@ -849,7 +860,7 @@ class ConversationMessage(QFrame):
         self._edit_area = QWidget(self)
         self._edit_area.setObjectName("_edit_area")
         edit_layout = QVBoxLayout(self._edit_area)
-        edit_layout.setContentsMargins(spacing, spacing // 2, spacing, spacing // 2)
+        edit_layout.setContentsMargins(0, 0, 0, 0)
         edit_layout.setSpacing(spacing // 2)
 
         # Use MarkdownTextEdit (is_input=True) to get syntax highlighting for code blocks
@@ -903,6 +914,17 @@ class ConversationMessage(QFrame):
         self._edit_confirm_button = None
         self._edit_cancel_button = None
         self._sections_container.show()
+        for btn in (
+            self._fork_message_button,
+            self._edit_message_button,
+            self._delete_message_button,
+            self._copy_message_button,
+            self._save_message_button,
+        ):
+            if btn is not None:
+                btn.show()
+        if self._expand_button is not None:
+            self._expand_button.setEnabled(True)
 
     def _confirm_edit(self) -> None:
         """Confirm the inline edit and emit the new content."""

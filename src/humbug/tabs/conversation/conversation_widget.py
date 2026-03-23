@@ -1825,7 +1825,8 @@ class ConversationWidget(QWidget):
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
                 border: none;
-                padding: 2px 4px;
+                padding: 0;
+                margin: 0;
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
             }}
 
@@ -1834,8 +1835,8 @@ class ConversationWidget(QWidget):
             }}
 
             #ConversationMessage #_edit_confirm_button {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
                 border: none;
                 border-radius: 4px;
                 padding: 4px 12px;
@@ -1843,13 +1844,17 @@ class ConversationWidget(QWidget):
             }}
 
             #ConversationMessage #_edit_confirm_button:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT_HOVER)};
+            }}
+
+            #ConversationMessage #_edit_confirm_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT_PRESSED)};
             }}
 
             #ConversationMessage #_edit_cancel_button {{
                 background-color: transparent;
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
+                color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
                 border-radius: 4px;
                 padding: 4px 12px;
                 font-size: {label_font_size:.1f}pt;
@@ -1857,6 +1862,12 @@ class ConversationWidget(QWidget):
 
             #ConversationMessage #_edit_cancel_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
+            }}
+
+            #ConversationMessage #_edit_cancel_button:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
+                border-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
+                color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
             }}
 
             /* Scrollbars within approval contexts */
