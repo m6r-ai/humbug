@@ -1,6 +1,6 @@
 # Contributors
 
-# Thank you to everyone who has contributed to this project so far
+Thank you to everyone who has contributed to this project so far!
 
 Dave Hudson [dave-hudson](https://github.com/dave-hudson)
 
@@ -16,4 +16,4 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 
 * Added Windows installer.
 * UI improvement for the conversation input box.
-
+* Added feature to edit a previous user message.

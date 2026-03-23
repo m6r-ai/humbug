@@ -150,7 +150,7 @@ class MainWindow(QMainWindow):
 
         # Edit menu actions
         self._submit_message_action = QAction(strings.submit_message, self)
-        self._submit_message_action.setShortcut(QKeySequence("Ctrl+J"))
+        self._submit_message_action.setShortcut(QKeySequence("Ctrl+Enter"))
         self._submit_message_action.triggered.connect(self._on_submit_message)
 
         self._undo_action = QAction(strings.undo, self)

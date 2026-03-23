@@ -2,6 +2,11 @@
 
 ## v42 (2026-xx-xx)
 
+New features:
+
+- Added an edit button to allow you to edit previous user messages.
+- The submit shortcut is now Cmd+Enter or Ctrl+Enter rather than Cmd+J or Ctrl+J.  This is more natural.
+
 Bug fixes:
 
 - Improved filesystem and editor tool descriptions to help avoid problems related to escaping.

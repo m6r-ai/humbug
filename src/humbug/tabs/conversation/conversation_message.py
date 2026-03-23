@@ -938,8 +938,7 @@ class ConversationMessage(QFrame):
         """Intercept Ctrl+Enter in the inline editor to confirm."""
         if obj is self._edit_text_edit and event.type() == QEvent.Type.KeyPress:
             key_event = cast(QKeyEvent, event)
-            if (key_event.key() == Qt.Key.Key_Return and
-                    key_event.modifiers() & Qt.KeyboardModifier.ControlModifier):
+            if (key_event.key() == Qt.Key.Key_Return and key_event.modifiers() & Qt.KeyboardModifier.ControlModifier):
                 self._confirm_edit()
                 return True
 
