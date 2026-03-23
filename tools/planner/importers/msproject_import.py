@@ -354,7 +354,7 @@ def _parse_tasks(
                 "source-ids": {"msproject": uid},
             })
 
-        if not is_summary:
+        if True:
             task_dict: dict[str, Any] = {
                 "id": task_id,
                 "name": name,
@@ -368,11 +368,11 @@ def _parse_tasks(
                 "calendar-id": calendar_id,
                 "status": status,
                 "progress": progress,
-                "type": "milestone" if is_milestone else "task",
+                "type": "milestone" if is_milestone else ("summary" if is_summary else "task"),
                 "priority": "critical" if critical else "normal",
                 "wbs": wbs,
                 "outline-level": outline_level,
-                "is-summary": False,
+                "is-summary": bool(is_summary),
                 "is-milestone": bool(is_milestone),
                 "assigned-resources": assigned_resources,
                 "authoritative-source": "msproject",
