@@ -48,16 +48,16 @@
                        ("unscheduled" errors)
                        (_ (list-append errors (string-concat "Unknown schedule-mode: " mode))))))
         (dict
-          (list "task-id"   (struct-get t 'id))
-          (list "valid"     (integer=? (list-length errors) 0))
-          (list "errors"    errors)
-          (list "warnings"  (list))))))
+          "task-id"   (struct-get t 'id)
+          "valid"     (integer=? (list-length errors) 0)
+          "errors"    errors
+          "warnings"  (list)))))
 )
 
 (dict
-  (list "task"                  task)
-  (list "get-task-calendar"     get-task-calendar)
-  (list "update-earliest-dates" update-earliest-dates)
-  (list "update-latest-dates"   update-latest-dates)
-  (list "update-slack"          update-slack)
-  (list "validate-task"         validate-task)))
+  "task"                  task
+  "get-task-calendar"     get-task-calendar
+  "update-earliest-dates" update-earliest-dates
+  "update-latest-dates"   update-latest-dates
+  "update-slack"          update-slack
+  "validate-task"         validate-task))

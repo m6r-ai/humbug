@@ -35,7 +35,6 @@ class ConversationWidget(QWidget):
     status_updated = Signal()
 
     # Signals for tab to handle forking a conversation
-    fork_requested = Signal()  # Signal to fork the conversation
     fork_from_index_requested = Signal(int)  # Signal to fork from a specific message index
 
     # Emits when conversation settings are requested
@@ -1712,10 +1711,8 @@ class ConversationWidget(QWidget):
         """Build styles for the main message frame."""
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
-        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor * 1.2)
-        label_font_size = style_manager.base_font_size() * zoom_factor * 0.88
-        banner_sep_size = max(1, int(zoom_factor))
-        banner_sep_spacing = int(style_manager.message_bubble_spacing() * zoom_factor * 1.6)
+        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor)
+        label_font_size = style_manager.base_font_size() * zoom_factor * 0.8
 
         # The -2px padding above is to offset the 2px border so that the content area remains the same size
         return f"""
@@ -1750,12 +1747,10 @@ class ConversationWidget(QWidget):
                 background-color: transparent;
                 border: none;
                 border-radius: 0;
-                padding: 0 0 {banner_sep_spacing}px 0;
+                padding: 0;
                 margin: 0;
             }}
-            #ConversationMessage[message_source="system"] #_banner {{
-                border-bottom: {banner_sep_size}px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
-            }}
+            
             #ConversationMessage[message_source="ai"] #_banner,
             #ConversationMessage[message_source="ai_connected"] #_banner,
             #ConversationMessage[message_source="reasoning"] #_banner,
@@ -1897,58 +1892,58 @@ class ConversationWidget(QWidget):
             }}
 
             #ConversationMessage #_edit_area {{
-                background-color: transparent;
-                border: none;
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border-radius: {border_radius}px;
+                border: 0;
             }}
 
             #ConversationMessage #_edit_text_edit {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
-                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
-                border-radius: 6px;
-                padding: 8px;
-                font-size: {label_font_size / 0.88:.1f}pt;
+                background-color: transparent;
+                border: none;
+                padding: 0;
+                margin: 0;
+                selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
             }}
 
             #ConversationMessage #_edit_btn_row {{
                 background-color: transparent;
-                border: none;
             }}
 
             #ConversationMessage #_edit_confirm_button {{
-                background-color: #7090e0;
-                color: #ffffff;
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
                 border: none;
-                border-radius: 6px;
-                padding: 6px 18px;
+                border-radius: 4px;
+                padding: 4px 12px;
                 font-size: {label_font_size:.1f}pt;
-                font-weight: 600;
             }}
 
             #ConversationMessage #_edit_confirm_button:hover {{
-                background-color: #5878c8;
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT_HOVER)};
             }}
 
             #ConversationMessage #_edit_confirm_button:pressed {{
-                background-color: #4060b0;
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT_PRESSED)};
             }}
 
             #ConversationMessage #_edit_cancel_button {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
-                color: #ffffff;
-                border: none;
-                border-radius: 6px;
-                padding: 6px 18px;
+                background-color: transparent;
+                color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
+                border-radius: 4px;
+                padding: 4px 12px;
                 font-size: {label_font_size:.1f}pt;
-                font-weight: 600;
             }}
 
             #ConversationMessage #_edit_cancel_button:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER)};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
             }}
 
             #ConversationMessage #_edit_cancel_button:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
+                border-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
+                color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
             }}
 
             /* Scrollbars within approval contexts */
@@ -2193,71 +2188,97 @@ class ConversationWidget(QWidget):
         paste_action.triggered.connect(self.paste)
         menu.addSeparator()
 
-        fork_action = menu.addAction(strings.fork_conversation)
-        fork_action.triggered.connect(self.fork_requested)
-        menu.addSeparator()
-
         # Show menu at click position
         menu.exec_(self.mapToGlobal(pos))
 
-    def _find_fork_end_index(self, start_index: int) -> int:
-        """
-        Find the last message index to include when forking from start_index.
-
-        This scans forward from start_index to include any hidden messages
-        that follow, stopping at the next visible message.
-
-        Args:
-            start_index: Index of the message to fork from
-
-        Returns:
-            Index of the last message to include in the fork
-        """
-        if start_index < 0 or start_index >= len(self._messages):
-            return start_index
-
-        # Start from the message after the fork point
-        current_index = start_index + 1
-
-        # Scan forward while we have hidden messages
-        while current_index < len(self._messages):
-            message_widget = self._messages[current_index]
-
-            # If we hit a visible message, stop (don't include it)
-            if message_widget.is_rendered():
-                break
-
-            # This is a hidden message, include it and continue
-            current_index += 1
-
-        # Return the index of the last message to include
-        # (current_index - 1 because we stopped at the first visible message)
-        return current_index - 1
-
     def _on_message_fork_requested(self) -> None:
-        """
-        Fork the conversation from the specified message.
-
-        This will include the specified message and any hidden messages
-        that immediately follow it until the next visible message.
-        """
+        """Fork the conversation from the specified message."""
         # Find the index of the message in our list
         message = self.sender()
         if not isinstance(message, ConversationMessage):
             return
 
-        if message not in self._messages:
-            # For the input widget, fork at current position
-            self.fork_requested.emit()
-            return
-
         message_index = self._messages.index(message)
 
-        # Find the actual end index including hidden messages
-        fork_end_index = self._find_fork_end_index(message_index)
-
         # Emit signal with the end index (inclusive)
-        self.fork_from_index_requested.emit(fork_end_index)
+        self.fork_from_index_requested.emit(message_index)
+
+    def _on_message_edit_confirmed(self, new_text: str) -> None:
+        """Handle confirmed inline edit: truncate from that message onward and resubmit."""
+        if self._ai_conversation is None:
+            return
+
+        sender = self.sender()
+        if not isinstance(sender, ConversationMessage):
+            return
+
+        # Guard: only handle widgets that belong to THIS conversation
+        if sender not in self._messages:
+            return
+
+        widget_index = self._messages.index(sender)
+        if widget_index < 0 or widget_index >= len(self._messages):
+            return
+
+        if self._messages[widget_index].message_source() != AIMessageSource.USER:
+            return
+
+        if self._is_streaming:
+            self.cancel_current_tasks(False)
+            self._is_streaming = False
+            self._input.set_streaming(False)
+            self._stop_message_border_animation()
+            self._pending_messages.clear()
+            if self._update_timer.isActive():
+                self._update_timer.stop()
+
+            self.status_updated.emit()
+
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        history = ai_conversation.get_conversation_history()
+        all_messages = history.get_messages()
+
+        # Use message ID to find the correct position in history (independent of widget index)
+        message_id = sender.message_id()
+        hist_index = next((i for i, m in enumerate(all_messages) if m.id == message_id), -1)
+        if hist_index < 0 or all_messages[hist_index].source != AIMessageSource.USER:
+            return
+
+        preserved_history_messages = all_messages[:hist_index]
+        ai_conversation.load_message_history(preserved_history_messages)
+
+        preserved_messages = self._messages[:widget_index]
+
+        for i in range(len(self._messages) - 1, widget_index - 1, -1):
+            message_widget = self._messages[i]
+            if self._message_with_selection == message_widget:
+                self._message_with_selection = None
+
+            self._messages_layout.removeWidget(message_widget)
+            message_widget.deleteLater()
+
+        self._messages = preserved_messages
+
+        conversation_settings = ai_conversation.conversation_settings()
+        self._input.set_model(conversation_settings.model)
+
+        preserved_history = AIConversationHistory(preserved_history_messages, history.version(), history.parent())
+        try:
+            self._transcript_handler.write(preserved_history)
+
+            if self._animated_message and self._animated_message not in preserved_messages:
+                self._stop_message_border_animation()
+
+            self.status_updated.emit()
+            self._spotlighted_message_index = -1
+            self._auto_scroll = True
+
+            # Put new text in input and immediately submit
+            self._input.set_plain_text(new_text.strip())
+            self.submit()
+
+        except AIConversationTranscriptError as e:
+            self._logger.error("Failed to update transcript after edit: %s", str(e))
 
     def _on_message_edit_confirmed(self, new_text: str) -> None:
         """Handle confirmed inline edit: truncate from that message onward and resubmit."""

@@ -48,13 +48,13 @@
             (pred-finish (struct-get predecessor-task 'earliest-finish)))
         (match dep-type
           ("finish-to-start"
-            (dict (list "start-constraint"  (add-working-days pred-finish lag-days successor-cal))))
+            (dict "start-constraint"  (add-working-days pred-finish lag-days successor-cal)))
           ("start-to-start"
-            (dict (list "start-constraint"  (add-working-days pred-start  lag-days successor-cal))))
+            (dict "start-constraint"  (add-working-days pred-start  lag-days successor-cal)))
           ("finish-to-finish"
-            (dict (list "finish-constraint" (add-working-days pred-finish lag-days successor-cal))))
+            (dict "finish-constraint" (add-working-days pred-finish lag-days successor-cal)))
           ("start-to-finish"
-            (dict (list "finish-constraint" (add-working-days pred-start  lag-days successor-cal))))
+            (dict "finish-constraint" (add-working-days pred-start  lag-days successor-cal)))
           (_ (dict))))))
 
   ; Apply a dependency constraint in the backward pass (latest dates direction)
@@ -96,19 +96,19 @@
                          (list-append errors (string-concat "Task depends on itself: " from-task))
                          errors)))
         (dict
-          (list "from-task" from-task)
-          (list "to-task"   to-task)
-          (list "valid"     (integer=? (list-length errors) 0))
-          (list "errors"    errors)))))
+          "from-task" from-task
+          "to-task"   to-task
+          "valid"     (integer=? (list-length errors) 0)
+          "errors"    errors))))
 )
 
 (dict
-  (list "dependency"                   dependency)
-  (list "get-predecessors"             get-predecessors)
-  (list "get-successors"               get-successors)
-  (list "get-predecessor-dependencies" get-predecessor-dependencies)
-  (list "get-successor-dependencies"   get-successor-dependencies)
-  (list "task-exists?"                 task-exists?)
-  (list "apply-forward-constraint"     apply-forward-constraint)
-  (list "apply-backward-constraint"    apply-backward-constraint)
-  (list "validate-dependency"          validate-dependency)))
+  "dependency"                   dependency
+  "get-predecessors"             get-predecessors
+  "get-successors"               get-successors
+  "get-predecessor-dependencies" get-predecessor-dependencies
+  "get-successor-dependencies"   get-successor-dependencies
+  "task-exists?"                 task-exists?
+  "apply-forward-constraint"     apply-forward-constraint
+  "apply-backward-constraint"    apply-backward-constraint
+  "validate-dependency"          validate-dependency))

@@ -91,5 +91,5 @@
          (walk nodes path))))))
 
 (dict
-  (list "assert-equal"  assert-equal)
-  (list "test-find"     test-find)))
+  "assert-equal"  assert-equal
+  "test-find"     test-find))

@@ -132,10 +132,6 @@ class MainWindow(QMainWindow):
         self._open_file_action.setShortcut(QKeySequence.StandardKey.Open)
         self._open_file_action.triggered.connect(self._on_open_file)
 
-        self._fork_conv_action = QAction(strings.fork_conversation, self)
-        self._fork_conv_action.setShortcut(QKeySequence("Ctrl+Shift+F"))
-        self._fork_conv_action.triggered.connect(self._on_fork_conversation)
-
         self._save_action = QAction(strings.save, self)
         self._save_action.setShortcut(QKeySequence.StandardKey.Save)
         self._save_action.triggered.connect(self._on_save_file)
@@ -267,8 +263,6 @@ class MainWindow(QMainWindow):
         self._file_menu.addAction(self._open_conv_action)
         self._file_menu.addAction(self._open_file_action)
         self._file_menu.addSeparator()
-        self._file_menu.addAction(self._fork_conv_action)
-        self._file_menu.addSeparator()
         self._file_menu.addAction(self._save_action)
         self._file_menu.addAction(self._save_as_action)
         self._file_menu.addSeparator()
@@ -343,7 +337,6 @@ class MainWindow(QMainWindow):
         # Create tab manager in splitter
         self._column_manager = ColumnManager(self)
         self._column_manager.tab_changed.connect(self._on_column_manager_tab_changed)
-        self._column_manager.fork_requested.connect(self._on_fork_conversation)
         self._column_manager.fork_from_index_requested.connect(self._on_column_manager_fork_from_index_requested)
         self._column_manager.open_preview_link_requested.connect(self._on_column_manager_open_preview_link_requested)
         self._column_manager.edit_file_requested.connect(self._on_column_manager_edit_file_requested)
@@ -480,7 +473,6 @@ class MainWindow(QMainWindow):
 
         # Update tab-specific actions
         column_manager = self._column_manager
-        self._fork_conv_action.setEnabled(column_manager.can_fork_conversation())
         self._save_action.setEnabled(column_manager.can_save_file())
         self._save_as_action.setEnabled(column_manager.can_save_file_as())
         self._close_tab_action.setEnabled(column_manager.can_close_tab())
@@ -540,7 +532,6 @@ class MainWindow(QMainWindow):
         self._open_preview_action.setText(strings.open_preview)
         self._open_conv_action.setText(strings.open_conversation)
         self._open_file_action.setText(strings.open_file)
-        self._fork_conv_action.setText(strings.fork_conversation)
         self._save_action.setText(strings.save)
         self._save_as_action.setText(strings.save_as)
         self._close_tab_action.setText(strings.close_tab)
@@ -1277,21 +1268,6 @@ class MainWindow(QMainWindow):
                 strings.error_opening_conversation.format(path, str(e))
             )
             return None
-
-    def _on_fork_conversation(self) -> None:
-        """Create a new conversation tab with the history of the current conversation."""
-        # Create task to fork conversation
-        try:
-            self._column_manager.fork_conversation_from_index(None)
-
-        except ColumnManagerError as e:
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.conversation_error_title,
-                strings.error_forking_conversation.format(str(e))
-            )
 
     def _on_column_manager_fork_from_index_requested(self, index: int) -> None:
         """Handle fork conversation requests from a specific index."""

@@ -30,7 +30,7 @@ class TestModuleSystemBasics:
         module_file = tmp_path / "math_utils.menai"
         module_file.write_text("""
 (let ((square (lambda (x) (integer* x x))))
-  (dict (list "square" square)))
+  (dict "square" square))
 """)
 
         menai = Menai(module_path=[str(tmp_path)])
@@ -50,9 +50,9 @@ class TestModuleSystemBasics:
       (double (lambda (x) (integer* x 2)))
       (negate (lambda (x) (integer-neg x))))
   (dict
-    (list "add-one" add-one)
-    (list "double" double)
-    (list "negate" negate)))
+    "add-one" add-one
+    "double" double
+    "negate" negate))
 """)
 
         menai = Menai(module_path=[str(tmp_path)])
@@ -75,8 +75,8 @@ class TestModuleSystemBasics:
 (letrec ((helper (lambda (x) (integer* x 2)))
          (public-fn (lambda (x) (helper x))))
   (dict
-    (list "public" public-fn)
-    (list "also-public" (lambda (x) (integer+ x 1)))))
+    "public" public-fn
+    "also-public" (lambda (x) (integer+ x 1))))
 """)
 
         menai = Menai(module_path=[str(tmp_path)])
@@ -103,7 +103,7 @@ class TestModuleCaching:
         """Test that modules are cached after first load."""
         module_file = tmp_path / "cached.menai"
         module_file.write_text("""
-(dict (list "value" 42))
+(dict "value" 42)
 """)
 
         menai = Menai(module_path=[str(tmp_path)])
@@ -119,7 +119,7 @@ class TestModuleCaching:
         module_file = tmp_path / "multi.menai"
         module_file.write_text("""
 (let ((fn (lambda (x) (integer* x x))))
-  (dict (list "square" fn)))
+  (dict "square" fn))
 """)
 
         menai = Menai(module_path=[str(tmp_path)])
@@ -141,7 +141,7 @@ class TestModuleCaching:
         """Test clearing the module cache."""
         module_file = tmp_path / "clearable.menai"
         module_file.write_text("""
-(dict (list "x" 1))
+(dict "x" 1)
 """)
 
         menai = Menai(module_path=[str(tmp_path)])
@@ -159,7 +159,7 @@ class TestModuleSearchPath:
     def test_single_directory_search_path(self, tmp_path):
         """Test module resolution with single directory."""
         module_file = tmp_path / "single.menai"
-        module_file.write_text('(dict (list "val" 1))')
+        module_file.write_text('(dict "val" 1)')
 
         menai = Menai(module_path=[str(tmp_path)])
         result = menai.evaluate('(import "single")')
@@ -175,10 +175,10 @@ class TestModuleSearchPath:
         dir2.mkdir()
 
         # Module in first directory
-        (dir1 / "first.menai").write_text('(dict (list "val" 1))')
+        (dir1 / "first.menai").write_text('(dict "val" 1)')
 
         # Module in second directory
-        (dir2 / "second.menai").write_text('(dict (list "val" 2))')
+        (dir2 / "second.menai").write_text('(dict "val" 2)')
 
         menai = Menai(module_path=[str(dir1), str(dir2)])
 
@@ -194,8 +194,8 @@ class TestModuleSearchPath:
         dir2.mkdir()
 
         # Same module name in both directories with different values
-        (dir1 / "duplicate.menai").write_text('(dict (list "val" 1))')
-        (dir2 / "duplicate.menai").write_text('(dict (list "val" 2))')
+        (dir1 / "duplicate.menai").write_text('(dict "val" 1)')
+        (dir2 / "duplicate.menai").write_text('(dict "val" 2)')
 
         # dir1 is first in search path
         menai = Menai(module_path=[str(dir1), str(dir2)])
@@ -213,7 +213,7 @@ class TestModuleSearchPath:
         subdir = tmp_path / "lib"
         subdir.mkdir()
 
-        (subdir / "helper.menai").write_text('(dict (list "val" 42))')
+        (subdir / "helper.menai").write_text('(dict "val" 42)')
 
         menai = Menai(module_path=[str(tmp_path)])
 
@@ -365,14 +365,14 @@ class TestTransitiveImports:
         # Base module
         (tmp_path / "base.menai").write_text("""
 (let ((add (lambda (x y) (integer+ x y))))
-  (dict (list "add" add)))
+  (dict "add" add))
 """)
 
         # Module that uses base
         (tmp_path / "wrapper.menai").write_text("""
 (let ((base (import "base")))
   (let ((add-ten (lambda (x) ((dict-get base "add") x 10))))
-    (dict (list "add-ten" add-ten))))
+    (dict "add-ten" add-ten)))
 """)
 
         menai = Menai(module_path=[str(tmp_path)])
@@ -388,19 +388,19 @@ class TestTransitiveImports:
         """Test three-level import chain (A imports B imports C)."""
         # Level 3 (deepest)
         (tmp_path / "level3.menai").write_text("""
-(dict (list "value" 1))
+(dict "value" 1)
 """)
 
         # Level 2
         (tmp_path / "level2.menai").write_text("""
 (let ((l3 (import "level3")))
-  (dict (list "get-value" (lambda () (dict-get l3 "value")))))
+  (dict "get-value" (lambda () (dict-get l3 "value"))))
 """)
 
         # Level 1
         (tmp_path / "level1.menai").write_text("""
 (let ((l2 (import "level2")))
-  (dict (list "get-nested" (lambda () ((dict-get l2 "get-value"))))))
+  (dict "get-nested" (lambda () ((dict-get l2 "get-value")))))
 """)
 
         menai = Menai(module_path=[str(tmp_path)])
@@ -416,19 +416,19 @@ class TestTransitiveImports:
         """Test diamond dependency pattern (A imports B and C, both import D)."""
         # Base module (D)
         (tmp_path / "base.menai").write_text("""
-(dict (list "value" 10))
+(dict "value" 10)
 """)
 
         # B imports base
         (tmp_path / "left.menai").write_text("""
 (let ((base (import "base")))
-  (dict (list "get-left" (lambda () (dict-get base "value")))))
+  (dict "get-left" (lambda () (dict-get base "value"))))
 """)
 
         # C imports base
         (tmp_path / "right.menai").write_text("""
 (let ((base (import "base")))
-  (dict (list "get-right" (lambda () (dict-get base "value")))))
+  (dict "get-right" (lambda () (dict-get base "value"))))
 """)
 
         # A imports both B and C
@@ -436,9 +436,9 @@ class TestTransitiveImports:
 (let ((left (import "left"))
       (right (import "right")))
   (dict
-    (list "sum" (lambda ()
+    "sum" (lambda ()
       (integer+ ((dict-get left "get-left"))
-         ((dict-get right "get-right")))))))
+         ((dict-get right "get-right"))))))
 """)
 
         menai = Menai(module_path=[str(tmp_path)])
@@ -461,7 +461,7 @@ class TestModuleCompilation:
 (let ((x 10)
       (y 20))
   (let ((sum (lambda () (integer+ x y))))
-    (dict (list "sum" sum))))
+    (dict "sum" sum)))
 """)
 
         menai = Menai(module_path=[str(tmp_path)])
@@ -480,7 +480,7 @@ class TestModuleCompilation:
                       (if (integer<=? n 1)
                           1
                           (integer* n (factorial (integer- n 1)))))))
-  (dict (list "factorial" factorial)))
+  (dict "factorial" factorial))
 """)
 
         menai = Menai(module_path=[str(tmp_path)])
@@ -499,7 +499,7 @@ class TestModuleCompilation:
                  (if (integer<? x 0)
                      (integer-neg x)
                      x))))
-  (dict (list "abs" abs-val)))
+  (dict "abs" abs-val))
 """)
 
         menai = Menai(module_path=[str(tmp_path)])
@@ -516,7 +516,7 @@ class TestModuleCompilation:
         (tmp_path / "hof.menai").write_text("""
 (let ((sum-squares (lambda (lst)
                      (fold-list integer+ 0 (map-list (lambda (x) (integer* x x)) lst)))))
-  (dict (list "sum-squares" sum-squares)))
+  (dict "sum-squares" sum-squares))
 """)
 
         menai = Menai(module_path=[str(tmp_path)])
@@ -560,8 +560,8 @@ class TestModuleEdgeCases:
         """Test module with nested dicts and lists."""
         (tmp_path / "complex.menai").write_text("""
 (dict
-  (list "data" (list 1 2 3))
-  (list "nested" (dict (list "inner" 42))))
+  "data" (list 1 2 3)
+  "nested" (dict "inner" 42))
 """)
 
         menai = Menai(module_path=[str(tmp_path)])
@@ -579,7 +579,7 @@ class TestModuleEdgeCases:
 
     def test_multiple_menai_instances_separate_caches(self, tmp_path):
         """Test that different Menai instances have separate module caches."""
-        (tmp_path / "test.menai").write_text('(dict (list "val" 1))')
+        (tmp_path / "test.menai").write_text('(dict "val" 1)')
 
         menai1 = Menai(module_path=[str(tmp_path)])
         menai2 = Menai(module_path=[str(tmp_path)])
@@ -594,10 +594,9 @@ class TestModuleEdgeCases:
 
     def test_module_name_with_special_characters(self, tmp_path):
         """Test module names with underscores and hyphens."""
-        (tmp_path / "my_module-v2.menai").write_text('(dict (list "x" 1))')
+        (tmp_path / "my_module-v2.menai").write_text('(dict "x" 1)')
 
         menai = Menai(module_path=[str(tmp_path)])
 
         result = menai.evaluate('(import "my_module-v2")')
-
         assert result is not None

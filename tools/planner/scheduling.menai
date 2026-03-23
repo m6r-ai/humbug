@@ -62,11 +62,11 @@
       (if (date-after? finish-from-start required-finish)
           (let ((adjusted-start (calculate-start-date required-finish duration task-cal)))
             (dict
-              (list "earliest-start"  (max-date earliest-start adjusted-start))
-              (list "earliest-finish" required-finish)))
+              "earliest-start"  (max-date earliest-start adjusted-start)
+              "earliest-finish" required-finish))
           (dict
-            (list "earliest-start"  earliest-start)
-            (list "earliest-finish" (max-date finish-from-start required-finish))))))
+            "earliest-start"  earliest-start
+            "earliest-finish" (max-date finish-from-start required-finish)))))
 
   ; ==========================================================================
   ; FORWARD PASS
@@ -82,8 +82,8 @@
 
         (if (and (integer=? (list-length pred-deps) 0) has-start-date)
             (dict
-              (list "earliest-start"  (struct-get t 'start-date))
-              (list "earliest-finish" (calculate-end-date (struct-get t 'start-date) duration task-cal)))
+              "earliest-start"  (struct-get t 'start-date)
+              "earliest-finish" (calculate-end-date (struct-get t 'start-date) duration task-cal))
 
             (let* ((constraints
                     (map-list (lambda (dep)
@@ -113,8 +113,8 @@
                                               (find-latest-constraint finish-constraints "finish-constraint")
                                               duration task-cal)
                   (dict
-                    (list "earliest-start"  earliest-start)
-                    (list "earliest-finish" finish-from-start))))))))
+                    "earliest-start"  earliest-start
+                    "earliest-finish" finish-from-start)))))))
 
   (forward-pass
     (lambda (project)
@@ -244,8 +244,8 @@
         0))))
 
 (dict
-  (list "forward-pass"           forward-pass)
-  (list "backward-pass"          backward-pass)
-  (list "calculate-slack"        calculate-slack)
-  (list "identify-critical-path" identify-critical-path)
-  (list "schedule-project"       schedule-project)))
+  "forward-pass"           forward-pass
+  "backward-pass"          backward-pass
+  "calculate-slack"        calculate-slack
+  "identify-critical-path" identify-critical-path
+  "schedule-project"       schedule-project))

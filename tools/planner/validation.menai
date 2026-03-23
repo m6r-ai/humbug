@@ -73,20 +73,20 @@
                (fold-list list-append (list)
                           (list task-errors dep-errors cycle-errors))))
         (dict
-          (list "valid"                       (integer=? (list-length all-errors) 0))
-          (list "task-count"                  (list-length tasks))
-          (list "dependency-count"            (list-length dependencies))
-          (list "tasks-with-errors"
+          "valid"                       (integer=? (list-length all-errors) 0)
+          "task-count"                  (list-length tasks)
+          "dependency-count"            (list-length dependencies)
+          "tasks-with-errors"
                 (list-length (filter-list (lambda (v) (boolean-not (dict-get v "valid")))
-                                          task-validations)))
-          (list "dependencies-with-errors"
+                                          task-validations))
+          "dependencies-with-errors"
                 (list-length (filter-list (lambda (v) (boolean-not (dict-get v "valid")))
-                                          dep-validations)))
-          (list "circular-dependencies-found" (list-length cycles))
-          (list "errors"                      all-errors)
-          (list "task-validations"            task-validations)
-          (list "dependency-validations"      dep-validations)
-          (list "cycles"                      cycles)))))
+                                          dep-validations))
+          "circular-dependencies-found" (list-length cycles)
+          "errors"                      all-errors
+          "task-validations"            task-validations
+          "dependency-validations"      dep-validations
+          "cycles"                      cycles))))
 
   ; ============================================================================
   ; CONSISTENCY CHECKS
@@ -123,9 +123,9 @@
 )
 
 (dict
-  (list "detect-cycles"                   detect-cycles)
-  (list "has-circular-dependencies?"      has-circular-dependencies?)
-  (list "validate-project"                validate-project)
-  (list "find-duplicate-task-ids"         find-duplicate-task-ids)
-  (list "find-orphaned-tasks"             find-orphaned-tasks)
-  (list "find-tasks-with-invalid-calendars" find-tasks-with-invalid-calendars)))
+  "detect-cycles"                   detect-cycles
+  "has-circular-dependencies?"      has-circular-dependencies?
+  "validate-project"                validate-project
+  "find-duplicate-task-ids"         find-duplicate-task-ids
+  "find-orphaned-tasks"             find-orphaned-tasks
+  "find-tasks-with-invalid-calendars" find-tasks-with-invalid-calendars))

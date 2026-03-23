@@ -292,21 +292,20 @@
 
 ; Return dict of all calendar functions
 (dict
-  (list "calendar" calendar)
-  (list "parse-date" parse-date)
-  (list "format-date" format-date)
-  (list "day-of-week" day-of-week)
-  (list "day-name" day-name)
-  (list "is-holiday?" is-holiday?)
-  (list "is-working-day?" is-working-day?)
-  (list "add-calendar-days" add-calendar-days)
-  (list "add-working-days" add-working-days)
-  (list "working-days-between" working-days-between)
-  (list "calendar-days-between" calendar-days-between)
-  (list "compare-dates" compare-dates)
-  (list "date-before?" date-before?)
-  (list "date-after?" date-after?)
-  (list "calculate-end-date" calculate-end-date)
-  (list "calculate-start-date" calculate-start-date)
-  (list "calculate-duration" calculate-duration)
-))
+  "calendar" calendar
+  "parse-date" parse-date
+  "format-date" format-date
+  "day-of-week" day-of-week
+  "day-name" day-name
+  "is-holiday?" is-holiday?
+  "is-working-day?" is-working-day?
+  "add-calendar-days" add-calendar-days
+  "add-working-days" add-working-days
+  "working-days-between" working-days-between
+  "calendar-days-between" calendar-days-between
+  "compare-dates" compare-dates
+  "date-before?" date-before?
+  "date-after?" date-after?
+  "calculate-end-date" calculate-end-date
+  "calculate-start-date" calculate-start-date
+  "calculate-duration" calculate-duration))

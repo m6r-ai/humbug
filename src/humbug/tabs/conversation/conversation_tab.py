@@ -23,7 +23,6 @@ from humbug.tabs.tab_type import TabType
 class ConversationTab(TabBase):
     """Unified conversation tab."""
 
-    fork_requested = Signal()
     fork_from_index_requested = Signal(int)
     conversation_completed = Signal(dict)  # Signal for conversation completion
 
@@ -62,7 +61,6 @@ class ConversationTab(TabBase):
 
         # Create conversation widget
         self._conversation_widget = ConversationWidget(path, self, ai_conversation=ai_conversation)
-        self._conversation_widget.fork_requested.connect(self.fork_requested)
         self._conversation_widget.fork_from_index_requested.connect(self.fork_from_index_requested)
         self._conversation_widget.conversation_settings_requested.connect(
             self.show_conversation_settings_dialog

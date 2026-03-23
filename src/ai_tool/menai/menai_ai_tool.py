@@ -329,13 +329,13 @@ Syntax: (operator arg1 arg2 ...)
 - Type predicate: (dict? (dict ...)) → #t
 - Equality: (dict=? a1 a2), (dict!=? a1 a2)
 - Output format: dicts display with curly braces: {("name" "Alice") ("age" 30)} — this is display-only; construction always uses (dict ...)
-- Construction: (dict (list "name" "Alice") (list "age" 30))
+- Construction: (dict "name" "Alice" "age" 30)
 - Access: (dict-get my-dict "key") → value or #none if missing, (dict-get my-dict "key" "default") → value or "default" if missing
 - Modification: (dict-set my-dict "key" value), (dict-remove my-dict "key")
 - Queries: (dict-has? my-dict "key"), (dict-keys my-dict), (dict-values my-dict), (dict-length my-dict)
 - Merging: (dict-merge dict1 dict2) - second wins on conflicts
 - Type checking: (dict? value)
-- Nested dicts: (dict (list "user" (dict (list "name" "Bob") (list "id" 123))))
+- Nested dicts: (dict "user" (dict "name" "Bob" "id" 123))
 - Pattern matching: (match data ((? dict? a) ...) (_ ...))
 - Maintains insertion order, optimized for data processing workflows
 
@@ -402,9 +402,9 @@ Syntax: (operator arg1 arg2 ...)
 
 - (range start end [step]) → (range 1 5) → (1 2 3 4), integers only
 - (map-list func list) → (map-list (lambda (x) (integer* x 2)) (list 1 2 3)) → (2 4 6)
-- (map-dict func dict) → applies func to each (key value) pair, returning a new dict with transformed values; func receives key and value as separate arguments: (map-dict (lambda (k v) (integer* v 2)) (dict (list "a" 1) (list "b" 2))) → {("a" 2) ("b" 4)}
+- (map-dict func dict) → applies func to each (key value) pair, returning a new dict with transformed values; func receives key and value as separate arguments: (map-dict (lambda (k v) (integer* v 2)) (dict "a" 1 "b" 2)) → {("a" 2) ("b" 4)}
 - (filter-list predicate list) → (filter-list (lambda (x) (integer>? x 0)) (list -1 2 -3 4)) → (2 4)
-- (filter-dict pred dict) → returns a new dict containing only entries where pred returns #t; pred receives key and value as separate arguments: (filter-dict (lambda (k v) (integer>? v 1)) (dict (list "a" 1) (list "b" 2))) → {("b" 2)}
+- (filter-dict pred dict) → returns a new dict containing only entries where pred returns #t; pred receives key and value as separate arguments: (filter-dict (lambda (k v) (integer>? v 1)) (dict "a" 1 "b" 2)) → {("b" 2)}
 - (fold-list func init list) → left fold (tail-recursive); processes list left-to-right, accumulating into init: (fold-list integer+ 0 (list 1 2 3 4)) → 10, (fold-list integer- 0 (list 1 2 3)) → -6
 - (find-list predicate list) → first element satisfying predicate, or #none if none found: (find-list (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → 4, note: (find-list predicate ()) → #none
 - (any-list? predicate list) → #t if at least one element satisfies predicate, #f otherwise: (any-list? (lambda (x) (integer>? x 3)) (list 1 2 3 4 5)) → #t, note: (any-list? predicate ()) → #f
@@ -471,52 +471,7 @@ Syntax: (operator arg1 arg2 ...)
 - List destructuring: (match lst ((a b c) (integer+ a b c)) ((head . tail) (list-prepend tail head)))
 - Nested patterns: (match data (((? integer? x) (? string? y)) (list x y)) (_ "no match"))
 - First match wins: patterns are tested in order, use specific patterns before general ones
-- Example: (match data (42 "answer") ((? integer? n) (integer* n 2)) ((? string? s) (string-upcase s))
-- ((head . tail) (list head (list-length tail))) (_ \"unknown\"))
-
-## Module system
-
-- (import \"module-name\") → load and return a module (compile-time operation)
-- Modules are just .menai files that return a value (typically an dict of functions)
-- Modules are cached after first load for performance
-- Circular imports are detected and prevented with clear error messages
-- Example module (math_utils.menai):
-  ```menai
-  (let ((square (lambda (x) (integer* x x)))
-        (cube (lambda (x) (integer* x (integer* x x)))))
-    (dict
-      (list \"square\" square)
-      (list \"cube\" cube)))
-  ```
-- Using a module:
-  ```menai
-  (let ((math (import \"math_utils\")))
-    ((dict-get math \"square\") 5))  → 25
-  ```
-- Modules can import other modules (transitive dependencies)
-- Private functions: functions not in the exported dict are private to the module
-- Module names can include subdirectories: (e.g. import \"lib/helpers\")
-- Available modules can be found in the module search path directories
-
-## Debugging with trace
-
-- (trace message1 message2 ... messageN expr) → special form for debugging
-- Emits messages BEFORE evaluating expr, then returns expr's value
-- Messages are evaluated and converted to strings for output
-- Traces appear in the tool result context for inspection
-- Example: (trace \"Computing factorial\" (factorial 5))
-- Multiple messages: (trace \"x=\" x \"y=\" y (integer+ x y))
-- Useful for debugging recursive functions and complex algorithms
-- Trace output shows execution order, helping identify logic issues
-
-## Raising errors
-
-- (error msg) → special form that raises a runtime error; msg must be a string expression
-- msg can be a string literal, a variable, or any expression that evaluates to a string
-- Raises immediately; no value is ever returned
-- Valid in any expression position, including inside lambda bodies, let bindings, and match arms
-- Used to signal invalid arguments or unrecoverable conditions
-- Example: (if (integer<? n 0) (error "n must be non-negative") (float-sqrt (integer->float n)))
+- Example: (match data (42 "answer") ((? integer? n) (integer* n 2)) ((? string? s) (string-upcase s))\n- ((head . tail) (list head (list-length tail))) (_ \"unknown\"))\n\n## Module system\n\n- (import \"module-name\") → load and return a module (compile-time operation)\n- Modules are just .menai files that return a value (typically an dict of functions)\n- Modules are cached after first load for performance\n- Circular imports are detected and prevented with clear error messages\n- Example module (math_utils.menai):\n  ```menai\n  (let ((square (lambda (x) (integer* x x)))\n        (cube (lambda (x) (integer* x (integer* x x)))))\n    (dict \"square\" square \"cube\" cube))\n  ```\n- Using a module:\n  ```menai\n  (let ((math (import \"math_utils\")))\n    ((dict-get math \"square\") 5))  → 25\n  ```\n- Modules can import other modules (transitive dependencies)\n- Private functions: functions not in the exported dict are private to the module\n- Module names can include subdirectories: (e.g. import \"lib/helpers\")\n- Available modules can be found in the module search path directories\n\n## Debugging with trace\n\n- (trace message1 message2 ... messageN expr) → special form for debugging\n- Emits messages BEFORE evaluating expr, then returns expr's value\n- Messages are evaluated and converted to strings for output\n- Traces appear in the tool result context for inspection\n- Example: (trace \"Computing factorial\" (factorial 5))\n- Multiple messages: (trace \"x=\" x \"y=\" y (integer+ x y))\n- Useful for debugging recursive functions and complex algorithms\n- Trace output shows execution order, helping identify logic issues\n\n## Raising errors\n\n- (error msg) → special form that raises a runtime error; msg must be a string expression\n- msg can be a string literal, a variable, or any expression that evaluates to a string\n- Raises immediately; no value is ever returned\n- Valid in any expression position, including inside lambda bodies, let bindings, and match arms\n- Used to signal invalid arguments or unrecoverable conditions\n- Example: (if (integer<? n 0) ())"n must be non-negative") (float-sqrt (integer->float n)))
 - Example: (error (string-concat "invalid value: " (integer->string x)))
 
 ## Important notes

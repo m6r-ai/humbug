@@ -8,16 +8,16 @@ and reports them with full isolation between tests.
 
 ```bash
 # Run all tests under a directory (recursive)
-python tools/menai/runner/menai_runner.py menai_modules/
+python tools/menai/runner/run.py menai_modules/
 
 # Run a single test file
-python tools/menai/runner/menai_runner.py menai_modules/json_parser_test.menai
+python tools/menai/runner/run.py menai_modules/json_parser_test.menai
 
 # Show passing tests as well as failures
-python tools/menai/runner/menai_runner.py menai_modules/ --verbose
+python tools/menai/runner/run.py menai_modules/ --verbose
 
 # Filter by name (case-insensitive substring match on full path)
-python tools/menai/runner/menai_runner.py menai_modules/ --filter "parse-string"
+python tools/menai/runner/run.py menai_modules/ --filter "parse-string"
 ```
 
 The runner exits with code 0 if all tests pass, non-zero if any fail.

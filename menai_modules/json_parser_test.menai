@@ -4,17 +4,16 @@
       (t       (import "menai_test")))
   (let ((parse         (dict-get json "parse"))
         (assert-equal  (dict-get t   "assert-equal")))
-    (dict
-      (list "tests" (list
+    (dict "tests" (list
 
         (list "objects" (list
           (list "empty object"
                 (lambda () (assert-equal (parse "{}") (dict))))
           (list "single key"
-                (lambda () (assert-equal (parse "{\"a\": 1}") (dict (list "a" 1)))))
+                (lambda () (assert-equal (parse "{\"a\": 1}") (dict "a" 1))))
           (list "nested object"
                 (lambda () (assert-equal (parse "{\"a\": {\"b\": 2}}")
-                                         (dict (list "a" (dict (list "b" 2)))))))
+                                         (dict "a" (dict "b" 2)))))
         ))
 
         (list "arrays" (list
@@ -60,4 +59,4 @@
                 (lambda () (assert-equal (parse "null") #none)))
         ))
 
-      )))))
+      ))))

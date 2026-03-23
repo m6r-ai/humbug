@@ -7,7 +7,7 @@ import colorsys
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication, QTextEdit
 )
-from PySide6.QtCore import Signal, QPoint, QSize, Qt, QTimer, QEvent
+from PySide6.QtCore import Signal, QPoint, QSize, Qt, QEvent
 from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QColor, QPainter, QPen
 
 from ai import AIMessageSource
@@ -196,16 +196,16 @@ class ConversationMessage(QFrame):
         self._edit_message_button: QToolButton | None = None
         self._delete_message_button: QToolButton | None = None
 
-        # Add fork button only for AI messages
         style = self._message_source
-        if style == AIMessageSource.AI:
+        # Add fork and delete buttons only for user messages
+        if style == AIMessageSource.USER and not self._is_input:
             self._fork_message_button = QToolButton()
             self._fork_message_button.setObjectName("_fork_button")
             self._fork_message_button.clicked.connect(self._fork_message)
             self._banner_layout.addWidget(self._fork_message_button)
 
         # Add edit and delete buttons only for user messages
-        elif style == AIMessageSource.USER and not self._is_input:
+        if style == AIMessageSource.USER and not self._is_input:
             self._edit_message_button = QToolButton()
             self._edit_message_button.setObjectName("_edit_button")
             self._edit_message_button.clicked.connect(self._edit_message)
@@ -227,6 +227,12 @@ class ConversationMessage(QFrame):
             self._save_message_button.setObjectName("_save_button")
             self._save_message_button.clicked.connect(self._save_message)
             self._banner_layout.addWidget(self._save_message_button)
+
+        # Inline edit area (hidden until edit mode is active)
+        self._edit_area: QWidget | None = None
+        self._edit_text_edit: MarkdownTextEdit | None = None
+        self._edit_confirm_button: QToolButton | None = None
+        self._edit_cancel_button: QToolButton | None = None
 
         # Container for message sections
         self._sections_container = QWidget(self)
@@ -526,10 +532,10 @@ class ConversationMessage(QFrame):
             self._edit_message_button.setToolTip(strings.tooltip_edit_message)
 
         if self._edit_confirm_button:
-            self._edit_confirm_button.setText("Submit")
+            self._edit_confirm_button.setText(strings.submit_message)
 
         if self._edit_cancel_button:
-            self._edit_cancel_button.setText("Cancel")
+            self._edit_cancel_button.setText(strings.cancel)
 
         if self._delete_message_button:
             self._delete_message_button.setToolTip(strings.tooltip_delete_from_message)
@@ -895,24 +901,36 @@ class ConversationMessage(QFrame):
         if self._edit_area is not None:
             return  # Already in edit mode
 
-        # Hide the rendered sections
+        # Hide the rendered sections and banner action buttons
         self._sections_container.hide()
+        for btn in (
+            self._fork_message_button,
+            self._edit_message_button,
+            self._delete_message_button,
+            self._copy_message_button,
+            self._save_message_button,
+        ):
+            if btn is not None:
+                btn.hide()
+        if self._expand_button is not None:
+            self._expand_button.setEnabled(False)
 
-        # Build the edit area
+        # Build the edit area using the same MarkdownTextEdit approach as the input box,
+        # so code block syntax highlighting and other input behaviours work correctly.
+        zoom_factor = self._style_manager.zoom_factor()
+        spacing = int(self._style_manager.message_bubble_spacing() * zoom_factor)
         self._edit_area = QWidget(self)
         self._edit_area.setObjectName("_edit_area")
         edit_layout = QVBoxLayout(self._edit_area)
         edit_layout.setContentsMargins(0, 0, 0, 0)
-        edit_layout.setSpacing(8)
+        edit_layout.setSpacing(spacing // 2)
 
-        # Text editor pre-filled with current content
-        text_edit = QTextEdit(self._edit_area)
+        # Use MarkdownTextEdit (is_input=True) to get syntax highlighting for code blocks
+        text_edit = MarkdownTextEdit(True, self._edit_area)
         text_edit.setObjectName("_edit_text_edit")
         text_edit.setPlainText(self._message_content)
         text_edit.setMinimumHeight(80)
-        text_edit.setSizePolicy(text_edit.sizePolicy().horizontalPolicy(),
-                                text_edit.sizePolicy().verticalPolicy())
-        # Ctrl+Enter / Cmd+Enter confirms
+        text_edit.apply_style()
         text_edit.installEventFilter(self)
         self._edit_text_edit = text_edit
         edit_layout.addWidget(text_edit)
@@ -942,7 +960,6 @@ class ConversationMessage(QFrame):
 
         self._on_language_changed()  # set button labels
         text_edit.setFocus()
-        # Move cursor to end
         cursor = text_edit.textCursor()
         cursor.movePosition(cursor.MoveOperation.End)
         text_edit.setTextCursor(cursor)
@@ -959,6 +976,17 @@ class ConversationMessage(QFrame):
         self._edit_confirm_button = None
         self._edit_cancel_button = None
         self._sections_container.show()
+        for btn in (
+            self._fork_message_button,
+            self._edit_message_button,
+            self._delete_message_button,
+            self._copy_message_button,
+            self._save_message_button,
+        ):
+            if btn is not None:
+                btn.show()
+        if self._expand_button is not None:
+            self._expand_button.setEnabled(True)
 
     def _confirm_edit(self) -> None:
         """Confirm the inline edit and emit the new content."""
@@ -970,7 +998,7 @@ class ConversationMessage(QFrame):
         self.edit_confirmed.emit(new_text)
 
     def eventFilter(self, obj: QWidget, event: QEvent) -> bool:
-        """Intercept Ctrl/Cmd+Enter in the inline editor to confirm."""
+        """Intercept Ctrl+Enter in the inline editor to confirm."""
         if obj is self._edit_text_edit and event.type() == QEvent.Type.KeyPress:
             from PySide6.QtGui import QKeyEvent
             key_event = event  # type: ignore[assignment]
@@ -1104,6 +1132,10 @@ class ConversationMessage(QFrame):
         # Apply styling to all sections
         for section in self._sections:
             section.apply_style()
+
+        # Re-apply style to the inline edit text area if currently open
+        if self._edit_text_edit is not None:
+            self._edit_text_edit.apply_style()
 
     def find_text(self, text: str) -> List[Tuple[int, int, int]]:
         """
