@@ -2,6 +2,10 @@
 
 ## v42 (2026-xx-xx)
 
+Bug fixes:
+
+- Improved filesystem and editor tool descriptions to help avoid problems related to escaping.
+
 ## v41 (2026-03-22)
 
 New features:
@@ -20,6 +24,7 @@ New features:
 - The UI for the input box is now slightly different, putting the buttons at the bottom of the box ro a better UX.
 - Added the ability to create a conversation from the mindspace conversations view.
 - Removed top-level conversation fork option and moved message-level forking to user messages to simplify the UX.
+- Menai `dict` syntax is now consistent with `list` and `set`.
 
 Bug fixes:
 
