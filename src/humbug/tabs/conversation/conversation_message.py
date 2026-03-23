@@ -1,13 +1,13 @@
+import colorsys
 from datetime import datetime
 import logging
-from typing import Dict, List, Tuple, Any
-import colorsys
+from typing import Dict, List, Tuple, Any, cast
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication
 )
-from PySide6.QtCore import Signal, QPoint, QSize, Qt, QEvent
-from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QColor, QPainter, QPen
+from PySide6.QtCore import Signal, QPoint, QSize, Qt, QEvent, QObject
+from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QColor, QPainter, QPen, QKeyEvent
 
 from ai import AIMessageSource
 from ai_tool import AIToolCall
@@ -181,8 +181,8 @@ class ConversationMessage(QFrame):
         # Inline edit area (hidden until edit mode is active)
         self._edit_area: QWidget | None = None
         self._edit_text_edit: MarkdownTextEdit | None = None
-        self._edit_confirm_button: QToolButton | None = None
-        self._edit_cancel_button: QToolButton | None = None
+        self._edit_confirm_button: QPushButton | None = None
+        self._edit_cancel_button: QPushButton | None = None
 
         # Container for message sections
         self._sections_container = QWidget(self)
@@ -867,7 +867,6 @@ class ConversationMessage(QFrame):
         text_edit = MarkdownTextEdit(True, self._edit_area)
         text_edit.setObjectName("_edit_text_edit")
         text_edit.setPlainText(self._message_content)
-        text_edit.setMinimumHeight(80)
         text_edit.apply_style()
         text_edit.installEventFilter(self)
         self._edit_text_edit = text_edit
@@ -935,16 +934,15 @@ class ConversationMessage(QFrame):
         self._cancel_edit()  # clean up edit UI before emitting
         self.edit_confirmed.emit(new_text)
 
-    def eventFilter(self, obj: QWidget, event: QEvent) -> bool:
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         """Intercept Ctrl+Enter in the inline editor to confirm."""
         if obj is self._edit_text_edit and event.type() == QEvent.Type.KeyPress:
-            from PySide6.QtGui import QKeyEvent
-            key_event = event  # type: ignore[assignment]
-            if (hasattr(key_event, 'key') and
-                    key_event.key() == Qt.Key.Key_Return and  # type: ignore[attr-defined]
+            key_event = cast(QKeyEvent, event)
+            if (key_event.key() == Qt.Key.Key_Return and
                     key_event.modifiers() & Qt.KeyboardModifier.ControlModifier):
                 self._confirm_edit()
                 return True
+
         return super().eventFilter(obj, event)
 
     def _delete_message(self) -> None:

@@ -1826,7 +1826,7 @@ class ConversationWidget(QWidget):
                 background-color: transparent;
                 border: none;
                 padding: 0;
-                margin: 0;
+                margin: 0 0 {border_radius}px 0;
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
             }}
 
