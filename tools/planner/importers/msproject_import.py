@@ -521,6 +521,7 @@ def _parse_tasks(
         wbs = _text(task_el, "WBS", "")
         outline_level = _int(task_el, "OutlineLevel", 1)
         critical = _int(task_el, "Critical", 0)
+        duration_format = _text(task_el, "DurationFormat")
 
         cal_uid = _text(task_el, "CalendarUID", "-1")
         if cal_uid == "-1":
@@ -574,6 +575,7 @@ def _parse_tasks(
                 "outline-level": outline_level,
                 "is-summary": bool(is_summary),
                 "is-milestone": bool(is_milestone),
+                "duration-format": duration_format,
                 "assigned-resources": assigned_resources,
                 "authoritative-source": "msproject",
                 "source-ids": {"msproject": uid},

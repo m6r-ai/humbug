@@ -71,6 +71,23 @@ def _days_to_iso_duration(days: Optional[float], hours_per_day: float) -> str:
     return f"PT{hours}H{minutes}M0S"
 
 
+def _duration_format(duration_days: float, is_summary: bool) -> str:
+    """
+    Return the MS Project DurationFormat code for a task.
+
+      21 = estimated days  (summary tasks — MS Project rolls these up)
+       7 = days            (whole-day or zero-duration tasks)
+       5 = hours           (sub-day tasks where hours is the natural unit)
+    """
+    if is_summary:
+        return "21"
+    # Sub-day: duration is a non-integer fraction of a day
+    whole = round(duration_days) == duration_days or abs(duration_days - round(duration_days)) < 1e-9
+    if not whole and duration_days > 0.0:
+        return "5"
+    return "7"
+
+
 def _days_to_slack_tenths(days: Optional[float], hours_per_day: float) -> int:
     """Convert decimal working days to MS Project slack (tenths of a minute)."""
     if days is None:
@@ -129,12 +146,14 @@ def _build_project_summary_task(
     if proj_end_dt:
         _sub(task_el, "Finish", proj_end_dt)
     _sub(task_el, "Duration", duration_str)
+    _sub(task_el, "DurationFormat", "21")
     _sub(task_el, "Work", work_str)
     _sub(task_el, "Milestone", "0")
     _sub(task_el, "Summary", "1")
     _sub(task_el, "Critical", "0")
     _sub(task_el, "PercentComplete", "0")
     _sub(task_el, "CalendarUID", "-1")
+    _sub(task_el, "ConstraintType", "0")
     _sub(task_el, "CommitmentType", "0")
 
 
@@ -200,6 +219,8 @@ def _build_task_element(
         _sub(task_el, "Finish", finish_dt)
 
     _sub(task_el, "Duration", duration_str)
+    stored_fmt = task.get("duration-format")
+    _sub(task_el, "DurationFormat", stored_fmt if stored_fmt else _duration_format(duration_days, is_summary))
     _sub(task_el, "Work", work_str)
     _sub(task_el, "Milestone", "1" if is_milestone else "0")
     _sub(task_el, "Summary", "1" if is_summary else "0")
@@ -226,6 +247,7 @@ def _build_task_element(
     if cal_id and cal_id != "cal-1":
         cal_source_uid = cal_id.replace("cal-", "")
     _sub(task_el, "CalendarUID", cal_source_uid)
+    _sub(task_el, "ConstraintType", "0")
 
     _sub(task_el, "LevelAssignments", "1")
     _sub(task_el, "LevelingCanSplit", "1")
