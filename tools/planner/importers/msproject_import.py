@@ -467,6 +467,7 @@ def _parse_tasks(
 
     # First pass: collect all tasks and build uid->id map
     raw_tasks = []
+    uid_to_duration: dict[str, Optional[float]] = {}
     task_counter = 1
 
     for task_el in tasks_el.findall(_tag("Task")):
@@ -486,6 +487,11 @@ def _parse_tasks(
         task_id = f"T{task_counter:03d}"
         uid_to_task_id[uid] = task_id
         task_counter += 1
+
+        # Store duration for percent-lag resolution
+        dur_str = _text(task_el, "Duration", "")
+        dur_hours = _parse_iso_duration_hours(dur_str)
+        uid_to_duration[uid] = _hours_to_work_days(dur_hours, hours_per_day)
 
         raw_tasks.append((uid, task_id, name, is_summary, is_milestone, task_el))
 
@@ -590,7 +596,8 @@ def _parse_tasks(
             # LinkLag is in tenths of a minute; LagFormat=7 means minutes
             link_lag_raw = _int(pred_el, "LinkLag", 0)
             lag_format = _text(pred_el, "LagFormat", "7")
-            lag_days = _convert_lag_to_days(link_lag_raw, lag_format, hours_per_day)
+            pred_duration = uid_to_duration.get(pred_uid)
+            lag_days = _convert_lag_to_days(link_lag_raw, lag_format, hours_per_day, pred_duration)
 
             dependencies.append({
                 "from-task": pred_uid,   # still UID at this stage; resolved below
@@ -638,7 +645,8 @@ def _parse_tasks(
     return tasks, resolved_deps, milestones, uid_to_task_id
 
 
-def _convert_lag_to_days(link_lag: int, lag_format: str, hours_per_day: float) -> float:
+def _convert_lag_to_days(link_lag: int, lag_format: str, hours_per_day: float,
+                          predecessor_duration_days: Optional[float] = None) -> float:
     """
     Convert a MS Project LinkLag value to decimal working days.
 
@@ -649,11 +657,17 @@ def _convert_lag_to_days(link_lag: int, lag_format: str, hours_per_day: float) -
       5  = hours (tenths of a minute stored)
       7  = days (tenths of a minute stored, where 1 day = minutes_per_day * 10)
       8  = weeks
-      19 = percent
-    In practice the raw value is always in tenths of a minute.
+      19 = percent of predecessor duration (LinkLag is the percentage value)
+    For LagFormat=19, LinkLag is the percentage directly (not tenths of a minute).
+    All other formats store tenths of a minute.
     """
     if link_lag == 0:
         return 0.0
+
+    if lag_format in ("19", "51"):   # percent / elapsed percent
+        if predecessor_duration_days is not None:
+            return round(link_lag / 100.0 * predecessor_duration_days, 6)
+        return 0.0  # Cannot compute without predecessor duration
 
     tenths_of_minute = link_lag
     total_minutes = tenths_of_minute / 10.0

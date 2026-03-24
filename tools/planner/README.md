@@ -1,406 +1,315 @@
 # Project Planner with Menai
 
-A sophisticated project planning and analysis tool using Menai (AI Functional Programming Language) for complex dependency analysis, critical path calculation, and what-if scenario planning.
+A project planning and analysis tool using Menai (AI Functional Programming Language) for critical path calculation, dependency analysis, and schedule validation.
 
 ## Overview
 
-This tool addresses the challenges of managing large software build and deployment programs with:
-- **1000+ tasks** across multiple teams
-- **100+ people** including internal and external resources
-- **Multiple source systems** (Jira, MS Project, Excel) with no single source of truth
-- **Complex dependencies** (FS, SS, FF, SF constraints)
-- **Mixed calendars** (5-day and 7-day work weeks)
-- **External vendor dependencies** with varying reliability
-- **Highly unpredictable design tasks** alongside predictable deployment work
+This tool imports project data from MS Project XML, computes a CPM schedule using Menai's pure functional engine, and exports the results back to MS Project XML (or planner JSON). It is designed to handle real-world complexity:
 
-### Why Menai?
-
-Menai's functional programming model is ideal for project planning because:
-- **Immutable data** makes scenario planning safe (no accidental mutations)
-- **Pattern matching** simplifies complex dependency logic
-- **Higher-order functions** (map, filter, fold) enable elegant queries
-- **Alists** provide efficient key-value data structures
-- **Pure functions** ensure reproducible calculations
-- **No side effects** means parallel computation is straightforward
+- **Sub-day task granularity** — tasks can start and finish at any time within a working day
+- **All four dependency types** — FS, SS, FF, SF with positive and negative lag (including percent lag)
+- **Split working days** — correctly handles calendars with morning/afternoon periods and lunch breaks
+- **Hierarchy preservation** — summary tasks and milestones are preserved through the full import/schedule/export cycle
+- **Exact arithmetic** — scheduling uses working-day offsets (floats) so fractional durations accumulate without rounding error
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Python Layer                              │
-│  - Data import (Jira/MSProject/Excel)                       │
-│  - ID reconciliation and conflict resolution                │
-│  - Report generation and visualization                      │
-│  - CLI and AI interface                                     │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  Menai Bridge                                │
-│  - Convert Python ↔ Menai data structures                   │
-│  - Manage Menai evaluation                                  │
-└────────────────────┬────────────────────────────────────────┘
-                     │
-                     ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Menai Core                                │
-│  - Dependency graph analysis                                │
-│  - Critical path calculation (CPM algorithm)                │
-│  - Calendar arithmetic (working days)                       │
-│  - Scenario management and comparison                       │
-│  - Validation (circular deps, overallocation, etc.)        │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                      Python Layer                             │
+│  importers/msproject_import.py  — XML → planner JSON         │
+│  importers/msproject_export.py  — planner JSON → XML         │
+│  run_planner.py                 — end-to-end pipeline        │
+│  menai_bridge.py                — Python ↔ Menai conversion  │
+└────────────────────────┬─────────────────────────────────────┘
+                         │
+                         ▼
+┌──────────────────────────────────────────────────────────────┐
+│                     Menai Core                                │
+│  task.menai        — task struct, field updates              │
+│  dependency.menai  — dependency struct, constraint logic     │
+│  scheduling.menai  — CPM forward/backward pass, slack        │
+│  validation.menai  — cycle detection, consistency checks     │
+│  calendar.menai    — date arithmetic, offset conversion      │
+└──────────────────────────────────────────────────────────────┘
 ```
+
+## Scheduling Model
+
+### Working-Day Offsets
+
+All scheduling positions are represented as **floating-point working-day offsets from the project start**. An offset of `0.0` is the project start instant; `1.0` is exactly one working day later; `0.5` is half a working day later.
+
+This model correctly handles sub-day precision:
+
+| Clock time | Offset (8h/day, 08:00-12:00, 13:00-17:00) |
+|---|---|
+| `2026-03-23T08:00:00` (project start) | `0.0` |
+| `2026-03-23T12:00:00` (end of morning) | `0.5` |
+| `2026-03-23T13:00:00` (start of afternoon) | `0.5` |
+| `2026-03-23T17:00:00` (end of day) | `1.0` |
+| `2026-03-24T08:00:00` (next day start) | `1.0` |
+
+The CPM engine operates entirely on these floats — no calendar lookups during scheduling. The calendar is only used at the import boundary (datetime → offset) and export boundary (offset → datetime).
+
+### CPM Algorithm
+
+The Menai scheduling engine implements the standard Critical Path Method:
+
+1. **Forward pass** — computes `earliest-start` and `earliest-finish` for each task by topological traversal, applying dependency constraints as float arithmetic
+2. **Backward pass** — computes `latest-start` and `latest-finish` working backwards from the project end
+3. **Slack** — `latest-start - earliest-start` for each task
+4. **Critical path** — tasks with slack ≤ 0
+
+Dependency constraints are pure float addition:
+
+| Type | Forward constraint |
+|---|---|
+| Finish-to-Start | `succ-start = pred-finish + lag` |
+| Start-to-Start | `succ-start = pred-start + lag` |
+| Finish-to-Finish | `succ-finish = pred-finish + lag` |
+| Start-to-Finish | `succ-finish = pred-start + lag` |
+
+### Summary Tasks and Hierarchy
+
+Summary tasks are excluded from the CPM graph — only leaf tasks and milestones are scheduled. After CPM completes, a rollup pass computes summary task positions from their children:
+
+- Summary `earliest-start` = min of children's `earliest-start`
+- Summary `earliest-finish` = max of children's `earliest-finish`
+- Summary `on-critical-path` = true if any child is on the critical path
 
 ## Data Model
 
-### Core Entities
+### Task
 
-#### Task
 ```python
 {
-  "id": "TASK-123",
-  "name": "Deploy API Gateway",
-  "owner": "alice",
-  "team": "infra-team",
-  
-  # Scheduling (dates OR duration)
-  "start-date": "2025-02-01",        # ISO date or None
-  "end-date": "2025-02-10",          # ISO date or None
-  "duration-days": 10,               # Work days or None
-  "schedule-mode": "fixed-dates",    # "fixed-dates" | "duration-based" | "unscheduled"
-  
-  # Calendar
-  "calendar-type": "5-day",          # "5-day" | "7-day"
-  "calendar-id": "standard-5day",
-  
-  # Status
-  "status": "in-progress",           # "not-started" | "in-progress" | "complete" | "blocked"
-  "progress": 0.3,                   # 0.0 to 1.0
-  
-  # Source tracking (multi-system reconciliation)
-  "authoritative-source": "jira",
-  "source-ids": {
-    "jira": "PROJ-456",
-    "msproject": "23",
-    "excel": "row-15"
-  },
-  "last-updated": "2025-01-15T10:30:00",
-  
-  # External parties
-  "external-parties": ["vendor-acme"],
-  
-  # Optional metadata
-  "type": "deployment",              # Informational only
-  "priority": "high"                 # Informational only
+  "id": "T029",
+  "name": "Develop code",
+  "owner": "developer",
+  "team": None,
+
+  # Scheduling offsets (working days from project start)
+  "start-offset": 35.0,        # original imported position
+  "end-offset": 50.0,          # original imported position
+
+  # Original datetime strings (preserved for round-trip fidelity)
+  "start-date": "2026-05-11",
+  "end-date": "2026-05-29",
+  "start-time": "08:00:00",
+  "end-time": "17:00:00",
+
+  "duration-days": 15.0,       # always float
+  "schedule-mode": "fixed-dates" | "duration-based" | "unscheduled",
+  "calendar-id": "cal-1",
+
+  "status": "not-started" | "in-progress" | "complete",
+  "progress": 0.0,             # 0.0 to 1.0
+
+  "type": "task" | "summary" | "milestone",
+  "is-summary": False,
+  "is-milestone": False,
+
+  # Hierarchy
+  "parent-id": "T025",         # planner ID of parent summary, or None
+  "children": [],              # planner IDs of direct children (summaries only)
+  "wbs": "5.1.1",
+  "outline-level": 3,
+
+  # CPM results (populated after scheduling)
+  "earliest-start": 35.0,
+  "earliest-finish": 50.0,
+  "latest-start": 35.0,
+  "latest-finish": 50.0,
+  "slack-days": 0.0,
+  "on-critical-path": True,
+
+  # Provenance
+  "authoritative-source": "msproject",
+  "source-ids": {"msproject": "29"},
+  "assigned-resources": ["developer"],
+  "external-parties": []
 }
 ```
 
-#### Dependency
+### Dependency
+
 ```python
 {
-  "from-task": "TASK-120",
-  "to-task": "TASK-123",
-  "type": "finish-to-start",         # "finish-to-start" | "start-to-start" | 
-                                     # "finish-to-finish" | "start-to-finish"
-  "lag-days": 2,                     # Positive=delay, negative=lead time
+  "from-task": "T029",
+  "to-task": "T030",
+  "type": "finish-to-start",   # "finish-to-start" | "start-to-start" |
+                               # "finish-to-finish" | "start-to-finish"
+  "lag-days": -11.25,          # float; negative = lead time
   "source": "msproject"
 }
 ```
 
-#### Calendar
+Lag is always stored in working days. Percent lag (MS Project `LagFormat=19`) is converted at import time using the predecessor's duration: `lag_days = (percent / 100) * predecessor_duration_days`.
+
+### Calendar
+
 ```python
 {
-  "id": "standard-5day",
-  "name": "Standard Work Week",
+  "id": "cal-1",
+  "name": "Standard",
   "type": "5-day",
+  "is-base-calendar": True,
   "working-days": ["mon", "tue", "wed", "thu", "fri"],
-  "holidays": ["2025-12-25", "2025-12-26", "2026-01-01"]
+  "working-periods": [[8.0, 12.0], [13.0, 17.0]],  # (start_hour, end_hour) pairs
+  "holidays": [],
+  "source-uid": "1"
 }
 ```
 
-#### Resource
-```python
-{
-  "id": "alice",
-  "name": "Alice Smith",
-  "team": "infra-team",
-  "role": "devops-engineer",
-  "external": False
-}
-```
-
-#### External Party
-```python
-{
-  "id": "vendor-acme",
-  "name": "ACME Corp",
-  "contact": "pm@acme.com",
-  "calendar-id": "vendor-calendar",
-  "tasks-owned": ["TASK-200", "TASK-201"],
-  "tasks-involved": ["TASK-150"]
-}
-```
-
-### Complete Project Structure
+### Project Structure
 
 ```python
 {
-  "project-id": "BUILD-2025",
-  "name": "Software Build and Deployment Programme",
-  "created": "2025-01-01T00:00:00",
-  "last-modified": "2025-01-15T14:30:00",
-  "version": 47,
-  
-  "tasks": [...],
-  "dependencies": [...],
+  "project-id": "SOFTWARE-DEVELOPMENT",
+  "name": "Software Development",
+  "company": "...",
+  "created": "2026-03-23T15:46:00",
+  "last-modified": "...",
+  "version": 1,
+  "source-file": "path/to/original.xml",
+
+  "schedule": {
+    "start-date": "2026-03-23",
+    "finish-date": "2026-08-03",
+    "hours-per-day": 8.0,
+    "project-start-datetime": "2026-03-23T08:00:00",
+    "working-days": ["mon", "tue", "wed", "thu", "fri"],
+    "working-periods": [[8.0, 12.0], [13.0, 17.0]]
+  },
+
+  "tasks": [...],           # all tasks including summaries and milestones
+  "dependencies": [...],    # original dependencies (may reference summary tasks)
   "resources": [...],
-  "external-parties": [...],
-  "milestones": [...],
+  "milestones": [...],      # milestone metadata (also present in tasks list)
   "calendars": [...],
-  
-  "id-mappings": {
-    "jira": {"PROJ-456": "TASK-123", ...},
-    "msproject": {"23": "TASK-123", ...},
-    "excel": {"row-15": "TASK-123", ...}
-  },
-  
-  "validation": {
-    "last-validated": "2025-01-15T14:30:00",
-    "errors": [],
-    "warnings": []
-  },
-  
+  "external-parties": [],
+  "id-mappings": {"msproject": {"1": "T001", ...}},
+
+  "validation": {"last-validated": None, "errors": [], "warnings": []},
+
   "calculated": {
-    "critical-path": ["TASK-100", "TASK-120", ...],
-    "earliest-start": "2025-02-01",
-    "latest-finish": "2025-06-30",
-    "total-duration-days": 150,
-    "calculation-timestamp": "2025-01-15T14:30:00"
+    "critical-path": ["T002", "T003", ...],
+    "earliest-start": 0.0,          # offset of project start
+    "latest-finish": 97.75,         # offset of project end
+    "total-duration-days": 191.0,
+    "calculation-timestamp": "..."
   }
 }
 ```
 
 ## Files
 
-### Current Implementation
+### Menai Modules
 
-- **`example_project.py`** - Creates a realistic 20-task software project with:
-  - Design, development, testing, and deployment phases
-  - Multiple dependency types (FS, SS, FF, SF)
-  - Mixed 5-day and 7-day calendars
-  - External vendor dependencies
-  - Multi-source data (Jira, MS Project, Excel)
+| File | Purpose |
+|---|---|
+| `task.menai` | Task struct with offset-based scheduling fields; field update helpers; single-task validation |
+| `dependency.menai` | Dependency struct; predecessor/successor queries; forward/backward constraint application (pure float arithmetic) |
+| `scheduling.menai` | Complete CPM implementation: forward pass, backward pass, slack calculation, critical path identification |
+| `validation.menai` | Project validation: circular dependency detection (DFS), task/dependency consistency checks |
+| `calendar.menai` | Date arithmetic: working-day stepping, offset↔datetime conversion with working-period awareness |
 
-- **`menai_bridge.py`** - Bridge between Python and Menai:
-  - Converts Python dict/list ↔ Menai alist/list
-  - Evaluates Menai expressions with data bindings
-  - Loads and executes Menai files
+### Python Layer
 
-- **`demo.py`** - Demonstration of Menai project queries:
-  - Basic queries (task lists, counts, filtering)
-  - Dependency analysis
-  - Resource allocation
-  - Calendar type distribution
-  - Complex multi-condition queries
+| File | Purpose |
+|---|---|
+| `importers/msproject_import.py` | Parse MS Project XML → planner JSON; compute working-day offsets from datetimes; handle all lag formats including percent lag |
+| `importers/msproject_export.py` | Convert planner JSON → MS Project XML; convert offsets back to datetimes using working periods |
+| `menai_bridge.py` | Convert Python dicts/lists to Menai expressions; `expand_summary_dependencies()` for CPM input; `merge_cpm_results()` with summary rollup; `save_project()` |
+| `run_planner.py` | End-to-end pipeline: load → validate → schedule → export |
+| `example_project.py` | Hardcoded 20-task example project (used by validation tests) |
 
-### Planned Implementation
+### Tests
 
-- **`validation.menai`** - Project validation functions:
-  - Circular dependency detection
-  - Data consistency checks
-  - Resource overallocation detection
-  - Calendar constraint validation
-
-- **`calendar.menai`** - Calendar arithmetic:
-  - Calculate working days between dates
-  - Add/subtract working days
-  - Handle holidays and weekends
-  - Support multiple calendar types
-
-- **`scheduling.menai`** - Critical path method (CPM):
-  - Forward pass (earliest start/finish)
-  - Backward pass (latest start/finish)
-  - Slack calculation
-  - Critical path identification
-  - Dependency constraint application
-
-- **`scenarios.menai`** - What-if scenario support:
-  - Create scenarios from baseline
-  - Apply changes (delays, new dependencies, resource changes)
-  - Compare scenarios
-  - Impact analysis
-
-- **`importers/`** - Data import modules:
-  - `jira_import.py` - Import from Jira CSV/JSON
-  - `msproject_import.py` - Import from MS Project XML
-  - `excel_import.py` - Import from Excel spreadsheets
-  - `reconcile.py` - ID mapping and conflict resolution
-
-- **`cli.py`** - Command-line interface:
-  - Import from multiple sources
-  - Run analysis queries
-  - Generate reports
-  - Interactive AI mode
+| File | Purpose |
+|---|---|
+| `test_calendar.py` | Calendar arithmetic tests (all passing) |
+| `test_scheduling_basic.py` | CPM tests on a simple 3-task chain (all passing) |
+| `test_validation_simple.py` | Validation tests: cycle detection, dependency queries (all passing) |
 
 ## Usage
 
-### Running the Demo
+### Full Pipeline: XML → Schedule → XML
 
 ```bash
-cd tools/project_planner
-python demo.py
+# Step 1: Import MS Project XML to planner JSON
+python3 tools/planner/importers/msproject_import.py plan.xml -o plan.json
+
+# Step 2: Schedule and export
+python3 tools/planner/run_planner.py plan.json -o plan-scheduled.json -x plan-scheduled.xml
 ```
 
-This demonstrates:
-- Loading a 20-task project into Menai
-- Querying tasks by status, priority, team, owner
-- Analyzing dependencies
-- Resource allocation analysis
-- Calendar type distribution
-- Complex multi-condition queries
-
-### Testing the Bridge
+### Run Tests
 
 ```bash
-python menai_bridge.py
+python3 tools/planner/test_calendar.py
+python3 tools/planner/test_scheduling_basic.py
+python3 tools/planner/test_validation_simple.py
 ```
 
-This tests:
-- Python → Menai data conversion
-- Simple value, list, and dict conversion
-- Nested structure handling
-- Menai evaluation with Python data
-- Alist and list operations
+### Python API
 
-### Viewing Example Data
-
-```bash
-python example_project.py | less
-```
-
-This outputs the complete example project as JSON.
-
-## Example Queries
-
-### Find all critical priority tasks
 ```python
-bridge.evaluate_with_data(
-    '''(let ((tasks (alist-get project "tasks"))
-             (critical (filter 
-               (lambda (task) (string=? (alist-get task "priority") "critical"))
-               tasks)))
-          (map (lambda (task) (alist-get task "name")) critical))''',
-    {"project": project}
-)
-```
+from tools.planner.menai_bridge import MenaiBridge, expand_summary_dependencies, merge_cpm_results
 
-### Find tasks owned by a specific person
-```python
-bridge.evaluate_with_data(
-    '''(let ((tasks (alist-get project "tasks")))
-          (filter 
-            (lambda (task) (string=? (alist-get task "owner") "alice"))
-            tasks))''',
-    {"project": project}
-)
-```
+bridge = MenaiBridge()
 
-### Count tasks by team
-```python
-bridge.evaluate_with_data(
-    '''(let ((tasks (alist-get project "tasks"))
-             (teams (map (lambda (task) (alist-get task "team")) tasks)))
-          (list
-            (list "backend" (list-length (filter (lambda (t) (string=? t "backend")) teams)))
-            (list "frontend" (list-length (filter (lambda (t) (string=? t "frontend")) teams)))
-            (list "infra" (list-length (filter (lambda (t) (string=? t "infra")) teams)))))''',
-    {"project": project}
-)
-```
+# Load project
+project = bridge.load_project("plan.json")
 
-### Find all predecessors of a task
-```python
-bridge.evaluate_with_data(
-    '''(let ((deps (alist-get project "dependencies")))
-          (filter 
-            (lambda (dep) (string=? (alist-get dep "to-task") "TASK-123"))
-            deps))''',
-    {"project": project}
-)
+# Prepare CPM input (expand summary deps, filter to leaf tasks)
+cpm_project = expand_summary_dependencies(project)
+
+# Schedule
+preamble = MenaiBridge.struct_preamble()
+project_expr = bridge.python_to_menai_project(cpm_project)
+
+scheduled = bridge.evaluate(f'''
+    {preamble}
+    (let* ((scheduling (import "tools/planner/scheduling"))
+           (schedule   (dict-get scheduling "schedule-project"))
+           (project    {project_expr}))
+      (schedule project))
+''')
+
+# Merge computed offsets back into full project (includes summary rollup)
+critical_ids = set(scheduled.get("critical-path", []))
+output = merge_cpm_results(project, scheduled, critical_ids)
 ```
 
 ## Design Decisions
 
-### 1. This is the System of Record
-The tool is designed to be the **definitive source of truth**. Other systems (Jira, MS Project, Excel) import into this system and must synchronize with it.
+### Offset-Based Scheduling
 
-### 2. Multi-Source Reconciliation
-Each task tracks its source system IDs and has an "authoritative-source" field. During import, conflicts are resolved based on source priority.
+The CPM engine works in **working-day offsets** rather than calendar dates. This means:
 
-### 3. Flexible Scheduling
-Tasks can have:
-- Fixed dates (start + end)
-- Duration-based (calculated from dependencies + duration)
-- Unscheduled (boolean-not yet placed on timeline)
+- Sub-day precision is preserved exactly — a 0.5-day task starting at `13:00:00` finishes at `17:00:00` the same day, and its successor correctly starts at `08:00:00` the next day
+- Percent lag (`LagFormat=19` in MS Project) is correctly converted to working days using the predecessor's duration
+- Floating-point arithmetic is exact for quarter-day granularity (the finest granularity in typical MS Project files)
+- The CPM engine is calendar-agnostic — no calendar lookups during scheduling
 
-### 4. Mixed Calendars
-Different tasks can use different calendars (5-day vs 7-day). This is critical for deployment tasks that run 24/7 vs. development tasks on business days.
+### Summary Task Handling
 
-### 5. Scenario Objects
-What-if scenarios are first-class objects that contain:
-- Full project state
-- List of changes from parent scenario
-- Impact summary
-- Comparison data
+Summary tasks are not nodes in the CPM graph. Instead:
 
-### 6. Validation as Data
-Validation results are stored in the project structure, not just logged. This allows tracking validation status over time.
+1. Dependencies referencing summary tasks are **expanded** to equivalent leaf-task dependencies by `expand_summary_dependencies()`
+2. The CPM engine schedules leaf tasks and milestones only
+3. A **rollup pass** in `merge_cpm_results()` computes summary positions from their children
 
-## Next Steps
+This preserves the original hierarchy for re-export while ensuring the schedule is computed from first principles.
 
-### Phase 1: Foundation (In Progress)
-- [x] Data model definition
-- [x] Example project with realistic complexity
-- [x] Python ↔ Menai bridge
-- [x] Basic query demonstrations
-- [ ] Calendar arithmetic functions
-- [ ] Circular dependency detection
-- [ ] Data validation functions
+### Round-Trip Fidelity
 
-### Phase 2: Core Analysis
-- [ ] Forward pass (earliest dates)
-- [ ] Backward pass (latest dates)
-- [ ] Critical path calculation
-- [ ] Slack calculation
-- [ ] Resource loading analysis
-
-### Phase 3: What-If Scenarios
-- [ ] Scenario creation and management
-- [ ] Scenario comparison
-- [ ] Impact analysis
-- [ ] Change tracking
-
-### Phase 4: Import/Export
-- [ ] Jira CSV/JSON importer
-- [ ] MS Project XML importer
-- [ ] Excel importer
-- [ ] ID reconciliation
-- [ ] Conflict resolution
-- [ ] Export to various formats
-
-### Phase 5: User Interface
-- [ ] Command-line interface
-- [ ] Interactive AI mode (natural language queries)
-- [ ] Report generation
-- [ ] Visualization (Gantt charts, network diagrams)
+The importer preserves original datetime strings (`start-time`, `end-time`) alongside computed offsets. The exporter uses these original times when the computed date matches the original — ensuring that tasks whose schedule hasn't changed are exported with their exact original times, not approximations.
 
 ## Requirements
 
 - Python 3.8+
 - Menai (included in Humbug)
-- No external dependencies for core functionality
-
-## License
-
-Same as Humbug project.
+- No external dependencies
