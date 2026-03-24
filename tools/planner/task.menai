@@ -1,25 +1,28 @@
 ; task.menai
 ; Task struct definition and single-task operations
+;
+; Scheduling is performed in working-day offsets from the project start.
+; An offset of 0.0 means the project start instant.  An offset of 1.0
+; means exactly one working day later.  Fractional offsets represent
+; partial days (e.g. 0.5 = half a working day from project start).
+;
+; The fields start-offset and end-offset hold the original imported
+; position of the task.  The earliest/latest fields hold the CPM-computed
+; positions.  All six are floats measured in working days.
 
 (letrec (
   (task (struct (id name duration-days calendar-id schedule-mode
-                 start-date end-date status progress
+                 start-offset end-offset status progress
                  earliest-start earliest-finish
                  latest-start latest-finish slack-days)))
 
-  ; Get the calendar for a task from a list of calendars
-  (get-task-calendar
-    (lambda (t calendars)
-      (find-list (lambda (c) (string=? (struct-get c 'id) (struct-get t 'calendar-id)))
-                 calendars)))
-
-  ; Update a task with computed earliest dates
+  ; Update a task with computed earliest offsets
   (update-earliest-dates
     (lambda (t earliest-start earliest-finish)
       (struct-set (struct-set t 'earliest-start earliest-start)
                   'earliest-finish earliest-finish)))
 
-  ; Update a task with computed latest dates
+  ; Update a task with computed latest offsets
   (update-latest-dates
     (lambda (t latest-start latest-finish)
       (struct-set (struct-set t 'latest-finish latest-finish)
@@ -37,10 +40,10 @@
              (mode   (struct-get t 'schedule-mode))
              (errors (match mode
                        ("fixed-dates"
-                         (if (and (string? (struct-get t 'start-date))
-                                  (string? (struct-get t 'end-date)))
+                         (if (and (float? (struct-get t 'start-offset))
+                                  (float? (struct-get t 'end-offset)))
                              errors
-                             (list-append errors "fixed-dates mode requires start-date and end-date")))
+                             (list-append errors "fixed-dates mode requires start-offset and end-offset")))
                        ("duration-based"
                          (if (float? (struct-get t 'duration-days))
                              errors
@@ -56,7 +59,6 @@
 
 (dict
   "task"                  task
-  "get-task-calendar"     get-task-calendar
   "update-earliest-dates" update-earliest-dates
   "update-latest-dates"   update-latest-dates
   "update-slack"          update-slack

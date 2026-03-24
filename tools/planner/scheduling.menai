@@ -1,95 +1,73 @@
 ; scheduling.menai
 ; Critical Path Method (CPM) scheduling algorithm
+;
+; All scheduling positions are working-day offsets (floats) from the
+; project start.  No calendar arithmetic is performed here — the calendar
+; is only needed at the import/export boundary to convert between offsets
+; and calendar dates.
 
 (letrec (
-  (calendar-mod (import "tools/planner/calendar"))
-  (task-mod     (import "tools/planner/task"))
-  (dep-mod      (import "tools/planner/dependency"))
+  (task-mod (import "tools/planner/task"))
+  (dep-mod  (import "tools/planner/dependency"))
 
-  ; Struct types
-  (task       (dict-get task-mod "task"))
+  (task (dict-get task-mod "task"))
 
-  ; Calendar functions
-  (add-working-days     (dict-get calendar-mod "add-working-days"))
-  (calculate-end-date   (dict-get calendar-mod "calculate-end-date"))
-  (calculate-start-date (dict-get calendar-mod "calculate-start-date"))
-  (working-days-between (dict-get calendar-mod "working-days-between"))
-  (date-before?         (dict-get calendar-mod "date-before?"))
-  (date-after?          (dict-get calendar-mod "date-after?"))
+  (update-earliest-dates (dict-get task-mod "update-earliest-dates"))
+  (update-latest-dates   (dict-get task-mod "update-latest-dates"))
+  (update-slack          (dict-get task-mod "update-slack"))
 
-  ; Task operations
-  (get-task-calendar       (dict-get task-mod "get-task-calendar"))
-  (update-earliest-dates   (dict-get task-mod "update-earliest-dates"))
-  (update-latest-dates     (dict-get task-mod "update-latest-dates"))
-  (update-slack            (dict-get task-mod "update-slack"))
-
-  ; Dependency operations
-  (get-predecessors            (dict-get dep-mod "get-predecessors"))
-  (get-successors              (dict-get dep-mod "get-successors"))
+  (get-predecessors             (dict-get dep-mod "get-predecessors"))
+  (get-successors               (dict-get dep-mod "get-successors"))
   (get-predecessor-dependencies (dict-get dep-mod "get-predecessor-dependencies"))
-  (get-successor-dependencies  (dict-get dep-mod "get-successor-dependencies"))
-  (apply-forward-constraint    (dict-get dep-mod "apply-forward-constraint"))
-  (apply-backward-constraint   (dict-get dep-mod "apply-backward-constraint"))
+  (get-successor-dependencies   (dict-get dep-mod "get-successor-dependencies"))
+  (apply-forward-constraint     (dict-get dep-mod "apply-forward-constraint"))
+  (apply-backward-constraint    (dict-get dep-mod "apply-backward-constraint"))
 
   ; ==========================================================================
   ; HELPERS
   ; ==========================================================================
+
+  ; Round an offset to 6 decimal places to prevent floating point drift
+  (round-offset
+    (lambda (x)
+      (float/ (float-round (float* x 1000000.0)) 1000000.0)))
 
   (find-task
     (lambda (task-id tasks)
       (find-list (lambda (t) (string=? (struct-get t 'id) task-id))
                  tasks)))
 
-  (max-date
-    (lambda (date1 date2)
-      (if (date-after? date1 date2) date1 date2)))
-
-  (min-date
-    (lambda (date1 date2)
-      (if (date-before? date1 date2) date1 date2)))
-
-  ; Find the latest (max) date across a list of constraint dicts for a given key
+  ; Find the maximum float across a list of constraint dicts for a given key
   (find-latest-constraint
     (lambda (constraints key-name)
-      (fold-list max-date
+      (fold-list float-max
                  (dict-get (list-first constraints) key-name)
                  (map-list (lambda (c) (dict-get c key-name))
                            (list-rest constraints)))))
-
-  ; Reconcile finish constraints with a calculated finish date
-  (reconcile-finish-constraint
-    (lambda (earliest-start finish-from-start required-finish duration task-cal)
-      (if (date-after? finish-from-start required-finish)
-          (let ((adjusted-start (calculate-start-date required-finish duration task-cal)))
-            (dict
-              "earliest-start"  (max-date earliest-start adjusted-start)
-              "earliest-finish" required-finish))
-          (dict
-            "earliest-start"  earliest-start
-            "earliest-finish" (max-date finish-from-start required-finish)))))
 
   ; ==========================================================================
   ; FORWARD PASS
   ; ==========================================================================
 
-  (calculate-earliest-dates
-    (lambda (t dependencies calendars scheduled-tasks)
-      (let* ((task-id        (struct-get t 'id))
-             (task-cal       (get-task-calendar t calendars))
-             (duration       (struct-get t 'duration-days))
-             (pred-deps      (get-predecessor-dependencies task-id dependencies))
-             (has-start-date (string? (struct-get t 'start-date))))
+  (calculate-earliest-offsets
+    (lambda (t dependencies scheduled-tasks)
+      (let* ((task-id    (struct-get t 'id))
+             (duration   (struct-get t 'duration-days))
+             (pred-deps  (get-predecessor-dependencies task-id dependencies))
+             (has-offset (float? (struct-get t 'start-offset))))
 
-        (if (and (integer=? (list-length pred-deps) 0) has-start-date)
+        (if (and (integer=? (list-length pred-deps) 0) has-offset)
+            ; No predecessors and has a fixed start — use it directly
             (dict
-              "earliest-start"  (struct-get t 'start-date)
-              "earliest-finish" (calculate-end-date (struct-get t 'start-date) duration task-cal))
+              "earliest-start"  (struct-get t 'start-offset)
+              "earliest-finish" (float+ (struct-get t 'start-offset) duration))
 
+            ; Gather constraints from all scheduled predecessors
             (let* ((constraints
                     (map-list (lambda (dep)
                                 (let ((pred (find-task (struct-get dep 'from-task) scheduled-tasks)))
                                   (if (struct-type? task pred)
-                                      (apply-forward-constraint dep pred task-cal)
+                                      (apply-forward-constraint dep pred)
                                       (dict))))
                               pred-deps))
                    (start-constraints
@@ -99,19 +77,18 @@
                    (earliest-start
                     (if (integer>? (list-length start-constraints) 0)
                         (find-latest-constraint start-constraints "start-constraint")
-                        (if has-start-date (struct-get t 'start-date) "2025-01-01")))
+                        (if has-offset (struct-get t 'start-offset) 0.0)))
                    (finish-from-start
-                    (calculate-end-date
-                      (if (integer>? (list-length start-constraints) 0)
-                          (find-latest-constraint start-constraints "start-constraint")
-                          (if has-start-date (struct-get t 'start-date) "2025-01-01"))
-                      duration
-                      task-cal)))
+                    (round-offset (float+ earliest-start duration))))
 
               (if (integer>? (list-length finish-constraints) 0)
-                  (reconcile-finish-constraint earliest-start finish-from-start
-                                              (find-latest-constraint finish-constraints "finish-constraint")
-                                              duration task-cal)
+                  ; FF or SF constraint — reconcile with finish-from-start
+                  (let* ((required-finish (find-latest-constraint finish-constraints "finish-constraint"))
+                         (finish          (float-max finish-from-start required-finish))
+                         (start           (float-max earliest-start (float- finish duration))))
+                    (dict
+                      "earliest-start"  start
+                      "earliest-finish" finish))
                   (dict
                     "earliest-start"  earliest-start
                     "earliest-finish" finish-from-start)))))))
@@ -119,8 +96,7 @@
   (forward-pass
     (lambda (project)
       (let ((tasks        (dict-get project "tasks"))
-            (dependencies (dict-get project "dependencies"))
-            (calendars    (dict-get project "calendars")))
+            (dependencies (dict-get project "dependencies")))
         (letrec ((schedule-tasks
                    (lambda (remaining scheduled)
                      (if (list-null? remaining)
@@ -135,10 +111,10 @@
                                                 (get-predecessors (struct-get t 'id) dependencies)))
                                    remaining)))
                            (if (struct-type? task next-task)
-                               (let* ((dates (calculate-earliest-dates next-task dependencies calendars scheduled))
+                               (let* ((offsets (calculate-earliest-offsets next-task dependencies scheduled))
                                       (updated (update-earliest-dates next-task
-                                                                      (dict-get dates "earliest-start")
-                                                                      (dict-get dates "earliest-finish"))))
+                                                                      (dict-get offsets "earliest-start")
+                                                                      (dict-get offsets "earliest-finish"))))
                                  (schedule-tasks
                                    (list-remove remaining next-task)
                                    (list-concat scheduled (list updated))))
@@ -150,9 +126,8 @@
   ; ==========================================================================
 
   (calculate-latest-finish
-    (lambda (t dependencies calendars scheduled-tasks project-end)
+    (lambda (t dependencies scheduled-tasks project-end)
       (let* ((task-id   (struct-get t 'id))
-             (task-cal  (get-task-calendar t calendars))
              (succ-deps (get-successor-dependencies task-id dependencies)))
         (if (integer=? (list-length succ-deps) 0)
             project-end
@@ -160,21 +135,20 @@
                     (map-list (lambda (dep)
                                 (let ((succ (find-task (struct-get dep 'to-task) scheduled-tasks)))
                                   (if (struct-type? task succ)
-                                      (apply-backward-constraint dep succ task-cal)
+                                      (apply-backward-constraint dep succ)
                                       #f)))
                               succ-deps))
-                   (valid-constraints (filter-list string? constraints)))
+                   (valid-constraints (filter-list float? constraints)))
               (if (integer>? (list-length valid-constraints) 0)
-                  (fold-list min-date (list-first valid-constraints) (list-rest valid-constraints))
+                  (fold-list float-min (list-first valid-constraints) (list-rest valid-constraints))
                   project-end))))))
 
   (backward-pass
     (lambda (project)
       (let* ((tasks        (dict-get project "tasks"))
              (dependencies (dict-get project "dependencies"))
-             (calendars    (dict-get project "calendars"))
              (project-end
-               (fold-list max-date
+               (fold-list float-max
                           (struct-get (list-first tasks) 'earliest-finish)
                           (map-list (lambda (t) (struct-get t 'earliest-finish))
                                     (list-rest tasks)))))
@@ -193,10 +167,8 @@
                                    remaining)))
                            (if (struct-type? task next-task)
                                (let* ((l-finish (calculate-latest-finish next-task dependencies
-                                                                         calendars scheduled project-end))
-                                      (l-start  (calculate-start-date l-finish
-                                                                       (struct-get next-task 'duration-days)
-                                                                       (get-task-calendar next-task calendars)))
+                                                                         scheduled project-end))
+                                      (l-start  (round-offset (float- l-finish (struct-get next-task 'duration-days))))
                                       (updated  (update-latest-dates next-task l-start l-finish)))
                                  (schedule-backward
                                    (list-remove remaining next-task)
@@ -210,15 +182,15 @@
 
   (calculate-slack
     (lambda (project)
-      (let* ((tasks     (dict-get project "tasks"))
-             (calendars (dict-get project "calendars")))
+      (let ((tasks (dict-get project "tasks")))
         (dict-set project "tasks"
           (map-list (lambda (t)
                       (update-slack t
-                        (working-days-between
-                          (struct-get t 'earliest-start)
-                          (struct-get t 'latest-start)
-                          (get-task-calendar t calendars))))
+                        ; Round to 9 decimal places to eliminate floating point noise
+                        (float/ (float-round (float* (float- (struct-get t 'latest-start)
+                                                             (struct-get t 'earliest-start))
+                                                     1000000000.0))
+                                1000000000.0)))
                     tasks)))))
 
   (identify-critical-path

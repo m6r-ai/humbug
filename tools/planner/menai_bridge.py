@@ -22,7 +22,7 @@ from menai import Menai
 # exactly match one of these sets.
 _TASK_FIELDS = (
     "id", "name", "duration-days", "calendar-id", "schedule-mode",
-    "start-date", "end-date", "status", "progress",
+    "start-offset", "end-offset", "status", "progress",
     "earliest-start", "earliest-finish",
     "latest-start", "latest-finish", "slack-days",
 )
@@ -36,10 +36,8 @@ _CALENDAR_KEYS = frozenset(_CALENDAR_FIELDS)
 
 # Struct module imports needed to construct the types at runtime
 _STRUCT_IMPORTS = '''(let* (
-  (cal-mod  (import "tools/planner/calendar"))
   (task-mod (import "tools/planner/task"))
   (dep-mod  (import "tools/planner/dependency"))
-  (make-calendar   (dict-get cal-mod  "calendar"))
   (make-task       (dict-get task-mod "task"))
   (make-dependency (dict-get dep-mod  "dependency")))'''
 
@@ -116,6 +114,122 @@ def expand_summary_dependencies(project: dict) -> dict:
     }
 
 
+# Fields written back from the CPM result into each task
+_CPM_FIELDS = ("earliest-start", "earliest-finish", "latest-start", "latest-finish", "slack-days")
+
+
+def _valid_offset(v) -> bool:
+    """Return True if v is a valid (non-None, non-False) scheduling offset."""
+    return v is not None and v is not False
+
+
+def merge_cpm_results(full_project: dict, scheduled_project: dict, critical_ids: set) -> dict:
+    """
+    Merge CPM-computed offsets back into the full project (which includes
+    summary tasks) and roll up summary offsets from their children.
+
+    Args:
+        full_project:      The complete project dict from load_project(),
+                           containing all tasks including summaries.
+        scheduled_project: The CPM output dict from schedule-project,
+                           containing only leaf/milestone tasks with
+                           computed offset fields (floats).
+        critical_ids:      Set of task IDs on the critical path.
+
+    Returns:
+        A new project dict with all tasks updated and the calculated
+        section populated.  Offsets are working-day floats from project
+        start.  The original dicts are not modified.
+    """
+    # Build a lookup of CPM results by task id
+    cpm_map: dict[str, dict] = {
+        t["id"]: t for t in scheduled_project.get("tasks", [])
+    }
+
+    # Copy all tasks, merging CPM fields into leaf/milestone tasks
+    updated_tasks = []
+    for task in full_project["tasks"]:
+        task = dict(task)  # shallow copy so we don't mutate the original
+        cpm = cpm_map.get(task["id"])
+        if cpm:
+            for field in _CPM_FIELDS:
+                val = cpm.get(field)
+                # Menai returns #f for unset fields; normalise to None
+                task[field] = None if val is False else val
+        else:
+            # Summary tasks — initialise fields; rollup fills them below
+            for field in _CPM_FIELDS:
+                task.setdefault(field, None)
+        task["on-critical-path"] = task["id"] in critical_ids
+        updated_tasks.append(task)
+
+    # Roll up summary dates bottom-up.
+    # Tasks are in outline order so reversing gives us leaves before parents.
+    task_map = {t["id"]: t for t in updated_tasks}
+
+    for task in reversed(updated_tasks):
+        if not task.get("is-summary"):
+            continue
+        children = [task_map[cid] for cid in task.get("children", []) if cid in task_map]
+        if not children:
+            continue
+
+        es_dates = [c["earliest-start"]  for c in children if _valid_offset(c.get("earliest-start"))]
+        ef_dates = [c["earliest-finish"] for c in children if _valid_offset(c.get("earliest-finish"))]
+        ls_dates = [c["latest-start"]    for c in children if _valid_offset(c.get("latest-start"))]
+        lf_dates = [c["latest-finish"]   for c in children if _valid_offset(c.get("latest-finish"))]
+        slack_vals = [c["slack-days"] for c in children if c.get("slack-days") is not None]
+        task["earliest-start"] = min(es_dates) if es_dates else None
+        task["earliest-finish"] = max(ef_dates) if ef_dates else None
+        task["latest-start"] = min(ls_dates) if ls_dates else None
+        task["latest-finish"] = max(lf_dates) if lf_dates else None
+        task["slack-days"] = min(slack_vals) if slack_vals else None
+        task["on-critical-path"] = any(c.get("on-critical-path") for c in children)
+
+    # Populate the calculated section
+    all_starts = [t["earliest-start"] for t in updated_tasks if _valid_offset(t.get("earliest-start"))]
+    all_finishes = [t["earliest-finish"] for t in updated_tasks if _valid_offset(t.get("earliest-finish"))]
+    project_start = min(all_starts) if all_starts else None
+    project_finish = max(all_finishes) if all_finishes else None
+
+    leaf_tasks = [t for t in updated_tasks if not t.get("is-summary") and not t.get("is-milestone")]
+    total_days = sum(
+        t.get("duration-days") or 0.0
+        for t in leaf_tasks
+        if _valid_offset(t.get("earliest-start"))
+    )
+
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+
+    calculated = {
+        "critical-path": sorted(critical_ids),
+        "earliest-start": project_start,
+        "latest-finish": project_finish,
+        "total-duration-days": round(total_days, 2),
+        "calculation-timestamp": now,
+    }
+
+    return {
+        **full_project,
+        "tasks": updated_tasks,
+        "calculated": calculated,
+    }
+
+
+def save_project(project: dict, json_path: str, indent: int = 2) -> None:
+    """
+    Write a project dict to a JSON file.
+
+    Args:
+        project:   Project dict (typically the output of merge_cpm_results).
+        json_path: Destination file path.
+        indent:    JSON indentation level.
+    """
+    with open(json_path, "w", encoding="utf-8") as f:
+        json.dump(project, f, indent=indent, default=str)
+
+
 class MenaiBridge:
     """Bridge for converting between Python and Menai data structures."""
     
@@ -144,8 +258,10 @@ class MenaiBridge:
         """Convert a Python task dict to a Menai task struct constructor call."""
         def field_value(f):
             v = value.get(f)
-            # duration-days must always be a float for the Menai calendar arithmetic
-            if f == "duration-days" and isinstance(v, int):
+            # Numeric scheduling fields must always be floats
+            if f in ("duration-days", "start-offset", "end-offset",
+                     "earliest-start", "earliest-finish",
+                     "latest-start", "latest-finish", "slack-days") and isinstance(v, int):
                 v = float(v)
             return self.python_to_menai(v)
         fields = [field_value(f) for f in _TASK_FIELDS]
@@ -179,9 +295,7 @@ class MenaiBridge:
         Load a project from a JSON file produced by the MS Project importer.
 
         Applies any normalisation required before passing to Menai:
-          - Ensures duration-days and lag-days are floats
-          - working-days / holidays are normalised to sets inside
-            python_to_menai_calendar, so no action needed here
+          - Ensures duration-days, start-offset, end-offset and lag-days are floats
 
         Args:
             json_path: Path to the planner JSON file.
@@ -195,9 +309,10 @@ class MenaiBridge:
             project = json.load(f)
 
         for task in project["tasks"]:
-            d = task.get("duration-days")
-            if isinstance(d, int):
-                task["duration-days"] = float(d)
+            for field in ("duration-days", "start-offset", "end-offset"):
+                v = task.get(field)
+                if isinstance(v, int):
+                    task[field] = float(v)
 
         for dep in project.get("dependencies", []):
             lag = dep.get("lag-days")
@@ -208,19 +323,19 @@ class MenaiBridge:
 
     def python_to_menai_project(self, project: dict) -> str:
         """
-        Convert a Python project dict to a Menai expression with tasks,
-        dependencies, and calendars as structs.  Must be used inside an
+        Convert a Python project dict to a Menai expression with tasks
+        and dependencies as structs.  Calendars are passed as generic dicts
+        since the CPM engine no longer uses them.  Must be used inside an
         expression that has the struct_preamble bindings in scope.
         """
         tasks = f'(list {" ".join(self.python_to_menai_task(t) for t in project["tasks"])})'
         deps  = f'(list {" ".join(self.python_to_menai_dependency(d) for d in project["dependencies"])})'
-        cals  = f'(list {" ".join(self.python_to_menai_calendar(c) for c in project.get("calendars", []))})'
-        other = {k: v for k, v in project.items() if k not in ("tasks", "dependencies", "calendars")}
+        other = {k: v for k, v in project.items() if k not in ("tasks", "dependencies")}
         other_pairs = " ".join(
             f'{self.python_to_menai(k)} {self.python_to_menai(v)}'
             for k, v in other.items()
         )
-        return f'(dict "tasks" {tasks} "dependencies" {deps} "calendars" {cals} {other_pairs})'
+        return f'(dict "tasks" {tasks} "dependencies" {deps} {other_pairs})'
 
     def python_to_menai(self, value: Any) -> str:
         """

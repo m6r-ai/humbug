@@ -107,11 +107,176 @@ def _parse_datetime_date(dt_str: Optional[str]) -> Optional[str]:
     return dt_str[:10]
 
 
+def _parse_datetime_time(dt_str: Optional[str]) -> Optional[str]:
+    """
+    Extract just the time part (HH:MM:SS) from an ISO datetime string.
+    Returns None if the string is absent, a sentinel, or has no time component.
+    """
+    if not dt_str:
+        return None
+    if dt_str.startswith("1984-01-01") or dt_str.startswith("2049-12-31"):
+        return None
+    if len(dt_str) < 19 or dt_str[10] != "T":
+        return None
+    return dt_str[11:19]
+
+
 def _slugify(name: str) -> str:
     """Convert a resource name to a simple lowercase slug for use as an id."""
     slug = name.lower()
     slug = re.sub(r"[^a-z0-9]+", "-", slug)
     return slug.strip("-")
+
+
+# Day-of-week names (Monday=0 ... Sunday=6, matching datetime.weekday())
+_WEEKDAY_NAMES = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]
+
+
+def _datetime_to_offset(
+    dt_str: Optional[str],
+    project_start_str: str,
+    working_days: set,
+    hours_per_day: float,
+    working_periods: Optional[list] = None,
+) -> Optional[float]:
+    """
+    Convert an MS Project datetime string to a working-day offset from
+    the project start.
+
+    Returns a float offset in working days, or None if absent/sentinel.
+    """
+    if not dt_str:
+        return None
+    if dt_str.startswith("1984-01-01") or dt_str.startswith("2049-12-31"):
+        return None
+
+    from datetime import datetime as _dt, timedelta as _td, time as _time
+    fmt = "%Y-%m-%dT%H:%M:%S"
+    task_dt = _dt.strptime(dt_str[:19], fmt)
+    proj_dt = _dt.strptime(project_start_str[:19], fmt)
+
+    # Default periods: 08:00-12:00, 13:00-17:00
+    periods = working_periods or [(8.0, 12.0), (13.0, 17.0)]
+
+    def working_hours_in_day(from_hour: float, to_hour: float) -> float:
+        """Count working hours between two clock hours on the same day."""
+        total = 0.0
+        for (p_start, p_end) in periods:
+            overlap_start = max(from_hour, p_start)
+            overlap_end = min(to_hour, p_end)
+            if overlap_end > overlap_start:
+                total += overlap_end - overlap_start
+        return total
+
+    def day_start_hour() -> float:
+        return periods[0][0] if periods else 8.0
+
+    def day_end_hour() -> float:
+        return periods[-1][1] if periods else 17.0
+
+    total_hours = 0.0
+    current_date = proj_dt.date()
+    task_date = task_dt.date()
+    proj_hour = proj_dt.hour + proj_dt.minute / 60.0 + proj_dt.second / 3600.0
+
+    while current_date < task_date:
+        day_name = _WEEKDAY_NAMES[current_date.weekday()]
+        if day_name in working_days:
+            from_h = proj_hour if current_date == proj_dt.date() else day_start_hour()
+            total_hours += working_hours_in_day(from_h, day_end_hour())
+        current_date = current_date + _td(days=1)
+
+    # Final partial day
+    day_name = _WEEKDAY_NAMES[current_date.weekday()]
+    if day_name in working_days:
+        from_h = proj_hour if current_date == proj_dt.date() else day_start_hour()
+        task_hour = task_dt.hour + task_dt.minute / 60.0 + task_dt.second / 3600.0
+        total_hours += working_hours_in_day(from_h, task_hour)
+
+    return round(total_hours / hours_per_day, 6)
+
+
+def _offset_to_datetime(
+    offset: float,
+    project_start_str: str,
+    working_days: set,
+    hours_per_day: float,
+    working_periods: Optional[list] = None,
+    is_start: bool = False,
+) -> str:
+    """
+    Convert a working-day offset back to an MS Project datetime string.
+
+    If is_start=True and the offset lands exactly at end-of-day, advance
+    to the start of the next working day (since end-of-day and start-of-
+    next-day are the same offset but have different datetime representations).
+
+    Returns a datetime string e.g. '2026-04-09T13:00:00'.
+    """
+    from datetime import datetime as _dt, timedelta as _td, date as _date
+    fmt = "%Y-%m-%dT%H:%M:%S"
+    proj_dt = _dt.strptime(project_start_str[:19], fmt)
+
+    periods = working_periods or [(8.0, 12.0), (13.0, 17.0)]
+
+    def day_start_hour() -> float:
+        return periods[0][0] if periods else 8.0
+
+    remaining_hours = offset * hours_per_day
+    current_date = proj_dt.date()
+    current_hour = proj_dt.hour + proj_dt.minute / 60.0 + proj_dt.second / 3600.0
+
+    while remaining_hours > 1e-9:
+        day_name = _WEEKDAY_NAMES[current_date.weekday()]
+        if day_name in working_days:
+            # Walk through working periods for this day
+            for (p_start, p_end) in periods:
+                from_h = max(current_hour, p_start)
+                if from_h >= p_end:
+                    continue  # Already past this period
+                available = p_end - from_h
+                if remaining_hours <= available + 1e-9:
+                    # Finish within this period
+                    finish_hour = from_h + remaining_hours
+                    remaining_hours = 0.0
+                    at_period_end = abs(finish_hour - p_end) < 1e-9
+                    if is_start and at_period_end:
+                        # Land at period end — advance to next working slot
+                        # Check for another period today
+                        for (np_start, np_end) in periods:
+                            if np_start > p_end - 1e-9:
+                                h = int(np_start)
+                                m = int(round((np_start - h) * 60))
+                                result = _dt.combine(current_date, _dt.min.time()).replace(hour=h, minute=m, second=0)
+                                return result.strftime(fmt)
+                        # No more periods today — advance to next working day
+                        next_date = current_date + _td(days=1)
+                        while _WEEKDAY_NAMES[next_date.weekday()] not in working_days:
+                            next_date = next_date + _td(days=1)
+                        start_h = day_start_hour()
+                        h = int(start_h)
+                        m = int(round((start_h - h) * 60))
+                        result = _dt.combine(next_date, _dt.min.time()).replace(hour=h, minute=m, second=0)
+                        return result.strftime(fmt)
+                    h = int(finish_hour)
+                    m = int(round((finish_hour - h) * 60))
+                    if m == 60:
+                        h += 1
+                        m = 0
+                    result = _dt.combine(current_date, _dt.min.time()).replace(hour=h, minute=m, second=0)
+                    return result.strftime(fmt)
+                else:
+                    remaining_hours -= available
+
+        # Advance to next day
+        current_date = current_date + _td(days=1)
+        current_hour = day_start_hour()
+
+    # Landed exactly at end of a day or on a non-working day boundary
+    h = int(current_hour)
+    m = int(round((current_hour - h) * 60))
+    result = _dt.combine(current_date, _dt.min.time()).replace(hour=h, minute=m, second=0)
+    return result.strftime(fmt)
 
 
 def _parse_calendars(root: ET.Element) -> list[dict]:
@@ -128,6 +293,7 @@ def _parse_calendars(root: ET.Element) -> list[dict]:
 
         working_days = set()
         non_working_days = set()
+        working_periods: list[tuple[float, float]] = []  # (start_hour, end_hour) pairs
 
         weekdays_el = cal_el.find(_tag("WeekDays"))
         if weekdays_el is not None:
@@ -138,6 +304,18 @@ def _parse_calendars(root: ET.Element) -> list[dict]:
                 if day_name:
                     if day_working:
                         working_days.add(day_name)
+                        # Extract working time periods from the first working day found
+                        if not working_periods:
+                            wt_el = wd_el.find(_tag("WorkingTimes"))
+                            if wt_el is not None:
+                                for period_el in wt_el.findall(_tag("WorkingTime")):
+                                    from_str = _text(period_el, "FromTime", "")
+                                    to_str = _text(period_el, "ToTime", "")
+                                    if from_str and to_str:
+                                        def _t(s):
+                                            h, m, _ = s.split(":")
+                                            return int(h) + int(m) / 60.0
+                                        working_periods.append((_t(from_str), _t(to_str)))
                     else:
                         non_working_days.add(day_name)
 
@@ -157,6 +335,7 @@ def _parse_calendars(root: ET.Element) -> list[dict]:
             "type": cal_type,
             "is-base-calendar": bool(is_base),
             "working-days": sorted(working_days) if working_days else sorted(standard_five),
+            "working-periods": working_periods if working_periods else [(8.0, 12.0), (13.0, 17.0)],
             "holidays": [],
             "source-uid": uid,
         })
@@ -261,6 +440,9 @@ def _infer_status(percent_complete: int, milestone: bool) -> str:
 def _parse_tasks(
     root: ET.Element,
     hours_per_day: float,
+    project_start_str: str,
+    working_days: set,
+    working_periods: list,
     task_resource_map: dict[str, list[str]],
     uid_to_cal_id: dict[str, str],
 ) -> tuple[list[dict], list[dict], list[dict], dict[str, str]]:
@@ -317,10 +499,18 @@ def _parse_tasks(
         finish_str = _text(task_el, "Finish")
         start_date = _parse_datetime_date(start_str)
         end_date = _parse_datetime_date(finish_str)
+        start_time = _parse_datetime_time(start_str)
+        end_time = _parse_datetime_time(finish_str)
+        start_offset = _datetime_to_offset(start_str, project_start_str, working_days, hours_per_day, working_periods)
+        end_offset = _datetime_to_offset(finish_str, project_start_str, working_days, hours_per_day, working_periods)
 
         duration_str = _text(task_el, "Duration", "")
         duration_hours = _parse_iso_duration_hours(duration_str)
         duration_days = _hours_to_work_days(duration_hours, hours_per_day)
+
+        # For milestones and zero-duration tasks, derive duration from offsets if needed
+        if duration_days is None and start_offset is not None and end_offset is not None:
+            duration_days = round(end_offset - start_offset, 6)
 
         wbs = _text(task_el, "WBS", "")
         outline_level = _int(task_el, "OutlineLevel", 1)
@@ -360,9 +550,13 @@ def _parse_tasks(
                 "name": name,
                 "owner": owner if not is_milestone else None,
                 "team": None,
+                "start-offset": start_offset,
+                "end-offset": end_offset,
                 "start-date": start_date or end_date,
-                "end-date": start_date or end_date,
-                "duration-days": 0.0 if is_milestone else duration_days,
+                "end-date": end_date or start_date,
+                "start-time": start_time,
+                "end-time": end_time,
+                "duration-days": duration_days if duration_days is not None else 0.0,
                 "schedule-mode": "fixed-dates" if is_milestone else schedule_mode,
                 "calendar-type": "5-day",
                 "calendar-id": calendar_id,
@@ -498,6 +692,10 @@ def import_msproject_xml(xml_path: str) -> dict:
     last_saved_str = _text(root, "LastSaved", "")
     start_date = _parse_datetime_date(_text(root, "StartDate"))
     finish_date = _parse_datetime_date(_text(root, "FinishDate"))
+    project_start_str = _text(root, "StartDate") or "2000-01-01T08:00:00"
+    default_start_time = _text(root, "DefaultStartTime") or "08:00:00"
+    if "T" not in project_start_str:
+        project_start_str = f"{project_start_str}T{default_start_time}"
 
     minutes_per_day = _int(root, "MinutesPerDay", 480)
     hours_per_day = minutes_per_day / 60.0
@@ -505,6 +703,11 @@ def import_msproject_xml(xml_path: str) -> dict:
     # Parse calendars
     calendars = _parse_calendars(root)
     uid_to_cal_id = {c["source-uid"]: c["id"] for c in calendars}
+
+    # Get working days from the base calendar for offset conversion
+    base_cal = next((c for c in calendars if c.get("is-base-calendar")), None)
+    working_days = set(base_cal["working-days"]) if base_cal else {"mon", "tue", "wed", "thu", "fri"}
+    working_periods = base_cal["working-periods"] if base_cal else [(8.0, 12.0), (13.0, 17.0)]
 
     # Parse resources
     resources, uid_to_resource_id = _parse_resources(root)
@@ -514,7 +717,7 @@ def import_msproject_xml(xml_path: str) -> dict:
 
     # Parse tasks, dependencies, milestones
     tasks, dependencies, milestones, uid_to_task_id = _parse_tasks(
-        root, hours_per_day, task_resource_map, uid_to_cal_id
+        root, hours_per_day, project_start_str, working_days, working_periods, task_resource_map, uid_to_cal_id
     )
 
     # Build id-mappings section
@@ -537,6 +740,9 @@ def import_msproject_xml(xml_path: str) -> dict:
             "start-date": start_date,
             "finish-date": finish_date,
             "hours-per-day": hours_per_day,
+            "project-start-datetime": project_start_str,
+            "working-days": sorted(working_days),
+            "working-periods": working_periods,
         },
         "tasks": tasks,
         "dependencies": dependencies,

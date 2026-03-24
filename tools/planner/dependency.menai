@@ -1,10 +1,11 @@
 ; dependency.menai
 ; Dependency struct definition and dependency-level operations
+;
+; All scheduling positions are working-day offsets (floats).
+; Constraint application is pure float arithmetic — no calendar lookups needed.
 
 (letrec (
-  (calendar-mod     (import "tools/planner/calendar"))
-  (add-working-days (dict-get calendar-mod "add-working-days"))
-  (dependency       (struct (from-task to-task type lag-days)))
+  (dependency (struct (from-task to-task type lag-days)))
 
   ; Get all predecessor task IDs for a given task
   (get-predecessors
@@ -38,43 +39,45 @@
       (any-list? (lambda (t) (string=? (struct-get t 'id) task-id))
                  tasks)))
 
-  ; Apply a dependency constraint in the forward pass (earliest dates direction)
-  ; Returns a dict with "start-constraint" and/or "finish-constraint"
+  ; Apply a dependency constraint in the forward pass.
+  ; All values are working-day offsets.
+  ; Returns a dict with "start-constraint" and/or "finish-constraint".
   (apply-forward-constraint
-    (lambda (dep predecessor-task successor-cal)
+    (lambda (dep predecessor-task)
       (let ((dep-type    (struct-get dep 'type))
             (lag-days    (struct-get dep 'lag-days))
             (pred-start  (struct-get predecessor-task 'earliest-start))
             (pred-finish (struct-get predecessor-task 'earliest-finish)))
         (match dep-type
           ("finish-to-start"
-            (dict "start-constraint"  (add-working-days pred-finish lag-days successor-cal)))
+            (dict "start-constraint"  (float+ pred-finish lag-days)))
           ("start-to-start"
-            (dict "start-constraint"  (add-working-days pred-start  lag-days successor-cal)))
+            (dict "start-constraint"  (float+ pred-start  lag-days)))
           ("finish-to-finish"
-            (dict "finish-constraint" (add-working-days pred-finish lag-days successor-cal)))
+            (dict "finish-constraint" (float+ pred-finish lag-days)))
           ("start-to-finish"
-            (dict "finish-constraint" (add-working-days pred-start  lag-days successor-cal)))
+            (dict "finish-constraint" (float+ pred-start  lag-days)))
           (_ (dict))))))
 
-  ; Apply a dependency constraint in the backward pass (latest dates direction)
-  ; Returns a date string constraint on the predecessor's latest finish, or #f if not applicable
+  ; Apply a dependency constraint in the backward pass.
+  ; Returns a float offset constraint on the predecessor's latest finish,
+  ; or #f if not applicable for this dependency type.
   (apply-backward-constraint
-    (lambda (dep successor-task predecessor-cal)
+    (lambda (dep successor-task)
       (let ((dep-type           (struct-get dep 'type))
             (lag-days           (struct-get dep 'lag-days))
             (succ-latest-start  (struct-get successor-task 'latest-start))
             (succ-latest-finish (struct-get successor-task 'latest-finish)))
         (match dep-type
           ("finish-to-start"
-            (add-working-days succ-latest-start  (float-neg lag-days) predecessor-cal))
+            (float- succ-latest-start  lag-days))
           ("finish-to-finish"
-            (add-working-days succ-latest-finish (float-neg lag-days) predecessor-cal))
+            (float- succ-latest-finish lag-days))
           ("start-to-start"   #f)
           ("start-to-finish"  #f)
           (_ #f)))))
 
-  ; Validate a single dependency, returning a dict with "from-task", "to-task", "valid", "errors"
+  ; Validate a single dependency
   (validate-dependency
     (lambda (dep tasks)
       (let* ((from-task  (struct-get dep 'from-task))
