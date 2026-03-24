@@ -9,7 +9,7 @@ from typing import Dict, List, Tuple, Any, Set, cast
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QSizePolicy,
-    QMenu, QWidgetAction, QFileDialog
+    QMenu, QWidgetAction, QFileDialog, QPushButton
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QUrl
 from PySide6.QtGui import QCursor, QResizeEvent, QDesktopServices, QColor, QIcon, QPixmap
@@ -2499,10 +2499,8 @@ class ConversationWidget(QWidget):
             # Emit status update
             self.status_updated.emit()
 
-            # Put the spotlight back to the input — strip document XML, keep plain text only
-            plain_prompt = re.sub(r'<document[^>]*>.*?</document>\s*', '', prompt, flags=re.DOTALL).strip()
+            # Focus input but do NOT restore deleted message text
             self._spotlighted_message_index = -1
-            self._input.set_plain_text(plain_prompt)
             self._input.set_spotlighted(True)
             self._input.setFocus()
 
@@ -2824,6 +2822,22 @@ class ConversationWidget(QWidget):
                 item_widget.mousePressEvent = lambda _e, fp=filepath: (
                     recent_menu.close(), menu.close(), self._attach_file_path(fp)
                 )
+
+                # Delete button — removes the file from disk and closes the menu
+                del_btn = QPushButton("✕")
+                del_btn.setFixedSize(20, 20)
+                del_btn.setFlat(True)
+                del_btn.setStyleSheet(
+                    f"color: {text_dim}; background: transparent; border: none;"
+                    " font-size: 9pt;"
+                )
+                del_btn.clicked.connect(
+                    lambda _checked, fp=filepath: (
+                        self._delete_recent_file(fp), recent_menu.close(), menu.close()
+                    )
+                )
+                item_widget.layout().addWidget(del_btn)
+
                 wa = QWidgetAction(recent_menu)
                 wa.setDefaultWidget(item_widget)
                 recent_menu.addAction(wa)
@@ -2889,6 +2903,7 @@ class ConversationWidget(QWidget):
                 self._logger.warning("Failed to save attachment to uploads: %s", str(e))
 
         self._input.add_attachment(filename, content, upload_path)
+        self._input.focus_end()
 
     def _read_pdf(self, path: str) -> str:
         """Extract text from a PDF file using pypdf."""
@@ -2907,6 +2922,14 @@ class ConversationWidget(QWidget):
         doc = Document(path)
         paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
         return "\n\n".join(paragraphs)
+
+    def _delete_recent_file(self, filepath: str) -> None:
+        """Delete a file from disk (used when removing a recent-files entry)."""
+        try:
+            if os.path.isfile(filepath):
+                os.remove(filepath)
+        except Exception as e:
+            self._logger.warning("Failed to delete recent file '%s': %s", filepath, str(e))
 
     def _on_attachment_file_deleted(self, upload_path: str) -> None:
         """Delete an uploaded file from the mindspace when the user removes an attachment."""

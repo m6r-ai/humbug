@@ -1584,7 +1584,12 @@ class ColumnManager(QWidget):
                 if isinstance(message, dict) and message.get('type') == 'user_message':
                     content = message.get('content', '').strip()
                     if content:
-                        title = content.splitlines()[0][:50].strip()
+                        import re as _re
+                        text_only = _re.sub(r'<document[^>]*>.*?</document>', '', content, flags=_re.DOTALL).strip()
+                        if not text_only:
+                            filenames = _re.findall(r'<document filename="([^"]+)"', content)
+                            text_only = filenames[0] if filenames else ""
+                        title = text_only.splitlines()[0][:50].strip()
                         if title:
                             return title
 

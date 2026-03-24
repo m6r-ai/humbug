@@ -6,7 +6,7 @@ from typing import Dict, List, Tuple
 
 from PySide6.QtCore import Signal, Qt, QRect, QSize, QPoint
 from PySide6.QtGui import QTextCursor, QTextDocument, QIcon
-from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QScrollArea, QFrame
+from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QSizePolicy
 
 from ai import AIMessageSource
 
@@ -45,6 +45,10 @@ class ConversationInput(ConversationMessage):
         self._text_area.cursorPositionChanged.connect(self.cursor_position_changed)
         self._text_area.page_key_scroll_requested.connect(self.page_key_scroll_requested)
 
+        # Cap the input widget's vertical height to its natural content size.
+        # Without this the messages_layout stretch gives the input all available space.
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+
         # Attachments bar (shown between text area and banner when files are attached)
         self._attachments_bar = QWidget(self)
         self._attachments_bar.setObjectName("_attachments_bar")
@@ -70,7 +74,7 @@ class ConversationInput(ConversationMessage):
         chips_outer.addWidget(chips_scroll)
 
         self._attachments_bar.hide()
-        # Insert between sections_container (index 1) and banner (last)
+        # Insert between sections_container and banner
         self._layout.insertWidget(self._layout.count() - 1, self._attachments_bar)
 
         # Create attach button — placed at the LEFT of the banner (bottom-left of input)
@@ -327,6 +331,13 @@ class ConversationInput(ConversationMessage):
             self._attachments.pop(index)
             self._rebuild_chips()
             self._update_button_states()
+
+    def focus_end(self) -> None:
+        """Set focus to the input area and move the cursor to the end."""
+        cursor = self._text_area.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        self._text_area.setTextCursor(cursor)
+        self._text_area.setFocus()
 
     def clear(self) -> None:
         """Clear the input area."""
