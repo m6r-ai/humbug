@@ -3,14 +3,16 @@
 import asyncio
 import logging
 import os
+import re
 import shutil
 from typing import Dict, List, Tuple, Any, Set, cast
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu, QFileDialog
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QSizePolicy,
+    QMenu, QWidgetAction, QFileDialog
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QUrl
-from PySide6.QtGui import QCursor, QResizeEvent, QDesktopServices
+from PySide6.QtGui import QCursor, QResizeEvent, QDesktopServices, QColor, QIcon, QPixmap
 
 from ai import (
     AIConversation, AIConversationEvent, AIConversationHistory,
@@ -1692,7 +1694,8 @@ class ConversationWidget(QWidget):
                 border: none;
             }}
 
-            #_attachments_bar, #_chips_scroll, #_chips_container {{
+            #_attachments_bar, #_chips_scroll, #_chips_container, #_chip_info,
+            #_display_chips_container, #_text_row {{
                 background-color: transparent;
                 border: none;
             }}
@@ -1700,12 +1703,22 @@ class ConversationWidget(QWidget):
             #_attachment_chip {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
                 border: 1px solid {style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER)};
-                border-radius: 4px;
+                border-radius: 8px;
             }}
 
             #_chip_label {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                font-size: {style_manager.base_font_size() * style_manager.zoom_factor() * 0.85:.1f}pt;
+                font-size: {style_manager.base_font_size() * style_manager.zoom_factor() * 0.9:.1f}pt;
+                font-weight: bold;
+                background: transparent;
+                border: none;
+            }}
+
+            #_chip_type_label {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                font-size: {style_manager.base_font_size() * style_manager.zoom_factor() * 0.75:.1f}pt;
+                background: transparent;
+                border: none;
             }}
 
             #_chip_remove {{
@@ -2420,7 +2433,10 @@ class ConversationWidget(QWidget):
             if self._update_timer.isActive():
                 self._update_timer.stop()
 
-            self.status_updated.emit()
+        # Prevent the async completion handler from restoring old content (with XML) into the input
+        self._last_submitted_message = ""
+
+        self.status_updated.emit()
 
         # Update the underlying AI conversation history
         ai_conversation = cast(AIConversation, self._ai_conversation)
@@ -2439,6 +2455,14 @@ class ConversationWidget(QWidget):
 
         # Keep only the messages up to the specified history index
         preserved_history_messages = all_messages[:hist_index]
+
+        # Delete any uploaded files attached to the messages being removed
+        for msg in all_messages[hist_index:]:
+            if msg.source == AIMessageSource.USER:
+                for upload_path in re.findall(
+                    r'<document[^>]+\s+path="([^"]+)"', msg.content or ""
+                ):
+                    self._on_attachment_file_deleted(upload_path)
 
         # Update the AI conversation history
         ai_conversation.load_message_history(preserved_history_messages)
@@ -2475,9 +2499,10 @@ class ConversationWidget(QWidget):
             # Emit status update
             self.status_updated.emit()
 
-            # Put the spotlight back to the input
+            # Put the spotlight back to the input — strip document XML, keep plain text only
+            plain_prompt = re.sub(r'<document[^>]*>.*?</document>\s*', '', prompt, flags=re.DOTALL).strip()
             self._spotlighted_message_index = -1
-            self._input.set_plain_text(prompt)
+            self._input.set_plain_text(plain_prompt)
             self._input.set_spotlighted(True)
             self._input.setFocus()
 
@@ -2605,13 +2630,221 @@ class ConversationWidget(QWidget):
         """Handle settings request from input widget."""
         self.conversation_settings_requested.emit()
 
-    def _on_attach_requested(self) -> None:
-        """Handle attach document request: open file dialog and attach selected file."""
+    @staticmethod
+    def _file_ext_color(ext_lower: str) -> str:
+        """Return a hex background color for a file-type icon badge."""
+        colors = {
+            ".pdf": "#e05c4b", ".docx": "#2b7cd3", ".doc": "#2b7cd3",
+            ".png": "#2eaa6e", ".jpg": "#2eaa6e", ".jpeg": "#2eaa6e", ".gif": "#2eaa6e",
+            ".csv": "#8e44ad", ".json": "#e67e22", ".yaml": "#e67e22", ".yml": "#e67e22",
+            ".md": "#16a085", ".rst": "#16a085", ".txt": "#7f8c8d",
+        }
+        return colors.get(ext_lower, "#7f8c8d")
+
+    def _make_menu_item_widget(
+        self, parent: QMenu, icon_widget: QWidget, title: str,
+        subtitle: str = "", has_arrow: bool = False, hover_color: str = ""
+    ) -> QWidget:
+        """Build a rich widget-action row: icon | title / subtitle | optional arrow."""
+        sm = self._style_manager
+        text_primary = sm.get_color_str(ColorRole.TEXT_PRIMARY)
+        text_dim = sm.get_color_str(ColorRole.TEXT_DISABLED)
+        font_size = sm.base_font_size() * sm.zoom_factor()
+        hover_bg = hover_color or sm.get_color_str(ColorRole.MENU_HOVER)
+
+        container = QWidget(parent)
+        container.setFixedHeight(48 if subtitle else 44)
+        container.setStyleSheet("background: transparent; border-radius: 6px;")
+        row = QHBoxLayout(container)
+        row.setContentsMargins(12, 0, 12, 0)
+        row.setSpacing(12)
+        row.addWidget(icon_widget)
+
+        info = QWidget()
+        info.setStyleSheet("background: transparent; border: none;")
+        info_layout = QVBoxLayout(info)
+        info_layout.setContentsMargins(0, 0, 0, 0)
+        info_layout.setSpacing(1)
+
+        title_lbl = QLabel(title)
+        title_lbl.setStyleSheet(
+            f"color: {text_primary}; font-size: {font_size:.1f}pt;"
+            " background: transparent; border: none;"
+        )
+        info_layout.addWidget(title_lbl)
+        if subtitle:
+            sub_lbl = QLabel(subtitle)
+            sub_lbl.setStyleSheet(
+                f"color: {text_dim}; font-size: {font_size * 0.78:.1f}pt;"
+                " background: transparent; border: none;"
+            )
+            info_layout.addWidget(sub_lbl)
+
+        row.addWidget(info, 1)
+
+        if has_arrow:
+            arrow_lbl = QLabel("›")
+            arrow_lbl.setStyleSheet(
+                f"color: {text_dim}; font-size: {font_size * 1.2:.1f}pt;"
+                " background: transparent; border: none;"
+            )
+            row.addWidget(arrow_lbl)
+
+        container.setCursor(Qt.CursorShape.PointingHandCursor)
+        container.enterEvent = lambda _e, w=container, c=hover_bg: w.setStyleSheet(
+            f"background-color: {c}; border-radius: 6px;"
+        )
+        container.leaveEvent = lambda _e, w=container: w.setStyleSheet("background: transparent; border-radius: 6px;")
+        return container
+
+    def _make_icon_badge(self, parent: QWidget, color: str, text: str) -> QLabel:
+        """Return a 34×34 colored rounded-square badge label."""
+        sm = self._style_manager
+        bg = sm.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+        badge = QLabel(text, parent)
+        badge.setFixedSize(34, 34)
+        badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        badge.setStyleSheet(
+            f"background-color: {bg}; border-radius: 8px; border: none;"
+        )
+        # Inner icon label (centered)
+        inner = QLabel(text, badge)
+        inner.setFixedSize(20, 20)
+        inner.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        inner.setStyleSheet(
+            f"background-color: {color}; border-radius: 5px; color: white;"
+            f" font-size: 6pt; font-weight: bold; border: none;"
+        )
+        inner.move(7, 7)
+        return badge
+
+    def _on_attach_requested(self, btn_pos: QPoint) -> None:
+        """Show a ChatGPT-style popup menu above the attach button."""
+        sm = self._style_manager
+        font_size = sm.base_font_size() * sm.zoom_factor()
+        text_dim = sm.get_color_str(ColorRole.TEXT_DISABLED)
+        text_primary = sm.get_color_str(ColorRole.TEXT_PRIMARY)
+        menu_bg = sm.get_color_str(ColorRole.MENU_BACKGROUND)
+        menu_border = sm.get_color_str(ColorRole.MENU_BORDER)
+        hover_bg = sm.get_color_str(ColorRole.MENU_HOVER)
+        bg_tertiary = sm.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+
+        shared_css = f"""
+            QMenu {{
+                background-color: {menu_bg};
+                border: 1px solid {menu_border};
+                border-radius: 12px;
+                padding: 6px;
+            }}
+            QMenu::item {{ height: 0px; padding: 0px; margin: 0px; }}
+            QMenu::separator {{ height: 1px; background: {menu_border}; margin: 4px 10px; }}
+        """
+
+        # Subtle hover — slightly lighter/darker than menu background
+        light_hover = sm.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+
+        menu = QMenu(self)
+        menu.setMinimumWidth(280)
+        menu.setStyleSheet(shared_css)
+
+        # ── "Add photos & files" ─────────────────────────────────────────
+        paperclip_icon = QLabel()
+        paperclip_icon.setFixedSize(32, 32)
+        paperclip_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        paperclip_icon.setStyleSheet("background: transparent; border: none;")
+        paperclip_icon.setPixmap(
+            QIcon(sm.scale_icon("paperclip", 18)).pixmap(20, 20)
+        )
+
+        add_widget = self._make_menu_item_widget(menu, paperclip_icon, "Add photos & files",
+                                                  hover_color=light_hover)
+        add_action = QWidgetAction(menu)
+        add_action.setDefaultWidget(add_widget)
+        menu.addAction(add_action)
+        add_widget.mousePressEvent = lambda _e: (menu.close(), self._open_file_dialog())
+
+        # ── "Recent files" submenu (no separator before it) ───────────────
+        recent_menu = QMenu(menu)
+        recent_menu.setMinimumWidth(300)
+        recent_menu.setStyleSheet(shared_css)
+
+        recent_icon = QLabel()
+        recent_icon.setFixedSize(32, 32)
+        recent_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        recent_icon.setStyleSheet("background: transparent; border: none;")
+        recent_icon.setPixmap(
+            QIcon(sm.scale_icon("clock", 18)).pixmap(22, 22)
+        )
+
+        recent_widget = self._make_menu_item_widget(menu, recent_icon, "Recent files",
+                                                     has_arrow=True, hover_color=light_hover)
+        recent_action = QWidgetAction(menu)
+        recent_action.setDefaultWidget(recent_widget)
+        menu.addAction(recent_action)
+        recent_widget.mousePressEvent = lambda _e, m=recent_menu, w=recent_widget: (
+            m.exec(w.mapToGlobal(QPoint(w.width(), 0)))
+        )
+
+        # ── Populate recent files submenu ─────────────────────────────────
+        recent_files: List[Tuple[float, str, str]] = []
+        if self._mindspace_manager.has_mindspace():
+            uploads_dir = self._mindspace_manager.get_absolute_path("files/uploads")
+            if os.path.isdir(uploads_dir):
+                for fname in os.listdir(uploads_dir):
+                    fpath = os.path.join(uploads_dir, fname)
+                    if os.path.isfile(fpath):
+                        recent_files.append((os.path.getmtime(fpath), fname, fpath))
+                recent_files.sort(reverse=True)
+                recent_files = recent_files[:10]
+
+        if not recent_files:
+            no_action = recent_menu.addAction("No recent files")
+            no_action.setEnabled(False)
+        else:
+            from datetime import datetime as _dt
+            for mtime, filename, filepath in recent_files:
+                ext_lower = os.path.splitext(filename)[1].lower()
+                ext_label = ext_lower.upper().lstrip('.') or "FILE"
+                badge_color = self._file_ext_color(ext_lower)
+                display_name = filename if len(filename) <= 24 else filename[:21] + "..."
+                date_str = _dt.fromtimestamp(mtime).strftime("%b %d, %I:%M %p")
+
+                # Badge
+                file_badge = QLabel(ext_label[:4])
+                file_badge.setFixedSize(34, 34)
+                file_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                file_badge.setStyleSheet(
+                    f"background-color: {badge_color}; border-radius: 8px;"
+                    " color: white; font-size: 6pt; font-weight: bold; border: none;"
+                )
+
+                item_widget = self._make_menu_item_widget(
+                    recent_menu, file_badge, display_name, date_str, hover_color=light_hover
+                )
+                item_widget.mousePressEvent = lambda _e, fp=filepath: (
+                    recent_menu.close(), menu.close(), self._attach_file_path(fp)
+                )
+                wa = QWidgetAction(recent_menu)
+                wa.setDefaultWidget(item_widget)
+                recent_menu.addAction(wa)
+
+        # ── Position menu ABOVE the attach button ─────────────────────────
+        menu.adjustSize()
+        menu_h = menu.sizeHint().height()
+        if menu_h < 60:
+            menu_h = 200  # safe fallback before layout completes
+        show_pos = QPoint(btn_pos.x() - 10, btn_pos.y() - menu_h - 6)
+        menu.exec(show_pos)
+
+    def _open_file_dialog(self) -> None:
+        """Open file-picker dialog and attach the chosen file."""
         strings = self._language_manager.strings()
         supported = (
-            "Documents (*.pdf *.docx *.txt *.md *.rst *.csv *.json *.yaml *.yml *.xml *.html *.htm "
+            "All supported (*.pdf *.docx *.txt *.md *.rst *.csv *.json *.yaml *.yml *.xml *.html *.htm "
             "*.py *.js *.ts *.jsx *.tsx *.java *.c *.cpp *.h *.hpp *.cs "
-            "*.go *.rs *.rb *.php *.swift *.kt *.sh *.bash *.zsh);;"
+            "*.go *.rs *.rb *.php *.swift *.kt *.sh *.bash *.zsh "
+            "*.png *.jpg *.jpeg *.gif *.bmp *.webp);;"
+            "Images (*.png *.jpg *.jpeg *.gif *.bmp *.webp);;"
             "PDF files (*.pdf);;"
             "Word documents (*.docx);;"
             "Text & code files (*.txt *.md *.rst *.csv *.json *.yaml *.yml *.xml *.html *.htm "
@@ -2620,17 +2853,22 @@ class ConversationWidget(QWidget):
             "All files (*)"
         )
         path, _ = QFileDialog.getOpenFileName(self, strings.file_dialog_attach_document, "", supported)
-        if not path:
-            return
+        if path:
+            self._attach_file_path(path)
 
+    def _attach_file_path(self, path: str) -> None:
+        """Read a file at *path* and add it as an attachment to the input."""
         filename = os.path.basename(path)
         ext = os.path.splitext(path)[1].lower()
 
+        _image_exts = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
         try:
             if ext == ".pdf":
                 content = self._read_pdf(path)
             elif ext == ".docx":
                 content = self._read_docx(path)
+            elif ext in _image_exts:
+                content = ""  # images are stored by reference; content is the file itself
             else:
                 with open(path, 'r', encoding='utf-8', errors='replace') as f:
                     content = f.read()
@@ -2638,13 +2876,14 @@ class ConversationWidget(QWidget):
             self._logger.warning("Failed to read attachment %s: %s", path, str(e))
             return
 
-        # Save a copy to files/uploads/ inside the mindspace
+        # Save a copy to files/uploads/ — skip the copy if it's already there
         upload_path = ""
         if self._mindspace_manager.has_mindspace():
             try:
                 uploads_dir = self._mindspace_manager.ensure_mindspace_dir("files/uploads")
                 dest = os.path.join(uploads_dir, filename)
-                shutil.copy2(path, dest)
+                if os.path.abspath(path) != os.path.abspath(dest):
+                    shutil.copy2(path, dest)
                 upload_path = self._mindspace_manager.get_relative_path(dest)
             except Exception as e:
                 self._logger.warning("Failed to save attachment to uploads: %s", str(e))

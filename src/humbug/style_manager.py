@@ -1073,6 +1073,23 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
+            self._write_icon(f'clock-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="32" cy="32" r="26" fill="none" stroke="{color}" stroke-width="5"/>
+                    <polyline points="32,16 32,32 44,40" fill="none" stroke="{color}" stroke-width="5"
+                              stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            ''')
+
+            self._write_icon(f'plus-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="4" width="56" height="56" rx="14" ry="14"
+                          fill="none" stroke="{color}" stroke-width="5"/>
+                    <line x1="32" y1="18" x2="32" y2="46" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="18" y1="32" x2="46" y2="32" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+                </svg>
+            ''')
+
             self._create_active_inactive_theme_icons(True, suffix, color)
             self._create_active_inactive_theme_icons(False, suffix, inactive_color)
 

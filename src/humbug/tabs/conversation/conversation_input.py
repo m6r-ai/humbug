@@ -1,11 +1,12 @@
 """Input widget that matches history message styling."""
 
+import os
 import sys
 from typing import Dict, List, Tuple
 
-from PySide6.QtCore import Signal, Qt, QRect, QSize
+from PySide6.QtCore import Signal, Qt, QRect, QSize, QPoint
 from PySide6.QtGui import QTextCursor, QTextDocument, QIcon
-from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QLabel, QPushButton, QScrollArea
+from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QScrollArea, QFrame
 
 from ai import AIMessageSource
 
@@ -21,7 +22,7 @@ class ConversationInput(ConversationMessage):
     submit_requested = Signal()
     stop_requested = Signal()
     settings_requested = Signal()
-    attach_requested = Signal()
+    attach_requested = Signal(QPoint)
     modified = Signal()
 
     def __init__(self, style: AIMessageSource, parent: QWidget | None = None) -> None:
@@ -57,7 +58,7 @@ class ConversationInput(ConversationMessage):
         chips_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         chips_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         chips_scroll.setWidgetResizable(True)
-        chips_scroll.setFixedHeight(30)
+        chips_scroll.setFixedHeight(58)
 
         chips_container = QWidget()
         chips_container.setObjectName("_chips_container")
@@ -72,11 +73,11 @@ class ConversationInput(ConversationMessage):
         # Insert between sections_container (index 1) and banner (last)
         self._layout.insertWidget(self._layout.count() - 1, self._attachments_bar)
 
-        # Create attach button (before stop/submit)
+        # Create attach button — placed at the LEFT of the banner (bottom-left of input)
         self._attach_button = QToolButton(self)
         self._attach_button.setObjectName("_attach_button")
         self._attach_button.clicked.connect(self._on_attach_button_clicked)
-        self._banner_layout.addWidget(self._attach_button)
+        self._banner_layout.insertWidget(0, self._attach_button)
 
         # Create stop button (initially hidden)
         self._stop_button = QToolButton(self)
@@ -147,10 +148,13 @@ class ConversationInput(ConversationMessage):
         icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
 
-        # Update attach button
+        # Update attach button — plus icon in a rounded square
         if self._attach_button:
-            self._attach_button.setIcon(QIcon(self._style_manager.scale_icon("paperclip", icon_base_size)))
-            self._attach_button.setIconSize(icon_size)
+            attach_base_size = 18
+            attach_scaled_size = int(attach_base_size * self._style_manager.zoom_factor())
+            attach_icon_size = QSize(attach_scaled_size, attach_scaled_size)
+            self._attach_button.setIcon(QIcon(self._style_manager.scale_icon("plus", attach_base_size)))
+            self._attach_button.setIconSize(attach_icon_size)
 
         # Update submit/interrupt button
         if self._submit_button:
@@ -221,8 +225,12 @@ class ConversationInput(ConversationMessage):
         self.settings_requested.emit()
 
     def _on_attach_button_clicked(self) -> None:
-        """Handle attach button click."""
-        self.attach_requested.emit()
+        """Handle attach button click — emit the button's top-left global position."""
+        btn = self._attach_button
+        if btn is not None:
+            self.attach_requested.emit(btn.mapToGlobal(QPoint(0, 0)))
+        else:
+            self.attach_requested.emit(QPoint())
 
     def add_attachment(self, filename: str, content: str, upload_path: str = "") -> None:
         """Add a document attachment and show its chip in the bar."""
@@ -240,6 +248,20 @@ class ConversationInput(ConversationMessage):
         self._rebuild_chips()
         self._update_button_states()
 
+    @staticmethod
+    def _ext_color(filename: str) -> str:
+        """Return a background color hex string based on the file extension."""
+        colors = {
+            ".pdf": "#e05c4b",
+            ".docx": "#2b7cd3", ".doc": "#2b7cd3",
+            ".png": "#2eaa6e", ".jpg": "#2eaa6e", ".jpeg": "#2eaa6e", ".gif": "#2eaa6e",
+            ".csv": "#8e44ad",
+            ".json": "#e67e22", ".yaml": "#e67e22", ".yml": "#e67e22",
+            ".md": "#16a085", ".rst": "#16a085",
+            ".txt": "#7f8c8d",
+        }
+        return colors.get(os.path.splitext(filename)[1].lower(), "#7f8c8d")
+
     def _rebuild_chips(self) -> None:
         """Rebuild the attachment chips strip from the current attachments list."""
         if self._chips_layout is None or self._attachments_bar is None:
@@ -252,15 +274,41 @@ class ConversationInput(ConversationMessage):
                 item.widget().deleteLater()
 
         for index, (filename, _, _upload_path) in enumerate(self._attachments):
+            ext = os.path.splitext(filename)[1].upper().lstrip('.') or "FILE"
+            display_name = filename if len(filename) <= 18 else filename[:15] + "..."
+
             chip = QWidget()
             chip.setObjectName("_attachment_chip")
             chip_layout = QHBoxLayout(chip)
-            chip_layout.setContentsMargins(6, 2, 4, 2)
-            chip_layout.setSpacing(4)
+            chip_layout.setContentsMargins(6, 6, 8, 6)
+            chip_layout.setSpacing(8)
 
-            name_label = QLabel(filename)
+            # Colored icon badge showing file type
+            icon_label = QLabel(ext[:4])
+            icon_label.setFixedSize(32, 32)
+            icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            icon_label.setStyleSheet(
+                f"background-color: {self._ext_color(filename)}; border-radius: 6px;"
+                " color: white; font-size: 7pt; font-weight: bold; border: none;"
+            )
+            chip_layout.addWidget(icon_label)
+
+            # Filename and type stacked vertically
+            info = QWidget()
+            info.setObjectName("_chip_info")
+            info_layout = QVBoxLayout(info)
+            info_layout.setContentsMargins(0, 0, 0, 0)
+            info_layout.setSpacing(1)
+
+            name_label = QLabel(display_name)
             name_label.setObjectName("_chip_label")
-            chip_layout.addWidget(name_label)
+            info_layout.addWidget(name_label)
+
+            type_label = QLabel(ext[:4])
+            type_label.setObjectName("_chip_type_label")
+            info_layout.addWidget(type_label)
+
+            chip_layout.addWidget(info)
 
             remove_btn = QPushButton("✕")
             remove_btn.setObjectName("_chip_remove")
