@@ -81,8 +81,7 @@ def _duration_format(duration_days: float, is_summary: bool) -> str:
     """
     if is_summary:
         return "21"
-    # Sub-day: duration is a non-integer fraction of a day
-    whole = round(duration_days) == duration_days or abs(duration_days - round(duration_days)) < 1e-9
+    whole = abs(duration_days - round(duration_days)) < 1e-9
     if not whole and duration_days > 0.0:
         return "5"
     return "7"
@@ -146,14 +145,75 @@ def _build_project_summary_task(
     if proj_end_dt:
         _sub(task_el, "Finish", proj_end_dt)
     _sub(task_el, "Duration", duration_str)
+    if proj_start_dt:
+        _sub(task_el, "ManualStart", proj_start_dt)
+    if proj_end_dt:
+        _sub(task_el, "ManualFinish", proj_end_dt)
+    _sub(task_el, "ManualDuration", duration_str)
     _sub(task_el, "DurationFormat", "21")
+    _sub(task_el, "FreeformDurationFormat", "7")
     _sub(task_el, "Work", work_str)
+    _sub(task_el, "ResumeValid", "0")
+    _sub(task_el, "EffortDriven", "0")
+    _sub(task_el, "Recurring", "0")
+    _sub(task_el, "OverAllocated", "0")
+    _sub(task_el, "Estimated", "0")
     _sub(task_el, "Milestone", "0")
     _sub(task_el, "Summary", "1")
+    _sub(task_el, "DisplayAsSummary", "0")
     _sub(task_el, "Critical", "0")
+    _sub(task_el, "IsSubproject", "0")
+    _sub(task_el, "IsSubprojectReadOnly", "0")
+    _sub(task_el, "ExternalTask", "0")
+    if proj_start_dt:
+        _sub(task_el, "EarlyStart", proj_start_dt)
+    if proj_end_dt:
+        _sub(task_el, "EarlyFinish", proj_end_dt)
+    if proj_start_dt:
+        _sub(task_el, "LateStart", proj_start_dt)
+    if proj_end_dt:
+        _sub(task_el, "LateFinish", proj_end_dt)
+    _sub(task_el, "StartVariance", "0")
+    _sub(task_el, "FinishVariance", "0")
+    _sub(task_el, "WorkVariance", "0.00")
+    _sub(task_el, "FreeSlack", "0")
+    _sub(task_el, "TotalSlack", "0")
+    _sub(task_el, "StartSlack", "0")
+    _sub(task_el, "FinishSlack", "0")
+    _sub(task_el, "FixedCost", "0")
+    _sub(task_el, "FixedCostAccrual", "3")
     _sub(task_el, "PercentComplete", "0")
-    _sub(task_el, "CalendarUID", "-1")
+    _sub(task_el, "PercentWorkComplete", "0")
+    _sub(task_el, "Cost", "0")
+    _sub(task_el, "OvertimeCost", "0")
+    _sub(task_el, "OvertimeWork", "PT0H0M0S")
+    _sub(task_el, "ActualDuration", "PT0H0M0S")
+    _sub(task_el, "ActualCost", "0")
+    _sub(task_el, "ActualOvertimeCost", "0")
+    _sub(task_el, "ActualWork", "PT0H0M0S")
+    _sub(task_el, "ActualOvertimeWork", "PT0H0M0S")
+    _sub(task_el, "RegularWork", work_str)
+    _sub(task_el, "RemainingDuration", duration_str)
+    _sub(task_el, "RemainingCost", "0")
+    _sub(task_el, "RemainingWork", work_str)
+    _sub(task_el, "RemainingOvertimeCost", "0")
+    _sub(task_el, "RemainingOvertimeWork", "PT0H0M0S")
+    _sub(task_el, "ACWP", "0.00")
+    _sub(task_el, "CV", "0.00")
     _sub(task_el, "ConstraintType", "0")
+    _sub(task_el, "CalendarUID", "-1")
+    _sub(task_el, "LevelAssignments", "1")
+    _sub(task_el, "LevelingCanSplit", "1")
+    _sub(task_el, "LevelingDelay", "0")
+    _sub(task_el, "LevelingDelayFormat", "8")
+    _sub(task_el, "IgnoreResourceCalendar", "0")
+    _sub(task_el, "HideBar", "0")
+    _sub(task_el, "Rollup", "0")
+    _sub(task_el, "BCWS", "0.00")
+    _sub(task_el, "BCWP", "0.00")
+    _sub(task_el, "PhysicalPercentComplete", "0")
+    _sub(task_el, "EarnedValueMethod", "0")
+    _sub(task_el, "IsPublished", "0")
     _sub(task_el, "CommitmentType", "0")
 
 
@@ -163,7 +223,7 @@ def _build_task_element(
     schedule: dict,
     tasks_el: ET.Element,
 ) -> None:
-    """Write a single task element."""
+    """Write a single task element in the canonical MS Project XML field order."""
     uid = _task_uid(task)
     if not uid:
         return
@@ -173,9 +233,9 @@ def _build_task_element(
     is_milestone = task.get("is-milestone", False)
     duration_days = task.get("duration-days") or 0.0
     duration_str = _days_to_iso_duration(duration_days, hours_per_day)
-    work_str = duration_str
+    assigned = task.get("assigned-resources", [])
+    work_str = duration_str if assigned else "PT0H0M0S"
 
-    # Use computed offsets if available, fall back to original
     earliest_start = task.get("earliest-start")
     earliest_finish = task.get("earliest-finish")
     latest_start = task.get("latest-start")
@@ -188,8 +248,6 @@ def _build_task_element(
     finish_offset = earliest_finish if earliest_finish is not None and earliest_finish is not False \
         else task.get("end-offset")
 
-    # Only use is_start=True for tasks with non-zero duration.
-    # Zero-duration tasks (milestones) have start == finish at the same instant.
     use_is_start = duration_days > 0.0
     start_dt = _offset_to_dt(start_offset, schedule, is_start=use_is_start)
     finish_dt = _offset_to_dt(finish_offset, schedule)
@@ -199,6 +257,15 @@ def _build_task_element(
     late_finish_dt = _offset_to_dt(latest_finish, schedule)
 
     percent = _percent_complete(task)
+    slack_tenths = _days_to_slack_tenths(slack_days, hours_per_day)
+
+    cal_id = task.get("calendar-id", "")
+    cal_source_uid = "-1"
+    if cal_id and cal_id != "cal-1":
+        cal_source_uid = cal_id.replace("cal-", "")
+
+    stored_fmt = task.get("duration-format")
+    dur_fmt = stored_fmt if stored_fmt else _duration_format(duration_days, is_summary)
 
     task_el = ET.SubElement(tasks_el, "Task")
     _sub(task_el, "UID", uid)
@@ -212,20 +279,31 @@ def _build_task_element(
     _sub(task_el, "OutlineNumber", task.get("wbs", ""))
     _sub(task_el, "OutlineLevel", str(task.get("outline-level", 1)))
     _sub(task_el, "Priority", "500")
-
     if start_dt:
         _sub(task_el, "Start", start_dt)
     if finish_dt:
         _sub(task_el, "Finish", finish_dt)
-
     _sub(task_el, "Duration", duration_str)
-    stored_fmt = task.get("duration-format")
-    _sub(task_el, "DurationFormat", stored_fmt if stored_fmt else _duration_format(duration_days, is_summary))
+    if start_dt:
+        _sub(task_el, "ManualStart", start_dt)
+    if finish_dt:
+        _sub(task_el, "ManualFinish", finish_dt)
+    _sub(task_el, "ManualDuration", duration_str)
+    _sub(task_el, "DurationFormat", dur_fmt)
+    _sub(task_el, "FreeformDurationFormat", "7")
     _sub(task_el, "Work", work_str)
+    _sub(task_el, "ResumeValid", "0")
+    _sub(task_el, "EffortDriven", "1" if assigned else "0")
+    _sub(task_el, "Recurring", "0")
+    _sub(task_el, "OverAllocated", "0")
+    _sub(task_el, "Estimated", "0")
     _sub(task_el, "Milestone", "1" if is_milestone else "0")
     _sub(task_el, "Summary", "1" if is_summary else "0")
+    _sub(task_el, "DisplayAsSummary", "0")
     _sub(task_el, "Critical", "1" if on_critical else "0")
-
+    _sub(task_el, "IsSubproject", "0")
+    _sub(task_el, "IsSubprojectReadOnly", "0")
+    _sub(task_el, "ExternalTask", "0")
     if early_start_dt:
         _sub(task_el, "EarlyStart", early_start_dt)
     if early_finish_dt:
@@ -234,36 +312,54 @@ def _build_task_element(
         _sub(task_el, "LateStart", late_start_dt)
     if late_finish_dt:
         _sub(task_el, "LateFinish", late_finish_dt)
-
-    slack_tenths = _days_to_slack_tenths(slack_days, hours_per_day)
+    _sub(task_el, "StartVariance", "0")
+    _sub(task_el, "FinishVariance", "0")
+    _sub(task_el, "WorkVariance", "0.00")
     _sub(task_el, "FreeSlack", str(slack_tenths))
     _sub(task_el, "TotalSlack", str(slack_tenths))
-
+    _sub(task_el, "StartSlack", str(slack_tenths))
+    _sub(task_el, "FinishSlack", str(slack_tenths))
+    _sub(task_el, "FixedCost", "0")
+    _sub(task_el, "FixedCostAccrual", "3")
     _sub(task_el, "PercentComplete", str(percent))
     _sub(task_el, "PercentWorkComplete", str(percent))
-
-    cal_id = task.get("calendar-id", "")
-    cal_source_uid = "-1"
-    if cal_id and cal_id != "cal-1":
-        cal_source_uid = cal_id.replace("cal-", "")
-    _sub(task_el, "CalendarUID", cal_source_uid)
+    _sub(task_el, "Cost", "0")
+    _sub(task_el, "OvertimeCost", "0")
+    _sub(task_el, "OvertimeWork", "PT0H0M0S")
+    _sub(task_el, "ActualDuration", "PT0H0M0S")
+    _sub(task_el, "ActualCost", "0")
+    _sub(task_el, "ActualOvertimeCost", "0")
+    _sub(task_el, "ActualWork", "PT0H0M0S")
+    _sub(task_el, "ActualOvertimeWork", "PT0H0M0S")
+    _sub(task_el, "RegularWork", work_str)
+    _sub(task_el, "RemainingDuration", duration_str)
+    _sub(task_el, "RemainingCost", "0")
+    _sub(task_el, "RemainingWork", work_str)
+    _sub(task_el, "RemainingOvertimeCost", "0")
+    _sub(task_el, "RemainingOvertimeWork", "PT0H0M0S")
+    _sub(task_el, "ACWP", "0.00")
+    _sub(task_el, "CV", "0.00")
     _sub(task_el, "ConstraintType", "0")
-
+    _sub(task_el, "CalendarUID", cal_source_uid)
     _sub(task_el, "LevelAssignments", "1")
     _sub(task_el, "LevelingCanSplit", "1")
     _sub(task_el, "LevelingDelay", "0")
     _sub(task_el, "LevelingDelayFormat", "8")
     _sub(task_el, "IgnoreResourceCalendar", "0")
+    _sub(task_el, "HideBar", "0")
     _sub(task_el, "Rollup", "1" if is_summary else "0")
+    _sub(task_el, "BCWS", "0.00")
+    _sub(task_el, "BCWP", "0.00")
+    _sub(task_el, "PhysicalPercentComplete", "0")
+    _sub(task_el, "EarnedValueMethod", "0")
+    _sub(task_el, "IsPublished", "0" if is_summary else "1")
     _sub(task_el, "CommitmentType", "0")
-
-    # Predecessor links
     for dep in dep_map.get(uid, []):
         pred_el = ET.SubElement(task_el, "PredecessorLink")
         _sub(pred_el, "PredecessorUID", dep["pred_uid"])
         _sub(pred_el, "Type", DEPENDENCY_TYPE_CODES.get(dep["type"], "1"))
         _sub(pred_el, "CrossProject", "0")
-        lag_tenths = _days_to_slack_tenths(dep["lag_days"], schedule.get("hours-per-day", 8.0))
+        lag_tenths = _days_to_slack_tenths(dep["lag_days"], hours_per_day)
         _sub(pred_el, "LinkLag", str(lag_tenths))
         _sub(pred_el, "LagFormat", "7")
 
@@ -357,13 +453,21 @@ def _build_assignments(
     schedule: dict,
     assignments_el: ET.Element,
 ) -> None:
-    """Write assignment elements."""
+    """
+    Write assignment elements in the canonical MS Project XML field order.
+
+    Every task gets exactly one assignment.  Tasks with assigned resources
+    get ResourceUID set to the resource's MS Project UID; tasks without
+    assigned resources get ResourceUID=-65535 (the MS Project unassigned
+    placeholder).  All fields are written in schema order.
+    """
     task_map = {_task_uid(t): t for t in project.get("tasks", []) if _task_uid(t)}
     resource_uid_map = {
         r.get("id"): _resource_uid(r)
         for r in project.get("resources", [])
         if r.get("id") and _resource_uid(r)
     }
+    hours_per_day = schedule.get("hours-per-day", 8.0)
     assign_uid = 1
 
     for task in project.get("tasks", []):
@@ -377,6 +481,8 @@ def _build_assignments(
 
         resources = task.get("assigned-resources", [])
         is_milestone = task.get("is-milestone", False)
+        duration_days = task_obj.get("duration-days") or 0.0
+        use_is_start = duration_days > 0.0
 
         # Resolve start/finish from computed offsets
         start_offset = task_obj.get("earliest-start")
@@ -386,45 +492,70 @@ def _build_assignments(
         if finish_offset is None or finish_offset is False:
             finish_offset = task_obj.get("end-offset")
 
-        start_dt = _offset_to_dt(start_offset, schedule, is_start=True)
+        start_dt = _offset_to_dt(start_offset, schedule, is_start=use_is_start)
         finish_dt = _offset_to_dt(finish_offset, schedule)
-        duration_days = task_obj.get("duration-days") or 0.0
-        work_str = _days_to_iso_duration(duration_days, schedule.get("hours-per-day", 8.0))
+        work_str = _days_to_iso_duration(duration_days, hours_per_day)
+        percent = str(_percent_complete(task))
 
-        if not resources:
+        # Build list of resource UIDs — fall back to unassigned placeholder
+        resource_uids = [resource_uid_map[r] for r in resources if r in resource_uid_map]
+        if not resource_uids:
+            resource_uids = ["-65535"]
+
+        for res_uid in resource_uids:
+            is_unassigned = res_uid == "-65535"
+            task_work = work_str
+
             assign_el = ET.SubElement(assignments_el, "Assignment")
             _sub(assign_el, "UID", str(assign_uid))
             _sub(assign_el, "TaskUID", task_uid)
-            _sub(assign_el, "ResourceUID", "-65535")
-            _sub(assign_el, "PercentWorkComplete", str(_percent_complete(task)))
-            _sub(assign_el, "Milestone", "1" if is_milestone else "0")
-            if start_dt:
-                _sub(assign_el, "Start", start_dt)
+            _sub(assign_el, "ResourceUID", res_uid)
+            _sub(assign_el, "PercentWorkComplete", percent)
+            _sub(assign_el, "ActualCost", "0")
+            _sub(assign_el, "ActualOvertimeCost", "0")
+            _sub(assign_el, "ActualOvertimeWork", "PT0H0M0S")
+            _sub(assign_el, "ActualWork", "PT0H0M0S")
+            _sub(assign_el, "ACWP", "0.00")
+            _sub(assign_el, "Confirmed", "0")
+            _sub(assign_el, "Cost", "0")
+            _sub(assign_el, "CostRateTable", "0")
+            _sub(assign_el, "RateScale", "0")
+            _sub(assign_el, "CostVariance", "0")
+            _sub(assign_el, "CV", "0.00")
+            _sub(assign_el, "Delay", "0")
             if finish_dt:
                 _sub(assign_el, "Finish", finish_dt)
+            _sub(assign_el, "FinishVariance", "0")
+            _sub(assign_el, "WorkVariance", "0.00")
+            _sub(assign_el, "HasFixedRateUnits", "1")
+            _sub(assign_el, "FixedMaterial", "0")
+            _sub(assign_el, "LevelingDelay", "0")
+            _sub(assign_el, "LevelingDelayFormat", "7")
+            _sub(assign_el, "LinkedFields", "0")
+            _sub(assign_el, "Milestone", "1" if is_milestone else "0")
+            _sub(assign_el, "Overallocated", "0")
+            _sub(assign_el, "OvertimeCost", "0")
+            _sub(assign_el, "OvertimeWork", "PT0H0M0S")
+            _sub(assign_el, "RegularWork", task_work)
+            _sub(assign_el, "RemainingCost", "0")
+            _sub(assign_el, "RemainingOvertimeCost", "0")
+            _sub(assign_el, "RemainingOvertimeWork", "PT0H0M0S")
+            _sub(assign_el, "RemainingWork", task_work)
+            _sub(assign_el, "ResponsePending", "0")
+            if start_dt:
+                _sub(assign_el, "Start", start_dt)
+            _sub(assign_el, "StartVariance", "0")
             _sub(assign_el, "Units", "1")
-            _sub(assign_el, "Work", "PT0H0M0S")
+            _sub(assign_el, "UpdateNeeded", "0")
+            _sub(assign_el, "VAC", "0.00")
+            _sub(assign_el, "Work", task_work)
+            _sub(assign_el, "WorkContour", "0")
+            _sub(assign_el, "BCWS", "0.00")
+            _sub(assign_el, "BCWP", "0.00")
+            _sub(assign_el, "BookingType", "0")
+            _sub(assign_el, "BudgetCost", "0")
+            _sub(assign_el, "BudgetWork", "PT0H0M0S")
             assign_uid += 1
-        else:
-            for resource_id in resources:
-                res_uid = resource_uid_map.get(resource_id)
-                if not res_uid:
-                    continue
-                assign_el = ET.SubElement(assignments_el, "Assignment")
-                _sub(assign_el, "UID", str(assign_uid))
-                _sub(assign_el, "TaskUID", task_uid)
-                _sub(assign_el, "ResourceUID", res_uid)
-                _sub(assign_el, "PercentWorkComplete", str(_percent_complete(task)))
-                _sub(assign_el, "Milestone", "1" if is_milestone else "0")
-                if start_dt:
-                    _sub(assign_el, "Start", start_dt)
-                if finish_dt:
-                    _sub(assign_el, "Finish", finish_dt)
-                _sub(assign_el, "Units", "1")
-                _sub(assign_el, "Work", work_str)
-                _sub(assign_el, "RegularWork", work_str)
-                _sub(assign_el, "RemainingWork", work_str)
-                assign_uid += 1
 
 
 def _build_predecessor_map(project: dict) -> dict:
