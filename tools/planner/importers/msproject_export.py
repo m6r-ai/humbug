@@ -271,6 +271,8 @@ def _build_task_element(
     _sub(task_el, "UID", uid)
     _sub(task_el, "ID", uid)
     _sub(task_el, "Name", task.get("name", ""))
+    if task.get("description"):
+        _sub(task_el, "Notes", task["description"])
     _sub(task_el, "Active", "1")
     _sub(task_el, "Manual", "0")
     _sub(task_el, "Type", "1" if is_summary else "0")

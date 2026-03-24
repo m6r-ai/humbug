@@ -499,6 +499,7 @@ def _parse_tasks(
     for uid, task_id, name, is_summary, is_milestone, task_el in raw_tasks:
         percent_complete = _int(task_el, "PercentComplete", 0)
         status = _infer_status(percent_complete, bool(is_milestone))
+        notes = _text(task_el, "Notes")
         progress = round(percent_complete / 100.0, 2)
 
         start_str = _text(task_el, "Start")
@@ -555,6 +556,7 @@ def _parse_tasks(
             task_dict: dict[str, Any] = {
                 "id": task_id,
                 "name": name,
+                "description": notes,
                 "owner": owner if not is_milestone else None,
                 "team": None,
                 "start-offset": start_offset,
