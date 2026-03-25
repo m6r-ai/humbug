@@ -9,7 +9,7 @@ import colorsys
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication, QTextEdit
 )
-from PySide6.QtCore import Signal, QPoint, QSize, Qt, QEvent
+from PySide6.QtCore import Signal, QPoint, QSize, Qt, QEvent, QTimer
 from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QColor, QPainter, QPen
 
 from ai import AIMessageSource
@@ -26,20 +26,32 @@ from humbug.style_manager import StyleManager, ColorMode
 from humbug.tabs.conversation.conversation_message_section import ConversationMessageSection
 
 
-class TypingIndicatorWidget(QWidget):
-    """Animated typing indicator with three bouncing dots, shown while AI is generating."""
+class TypingIndicatorWidget(QFrame):
+    """Animated typing indicator matching Claude's loading style — three sequential pulsing dots."""
 
-    _FRAME_COUNT = 30
-    _TIMER_INTERVAL_MS = 50  # 50 ms/frame → 1.5 s full cycle
+    _FRAME_COUNT = 36
+    _TIMER_INTERVAL_MS = 45  # ~22 fps, 1.6 s full cycle
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._frame = 0
         self._style_manager = StyleManager()
+
+        # Style as an AI message bubble so it blends with the conversation
+        self.setObjectName("ConversationMessage")
+        self.setProperty("message_source", "ai")
+        self.setFrameStyle(QFrame.Shape.NoFrame)
+
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._on_timer)
         self._timer.start(self._TIMER_INTERVAL_MS)
-        self.setFixedHeight(24)
+
+        # Fixed height: bubble padding + dot area
+        self.setFixedHeight(44)
+        self.setMinimumWidth(72)
+
+    def sizeHint(self) -> QSize:
+        return QSize(72, 44)
 
     def _on_timer(self) -> None:
         self._frame = (self._frame + 1) % self._FRAME_COUNT
@@ -50,21 +62,36 @@ class TypingIndicatorWidget(QWidget):
         self._timer.stop()
 
     def paintEvent(self, event: QPaintEvent) -> None:
-        """Draw three phase-shifted bouncing dots."""
+        """Draw a message bubble containing three sequential pulsing dots."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        dot_radius = 4
-        gap = 8
+        zoom = self._style_manager.zoom_factor()
+        border_radius = int(self._style_manager.message_bubble_spacing() * zoom)
+
+        # Draw bubble background (same as AI message background)
+        bg_color = QColor(self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND))
+        painter.setBrush(bg_color)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawRoundedRect(self.rect(), border_radius, border_radius)
+
+        # Dot geometry
+        dot_radius = max(4, int(5 * zoom))
+        gap = max(6, int(8 * zoom))
+        x_start = 16 + dot_radius  # left-aligned with a small margin
         y_center = self.height() // 2
-        x_start = dot_radius + 4
 
         base_color = QColor(self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY))
 
         for i in range(3):
-            phase = (self._frame / self._FRAME_COUNT * 2 * math.pi) - (i * 2 * math.pi / 3)
-            y_offset = int(-4 * max(0.0, math.sin(phase)))
-            alpha = int(60 + 180 * max(0.0, math.sin(phase)))
+            # Sequential wave: each dot is phase-shifted by 1/3 of the cycle
+            phase = (self._frame / self._FRAME_COUNT * 2 * math.pi) - (i * math.pi / 2.2)
+            sin_val = math.sin(phase)
+
+            # Bounce up by up to 7px when sin is positive
+            y_offset = int(-7 * zoom * max(0.0, sin_val))
+            # Opacity: dim when resting, bright when bouncing
+            alpha = int(80 + 175 * max(0.0, sin_val))
 
             color = QColor(base_color)
             color.setAlpha(alpha)
@@ -357,6 +384,7 @@ class ConversationMessage(QFrame):
         """Update the border style with the current animation color."""
         self.style().unpolish(self)
         self.style().polish(self)
+        self.update()
 
     def _has_focus_in_hierarchy(self) -> bool:
         """Check if this widget or any of its descendants has focus."""
