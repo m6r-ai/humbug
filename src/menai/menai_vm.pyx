@@ -9,7 +9,6 @@ import math
 from typing import List, Dict, Any, cast, Protocol
 
 from menai.menai_bytecode import CodeObject, Opcode, Instruction
-from menai.menai_bytecode import _OPCODE_SHIFT, _DEST_SHIFT, _SRC0_SHIFT, _SRC1_SHIFT, _FIELD_MASK, _OPCODE_MASK
 from menai.menai_error import MenaiEvalError, MenaiCancelledException
 from menai.menai_value_fast import (
     MenaiValue, MenaiBoolean, MenaiString, MenaiList, MenaiDict, MenaiFunction,
@@ -25,6 +24,17 @@ from menai.menai_value_fast cimport (
 )
 from menai.menai_vm_bytecode_validator import validate_bytecode
 
+
+# Compile-time constants for instruction word unpacking.
+# DEF causes Cython to substitute the literal value at compile time,
+# so the generated C is e.g. (word >> 48) & 0xFFF — no Python integer
+# objects, no PyLong operations in the hot dispatch loop.
+DEF OPCODE_SHIFT = 48
+DEF DEST_SHIFT   = 36
+DEF SRC0_SHIFT   = 24
+DEF SRC1_SHIFT   = 12
+DEF FIELD_MASK   = 0xFFF
+DEF OPCODE_MASK  = 0xFFFF
 
 class MenaiTraceWatcher(Protocol):
     """Protocol for Menai trace watchers."""
@@ -441,11 +451,11 @@ class MenaiVM:
             # no heap object allocation.
             word   = raw_instructions[frame.ip]
             frame.ip += 1
-            opcode = (word >> _OPCODE_SHIFT) & _OPCODE_MASK
-            dest   = (word >> _DEST_SHIFT)   & _FIELD_MASK
-            src0   = (word >> _SRC0_SHIFT)   & _FIELD_MASK
-            src1   = (word >> _SRC1_SHIFT)   & _FIELD_MASK
-            src2   =  word                   & _FIELD_MASK
+            opcode = (word >> OPCODE_SHIFT) & OPCODE_MASK
+            dest   = (word >> DEST_SHIFT)   & FIELD_MASK
+            src0   = (word >> SRC0_SHIFT)   & FIELD_MASK
+            src1   = (word >> SRC1_SHIFT)   & FIELD_MASK
+            src2   =  word                  & FIELD_MASK
 
             result = dispatch[opcode](frame, dest, src0, src1, src2)
             if result is None:
