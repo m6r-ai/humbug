@@ -113,6 +113,7 @@ class LanguageStrings:
     mistral_backend: str
     openai_backend: str
     ollama_backend: str
+    humbug_backend: str
     xai_backend: str
     vllm_backend: str
 

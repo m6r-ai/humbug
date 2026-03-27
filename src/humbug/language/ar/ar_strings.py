@@ -123,6 +123,7 @@ def get_arabic_strings() -> LanguageStrings:
         mistral_backend="ميسترال",
         openai_backend="أوبن إي آي",
         ollama_backend="أولاما",
+        humbug_backend="Humbug AI",
         xai_backend="xAI",
         vllm_backend="vLLM",
 

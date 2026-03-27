@@ -226,6 +226,15 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
+        "Humbug AI": AIModel(
+            name="humbugAi",
+            provider="humbug",
+            context_window=131072,
+            max_output_tokens=4096,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.NO_TOOLS
+        ),
         "llama3.2": AIModel(
             name="llama3.2",
             provider="ollama",
@@ -689,6 +698,9 @@ class AIConversationSettings:
 
         if "mistral" in ai_backends:
             return "mistral-large-latest"
+
+        if "humbug" in ai_backends:
+            return "Humbug AI"
 
         if "ollama" in ai_backends:
             return "qwen3.5"

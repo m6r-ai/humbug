@@ -122,6 +122,7 @@ def get_english_strings() -> LanguageStrings:
         mistral_backend="Mistral",
         openai_backend="OpenAI",
         ollama_backend="Ollama",
+        humbug_backend="Humbug AI",
         xai_backend="xAI",
         vllm_backend="vLLM",
 

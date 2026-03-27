@@ -10,6 +10,7 @@ from ai.deepseek.deepseek_backend import DeepseekBackend
 from ai.google.google_backend import GoogleBackend
 from ai.mistral.mistral_backend import MistralBackend
 from ai.ollama.ollama_backend import OllamaBackend
+from ai.humbug.humbug_backend import HumbugBackend
 from ai.openai.openai_backend import OpenAIBackend
 from ai.vllm.vllm_backend import VLLMBackend
 from ai.xai.xai_backend import XAIBackend
@@ -34,6 +35,7 @@ class AIManager:
         "google": GoogleBackend,
         "mistral": MistralBackend,
         "ollama": OllamaBackend,
+        "humbug": HumbugBackend,
         "openai": OpenAIBackend,
         "vllm": VLLMBackend,
         "xai": XAIBackend,
