@@ -1,8 +1,9 @@
 """Bytecode definitions for Menai virtual machine."""
 
+import array
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Callable, Dict, List, Tuple
+from typing import Callable, Dict, List, Tuple, Union
 
 from menai.menai_value import MenaiValue
 
@@ -461,6 +462,65 @@ BUILTIN_OPCODE_MAP: Dict[str, Tuple[Opcode, int]] = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Packed instruction encoding
+#
+# Each instruction is stored as a single unsigned 64-bit word:
+#
+#   63        48 47      36 35      24 23      12 11       0
+#   [  opcode  ] [  dest  ] [  src0  ] [  src1  ] [  src2  ]
+#       16 bits    12 bits    12 bits    12 bits    12 bits
+#
+# The 12-bit fields support up to 4096 register slots, which is far more
+# than the slot allocator ever produces.  The 16-bit opcode field gives
+# ample room for future expansion.
+# ---------------------------------------------------------------------------
+
+_OPCODE_SHIFT = 48
+_DEST_SHIFT   = 36
+_SRC0_SHIFT   = 24
+_SRC1_SHIFT   = 12
+_FIELD_MASK   = 0xFFF
+_OPCODE_MASK  = 0xFFFF
+
+
+def pack_instruction(opcode: int, dest: int, src0: int, src1: int, src2: int) -> int:
+    """Pack five integer fields into a single unsigned 64-bit instruction word."""
+    return (
+        (opcode & _OPCODE_MASK) << _OPCODE_SHIFT
+        | (dest  & _FIELD_MASK) << _DEST_SHIFT
+        | (src0  & _FIELD_MASK) << _SRC0_SHIFT
+        | (src1  & _FIELD_MASK) << _SRC1_SHIFT
+        | (src2  & _FIELD_MASK)
+    )
+
+
+def unpack_instruction(word: int) -> 'Instruction':
+    """Unpack a 64-bit instruction word into an Instruction object.
+
+    Used by the validator, disassembler, and the pure-Python VM shim.
+    """
+    return Instruction(
+        opcode=(word >> _OPCODE_SHIFT) & _OPCODE_MASK,
+        dest  =(word >> _DEST_SHIFT)   & _FIELD_MASK,
+        src0  =(word >> _SRC0_SHIFT)   & _FIELD_MASK,
+        src1  =(word >> _SRC1_SHIFT)   & _FIELD_MASK,
+        src2  = word                   & _FIELD_MASK,
+    )
+
+
+def make_instructions_array(words: List[int] | None = None) -> 'array.array[int]':
+    """Create an unsigned 64-bit array for storing packed instructions.
+
+    Args:
+        words: Optional initial list of packed instruction words.
+
+    Returns:
+        An array.array('Q') — the canonical storage type for CodeObject.instructions.
+    """
+    return array.array('Q', words if words is not None else [])
+
+
 def reg_name(slot: int, code: 'CodeObject') -> str:
     """Return the symbolic register name for a slot index within a CodeObject.
 
@@ -601,7 +661,7 @@ class CodeObject:
     """
 
     # Bytecode instructions
-    instructions: List[Instruction]
+    instructions: 'array.array[int]'
 
     # Constant pool (for LOAD_CONST)
     constants: List[MenaiValue]
@@ -623,6 +683,21 @@ class CodeObject:
     source_line: int = 0  # Line number in source code where this function is defined
     source_file: str = ""  # Source file name (if available)
 
+    def __post_init__(self) -> None:
+        """Convert a plain list of Instruction objects to a packed array if needed.
+
+        This allows test code and other callers to construct CodeObject with
+        instructions=[Instruction(...), ...] and have it automatically converted
+        to the packed array.array('Q') format the VM and validator expect.
+        """
+        if isinstance(self.instructions, list):
+            packed = make_instructions_array()
+            for instr in self.instructions:
+                packed.append(
+                    pack_instruction(instr.opcode, instr.dest, instr.src0, instr.src1, instr.src2)
+                )
+            self.instructions = packed
+
     def __repr__(self) -> str:
         """Human-readable representation."""
         lines = [f"CodeObject: {self.name}"]
@@ -631,8 +706,8 @@ class CodeObject:
         lines.append(f"  Constants: {len(self.constants)}")
         lines.append(f"  Names: {self.names}")
         lines.append("  Instructions:")
-        for i, instr in enumerate(self.instructions):
-            lines.append(f"    {i:3d}: {instr}")
+        for i, word in enumerate(self.instructions):
+            lines.append(f"    {i:3d}: {unpack_instruction(word)}")
 
         return "\n".join(lines)
 

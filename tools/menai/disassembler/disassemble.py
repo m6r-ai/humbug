@@ -20,7 +20,7 @@ import argparse
 from pathlib import Path
 import sys
 import traceback
-from typing import List, Dict
+from typing import Iterator, List, Dict
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from menai import Menai
 from menai.menai_compiler import MenaiCompiler
 from menai.menai_value import MenaiValue
-from menai.menai_bytecode import Opcode, CodeObject, Instruction, reg_name
+from menai.menai_bytecode import Opcode, CodeObject, Instruction, reg_name, unpack_instruction
 
 
 _ANSI_CYAN = "\033[36m"
@@ -52,6 +52,12 @@ def _grey(text: str, color: bool) -> str:
 
 def _green(text: str, color: bool) -> str:
     return f"{_ANSI_GREEN}{text}{_ANSI_RESET}" if color else text
+
+
+def _instructions(code: CodeObject) -> Iterator[Instruction]:
+    """Yield unpacked Instruction objects from a CodeObject's packed instruction array."""
+    for word in code.instructions:
+        yield unpack_instruction(word)
 
 
 def format_constant(const: object) -> str:
@@ -125,11 +131,11 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
 
     elif opcode == Opcode.PATCH_CLOSURE:
         # src0 = closure register, src1 = capture index, src2 = value register.
-        # Scan backwards for the MAKE_CLOSURE that produced each register so we
-        # can name the closure and the free-var being filled.
+        # Scan for the MAKE_CLOSURE that produced each register so we can name
+        # the closure and the free-var being filled.
         closure_name = None
         free_var_name = None
-        for scan_instr in code.instructions:
+        for scan_instr in _instructions(code):
             if scan_instr.opcode == Opcode.MAKE_CLOSURE and scan_instr.dest == instr.src0:
                 nested = code.code_objects[scan_instr.src0]
                 closure_name = clean_name(nested.name) if nested.name else reg_name(instr.src0, code)
@@ -141,7 +147,7 @@ def annotate_instruction(instr: Instruction, code: CodeObject) -> str:
         # Name the value being patched in: use the closure's own name if the
         # value register also holds a known closure, otherwise use reg_name.
         value_closure_name = None
-        for scan_instr in code.instructions:
+        for scan_instr in _instructions(code):
             if scan_instr.opcode == Opcode.MAKE_CLOSURE and scan_instr.dest == instr.src2:
                 value_closure_name = clean_name(code.code_objects[scan_instr.src0].name)
                 break
@@ -233,7 +239,6 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
 
         output.append(_grey(f"{indent}{'-'*70}", color))
 
-    # Show register map for params and captures (only when present)
     capture_count = len(code.free_vars)
     if capture_count:
         output.append(f"{indent}{_green('Captured: ' + str(len(code.free_vars)), color)}")
@@ -258,14 +263,14 @@ def disassemble_with_nested(code: CodeObject, depth: int = 0, name: str | None =
     jump_targets = {
         instr.src1 if instr.opcode in (Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE)
         else instr.src0
-        for instr in code.instructions
+        for instr in _instructions(code)
         if instr.opcode in (Opcode.JUMP, Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE)
     }
     control_flow_opcodes = {
         Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE, Opcode.CALL, Opcode.APPLY
     }
 
-    for i, instr in enumerate(code.instructions):
+    for i, instr in enumerate(_instructions(code)):
         is_target = i in jump_targets
         if is_target and i > 0:
             output.append(f"{indent}")
@@ -305,7 +310,7 @@ def analyze_function_flow(code: CodeObject) -> Dict[int, str]:
     """Track which functions are stored in which variables."""
     var_map = {}
 
-    for instr in code.instructions:
+    for instr in _instructions(code):
         if instr.opcode == Opcode.MAKE_CLOSURE:
             closure_idx = instr.src0
             var_idx = instr.dest
@@ -329,7 +334,7 @@ def trace_calls(code: CodeObject, var_map: Dict[int, str]) -> List[str]:
     """Trace function calls."""
     traces = []
 
-    for i, instr in enumerate(code.instructions):
+    for i, instr in enumerate(_instructions(code)):
         if instr.opcode == Opcode.CALL:
             arg_count = instr.src1
             func_reg = instr.src0
