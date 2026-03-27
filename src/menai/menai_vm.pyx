@@ -407,6 +407,9 @@ class MenaiVM:
 
         self.regs = [Menai_NONE] * ((self._max_frame_depth + 1) * max_locals)
 
+        cdef Frame frame
+        cdef int instruction_count, check_interval
+
         # Set up the first real frame at depth 1 (depth 0 is the sentinel).
         self.frame_depth = 1
         frame = self._frames[1]
@@ -428,10 +431,9 @@ class MenaiVM:
         check_interval = self._cancellation_check_interval
 
         instruction_count = 0
-        instructions = frame.code.instructions
-        instructions_len = frame.code_len
         cdef unsigned long long word
-        cdef int opcode, dest, src0, src1, src2
+        cdef int opcode, dest, src0, src1, src2, instructions_len
+        instructions_len = frame.code_len
 
         while True:
             # Periodically check for cancellation
