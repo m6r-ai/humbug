@@ -64,6 +64,8 @@ cdef class Frame:
     compiles to a direct C struct field read with no Python attribute lookup.
     """
     cdef public object code        # CodeObject (Python object — GC tracked)
+    cdef public object instructions_obj  # array.array kept alive for instructions_buf
+    cdef unsigned long long[::1] instructions_buf  # typed memoryview — acquired once per frame setup
     cdef public int code_len
     cdef public int ip
     cdef public int base
@@ -415,6 +417,8 @@ class MenaiVM:
         frame = self._frames[1]
         frame.code = code
         frame.code_len = len(code.instructions)
+        frame.instructions_obj = code.instructions
+        frame.instructions_buf = code.instructions
         frame.ip = 0
         frame.base = 0  # sentinel sits at base 0 with local_count 0; first real frame starts at 0
         frame.return_dest = 0
@@ -425,7 +429,7 @@ class MenaiVM:
 
         # Typed memoryview over the packed instruction array for direct C-level
         # access — no Python list overhead on every fetch.
-        cdef unsigned long long[::1] raw_instructions = frame.code.instructions
+        cdef unsigned long long[::1] raw_instructions = frame.instructions_buf
 
         # Cache cancellation check interval for performance
         check_interval = self._cancellation_check_interval
@@ -467,7 +471,7 @@ class MenaiVM:
             if result is _FRAME_CHANGE:
                 # Frame changed (call, return, or tail call); re-sync.
                 frame = self._frames[self.frame_depth]
-                raw_instructions = frame.code.instructions
+                raw_instructions = frame.instructions_buf
                 instructions_len = frame.code_len
                 continue
 
@@ -741,6 +745,8 @@ class MenaiVM:
         new_frame = <Frame>self._frames[new_depth]
         new_frame.code = code
         new_frame.code_len = len(code.instructions)
+        new_frame.instructions_obj = code.instructions
+        new_frame.instructions_buf = code.instructions
         new_frame.ip = 0
         callee_base = base + f.code.local_count
         new_frame.base = callee_base
@@ -846,6 +852,8 @@ class MenaiVM:
 
         f.code = code
         f.code_len = len(code.instructions)
+        f.instructions_obj = code.instructions
+        f.instructions_buf = code.instructions
         f.ip = 0
         if func.captured_values:
             for i, captured_val in enumerate(func.captured_values):
@@ -913,6 +921,8 @@ class MenaiVM:
         new_frame = <Frame>self._frames[new_depth]
         new_frame.code = code
         new_frame.code_len = len(code.instructions)
+        new_frame.instructions_obj = code.instructions
+        new_frame.instructions_buf = code.instructions
         new_frame.ip = 0
         callee_base = base + f.code.local_count
         new_frame.base = callee_base
@@ -1037,6 +1047,8 @@ class MenaiVM:
 
         f.code = code
         f.code_len = len(code.instructions)
+        f.instructions_obj = code.instructions
+        f.instructions_buf = code.instructions
         f.ip = 0
         if func.captured_values:
             for i, captured_val in enumerate(func.captured_values):
