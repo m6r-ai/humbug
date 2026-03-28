@@ -70,8 +70,7 @@
                              cycles)
                    (list)))
              (all-errors
-               (fold-list list-append (list)
-                          (list task-errors dep-errors cycle-errors))))
+               (list-concat task-errors dep-errors cycle-errors)))
         (dict
           "valid"                       (integer=? (list-length all-errors) 0)
           "task-count"                  (list-length tasks)

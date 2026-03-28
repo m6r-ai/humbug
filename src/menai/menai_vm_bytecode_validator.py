@@ -17,7 +17,8 @@ from collections import deque
 from typing import Deque, List, Dict, Tuple, Set
 from enum import Enum
 
-from menai.menai_bytecode import CodeObject, Instruction, Opcode
+from menai.menai_bytecode import CodeObject, Instruction, Opcode, unpack_instruction
+
 
 
 class ValidationErrorType(Enum):
@@ -108,21 +109,22 @@ class BytecodeValidator:
             )
 
         # Check all opcodes are valid
-        for i, instr in enumerate(code.instructions):
+        for i, word in enumerate(code.instructions):
             try:
-                Opcode(instr.opcode)
+                Opcode(unpack_instruction(word).opcode)
 
             except ValueError as e:
                 raise ValidationError(
                     ValidationErrorType.INVALID_OPCODE,
-                    f"Invalid opcode value: {instr.opcode}",
+                    f"Invalid opcode value: {unpack_instruction(word).opcode}",
                     instruction_index=i
                 ) from e
 
     def _validate_indices(self, code: CodeObject) -> None:
         """Validate all indices (constants, names, code objects, variables)."""
         total_slots = code.local_count + code.outgoing_arg_slots
-        for i, instr in enumerate(code.instructions):
+        for i, word in enumerate(code.instructions):
+            instr = unpack_instruction(word)
             opcode = instr.opcode
 
             # Validate constant pool indices
@@ -277,9 +279,8 @@ class BytecodeValidator:
             if not block.visited:
                 continue  # Unreachable code, skip
 
-            last_instr = code.instructions[block.end_index]
-
-            # Check if block ends properly
+            last_word = code.instructions[block.end_index]
+            last_instr = unpack_instruction(last_word)
             ends_properly = (
                 last_instr.opcode in (Opcode.RETURN, Opcode.TAIL_CALL, Opcode.TAIL_APPLY, Opcode.RAISE_ERROR) or
                 len(block.successors) > 0
@@ -343,7 +344,7 @@ class BytecodeValidator:
                 continue
 
             current_initialized, current_closures = initialized_at[instr_idx]
-            instr = code.instructions[instr_idx]
+            instr: Instruction = unpack_instruction(code.instructions[instr_idx])
             opcode = instr.opcode
 
             # Check MOVE - source register must be initialized
@@ -509,7 +510,7 @@ class BytecodeValidator:
 
     def _get_successors(self, instr_idx: int, instr: Instruction, code: CodeObject) -> List[int]:
         """Get successor instruction indices for an instruction."""
-        opcode = instr.opcode
+        opcode = instr.opcode  # instr is already unpacked by callers
 
         # Terminal instructions have no successors
         if opcode in (Opcode.RETURN, Opcode.RAISE_ERROR):
@@ -548,8 +549,8 @@ class BytecodeValidator:
         # Find block boundaries (leaders)
         leaders = {0}  # First instruction is always a leader
 
-        for i, instr in enumerate(code.instructions):
-            # Jump targets are leaders
+        for i, word in enumerate(code.instructions):
+            instr = unpack_instruction(word)
             if instr.opcode in (Opcode.JUMP, Opcode.JUMP_IF_FALSE, Opcode.JUMP_IF_TRUE):
                 leaders.add(instr.src0 if instr.opcode == Opcode.JUMP else instr.src1)
                 # Instruction after conditional jump is a leader
@@ -572,7 +573,7 @@ class BytecodeValidator:
 
         # Build edges
         for start, block in blocks.items():
-            last_instr = code.instructions[block.end_index]
+            last_instr = unpack_instruction(code.instructions[block.end_index])
             successors = self._get_successors(block.end_index, last_instr, code)
 
             for succ_idx in successors:

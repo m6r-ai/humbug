@@ -5,5 +5,5 @@
                      (sorted  (sort-list string<? lines))
                      (upper   (map-list string-upcase sorted))
                      (result  (string-concat (list->string upper "\n") "\n")))
-                (dict (list "result" result))))))
-  (dict (list "run" run)))
+                (dict "result" result)))))
+  (dict "run" run))

@@ -1,6 +1,6 @@
 # Contributors
 
-# Thank you to everyone who has contributed to this project so far
+Thank you to everyone who has contributed to this project so far!
 
 Dave Hudson [dave-hudson](https://github.com/dave-hudson)
 
@@ -14,6 +14,8 @@ Cameron McFarlane [Camium02](https://github.com/Camium02)
 
 Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Added scripts to generate a .exe setup wizard for Windows installation
-* UI improvements.
+* UI/UI improvements.
 * Added New folder and new conversation option on right click.
+* Upload file feature 
+* Multi Tab feature
 

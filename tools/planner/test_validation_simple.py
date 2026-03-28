@@ -25,7 +25,7 @@ def make_task(task_id, name):
     return {
         "id": task_id, "name": name, "duration-days": 1,
         "calendar-id": "cal1", "schedule-mode": "duration-based",
-        "start-date": False, "end-date": False,
+        "start-offset": False, "end-offset": False,
         "status": "not-started", "progress": 0.0,
         "earliest-start": False, "earliest-finish": False,
         "latest-start": False, "latest-finish": False, "slack-days": False,

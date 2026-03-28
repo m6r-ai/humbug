@@ -287,6 +287,18 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#f59e0b",   # amber-500
                 ColorMode.LIGHT: "#d97706"   # amber-600
             },
+            ColorRole.BUTTON_BACKGROUND_EDIT: {
+                ColorMode.DARK: "#b07010",
+                ColorMode.LIGHT: "#a06008"
+            },
+            ColorRole.BUTTON_BACKGROUND_EDIT_PRESSED: {
+                ColorMode.DARK: "#906000",
+                ColorMode.LIGHT: "#804800"
+            },
+            ColorRole.BUTTON_BACKGROUND_EDIT_HOVER: {
+                ColorMode.DARK: "#c08020",
+                ColorMode.LIGHT: "#b07018"
+            },
             ColorRole.BUTTON_BACKGROUND_DISABLED: {
                 ColorMode.DARK: "#18181b",
                 ColorMode.LIGHT: "#f4f4f5"

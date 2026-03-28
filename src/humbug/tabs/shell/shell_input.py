@@ -127,9 +127,9 @@ class ShellInput(ShellMessage):
     def _get_submit_key_text(self) -> str:
         """Get the appropriate submit key text based on the platform."""
         if sys.platform == "darwin":
-            return "⌘J"
+            return "⌘ Enter"
 
-        return "Ctrl+J"
+        return "Ctrl+Enter"
 
     def _update_header_text(self) -> None:
         """Update the header text based on current state."""

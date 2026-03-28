@@ -11,7 +11,7 @@
       "id": "read-template",
       "tool": "filesystem",
       "operation": "read_file",
-      "path": "tools/pipeline/examples/clock-and-file/template.txt"
+      "path": "tools/pipeline-runner/examples/clock-and-file/template.txt"
     },
     {
       "id": "render",
@@ -20,7 +20,7 @@
         "timestamp": "get-time",
         "template": "read-template"
       },
-      "expression": "(dict (list \"result\" (string-replace (dict-get inputs \"template\") \"{timestamp}\" (dict-get inputs \"timestamp\"))))",
+      "expression": "(dict \"result\" (string-replace (dict-get inputs \"template\") \"{timestamp}\" (dict-get inputs \"timestamp\")))",
       "outputs": {}
     },
     {

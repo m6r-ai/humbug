@@ -28,7 +28,7 @@ categories:
   "id": "transform",
   "tool": "menai",
   "inputs": { "content": "read-input" },
-  "expression": "(dict (list \"result\" (string-upcase (dict-get inputs \"content\"))))",
+  "expression": "(dict \"result\" (string-upcase (dict-get inputs \"content\")))",
   "outputs": {}
 }
 ```
@@ -81,9 +81,9 @@ is a function that accepts `inputs` and returns a dict:
 
 ```menai
 (dict
-  (list "run" (lambda (inputs)
+  "run" (lambda (inputs)
     (let ((content (dict-get inputs "content")))
-      (dict (list "result" (string-upcase content)))))))
+      (dict "result" (string-upcase content)))))
 ```
 
 Module names are resolved relative to the pipeline file's directory first, then the
@@ -126,7 +126,7 @@ Supported operations: `write_stdout`, `write_stderr`.
 Run from the repository root with the virtual environment active:
 
 ```bash
-python tools/pipeline/pipeline_cli.py <pipeline.json> [options]
+python tools/pipline-runner/pipeline-run.py <pipeline.json> [options]
 ```
 
 Options:
@@ -153,7 +153,7 @@ The simplest possible pipeline.  Gets the current time, formats a greeting in Me
 and writes it to stdout.
 
 ```bash
-python tools/pipeline/pipeline_cli.py tools/pipeline/examples/hello-timestamp/pipeline.json
+python tools/pipline-runner/pipeline-run.py tools/pipeline/examples/hello-timestamp/pipeline.json
 ```
 
 ### `file-transform`
@@ -162,7 +162,7 @@ Reads a list of fruit names, sorts and uppercases them in Menai, writes to stdou
 Demonstrates single-input single-output Menai transformation.
 
 ```bash
-python tools/pipeline/pipeline_cli.py tools/pipeline/examples/file-transform/pipeline.json
+python tools/pipline-runner/pipeline-run.py tools/pipeline/examples/file-transform/pipeline.json
 ```
 
 ### `multi-input`
@@ -171,7 +171,7 @@ Reads two files (a header and a body) and concatenates them in a single Menai st
 Demonstrates multiple named inputs feeding one Menai step.
 
 ```bash
-python tools/pipeline/pipeline_cli.py tools/pipeline/examples/multi-input/pipeline.json
+python tools/pipline-runner/pipeline-run.py tools/pipeline/examples/multi-input/pipeline.json
 ```
 
 ### `multi-output`
@@ -181,7 +181,7 @@ uppercase-only groups in Menai, and writes each group to stdout separately.
 Demonstrates a Menai step producing multiple outputs consumed by different downstream steps.
 
 ```bash
-python tools/pipeline/pipeline_cli.py tools/pipeline/examples/multi-output/pipeline.json
+python tools/pipline-runner/pipeline-run.py tools/pipeline/examples/multi-output/pipeline.json
 ```
 
 ### `adjacent-collapse`
@@ -190,8 +190,8 @@ Two adjacent Menai steps (trim whitespace, then upcase) that the optimizer colla
 into one.  Run with and without `--no-optimize` to observe identical results.
 
 ```bash
-python tools/pipeline/pipeline_cli.py tools/pipeline/examples/adjacent-collapse/pipeline.json
-python tools/pipeline/pipeline_cli.py --no-optimize tools/pipeline/examples/adjacent-collapse/pipeline.json
+python tools/pipline-runner/pipeline-run.py tools/pipeline/examples/adjacent-collapse/pipeline.json
+python tools/pipline-runner/pipeline-run.py --no-optimize tools/pipeline/examples/adjacent-collapse/pipeline.json
 ```
 
 ### `clock-and-file`
@@ -201,7 +201,7 @@ substitute the timestamp into the template.  Demonstrates mixed tool types feedi
 single Menai step.
 
 ```bash
-python tools/pipeline/pipeline_cli.py tools/pipeline/examples/clock-and-file/pipeline.json
+python tools/pipline-runner/pipeline-run.py tools/pipeline/examples/clock-and-file/pipeline.json
 ```
 
 ### `module-step`
@@ -212,7 +212,7 @@ extracted into a standalone `sort-and-upcase.menai` module file.  Demonstrates t
 the pipeline that uses it.
 
 ```bash
-python tools/pipeline/pipeline_cli.py tools/pipeline/examples/module-step/pipeline.json
+python tools/pipline-runner/pipeline-run.py tools/pipeline/examples/module-step/pipeline.json
 ```
 
 ## Pipeline JSON reference
@@ -233,7 +233,7 @@ python tools/pipeline/pipeline_cli.py tools/pipeline/examples/module-step/pipeli
       "inputs": {
         "input-name": "source-step-id"
       },
-      "expression": "(dict (list \"key\" value) ...)",
+      "expression": "(dict \"key\" value ...)",
       "outputs": {
         "key": "target-step-id"
       }

@@ -1,16 +1,21 @@
+import colorsys
 from datetime import datetime
 import logging
+
 import math
 import os
 import re
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any , cast
 import colorsys
+
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication, QTextEdit
 )
-from PySide6.QtCore import Signal, QPoint, QSize, Qt, QEvent, QTimer
-from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QColor, QPainter, QPen
+
+from PySide6.QtCore import Signal, QPoint, QSize, Qt, QEvent, QTimer , QObject
+from PySide6.QtGui import QIcon, QGuiApplication, QPaintEvent, QColor, QPainter, QPen , QKeyEvent
+
 
 from ai import AIMessageSource
 from ai_tool import AIToolCall

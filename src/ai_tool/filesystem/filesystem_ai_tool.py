@@ -193,9 +193,11 @@ class FileSystemAITool(AITool):
                 allowed_parameters={"path", "encoding", "start_line", "end_line"},
                 required_parameters={"path"},
                 description="Read file contents with line numbers. Optionally specify start_line and end_line "
-                    "(1-indexed, inclusive) to read a specific range of lines. Returns a dictionary with integer "
-                    "line numbers as keys and line content as string values. Use this when you only need specific "
-                    "lines or when line numbers are important"
+                    "(1-indexed, inclusive) to read a specific range of lines. Use this when you only need specific "
+                    "lines or when line numbers are important. Returns a dictionary with integer "
+                    "line numbers as keys and line content as string values. Note: line content is returned as JSON-encoded "
+                    "strings, so special characters (double quotes, backslashes, etc.) will appear escaped — these escape "
+                    "sequences are not present in the source."
             ),
             "write_file": AIToolOperationDefinition(
                 name="write_file",

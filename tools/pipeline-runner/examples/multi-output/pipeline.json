@@ -4,7 +4,7 @@
       "id": "read-input",
       "tool": "filesystem",
       "operation": "read_file",
-      "path": "tools/pipeline/examples/multi-output/input.txt"
+      "path": "tools/pipeline-runner/examples/multi-output/input.txt"
     },
     {
       "id": "split",
@@ -12,7 +12,7 @@
       "inputs": {
         "content": "read-input"
       },
-      "expression": "(let* ((lines (filter-list (lambda (s) (boolean-not (string=? s \"\"))) (string->list (dict-get inputs \"content\") \"\\n\"))) (lower-lines (filter-list (lambda (s) (string=? s (string-downcase s))) lines)) (upper-lines (filter-list (lambda (s) (string=? s (string-upcase s))) lines)) (lower-out (string-concat (list->string lower-lines \"\\n\") \"\\n\")) (upper-out (string-concat (list->string upper-lines \"\\n\") \"\\n\"))) (dict (list \"lowercase\" lower-out) (list \"uppercase\" upper-out)))",
+      "expression": "(let* ((lines (filter-list (lambda (s) (boolean-not (string=? s \"\"))) (string->list (dict-get inputs \"content\") \"\\n\"))) (lower-lines (filter-list (lambda (s) (string=? s (string-downcase s))) lines)) (upper-lines (filter-list (lambda (s) (string=? s (string-upcase s))) lines)) (lower-out (string-concat (list->string lower-lines \"\\n\") \"\\n\")) (upper-out (string-concat (list->string upper-lines \"\\n\") \"\\n\"))) (dict \"lowercase\" lower-out \"uppercase\" upper-out))",
       "outputs": {
         "lowercase": "write-lower",
         "uppercase": "write-upper"

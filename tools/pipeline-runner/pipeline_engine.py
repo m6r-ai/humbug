@@ -9,16 +9,10 @@ from typing import Any, Callable, Dict, List, Optional
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from menai import Menai, MenaiError
-try:
-    from menai.menai_value_fast import (
-        MenaiBoolean, MenaiDict, MenaiFloat, MenaiInteger, MenaiList, MenaiNone,
-        MenaiString, MenaiValue
-    )
-except ImportError:
-    from menai.menai_value import (  # type: ignore[assignment]
-        MenaiBoolean, MenaiDict, MenaiFloat, MenaiInteger, MenaiList, MenaiNone,
-        MenaiString, MenaiValue
-    )
+from menai.menai_value import (
+    MenaiBoolean, MenaiDict, MenaiFloat, MenaiInteger, MenaiList, MenaiNone,
+    MenaiString, MenaiValue
+)
 
 from pipeline_step import MenaiStep, Pipeline, PipelineStep, ToolStep, resolve_step_expression
 from pipeline_tools import (
@@ -137,7 +131,7 @@ def _python_to_menai_literal(value: Any) -> str:
             return "(dict)"
 
         pairs = " ".join(
-            f"(list {_python_to_menai_literal(k)} {_python_to_menai_literal(v)})"
+            f"{_python_to_menai_literal(k)} {_python_to_menai_literal(v)}"
             for k, v in value.items()
         )
         return f"(dict {pairs})"
@@ -185,7 +179,7 @@ def _build_menai_expression(step: MenaiStep, step_outputs: Dict[str, str]) -> st
             )
 
         literal = _python_to_menai_literal(value)
-        bindings.append(f'(list "{input_name}" {literal})')
+        bindings.append(f'"{input_name}" {literal}')
 
     inputs_expr = f"(dict {' '.join(bindings)})"
     return f"(let ((inputs {inputs_expr})) {expression})"

@@ -18,11 +18,12 @@ Covers:
 
 from menai.menai_bytecode import Opcode
 from menai.menai_compiler import MenaiCompiler
+from menai.menai_bytecode import unpack_instruction
 
 
 def _count_op(code, opcode) -> int:
     """Count occurrences of `opcode` in `code` and all nested code objects."""
-    n = sum(1 for i in code.instructions if i.opcode == opcode)
+    n = sum(1 for i in code.instructions if unpack_instruction(i).opcode == opcode)
     for nested in code.code_objects:
         n += _count_op(nested, opcode)
     return n

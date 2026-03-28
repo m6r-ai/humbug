@@ -41,7 +41,7 @@ def _merge_two_menai_steps(first: MenaiStep, second: MenaiStep) -> MenaiStep:
 
     if injected_from_first:
         second_inputs_pairs = " ".join(
-            f'(list "{name}" (dict-get {intermediate} "{name}"))'
+            f'"{name}" (dict-get {intermediate} "{name}")'
             for name in sorted(injected_from_first)
         )
         second_inputs_expr = f"(dict {second_inputs_pairs})"

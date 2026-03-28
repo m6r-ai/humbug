@@ -4,7 +4,7 @@
       "id": "read-input",
       "tool": "filesystem",
       "operation": "read_file",
-      "path": "tools/pipeline/examples/file-transform/input.txt"
+      "path": "tools/pipeline-runner/examples/module-step/input.txt"
     },
     {
       "id": "transform",
@@ -12,7 +12,7 @@
       "inputs": {
         "content": "read-input"
       },
-      "expression": "(let* ((lines (filter-list (lambda (s) (boolean-not (string=? s \"\"))) (string->list (dict-get inputs \"content\") \"\\n\"))) (sorted (sort-list string<? lines)) (upper (map-list string-upcase sorted)) (result (string-concat (list->string upper \"\\n\") \"\\n\"))) (dict (list \"result\" result)))",
+      "module": "sort-and-upcase",
       "outputs": {}
     },
     {

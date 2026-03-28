@@ -2,10 +2,11 @@
 
 import os
 import sys
-from typing import Dict, List, Tuple
 
-from PySide6.QtCore import Signal, Qt, QRect, QSize, QPoint
-from PySide6.QtGui import QTextCursor, QTextDocument, QIcon
+from typing import Dict, List, Tuple , cast
+
+from PySide6.QtCore import Signal, Qt, QRect, QSize, QPoint , QObject , QEvent
+from PySide6.QtGui import QTextCursor, QTextDocument, QIcon , QKeyEvent 
 from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QSizePolicy
 
 from ai import AIMessageSource
@@ -45,6 +46,7 @@ class ConversationInput(ConversationMessage):
 
         self._text_area.cursorPositionChanged.connect(self.cursor_position_changed)
         self._text_area.page_key_scroll_requested.connect(self.page_key_scroll_requested)
+        self._text_area.installEventFilter(self)  # Install event filter for Ctrl+Enter
 
         # Cap the input widget's vertical height to its natural content size.
         # Without this the messages_layout stretch gives the input all available space.
@@ -108,6 +110,16 @@ class ConversationInput(ConversationMessage):
 
         self._on_language_changed()
 
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+        """Intercept Ctrl+Enter in the inline editor to confirm."""
+        if obj is self._text_area and event.type() == QEvent.Type.KeyPress:
+            key_event = cast(QKeyEvent, event)
+            if (key_event.key() == Qt.Key.Key_Return and key_event.modifiers() & Qt.KeyboardModifier.ControlModifier):
+                self.submit_requested.emit()
+                return True
+
+        return super().eventFilter(obj, event)
+
     def set_model(self, model: str) -> None:
         """Set the model name for the input prompt."""
         self._current_model = model
@@ -140,9 +152,9 @@ class ConversationInput(ConversationMessage):
     def _get_submit_key_text(self) -> str:
         """Get the appropriate submit key text based on the platform."""
         if sys.platform == "darwin":
-            return "⌘J"
+            return "⌘ Enter"
 
-        return "Ctrl+J"
+        return "Ctrl+Enter"
 
     def apply_style(self) -> None:
         """Apply style changes."""

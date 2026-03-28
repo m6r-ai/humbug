@@ -698,6 +698,16 @@ def create_example_project() -> Dict[str, Any]:
         }
     }
     
+    # Ensure all tasks have the offset-based scheduling fields required by the
+    # Menai task struct.  The example project predates the offset model so we
+    # add placeholder values here.
+    for task in project["tasks"]:
+        task.setdefault("start-offset", None)
+        task.setdefault("end-offset", None)
+        task.setdefault("duration-days", None)
+        if isinstance(task.get("duration-days"), int):
+            task["duration-days"] = float(task["duration-days"])
+
     return project
 
 

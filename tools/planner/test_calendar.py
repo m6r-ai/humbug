@@ -143,9 +143,9 @@ def main():
     
     start = "2025-03-17"
     test_cases = [
-        (1, "2025-03-18", "Mon + 1 = Tue"),
-        (5, "2025-03-24", "Mon + 5 = Mon (skip weekend)"),
-        (10, "2025-03-31", "Mon + 10 = Mon (skip 2 weekends)"),
+        (1.0, "2025-03-18", "Mon + 1 = Tue"),
+        (5.0, "2025-03-24", "Mon + 5 = Mon (skip weekend)"),
+        (10.0, "2025-03-31", "Mon + 10 = Mon (skip 2 weekends)"),
     ]
     
     for days, expected, description in test_cases:
@@ -162,9 +162,9 @@ def main():
     
     start = "2025-03-17"
     test_cases = [
-        (1, "2025-03-18", "Every day is working"),
-        (7, "2025-03-24", "7 days = 1 week"),
-        (10, "2025-03-27", "10 days"),
+        (1.0, "2025-03-18", "Every day is working"),
+        (7.0, "2025-03-24", "7 days = 1 week"),
+        (10.0, "2025-03-27", "10 days"),
     ]
     
     for days, expected, description in test_cases:
@@ -180,10 +180,10 @@ def main():
     print_test("TEST 7: Count Working Days Between Dates")
     
     test_cases = [
-        ("2025-03-17", "2025-03-18", 1, "Mon to Tue = 1 day"),
-        ("2025-03-17", "2025-03-24", 5, "Mon to Mon = 5 days (skip weekend)"),
-        ("2025-03-17", "2025-03-31", 10, "Mon to Mon = 10 days (skip 2 weekends)"),
-        ("2025-03-21", "2025-03-24", 1, "Fri to Mon = 1 day (skip weekend)"),
+        ("2025-03-17", "2025-03-18", 1.0, "Mon to Tue = 1 day"),
+        ("2025-03-17", "2025-03-24", 5.0, "Mon to Mon = 5 days (skip weekend)"),
+        ("2025-03-17", "2025-03-31", 10.0, "Mon to Mon = 10 days (skip 2 weekends)"),
+        ("2025-03-21", "2025-03-24", 1.0, "Fri to Mon = 1 day (skip weekend)"),
     ]
     
     for start, end, expected, description in test_cases:
@@ -217,9 +217,9 @@ def main():
     print_test("TEST 9: Calculate End Date (start + duration)")
     
     test_cases = [
-        ("2025-03-17", 5, "2025-03-24", "5 working days from Monday"),
-        ("2025-03-17", 10, "2025-03-31", "10 working days from Monday"),
-        ("2025-03-20", 3, "2025-03-25", "3 working days from Thursday"),
+        ("2025-03-17", 5.0, "2025-03-24", "5 working days from Monday"),
+        ("2025-03-17", 10.0, "2025-03-31", "10 working days from Monday"),
+        ("2025-03-20", 3.0, "2025-03-25", "3 working days from Thursday"),
     ]
     
     for start, duration, expected, description in test_cases:
@@ -235,8 +235,8 @@ def main():
     print_test("TEST 10: Calculate Start Date (end - duration)")
     
     test_cases = [
-        ("2025-03-24", 5, "2025-03-17", "5 working days before Monday"),
-        ("2025-03-31", 10, "2025-03-17", "10 working days before Monday"),
+        ("2025-03-24", 5.0, "2025-03-17", "5 working days before Monday"),
+        ("2025-03-31", 10.0, "2025-03-17", "10 working days before Monday"),
     ]
     
     for end, duration, expected, description in test_cases:
@@ -252,9 +252,9 @@ def main():
     print_test("TEST 11: Calculate Duration (start to end)")
     
     test_cases = [
-        ("2025-03-17", "2025-03-24", 5, "Monday to Monday"),
-        ("2025-03-17", "2025-03-31", 10, "Monday to Monday (2 weeks)"),
-        ("2025-03-21", "2025-03-24", 1, "Friday to Monday"),
+        ("2025-03-17", "2025-03-24", 5.0, "Monday to Monday"),
+        ("2025-03-17", "2025-03-31", 10.0, "Monday to Monday (2 weeks)"),
+        ("2025-03-21", "2025-03-24", 1.0, "Friday to Monday"),
     ]
     
     for start, end, expected, description in test_cases:

@@ -253,6 +253,15 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
+        "minimax-m2.7 (thinking)": AIModel(
+            name="minimax-m2.7:cloud",
+            provider="ollama",
+            context_window=200000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "minimax-m2.5 (thinking)": AIModel(
             name="minimax-m2.5:cloud",
             provider="ollama",

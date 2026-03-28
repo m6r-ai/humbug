@@ -1,4 +1,5 @@
-"""Build script for Cython extension modules.
+"""
+Build script for Cython extension modules.
 
 Usage:
     python setup.py build_ext --inplace
@@ -15,6 +16,12 @@ and release step, not part of the pip-installable package metadata.
 from setuptools import Extension, setup
 from Cython.Build import cythonize
 
+import os
+import sys
+
+# src/menai is both the package root and where the shim header lives.
+_MENAI_SRC = os.path.join("src", "menai")
+
 extensions = [
     Extension(
         name="menai.menai_value_fast",
@@ -25,6 +32,13 @@ extensions = [
         name="menai.menai_vm",
         sources=["src/menai/menai_vm.pyx"],
         extra_compile_args=["-O2"],
+    ),
+    Extension(
+        name="menai.menai_vm_c",
+        sources=["src/menai/menai_vm_c.c"],
+        include_dirs=[_MENAI_SRC],
+        extra_compile_args=["-O3", "-std=c11"],
+        py_limited_api=False,
     ),
 ]
 

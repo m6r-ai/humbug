@@ -22,10 +22,11 @@ assignments.  A sequencing algorithm detects cycles and breaks them with a
 scratch slot so that the sequential bytecode MOVE instructions are correct.
 """
 
+import array
 from dataclasses import dataclass, field
 from typing import Dict, List, Set, Tuple
 
-from menai.menai_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Instruction, Opcode
+from menai.menai_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Instruction, Opcode, pack_instruction, make_instructions_array
 from menai.menai_value import (
     MenaiBoolean,
     MenaiComplex,
@@ -70,10 +71,41 @@ BINARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if ar
 TERNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 3}
 
 
+from menai.menai_bytecode import (
+    _OPCODE_SHIFT, _DEST_SHIFT, _SRC0_SHIFT, _SRC1_SHIFT,
+    _FIELD_MASK, _OPCODE_MASK,
+)
+
+_FIELD_NAMES = ('opcode', 'dest', 'src0', 'src1', 'src2')
+_SHIFTS = {
+    'opcode': _OPCODE_SHIFT,
+    'dest':   _DEST_SHIFT,
+    'src0':   _SRC0_SHIFT,
+    'src1':   _SRC1_SHIFT,
+    'src2':   0,
+}
+_MASKS = {
+    'opcode': _OPCODE_MASK,
+    'dest':   _FIELD_MASK,
+    'src0':   _FIELD_MASK,
+    'src1':   _FIELD_MASK,
+    'src2':   _FIELD_MASK,
+}
+
+
+def _patch_instruction(instructions: 'array.array[int]', idx: int, field_name: str, value: int) -> None:
+    """Patch a single field in a packed instruction word in-place."""
+    shift = _SHIFTS[field_name]
+    mask  = _MASKS[field_name]
+    word  = instructions[idx]
+    word  = (word & ~(mask << shift)) | ((value & mask) << shift)
+    instructions[idx] = word
+
+
 @dataclass
 class _EmitContext:
     """Mutable state for emitting one MenaiVCodeFunction into a CodeObject."""
-    instructions: List[Instruction] = field(default_factory=list)
+    instructions: 'array.array[int]' = field(default_factory=make_instructions_array)
     constants: List[MenaiValue] = field(default_factory=list)
     names: List[str] = field(default_factory=list)
     code_objects: List[CodeObject] = field(default_factory=list)
@@ -89,7 +121,7 @@ class _EmitContext:
     def emit(self, opcode: Opcode, src0: int = 0, src1: int = 0, dest: int = 0, src2: int = 0) -> int:
         """Emit an instruction and return its index."""
         idx = len(self.instructions)
-        self.instructions.append(Instruction(int(opcode), dest=dest, src0=src0, src1=src1, src2=src2))
+        self.instructions.append(pack_instruction(int(opcode), dest, src0, src1, src2))
         return idx
 
     def current_index(self) -> int:
@@ -98,7 +130,7 @@ class _EmitContext:
 
     def patch(self, instr_index: int, field_name: str, value: int) -> None:
         """Patch the specified field of an instruction."""
-        setattr(self.instructions[instr_index], field_name, value)
+        _patch_instruction(self.instructions, instr_index, field_name, value)
 
     def emit_constant(self, value: MenaiValue, dest: int) -> None:
         """Emit instructions to load a constant value into dest."""
@@ -305,15 +337,12 @@ class MenaiBytecodeBuilder:
                 continue
 
             if isinstance(instr, MenaiVCodeApply):
-                ctx.emit(Opcode.APPLY, ctx.slot_of(instr.func), dest=ctx.slot_of(instr.dst))
-                # src1 carries the arg_list register; the VM scatters it into the outgoing zone.
-                ctx.instructions[-1].src1 = ctx.slot_of(instr.arg_list)
+                ctx.emit(Opcode.APPLY, ctx.slot_of(instr.func), ctx.slot_of(instr.arg_list), dest=ctx.slot_of(instr.dst))
                 i += 1
                 continue
 
             if isinstance(instr, MenaiVCodeTailApply):
-                ctx.emit(Opcode.TAIL_APPLY, ctx.slot_of(instr.func))
-                ctx.instructions[-1].src1 = ctx.slot_of(instr.arg_list)
+                ctx.emit(Opcode.TAIL_APPLY, ctx.slot_of(instr.func), ctx.slot_of(instr.arg_list))
                 i += 1
                 continue
 

@@ -129,8 +129,10 @@ class EditorAITool(AITool):
                 allowed_parameters={"tab_id", "start_line", "end_line"},
                 required_parameters={"tab_id"},
                 description="Read content lines from an editor tab. Optionally specify line range with "
-                    "start_line and end_line (1-indexed, inclusive). Returns line numbers and content as a "
-                    "dictionary-like structure"
+                    "start_line and end_line (1-indexed, inclusive). Returns a dictionary with integer "
+                    "line numbers as keys and line content as string values. Note: line content is returned as "
+                    "JSON-encoded strings, so special characters (double quotes, backslashes, etc.) will appear "
+                    "escaped — these escape sequences are not present in the source."
             ),
             "get_cursor_info": AIToolOperationDefinition(
                 name="get_cursor_info",

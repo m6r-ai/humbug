@@ -26,5 +26,5 @@
              (let* ((content (dict-get inputs "content"))
                     (parsed  ((dict-get json-parser "parse") content))
                     (result  (value->string parsed)))
-               (dict (list "result" result)))))))
-    (dict (list "run" run))))
+               (dict "result" result))))))
+    (dict "run" run)))

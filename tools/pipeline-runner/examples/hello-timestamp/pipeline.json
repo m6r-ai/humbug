@@ -13,7 +13,7 @@
       "inputs": {
         "timestamp": "get-time"
       },
-      "expression": "(dict (list \"result\" (string-concat \"Hello from the pipeline! Current time: \" (dict-get inputs \"timestamp\") \"\\n\")))",
+      "expression": "(dict \"result\" (string-concat \"Hello from the pipeline! Current time: \" (dict-get inputs \"timestamp\") \"\\n\"))",
       "outputs": {}
     },
     {
