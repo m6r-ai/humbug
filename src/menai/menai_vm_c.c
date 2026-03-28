@@ -333,7 +333,7 @@ fetch_type(PyObject *module, const char *name, PyTypeObject **dst)
         return -1;
     }
     *dst = (PyTypeObject *)obj;
-    Py_DECREF(obj);
+    /* Keep the reference alive in the module-level global. */
     return 0;
 }
 
@@ -344,7 +344,7 @@ fetch_singleton(PyObject *module, const char *name, PyObject **dst)
     if (obj == NULL)
         return -1;
     *dst = obj;
-    Py_DECREF(obj);
+    /* Keep the reference alive in the module-level global. */
     return 0;
 }
 
@@ -1243,10 +1243,14 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_TAIL_CALL: {
             PyObject *raw = regs[base + src0];
             int n_args    = src1;
+            /* Take an owned reference before the arg-moving loop.
+             * The loop may overwrite regs[base+src0] if src0 < n_args,
+             * which would decrement raw's refcount to zero and free it. */
+            Py_INCREF(raw);
 
             int local_count = 0;
             if (code_get_int(frame->code_obj, "local_count", &local_count) < 0)
-                goto error;
+            { Py_DECREF(raw); goto error; }
 
             if (IS_MENAI_FUNCTION(raw)) {
                 /* Move outgoing args down to base+0..n_args-1 in place. */
@@ -1263,7 +1267,8 @@ execute_loop(PyObject *code, PyObject *globals,
                 int saved_return_dest = frame->return_dest;
                 if (call_setup(frame, raw, regs, base, n_args,
                                saved_return_dest) < 0)
-                    goto error;
+                { Py_DECREF(raw); goto error; }
+                Py_DECREF(raw);
 
             } else if (IS_MENAI_STRUCTTYPE(raw)) {
                 PyObject *field_names = PyObject_GetAttrString(raw, "field_names");
@@ -1327,8 +1332,18 @@ execute_loop(PyObject *code, PyObject *globals,
 
         case OP_BOOLEAN_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            if (!IS_MENAI_BOOLEAN(a) || !IS_MENAI_BOOLEAN(b)) {
-                menai_raise_eval_error("boolean=?: requires boolean arguments");
+            if (!IS_MENAI_BOOLEAN(a)) {
+                PyObject *_tn = PyObject_CallMethod(a, "type_name", NULL);
+                menai_raise_eval_errorf("Function 'boolean=?' requires boolean arguments, got %s",
+                    _tn ? PyUnicode_AsUTF8(_tn) : "?");
+                Py_XDECREF(_tn);
+                goto error;
+            }
+            if (!IS_MENAI_BOOLEAN(b)) {
+                PyObject *_tn = PyObject_CallMethod(b, "type_name", NULL);
+                menai_raise_eval_errorf("Function 'boolean=?' requires boolean arguments, got %s",
+                    _tn ? PyUnicode_AsUTF8(_tn) : "?");
+                Py_XDECREF(_tn);
                 goto error;
             }
             BOOL_STORE(menai_boolean_value(a) == menai_boolean_value(b));
@@ -1337,8 +1352,18 @@ execute_loop(PyObject *code, PyObject *globals,
 
         case OP_BOOLEAN_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            if (!IS_MENAI_BOOLEAN(a) || !IS_MENAI_BOOLEAN(b)) {
-                menai_raise_eval_error("boolean!=?: requires boolean arguments");
+            if (!IS_MENAI_BOOLEAN(a)) {
+                PyObject *_tn = PyObject_CallMethod(a, "type_name", NULL);
+                menai_raise_eval_errorf("Function 'boolean!=?' requires boolean arguments, got %s",
+                    _tn ? PyUnicode_AsUTF8(_tn) : "?");
+                Py_XDECREF(_tn);
+                goto error;
+            }
+            if (!IS_MENAI_BOOLEAN(b)) {
+                PyObject *_tn = PyObject_CallMethod(b, "type_name", NULL);
+                menai_raise_eval_errorf("Function 'boolean!=?' requires boolean arguments, got %s",
+                    _tn ? PyUnicode_AsUTF8(_tn) : "?");
+                Py_XDECREF(_tn);
                 goto error;
             }
             BOOL_STORE(menai_boolean_value(a) != menai_boolean_value(b));
@@ -1365,7 +1390,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_SYMBOL_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!IS_MENAI_SYMBOL(a) || !IS_MENAI_SYMBOL(b)) {
-                menai_raise_eval_error("symbol=?: requires symbol arguments");
+                menai_raise_eval_error("symbol=?: arguments must be symbols");
                 goto error;
             }
             PyObject *na = menai_symbol_name(a);
@@ -1381,7 +1406,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_SYMBOL_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!IS_MENAI_SYMBOL(a) || !IS_MENAI_SYMBOL(b)) {
-                menai_raise_eval_error("symbol!=?: requires symbol arguments");
+                menai_raise_eval_error("symbol!=?: arguments must be symbols");
                 goto error;
             }
             PyObject *na = menai_symbol_name(a);
@@ -1397,7 +1422,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_SYMBOL_TO_STRING: {
             PyObject *a = regs[base + src0];
             if (!IS_MENAI_SYMBOL(a)) {
-                menai_raise_eval_error("symbol->string: requires symbol argument");
+                menai_raise_eval_error("symbol->string: argument must be a symbol");
                 goto error;
             }
             PyObject *name = menai_symbol_name(a);
@@ -1918,7 +1943,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             FLT_REQUIRE(a, "float-logn"); FLT_REQUIRE(b, "float-logn");
             double av = menai_float_value(a), bv = menai_float_value(b);
-            if (bv <= 0.0 || bv == 1.0) { menai_raise_eval_error("float-logn: base must be positive and not 1"); goto error; }
+            if (bv <= 0.0 || bv == 1.0) { menai_raise_eval_error("Function 'float-logn' requires a positive base not equal to 1"); goto error; }
             if (av < 0.0) { menai_raise_eval_error("float-logn: argument must be non-negative"); goto error; }
             FLT_STORE(av == 0.0 ? -INFINITY : log(av) / log(bv));
             break;
@@ -2163,14 +2188,17 @@ execute_loop(PyObject *code, PyObject *globals,
              */
             PyObject *raw_func = regs[base + src0];
             PyObject *raw_args = regs[base + src1];
+            /* Own raw_func before the scatter loop which may overwrite its slot. */
+            Py_INCREF(raw_func);
 
             if (!IS_MENAI_LIST(raw_args)) {
+                Py_DECREF(raw_func);
                 menai_raise_eval_error("apply: second argument must be a list");
                 goto error;
             }
 
             PyObject *elements = PyObject_GetAttrString(raw_args, "elements");
-            if (elements == NULL) goto error;
+            if (elements == NULL) { Py_DECREF(raw_func); goto error; }
             int arity = (int)PyTuple_GET_SIZE(elements);
 
             if (IS_MENAI_FUNCTION(raw_func)) {
@@ -2186,7 +2214,8 @@ execute_loop(PyObject *code, PyObject *globals,
 
                 int saved_return_dest = frame->return_dest;
                 if (call_setup(frame, raw_func, regs, base, arity, saved_return_dest) < 0)
-                    goto error;
+                { Py_DECREF(raw_func); goto error; }
+                Py_DECREF(raw_func);
 
             } else if (IS_MENAI_STRUCTTYPE(raw_func)) {
                 PyObject *field_names = PyObject_GetAttrString(raw_func, "field_names");
@@ -2402,7 +2431,36 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_COMPLEX_COS:  { CPX_TRANSCENDENTAL("cos",  "complex-cos");  break; }
         case OP_COMPLEX_TAN:  { CPX_TRANSCENDENTAL("tan",  "complex-tan");  break; }
         case OP_COMPLEX_SQRT: { CPX_TRANSCENDENTAL("sqrt", "complex-sqrt"); break; }
-        case OP_COMPLEX_LOGN: { CPX_TRANSCENDENTAL2("log", "complex-logn"); break; }
+        case OP_COMPLEX_LOGN: {
+            PyObject *a = regs[base + src0], *b = regs[base + src1];
+            CPX_REQUIRE(a, "complex-logn"); CPX_REQUIRE(b, "complex-logn");
+            /* Declare all locals before any goto to avoid jumping over
+             * initialisers, which is undefined behaviour in C. */
+            PyObject *av = NULL, *bv = NULL, *zero = NULL, *fn = NULL, *res = NULL;
+            int is_zero;
+            av = PyObject_GetAttrString(a, "value");
+            if (av == NULL) goto cpx_logn_err;
+            bv = PyObject_GetAttrString(b, "value");
+            if (bv == NULL) goto cpx_logn_err;
+            zero = PyComplex_FromDoubles(0.0, 0.0);
+            if (zero == NULL) goto cpx_logn_err;
+            is_zero = PyObject_RichCompareBool(bv, zero, Py_EQ);
+            Py_CLEAR(zero);
+            if (is_zero < 0) goto cpx_logn_err;
+            if (is_zero) {
+                menai_raise_eval_error("Function 'complex-logn' requires a non-zero base");
+                goto cpx_logn_err;
+            }
+            fn = PyObject_GetAttrString(cmath_module, "log");
+            if (fn == NULL) goto cpx_logn_err;
+            res = PyObject_CallFunctionObjArgs(fn, av, bv, NULL);
+            Py_CLEAR(fn); Py_CLEAR(av); Py_CLEAR(bv);
+            CPX_STORE(res);
+            break;
+        cpx_logn_err:
+            Py_XDECREF(av); Py_XDECREF(bv); Py_XDECREF(zero); Py_XDECREF(fn);
+            goto error;
+        }
         case OP_COMPLEX_TO_STRING: {
             PyObject *a = regs[base + src0];
             CPX_REQUIRE(a, "complex->string");
@@ -2731,7 +2789,7 @@ execute_loop(PyObject *code, PyObject *globals,
             long radix = PyLong_AsLong(bv); Py_DECREF(bv);
             if (radix == -1 && PyErr_Occurred()) goto error;
             if (radix != 2 && radix != 8 && radix != 10 && radix != 16) {
-                menai_raise_eval_errorf("string->integer: radix must be 2,8,10,16, got %ld", radix);
+                menai_raise_eval_errorf("string->integer radix must be 2, 8, 10, or 16, got %ld", radix);
                 goto error;
             }
             PyObject *sa = menai_string_value(a);
@@ -2865,6 +2923,15 @@ execute_loop(PyObject *code, PyObject *globals,
     if (!IS_MENAI_LIST(r)) { \
         PyObject *_tn = PyObject_CallMethod((r), "type_name", NULL); \
         menai_raise_eval_errorf("Function '%s' requires list arguments, got %s", \
+            nm, _tn ? PyUnicode_AsUTF8(_tn) : "?"); \
+        Py_XDECREF(_tn); \
+        goto error; \
+    }
+
+#define LIST_REQUIRE_SINGULAR(r, nm) \
+    if (!IS_MENAI_LIST(r)) { \
+        PyObject *_tn = PyObject_CallMethod((r), "type_name", NULL); \
+        menai_raise_eval_errorf("Function '%s' requires a list argument, got %s", \
             nm, _tn ? PyUnicode_AsUTF8(_tn) : "?"); \
         Py_XDECREF(_tn); \
         goto error; \
@@ -3176,7 +3243,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_TO_SET: {
             PyObject *a = regs[base + src0];
-            LIST_REQUIRE(a, "list->set");
+            LIST_REQUIRE_SINGULAR(a, "list->set");
             LIST_ELEMENTS(a, elems, error);
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_SetType, elems);
             Py_DECREF(elems);
@@ -3476,6 +3543,15 @@ execute_loop(PyObject *code, PyObject *globals,
         goto error; \
     }
 
+#define SET_REQUIRE_SINGULAR(r, nm) \
+    if (!IS_MENAI_SET(r)) { \
+        PyObject *_tn = PyObject_CallMethod((r), "type_name", NULL); \
+        menai_raise_eval_errorf("Function '%s' requires a set argument, got %s", \
+            nm, _tn ? PyUnicode_AsUTF8(_tn) : "?"); \
+        Py_XDECREF(_tn); \
+        goto error; \
+    }
+
         case OP_SET_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             SET_REQUIRE(a, "set=?"); SET_REQUIRE(b, "set=?");
@@ -3494,7 +3570,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_SET_LENGTH: {
             PyObject *a = regs[base + src0];
-            SET_REQUIRE(a, "set-length");
+            SET_REQUIRE_SINGULAR(a, "set-length");
             PyObject *elems = PyObject_GetAttrString(a, "elements");
             if (elems == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
@@ -3506,7 +3582,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_SET_MEMBER_P: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
-            SET_REQUIRE(a, "set-member?");
+            SET_REQUIRE_SINGULAR(a, "set-member?");
             PyObject *hk = PyObject_CallMethod(
                 (PyObject *)Menai_DictType, "to_hashable_key", "O", item);
             if (hk == NULL) goto error;
@@ -3520,7 +3596,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_SET_ADD: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
-            SET_REQUIRE(a, "set-add");
+            SET_REQUIRE_SINGULAR(a, "set-add");
             PyObject *hk = PyObject_CallMethod(
                 (PyObject *)Menai_DictType, "to_hashable_key", "O", item);
             if (hk == NULL) goto error;
@@ -3552,7 +3628,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_SET_REMOVE: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
-            SET_REQUIRE(a, "set-remove");
+            SET_REQUIRE_SINGULAR(a, "set-remove");
             PyObject *hk = PyObject_CallMethod(
                 (PyObject *)Menai_DictType, "to_hashable_key", "O", item);
             if (hk == NULL) goto error;
@@ -3728,7 +3804,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_SET_TO_LIST: {
             PyObject *a = regs[base + src0];
-            SET_REQUIRE(a, "set->list");
+            SET_REQUIRE_SINGULAR(a, "set->list");
             PyObject *elems = PyObject_GetAttrString(a, "elements");
             if (elems == NULL) goto error;
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, elems);
@@ -3853,8 +3929,20 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *name = menai_symbol_name(field_sym);
             if (name == NULL) { Py_DECREF(stype); goto error; }
             PyObject *idx = PyObject_CallMethod(stype, "field_index", "O", name);
+            if (idx == NULL) {
+                if (PyErr_ExceptionMatches(PyExc_KeyError)) {
+                    PyErr_Clear();
+                    PyObject *stype_name = PyObject_GetAttrString(stype, "name");
+                    if (stype_name != NULL) {
+                        menai_raise_eval_errorf(
+                            "'struct-get': struct '%s' has no field '%s'",
+                            PyUnicode_AsUTF8(stype_name), PyUnicode_AsUTF8(name));
+                        Py_DECREF(stype_name);
+                    }
+                }
+                Py_DECREF(name); Py_DECREF(stype); goto error;
+            }
             Py_DECREF(name); Py_DECREF(stype);
-            if (idx == NULL) goto error;
             Py_ssize_t fi = PyLong_AsSsize_t(idx); Py_DECREF(idx);
             if (fi == -1 && PyErr_Occurred()) goto error;
             PyObject *fields = PyObject_GetAttrString(val, "fields");
@@ -3897,8 +3985,20 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *name = menai_symbol_name(field_sym);
             if (name == NULL) { Py_DECREF(stype); goto error; }
             PyObject *idx = PyObject_CallMethod(stype, "field_index", "O", name);
+            if (idx == NULL) {
+                if (PyErr_ExceptionMatches(PyExc_KeyError)) {
+                    PyErr_Clear();
+                    PyObject *stype_name = PyObject_GetAttrString(stype, "name");
+                    if (stype_name != NULL) {
+                        menai_raise_eval_errorf(
+                            "'struct-set': struct '%s' has no field '%s'",
+                            PyUnicode_AsUTF8(stype_name), PyUnicode_AsUTF8(name));
+                        Py_DECREF(stype_name);
+                    }
+                }
+                Py_DECREF(name); Py_DECREF(stype); goto error;
+            }
             Py_DECREF(name);
-            if (idx == NULL) { Py_DECREF(stype); goto error; }
             Py_ssize_t fi = PyLong_AsSsize_t(idx); Py_DECREF(idx);
             if (fi == -1 && PyErr_Occurred()) { Py_DECREF(stype); goto error; }
             PyObject *fields = PyObject_GetAttrString(val, "fields");

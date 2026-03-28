@@ -740,6 +740,20 @@ def to_slow(src):
     Called on the return value of execute() so that no fast types escape the VM
     boundary.  All code outside menai_vm.pyx sees only menai_value.py types.
     """
+    return _to_slow_memo(src, {})
+
+
+def _to_slow_memo(src, memo):
+    """Cycle-safe implementation of to_slow using a memo dict.
+
+    memo maps id(fast_obj) -> slow_obj to break reference cycles such as
+    (letrec ((x (list (lambda () x)))) x) where a list contains a closure
+    that captures the same list.
+    """
+    obj_id = id(src)
+    if obj_id in memo:
+        return memo[obj_id]
+
     if isinstance(src, _slow.MenaiValue):
         return src
 
@@ -765,32 +779,57 @@ def to_slow(src):
         return _slow.MenaiSymbol(src.name)
 
     if type(src) is MenaiList:
-        return _slow.MenaiList(tuple(to_slow(e) for e in src.elements))
+        # Register a placeholder before recursing to break cycles.
+        # MenaiList is immutable so we must convert elements first, but
+        # to handle cycles we pre-register the fast object mapped to None
+        # and overwrite after construction.  A cycle through a list element
+        # would return None for the back-edge, which is the best we can do
+        # for immutable containers.
+        memo[obj_id] = None
+        result = _slow.MenaiList(tuple(_to_slow_memo(e, memo) for e in src.elements))
+        memo[obj_id] = result
+        return result
 
     if type(src) is MenaiDict:
-        return _slow.MenaiDict(tuple(
-            (to_slow(k), to_slow(v)) for k, v in src.pairs
+        memo[obj_id] = None
+        result = _slow.MenaiDict(tuple(
+            (_to_slow_memo(k, memo), _to_slow_memo(v, memo)) for k, v in src.pairs
         ))
+        memo[obj_id] = result
+        return result
 
     if type(src) is MenaiSet:
-        return _slow.MenaiSet(tuple(to_slow(e) for e in src.elements))
+        memo[obj_id] = None
+        result = _slow.MenaiSet(tuple(_to_slow_memo(e, memo) for e in src.elements))
+        memo[obj_id] = result
+        return result
 
     if type(src) is MenaiStructType:
         return _slow.MenaiStructType(src.name, src.tag, src.field_names)
 
     if type(src) is MenaiStruct:
-        return _slow.MenaiStruct(
-            struct_type=to_slow(src.struct_type),
-            fields=tuple(to_slow(f) for f in src.fields),
+        memo[obj_id] = None
+        result = _slow.MenaiStruct(
+            struct_type=_to_slow_memo(src.struct_type, memo),
+            fields=tuple(_to_slow_memo(f, memo) for f in src.fields),
         )
+        memo[obj_id] = result
+        return result
 
     if type(src) is MenaiFunction:
-        return _slow.MenaiFunction(
+        # Two-phase construction: create with empty captured_values first,
+        # register in memo, then fill captures.  This breaks the cycle
+        # list -> closure -> list cleanly because the closure is registered
+        # before we recurse into its captured_values.
+        slow_fn = _slow.MenaiFunction(
             parameters=src.parameters,
             name=src.name,
             bytecode=src.bytecode,
-            captured_values=[to_slow(cv) for cv in src.captured_values],
+            captured_values=[],
             is_variadic=src.is_variadic,
         )
+        memo[obj_id] = slow_fn
+        slow_fn.captured_values = [_to_slow_memo(cv, memo) for cv in src.captured_values]
+        return slow_fn
 
     raise TypeError(f"to_slow: unexpected fast type {type(src)!r}")
