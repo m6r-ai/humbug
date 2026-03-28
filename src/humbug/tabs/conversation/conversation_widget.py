@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QMenu, QWidgetAction, QFileDialog, QPushButton
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QUrl
-from PySide6.QtGui import QCursor, QResizeEvent, QDesktopServices, QColor, QIcon, QPixmap
+from PySide6.QtGui import QCursor, QResizeEvent, QDesktopServices, QColor, QIcon, QPixmap, QPalette
 
 from ai import (
     AIConversation, AIConversationEvent, AIConversationHistory,
@@ -25,7 +25,7 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.style_manager import StyleManager
+from humbug.style_manager import StyleManager, ColorMode
 from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.conversation.conversation_input import ConversationInput
 from humbug.tabs.conversation.conversation_message import ConversationMessage, TypingIndicatorWidget
@@ -73,6 +73,7 @@ class ConversationWidget(QWidget):
         self._logger = logging.getLogger("ConversationWidget")
 
         self.setObjectName("ConversationWidget")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self._mindspace_manager = MindspaceManager()
 
@@ -152,12 +153,15 @@ class ConversationWidget(QWidget):
         # Set up the scroll area
         self._scroll_area = QScrollArea()
         self._scroll_area.setObjectName("ConversationScrollArea")
+        self._scroll_area.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._scroll_area.setFrameStyle(0)
         self._scroll_area.setWidgetResizable(True)
         self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._scroll_area.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
+        self._scroll_area.viewport().setObjectName("ConversationViewport")
+        self._scroll_area.viewport().setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         # Connect to the vertical scrollbar's change signals
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
@@ -165,6 +169,8 @@ class ConversationWidget(QWidget):
 
         # Create messages container widget
         self._messages_container = QWidget()
+        self._messages_container.setObjectName("ConversationMessagesContainer")
+        self._messages_container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._messages_layout = QVBoxLayout(self._messages_container)
         self._messages_container.setLayout(self._messages_layout)
 
@@ -182,6 +188,7 @@ class ConversationWidget(QWidget):
         self._input.stop_requested.connect(self._on_stop_requested)
         self._input.settings_requested.connect(self._on_input_settings_requested)
         self._input.attach_requested.connect(self._on_attach_requested)
+        self._input.attachment_file_deleted.connect(self._on_attachment_file_deleted)
         self._input.modified.connect(self.conversation_modified)
 
         style_manager.style_changed.connect(self._on_style_changed)
@@ -1676,21 +1683,37 @@ class ConversationWidget(QWidget):
     def _build_widget_style(self) -> str:
         """Build styles for the conversation widget."""
         style_manager = self._style_manager
+        conversation_canvas = (
+            "rgba(8, 12, 20, 0.96)"
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)
+        )
 
         return f"""
             QWidget {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                background-color: {conversation_canvas};
             }}
 
             {style_manager.get_menu_stylesheet()}
 
             QScrollArea {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                background-color: {conversation_canvas};
+                border: none;
+            }}
+
+            QScrollArea > QWidget > QWidget {{
+                background-color: {conversation_canvas};
+                border: none;
+            }}
+
+            QWidget#ConversationMessagesContainer,
+            QWidget#ConversationViewport {{
+                background-color: {conversation_canvas};
                 border: none;
             }}
 
             #InputSeparator {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
+                background-color: {style_manager.get_color_str(ColorRole.MENU_BORDER)};
                 border: none;
             }}
 
@@ -1701,9 +1724,9 @@ class ConversationWidget(QWidget):
             }}
 
             #_attachment_chip {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
-                border: 1px solid {style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER)};
-                border-radius: 8px;
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: 10px;
             }}
 
             #_chip_label {{
@@ -1735,12 +1758,13 @@ class ConversationWidget(QWidget):
 
             QScrollBar:vertical {{
                 background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 8px;
+                width: 6px;
+                border-radius: 3px;
             }}
             QScrollBar::handle:vertical {{
                 background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-                border-radius: 4px;
+                min-height: 30px;
+                border-radius: 3px;
             }}
             QScrollBar::add-page:vertical,
             QScrollBar::sub-page:vertical {{
@@ -1752,12 +1776,67 @@ class ConversationWidget(QWidget):
             }}
         """
 
+    def _apply_surface_palette(self) -> None:
+        """Force the conversation surfaces to use the correct background palette."""
+        canvas = QColor(
+            "rgba(8, 12, 20, 245)"
+            if self._style_manager.color_mode() == ColorMode.DARK
+            else self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)
+        )
+
+        for widget in (self, self._scroll_area, self._scroll_area.viewport(), self._messages_container):
+            palette = widget.palette()
+            palette.setColor(QPalette.ColorRole.Window, canvas)
+            palette.setColor(QPalette.ColorRole.Base, canvas)
+            widget.setPalette(palette)
+            widget.setAutoFillBackground(True)
+
     def _build_conversation_message_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
-        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor)
+        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor * 1.4)
         label_font_size = style_manager.base_font_size() * zoom_factor * 0.8
+        input_surface = (
+            "rgba(9, 14, 24, 0.78)"
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)
+        )
+        input_hover = (
+            "rgba(15, 23, 38, 0.88)"
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)
+        )
+        submit_surface = (
+            style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)
+        )
+        submit_hover = (
+            style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)
+        )
+        submit_pressed = (
+            style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)
+        )
+        submit_text = (
+            style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER)
+        )
+        submit_border = (
+            style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.MENU_BORDER)
+        )
+        action_button_surface = (
+            style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)
+        )
 
         # The -2px padding above is to offset the 2px border so that the content area remains the same size
         return f"""
@@ -1765,19 +1844,22 @@ class ConversationWidget(QWidget):
                 margin: 0;
                 border-radius: {border_radius}px;
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                padding: -2px;
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
+                padding: -1px;
             }}
-            #ConversationMessage[message_source="user"],
+            #ConversationMessage[message_source="user"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
+            }}
             #ConversationMessage[message_source="user_input"],
             #ConversationMessage[message_source="ai_streaming"] {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
+                background-color: {input_surface};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MENU_BORDER)};
             }}
             #ConversationMessage[message_source="ai"],
             #ConversationMessage[message_source="reasoning"] {{
-                background-color: transparent;
-                border: 2px solid transparent;
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
             }}
 
             #ConversationMessage #_sections_container {{
@@ -1803,12 +1885,12 @@ class ConversationWidget(QWidget):
 
             #ConversationMessage #_role_label {{
                 margin: 0;
-                padding: 1px 6px 1px 0;
+                padding: 2px 6px 2px 0;
                 border: none;
                 background-color: transparent;
                 font-size: {label_font_size:.1f}pt;
                 font-weight: 700;
-                letter-spacing: 0.2px;
+                letter-spacing: 0.3px;
             }}
             #ConversationMessage[message_source="user"] #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
@@ -1847,12 +1929,17 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_stop_button,
             #ConversationMessage #_submit_button,
             #ConversationMessage #_settings_button {{
-                background-color: transparent;
+                background-color: {action_button_surface};
                 color: {style_manager.get_color_str(ColorRole.TEXT_INACTIVE)};
-                border: none;
-                padding: 2px 4px;
+                border: 1px solid {style_manager.get_color_str(ColorRole.MENU_BORDER)};
+                padding: 4px 6px;
                 margin: 0px;
-                border-radius: 4px;
+                border-radius: {int(10 * zoom_factor)}px;
+            }}
+            #ConversationMessage #_attach_button {{
+                background-color: transparent;
+                border: none;
+                padding: 2px 4px 2px 0px;
             }}
 
             #ConversationMessage #_copy_button:hover,
@@ -1864,7 +1951,11 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_stop_button:hover,
             #ConversationMessage #_submit_button:hover,
             #ConversationMessage #_settings_button:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
+                background-color: {input_hover};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            #ConversationMessage #_attach_button:hover {{
+                background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
 
@@ -1880,11 +1971,30 @@ class ConversationWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
+            #ConversationMessage #_attach_button:pressed {{
+                background-color: transparent;
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+
+            #ConversationMessage #_submit_button:enabled {{
+                background-color: {submit_surface};
+                color: {submit_text};
+                border: 1px solid {submit_border};
+                border-radius: {int(10 * zoom_factor)}px;
+            }}
+            #ConversationMessage #_submit_button:enabled:hover {{
+                background-color: {submit_hover};
+                color: {submit_text};
+            }}
+            #ConversationMessage #_submit_button:enabled:pressed {{
+                background-color: {submit_pressed};
+                color: {submit_text};
+            }}
 
             #ConversationMessage #_stop_button:disabled,
             #ConversationMessage #_submit_button:disabled {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-                background-color: transparent;
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
             }}
 
             #ConversationMessage[message_source="user"] #_copy_button:hover,
@@ -1957,9 +2067,9 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_edit_confirm_button {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
-                border: none;
-                border-radius: 4px;
-                padding: 4px 12px;
+                border: 1px solid {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT)};
+                border-radius: 10px;
+                padding: 6px 14px;
                 font-size: {label_font_size:.1f}pt;
             }}
 
@@ -1972,11 +2082,11 @@ class ConversationWidget(QWidget):
             }}
 
             #ConversationMessage #_edit_cancel_button {{
-                background-color: transparent;
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
                 border: 1px solid {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
-                border-radius: 4px;
-                padding: 4px 12px;
+                border-radius: 10px;
+                padding: 6px 14px;
                 font-size: {label_font_size:.1f}pt;
             }}
 
@@ -2078,6 +2188,9 @@ class ConversationWidget(QWidget):
                 border-radius: {border_radius}px;
                 border: 0;
             }}
+            #ConversationMessage[message_source="user_input"] #ConversationMessageSection[section_style="text-user"] {{
+                background-color: transparent;
+            }}
             #ConversationMessage #ConversationMessageSection[section_style="code-system"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
                 margin: 0;
@@ -2104,10 +2217,10 @@ class ConversationWidget(QWidget):
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
                 border: none;
-                padding: 4px 6px;
+                padding: 8px 6px;
                 margin: 0;
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
-                line-height: 1.5;
+                line-height: 1.65;
             }}
 
             /* Extra top breathing room for user message content */
@@ -2186,10 +2299,10 @@ class ConversationWidget(QWidget):
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
         spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
-        msg_spacing = int(spacing * 1.4)
+        msg_spacing = int(spacing * 1.8)
         self._messages_layout.setSpacing(msg_spacing)
-        self._messages_layout.setContentsMargins(spacing * 2, msg_spacing, spacing * 2, msg_spacing)
-        self._messages_container.setMaximumWidth(int(1100 * zoom_factor))
+        self._messages_layout.setContentsMargins(spacing * 3, msg_spacing, spacing * 3, msg_spacing)
+        self._messages_container.setMaximumWidth(int(900 * zoom_factor))
 
         font = self.font()
         base_font_size = style_manager.base_font_size()
@@ -2209,6 +2322,7 @@ class ConversationWidget(QWidget):
 
         shared_stylesheet = "\n".join(stylesheet_parts)
         self.setStyleSheet(shared_stylesheet)
+        self._apply_surface_palette()
 
         for message in self._messages:
             if message.is_rendered():

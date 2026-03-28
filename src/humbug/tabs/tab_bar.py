@@ -2,7 +2,7 @@ from typing import cast
 
 from PySide6.QtWidgets import QTabBar, QWidget
 from PySide6.QtCore import QEvent, QObject
-from PySide6.QtGui import QHoverEvent, QCursor, QPainter, QPaintEvent
+from PySide6.QtGui import QHoverEvent, QCursor, QPainter, QPaintEvent, QPen
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
@@ -82,103 +82,36 @@ class TabBar(QTabBar):
         Args:
             event: The paint event
         """
-        # Create painter
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        rightmost_tab_right = 0
+        painter.fillRect(self.rect(), self._style_manager.get_color(ColorRole.TAB_BAR_BACKGROUND))
 
-        # Calculate the top border thickness we need.  Annoyingly this has to based on whether we're full screen or
-        # not because full screen has no border whereas windows have a 1px border.
-        border_px = 2
-        parent = self.parentWidget()
-        while parent:
-            if parent.isFullScreen():
-                border_px = 1
-                break
-
-            parent = parent.parentWidget()
-
-        prev_is_current = False
-
-        # Paint each tab's background
         for index in range(self.count()):
-            # Get tab state
             tab_state = self.tabData(index)
             if not isinstance(tab_state, dict):
                 tab_state = {}
 
             is_current = tab_state.get('is_current', False)
-
             tab_rect = self.tabRect(index)
             if not tab_rect.intersects(event.rect()):
-                prev_is_current = is_current
-                continue  # Skip tabs not in the update region
-
-            # Track the rightmost position
-            rightmost_tab_right = max(rightmost_tab_right, tab_rect.right() + 1)
+                continue
 
             is_updated = tab_state.get('is_updated', False)
             is_active_column = tab_state.get('is_active_column', False)
             is_hovered = index == self.current_hovered_tab
 
-            # Get background color
             background_color = self._get_tab_background_color(is_active_column, is_current, is_updated, is_hovered)
             color = self._style_manager.get_color(background_color)
+            tab_pill_rect = tab_rect.adjusted(2, 3, -2, -1)
 
-            # Fill the tab background
-            painter.fillRect(tab_rect, color)
-
-            # Draw left border if we're not the first tab
-            if index > 0:
-                left_border_color = self._style_manager.get_color(
-                    ColorRole.SPLITTER if is_current or prev_is_current else ColorRole.TAB_SPLITTER
-                )
-                left_border_rect = tab_rect.adjusted(0, 0, -tab_rect.width() + 1, 0)
-                painter.fillRect(left_border_rect, left_border_color)
-
-            # Draw top border
-            border_color_role = ColorRole.TAB_SPLITTER
+            border_color_role = ColorRole.MENU_BORDER
             if is_current:
-                if is_active_column:
-                    border_color_role = ColorRole.TAB_BORDER_ACTIVE
+                border_color_role = ColorRole.TAB_BORDER_ACTIVE if is_active_column else ColorRole.SPLITTER
 
-                else:
-                    border_color_role = ColorRole.SPLITTER
+            painter.setBrush(color)
+            painter.setPen(QPen(self._style_manager.get_color(border_color_role), 1))
+            painter.drawRoundedRect(tab_pill_rect, 10, 10)
 
-            border_color = self._style_manager.get_color(border_color_role)
-            border_rect = tab_rect.adjusted(0, 0, 0, -tab_rect.height() + border_px)
-            painter.fillRect(border_rect, border_color)
-
-            # Draw bottom border for all tabs
-            bottom_border_color = self._style_manager.get_color(ColorRole.SPLITTER)
-            if not is_current:  # Only non-current tabs get bottom border
-                bottom_border_rect = tab_rect.adjusted(0, tab_rect.height() - 1, 0, 0)
-                painter.fillRect(bottom_border_rect, bottom_border_color)
-
-            prev_is_current = is_current
-
-        # Paint right edge of rightmost tab and bottom edge of empty space
-        if self.count() > 0 and rightmost_tab_right < self.width():
-            splitter_color = self._style_manager.get_color(
-                ColorRole.SPLITTER if prev_is_current else ColorRole.TAB_SPLITTER
-            )
-
-            # Paint right edge of the rightmost tab
-            right_edge_rect = self.rect()
-            right_edge_rect.setLeft(rightmost_tab_right)
-            right_edge_rect.setWidth(1)
-            painter.fillRect(right_edge_rect, splitter_color)
-
-            # Paint bottom edge of empty space to the right
-            if rightmost_tab_right + 1 < self.width():
-                empty_space_bottom_rect = self.rect()
-                empty_space_bottom_rect.setLeft(rightmost_tab_right + 1)
-                empty_space_bottom_rect.setTop(self.height() - 1)
-                empty_space_bottom_rect.setHeight(1)
-                colour = self._style_manager.get_color(ColorRole.SPLITTER)
-                painter.fillRect(empty_space_bottom_rect, colour)
-
-        # Let Qt paint the text and other tab elements on top
         super().paintEvent(event)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:

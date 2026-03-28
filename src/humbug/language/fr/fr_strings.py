@@ -64,6 +64,7 @@ def get_french_strings() -> LanguageStrings:
         reset_zoom="Réinitialiser le zoom",
         show_system_log="Afficher le journal de l'espace mental",
         show_system_shell="Afficher le shell Humbug",
+        toggle_mindspace_panel="Afficher ou masquer le panneau de l'espace mental",
         show_all_columns="Afficher toutes les colonnes",
         split_column_left="Diviser la colonne à gauche",
         split_column_right="Diviser la colonne à droite",
@@ -131,6 +132,7 @@ def get_french_strings() -> LanguageStrings:
         theme_dark="Sombre",
         theme_light="Clair",
         file_sort_order="Ordre de tri des fichiers",
+        open_chat_in_new_tab="Ouvrir la discussion dans un nouvel onglet",
         sort_directories_first="Dossiers en premier",
         sort_alphabetical="Alphabétique",
 

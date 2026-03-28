@@ -55,7 +55,7 @@ class StyleManager(QObject):
             self._base_font_size = self._determine_base_font_size()
             self._user_font_size: float | None = None
             self._initialized = True
-            self._color_mode = ColorMode.DARK  # Default to dark mode
+            self._color_mode = ColorMode.LIGHT  # Default to light mode
             self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
             self._highlights: Dict[TokenType, QTextCharFormat] = {}
             self._proportional_highlights: Dict[TokenType, QTextCharFormat] = {}
@@ -75,475 +75,480 @@ class StyleManager(QObject):
         """Initialize the application colours for both light and dark modes."""
         return {
             # Background colours
+            # Dark: Zinc-950/900 scale  |  Light: pure white / zinc-50/100
             ColorRole.BACKGROUND_PRIMARY: {
-                ColorMode.DARK: "#060606",
-                ColorMode.LIGHT: "#fcfcfc"
+                ColorMode.DARK: "#0f172a",
+                ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.BACKGROUND_SECONDARY: {
-                ColorMode.DARK: "#141414",
-                ColorMode.LIGHT: "#ececec"
+                ColorMode.DARK: "#111827",
+                ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.BACKGROUND_TERTIARY: {
-                ColorMode.DARK: "#080808",
-                ColorMode.LIGHT: "#f8f8f8"
+                ColorMode.DARK: "#182235",
+                ColorMode.LIGHT: "#eef3f8"
             },
             ColorRole.BACKGROUND_TERTIARY_HOVER: {
-                ColorMode.DARK: "#303030",
-                ColorMode.LIGHT: "#e0e0e0"
+                ColorMode.DARK: "#23314d",
+                ColorMode.LIGHT: "#dce6f2"
             },
             ColorRole.BACKGROUND_TERTIARY_PRESSED: {
-                ColorMode.DARK: "#505050",
-                ColorMode.LIGHT: "#c8c8c8"
+                ColorMode.DARK: "#2c3c5d",
+                ColorMode.LIGHT: "#cfdceb"
             },
             ColorRole.BACKGROUND_DIALOG: {
-                ColorMode.DARK: "#282828",
-                ColorMode.LIGHT: "#d0d0d0"
+                ColorMode.DARK: "#111827",
+                ColorMode.LIGHT: "#ffffff"
             },
 
             # Text colours
+            # Dark: zinc-100/400/600  |  Light: zinc-950/500/400
             ColorRole.TEXT_PRIMARY: {
-                ColorMode.DARK: "#d8d8d8",
-                ColorMode.LIGHT: "#202020"
+                ColorMode.DARK: "#e5e7eb",
+                ColorMode.LIGHT: "#172033"
             },
             ColorRole.TEXT_BRIGHT: {
-                ColorMode.DARK: "#ffffff",
-                ColorMode.LIGHT: "#000000"
+                ColorMode.DARK: "#f8fafc",
+                ColorMode.LIGHT: "#111827"
             },
             ColorRole.TEXT_HEADING: {
-                ColorMode.DARK: "#ffe0a0",
-                ColorMode.LIGHT: "#204080"
+                ColorMode.DARK: "#90caf9",
+                ColorMode.LIGHT: "#1565c0"
             },
             ColorRole.TEXT_HEADING_BRIGHT: {
-                ColorMode.DARK: "#ffe8a0",
-                ColorMode.LIGHT: "#203880"
+                ColorMode.DARK: "#bbdefb",
+                ColorMode.LIGHT: "#0d47a1"
             },
             ColorRole.TEXT_DISABLED: {
-                ColorMode.DARK: "#707070",
-                ColorMode.LIGHT: "#909090"
+                ColorMode.DARK: "#8a94a6",
+                ColorMode.LIGHT: "#7b8794"
             },
             ColorRole.TEXT_SELECTED: {
-                ColorMode.DARK: "#404058",
-                ColorMode.LIGHT: "#c8c8dc"
+                ColorMode.DARK: "#1e3a5f",
+                ColorMode.LIGHT: "#bfdbfe"   # blue-200
             },
             ColorRole.TEXT_FOUND: {
-                ColorMode.DARK: "#885050",
-                ColorMode.LIGHT: "#e0b4b4"
+                ColorMode.DARK: "#7f1d1d",
+                ColorMode.LIGHT: "#fecaca"   # red-200
             },
             ColorRole.TEXT_FOUND_DIM: {
-                ColorMode.DARK: "#583838",
-                ColorMode.LIGHT: "#f4d8d8"
+                ColorMode.DARK: "#450a0a",
+                ColorMode.LIGHT: "#fee2e2"   # red-100
             },
             ColorRole.TEXT_RECOMMENDED: {
                 ColorMode.DARK: "#ffffff",
                 ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.TEXT_LINK: {
-                ColorMode.DARK: "#80a0ff",
-                ColorMode.LIGHT: "#0000ff"
+                ColorMode.DARK: "#60a5fa",   # blue-400
+                ColorMode.LIGHT: "#2563eb"   # blue-600
             },
             ColorRole.TEXT_INACTIVE: {
-                ColorMode.DARK: "#909090",
-                ColorMode.LIGHT: "#707070"
+                ColorMode.DARK: "#94a3b8",
+                ColorMode.LIGHT: "#667085"
             },
             ColorRole.TEXT_EPHEMERAL: {
-                ColorMode.DARK: "#e0a080",
-                ColorMode.LIGHT: "#a0785c"
+                ColorMode.DARK: "#d4a574",
+                ColorMode.LIGHT: "#92400e"   # amber-800
             },
             ColorRole.TEXT_EPHEMERAL_INACTIVE: {
-                ColorMode.DARK: "#a06040",
-                ColorMode.LIGHT: "#c09070"
+                ColorMode.DARK: "#92400e",
+                ColorMode.LIGHT: "#b45309"   # amber-700
             },
             ColorRole.TEXT_ERROR: {
-                ColorMode.DARK: "#e03020",
-                ColorMode.LIGHT: "#f04030"
+                ColorMode.DARK: "#f87171",   # red-400
+                ColorMode.LIGHT: "#dc2626"   # red-600
             },
             ColorRole.TEXT_ERROR_INACTIVE: {
-                ColorMode.DARK: "#e06050",
-                ColorMode.LIGHT: "#f07060"
+                ColorMode.DARK: "#fca5a5",   # red-300
+                ColorMode.LIGHT: "#ef4444"   # red-500
             },
 
             # Edit box colours
             ColorRole.EDIT_BOX_BORDER: {
-                ColorMode.DARK: "#6060c0",
-                ColorMode.LIGHT: "#404080"
+                ColorMode.DARK: "#60a5fa",
+                ColorMode.LIGHT: "#1976d2"
             },
             ColorRole.EDIT_BOX_BACKGROUND: {
-                ColorMode.DARK: "#242454",
-                ColorMode.LIGHT: "#b8b8f8"
+                ColorMode.DARK: "#0f1b31",
+                ColorMode.LIGHT: "#f5f9ff"
             },
             ColorRole.EDIT_BOX_ERROR: {
-                ColorMode.DARK: "#c03020",
-                ColorMode.LIGHT: "#d04030"
+                ColorMode.DARK: "#dc2626",
+                ColorMode.LIGHT: "#dc2626"
             },
 
-            # Mindspace colours
+            # Mindspace / sidebar colours
             ColorRole.MINDSPACE_BACKGROUND: {
-                ColorMode.DARK: "#101010",
-                ColorMode.LIGHT: "#fafafa"
+                ColorMode.DARK: "#08080a",
+                ColorMode.LIGHT: "#f8f8f9"
             },
             ColorRole.MINDSPACE_NAME_BACKGROUND: {
-                ColorMode.DARK: "#383838",
-                ColorMode.LIGHT: "#d0d0d0"
+                ColorMode.DARK: "#18181b",   # zinc-900
+                ColorMode.LIGHT: "#ebebec"
             },
             ColorRole.MINDSPACE_NAME_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#585858",
-                ColorMode.LIGHT: "#b0b0b0"
+                ColorMode.DARK: "#27272a",   # zinc-800
+                ColorMode.LIGHT: "#e0e0e2"
             },
             ColorRole.MINDSPACE_NAME_BACKGROUND_PRESSED: {
-                ColorMode.DARK: "#707070",
-                ColorMode.LIGHT: "#909090"
+                ColorMode.DARK: "#3f3f46",   # zinc-700
+                ColorMode.LIGHT: "#d4d4d8"   # zinc-300
             },
             ColorRole.MINDSPACE_HEADING: {
-                ColorMode.DARK: "#242424",
-                ColorMode.LIGHT: "#e0e0e0"
+                ColorMode.DARK: "#111113",
+                ColorMode.LIGHT: "#f0f0f2"
             },
 
             # Tab colours
             ColorRole.TAB_BAR_BACKGROUND: {
-                ColorMode.DARK: "#383838",
-                ColorMode.LIGHT: "#d0d0d0"
+                ColorMode.DARK: "#0f172a",
+                ColorMode.LIGHT: "#eaf0f8"
             },
             ColorRole.TAB_BACKGROUND_ACTIVE: {
-                ColorMode.DARK: "#000000",
+                ColorMode.DARK: "#111827",
                 ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.TAB_BACKGROUND_INACTIVE: {
-                ColorMode.DARK: "#202020",
-                ColorMode.LIGHT: "#f0f0f0"
+                ColorMode.DARK: "#162033",
+                ColorMode.LIGHT: "#dde7f2"
             },
             ColorRole.TAB_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#242454",
-                ColorMode.LIGHT: "#b8b8f8"
+                ColorMode.DARK: "#1d2a44",
+                ColorMode.LIGHT: "#d4e3f5"
             },
             ColorRole.TAB_BACKGROUND_UPDATED: {
-                ColorMode.DARK: "#3c2054",
-                ColorMode.LIGHT: "#f0d0f8"
+                ColorMode.DARK: "#132a4a",
+                ColorMode.LIGHT: "#dbeafe"
             },
             ColorRole.TAB_BORDER_ACTIVE: {
-                ColorMode.DARK: "#a0d0ff",
-                ColorMode.LIGHT: "#ff3018"
+                ColorMode.DARK: "#60a5fa",
+                ColorMode.LIGHT: "#1976d2"
             },
 
             # Button colours
             ColorRole.BUTTON_BACKGROUND: {
-                ColorMode.DARK: "#0c0c0c",
-                ColorMode.LIGHT: "#e8e8e8"
+                ColorMode.DARK: "#182235",
+                ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.BUTTON_BACKGROUND_PRESSED: {
-                ColorMode.DARK: "#505050",
-                ColorMode.LIGHT: "#b0b0b0"
+                ColorMode.DARK: "#2c3c5d",
+                ColorMode.LIGHT: "#dbeafe"
             },
             ColorRole.BUTTON_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#c0c0c0"
+                ColorMode.DARK: "#23314d",
+                ColorMode.LIGHT: "#f5f9ff"
             },
             ColorRole.BUTTON_SECONDARY_BACKGROUND: {
-                ColorMode.DARK: "#2c2c2c",
-                ColorMode.LIGHT: "#d8d8d8"
+                ColorMode.DARK: "#162033",
+                ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED: {
-                ColorMode.DARK: "#505050",
-                ColorMode.LIGHT: "#b0b0b0"
+                ColorMode.DARK: "#3f3f46",
+                ColorMode.LIGHT: "#e8f0fb"
             },
             ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#c0c0c0"
+                ColorMode.DARK: "#27272a",
+                ColorMode.LIGHT: "#f5f9ff"
             },
             ColorRole.BUTTON_BACKGROUND_RECOMMENDED: {
-                ColorMode.DARK: "#2050c0",
-                ColorMode.LIGHT: "#3060d0"
+                ColorMode.DARK: "#2563eb",   # blue-600
+                ColorMode.LIGHT: "#2563eb"   # blue-600
             },
             ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED: {
-                ColorMode.DARK: "#4070e0",
-                ColorMode.LIGHT: "#1040b0"
+                ColorMode.DARK: "#1d4ed8",   # blue-700
+                ColorMode.LIGHT: "#1e40af"   # blue-800
             },
             ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER: {
-                ColorMode.DARK: "#3060d0",
-                ColorMode.LIGHT: "#2050c0"
+                ColorMode.DARK: "#3b82f6",   # blue-500
+                ColorMode.LIGHT: "#1d4ed8"   # blue-700
             },
             ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE: {
-                ColorMode.DARK: "#c03020",
-                ColorMode.LIGHT: "#d04030"
+                ColorMode.DARK: "#dc2626",   # red-600
+                ColorMode.LIGHT: "#dc2626"
             },
             ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED: {
-                ColorMode.DARK: "#e05040",
-                ColorMode.LIGHT: "#b02010"
+                ColorMode.DARK: "#b91c1c",   # red-700
+                ColorMode.LIGHT: "#991b1b"   # red-800
             },
             ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER: {
-                ColorMode.DARK: "#d04030",
-                ColorMode.LIGHT: "#c03020"
+                ColorMode.DARK: "#ef4444",   # red-500
+                ColorMode.LIGHT: "#b91c1c"   # red-700
             },
             ColorRole.BUTTON_BACKGROUND_EDIT: {
-                ColorMode.DARK: "#b07010",
-                ColorMode.LIGHT: "#a06008"
+                ColorMode.DARK: "#d97706",   # amber-600
+                ColorMode.LIGHT: "#b45309"   # amber-700
             },
             ColorRole.BUTTON_BACKGROUND_EDIT_PRESSED: {
-                ColorMode.DARK: "#906000",
-                ColorMode.LIGHT: "#804800"
+                ColorMode.DARK: "#b45309",   # amber-700
+                ColorMode.LIGHT: "#92400e"   # amber-800
             },
             ColorRole.BUTTON_BACKGROUND_EDIT_HOVER: {
-                ColorMode.DARK: "#c08020",
-                ColorMode.LIGHT: "#b07018"
+                ColorMode.DARK: "#f59e0b",   # amber-500
+                ColorMode.LIGHT: "#d97706"   # amber-600
             },
             ColorRole.BUTTON_BACKGROUND_DISABLED: {
-                ColorMode.DARK: "#202020",
-                ColorMode.LIGHT: "#d8d8d8"
+                ColorMode.DARK: "#18181b",
+                ColorMode.LIGHT: "#f4f4f5"
             },
 
             # Menu elements
             ColorRole.MENU_BACKGROUND: {
-                ColorMode.DARK: "#2d2d2d",
-                ColorMode.LIGHT: "#f0f0f0"
+                ColorMode.DARK: "#111827",
+                ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.MENU_HOVER: {
-                ColorMode.DARK: "#3060d0",
-                ColorMode.LIGHT: "#5090e0"
+                ColorMode.DARK: "#1d2a44",
+                ColorMode.LIGHT: "#edf4ff"
             },
             ColorRole.MENU_BORDER: {
-                ColorMode.DARK: "#606060",
-                ColorMode.LIGHT: "#b0b0b0"
+                ColorMode.DARK: "#334155",
+                ColorMode.LIGHT: "#d7e1ee"
             },
 
             # Splitter bars
             ColorRole.SPLITTER: {
-                ColorMode.DARK: "#606060",
-                ColorMode.LIGHT: "#b0b0b0"
+                ColorMode.DARK: "#334155",
+                ColorMode.LIGHT: "#d7e1ee"
             },
             ColorRole.TAB_SPLITTER: {
-                ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#d0d0d0"
+                ColorMode.DARK: "#22304a",
+                ColorMode.LIGHT: "#d7e1ee"
             },
 
             # Scroll bar elements
             ColorRole.SCROLLBAR_BACKGROUND: {
-                ColorMode.DARK: "#2d2d2d",
-                ColorMode.LIGHT: "#f0f0f0"
+                ColorMode.DARK: "#0f172a",
+                ColorMode.LIGHT: "#edf2f7"
             },
             ColorRole.SCROLLBAR_HANDLE: {
-                ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#c0c0c0"
+                ColorMode.DARK: "#475569",
+                ColorMode.LIGHT: "#b8c7da"
             },
 
             # Code block border
             ColorRole.CODE_BORDER: {
-                ColorMode.DARK: "#383838",
-                ColorMode.LIGHT: "#d0d0d0"
+                ColorMode.DARK: "#27272a",   # zinc-800
+                ColorMode.LIGHT: "#e4e4e7"   # zinc-200
             },
 
             # Table elements
             ColorRole.TABLE_BORDER: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#a0a0a0"
+                ColorMode.DARK: "#3f3f46",   # zinc-700
+                ColorMode.LIGHT: "#d4d4d8"   # zinc-300
             },
             ColorRole.TABLE_HEADER_BACKGROUND: {
-                ColorMode.DARK: "#484838",
-                ColorMode.LIGHT: "#d0d0e0"
+                ColorMode.DARK: "#1f1f23",
+                ColorMode.LIGHT: "#f0f0f2"
             },
 
             # Message colours
+            # Dark: zinc-900 card for AI, deep blue-tinted for user
+            # Light: white/zinc-50 for AI, blue-50 for user
             ColorRole.MESSAGE_BACKGROUND: {
-                ColorMode.DARK: "#181818",
-                ColorMode.LIGHT: "#f2f2f2"
+                ColorMode.DARK: "#111827",
+                ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.MESSAGE_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#383838",
-                ColorMode.LIGHT: "#d8d8d8"
+                ColorMode.DARK: "#182235",
+                ColorMode.LIGHT: "#f5f9ff"
             },
             ColorRole.MESSAGE_BACKGROUND_PRESSED: {
-                ColorMode.DARK: "#505050",
-                ColorMode.LIGHT: "#c0c0c0"
+                ColorMode.DARK: "#22304a",
+                ColorMode.LIGHT: "#e8f0fb"
             },
             ColorRole.MESSAGE_USER_BACKGROUND: {
-                ColorMode.DARK: "#282828",
-                ColorMode.LIGHT: "#f0f0f0"
+                ColorMode.DARK: "#0f1b31",
+                ColorMode.LIGHT: "#f5f9ff"
             },
             ColorRole.MESSAGE_USER_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#484848",
-                ColorMode.LIGHT: "#c0c0c0"
+                ColorMode.DARK: "#152540",
+                ColorMode.LIGHT: "#e8f1fd"
             },
             ColorRole.MESSAGE_USER_BACKGROUND_PRESSED: {
-                ColorMode.DARK: "#606060",
-                ColorMode.LIGHT: "#a0a0a0"
+                ColorMode.DARK: "#1e2d49",
+                ColorMode.LIGHT: "#dbeafe"
             },
             ColorRole.MESSAGE_BORDER: {
-                ColorMode.DARK: "#303030",
-                ColorMode.LIGHT: "#e2e2e2"
+                ColorMode.DARK: "#334155",
+                ColorMode.LIGHT: "#d7e1ee"
             },
             ColorRole.MESSAGE_USER_BORDER: {
-                ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#d0d0d0"
+                ColorMode.DARK: "#335c8a",
+                ColorMode.LIGHT: "#90caf9"
             },
             ColorRole.MESSAGE_SPOTLIGHTED: {
-                ColorMode.DARK: "#586878",
-                ColorMode.LIGHT: "#98a8b8"
+                ColorMode.DARK: "#1e3a5f",
+                ColorMode.LIGHT: "#93c5fd"   # blue-300
             },
+            # Role label accent colours
             ColorRole.MESSAGE_USER: {
-                ColorMode.DARK: "#7090e0",
-                ColorMode.LIGHT: "#5068a0"
+                ColorMode.DARK: "#60a5fa",   # blue-400
+                ColorMode.LIGHT: "#1d4ed8"   # blue-700
             },
             ColorRole.MESSAGE_AI: {
-                ColorMode.DARK: "#80c080",
-                ColorMode.LIGHT: "#208020"
+                ColorMode.DARK: "#34d399",   # emerald-400
+                ColorMode.LIGHT: "#047857"   # emerald-700
             },
             ColorRole.MESSAGE_REASONING: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#808080"
+                ColorMode.DARK: "#a78bfa",   # violet-400
+                ColorMode.LIGHT: "#6d28d9"   # violet-700
             },
             ColorRole.MESSAGE_TOOL_CALL: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#808080"
+                ColorMode.DARK: "#fb923c",   # orange-400
+                ColorMode.LIGHT: "#c2410c"   # orange-700
             },
             ColorRole.MESSAGE_TOOL_RESULT: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#808080"
+                ColorMode.DARK: "#a78bfa",   # violet-400
+                ColorMode.LIGHT: "#5b21b6"   # violet-800
             },
             ColorRole.MESSAGE_USER_QUEUED: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#808080"
+                ColorMode.DARK: "#6b7280",   # gray-500
+                ColorMode.LIGHT: "#6b7280"
             },
             ColorRole.MESSAGE_SYSTEM_ERROR: {
-                ColorMode.DARK: "#c08080",
-                ColorMode.LIGHT: "#a04040"
+                ColorMode.DARK: "#f87171",   # red-400
+                ColorMode.LIGHT: "#b91c1c"   # red-700
             },
             ColorRole.MESSAGE_SYSTEM_SUCCESS: {
-                ColorMode.DARK: "#80c080",
-                ColorMode.LIGHT: "#40a040"
+                ColorMode.DARK: "#34d399",   # emerald-400
+                ColorMode.LIGHT: "#047857"   # emerald-700
             },
             ColorRole.MESSAGE_SYNTAX: {
-                ColorMode.DARK: "#a07850",
-                ColorMode.LIGHT: "#806040"
+                ColorMode.DARK: "#d97706",   # amber-600
+                ColorMode.LIGHT: "#b45309"   # amber-700
             },
             ColorRole.MESSAGE_STREAMING: {
-                ColorMode.DARK: "#c0a080",
-                ColorMode.LIGHT: "#a07050"
+                ColorMode.DARK: "#90caf9",
+                ColorMode.LIGHT: "#1976d2"
             },
             ColorRole.MESSAGE_TRACE: {
-                ColorMode.DARK: "#a0a0a0",
-                ColorMode.LIGHT: "#606060"
+                ColorMode.DARK: "#a1a1aa",   # zinc-400
+                ColorMode.LIGHT: "#71717a"   # zinc-500
             },
             ColorRole.MESSAGE_INFORMATION: {
-                ColorMode.DARK: "#80b0f0",
-                ColorMode.LIGHT: "#0060c0"
+                ColorMode.DARK: "#60a5fa",   # blue-400
+                ColorMode.LIGHT: "#2563eb"   # blue-600
             },
             ColorRole.MESSAGE_WARNING: {
-                ColorMode.DARK: "#f0c040",
-                ColorMode.LIGHT: "#c0a020"
+                ColorMode.DARK: "#fbbf24",   # amber-400
+                ColorMode.LIGHT: "#d97706"   # amber-600
             },
             ColorRole.MESSAGE_ERROR: {
-                ColorMode.DARK: "#ff6060",
-                ColorMode.LIGHT: "#c03030"
+                ColorMode.DARK: "#f87171",   # red-400
+                ColorMode.LIGHT: "#dc2626"   # red-600
             },
 
             # Status bar elements
             ColorRole.STATUS_BAR_BACKGROUND: {
-                ColorMode.DARK: "#121212",
-                ColorMode.LIGHT: "#e8e8e8"
+                ColorMode.DARK: "#09090b",   # zinc-950 — flush with app bg
+                ColorMode.LIGHT: "#f4f4f5"   # zinc-100
             },
             ColorRole.CANARY_BACKGROUND: {
-                ColorMode.DARK: "#802020",
-                ColorMode.LIGHT: "#ff8080"
+                ColorMode.DARK: "#991b1b",   # red-800
+                ColorMode.LIGHT: "#dc2626"   # red-600
             },
 
             # Close button states
             ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#d04030",
-                ColorMode.LIGHT: "#c03020"
+                ColorMode.DARK: "#ef4444",   # red-500
+                ColorMode.LIGHT: "#dc2626"   # red-600
             },
 
             # Line numbers
             ColorRole.LINE_NUMBER: {
-                ColorMode.DARK: "#606060",
-                ColorMode.LIGHT: "#c0c0c0"
+                ColorMode.DARK: "#52525b",   # zinc-600
+                ColorMode.LIGHT: "#a1a1aa"   # zinc-400
             },
 
-            # Syntax highlighting
+            # Syntax highlighting — VS Code-inspired, calibrated for zinc-900 (dark) and white (light)
             ColorRole.SYNTAX_ERROR: {
-                ColorMode.DARK: "#ff0000",
-                ColorMode.LIGHT: "#ff0000"
+                ColorMode.DARK: "#ef4444",   # red-500
+                ColorMode.LIGHT: "#dc2626"   # red-600
             },
-            ColorRole.SYNTAX_01: {
-                ColorMode.DARK: "#80e0d0",
-                ColorMode.LIGHT: "#007070"
+            ColorRole.SYNTAX_01: {           # addresses / identifiers
+                ColorMode.DARK: "#5eead4",   # teal-300
+                ColorMode.LIGHT: "#0f766e"   # teal-700
             },
-            ColorRole.SYNTAX_02: {
-                ColorMode.DARK: "#f0f0f0",
-                ColorMode.LIGHT: "#202020"
+            ColorRole.SYNTAX_02: {           # plain code text
+                ColorMode.DARK: "#f4f4f5",   # zinc-100
+                ColorMode.LIGHT: "#18181b"   # zinc-900
             },
-            ColorRole.SYNTAX_03: {
-                ColorMode.DARK: "#68b068",
-                ColorMode.LIGHT: "#407040"
+            ColorRole.SYNTAX_03: {           # comments
+                ColorMode.DARK: "#71717a",   # zinc-500
+                ColorMode.LIGHT: "#71717a"   # zinc-500
             },
-            ColorRole.SYNTAX_04: {
-                ColorMode.DARK: "#ffa0eb",
-                ColorMode.LIGHT: "#c000a0"
+            ColorRole.SYNTAX_04: {           # CSS at-rules / decorators
+                ColorMode.DARK: "#f472b6",   # pink-400
+                ColorMode.LIGHT: "#be185d"   # pink-700
             },
-            ColorRole.SYNTAX_05: {
-                ColorMode.DARK: "#808080",
-                ColorMode.LIGHT: "#606060"
+            ColorRole.SYNTAX_05: {           # doctype / meta
+                ColorMode.DARK: "#a1a1aa",   # zinc-400
+                ColorMode.LIGHT: "#71717a"   # zinc-500
             },
-            ColorRole.SYNTAX_06: {
-                ColorMode.DARK: "#90e0e8",
-                ColorMode.LIGHT: "#0080a0"
+            ColorRole.SYNTAX_06: {           # builtins / type names
+                ColorMode.DARK: "#7dd3fc",   # sky-300
+                ColorMode.LIGHT: "#0369a1"   # sky-700
             },
-            ColorRole.SYNTAX_07: {
-                ColorMode.DARK: "#e0e080",
-                ColorMode.LIGHT: "#a0a000"
+            ColorRole.SYNTAX_07: {           # commands / diff headings / bold markers
+                ColorMode.DARK: "#fde047",   # yellow-300
+                ColorMode.LIGHT: "#a16207"   # yellow-700
             },
-            ColorRole.SYNTAX_08: {
-                ColorMode.DARK: "#b090f0",
-                ColorMode.LIGHT: "#5040c0"
+            ColorRole.SYNTAX_08: {           # annotations / attributes
+                ColorMode.DARK: "#a78bfa",   # violet-400
+                ColorMode.LIGHT: "#6d28d9"   # violet-700
             },
-            ColorRole.SYNTAX_09: {
-                ColorMode.DARK: "#90e0e8",
-                ColorMode.LIGHT: "#0080a0"
+            ColorRole.SYNTAX_09: {           # additional type tokens
+                ColorMode.DARK: "#7dd3fc",   # sky-300
+                ColorMode.LIGHT: "#0369a1"   # sky-700
             },
-            ColorRole.SYNTAX_10: {
-                ColorMode.DARK: "#d070d0",
-                ColorMode.LIGHT: "#a000a0"
+            ColorRole.SYNTAX_10: {           # other tokens
+                ColorMode.DARK: "#e879f9",   # fuchsia-400
+                ColorMode.LIGHT: "#a21caf"   # fuchsia-700
             },
-            ColorRole.SYNTAX_11: {
-                ColorMode.DARK: "#80b0f0",
-                ColorMode.LIGHT: "#0060c0"
+            ColorRole.SYNTAX_11: {           # arguments / diff metadata
+                ColorMode.DARK: "#93c5fd",   # blue-300
+                ColorMode.LIGHT: "#1d4ed8"   # blue-700
             },
-            ColorRole.SYNTAX_12: {
-                ColorMode.DARK: "#f08080",
-                ColorMode.LIGHT: "#c03030"
+            ColorRole.SYNTAX_12: {           # backtick / diff removed / error refs
+                ColorMode.DARK: "#fb7185",   # rose-400
+                ColorMode.LIGHT: "#be123c"   # rose-700
             },
-            ColorRole.SYNTAX_13: {
-                ColorMode.DARK: "#ffc0eb",
-                ColorMode.LIGHT: "#c080a0"
+            ColorRole.SYNTAX_13: {           # blockquotes
+                ColorMode.DARK: "#c4b5fd",   # violet-300
+                ColorMode.LIGHT: "#7c3aed"   # violet-600
             },
-            ColorRole.SYNTAX_14: {
-                ColorMode.DARK: "#f0e060",
-                ColorMode.LIGHT: "#a09040"
+            ColorRole.SYNTAX_14: {           # strings / diff changed
+                ColorMode.DARK: "#fcd34d",   # amber-300
+                ColorMode.LIGHT: "#b45309"   # amber-700
             },
-            ColorRole.SYNTAX_15: {
-                ColorMode.DARK: "#70e0e8",
-                ColorMode.LIGHT: "#2090a0"
+            ColorRole.SYNTAX_15: {           # additional type / cyan tokens
+                ColorMode.DARK: "#5eead4",   # teal-300
+                ColorMode.LIGHT: "#0f766e"   # teal-700
             },
-            ColorRole.SYNTAX_16: {
-                ColorMode.DARK: "#88d048",
-                ColorMode.LIGHT: "#508020"
+            ColorRole.SYNTAX_16: {           # booleans / diff added
+                ColorMode.DARK: "#4ade80",   # green-400
+                ColorMode.LIGHT: "#15803d"   # green-700
             },
-            ColorRole.SYNTAX_17: {
-                ColorMode.DARK: "#c0c0c0",
-                ColorMode.LIGHT: "#404040"
+            ColorRole.SYNTAX_17: {           # plain text / punctuation
+                ColorMode.DARK: "#d4d4d8",   # zinc-300
+                ColorMode.LIGHT: "#52525b"   # zinc-600
             },
-            ColorRole.SYNTAX_18: {
-                ColorMode.DARK: "#80b080",
-                ColorMode.LIGHT: "#609060"
+            ColorRole.SYNTAX_18: {           # secondary comments / doc strings
+                ColorMode.DARK: "#86efac",   # green-300
+                ColorMode.LIGHT: "#16a34a"   # green-600
             },
-            ColorRole.SYNTAX_19: {
-                ColorMode.DARK: "#c87050",
-                ColorMode.LIGHT: "#a04020"
+            ColorRole.SYNTAX_19: {           # characters / special literals
+                ColorMode.DARK: "#fdba74",   # orange-300
+                ColorMode.LIGHT: "#c2410c"   # orange-700
             },
-            ColorRole.SYNTAX_20: {
-                ColorMode.DARK: "#c05040",
-                ColorMode.LIGHT: "#803828"
+            ColorRole.SYNTAX_20: {           # character types / error tokens
+                ColorMode.DARK: "#fb7185",   # rose-400
+                ColorMode.LIGHT: "#be123c"   # rose-700
             },
-            ColorRole.SYNTAX_21: {
-                ColorMode.DARK: "#30c090",
-                ColorMode.LIGHT: "#24906c"
+            ColorRole.SYNTAX_21: {           # bold / emphasis
+                ColorMode.DARK: "#bae6fd",   # sky-200
+                ColorMode.LIGHT: "#0369a1"   # sky-700
             },
 
             # Terminal basic colors
@@ -1083,10 +1088,8 @@ class StyleManager(QObject):
 
             self._write_icon(f'plus-{suffix}.svg', f'''
                 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="4" y="4" width="56" height="56" rx="14" ry="14"
-                          fill="none" stroke="{color}" stroke-width="5"/>
-                    <line x1="32" y1="18" x2="32" y2="46" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
-                    <line x1="18" y1="32" x2="46" y2="32" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="32" y1="16" x2="32" y2="48" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="16" y1="32" x2="48" y2="32" stroke="{color}" stroke-width="5" stroke-linecap="round"/>
                 </svg>
             ''')
 
@@ -1351,57 +1354,88 @@ class StyleManager(QObject):
             }}
 
             QScrollArea {{
-                background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                background-color: transparent;
                 border: none;
             }}
 
             QScrollArea > QWidget > QWidget {{
-                background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                background-color: transparent;
                 border: none;
             }}
 
-            /* Labels */
             QLabel {{
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                background-color: transparent;
                 border: none;
-                border-radius: 4px;
                 padding: 0px;
                 margin: 0px;
                 font-size: {base_font_size * zoom_factor}pt;
             }}
 
-            /* Text inputs */
+            QWidget#SettingsContainer {{
+                background: transparent;
+            }}
+
+            QWidget#SettingsField {{
+                background-color: {self.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                border: 1px solid {self.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: 14px;
+            }}
+
+            QWidget#SettingsField:hover {{
+                border: 1px solid {self.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+            }}
+
+            QWidget#SettingsHeaderBlock,
+            QWidget#SettingsSectionBlock {{
+                background: transparent;
+                border: none;
+            }}
+
             QLineEdit {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 4px;
+                border: 1px solid {self.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: 10px;
+                padding: 6px 10px;
                 font-size: {int(base_font_size * zoom_factor)}pt;
+            }}
+            QLineEdit:hover {{
+                border: 1px solid {self.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+            }}
+            QLineEdit:focus {{
+                border: 1px solid {self.get_color_str(ColorRole.EDIT_BOX_BORDER)};
+                background-color: {self.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
             }}
             QLineEdit:disabled {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
                 color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+                border: 1px solid {self.get_color_str(ColorRole.MENU_BORDER)};
             }}
 
-            /* Text areas */
             #SettingsTextArea {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                border: none;
-                border-radius: 4px;
-                padding: 4px;
+                color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: 1px solid {self.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: 10px;
+                padding: 6px 10px;
+            }}
+            #SettingsTextArea:hover {{
+                border: 1px solid {self.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+            }}
+            #SettingsTextArea:focus {{
+                border: 1px solid {self.get_color_str(ColorRole.EDIT_BOX_BORDER)};
+                background-color: {self.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
             }}
             #SettingsTextArea:disabled {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
                 color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+                border: 1px solid {self.get_color_str(ColorRole.MENU_BORDER)};
             }}
 
-            /* Checkboxes */
             QCheckBox {{
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
-                border-radius: 4px;
                 padding: 0px;
                 margin: 0px;
             }}
@@ -1409,34 +1443,46 @@ class StyleManager(QObject):
                 width: {int(18 * zoom_factor)}px;
                 height: {int(18 * zoom_factor)}px;
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                border: 1px solid {self.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: 6px;
             }}
             QCheckBox::indicator:disabled {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                border: 1px solid {self.get_color_str(ColorRole.MENU_BORDER)};
             }}
             QCheckBox::indicator:checked {{
+                background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
+                border: 1px solid {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
                 image: url({self.get_icon_path('check')});
             }}
             QCheckBox:disabled {{
                 color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
             }}
 
-            /* Combo boxes */
             QComboBox {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 6px;
+                border: 1px solid {self.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: 10px;
+                padding: 6px 10px;
                 margin: 0px;
                 font-size: {int(base_font_size * zoom_factor)}pt;
+            }}
+            QComboBox:hover {{
+                border: 1px solid {self.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+            }}
+            QComboBox:focus {{
+                border: 1px solid {self.get_color_str(ColorRole.EDIT_BOX_BORDER)};
+                background-color: {self.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
             }}
             QComboBox:disabled {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
                 color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+                border: 1px solid {self.get_color_str(ColorRole.MENU_BORDER)};
             }}
             QComboBox::drop-down {{
                 border: none;
-                width: 20px;
+                width: 28px;
             }}
             QComboBox::down-arrow {{
                 image: url({self.get_icon_path("arrow-down")});
@@ -1457,27 +1503,37 @@ class StyleManager(QObject):
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
             QComboBox QListView {{
-                background-color: {self.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                background-color: {self.get_color_str(ColorRole.MENU_BACKGROUND)};
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: 1px solid {self.get_color_str(ColorRole.MENU_BORDER)};
+                outline: none;
+                padding: 6px;
             }}
 
-            /* Spin boxes */
             QSpinBox, QDoubleSpinBox {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 4px;
+                border: 1px solid {self.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: 10px;
+                padding: 6px 10px;
                 font-size: {base_font_size * zoom_factor}pt;
+            }}
+            QSpinBox:hover, QDoubleSpinBox:hover {{
+                border: 1px solid {self.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+            }}
+            QSpinBox:focus, QDoubleSpinBox:focus {{
+                border: 1px solid {self.get_color_str(ColorRole.EDIT_BOX_BORDER)};
+                background-color: {self.get_color_str(ColorRole.EDIT_BOX_BACKGROUND)};
             }}
             QSpinBox:disabled, QDoubleSpinBox:disabled {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
                 color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+                border: 1px solid {self.get_color_str(ColorRole.MENU_BORDER)};
             }}
             QSpinBox::up-button, QSpinBox::down-button,
             QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {{
                 border: none;
-                width: 20px;
+                width: 24px;
             }}
             QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {{
                 image: url({self.get_icon_path('arrow-up')});
@@ -1498,17 +1554,18 @@ class StyleManager(QObject):
                 image: none;
             }}
 
-            /* Buttons */
             QPushButton {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND)};
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 4px;
+                border: 1px solid {self.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: 10px;
+                padding: 8px 16px;
                 font-size: {base_font_size * zoom_factor}pt;
+                font-weight: 600;
             }}
             QPushButton:hover {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                border: 1px solid {self.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
             }}
             QPushButton:pressed {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
@@ -1516,37 +1573,45 @@ class StyleManager(QObject):
             QPushButton:disabled {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
                 color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
+                border: 1px solid {self.get_color_str(ColorRole.MENU_BORDER)};
             }}
 
-            /* Recommended (primary) buttons */
             QPushButton[recommended="true"] {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
                 color: {self.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+                border: 1px solid {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
             }}
             QPushButton[recommended="true"]:hover {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
+                border: 1px solid {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
             }}
             QPushButton[recommended="true"]:pressed {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
+                border: 1px solid {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
             }}
             QPushButton[recommended="false"] {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
                 color: {self.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+                border: 1px solid {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
             }}
             QPushButton[recommended="false"]:hover {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER)};
+                border: 1px solid {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER)};
             }}
             QPushButton[recommended="false"]:pressed {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
+                border: 1px solid {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
             }}
 
             QScrollBar:vertical {{
                 background-color: {self.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
                 width: 12px;
+                border-radius: 6px;
             }}
             QScrollBar::handle:vertical {{
                 background-color: {self.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
                 min-height: 20px;
+                border-radius: 6px;
             }}
             QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
                 background: none;

@@ -28,9 +28,11 @@ class SettingsHeader(SettingsItem):
             parent: Parent widget
         """
         super().__init__(parent)
+        self.setObjectName("SettingsHeaderBlock")
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(4, 8, 4, 2)
+        layout.setSpacing(0)
 
         self._label = QLabel(title)
         self._label.setIndent(0)
@@ -58,6 +60,6 @@ class SettingsHeader(SettingsItem):
                 border-radius: none;
                 border: 0px;
                 padding: 0px;
-                margin: 0px 0px 0.75em 0px;
+                margin: 0px 0px 0.35em 0px;
             }}
         """)

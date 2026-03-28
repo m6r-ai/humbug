@@ -41,6 +41,7 @@ class ConversationInput(ConversationMessage):
 
         # Connect text cursor signals
         self._text_area = self._sections[0].text_area()
+        self._text_area.setMinimumHeight(82)
 
         self._text_area.cursorPositionChanged.connect(self.cursor_position_changed)
         self._text_area.page_key_scroll_requested.connect(self.page_key_scroll_requested)
@@ -146,6 +147,7 @@ class ConversationInput(ConversationMessage):
     def apply_style(self) -> None:
         """Apply style changes."""
         super().apply_style()
+        self._text_area.setMinimumHeight(int(82 * self._style_manager.zoom_factor()))
 
         # Apply icon and styling
         icon_base_size = 14
@@ -328,7 +330,9 @@ class ConversationInput(ConversationMessage):
     def _remove_attachment(self, index: int) -> None:
         """Remove the attachment at the given index."""
         if 0 <= index < len(self._attachments):
-            self._attachments.pop(index)
+            _filename, _content, upload_path = self._attachments.pop(index)
+            if upload_path:
+                self.attachment_file_deleted.emit(upload_path)
             self._rebuild_chips()
             self._update_button_states()
 

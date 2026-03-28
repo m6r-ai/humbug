@@ -28,10 +28,11 @@ class SettingsSection(SettingsItem):
             parent: Parent widget
         """
         super().__init__(parent)
+        self.setObjectName("SettingsSectionBlock")
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.setContentsMargins(6, 4, 6, 0)
+        layout.setSpacing(1)
 
         self._title_label = QLabel(title)
         self._title_label.setIndent(0)
@@ -56,7 +57,7 @@ class SettingsSection(SettingsItem):
         zoom_factor = self._style_manager.zoom_factor()
         title_scaled_font_size = int(font_size * zoom_factor)
         color = self._style_manager.get_color_str(ColorRole.TEXT_BRIGHT)
-        bottom_margin = "0.3em" if self._description_label else "1.1em"
+        bottom_margin = "0.2em" if self._description_label else "0.6em"
         self._title_label.setStyleSheet(f"""
             QLabel {{
                 color: {color};
@@ -70,12 +71,14 @@ class SettingsSection(SettingsItem):
 
         if self._description_label:
             description_scaled_font_size = int(font_size * zoom_factor * 0.85)
+            description_color = self._style_manager.get_color_str(ColorRole.TEXT_INACTIVE)
             self._description_label.setStyleSheet(f"""
                 QLabel {{
                     font-size: {description_scaled_font_size}pt;
+                    color: {description_color};
                     border-radius: none;
                     border: none;
                     padding: 0px;
-                    margin: 0em 0em 1.5em 0em;
+                    margin: 0em 0em 0.65em 0em;
                 }}
             """)

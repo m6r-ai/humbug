@@ -65,6 +65,7 @@ def get_arabic_strings() -> LanguageStrings:
         reset_zoom="إعادة تعيين التكبير",
         show_system_log="عرض سجل المساحة الذهنية",
         show_system_shell="عرض صدفة هامبغ",
+        toggle_mindspace_panel="إظهار أو إخفاء لوحة المساحة الذهنية",
         show_all_columns="عرض كل الأعمدة",
         split_column_left="تقسيم العمود لليسار",
         split_column_right="تقسيم العمود لليمين",
@@ -132,6 +133,7 @@ def get_arabic_strings() -> LanguageStrings:
         theme_dark="داكن",
         theme_light="فاتح",
         file_sort_order="ترتيب الملفات",
+        open_chat_in_new_tab="فتح المحادثة في تبويب جديد",
         sort_directories_first="المجلدات أولاً",
         sort_alphabetical="أبجدي",
 

@@ -27,10 +27,10 @@ from humbug.tabs.conversation.conversation_message_section import ConversationMe
 
 
 class TypingIndicatorWidget(QFrame):
-    """Animated typing indicator matching Claude's loading style — three sequential pulsing dots."""
+    """Animated typing indicator with restrained, premium motion."""
 
-    _FRAME_COUNT = 36
-    _TIMER_INTERVAL_MS = 45  # ~22 fps, 1.6 s full cycle
+    _FRAME_COUNT = 48
+    _TIMER_INTERVAL_MS = 36
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -46,12 +46,11 @@ class TypingIndicatorWidget(QFrame):
         self._timer.timeout.connect(self._on_timer)
         self._timer.start(self._TIMER_INTERVAL_MS)
 
-        # Fixed height: bubble padding + dot area
-        self.setFixedHeight(44)
-        self.setMinimumWidth(72)
+        self.setFixedHeight(42)
+        self.setMinimumWidth(86)
 
     def sizeHint(self) -> QSize:
-        return QSize(72, 44)
+        return QSize(86, 42)
 
     def _on_timer(self) -> None:
         self._frame = (self._frame + 1) % self._FRAME_COUNT
@@ -62,45 +61,46 @@ class TypingIndicatorWidget(QFrame):
         self._timer.stop()
 
     def paintEvent(self, event: QPaintEvent) -> None:
-        """Draw a message bubble containing three sequential pulsing dots."""
+        """Draw a refined three-dot loader inside a soft AI bubble."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         zoom = self._style_manager.zoom_factor()
         border_radius = int(self._style_manager.message_bubble_spacing() * zoom)
+        rect = self.rect().adjusted(1, 1, -1, -1)
 
-        # Draw bubble background (same as AI message background)
         bg_color = QColor(self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND))
-        painter.setBrush(bg_color)
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawRoundedRect(self.rect(), border_radius, border_radius)
+        border_color = QColor(self._style_manager.get_color_str(ColorRole.MESSAGE_BORDER))
+        bg_color.setAlpha(235 if self._style_manager.color_mode() == ColorMode.DARK else 245)
+        border_color.setAlpha(180 if self._style_manager.color_mode() == ColorMode.DARK else 140)
 
-        # Dot geometry
-        dot_radius = max(4, int(5 * zoom))
-        gap = max(6, int(8 * zoom))
-        x_start = 16 + dot_radius  # left-aligned with a small margin
+        painter.setBrush(bg_color)
+        painter.setPen(QPen(border_color, 1))
+        painter.drawRoundedRect(rect, border_radius, border_radius)
+
+        dot_radius = max(4.0, 4.5 * zoom)
+        gap = max(10.0, 12.0 * zoom)
+        x_start = rect.left() + 20 + dot_radius
         y_center = self.height() // 2
 
-        base_color = QColor(self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY))
+        base_color = QColor(self._style_manager.get_color_str(ColorRole.MESSAGE_STREAMING))
+        progress = self._frame / self._FRAME_COUNT
 
         for i in range(3):
-            # Sequential wave: each dot is phase-shifted by 1/3 of the cycle
-            phase = (self._frame / self._FRAME_COUNT * 2 * math.pi) - (i * math.pi / 2.2)
-            sin_val = math.sin(phase)
-
-            # Bounce up by up to 7px when sin is positive
-            y_offset = int(-7 * zoom * max(0.0, sin_val))
-            # Opacity: dim when resting, bright when bouncing
-            alpha = int(80 + 175 * max(0.0, sin_val))
+            local_progress = (progress - i * 0.16) % 1.0
+            emphasis = math.sin(local_progress * math.pi)
+            emphasis = max(0.0, emphasis)
+            eased = 1.0 - pow(1.0 - emphasis, 2.2)
 
             color = QColor(base_color)
-            color.setAlpha(alpha)
+            color.setAlpha(int(72 + 168 * eased))
             painter.setBrush(color)
             painter.setPen(Qt.PenStyle.NoPen)
 
+            current_radius = dot_radius + (2.4 * zoom * eased)
+            y = y_center - int(2.0 * zoom * eased)
             x = x_start + i * (dot_radius * 2 + gap)
-            y = y_center + y_offset
-            painter.drawEllipse(QPoint(x, y), dot_radius, dot_radius)
+            painter.drawEllipse(QPoint(int(x), int(y)), int(current_radius), int(current_radius))
 
         painter.end()
 
@@ -537,13 +537,13 @@ class ConversationMessage(QFrame):
                     role_text = strings.role_you_queued
 
                 case AIMessageSource.AI_CONNECTED:
-                    role_text = strings.role_connected.format(model=self._message_model)
+                    role_text = self._format_model_title(self._message_model)
 
                 case AIMessageSource.AI:
-                    role_text = strings.role_assistant.format(model=self._message_model)
+                    role_text = self._format_model_title(self._message_model)
 
                 case AIMessageSource.REASONING:
-                    role_text = strings.role_reasoning.format(model=self._message_model)
+                    role_text = f"{self._format_model_title(self._message_model)} Thinking"
 
                 case AIMessageSource.SYSTEM:
                     role_text = strings.role_system
@@ -556,8 +556,8 @@ class ConversationMessage(QFrame):
 
             # Format with timestamp
             if self._message_timestamp is not None:
-                timestamp_str = self._message_timestamp.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-                self._role_label.setText(f"{role_text} @ {timestamp_str}")
+                timestamp_str = self._format_timestamp(self._message_timestamp)
+                self._role_label.setText(f"{role_text} • {timestamp_str}")
 
             else:
                 self._role_label.setText(role_text)
@@ -588,6 +588,54 @@ class ConversationMessage(QFrame):
 
         if self._approval_i_am_unsure_button:
             self._approval_i_am_unsure_button.setText(strings.i_am_unsure_about_tool_call)
+
+    @staticmethod
+    def _format_timestamp(timestamp: datetime) -> str:
+        """Format timestamps for a cleaner message title line."""
+        return timestamp.strftime("%b %d, %H:%M")
+
+    @staticmethod
+    def _format_model_title(model: str | None) -> str:
+        """Simplify raw model identifiers into cleaner display titles."""
+        if not model:
+            return "Assistant"
+
+        display = model.replace("_", " ").replace("-", " ").strip()
+        replacements = {
+            "response": "",
+            "connected": "",
+            "thinking": "",
+        }
+        words = []
+        for part in display.split():
+            lowered = part.lower()
+            replacement = replacements.get(lowered, part)
+            if replacement:
+                words.append(replacement)
+
+        cleaned = " ".join(words).strip()
+        if not cleaned:
+            return "Assistant"
+
+        titled_words = []
+        replacements = {
+            "gpt": "GPT",
+            "ai": "AI",
+            "xai": "xAI",
+            "vllm": "vLLM",
+            "claude": "Claude",
+            "gemini": "Gemini",
+            "deepseek": "DeepSeek",
+            "openai": "OpenAI",
+            "ollama": "Ollama",
+            "mistral": "Mistral",
+            "zai": "Z.ai",
+        }
+        for word in cleaned.split():
+            lowered = word.lower()
+            titled_words.append(replacements.get(lowered, word.capitalize()))
+
+        return " ".join(titled_words)
 
         if self._approval_reject_button:
             self._approval_reject_button.setText(strings.reject_tool_call)

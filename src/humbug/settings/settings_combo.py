@@ -7,7 +7,7 @@ setting widget.
 
 from typing import List, Any, Tuple
 
-from PySide6.QtWidgets import QWidget, QComboBox, QListView
+from PySide6.QtWidgets import QWidget, QComboBox, QListView, QSizePolicy
 
 from humbug.settings.settings_field import SettingsField
 
@@ -40,6 +40,7 @@ class SettingsCombo(SettingsField):
 
         self._combo = QComboBox()
         self._combo.setView(QListView())  # For better styling
+        self._combo.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._combo.currentIndexChanged.connect(self._on_current_index_changed)
 
         # Add items if provided

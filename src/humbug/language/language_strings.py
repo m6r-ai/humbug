@@ -55,6 +55,7 @@ class LanguageStrings:
     reset_zoom: str
     show_system_log: str
     show_system_shell: str
+    toggle_mindspace_panel: str
     show_all_columns: str
     split_column_left: str
     split_column_right: str
@@ -122,6 +123,7 @@ class LanguageStrings:
     theme_dark: str
     theme_light: str
     file_sort_order: str
+    open_chat_in_new_tab: str
     sort_directories_first: str
     sort_alphabetical: str
 

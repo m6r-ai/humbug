@@ -64,6 +64,7 @@ def get_english_strings() -> LanguageStrings:
         reset_zoom="Reset Zoom",
         show_system_log="Show Mindspace Log",
         show_system_shell="Show Humbug Shell",
+        toggle_mindspace_panel="Toggle Mindspace Panel",
         show_all_columns="Show All Columns",
         split_column_left="Split Column Left",
         split_column_right="Split Column Right",
@@ -131,6 +132,7 @@ def get_english_strings() -> LanguageStrings:
         theme_dark="Dark",
         theme_light="Light",
         file_sort_order="File Sort Order",
+        open_chat_in_new_tab="Open chat in a new tab",
         sort_directories_first="Directories First",
         sort_alphabetical="Alphabetical",
 

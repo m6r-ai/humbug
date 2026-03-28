@@ -119,8 +119,8 @@ class TabLabel(QWidget):
 
         # Update layout margins and spacing
         self._layout.setSpacing(round(6 * factor))
-        margins = round(8 * factor)
-        self._layout.setContentsMargins(margins, 0, margins, 0)
+        margins = round(10 * factor)
+        self._layout.setContentsMargins(margins, round(4 * factor), margins, round(4 * factor))
 
         self._update_buttons()
         self.adjustSize()
@@ -248,7 +248,7 @@ class TabLabel(QWidget):
                 outline: none;
                 padding: 0px;
                 margin: 0px;
-                background: {style_manager.get_color_str(base_color)};
+                background: transparent;
             }}
         """
 
@@ -257,9 +257,10 @@ class TabLabel(QWidget):
                 QToolButton {{
                     border: none;
                     outline: none;
-                    padding: 0px;
+                    padding: 2px;
                     margin: 0px;
-                    background: {style_manager.get_color_str(base_color)};
+                    background: transparent;
+                    border-radius: 8px;
                 }}
                 QToolButton:hover {{
                     background: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER)};
@@ -278,9 +279,10 @@ class TabLabel(QWidget):
                 QToolButton {{
                     border: none;
                     outline: none;
-                    padding: 0px;
+                    padding: 2px;
                     margin: 0px;
-                    background: {style_manager.get_color_str(base_color)};
+                    background: transparent;
+                    border-radius: 8px;
                 }}
             """
             self._type_label.setPixmap(self._inactive_type_pixmap)

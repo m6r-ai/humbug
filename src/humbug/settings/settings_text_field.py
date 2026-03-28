@@ -5,7 +5,7 @@ This module defines the SettingsTextField class which provides a text field
 setting widget.
 """
 
-from PySide6.QtWidgets import QWidget, QLineEdit
+from PySide6.QtWidgets import QWidget, QLineEdit, QSizePolicy
 
 from humbug.settings.settings_field import SettingsField
 
@@ -36,6 +36,7 @@ class SettingsTextField(SettingsField):
         super().__init__(label_text, parent)
 
         self._text_field = QLineEdit()
+        self._text_field.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._text_field.setPlaceholderText(placeholder)
         self._text_field.textChanged.connect(self._on_text_changed)
 

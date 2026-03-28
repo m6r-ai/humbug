@@ -342,16 +342,7 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
         file_name = source_model.fileName(index)
 
         if file_name == ".":
-            # Only show current directory at the conversations root level
-            # Check if the parent of this "." entry is the conversations root
-            parent_path = source_model.filePath(source_parent) if source_parent.isValid() else ""
-
-            # Normalize paths for comparison
-            normalized_parent = os.path.normpath(parent_path) if parent_path else ""
-            normalized_conversations = os.path.normpath(self._conversations_root)
-
-            # Only show "." if we're at the conversations root level
-            return normalized_parent == normalized_conversations
+            return False
 
         # Show all other items (no special filtering needed)
         return True
@@ -369,13 +360,6 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
         # Get file names for both indexes
         left_name = source_model.fileName(source_left)
         right_name = source_model.fileName(source_right)
-
-        # "." always sorts to the top
-        if left_name == ".":
-            return True
-
-        if right_name == ".":
-            return False
 
         # Get file info for both indexes
         left_info = source_model.fileInfo(source_left)

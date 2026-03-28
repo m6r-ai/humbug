@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
     QLabel, QApplication, QDialog, QMenu, QStatusBar
 )
-from PySide6.QtCore import Qt, QTimer, QEvent
+from PySide6.QtCore import Qt, QTimer, QEvent, QVariantAnimation, QEasingCurve
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 
 from metaphor import (
@@ -209,6 +209,10 @@ class MainWindow(QMainWindow):
         self._show_system_shell_action.setShortcut(QKeySequence("Ctrl+Shift+Y"))
         self._show_system_shell_action.triggered.connect(self._on_show_system_shell)
 
+        self._toggle_mindspace_panel_action = QAction(strings.toggle_mindspace_panel, self)
+        self._toggle_mindspace_panel_action.setShortcut(QKeySequence("Ctrl+Alt+B"))
+        self._toggle_mindspace_panel_action.triggered.connect(self._on_toggle_mindspace_panel)
+
         self._show_all_columns_action = QAction(strings.show_all_columns, self)
         self._show_all_columns_action.setShortcut(QKeySequence("Ctrl+\\"))
         self._show_all_columns_action.triggered.connect(self._on_show_all_columns)
@@ -296,6 +300,7 @@ class MainWindow(QMainWindow):
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._show_system_log_action)
         self._view_menu.addAction(self._show_system_shell_action)
+        self._view_menu.addAction(self._toggle_mindspace_panel_action)
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._show_all_columns_action)
         self._view_menu.addAction(self._split_column_left_action)
@@ -332,6 +337,7 @@ class MainWindow(QMainWindow):
         self._mindspace_view.open_mindspace_requested.connect(self._on_open_mindspace)
         self._mindspace_view.settings_requested.connect(self._on_show_mindspace_settings_dialog)
         self._mindspace_view.new_conversation_requested.connect(self._on_mindspace_view_new_conversation_in_folder)
+        self._mindspace_view.toggle_panel_requested.connect(self._on_toggle_mindspace_panel)
         self._splitter.addWidget(self._mindspace_view)
 
         # Create tab manager in splitter
@@ -345,6 +351,9 @@ class MainWindow(QMainWindow):
 
         # Set initial mindspace view width
         self._splitter.setSizes([300, self.width() - 300])
+        self._mindspace_panel_width = 300
+        self._mindspace_panel_collapsed = False
+        self._splitter.splitterMoved.connect(self._on_main_splitter_moved)
 
         # Set the stretch factors: 0 for mindspace view (no stretch) and 1 for column manager (stretch to fill)
         self._splitter.setStretchFactor(0, 0)
@@ -492,6 +501,7 @@ class MainWindow(QMainWindow):
         self._zoom_out_action.setEnabled(current_zoom > 0.5)
         self._show_system_log_action.setEnabled(has_mindspace)
         self._show_system_shell_action.setEnabled(has_mindspace)
+        self._toggle_mindspace_panel_action.setEnabled(True)
         self._show_all_columns_action.setEnabled(column_manager.can_show_all_columns())
         self._split_column_left_action.setEnabled(column_manager.can_split_column())
         self._split_column_right_action.setEnabled(column_manager.can_split_column())
@@ -556,7 +566,9 @@ class MainWindow(QMainWindow):
         self._zoom_in_action.setText(strings.zoom_in)
         self._zoom_out_action.setText(strings.zoom_out)
         self._reset_zoom_action.setText(strings.reset_zoom)
+        self._show_system_log_action.setText(strings.show_system_log)
         self._show_system_shell_action.setText(strings.show_system_shell)
+        self._toggle_mindspace_panel_action.setText(strings.toggle_mindspace_panel)
         self._show_all_columns_action.setText(strings.show_all_columns)
         self._split_column_left_action.setText(strings.split_column_left)
         self._split_column_right_action.setText(strings.split_column_right)
@@ -988,6 +1000,80 @@ class MainWindow(QMainWindow):
         """Show all columns equally."""
         self._column_manager.show_all_columns()
 
+    def _on_toggle_mindspace_panel(self) -> None:
+        """Toggle the visibility of the left mindspace panel."""
+        self._set_mindspace_panel_collapsed(not self._mindspace_panel_collapsed)
+
+    _ICON_RAIL_WIDTH = 44  # Width of the narrow icon rail when panel is collapsed
+
+    def _set_mindspace_panel_collapsed(self, collapsed: bool) -> None:
+        """Collapse or expand the mindspace panel while preserving its width."""
+        if collapsed == self._mindspace_panel_collapsed:
+            return
+
+        if collapsed:
+            current_width = self._splitter.sizes()[0]
+            if current_width > self._ICON_RAIL_WIDTH:
+                self._mindspace_panel_width = current_width
+            target = self._ICON_RAIL_WIDTH
+        else:
+            target = max(220, self._mindspace_panel_width)
+
+        self._mindspace_panel_collapsed = collapsed
+
+        # Switch icon rail on/off immediately so the user sees the right content
+        # as the panel slides, rather than a flash at the end
+        if collapsed:
+            self._mindspace_view.set_panel_collapsed(True)
+
+        self._animate_panel_width(target, on_done=None if collapsed else lambda: None)
+
+    def _animate_panel_width(self, target_width: int, on_done=None) -> None:
+        """Smoothly animate the sidebar to target_width pixels."""
+        # Stop any in-progress animation
+        if hasattr(self, '_panel_animation') and self._panel_animation is not None:
+            self._panel_animation.stop()
+
+        start_width = self._splitter.sizes()[0]
+        if start_width == target_width:
+            if on_done:
+                on_done()
+            return
+
+        anim = QVariantAnimation(self)
+        anim.setStartValue(float(start_width))
+        anim.setEndValue(float(target_width))
+        anim.setDuration(220)
+        anim.setEasingCurve(QEasingCurve.Type.OutCubic)
+
+        def _tick(value):
+            w = int(value)
+            self._splitter.setSizes([w, max(1, self.width() - w)])
+
+        def _finished():
+            self._panel_animation = None
+            # If expanding, switch to full panel content after slide completes
+            if target_width > self._ICON_RAIL_WIDTH:
+                self._mindspace_view.set_panel_collapsed(False)
+            if on_done:
+                on_done()
+
+        anim.valueChanged.connect(_tick)
+        anim.finished.connect(_finished)
+        anim.start()
+        self._panel_animation = anim
+
+    def _on_main_splitter_moved(self, _pos: int, _index: int) -> None:
+        """Track sidebar width changes so expand restores the last useful size."""
+        sidebar_width = self._splitter.sizes()[0]
+        now_collapsed = sidebar_width <= self._ICON_RAIL_WIDTH
+        if now_collapsed != self._mindspace_panel_collapsed:
+            self._mindspace_panel_collapsed = now_collapsed
+            self._mindspace_view.set_panel_collapsed(now_collapsed)
+
+        if sidebar_width > self._ICON_RAIL_WIDTH + 40:
+            self._mindspace_panel_width = sidebar_width
+
     def _on_split_column(self, split_left: bool) -> None:
         """Split the current column."""
         self._column_manager.split_column(split_left)
@@ -1135,6 +1221,11 @@ class MainWindow(QMainWindow):
     def _on_mindspace_view_new_conversation_in_folder(self, folder_path: str) -> None:
         """Create a new conversation in a specific folder."""
         if not self._mindspace_manager.has_mindspace():
+            return
+
+        # Empty path means default location — reuse the safe path that ensures the folder exists
+        if not folder_path:
+            self._on_new_conversation()
             return
 
         try:

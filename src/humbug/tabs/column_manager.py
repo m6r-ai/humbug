@@ -5,6 +5,7 @@ from typing import Dict, List, cast
 
 from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer
+from PySide6.QtGui import QColor, QPalette
 
 from ai import AIConversation, AIConversationHistory, AIConversationSettings, AIReasoningCapability
 
@@ -15,7 +16,7 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.status_message import StatusMessage
-from humbug.style_manager import StyleManager
+from humbug.style_manager import StyleManager, ColorMode
 from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.column_splitter import ColumnSplitter
 from humbug.tabs.column_widget import ColumnWidget
@@ -33,6 +34,7 @@ from humbug.tabs.terminal.terminal_tab import TerminalTab
 from humbug.tabs.preview.preview_error import PreviewError
 from humbug.tabs.preview.preview_tab import PreviewTab
 from humbug.tabs.welcome_widget import WelcomeWidget
+from humbug.user.user_manager import UserManager
 from humbug.user.user_settings import UserSettings
 
 
@@ -49,9 +51,11 @@ class ColumnManager(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the tab manager."""
         super().__init__(parent)
+        self.setObjectName("ColumnManager")
 
         self._untitled_count = 0
         self._mindspace_manager = MindspaceManager()
+        self._user_manager = UserManager()
         self._logger = logging.getLogger("ColumnManager")
 
         self._language_manager = LanguageManager()
@@ -66,6 +70,7 @@ class ColumnManager(QWidget):
 
         # Create stack widget for tab container and welcome message
         self._stack = QStackedWidget()
+        self._stack.setObjectName("ColumnManagerStack")
         main_layout.addWidget(self._stack)
 
         # Create welcome widget
@@ -76,6 +81,7 @@ class ColumnManager(QWidget):
 
         # Create widget to hold columns
         self._columns_widget = QWidget()
+        self._columns_widget.setObjectName("ColumnManagerColumns")
         self._columns_layout = QVBoxLayout(self._columns_widget)
         self._columns_layout.setContentsMargins(0, 0, 0, 0)
         self._columns_layout.setSpacing(0)
@@ -90,6 +96,7 @@ class ColumnManager(QWidget):
         self._column_splitter.splitterMoved.connect(self._on_column_splitter_splitter_moved)
 
         self._style_manager = StyleManager()
+        self._apply_background_style()
 
         # Create initial column
         self._tab_columns: List[ColumnWidget] = []
@@ -557,7 +564,9 @@ class ColumnManager(QWidget):
                 return None
 
             try:
-                conversation_tab = self.open_conversation(path, ephemeral)
+                force_new_tab = self._user_manager.settings().open_chat_in_new_tab
+                open_ephemeral = False if force_new_tab else ephemeral
+                conversation_tab = self.open_conversation(path, open_ephemeral, force_new_tab=force_new_tab)
 
             except ColumnManagerError:
                 return None
@@ -756,12 +765,11 @@ class ColumnManager(QWidget):
 
         # Update any conversation tab for this file
         if old_path.endswith('.conv'):
-            conversation_tab = self._find_conversation_tab_by_path(old_path)
-            if conversation_tab:
+            for conversation_tab in self._find_conversation_tabs_by_path(old_path):
                 conversation_tab.set_path(new_path)
 
                 # Update tab label text
-                new_title = os.path.splitext(os.path.basename(new_path))[0]
+                new_title = self._get_display_title_for_path(new_path)
                 tab_id = conversation_tab.tab_id()
                 label = self._tab_labels[tab_id]
                 label.set_text(new_title)
@@ -773,7 +781,7 @@ class ColumnManager(QWidget):
             preview_tab.set_path(new_path)
 
             # Update tab label text
-            new_title = os.path.basename(new_path)
+            new_title = self._get_display_title_for_path(new_path)
             tab_id = preview_tab.tab_id()
             label = self._tab_labels[tab_id]
             label.set_text(new_title)
@@ -1336,6 +1344,13 @@ class ColumnManager(QWidget):
         """
         return self._tabs.get(tab_id)
 
+    def _find_conversation_tabs_by_path(self, path: str) -> List[ConversationTab]:
+        """Find all conversation tabs for a conversation path."""
+        return [
+            tab for tab in self._tabs.values()
+            if isinstance(tab, ConversationTab) and tab.path() == path
+        ]
+
     def _find_conversation_tab_by_path(self, path: str) -> ConversationTab | None:
         """
         Find a conversation tab by its conversation path.
@@ -1346,11 +1361,8 @@ class ColumnManager(QWidget):
         Returns:
             The ConversationTab if found, None otherwise
         """
-        for tab in self._tabs.values():
-            if isinstance(tab, ConversationTab) and tab.path() == path:
-                return tab
-
-        return None
+        matches = self._find_conversation_tabs_by_path(path)
+        return matches[0] if matches else None
 
     def _find_editor_tab_by_path(self, path: str) -> EditorTab | None:
         """
@@ -1453,7 +1465,7 @@ class ColumnManager(QWidget):
 
         editor = EditorTab("", path, None, self)
         editor.set_ephemeral(ephemeral)
-        self._add_tab(editor, os.path.basename(path))
+        self._add_tab(editor, self._get_display_title_for_path(path))
         return editor
 
     def new_conversation(
@@ -1520,13 +1532,13 @@ class ColumnManager(QWidget):
         self._add_tab(conversation_tab, conversation_title)
         return conversation_tab
 
-    def open_conversation(self, path: str, ephemeral: bool) -> ConversationTab:
+    def open_conversation(self, path: str, ephemeral: bool, force_new_tab: bool = False) -> ConversationTab:
         """Open an existing conversation file."""
         assert os.path.isabs(path), "Path must be absolute"
 
         # Check if already open
         abs_path = self._mindspace_manager.get_absolute_path(path)
-        existing_tab = self._find_conversation_tab_by_path(abs_path)
+        existing_tab = None if force_new_tab else self._find_conversation_tab_by_path(abs_path)
         if existing_tab:
             if existing_tab.is_ephemeral() and not ephemeral:
                 # If the existing tab is ephemeral, convert it to permanent
@@ -1542,7 +1554,7 @@ class ColumnManager(QWidget):
             conversation_tab.conversation_completed.connect(
                 lambda _result, tab=conversation_tab: self._update_conversation_tab_title(tab)
             )
-            conversation_title = os.path.splitext(os.path.basename(abs_path))[0]
+            conversation_title = self._get_display_title_for_path(abs_path)
             conversation_tab.set_ephemeral(ephemeral)
             self._add_tab(conversation_tab, conversation_title)
             # If the conversation already has messages, update the title immediately
@@ -1567,11 +1579,11 @@ class ColumnManager(QWidget):
 
         return True
 
-    def _derive_conversation_title(self, conversation_tab: ConversationTab) -> str | None:
-        """Derive a short title from the first user message in a conversation."""
+    def _derive_conversation_title_from_path(self, path: str) -> str | None:
+        """Derive a short title from the first user message in a conversation file."""
         import json
         try:
-            with open(conversation_tab.path(), 'r', encoding='utf-8') as f:
+            with open(path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
             messages = []
@@ -1597,6 +1609,20 @@ class ColumnManager(QWidget):
             pass
 
         return None
+
+    def _derive_conversation_title(self, conversation_tab: ConversationTab) -> str | None:
+        """Derive a short title from the first user message in a conversation."""
+        return self._derive_conversation_title_from_path(conversation_tab.path())
+
+    def _get_display_title_for_path(self, path: str) -> str:
+        """Get the preferred tab title for a path."""
+        if path.endswith(".conv"):
+            derived_title = self._derive_conversation_title_from_path(path)
+            if derived_title:
+                return derived_title
+            return os.path.splitext(os.path.basename(path))[0]
+
+        return os.path.basename(path)
 
     def _update_conversation_tab_title(self, conversation_tab: ConversationTab) -> None:
         """Update the tab label with a title derived from the first user message."""
@@ -1692,7 +1718,7 @@ class ColumnManager(QWidget):
             new_tab.set_conversation_history(new_history)
 
             new_tab.fork_from_index_requested.connect(self._on_conversation_fork_from_index_requested)
-            self._add_tab(new_tab, os.path.splitext(os.path.basename(new_tab.path()))[0])
+            self._add_tab(new_tab, self._get_display_title_for_path(new_tab.path()))
 
         except ConversationError as e:
             self._logger.exception("Failed to fork conversation: %s", str(e))
@@ -1760,7 +1786,7 @@ class ColumnManager(QWidget):
             preview_tab.open_link_requested.connect(self._on_preview_open_link_requested)
             preview_tab.edit_file_requested.connect(self._on_preview_edit_file_requested)
             preview_tab.set_ephemeral(ephemeral)
-            self._add_tab(preview_tab, os.path.basename(path_minus_anchor))
+            self._add_tab(preview_tab, self._get_display_title_for_path(path_minus_anchor))
 
             # If there's an anchor, scroll to it
             if anchor:
@@ -1840,7 +1866,7 @@ class ColumnManager(QWidget):
     def _get_tab_title(self, tab: TabBase, state: TabState) -> str:
         """Get appropriate title for tab type."""
         if isinstance(tab, ConversationTab):
-            return os.path.splitext(os.path.basename(state.path))[0]
+            return self._get_display_title_for_path(state.path)
 
         if isinstance(tab, LogTab):
             return "Mindspace Log"
@@ -1855,9 +1881,9 @@ class ColumnManager(QWidget):
             return "Terminal"
 
         if isinstance(tab, PreviewTab):
-            return os.path.basename(state.path)
+            return self._get_display_title_for_path(state.path)
 
-        return os.path.basename(state.path)
+        return self._get_display_title_for_path(state.path)
 
     def _restore_column_state(self, column_index: int, tab_states: List[Dict]) -> None:
         """
@@ -1946,6 +1972,8 @@ class ColumnManager(QWidget):
 
     def apply_style(self) -> None:
         """Apply style changes from StyleManager."""
+        self._apply_background_style()
+
         # Apply styles to individual widgets
         self._update_column_splitter()
         self._apply_all_tab_bar_styles()
@@ -1974,6 +2002,33 @@ class ColumnManager(QWidget):
         """
         self._welcome_widget.set_user_settings(user_settings)
 
+    def _apply_background_style(self) -> None:
+        """Apply the shared background surface for the column manager stack."""
+        background = QColor(
+            "rgba(8, 12, 20, 245)"
+            if self._style_manager.color_mode() == ColorMode.DARK
+            else self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)
+        )
+
+        for widget in (self, self._stack, self._columns_widget):
+            palette = widget.palette()
+            palette.setColor(QPalette.ColorRole.Window, background)
+            palette.setColor(QPalette.ColorRole.Base, background)
+            widget.setPalette(palette)
+            widget.setAutoFillBackground(True)
+
+        background_css = background.name(QColor.NameFormat.HexArgb)
+        self.setStyleSheet(f"""
+            QWidget#ColumnManager {{
+                background-color: {background_css};
+            }}
+            QStackedWidget#ColumnManagerStack,
+            QWidget#ColumnManagerColumns {{
+                background-color: {background_css};
+                border: none;
+            }}
+        """)
+
     def _update_column_splitter(self) -> None:
         """Trigger repaint of column splitter handles."""
         # The column splitter uses custom painted handles, so we just need to trigger a repaint
@@ -1985,20 +2040,21 @@ class ColumnManager(QWidget):
             QTabBar {{
                 border: none;
                 margin: 0px;
-                padding: 0px;
+                padding: 6px 8px 4px 8px;
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
             }}
             QTabBar::tab {{
                 border: none;
-                margin: 0px;
-                padding: 7px 0px 7px 0px;
+                margin: 0px 4px 0px 0px;
+                padding: 4px 0px 6px 0px;
             }}
             QTabBar::scroller {{
                 width: 28px;
             }}
             QTabBar QToolButton {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_INACTIVE)};
-                border: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: 9px;
             }}
             QTabBar QToolButton:hover {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
@@ -2118,8 +2174,7 @@ class ColumnManager(QWidget):
 
         # Also check for conversation files
         if path.endswith('.conv'):
-            conversation_tab = self._find_conversation_tab_by_path(path)
-            if conversation_tab:
+            for conversation_tab in self._find_conversation_tabs_by_path(path):
                 self._mindspace_manager.add_interaction(
                     MindspaceLogLevel.INFO,
                     f"Deleted '{path}' - closed conversation tab\ntab ID: {conversation_tab.tab_id()}"
@@ -2212,7 +2267,7 @@ class ColumnManager(QWidget):
         Args:
             current_tab: Tab to update
         """
-        title = os.path.basename(tab.path())
+        title = self._get_display_title_for_path(tab.path())
         if tab.is_modified():
             title += "*"
 
