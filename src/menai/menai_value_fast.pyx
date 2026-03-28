@@ -626,6 +626,25 @@ Menai_DICT_EMPTY = MenaiDict(())
 Menai_SET_EMPTY = MenaiSet(())
 
 
+def get_field_offsets():
+    """Return byte offsets of C-level scalar fields for use by the C VM shim.
+
+    Only genuine C scalar fields are included — bint and double.  Python-object
+    fields (MenaiInteger.value, MenaiString.value, etc.) are accessed via
+    PyObject_GetAttrString in the C VM and do not need offsets.
+
+    Returns a dict with keys:
+        'boolean_value' — offset of MenaiBoolean.value  (C int / bint)
+        'float_value'   — offset of MenaiFloat.value    (C double)
+    """
+    cdef MenaiBoolean b = MenaiBoolean(True)
+    cdef MenaiFloat   f = MenaiFloat(0.0)
+    return {
+        'boolean_value': <size_t>(&b.value) - <size_t>(<void*>b),
+        'float_value':   <size_t>(&f.value) - <size_t>(<void*>f),
+    }
+
+
 def convert_value(src):
     """
     Convert a single compiler-world MenaiValue to its fast VM equivalent.
@@ -683,6 +702,8 @@ def convert_value(src):
         # Zero-capture lambdas are stored as LOAD_CONST constants by the
         # bytecode builder.  Convert to a fast MenaiFunction; the nested
         # CodeObject's constants are converted by convert_code_object below.
+        # captured_values are NOT recursively converted here to avoid cycles
+        # in letrec closures — call_setup converts them at call time instead.
         return MenaiFunction(
             parameters=src.parameters,
             name=src.name,
@@ -702,6 +723,11 @@ def convert_code_object(code):
     This is safe because CodeObject instances are not shared across executions.
     """
     code.constants = [convert_value(v) for v in code.constants]
+    # Also convert the bytecode of any zero-capture MenaiFunction constants,
+    # since those code objects are not in code.code_objects.
+    for const in code.constants:
+        if type(const) is MenaiFunction and const.bytecode is not None:
+            convert_code_object(const.bytecode)
     for child in code.code_objects:
         convert_code_object(child)
 
@@ -763,7 +789,7 @@ def to_slow(src):
             parameters=src.parameters,
             name=src.name,
             bytecode=src.bytecode,
-            captured_values=list(src.captured_values),
+            captured_values=[to_slow(cv) for cv in src.captured_values],
             is_variadic=src.is_variadic,
         )
 

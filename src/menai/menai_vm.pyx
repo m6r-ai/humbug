@@ -24,6 +24,13 @@ from menai.menai_value_fast cimport (
 )
 from menai.menai_vm_bytecode_validator import validate_bytecode
 
+try:
+    from menai.menai_vm_c import execute as _c_vm_execute
+    _C_VM_AVAILABLE = True
+except ImportError:
+    _c_vm_execute = None
+    _C_VM_AVAILABLE = False
+
 
 # Compile-time constants for instruction word unpacking.
 # DEF causes Cython to substitute the literal value at compile time,
@@ -386,6 +393,11 @@ class MenaiVM:
         # Validate bytecode before execution (if enabled)
         if self.validate_bytecode:
             validate_bytecode(code)
+
+        # Delegate to the C VM when available and no trace watcher is active.
+        # The C VM does not yet support trace watchers or cancellation signals.
+        if _C_VM_AVAILABLE and self.trace_watcher is None and not self._cancelled:
+            return _c_vm_execute(code, constants, prelude_functions or {})
 
         # Convert compiler-world constants to fast cdef class values, once.
         convert_code_object(code)
