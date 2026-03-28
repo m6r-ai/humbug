@@ -11,29 +11,33 @@ UNAME := $(shell uname -s)
 PYTHON := $(shell test -f venv/bin/python && echo venv/bin/python || echo python3)
 
 #
-# Cython extension source files.
+# Extension source files.
 #
 PYX_SOURCES := \
-	src/menai/menai_value_fast.pyx \
-	src/menai/menai_vm.pyx
+	src/menai/menai_value_fast.pyx
+
+C_SOURCES := \
+	src/menai/menai_vm_c.c
 
 #
 # Derive the expected .so names from the Python ABI tag.
 #
 EXT_SUFFIX := $(shell $(PYTHON) -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
 
-SO_FILES := $(patsubst src/menai/%.pyx, src/menai/%$(EXT_SUFFIX), $(PYX_SOURCES))
+SO_FILES := \
+	$(patsubst src/menai/%.pyx, src/menai/%$(EXT_SUFFIX), $(PYX_SOURCES)) \
+	$(patsubst src/menai/%.c,   src/menai/%$(EXT_SUFFIX), $(C_SOURCES))
 
 #
-# Build the Cython extensions in-place.  setup.py builds all extensions in a
-# single invocation, so both .so files are produced together.  We use a stamp
-# file to avoid running the build twice when make evaluates multiple targets.
+# Build all extensions in-place.  setup.py builds all extensions in a single
+# invocation, so all .so files are produced together.  We use a stamp file to
+# avoid running the build twice when make evaluates multiple targets.
 #
 .PHONY: build
 
 build: $(SO_FILES)
 
-$(SO_FILES): $(PYX_SOURCES) src/menai/menai_value_fast.pxd
+$(SO_FILES): $(PYX_SOURCES) $(C_SOURCES) src/menai/menai_value_fast.pxd src/menai/menai_vm_shim.h
 	$(PYTHON) setup.py build_ext --inplace
 	@mkdir -p build && touch $@
 

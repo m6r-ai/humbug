@@ -1,10 +1,10 @@
 """
-Build script for Cython extension modules.
+Build script for C and Cython extension modules.
 
 Usage:
     python setup.py build_ext --inplace
 
-This compiles the Cython VM extensions and places the resulting .so files
+This compiles the C VM and Cython value extensions and places the resulting .so files
 directly into src/menai/ alongside the pure-Python sources.  PyInstaller will
 pick them up automatically from there.
 
@@ -26,11 +26,6 @@ extensions = [
     Extension(
         name="menai.menai_value_fast",
         sources=["src/menai/menai_value_fast.pyx"],
-        extra_compile_args=["-O2"],
-    ),
-    Extension(
-        name="menai.menai_vm",
-        sources=["src/menai/menai_vm.pyx"],
         extra_compile_args=["-O2"],
     ),
     Extension(
