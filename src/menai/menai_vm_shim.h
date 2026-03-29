@@ -149,6 +149,76 @@ static inline void reg_set(PyObject **regs, int slot, PyObject *val) {
 }
 
 /* ---------------------------------------------------------------------------
+ * Value constructors
+ *
+ * Each function wraps a C or Python primitive in the corresponding Menai
+ * type and returns a new reference, or NULL on failure.
+ *
+ * make_integer_value() additionally consumes (Py_DECREF) the Python int
+ * it is given, matching the ownership transfer that INT_STORE previously
+ * performed implicitly.
+ * ------------------------------------------------------------------------- */
+
+static inline PyObject *make_integer(PyObject *py_int) {
+    return PyObject_CallOneArg((PyObject *)Menai_IntegerType, py_int);
+}
+
+static inline PyObject *make_float(double v) {
+    PyObject *pf = PyFloat_FromDouble(v);
+    if (pf == NULL) return NULL;
+    PyObject *r = PyObject_CallOneArg((PyObject *)Menai_FloatType, pf);
+    Py_DECREF(pf);
+    return r;
+}
+
+static inline PyObject *make_complex_val(double real, double imag) {
+    PyObject *pc = PyComplex_FromDoubles(real, imag);
+    if (pc == NULL) return NULL;
+    PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ComplexType, pc);
+    Py_DECREF(pc);
+    return r;
+}
+
+static inline PyObject *make_string_from_pyobj(PyObject *py_str) {
+    return PyObject_CallOneArg((PyObject *)Menai_StringType, py_str);
+}
+
+/*
+ * make_integer_value — consume a Python int ref, wrap it in MenaiInteger.
+ *
+ * Takes ownership of py_int (calls Py_DECREF on it).  Returns a new
+ * MenaiInteger reference, or NULL on failure.  Handles a NULL input
+ * gracefully (returns NULL without crashing).
+ */
+static inline PyObject *make_integer_value(PyObject *py_int) {
+    if (py_int == NULL) return NULL;
+    PyObject *r = make_integer(py_int);
+    Py_DECREF(py_int);
+    return r;
+}
+
+/*
+ * make_complex_value — consume a Python complex ref, wrap it in MenaiComplex.
+ *
+ * Takes ownership of py_complex (calls Py_DECREF on it).  Returns a new
+ * MenaiComplex reference, or NULL on failure.  Handles a NULL input
+ * gracefully.
+ */
+static inline PyObject *make_complex_value(PyObject *py_complex) {
+    if (py_complex == NULL) return NULL;
+    PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ComplexType, py_complex);
+    Py_DECREF(py_complex);
+    return r;
+}
+
+/*
+ * bool_store — write Menai_TRUE or Menai_FALSE into a register.
+ */
+static inline void bool_store(PyObject **regs, int slot, int cond) {
+    reg_set(regs, slot, cond ? Menai_TRUE : Menai_FALSE);
+}
+
+/* ---------------------------------------------------------------------------
  * Error helpers
  * ------------------------------------------------------------------------- */
 
