@@ -3850,7 +3850,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(fidx, "struct-get-imm")) goto error;
             PyObject *iv = menai_integer_value(fidx);
             if (iv == NULL) goto error;
-            Py_ssize_t fi = PyLong_AsSsize_t(iv); Py_DECREF(iv);
+            Py_ssize_t fi = PyLong_AsSsize_t(iv);
+            Py_DECREF(iv);
             if (fi == -1 && PyErr_Occurred()) goto error;
             PyObject *fields = PyObject_GetAttrString(val, "fields");
             if (fields == NULL) goto error;
@@ -3866,7 +3867,10 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *stype = PyObject_GetAttrString(val, "struct_type");
             if (stype == NULL) goto error;
             PyObject *name = menai_symbol_name(field_sym);
-            if (name == NULL) { Py_DECREF(stype); goto error; }
+            if (name == NULL) {
+                Py_DECREF(stype);
+                goto error;
+            }
             PyObject *idx = PyObject_CallMethod(stype, "field_index", "O", name);
             if (idx == NULL) {
                 if (PyErr_ExceptionMatches(PyExc_KeyError)) {
@@ -3879,28 +3883,44 @@ execute_loop(PyObject *code, PyObject *globals,
                         Py_DECREF(stype_name);
                     }
                 }
-                Py_DECREF(name); Py_DECREF(stype); goto error;
+                Py_DECREF(name);
+                Py_DECREF(stype);
+                goto error;
             }
             Py_DECREF(name);
-            Py_ssize_t fi = PyLong_AsSsize_t(idx); Py_DECREF(idx);
-            if (fi == -1 && PyErr_Occurred()) { Py_DECREF(stype); goto error; }
+            Py_ssize_t fi = PyLong_AsSsize_t(idx);
+            Py_DECREF(idx);
+            if (fi == -1 && PyErr_Occurred()) {
+                Py_DECREF(stype);
+                goto error;
+            }
             PyObject *fields = PyObject_GetAttrString(val, "fields");
-            if (fields == NULL) { Py_DECREF(stype); goto error; }
+            if (fields == NULL) {
+                Py_DECREF(stype);
+                goto error;
+            }
             Py_ssize_t nf = PyTuple_GET_SIZE(fields);
             PyObject *new_fields = PyTuple_New(nf);
-            if (new_fields == NULL) { Py_DECREF(fields); Py_DECREF(stype); goto error; }
+            if (new_fields == NULL) {
+                Py_DECREF(fields);
+                Py_DECREF(stype);
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < nf; i++) {
                 PyObject *fv = (i == fi) ? new_val : PyTuple_GET_ITEM(fields, i);
-                Py_INCREF(fv); PyTuple_SET_ITEM(new_fields, i, fv);
+                Py_INCREF(fv);
+                PyTuple_SET_ITEM(new_fields, i, fv);
             }
             Py_DECREF(fields);
             PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", stype, "fields", new_fields);
-            Py_DECREF(stype); Py_DECREF(new_fields);
+            Py_DECREF(stype);
+            Py_DECREF(new_fields);
             if (kwargs == NULL) goto error;
             PyObject *r = PyObject_Call((PyObject *)Menai_StructType, empty_tuple, kwargs);
             Py_DECREF(kwargs);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_STRUCT_SET_IMM: {
@@ -3909,27 +3929,38 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(fidx, "struct-set-imm")) goto error;
             PyObject *iv = menai_integer_value(fidx);
             if (iv == NULL) goto error;
-            Py_ssize_t fi = PyLong_AsSsize_t(iv); Py_DECREF(iv);
+            Py_ssize_t fi = PyLong_AsSsize_t(iv);
+            Py_DECREF(iv);
             if (fi == -1 && PyErr_Occurred()) goto error;
             PyObject *stype = PyObject_GetAttrString(val, "struct_type");
             if (stype == NULL) goto error;
             PyObject *fields = PyObject_GetAttrString(val, "fields");
-            if (fields == NULL) { Py_DECREF(stype); goto error; }
+            if (fields == NULL) {
+                Py_DECREF(stype);
+                goto error;
+            }
             Py_ssize_t nf = PyTuple_GET_SIZE(fields);
             PyObject *new_fields = PyTuple_New(nf);
-            if (new_fields == NULL) { Py_DECREF(fields); Py_DECREF(stype); goto error; }
+            if (new_fields == NULL) {
+                Py_DECREF(fields);
+                Py_DECREF(stype);
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < nf; i++) {
                 PyObject *fv = (i == fi) ? new_val : PyTuple_GET_ITEM(fields, i);
-                Py_INCREF(fv); PyTuple_SET_ITEM(new_fields, i, fv);
+                Py_INCREF(fv);
+                PyTuple_SET_ITEM(new_fields, i, fv);
             }
             Py_DECREF(fields);
             PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", stype, "fields", new_fields);
-            Py_DECREF(stype); Py_DECREF(new_fields);
+            Py_DECREF(stype);
+            Py_DECREF(new_fields);
             if (kwargs == NULL) goto error;
             PyObject *r = PyObject_Call((PyObject *)Menai_StructType, empty_tuple, kwargs);
             Py_DECREF(kwargs);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_STRUCT_EQ_P: {
@@ -3964,9 +3995,11 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_structtype(val, "struct-type-name")) goto error;
             PyObject *name = PyObject_GetAttrString(val, "name");
             if (name == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(name); Py_DECREF(name);
+            PyObject *r = make_string_from_pyobj(name);
+            Py_DECREF(name);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_STRUCT_FIELDS: {
