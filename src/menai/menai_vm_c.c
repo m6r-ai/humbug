@@ -287,6 +287,7 @@ static PyObject *fn_convert_code_object   = NULL;  /* menai_value_fast.convert_c
 static PyObject *fn_convert_value         = NULL;  /* menai_value_fast.convert_value */
 static PyObject *fn_to_slow               = NULL;  /* menai_value_fast.to_slow */
 static PyObject *cmath_module             = NULL;  /* Python cmath module for complex transcendentals */
+static PyObject *empty_tuple              = NULL;  /* Cached PyTuple_New(0) — used for struct construction */
 
 /* Forward declaration — defined after call_setup. */
 static PyObject *ensure_fast_value(PyObject *val, PyObject *memo);
@@ -432,6 +433,13 @@ menai_vm_shim_init(void)
     {
         cmath_module = PyImport_ImportModule("cmath");
         if (cmath_module == NULL)
+            goto fail;
+    }
+
+    /* Cached empty tuple for struct constructor calls */
+    {
+        empty_tuple = PyTuple_New(0);
+        if (empty_tuple == NULL)
             goto fail;
     }
 
@@ -1135,7 +1143,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 Py_DECREF(fields);
                 if (kwargs == NULL) goto error;
                 PyObject *instance = PyObject_Call(
-                    (PyObject *)Menai_StructType, PyTuple_New(0), kwargs);
+                    (PyObject *)Menai_StructType, empty_tuple, kwargs);
                 Py_DECREF(kwargs);
                 if (instance == NULL) goto error;
                 reg_set(regs, base + dest, instance);
@@ -1181,7 +1189,7 @@ execute_loop(PyObject *code, PyObject *globals,
 
             } else if (IS_MENAI_STRUCTTYPE(raw)) {
                 PyObject *field_names = PyObject_GetAttrString(raw, "field_names");
-                if (field_names == NULL) goto error;
+                if (field_names == NULL) { Py_DECREF(raw); goto error; }
                 Py_ssize_t n_fields = PyTuple_GET_SIZE(field_names);
                 Py_DECREF(field_names);
                 if (n_args != (int)n_fields) {
@@ -1190,10 +1198,10 @@ execute_loop(PyObject *code, PyObject *globals,
                         "Struct constructor '%s' called with wrong number of arguments",
                         sname ? PyUnicode_AsUTF8(sname) : "?");
                     Py_XDECREF(sname);
-                    goto error;
+                    Py_DECREF(raw); goto error;
                 }
                 PyObject *fields = PyTuple_New(n_fields);
-                if (fields == NULL) goto error;
+                if (fields == NULL) { Py_DECREF(raw); goto error; }
                 for (int i = 0; i < (int)n_fields; i++) {
                     PyObject *fv = regs[base + local_count + i];
                     Py_INCREF(fv);
@@ -1204,20 +1212,22 @@ execute_loop(PyObject *code, PyObject *globals,
                 Py_DECREF(fields);
                 if (kwargs == NULL) goto error;
                 PyObject *instance = PyObject_Call(
-                    (PyObject *)Menai_StructType, PyTuple_New(0), kwargs);
+                    (PyObject *)Menai_StructType, empty_tuple, kwargs);
                 Py_DECREF(kwargs);
-                if (instance == NULL) goto error;
+                if (instance == NULL) { Py_DECREF(raw); goto error; }
 
                 /* Tail-return the struct: pop frame and deliver to caller. */
                 PyObject *retval = instance;
+                int saved_return_dest = frame->return_dest;
                 frame_release(frame);
                 frame_depth--;
                 Frame *caller = &frames[frame_depth];
                 if (caller->is_sentinel) {
-                    return retval;
+                    Py_DECREF(raw); return retval;
                 }
-                reg_set(regs, caller->base + frame->return_dest, retval);
+                reg_set(regs, caller->base + saved_return_dest, retval);
                 Py_DECREF(retval);
+                Py_DECREF(raw);
                 frame = caller;
 
             } else {
@@ -2172,9 +2182,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", raw_func, "fields", fields);
                 Py_DECREF(fields);
                 if (kwargs == NULL) goto error;
-                PyObject *empty = PyTuple_New(0);
-                PyObject *instance = PyObject_Call((PyObject *)Menai_StructType, empty, kwargs);
-                Py_DECREF(empty);
+                PyObject *instance = PyObject_Call((PyObject *)Menai_StructType, empty_tuple, kwargs);
                 Py_DECREF(kwargs);
                 if (instance == NULL) goto error;
                 reg_set(regs, base + dest, instance);
@@ -2245,17 +2253,17 @@ execute_loop(PyObject *code, PyObject *globals,
                 PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", raw_func, "fields", fields);
                 Py_DECREF(fields);
                 if (kwargs == NULL) goto error;
-                PyObject *empty = PyTuple_New(0);
-                PyObject *retval = PyObject_Call((PyObject *)Menai_StructType, empty, kwargs);
-                Py_DECREF(empty);
+                PyObject *retval = PyObject_Call((PyObject *)Menai_StructType, empty_tuple, kwargs);
                 Py_DECREF(kwargs);
-                if (retval == NULL) goto error;
+                if (retval == NULL) { Py_DECREF(raw_func); goto error; }
+                int saved_return_dest = frame->return_dest;
                 frame_release(frame);
                 frame_depth--;
                 Frame *caller = &frames[frame_depth];
-                if (caller->is_sentinel) return retval;
-                reg_set(regs, caller->base + frame->return_dest, retval);
+                if (caller->is_sentinel) { Py_DECREF(raw_func); return retval; }
+                reg_set(regs, caller->base + saved_return_dest, retval);
                 Py_DECREF(retval);
+                Py_DECREF(raw_func);
                 frame = caller;
             } else {
                 Py_DECREF(elements);
@@ -2339,10 +2347,11 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_complex(a, "complex-neg")) goto error;
             PyObject *cv = menai_complex_value(a);
             if (cv == NULL) goto error;
-            PyObject *_r = make_complex_value(PyNumber_Negative(cv));
+            PyObject *neg = PyNumber_Negative(cv);
+            Py_DECREF(cv);
+            PyObject *_r = make_complex_value(neg);
             if (_r == NULL) goto error;
             reg_set(regs, base + dest, _r); Py_DECREF(_r);
-            Py_DECREF(cv);
             break;
         }
         case OP_COMPLEX_ADD: {
@@ -2417,9 +2426,9 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_complex(a, "complex-expn")) goto error;
             if (!require_complex(b, "complex-expn")) goto error;
             PyObject *av = menai_complex_value(a);
-            if (av == NULL) goto cpx_logn_err;
+            if (av == NULL) goto error;
             PyObject *bv = menai_complex_value(b);
-            if (bv == NULL) goto cpx_logn_err;
+            if (bv == NULL) { Py_DECREF(av); goto error; }
             PyObject *res = PyNumber_Power(av, bv, Py_None);
             Py_DECREF(av); Py_DECREF(bv);
             PyObject *_r = make_complex_value(res);
@@ -3878,9 +3887,8 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", struct_type, "fields", fields);
             Py_DECREF(fields);
             if (kwargs == NULL) goto error;
-            PyObject *empty = PyTuple_New(0);
-            PyObject *instance = PyObject_Call((PyObject *)Menai_StructType, empty, kwargs);
-            Py_DECREF(empty); Py_DECREF(kwargs);
+            PyObject *instance = PyObject_Call((PyObject *)Menai_StructType, empty_tuple, kwargs);
+            Py_DECREF(kwargs);
             if (instance == NULL) goto error;
             reg_set(regs, base + dest, instance);
             Py_DECREF(instance);
@@ -4009,9 +4017,8 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", stype, "fields", new_fields);
             Py_DECREF(stype); Py_DECREF(new_fields);
             if (kwargs == NULL) goto error;
-            PyObject *empty = PyTuple_New(0);
-            PyObject *r = PyObject_Call((PyObject *)Menai_StructType, empty, kwargs);
-            Py_DECREF(empty); Py_DECREF(kwargs);
+            PyObject *r = PyObject_Call((PyObject *)Menai_StructType, empty_tuple, kwargs);
+            Py_DECREF(kwargs);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r); Py_DECREF(r);
             break;
@@ -4043,9 +4050,8 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", stype, "fields", new_fields);
             Py_DECREF(stype); Py_DECREF(new_fields);
             if (kwargs == NULL) goto error;
-            PyObject *empty = PyTuple_New(0);
-            PyObject *r = PyObject_Call((PyObject *)Menai_StructType, empty, kwargs);
-            Py_DECREF(empty); Py_DECREF(kwargs);
+            PyObject *r = PyObject_Call((PyObject *)Menai_StructType, empty_tuple, kwargs);
+            Py_DECREF(kwargs);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r); Py_DECREF(r);
             break;
