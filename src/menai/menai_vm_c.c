@@ -853,8 +853,7 @@ ensure_fast_value(PyObject *val, PyObject *memo)
 
 /* ---------------------------------------------------------------------------
  * execute_loop — the main dispatch loop
- *
- * Forward declaration needed by cpx_transcendental.
+ * (forward declaration; defined after cpx_transcendental below)
  * ------------------------------------------------------------------------- */
 
 static PyObject *execute_loop(PyObject *code, PyObject *globals,
@@ -888,7 +887,7 @@ cpx_transcendental(PyObject **regs, int slot, PyObject *src,
 
 /* ---------------------------------------------------------------------------
  * execute_loop — the main dispatch loop
-  * ------------------------------------------------------------------------- */
+ * ------------------------------------------------------------------------- */
 
 /*
  * Internal execute — called by menai_vm_c_execute after setup.
@@ -1071,6 +1070,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *retval = regs[base + src0];
             Py_INCREF(retval);
 
+            int saved_return_dest = frame->return_dest;
             frame_release(frame);
             frame_depth--;
             Frame *caller = &frames[frame_depth];
@@ -1081,7 +1081,7 @@ execute_loop(PyObject *code, PyObject *globals,
             }
 
             /* Store result into caller's register window. */
-            reg_set(regs, caller->base + frame->return_dest, retval);
+            reg_set(regs, caller->base + saved_return_dest, retval);
             Py_DECREF(retval);
 
             frame = caller;
@@ -1231,8 +1231,8 @@ execute_loop(PyObject *code, PyObject *globals,
                 frame = caller;
 
             } else {
-                menai_raise_eval_error("Cannot call non-function value");
-                goto error;
+                Py_DECREF(raw);
+                menai_raise_eval_error("Cannot call non-function value"); goto error;
             }
             break;
         }
@@ -1346,7 +1346,8 @@ execute_loop(PyObject *code, PyObject *globals,
             int ok = (code_get_int(bc, "param_count", &pc) == 0);
             if (ok) {
                 PyObject *iv = PyObject_GetAttrString(bc, "is_variadic");
-                if (iv) { is_var = PyObject_IsTrue(iv); Py_DECREF(iv); }
+                if (iv) { is_var = PyObject_IsTrue(iv); Py_DECREF(iv);
+                          if (is_var < 0) ok = 0; }
                 else ok = 0;
             }
             Py_DECREF(bc);
@@ -1386,7 +1387,8 @@ execute_loop(PyObject *code, PyObject *globals,
             int ok = (code_get_int(bc, "param_count", &pc) == 0);
             if (ok) {
                 PyObject *iv = PyObject_GetAttrString(bc, "is_variadic");
-                if (iv) { is_var = PyObject_IsTrue(iv); Py_DECREF(iv); }
+                if (iv) { is_var = PyObject_IsTrue(iv); Py_DECREF(iv);
+                          if (is_var < 0) ok = 0; }
                 else ok = 0;
             }
             Py_DECREF(bc);
@@ -1498,8 +1500,10 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *bv = menai_integer_value(b);
             if (bv == NULL) goto error;
             PyObject *_zero = PyLong_FromLong(0);
+            if (_zero == NULL) { Py_DECREF(bv); goto error; }
             int _is_zero = PyObject_RichCompareBool(bv, _zero, Py_EQ);
             Py_DECREF(_zero);
+            if (_is_zero < 0) { Py_DECREF(bv); goto error; }
             if (_is_zero) { Py_DECREF(bv); menai_raise_eval_error("Division by zero in 'integer/'"); goto error; }
             PyObject *av = menai_integer_value(a);
             if (av == NULL) { Py_DECREF(bv); goto error; }
@@ -1517,8 +1521,10 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *bv = menai_integer_value(b);
             if (bv == NULL) goto error;
             PyObject *_zero = PyLong_FromLong(0);
+            if (_zero == NULL) { Py_DECREF(bv); goto error; }
             int _is_zero = PyObject_RichCompareBool(bv, _zero, Py_EQ);
             Py_DECREF(_zero);
+            if (_is_zero < 0) { Py_DECREF(bv); goto error; }
             if (_is_zero) { Py_DECREF(bv); menai_raise_eval_error("Modulo by zero in 'integer%'"); goto error; }
             PyObject *av = menai_integer_value(a);
             if (av == NULL) { Py_DECREF(bv); goto error; }
@@ -1536,8 +1542,10 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *bv = menai_integer_value(b);
             if (bv == NULL) goto error;
             PyObject *_zero = PyLong_FromLong(0);
+            if (_zero == NULL) { Py_DECREF(bv); goto error; }
             int _is_neg = PyObject_RichCompareBool(bv, _zero, Py_LT);
             Py_DECREF(_zero);
+            if (_is_neg < 0) { Py_DECREF(bv); goto error; }
             if (_is_neg) { Py_DECREF(bv); menai_raise_eval_error("Function 'integer-expn' requires a non-negative exponent"); goto error; }
             PyObject *av = menai_integer_value(a);
             if (av == NULL) { Py_DECREF(bv); goto error; }
@@ -1764,7 +1772,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_float(a, "float-abs")) goto error;
             double v = menai_float_value(a);
             {
-                PyObject *_r = make_float(v < 0.0 ? -v : v);
+                PyObject *_r = make_float(fabs(v));
                 if (_r == NULL) goto error;
                 reg_set(regs, base + dest, _r); Py_DECREF(_r);
             }
@@ -2181,16 +2189,16 @@ execute_loop(PyObject *code, PyObject *globals,
 
             } else if (IS_MENAI_STRUCTTYPE(raw_func)) {
                 PyObject *field_names = PyObject_GetAttrString(raw_func, "field_names");
-                if (field_names == NULL) { Py_DECREF(elements); goto error; }
+                if (field_names == NULL) { Py_DECREF(elements); Py_DECREF(raw_func); goto error; }
                 Py_ssize_t n_fields = PyTuple_GET_SIZE(field_names);
                 Py_DECREF(field_names);
                 if (arity != (int)n_fields) {
                     Py_DECREF(elements);
-                    menai_raise_eval_error("Struct constructor called with wrong number of arguments");
-                    goto error;
+                    Py_DECREF(raw_func);
+                    menai_raise_eval_error("Struct constructor called with wrong number of arguments"); goto error;
                 }
                 PyObject *fields = PyTuple_New(n_fields);
-                if (fields == NULL) { Py_DECREF(elements); goto error; }
+                if (fields == NULL) { Py_DECREF(elements); Py_DECREF(raw_func); goto error; }
                 for (int i = 0; i < (int)n_fields; i++) {
                     PyObject *fv = PyTuple_GET_ITEM(elements, i);
                     Py_INCREF(fv);
@@ -2199,7 +2207,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 Py_DECREF(elements);
                 PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", raw_func, "fields", fields);
                 Py_DECREF(fields);
-                if (kwargs == NULL) goto error;
+                if (kwargs == NULL) { Py_DECREF(raw_func); goto error; }
                 PyObject *retval = PyObject_Call((PyObject *)Menai_StructType, empty_tuple, kwargs);
                 Py_DECREF(kwargs);
                 if (retval == NULL) { Py_DECREF(raw_func); goto error; }
@@ -2214,8 +2222,8 @@ execute_loop(PyObject *code, PyObject *globals,
                 frame = caller;
             } else {
                 Py_DECREF(elements);
-                menai_raise_eval_error("apply: first argument must be a function");
-                goto error;
+                Py_DECREF(raw_func);
+                menai_raise_eval_error("apply: first argument must be a function"); goto error;
             }
             break;
         }
@@ -2860,7 +2868,6 @@ execute_loop(PyObject *code, PyObject *globals,
                     PyObject *ms = make_string_from_pyobj(PyList_GET_ITEM(parts, i));
                     if (ms == NULL) { Py_DECREF(parts); Py_DECREF(sb); Py_DECREF(sa); goto error; }
                     PyObject *old = PyList_GET_ITEM(parts, i);
-                    Py_INCREF(ms);
                     PyList_SET_ITEM(parts, i, ms);
                     Py_DECREF(old);
                 }
@@ -3364,7 +3371,8 @@ execute_loop(PyObject *code, PyObject *globals,
                     if (eq < 0) { Py_DECREF(new_pairs); Py_DECREF(hk); Py_DECREF(pairs); goto error; }
                     PyObject *new_pair = eq ? PyTuple_Pack(2, key, val) : pair;
                     if (eq) found = 1;
-                    Py_INCREF(new_pair);
+                    if (new_pair == NULL) { Py_DECREF(new_pairs); Py_DECREF(hk); Py_DECREF(pairs); goto error; }
+                    if (!eq) Py_INCREF(new_pair);
                     if (PyList_Append(new_pairs, new_pair) < 0) {
                         Py_DECREF(new_pair); Py_DECREF(new_pairs); Py_DECREF(hk); Py_DECREF(pairs); goto error;
                     }
