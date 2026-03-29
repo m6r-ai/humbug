@@ -47,24 +47,6 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "claude-sonnet-4-5": AIModel(
-            name="claude-sonnet-4-5",
-            provider="anthropic",
-            context_window=200000,
-            max_output_tokens=32000,  # This is actually 64000 but that's too much
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "claude-sonnet-4-5 (thinking)": AIModel(
-            name="claude-sonnet-4-5",
-            provider="anthropic",
-            context_window=200000,
-            max_output_tokens=32000,  # This is actually 64000 but that's too much
-            supports_temperature=False,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
         "claude-opus-4-6": AIModel(
             name="claude-opus-4-6",
             provider="anthropic",
@@ -423,8 +405,8 @@ class AIConversationSettings:
         ),
 
         # Z.ai models
-        "glm-5 (Z.ai)": AIModel(
-            name="glm-5",
+        "glm-5.1 (Z.ai)": AIModel(
+            name="glm-5.1",
             provider="zai",
             context_window=200000,
             max_output_tokens=32768,
@@ -432,8 +414,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "glm-5 (thinking) (Z.ai)": AIModel(
-            name="glm-5",
+        "glm-5.1 (thinking) (Z.ai)": AIModel(
+            name="glm-5.1",
             provider="zai",
             context_window=200000,
             max_output_tokens=32768,
@@ -455,15 +437,6 @@ class AIConversationSettings:
             provider="zai",
             context_window=200000,
             max_output_tokens=32768,
-            supports_temperature=True,
-            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
-            tool_capabilities=ToolCapability.FUNCTION_CALLING
-        ),
-        "glm-4.5": AIModel(
-            name="glm-4.5",
-            provider="zai",
-            context_window=128000,
-            max_output_tokens=8192,
             supports_temperature=True,
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
