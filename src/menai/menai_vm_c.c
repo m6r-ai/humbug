@@ -874,30 +874,11 @@ make_string_from_pyobj(PyObject *py_str)
 /* ---------------------------------------------------------------------------
  * Arithmetic helper macros
  *
- * INT_REQUIRE / FLT_REQUIRE — type-check a register value, goto error if wrong.
  * INT_STORE — wrap a Python int result in MenaiInteger and store to dest.
  * FLT_STORE — wrap a C double result in MenaiFloat and store to dest.
  *
- * All macros assume local variables: regs, base, dest, and label error.
+ * All macros assume local variables: regs, base, dest, and the label error.
  * ------------------------------------------------------------------------- */
-
-#define INT_REQUIRE(reg, op_name) \
-    if (!IS_MENAI_INTEGER(reg)) { \
-        PyObject *_tn = PyObject_CallMethod((reg), "type_name", NULL); \
-        menai_raise_eval_errorf("Function '%s' requires integer arguments, got %s", \
-            op_name, _tn ? PyUnicode_AsUTF8(_tn) : "?"); \
-        Py_XDECREF(_tn); \
-        goto error; \
-    }
-
-#define FLT_REQUIRE(reg, op_name) \
-    if (!IS_MENAI_FLOAT(reg)) { \
-        PyObject *_tn = PyObject_CallMethod((reg), "type_name", NULL); \
-        menai_raise_eval_errorf("Function '%s' requires float arguments, got %s", \
-            op_name, _tn ? PyUnicode_AsUTF8(_tn) : "?"); \
-        Py_XDECREF(_tn); \
-        goto error; \
-    }
 
 /*
  * INT_STORE: takes a new PyObject* (a Python int), wraps it in MenaiInteger,
@@ -1543,80 +1524,90 @@ execute_loop(PyObject *code, PyObject *globals,
 
         case OP_INTEGER_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer=?"); INT_REQUIRE(b, "integer=?");
+            if (!require_integer(a, "integer=?")) goto error;
+            if (!require_integer(b, "integer=?")) goto error;
             INT_CMP(a, b, Py_EQ, "integer=?");
             break;
         }
         case OP_INTEGER_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer!=?"); INT_REQUIRE(b, "integer!=?");
+            if (!require_integer(a, "integer!=?")) goto error;
+            if (!require_integer(b, "integer!=?")) goto error;
             INT_CMP(a, b, Py_NE, "integer!=?");
             break;
         }
         case OP_INTEGER_LT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer<?"); INT_REQUIRE(b, "integer<?");
+            if (!require_integer(a, "integer<?")) goto error;
+            if (!require_integer(b, "integer<?")) goto error;
             INT_CMP(a, b, Py_LT, "integer<?");
             break;
         }
         case OP_INTEGER_GT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer>?"); INT_REQUIRE(b, "integer>?");
+            if (!require_integer(a, "integer>?")) goto error;
+            if (!require_integer(b, "integer>?")) goto error;
             INT_CMP(a, b, Py_GT, "integer>?");
             break;
         }
         case OP_INTEGER_LTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer<=?"); INT_REQUIRE(b, "integer<=?");
+            if (!require_integer(a, "integer<=?")) goto error;
+            if (!require_integer(b, "integer<=?")) goto error;
             INT_CMP(a, b, Py_LE, "integer<=?");
             break;
         }
         case OP_INTEGER_GTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer>=?"); INT_REQUIRE(b, "integer>=?");
+            if (!require_integer(a, "integer>=?")) goto error;
+            if (!require_integer(b, "integer>=?")) goto error;
             INT_CMP(a, b, Py_GE, "integer>=?");
             break;
         }
 
         case OP_INTEGER_ABS: {
             PyObject *a = regs[base + src0];
-            INT_REQUIRE(a, "integer-abs");
+            if (!require_integer(a, "integer-abs")) goto error;
             INT_UNOP(a, PyNumber_Absolute, "integer-abs");
             break;
         }
         case OP_INTEGER_NEG: {
             PyObject *a = regs[base + src0];
-            INT_REQUIRE(a, "integer-neg");
+            if (!require_integer(a, "integer-neg")) goto error;
             INT_UNOP(a, PyNumber_Negative, "integer-neg");
             break;
         }
         case OP_INTEGER_BIT_NOT: {
             PyObject *a = regs[base + src0];
-            INT_REQUIRE(a, "integer-bit-not");
+            if (!require_integer(a, "integer-bit-not")) goto error;
             INT_UNOP(a, PyNumber_Invert, "integer-bit-not");
             break;
         }
         case OP_INTEGER_ADD: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer+"); INT_REQUIRE(b, "integer+");
+            if (!require_integer(a, "integer+")) goto error;
+            if (!require_integer(b, "integer+")) goto error;
             INT_BINOP(a, b, PyNumber_Add, "integer+");
             break;
         }
         case OP_INTEGER_SUB: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer-"); INT_REQUIRE(b, "integer-");
+            if (!require_integer(a, "integer-")) goto error;
+            if (!require_integer(b, "integer-")) goto error;
             INT_BINOP(a, b, PyNumber_Subtract, "integer-");
             break;
         }
         case OP_INTEGER_MUL: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer*"); INT_REQUIRE(b, "integer*");
+            if (!require_integer(a, "integer*")) goto error;
+            if (!require_integer(b, "integer*")) goto error;
             INT_BINOP(a, b, PyNumber_Multiply, "integer*");
             break;
         }
         case OP_INTEGER_DIV: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer/"); INT_REQUIRE(b, "integer/");
+            if (!require_integer(a, "integer/")) goto error;
+            if (!require_integer(b, "integer/")) goto error;
             PyObject *bv = menai_integer_value(b);
             if (bv == NULL) goto error;
             PyObject *_zero = PyLong_FromLong(0);
@@ -1632,7 +1623,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_INTEGER_MOD: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer%"); INT_REQUIRE(b, "integer%");
+            if (!require_integer(a, "integer%")) goto error;
+            if (!require_integer(b, "integer%")) goto error;
             PyObject *bv = menai_integer_value(b);
             if (bv == NULL) goto error;
             PyObject *_zero = PyLong_FromLong(0);
@@ -1648,7 +1640,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_INTEGER_EXPN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer-expn"); INT_REQUIRE(b, "integer-expn");
+            if (!require_integer(a, "integer-expn")) goto error;
+            if (!require_integer(b, "integer-expn")) goto error;
             PyObject *bv = menai_integer_value(b);
             if (bv == NULL) goto error;
             PyObject *_zero = PyLong_FromLong(0);
@@ -1664,37 +1657,43 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_INTEGER_BIT_OR: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer-bit-or"); INT_REQUIRE(b, "integer-bit-or");
+            if (!require_integer(a, "integer-bit-or")) goto error;
+            if (!require_integer(b, "integer-bit-or")) goto error;
             INT_BINOP(a, b, PyNumber_Or, "integer-bit-or");
             break;
         }
         case OP_INTEGER_BIT_AND: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer-bit-and"); INT_REQUIRE(b, "integer-bit-and");
+            if (!require_integer(a, "integer-bit-and")) goto error;
+            if (!require_integer(b, "integer-bit-and")) goto error;
             INT_BINOP(a, b, PyNumber_And, "integer-bit-and");
             break;
         }
         case OP_INTEGER_BIT_XOR: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer-bit-xor"); INT_REQUIRE(b, "integer-bit-xor");
+            if (!require_integer(a, "integer-bit-xor")) goto error;
+            if (!require_integer(b, "integer-bit-xor")) goto error;
             INT_BINOP(a, b, PyNumber_Xor, "integer-bit-xor");
             break;
         }
         case OP_INTEGER_BIT_SHIFT_LEFT: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer-bit-shift-left"); INT_REQUIRE(b, "integer-bit-shift-left");
+            if (!require_integer(a, "integer-bit-shift-left")) goto error;
+            if (!require_integer(b, "integer-bit-shift-left")) goto error;
             INT_BINOP(a, b, PyNumber_Lshift, "integer-bit-shift-left");
             break;
         }
         case OP_INTEGER_BIT_SHIFT_RIGHT: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer-bit-shift-right"); INT_REQUIRE(b, "integer-bit-shift-right");
+            if (!require_integer(a, "integer-bit-shift-right")) goto error;
+            if (!require_integer(b, "integer-bit-shift-right")) goto error;
             INT_BINOP(a, b, PyNumber_Rshift, "integer-bit-shift-right");
             break;
         }
         case OP_INTEGER_MIN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer-min"); INT_REQUIRE(b, "integer-min");
+            if (!require_integer(a, "integer-min")) goto error;
+            if (!require_integer(b, "integer-min")) goto error;
             PyObject *_av = menai_integer_value(a);
             if (_av == NULL) goto error;
             PyObject *_bv = menai_integer_value(b);
@@ -1707,7 +1706,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_INTEGER_MAX: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer-max"); INT_REQUIRE(b, "integer-max");
+            if (!require_integer(a, "integer-max")) goto error;
+            if (!require_integer(b, "integer-max")) goto error;
             PyObject *_av = menai_integer_value(a);
             if (_av == NULL) goto error;
             PyObject *_bv = menai_integer_value(b);
@@ -1720,7 +1720,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_INTEGER_TO_FLOAT: {
             PyObject *a = regs[base + src0];
-            INT_REQUIRE(a, "integer->float");
+            if (!require_integer(a, "integer->float")) goto error;
             PyObject *_av = menai_integer_value(a);
             if (_av == NULL) goto error;
             double d = PyLong_AsDouble(_av);
@@ -1731,7 +1731,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_INTEGER_TO_COMPLEX: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer->complex"); INT_REQUIRE(b, "integer->complex");
+            if (!require_integer(a, "integer->complex")) goto error;
+            if (!require_integer(b, "integer->complex")) goto error;
             PyObject *_av = menai_integer_value(a);
             if (_av == NULL) goto error;
             double re = PyLong_AsDouble(_av);
@@ -1750,7 +1751,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_INTEGER_TO_STRING: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            INT_REQUIRE(a, "integer->string"); INT_REQUIRE(b, "integer->string");
+            if (!require_integer(a, "integer->string")) goto error;
+            if (!require_integer(b, "integer->string")) goto error;
             PyObject *_bv = menai_integer_value(b);
             if (_bv == NULL) goto error;
             long radix = PyLong_AsLong(_bv);
@@ -1783,7 +1785,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_INTEGER_CODEPOINT_TO_STRING: {
             PyObject *a = regs[base + src0];
-            INT_REQUIRE(a, "integer-codepoint->string");
+            if (!require_integer(a, "integer-codepoint->string")) goto error;
             PyObject *_av = menai_integer_value(a);
             if (_av == NULL) goto error;
             long cp = PyLong_AsLong(_av);
@@ -1814,74 +1816,84 @@ execute_loop(PyObject *code, PyObject *globals,
 
         case OP_FLOAT_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float=?"); FLT_REQUIRE(b, "float=?");
+            if (!require_float(a, "float=?")) goto error;
+            if (!require_float(b, "float=?")) goto error;
             BOOL_STORE(menai_float_value(a) == menai_float_value(b));
             break;
         }
         case OP_FLOAT_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float!=?"); FLT_REQUIRE(b, "float!=?");
+            if (!require_float(a, "float!=?")) goto error;
+            if (!require_float(b, "float!=?")) goto error;
             BOOL_STORE(menai_float_value(a) != menai_float_value(b));
             break;
         }
         case OP_FLOAT_LT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float<?"); FLT_REQUIRE(b, "float<?");
+            if (!require_float(a, "float<?")) goto error;
+            if (!require_float(b, "float<?")) goto error;
             BOOL_STORE(menai_float_value(a) < menai_float_value(b));
             break;
         }
         case OP_FLOAT_GT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float>?"); FLT_REQUIRE(b, "float>?");
+            if (!require_float(a, "float>?")) goto error;
+            if (!require_float(b, "float>?")) goto error;
             BOOL_STORE(menai_float_value(a) > menai_float_value(b));
             break;
         }
         case OP_FLOAT_LTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float<=?"); FLT_REQUIRE(b, "float<=?");
+            if (!require_float(a, "float<=?")) goto error;
+            if (!require_float(b, "float<=?")) goto error;
             BOOL_STORE(menai_float_value(a) <= menai_float_value(b));
             break;
         }
         case OP_FLOAT_GTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float>=?"); FLT_REQUIRE(b, "float>=?");
+            if (!require_float(a, "float>=?")) goto error;
+            if (!require_float(b, "float>=?")) goto error;
             BOOL_STORE(menai_float_value(a) >= menai_float_value(b));
             break;
         }
         case OP_FLOAT_NEG: {
             PyObject *a = regs[base + src0];
-            FLT_REQUIRE(a, "float-neg");
+            if (!require_float(a, "float-neg")) goto error;
             FLT_STORE(-menai_float_value(a));
             break;
         }
         case OP_FLOAT_ABS: {
             PyObject *a = regs[base + src0];
-            FLT_REQUIRE(a, "float-abs");
+            if (!require_float(a, "float-abs")) goto error;
             double v = menai_float_value(a);
             FLT_STORE(v < 0.0 ? -v : v);
             break;
         }
         case OP_FLOAT_ADD: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float+"); FLT_REQUIRE(b, "float+");
+            if (!require_float(a, "float+")) goto error;
+            if (!require_float(b, "float+")) goto error;
             FLT_STORE(menai_float_value(a) + menai_float_value(b));
             break;
         }
         case OP_FLOAT_SUB: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float-"); FLT_REQUIRE(b, "float-");
+            if (!require_float(a, "float-")) goto error;
+            if (!require_float(b, "float-")) goto error;
             FLT_STORE(menai_float_value(a) - menai_float_value(b));
             break;
         }
         case OP_FLOAT_MUL: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float*"); FLT_REQUIRE(b, "float*");
+            if (!require_float(a, "float*")) goto error;
+            if (!require_float(b, "float*")) goto error;
             FLT_STORE(menai_float_value(a) * menai_float_value(b));
             break;
         }
         case OP_FLOAT_DIV: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float/"); FLT_REQUIRE(b, "float/");
+            if (!require_float(a, "float/")) goto error;
+            if (!require_float(b, "float/")) goto error;
             double bv = menai_float_value(b);
             if (bv == 0.0) { menai_raise_eval_error("Division by zero in 'float/'"); goto error; }
             FLT_STORE(menai_float_value(a) / bv);
@@ -1889,7 +1901,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_FLOAT_FLOOR_DIV: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float//"); FLT_REQUIRE(b, "float//");
+            if (!require_float(a, "float//")) goto error;
+            if (!require_float(b, "float//")) goto error;
             double bv = menai_float_value(b);
             if (bv == 0.0) { menai_raise_eval_error("Division by zero in 'float//'"); goto error; }
             FLT_STORE(floor(menai_float_value(a) / bv));
@@ -1897,7 +1910,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_FLOAT_MOD: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float%"); FLT_REQUIRE(b, "float%");
+            if (!require_float(a, "float%")) goto error;
+            if (!require_float(b, "float%")) goto error;
             double bv = menai_float_value(b);
             if (bv == 0.0) { menai_raise_eval_error("Modulo by zero in 'float%'"); goto error; }
             FLT_STORE(fmod(menai_float_value(a), bv));
@@ -1905,19 +1919,20 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_FLOAT_EXP: {
             PyObject *a = regs[base + src0];
-            FLT_REQUIRE(a, "float-exp");
+            if (!require_float(a, "float-exp")) goto error;
             FLT_STORE(exp(menai_float_value(a)));
             break;
         }
         case OP_FLOAT_EXPN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float-expn"); FLT_REQUIRE(b, "float-expn");
+            if (!require_float(a, "float-expn")) goto error;
+            if (!require_float(b, "float-expn")) goto error;
             FLT_STORE(pow(menai_float_value(a), menai_float_value(b)));
             break;
         }
         case OP_FLOAT_LOG: {
             PyObject *a = regs[base + src0];
-            FLT_REQUIRE(a, "float-log");
+            if (!require_float(a, "float-log")) goto error;
             double v = menai_float_value(a);
             if (v < 0.0) { menai_raise_eval_error("float-log: argument must be non-negative"); goto error; }
             FLT_STORE(v == 0.0 ? -INFINITY : log(v));
@@ -1925,7 +1940,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_FLOAT_LOG10: {
             PyObject *a = regs[base + src0];
-            FLT_REQUIRE(a, "float-log10");
+            if (!require_float(a, "float-log10")) goto error;
             double v = menai_float_value(a);
             if (v < 0.0) { menai_raise_eval_error("float-log10: argument must be non-negative"); goto error; }
             FLT_STORE(v == 0.0 ? -INFINITY : log10(v));
@@ -1933,7 +1948,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_FLOAT_LOG2: {
             PyObject *a = regs[base + src0];
-            FLT_REQUIRE(a, "float-log2");
+            if (!require_float(a, "float-log2")) goto error;
             double v = menai_float_value(a);
             if (v < 0.0) { menai_raise_eval_error("float-log2: argument must be non-negative"); goto error; }
             FLT_STORE(v == 0.0 ? -INFINITY : log2(v));
@@ -1941,7 +1956,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_FLOAT_LOGN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float-logn"); FLT_REQUIRE(b, "float-logn");
+            if (!require_float(a, "float-logn")) goto error;
+            if (!require_float(b, "float-logn")) goto error;
             double av = menai_float_value(a), bv = menai_float_value(b);
             if (bv <= 0.0 || bv == 1.0) { menai_raise_eval_error("Function 'float-logn' requires a positive base not equal to 1"); goto error; }
             if (av < 0.0) { menai_raise_eval_error("float-logn: argument must be non-negative"); goto error; }
@@ -1949,51 +1965,53 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         }
         case OP_FLOAT_SIN: {
-            PyObject *a = regs[base + src0]; FLT_REQUIRE(a, "float-sin");
+            PyObject *a = regs[base + src0]; if (!require_float(a, "float-sin")) goto error;
             FLT_STORE(sin(menai_float_value(a))); break;
         }
         case OP_FLOAT_COS: {
-            PyObject *a = regs[base + src0]; FLT_REQUIRE(a, "float-cos");
+            PyObject *a = regs[base + src0]; if (!require_float(a, "float-cos")) goto error;
             FLT_STORE(cos(menai_float_value(a))); break;
         }
         case OP_FLOAT_TAN: {
-            PyObject *a = regs[base + src0]; FLT_REQUIRE(a, "float-tan");
+            PyObject *a = regs[base + src0]; if (!require_float(a, "float-tan")) goto error;
             FLT_STORE(tan(menai_float_value(a))); break;
         }
         case OP_FLOAT_SQRT: {
-            PyObject *a = regs[base + src0]; FLT_REQUIRE(a, "float-sqrt");
+            PyObject *a = regs[base + src0]; if (!require_float(a, "float-sqrt")) goto error;
             double v = menai_float_value(a);
             if (v < 0.0) { menai_raise_eval_error("float-sqrt: argument must be non-negative"); goto error; }
             FLT_STORE(sqrt(v)); break;
         }
         case OP_FLOAT_FLOOR: {
-            PyObject *a = regs[base + src0]; FLT_REQUIRE(a, "float-floor");
+            PyObject *a = regs[base + src0]; if (!require_float(a, "float-floor")) goto error;
             FLT_STORE(floor(menai_float_value(a))); break;
         }
         case OP_FLOAT_CEIL: {
-            PyObject *a = regs[base + src0]; FLT_REQUIRE(a, "float-ceil");
+            PyObject *a = regs[base + src0]; if (!require_float(a, "float-ceil")) goto error;
             FLT_STORE(ceil(menai_float_value(a))); break;
         }
         case OP_FLOAT_ROUND: {
-            PyObject *a = regs[base + src0]; FLT_REQUIRE(a, "float-round");
+            PyObject *a = regs[base + src0]; if (!require_float(a, "float-round")) goto error;
             FLT_STORE(round(menai_float_value(a))); break;
         }
         case OP_FLOAT_MIN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float-min"); FLT_REQUIRE(b, "float-min");
+            if (!require_float(a, "float-min")) goto error;
+            if (!require_float(b, "float-min")) goto error;
             double av = menai_float_value(a), bv = menai_float_value(b);
             FLT_STORE(av <= bv ? av : bv);
             break;
         }
         case OP_FLOAT_MAX: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float-max"); FLT_REQUIRE(b, "float-max");
+            if (!require_float(a, "float-max")) goto error;
+            if (!require_float(b, "float-max")) goto error;
             double av = menai_float_value(a), bv = menai_float_value(b);
             FLT_STORE(av >= bv ? av : bv);
             break;
         }
         case OP_FLOAT_TO_INTEGER: {
-            PyObject *a = regs[base + src0]; FLT_REQUIRE(a, "float->integer");
+            PyObject *a = regs[base + src0]; if (!require_float(a, "float->integer")) goto error;
             double v = menai_float_value(a);
             PyObject *py_int = PyLong_FromDouble(trunc(v));
             if (py_int == NULL) goto error;
@@ -2002,7 +2020,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_FLOAT_TO_COMPLEX: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            FLT_REQUIRE(a, "float->complex"); FLT_REQUIRE(b, "float->complex");
+            if (!require_float(a, "float->complex")) goto error;
+            if (!require_float(b, "float->complex")) goto error;
             PyObject *r = make_complex_val(menai_float_value(a), menai_float_value(b));
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
@@ -2010,7 +2029,7 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         }
         case OP_FLOAT_TO_STRING: {
-            PyObject *a = regs[base + src0]; FLT_REQUIRE(a, "float->string");
+            PyObject *a = regs[base + src0]; if (!require_float(a, "float->string")) goto error;
             PyObject *_pf = PyFloat_FromDouble(menai_float_value(a));
             if (_pf == NULL) goto error;
             PyObject *py_str = PyObject_Str(_pf);
@@ -2270,15 +2289,6 @@ execute_loop(PyObject *code, PyObject *globals,
         /* Complex numbers                                                    */
         /* ----------------------------------------------------------------- */
 
-#define CPX_REQUIRE(r, nm) \
-    if (!IS_MENAI_COMPLEX(r)) { \
-        PyObject *_tn = PyObject_CallMethod((r), "type_name", NULL); \
-        menai_raise_eval_errorf("Function '%s' requires complex arguments, got %s", \
-            nm, _tn ? PyUnicode_AsUTF8(_tn) : "?"); \
-        Py_XDECREF(_tn); \
-        goto error; \
-    }
-
 /* Get .value (Python complex) from a MenaiComplex — new reference. */
 #define CPX_VAL(obj, var) \
     PyObject *(var) = PyObject_GetAttrString((obj), "value"); \
@@ -2300,7 +2310,8 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         case OP_COMPLEX_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            CPX_REQUIRE(a, "complex=?"); CPX_REQUIRE(b, "complex=?");
+            if (!require_complex(a, "complex=?")) goto error;
+            if (!require_complex(b, "complex=?")) goto error;
             int eq = PyObject_RichCompareBool(a, b, Py_EQ);
             if (eq < 0) goto error;
             BOOL_STORE(eq);
@@ -2308,7 +2319,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_COMPLEX_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            CPX_REQUIRE(a, "complex!=?"); CPX_REQUIRE(b, "complex!=?");
+            if (!require_complex(a, "complex!=?")) goto error;
+            if (!require_complex(b, "complex!=?")) goto error;
             int neq = PyObject_RichCompareBool(a, b, Py_NE);
             if (neq < 0) goto error;
             BOOL_STORE(neq);
@@ -2316,7 +2328,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_COMPLEX_REAL: {
             PyObject *a = regs[base + src0];
-            CPX_REQUIRE(a, "complex-real");
+            if (!require_complex(a, "complex-real")) goto error;
             CPX_VAL(a, cv);
             double r = PyComplex_RealAsDouble(cv);
             Py_DECREF(cv);
@@ -2325,7 +2337,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_COMPLEX_IMAG: {
             PyObject *a = regs[base + src0];
-            CPX_REQUIRE(a, "complex-imag");
+            if (!require_complex(a, "complex-imag")) goto error;
             CPX_VAL(a, cv);
             double i = PyComplex_ImagAsDouble(cv);
             Py_DECREF(cv);
@@ -2334,7 +2346,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_COMPLEX_ABS: {
             PyObject *a = regs[base + src0];
-            CPX_REQUIRE(a, "complex-abs");
+            if (!require_complex(a, "complex-abs")) goto error;
             CPX_VAL(a, cv);
             double re = PyComplex_RealAsDouble(cv), im = PyComplex_ImagAsDouble(cv);
             Py_DECREF(cv);
@@ -2343,7 +2355,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_COMPLEX_NEG: {
             PyObject *a = regs[base + src0];
-            CPX_REQUIRE(a, "complex-neg");
+            if (!require_complex(a, "complex-neg")) goto error;
             CPX_VAL(a, cv);
             CPX_STORE(PyNumber_Negative(cv));
             Py_DECREF(cv);
@@ -2351,7 +2363,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_COMPLEX_ADD: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            CPX_REQUIRE(a, "complex+"); CPX_REQUIRE(b, "complex+");
+            if (!require_complex(a, "complex+")) goto error;
+            if (!require_complex(b, "complex+")) goto error;
             CPX_VAL(a, av); CPX_VAL(b, bv);
             PyObject *res = PyNumber_Add(av, bv);
             Py_DECREF(av); Py_DECREF(bv);
@@ -2360,7 +2373,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_COMPLEX_SUB: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            CPX_REQUIRE(a, "complex-"); CPX_REQUIRE(b, "complex-");
+            if (!require_complex(a, "complex-")) goto error;
+            if (!require_complex(b, "complex-")) goto error;
             CPX_VAL(a, av); CPX_VAL(b, bv);
             PyObject *res = PyNumber_Subtract(av, bv);
             Py_DECREF(av); Py_DECREF(bv);
@@ -2369,7 +2383,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_COMPLEX_MUL: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            CPX_REQUIRE(a, "complex*"); CPX_REQUIRE(b, "complex*");
+            if (!require_complex(a, "complex*")) goto error;
+            if (!require_complex(b, "complex*")) goto error;
             CPX_VAL(a, av); CPX_VAL(b, bv);
             PyObject *res = PyNumber_Multiply(av, bv);
             Py_DECREF(av); Py_DECREF(bv);
@@ -2378,7 +2393,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_COMPLEX_DIV: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            CPX_REQUIRE(a, "complex/"); CPX_REQUIRE(b, "complex/");
+            if (!require_complex(a, "complex/")) goto error;
+            if (!require_complex(b, "complex/")) goto error;
             CPX_VAL(a, av); CPX_VAL(b, bv);
             /* Check for zero divisor */
             double br = PyComplex_RealAsDouble(bv), bi = PyComplex_ImagAsDouble(bv);
@@ -2394,7 +2410,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_COMPLEX_EXPN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            CPX_REQUIRE(a, "complex-expn"); CPX_REQUIRE(b, "complex-expn");
+            if (!require_complex(a, "complex-expn")) goto error;
+            if (!require_complex(b, "complex-expn")) goto error;
             CPX_VAL(a, av); CPX_VAL(b, bv);
             PyObject *res = PyNumber_Power(av, bv, Py_None);
             Py_DECREF(av); Py_DECREF(bv);
@@ -2404,7 +2421,7 @@ execute_loop(PyObject *code, PyObject *globals,
         /* Transcendentals via cmath module */
 #define CPX_TRANSCENDENTAL(fn_name, op_name) do { \
     PyObject *a = regs[base + src0]; \
-    CPX_REQUIRE(a, op_name); \
+    if (!require_complex(a, op_name)) goto error; \
     CPX_VAL(a, cv); \
     PyObject *fn = PyObject_GetAttrString(cmath_module, fn_name); \
     if (fn == NULL) { Py_DECREF(cv); goto error; } \
@@ -2415,7 +2432,8 @@ execute_loop(PyObject *code, PyObject *globals,
 
 #define CPX_TRANSCENDENTAL2(fn_name, op_name) do { \
     PyObject *a = regs[base + src0], *b = regs[base + src1]; \
-    CPX_REQUIRE(a, op_name); CPX_REQUIRE(b, op_name); \
+    if (!require_complex(a, op_name)) goto error; \
+    if (!require_complex(b, op_name)) goto error; \
     CPX_VAL(a, av); CPX_VAL(b, bv); \
     PyObject *fn = PyObject_GetAttrString(cmath_module, fn_name); \
     if (fn == NULL) { Py_DECREF(av); Py_DECREF(bv); goto error; } \
@@ -2433,7 +2451,8 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_COMPLEX_SQRT: { CPX_TRANSCENDENTAL("sqrt", "complex-sqrt"); break; }
         case OP_COMPLEX_LOGN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            CPX_REQUIRE(a, "complex-logn"); CPX_REQUIRE(b, "complex-logn");
+            if (!require_complex(a, "complex-logn")) goto error;
+            if (!require_complex(b, "complex-logn")) goto error;
             /* Declare all locals before any goto to avoid jumping over
              * initialisers, which is undefined behaviour in C. */
             PyObject *av = NULL, *bv = NULL, *zero = NULL, *fn = NULL, *res = NULL;
@@ -2463,7 +2482,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_COMPLEX_TO_STRING: {
             PyObject *a = regs[base + src0];
-            CPX_REQUIRE(a, "complex->string");
+            if (!require_complex(a, "complex->string")) goto error;
             PyObject *desc = PyObject_CallMethod(a, "describe", NULL);
             if (desc == NULL) goto error;
             PyObject *r = make_string_from_pyobj(desc); Py_DECREF(desc);
@@ -2480,15 +2499,6 @@ execute_loop(PyObject *code, PyObject *globals,
             BOOL_STORE(IS_MENAI_STRING(regs[base + src0]));
             break;
 
-#define STR_REQUIRE(r, nm) \
-    if (!IS_MENAI_STRING(r)) { \
-        PyObject *_tn = PyObject_CallMethod((r), "type_name", NULL); \
-        menai_raise_eval_errorf("Function '%s' requires string arguments, got %s", \
-            nm, _tn ? PyUnicode_AsUTF8(_tn) : "?"); \
-        Py_XDECREF(_tn); \
-        goto error; \
-    }
-
 #define STR_CMP(a, b, op, nm) do { \
     PyObject *_sa = menai_string_value(a); if (_sa == NULL) goto error; \
     PyObject *_sb = menai_string_value(b); if (_sb == NULL) { Py_DECREF(_sa); goto error; } \
@@ -2503,43 +2513,49 @@ execute_loop(PyObject *code, PyObject *globals,
 
         case OP_STRING_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            STR_REQUIRE(a, "string=?"); STR_REQUIRE(b, "string=?");
+            if (!require_string(a, "string=?")) goto error;
+            if (!require_string(b, "string=?")) goto error;
             STR_CMP(a, b, Py_EQ, "string=?");
             break;
         }
         case OP_STRING_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            STR_REQUIRE(a, "string!=?"); STR_REQUIRE(b, "string!=?");
+            if (!require_string(a, "string!=?")) goto error;
+            if (!require_string(b, "string!=?")) goto error;
             STR_CMP(a, b, Py_NE, "string!=?");
             break;
         }
         case OP_STRING_LT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            STR_REQUIRE(a, "string<?"); STR_REQUIRE(b, "string<?");
+            if (!require_string(a, "string<?")) goto error;
+            if (!require_string(b, "string<?")) goto error;
             STR_CMP(a, b, Py_LT, "string<?");
             break;
         }
         case OP_STRING_GT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            STR_REQUIRE(a, "string>?"); STR_REQUIRE(b, "string>?");
+            if (!require_string(a, "string>?")) goto error;
+            if (!require_string(b, "string>?")) goto error;
             STR_CMP(a, b, Py_GT, "string>?");
             break;
         }
         case OP_STRING_LTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            STR_REQUIRE(a, "string<=?"); STR_REQUIRE(b, "string<=?");
+            if (!require_string(a, "string<=?")) goto error;
+            if (!require_string(b, "string<=?")) goto error;
             STR_CMP(a, b, Py_LE, "string<=?");
             break;
         }
         case OP_STRING_GTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            STR_REQUIRE(a, "string>=?"); STR_REQUIRE(b, "string>=?");
+            if (!require_string(a, "string>=?")) goto error;
+            if (!require_string(b, "string>=?")) goto error;
             STR_CMP(a, b, Py_GE, "string>=?");
             break;
         }
         case OP_STRING_LENGTH: {
             PyObject *a = regs[base + src0];
-            STR_REQUIRE(a, "string-length");
+            if (!require_string(a, "string-length")) goto error;
             PyObject *sv = menai_string_value(a);
             if (sv == NULL) goto error;
             Py_ssize_t len = PyUnicode_GET_LENGTH(sv);
@@ -2551,7 +2567,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRING_UPCASE: {
             PyObject *a = regs[base + src0];
-            STR_REQUIRE(a, "string-upcase");
+            if (!require_string(a, "string-upcase")) goto error;
             PyObject *sv = menai_string_value(a);
             if (sv == NULL) goto error;
             PyObject *up = PyObject_CallMethod(sv, "upper", NULL);
@@ -2565,7 +2581,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRING_DOWNCASE: {
             PyObject *a = regs[base + src0];
-            STR_REQUIRE(a, "string-downcase");
+            if (!require_string(a, "string-downcase")) goto error;
             PyObject *sv = menai_string_value(a);
             if (sv == NULL) goto error;
             PyObject *lo = PyObject_CallMethod(sv, "lower", NULL);
@@ -2579,7 +2595,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRING_TRIM: {
             PyObject *a = regs[base + src0];
-            STR_REQUIRE(a, "string-trim");
+            if (!require_string(a, "string-trim")) goto error;
             PyObject *sv = menai_string_value(a);
             if (sv == NULL) goto error;
             PyObject *t = PyObject_CallMethod(sv, "strip", NULL);
@@ -2592,7 +2608,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRING_TRIM_LEFT: {
             PyObject *a = regs[base + src0];
-            STR_REQUIRE(a, "string-trim-left");
+            if (!require_string(a, "string-trim-left")) goto error;
             PyObject *sv = menai_string_value(a);
             if (sv == NULL) goto error;
             PyObject *t = PyObject_CallMethod(sv, "lstrip", NULL);
@@ -2605,7 +2621,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRING_TRIM_RIGHT: {
             PyObject *a = regs[base + src0];
-            STR_REQUIRE(a, "string-trim-right");
+            if (!require_string(a, "string-trim-right")) goto error;
             PyObject *sv = menai_string_value(a);
             if (sv == NULL) goto error;
             PyObject *t = PyObject_CallMethod(sv, "rstrip", NULL);
@@ -2618,7 +2634,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRING_CONCAT: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            STR_REQUIRE(a, "string-concat"); STR_REQUIRE(b, "string-concat");
+            if (!require_string(a, "string-concat")) goto error;
+            if (!require_string(b, "string-concat")) goto error;
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
@@ -2633,7 +2650,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRING_PREFIX_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            STR_REQUIRE(a, "string-prefix?"); STR_REQUIRE(b, "string-prefix?");
+            if (!require_string(a, "string-prefix?")) goto error;
+            if (!require_string(b, "string-prefix?")) goto error;
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
@@ -2646,7 +2664,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRING_SUFFIX_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            STR_REQUIRE(a, "string-suffix?"); STR_REQUIRE(b, "string-suffix?");
+            if (!require_string(a, "string-suffix?")) goto error;
+            if (!require_string(b, "string-suffix?")) goto error;
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
@@ -2659,7 +2678,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRING_REF: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            STR_REQUIRE(a, "string-ref");
+            if (!require_string(a, "string-ref")) goto error;
             if (!IS_MENAI_INTEGER(b)) { menai_raise_eval_error("string-ref: index must be integer"); goto error; }
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
@@ -2684,7 +2703,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRING_SLICE: {
             PyObject *a = regs[base + src0], *b = regs[base + src1], *c = regs[base + src2];
-            STR_REQUIRE(a, "string-slice");
+            if (!require_string(a, "string-slice")) goto error;
             if (!IS_MENAI_INTEGER(b) || !IS_MENAI_INTEGER(c)) {
                 menai_raise_eval_error("string-slice: indices must be integers"); goto error;
             }
@@ -2727,7 +2746,9 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRING_REPLACE: {
             PyObject *a = regs[base + src0], *b = regs[base + src1], *c = regs[base + src2];
-            STR_REQUIRE(a, "string-replace"); STR_REQUIRE(b, "string-replace"); STR_REQUIRE(c, "string-replace");
+            if (!require_string(a, "string-replace")) goto error;
+            if (!require_string(b, "string-replace")) goto error;
+            if (!require_string(c, "string-replace")) goto error;
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
@@ -2744,7 +2765,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRING_INDEX: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            STR_REQUIRE(a, "string-index"); STR_REQUIRE(b, "string-index");
+            if (!require_string(a, "string-index")) goto error;
+            if (!require_string(b, "string-index")) goto error;
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
@@ -2763,7 +2785,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRING_TO_INTEGER_CODEPOINT: {
             PyObject *a = regs[base + src0];
-            STR_REQUIRE(a, "string->integer-codepoint");
+            if (!require_string(a, "string->integer-codepoint")) goto error;
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
             Py_ssize_t slen = PyUnicode_GET_LENGTH(sa);
@@ -2782,7 +2804,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_STRING_TO_INTEGER: {
             /* src0=string, src1=radix(integer) */
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            STR_REQUIRE(a, "string->integer");
+            if (!require_string(a, "string->integer")) goto error;
             if (!IS_MENAI_INTEGER(b)) { menai_raise_eval_error("string->integer: radix must be integer"); goto error; }
             PyObject *bv = menai_integer_value(b);
             if (bv == NULL) goto error;
@@ -2809,7 +2831,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRING_TO_NUMBER: {
             PyObject *a = regs[base + src0];
-            STR_REQUIRE(a, "string->number");
+            if (!require_string(a, "string->number")) goto error;
             /* Delegate to the Menai object's method via Python call */
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
@@ -2869,7 +2891,8 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_STRING_TO_LIST: {
             /* src0=string, src1=delimiter string */
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            STR_REQUIRE(a, "string->list"); STR_REQUIRE(b, "string->list");
+            if (!require_string(a, "string->list")) goto error;
+            if (!require_string(b, "string->list")) goto error;
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
@@ -2919,24 +2942,6 @@ execute_loop(PyObject *code, PyObject *globals,
             BOOL_STORE(IS_MENAI_LIST(regs[base + src0]));
             break;
 
-#define LIST_REQUIRE(r, nm) \
-    if (!IS_MENAI_LIST(r)) { \
-        PyObject *_tn = PyObject_CallMethod((r), "type_name", NULL); \
-        menai_raise_eval_errorf("Function '%s' requires list arguments, got %s", \
-            nm, _tn ? PyUnicode_AsUTF8(_tn) : "?"); \
-        Py_XDECREF(_tn); \
-        goto error; \
-    }
-
-#define LIST_REQUIRE_SINGULAR(r, nm) \
-    if (!IS_MENAI_LIST(r)) { \
-        PyObject *_tn = PyObject_CallMethod((r), "type_name", NULL); \
-        menai_raise_eval_errorf("Function '%s' requires a list argument, got %s", \
-            nm, _tn ? PyUnicode_AsUTF8(_tn) : "?"); \
-        Py_XDECREF(_tn); \
-        goto error; \
-    }
-
         /* Helper: get .elements tuple from a MenaiList (new ref) */
 #define LIST_ELEMENTS(obj, var, lbl) \
     PyObject *(var) = PyObject_GetAttrString((obj), "elements"); \
@@ -2944,7 +2949,8 @@ execute_loop(PyObject *code, PyObject *globals,
 
         case OP_LIST_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            LIST_REQUIRE(a, "list=?"); LIST_REQUIRE(b, "list=?");
+            if (!require_list(a, "list=?")) goto error;
+            if (!require_list(b, "list=?")) goto error;
             int eq = PyObject_RichCompareBool(a, b, Py_EQ);
             if (eq < 0) goto error;
             BOOL_STORE(eq);
@@ -2952,7 +2958,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            LIST_REQUIRE(a, "list!=?"); LIST_REQUIRE(b, "list!=?");
+            if (!require_list(a, "list!=?")) goto error;
+            if (!require_list(b, "list!=?")) goto error;
             int neq = PyObject_RichCompareBool(a, b, Py_NE);
             if (neq < 0) goto error;
             BOOL_STORE(neq);
@@ -2960,7 +2967,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_NULL_P: {
             PyObject *a = regs[base + src0];
-            LIST_REQUIRE(a, "list-null?");
+            if (!require_list(a, "list-null?")) goto error;
             LIST_ELEMENTS(a, elems, error);
             int is_null = (PyTuple_GET_SIZE(elems) == 0);
             Py_DECREF(elems);
@@ -2969,7 +2976,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_LENGTH: {
             PyObject *a = regs[base + src0];
-            LIST_REQUIRE(a, "list-length");
+            if (!require_list(a, "list-length")) goto error;
             LIST_ELEMENTS(a, elems, error);
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             Py_DECREF(elems);
@@ -2980,7 +2987,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_FIRST: {
             PyObject *a = regs[base + src0];
-            LIST_REQUIRE(a, "list-first");
+            if (!require_list(a, "list-first")) goto error;
             LIST_ELEMENTS(a, elems, error);
             if (PyTuple_GET_SIZE(elems) == 0) {
                 Py_DECREF(elems);
@@ -2993,7 +3000,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_REST: {
             PyObject *a = regs[base + src0];
-            LIST_REQUIRE(a, "list-rest");
+            if (!require_list(a, "list-rest")) goto error;
             LIST_ELEMENTS(a, elems, error);
             if (PyTuple_GET_SIZE(elems) == 0) {
                 Py_DECREF(elems);
@@ -3010,7 +3017,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_LAST: {
             PyObject *a = regs[base + src0];
-            LIST_REQUIRE(a, "list-last");
+            if (!require_list(a, "list-last")) goto error;
             LIST_ELEMENTS(a, elems, error);
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             if (n == 0) {
@@ -3024,7 +3031,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_REF: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            LIST_REQUIRE(a, "list-ref");
+            if (!require_list(a, "list-ref")) goto error;
             if (!IS_MENAI_INTEGER(b)) { menai_raise_eval_error("list-ref: index must be integer"); goto error; }
             LIST_ELEMENTS(a, elems, error);
             PyObject *bv = menai_integer_value(b);
@@ -3041,7 +3048,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_PREPEND: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
-            LIST_REQUIRE(a, "list-prepend");
+            if (!require_list(a, "list-prepend")) goto error;
             LIST_ELEMENTS(a, elems, error);
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             PyObject *new_tup = PyTuple_New(n + 1);
@@ -3060,7 +3067,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_APPEND: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
-            LIST_REQUIRE(a, "list-append");
+            if (!require_list(a, "list-append")) goto error;
             LIST_ELEMENTS(a, elems, error);
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             PyObject *new_tup = PyTuple_New(n + 1);
@@ -3079,7 +3086,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_REVERSE: {
             PyObject *a = regs[base + src0];
-            LIST_REQUIRE(a, "list-reverse");
+            if (!require_list(a, "list-reverse")) goto error;
             LIST_ELEMENTS(a, elems, error);
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             PyObject *rev = PyTuple_New(n);
@@ -3097,7 +3104,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_CONCAT: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            LIST_REQUIRE(a, "list-concat"); LIST_REQUIRE(b, "list-concat");
+            if (!require_list(a, "list-concat")) goto error;
+            if (!require_list(b, "list-concat")) goto error;
             LIST_ELEMENTS(a, ea, error);
             PyObject *eb = PyObject_GetAttrString(b, "elements");
             if (eb == NULL) { Py_DECREF(ea); goto error; }
@@ -3112,7 +3120,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_MEMBER_P: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
-            LIST_REQUIRE(a, "list-member?");
+            if (!require_list(a, "list-member?")) goto error;
             LIST_ELEMENTS(a, elems, error);
             int found = PySequence_Contains(elems, item);
             Py_DECREF(elems);
@@ -3122,7 +3130,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_INDEX: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
-            LIST_REQUIRE(a, "list-index");
+            if (!require_list(a, "list-index")) goto error;
             LIST_ELEMENTS(a, elems, error);
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             Py_ssize_t found = -1;
@@ -3143,7 +3151,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_SLICE: {
             PyObject *a = regs[base + src0], *b = regs[base + src1], *c = regs[base + src2];
-            LIST_REQUIRE(a, "list-slice");
+            if (!require_list(a, "list-slice")) goto error;
             if (!IS_MENAI_INTEGER(b) || !IS_MENAI_INTEGER(c)) {
                 menai_raise_eval_error("list-slice: indices must be integers"); goto error;
             }
@@ -3186,7 +3194,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_REMOVE: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
-            LIST_REQUIRE(a, "list-remove");
+            if (!require_list(a, "list-remove")) goto error;
             LIST_ELEMENTS(a, elems, error);
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             /* Count non-matching elements first */
@@ -3214,7 +3222,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_TO_STRING: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            LIST_REQUIRE(a, "list->string"); STR_REQUIRE(b, "list->string");
+            if (!require_list(a, "list->string")) goto error;
+            if (!require_string(b, "list->string")) goto error;
             LIST_ELEMENTS(a, elems, error);
             PyObject *sep = menai_string_value(b);
             if (sep == NULL) { Py_DECREF(elems); goto error; }
@@ -3243,7 +3252,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_LIST_TO_SET: {
             PyObject *a = regs[base + src0];
-            LIST_REQUIRE_SINGULAR(a, "list->set");
+            if (!require_list_singular(a, "list->set")) goto error;
             LIST_ELEMENTS(a, elems, error);
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_SetType, elems);
             Py_DECREF(elems);
@@ -3260,18 +3269,10 @@ execute_loop(PyObject *code, PyObject *globals,
             BOOL_STORE(IS_MENAI_DICT(regs[base + src0]));
             break;
 
-#define DICT_REQUIRE(r, nm) \
-    if (!IS_MENAI_DICT(r)) { \
-        PyObject *_tn = PyObject_CallMethod((r), "type_name", NULL); \
-        menai_raise_eval_errorf("Function '%s' requires dict arguments, got %s", \
-            nm, _tn ? PyUnicode_AsUTF8(_tn) : "?"); \
-        Py_XDECREF(_tn); \
-        goto error; \
-    }
-
         case OP_DICT_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            DICT_REQUIRE(a, "dict=?"); DICT_REQUIRE(b, "dict=?");
+            if (!require_dict(a, "dict=?")) goto error;
+            if (!require_dict(b, "dict=?")) goto error;
             int eq = PyObject_RichCompareBool(a, b, Py_EQ);
             if (eq < 0) goto error;
             BOOL_STORE(eq);
@@ -3279,7 +3280,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_DICT_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            DICT_REQUIRE(a, "dict!=?"); DICT_REQUIRE(b, "dict!=?");
+            if (!require_dict(a, "dict!=?")) goto error;
+            if (!require_dict(b, "dict!=?")) goto error;
             int neq = PyObject_RichCompareBool(a, b, Py_NE);
             if (neq < 0) goto error;
             BOOL_STORE(neq);
@@ -3287,7 +3289,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_DICT_LENGTH: {
             PyObject *a = regs[base + src0];
-            DICT_REQUIRE(a, "dict-length");
+            if (!require_dict(a, "dict-length")) goto error;
             PyObject *pairs = PyObject_GetAttrString(a, "pairs");
             if (pairs == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(pairs);
@@ -3299,7 +3301,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_DICT_KEYS: {
             PyObject *a = regs[base + src0];
-            DICT_REQUIRE(a, "dict-keys");
+            if (!require_dict(a, "dict-keys")) goto error;
             PyObject *r = PyObject_CallMethod(a, "dict_keys_as_list", NULL);
             /* dict-keys is a Python-level operation; delegate entirely */
             if (r == NULL) {
@@ -3325,7 +3327,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_DICT_VALUES: {
             PyObject *a = regs[base + src0];
-            DICT_REQUIRE(a, "dict-values");
+            if (!require_dict(a, "dict-values")) goto error;
             PyObject *pairs = PyObject_GetAttrString(a, "pairs");
             if (pairs == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(pairs);
@@ -3345,7 +3347,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_DICT_HAS_P: {
             PyObject *a = regs[base + src0], *key = regs[base + src1];
-            DICT_REQUIRE(a, "dict-has?");
+            if (!require_dict(a, "dict-has?")) goto error;
             PyObject *r = PyObject_CallMethod(a, "to_hashable_key", "O", key);
             if (r == NULL) goto error;
             PyObject *lookup = PyObject_GetAttrString(a, "lookup");
@@ -3359,7 +3361,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_DICT_GET: {
             /* src0=dict, src1=key, src2=default */
             PyObject *a = regs[base + src0], *key = regs[base + src1], *def = regs[base + src2];
-            DICT_REQUIRE(a, "dict-get");
+            if (!require_dict(a, "dict-get")) goto error;
             PyObject *hk = PyObject_CallMethod(a, "to_hashable_key", "O", key);
             if (hk == NULL) goto error;
             PyObject *lookup = PyObject_GetAttrString(a, "lookup");
@@ -3378,7 +3380,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_DICT_SET: {
             /* src0=dict, src1=key, src2=value */
             PyObject *a = regs[base + src0], *key = regs[base + src1], *val = regs[base + src2];
-            DICT_REQUIRE(a, "dict-set");
+            if (!require_dict(a, "dict-set")) goto error;
             /* Build new pairs tuple with key inserted or updated */
             PyObject *result = PyObject_CallMethod(
                 a, "dict_set_impl", "OO", key, val);
@@ -3430,7 +3432,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_DICT_REMOVE: {
             PyObject *a = regs[base + src0], *key = regs[base + src1];
-            DICT_REQUIRE(a, "dict-remove");
+            if (!require_dict(a, "dict-remove")) goto error;
             PyObject *hk = PyObject_CallMethod(a, "to_hashable_key", "O", key);
             if (hk == NULL) goto error;
             PyObject *pairs = PyObject_GetAttrString(a, "pairs");
@@ -3466,7 +3468,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_DICT_MERGE: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            DICT_REQUIRE(a, "dict-merge"); DICT_REQUIRE(b, "dict-merge");
+            if (!require_dict(a, "dict-merge")) goto error;
+            if (!require_dict(b, "dict-merge")) goto error;
             /* Delegate to the Python __add__ equivalent: call the Cython method */
             PyObject *r = PyObject_CallMethod(a, "dict_merge_impl", "O", b);
             if (r == NULL) {
@@ -3534,27 +3537,10 @@ execute_loop(PyObject *code, PyObject *globals,
             BOOL_STORE(IS_MENAI_SET(regs[base + src0]));
             break;
 
-#define SET_REQUIRE(r, nm) \
-    if (!IS_MENAI_SET(r)) { \
-        PyObject *_tn = PyObject_CallMethod((r), "type_name", NULL); \
-        menai_raise_eval_errorf("Function '%s' requires set arguments, got %s", \
-            nm, _tn ? PyUnicode_AsUTF8(_tn) : "?"); \
-        Py_XDECREF(_tn); \
-        goto error; \
-    }
-
-#define SET_REQUIRE_SINGULAR(r, nm) \
-    if (!IS_MENAI_SET(r)) { \
-        PyObject *_tn = PyObject_CallMethod((r), "type_name", NULL); \
-        menai_raise_eval_errorf("Function '%s' requires a set argument, got %s", \
-            nm, _tn ? PyUnicode_AsUTF8(_tn) : "?"); \
-        Py_XDECREF(_tn); \
-        goto error; \
-    }
-
         case OP_SET_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            SET_REQUIRE(a, "set=?"); SET_REQUIRE(b, "set=?");
+            if (!require_set(a, "set=?")) goto error;
+            if (!require_set(b, "set=?")) goto error;
             int eq = PyObject_RichCompareBool(a, b, Py_EQ);
             if (eq < 0) goto error;
             BOOL_STORE(eq);
@@ -3562,7 +3548,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_SET_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            SET_REQUIRE(a, "set!=?"); SET_REQUIRE(b, "set!=?");
+            if (!require_set(a, "set!=?")) goto error;
+            if (!require_set(b, "set!=?")) goto error;
             int neq = PyObject_RichCompareBool(a, b, Py_NE);
             if (neq < 0) goto error;
             BOOL_STORE(neq);
@@ -3570,7 +3557,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_SET_LENGTH: {
             PyObject *a = regs[base + src0];
-            SET_REQUIRE_SINGULAR(a, "set-length");
+            if (!require_set_singular(a, "set-length")) goto error;
             PyObject *elems = PyObject_GetAttrString(a, "elements");
             if (elems == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
@@ -3582,7 +3569,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_SET_MEMBER_P: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
-            SET_REQUIRE_SINGULAR(a, "set-member?");
+            if (!require_set_singular(a, "set-member?")) goto error;
             PyObject *hk = PyObject_CallMethod(
                 (PyObject *)Menai_DictType, "to_hashable_key", "O", item);
             if (hk == NULL) goto error;
@@ -3596,7 +3583,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_SET_ADD: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
-            SET_REQUIRE_SINGULAR(a, "set-add");
+            if (!require_set_singular(a, "set-add")) goto error;
             PyObject *hk = PyObject_CallMethod(
                 (PyObject *)Menai_DictType, "to_hashable_key", "O", item);
             if (hk == NULL) goto error;
@@ -3628,7 +3615,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_SET_REMOVE: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
-            SET_REQUIRE_SINGULAR(a, "set-remove");
+            if (!require_set_singular(a, "set-remove")) goto error;
             PyObject *hk = PyObject_CallMethod(
                 (PyObject *)Menai_DictType, "to_hashable_key", "O", item);
             if (hk == NULL) goto error;
@@ -3665,7 +3652,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_SET_UNION: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            SET_REQUIRE(a, "set-union"); SET_REQUIRE(b, "set-union");
+            if (!require_set(a, "set-union")) goto error;
+            if (!require_set(b, "set-union")) goto error;
             PyObject *ea = PyObject_GetAttrString(a, "elements");
             if (ea == NULL) goto error;
             PyObject *mb = PyObject_GetAttrString(b, "members");
@@ -3720,7 +3708,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_SET_INTERSECTION: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            SET_REQUIRE(a, "set-intersection"); SET_REQUIRE(b, "set-intersection");
+            if (!require_set(a, "set-intersection")) goto error;
+            if (!require_set(b, "set-intersection")) goto error;
             PyObject *ea = PyObject_GetAttrString(a, "elements");
             if (ea == NULL) goto error;
             PyObject *mb = PyObject_GetAttrString(b, "members");
@@ -3755,7 +3744,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_SET_DIFFERENCE: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            SET_REQUIRE(a, "set-difference"); SET_REQUIRE(b, "set-difference");
+            if (!require_set(a, "set-difference")) goto error;
+            if (!require_set(b, "set-difference")) goto error;
             PyObject *ea = PyObject_GetAttrString(a, "elements");
             if (ea == NULL) goto error;
             PyObject *mb = PyObject_GetAttrString(b, "members");
@@ -3790,7 +3780,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_SET_SUBSET_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            SET_REQUIRE(a, "set-subset?"); SET_REQUIRE(b, "set-subset?");
+            if (!require_set(a, "set-subset?")) goto error;
+            if (!require_set(b, "set-subset?")) goto error;
             PyObject *ma = PyObject_GetAttrString(a, "members");
             if (ma == NULL) goto error;
             PyObject *mb = PyObject_GetAttrString(b, "members");
@@ -3804,7 +3795,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_SET_TO_LIST: {
             PyObject *a = regs[base + src0];
-            SET_REQUIRE_SINGULAR(a, "set->list");
+            if (!require_set_singular(a, "set->list")) goto error;
             PyObject *elems = PyObject_GetAttrString(a, "elements");
             if (elems == NULL) goto error;
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, elems);

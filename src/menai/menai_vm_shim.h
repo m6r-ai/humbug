@@ -165,6 +165,68 @@ PyObject *menai_raise_eval_error(const char *message);
 PyObject *menai_raise_eval_errorf(const char *fmt, ...);
 
 /* ---------------------------------------------------------------------------
+ * Type-requirement guards
+ *
+ * Each function checks that val is of the expected Menai type.  Returns 1 if
+ * the check passes, 0 if it fails (with a MenaiEvalError already set).
+ *
+ * Usage pattern in the dispatch loop:
+ *
+ *   if (!require_integer(a, "integer+")) goto error;
+ *
+ * The typed wrappers all delegate to require_type_impl, which holds the
+ * single copy of the error-formatting logic.
+ * ------------------------------------------------------------------------- */
+
+static inline int
+require_type_impl(int ok, PyObject *val, const char *op_name, const char *noun)
+{
+    if (ok)
+        return 1;
+    PyObject *tn = PyObject_CallMethod(val, "type_name", NULL);
+    menai_raise_eval_errorf("Function '%s' requires %s, got %s",
+        op_name, noun, tn ? PyUnicode_AsUTF8(tn) : "?");
+    Py_XDECREF(tn);
+    return 0;
+}
+
+static inline int require_integer(PyObject *val, const char *op_name) {
+    return require_type_impl(IS_MENAI_INTEGER(val), val, op_name, "integer arguments");
+}
+
+static inline int require_float(PyObject *val, const char *op_name) {
+    return require_type_impl(IS_MENAI_FLOAT(val), val, op_name, "float arguments");
+}
+
+static inline int require_complex(PyObject *val, const char *op_name) {
+    return require_type_impl(IS_MENAI_COMPLEX(val), val, op_name, "complex arguments");
+}
+
+static inline int require_string(PyObject *val, const char *op_name) {
+    return require_type_impl(IS_MENAI_STRING(val), val, op_name, "string arguments");
+}
+
+static inline int require_list(PyObject *val, const char *op_name) {
+    return require_type_impl(IS_MENAI_LIST(val), val, op_name, "list arguments");
+}
+
+static inline int require_list_singular(PyObject *val, const char *op_name) {
+    return require_type_impl(IS_MENAI_LIST(val), val, op_name, "a list argument");
+}
+
+static inline int require_dict(PyObject *val, const char *op_name) {
+    return require_type_impl(IS_MENAI_DICT(val), val, op_name, "dict arguments");
+}
+
+static inline int require_set(PyObject *val, const char *op_name) {
+    return require_type_impl(IS_MENAI_SET(val), val, op_name, "set arguments");
+}
+
+static inline int require_set_singular(PyObject *val, const char *op_name) {
+    return require_type_impl(IS_MENAI_SET(val), val, op_name, "a set argument");
+}
+
+/* ---------------------------------------------------------------------------
  * Init
  * ------------------------------------------------------------------------- */
 
