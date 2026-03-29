@@ -219,6 +219,111 @@ static inline void bool_store(PyObject **regs, int slot, int cond) {
 }
 
 /* ---------------------------------------------------------------------------
+ * Integer arithmetic helpers
+ *
+ * These replace the INT_CMP, INT_BINOP, and INT_UNOP macros.  Each returns
+ * 0 on success or -1 on failure (Python exception set).  The function-pointer
+ * parameters accept any PyNumber_* function with the matching signature.
+ * ------------------------------------------------------------------------- */
+
+typedef PyObject *(*menai_unaryfunc)(PyObject *);
+typedef PyObject *(*menai_binaryfunc)(PyObject *, PyObject *);
+
+static inline int
+int_cmp(PyObject **regs, int slot, PyObject *a, PyObject *b, int op)
+{
+    PyObject *av = menai_integer_value(a);
+    if (av == NULL) return -1;
+    PyObject *bv = menai_integer_value(b);
+    if (bv == NULL) { Py_DECREF(av); return -1; }
+    int r = PyObject_RichCompareBool(av, bv, op);
+    Py_DECREF(av); Py_DECREF(bv);
+    if (r < 0) return -1;
+    bool_store(regs, slot, r);
+    return 0;
+}
+
+static inline int
+int_unop(PyObject **regs, int slot, PyObject *a, menai_unaryfunc fn)
+{
+    PyObject *av = menai_integer_value(a);
+    if (av == NULL) return -1;
+    PyObject *res = fn(av);
+    Py_DECREF(av);
+    PyObject *r = make_integer_value(res);
+    if (r == NULL) return -1;
+    reg_set(regs, slot, r);
+    Py_DECREF(r);
+    return 0;
+}
+
+static inline int
+int_binop(PyObject **regs, int slot, PyObject *a, PyObject *b,
+          menai_binaryfunc fn)
+{
+    PyObject *av = menai_integer_value(a);
+    if (av == NULL) return -1;
+    PyObject *bv = menai_integer_value(b);
+    if (bv == NULL) { Py_DECREF(av); return -1; }
+    PyObject *res = fn(av, bv);
+    Py_DECREF(av); Py_DECREF(bv);
+    PyObject *r = make_integer_value(res);
+    if (r == NULL) return -1;
+    reg_set(regs, slot, r);
+    Py_DECREF(r);
+    return 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * String comparison helper
+ *
+ * Replaces the STR_CMP macro.  Returns 0 on success, -1 on failure.
+ * ------------------------------------------------------------------------- */
+
+static inline int
+str_cmp(PyObject **regs, int slot, PyObject *a, PyObject *b, int op)
+{
+    PyObject *sa = menai_string_value(a);
+    if (sa == NULL) return -1;
+    PyObject *sb = menai_string_value(b);
+    if (sb == NULL) { Py_DECREF(sa); return -1; }
+    PyObject *cmp = PyUnicode_RichCompare(sa, sb, op);
+    Py_DECREF(sa); Py_DECREF(sb);
+    if (cmp == NULL) return -1;
+    int r = PyObject_IsTrue(cmp);
+    Py_DECREF(cmp);
+    if (r < 0) return -1;
+    bool_store(regs, slot, r);
+    return 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * List elements accessor
+ *
+ * Replaces LIST_ELEMENTS(obj, var, error).  Returns a new reference to the
+ * elements tuple, or NULL on failure (Python exception set).
+ * ------------------------------------------------------------------------- */
+
+static inline PyObject *
+menai_list_elements(PyObject *list_obj)
+{
+    return PyObject_GetAttrString(list_obj, "elements");
+}
+
+/* ---------------------------------------------------------------------------
+ * Complex value accessor
+ *
+ * Replaces CPX_VAL(obj, var).  Returns a new reference to the Python complex
+ * .value field, or NULL on failure.
+ * ------------------------------------------------------------------------- */
+
+static inline PyObject *
+menai_complex_value(PyObject *obj)
+{
+    return PyObject_GetAttrString(obj, "value");
+}
+
+/* ---------------------------------------------------------------------------
  * Error helpers
  * ------------------------------------------------------------------------- */
 
