@@ -1283,8 +1283,9 @@ execute_loop(PyObject *code, PyObject *globals,
             if (na == NULL) goto error;
             PyObject *nb = menai_symbol_name(b);
             if (nb == NULL) { Py_DECREF(na); goto error; }
-            int eq = PyUnicode_Compare(na, nb) == 0;
+            int eq = PyObject_RichCompareBool(na, nb, Py_EQ);
             Py_DECREF(na); Py_DECREF(nb);
+            if (eq < 0) goto error;
             bool_store(regs, base + dest, eq);
             break;
         }
@@ -1296,8 +1297,9 @@ execute_loop(PyObject *code, PyObject *globals,
             if (na == NULL) goto error;
             PyObject *nb = menai_symbol_name(b);
             if (nb == NULL) { Py_DECREF(na); goto error; }
-            int neq = PyUnicode_Compare(na, nb) != 0;
+            int neq = PyObject_RichCompareBool(na, nb, Py_NE);
             Py_DECREF(na); Py_DECREF(nb);
+            if (neq < 0) goto error;
             bool_store(regs, base + dest, neq);
             break;
         }
@@ -1636,7 +1638,7 @@ execute_loop(PyObject *code, PyObject *globals,
             double im = PyLong_AsDouble(_bv);
             Py_DECREF(_bv);
             if (im == -1.0 && PyErr_Occurred()) goto error;
-            PyObject *r = make_complex_val(re, im);
+            PyObject *r = make_complex_from_doubles(re, im);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
             Py_DECREF(r);
@@ -1965,7 +1967,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float->complex")) goto error;
             if (!require_float(b, "float->complex")) goto error;
-            PyObject *r = make_complex_val(menai_float_value(a), menai_float_value(b));
+            PyObject *r = make_complex_from_doubles(menai_float_value(a), menai_float_value(b));
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
             Py_DECREF(r);
@@ -2804,8 +2806,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (has_j) {
                 result = PyObject_CallOneArg((PyObject *)&PyComplex_Type, sa);
                 if (result != NULL) {
-                    PyObject *r = make_complex_val(PyComplex_RealAsDouble(result),
-                                                   PyComplex_ImagAsDouble(result));
+                    PyObject *r = make_complex_from_doubles(PyComplex_RealAsDouble(result),
+                                                            PyComplex_ImagAsDouble(result));
                     Py_DECREF(result); Py_DECREF(sa);
                     if (r == NULL) goto error;
                     reg_set(regs, base + dest, r); Py_DECREF(r);
@@ -3053,7 +3055,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_list(b, "list-concat")) goto error;
             PyObject *ea = menai_list_elements(a);
             if (ea == NULL) goto error;
-            PyObject *eb = PyObject_GetAttrString(b, "elements");
+            PyObject *eb = menai_list_elements(b);
             if (eb == NULL) { Py_DECREF(ea); goto error; }
             PyObject *cat = PySequence_Concat(ea, eb);
             Py_DECREF(ea); Py_DECREF(eb);

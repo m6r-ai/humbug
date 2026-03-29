@@ -171,7 +171,7 @@ static inline PyObject *make_float(double v) {
     return r;
 }
 
-static inline PyObject *make_complex_val(double real, double imag) {
+static inline PyObject *make_complex_from_doubles(double real, double imag) {
     PyObject *pc = PyComplex_FromDoubles(real, imag);
     if (pc == NULL) return NULL;
     PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ComplexType, pc);
