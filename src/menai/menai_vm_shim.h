@@ -401,6 +401,54 @@ static inline int require_set_singular(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_SET(val), val, op_name, "a set argument");
 }
 
+static inline int require_boolean(PyObject *val, const char *op_name) {
+    return require_type_impl(IS_MENAI_BOOLEAN(val), val, op_name, "boolean arguments");
+}
+
+static inline int require_function(PyObject *val, const char *op_name) {
+    return require_type_impl(IS_MENAI_FUNCTION(val), val, op_name, "function arguments");
+}
+
+static inline int require_struct(PyObject *val, const char *op_name) {
+    return require_type_impl(IS_MENAI_STRUCT(val), val, op_name, "a struct argument");
+}
+
+static inline int require_structtype(PyObject *val, const char *op_name) {
+    return require_type_impl(IS_MENAI_STRUCTTYPE(val), val, op_name, "a struct type argument");
+}
+
+/*
+ * Symbol type-check helpers.
+ *
+ * The symbol ops use a different error phrasing from the rest ("must be a
+ * symbol" / "must be symbols") which is what the tests assert on.  These
+ * helpers produce that exact phrasing rather than delegating to
+ * require_type_impl.
+ */
+static inline int
+require_symbol(PyObject *val, const char *op_name)
+{
+    if (IS_MENAI_SYMBOL(val))
+        return 1;
+    menai_raise_eval_errorf("%s: argument must be a symbol", op_name);
+    return 0;
+}
+
+static inline int
+require_symbol_pair(PyObject *a, PyObject *b, const char *op_name)
+{
+    if (IS_MENAI_SYMBOL(a) && IS_MENAI_SYMBOL(b))
+        return 1;
+    menai_raise_eval_errorf("%s: arguments must be symbols", op_name);
+    return 0;
+}
+
+static inline int
+require_function_singular(PyObject *val, const char *op_name)
+{
+    return require_type_impl(IS_MENAI_FUNCTION(val), val, op_name, "a function argument");
+}
+
 /* ---------------------------------------------------------------------------
  * Init
  * ------------------------------------------------------------------------- */

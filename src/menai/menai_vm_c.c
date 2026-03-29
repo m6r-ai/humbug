@@ -1251,53 +1251,23 @@ execute_loop(PyObject *code, PyObject *globals,
 
         case OP_BOOLEAN_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            if (!IS_MENAI_BOOLEAN(a)) {
-                PyObject *_tn = PyObject_CallMethod(a, "type_name", NULL);
-                menai_raise_eval_errorf("Function 'boolean=?' requires boolean arguments, got %s",
-                    _tn ? PyUnicode_AsUTF8(_tn) : "?");
-                Py_XDECREF(_tn);
-                goto error;
-            }
-            if (!IS_MENAI_BOOLEAN(b)) {
-                PyObject *_tn = PyObject_CallMethod(b, "type_name", NULL);
-                menai_raise_eval_errorf("Function 'boolean=?' requires boolean arguments, got %s",
-                    _tn ? PyUnicode_AsUTF8(_tn) : "?");
-                Py_XDECREF(_tn);
-                goto error;
-            }
+            if (!require_boolean(a, "boolean=?")) goto error;
+            if (!require_boolean(b, "boolean=?")) goto error;
             bool_store(regs, base + dest, menai_boolean_value(a) == menai_boolean_value(b));
             break;
         }
 
         case OP_BOOLEAN_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            if (!IS_MENAI_BOOLEAN(a)) {
-                PyObject *_tn = PyObject_CallMethod(a, "type_name", NULL);
-                menai_raise_eval_errorf("Function 'boolean!=?' requires boolean arguments, got %s",
-                    _tn ? PyUnicode_AsUTF8(_tn) : "?");
-                Py_XDECREF(_tn);
-                goto error;
-            }
-            if (!IS_MENAI_BOOLEAN(b)) {
-                PyObject *_tn = PyObject_CallMethod(b, "type_name", NULL);
-                menai_raise_eval_errorf("Function 'boolean!=?' requires boolean arguments, got %s",
-                    _tn ? PyUnicode_AsUTF8(_tn) : "?");
-                Py_XDECREF(_tn);
-                goto error;
-            }
+            if (!require_boolean(a, "boolean!=?")) goto error;
+            if (!require_boolean(b, "boolean!=?")) goto error;
             bool_store(regs, base + dest, menai_boolean_value(a) != menai_boolean_value(b));
             break;
         }
 
         case OP_BOOLEAN_NOT: {
             PyObject *a = regs[base + src0];
-            if (!IS_MENAI_BOOLEAN(a)) {
-                PyObject *_tn = PyObject_CallMethod(a, "type_name", NULL);
-                menai_raise_eval_errorf("Function 'boolean-not' requires boolean arguments, got %s",
-                    _tn ? PyUnicode_AsUTF8(_tn) : "?");
-                Py_XDECREF(_tn);
-                goto error;
-            }
+            if (!require_boolean(a, "boolean-not")) goto error;
             bool_store(regs, base + dest, !menai_boolean_value(a));
             break;
         }
@@ -1308,10 +1278,7 @@ execute_loop(PyObject *code, PyObject *globals,
 
         case OP_SYMBOL_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            if (!IS_MENAI_SYMBOL(a) || !IS_MENAI_SYMBOL(b)) {
-                menai_raise_eval_error("symbol=?: arguments must be symbols");
-                goto error;
-            }
+            if (!require_symbol_pair(a, b, "symbol=?")) goto error;
             PyObject *na = menai_symbol_name(a);
             if (na == NULL) goto error;
             PyObject *nb = menai_symbol_name(b);
@@ -1324,10 +1291,7 @@ execute_loop(PyObject *code, PyObject *globals,
 
         case OP_SYMBOL_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            if (!IS_MENAI_SYMBOL(a) || !IS_MENAI_SYMBOL(b)) {
-                menai_raise_eval_error("symbol!=?: arguments must be symbols");
-                goto error;
-            }
+            if (!require_symbol_pair(a, b, "symbol!=?")) goto error;
             PyObject *na = menai_symbol_name(a);
             if (na == NULL) goto error;
             PyObject *nb = menai_symbol_name(b);
@@ -1340,10 +1304,7 @@ execute_loop(PyObject *code, PyObject *globals,
 
         case OP_SYMBOL_TO_STRING: {
             PyObject *a = regs[base + src0];
-            if (!IS_MENAI_SYMBOL(a)) {
-                menai_raise_eval_error("symbol->string: argument must be a symbol");
-                goto error;
-            }
+            if (!require_symbol(a, "symbol->string")) goto error;
             PyObject *name = menai_symbol_name(a);
             if (name == NULL) goto error;
             PyObject *r = make_string_from_pyobj(name);
@@ -1360,30 +1321,23 @@ execute_loop(PyObject *code, PyObject *globals,
 
         case OP_FUNCTION_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            if (!IS_MENAI_FUNCTION(a) || !IS_MENAI_FUNCTION(b)) {
-                menai_raise_eval_error("function=?: requires function arguments");
-                goto error;
-            }
+            if (!require_function(a, "function=?")) goto error;
+            if (!require_function(b, "function=?")) goto error;
             bool_store(regs, base + dest, a == b);
             break;
         }
 
         case OP_FUNCTION_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            if (!IS_MENAI_FUNCTION(a) || !IS_MENAI_FUNCTION(b)) {
-                menai_raise_eval_error("function!=?: requires function arguments");
-                goto error;
-            }
+            if (!require_function(a, "function!=?")) goto error;
+            if (!require_function(b, "function!=?")) goto error;
             bool_store(regs, base + dest, a != b);
             break;
         }
 
         case OP_FUNCTION_MIN_ARITY: {
             PyObject *f = regs[base + src0];
-            if (!IS_MENAI_FUNCTION(f)) {
-                menai_raise_eval_error("function-min-arity: requires function argument");
-                goto error;
-            }
+            if (!require_function_singular(f, "function-min-arity")) goto error;
             PyObject *bc = PyObject_GetAttrString(f, "bytecode");
             if (bc == NULL) goto error;
             int pc = 0, is_var = 0;
@@ -1406,10 +1360,7 @@ execute_loop(PyObject *code, PyObject *globals,
 
         case OP_FUNCTION_VARIADIC_P: {
             PyObject *f = regs[base + src0];
-            if (!IS_MENAI_FUNCTION(f)) {
-                menai_raise_eval_error("function-variadic?: requires function argument");
-                goto error;
-            }
+            if (!require_function_singular(f, "function-variadic?")) goto error;
             PyObject *bc = PyObject_GetAttrString(f, "bytecode");
             if (bc == NULL) goto error;
             PyObject *iv = PyObject_GetAttrString(bc, "is_variadic");
@@ -1425,14 +1376,8 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_FUNCTION_ACCEPTS_P: {
             PyObject *f = regs[base + src0];
             PyObject *n_obj = regs[base + src1];
-            if (!IS_MENAI_FUNCTION(f)) {
-                menai_raise_eval_error("function-accepts?: first argument must be a function");
-                goto error;
-            }
-            if (!IS_MENAI_INTEGER(n_obj)) {
-                menai_raise_eval_error("function-accepts?: second argument must be an integer");
-                goto error;
-            }
+            if (!require_function_singular(f, "function-accepts?")) goto error;
+            if (!require_integer(n_obj, "function-accepts?")) goto error;
             PyObject *bc = PyObject_GetAttrString(f, "bytecode");
             if (bc == NULL) goto error;
             int pc = 0, is_var = 0;
@@ -3900,10 +3845,7 @@ execute_loop(PyObject *code, PyObject *globals,
 
         case OP_STRUCT_TYPE_P: {
             PyObject *stype = regs[base + src0], *val = regs[base + src1];
-            if (!IS_MENAI_STRUCTTYPE(stype)) {
-                menai_raise_eval_error("struct-type?: first argument must be a struct type");
-                goto error;
-            }
+            if (!require_structtype(stype, "struct-type?")) goto error;
             if (!IS_MENAI_STRUCT(val)) { bool_store(regs, base + dest, 0); break; }
             PyObject *val_stype = PyObject_GetAttrString(val, "struct_type");
             if (val_stype == NULL) goto error;
@@ -3921,12 +3863,8 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_STRUCT_GET: {
             /* src1 holds a MenaiSymbol field name */
             PyObject *val = regs[base + src0], *field_sym = regs[base + src1];
-            if (!IS_MENAI_STRUCT(val)) {
-                menai_raise_eval_error("struct-get: requires a struct argument"); goto error;
-            }
-            if (!IS_MENAI_SYMBOL(field_sym)) {
-                menai_raise_eval_error("struct-get: field name must be a symbol"); goto error;
-            }
+            if (!require_struct(val, "struct-get")) goto error;
+            if (!require_symbol(field_sym, "struct-get")) goto error;
             PyObject *stype = PyObject_GetAttrString(val, "struct_type");
             if (stype == NULL) goto error;
             PyObject *name = menai_symbol_name(field_sym);
@@ -3958,12 +3896,8 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_STRUCT_GET_IMM: {
             /* src1 holds a MenaiInteger field index */
             PyObject *val = regs[base + src0], *fidx = regs[base + src1];
-            if (!IS_MENAI_STRUCT(val)) {
-                menai_raise_eval_error("struct-get-imm: requires a struct argument"); goto error;
-            }
-            if (!IS_MENAI_INTEGER(fidx)) {
-                menai_raise_eval_error("struct-get-imm: field index must be an integer"); goto error;
-            }
+            if (!require_struct(val, "struct-get-imm")) goto error;
+            if (!require_integer(fidx, "struct-get-imm")) goto error;
             PyObject *iv = menai_integer_value(fidx);
             if (iv == NULL) goto error;
             Py_ssize_t fi = PyLong_AsSsize_t(iv); Py_DECREF(iv);
@@ -3977,12 +3911,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRUCT_SET: {
             PyObject *val = regs[base + src0], *field_sym = regs[base + src1], *new_val = regs[base + src2];
-            if (!IS_MENAI_STRUCT(val)) {
-                menai_raise_eval_error("struct-set: requires a struct argument"); goto error;
-            }
-            if (!IS_MENAI_SYMBOL(field_sym)) {
-                menai_raise_eval_error("struct-set: field name must be a symbol"); goto error;
-            }
+            if (!require_struct(val, "struct-set")) goto error;
+            if (!require_symbol(field_sym, "struct-set")) goto error;
             PyObject *stype = PyObject_GetAttrString(val, "struct_type");
             if (stype == NULL) goto error;
             PyObject *name = menai_symbol_name(field_sym);
@@ -4025,12 +3955,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRUCT_SET_IMM: {
             PyObject *val = regs[base + src0], *fidx = regs[base + src1], *new_val = regs[base + src2];
-            if (!IS_MENAI_STRUCT(val)) {
-                menai_raise_eval_error("struct-set-imm: requires a struct argument"); goto error;
-            }
-            if (!IS_MENAI_INTEGER(fidx)) {
-                menai_raise_eval_error("struct-set-imm: field index must be an integer"); goto error;
-            }
+            if (!require_struct(val, "struct-set-imm")) goto error;
+            if (!require_integer(fidx, "struct-set-imm")) goto error;
             PyObject *iv = menai_integer_value(fidx);
             if (iv == NULL) goto error;
             Py_ssize_t fi = PyLong_AsSsize_t(iv); Py_DECREF(iv);
@@ -4058,9 +3984,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRUCT_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            if (!IS_MENAI_STRUCT(a) || !IS_MENAI_STRUCT(b)) {
-                menai_raise_eval_error("struct=?: requires struct arguments"); goto error;
-            }
+            if (!require_struct(a, "struct=?")) goto error;
+            if (!require_struct(b, "struct=?")) goto error;
             int eq = PyObject_RichCompareBool(a, b, Py_EQ);
             if (eq < 0) goto error;
             bool_store(regs, base + dest, eq);
@@ -4068,9 +3993,8 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRUCT_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
-            if (!IS_MENAI_STRUCT(a) || !IS_MENAI_STRUCT(b)) {
-                menai_raise_eval_error("struct!=?: requires struct arguments"); goto error;
-            }
+            if (!require_struct(a, "struct!=?")) goto error;
+            if (!require_struct(b, "struct!=?")) goto error;
             int neq = PyObject_RichCompareBool(a, b, Py_NE);
             if (neq < 0) goto error;
             bool_store(regs, base + dest, neq);
@@ -4078,9 +4002,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRUCT_TYPE: {
             PyObject *val = regs[base + src0];
-            if (!IS_MENAI_STRUCT(val)) {
-                menai_raise_eval_error("struct-type: requires a struct argument"); goto error;
-            }
+            if (!require_struct(val, "struct-type")) goto error;
             PyObject *stype = PyObject_GetAttrString(val, "struct_type");
             if (stype == NULL) goto error;
             reg_set(regs, base + dest, stype);
@@ -4089,9 +4011,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRUCT_TYPE_NAME: {
             PyObject *val = regs[base + src0];
-            if (!IS_MENAI_STRUCTTYPE(val)) {
-                menai_raise_eval_error("struct-type-name: requires a struct type argument"); goto error;
-            }
+            if (!require_structtype(val, "struct-type-name")) goto error;
             PyObject *name = PyObject_GetAttrString(val, "name");
             if (name == NULL) goto error;
             PyObject *r = make_string_from_pyobj(name); Py_DECREF(name);
@@ -4101,9 +4021,7 @@ execute_loop(PyObject *code, PyObject *globals,
         }
         case OP_STRUCT_FIELDS: {
             PyObject *val = regs[base + src0];
-            if (!IS_MENAI_STRUCTTYPE(val)) {
-                menai_raise_eval_error("struct-fields: requires a struct type argument"); goto error;
-            }
+            if (!require_structtype(val, "struct-fields")) goto error;
             PyObject *field_names = PyObject_GetAttrString(val, "field_names");
             if (field_names == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(field_names);
