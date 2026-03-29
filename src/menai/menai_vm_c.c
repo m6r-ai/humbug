@@ -365,6 +365,19 @@ fetch_callable(PyObject *module, const char *name, PyObject **dst)
     return 0;
 }
 
+static size_t
+fetch_offset(PyObject *offsets, const char *key)
+{
+    PyObject *v = PyDict_GetItemString(offsets, key);
+    if (v == NULL) {
+        PyErr_Format(PyExc_KeyError,
+                     "menai_vm_shim_init: missing offset '%s'", key);
+        return (size_t)-1;
+    }
+    size_t result = PyLong_AsSize_t(v);
+    return result;
+}
+
 int
 menai_vm_shim_init(void)
 {
@@ -405,22 +418,13 @@ menai_vm_shim_init(void)
         Py_DECREF(offsets_fn);
         if (offsets == NULL) goto fail;
 
-#define FETCH_OFFSET(key, dst) do { \
-    PyObject *_v = PyDict_GetItemString(offsets, key); \
-    if (_v == NULL) { \
-        PyErr_Format(PyExc_KeyError, \
-                     "menai_vm_shim_init: missing offset '%s'", key); \
-        Py_DECREF(offsets); goto fail; \
-    } \
-    (dst) = (size_t)PyLong_AsSize_t(_v); \
-    if ((dst) == (size_t)-1 && PyErr_Occurred()) { \
-        Py_DECREF(offsets); goto fail; \
-    } \
-} while (0)
+        Menai_offset_boolean_value = fetch_offset(offsets, "boolean_value");
+        if (Menai_offset_boolean_value == (size_t)-1 && PyErr_Occurred())
+        { Py_DECREF(offsets); goto fail; }
+        Menai_offset_float_value = fetch_offset(offsets, "float_value");
+        if (Menai_offset_float_value == (size_t)-1 && PyErr_Occurred())
+        { Py_DECREF(offsets); goto fail; }
 
-        FETCH_OFFSET("boolean_value", Menai_offset_boolean_value);
-        FETCH_OFFSET("float_value",   Menai_offset_float_value);
-#undef FETCH_OFFSET
         Py_DECREF(offsets);
     }
 
