@@ -564,12 +564,17 @@ max_local_count(PyObject *code)
 
     /* Iterative DFS using a Python list as a stack. */
     PyObject *stack = PyList_New(0);
-    if (stack == NULL) { Py_DECREF(children); return -1; }
+    if (stack == NULL) {
+        Py_DECREF(children);
+        return -1;
+    }
 
     Py_ssize_t n = PyList_GET_SIZE(children);
     for (Py_ssize_t i = 0; i < n; i++) {
         if (PyList_Append(stack, PyList_GET_ITEM(children, i)) < 0) {
-            Py_DECREF(children); Py_DECREF(stack); return -1;
+            Py_DECREF(children);
+            Py_DECREF(stack);
+            return -1;
         }
     }
     Py_DECREF(children);
@@ -579,24 +584,33 @@ max_local_count(PyObject *code)
         PyObject *co = PyList_GET_ITEM(stack, last);
         Py_INCREF(co);
         if (PyList_SetSlice(stack, last, last + 1, NULL) < 0) {
-            Py_DECREF(co); Py_DECREF(stack); return -1;
+            Py_DECREF(co);
+            Py_DECREF(stack);
+            return -1;
         }
 
         int lc = 0, oa = 0;
         if (code_get_int(co, "local_count", &lc) < 0 ||
             code_get_int(co, "outgoing_arg_slots", &oa) < 0) {
-            Py_DECREF(co); Py_DECREF(stack); return -1;
+            Py_DECREF(co);
+            Py_DECREF(stack);
+            return -1;
         }
         if (lc + oa > best)
             best = lc + oa;
 
         PyObject *sub = PyObject_GetAttrString(co, "code_objects");
         Py_DECREF(co);
-        if (sub == NULL) { Py_DECREF(stack); return -1; }
+        if (sub == NULL) {
+            Py_DECREF(stack);
+            return -1;
+        }
         Py_ssize_t m = PyList_GET_SIZE(sub);
         for (Py_ssize_t i = 0; i < m; i++) {
             if (PyList_Append(stack, PyList_GET_ITEM(sub, i)) < 0) {
-                Py_DECREF(sub); Py_DECREF(stack); return -1;
+                Py_DECREF(sub);
+                Py_DECREF(stack);
+                return -1;
             }
         }
         Py_DECREF(sub);
@@ -711,7 +725,8 @@ call_setup(Frame *new_frame, PyObject *func_obj,
             PyObject *cv = PyList_GET_ITEM(captured, i);
             PyObject *fast_cv = PyObject_CallOneArg(fn_convert_value, cv);
             if (fast_cv == NULL) {
-                Py_DECREF(captured); goto fail;
+                Py_DECREF(captured);
+                goto fail;
             }
             reg_set(regs, callee_base + param_count + (int)i, fast_cv);
             Py_DECREF(fast_cv);
@@ -755,9 +770,13 @@ cpx_transcendental(PyObject **regs, int slot, PyObject *src,
     PyObject *cv = menai_complex_value(src);
     if (cv == NULL) return -1;
     PyObject *fn = PyObject_GetAttrString(cmath_module, fn_name);
-    if (fn == NULL) { Py_DECREF(cv); return -1; }
+    if (fn == NULL) {
+        Py_DECREF(cv);
+        return -1;
+    }
     PyObject *res = PyObject_CallOneArg(fn, cv);
-    Py_DECREF(fn); Py_DECREF(cv);
+    Py_DECREF(fn);
+    Py_DECREF(cv);
     PyObject *r = make_complex_value(res);
     if (r == NULL) return -1;
     reg_set(regs, slot, r);
@@ -870,11 +889,13 @@ execute_loop(PyObject *code, PyObject *globals,
                     if (parts != NULL) {
                         for (Py_ssize_t i = 0; i < show; i++) {
                             PyObject *k = PyList_GET_ITEM(keys, i);
-                            Py_INCREF(k); PyList_SET_ITEM(parts, i, k);
+                            Py_INCREF(k);
+                            PyList_SET_ITEM(parts, i, k);
                         }
                         PyObject *sep = PyUnicode_FromString(", ");
                         PyObject *joined = PyUnicode_Join(sep, parts);
-                        Py_DECREF(sep); Py_DECREF(parts);
+                        Py_DECREF(sep);
+                        Py_DECREF(parts);
                         if (joined != NULL) {
                             menai_raise_eval_errorf(
                                 "Undefined variable: '%s'\n  Available variables: %s%s",
@@ -1046,8 +1067,10 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_INCREF(raw);
 
             int local_count = 0;
-            if (code_get_int(frame->code_obj, "local_count", &local_count) < 0)
-            { Py_DECREF(raw); goto error; }
+            if (code_get_int(frame->code_obj, "local_count", &local_count) < 0)  {
+                Py_DECREF(raw);
+                goto error;
+            }
 
             if (IS_MENAI_FUNCTION(raw)) {
                 /* Move outgoing args down to base+0..n_args-1 in place. */
@@ -1062,14 +1085,18 @@ execute_loop(PyObject *code, PyObject *globals,
                 frame->instrs           = NULL;
 
                 int saved_return_dest = frame->return_dest;
-                if (call_setup(frame, raw, regs, base, n_args,
-                               saved_return_dest) < 0)
-                { Py_DECREF(raw); goto error; }
+                if (call_setup(frame, raw, regs, base, n_args, saved_return_dest) < 0) {
+                    Py_DECREF(raw);
+                    goto error;
+                }
                 Py_DECREF(raw);
 
             } else if (IS_MENAI_STRUCTTYPE(raw)) {
                 PyObject *field_names = PyObject_GetAttrString(raw, "field_names");
-                if (field_names == NULL) { Py_DECREF(raw); goto error; }
+                if (field_names == NULL) {
+                    Py_DECREF(raw);
+                    goto error;
+                }
                 Py_ssize_t n_fields = PyTuple_GET_SIZE(field_names);
                 Py_DECREF(field_names);
                 if (n_args != (int)n_fields) {
@@ -1078,10 +1105,14 @@ execute_loop(PyObject *code, PyObject *globals,
                         "Struct constructor '%s' called with wrong number of arguments",
                         sname ? PyUnicode_AsUTF8(sname) : "?");
                     Py_XDECREF(sname);
-                    Py_DECREF(raw); goto error;
+                    Py_DECREF(raw);
+                    goto error;
                 }
                 PyObject *fields = PyTuple_New(n_fields);
-                if (fields == NULL) { Py_DECREF(raw); goto error; }
+                if (fields == NULL) {
+                    Py_DECREF(raw);
+                    goto error;
+                }
                 for (int i = 0; i < (int)n_fields; i++) {
                     PyObject *fv = regs[base + local_count + i];
                     Py_INCREF(fv);
@@ -1094,7 +1125,10 @@ execute_loop(PyObject *code, PyObject *globals,
                 PyObject *instance = PyObject_Call(
                     (PyObject *)Menai_StructType, empty_tuple, kwargs);
                 Py_DECREF(kwargs);
-                if (instance == NULL) { Py_DECREF(raw); goto error; }
+                if (instance == NULL) {
+                    Py_DECREF(raw);
+                    goto error;
+                }
 
                 /* Tail-return the struct: pop frame and deliver to caller. */
                 PyObject *retval = instance;
@@ -1103,7 +1137,8 @@ execute_loop(PyObject *code, PyObject *globals,
                 frame_depth--;
                 Frame *caller = &frames[frame_depth];
                 if (caller->is_sentinel) {
-                    Py_DECREF(raw); return retval;
+                    Py_DECREF(raw);
+                    return retval;
                 }
                 reg_set(regs, caller->base + saved_return_dest, retval);
                 Py_DECREF(retval);
@@ -1112,7 +1147,8 @@ execute_loop(PyObject *code, PyObject *globals,
 
             } else {
                 Py_DECREF(raw);
-                menai_raise_eval_error("Cannot call non-function value"); goto error;
+                menai_raise_eval_error("Cannot call non-function value");
+                goto error;
             }
             break;
         }
@@ -1162,9 +1198,13 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *na = menai_symbol_name(a);
             if (na == NULL) goto error;
             PyObject *nb = menai_symbol_name(b);
-            if (nb == NULL) { Py_DECREF(na); goto error; }
+            if (nb == NULL) {
+                Py_DECREF(na);
+                goto error;
+            }
             int eq = PyObject_RichCompareBool(na, nb, Py_EQ);
-            Py_DECREF(na); Py_DECREF(nb);
+            Py_DECREF(na);
+            Py_DECREF(nb);
             if (eq < 0) goto error;
             bool_store(regs, base + dest, eq);
             break;
@@ -1176,9 +1216,13 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *na = menai_symbol_name(a);
             if (na == NULL) goto error;
             PyObject *nb = menai_symbol_name(b);
-            if (nb == NULL) { Py_DECREF(na); goto error; }
+            if (nb == NULL) {
+                Py_DECREF(na);
+                goto error;
+            }
             int neq = PyObject_RichCompareBool(na, nb, Py_NE);
-            Py_DECREF(na); Py_DECREF(nb);
+            Py_DECREF(na);
+            Py_DECREF(nb);
             if (neq < 0) goto error;
             bool_store(regs, base + dest, neq);
             break;
@@ -1226,8 +1270,11 @@ execute_loop(PyObject *code, PyObject *globals,
             int ok = (code_get_int(bc, "param_count", &pc) == 0);
             if (ok) {
                 PyObject *iv = PyObject_GetAttrString(bc, "is_variadic");
-                if (iv) { is_var = PyObject_IsTrue(iv); Py_DECREF(iv);
-                          if (is_var < 0) ok = 0; }
+                if (iv) {
+                    is_var = PyObject_IsTrue(iv);
+                    Py_DECREF(iv);
+                    if (is_var < 0) ok = 0;
+                }
                 else ok = 0;
             }
             Py_DECREF(bc);
@@ -1237,7 +1284,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (r == NULL) goto error;
             PyObject *_r = make_integer_value(r);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
 
@@ -1267,8 +1315,10 @@ execute_loop(PyObject *code, PyObject *globals,
             int ok = (code_get_int(bc, "param_count", &pc) == 0);
             if (ok) {
                 PyObject *iv = PyObject_GetAttrString(bc, "is_variadic");
-                if (iv) { is_var = PyObject_IsTrue(iv); Py_DECREF(iv);
-                          if (is_var < 0) ok = 0; }
+                if (iv) { is_var = PyObject_IsTrue(iv);
+                    Py_DECREF(iv);
+                    if (is_var < 0) ok = 0;
+                }
                 else ok = 0;
             }
             Py_DECREF(bc);
@@ -1380,18 +1430,33 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *bv = menai_integer_value(b);
             if (bv == NULL) goto error;
             PyObject *_zero = PyLong_FromLong(0);
-            if (_zero == NULL) { Py_DECREF(bv); goto error; }
+            if (_zero == NULL) {
+                Py_DECREF(bv);
+                goto error;
+            }
             int _is_zero = PyObject_RichCompareBool(bv, _zero, Py_EQ);
             Py_DECREF(_zero);
-            if (_is_zero < 0) { Py_DECREF(bv); goto error; }
-            if (_is_zero) { Py_DECREF(bv); menai_raise_eval_error("Division by zero in 'integer/'"); goto error; }
+            if (_is_zero < 0) {
+                Py_DECREF(bv);
+                goto error;
+            }
+            if (_is_zero) {
+                Py_DECREF(bv);
+                menai_raise_eval_error("Division by zero in 'integer/'");
+                goto error;
+            }
             PyObject *av = menai_integer_value(a);
-            if (av == NULL) { Py_DECREF(bv); goto error; }
+            if (av == NULL) {
+                Py_DECREF(bv);
+                goto error;
+            }
             PyObject *_res = PyNumber_FloorDivide(av, bv);
-            Py_DECREF(av); Py_DECREF(bv);
+            Py_DECREF(av);
+            Py_DECREF(bv);
             PyObject *_r = make_integer_value(_res);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_INTEGER_MOD: {
@@ -1401,18 +1466,33 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *bv = menai_integer_value(b);
             if (bv == NULL) goto error;
             PyObject *_zero = PyLong_FromLong(0);
-            if (_zero == NULL) { Py_DECREF(bv); goto error; }
+            if (_zero == NULL) {
+                Py_DECREF(bv);
+                goto error;
+            }
             int _is_zero = PyObject_RichCompareBool(bv, _zero, Py_EQ);
             Py_DECREF(_zero);
-            if (_is_zero < 0) { Py_DECREF(bv); goto error; }
-            if (_is_zero) { Py_DECREF(bv); menai_raise_eval_error("Modulo by zero in 'integer%'"); goto error; }
+            if (_is_zero < 0) {
+                Py_DECREF(bv);
+                goto error;
+            }
+            if (_is_zero) {
+                Py_DECREF(bv);
+                menai_raise_eval_error("Modulo by zero in 'integer%'");
+                goto error;
+            }
             PyObject *av = menai_integer_value(a);
-            if (av == NULL) { Py_DECREF(bv); goto error; }
+            if (av == NULL) {
+                Py_DECREF(bv);
+                goto error;
+            }
             PyObject *_res = PyNumber_Remainder(av, bv);
-            Py_DECREF(av); Py_DECREF(bv);
+            Py_DECREF(av);
+            Py_DECREF(bv);
             PyObject *_r = make_integer_value(_res);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_INTEGER_EXPN: {
@@ -1422,18 +1502,33 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *bv = menai_integer_value(b);
             if (bv == NULL) goto error;
             PyObject *_zero = PyLong_FromLong(0);
-            if (_zero == NULL) { Py_DECREF(bv); goto error; }
+            if (_zero == NULL) {
+                Py_DECREF(bv);
+                goto error;
+            }
             int _is_neg = PyObject_RichCompareBool(bv, _zero, Py_LT);
             Py_DECREF(_zero);
-            if (_is_neg < 0) { Py_DECREF(bv); goto error; }
-            if (_is_neg) { Py_DECREF(bv); menai_raise_eval_error("Function 'integer-expn' requires a non-negative exponent"); goto error; }
+            if (_is_neg < 0) {
+                Py_DECREF(bv);
+                goto error;
+            }
+            if (_is_neg) {
+                Py_DECREF(bv);
+                menai_raise_eval_error("Function 'integer-expn' requires a non-negative exponent");
+                goto error;
+            }
             PyObject *av = menai_integer_value(a);
-            if (av == NULL) { Py_DECREF(bv); goto error; }
+            if (av == NULL) {
+                Py_DECREF(bv);
+                goto error;
+            }
             PyObject *_res = PyNumber_Power(av, bv, Py_None);
-            Py_DECREF(av); Py_DECREF(bv);
+            Py_DECREF(av);
+            Py_DECREF(bv);
             PyObject *_r = make_integer_value(_res);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_INTEGER_BIT_OR: {
@@ -1478,9 +1573,13 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *_av = menai_integer_value(a);
             if (_av == NULL) goto error;
             PyObject *_bv = menai_integer_value(b);
-            if (_bv == NULL) { Py_DECREF(_av); goto error; }
+            if (_bv == NULL) {
+                Py_DECREF(_av);
+                goto error;
+            }
             int lt = PyObject_RichCompareBool(_av, _bv, Py_LE);
-            Py_DECREF(_av); Py_DECREF(_bv);
+            Py_DECREF(_av);
+            Py_DECREF(_bv);
             if (lt < 0) goto error;
             reg_set(regs, base + dest, lt ? a : b);
             break;
@@ -1492,9 +1591,13 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *_av = menai_integer_value(a);
             if (_av == NULL) goto error;
             PyObject *_bv = menai_integer_value(b);
-            if (_bv == NULL) { Py_DECREF(_av); goto error; }
+            if (_bv == NULL) {
+                Py_DECREF(_av);
+                goto error;
+            }
             int gt = PyObject_RichCompareBool(_av, _bv, Py_GE);
-            Py_DECREF(_av); Py_DECREF(_bv);
+            Py_DECREF(_av);
+            Py_DECREF(_bv);
             if (gt < 0) goto error;
             reg_set(regs, base + dest, gt ? a : b);
             break;
@@ -1509,7 +1612,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (d == -1.0 && PyErr_Occurred()) goto error;
             PyObject *_r = make_float(d);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_INTEGER_TO_COMPLEX: {
@@ -1644,7 +1748,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_float(a, "float-neg")) goto error;
             PyObject *_r = make_float(-menai_float_value(a));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_ABS: {
@@ -1654,7 +1759,8 @@ execute_loop(PyObject *code, PyObject *globals,
             {
                 PyObject *_r = make_float(fabs(v));
                 if (_r == NULL) goto error;
-                reg_set(regs, base + dest, _r); Py_DECREF(_r);
+                reg_set(regs, base + dest, _r);
+                Py_DECREF(_r);
             }
             break;
         }
@@ -1664,7 +1770,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_float(b, "float+")) goto error;
             PyObject *_r = make_float(menai_float_value(a) + menai_float_value(b));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_SUB: {
@@ -1673,7 +1780,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_float(b, "float-")) goto error;
             PyObject *_r = make_float(menai_float_value(a) - menai_float_value(b));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_MUL: {
@@ -1682,7 +1790,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_float(b, "float*")) goto error;
             PyObject *_r = make_float(menai_float_value(a) * menai_float_value(b));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_DIV: {
@@ -1690,10 +1799,14 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_float(a, "float/")) goto error;
             if (!require_float(b, "float/")) goto error;
             double bv = menai_float_value(b);
-            if (bv == 0.0) { menai_raise_eval_error("Division by zero in 'float/'"); goto error; }
+            if (bv == 0.0) {
+                menai_raise_eval_error("Division by zero in 'float/'");
+                goto error;
+            }
             PyObject *_r = make_float(menai_float_value(a) / bv);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_FLOOR_DIV: {
