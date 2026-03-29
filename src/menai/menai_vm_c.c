@@ -3976,19 +3976,27 @@ execute_loop(PyObject *code, PyObject *globals,
             if (field_names == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(field_names);
             PyObject *tup = PyTuple_New(n);
-            if (tup == NULL) { Py_DECREF(field_names); goto error; }
+            if (tup == NULL) {
+                Py_DECREF(field_names);
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *fname = PyTuple_GET_ITEM(field_names, i);
                 /* Wrap in MenaiSymbol */
                 PyObject *sym = PyObject_CallOneArg((PyObject *)Menai_SymbolType, fname);
-                if (sym == NULL) { Py_DECREF(tup); Py_DECREF(field_names); goto error; }
+                if (sym == NULL) {
+                    Py_DECREF(tup);
+                    Py_DECREF(field_names);
+                    goto error;
+                }
                 PyTuple_SET_ITEM(tup, i, sym);
             }
             Py_DECREF(field_names);
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, tup);
             Py_DECREF(tup);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
 
@@ -4036,10 +4044,16 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
         Py_ssize_t cpos = 0;
         while (PyDict_Next(constants_dict, &cpos, &ckey, &cval)) {
             PyObject *converted = PyObject_CallOneArg(fn_convert_value, cval);
-            if (converted == NULL) { Py_DECREF(fast_constants); return NULL; }
+            if (converted == NULL) {
+                Py_DECREF(fast_constants);
+                return NULL;
+            }
             int ok = PyDict_SetItem(fast_constants, ckey, converted);
             Py_DECREF(converted);
-            if (ok < 0) { Py_DECREF(fast_constants); return NULL; }
+            if (ok < 0) {
+                Py_DECREF(fast_constants);
+                return NULL;
+            }
         }
     }
 
@@ -4048,15 +4062,25 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     PyObject *globals;
     if (prelude_dict != Py_None && PyDict_Size(prelude_dict) > 0) {
         PyObject *fast_prelude = PyDict_New();
-        if (fast_prelude == NULL) { Py_DECREF(fast_constants); return NULL; }
+        if (fast_prelude == NULL) {
+            Py_DECREF(fast_constants);
+            return NULL;
+        }
         PyObject *pkey, *pval;
         Py_ssize_t ppos = 0;
         while (PyDict_Next(prelude_dict, &ppos, &pkey, &pval)) {
             PyObject *converted = PyObject_CallOneArg(fn_convert_value, pval);
-            if (converted == NULL) { Py_DECREF(fast_prelude); Py_DECREF(fast_constants); return NULL; }
+            if (converted == NULL) { Py_DECREF(fast_prelude);
+                Py_DECREF(fast_constants);
+                return NULL;
+            }
             int ok = PyDict_SetItem(fast_prelude, pkey, converted);
             Py_DECREF(converted);
-            if (ok < 0) { Py_DECREF(fast_prelude); Py_DECREF(fast_constants); return NULL; }
+            if (ok < 0) {
+                Py_DECREF(fast_prelude);
+                Py_DECREF(fast_constants);
+                return NULL;
+            }
         }
         globals = build_globals(fast_constants, fast_prelude);
         Py_DECREF(fast_prelude);
@@ -4081,10 +4105,16 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
         while (PyDict_Next(globals, &pos, &key, &val)) {
             if (IS_MENAI_FUNCTION(val)) {
                 PyObject *bc = PyObject_GetAttrString(val, "bytecode");
-                if (bc == NULL) { Py_DECREF(globals); return NULL; }
+                if (bc == NULL) {
+                    Py_DECREF(globals);
+                    return NULL;
+                }
                 int n = max_local_count(bc);
                 Py_DECREF(bc);
-                if (n < 0) { Py_DECREF(globals); return NULL; }
+                if (n < 0) {
+                    Py_DECREF(globals);
+                    return NULL;
+                }
                 if (n > max_locals)
                     max_locals = n;
             }
