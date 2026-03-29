@@ -5,7 +5,7 @@
  *
  *   menai_vm_c.execute(code, globals_dict, prelude_dict) -> MenaiValue
  *
- * The MenaiVM Python class in menai_vm.py calls this in place of its Cython
+ * The MenaiVM Python class in menai_vm.py calls this in place of its Python
  * execute loop when this extension is available.
  *
  * Build:
@@ -28,7 +28,7 @@
 
 #define MAX_FRAME_DEPTH 1024
 
-/* Cancellation check interval — matches the Cython VM default. */
+/* Cancellation check interval — matches the Python VM default. */
 #define CANCEL_CHECK_INTERVAL 1000
 
 /* ---------------------------------------------------------------------------
@@ -274,23 +274,17 @@ PyObject *Menai_EMPTY_LIST = NULL;
 PyObject *Menai_EMPTY_DICT = NULL;
 PyObject *Menai_EMPTY_SET  = NULL;
 
-size_t Menai_offset_boolean_value = 0;
-size_t Menai_offset_float_value   = 0;
-
 /* ---------------------------------------------------------------------------
- * Module-level callables fetched at init
+ * Module-level state fetched at init
  * ------------------------------------------------------------------------- */
 
 static PyObject *MenaiEvalError_type      = NULL;
 static PyObject *MenaiCancelledException_type = NULL;
-static PyObject *fn_convert_code_object   = NULL;  /* menai_value_fast.convert_code_object */
-static PyObject *fn_convert_value         = NULL;  /* menai_value_fast.convert_value */
-static PyObject *fn_to_slow               = NULL;  /* menai_value_fast.to_slow */
+static PyObject *fn_convert_code_object   = NULL;
+static PyObject *fn_convert_value         = NULL;
+static PyObject *fn_to_slow               = NULL;
 static PyObject *cmath_module             = NULL;  /* Python cmath module for complex transcendentals */
 static PyObject *empty_tuple              = NULL;  /* Cached PyTuple_New(0) — used for struct construction */
-
-/* Forward declaration — defined after call_setup. */
-static PyObject *ensure_fast_value(PyObject *val, PyObject *memo);
 
 /* ---------------------------------------------------------------------------
  * Error helpers
@@ -361,104 +355,61 @@ fetch_callable(PyObject *module, const char *name, PyObject **dst)
         Py_DECREF(obj);
         return -1;
     }
-    /* Keep a strong reference — these are called repeatedly. */
     *dst = obj;
     return 0;
-}
-
-static size_t
-fetch_offset(PyObject *offsets, const char *key)
-{
-    PyObject *v = PyDict_GetItemString(offsets, key);
-    if (v == NULL) {
-        PyErr_Format(PyExc_KeyError,
-                     "menai_vm_shim_init: missing offset '%s'", key);
-        return (size_t)-1;
-    }
-    size_t result = PyLong_AsSize_t(v);
-    return result;
 }
 
 int
 menai_vm_shim_init(void)
 {
-    PyObject *vf = PyImport_ImportModule("menai.menai_value_fast");
-    if (vf == NULL)
+    PyObject *vc = PyImport_ImportModule("menai.menai_value_c");
+    if (vc == NULL)
         return -1;
 
-    if (fetch_type(vf, "MenaiNone",       &Menai_NoneType)       < 0) goto fail;
-    if (fetch_type(vf, "MenaiBoolean",    &Menai_BooleanType)    < 0) goto fail;
-    if (fetch_type(vf, "MenaiInteger",    &Menai_IntegerType)    < 0) goto fail;
-    if (fetch_type(vf, "MenaiFloat",      &Menai_FloatType)      < 0) goto fail;
-    if (fetch_type(vf, "MenaiComplex",    &Menai_ComplexType)    < 0) goto fail;
-    if (fetch_type(vf, "MenaiString",     &Menai_StringType)     < 0) goto fail;
-    if (fetch_type(vf, "MenaiSymbol",     &Menai_SymbolType)     < 0) goto fail;
-    if (fetch_type(vf, "MenaiList",       &Menai_ListType)       < 0) goto fail;
-    if (fetch_type(vf, "MenaiDict",       &Menai_DictType)       < 0) goto fail;
-    if (fetch_type(vf, "MenaiSet",        &Menai_SetType)        < 0) goto fail;
-    if (fetch_type(vf, "MenaiFunction",   &Menai_FunctionType)   < 0) goto fail;
-    if (fetch_type(vf, "MenaiStructType", &Menai_StructTypeType) < 0) goto fail;
-    if (fetch_type(vf, "MenaiStruct",     &Menai_StructType)     < 0) goto fail;
+    if (fetch_type(vc, "MenaiNone",       &Menai_NoneType)       < 0) goto fail;
+    if (fetch_type(vc, "MenaiBoolean",    &Menai_BooleanType)    < 0) goto fail;
+    if (fetch_type(vc, "MenaiInteger",    &Menai_IntegerType)    < 0) goto fail;
+    if (fetch_type(vc, "MenaiFloat",      &Menai_FloatType)      < 0) goto fail;
+    if (fetch_type(vc, "MenaiComplex",    &Menai_ComplexType)    < 0) goto fail;
+    if (fetch_type(vc, "MenaiString",     &Menai_StringType)     < 0) goto fail;
+    if (fetch_type(vc, "MenaiSymbol",     &Menai_SymbolType)     < 0) goto fail;
+    if (fetch_type(vc, "MenaiList",       &Menai_ListType)       < 0) goto fail;
+    if (fetch_type(vc, "MenaiDict",       &Menai_DictType)       < 0) goto fail;
+    if (fetch_type(vc, "MenaiSet",        &Menai_SetType)        < 0) goto fail;
+    if (fetch_type(vc, "MenaiFunction",   &Menai_FunctionType)   < 0) goto fail;
+    if (fetch_type(vc, "MenaiStructType", &Menai_StructTypeType) < 0) goto fail;
+    if (fetch_type(vc, "MenaiStruct",     &Menai_StructType)     < 0) goto fail;
 
-    if (fetch_singleton(vf, "Menai_NONE",          &Menai_NONE)       < 0) goto fail;
-    if (fetch_singleton(vf, "Menai_BOOLEAN_TRUE",  &Menai_TRUE)       < 0) goto fail;
-    if (fetch_singleton(vf, "Menai_BOOLEAN_FALSE", &Menai_FALSE)      < 0) goto fail;
-    if (fetch_singleton(vf, "Menai_LIST_EMPTY",    &Menai_EMPTY_LIST) < 0) goto fail;
-    if (fetch_singleton(vf, "Menai_DICT_EMPTY",    &Menai_EMPTY_DICT) < 0) goto fail;
-    if (fetch_singleton(vf, "Menai_SET_EMPTY",     &Menai_EMPTY_SET)  < 0) goto fail;
+    if (fetch_singleton(vc, "Menai_NONE",          &Menai_NONE)       < 0) goto fail;
+    if (fetch_singleton(vc, "Menai_BOOLEAN_TRUE",  &Menai_TRUE)       < 0) goto fail;
+    if (fetch_singleton(vc, "Menai_BOOLEAN_FALSE", &Menai_FALSE)      < 0) goto fail;
+    if (fetch_singleton(vc, "Menai_LIST_EMPTY",    &Menai_EMPTY_LIST) < 0) goto fail;
+    if (fetch_singleton(vc, "Menai_DICT_EMPTY",    &Menai_EMPTY_DICT) < 0) goto fail;
+    if (fetch_singleton(vc, "Menai_SET_EMPTY",     &Menai_EMPTY_SET)  < 0) goto fail;
 
-    if (fetch_callable(vf, "convert_code_object", &fn_convert_code_object) < 0) goto fail;
-    if (fetch_callable(vf, "convert_value",        &fn_convert_value)        < 0) goto fail;
-    if (fetch_callable(vf, "to_slow",             &fn_to_slow)             < 0) goto fail;
+    if (fetch_callable(vc, "convert_code_object", &fn_convert_code_object) < 0) goto fail;
+    if (fetch_callable(vc, "convert_value",       &fn_convert_value)       < 0) goto fail;
+    if (fetch_callable(vc, "to_slow",             &fn_to_slow)             < 0) goto fail;
 
-    /* Field offsets */
-    {
-        PyObject *offsets_fn = PyObject_GetAttrString(vf, "get_field_offsets");
-        if (offsets_fn == NULL) goto fail;
-        PyObject *offsets = PyObject_CallNoArgs(offsets_fn);
-        Py_DECREF(offsets_fn);
-        if (offsets == NULL) goto fail;
+    cmath_module = PyImport_ImportModule("cmath");
+    if (cmath_module == NULL) goto fail;
 
-        Menai_offset_boolean_value = fetch_offset(offsets, "boolean_value");
-        if (Menai_offset_boolean_value == (size_t)-1 && PyErr_Occurred())
-        { Py_DECREF(offsets); goto fail; }
-        Menai_offset_float_value = fetch_offset(offsets, "float_value");
-        if (Menai_offset_float_value == (size_t)-1 && PyErr_Occurred())
-        { Py_DECREF(offsets); goto fail; }
+    empty_tuple = PyTuple_New(0);
+    if (empty_tuple == NULL) goto fail;
 
-        Py_DECREF(offsets);
-    }
+    PyObject *err_mod = PyImport_ImportModule("menai.menai_error");
+    if (err_mod == NULL) goto fail;
+    MenaiEvalError_type = PyObject_GetAttrString(err_mod, "MenaiEvalError");
+    MenaiCancelledException_type = PyObject_GetAttrString(err_mod, "MenaiCancelledException");
+    Py_DECREF(err_mod);
+    if (MenaiEvalError_type == NULL || MenaiCancelledException_type == NULL)
+        goto fail;
 
-    /* cmath module for complex transcendentals */
-    {
-        cmath_module = PyImport_ImportModule("cmath");
-        if (cmath_module == NULL)
-            goto fail;
-    }
-
-    /* Cached empty tuple for struct constructor calls */
-    {
-        empty_tuple = PyTuple_New(0);
-        if (empty_tuple == NULL)
-            goto fail;
-    }
-
-    /* Error types */
-    {
-        PyObject *err_mod = PyImport_ImportModule("menai.menai_error");
-        if (err_mod == NULL) goto fail;
-        MenaiEvalError_type = PyObject_GetAttrString(err_mod, "MenaiEvalError");
-        MenaiCancelledException_type = PyObject_GetAttrString(err_mod, "MenaiCancelledException");
-        Py_DECREF(err_mod);
-        if (MenaiEvalError_type == NULL || MenaiCancelledException_type == NULL)
-            goto fail;
-    }
-
-    Py_DECREF(vf);
+    Py_DECREF(vc);
     return 0;
 
 fail:
-    Py_DECREF(vf);
+    Py_DECREF(vc);
     return -1;
 }
 
@@ -756,20 +707,14 @@ call_setup(Frame *new_frame, PyObject *func_obj,
         PyObject *captured = PyObject_GetAttrString(func_obj, "captured_values");
         if (captured == NULL) goto fail;
         Py_ssize_t ncap = PyList_GET_SIZE(captured);
-        if (ncap > 0) {
-            /* Use a memo dict to handle cyclic letrec closures correctly. */
-            PyObject *memo = PyDict_New();
-            if (memo == NULL) { Py_DECREF(captured); goto fail; }
-            for (Py_ssize_t i = 0; i < ncap; i++) {
-                PyObject *cv = PyList_GET_ITEM(captured, i);
-                PyObject *fast_cv = ensure_fast_value(cv, memo);
-                if (fast_cv == NULL) {
-                    Py_DECREF(memo); Py_DECREF(captured); goto fail;
-                }
-                reg_set(regs, callee_base + param_count + (int)i, fast_cv);
-                Py_DECREF(fast_cv);
+        for (Py_ssize_t i = 0; i < ncap; i++) {
+            PyObject *cv = PyList_GET_ITEM(captured, i);
+            PyObject *fast_cv = PyObject_CallOneArg(fn_convert_value, cv);
+            if (fast_cv == NULL) {
+                Py_DECREF(captured); goto fail;
             }
-            Py_DECREF(memo);
+            reg_set(regs, callee_base + param_count + (int)i, fast_cv);
+            Py_DECREF(fast_cv);
         }
         Py_DECREF(captured);
     }
@@ -785,71 +730,6 @@ fail:
     Py_DECREF(bytecode);
     return -1;
 }
-
-/* ---------------------------------------------------------------------------
- * Value constructor helpers
- * ------------------------------------------------------------------------- */
-
-/*
- * ensure_fast_value — convert a value to a fast VM type, recursively
- * converting any slow MenaiFunction objects reachable through captured_values.
- *
- * memo maps id(slow_obj) -> fast_obj to break cycles in letrec closures.
- * Returns a new reference, or NULL on error.
- */
-static PyObject *
-ensure_fast_value(PyObject *val, PyObject *memo)
-{
-    /* Already fast — return unchanged (new ref via Py_INCREF). */
-    if (IS_MENAI_FUNCTION(val) || IS_MENAI_NONE(val) || IS_MENAI_BOOLEAN(val) ||
-        IS_MENAI_INTEGER(val) || IS_MENAI_FLOAT(val) || IS_MENAI_COMPLEX(val) ||
-        IS_MENAI_STRING(val) || IS_MENAI_SYMBOL(val) || IS_MENAI_LIST(val) ||
-        IS_MENAI_DICT(val) || IS_MENAI_SET(val) || IS_MENAI_STRUCTTYPE(val) ||
-        IS_MENAI_STRUCT(val)) {
-        Py_INCREF(val);
-        return val;
-    }
-
-    /* Check memo for cycles. */
-    PyObject *key = PyLong_FromVoidPtr(val);
-    if (key == NULL) return NULL;
-    PyObject *cached = PyDict_GetItem(memo, key);
-    if (cached != NULL) {
-        Py_DECREF(key);
-        Py_INCREF(cached);
-        return cached;
-    }
-
-    /* Convert the slow value to fast. */
-    PyObject *fast = PyObject_CallOneArg(fn_convert_value, val);
-    if (fast == NULL) { Py_DECREF(key); return NULL; }
-
-    /* Register in memo BEFORE recursing to break cycles. */
-    if (PyDict_SetItem(memo, key, fast) < 0) {
-        Py_DECREF(key); Py_DECREF(fast); return NULL;
-    }
-    Py_DECREF(key);
-
-    /* If the result is a MenaiFunction, recursively convert its captured_values. */
-    if (IS_MENAI_FUNCTION(fast)) {
-        PyObject *cap = PyObject_GetAttrString(fast, "captured_values");
-        if (cap == NULL) { Py_DECREF(fast); return NULL; }
-        Py_ssize_t n = PyList_GET_SIZE(cap);
-        for (Py_ssize_t i = 0; i < n; i++) {
-            PyObject *cv = PyList_GET_ITEM(cap, i);
-            PyObject *fast_cv = ensure_fast_value(cv, memo);
-            if (fast_cv == NULL) { Py_DECREF(cap); Py_DECREF(fast); return NULL; }
-            /* Replace in-place — PyList_SetItem steals fast_cv. */
-            if (PyList_SetItem(cap, i, fast_cv) < 0) {
-                Py_DECREF(cap); Py_DECREF(fast); return NULL;
-            }
-        }
-        Py_DECREF(cap);
-    }
-
-    return fast;
-}
-
 
 /* ---------------------------------------------------------------------------
  * execute_loop — the main dispatch loop
@@ -980,7 +860,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *val  = PyDict_GetItem(globals, name);
             if (val == NULL) {
                 /* Build a rich error with available variable names, matching
-                 * the Cython VM's error format. */
+                 * the Python VM's error format. */
                 PyObject *keys = PyDict_Keys(globals);
                 const char *name_str = PyUnicode_AsUTF8(name);
                 if (keys != NULL) {
@@ -2085,27 +1965,24 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
 
-            PyObject *elements = PyObject_GetAttrString(raw_args, "elements");
-            if (elements == NULL) goto error;
+            PyObject *elements = ((MenaiList_Object *)raw_args)->elements;
             int arity = (int)PyTuple_GET_SIZE(elements);
 
             if (IS_MENAI_FUNCTION(raw_func)) {
                 if (frame_depth >= MAX_FRAME_DEPTH) {
-                    Py_DECREF(elements);
                     menai_raise_eval_error("Maximum call depth exceeded");
                     goto error;
                 }
 
                 int local_count = 0;
                 if (code_get_int(frame->code_obj, "local_count", &local_count) < 0) {
-                    Py_DECREF(elements); goto error;
+                    goto error;
                 }
                 int callee_base = base + local_count;
 
                 /* Scatter list elements into the callee window */
                 for (int i = 0; i < arity; i++)
                     reg_set(regs, callee_base + i, PyTuple_GET_ITEM(elements, i));
-                Py_DECREF(elements);
 
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
@@ -2118,22 +1995,20 @@ execute_loop(PyObject *code, PyObject *globals,
 
             } else if (IS_MENAI_STRUCTTYPE(raw_func)) {
                 PyObject *field_names = PyObject_GetAttrString(raw_func, "field_names");
-                if (field_names == NULL) { Py_DECREF(elements); goto error; }
+                if (field_names == NULL) goto error;
                 Py_ssize_t n_fields = PyTuple_GET_SIZE(field_names);
                 Py_DECREF(field_names);
                 if (arity != (int)n_fields) {
-                    Py_DECREF(elements);
                     menai_raise_eval_error("Struct constructor called with wrong number of arguments");
                     goto error;
                 }
                 PyObject *fields = PyTuple_New(n_fields);
-                if (fields == NULL) { Py_DECREF(elements); goto error; }
+                if (fields == NULL) goto error;
                 for (int i = 0; i < (int)n_fields; i++) {
                     PyObject *fv = PyTuple_GET_ITEM(elements, i);
                     Py_INCREF(fv);
                     PyTuple_SET_ITEM(fields, i, fv);
                 }
-                Py_DECREF(elements);
                 PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", raw_func, "fields", fields);
                 Py_DECREF(fields);
                 if (kwargs == NULL) goto error;
@@ -2143,7 +2018,6 @@ execute_loop(PyObject *code, PyObject *globals,
                 reg_set(regs, base + dest, instance);
                 Py_DECREF(instance);
             } else {
-                Py_DECREF(elements);
                 menai_raise_eval_error("apply: first argument must be a function");
                 goto error;
             }
@@ -2167,15 +2041,13 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
 
-            PyObject *elements = PyObject_GetAttrString(raw_args, "elements");
-            if (elements == NULL) { Py_DECREF(raw_func); goto error; }
+            PyObject *elements = ((MenaiList_Object *)raw_args)->elements;
             int arity = (int)PyTuple_GET_SIZE(elements);
 
             if (IS_MENAI_FUNCTION(raw_func)) {
                 /* Scatter args into base+0..arity-1 (reusing current frame's base) */
                 for (int i = 0; i < arity; i++)
                     reg_set(regs, base + i, PyTuple_GET_ITEM(elements, i));
-                Py_DECREF(elements);
 
                 /* Release old frame instructions, reuse frame */
                 Py_XDECREF(frame->instructions_obj);
@@ -2189,22 +2061,20 @@ execute_loop(PyObject *code, PyObject *globals,
 
             } else if (IS_MENAI_STRUCTTYPE(raw_func)) {
                 PyObject *field_names = PyObject_GetAttrString(raw_func, "field_names");
-                if (field_names == NULL) { Py_DECREF(elements); Py_DECREF(raw_func); goto error; }
+                if (field_names == NULL) { Py_DECREF(raw_func); goto error; }
                 Py_ssize_t n_fields = PyTuple_GET_SIZE(field_names);
                 Py_DECREF(field_names);
                 if (arity != (int)n_fields) {
-                    Py_DECREF(elements);
                     Py_DECREF(raw_func);
                     menai_raise_eval_error("Struct constructor called with wrong number of arguments"); goto error;
                 }
                 PyObject *fields = PyTuple_New(n_fields);
-                if (fields == NULL) { Py_DECREF(elements); Py_DECREF(raw_func); goto error; }
+                if (fields == NULL) { Py_DECREF(raw_func); goto error; }
                 for (int i = 0; i < (int)n_fields; i++) {
                     PyObject *fv = PyTuple_GET_ITEM(elements, i);
                     Py_INCREF(fv);
                     PyTuple_SET_ITEM(fields, i, fv);
                 }
-                Py_DECREF(elements);
                 PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", raw_func, "fields", fields);
                 Py_DECREF(fields);
                 if (kwargs == NULL) { Py_DECREF(raw_func); goto error; }
@@ -2221,7 +2091,6 @@ execute_loop(PyObject *code, PyObject *globals,
                 Py_DECREF(raw_func);
                 frame = caller;
             } else {
-                Py_DECREF(elements);
                 Py_DECREF(raw_func);
                 menai_raise_eval_error("apply: first argument must be a function"); goto error;
             }
@@ -2782,7 +2651,7 @@ execute_loop(PyObject *code, PyObject *globals,
             /* Delegate to the Menai object's method via Python call */
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
-            /* Try int, then float, then complex — matching Cython VM logic */
+            /* Try int, then float, then complex — matching Python VM logic */
             PyObject *result = NULL;
             /* Check for 'j'/'J' → complex */
             PyObject *lower = PyObject_CallMethod(sa, "lower", NULL);
@@ -2912,9 +2781,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-null?")) goto error;
             PyObject *elems = menai_list_elements(a);
-            if (elems == NULL) goto error;
             int is_null = (PyTuple_GET_SIZE(elems) == 0);
-            Py_DECREF(elems);
             bool_store(regs, base + dest, is_null);
             break;
         }
@@ -2922,9 +2789,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-length")) goto error;
             PyObject *elems = menai_list_elements(a);
-            if (elems == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
-            Py_DECREF(elems);
             PyObject *iv = PyLong_FromSsize_t(n);
             if (iv == NULL) goto error;
             PyObject *_r = make_integer_value(iv);
@@ -2936,27 +2801,21 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-first")) goto error;
             PyObject *elems = menai_list_elements(a);
-            if (elems == NULL) goto error;
             if (PyTuple_GET_SIZE(elems) == 0) {
-                Py_DECREF(elems);
                 menai_raise_eval_error("Function 'list-first' requires a non-empty list"); goto error;
             }
             PyObject *first = PyTuple_GET_ITEM(elems, 0);
             reg_set(regs, base + dest, first);
-            Py_DECREF(elems);
             break;
         }
         case OP_LIST_REST: {
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-rest")) goto error;
             PyObject *elems = menai_list_elements(a);
-            if (elems == NULL) goto error;
             if (PyTuple_GET_SIZE(elems) == 0) {
-                Py_DECREF(elems);
                 menai_raise_eval_error("Function 'list-rest' requires a non-empty list"); goto error;
             }
             PyObject *rest = PyTuple_GetSlice(elems, 1, PY_SSIZE_T_MAX);
-            Py_DECREF(elems);
             if (rest == NULL) goto error;
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, rest);
             Py_DECREF(rest);
@@ -2968,15 +2827,12 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-last")) goto error;
             PyObject *elems = menai_list_elements(a);
-            if (elems == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             if (n == 0) {
-                Py_DECREF(elems);
                 menai_raise_eval_error("Function 'list-last' requires a non-empty list"); goto error;
             }
             PyObject *last = PyTuple_GET_ITEM(elems, n - 1);
             reg_set(regs, base + dest, last);
-            Py_DECREF(elems);
             break;
         }
         case OP_LIST_REF: {
@@ -2984,33 +2840,28 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_list(a, "list-ref")) goto error;
             if (!IS_MENAI_INTEGER(b)) { menai_raise_eval_error("list-ref: index must be integer"); goto error; }
             PyObject *elems = menai_list_elements(a);
-            if (elems == NULL) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (bv == NULL) { Py_DECREF(elems); goto error; }
+            if (bv == NULL) goto error;
             Py_ssize_t idx = PyLong_AsSsize_t(bv); Py_DECREF(bv);
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             if (idx < 0 || idx >= n) {
-                Py_DECREF(elems);
                 menai_raise_eval_errorf("list-ref: index out of range: %zd", idx); goto error;
             }
             reg_set(regs, base + dest, PyTuple_GET_ITEM(elems, idx));
-            Py_DECREF(elems);
             break;
         }
         case OP_LIST_PREPEND: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_list(a, "list-prepend")) goto error;
             PyObject *elems = menai_list_elements(a);
-            if (elems == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             PyObject *new_tup = PyTuple_New(n + 1);
-            if (new_tup == NULL) { Py_DECREF(elems); goto error; }
+            if (new_tup == NULL) goto error;
             Py_INCREF(item); PyTuple_SET_ITEM(new_tup, 0, item);
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *e = PyTuple_GET_ITEM(elems, i);
                 Py_INCREF(e); PyTuple_SET_ITEM(new_tup, i + 1, e);
             }
-            Py_DECREF(elems);
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, new_tup);
             Py_DECREF(new_tup);
             if (r == NULL) goto error;
@@ -3021,15 +2872,13 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_list(a, "list-append")) goto error;
             PyObject *elems = menai_list_elements(a);
-            if (elems == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             PyObject *new_tup = PyTuple_New(n + 1);
-            if (new_tup == NULL) { Py_DECREF(elems); goto error; }
+            if (new_tup == NULL) goto error;
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *e = PyTuple_GET_ITEM(elems, i);
                 Py_INCREF(e); PyTuple_SET_ITEM(new_tup, i, e);
             }
-            Py_DECREF(elems);
             Py_INCREF(item); PyTuple_SET_ITEM(new_tup, n, item);
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, new_tup);
             Py_DECREF(new_tup);
@@ -3041,15 +2890,13 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-reverse")) goto error;
             PyObject *elems = menai_list_elements(a);
-            if (elems == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             PyObject *rev = PyTuple_New(n);
-            if (rev == NULL) { Py_DECREF(elems); goto error; }
+            if (rev == NULL) goto error;
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *e = PyTuple_GET_ITEM(elems, n - 1 - i);
                 Py_INCREF(e); PyTuple_SET_ITEM(rev, i, e);
             }
-            Py_DECREF(elems);
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, rev);
             Py_DECREF(rev);
             if (r == NULL) goto error;
@@ -3061,11 +2908,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_list(a, "list-concat")) goto error;
             if (!require_list(b, "list-concat")) goto error;
             PyObject *ea = menai_list_elements(a);
-            if (ea == NULL) goto error;
             PyObject *eb = menai_list_elements(b);
-            if (eb == NULL) { Py_DECREF(ea); goto error; }
             PyObject *cat = PySequence_Concat(ea, eb);
-            Py_DECREF(ea); Py_DECREF(eb);
             if (cat == NULL) goto error;
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, cat);
             Py_DECREF(cat);
@@ -3077,9 +2921,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_list(a, "list-member?")) goto error;
             PyObject *elems = menai_list_elements(a);
-            if (elems == NULL) goto error;
             int found = PySequence_Contains(elems, item);
-            Py_DECREF(elems);
             if (found < 0) goto error;
             bool_store(regs, base + dest, found);
             break;
@@ -3088,15 +2930,13 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_list(a, "list-index")) goto error;
             PyObject *elems = menai_list_elements(a);
-            if (elems == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             Py_ssize_t found = -1;
             for (Py_ssize_t i = 0; i < n; i++) {
                 int eq = PyObject_RichCompareBool(PyTuple_GET_ITEM(elems, i), item, Py_EQ);
-                if (eq < 0) { Py_DECREF(elems); goto error; }
+                if (eq < 0) goto error;
                 if (eq) { found = i; break; }
             }
-            Py_DECREF(elems);
             if (found == -1) {
                 reg_set(regs, base + dest, Menai_NONE);
             } else {
@@ -3115,36 +2955,29 @@ execute_loop(PyObject *code, PyObject *globals,
                 menai_raise_eval_error("list-slice: indices must be integers"); goto error;
             }
             PyObject *elems = menai_list_elements(a);
-            if (elems == NULL) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (bv == NULL) { Py_DECREF(elems); goto error; }
+            if (bv == NULL) goto error;
             PyObject *cv = menai_integer_value(c);
-            if (cv == NULL) { Py_DECREF(bv); Py_DECREF(elems); goto error; }
+            if (cv == NULL) { Py_DECREF(bv); goto error; }
             Py_ssize_t start = PyLong_AsSsize_t(bv), end = PyLong_AsSsize_t(cv);
             Py_DECREF(bv); Py_DECREF(cv);
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             if (start < 0) {
-                Py_DECREF(elems);
                 menai_raise_eval_errorf("list-slice start index cannot be negative: %zd", start); goto error;
             }
             if (end < 0) {
-                Py_DECREF(elems);
                 menai_raise_eval_errorf("list-slice end index cannot be negative: %zd", end); goto error;
             }
             if (start > n) {
-                Py_DECREF(elems);
                 menai_raise_eval_errorf("list-slice start index out of range: %zd (list length: %zd)", start, n); goto error;
             }
             if (end > n) {
-                Py_DECREF(elems);
                 menai_raise_eval_errorf("list-slice end index out of range: %zd (list length: %zd)", end, n); goto error;
             }
             if (start > end) {
-                Py_DECREF(elems);
                 menai_raise_eval_errorf("list-slice start index (%zd) cannot be greater than end index (%zd)", start, end); goto error;
             }
             PyObject *sliced = PyTuple_GetSlice(elems, start, end);
-            Py_DECREF(elems);
             if (sliced == NULL) goto error;
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, sliced);
             Py_DECREF(sliced);
@@ -3156,25 +2989,23 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_list(a, "list-remove")) goto error;
             PyObject *elems = menai_list_elements(a);
-            if (elems == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             /* Count non-matching elements first */
             Py_ssize_t keep = 0;
             for (Py_ssize_t i = 0; i < n; i++) {
                 int eq = PyObject_RichCompareBool(PyTuple_GET_ITEM(elems, i), item, Py_EQ);
-                if (eq < 0) { Py_DECREF(elems); goto error; }
+                if (eq < 0) goto error;
                 if (!eq) keep++;
             }
             PyObject *new_tup = PyTuple_New(keep);
-            if (new_tup == NULL) { Py_DECREF(elems); goto error; }
+            if (new_tup == NULL) goto error;
             Py_ssize_t j = 0;
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *e = PyTuple_GET_ITEM(elems, i);
                 int eq = PyObject_RichCompareBool(e, item, Py_EQ);
-                if (eq < 0) { Py_DECREF(new_tup); Py_DECREF(elems); goto error; }
+                if (eq < 0) { Py_DECREF(new_tup); goto error; }
                 if (!eq) { Py_INCREF(e); PyTuple_SET_ITEM(new_tup, j++, e); }
             }
-            Py_DECREF(elems);
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, new_tup);
             Py_DECREF(new_tup);
             if (r == NULL) goto error;
@@ -3186,24 +3017,22 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_list(a, "list->string")) goto error;
             if (!require_string(b, "list->string")) goto error;
             PyObject *elems = menai_list_elements(a);
-            if (elems == NULL) goto error;
             PyObject *sep = menai_string_value(b);
-            if (sep == NULL) { Py_DECREF(elems); goto error; }
+            if (sep == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             PyObject *parts = PyList_New(n);
-            if (parts == NULL) { Py_DECREF(sep); Py_DECREF(elems); goto error; }
+            if (parts == NULL) { Py_DECREF(sep); goto error; }
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *elem = PyTuple_GET_ITEM(elems, i);
                 if (!IS_MENAI_STRING(elem)) {
-                    Py_DECREF(parts); Py_DECREF(sep); Py_DECREF(elems);
+                    Py_DECREF(parts); Py_DECREF(sep);
                     menai_raise_eval_error("list->string: all elements must be strings");
                     goto error;
                 }
                 PyObject *sv = menai_string_value(elem);
-                if (sv == NULL) { Py_DECREF(parts); Py_DECREF(sep); Py_DECREF(elems); goto error; }
+                if (sv == NULL) { Py_DECREF(parts); Py_DECREF(sep); goto error; }
                 PyList_SET_ITEM(parts, i, sv); /* steals ref */
             }
-            Py_DECREF(elems);
             PyObject *joined = PyUnicode_Join(sep, parts);
             Py_DECREF(sep); Py_DECREF(parts);
             if (joined == NULL) goto error;
@@ -3216,9 +3045,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_list_singular(a, "list->set")) goto error;
             PyObject *elems = menai_list_elements(a);
-            if (elems == NULL) goto error;
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_SetType, elems);
-            Py_DECREF(elems);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r); Py_DECREF(r);
             break;
@@ -4082,11 +3909,11 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "OOO", &code, &constants_dict, &prelude_dict))
         return NULL;
 
-    /* Convert compiler-world constants to fast cdef class values. */
-    PyObject *tmp = PyObject_CallOneArg(fn_convert_code_object, code);
-    if (tmp == NULL)
+    /* Convert compiler-world constants in the code object tree to fast C types. */
+    PyObject *_tmp = PyObject_CallOneArg(fn_convert_code_object, code);
+    if (_tmp == NULL)
         return NULL;
-    Py_DECREF(tmp);
+    Py_DECREF(_tmp);
 
     /* Convert constants dict (pi, e, etc.) from slow to fast types. */
     PyObject *fast_constants = PyDict_New();
@@ -4103,10 +3930,8 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
         }
     }
 
-    /* Build the globals dict (constants + prelude). */
-    /* Convert prelude values from slow compiler-world types to fast VM types.
-     * The prelude may contain slow MenaiFunction objects from menai_value.py;
-     * IS_MENAI_FUNCTION checks the fast Cython type so they must be converted. */
+    /* Build the globals dict (constants + prelude), converting prelude values
+     * from slow compiler-world types to fast C types. */
     PyObject *globals;
     if (prelude_dict != Py_None && PyDict_Size(prelude_dict) > 0) {
         PyObject *fast_prelude = PyDict_New();
@@ -4170,7 +3995,7 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     if (result == NULL)
         return NULL;
 
-    /* Convert fast VM types back to compiler-world types. */
+    /* Convert fast C types back to compiler-world types. */
     PyObject *slow_result = PyObject_CallOneArg(fn_to_slow, result);
     Py_DECREF(result);
     return slow_result;

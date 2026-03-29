@@ -16,6 +16,10 @@ dependencies = [
 [tool.coverage.run]
 source = ["metaphor"]
 branch = true
+omit = [
+    "src/menai/menai_value_c*",
+    "src/menai/menai_vm_c*",
+]
 
 [tool.coverage.report]
 exclude_lines = [

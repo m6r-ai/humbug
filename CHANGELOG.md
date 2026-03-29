@@ -6,6 +6,9 @@ New features:
 
 - Added an edit button to allow you to edit previous user messages.
 - The submit shortcut is now Cmd+Enter or Ctrl+Enter rather than Cmd+J or Ctrl+J.  This is more natural.
+- Removed Claude Sonnet 4.5 support (we have 4.6).
+- Added GLM 5.1 support
+- Added Menai native C VM implementation and remove the cython version.
 
 Bug fixes:
 
