@@ -1817,10 +1817,14 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_float(a, "float//")) goto error;
             if (!require_float(b, "float//")) goto error;
             double bv = menai_float_value(b);
-            if (bv == 0.0) { menai_raise_eval_error("Division by zero in 'float//'"); goto error; }
+            if (bv == 0.0) {
+                menai_raise_eval_error("Division by zero in 'float//'");
+                goto error;
+            }
             PyObject *_r = make_float(floor(menai_float_value(a) / bv));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_MOD: {
@@ -1828,10 +1832,14 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_float(a, "float%")) goto error;
             if (!require_float(b, "float%")) goto error;
             double bv = menai_float_value(b);
-            if (bv == 0.0) { menai_raise_eval_error("Modulo by zero in 'float%'"); goto error; }
+            if (bv == 0.0) {
+                menai_raise_eval_error("Modulo by zero in 'float%'");
+                goto error;
+            }
             PyObject *_r = make_float(fmod(menai_float_value(a), bv));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_EXP: {
@@ -1839,7 +1847,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_float(a, "float-exp")) goto error;
             PyObject *_r = make_float(exp(menai_float_value(a)));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_EXPN: {
@@ -1848,37 +1857,50 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_float(b, "float-expn")) goto error;
             PyObject *_r = make_float(pow(menai_float_value(a), menai_float_value(b)));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_LOG: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-log")) goto error;
             double v = menai_float_value(a);
-            if (v < 0.0) { menai_raise_eval_error("float-log: argument must be non-negative"); goto error; }
+            if (v < 0.0) {
+                menai_raise_eval_error("float-log: argument must be non-negative");
+                goto error;
+            }
             PyObject *_r = make_float(v == 0.0 ? -INFINITY : log(v));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_LOG10: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-log10")) goto error;
             double v = menai_float_value(a);
-            if (v < 0.0) { menai_raise_eval_error("float-log10: argument must be non-negative"); goto error; }
+            if (v < 0.0) {
+                menai_raise_eval_error("float-log10: argument must be non-negative");
+                goto error;
+            }
             PyObject *_r = make_float(v == 0.0 ? -INFINITY : log10(v));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_LOG2: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-log2")) goto error;
             double v = menai_float_value(a);
-            if (v < 0.0) { menai_raise_eval_error("float-log2: argument must be non-negative"); goto error; }
+            if (v < 0.0) {
+                menai_raise_eval_error("float-log2: argument must be non-negative");
+                goto error;
+            }
             PyObject *_r = make_float(v == 0.0 ? -INFINITY : log2(v));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_LOGN: {
