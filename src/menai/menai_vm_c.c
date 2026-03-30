@@ -367,7 +367,10 @@ static inline void reg_set(PyObject **regs, int slot, PyObject *val) {
 static inline PyObject *make_integer(PyObject *py_int) {
     MenaiInteger_Object *r = (MenaiInteger_Object *)
         Menai_IntegerType->tp_alloc(Menai_IntegerType, 0);
-    if (r) { Py_INCREF(py_int); r->value = py_int; }
+    if (r) {
+        Py_INCREF(py_int);
+        r->value = py_int;
+    }
     return (PyObject *)r;
 }
 
@@ -383,15 +386,21 @@ static inline PyObject *make_complex_from_doubles(double real, double imag) {
     if (!pc) return NULL;
     MenaiComplex_Object *r = (MenaiComplex_Object *)
         Menai_ComplexType->tp_alloc(Menai_ComplexType, 0);
-    if (r) { r->value = pc; }
-    else   { Py_DECREF(pc); }
+    if (r) {
+        r->value = pc;
+    } else {
+        Py_DECREF(pc);
+    }
     return (PyObject *)r;
 }
 
 static inline PyObject *make_string_from_pyobj(PyObject *py_str) {
     MenaiString_Object *r = (MenaiString_Object *)
         Menai_StringType->tp_alloc(Menai_StringType, 0);
-    if (r) { Py_INCREF(py_str); r->value = py_str; }
+    if (r) {
+        Py_INCREF(py_str);
+        r->value = py_str;
+    }
     return (PyObject *)r;
 }
 
@@ -406,8 +415,11 @@ static inline PyObject *make_complex_value(PyObject *py_complex) {
     if (!py_complex) return NULL;
     MenaiComplex_Object *r = (MenaiComplex_Object *)
         Menai_ComplexType->tp_alloc(Menai_ComplexType, 0);
-    if (r) { r->value = py_complex; }  /* steals py_complex */
-    else   { Py_DECREF(py_complex); }
+    if (r) {
+        r->value = py_complex;
+    } else {
+        Py_DECREF(py_complex);
+    }
     return (PyObject *)r;
 }
 
@@ -421,20 +433,6 @@ static inline void bool_store(PyObject **regs, int slot, int cond) {
 
 typedef PyObject *(*menai_unaryfunc)(PyObject *);
 typedef PyObject *(*menai_binaryfunc)(PyObject *, PyObject *);
-
-static inline int
-int_cmp(PyObject **regs, int slot, PyObject *a, PyObject *b, int op)
-{
-    PyObject *av = menai_integer_value(a);
-    if (!av) return -1;
-    PyObject *bv = menai_integer_value(b);
-    if (!bv) { Py_DECREF(av); return -1; }
-    int r = PyObject_RichCompareBool(av, bv, op);
-    Py_DECREF(av); Py_DECREF(bv);
-    if (r < 0) return -1;
-    bool_store(regs, slot, r);
-    return 0;
-}
 
 static inline int
 int_unop(PyObject **regs, int slot, PyObject *a, menai_unaryfunc fn)
@@ -457,32 +455,16 @@ int_binop(PyObject **regs, int slot, PyObject *a, PyObject *b,
     PyObject *av = menai_integer_value(a);
     if (!av) return -1;
     PyObject *bv = menai_integer_value(b);
-    if (!bv) { Py_DECREF(av); return -1; }
+    if (!bv) {
+        Py_DECREF(av);
+        return -1;
+    }
     PyObject *res = fn(av, bv);
     Py_DECREF(av); Py_DECREF(bv);
     PyObject *r = make_integer_value(res);
     if (!r) return -1;
     reg_set(regs, slot, r);
     Py_DECREF(r);
-    return 0;
-}
-
-/* ---------------------------------------------------------------------------
- * String comparison helper
- * ------------------------------------------------------------------------- */
-
-static inline int
-str_cmp(PyObject **regs, int slot, PyObject *a, PyObject *b, int op)
-{
-    /* Direct access — no attribute lookup */
-    PyObject *sa = ((MenaiString_Object *)a)->value;
-    PyObject *sb = ((MenaiString_Object *)b)->value;
-    PyObject *cmp = PyUnicode_RichCompare(sa, sb, op);
-    if (!cmp) return -1;
-    int r = PyObject_IsTrue(cmp);
-    Py_DECREF(cmp);
-    if (r < 0) return -1;
-    bool_store(regs, slot, r);
     return 0;
 }
 
@@ -564,6 +546,9 @@ static inline int require_boolean(PyObject *val, const char *op_name) {
 static inline int require_function(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_FUNCTION(val), val, op_name, "function arguments");
 }
+static inline int require_function_singular(PyObject *val, const char *op_name) {
+    return require_type_impl(IS_MENAI_FUNCTION(val), val, op_name, "a function argument");
+}
 static inline int require_struct(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_STRUCT(val), val, op_name, "a struct argument");
 }
@@ -579,9 +564,6 @@ static inline int require_symbol_pair(PyObject *a, PyObject *b, const char *op_n
     if (IS_MENAI_SYMBOL(a) && IS_MENAI_SYMBOL(b)) return 1;
     menai_raise_eval_errorf("%s: arguments must be symbols", op_name);
     return 0;
-}
-static inline int require_function_singular(PyObject *val, const char *op_name) {
-    return require_type_impl(IS_MENAI_FUNCTION(val), val, op_name, "a function argument");
 }
 
 /* ---------------------------------------------------------------------------
@@ -1609,42 +1591,96 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer=?")) goto error;
             if (!require_integer(b, "integer=?")) goto error;
-            if (int_cmp(regs, base + dest, a, b, Py_EQ) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *bv = menai_integer_value(b);
+            if (!bv) {
+                Py_DECREF(av);
+                goto error;
+            }
+            bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_EQ));
+            Py_DECREF(av);
+            Py_DECREF(bv);
             break;
         }
         case OP_INTEGER_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer!=?")) goto error;
             if (!require_integer(b, "integer!=?")) goto error;
-            if (int_cmp(regs, base + dest, a, b, Py_NE) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *bv = menai_integer_value(b);
+            if (!bv) {
+                Py_DECREF(av);
+                goto error;
+            }
+            bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_NE));
+            Py_DECREF(av);
+            Py_DECREF(bv);
             break;
         }
         case OP_INTEGER_LT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer<?")) goto error;
             if (!require_integer(b, "integer<?")) goto error;
-            if (int_cmp(regs, base + dest, a, b, Py_LT) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *bv = menai_integer_value(b);
+            if (!bv) {
+                Py_DECREF(av);
+                goto error;
+            }
+            bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_LT));
+            Py_DECREF(av);
+            Py_DECREF(bv);
             break;
         }
         case OP_INTEGER_GT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer>?")) goto error;
             if (!require_integer(b, "integer>?")) goto error;
-            if (int_cmp(regs, base + dest, a, b, Py_GT) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *bv = menai_integer_value(b);
+            if (!bv) {
+                Py_DECREF(av);
+                goto error;
+            }
+            bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_GT));
+            Py_DECREF(av);
+            Py_DECREF(bv);
             break;
         }
         case OP_INTEGER_LTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer<=?")) goto error;
             if (!require_integer(b, "integer<=?")) goto error;
-            if (int_cmp(regs, base + dest, a, b, Py_LE) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *bv = menai_integer_value(b);
+            if (!bv) {
+                Py_DECREF(av);
+                goto error;
+            }
+            bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_LE));
+            Py_DECREF(av);
+            Py_DECREF(bv);
             break;
         }
         case OP_INTEGER_GTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer>=?")) goto error;
             if (!require_integer(b, "integer>=?")) goto error;
-            if (int_cmp(regs, base + dest, a, b, Py_GE) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *bv = menai_integer_value(b);
+            if (!bv) {
+                Py_DECREF(av);
+                goto error;
+            }
+            bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_GE));
+            Py_DECREF(av);
+            Py_DECREF(bv);
             break;
         }
 
@@ -2929,42 +2965,66 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string=?")) goto error;
             if (!require_string(b, "string=?")) goto error;
-            if (str_cmp(regs, base + dest, a, b, Py_EQ) < 0) goto error;
+            PyObject *_cmp = PyUnicode_RichCompare(((MenaiString_Object *)a)->value,
+                                                   ((MenaiString_Object *)b)->value, Py_EQ);
+            if (!_cmp) goto error;
+            bool_store(regs, base + dest, PyObject_IsTrue(_cmp));
+            Py_DECREF(_cmp);
             break;
         }
         case OP_STRING_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string!=?")) goto error;
             if (!require_string(b, "string!=?")) goto error;
-            if (str_cmp(regs, base + dest, a, b, Py_NE) < 0) goto error;
+            PyObject *_cmp = PyUnicode_RichCompare(((MenaiString_Object *)a)->value,
+                                                   ((MenaiString_Object *)b)->value, Py_NE);
+            if (!_cmp) goto error;
+            bool_store(regs, base + dest, PyObject_IsTrue(_cmp));
+            Py_DECREF(_cmp);
             break;
         }
         case OP_STRING_LT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string<?")) goto error;
             if (!require_string(b, "string<?")) goto error;
-            if (str_cmp(regs, base + dest, a, b, Py_LT) < 0) goto error;
+            PyObject *_cmp = PyUnicode_RichCompare(((MenaiString_Object *)a)->value,
+                                                   ((MenaiString_Object *)b)->value, Py_LT);
+            if (!_cmp) goto error;
+            bool_store(regs, base + dest, PyObject_IsTrue(_cmp));
+            Py_DECREF(_cmp);
             break;
         }
         case OP_STRING_GT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string>?")) goto error;
             if (!require_string(b, "string>?")) goto error;
-            if (str_cmp(regs, base + dest, a, b, Py_GT) < 0) goto error;
+            PyObject *_cmp = PyUnicode_RichCompare(((MenaiString_Object *)a)->value,
+                                                   ((MenaiString_Object *)b)->value, Py_GT);
+            if (!_cmp) goto error;
+            bool_store(regs, base + dest, PyObject_IsTrue(_cmp));
+            Py_DECREF(_cmp);
             break;
         }
         case OP_STRING_LTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string<=?")) goto error;
             if (!require_string(b, "string<=?")) goto error;
-            if (str_cmp(regs, base + dest, a, b, Py_LE) < 0) goto error;
+            PyObject *_cmp = PyUnicode_RichCompare(((MenaiString_Object *)a)->value,
+                                                   ((MenaiString_Object *)b)->value, Py_LE);
+            if (!_cmp) goto error;
+            bool_store(regs, base + dest, PyObject_IsTrue(_cmp));
+            Py_DECREF(_cmp);
             break;
         }
         case OP_STRING_GTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string>=?")) goto error;
             if (!require_string(b, "string>=?")) goto error;
-            if (str_cmp(regs, base + dest, a, b, Py_GE) < 0) goto error;
+            PyObject *_cmp = PyUnicode_RichCompare(((MenaiString_Object *)a)->value,
+                                                   ((MenaiString_Object *)b)->value, Py_GE);
+            if (!_cmp) goto error;
+            bool_store(regs, base + dest, PyObject_IsTrue(_cmp));
+            Py_DECREF(_cmp);
             break;
         }
         case OP_STRING_LENGTH: {
