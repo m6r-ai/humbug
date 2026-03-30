@@ -2584,7 +2584,10 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *av = menai_complex_value(a);
             if (av == NULL) goto error;
             PyObject *bv = menai_complex_value(b);
-            if (bv == NULL) { Py_DECREF(av); goto error; }
+            if (bv == NULL) {
+                Py_DECREF(av);
+                goto error;
+            }
             double complex za = PyComplex_RealAsDouble(av) + PyComplex_ImagAsDouble(av) * I;
             double complex zb = PyComplex_RealAsDouble(bv) + PyComplex_ImagAsDouble(bv) * I;
             Py_DECREF(av);
@@ -2605,9 +2608,11 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_complex(a, "complex->string")) goto error;
             PyObject *desc = PyObject_CallMethod(a, "describe", NULL);
             if (desc == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(desc); Py_DECREF(desc);
+            PyObject *r = make_string_from_pyobj(desc);
+            Py_DECREF(desc);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
 
@@ -2672,7 +2677,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (r == NULL) goto error;
             PyObject *_r = make_integer_value(r);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_STRING_UPCASE: {
@@ -2686,7 +2692,8 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *r = make_string_from_pyobj(up);
             Py_DECREF(up);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_STRING_DOWNCASE: {
@@ -2700,7 +2707,8 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *r = make_string_from_pyobj(lo);
             Py_DECREF(lo);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_STRING_TRIM: {
@@ -2711,9 +2719,11 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *t = PyObject_CallMethod(sv, "strip", NULL);
             Py_DECREF(sv);
             if (t == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(t); Py_DECREF(t);
+            PyObject *r = make_string_from_pyobj(t);
+            Py_DECREF(t);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_STRING_TRIM_LEFT: {
@@ -2724,9 +2734,11 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *t = PyObject_CallMethod(sv, "lstrip", NULL);
             Py_DECREF(sv);
             if (t == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(t); Py_DECREF(t);
+            PyObject *r = make_string_from_pyobj(t);
+            Py_DECREF(t);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_STRING_TRIM_RIGHT: {
@@ -2737,9 +2749,11 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *t = PyObject_CallMethod(sv, "rstrip", NULL);
             Py_DECREF(sv);
             if (t == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(t); Py_DECREF(t);
+            PyObject *r = make_string_from_pyobj(t);
+            Py_DECREF(t);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_STRING_CONCAT: {
@@ -2749,13 +2763,19 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
-            if (sb == NULL) { Py_DECREF(sa); goto error; }
+            if (sb == NULL) {
+                Py_DECREF(sa);
+                goto error;
+            }
             PyObject *cat = PyUnicode_Concat(sa, sb);
-            Py_DECREF(sa); Py_DECREF(sb);
+            Py_DECREF(sa);
+            Py_DECREF(sb);
             if (cat == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(cat); Py_DECREF(cat);
+            PyObject *r = make_string_from_pyobj(cat);
+            Py_DECREF(cat);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_STRING_PREFIX_P: {
@@ -2765,9 +2785,13 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
-            if (sb == NULL) { Py_DECREF(sa); goto error; }
+            if (sb == NULL) {
+                Py_DECREF(sa);
+                goto error;
+            }
             int r = PyUnicode_Tailmatch(sa, sb, 0, PY_SSIZE_T_MAX, -1);
-            Py_DECREF(sa); Py_DECREF(sb);
+            Py_DECREF(sa);
+            Py_DECREF(sb);
             if (r < 0) goto error;
             bool_store(regs, base + dest, r);
             break;
@@ -2779,9 +2803,13 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
-            if (sb == NULL) { Py_DECREF(sa); goto error; }
+            if (sb == NULL) {
+                Py_DECREF(sa);
+                goto error;
+            }
             int r = PyUnicode_Tailmatch(sa, sb, 0, PY_SSIZE_T_MAX, 1);
-            Py_DECREF(sa); Py_DECREF(sb);
+            Py_DECREF(sa);
+            Py_DECREF(sb);
             if (r < 0) goto error;
             bool_store(regs, base + dest, r);
             break;
@@ -2789,11 +2817,17 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_STRING_REF: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string-ref")) goto error;
-            if (!IS_MENAI_INTEGER(b)) { menai_raise_eval_error("string-ref: index must be integer"); goto error; }
+            if (!IS_MENAI_INTEGER(b)) {
+                menai_raise_eval_error("string-ref: index must be integer");
+                goto error;
+            }
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
             PyObject *iv = menai_integer_value(b);
-            if (iv == NULL) { Py_DECREF(sa); goto error; }
+            if (iv == NULL) {
+                Py_DECREF(sa);
+                goto error;
+            }
             Py_ssize_t idx = PyLong_AsSsize_t(iv);
             Py_DECREF(iv);
             Py_ssize_t slen = PyUnicode_GET_LENGTH(sa);
@@ -2806,52 +2840,70 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(sa);
             PyObject *ch_str = PyUnicode_FromOrdinal((int)ch);
             if (ch_str == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(ch_str); Py_DECREF(ch_str);
+            PyObject *r = make_string_from_pyobj(ch_str);
+            Py_DECREF(ch_str);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_STRING_SLICE: {
             PyObject *a = regs[base + src0], *b = regs[base + src1], *c = regs[base + src2];
             if (!require_string(a, "string-slice")) goto error;
             if (!IS_MENAI_INTEGER(b) || !IS_MENAI_INTEGER(c)) {
-                menai_raise_eval_error("string-slice: indices must be integers"); goto error;
+                menai_raise_eval_error("string-slice: indices must be integers");
+                goto error;
             }
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (bv == NULL) { Py_DECREF(sa); goto error; }
+            if (bv == NULL) {
+                Py_DECREF(sa);
+                goto error;
+            }
             PyObject *cv = menai_integer_value(c);
-            if (cv == NULL) { Py_DECREF(bv); Py_DECREF(sa); goto error; }
+            if (cv == NULL) {
+                Py_DECREF(bv);
+                Py_DECREF(sa);
+                goto error;
+            }
             Py_ssize_t start = PyLong_AsSsize_t(bv), end = PyLong_AsSsize_t(cv);
-            Py_DECREF(bv); Py_DECREF(cv);
+            Py_DECREF(bv);
+            Py_DECREF(cv);
             Py_ssize_t slen = PyUnicode_GET_LENGTH(sa);
             if (start < 0) {
                 Py_DECREF(sa);
-                menai_raise_eval_errorf("string-slice start index cannot be negative: %zd", start); goto error;
+                menai_raise_eval_errorf("string-slice start index cannot be negative: %zd", start);
+                goto error;
             }
             if (end < 0) {
                 Py_DECREF(sa);
-                menai_raise_eval_errorf("string-slice end index cannot be negative: %zd", end); goto error;
+                menai_raise_eval_errorf("string-slice end index cannot be negative: %zd", end);
+                goto error;
             }
             if (start > slen) {
                 Py_DECREF(sa);
-                menai_raise_eval_errorf("string-slice start index out of range: %zd (string length: %zd)", start, slen); goto error;
+                menai_raise_eval_errorf("string-slice start index out of range: %zd (string length: %zd)", start, slen);
+                goto error;
             }
             if (end > slen) {
                 Py_DECREF(sa);
-                menai_raise_eval_errorf("string-slice end index out of range: %zd (string length: %zd)", end, slen); goto error;
+                menai_raise_eval_errorf("string-slice end index out of range: %zd (string length: %zd)", end, slen);
+                goto error;
             }
             if (start > end) {
                 Py_DECREF(sa);
-                menai_raise_eval_errorf("string-slice start index (%zd) cannot be greater than end index (%zd)", start, end); goto error;
+                menai_raise_eval_errorf("string-slice start index (%zd) cannot be greater than end index (%zd)", start, end);
+                goto error;
             }
             PyObject *sliced = PyUnicode_Substring(sa, start, end);
             Py_DECREF(sa);
             if (sliced == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(sliced); Py_DECREF(sliced);
+            PyObject *r = make_string_from_pyobj(sliced);
+            Py_DECREF(sliced);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_STRING_REPLACE: {
@@ -2862,15 +2914,26 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
-            if (sb == NULL) { Py_DECREF(sa); goto error; }
+            if (sb == NULL) {
+                Py_DECREF(sa);
+                goto error;
+            }
             PyObject *sc = menai_string_value(c);
-            if (sc == NULL) { Py_DECREF(sb); Py_DECREF(sa); goto error; }
+            if (sc == NULL) {
+                Py_DECREF(sb);
+                Py_DECREF(sa);
+                goto error;
+            }
             PyObject *replaced = PyObject_CallMethod(sa, "replace", "OO", sb, sc);
-            Py_DECREF(sa); Py_DECREF(sb); Py_DECREF(sc);
+            Py_DECREF(sa);
+            Py_DECREF(sb);
+            Py_DECREF(sc);
             if (replaced == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(replaced); Py_DECREF(replaced);
+            PyObject *r = make_string_from_pyobj(replaced);
+            Py_DECREF(replaced);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_STRING_INDEX: {
@@ -2880,9 +2943,13 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
-            if (sb == NULL) { Py_DECREF(sa); goto error; }
+            if (sb == NULL) {
+                Py_DECREF(sa);
+                goto error;
+            }
             Py_ssize_t idx = PyUnicode_Find(sa, sb, 0, PY_SSIZE_T_MAX, 1);
-            Py_DECREF(sa); Py_DECREF(sb);
+            Py_DECREF(sa);
+            Py_DECREF(sb);
             if (idx == -2) goto error; /* error */
             if (idx == -1) {
                 reg_set(regs, base + dest, Menai_NONE);
@@ -2891,7 +2958,8 @@ execute_loop(PyObject *code, PyObject *globals,
                 if (iv == NULL) goto error;
                 PyObject *_r = make_integer_value(iv);
                 if (_r == NULL) goto error;
-                reg_set(regs, base + dest, _r); Py_DECREF(_r);
+                reg_set(regs, base + dest, _r);
+                Py_DECREF(_r);
             }
             break;
         }
@@ -2912,17 +2980,22 @@ execute_loop(PyObject *code, PyObject *globals,
             if (iv == NULL) goto error;
             PyObject *_r = make_integer_value(iv);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_STRING_TO_INTEGER: {
             /* src0=string, src1=radix(integer) */
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string->integer")) goto error;
-            if (!IS_MENAI_INTEGER(b)) { menai_raise_eval_error("string->integer: radix must be integer"); goto error; }
+            if (!IS_MENAI_INTEGER(b)) {
+                menai_raise_eval_error("string->integer: radix must be integer");
+                goto error;
+            }
             PyObject *bv = menai_integer_value(b);
             if (bv == NULL) goto error;
-            long radix = PyLong_AsLong(bv); Py_DECREF(bv);
+            long radix = PyLong_AsLong(bv);
+            Py_DECREF(bv);
             if (radix == -1 && PyErr_Occurred()) goto error;
             if (radix != 2 && radix != 8 && radix != 10 && radix != 16) {
                 menai_raise_eval_errorf("string->integer radix must be 2, 8, 10, or 16, got %ld", radix);
@@ -2941,7 +3014,8 @@ execute_loop(PyObject *code, PyObject *globals,
             } else {
                 PyObject *_r = make_integer_value(ri);
                 if (_r == NULL) goto error;
-                reg_set(regs, base + dest, _r); Py_DECREF(_r);
+                reg_set(regs, base + dest, _r);
+                Py_DECREF(_r);
             }
             break;
         }
@@ -2955,27 +3029,38 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *result = NULL;
             /* Check for 'j'/'J' → complex */
             PyObject *lower = PyObject_CallMethod(sa, "lower", NULL);
-            if (lower == NULL) { Py_DECREF(sa); goto error; }
+            if (lower == NULL) {
+                Py_DECREF(sa);
+                goto error;
+            }
             /* Use PyUnicode_Contains to avoid leaking temporary string objects */
             PyObject *_j = PyUnicode_FromString("j");
             PyObject *_dot = PyUnicode_FromString(".");
             PyObject *_e = PyUnicode_FromString("e");
             if (!_j || !_dot || !_e) {
-                Py_XDECREF(_j); Py_XDECREF(_dot); Py_XDECREF(_e);
-                Py_DECREF(lower); Py_DECREF(sa); goto error;
+                Py_XDECREF(_j);
+                Py_XDECREF(_dot);
+                Py_XDECREF(_e);
+                Py_DECREF(lower);
+                Py_DECREF(sa);
+                goto error;
             }
             int has_j = PyUnicode_Find(lower, _j, 0, PY_SSIZE_T_MAX, 1) >= 0;
             int has_dot = PyUnicode_Find(sa, _dot, 0, PY_SSIZE_T_MAX, 1) >= 0;
             int has_e = PyUnicode_Find(lower, _e, 0, PY_SSIZE_T_MAX, 1) >= 0;
-            Py_DECREF(_j); Py_DECREF(_dot); Py_DECREF(_e);
+            Py_DECREF(_j);
+            Py_DECREF(_dot);
+            Py_DECREF(_e);
             Py_DECREF(lower);
             if (!has_dot && !has_e && !has_j) {
                 result = PyLong_FromUnicodeObject(sa, 10);
                 if (result) {
-                    PyObject *r = make_integer(result); Py_DECREF(result);
+                    PyObject *r = make_integer(result);
+                    Py_DECREF(result);
                     Py_DECREF(sa);
                     if (r == NULL) goto error;
-                    reg_set(regs, base + dest, r); Py_DECREF(r);
+                    reg_set(regs, base + dest, r);
+                    Py_DECREF(r);
                     break;
                 }
                 PyErr_Clear();
@@ -2985,9 +3070,11 @@ execute_loop(PyObject *code, PyObject *globals,
                 if (result != NULL) {
                     PyObject *r = make_complex_from_doubles(PyComplex_RealAsDouble(result),
                                                             PyComplex_ImagAsDouble(result));
-                    Py_DECREF(result); Py_DECREF(sa);
+                    Py_DECREF(result);
+                    Py_DECREF(sa);
                     if (r == NULL) goto error;
-                    reg_set(regs, base + dest, r); Py_DECREF(r);
+                    reg_set(regs, base + dest, r);
+                    Py_DECREF(r);
                     break;
                 }
                 PyErr_Clear();
@@ -2996,10 +3083,12 @@ execute_loop(PyObject *code, PyObject *globals,
             result = PyFloat_FromString(sa);
             Py_DECREF(sa);
             if (result) {
-                double dv = PyFloat_AsDouble(result); Py_DECREF(result);
+                double dv = PyFloat_AsDouble(result);
+                Py_DECREF(result);
                 PyObject *_r = make_float(dv);
                 if (_r == NULL) goto error;
-                reg_set(regs, base + dest, _r); Py_DECREF(_r);
+                reg_set(regs, base + dest, _r);
+                Py_DECREF(_r);
             } else {
                 PyErr_Clear();
                 reg_set(regs, base + dest, Menai_NONE);
@@ -3014,40 +3103,70 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
-            if (sb == NULL) { Py_DECREF(sa); goto error; }
+            if (sb == NULL) {
+                Py_DECREF(sa);
+                goto error;
+            }
             PyObject *parts;
             if (PyUnicode_GET_LENGTH(sb) == 0) {
                 /* Split into individual characters */
                 Py_ssize_t slen = PyUnicode_GET_LENGTH(sa);
                 parts = PyList_New(slen);
-                if (parts == NULL) { Py_DECREF(sb); Py_DECREF(sa); goto error; }
+                if (parts == NULL) {
+                    Py_DECREF(sb);
+                    Py_DECREF(sa);
+                    goto error;
+                }
                 for (Py_ssize_t i = 0; i < slen; i++) {
                     PyObject *ch = PyUnicode_FromOrdinal(PyUnicode_ReadChar(sa, i));
-                    if (ch == NULL) { Py_DECREF(parts); Py_DECREF(sb); Py_DECREF(sa); goto error; }
-                    PyObject *ms = make_string_from_pyobj(ch); Py_DECREF(ch);
-                    if (ms == NULL) { Py_DECREF(parts); Py_DECREF(sb); Py_DECREF(sa); goto error; }
+                    if (ch == NULL) {
+                        Py_DECREF(parts);
+                        Py_DECREF(sb);
+                        Py_DECREF(sa);
+                        goto error;
+                    }
+                    PyObject *ms = make_string_from_pyobj(ch);
+                    Py_DECREF(ch);
+                    if (ms == NULL) {
+                        Py_DECREF(parts);
+                        Py_DECREF(sb);
+                        Py_DECREF(sa);
+                        goto error;
+                    }
                     PyList_SET_ITEM(parts, i, ms);
                 }
             } else {
                 parts = PyObject_CallMethod(sa, "split", "O", sb);
-                if (parts == NULL) { Py_DECREF(sb); Py_DECREF(sa); goto error; }
+                if (parts == NULL) {
+                    Py_DECREF(sb);
+                    Py_DECREF(sa);
+                    goto error;
+                }
                 /* Wrap each str in MenaiString */
                 Py_ssize_t n = PyList_GET_SIZE(parts);
                 for (Py_ssize_t i = 0; i < n; i++) {
                     PyObject *ms = make_string_from_pyobj(PyList_GET_ITEM(parts, i));
-                    if (ms == NULL) { Py_DECREF(parts); Py_DECREF(sb); Py_DECREF(sa); goto error; }
+                    if (ms == NULL) {
+                        Py_DECREF(parts);
+                        Py_DECREF(sb);
+                        Py_DECREF(sa);
+                        goto error;
+                    }
                     PyObject *old = PyList_GET_ITEM(parts, i);
                     PyList_SET_ITEM(parts, i, ms);
                     Py_DECREF(old);
                 }
             }
-            Py_DECREF(sa); Py_DECREF(sb);
-            PyObject *tup = PyList_AsTuple(parts); Py_DECREF(parts);
+            Py_DECREF(sa);
+            Py_DECREF(sb);
+            PyObject *tup = PyList_AsTuple(parts);
+            Py_DECREF(parts);
             if (tup == NULL) goto error;
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, tup);
             Py_DECREF(tup);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
 
@@ -3094,7 +3213,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (iv == NULL) goto error;
             PyObject *_r = make_integer_value(iv);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_LIST_FIRST: {
@@ -3102,7 +3222,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_list(a, "list-first")) goto error;
             PyObject *elems = menai_list_elements(a);
             if (PyTuple_GET_SIZE(elems) == 0) {
-                menai_raise_eval_error("Function 'list-first' requires a non-empty list"); goto error;
+                menai_raise_eval_error("Function 'list-first' requires a non-empty list");
+                goto error;
             }
             PyObject *first = PyTuple_GET_ITEM(elems, 0);
             reg_set(regs, base + dest, first);
@@ -3113,14 +3234,16 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_list(a, "list-rest")) goto error;
             PyObject *elems = menai_list_elements(a);
             if (PyTuple_GET_SIZE(elems) == 0) {
-                menai_raise_eval_error("Function 'list-rest' requires a non-empty list"); goto error;
+                menai_raise_eval_error("Function 'list-rest' requires a non-empty list");
+                goto error;
             }
             PyObject *rest = PyTuple_GetSlice(elems, 1, PY_SSIZE_T_MAX);
             if (rest == NULL) goto error;
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, rest);
             Py_DECREF(rest);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_LIST_LAST: {
@@ -3129,7 +3252,8 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *elems = menai_list_elements(a);
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             if (n == 0) {
-                menai_raise_eval_error("Function 'list-last' requires a non-empty list"); goto error;
+                menai_raise_eval_error("Function 'list-last' requires a non-empty list");
+                goto error;
             }
             PyObject *last = PyTuple_GET_ITEM(elems, n - 1);
             reg_set(regs, base + dest, last);
@@ -3138,14 +3262,19 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_LIST_REF: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_list(a, "list-ref")) goto error;
-            if (!IS_MENAI_INTEGER(b)) { menai_raise_eval_error("list-ref: index must be integer"); goto error; }
+            if (!IS_MENAI_INTEGER(b)) {
+                menai_raise_eval_error("list-ref: index must be integer");
+                goto error;
+            }
             PyObject *elems = menai_list_elements(a);
             PyObject *bv = menai_integer_value(b);
             if (bv == NULL) goto error;
-            Py_ssize_t idx = PyLong_AsSsize_t(bv); Py_DECREF(bv);
+            Py_ssize_t idx = PyLong_AsSsize_t(bv);
+            Py_DECREF(bv);
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             if (idx < 0 || idx >= n) {
-                menai_raise_eval_errorf("list-ref: index out of range: %zd", idx); goto error;
+                menai_raise_eval_errorf("list-ref: index out of range: %zd", idx);
+                goto error;
             }
             reg_set(regs, base + dest, PyTuple_GET_ITEM(elems, idx));
             break;
@@ -3157,15 +3286,18 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             PyObject *new_tup = PyTuple_New(n + 1);
             if (new_tup == NULL) goto error;
-            Py_INCREF(item); PyTuple_SET_ITEM(new_tup, 0, item);
+            Py_INCREF(item);
+            PyTuple_SET_ITEM(new_tup, 0, item);
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *e = PyTuple_GET_ITEM(elems, i);
-                Py_INCREF(e); PyTuple_SET_ITEM(new_tup, i + 1, e);
+                Py_INCREF(e);
+                PyTuple_SET_ITEM(new_tup, i + 1, e);
             }
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, new_tup);
             Py_DECREF(new_tup);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_LIST_APPEND: {
@@ -3177,13 +3309,16 @@ execute_loop(PyObject *code, PyObject *globals,
             if (new_tup == NULL) goto error;
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *e = PyTuple_GET_ITEM(elems, i);
-                Py_INCREF(e); PyTuple_SET_ITEM(new_tup, i, e);
+                Py_INCREF(e);
+                PyTuple_SET_ITEM(new_tup, i, e);
             }
-            Py_INCREF(item); PyTuple_SET_ITEM(new_tup, n, item);
+            Py_INCREF(item);
+            PyTuple_SET_ITEM(new_tup, n, item);
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, new_tup);
             Py_DECREF(new_tup);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_LIST_REVERSE: {
@@ -3195,12 +3330,14 @@ execute_loop(PyObject *code, PyObject *globals,
             if (rev == NULL) goto error;
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *e = PyTuple_GET_ITEM(elems, n - 1 - i);
-                Py_INCREF(e); PyTuple_SET_ITEM(rev, i, e);
+                Py_INCREF(e);
+                PyTuple_SET_ITEM(rev, i, e);
             }
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, rev);
             Py_DECREF(rev);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_LIST_CONCAT: {
@@ -3214,7 +3351,8 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, cat);
             Py_DECREF(cat);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_LIST_MEMBER_P: {
@@ -3235,7 +3373,10 @@ execute_loop(PyObject *code, PyObject *globals,
             for (Py_ssize_t i = 0; i < n; i++) {
                 int eq = PyObject_RichCompareBool(PyTuple_GET_ITEM(elems, i), item, Py_EQ);
                 if (eq < 0) goto error;
-                if (eq) { found = i; break; }
+                if (eq) {
+                    found = i;
+                    break;
+                }
             }
             if (found == -1) {
                 reg_set(regs, base + dest, Menai_NONE);
@@ -3244,7 +3385,8 @@ execute_loop(PyObject *code, PyObject *globals,
                 if (iv == NULL) goto error;
                 PyObject *_r = make_integer_value(iv);
                 if (_r == NULL) goto error;
-                reg_set(regs, base + dest, _r); Py_DECREF(_r);
+                reg_set(regs, base + dest, _r);
+                Py_DECREF(_r);
             }
             break;
         }
@@ -3252,37 +3394,48 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1], *c = regs[base + src2];
             if (!require_list(a, "list-slice")) goto error;
             if (!IS_MENAI_INTEGER(b) || !IS_MENAI_INTEGER(c)) {
-                menai_raise_eval_error("list-slice: indices must be integers"); goto error;
+                menai_raise_eval_error("list-slice: indices must be integers");
+                goto error;
             }
             PyObject *elems = menai_list_elements(a);
             PyObject *bv = menai_integer_value(b);
             if (bv == NULL) goto error;
             PyObject *cv = menai_integer_value(c);
-            if (cv == NULL) { Py_DECREF(bv); goto error; }
+            if (cv == NULL) {
+                Py_DECREF(bv);
+                goto error;
+            }
             Py_ssize_t start = PyLong_AsSsize_t(bv), end = PyLong_AsSsize_t(cv);
-            Py_DECREF(bv); Py_DECREF(cv);
+            Py_DECREF(bv);
+            Py_DECREF(cv);
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             if (start < 0) {
-                menai_raise_eval_errorf("list-slice start index cannot be negative: %zd", start); goto error;
+                menai_raise_eval_errorf("list-slice start index cannot be negative: %zd", start);
+                goto error;
             }
             if (end < 0) {
-                menai_raise_eval_errorf("list-slice end index cannot be negative: %zd", end); goto error;
+                menai_raise_eval_errorf("list-slice end index cannot be negative: %zd", end);
+                goto error;
             }
             if (start > n) {
-                menai_raise_eval_errorf("list-slice start index out of range: %zd (list length: %zd)", start, n); goto error;
+                menai_raise_eval_errorf("list-slice start index out of range: %zd (list length: %zd)", start, n);
+                goto error;
             }
             if (end > n) {
-                menai_raise_eval_errorf("list-slice end index out of range: %zd (list length: %zd)", end, n); goto error;
+                menai_raise_eval_errorf("list-slice end index out of range: %zd (list length: %zd)", end, n);
+                goto error;
             }
             if (start > end) {
-                menai_raise_eval_errorf("list-slice start index (%zd) cannot be greater than end index (%zd)", start, end); goto error;
+                menai_raise_eval_errorf("list-slice start index (%zd) cannot be greater than end index (%zd)", start, end);
+                goto error;
             }
             PyObject *sliced = PyTuple_GetSlice(elems, start, end);
             if (sliced == NULL) goto error;
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, sliced);
             Py_DECREF(sliced);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_LIST_REMOVE: {
@@ -3303,13 +3456,20 @@ execute_loop(PyObject *code, PyObject *globals,
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *e = PyTuple_GET_ITEM(elems, i);
                 int eq = PyObject_RichCompareBool(e, item, Py_EQ);
-                if (eq < 0) { Py_DECREF(new_tup); goto error; }
-                if (!eq) { Py_INCREF(e); PyTuple_SET_ITEM(new_tup, j++, e); }
+                if (eq < 0) {
+                    Py_DECREF(new_tup);
+                    goto error;
+                }
+                if (!eq) {
+                    Py_INCREF(e);
+                    PyTuple_SET_ITEM(new_tup, j++, e);
+                }
             }
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, new_tup);
             Py_DECREF(new_tup);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_LIST_TO_STRING: {
@@ -3321,24 +3481,35 @@ execute_loop(PyObject *code, PyObject *globals,
             if (sep == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             PyObject *parts = PyList_New(n);
-            if (parts == NULL) { Py_DECREF(sep); goto error; }
+            if (parts == NULL) {
+                Py_DECREF(sep);
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *elem = PyTuple_GET_ITEM(elems, i);
                 if (!IS_MENAI_STRING(elem)) {
-                    Py_DECREF(parts); Py_DECREF(sep);
+                    Py_DECREF(parts);
+                    Py_DECREF(sep);
                     menai_raise_eval_error("list->string: all elements must be strings");
                     goto error;
                 }
                 PyObject *sv = menai_string_value(elem);
-                if (sv == NULL) { Py_DECREF(parts); Py_DECREF(sep); goto error; }
+                if (sv == NULL) {
+                    Py_DECREF(parts);
+                    Py_DECREF(sep);
+                    goto error;
+                }
                 PyList_SET_ITEM(parts, i, sv); /* steals ref */
             }
             PyObject *joined = PyUnicode_Join(sep, parts);
-            Py_DECREF(sep); Py_DECREF(parts);
+            Py_DECREF(sep);
+            Py_DECREF(parts);
             if (joined == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(joined); Py_DECREF(joined);
+            PyObject *r = make_string_from_pyobj(joined);
+            Py_DECREF(joined);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_LIST_TO_SET: {
@@ -3347,7 +3518,8 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *elems = menai_list_elements(a);
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_SetType, elems);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
 
@@ -3388,7 +3560,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (iv == NULL) goto error;
             PyObject *_r = make_integer_value(iv);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_DICT_KEYS: {
@@ -3403,18 +3576,23 @@ execute_loop(PyObject *code, PyObject *globals,
                 if (pairs == NULL) goto error;
                 Py_ssize_t n = PyTuple_GET_SIZE(pairs);
                 PyObject *tup = PyTuple_New(n);
-                if (tup == NULL) { Py_DECREF(pairs); goto error; }
+                if (tup == NULL) {
+                    Py_DECREF(pairs);
+                    goto error;
+                }
                 for (Py_ssize_t i = 0; i < n; i++) {
                     PyObject *pair = PyTuple_GET_ITEM(pairs, i);
                     PyObject *k = PyTuple_GET_ITEM(pair, 0);
-                    Py_INCREF(k); PyTuple_SET_ITEM(tup, i, k);
+                    Py_INCREF(k);
+                    PyTuple_SET_ITEM(tup, i, k);
                 }
                 Py_DECREF(pairs);
                 r = PyObject_CallOneArg((PyObject *)Menai_ListType, tup);
                 Py_DECREF(tup);
             }
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_DICT_VALUES: {
@@ -3424,17 +3602,22 @@ execute_loop(PyObject *code, PyObject *globals,
             if (pairs == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(pairs);
             PyObject *tup = PyTuple_New(n);
-            if (tup == NULL) { Py_DECREF(pairs); goto error; }
+            if (tup == NULL) {
+                Py_DECREF(pairs);
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *pair = PyTuple_GET_ITEM(pairs, i);
                 PyObject *v = PyTuple_GET_ITEM(pair, 1);
-                Py_INCREF(v); PyTuple_SET_ITEM(tup, i, v);
+                Py_INCREF(v);
+                PyTuple_SET_ITEM(tup, i, v);
             }
             Py_DECREF(pairs);
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, tup);
             Py_DECREF(tup);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_DICT_HAS_P: {
@@ -3443,9 +3626,13 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *r = PyObject_CallMethod(a, "to_hashable_key", "O", key);
             if (r == NULL) goto error;
             PyObject *lookup = PyObject_GetAttrString(a, "lookup");
-            if (lookup == NULL) { Py_DECREF(r); goto error; }
+            if (lookup == NULL) {
+                Py_DECREF(r);
+                goto error;
+            }
             int has = PyDict_Contains(lookup, r);
-            Py_DECREF(r); Py_DECREF(lookup);
+            Py_DECREF(r);
+            Py_DECREF(lookup);
             if (has < 0) goto error;
             bool_store(regs, base + dest, has);
             break;
@@ -3457,9 +3644,13 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *hk = PyObject_CallMethod(a, "to_hashable_key", "O", key);
             if (hk == NULL) goto error;
             PyObject *lookup = PyObject_GetAttrString(a, "lookup");
-            if (lookup == NULL) { Py_DECREF(hk); goto error; }
+            if (lookup == NULL) {
+                Py_DECREF(hk);
+                goto error;
+            }
             PyObject *entry = PyDict_GetItem(lookup, hk);
-            Py_DECREF(hk); Py_DECREF(lookup);
+            Py_DECREF(hk);
+            Py_DECREF(lookup);
             if (entry != NULL) {
                 /* entry is (key, value) tuple */
                 PyObject *val = PyTuple_GET_ITEM(entry, 1);
@@ -3482,37 +3673,68 @@ execute_loop(PyObject *code, PyObject *globals,
                 PyObject *pairs = PyObject_GetAttrString(a, "pairs");
                 if (pairs == NULL) goto error;
                 PyObject *hk = PyObject_CallMethod(a, "to_hashable_key", "O", key);
-                if (hk == NULL) { Py_DECREF(pairs); goto error; }
+                if (hk == NULL) {
+                    Py_DECREF(pairs);
+                    goto error;
+                }
                 Py_ssize_t n = PyTuple_GET_SIZE(pairs);
                 /* Find if key exists */
                 int found = 0;
                 PyObject *new_pairs = PyList_New(0);
-                if (new_pairs == NULL) { Py_DECREF(hk); Py_DECREF(pairs); goto error; }
+                if (new_pairs == NULL) {
+                    Py_DECREF(hk);
+                    Py_DECREF(pairs);
+                    goto error;
+                }
                 for (Py_ssize_t i = 0; i < n; i++) {
                     PyObject *pair = PyTuple_GET_ITEM(pairs, i);
                     PyObject *k = PyTuple_GET_ITEM(pair, 0);
                     PyObject *khk = PyObject_CallMethod(a, "to_hashable_key", "O", k);
-                    if (khk == NULL) { Py_DECREF(new_pairs); Py_DECREF(hk); Py_DECREF(pairs); goto error; }
+                    if (khk == NULL) {
+                        Py_DECREF(new_pairs);
+                        Py_DECREF(hk);
+                        Py_DECREF(pairs);
+                        goto error;
+                    }
                     int eq = PyObject_RichCompareBool(khk, hk, Py_EQ);
                     Py_DECREF(khk);
-                    if (eq < 0) { Py_DECREF(new_pairs); Py_DECREF(hk); Py_DECREF(pairs); goto error; }
+                    if (eq < 0) {
+                        Py_DECREF(new_pairs);
+                        Py_DECREF(hk);
+                        Py_DECREF(pairs);
+                        goto error;
+                    }
                     PyObject *new_pair = eq ? PyTuple_Pack(2, key, val) : pair;
                     if (eq) found = 1;
-                    if (new_pair == NULL) { Py_DECREF(new_pairs); Py_DECREF(hk); Py_DECREF(pairs); goto error; }
+                    if (new_pair == NULL) {
+                        Py_DECREF(new_pairs);
+                        Py_DECREF(hk);
+                        Py_DECREF(pairs);
+                        goto error;
+                    }
                     if (!eq) Py_INCREF(new_pair);
                     if (PyList_Append(new_pairs, new_pair) < 0) {
-                        Py_DECREF(new_pair); Py_DECREF(new_pairs); Py_DECREF(hk); Py_DECREF(pairs); goto error;
+                        Py_DECREF(new_pair);
+                        Py_DECREF(new_pairs);
+                        Py_DECREF(hk);
+                        Py_DECREF(pairs);
+                        goto error;
                     }
                     Py_DECREF(new_pair);
                 }
                 if (!found) {
                     PyObject *new_pair = PyTuple_Pack(2, key, val);
                     if (new_pair == NULL || PyList_Append(new_pairs, new_pair) < 0) {
-                        Py_XDECREF(new_pair); Py_DECREF(new_pairs); Py_DECREF(hk); Py_DECREF(pairs); goto error;
+                        Py_XDECREF(new_pair);
+                        Py_DECREF(new_pairs);
+                        Py_DECREF(hk);
+                        Py_DECREF(pairs);
+                        goto error;
                     }
                     Py_DECREF(new_pair);
                 }
-                Py_DECREF(hk); Py_DECREF(pairs);
+                Py_DECREF(hk);
+                Py_DECREF(pairs);
                 PyObject *new_tup = PyList_AsTuple(new_pairs);
                 Py_DECREF(new_pairs);
                 if (new_tup == NULL) goto error;
@@ -3520,7 +3742,8 @@ execute_loop(PyObject *code, PyObject *globals,
                 Py_DECREF(new_tup);
             }
             if (result == NULL) goto error;
-            reg_set(regs, base + dest, result); Py_DECREF(result);
+            reg_set(regs, base + dest, result);
+            Py_DECREF(result);
             break;
         }
         case OP_DICT_REMOVE: {
@@ -3752,40 +3975,90 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *ea = PyObject_GetAttrString(a, "elements");
             if (ea == NULL) goto error;
             PyObject *mb = PyObject_GetAttrString(b, "members");
-            if (mb == NULL) { Py_DECREF(ea); goto error; }
+            if (mb == NULL) {
+                Py_DECREF(ea);
+                goto error;
+            }
             PyObject *eb = PyObject_GetAttrString(b, "elements");
-            if (eb == NULL) { Py_DECREF(mb); Py_DECREF(ea); goto error; }
+            if (eb == NULL) {
+                Py_DECREF(mb);
+                Py_DECREF(ea);
+                goto error;
+            }
             Py_ssize_t na = PyTuple_GET_SIZE(ea), nb = PyTuple_GET_SIZE(eb);
             PyObject *new_list = PyList_New(0);
-            if (new_list == NULL) { Py_DECREF(eb); Py_DECREF(mb); Py_DECREF(ea); goto error; }
+            if (new_list == NULL) {
+                Py_DECREF(eb);
+                Py_DECREF(mb);
+                Py_DECREF(ea);
+                goto error;
+            }
             PyObject *seen = PyDict_New();
-            if (seen == NULL) { Py_DECREF(new_list); Py_DECREF(eb); Py_DECREF(mb); Py_DECREF(ea); goto error; }
+            if (seen == NULL) {
+                Py_DECREF(new_list);
+                Py_DECREF(eb);
+                Py_DECREF(mb);
+                Py_DECREF(ea);
+                goto error;
+            }
             /* Add all of a's elements */
             for (Py_ssize_t i = 0; i < na; i++) {
                 PyObject *e = PyTuple_GET_ITEM(ea, i);
                 PyObject *hk = PyObject_CallMethod((PyObject *)Menai_DictType, "to_hashable_key", "O", e);
-                if (hk == NULL) goto set_union_err;
+                if (hk == NULL) {
+                    Py_DECREF(seen);
+                    Py_DECREF(eb);
+                    Py_DECREF(mb);
+                    Py_DECREF(ea);
+                    Py_DECREF(new_list);
+                    goto error;
+                }
                 Py_INCREF(e);
                 if (PyList_Append(new_list, e) < 0 || PyDict_SetItem(seen, hk, Py_True) < 0) {
-                    Py_DECREF(e); Py_DECREF(hk); goto set_union_err;
+                    Py_DECREF(e);
+                    Py_DECREF(hk);
+                    Py_DECREF(seen);
+                    Py_DECREF(eb);
+                    Py_DECREF(mb);
+                    Py_DECREF(ea);
+                    Py_DECREF(new_list);
+                    goto error;
                 }
-                Py_DECREF(e); Py_DECREF(hk);
+                Py_DECREF(e);
+                Py_DECREF(hk);
             }
             /* Add b's elements not in a */
             for (Py_ssize_t i = 0; i < nb; i++) {
                 PyObject *e = PyTuple_GET_ITEM(eb, i);
                 PyObject *hk = PyObject_CallMethod((PyObject *)Menai_DictType, "to_hashable_key", "O", e);
-                if (hk == NULL) goto set_union_err;
+                if (hk == NULL) {
+                    Py_DECREF(seen);
+                    Py_DECREF(eb);
+                    Py_DECREF(mb);
+                    Py_DECREF(ea);
+                    Py_DECREF(new_list);
+                    goto error;
+                }
                 if (!PyDict_Contains(seen, hk)) {
                     Py_INCREF(e);
                     if (PyList_Append(new_list, e) < 0) {
-                        Py_DECREF(e); Py_DECREF(hk); goto set_union_err;
+                        Py_DECREF(e);
+                        Py_DECREF(hk);
+                        Py_DECREF(seen);
+                        Py_DECREF(eb);
+                        Py_DECREF(mb);
+                        Py_DECREF(ea);
+                        Py_DECREF(new_list);
+                        goto error;
                     }
                     Py_DECREF(e);
                 }
                 Py_DECREF(hk);
             }
-            Py_DECREF(seen); Py_DECREF(eb); Py_DECREF(mb); Py_DECREF(ea);
+            Py_DECREF(seen);
+            Py_DECREF(eb);
+            Py_DECREF(mb);
+            Py_DECREF(ea);
             {
                 PyObject *new_tup = PyList_AsTuple(new_list);
                 Py_DECREF(new_list);
@@ -3793,13 +4066,10 @@ execute_loop(PyObject *code, PyObject *globals,
                 PyObject *r = PyObject_CallOneArg((PyObject *)Menai_SetType, new_tup);
                 Py_DECREF(new_tup);
                 if (r == NULL) goto error;
-                reg_set(regs, base + dest, r); Py_DECREF(r);
+                reg_set(regs, base + dest, r);
+                Py_DECREF(r);
             }
             break;
-        set_union_err:
-            Py_DECREF(seen); Py_DECREF(eb); Py_DECREF(mb); Py_DECREF(ea);
-            Py_DECREF(new_list);
-            goto error;
         }
         case OP_SET_INTERSECTION: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
@@ -3808,33 +4078,56 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *ea = PyObject_GetAttrString(a, "elements");
             if (ea == NULL) goto error;
             PyObject *mb = PyObject_GetAttrString(b, "members");
-            if (mb == NULL) { Py_DECREF(ea); goto error; }
+            if (mb == NULL) {
+                Py_DECREF(ea);
+                goto error;
+            }
             Py_ssize_t na = PyTuple_GET_SIZE(ea);
             PyObject *new_list = PyList_New(0);
-            if (new_list == NULL) { Py_DECREF(mb); Py_DECREF(ea); goto error; }
+            if (new_list == NULL) {
+                Py_DECREF(mb);
+                Py_DECREF(ea);
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < na; i++) {
                 PyObject *e = PyTuple_GET_ITEM(ea, i);
                 PyObject *hk = PyObject_CallMethod((PyObject *)Menai_DictType, "to_hashable_key", "O", e);
-                if (hk == NULL) { Py_DECREF(new_list); Py_DECREF(mb); Py_DECREF(ea); goto error; }
+                if (hk == NULL) {
+                    Py_DECREF(new_list);
+                    Py_DECREF(mb);
+                    Py_DECREF(ea);
+                    goto error;
+                }
                 int in_b = PySequence_Contains(mb, hk);
                 Py_DECREF(hk);
-                if (in_b < 0) { Py_DECREF(new_list); Py_DECREF(mb); Py_DECREF(ea); goto error; }
+                if (in_b < 0) {
+                    Py_DECREF(new_list);
+                    Py_DECREF(mb);
+                    Py_DECREF(ea);
+                    goto error;
+                }
                 if (in_b) {
                     Py_INCREF(e);
                     if (PyList_Append(new_list, e) < 0) {
-                        Py_DECREF(e); Py_DECREF(new_list); Py_DECREF(mb); Py_DECREF(ea); goto error;
+                        Py_DECREF(e);
+                        Py_DECREF(new_list);
+                        Py_DECREF(mb);
+                        Py_DECREF(ea);
+                        goto error;
                     }
                     Py_DECREF(e);
                 }
             }
-            Py_DECREF(mb); Py_DECREF(ea);
+            Py_DECREF(mb);
+            Py_DECREF(ea);
             PyObject *new_tup = PyList_AsTuple(new_list);
             Py_DECREF(new_list);
             if (new_tup == NULL) goto error;
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_SetType, new_tup);
             Py_DECREF(new_tup);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_SET_DIFFERENCE: {
@@ -3844,33 +4137,56 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *ea = PyObject_GetAttrString(a, "elements");
             if (ea == NULL) goto error;
             PyObject *mb = PyObject_GetAttrString(b, "members");
-            if (mb == NULL) { Py_DECREF(ea); goto error; }
+            if (mb == NULL) {
+                Py_DECREF(ea);
+                goto error;
+            }
             Py_ssize_t na = PyTuple_GET_SIZE(ea);
             PyObject *new_list = PyList_New(0);
-            if (new_list == NULL) { Py_DECREF(mb); Py_DECREF(ea); goto error; }
+            if (new_list == NULL) {
+                Py_DECREF(mb);
+                Py_DECREF(ea);
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < na; i++) {
                 PyObject *e = PyTuple_GET_ITEM(ea, i);
                 PyObject *hk = PyObject_CallMethod((PyObject *)Menai_DictType, "to_hashable_key", "O", e);
-                if (hk == NULL) { Py_DECREF(new_list); Py_DECREF(mb); Py_DECREF(ea); goto error; }
+                if (hk == NULL) {
+                    Py_DECREF(new_list);
+                    Py_DECREF(mb);
+                    Py_DECREF(ea);
+                    goto error;
+                }
                 int in_b = PySequence_Contains(mb, hk);
                 Py_DECREF(hk);
-                if (in_b < 0) { Py_DECREF(new_list); Py_DECREF(mb); Py_DECREF(ea); goto error; }
+                if (in_b < 0) {
+                    Py_DECREF(new_list);
+                    Py_DECREF(mb);
+                    Py_DECREF(ea);
+                    goto error;
+                }
                 if (!in_b) {
                     Py_INCREF(e);
                     if (PyList_Append(new_list, e) < 0) {
-                        Py_DECREF(e); Py_DECREF(new_list); Py_DECREF(mb); Py_DECREF(ea); goto error;
+                        Py_DECREF(e);
+                        Py_DECREF(new_list);
+                        Py_DECREF(mb);
+                        Py_DECREF(ea);
+                        goto error;
                     }
                     Py_DECREF(e);
                 }
             }
-            Py_DECREF(mb); Py_DECREF(ea);
+            Py_DECREF(mb);
+            Py_DECREF(ea);
             PyObject *new_tup = PyList_AsTuple(new_list);
             Py_DECREF(new_list);
             if (new_tup == NULL) goto error;
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_SetType, new_tup);
             Py_DECREF(new_tup);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_SET_SUBSET_P: {
@@ -3880,10 +4196,14 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *ma = PyObject_GetAttrString(a, "members");
             if (ma == NULL) goto error;
             PyObject *mb = PyObject_GetAttrString(b, "members");
-            if (mb == NULL) { Py_DECREF(ma); goto error; }
+            if (mb == NULL) {
+                Py_DECREF(ma);
+                goto error;
+            }
             /* frozenset.issubset: use PyObject_CallMethod */
             int r = PyObject_RichCompareBool(ma, mb, Py_LE);
-            Py_DECREF(ma); Py_DECREF(mb);
+            Py_DECREF(ma);
+            Py_DECREF(mb);
             if (r < 0) goto error;
             bool_store(regs, base + dest, r);
             break;
@@ -3896,7 +4216,8 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, elems);
             Py_DECREF(elems);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
 
@@ -3908,18 +4229,31 @@ execute_loop(PyObject *code, PyObject *globals,
             /* src0=start, src1=end, src2=step — all integers */
             PyObject *ra = regs[base + src0], *rb = regs[base + src1], *rc = regs[base + src2];
             if (!IS_MENAI_INTEGER(ra) || !IS_MENAI_INTEGER(rb) || !IS_MENAI_INTEGER(rc)) {
-                menai_raise_eval_error("range requires integer arguments"); goto error;
+                menai_raise_eval_error("range requires integer arguments");
+                goto error;
             }
             PyObject *av = menai_integer_value(ra);
             if (av == NULL) goto error;
             PyObject *bv = menai_integer_value(rb);
-            if (bv == NULL) { Py_DECREF(av); goto error; }
+            if (bv == NULL) {
+                Py_DECREF(av);
+                goto error;
+            }
             PyObject *cv = menai_integer_value(rc);
-            if (cv == NULL) { Py_DECREF(bv); Py_DECREF(av); goto error; }
+            if (cv == NULL) {
+                Py_DECREF(bv);
+                Py_DECREF(av);
+                goto error;
+            }
             long start = PyLong_AsLong(av), end = PyLong_AsLong(bv), step = PyLong_AsLong(cv);
-            Py_DECREF(av); Py_DECREF(bv); Py_DECREF(cv);
+            Py_DECREF(av);
+            Py_DECREF(bv);
+            Py_DECREF(cv);
             if ((start == -1 || end == -1 || step == -1) && PyErr_Occurred()) goto error;
-            if (step == 0) { menai_raise_eval_error("range: step cannot be zero"); goto error; }
+            if (step == 0) {
+                menai_raise_eval_error("range: step cannot be zero");
+                goto error;
+            }
             /* Compute length */
             Py_ssize_t n = 0;
             if (step > 0 && end > start) n = (end - start + step - 1) / step;
@@ -3929,17 +4263,24 @@ execute_loop(PyObject *code, PyObject *globals,
             long val = start;
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *iv = PyLong_FromLong(val);
-                if (iv == NULL) { Py_DECREF(tup); goto error; }
+                if (iv == NULL) {
+                    Py_DECREF(tup);
+                    goto error;
+                }
                 PyObject *mi = make_integer(iv);
                 Py_DECREF(iv);
-                if (mi == NULL) { Py_DECREF(tup); goto error; }
+                if (mi == NULL) {
+                    Py_DECREF(tup);
+                    goto error;
+                }
                 PyTuple_SET_ITEM(tup, i, mi);
                 val += step;
             }
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, tup);
             Py_DECREF(tup);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
 
@@ -3983,16 +4324,26 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_STRUCT_TYPE_P: {
             PyObject *stype = regs[base + src0], *val = regs[base + src1];
             if (!require_structtype(stype, "struct-type?")) goto error;
-            if (!IS_MENAI_STRUCT(val)) { bool_store(regs, base + dest, 0); break; }
+            if (!IS_MENAI_STRUCT(val)) {
+                bool_store(regs, base + dest, 0);
+                break;
+            }
             PyObject *val_stype = PyObject_GetAttrString(val, "struct_type");
             if (val_stype == NULL) goto error;
             PyObject *tag_a = PyObject_GetAttrString(stype, "tag");
-            if (tag_a == NULL) { Py_DECREF(val_stype); goto error; }
+            if (tag_a == NULL) {
+                Py_DECREF(val_stype);
+                goto error;
+            }
             PyObject *tag_b = PyObject_GetAttrString(val_stype, "tag");
             Py_DECREF(val_stype);
-            if (tag_b == NULL) { Py_DECREF(tag_a); goto error; }
+            if (tag_b == NULL) {
+                Py_DECREF(tag_a);
+                goto error;
+            }
             int eq = PyObject_RichCompareBool(tag_a, tag_b, Py_EQ);
-            Py_DECREF(tag_a); Py_DECREF(tag_b);
+            Py_DECREF(tag_a);
+            Py_DECREF(tag_b);
             if (eq < 0) goto error;
             bool_store(regs, base + dest, eq);
             break;
@@ -4005,7 +4356,10 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *stype = PyObject_GetAttrString(val, "struct_type");
             if (stype == NULL) goto error;
             PyObject *name = menai_symbol_name(field_sym);
-            if (name == NULL) { Py_DECREF(stype); goto error; }
+            if (name == NULL) {
+                Py_DECREF(stype);
+                goto error;
+            }
             PyObject *idx = PyObject_CallMethod(stype, "field_index", "O", name);
             if (idx == NULL) {
                 if (PyErr_ExceptionMatches(PyExc_KeyError)) {
@@ -4018,10 +4372,14 @@ execute_loop(PyObject *code, PyObject *globals,
                         Py_DECREF(stype_name);
                     }
                 }
-                Py_DECREF(name); Py_DECREF(stype); goto error;
+                Py_DECREF(name);
+                Py_DECREF(stype);
+                goto error;
             }
-            Py_DECREF(name); Py_DECREF(stype);
-            Py_ssize_t fi = PyLong_AsSsize_t(idx); Py_DECREF(idx);
+            Py_DECREF(name);
+            Py_DECREF(stype);
+            Py_ssize_t fi = PyLong_AsSsize_t(idx);
+            Py_DECREF(idx);
             if (fi == -1 && PyErr_Occurred()) goto error;
             PyObject *fields = PyObject_GetAttrString(val, "fields");
             if (fields == NULL) goto error;
