@@ -1355,9 +1355,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (na == NULL) goto error;
             PyObject *nb = menai_symbol_name(b);
             if (nb == NULL) goto error;
-            int eq = PyObject_RichCompareBool(na, nb, Py_EQ);
-            if (eq < 0) goto error;
-            bool_store(regs, base + dest, eq);
+            bool_store(regs, base + dest, PyObject_RichCompareBool(na, nb, Py_EQ));
             break;
         }
 
@@ -1368,9 +1366,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (na == NULL) goto error;
             PyObject *nb = menai_symbol_name(b);
             if (nb == NULL) goto error;
-            int neq = PyObject_RichCompareBool(na, nb, Py_NE);
-            if (neq < 0) goto error;
-            bool_store(regs, base + dest, neq);
+            bool_store(regs, base + dest, PyObject_RichCompareBool(na, nb, Py_NE));
             break;
         }
 
@@ -1794,9 +1790,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (_av == NULL) goto error;
             PyObject *_bv = menai_integer_value(b);
             if (_bv == NULL) goto error;
-            int lt = PyObject_RichCompareBool(_av, _bv, Py_LE);
-            if (lt < 0) goto error;
-            reg_set(regs, base + dest, lt ? a : b);
+            reg_set(regs, base + dest, PyObject_RichCompareBool(_av, _bv, Py_LE) ? a : b);
             break;
         }
 
@@ -1808,9 +1802,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (_av == NULL) goto error;
             PyObject *_bv = menai_integer_value(b);
             if (_bv == NULL) goto error;
-            int gt = PyObject_RichCompareBool(_av, _bv, Py_GE);
-            if (gt < 0) goto error;
-            reg_set(regs, base + dest, gt ? a : b);
+            reg_set(regs, base + dest, PyObject_RichCompareBool(_av, _bv, Py_GE) ? a : b);
             break;
         }
 
@@ -2563,9 +2555,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_complex(a, "complex=?")) goto error;
             if (!require_complex(b, "complex=?")) goto error;
-            int eq = PyObject_RichCompareBool(a, b, Py_EQ);
-            if (eq < 0) goto error;
-            bool_store(regs, base + dest, eq);
+            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_EQ));
             break;
         }
 
@@ -2573,9 +2563,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_complex(a, "complex!=?")) goto error;
             if (!require_complex(b, "complex!=?")) goto error;
-            int neq = PyObject_RichCompareBool(a, b, Py_NE);
-            if (neq < 0) goto error;
-            bool_store(regs, base + dest, neq);
+            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_NE));
             break;
         }
 
@@ -3371,9 +3359,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_list(a, "list=?")) goto error;
             if (!require_list(b, "list=?")) goto error;
-            int eq = PyObject_RichCompareBool(a, b, Py_EQ);
-            if (eq < 0) goto error;
-            bool_store(regs, base + dest, eq);
+            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_EQ));
             break;
         }
 
@@ -3381,9 +3367,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_list(a, "list!=?")) goto error;
             if (!require_list(b, "list!=?")) goto error;
-            int neq = PyObject_RichCompareBool(a, b, Py_NE);
-            if (neq < 0) goto error;
-            bool_store(regs, base + dest, neq);
+            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_NE));
             break;
         }
 
@@ -3728,9 +3712,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_dict(a, "dict=?")) goto error;
             if (!require_dict(b, "dict=?")) goto error;
-            int eq = PyObject_RichCompareBool(a, b, Py_EQ);
-            if (eq < 0) goto error;
-            bool_store(regs, base + dest, eq);
+            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_EQ));
             break;
         }
 
@@ -3738,9 +3720,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_dict(a, "dict!=?")) goto error;
             if (!require_dict(b, "dict!=?")) goto error;
-            int neq = PyObject_RichCompareBool(a, b, Py_NE);
-            if (neq < 0) goto error;
-            bool_store(regs, base + dest, neq);
+            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_NE));
             break;
         }
 
@@ -4129,9 +4109,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_set(a, "set=?")) goto error;
             if (!require_set(b, "set=?")) goto error;
-            int eq = PyObject_RichCompareBool(a, b, Py_EQ);
-            if (eq < 0) goto error;
-            bool_store(regs, base + dest, eq);
+            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_EQ));
             break;
         }
 
@@ -4139,9 +4117,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_set(a, "set!=?")) goto error;
             if (!require_set(b, "set!=?")) goto error;
-            int neq = PyObject_RichCompareBool(a, b, Py_NE);
-            if (neq < 0) goto error;
-            bool_store(regs, base + dest, neq);
+            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_NE));
             break;
         }
 
@@ -4517,11 +4493,9 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
             /* frozenset.issubset: use PyObject_CallMethod */
-            int r = PyObject_RichCompareBool(ma, mb, Py_LE);
+            bool_store(regs, base + dest, PyObject_RichCompareBool(ma, mb, Py_LE));
             Py_DECREF(ma);
             Py_DECREF(mb);
-            if (r < 0) goto error;
-            bool_store(regs, base + dest, r);
             break;
         }
 
@@ -4641,11 +4615,9 @@ execute_loop(PyObject *code, PyObject *globals,
                 Py_DECREF(tag_a);
                 goto error;
             }
-            int eq = PyObject_RichCompareBool(tag_a, tag_b, Py_EQ);
+            bool_store(regs, base + dest, PyObject_RichCompareBool(tag_a, tag_b, Py_EQ));
             Py_DECREF(tag_a);
             Py_DECREF(tag_b);
-            if (eq < 0) goto error;
-            bool_store(regs, base + dest, eq);
             break;
         }
 
@@ -4805,9 +4777,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_struct(a, "struct=?")) goto error;
             if (!require_struct(b, "struct=?")) goto error;
-            int eq = PyObject_RichCompareBool(a, b, Py_EQ);
-            if (eq < 0) goto error;
-            bool_store(regs, base + dest, eq);
+            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_EQ));
             break;
         }
 
@@ -4815,9 +4785,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_struct(a, "struct!=?")) goto error;
             if (!require_struct(b, "struct!=?")) goto error;
-            int neq = PyObject_RichCompareBool(a, b, Py_NE);
-            if (neq < 0) goto error;
-            bool_store(regs, base + dest, neq);
+            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_NE));
             break;
         }
 
