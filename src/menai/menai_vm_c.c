@@ -930,8 +930,7 @@ call_setup(Frame *new_frame, PyObject *func_obj,
             Py_INCREF(elem);
             PyTuple_SET_ITEM(rest_tuple, k, elem);
         }
-        PyObject *rest_list = PyObject_CallOneArg(
-            (PyObject *)Menai_ListType, rest_tuple);
+        PyObject *rest_list = PyObject_CallOneArg((PyObject *)Menai_ListType, rest_tuple);
         Py_DECREF(rest_tuple);
         if (rest_list == NULL) return -1;
         reg_set(regs, callee_base + min_arity, rest_list);
@@ -939,8 +938,7 @@ call_setup(Frame *new_frame, PyObject *func_obj,
 
     } else if (arity != param_count) {
         PyObject *name = func->name;
-        const char *fname = (name != NULL && name != Py_None)
-                            ? PyUnicode_AsUTF8(name) : "<lambda>";
+        const char *fname = (name != NULL && name != Py_None) ? PyUnicode_AsUTF8(name) : "<lambda>";
         menai_raise_eval_errorf(
             "Function '%s' expects %d argument%s, got %d",
             fname, param_count, param_count == 1 ? "" : "s", arity);
