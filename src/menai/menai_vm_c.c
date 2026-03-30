@@ -1044,7 +1044,6 @@ execute_loop(PyObject *code, PyObject *globals,
             reg_set(regs, base + dest, Menai_EMPTY_SET);
             break;
 
-        /* ----------------------------------------------------------------- */
         case OP_LOAD_CONST: {
             PyObject *constants = PyObject_GetAttrString(frame->code_obj, "constants");
             if (constants == NULL) goto error;
@@ -1054,7 +1053,6 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         }
 
-        /* ----------------------------------------------------------------- */
         case OP_LOAD_NAME: {
             PyObject *names = PyObject_GetAttrString(frame->code_obj, "names");
             if (names == NULL) goto error;
@@ -1103,12 +1101,10 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         }
 
-        /* ----------------------------------------------------------------- */
         case OP_MOVE:
             reg_set(regs, base + dest, regs[base + src0]);
             break;
 
-        /* ----------------------------------------------------------------- */
         case OP_JUMP:
             frame->ip = src0;
             break;
@@ -1133,7 +1129,6 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         }
 
-        /* ----------------------------------------------------------------- */
         case OP_RAISE_ERROR: {
             PyObject *msg = regs[base + src0];
             if (!IS_MENAI_STRING(msg)) {
@@ -1147,7 +1142,6 @@ execute_loop(PyObject *code, PyObject *globals,
             goto error;
         }
 
-        /* ----------------------------------------------------------------- */
         case OP_RETURN: {
             PyObject *retval = regs[base + src0];
             Py_INCREF(retval);
@@ -1170,7 +1164,6 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         }
 
-        /* ----------------------------------------------------------------- */
         case OP_CALL: {
             PyObject *raw = regs[base + src0];
             int arity     = src1;
@@ -1179,8 +1172,7 @@ execute_loop(PyObject *code, PyObject *globals,
              * at regs[base + local_count .. base + local_count + arity - 1].
              * We need local_count to find callee_base. */
             int local_count = 0;
-            if (code_get_int(frame->code_obj, "local_count", &local_count) < 0)
-                goto error;
+            if (code_get_int(frame->code_obj, "local_count", &local_count) < 0) goto error;
             int callee_base = base + local_count;
 
             if (IS_MENAI_FUNCTION(raw)) {
@@ -1220,12 +1212,10 @@ execute_loop(PyObject *code, PyObject *globals,
                     Py_INCREF(fv);
                     PyTuple_SET_ITEM(fields, i, fv);
                 }
-                PyObject *kwargs = Py_BuildValue("{sOsO}",
-                    "struct_type", raw, "fields", fields);
+                PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", raw, "fields", fields);
                 Py_DECREF(fields);
                 if (kwargs == NULL) goto error;
-                PyObject *instance = PyObject_Call(
-                    (PyObject *)Menai_StructType, empty_tuple, kwargs);
+                PyObject *instance = PyObject_Call((PyObject *)Menai_StructType, empty_tuple, kwargs);
                 Py_DECREF(kwargs);
                 if (instance == NULL) goto error;
                 reg_set(regs, base + dest, instance);
@@ -1238,17 +1228,16 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         }
 
-        /* ----------------------------------------------------------------- */
         case OP_TAIL_CALL: {
             PyObject *raw = regs[base + src0];
-            int n_args    = src1;
+            int n_args = src1;
             /* Take an owned reference before the arg-moving loop.
              * The loop may overwrite regs[base+src0] if src0 < n_args,
              * which would decrement raw's refcount to zero and free it. */
             Py_INCREF(raw);
 
             int local_count = 0;
-            if (code_get_int(frame->code_obj, "local_count", &local_count) < 0)  {
+            if (code_get_int(frame->code_obj, "local_count", &local_count) < 0) {
                 Py_DECREF(raw);
                 goto error;
             }
@@ -1271,7 +1260,6 @@ execute_loop(PyObject *code, PyObject *globals,
                     goto error;
                 }
                 Py_DECREF(raw);
-
             } else if (IS_MENAI_STRUCTTYPE(raw)) {
                 PyObject *field_names = PyObject_GetAttrString(raw, "field_names");
                 if (field_names == NULL) {
@@ -1299,8 +1287,7 @@ execute_loop(PyObject *code, PyObject *globals,
                     Py_INCREF(fv);
                     PyTuple_SET_ITEM(fields, i, fv);
                 }
-                PyObject *kwargs = Py_BuildValue("{sOsO}",
-                    "struct_type", raw, "fields", fields);
+                PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", raw, "fields", fields);
                 Py_DECREF(fields);
                 if (kwargs == NULL) goto error;
                 PyObject *instance = PyObject_Call(
@@ -1325,7 +1312,6 @@ execute_loop(PyObject *code, PyObject *globals,
                 Py_DECREF(retval);
                 Py_DECREF(raw);
                 frame = caller;
-
             } else {
                 Py_DECREF(raw);
                 menai_raise_eval_error("Cannot call non-function value");
@@ -1333,10 +1319,6 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             break;
         }
-
-        /* ----------------------------------------------------------------- */
-        /* None / Boolean / Symbol type predicates and ops                    */
-        /* ----------------------------------------------------------------- */
 
         case OP_NONE_P:
             bool_store(regs, base + dest, IS_MENAI_NONE(regs[base + src0]));
@@ -1515,13 +1497,10 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         }
 
-        /* ----------------------------------------------------------------- */
-        /* Integer arithmetic                                                 */
-        /* ----------------------------------------------------------------- */
-
         case OP_INTEGER_P:
             bool_store(regs, base + dest, IS_MENAI_INTEGER(regs[base + src0]));
             break;
+
 
         case OP_INTEGER_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
@@ -1539,6 +1518,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(bv);
             break;
         }
+
         case OP_INTEGER_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer!=?")) goto error;
@@ -1555,6 +1535,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(bv);
             break;
         }
+
         case OP_INTEGER_LT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer<?")) goto error;
@@ -1571,6 +1552,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(bv);
             break;
         }
+
         case OP_INTEGER_GT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer>?")) goto error;
@@ -1587,6 +1569,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(bv);
             break;
         }
+
         case OP_INTEGER_LTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer<=?")) goto error;
@@ -1603,6 +1586,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(bv);
             break;
         }
+
         case OP_INTEGER_GTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer>=?")) goto error;
@@ -1632,6 +1616,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_INTEGER_NEG: {
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer-neg")) goto error;
@@ -1644,6 +1629,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_INTEGER_BIT_NOT: {
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer-bit-not")) goto error;
@@ -1656,6 +1642,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_INTEGER_ADD: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer+")) goto error;
@@ -1675,6 +1662,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_INTEGER_SUB: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-")) goto error;
@@ -1694,6 +1682,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_INTEGER_MUL: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer*")) goto error;
@@ -1713,6 +1702,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_INTEGER_DIV: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer/")) goto error;
@@ -1749,6 +1739,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_INTEGER_MOD: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer%")) goto error;
@@ -1785,6 +1776,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_INTEGER_EXPN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-expn")) goto error;
@@ -1821,6 +1813,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_INTEGER_BIT_OR: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-or")) goto error;
@@ -1840,6 +1833,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_INTEGER_BIT_AND: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-and")) goto error;
@@ -1859,6 +1853,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_INTEGER_BIT_XOR: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-xor")) goto error;
@@ -1878,6 +1873,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_INTEGER_BIT_SHIFT_LEFT: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-shift-left")) goto error;
@@ -1897,6 +1893,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_INTEGER_BIT_SHIFT_RIGHT: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-shift-right")) goto error;
@@ -1916,6 +1913,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_INTEGER_MIN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-min")) goto error;
@@ -1934,6 +1932,7 @@ execute_loop(PyObject *code, PyObject *globals,
             reg_set(regs, base + dest, lt ? a : b);
             break;
         }
+
         case OP_INTEGER_MAX: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-max")) goto error;
@@ -1952,6 +1951,7 @@ execute_loop(PyObject *code, PyObject *globals,
             reg_set(regs, base + dest, gt ? a : b);
             break;
         }
+
         case OP_INTEGER_TO_FLOAT: {
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer->float")) goto error;
@@ -1966,6 +1966,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_INTEGER_TO_COMPLEX: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer->complex")) goto error;
@@ -1986,6 +1987,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_INTEGER_TO_STRING: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer->string")) goto error;
@@ -2020,6 +2022,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_INTEGER_CODEPOINT_TO_STRING: {
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer-codepoint->string")) goto error;
@@ -2043,10 +2046,6 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         }
 
-        /* ----------------------------------------------------------------- */
-        /* Float arithmetic                                                   */
-        /* ----------------------------------------------------------------- */
-
         case OP_FLOAT_P:
             bool_store(regs, base + dest, IS_MENAI_FLOAT(regs[base + src0]));
             break;
@@ -2058,6 +2057,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, menai_float_value(a) == menai_float_value(b));
             break;
         }
+
         case OP_FLOAT_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float!=?")) goto error;
@@ -2065,6 +2065,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, menai_float_value(a) != menai_float_value(b));
             break;
         }
+
         case OP_FLOAT_LT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float<?")) goto error;
@@ -2072,6 +2073,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, menai_float_value(a) < menai_float_value(b));
             break;
         }
+
         case OP_FLOAT_GT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float>?")) goto error;
@@ -2079,6 +2081,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, menai_float_value(a) > menai_float_value(b));
             break;
         }
+
         case OP_FLOAT_LTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float<=?")) goto error;
@@ -2086,6 +2089,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, menai_float_value(a) <= menai_float_value(b));
             break;
         }
+
         case OP_FLOAT_GTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float>=?")) goto error;
@@ -2093,6 +2097,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, menai_float_value(a) >= menai_float_value(b));
             break;
         }
+
         case OP_FLOAT_NEG: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-neg")) goto error;
@@ -2102,6 +2107,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_ABS: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-abs")) goto error;
@@ -2114,6 +2120,7 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             break;
         }
+
         case OP_FLOAT_ADD: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float+")) goto error;
@@ -2124,6 +2131,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_SUB: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float-")) goto error;
@@ -2134,6 +2142,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_MUL: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float*")) goto error;
@@ -2144,6 +2153,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_DIV: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float/")) goto error;
@@ -2159,6 +2169,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_FLOOR_DIV: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float//")) goto error;
@@ -2174,6 +2185,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_MOD: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float%")) goto error;
@@ -2189,6 +2201,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_EXP: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-exp")) goto error;
@@ -2198,6 +2211,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_EXPN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float-expn")) goto error;
@@ -2208,6 +2222,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_LOG: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-log")) goto error;
@@ -2222,6 +2237,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_LOG10: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-log10")) goto error;
@@ -2236,6 +2252,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_LOG2: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-log2")) goto error;
@@ -2250,6 +2267,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_LOGN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float-logn")) goto error;
@@ -2269,6 +2287,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_SIN: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-sin")) goto error;
@@ -2278,6 +2297,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_COS: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-cos")) goto error;
@@ -2287,6 +2307,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_TAN: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-tan")) goto error;
@@ -2296,6 +2317,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_SQRT: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-sqrt")) goto error;
@@ -2310,6 +2332,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_FLOOR: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-floor")) goto error;
@@ -2319,6 +2342,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_CEIL: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-ceil")) goto error;
@@ -2328,6 +2352,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_ROUND: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float-round")) goto error;
@@ -2337,6 +2362,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_MIN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float-min")) goto error;
@@ -2348,6 +2374,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_MAX: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float-max")) goto error;
@@ -2359,6 +2386,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_TO_INTEGER: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float->integer")) goto error;
@@ -2371,6 +2399,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_FLOAT_TO_COMPLEX: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_float(a, "float->complex")) goto error;
@@ -2381,6 +2410,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_FLOAT_TO_STRING: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float->string")) goto error;
@@ -2396,10 +2426,6 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
-
-        /* ----------------------------------------------------------------- */
-        /* MAKE_CLOSURE / PATCH_CLOSURE                                       */
-        /* ----------------------------------------------------------------- */
 
         case OP_MAKE_CLOSURE: {
             /*
@@ -2491,10 +2517,6 @@ execute_loop(PyObject *code, PyObject *globals,
             if (set_ok < 0) goto error;
             break;
         }
-
-        /* ----------------------------------------------------------------- */
-        /* APPLY / TAIL_APPLY                                                 */
-        /* ----------------------------------------------------------------- */
 
         case OP_APPLY: {
             /*
@@ -2594,8 +2616,7 @@ execute_loop(PyObject *code, PyObject *globals,
 
             if (IS_MENAI_FUNCTION(raw_func)) {
                 /* Scatter args into base+0..arity-1 (reusing current frame's base) */
-                for (int i = 0; i < arity; i++)
-                    reg_set(regs, base + i, PyTuple_GET_ITEM(elements, i));
+                for (int i = 0; i < arity; i++) reg_set(regs, base + i, PyTuple_GET_ITEM(elements, i));
                 Py_DECREF(raw_args);
 
                 /* Release old frame instructions, reuse frame */
@@ -2673,21 +2694,15 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         }
 
-        /* ----------------------------------------------------------------- */
-        /* EMIT_TRACE                                                         */
-        /* ----------------------------------------------------------------- */
-
         case OP_EMIT_TRACE:
             /* Trace is a no-op in the C VM — no watcher support yet. */
             break;
 
-        /* ----------------------------------------------------------------- */
-        /* Complex numbers                                                    */
-        /* ----------------------------------------------------------------- */
 
         case OP_COMPLEX_P:
             bool_store(regs, base + dest, IS_MENAI_COMPLEX(regs[base + src0]));
             break;
+
         case OP_COMPLEX_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_complex(a, "complex=?")) goto error;
@@ -2697,6 +2712,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, eq);
             break;
         }
+
         case OP_COMPLEX_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_complex(a, "complex!=?")) goto error;
@@ -2706,6 +2722,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, neq);
             break;
         }
+
         case OP_COMPLEX_REAL: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-real")) goto error;
@@ -2719,6 +2736,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_fr);
             break;
         }
+
         case OP_COMPLEX_IMAG: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-imag")) goto error;
@@ -2732,6 +2750,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_fr);
             break;
         }
+
         case OP_COMPLEX_ABS: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-abs")) goto error;
@@ -2745,6 +2764,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_fr);
             break;
         }
+
         case OP_COMPLEX_NEG: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-neg")) goto error;
@@ -2758,6 +2778,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_COMPLEX_ADD: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_complex(a, "complex+")) goto error;
@@ -2778,6 +2799,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_COMPLEX_SUB: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_complex(a, "complex-")) goto error;
@@ -2798,6 +2820,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_COMPLEX_MUL: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_complex(a, "complex*")) goto error;
@@ -2818,6 +2841,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_COMPLEX_DIV: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_complex(a, "complex/")) goto error;
@@ -2846,6 +2870,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_COMPLEX_EXPN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_complex(a, "complex-expn")) goto error;
@@ -2866,6 +2891,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_COMPLEX_EXP: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-exp")) goto error;
@@ -2880,6 +2906,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_COMPLEX_LOG: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-log")) goto error;
@@ -2894,6 +2921,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_COMPLEX_LOG10: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-log10")) goto error;
@@ -2908,6 +2936,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_COMPLEX_SIN: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-sin")) goto error;
@@ -2922,6 +2951,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_COMPLEX_COS: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-cos")) goto error;
@@ -2936,6 +2966,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_COMPLEX_TAN: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-tan")) goto error;
@@ -2950,6 +2981,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_COMPLEX_SQRT: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-sqrt")) goto error;
@@ -2964,6 +2996,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_COMPLEX_LOGN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_complex(a, "complex-logn")) goto error;
@@ -2990,6 +3023,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_COMPLEX_TO_STRING: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex->string")) goto error;
@@ -3002,10 +3036,6 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
-
-        /* ----------------------------------------------------------------- */
-        /* Strings                                                            */
-        /* ----------------------------------------------------------------- */
 
         case OP_STRING_P:
             bool_store(regs, base + dest, IS_MENAI_STRING(regs[base + src0]));
@@ -3022,6 +3052,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_cmp);
             break;
         }
+
         case OP_STRING_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string!=?")) goto error;
@@ -3033,6 +3064,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_cmp);
             break;
         }
+
         case OP_STRING_LT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string<?")) goto error;
@@ -3044,6 +3076,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_cmp);
             break;
         }
+
         case OP_STRING_GT_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string>?")) goto error;
@@ -3055,6 +3088,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_cmp);
             break;
         }
+
         case OP_STRING_LTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string<=?")) goto error;
@@ -3066,6 +3100,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_cmp);
             break;
         }
+
         case OP_STRING_GTE_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string>=?")) goto error;
@@ -3077,6 +3112,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_cmp);
             break;
         }
+
         case OP_STRING_LENGTH: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-length")) goto error;
@@ -3092,6 +3128,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_STRING_UPCASE: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-upcase")) goto error;
@@ -3107,6 +3144,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_STRING_DOWNCASE: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-downcase")) goto error;
@@ -3122,6 +3160,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_STRING_TRIM: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-trim")) goto error;
@@ -3137,6 +3176,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_STRING_TRIM_LEFT: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-trim-left")) goto error;
@@ -3152,6 +3192,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_STRING_TRIM_RIGHT: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-trim-right")) goto error;
@@ -3167,6 +3208,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_STRING_CONCAT: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string-concat")) goto error;
@@ -3189,6 +3231,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_STRING_PREFIX_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string-prefix?")) goto error;
@@ -3207,6 +3250,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, r);
             break;
         }
+
         case OP_STRING_SUFFIX_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string-suffix?")) goto error;
@@ -3225,6 +3269,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, r);
             break;
         }
+
         case OP_STRING_REF: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string-ref")) goto error;
@@ -3258,6 +3303,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_STRING_SLICE: {
             PyObject *a = regs[base + src0], *b = regs[base + src1], *c = regs[base + src2];
             if (!require_string(a, "string-slice")) goto error;
@@ -3317,6 +3363,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_STRING_REPLACE: {
             PyObject *a = regs[base + src0], *b = regs[base + src1], *c = regs[base + src2];
             if (!require_string(a, "string-replace")) goto error;
@@ -3347,6 +3394,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_STRING_INDEX: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string-index")) goto error;
@@ -3374,6 +3422,7 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             break;
         }
+
         case OP_STRING_TO_INTEGER_CODEPOINT: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string->integer-codepoint")) goto error;
@@ -3395,6 +3444,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_STRING_TO_INTEGER: {
             /* src0=string, src1=radix(integer) */
             PyObject *a = regs[base + src0], *b = regs[base + src1];
@@ -3430,6 +3480,7 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             break;
         }
+
         case OP_STRING_TO_NUMBER: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string->number")) goto error;
@@ -3506,6 +3557,7 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             break;
         }
+
         case OP_STRING_TO_LIST: {
             /* src0=string, src1=delimiter string */
             PyObject *a = regs[base + src0], *b = regs[base + src1];
@@ -3581,10 +3633,6 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         }
 
-        /* ----------------------------------------------------------------- */
-        /* Lists                                                              */
-        /* ----------------------------------------------------------------- */
-
         case OP_LIST_P:
             bool_store(regs, base + dest, IS_MENAI_LIST(regs[base + src0]));
             break;
@@ -3598,6 +3646,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, eq);
             break;
         }
+
         case OP_LIST_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_list(a, "list!=?")) goto error;
@@ -3607,6 +3656,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, neq);
             break;
         }
+
         case OP_LIST_NULL_P: {
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-null?")) goto error;
@@ -3615,6 +3665,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, is_null);
             break;
         }
+
         case OP_LIST_LENGTH: {
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-length")) goto error;
@@ -3628,6 +3679,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_LIST_FIRST: {
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-first")) goto error;
@@ -3640,6 +3692,7 @@ execute_loop(PyObject *code, PyObject *globals,
             reg_set(regs, base + dest, first);
             break;
         }
+
         case OP_LIST_REST: {
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-rest")) goto error;
@@ -3657,6 +3710,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_LIST_LAST: {
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-last")) goto error;
@@ -3670,6 +3724,7 @@ execute_loop(PyObject *code, PyObject *globals,
             reg_set(regs, base + dest, last);
             break;
         }
+
         case OP_LIST_REF: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_list(a, "list-ref")) goto error;
@@ -3690,6 +3745,7 @@ execute_loop(PyObject *code, PyObject *globals,
             reg_set(regs, base + dest, PyTuple_GET_ITEM(elems, idx));
             break;
         }
+
         case OP_LIST_PREPEND: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_list(a, "list-prepend")) goto error;
@@ -3711,6 +3767,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_LIST_APPEND: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_list(a, "list-append")) goto error;
@@ -3732,6 +3789,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_LIST_REVERSE: {
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-reverse")) goto error;
@@ -3751,6 +3809,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_LIST_CONCAT: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_list(a, "list-concat")) goto error;
@@ -3766,6 +3825,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_LIST_MEMBER_P: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_list(a, "list-member?")) goto error;
@@ -3775,6 +3835,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, found);
             break;
         }
+
         case OP_LIST_INDEX: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_list(a, "list-index")) goto error;
@@ -3801,6 +3862,7 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             break;
         }
+
         case OP_LIST_SLICE: {
             PyObject *a = regs[base + src0], *b = regs[base + src1], *c = regs[base + src2];
             if (!require_list(a, "list-slice")) goto error;
@@ -3849,6 +3911,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_LIST_REMOVE: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_list(a, "list-remove")) goto error;
@@ -3883,6 +3946,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_LIST_TO_STRING: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_list(a, "list->string")) goto error;
@@ -3923,6 +3987,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_LIST_TO_SET: {
             PyObject *a = regs[base + src0];
             if (!require_list_singular(a, "list->set")) goto error;
@@ -3933,10 +3998,6 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
-
-        /* ----------------------------------------------------------------- */
-        /* Dicts                                                              */
-        /* ----------------------------------------------------------------- */
 
         case OP_DICT_P:
             bool_store(regs, base + dest, IS_MENAI_DICT(regs[base + src0]));
@@ -3951,6 +4012,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, eq);
             break;
         }
+
         case OP_DICT_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_dict(a, "dict!=?")) goto error;
@@ -3960,6 +4022,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, neq);
             break;
         }
+
         case OP_DICT_LENGTH: {
             PyObject *a = regs[base + src0];
             if (!require_dict(a, "dict-length")) goto error;
@@ -3975,6 +4038,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_DICT_KEYS: {
             PyObject *a = regs[base + src0];
             if (!require_dict(a, "dict-keys")) goto error;
@@ -4006,6 +4070,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_DICT_VALUES: {
             PyObject *a = regs[base + src0];
             if (!require_dict(a, "dict-values")) goto error;
@@ -4031,6 +4096,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_DICT_HAS_P: {
             PyObject *a = regs[base + src0], *key = regs[base + src1];
             if (!require_dict(a, "dict-has?")) goto error;
@@ -4048,6 +4114,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, has);
             break;
         }
+
         case OP_DICT_GET: {
             /* src0=dict, src1=key, src2=default */
             PyObject *a = regs[base + src0], *key = regs[base + src1], *def = regs[base + src2];
@@ -4071,6 +4138,7 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             break;
         }
+
         case OP_DICT_SET: {
             /* src0=dict, src1=key, src2=value */
             PyObject *a = regs[base + src0], *key = regs[base + src1], *val = regs[base + src2];
@@ -4157,6 +4225,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(result);
             break;
         }
+
         case OP_DICT_REMOVE: {
             PyObject *a = regs[base + src0], *key = regs[base + src1];
             if (!require_dict(a, "dict-remove")) goto error;
@@ -4216,6 +4285,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_DICT_MERGE: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_dict(a, "dict-merge")) goto error;
@@ -4330,10 +4400,6 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         }
 
-        /* ----------------------------------------------------------------- */
-        /* Sets                                                               */
-        /* ----------------------------------------------------------------- */
-
         case OP_SET_P:
             bool_store(regs, base + dest, IS_MENAI_SET(regs[base + src0]));
             break;
@@ -4347,6 +4413,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, eq);
             break;
         }
+
         case OP_SET_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_set(a, "set!=?")) goto error;
@@ -4356,6 +4423,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, neq);
             break;
         }
+
         case OP_SET_LENGTH: {
             PyObject *a = regs[base + src0];
             if (!require_set_singular(a, "set-length")) goto error;
@@ -4371,11 +4439,11 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
+
         case OP_SET_MEMBER_P: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_set_singular(a, "set-member?")) goto error;
-            PyObject *hk = PyObject_CallMethod(
-                (PyObject *)Menai_DictType, "to_hashable_key", "O", item);
+            PyObject *hk = PyObject_CallMethod((PyObject *)Menai_DictType, "to_hashable_key", "O", item);
             if (hk == NULL) goto error;
             PyObject *members = PyObject_GetAttrString(a, "members");
             if (members == NULL) {
@@ -4389,11 +4457,11 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, has);
             break;
         }
+
         case OP_SET_ADD: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_set_singular(a, "set-add")) goto error;
-            PyObject *hk = PyObject_CallMethod(
-                (PyObject *)Menai_DictType, "to_hashable_key", "O", item);
+            PyObject *hk = PyObject_CallMethod((PyObject *)Menai_DictType, "to_hashable_key", "O", item);
             if (hk == NULL) goto error;
             PyObject *members = PyObject_GetAttrString(a, "members");
             if (members == NULL) {
@@ -4431,11 +4499,11 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             break;
         }
+
         case OP_SET_REMOVE: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_set_singular(a, "set-remove")) goto error;
-            PyObject *hk = PyObject_CallMethod(
-                (PyObject *)Menai_DictType, "to_hashable_key", "O", item);
+            PyObject *hk = PyObject_CallMethod((PyObject *)Menai_DictType, "to_hashable_key", "O", item);
             if (hk == NULL) goto error;
             PyObject *elems = PyObject_GetAttrString(a, "elements");
             if (elems == NULL) {
@@ -4491,6 +4559,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_SET_UNION: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_set(a, "set-union")) goto error;
@@ -4594,6 +4663,7 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             break;
         }
+
         case OP_SET_INTERSECTION: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_set(a, "set-intersection")) goto error;
@@ -4653,6 +4723,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_SET_DIFFERENCE: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_set(a, "set-difference")) goto error;
@@ -4712,6 +4783,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_SET_SUBSET_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_set(a, "set-subset?")) goto error;
@@ -4731,6 +4803,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, r);
             break;
         }
+
         case OP_SET_TO_LIST: {
             PyObject *a = regs[base + src0];
             if (!require_set_singular(a, "set->list")) goto error;
@@ -4743,10 +4816,6 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
-
-        /* ----------------------------------------------------------------- */
-        /* RANGE                                                              */
-        /* ----------------------------------------------------------------- */
 
         case OP_RANGE: {
             /* src0=start, src1=end, src2=step — all integers */
@@ -4807,10 +4876,6 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         }
 
-        /* ----------------------------------------------------------------- */
-        /* Structs                                                            */
-        /* ----------------------------------------------------------------- */
-
         case OP_MAKE_STRUCT: {
             /*
              * MAKE_STRUCT src0, src1:
@@ -4840,6 +4905,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(instance);
             break;
         }
+
         case OP_STRUCT_P:
             bool_store(regs, base + dest, IS_MENAI_STRUCT(regs[base + src0]));
             break;
@@ -4871,6 +4937,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, eq);
             break;
         }
+
         case OP_STRUCT_GET: {
             /* src1 holds a MenaiSymbol field name */
             PyObject *val = regs[base + src0], *field_sym = regs[base + src1];
@@ -4911,6 +4978,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(fields);
             break;
         }
+
         case OP_STRUCT_GET_IMM: {
             /* src1 holds a MenaiInteger field index */
             PyObject *val = regs[base + src0], *fidx = regs[base + src1];
@@ -4928,6 +4996,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(fields);
             break;
         }
+
         case OP_STRUCT_SET: {
             PyObject *val = regs[base + src0], *field_sym = regs[base + src1], *new_val = regs[base + src2];
             if (!require_struct(val, "struct-set")) goto error;
@@ -4991,6 +5060,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_STRUCT_SET_IMM: {
             PyObject *val = regs[base + src0], *fidx = regs[base + src1], *new_val = regs[base + src2];
             if (!require_struct(val, "struct-set-imm")) goto error;
@@ -5031,6 +5101,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_STRUCT_EQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_struct(a, "struct=?")) goto error;
@@ -5040,6 +5111,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, eq);
             break;
         }
+
         case OP_STRUCT_NEQ_P: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_struct(a, "struct!=?")) goto error;
@@ -5049,6 +5121,7 @@ execute_loop(PyObject *code, PyObject *globals,
             bool_store(regs, base + dest, neq);
             break;
         }
+
         case OP_STRUCT_TYPE: {
             PyObject *val = regs[base + src0];
             if (!require_struct(val, "struct-type")) goto error;
@@ -5058,6 +5131,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(stype);
             break;
         }
+
         case OP_STRUCT_TYPE_NAME: {
             PyObject *val = regs[base + src0];
             if (!require_structtype(val, "struct-type-name")) goto error;
@@ -5070,6 +5144,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(r);
             break;
         }
+
         case OP_STRUCT_FIELDS: {
             PyObject *val = regs[base + src0];
             if (!require_structtype(val, "struct-fields")) goto error;
@@ -5101,7 +5176,6 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         }
 
-        /* ----------------------------------------------------------------- */
         default:
             menai_raise_eval_errorf("Unimplemented opcode: %d", opcode);
             goto error;
