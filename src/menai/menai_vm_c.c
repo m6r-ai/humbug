@@ -365,8 +365,7 @@ static inline void reg_set(PyObject **regs, int slot, PyObject *val) {
  * ------------------------------------------------------------------------- */
 
 static inline PyObject *make_integer(PyObject *py_int) {
-    MenaiInteger_Object *r = (MenaiInteger_Object *)
-        Menai_IntegerType->tp_alloc(Menai_IntegerType, 0);
+    MenaiInteger_Object *r = (MenaiInteger_Object *)Menai_IntegerType->tp_alloc(Menai_IntegerType, 0);
     if (r) {
         Py_INCREF(py_int);
         r->value = py_int;
@@ -375,8 +374,7 @@ static inline PyObject *make_integer(PyObject *py_int) {
 }
 
 static inline PyObject *make_float(double v) {
-    MenaiFloat_Object *r = (MenaiFloat_Object *)
-        Menai_FloatType->tp_alloc(Menai_FloatType, 0);
+    MenaiFloat_Object *r = (MenaiFloat_Object *)Menai_FloatType->tp_alloc(Menai_FloatType, 0);
     if (r) r->value = v;
     return (PyObject *)r;
 }
@@ -384,8 +382,7 @@ static inline PyObject *make_float(double v) {
 static inline PyObject *make_complex_from_doubles(double real, double imag) {
     PyObject *pc = PyComplex_FromDoubles(real, imag);
     if (!pc) return NULL;
-    MenaiComplex_Object *r = (MenaiComplex_Object *)
-        Menai_ComplexType->tp_alloc(Menai_ComplexType, 0);
+    MenaiComplex_Object *r = (MenaiComplex_Object *)Menai_ComplexType->tp_alloc(Menai_ComplexType, 0);
     if (r) {
         r->value = pc;
     } else {
@@ -395,8 +392,7 @@ static inline PyObject *make_complex_from_doubles(double real, double imag) {
 }
 
 static inline PyObject *make_string_from_pyobj(PyObject *py_str) {
-    MenaiString_Object *r = (MenaiString_Object *)
-        Menai_StringType->tp_alloc(Menai_StringType, 0);
+    MenaiString_Object *r = (MenaiString_Object *)Menai_StringType->tp_alloc(Menai_StringType, 0);
     if (r) {
         Py_INCREF(py_str);
         r->value = py_str;
@@ -413,8 +409,7 @@ static inline PyObject *make_integer_value(PyObject *py_int) {
 
 static inline PyObject *make_complex_value(PyObject *py_complex) {
     if (!py_complex) return NULL;
-    MenaiComplex_Object *r = (MenaiComplex_Object *)
-        Menai_ComplexType->tp_alloc(Menai_ComplexType, 0);
+    MenaiComplex_Object *r = (MenaiComplex_Object *)Menai_ComplexType->tp_alloc(Menai_ComplexType, 0);
     if (r) {
         r->value = py_complex;
     } else {
@@ -425,48 +420,6 @@ static inline PyObject *make_complex_value(PyObject *py_complex) {
 
 static inline void bool_store(PyObject **regs, int slot, int cond) {
     reg_set(regs, slot, cond ? Menai_TRUE : Menai_FALSE);
-}
-
-/* ---------------------------------------------------------------------------
- * Integer arithmetic helpers
- * ------------------------------------------------------------------------- */
-
-typedef PyObject *(*menai_unaryfunc)(PyObject *);
-typedef PyObject *(*menai_binaryfunc)(PyObject *, PyObject *);
-
-static inline int
-int_unop(PyObject **regs, int slot, PyObject *a, menai_unaryfunc fn)
-{
-    PyObject *av = menai_integer_value(a);
-    if (!av) return -1;
-    PyObject *res = fn(av);
-    Py_DECREF(av);
-    PyObject *r = make_integer_value(res);
-    if (!r) return -1;
-    reg_set(regs, slot, r);
-    Py_DECREF(r);
-    return 0;
-}
-
-static inline int
-int_binop(PyObject **regs, int slot, PyObject *a, PyObject *b,
-          menai_binaryfunc fn)
-{
-    PyObject *av = menai_integer_value(a);
-    if (!av) return -1;
-    PyObject *bv = menai_integer_value(b);
-    if (!bv) {
-        Py_DECREF(av);
-        return -1;
-    }
-    PyObject *res = fn(av, bv);
-    Py_DECREF(av);
-    Py_DECREF(bv);
-    PyObject *r = make_integer_value(res);
-    if (!r) return -1;
-    reg_set(regs, slot, r);
-    Py_DECREF(r);
-    return 0;
 }
 
 /* ---------------------------------------------------------------------------
@@ -508,8 +461,7 @@ require_type_impl(int ok, PyObject *val, const char *op_name, const char *noun)
 {
     if (ok) return 1;
     PyObject *tn = PyObject_CallMethod(val, "type_name", NULL);
-    menai_raise_eval_errorf("Function '%s' requires %s, got %s",
-        op_name, noun, tn ? PyUnicode_AsUTF8(tn) : "?");
+    menai_raise_eval_errorf("Function '%s' requires %s, got %s", op_name, noun, tn ? PyUnicode_AsUTF8(tn) : "?");
     Py_XDECREF(tn);
     return 0;
 }
@@ -585,8 +537,7 @@ menai_raise_eval_errorf(const char *fmt, ...)
     va_start(args, fmt);
     PyObject *msg = PyUnicode_FromFormatV(fmt, args);
     va_end(args);
-    if (msg == NULL)
-        return NULL;
+    if (msg == NULL) return NULL;
     PyErr_SetObject(MenaiEvalError_type, msg);
     Py_DECREF(msg);
     return NULL;
@@ -600,8 +551,7 @@ static int
 fetch_type(PyObject *module, const char *name, PyTypeObject **dst)
 {
     PyObject *obj = PyObject_GetAttrString(module, name);
-    if (obj == NULL)
-        return -1;
+    if (obj == NULL) return -1;
     if (!PyType_Check(obj)) {
         PyErr_Format(PyExc_TypeError,
                      "menai_vm_shim_init: %s is not a type", name);
@@ -617,8 +567,7 @@ static int
 fetch_singleton(PyObject *module, const char *name, PyObject **dst)
 {
     PyObject *obj = PyObject_GetAttrString(module, name);
-    if (obj == NULL)
-        return -1;
+    if (obj == NULL) return -1;
     *dst = obj;
     /* Keep the reference alive in the module-level global. */
     return 0;
@@ -628,8 +577,7 @@ static int
 fetch_callable(PyObject *module, const char *name, PyObject **dst)
 {
     PyObject *obj = PyObject_GetAttrString(module, name);
-    if (obj == NULL)
-        return -1;
+    if (obj == NULL) return -1;
     if (!PyCallable_Check(obj)) {
         PyErr_Format(PyExc_TypeError,
                      "menai_vm_shim_init: %s is not callable", name);
@@ -644,8 +592,7 @@ int
 menai_vm_shim_init(void)
 {
     PyObject *vc = PyImport_ImportModule("menai.menai_value_c");
-    if (vc == NULL)
-        return -1;
+    if (vc == NULL) return -1;
 
     if (fetch_type(vc, "MenaiNone",       &Menai_NoneType)       < 0) goto fail;
     if (fetch_type(vc, "MenaiBoolean",    &Menai_BooleanType)    < 0) goto fail;
@@ -680,8 +627,7 @@ menai_vm_shim_init(void)
     MenaiEvalError_type = PyObject_GetAttrString(err_mod, "MenaiEvalError");
     MenaiCancelledException_type = PyObject_GetAttrString(err_mod, "MenaiCancelledException");
     Py_DECREF(err_mod);
-    if (MenaiEvalError_type == NULL || MenaiCancelledException_type == NULL)
-        goto fail;
+    if (MenaiEvalError_type == NULL || MenaiCancelledException_type == NULL) goto fail;
 
     Py_DECREF(vc);
     return 0;
@@ -726,8 +672,7 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
 {
     /* instructions — array.array('Q') */
     PyObject *instrs_obj = PyObject_GetAttrString(code_obj, "instructions");
-    if (instrs_obj == NULL)
-        return -1;
+    if (instrs_obj == NULL) return -1;
 
     Py_buffer view;
     if (PyObject_GetBuffer(instrs_obj, &view, PyBUF_SIMPLE) < 0) {
@@ -769,12 +714,10 @@ static int
 code_get_int(PyObject *code, const char *name, int *out)
 {
     PyObject *v = PyObject_GetAttrString(code, name);
-    if (v == NULL)
-        return -1;
+    if (v == NULL) return -1;
     long val = PyLong_AsLong(v);
     Py_DECREF(v);
-    if (val == -1 && PyErr_Occurred())
-        return -1;
+    if (val == -1 && PyErr_Occurred()) return -1;
     *out = (int)val;
     return 0;
 }
@@ -816,8 +759,7 @@ regs_alloc(int max_depth, int max_locals)
 static void
 regs_free(PyObject **regs, int max_depth, int max_locals)
 {
-    if (regs == NULL)
-        return;
+    if (regs == NULL) return;
     Py_ssize_t n = (Py_ssize_t)(max_depth + 1) * max_locals;
     for (Py_ssize_t i = 0; i < n; i++)
         Py_DECREF(regs[i]);  /* every slot is an owned reference */
@@ -877,8 +819,7 @@ max_local_count(PyObject *code)
             Py_DECREF(stack);
             return -1;
         }
-        if (lc + oa > best)
-            best = lc + oa;
+        if (lc + oa > best) best = lc + oa;
 
         PyObject *sub = PyObject_GetAttrString(co, "code_objects");
         Py_DECREF(co);
@@ -911,8 +852,7 @@ static PyObject *
 build_globals(PyObject *constants_dict, PyObject *prelude_dict)
 {
     PyObject *globals = PyDict_Copy(constants_dict);
-    if (globals == NULL)
-        return NULL;
+    if (globals == NULL) return NULL;
 
     if (prelude_dict != Py_None && PyDict_Size(prelude_dict) > 0) {
         if (PyDict_Merge(globals, prelude_dict, 1) < 0) {
@@ -944,19 +884,16 @@ call_setup(Frame *new_frame, PyObject *func_obj,
 {
     /* bytecode = func.bytecode */
     PyObject *bytecode = PyObject_GetAttrString(func_obj, "bytecode");
-    if (bytecode == NULL)
-        return -1;
+    if (bytecode == NULL) return -1;
 
     int param_count = 0, is_variadic_int = 0;
     if (code_get_int(bytecode, "param_count", &param_count) < 0) goto fail;
 
-    {
-        PyObject *iv = PyObject_GetAttrString(bytecode, "is_variadic");
-        if (iv == NULL) goto fail;
-        is_variadic_int = PyObject_IsTrue(iv);
-        Py_DECREF(iv);
-        if (is_variadic_int < 0) goto fail;
-    }
+    PyObject *iv = PyObject_GetAttrString(bytecode, "is_variadic");
+    if (iv == NULL) goto fail;
+    is_variadic_int = PyObject_IsTrue(iv);
+    Py_DECREF(iv);
+    if (is_variadic_int < 0) goto fail;
 
     if (is_variadic_int) {
         int min_arity = param_count - 1;
@@ -1182,8 +1119,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 menai_raise_eval_error("If condition must be boolean");
                 goto error;
             }
-            if (!menai_boolean_value(cond))
-                frame->ip = src1;
+            if (!menai_boolean_value(cond)) frame->ip = src1;
             break;
         }
 
@@ -1193,8 +1129,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 menai_raise_eval_error("If condition must be boolean");
                 goto error;
             }
-            if (menai_boolean_value(cond))
-                frame->ip = src1;
+            if (menai_boolean_value(cond)) frame->ip = src1;
             break;
         }
 
@@ -1688,40 +1623,94 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_INTEGER_ABS: {
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer-abs")) goto error;
-            if (int_unop(regs, base + dest, a, PyNumber_Absolute) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *_r = make_integer_value(PyNumber_Absolute(av));
+            Py_DECREF(av);
+            if (!_r) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_INTEGER_NEG: {
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer-neg")) goto error;
-            if (int_unop(regs, base + dest, a, PyNumber_Negative) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *_r = make_integer_value(PyNumber_Negative(av));
+            Py_DECREF(av);
+            if (!_r) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_INTEGER_BIT_NOT: {
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer-bit-not")) goto error;
-            if (int_unop(regs, base + dest, a, PyNumber_Invert) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *_r = make_integer_value(PyNumber_Invert(av));
+            Py_DECREF(av);
+            if (!_r) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_INTEGER_ADD: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer+")) goto error;
             if (!require_integer(b, "integer+")) goto error;
-            if (int_binop(regs, base + dest, a, b, PyNumber_Add) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *bv = menai_integer_value(b);
+            if (!bv) {
+                Py_DECREF(av);
+                goto error;
+            }
+            PyObject *_r = make_integer_value(PyNumber_Add(av, bv));
+            Py_DECREF(av);
+            Py_DECREF(bv);
+            if (!_r) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_INTEGER_SUB: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-")) goto error;
             if (!require_integer(b, "integer-")) goto error;
-            if (int_binop(regs, base + dest, a, b, PyNumber_Subtract) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *bv = menai_integer_value(b);
+            if (!bv) {
+                Py_DECREF(av);
+                goto error;
+            }
+            PyObject *_r = make_integer_value(PyNumber_Subtract(av, bv));
+            Py_DECREF(av);
+            Py_DECREF(bv);
+            if (!_r) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_INTEGER_MUL: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer*")) goto error;
             if (!require_integer(b, "integer*")) goto error;
-            if (int_binop(regs, base + dest, a, b, PyNumber_Multiply) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *bv = menai_integer_value(b);
+            if (!bv) {
+                Py_DECREF(av);
+                goto error;
+            }
+            PyObject *_r = make_integer_value(PyNumber_Multiply(av, bv));
+            Py_DECREF(av);
+            Py_DECREF(bv);
+            if (!_r) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_INTEGER_DIV: {
@@ -1836,35 +1825,95 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-or")) goto error;
             if (!require_integer(b, "integer-bit-or")) goto error;
-            if (int_binop(regs, base + dest, a, b, PyNumber_Or) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *bv = menai_integer_value(b);
+            if (!bv) {
+                Py_DECREF(av);
+                goto error;
+            }
+            PyObject *_r = make_integer_value(PyNumber_Or(av, bv));
+            Py_DECREF(av);
+            Py_DECREF(bv);
+            if (!_r) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_INTEGER_BIT_AND: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-and")) goto error;
             if (!require_integer(b, "integer-bit-and")) goto error;
-            if (int_binop(regs, base + dest, a, b, PyNumber_And) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *bv = menai_integer_value(b);
+            if (!bv) {
+                Py_DECREF(av);
+                goto error;
+            }
+            PyObject *_r = make_integer_value(PyNumber_And(av, bv));
+            Py_DECREF(av);
+            Py_DECREF(bv);
+            if (!_r) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_INTEGER_BIT_XOR: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-xor")) goto error;
             if (!require_integer(b, "integer-bit-xor")) goto error;
-            if (int_binop(regs, base + dest, a, b, PyNumber_Xor) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *bv = menai_integer_value(b);
+            if (!bv) {
+                Py_DECREF(av);
+                goto error;
+            }
+            PyObject *_r = make_integer_value(PyNumber_Xor(av, bv));
+            Py_DECREF(av);
+            Py_DECREF(bv);
+            if (!_r) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_INTEGER_BIT_SHIFT_LEFT: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-shift-left")) goto error;
             if (!require_integer(b, "integer-bit-shift-left")) goto error;
-            if (int_binop(regs, base + dest, a, b, PyNumber_Lshift) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *bv = menai_integer_value(b);
+            if (!bv) {
+                Py_DECREF(av);
+                goto error;
+            }
+            PyObject *_r = make_integer_value(PyNumber_Lshift(av, bv));
+            Py_DECREF(av);
+            Py_DECREF(bv);
+            if (!_r) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_INTEGER_BIT_SHIFT_RIGHT: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-shift-right")) goto error;
             if (!require_integer(b, "integer-bit-shift-right")) goto error;
-            if (int_binop(regs, base + dest, a, b, PyNumber_Rshift) < 0) goto error;
+            PyObject *av = menai_integer_value(a);
+            if (!av) goto error;
+            PyObject *bv = menai_integer_value(b);
+            if (!bv) {
+                Py_DECREF(av);
+                goto error;
+            }
+            PyObject *_r = make_integer_value(PyNumber_Rshift(av, bv));
+            Py_DECREF(av);
+            Py_DECREF(bv);
+            if (!_r) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_INTEGER_MIN: {
