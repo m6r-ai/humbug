@@ -457,7 +457,9 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
         return -1;
     }
 
-    f->code_obj         = code_obj;   /* borrowed — caller keeps code alive */
+    Py_INCREF(code_obj);
+    Py_XDECREF(f->code_obj);          /* release any previous owned reference */
+    f->code_obj         = code_obj;   /* owned reference (INCREF'd above) */
     f->instructions_obj = instrs_obj; /* we own this ref */
     f->instrs           = (uint64_t *)view.buf;
     f->code_len         = (int)(view.len / sizeof(uint64_t));
@@ -474,6 +476,7 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
 static void
 frame_release(Frame *f)
 {
+    Py_XDECREF(f->code_obj);
     Py_XDECREF(f->instructions_obj);
     f->instructions_obj = NULL;
     f->instrs           = NULL;
@@ -738,7 +741,7 @@ call_setup(Frame *new_frame, PyObject *func_obj,
     if (frame_setup(new_frame, bytecode, callee_base, return_dest) < 0)
         goto fail;
 
-    Py_DECREF(bytecode);
+    Py_DECREF(bytecode);  /* frame now owns its own ref; drop ours */
     return 0;
 
 fail:
@@ -2146,10 +2149,13 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *raw_func = regs[base + src0];
             PyObject *raw_args = regs[base + src1];
             /* Own raw_func before the scatter loop which may overwrite its slot. */
+            /* Own raw_args for the same reason — src1 may be < arity. */
             Py_INCREF(raw_func);
+            Py_INCREF(raw_args);
 
             if (!IS_MENAI_LIST(raw_args)) {
                 Py_DECREF(raw_func);
+                Py_DECREF(raw_args);
                 menai_raise_eval_error("apply: second argument must be a list");
                 goto error;
             }
@@ -2161,6 +2167,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 /* Scatter args into base+0..arity-1 (reusing current frame's base) */
                 for (int i = 0; i < arity; i++)
                     reg_set(regs, base + i, PyTuple_GET_ITEM(elements, i));
+                Py_DECREF(raw_args);
 
                 /* Release old frame instructions, reuse frame */
                 Py_XDECREF(frame->instructions_obj);
@@ -2174,15 +2181,16 @@ execute_loop(PyObject *code, PyObject *globals,
 
             } else if (IS_MENAI_STRUCTTYPE(raw_func)) {
                 PyObject *field_names = PyObject_GetAttrString(raw_func, "field_names");
-                if (field_names == NULL) { Py_DECREF(raw_func); goto error; }
+                if (field_names == NULL) { Py_DECREF(raw_args); Py_DECREF(raw_func); goto error; }
                 Py_ssize_t n_fields = PyTuple_GET_SIZE(field_names);
                 Py_DECREF(field_names);
                 if (arity != (int)n_fields) {
                     Py_DECREF(raw_func);
+                    Py_DECREF(raw_args);
                     menai_raise_eval_error("Struct constructor called with wrong number of arguments"); goto error;
                 }
                 PyObject *fields = PyTuple_New(n_fields);
-                if (fields == NULL) { Py_DECREF(raw_func); goto error; }
+                if (fields == NULL) { Py_DECREF(raw_args); Py_DECREF(raw_func); goto error; }
                 for (int i = 0; i < (int)n_fields; i++) {
                     PyObject *fv = PyTuple_GET_ITEM(elements, i);
                     Py_INCREF(fv);
@@ -2190,21 +2198,23 @@ execute_loop(PyObject *code, PyObject *globals,
                 }
                 PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", raw_func, "fields", fields);
                 Py_DECREF(fields);
-                if (kwargs == NULL) { Py_DECREF(raw_func); goto error; }
+                if (kwargs == NULL) { Py_DECREF(raw_args); Py_DECREF(raw_func); goto error; }
                 PyObject *retval = PyObject_Call((PyObject *)Menai_StructType, empty_tuple, kwargs);
                 Py_DECREF(kwargs);
-                if (retval == NULL) { Py_DECREF(raw_func); goto error; }
+                if (retval == NULL) { Py_DECREF(raw_args); Py_DECREF(raw_func); goto error; }
                 int saved_return_dest = frame->return_dest;
                 frame_release(frame);
                 frame_depth--;
                 Frame *caller = &frames[frame_depth];
-                if (caller->is_sentinel) { Py_DECREF(raw_func); return retval; }
+                if (caller->is_sentinel) { Py_DECREF(raw_args); Py_DECREF(raw_func); return retval; }
                 reg_set(regs, caller->base + saved_return_dest, retval);
                 Py_DECREF(retval);
+                Py_DECREF(raw_args);
                 Py_DECREF(raw_func);
                 frame = caller;
             } else {
                 Py_DECREF(raw_func);
+                Py_DECREF(raw_args);
                 menai_raise_eval_error("apply: first argument must be a function"); goto error;
             }
             break;
