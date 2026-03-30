@@ -1280,7 +1280,8 @@ execute_loop(PyObject *code, PyObject *globals,
             int ok = (code_get_int(bc, "param_count", &pc) == 0);
             if (ok) {
                 PyObject *iv = PyObject_GetAttrString(bc, "is_variadic");
-                if (iv) { is_var = PyObject_IsTrue(iv);
+                if (iv) {
+                    is_var = PyObject_IsTrue(iv);
                     Py_DECREF(iv);
                     if (is_var < 0) ok = 0;
                 }
@@ -2440,8 +2441,10 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *av = menai_complex_value(a);
             if (av == NULL) goto error;
             PyObject *bv = menai_complex_value(b);
-            if (bv == NULL) { Py_DECREF(av);
-                goto error; }
+            if (bv == NULL) {
+                Py_DECREF(av);
+                goto error;
+            }
             /* Check for zero divisor */
             double br = PyComplex_RealAsDouble(bv), bi = PyComplex_ImagAsDouble(bv);
             if (br == 0.0 && bi == 0.0) {
@@ -3752,34 +3755,57 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *hk = PyObject_CallMethod(a, "to_hashable_key", "O", key);
             if (hk == NULL) goto error;
             PyObject *pairs = PyObject_GetAttrString(a, "pairs");
-            if (pairs == NULL) { Py_DECREF(hk); goto error; }
+            if (pairs == NULL) {
+                Py_DECREF(hk);
+                goto error;
+            }
             Py_ssize_t n = PyTuple_GET_SIZE(pairs);
             PyObject *new_list = PyList_New(0);
-            if (new_list == NULL) { Py_DECREF(hk); Py_DECREF(pairs); goto error; }
+            if (new_list == NULL) {
+                Py_DECREF(hk);
+                Py_DECREF(pairs);
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *pair = PyTuple_GET_ITEM(pairs, i);
                 PyObject *k = PyTuple_GET_ITEM(pair, 0);
                 PyObject *khk = PyObject_CallMethod(a, "to_hashable_key", "O", k);
-                if (khk == NULL) { Py_DECREF(new_list); Py_DECREF(hk); Py_DECREF(pairs); goto error; }
+                if (khk == NULL) {
+                    Py_DECREF(new_list);
+                    Py_DECREF(hk);
+                    Py_DECREF(pairs);
+                    goto error;
+                }
                 int eq = PyObject_RichCompareBool(khk, hk, Py_EQ);
                 Py_DECREF(khk);
-                if (eq < 0) { Py_DECREF(new_list); Py_DECREF(hk); Py_DECREF(pairs); goto error; }
+                if (eq < 0) {
+                    Py_DECREF(new_list);
+                    Py_DECREF(hk);
+                    Py_DECREF(pairs);
+                    goto error;
+                }
                 if (!eq) {
                     Py_INCREF(pair);
                     if (PyList_Append(new_list, pair) < 0) {
-                        Py_DECREF(pair); Py_DECREF(new_list); Py_DECREF(hk); Py_DECREF(pairs); goto error;
+                        Py_DECREF(pair);
+                        Py_DECREF(new_list);
+                        Py_DECREF(hk);
+                        Py_DECREF(pairs);
+                        goto error;
                     }
                     Py_DECREF(pair);
                 }
             }
-            Py_DECREF(hk); Py_DECREF(pairs);
+            Py_DECREF(hk);
+            Py_DECREF(pairs);
             PyObject *new_tup = PyList_AsTuple(new_list);
             Py_DECREF(new_list);
             if (new_tup == NULL) goto error;
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_DictType, new_tup);
             Py_DECREF(new_tup);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_DICT_MERGE: {
@@ -3794,28 +3820,61 @@ execute_loop(PyObject *code, PyObject *globals,
                 PyObject *pa = PyObject_GetAttrString(a, "pairs");
                 if (pa == NULL) goto error;
                 PyObject *pb = PyObject_GetAttrString(b, "pairs");
-                if (pb == NULL) { Py_DECREF(pa); goto error; }
+                if (pb == NULL) {
+                    Py_DECREF(pa);
+                    goto error;
+                }
                 /* a's pairs first, then b's new pairs */
                 PyObject *merged = PyList_New(0);
-                if (merged == NULL) { Py_DECREF(pa); Py_DECREF(pb); goto error; }
+                if (merged == NULL) {
+                    Py_DECREF(pa);
+                    Py_DECREF(pb);
+                    goto error;
+                }
                 PyObject *seen = PyDict_New();
-                if (seen == NULL) { Py_DECREF(merged); Py_DECREF(pa); Py_DECREF(pb); goto error; }
+                if (seen == NULL) {
+                    Py_DECREF(merged);
+                    Py_DECREF(pa);
+                    Py_DECREF(pb);
+                    goto error;
+                }
                 /* Add a's pairs (with b's values if key in b) */
                 PyObject *b_lookup = PyObject_GetAttrString(b, "lookup");
-                if (b_lookup == NULL) { Py_DECREF(seen); Py_DECREF(merged); Py_DECREF(pa); Py_DECREF(pb); goto error; }
+                if (b_lookup == NULL) {
+                    Py_DECREF(seen);
+                    Py_DECREF(merged);
+                    Py_DECREF(pa);
+                    Py_DECREF(pb);
+                    goto error;
+                }
                 Py_ssize_t na = PyTuple_GET_SIZE(pa);
                 for (Py_ssize_t i = 0; i < na; i++) {
                     PyObject *pair = PyTuple_GET_ITEM(pa, i);
                     PyObject *k = PyTuple_GET_ITEM(pair, 0);
                     PyObject *hk = PyObject_CallMethod(a, "to_hashable_key", "O", k);
-                    if (hk == NULL) { Py_DECREF(b_lookup); Py_DECREF(seen); Py_DECREF(merged); Py_DECREF(pa); Py_DECREF(pb); goto error; }
+                    if (hk == NULL) {
+                        Py_DECREF(b_lookup);
+                        Py_DECREF(seen);
+                        Py_DECREF(merged);
+                        Py_DECREF(pa);
+                        Py_DECREF(pb);
+                        goto error;
+                    }
                     PyObject *b_entry = PyDict_GetItem(b_lookup, hk);
                     PyObject *use_pair = b_entry ? b_entry : pair;
                     Py_INCREF(use_pair);
                     if (PyList_Append(merged, use_pair) < 0 || PyDict_SetItem(seen, hk, Py_True) < 0) {
-                        Py_DECREF(use_pair); Py_DECREF(hk); Py_DECREF(b_lookup); Py_DECREF(seen); Py_DECREF(merged); Py_DECREF(pa); Py_DECREF(pb); goto error;
+                        Py_DECREF(use_pair);
+                        Py_DECREF(hk);
+                        Py_DECREF(b_lookup);
+                        Py_DECREF(seen);
+                        Py_DECREF(merged);
+                        Py_DECREF(pa);
+                        Py_DECREF(pb);
+                        goto error;
                     }
-                    Py_DECREF(use_pair); Py_DECREF(hk);
+                    Py_DECREF(use_pair);
+                    Py_DECREF(hk);
                 }
                 /* Add b's new pairs */
                 Py_ssize_t nb = PyTuple_GET_SIZE(pb);
@@ -3823,17 +3882,34 @@ execute_loop(PyObject *code, PyObject *globals,
                     PyObject *pair = PyTuple_GET_ITEM(pb, i);
                     PyObject *k = PyTuple_GET_ITEM(pair, 0);
                     PyObject *hk = PyObject_CallMethod(b, "to_hashable_key", "O", k);
-                    if (hk == NULL) { Py_DECREF(b_lookup); Py_DECREF(seen); Py_DECREF(merged); Py_DECREF(pa); Py_DECREF(pb); goto error; }
+                    if (hk == NULL) {
+                        Py_DECREF(b_lookup);
+                        Py_DECREF(seen);
+                        Py_DECREF(merged);
+                        Py_DECREF(pa);
+                        Py_DECREF(pb);
+                        goto error;
+                    }
                     if (!PyDict_Contains(seen, hk)) {
                         Py_INCREF(pair);
                         if (PyList_Append(merged, pair) < 0) {
-                            Py_DECREF(pair); Py_DECREF(hk); Py_DECREF(b_lookup); Py_DECREF(seen); Py_DECREF(merged); Py_DECREF(pa); Py_DECREF(pb); goto error;
+                            Py_DECREF(pair);
+                            Py_DECREF(hk);
+                            Py_DECREF(b_lookup);
+                            Py_DECREF(seen);
+                            Py_DECREF(merged);
+                            Py_DECREF(pa);
+                            Py_DECREF(pb);
+                            goto error;
                         }
                         Py_DECREF(pair);
                     }
                     Py_DECREF(hk);
                 }
-                Py_DECREF(b_lookup); Py_DECREF(seen); Py_DECREF(pa); Py_DECREF(pb);
+                Py_DECREF(b_lookup);
+                Py_DECREF(seen);
+                Py_DECREF(pa);
+                Py_DECREF(pb);
                 PyObject *new_tup = PyList_AsTuple(merged);
                 Py_DECREF(merged);
                 if (new_tup == NULL) goto error;
@@ -3841,7 +3917,8 @@ execute_loop(PyObject *code, PyObject *globals,
                 Py_DECREF(new_tup);
             }
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
 
@@ -3882,7 +3959,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (iv == NULL) goto error;
             PyObject *_r = make_integer_value(iv);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_SET_MEMBER_P: {
@@ -3892,9 +3970,13 @@ execute_loop(PyObject *code, PyObject *globals,
                 (PyObject *)Menai_DictType, "to_hashable_key", "O", item);
             if (hk == NULL) goto error;
             PyObject *members = PyObject_GetAttrString(a, "members");
-            if (members == NULL) { Py_DECREF(hk); goto error; }
+            if (members == NULL) {
+                Py_DECREF(hk);
+                goto error;
+            }
             int has = PySequence_Contains(members, hk);
-            Py_DECREF(hk); Py_DECREF(members);
+            Py_DECREF(hk);
+            Py_DECREF(members);
             if (has < 0) goto error;
             bool_store(regs, base + dest, has);
             break;
@@ -3906,9 +3988,13 @@ execute_loop(PyObject *code, PyObject *globals,
                 (PyObject *)Menai_DictType, "to_hashable_key", "O", item);
             if (hk == NULL) goto error;
             PyObject *members = PyObject_GetAttrString(a, "members");
-            if (members == NULL) { Py_DECREF(hk); goto error; }
+            if (members == NULL) {
+                Py_DECREF(hk);
+                goto error;
+            }
             int has = PySequence_Contains(members, hk);
-            Py_DECREF(hk); Py_DECREF(members);
+            Py_DECREF(hk);
+            Py_DECREF(members);
             if (has < 0) goto error;
             if (has) {
                 reg_set(regs, base + dest, a);
@@ -3917,17 +4003,23 @@ execute_loop(PyObject *code, PyObject *globals,
                 if (elems == NULL) goto error;
                 Py_ssize_t n = PyTuple_GET_SIZE(elems);
                 PyObject *new_tup = PyTuple_New(n + 1);
-                if (new_tup == NULL) { Py_DECREF(elems); goto error; }
+                if (new_tup == NULL) {
+                    Py_DECREF(elems);
+                    goto error;
+                }
                 for (Py_ssize_t i = 0; i < n; i++) {
                     PyObject *e = PyTuple_GET_ITEM(elems, i);
-                    Py_INCREF(e); PyTuple_SET_ITEM(new_tup, i, e);
+                    Py_INCREF(e);
+                    PyTuple_SET_ITEM(new_tup, i, e);
                 }
                 Py_DECREF(elems);
-                Py_INCREF(item); PyTuple_SET_ITEM(new_tup, n, item);
+                Py_INCREF(item);
+                PyTuple_SET_ITEM(new_tup, n, item);
                 PyObject *r = PyObject_CallOneArg((PyObject *)Menai_SetType, new_tup);
                 Py_DECREF(new_tup);
                 if (r == NULL) goto error;
-                reg_set(regs, base + dest, r); Py_DECREF(r);
+                reg_set(regs, base + dest, r);
+                Py_DECREF(r);
             }
             break;
         }
@@ -3938,34 +4030,57 @@ execute_loop(PyObject *code, PyObject *globals,
                 (PyObject *)Menai_DictType, "to_hashable_key", "O", item);
             if (hk == NULL) goto error;
             PyObject *elems = PyObject_GetAttrString(a, "elements");
-            if (elems == NULL) { Py_DECREF(hk); goto error; }
+            if (elems == NULL) {
+                Py_DECREF(hk);
+                goto error;
+            }
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             PyObject *new_list = PyList_New(0);
-            if (new_list == NULL) { Py_DECREF(elems); Py_DECREF(hk); goto error; }
+            if (new_list == NULL) {
+                Py_DECREF(elems);
+                Py_DECREF(hk);
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *e = PyTuple_GET_ITEM(elems, i);
                 PyObject *ehk = PyObject_CallMethod(
                     (PyObject *)Menai_DictType, "to_hashable_key", "O", e);
-                if (ehk == NULL) { Py_DECREF(new_list); Py_DECREF(elems); Py_DECREF(hk); goto error; }
+                if (ehk == NULL) {
+                    Py_DECREF(new_list);
+                    Py_DECREF(elems);
+                    Py_DECREF(hk);
+                    goto error;
+                }
                 int eq = PyObject_RichCompareBool(ehk, hk, Py_EQ);
                 Py_DECREF(ehk);
-                if (eq < 0) { Py_DECREF(new_list); Py_DECREF(elems); Py_DECREF(hk); goto error; }
+                if (eq < 0) {
+                    Py_DECREF(new_list);
+                    Py_DECREF(elems);
+                    Py_DECREF(hk);
+                    goto error;
+                }
                 if (!eq) {
                     Py_INCREF(e);
                     if (PyList_Append(new_list, e) < 0) {
-                        Py_DECREF(e); Py_DECREF(new_list); Py_DECREF(elems); Py_DECREF(hk); goto error;
+                        Py_DECREF(e);
+                        Py_DECREF(new_list);
+                        Py_DECREF(elems);
+                        Py_DECREF(hk);
+                        goto error;
                     }
                     Py_DECREF(e);
                 }
             }
-            Py_DECREF(elems); Py_DECREF(hk);
+            Py_DECREF(elems);
+            Py_DECREF(hk);
             PyObject *new_tup = PyList_AsTuple(new_list);
             Py_DECREF(new_list);
             if (new_tup == NULL) goto error;
             PyObject *r = PyObject_CallOneArg((PyObject *)Menai_SetType, new_tup);
             Py_DECREF(new_tup);
             if (r == NULL) goto error;
-            reg_set(regs, base + dest, r); Py_DECREF(r);
+            reg_set(regs, base + dest, r);
+            Py_DECREF(r);
             break;
         }
         case OP_SET_UNION: {
@@ -4648,7 +4763,8 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
         Py_ssize_t ppos = 0;
         while (PyDict_Next(prelude_dict, &ppos, &pkey, &pval)) {
             PyObject *converted = PyObject_CallOneArg(fn_convert_value, pval);
-            if (converted == NULL) { Py_DECREF(fast_prelude);
+            if (converted == NULL) {
+                Py_DECREF(fast_prelude);
                 Py_DECREF(fast_constants);
                 return NULL;
             }
