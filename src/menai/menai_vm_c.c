@@ -634,15 +634,20 @@ fail:
  * Frame struct
  *
  * The C VM maintains a fixed-size stack of Frame structs.  All fields are
- * plain C — no Python objects except code_obj and instructions_obj, which
- * are kept alive by the frame stack but never dereferenced in the hot loop.
+ * plain C — no Python objects except those listed below, all of which are
+ * kept alive by the frame stack.  constants, names, and local_count are
+ * cached here at frame_setup time so the hot loop never calls
+ * PyObject_GetAttrString on the code object.
  * ------------------------------------------------------------------------- */
 
 typedef struct {
     PyObject       *code_obj;         /* CodeObject — kept alive, not dereferenced in loop */
     PyObject       *instructions_obj; /* array.array — kept alive for instrs pointer */
+    PyObject       *constants;        /* owned ref — list of fast constant values */
+    PyObject       *names;            /* owned ref — list of global name strings */
     uint64_t       *instrs;           /* raw C pointer into the array.array buffer */
     int             code_len;
+    int             local_count;
     int             ip;
     int             base;
     int             return_dest;
@@ -655,6 +660,18 @@ typedef struct {
  * All read once at frame-setup time, not in the hot loop.
  * Return -1 and set exception on failure.
  * ------------------------------------------------------------------------- */
+
+static int
+code_get_int(PyObject *code, const char *name, int *out)
+{
+    PyObject *v = PyObject_GetAttrString(code, name);
+    if (v == NULL) return -1;
+    long val = PyLong_AsLong(v);
+    Py_DECREF(v);
+    if (val == -1 && PyErr_Occurred()) return -1;
+    *out = (int)val;
+    return 0;
+}
 
 /*
  * Fill frame fields from a CodeObject.
@@ -673,12 +690,36 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
         return -1;
     }
 
+    PyObject *constants = PyObject_GetAttrString(code_obj, "constants");
+    if (constants == NULL) {
+        Py_DECREF(instrs_obj);
+        return -1;
+    }
+    PyObject *names = PyObject_GetAttrString(code_obj, "names");
+    if (names == NULL) {
+        Py_DECREF(constants);
+        Py_DECREF(instrs_obj);
+        return -1;
+    }
+    int local_count = 0;
+    if (code_get_int(code_obj, "local_count", &local_count) < 0) {
+        Py_DECREF(names);
+        Py_DECREF(constants);
+        Py_DECREF(instrs_obj);
+        return -1;
+    }
+
     Py_INCREF(code_obj);
     Py_XDECREF(f->code_obj);          /* release any previous owned reference */
+    Py_XDECREF(f->constants);
+    Py_XDECREF(f->names);
     f->code_obj         = code_obj;   /* owned reference (INCREF'd above) */
     f->instructions_obj = instrs_obj; /* we own this ref */
+    f->constants        = constants;  /* we own this ref */
+    f->names            = names;      /* we own this ref */
     f->instrs           = (uint64_t *)view.buf;
     f->code_len         = (int)(view.len / sizeof(uint64_t));
+    f->local_count      = local_count;
     f->ip               = 0;
     f->base             = base;
     f->return_dest      = return_dest;
@@ -694,25 +735,13 @@ frame_release(Frame *f)
 {
     Py_XDECREF(f->code_obj);
     Py_XDECREF(f->instructions_obj);
+    Py_XDECREF(f->constants);
+    Py_XDECREF(f->names);
     f->instructions_obj = NULL;
     f->instrs           = NULL;
     f->code_obj         = NULL;
-}
-
-/* ---------------------------------------------------------------------------
- * CodeObject integer attribute helper
- * ------------------------------------------------------------------------- */
-
-static int
-code_get_int(PyObject *code, const char *name, int *out)
-{
-    PyObject *v = PyObject_GetAttrString(code, name);
-    if (v == NULL) return -1;
-    long val = PyLong_AsLong(v);
-    Py_DECREF(v);
-    if (val == -1 && PyErr_Occurred()) return -1;
-    *out = (int)val;
-    return 0;
+    f->constants        = NULL;
+    f->names            = NULL;
 }
 
 /* ---------------------------------------------------------------------------
@@ -875,35 +904,28 @@ call_setup(Frame *new_frame, PyObject *func_obj,
            PyObject **regs, int callee_base, int arity,
            int return_dest)
 {
-    /* bytecode = func.bytecode */
-    PyObject *bytecode = PyObject_GetAttrString(func_obj, "bytecode");
-    if (bytecode == NULL) return -1;
+    MenaiFunction_Object *func = (MenaiFunction_Object *)func_obj;
+    PyObject *bytecode = func->bytecode;  /* borrowed — kept alive by func_obj */
 
-    int param_count = 0, is_variadic_int = 0;
-    if (code_get_int(bytecode, "param_count", &param_count) < 0) goto fail;
+    int param_count = 0;
+    if (code_get_int(bytecode, "param_count", &param_count) < 0) return -1;
+    int is_variadic = func->is_variadic;
 
-    PyObject *iv = PyObject_GetAttrString(bytecode, "is_variadic");
-    if (iv == NULL) goto fail;
-    is_variadic_int = PyObject_IsTrue(iv);
-    Py_DECREF(iv);
-    if (is_variadic_int < 0) goto fail;
-
-    if (is_variadic_int) {
+    if (is_variadic) {
         int min_arity = param_count - 1;
         if (arity < min_arity) {
-            PyObject *name = PyObject_GetAttrString(func_obj, "name");
+            PyObject *name = func->name;
             const char *fname = (name != NULL && name != Py_None)
                                 ? PyUnicode_AsUTF8(name) : "<lambda>";
             menai_raise_eval_errorf(
                 "Function '%s' expects at least %d argument%s, got %d",
                 fname, min_arity, min_arity == 1 ? "" : "s", arity);
-            Py_XDECREF(name);
-            goto fail;
+            return -1;
         }
         /* Pack excess args into a MenaiList for the rest parameter. */
         int rest_count = arity - min_arity;
         PyObject *rest_tuple = PyTuple_New(rest_count);
-        if (rest_tuple == NULL) goto fail;
+        if (rest_tuple == NULL) return -1;
         for (int k = 0; k < rest_count; k++) {
             PyObject *elem = regs[callee_base + min_arity + k];
             Py_INCREF(elem);
@@ -912,49 +934,37 @@ call_setup(Frame *new_frame, PyObject *func_obj,
         PyObject *rest_list = PyObject_CallOneArg(
             (PyObject *)Menai_ListType, rest_tuple);
         Py_DECREF(rest_tuple);
-        if (rest_list == NULL) goto fail;
+        if (rest_list == NULL) return -1;
         reg_set(regs, callee_base + min_arity, rest_list);
         Py_DECREF(rest_list);
 
     } else if (arity != param_count) {
-        PyObject *name = PyObject_GetAttrString(func_obj, "name");
+        PyObject *name = func->name;
         const char *fname = (name != NULL && name != Py_None)
                             ? PyUnicode_AsUTF8(name) : "<lambda>";
         menai_raise_eval_errorf(
             "Function '%s' expects %d argument%s, got %d",
             fname, param_count, param_count == 1 ? "" : "s", arity);
-        Py_XDECREF(name);
-        goto fail;
+        return -1;
     }
 
     /* Populate capture slots: regs[callee_base + param_count + i] */
     {
-        PyObject *captured = PyObject_GetAttrString(func_obj, "captured_values");
-        if (captured == NULL) goto fail;
+        PyObject *captured = func->captured_values;
         Py_ssize_t ncap = PyList_GET_SIZE(captured);
         for (Py_ssize_t i = 0; i < ncap; i++) {
             PyObject *cv = PyList_GET_ITEM(captured, i);
             PyObject *fast_cv = PyObject_CallOneArg(fn_convert_value, cv);
             if (fast_cv == NULL) {
-                Py_DECREF(captured);
-                goto fail;
+                return -1;
             }
             reg_set(regs, callee_base + param_count + (int)i, fast_cv);
             Py_DECREF(fast_cv);
         }
-        Py_DECREF(captured);
     }
 
     /* Set up the new frame. */
-    if (frame_setup(new_frame, bytecode, callee_base, return_dest) < 0)
-        goto fail;
-
-    Py_DECREF(bytecode);  /* frame now owns its own ref; drop ours */
-    return 0;
-
-fail:
-    Py_DECREF(bytecode);
-    return -1;
+    return frame_setup(new_frame, bytecode, callee_base, return_dest);
 }
 
 static PyObject *execute_loop(PyObject *code, PyObject *globals,
@@ -975,13 +985,26 @@ execute_loop(PyObject *code, PyObject *globals,
 {
     /* Frame stack — depth 0 is the sentinel. */
     Frame frames[MAX_FRAME_DEPTH + 1];
-    memset(frames, 0, sizeof(frames));
-    frames[0].is_sentinel = 1;
+    frames[0] = (Frame){
+        .is_sentinel      = 1,
+        .code_obj         = NULL,
+        .instructions_obj = NULL,
+        .constants        = NULL,
+        .names            = NULL,
+        .instrs           = NULL,
+    };
+    frames[1] = (Frame){
+        .is_sentinel      = 0,
+        .code_obj         = NULL,
+        .instructions_obj = NULL,
+        .constants        = NULL,
+        .names            = NULL,
+        .instrs           = NULL,
+    };
 
     /* Set up frame at depth 1 for the top-level code object. */
     if (frame_setup(&frames[1], code, 0, 0) < 0)
         return NULL;
-    frames[1].is_sentinel = 0;
 
     int frame_depth = 1;
     Frame *frame    = &frames[1];
@@ -1038,18 +1061,13 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
 
         case OP_LOAD_CONST: {
-            PyObject *constants = PyObject_GetAttrString(frame->code_obj, "constants");
-            if (constants == NULL) goto error;
-            PyObject *val = PyList_GET_ITEM(constants, src0);
+            PyObject *val = PyList_GET_ITEM(frame->constants, src0);
             reg_set(regs, base + dest, val);
-            Py_DECREF(constants);
             break;
         }
 
         case OP_LOAD_NAME: {
-            PyObject *names = PyObject_GetAttrString(frame->code_obj, "names");
-            if (names == NULL) goto error;
-            PyObject *name = PyList_GET_ITEM(names, src0);
+            PyObject *name = PyList_GET_ITEM(frame->names, src0);
             PyObject *val  = PyDict_GetItem(globals, name);
             if (val == NULL) {
                 /* Build a rich error with available variable names, matching
@@ -1086,10 +1104,8 @@ execute_loop(PyObject *code, PyObject *globals,
                 } else {
                     menai_raise_eval_errorf("Undefined variable: '%s'", name_str);
                 }
-                Py_DECREF(names);
                 goto error;
             }
-            Py_DECREF(names);
             reg_set(regs, base + dest, val);
             break;
         }
@@ -1161,12 +1177,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *raw = regs[base + src0];
             int arity     = src1;
 
-            /* src1 holds arity; arguments are already in the outgoing zone
-             * at regs[base + local_count .. base + local_count + arity - 1].
-             * We need local_count to find callee_base. */
-            int local_count = 0;
-            if (code_get_int(frame->code_obj, "local_count", &local_count) < 0) goto error;
-            int callee_base = base + local_count;
+            int callee_base = base + frame->local_count;
 
             if (IS_MENAI_FUNCTION(raw)) {
                 if (frame_depth >= MAX_FRAME_DEPTH) {
@@ -1175,7 +1186,8 @@ execute_loop(PyObject *code, PyObject *globals,
                 }
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
-                new_frame->return_dest = dest;
+                *new_frame = (Frame){ .code_obj = NULL, .instructions_obj = NULL,
+                                      .constants = NULL, .names = NULL, .instrs = NULL };
 
                 if (call_setup(new_frame, raw, regs, callee_base,
                                arity, dest) < 0) {
@@ -1229,11 +1241,7 @@ execute_loop(PyObject *code, PyObject *globals,
              * which would decrement raw's refcount to zero and free it. */
             Py_INCREF(raw);
 
-            int local_count = 0;
-            if (code_get_int(frame->code_obj, "local_count", &local_count) < 0) {
-                Py_DECREF(raw);
-                goto error;
-            }
+            int local_count = frame->local_count;
 
             if (IS_MENAI_FUNCTION(raw)) {
                 /* Move outgoing args down to base+0..n_args-1 in place. */
@@ -2389,11 +2397,7 @@ execute_loop(PyObject *code, PyObject *globals,
                     goto error;
                 }
 
-                int local_count = 0;
-                if (code_get_int(frame->code_obj, "local_count", &local_count) < 0) {
-                    goto error;
-                }
-                int callee_base = base + local_count;
+                int callee_base = base + frame->local_count;
 
                 /* Scatter list elements into the callee window */
                 for (int i = 0; i < arity; i++)
@@ -2401,7 +2405,8 @@ execute_loop(PyObject *code, PyObject *globals,
 
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
-                new_frame->return_dest = dest;
+                *new_frame = (Frame){ .code_obj = NULL, .instructions_obj = NULL,
+                                      .constants = NULL, .names = NULL, .instrs = NULL };
                 if (call_setup(new_frame, raw_func, regs, callee_base, arity, dest) < 0) {
                     frame_depth--;
                     goto error;
