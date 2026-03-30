@@ -460,7 +460,8 @@ int_binop(PyObject **regs, int slot, PyObject *a, PyObject *b,
         return -1;
     }
     PyObject *res = fn(av, bv);
-    Py_DECREF(av); Py_DECREF(bv);
+    Py_DECREF(av);
+    Py_DECREF(bv);
     PyObject *r = make_integer_value(res);
     if (!r) return -1;
     reg_set(regs, slot, r);
