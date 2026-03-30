@@ -87,6 +87,7 @@ typedef struct {
     PyObject *bytecode;        /* CodeObject or Py_None */
     PyObject *captured_values; /* Python list of MenaiValue* */
     int       is_variadic;     /* C int: 0 or 1 */
+    int       param_count;     /* C int: number of fixed parameters */
 } MenaiFunction_Object;
 
 /* ---------------------------------------------------------------------------

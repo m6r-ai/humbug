@@ -907,8 +907,7 @@ call_setup(Frame *new_frame, PyObject *func_obj,
     MenaiFunction_Object *func = (MenaiFunction_Object *)func_obj;
     PyObject *bytecode = func->bytecode;  /* borrowed — kept alive by func_obj */
 
-    int param_count = 0;
-    if (code_get_int(bytecode, "param_count", &param_count) < 0) return -1;
+    int param_count = func->param_count;
     int is_variadic = func->is_variadic;
 
     if (is_variadic) {
@@ -954,12 +953,25 @@ call_setup(Frame *new_frame, PyObject *func_obj,
         Py_ssize_t ncap = PyList_GET_SIZE(captured);
         for (Py_ssize_t i = 0; i < ncap; i++) {
             PyObject *cv = PyList_GET_ITEM(captured, i);
-            PyObject *fast_cv = PyObject_CallOneArg(fn_convert_value, cv);
-            if (fast_cv == NULL) {
-                return -1;
+            /* Most captures are already fast C types (set by OP_PATCH_CLOSURE
+             * from registers).  Prelude closures may hold slow-world values
+             * that were not converted at load time.  Check with IS_MENAI_*
+             * first to avoid a Python call in the common fast case. */
+            PyTypeObject *cvt = Py_TYPE(cv);
+            if (cvt == Menai_NoneType     || cvt == Menai_BooleanType  ||
+                cvt == Menai_IntegerType  || cvt == Menai_FloatType    ||
+                cvt == Menai_ComplexType  || cvt == Menai_StringType   ||
+                cvt == Menai_SymbolType   || cvt == Menai_ListType     ||
+                cvt == Menai_DictType     || cvt == Menai_SetType      ||
+                cvt == Menai_FunctionType || cvt == Menai_StructTypeType ||
+                cvt == Menai_StructType) {
+                reg_set(regs, callee_base + param_count + (int)i, cv);
+            } else {
+                PyObject *fast_cv = PyObject_CallOneArg(fn_convert_value, cv);
+                if (fast_cv == NULL) return -1;
+                reg_set(regs, callee_base + param_count + (int)i, fast_cv);
+                Py_DECREF(fast_cv);
             }
-            reg_set(regs, callee_base + param_count + (int)i, fast_cv);
-            Py_DECREF(fast_cv);
         }
     }
 

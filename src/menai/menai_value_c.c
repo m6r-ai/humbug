@@ -1323,6 +1323,15 @@ MenaiFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
         Py_INCREF(bytecode); self->bytecode          = bytecode;
         self->captured_values = cap_list;
         self->is_variadic     = is_variadic;
+        /* Cache param_count from the bytecode object to avoid repeated
+         * PyObject_GetAttrString calls in call_setup on every function call. */
+        if (bytecode != Py_None) {
+            PyObject *pc = PyObject_GetAttrString(bytecode, "param_count");
+            self->param_count = pc ? (int)PyLong_AsLong(pc) : 0;
+            Py_XDECREF(pc);
+        } else {
+            self->param_count = (int)PyTuple_GET_SIZE(params_tup);
+        }
     } else {
         Py_DECREF(params_tup);
         Py_DECREF(cap_list);
@@ -1450,12 +1459,20 @@ MenaiFunction_get_is_variadic(PyObject *self, void *closure)
     return PyBool_FromLong(((MenaiFunction_Object *)self)->is_variadic);
 }
 
+static PyObject *
+MenaiFunction_get_param_count(PyObject *self, void *closure)
+{
+    (void)closure;
+    return PyLong_FromLong(((MenaiFunction_Object *)self)->param_count);
+}
+
 static PyGetSetDef MenaiFunction_getset[] = {
     {"parameters",      MenaiFunction_get_parameters,      NULL,                              NULL, NULL},
     {"name",            MenaiFunction_get_name,             NULL,                              NULL, NULL},
     {"bytecode",        MenaiFunction_get_bytecode,         NULL,                              NULL, NULL},
     {"captured_values", MenaiFunction_get_captured_values,  MenaiFunction_set_captured_values, NULL, NULL},
     {"is_variadic",     MenaiFunction_get_is_variadic,      NULL,                              NULL, NULL},
+    {"param_count",     MenaiFunction_get_param_count,      NULL,                              NULL, NULL},
     {NULL, NULL, NULL, NULL, NULL}
 };
 
