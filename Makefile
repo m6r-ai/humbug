@@ -32,7 +32,7 @@ SO_FILES := \
 
 build: $(SO_FILES)
 
-$(SO_FILES): $(C_SOURCES) src/menai/menai_value_c.h src/menai/menai_vm_shim.h
+$(SO_FILES): $(C_SOURCES) src/menai/menai_value_c.h
 	$(PYTHON) setup.py build_ext --inplace
 	@mkdir -p build && touch $@
 
