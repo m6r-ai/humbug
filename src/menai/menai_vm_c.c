@@ -15,6 +15,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <math.h>
+#include <complex.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -283,7 +284,6 @@ static PyObject *MenaiCancelledException_type = NULL;
 static PyObject *fn_convert_code_object   = NULL;
 static PyObject *fn_convert_value         = NULL;
 static PyObject *fn_to_slow               = NULL;
-static PyObject *cmath_module             = NULL;  /* Python cmath module for complex transcendentals */
 static PyObject *empty_tuple              = NULL;  /* Cached PyTuple_New(0) — used for struct construction */
 
 /* ---------------------------------------------------------------------------
@@ -390,9 +390,6 @@ menai_vm_shim_init(void)
     if (fetch_callable(vc, "convert_code_object", &fn_convert_code_object) < 0) goto fail;
     if (fetch_callable(vc, "convert_value",       &fn_convert_value)       < 0) goto fail;
     if (fetch_callable(vc, "to_slow",             &fn_to_slow)             < 0) goto fail;
-
-    cmath_module = PyImport_ImportModule("cmath");
-    if (cmath_module == NULL) goto fail;
 
     empty_tuple = PyTuple_New(0);
     if (empty_tuple == NULL) goto fail;
@@ -749,43 +746,8 @@ fail:
     return -1;
 }
 
-/* ---------------------------------------------------------------------------
- * execute_loop — the main dispatch loop
- * (forward declaration; defined after cpx_transcendental below)
- * ------------------------------------------------------------------------- */
-
 static PyObject *execute_loop(PyObject *code, PyObject *globals,
                               PyObject **regs, int max_locals);
-
-/* ---------------------------------------------------------------------------
- * cpx_transcendental — apply a single-argument cmath function to a
- * MenaiComplex value and store the result.
- *
- * Replaces the CPX_TRANSCENDENTAL macro.  Returns 0 on success, -1 on
- * failure (Python exception set).
- * ------------------------------------------------------------------------- */
-
-static int
-cpx_transcendental(PyObject **regs, int slot, PyObject *src,
-                   const char *fn_name, const char *op_name)
-{
-    if (!require_complex(src, op_name)) return -1;
-    PyObject *cv = menai_complex_value(src);
-    if (cv == NULL) return -1;
-    PyObject *fn = PyObject_GetAttrString(cmath_module, fn_name);
-    if (fn == NULL) {
-        Py_DECREF(cv);
-        return -1;
-    }
-    PyObject *res = PyObject_CallOneArg(fn, cv);
-    Py_DECREF(fn);
-    Py_DECREF(cv);
-    PyObject *r = make_complex_value(res);
-    if (r == NULL) return -1;
-    reg_set(regs, slot, r);
-    Py_DECREF(r);
-    return 0;
-}
 
 /* ---------------------------------------------------------------------------
  * execute_loop — the main dispatch loop
@@ -2517,45 +2479,126 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(_r);
             break;
         }
-        case OP_COMPLEX_EXP:  { if (cpx_transcendental(regs, base + dest, regs[base + src0], "exp",   "complex-exp")   < 0) goto error; break; }
-        case OP_COMPLEX_LOG:  { if (cpx_transcendental(regs, base + dest, regs[base + src0], "log",   "complex-log")   < 0) goto error; break; }
-        case OP_COMPLEX_LOG10:{ if (cpx_transcendental(regs, base + dest, regs[base + src0], "log10", "complex-log10") < 0) goto error; break; }
-        case OP_COMPLEX_SIN:  { if (cpx_transcendental(regs, base + dest, regs[base + src0], "sin",   "complex-sin")   < 0) goto error; break; }
-        case OP_COMPLEX_COS:  { if (cpx_transcendental(regs, base + dest, regs[base + src0], "cos",   "complex-cos")   < 0) goto error; break; }
-        case OP_COMPLEX_TAN:  { if (cpx_transcendental(regs, base + dest, regs[base + src0], "tan",   "complex-tan")   < 0) goto error; break; }
-        case OP_COMPLEX_SQRT: { if (cpx_transcendental(regs, base + dest, regs[base + src0], "sqrt",  "complex-sqrt")  < 0) goto error; break; }
+        case OP_COMPLEX_EXP: {
+            PyObject *a = regs[base + src0];
+            if (!require_complex(a, "complex-exp")) goto error;
+            PyObject *cv = menai_complex_value(a);
+            if (cv == NULL) goto error;
+            double complex z = PyComplex_RealAsDouble(cv) + PyComplex_ImagAsDouble(cv) * I;
+            Py_DECREF(cv);
+            double complex cr = cexp(z);
+            PyObject *_r = make_complex_from_doubles(creal(cr), cimag(cr));
+            if (_r == NULL) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
+            break;
+        }
+        case OP_COMPLEX_LOG: {
+            PyObject *a = regs[base + src0];
+            if (!require_complex(a, "complex-log")) goto error;
+            PyObject *cv = menai_complex_value(a);
+            if (cv == NULL) goto error;
+            double complex z = PyComplex_RealAsDouble(cv) + PyComplex_ImagAsDouble(cv) * I;
+            Py_DECREF(cv);
+            double complex cr = clog(z);
+            PyObject *_r = make_complex_from_doubles(creal(cr), cimag(cr));
+            if (_r == NULL) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
+            break;
+        }
+        case OP_COMPLEX_LOG10: {
+            PyObject *a = regs[base + src0];
+            if (!require_complex(a, "complex-log10")) goto error;
+            PyObject *cv = menai_complex_value(a);
+            if (cv == NULL) goto error;
+            double complex z = PyComplex_RealAsDouble(cv) + PyComplex_ImagAsDouble(cv) * I;
+            Py_DECREF(cv);
+            double complex cr = clog(z) / log(10.0);
+            PyObject *_r = make_complex_from_doubles(creal(cr), cimag(cr));
+            if (_r == NULL) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
+            break;
+        }
+        case OP_COMPLEX_SIN: {
+            PyObject *a = regs[base + src0];
+            if (!require_complex(a, "complex-sin")) goto error;
+            PyObject *cv = menai_complex_value(a);
+            if (cv == NULL) goto error;
+            double complex z = PyComplex_RealAsDouble(cv) + PyComplex_ImagAsDouble(cv) * I;
+            Py_DECREF(cv);
+            double complex cr = csin(z);
+            PyObject *_r = make_complex_from_doubles(creal(cr), cimag(cr));
+            if (_r == NULL) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
+            break;
+        }
+        case OP_COMPLEX_COS: {
+            PyObject *a = regs[base + src0];
+            if (!require_complex(a, "complex-cos")) goto error;
+            PyObject *cv = menai_complex_value(a);
+            if (cv == NULL) goto error;
+            double complex z = PyComplex_RealAsDouble(cv) + PyComplex_ImagAsDouble(cv) * I;
+            Py_DECREF(cv);
+            double complex cr = ccos(z);
+            PyObject *_r = make_complex_from_doubles(creal(cr), cimag(cr));
+            if (_r == NULL) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
+            break;
+        }
+        case OP_COMPLEX_TAN: {
+            PyObject *a = regs[base + src0];
+            if (!require_complex(a, "complex-tan")) goto error;
+            PyObject *cv = menai_complex_value(a);
+            if (cv == NULL) goto error;
+            double complex z = PyComplex_RealAsDouble(cv) + PyComplex_ImagAsDouble(cv) * I;
+            Py_DECREF(cv);
+            double complex cr = ctan(z);
+            PyObject *_r = make_complex_from_doubles(creal(cr), cimag(cr));
+            if (_r == NULL) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
+            break;
+        }
+        case OP_COMPLEX_SQRT: {
+            PyObject *a = regs[base + src0];
+            if (!require_complex(a, "complex-sqrt")) goto error;
+            PyObject *cv = menai_complex_value(a);
+            if (cv == NULL) goto error;
+            double complex z = PyComplex_RealAsDouble(cv) + PyComplex_ImagAsDouble(cv) * I;
+            Py_DECREF(cv);
+            double complex cr = csqrt(z);
+            PyObject *_r = make_complex_from_doubles(creal(cr), cimag(cr));
+            if (_r == NULL) goto error;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
+            break;
+        }
         case OP_COMPLEX_LOGN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_complex(a, "complex-logn")) goto error;
             if (!require_complex(b, "complex-logn")) goto error;
-            /* Declare all locals before any goto to avoid jumping over
-             * initialisers, which is undefined behaviour in C. */
-            PyObject *av = NULL, *bv = NULL, *zero = NULL, *fn = NULL, *res = NULL;
-            int is_zero;
-            av = PyObject_GetAttrString(a, "value");
-            if (av == NULL) goto cpx_logn_err;
-            bv = PyObject_GetAttrString(b, "value");
-            if (bv == NULL) goto cpx_logn_err;
-            zero = PyComplex_FromDoubles(0.0, 0.0);
-            if (zero == NULL) goto cpx_logn_err;
-            is_zero = PyObject_RichCompareBool(bv, zero, Py_EQ);
-            Py_CLEAR(zero);
-            if (is_zero < 0) goto cpx_logn_err;
-            if (is_zero) {
+            PyObject *av = menai_complex_value(a);
+            if (av == NULL) goto error;
+            PyObject *bv = menai_complex_value(b);
+            if (bv == NULL) { Py_DECREF(av); goto error; }
+            double complex za = PyComplex_RealAsDouble(av) + PyComplex_ImagAsDouble(av) * I;
+            double complex zb = PyComplex_RealAsDouble(bv) + PyComplex_ImagAsDouble(bv) * I;
+            Py_DECREF(av);
+            Py_DECREF(bv);
+            if (zb == 0.0) {
                 menai_raise_eval_error("Function 'complex-logn' requires a non-zero base");
-                goto cpx_logn_err;
+                goto error;
             }
-            fn = PyObject_GetAttrString(cmath_module, "log");
-            if (fn == NULL) goto cpx_logn_err;
-            res = PyObject_CallFunctionObjArgs(fn, av, bv, NULL);
-            Py_CLEAR(fn); Py_CLEAR(av); Py_CLEAR(bv);
-            PyObject *_r = make_complex_value(res);
+            double complex cr = clog(za) / clog(zb);
+            PyObject *_r = make_complex_from_doubles(creal(cr), cimag(cr));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
-        cpx_logn_err:
-            Py_XDECREF(av); Py_XDECREF(bv); Py_XDECREF(zero); Py_XDECREF(fn);
-            goto error;
         }
         case OP_COMPLEX_TO_STRING: {
             PyObject *a = regs[base + src0];
