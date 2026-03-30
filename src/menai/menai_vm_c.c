@@ -1908,56 +1908,87 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_float(a, "float-logn")) goto error;
             if (!require_float(b, "float-logn")) goto error;
             double av = menai_float_value(a), bv = menai_float_value(b);
-            if (bv <= 0.0 || bv == 1.0) { menai_raise_eval_error("Function 'float-logn' requires a positive base not equal to 1"); goto error; }
-            if (av < 0.0) { menai_raise_eval_error("float-logn: argument must be non-negative"); goto error; }
+            if (bv <= 0.0 || bv == 1.0) {
+                menai_raise_eval_error("Function 'float-logn' requires a positive base not equal to 1");
+                goto error;
+            }
+            if (av < 0.0) {
+                menai_raise_eval_error("float-logn: argument must be non-negative");
+                goto error;
+            }
             PyObject *_r = make_float(av == 0.0 ? -INFINITY : log(av) / log(bv));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_SIN: {
-            PyObject *a = regs[base + src0]; if (!require_float(a, "float-sin")) goto error;
+            PyObject *a = regs[base + src0];
+            if (!require_float(a, "float-sin")) goto error;
             PyObject *_r = make_float(sin(menai_float_value(a)));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r); break;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
+            break;
         }
         case OP_FLOAT_COS: {
-            PyObject *a = regs[base + src0]; if (!require_float(a, "float-cos")) goto error;
+            PyObject *a = regs[base + src0];
+            if (!require_float(a, "float-cos")) goto error;
             PyObject *_r = make_float(cos(menai_float_value(a)));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r); break;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
+            break;
         }
         case OP_FLOAT_TAN: {
-            PyObject *a = regs[base + src0]; if (!require_float(a, "float-tan")) goto error;
+            PyObject *a = regs[base + src0];
+            if (!require_float(a, "float-tan")) goto error;
             PyObject *_r = make_float(tan(menai_float_value(a)));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r); break;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
+            break;
         }
         case OP_FLOAT_SQRT: {
-            PyObject *a = regs[base + src0]; if (!require_float(a, "float-sqrt")) goto error;
+            PyObject *a = regs[base + src0];
+            if (!require_float(a, "float-sqrt")) goto error;
             double v = menai_float_value(a);
-            if (v < 0.0) { menai_raise_eval_error("float-sqrt: argument must be non-negative"); goto error; }
+            if (v < 0.0) {
+                menai_raise_eval_error("float-sqrt: argument must be non-negative");
+                goto error;
+            }
             PyObject *_r = make_float(sqrt(v));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r); break;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
+            break;
         }
         case OP_FLOAT_FLOOR: {
-            PyObject *a = regs[base + src0]; if (!require_float(a, "float-floor")) goto error;
+            PyObject *a = regs[base + src0];
+            if (!require_float(a, "float-floor")) goto error;
             PyObject *_r = make_float(floor(menai_float_value(a)));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r); break;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
+            break;
         }
         case OP_FLOAT_CEIL: {
-            PyObject *a = regs[base + src0]; if (!require_float(a, "float-ceil")) goto error;
+            PyObject *a = regs[base + src0];
+            if (!require_float(a, "float-ceil")) goto error;
             PyObject *_r = make_float(ceil(menai_float_value(a)));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r); break;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
+            break;
         }
         case OP_FLOAT_ROUND: {
-            PyObject *a = regs[base + src0]; if (!require_float(a, "float-round")) goto error;
+            PyObject *a = regs[base + src0];
+            if (!require_float(a, "float-round")) goto error;
             PyObject *_r = make_float(round(menai_float_value(a)));
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r); break;
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
+            break;
         }
         case OP_FLOAT_MIN: {
             PyObject *a = regs[base + src0], *b = regs[base + src1];
@@ -1966,7 +1997,8 @@ execute_loop(PyObject *code, PyObject *globals,
             double av = menai_float_value(a), bv = menai_float_value(b);
             PyObject *_r = make_float(av <= bv ? av : bv);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_MAX: {
@@ -1976,17 +2008,20 @@ execute_loop(PyObject *code, PyObject *globals,
             double av = menai_float_value(a), bv = menai_float_value(b);
             PyObject *_r = make_float(av >= bv ? av : bv);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_TO_INTEGER: {
-            PyObject *a = regs[base + src0]; if (!require_float(a, "float->integer")) goto error;
+            PyObject *a = regs[base + src0];
+            if (!require_float(a, "float->integer")) goto error;
             double v = menai_float_value(a);
             PyObject *py_int = PyLong_FromDouble(trunc(v));
             if (py_int == NULL) goto error;
             PyObject *_r = make_integer_value(py_int);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_FLOAT_TO_COMPLEX: {
@@ -2000,7 +2035,8 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
         }
         case OP_FLOAT_TO_STRING: {
-            PyObject *a = regs[base + src0]; if (!require_float(a, "float->string")) goto error;
+            PyObject *a = regs[base + src0];
+            if (!require_float(a, "float->string")) goto error;
             PyObject *_pf = PyFloat_FromDouble(menai_float_value(a));
             if (_pf == NULL) goto error;
             PyObject *py_str = PyObject_Str(_pf);
@@ -2031,20 +2067,44 @@ execute_loop(PyObject *code, PyObject *globals,
             /* child_code is borrowed from code_objects list */
 
             PyObject *param_names = PyObject_GetAttrString(child_code, "param_names");
-            if (param_names == NULL) { Py_DECREF(code_objects); goto error; }
+            if (param_names == NULL) {
+                Py_DECREF(code_objects);
+                goto error;
+            }
             PyObject *name = PyObject_GetAttrString(child_code, "name");
-            if (name == NULL) { Py_DECREF(param_names); Py_DECREF(code_objects); goto error; }
+            if (name == NULL) {
+                Py_DECREF(param_names);
+                Py_DECREF(code_objects);
+                goto error;
+            }
             PyObject *is_var = PyObject_GetAttrString(child_code, "is_variadic");
-            if (is_var == NULL) { Py_DECREF(name); Py_DECREF(param_names); Py_DECREF(code_objects); goto error; }
+            if (is_var == NULL) {
+                Py_DECREF(name);
+                Py_DECREF(param_names);
+                Py_DECREF(code_objects);
+                goto error;
+            }
             PyObject *free_vars = PyObject_GetAttrString(child_code, "free_vars");
-            if (free_vars == NULL) { Py_DECREF(is_var); Py_DECREF(name); Py_DECREF(param_names); Py_DECREF(code_objects); goto error; }
+            if (free_vars == NULL) {
+                Py_DECREF(is_var);
+                Py_DECREF(name);
+                Py_DECREF(param_names);
+                Py_DECREF(code_objects);
+                goto error;
+            }
 
             Py_ssize_t ncap = PyList_GET_SIZE(free_vars);
             Py_DECREF(free_vars);
 
             /* Build captured_values list pre-filled with None */
             PyObject *cap_list = PyList_New(ncap);
-            if (cap_list == NULL) { Py_DECREF(is_var); Py_DECREF(name); Py_DECREF(param_names); Py_DECREF(code_objects); goto error; }
+            if (cap_list == NULL) {
+                Py_DECREF(is_var);
+                Py_DECREF(name);
+                Py_DECREF(param_names);
+                Py_DECREF(code_objects);
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < ncap; i++) {
                 Py_INCREF(Py_None);
                 PyList_SET_ITEM(cap_list, i, Py_None);
@@ -2197,22 +2257,33 @@ execute_loop(PyObject *code, PyObject *globals,
                 frame->instrs = NULL;
 
                 int saved_return_dest = frame->return_dest;
-                if (call_setup(frame, raw_func, regs, base, arity, saved_return_dest) < 0)
-                { Py_DECREF(raw_func); goto error; }
+                if (call_setup(frame, raw_func, regs, base, arity, saved_return_dest) < 0) {
+                    Py_DECREF(raw_func);
+                    goto error;
+                }
                 Py_DECREF(raw_func);
 
             } else if (IS_MENAI_STRUCTTYPE(raw_func)) {
                 PyObject *field_names = PyObject_GetAttrString(raw_func, "field_names");
-                if (field_names == NULL) { Py_DECREF(raw_args); Py_DECREF(raw_func); goto error; }
+                if (field_names == NULL) {
+                    Py_DECREF(raw_args);
+                    Py_DECREF(raw_func);
+                    goto error;
+                }
                 Py_ssize_t n_fields = PyTuple_GET_SIZE(field_names);
                 Py_DECREF(field_names);
                 if (arity != (int)n_fields) {
                     Py_DECREF(raw_func);
                     Py_DECREF(raw_args);
-                    menai_raise_eval_error("Struct constructor called with wrong number of arguments"); goto error;
+                    menai_raise_eval_error("Struct constructor called with wrong number of arguments");
+                    goto error;
                 }
                 PyObject *fields = PyTuple_New(n_fields);
-                if (fields == NULL) { Py_DECREF(raw_args); Py_DECREF(raw_func); goto error; }
+                if (fields == NULL) {
+                    Py_DECREF(raw_args);
+                    Py_DECREF(raw_func);
+                    goto error;
+                }
                 for (int i = 0; i < (int)n_fields; i++) {
                     PyObject *fv = PyTuple_GET_ITEM(elements, i);
                     Py_INCREF(fv);
@@ -2220,15 +2291,27 @@ execute_loop(PyObject *code, PyObject *globals,
                 }
                 PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", raw_func, "fields", fields);
                 Py_DECREF(fields);
-                if (kwargs == NULL) { Py_DECREF(raw_args); Py_DECREF(raw_func); goto error; }
+                if (kwargs == NULL) {
+                    Py_DECREF(raw_args);
+                    Py_DECREF(raw_func);
+                    goto error;
+                }
                 PyObject *retval = PyObject_Call((PyObject *)Menai_StructType, empty_tuple, kwargs);
                 Py_DECREF(kwargs);
-                if (retval == NULL) { Py_DECREF(raw_args); Py_DECREF(raw_func); goto error; }
+                if (retval == NULL) {
+                    Py_DECREF(raw_args);
+                    Py_DECREF(raw_func);
+                    goto error;
+                }
                 int saved_return_dest = frame->return_dest;
                 frame_release(frame);
                 frame_depth--;
                 Frame *caller = &frames[frame_depth];
-                if (caller->is_sentinel) { Py_DECREF(raw_args); Py_DECREF(raw_func); return retval; }
+                if (caller->is_sentinel) {
+                    Py_DECREF(raw_args);
+                    Py_DECREF(raw_func);
+                    return retval;
+                }
                 reg_set(regs, caller->base + saved_return_dest, retval);
                 Py_DECREF(retval);
                 Py_DECREF(raw_args);
@@ -2237,7 +2320,8 @@ execute_loop(PyObject *code, PyObject *globals,
             } else {
                 Py_DECREF(raw_func);
                 Py_DECREF(raw_args);
-                menai_raise_eval_error("apply: first argument must be a function"); goto error;
+                menai_raise_eval_error("apply: first argument must be a function");
+                goto error;
             }
             break;
         }
@@ -2284,7 +2368,8 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(cv);
             PyObject *_fr = make_float(r);
             if (_fr == NULL) goto error;
-            reg_set(regs, base + dest, _fr); Py_DECREF(_fr);
+            reg_set(regs, base + dest, _fr);
+            Py_DECREF(_fr);
             break;
         }
         case OP_COMPLEX_IMAG: {
@@ -2296,7 +2381,8 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(cv);
             PyObject *_fr = make_float(i);
             if (_fr == NULL) goto error;
-            reg_set(regs, base + dest, _fr); Py_DECREF(_fr);
+            reg_set(regs, base + dest, _fr);
+            Py_DECREF(_fr);
             break;
         }
         case OP_COMPLEX_ABS: {
@@ -2308,7 +2394,8 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(cv);
             PyObject *_fr = make_float(sqrt(re*re + im*im));
             if (_fr == NULL) goto error;
-            reg_set(regs, base + dest, _fr); Py_DECREF(_fr);
+            reg_set(regs, base + dest, _fr);
+            Py_DECREF(_fr);
             break;
         }
         case OP_COMPLEX_NEG: {
@@ -2320,7 +2407,8 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(cv);
             PyObject *_r = make_complex_value(neg);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_COMPLEX_ADD: {
@@ -2330,12 +2418,17 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *av = menai_complex_value(a);
             if (av == NULL) goto error;
             PyObject *bv = menai_complex_value(b);
-            if (bv == NULL) { Py_DECREF(av); goto error; }
+            if (bv == NULL) {
+                Py_DECREF(av);
+                goto error;
+            }
             PyObject *res = PyNumber_Add(av, bv);
-            Py_DECREF(av); Py_DECREF(bv);
+            Py_DECREF(av);
+            Py_DECREF(bv);
             PyObject *_r = make_complex_value(res);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_COMPLEX_SUB: {
@@ -2345,12 +2438,17 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *av = menai_complex_value(a);
             if (av == NULL) goto error;
             PyObject *bv = menai_complex_value(b);
-            if (bv == NULL) { Py_DECREF(av); goto error; }
+            if (bv == NULL) {
+                Py_DECREF(av);
+                goto error;
+            }
             PyObject *res = PyNumber_Subtract(av, bv);
-            Py_DECREF(av); Py_DECREF(bv);
+            Py_DECREF(av);
+            Py_DECREF(bv);
             PyObject *_r = make_complex_value(res);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_COMPLEX_MUL: {
@@ -2360,12 +2458,17 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *av = menai_complex_value(a);
             if (av == NULL) goto error;
             PyObject *bv = menai_complex_value(b);
-            if (bv == NULL) { Py_DECREF(av); goto error; }
+            if (bv == NULL) {
+                Py_DECREF(av);
+                goto error;
+            }
             PyObject *res = PyNumber_Multiply(av, bv);
-            Py_DECREF(av); Py_DECREF(bv);
+            Py_DECREF(av);
+            Py_DECREF(bv);
             PyObject *_r = make_complex_value(res);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_COMPLEX_DIV: {
@@ -2375,19 +2478,23 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *av = menai_complex_value(a);
             if (av == NULL) goto error;
             PyObject *bv = menai_complex_value(b);
-            if (bv == NULL) { Py_DECREF(av); goto error; }
+            if (bv == NULL) { Py_DECREF(av);
+                goto error; }
             /* Check for zero divisor */
             double br = PyComplex_RealAsDouble(bv), bi = PyComplex_ImagAsDouble(bv);
             if (br == 0.0 && bi == 0.0) {
-                Py_DECREF(av); Py_DECREF(bv);
+                Py_DECREF(av);
+                Py_DECREF(bv);
                 menai_raise_eval_error("Division by zero in 'complex/'");
                 goto error;
             }
             PyObject *res = PyNumber_TrueDivide(av, bv);
-            Py_DECREF(av); Py_DECREF(bv);
+            Py_DECREF(av);
+            Py_DECREF(bv);
             PyObject *_r = make_complex_value(res);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_COMPLEX_EXPN: {
@@ -2397,12 +2504,17 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *av = menai_complex_value(a);
             if (av == NULL) goto error;
             PyObject *bv = menai_complex_value(b);
-            if (bv == NULL) { Py_DECREF(av); goto error; }
+            if (bv == NULL) {
+                Py_DECREF(av);
+                goto error;
+            }
             PyObject *res = PyNumber_Power(av, bv, Py_None);
-            Py_DECREF(av); Py_DECREF(bv);
+            Py_DECREF(av);
+            Py_DECREF(bv);
             PyObject *_r = make_complex_value(res);
             if (_r == NULL) goto error;
-            reg_set(regs, base + dest, _r); Py_DECREF(_r);
+            reg_set(regs, base + dest, _r);
+            Py_DECREF(_r);
             break;
         }
         case OP_COMPLEX_EXP:  { if (cpx_transcendental(regs, base + dest, regs[base + src0], "exp",   "complex-exp")   < 0) goto error; break; }
