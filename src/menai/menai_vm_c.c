@@ -740,7 +740,7 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
  * frame_setup_func — fast path for all function calls.
  * Reads pre-cached fields from func with zero Python API calls.
  */
-static void
+static inline void
 frame_setup_func(Frame *f, MenaiFunction_Object *func,
                  PyObject *code_obj, int base, int return_dest)
 {
@@ -970,30 +970,28 @@ call_setup(Frame *new_frame, PyObject *func_obj,
     }
 
     /* Populate capture slots: regs[callee_base + param_count + i] */
-    {
-        PyObject *captured = func->captured_values;
-        Py_ssize_t ncap = PyList_GET_SIZE(captured);
-        for (Py_ssize_t i = 0; i < ncap; i++) {
-            PyObject *cv = PyList_GET_ITEM(captured, i);
-            /* Most captures are already fast C types (set by OP_PATCH_CLOSURE
-             * from registers).  Prelude closures may hold slow-world values
-             * that were not converted at load time.  Check with IS_MENAI_*
-             * first to avoid a Python call in the common fast case. */
-            PyTypeObject *cvt = Py_TYPE(cv);
-            if (cvt == Menai_NoneType     || cvt == Menai_BooleanType  ||
-                cvt == Menai_IntegerType  || cvt == Menai_FloatType    ||
-                cvt == Menai_ComplexType  || cvt == Menai_StringType   ||
-                cvt == Menai_SymbolType   || cvt == Menai_ListType     ||
-                cvt == Menai_DictType     || cvt == Menai_SetType      ||
-                cvt == Menai_FunctionType || cvt == Menai_StructTypeType ||
-                cvt == Menai_StructType) {
-                reg_set(regs, callee_base + param_count + (int)i, cv);
-            } else {
-                PyObject *fast_cv = PyObject_CallOneArg(fn_convert_value, cv);
-                if (fast_cv == NULL) return -1;
-                reg_set(regs, callee_base + param_count + (int)i, fast_cv);
-                Py_DECREF(fast_cv);
-            }
+    PyObject *captured = func->captured_values;
+    Py_ssize_t ncap = PyList_GET_SIZE(captured);
+    for (Py_ssize_t i = 0; i < ncap; i++) {
+        PyObject *cv = PyList_GET_ITEM(captured, i);
+        /* Most captures are already fast C types (set by OP_PATCH_CLOSURE
+            * from registers).  Prelude closures may hold slow-world values
+            * that were not converted at load time.  Check with IS_MENAI_*
+            * first to avoid a Python call in the common fast case. */
+        PyTypeObject *cvt = Py_TYPE(cv);
+        if (cvt == Menai_NoneType     || cvt == Menai_BooleanType  ||
+            cvt == Menai_IntegerType  || cvt == Menai_FloatType    ||
+            cvt == Menai_ComplexType  || cvt == Menai_StringType   ||
+            cvt == Menai_SymbolType   || cvt == Menai_ListType     ||
+            cvt == Menai_DictType     || cvt == Menai_SetType      ||
+            cvt == Menai_FunctionType || cvt == Menai_StructTypeType ||
+            cvt == Menai_StructType) {
+            reg_set(regs, callee_base + param_count + (int)i, cv);
+        } else {
+            PyObject *fast_cv = PyObject_CallOneArg(fn_convert_value, cv);
+            if (fast_cv == NULL) return -1;
+            reg_set(regs, callee_base + param_count + (int)i, fast_cv);
+            Py_DECREF(fast_cv);
         }
     }
 
