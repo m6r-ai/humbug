@@ -23,6 +23,12 @@ import pstats
 import sys
 import time
 from io import StringIO
+from pathlib import Path
+
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _SCRIPT_DIR.parent.parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "src"))
+_MENAI_MODULES_DIR = _REPO_ROOT / "menai_modules"
 
 from menai import Menai
 
@@ -143,7 +149,8 @@ def run_benchmarks(
     puzzles: list[tuple[str, str, list[int]]],
 ) -> list[tuple[str, float, bool]]:
     """Solve every puzzle ``repeat`` times and report timing."""
-    menai = Menai()
+    module_path = [str(_SCRIPT_DIR), str(_MENAI_MODULES_DIR)]
+    menai = Menai(module_path=module_path)
     results: list[tuple[str, float, bool]] = []
 
     # Warm up (compile prelude, JIT caches, etc.)
@@ -183,8 +190,8 @@ def run_profile(
     label, _, flat = puzzle
     expr = make_solve_expression(flat)
 
-    menai = Menai()
-    # Warm up so we don't profile prelude compilation
+    module_path = [str(_SCRIPT_DIR), str(_MENAI_MODULES_DIR)]
+    menai = Menai(module_path=module_path)
     menai.evaluate("(integer+ 1 2)")
 
     print(f"\nProfiling puzzle: {label}")

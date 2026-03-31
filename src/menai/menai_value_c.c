@@ -1323,12 +1323,47 @@ MenaiFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
         Py_INCREF(bytecode); self->bytecode          = bytecode;
         self->captured_values = cap_list;
         self->is_variadic     = is_variadic;
+        self->instrs          = NULL;
+        self->instrs_obj      = NULL;
+        self->constants       = NULL;
+        self->names           = NULL;
+        self->code_len        = 0;
+        self->local_count     = 0;
         /* Cache param_count from the bytecode object to avoid repeated
          * PyObject_GetAttrString calls in call_setup on every function call. */
         if (bytecode != Py_None) {
             PyObject *pc = PyObject_GetAttrString(bytecode, "param_count");
             self->param_count = pc ? (int)PyLong_AsLong(pc) : 0;
             Py_XDECREF(pc);
+
+            /* Populate the frame setup cache from the bytecode object.
+             * All refs are borrowed from bytecode, which we own. */
+            PyObject *instrs_obj = PyObject_GetAttrString(bytecode, "instructions");
+            if (instrs_obj) {
+                Py_buffer view;
+                if (PyObject_GetBuffer(instrs_obj, &view, PyBUF_SIMPLE) == 0) {
+                    self->instrs     = (uint64_t *)view.buf;
+                    self->instrs_obj = instrs_obj;  /* borrowed — bytecode owns it */
+                    self->code_len   = (int)(view.len / sizeof(uint64_t));
+                    PyBuffer_Release(&view);
+                }
+                /* Do not Py_DECREF instrs_obj — it is borrowed from bytecode */
+            }
+            PyObject *constants = PyObject_GetAttrString(bytecode, "constants");
+            if (constants) {
+                self->constants = constants;  /* borrowed from bytecode */
+                /* Do not Py_DECREF — borrowed */
+            }
+            PyObject *names = PyObject_GetAttrString(bytecode, "names");
+            if (names) {
+                self->names = names;  /* borrowed from bytecode */
+                /* Do not Py_DECREF — borrowed */
+            }
+            PyObject *lc = PyObject_GetAttrString(bytecode, "local_count");
+            if (lc) {
+                self->local_count = (int)PyLong_AsLong(lc);
+                Py_DECREF(lc);
+            }
         } else {
             self->param_count = (int)PyTuple_GET_SIZE(params_tup);
         }

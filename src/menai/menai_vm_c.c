@@ -642,9 +642,8 @@ fail:
 
 typedef struct {
     PyObject       *code_obj;         /* CodeObject — kept alive, not dereferenced in loop */
-    PyObject       *instructions_obj; /* array.array — kept alive for instrs pointer */
-    PyObject       *constants;        /* owned ref — list of fast constant values */
-    PyObject       *names;            /* owned ref — list of global name strings */
+    PyObject       *constants;        /* borrowed ref — list of fast constant values */
+    PyObject       *names;            /* borrowed ref — list of global name strings */
     uint64_t       *instrs;           /* raw C pointer into the array.array buffer */
     int             code_len;
     int             local_count;
@@ -673,14 +672,13 @@ code_get_int(PyObject *code, const char *name, int *out)
     return 0;
 }
 
-/*
- * Fill frame fields from a CodeObject.
- * Gets the buffer pointer from code.instructions (an array.array('Q')).
+/* frame_setup — slow path used only for the top-level CodeObject at execute
+ * start.  All subsequent calls go through frame_setup_func which reads
+ * pre-cached fields directly from MenaiFunction_Object.
  */
 static int
 frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
 {
-    /* instructions — array.array('Q') */
     PyObject *instrs_obj = PyObject_GetAttrString(code_obj, "instructions");
     if (instrs_obj == NULL) return -1;
 
@@ -692,56 +690,82 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
 
     PyObject *constants = PyObject_GetAttrString(code_obj, "constants");
     if (constants == NULL) {
+        PyBuffer_Release(&view);
         Py_DECREF(instrs_obj);
         return -1;
     }
     PyObject *names = PyObject_GetAttrString(code_obj, "names");
     if (names == NULL) {
         Py_DECREF(constants);
+        PyBuffer_Release(&view);
         Py_DECREF(instrs_obj);
         return -1;
     }
-    int local_count = 0;
-    if (code_get_int(code_obj, "local_count", &local_count) < 0) {
+    PyObject *lc_obj = PyObject_GetAttrString(code_obj, "local_count");
+    if (lc_obj == NULL) {
         Py_DECREF(names);
         Py_DECREF(constants);
+        PyBuffer_Release(&view);
+        Py_DECREF(instrs_obj);
+        return -1;
+    }
+    int local_count = (int)PyLong_AsLong(lc_obj);
+    Py_DECREF(lc_obj);
+    if (local_count == -1 && PyErr_Occurred()) {
+        Py_DECREF(names);
+        Py_DECREF(constants);
+        PyBuffer_Release(&view);
         Py_DECREF(instrs_obj);
         return -1;
     }
 
     Py_INCREF(code_obj);
-    Py_XDECREF(f->code_obj);          /* release any previous owned reference */
-    Py_XDECREF(f->constants);
-    Py_XDECREF(f->names);
-    f->code_obj         = code_obj;   /* owned reference (INCREF'd above) */
-    f->instructions_obj = instrs_obj; /* we own this ref */
-    f->constants        = constants;  /* we own this ref */
-    f->names            = names;      /* we own this ref */
-    f->instrs           = (uint64_t *)view.buf;
-    f->code_len         = (int)(view.len / sizeof(uint64_t));
-    f->local_count      = local_count;
-    f->ip               = 0;
-    f->base             = base;
-    f->return_dest      = return_dest;
-    f->is_sentinel      = 0;
-
+    Py_XDECREF(f->code_obj);
+    f->code_obj    = code_obj;
+    f->constants   = constants;   /* owned — from GetAttrString above */
+    f->names       = names;       /* owned — from GetAttrString above */
+    f->instrs      = (uint64_t *)view.buf;
+    f->code_len    = (int)(view.len / sizeof(uint64_t));
+    f->local_count = local_count;
+    f->ip          = 0;
+    f->base        = base;
+    f->return_dest = return_dest;
+    f->is_sentinel = 0;
     PyBuffer_Release(&view);
-    /* instrs_obj still alive — buffer backed by it */
+    Py_DECREF(instrs_obj);  /* top-level: instrs backed by code_obj.instructions which code_obj owns */
     return 0;
+}
+
+/*
+ * frame_setup_func — fast path for all function calls.
+ * Reads pre-cached fields from func with zero Python API calls.
+ */
+static void
+frame_setup_func(Frame *f, MenaiFunction_Object *func,
+                 PyObject *code_obj, int base, int return_dest)
+{
+    Py_INCREF(code_obj);
+    Py_XDECREF(f->code_obj);
+    f->code_obj    = code_obj;
+    f->instrs      = func->instrs;
+    f->code_len    = func->code_len;
+    f->constants   = func->constants;
+    f->names       = func->names;
+    f->local_count = func->local_count;
+    f->ip          = 0;
+    f->base        = base;
+    f->return_dest = return_dest;
+    f->is_sentinel = 0;
 }
 
 static void
 frame_release(Frame *f)
 {
     Py_XDECREF(f->code_obj);
-    Py_XDECREF(f->instructions_obj);
-    Py_XDECREF(f->constants);
-    Py_XDECREF(f->names);
-    f->instructions_obj = NULL;
-    f->instrs           = NULL;
-    f->code_obj         = NULL;
-    f->constants        = NULL;
-    f->names            = NULL;
+    f->code_obj  = NULL;
+    f->instrs    = NULL;
+    f->constants = NULL;
+    f->names     = NULL;
 }
 
 /* ---------------------------------------------------------------------------
@@ -973,8 +997,8 @@ call_setup(Frame *new_frame, PyObject *func_obj,
         }
     }
 
-    /* Set up the new frame. */
-    return frame_setup(new_frame, bytecode, callee_base, return_dest);
+    frame_setup_func(new_frame, func, bytecode, callee_base, return_dest);
+    return 0;
 }
 
 static PyObject *execute_loop(PyObject *code, PyObject *globals,
@@ -998,7 +1022,6 @@ execute_loop(PyObject *code, PyObject *globals,
     frames[0] = (Frame){
         .is_sentinel      = 1,
         .code_obj         = NULL,
-        .instructions_obj = NULL,
         .constants        = NULL,
         .names            = NULL,
         .instrs           = NULL,
@@ -1006,7 +1029,6 @@ execute_loop(PyObject *code, PyObject *globals,
     frames[1] = (Frame){
         .is_sentinel      = 0,
         .code_obj         = NULL,
-        .instructions_obj = NULL,
         .constants        = NULL,
         .names            = NULL,
         .instrs           = NULL,
@@ -1196,7 +1218,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 }
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
-                *new_frame = (Frame){ .code_obj = NULL, .instructions_obj = NULL,
+                *new_frame = (Frame){ .code_obj = NULL,
                                       .constants = NULL, .names = NULL, .instrs = NULL };
 
                 if (call_setup(new_frame, raw, regs, callee_base,
@@ -1261,9 +1283,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 }
 
                 /* Reuse current frame — release old instructions first. */
-                Py_XDECREF(frame->instructions_obj);
-                frame->instructions_obj = NULL;
-                frame->instrs           = NULL;
+                frame->instrs = NULL;
 
                 int saved_return_dest = frame->return_dest;
                 if (call_setup(frame, raw, regs, base, n_args, saved_return_dest) < 0) {
@@ -1423,25 +1443,12 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_FUNCTION_MIN_ARITY: {
             PyObject *f = regs[base + src0];
             if (!require_function_singular(f, "function-min-arity")) goto error;
-            PyObject *bc = PyObject_GetAttrString(f, "bytecode");
-            if (bc == NULL) goto error;
-            int pc = 0, is_var = 0;
-            int ok = (code_get_int(bc, "param_count", &pc) == 0);
-            if (ok) {
-                PyObject *iv = PyObject_GetAttrString(bc, "is_variadic");
-                if (iv) {
-                    is_var = PyObject_IsTrue(iv);
-                    Py_DECREF(iv);
-                    if (is_var < 0) ok = 0;
-                }
-                else ok = 0;
-            }
-            Py_DECREF(bc);
-            if (!ok) goto error;
-            int min_a = is_var ? pc - 1 : pc;
+            MenaiFunction_Object *fn = (MenaiFunction_Object *)f;
+            int min_a = fn->is_variadic ? fn->param_count - 1 : fn->param_count;
             PyObject *r = PyLong_FromLong(min_a);
             if (r == NULL) goto error;
             PyObject *_r = make_integer_value(r);
+            Py_DECREF(r);
             if (_r == NULL) goto error;
             reg_set(regs, base + dest, _r);
             Py_DECREF(_r);
@@ -1451,15 +1458,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_FUNCTION_VARIADIC_P: {
             PyObject *f = regs[base + src0];
             if (!require_function_singular(f, "function-variadic?")) goto error;
-            PyObject *bc = PyObject_GetAttrString(f, "bytecode");
-            if (bc == NULL) goto error;
-            PyObject *iv = PyObject_GetAttrString(bc, "is_variadic");
-            Py_DECREF(bc);
-            if (iv == NULL) goto error;
-            int is_var = PyObject_IsTrue(iv);
-            Py_DECREF(iv);
-            if (is_var < 0) goto error;
-            bool_store(regs, base + dest, is_var);
+            bool_store(regs, base + dest, ((MenaiFunction_Object *)f)->is_variadic);
             break;
         }
 
@@ -1468,21 +1467,9 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *n_obj = regs[base + src1];
             if (!require_function_singular(f, "function-accepts?")) goto error;
             if (!require_integer(n_obj, "function-accepts?")) goto error;
-            PyObject *bc = PyObject_GetAttrString(f, "bytecode");
-            if (bc == NULL) goto error;
-            int pc = 0, is_var = 0;
-            int ok = (code_get_int(bc, "param_count", &pc) == 0);
-            if (ok) {
-                PyObject *iv = PyObject_GetAttrString(bc, "is_variadic");
-                if (iv) {
-                    is_var = PyObject_IsTrue(iv);
-                    Py_DECREF(iv);
-                    if (is_var < 0) ok = 0;
-                }
-                else ok = 0;
-            }
-            Py_DECREF(bc);
-            if (!ok) goto error;
+            MenaiFunction_Object *fn = (MenaiFunction_Object *)f;
+            int pc = fn->param_count;
+            int is_var = fn->is_variadic;
             PyObject *n_py = menai_integer_value(n_obj);
             if (n_py == NULL) goto error;
             long n = PyLong_AsLong(n_py);
@@ -2415,7 +2402,7 @@ execute_loop(PyObject *code, PyObject *globals,
 
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
-                *new_frame = (Frame){ .code_obj = NULL, .instructions_obj = NULL,
+                *new_frame = (Frame){ .code_obj = NULL,
                                       .constants = NULL, .names = NULL, .instrs = NULL };
                 if (call_setup(new_frame, raw_func, regs, callee_base, arity, dest) < 0) {
                     frame_depth--;
@@ -2483,8 +2470,6 @@ execute_loop(PyObject *code, PyObject *globals,
                 Py_DECREF(raw_args);
 
                 /* Release old frame instructions, reuse frame */
-                Py_XDECREF(frame->instructions_obj);
-                frame->instructions_obj = NULL;
                 frame->instrs = NULL;
 
                 int saved_return_dest = frame->return_dest;

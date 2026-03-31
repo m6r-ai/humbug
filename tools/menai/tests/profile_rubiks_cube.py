@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Profile test-rubiks-cube.menai
+"""Profile test-rubiks-cube.menai
 
 This script profiles the execution of the Rubik's cube test to identify
 performance bottlenecks in the Menai compiler and VM.
@@ -19,12 +18,18 @@ import sys
 from io import StringIO
 from pathlib import Path
 
-# Import Menai
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _SCRIPT_DIR.parent.parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "src"))
+
+_DEFAULT_TEST_FILE = _SCRIPT_DIR / "test-rubiks-cube.menai"
+_MENAI_MODULES_DIR = _REPO_ROOT / "menai_modules"
+
 from menai import Menai
 
 
 def profile_rubiks_cube(
-    test_file: str = "test-rubiks-cube.menai",
+    test_file: Path = _DEFAULT_TEST_FILE,
     output_file: str = None,
     top_n: int = 80,
     sort_by: str = "cumulative"
@@ -38,27 +43,22 @@ def profile_rubiks_cube(
         top_n: Number of top functions to display
         sort_by: Sort key for stats (cumulative, time, calls, etc.)
     """
-    # Read the test file
-    test_path = Path(test_file)
-    if not test_path.exists():
+    if not test_file.exists():
         print(f"Error: Test file not found: {test_file}")
         sys.exit(1)
 
-    with open(test_path, 'r', encoding='utf-8') as f:
-        test_expression = f.read()
+    test_expression = test_file.read_text(encoding="utf-8")
 
     print(f"Profiling: {test_file}")
     print("=" * 100)
     print(f"Expression length: {len(test_expression)} characters")
     print("=" * 100)
 
-    # Create Menai instance
-    menai = Menai()
+    module_path = [str(test_file.parent), str(_MENAI_MODULES_DIR)]
+    menai = Menai(module_path=module_path)
 
-    # Create profiler
     profiler = cProfile.Profile()
 
-    # Run with profiling
     print("\nRunning test with profiler enabled...")
     profiler.enable()
     
@@ -138,7 +138,7 @@ def main():
     )
     parser.add_argument(
         '--test-file',
-        default='test-rubiks-cube.menai',
+        default=str(_DEFAULT_TEST_FILE),
         help='Path to Menai test file (default: test-rubiks-cube.menai)'
     )
     parser.add_argument(
@@ -163,7 +163,7 @@ def main():
     args = parser.parse_args()
 
     profile_rubiks_cube(
-        test_file=args.test_file,
+        test_file=Path(args.test_file),
         output_file=args.output,
         top_n=args.top,
         sort_by=args.sort
