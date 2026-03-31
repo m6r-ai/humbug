@@ -307,6 +307,51 @@ static PyObject *empty_tuple              = NULL;  /* Cached PyTuple_New(0) — 
 
 /* ---------------------------------------------------------------------------
  * Direct field access via struct cast
+ * ------------------------------------------------------------------------- */
+
+/* ---------------------------------------------------------------------------
+ * Direct allocation helpers
+ *
+ * Bypass tp_new / PyArg_ParseTupleAndKeywords for the common case of
+ * wrapping an already-built tuple as a MenaiList or MenaiSet.
+ *
+ * Each function steals the reference(s) passed to it, matching the pattern
+ * at every call site: build tuple → call helper (no separate Py_DECREF needed).
+ * Returns a new reference, or NULL on MemoryError (references still stolen).
+ * ------------------------------------------------------------------------- */
+
+/* Wrap an already-built tuple as a MenaiList, stealing the tuple reference. */
+static inline PyObject *
+menai_list_from_tuple(PyObject *tup)
+{
+    MenaiList_Object *obj =
+        (MenaiList_Object *)Menai_ListType->tp_alloc(Menai_ListType, 0);
+    if (obj == NULL) {
+        Py_DECREF(tup);
+        return NULL;
+    }
+    obj->elements = tup;  /* steal */
+    return (PyObject *)obj;
+}
+
+/* Wrap an already-built tuple + frozenset as a MenaiSet, stealing both refs. */
+static inline PyObject *
+menai_set_from_parts(PyObject *elements_tup, PyObject *members_frozenset)
+{
+    MenaiSet_Object *obj =
+        (MenaiSet_Object *)Menai_SetType->tp_alloc(Menai_SetType, 0);
+    if (obj == NULL) {
+        Py_DECREF(elements_tup);
+        Py_DECREF(members_frozenset);
+        return NULL;
+    }
+    obj->elements = elements_tup;      /* steal */
+    obj->members  = members_frozenset; /* steal */
+    return (PyObject *)obj;
+}
+
+/* ---------------------------------------------------------------------------
+ * Direct field access via struct cast
  *
  * These read C-level fields directly using the known struct layout from
  * menai_value_c.h.  No runtime offset computation required.
@@ -954,8 +999,7 @@ call_setup(Frame *new_frame, PyObject *func_obj,
             Py_INCREF(elem);
             PyTuple_SET_ITEM(rest_tuple, k, elem);
         }
-        PyObject *rest_list = PyObject_CallOneArg((PyObject *)Menai_ListType, rest_tuple);
-        Py_DECREF(rest_tuple);
+        PyObject *rest_list = menai_list_from_tuple(rest_tuple);
         if (rest_list == NULL) return -1;
         reg_set(regs, callee_base + min_arity, rest_list);
         Py_DECREF(rest_list);
@@ -3341,8 +3385,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *tup = PyList_AsTuple(parts);
             Py_DECREF(parts);
             if (tup == NULL) goto error;
-            PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, tup);
-            Py_DECREF(tup);
+            PyObject *r = menai_list_from_tuple(tup);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
             Py_DECREF(r);
@@ -3415,8 +3458,7 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             PyObject *rest = PyTuple_GetSlice(elems, 1, PY_SSIZE_T_MAX);
             if (rest == NULL) goto error;
-            PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, rest);
-            Py_DECREF(rest);
+            PyObject *r = menai_list_from_tuple(rest);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
             Py_DECREF(r);
@@ -3471,8 +3513,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 Py_INCREF(e);
                 PyTuple_SET_ITEM(new_tup, i + 1, e);
             }
-            PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, new_tup);
-            Py_DECREF(new_tup);
+            PyObject *r = menai_list_from_tuple(new_tup);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
             Py_DECREF(r);
@@ -3493,8 +3534,7 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             Py_INCREF(item);
             PyTuple_SET_ITEM(new_tup, n, item);
-            PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, new_tup);
-            Py_DECREF(new_tup);
+            PyObject *r = menai_list_from_tuple(new_tup);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
             Py_DECREF(r);
@@ -3513,8 +3553,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 Py_INCREF(e);
                 PyTuple_SET_ITEM(rev, i, e);
             }
-            PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, rev);
-            Py_DECREF(rev);
+            PyObject *r = menai_list_from_tuple(rev);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
             Py_DECREF(r);
@@ -3529,8 +3568,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *eb = menai_list_elements(b);
             PyObject *cat = PySequence_Concat(ea, eb);
             if (cat == NULL) goto error;
-            PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, cat);
-            Py_DECREF(cat);
+            PyObject *r = menai_list_from_tuple(cat);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
             Py_DECREF(r);
@@ -3610,8 +3648,7 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             PyObject *sliced = PyTuple_GetSlice(elems, start, end);
             if (sliced == NULL) goto error;
-            PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, sliced);
-            Py_DECREF(sliced);
+            PyObject *r = menai_list_from_tuple(sliced);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
             Py_DECREF(r);
@@ -3645,8 +3682,7 @@ execute_loop(PyObject *code, PyObject *globals,
                     PyTuple_SET_ITEM(new_tup, j++, e);
                 }
             }
-            PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, new_tup);
-            Py_DECREF(new_tup);
+            PyObject *r = menai_list_from_tuple(new_tup);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
             Py_DECREF(r);
@@ -3761,8 +3797,7 @@ execute_loop(PyObject *code, PyObject *globals,
                     PyTuple_SET_ITEM(tup, i, k);
                 }
                 Py_DECREF(pairs);
-                r = PyObject_CallOneArg((PyObject *)Menai_ListType, tup);
-                Py_DECREF(tup);
+                r = menai_list_from_tuple(tup);
             }
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
@@ -3788,8 +3823,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 PyTuple_SET_ITEM(tup, i, v);
             }
             Py_DECREF(pairs);
-            PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, tup);
-            Py_DECREF(tup);
+            PyObject *r = menai_list_from_tuple(tup);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
             Py_DECREF(r);
@@ -4502,8 +4536,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_set_singular(a, "set->list")) goto error;
             PyObject *elems = PyObject_GetAttrString(a, "elements");
             if (elems == NULL) goto error;
-            PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, elems);
-            Py_DECREF(elems);
+            PyObject *r = menai_list_from_tuple(elems);  /* steals elems */
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
             Py_DECREF(r);
@@ -4551,8 +4584,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 PyTuple_SET_ITEM(tup, i, mi);
                 val += step;
             }
-            PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, tup);
-            Py_DECREF(tup);
+            PyObject *r = menai_list_from_tuple(tup);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
             Py_DECREF(r);
@@ -4833,8 +4865,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 PyTuple_SET_ITEM(tup, i, sym);
             }
             Py_DECREF(field_names);
-            PyObject *r = PyObject_CallOneArg((PyObject *)Menai_ListType, tup);
-            Py_DECREF(tup);
+            PyObject *r = menai_list_from_tuple(tup);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
             Py_DECREF(r);
