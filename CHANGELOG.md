@@ -9,6 +9,7 @@ New features:
 - Removed Claude Sonnet 4.5 support (we have 4.6).
 - Added GLM 5.1 support
 - Added Menai native C VM implementation and remove the cython version.
+- Added a new Menai benchmark performance test suite.  Removed the old JSON parser test.
 
 Bug fixes:
 
