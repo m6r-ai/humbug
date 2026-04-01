@@ -386,20 +386,12 @@ static inline PyObject *menai_string_value(PyObject *o) {
     return ((MenaiString_Object *)o)->value;
 }
 
-/* ---------------------------------------------------------------------------
- * Register array helpers
- * ------------------------------------------------------------------------- */
-
 static inline void reg_set(PyObject **regs, int slot, PyObject *val) {
     PyObject *old = regs[slot];
     Py_XINCREF(val);
     regs[slot] = val;
     Py_XDECREF(old);
 }
-
-/* ---------------------------------------------------------------------------
- * Value constructors
- * ------------------------------------------------------------------------- */
 
 static inline PyObject *make_integer(PyObject *py_int) {
     MenaiInteger_Object *r = (MenaiInteger_Object *)Menai_IntegerType->tp_alloc(Menai_IntegerType, 0);
@@ -480,10 +472,6 @@ menai_complex_value(PyObject *obj)
 
 PyObject *menai_raise_eval_error(const char *message);
 PyObject *menai_raise_eval_errorf(const char *fmt, ...);
-
-/* ---------------------------------------------------------------------------
- * Type-requirement guards
- * ------------------------------------------------------------------------- */
 
 static inline int
 require_type_impl(int ok, PyObject *val, const char *op_name, const char *noun)
@@ -871,8 +859,8 @@ static int
 max_local_count(PyObject *code)
 {
     int local_count = 0, outgoing = 0;
-    if (code_get_int(code, "local_count", &local_count) < 0)        return -1;
-    if (code_get_int(code, "outgoing_arg_slots", &outgoing) < 0)    return -1;
+    if (code_get_int(code, "local_count", &local_count) < 0) return -1;
+    if (code_get_int(code, "outgoing_arg_slots", &outgoing) < 0) return -1;
     int best = local_count + outgoing;
 
     PyObject *children = PyObject_GetAttrString(code, "code_objects");
@@ -935,13 +923,13 @@ max_local_count(PyObject *code)
     return best;
 }
 
-/* ---------------------------------------------------------------------------
- * build_globals — merge constants and prelude into a flat PyObject* dict
+/*
+ * build_globals
+ *      Merge constants and prelude into a flat PyObject* dict
  *
  * The C VM looks up globals by name on LOAD_NAME.  We build a Python dict
  * once at the start of execute() and keep it for the duration.
- * ------------------------------------------------------------------------- */
-
+ */
 static PyObject *
 build_globals(PyObject *constants_dict, PyObject *prelude_dict)
 {
@@ -1066,18 +1054,18 @@ execute_loop(PyObject *code, PyObject *globals,
     /* Frame stack — depth 0 is the sentinel. */
     Frame frames[MAX_FRAME_DEPTH + 1];
     frames[0] = (Frame){
-        .is_sentinel      = 1,
-        .code_obj         = NULL,
-        .constants        = NULL,
-        .names            = NULL,
-        .instrs           = NULL,
+        .is_sentinel = 1,
+        .code_obj = NULL,
+        .constants = NULL,
+        .names = NULL,
+        .instrs = NULL,
     };
     frames[1] = (Frame){
-        .is_sentinel      = 0,
-        .code_obj         = NULL,
-        .constants        = NULL,
-        .names            = NULL,
-        .instrs           = NULL,
+        .is_sentinel = 0,
+        .code_obj = NULL,
+        .constants = NULL,
+        .names = NULL,
+        .instrs = NULL,
     };
 
     /* Set up frame at depth 1 for the top-level code object. */
@@ -1085,7 +1073,7 @@ execute_loop(PyObject *code, PyObject *globals,
         return NULL;
 
     int frame_depth = 1;
-    Frame *frame    = &frames[1];
+    Frame *frame = &frames[1];
     int instr_count = 0;
 
     while (1) {
@@ -1105,11 +1093,11 @@ execute_loop(PyObject *code, PyObject *globals,
         /* Fetch and decode instruction */
         uint64_t word = frame->instrs[frame->ip++];
         int opcode = (int)((word >> OPCODE_SHIFT) & OPCODE_MASK);
-        int dest   = (int)((word >> DEST_SHIFT)   & FIELD_MASK);
-        int src0   = (int)((word >> SRC0_SHIFT)   & FIELD_MASK);
-        int src1   = (int)((word >> SRC1_SHIFT)   & FIELD_MASK);
-        int src2   = (int)( word                  & FIELD_MASK);
-        int base   = frame->base;
+        int dest = (int)((word >> DEST_SHIFT) & FIELD_MASK);
+        int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+        int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+        int src2 = (int)(word & FIELD_MASK);
+        int base = frame->base;
 
         switch (opcode) {
 
@@ -1439,9 +1427,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_symbol_pair(a, b, "symbol=?")) goto error;
             PyObject *na = menai_symbol_name(a);
-            if (na == NULL) goto error;
             PyObject *nb = menai_symbol_name(b);
-            if (nb == NULL) goto error;
             bool_store(regs, base + dest, PyObject_RichCompareBool(na, nb, Py_EQ));
             break;
         }
@@ -1450,9 +1436,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_symbol_pair(a, b, "symbol!=?")) goto error;
             PyObject *na = menai_symbol_name(a);
-            if (na == NULL) goto error;
             PyObject *nb = menai_symbol_name(b);
-            if (nb == NULL) goto error;
             bool_store(regs, base + dest, PyObject_RichCompareBool(na, nb, Py_NE));
             break;
         }
@@ -1461,7 +1445,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_symbol(a, "symbol->string")) goto error;
             PyObject *name = menai_symbol_name(a);
-            if (name == NULL) goto error;
             PyObject *r = make_string_from_pyobj(name);
             if (r == NULL) goto error;
             reg_set(regs, base + dest, r);
@@ -1520,7 +1503,6 @@ execute_loop(PyObject *code, PyObject *globals,
             int pc = fn->param_count;
             int is_var = fn->is_variadic;
             PyObject *n_py = menai_integer_value(n_obj);
-            if (n_py == NULL) goto error;
             long n = PyLong_AsLong(n_py);
             if (n == -1 && PyErr_Occurred()) goto error;
             int accepts = is_var ? (n >= pc - 1) : (n == pc);
@@ -1538,9 +1520,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer=?")) goto error;
             if (!require_integer(b, "integer=?")) goto error;
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (!bv) goto error;
             bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_EQ));
             break;
         }
@@ -1550,9 +1530,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer!=?")) goto error;
             if (!require_integer(b, "integer!=?")) goto error;
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (!bv) goto error;
             bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_NE));
             break;
         }
@@ -1562,9 +1540,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer<?")) goto error;
             if (!require_integer(b, "integer<?")) goto error;
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (!bv) goto error;
             bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_LT));
             break;
         }
@@ -1574,9 +1550,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer>?")) goto error;
             if (!require_integer(b, "integer>?")) goto error;
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (!bv) goto error;
             bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_GT));
             break;
         }
@@ -1586,9 +1560,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer<=?")) goto error;
             if (!require_integer(b, "integer<=?")) goto error;
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (!bv) goto error;
             bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_LE));
             break;
         }
@@ -1598,9 +1570,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer>=?")) goto error;
             if (!require_integer(b, "integer>=?")) goto error;
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (!bv) goto error;
             bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_GE));
             break;
         }
@@ -1609,7 +1579,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer-abs")) goto error;
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
             PyObject *_r = make_integer_value(PyNumber_Absolute(av));
             if (!_r) goto error;
             reg_set(regs, base + dest, _r);
@@ -1621,7 +1590,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer-neg")) goto error;
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
             PyObject *_r = make_integer_value(PyNumber_Negative(av));
             if (!_r) goto error;
             reg_set(regs, base + dest, _r);
@@ -1633,7 +1601,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer-bit-not")) goto error;
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
             PyObject *_r = make_integer_value(PyNumber_Invert(av));
             if (!_r) goto error;
             reg_set(regs, base + dest, _r);
@@ -1647,10 +1614,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(b, "integer+")) goto error;
 
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
 
             PyObject *bv = menai_integer_value(b);
-            if (!bv) goto error;
 
             PyObject *_r = make_integer_value(PyNumber_Add(av, bv));
             if (!_r) goto error;
@@ -1666,10 +1631,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(b, "integer-")) goto error;
 
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
 
             PyObject *bv = menai_integer_value(b);
-            if (!bv) goto error;
 
             PyObject *_r = make_integer_value(PyNumber_Subtract(av, bv));
             if (!_r) goto error;
@@ -1685,10 +1648,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(b, "integer*")) goto error;
 
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
 
             PyObject *bv = menai_integer_value(b);
-            if (!bv) goto error;
 
             PyObject *_r = make_integer_value(PyNumber_Multiply(av, bv));
             if (!_r) goto error;
@@ -1703,7 +1664,6 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer/")) goto error;
             if (!require_integer(b, "integer/")) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (bv == NULL) goto error;
             PyObject *_zero = PyLong_FromLong(0);
             if (_zero == NULL) goto error;
             int _is_zero = PyObject_RichCompareBool(bv, _zero, Py_EQ);
@@ -1714,7 +1674,6 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
             PyObject *av = menai_integer_value(a);
-            if (av == NULL) goto error;
             PyObject *_res = PyNumber_FloorDivide(av, bv);
             PyObject *_r = make_integer_value(_res);
             if (_r == NULL) goto error;
@@ -1728,7 +1687,6 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer%")) goto error;
             if (!require_integer(b, "integer%")) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (bv == NULL) goto error;
             PyObject *_zero = PyLong_FromLong(0);
             if (_zero == NULL) goto error;
             int _is_zero = PyObject_RichCompareBool(bv, _zero, Py_EQ);
@@ -1739,7 +1697,6 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
             PyObject *av = menai_integer_value(a);
-            if (av == NULL) goto error;
             PyObject *_res = PyNumber_Remainder(av, bv);
             PyObject *_r = make_integer_value(_res);
             if (_r == NULL) goto error;
@@ -1753,7 +1710,6 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer-expn")) goto error;
             if (!require_integer(b, "integer-expn")) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (bv == NULL) goto error;
             PyObject *_zero = PyLong_FromLong(0);
             if (_zero == NULL) goto error;
             int _is_neg = PyObject_RichCompareBool(bv, _zero, Py_LT);
@@ -1764,7 +1720,6 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
             PyObject *av = menai_integer_value(a);
-            if (av == NULL) goto error;
             PyObject *_res = PyNumber_Power(av, bv, Py_None);
             PyObject *_r = make_integer_value(_res);
             if (_r == NULL) goto error;
@@ -1778,9 +1733,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer-bit-or")) goto error;
             if (!require_integer(b, "integer-bit-or")) goto error;
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (!bv) goto error;
             PyObject *_r = make_integer_value(PyNumber_Or(av, bv));
             if (!_r) goto error;
             reg_set(regs, base + dest, _r);
@@ -1793,9 +1746,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer-bit-and")) goto error;
             if (!require_integer(b, "integer-bit-and")) goto error;
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (!bv) goto error;
             PyObject *_r = make_integer_value(PyNumber_And(av, bv));
             if (!_r) goto error;
             reg_set(regs, base + dest, _r);
@@ -1808,9 +1759,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer-bit-xor")) goto error;
             if (!require_integer(b, "integer-bit-xor")) goto error;
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (!bv) goto error;
             PyObject *_r = make_integer_value(PyNumber_Xor(av, bv));
             if (!_r) goto error;
             reg_set(regs, base + dest, _r);
@@ -1823,9 +1772,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer-bit-shift-left")) goto error;
             if (!require_integer(b, "integer-bit-shift-left")) goto error;
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (!bv) goto error;
             PyObject *_r = make_integer_value(PyNumber_Lshift(av, bv));
             if (!_r) goto error;
             reg_set(regs, base + dest, _r);
@@ -1838,9 +1785,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer-bit-shift-right")) goto error;
             if (!require_integer(b, "integer-bit-shift-right")) goto error;
             PyObject *av = menai_integer_value(a);
-            if (!av) goto error;
             PyObject *bv = menai_integer_value(b);
-            if (!bv) goto error;
             PyObject *_r = make_integer_value(PyNumber_Rshift(av, bv));
             if (!_r) goto error;
             reg_set(regs, base + dest, _r);
@@ -1853,9 +1798,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer-min")) goto error;
             if (!require_integer(b, "integer-min")) goto error;
             PyObject *_av = menai_integer_value(a);
-            if (_av == NULL) goto error;
             PyObject *_bv = menai_integer_value(b);
-            if (_bv == NULL) goto error;
             reg_set(regs, base + dest, PyObject_RichCompareBool(_av, _bv, Py_LE) ? a : b);
             break;
         }
@@ -1865,9 +1808,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer-max")) goto error;
             if (!require_integer(b, "integer-max")) goto error;
             PyObject *_av = menai_integer_value(a);
-            if (_av == NULL) goto error;
             PyObject *_bv = menai_integer_value(b);
-            if (_bv == NULL) goto error;
             reg_set(regs, base + dest, PyObject_RichCompareBool(_av, _bv, Py_GE) ? a : b);
             break;
         }
@@ -1876,7 +1817,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer->float")) goto error;
             PyObject *_av = menai_integer_value(a);
-            if (_av == NULL) goto error;
             double d = PyLong_AsDouble(_av);
             if (d == -1.0 && PyErr_Occurred()) goto error;
             PyObject *_r = make_float(d);
@@ -1891,11 +1831,9 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer->complex")) goto error;
             if (!require_integer(b, "integer->complex")) goto error;
             PyObject *_av = menai_integer_value(a);
-            if (_av == NULL) goto error;
             double re = PyLong_AsDouble(_av);
             if (re == -1.0 && PyErr_Occurred()) goto error;
             PyObject *_bv = menai_integer_value(b);
-            if (_bv == NULL) goto error;
             double im = PyLong_AsDouble(_bv);
             if (im == -1.0 && PyErr_Occurred()) goto error;
             PyObject *r = make_complex_from_doubles(re, im);
@@ -1910,7 +1848,6 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer->string")) goto error;
             if (!require_integer(b, "integer->string")) goto error;
             PyObject *_bv = menai_integer_value(b);
-            if (_bv == NULL) goto error;
             long radix = PyLong_AsLong(_bv);
             if (radix == -1 && PyErr_Occurred()) goto error;
             if (radix != 2 && radix != 8 && radix != 10 && radix != 16) {
@@ -1918,7 +1855,6 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
             PyObject *av = menai_integer_value(a);
-            if (av == NULL) goto error;
             PyObject *py_str;
             if (radix == 10) {
                 py_str = PyObject_Str(av);
@@ -1942,7 +1878,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer-codepoint->string")) goto error;
             PyObject *_av = menai_integer_value(a);
-            if (_av == NULL) goto error;
             long cp = PyLong_AsLong(_av);
             if (cp == -1 && PyErr_Occurred()) goto error;
             if (cp < 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) {
@@ -2613,7 +2548,6 @@ execute_loop(PyObject *code, PyObject *globals,
             /* Trace is a no-op in the C VM — no watcher support yet. */
             break;
 
-
         case OP_COMPLEX_P:
             bool_store(regs, base + dest, IS_MENAI_COMPLEX(regs[base + src0]));
             break;
@@ -2638,7 +2572,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-real")) goto error;
             PyObject *cv = menai_complex_value(a);
-            if (cv == NULL) goto error;
             double r = PyComplex_RealAsDouble(cv);
             PyObject *_fr = make_float(r);
             if (_fr == NULL) goto error;
@@ -2651,7 +2584,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-imag")) goto error;
             PyObject *cv = menai_complex_value(a);
-            if (cv == NULL) goto error;
             double i = PyComplex_ImagAsDouble(cv);
             PyObject *_fr = make_float(i);
             if (_fr == NULL) goto error;
@@ -2664,7 +2596,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-abs")) goto error;
             PyObject *cv = menai_complex_value(a);
-            if (cv == NULL) goto error;
             double re = PyComplex_RealAsDouble(cv), im = PyComplex_ImagAsDouble(cv);
             PyObject *_fr = make_float(sqrt(re*re + im*im));
             if (_fr == NULL) goto error;
@@ -2677,7 +2608,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-neg")) goto error;
             PyObject *cv = menai_complex_value(a);
-            if (cv == NULL) goto error;
             PyObject *neg = PyNumber_Negative(cv);
             PyObject *_r = make_complex_value(neg);
             if (_r == NULL) goto error;
@@ -2691,9 +2621,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_complex(a, "complex+")) goto error;
             if (!require_complex(b, "complex+")) goto error;
             PyObject *av = menai_complex_value(a);
-            if (av == NULL) goto error;
             PyObject *bv = menai_complex_value(b);
-            if (bv == NULL) goto error;
             PyObject *res = PyNumber_Add(av, bv);
             PyObject *_r = make_complex_value(res);
             if (_r == NULL) goto error;
@@ -2707,9 +2635,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_complex(a, "complex-")) goto error;
             if (!require_complex(b, "complex-")) goto error;
             PyObject *av = menai_complex_value(a);
-            if (av == NULL) goto error;
             PyObject *bv = menai_complex_value(b);
-            if (bv == NULL) goto error;
             PyObject *res = PyNumber_Subtract(av, bv);
             PyObject *_r = make_complex_value(res);
             if (_r == NULL) goto error;
@@ -2723,9 +2649,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_complex(a, "complex*")) goto error;
             if (!require_complex(b, "complex*")) goto error;
             PyObject *av = menai_complex_value(a);
-            if (av == NULL) goto error;
             PyObject *bv = menai_complex_value(b);
-            if (bv == NULL) goto error;
             PyObject *res = PyNumber_Multiply(av, bv);
             PyObject *_r = make_complex_value(res);
             if (_r == NULL) goto error;
@@ -2739,9 +2663,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_complex(a, "complex/")) goto error;
             if (!require_complex(b, "complex/")) goto error;
             PyObject *av = menai_complex_value(a);
-            if (av == NULL) goto error;
             PyObject *bv = menai_complex_value(b);
-            if (bv == NULL) goto error;
             /* Check for zero divisor */
             double br = PyComplex_RealAsDouble(bv), bi = PyComplex_ImagAsDouble(bv);
             if (br == 0.0 && bi == 0.0) {
@@ -2761,9 +2683,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_complex(a, "complex-expn")) goto error;
             if (!require_complex(b, "complex-expn")) goto error;
             PyObject *av = menai_complex_value(a);
-            if (av == NULL) goto error;
             PyObject *bv = menai_complex_value(b);
-            if (bv == NULL) goto error;
             PyObject *res = PyNumber_Power(av, bv, Py_None);
             PyObject *_r = make_complex_value(res);
             if (_r == NULL) goto error;
@@ -2776,7 +2696,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-exp")) goto error;
             PyObject *cv = menai_complex_value(a);
-            if (cv == NULL) goto error;
             double complex z = PyComplex_RealAsDouble(cv) + PyComplex_ImagAsDouble(cv) * I;
             double complex cr = cexp(z);
             PyObject *_r = make_complex_from_doubles(creal(cr), cimag(cr));
@@ -2790,7 +2709,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-log")) goto error;
             PyObject *cv = menai_complex_value(a);
-            if (cv == NULL) goto error;
             double complex z = PyComplex_RealAsDouble(cv) + PyComplex_ImagAsDouble(cv) * I;
             double complex cr = clog(z);
             PyObject *_r = make_complex_from_doubles(creal(cr), cimag(cr));
@@ -2804,7 +2722,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-log10")) goto error;
             PyObject *cv = menai_complex_value(a);
-            if (cv == NULL) goto error;
             double complex z = PyComplex_RealAsDouble(cv) + PyComplex_ImagAsDouble(cv) * I;
             double complex cr = clog(z) / log(10.0);
             PyObject *_r = make_complex_from_doubles(creal(cr), cimag(cr));
@@ -2818,7 +2735,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-sin")) goto error;
             PyObject *cv = menai_complex_value(a);
-            if (cv == NULL) goto error;
             double complex z = PyComplex_RealAsDouble(cv) + PyComplex_ImagAsDouble(cv) * I;
             double complex cr = csin(z);
             PyObject *_r = make_complex_from_doubles(creal(cr), cimag(cr));
@@ -2832,7 +2748,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-cos")) goto error;
             PyObject *cv = menai_complex_value(a);
-            if (cv == NULL) goto error;
             double complex z = PyComplex_RealAsDouble(cv) + PyComplex_ImagAsDouble(cv) * I;
             double complex cr = ccos(z);
             PyObject *_r = make_complex_from_doubles(creal(cr), cimag(cr));
@@ -2846,7 +2761,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-tan")) goto error;
             PyObject *cv = menai_complex_value(a);
-            if (cv == NULL) goto error;
             double complex z = PyComplex_RealAsDouble(cv) + PyComplex_ImagAsDouble(cv) * I;
             double complex cr = ctan(z);
             PyObject *_r = make_complex_from_doubles(creal(cr), cimag(cr));
@@ -2860,7 +2774,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-sqrt")) goto error;
             PyObject *cv = menai_complex_value(a);
-            if (cv == NULL) goto error;
             double complex z = PyComplex_RealAsDouble(cv) + PyComplex_ImagAsDouble(cv) * I;
             double complex cr = csqrt(z);
             PyObject *_r = make_complex_from_doubles(creal(cr), cimag(cr));
@@ -2875,9 +2788,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_complex(a, "complex-logn")) goto error;
             if (!require_complex(b, "complex-logn")) goto error;
             PyObject *av = menai_complex_value(a);
-            if (av == NULL) goto error;
             PyObject *bv = menai_complex_value(b);
-            if (bv == NULL) goto error;
             double complex za = PyComplex_RealAsDouble(av) + PyComplex_ImagAsDouble(av) * I;
             double complex zb = PyComplex_RealAsDouble(bv) + PyComplex_ImagAsDouble(bv) * I;
             if (zb == 0.0) {
@@ -2985,7 +2896,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-length")) goto error;
             PyObject *sv = menai_string_value(a);
-            if (sv == NULL) goto error;
             Py_ssize_t len = PyUnicode_GET_LENGTH(sv);
             PyObject *r = PyLong_FromSsize_t(len);
             if (r == NULL) goto error;
@@ -3000,7 +2910,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-upcase")) goto error;
             PyObject *sv = menai_string_value(a);
-            if (sv == NULL) goto error;
             PyObject *up = PyObject_CallMethod(sv, "upper", NULL);
             if (up == NULL) goto error;
             PyObject *r = make_string_from_pyobj(up);
@@ -3015,7 +2924,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-downcase")) goto error;
             PyObject *sv = menai_string_value(a);
-            if (sv == NULL) goto error;
             PyObject *lo = PyObject_CallMethod(sv, "lower", NULL);
             if (lo == NULL) goto error;
             PyObject *r = make_string_from_pyobj(lo);
@@ -3030,7 +2938,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-trim")) goto error;
             PyObject *sv = menai_string_value(a);
-            if (sv == NULL) goto error;
             PyObject *t = PyObject_CallMethod(sv, "strip", NULL);
             if (t == NULL) goto error;
             PyObject *r = make_string_from_pyobj(t);
@@ -3045,7 +2952,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-trim-left")) goto error;
             PyObject *sv = menai_string_value(a);
-            if (sv == NULL) goto error;
             PyObject *t = PyObject_CallMethod(sv, "lstrip", NULL);
             if (t == NULL) goto error;
             PyObject *r = make_string_from_pyobj(t);
@@ -3060,7 +2966,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-trim-right")) goto error;
             PyObject *sv = menai_string_value(a);
-            if (sv == NULL) goto error;
             PyObject *t = PyObject_CallMethod(sv, "rstrip", NULL);
             if (t == NULL) goto error;
             PyObject *r = make_string_from_pyobj(t);
@@ -3076,9 +2981,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_string(a, "string-concat")) goto error;
             if (!require_string(b, "string-concat")) goto error;
             PyObject *sa = menai_string_value(a);
-            if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
-            if (sb == NULL) goto error;
             PyObject *cat = PyUnicode_Concat(sa, sb);
             if (cat == NULL) goto error;
             PyObject *r = make_string_from_pyobj(cat);
@@ -3094,9 +2997,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_string(a, "string-prefix?")) goto error;
             if (!require_string(b, "string-prefix?")) goto error;
             PyObject *sa = menai_string_value(a);
-            if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
-            if (sb == NULL) goto error;
             int r = PyUnicode_Tailmatch(sa, sb, 0, PY_SSIZE_T_MAX, -1);
             if (r < 0) goto error;
             bool_store(regs, base + dest, r);
@@ -3109,10 +3010,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_string(b, "string-suffix?")) goto error;
 
             PyObject *sa = menai_string_value(a);
-            if (sa == NULL) goto error;
 
             PyObject *sb = menai_string_value(b);
-            if (sb == NULL) goto error;
 
             int r = PyUnicode_Tailmatch(sa, sb, 0, PY_SSIZE_T_MAX, 1);
             if (r < 0) goto error;
@@ -3128,9 +3027,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
             PyObject *sa = menai_string_value(a);
-            if (sa == NULL) goto error;
             PyObject *iv = menai_integer_value(b);
-            if (iv == NULL) goto error;
             Py_ssize_t idx = PyLong_AsSsize_t(iv);
             Py_ssize_t slen = PyUnicode_GET_LENGTH(sa);
             if (idx < 0 || idx >= slen) {
@@ -3156,13 +3053,10 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
             PyObject *sa = menai_string_value(a);
-            if (sa == NULL) goto error;
 
             PyObject *bv = menai_integer_value(b);
-            if (bv == NULL) goto error;
 
             PyObject *cv = menai_integer_value(c);
-            if (cv == NULL) goto error;
 
             Py_ssize_t start = PyLong_AsSsize_t(bv), end = PyLong_AsSsize_t(cv);
             Py_ssize_t slen = PyUnicode_GET_LENGTH(sa);
@@ -3202,11 +3096,8 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_string(b, "string-replace")) goto error;
             if (!require_string(c, "string-replace")) goto error;
             PyObject *sa = menai_string_value(a);
-            if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
-            if (sb == NULL) goto error;
             PyObject *sc = menai_string_value(c);
-            if (sc == NULL) goto error;
             PyObject *replaced = PyObject_CallMethod(sa, "replace", "OO", sb, sc);
             if (replaced == NULL) goto error;
             PyObject *r = make_string_from_pyobj(replaced);
@@ -3222,9 +3113,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_string(a, "string-index")) goto error;
             if (!require_string(b, "string-index")) goto error;
             PyObject *sa = menai_string_value(a);
-            if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
-            if (sb == NULL) goto error;
             Py_ssize_t idx = PyUnicode_Find(sa, sb, 0, PY_SSIZE_T_MAX, 1);
             if (idx == -2) goto error; /* error */
             if (idx == -1) {
@@ -3244,7 +3133,6 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string->integer-codepoint")) goto error;
             PyObject *sa = menai_string_value(a);
-            if (sa == NULL) goto error;
             Py_ssize_t slen = PyUnicode_GET_LENGTH(sa);
             if (slen != 1) {
                 menai_raise_eval_error("string->integer-codepoint: requires single-character string");
@@ -3269,7 +3157,6 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
             PyObject *bv = menai_integer_value(b);
-            if (bv == NULL) goto error;
             long radix = PyLong_AsLong(bv);
             if (radix == -1 && PyErr_Occurred()) goto error;
             if (radix != 2 && radix != 8 && radix != 10 && radix != 16) {
@@ -3277,7 +3164,6 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
             PyObject *sa = menai_string_value(a);
-            if (sa == NULL) goto error;
             PyObject *stripped = PyObject_CallMethod(sa, "strip", NULL);
             if (stripped == NULL) goto error;
             PyObject *ri = PyLong_FromUnicodeObject(stripped, (int)radix);
@@ -3299,7 +3185,6 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_string(a, "string->number")) goto error;
             /* Delegate to the Menai object's method via Python call */
             PyObject *sa = menai_string_value(a);
-            if (sa == NULL) goto error;
             /* Try int, then float, then complex — matching Python VM logic */
             PyObject *result = NULL;
             /* Check for 'j'/'J' → complex */
@@ -3370,9 +3255,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_string(a, "string->list")) goto error;
             if (!require_string(b, "string->list")) goto error;
             PyObject *sa = menai_string_value(a);
-            if (sa == NULL) goto error;
             PyObject *sb = menai_string_value(b);
-            if (sb == NULL) goto error;
             PyObject *parts;
             if (PyUnicode_GET_LENGTH(sb) == 0) {
                 /* Split into individual characters */
@@ -3519,7 +3402,6 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             PyObject *elems = menai_list_elements(a);
             PyObject *bv = menai_integer_value(b);
-            if (bv == NULL) goto error;
             Py_ssize_t idx = PyLong_AsSsize_t(bv);
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             if (idx < 0 || idx >= n) {
@@ -3652,9 +3534,7 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             PyObject *elems = menai_list_elements(a);
             PyObject *bv = menai_integer_value(b);
-            if (bv == NULL) goto error;
             PyObject *cv = menai_integer_value(c);
-            if (cv == NULL) goto error;
             Py_ssize_t start = PyLong_AsSsize_t(bv), end = PyLong_AsSsize_t(cv);
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             if (start < 0) {
@@ -3726,7 +3606,6 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_string(b, "list->string")) goto error;
             PyObject *elems = menai_list_elements(a);
             PyObject *sep = menai_string_value(b);
-            if (sep == NULL) goto error;
             Py_ssize_t n = PyTuple_GET_SIZE(elems);
             PyObject *parts = PyList_New(n);
             if (parts == NULL) {
@@ -4423,11 +4302,8 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
             PyObject *av = menai_integer_value(ra);
-            if (av == NULL) goto error;
             PyObject *bv = menai_integer_value(rb);
-            if (bv == NULL) goto error;
             PyObject *cv = menai_integer_value(rc);
-            if (cv == NULL) goto error;
             long start = PyLong_AsLong(av), end = PyLong_AsLong(bv), step = PyLong_AsLong(cv);
             if ((start == -1 || end == -1 || step == -1) && PyErr_Occurred()) goto error;
             if (step == 0) {
@@ -4517,7 +4393,6 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_symbol(field_sym, "struct-get")) goto error;
             PyObject *stype = ((MenaiStruct_Object *)val)->struct_type;
             PyObject *name = menai_symbol_name(field_sym);
-            if (name == NULL) goto error;
             PyObject *idx = PyObject_CallMethod(stype, "field_index", "O", name);
             if (idx == NULL) {
                 if (PyErr_ExceptionMatches(PyExc_KeyError)) {
@@ -4547,7 +4422,6 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_struct(val, "struct-get-imm")) goto error;
             if (!require_integer(fidx, "struct-get-imm")) goto error;
             PyObject *iv = menai_integer_value(fidx);
-            if (iv == NULL) goto error;
             Py_ssize_t fi = PyLong_AsSsize_t(iv);
             if (fi == -1 && PyErr_Occurred()) goto error;
             PyObject *fields = ((MenaiStruct_Object *)val)->fields;
@@ -4562,7 +4436,6 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_symbol(field_sym, "struct-set")) goto error;
             PyObject *stype = ((MenaiStruct_Object *)val)->struct_type;
             PyObject *name = menai_symbol_name(field_sym);
-            if (name == NULL) goto error;
             PyObject *idx = PyObject_CallMethod(stype, "field_index", "O", name);
             if (idx == NULL) {
                 if (PyErr_ExceptionMatches(PyExc_KeyError)) {
@@ -4609,7 +4482,6 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_struct(val, "struct-set-imm")) goto error;
             if (!require_integer(fidx, "struct-set-imm")) goto error;
             PyObject *iv = menai_integer_value(fidx);
-            if (iv == NULL) goto error;
             Py_ssize_t fi = PyLong_AsSsize_t(iv);
             if (fi == -1 && PyErr_Occurred()) goto error;
             PyObject *stype = ((MenaiStruct_Object *)val)->struct_type;
