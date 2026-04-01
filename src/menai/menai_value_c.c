@@ -488,9 +488,8 @@ MenaiComplex_richcompare(PyObject *self, PyObject *other, int op)
         if (op == Py_NE) Py_RETURN_TRUE;
         Py_RETURN_NOTIMPLEMENTED;
     }
-    return PyObject_RichCompare(
-        ((MenaiComplex_Object *)self)->value,
-        ((MenaiComplex_Object *)other)->value, op);
+
+    return PyObject_RichCompare(((MenaiComplex_Object *)self)->value, ((MenaiComplex_Object *)other)->value, op);
 }
 
 static Py_hash_t
