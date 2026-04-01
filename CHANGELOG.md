@@ -10,11 +10,13 @@ New features:
 - Added GLM 5.1 support
 - Added Menai native C VM implementation and remove the cython version.
 - Added a new Menai benchmark performance test suite.  Removed the old JSON parser test.
+- Added a requirement for AI delegation to get user approval.
 
 Bug fixes:
 
 - Improved filesystem and editor tool descriptions to help avoid problems related to escaping.
-- Fix problems with the Menai tool help
+- Fix problems with the Menai tool help.
+- Fixed a problem where delegated conversations did not show the initial prompt.
 
 ## v41 (2026-03-22)
 
