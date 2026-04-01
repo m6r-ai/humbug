@@ -3,7 +3,7 @@
  *
  * Exposes a single Python-callable function:
  *
- *   menai_vm_c.execute(code, globals_dict, prelude_dict) -> MenaiValue
+ * menai_vm_c.execute(code, globals_dict, prelude_dict) -> MenaiValue
  *
  * The MenaiVM Python class in menai_vm.py calls this in place of its Python
  * execute loop when this extension is available.
@@ -22,19 +22,17 @@
 #include <string.h>
 #include "menai_value_c.h"
 
-/* ---------------------------------------------------------------------------
+/*
  * Limits
- * ------------------------------------------------------------------------- */
-
+ */
 #define MAX_FRAME_DEPTH 1024
 
 /* Cancellation check interval — matches the Python VM default. */
 #define CANCEL_CHECK_INTERVAL 1000
 
-/* ---------------------------------------------------------------------------
+/*
  * Instruction encoding constants — must match menai_bytecode.py
- * ------------------------------------------------------------------------- */
-
+ */
 #define OPCODE_SHIFT 48
 #define DEST_SHIFT   36
 #define SRC0_SHIFT   24
@@ -42,10 +40,9 @@
 #define FIELD_MASK   0xFFFu
 #define OPCODE_MASK  0xFFFFu
 
-/* ---------------------------------------------------------------------------
+/*
  * Opcode values — must match menai_bytecode.py Opcode enum
- * ------------------------------------------------------------------------- */
-
+ */
 #define OP_LOAD_NONE        0
 #define OP_LOAD_TRUE        1
 #define OP_LOAD_FALSE       2
@@ -249,48 +246,43 @@
 #define OP_SET_TO_LIST              351
 #define OP_RANGE                    380
 
-/* ---------------------------------------------------------------------------
+/*
  * Shim state — definitions of the externs declared in menai_vm_shim.h
- * ------------------------------------------------------------------------- */
-
-PyTypeObject *Menai_NoneType       = NULL;
-PyTypeObject *Menai_BooleanType    = NULL;
-PyTypeObject *Menai_IntegerType    = NULL;
-PyTypeObject *Menai_FloatType      = NULL;
-PyTypeObject *Menai_ComplexType    = NULL;
-PyTypeObject *Menai_StringType     = NULL;
-PyTypeObject *Menai_SymbolType     = NULL;
-PyTypeObject *Menai_ListType       = NULL;
-PyTypeObject *Menai_DictType       = NULL;
-PyTypeObject *Menai_SetType        = NULL;
-PyTypeObject *Menai_FunctionType   = NULL;
+ */
+PyTypeObject *Menai_NoneType = NULL;
+PyTypeObject *Menai_BooleanType = NULL;
+PyTypeObject *Menai_IntegerType = NULL;
+PyTypeObject *Menai_FloatType = NULL;
+PyTypeObject *Menai_ComplexType = NULL;
+PyTypeObject *Menai_StringType = NULL;
+PyTypeObject *Menai_SymbolType = NULL;
+PyTypeObject *Menai_ListType = NULL;
+PyTypeObject *Menai_DictType = NULL;
+PyTypeObject *Menai_SetType = NULL;
+PyTypeObject *Menai_FunctionType = NULL;
 PyTypeObject *Menai_StructTypeType = NULL;
-PyTypeObject *Menai_StructType     = NULL;
+PyTypeObject *Menai_StructType = NULL;
 
-PyObject *Menai_NONE       = NULL;
-PyObject *Menai_TRUE       = NULL;
-PyObject *Menai_FALSE      = NULL;
+PyObject *Menai_NONE = NULL;
+PyObject *Menai_TRUE = NULL;
+PyObject *Menai_FALSE = NULL;
 PyObject *Menai_EMPTY_LIST = NULL;
 PyObject *Menai_EMPTY_DICT = NULL;
-PyObject *Menai_EMPTY_SET  = NULL;
+PyObject *Menai_EMPTY_SET = NULL;
 
-/* ---------------------------------------------------------------------------
+/*
  * Module-level state fetched at init
- * ------------------------------------------------------------------------- */
-
-static PyObject *MenaiEvalError_type      = NULL;
+ */
+static PyObject *MenaiEvalError_type = NULL;
 static PyObject *MenaiCancelledException_type = NULL;
-static PyObject *fn_convert_code_object   = NULL;
-static PyObject *fn_convert_value         = NULL;
-static PyObject *fn_to_slow               = NULL;
-static PyObject *empty_tuple              = NULL;  /* Cached PyTuple_New(0) — used for struct construction */
+static PyObject *fn_convert_code_object = NULL;
+static PyObject *fn_convert_value = NULL;
+static PyObject *fn_to_slow = NULL;
+static PyObject *empty_tuple = NULL;  /* Cached PyTuple_New(0) — used for struct construction */
 
-/* ---------------------------------------------------------------------------
+/*
  * Fast type-check macros
- *
- * Py_TYPE(o) is a single pointer dereference — no Python call overhead.
- * ------------------------------------------------------------------------- */
-
+ */
 #define IS_MENAI_NONE(o)       (Py_TYPE(o) == Menai_NoneType)
 #define IS_MENAI_BOOLEAN(o)    (Py_TYPE(o) == Menai_BooleanType)
 #define IS_MENAI_INTEGER(o)    (Py_TYPE(o) == Menai_IntegerType)
@@ -305,31 +297,16 @@ static PyObject *empty_tuple              = NULL;  /* Cached PyTuple_New(0) — 
 #define IS_MENAI_STRUCTTYPE(o) (Py_TYPE(o) == Menai_StructTypeType)
 #define IS_MENAI_STRUCT(o)     (Py_TYPE(o) == Menai_StructType)
 
-/* ---------------------------------------------------------------------------
- * Direct field access via struct cast
- * ------------------------------------------------------------------------- */
-
-/* ---------------------------------------------------------------------------
- * Direct allocation helpers
- *
- * Bypass tp_new / PyArg_ParseTupleAndKeywords for the common case of
- * wrapping an already-built tuple as a MenaiList or MenaiSet.
- *
- * Each function steals the reference(s) passed to it, matching the pattern
- * at every call site: build tuple → call helper (no separate Py_DECREF needed).
- * Returns a new reference, or NULL on MemoryError (references still stolen).
- * ------------------------------------------------------------------------- */
-
 /* Wrap an already-built tuple as a MenaiList, stealing the tuple reference. */
 static inline PyObject *
 menai_list_from_tuple(PyObject *tup)
 {
-    MenaiList_Object *obj =
-        (MenaiList_Object *)Menai_ListType->tp_alloc(Menai_ListType, 0);
+    MenaiList_Object *obj = (MenaiList_Object *)Menai_ListType->tp_alloc(Menai_ListType, 0);
     if (obj == NULL) {
         Py_DECREF(tup);
         return NULL;
     }
+
     obj->elements = tup;  /* steal */
     return (PyObject *)obj;
 }
@@ -345,34 +322,49 @@ menai_set_from_elements(PyObject *elements)
 {
     Py_ssize_t n = PyTuple_GET_SIZE(elements);
     PyObject *members_set = PySet_New(NULL);
-    if (!members_set) { Py_DECREF(elements); return NULL; }
+    if (!members_set) {
+        Py_DECREF(elements);
+       	return NULL;
+    }
     for (Py_ssize_t i = 0; i < n; i++) {
         PyObject *hk = PyObject_CallMethod(
             (PyObject *)Menai_DictType, "to_hashable_key", "O",
             PyTuple_GET_ITEM(elements, i));
-        if (!hk) { Py_DECREF(members_set); Py_DECREF(elements); return NULL; }
-        if (PySet_Add(members_set, hk) < 0) {
-            Py_DECREF(hk); Py_DECREF(members_set); Py_DECREF(elements); return NULL;
+
+            if (!hk) {
+            Py_DECREF(members_set);
+            Py_DECREF(elements);
+            return NULL;
         }
+
+        if (PySet_Add(members_set, hk) < 0) {
+            Py_DECREF(hk);
+            Py_DECREF(members_set);
+    	    Py_DECREF(elements);
+            return NULL;
+        }
+
         Py_DECREF(hk);
     }
+
     PyObject *members = PyFrozenSet_New(members_set);
     Py_DECREF(members_set);
-    if (!members) { Py_DECREF(elements); return NULL; }
-    MenaiSet_Object *obj =
-        (MenaiSet_Object *)Menai_SetType->tp_alloc(Menai_SetType, 0);
-    if (!obj) { Py_DECREF(members); Py_DECREF(elements); return NULL; }
+    if (!members) {
+        Py_DECREF(elements);
+       	return NULL;
+    }
+
+    MenaiSet_Object *obj = (MenaiSet_Object *)Menai_SetType->tp_alloc(Menai_SetType, 0);
+    if (!obj) {
+        Py_DECREF(members);
+       	Py_DECREF(elements);
+       	return NULL;
+    }
+
     obj->elements = elements;  /* steal */
     obj->members  = members;   /* steal */
     return (PyObject *)obj;
 }
-
-/* ---------------------------------------------------------------------------
- * Direct field access via struct cast
- *
- * These read C-level fields directly using the known struct layout from
- * menai_value_c.h.  No runtime offset computation required.
- * ------------------------------------------------------------------------- */
 
 static inline int menai_boolean_value(PyObject *o) {
     return ((MenaiBoolean_Object *)o)->value;
@@ -380,18 +372,6 @@ static inline int menai_boolean_value(PyObject *o) {
 
 static inline double menai_float_value(PyObject *o) {
     return ((MenaiFloat_Object *)o)->value;
-}
-
-/* ---------------------------------------------------------------------------
- * Borrowed-reference field accessors
- *
- * These return borrowed references — the caller must not Py_DECREF the result.
- * The outer Menai object keeps the inner Python object alive for the duration
- * of any operation that holds a reference to the outer object.
- * ------------------------------------------------------------------------- */
-
-static inline PyObject *menai_get_attr(PyObject *o, const char *name) {
-    return PyObject_GetAttrString(o, name);
 }
 
 static inline PyObject *menai_integer_value(PyObject *o) {
@@ -427,6 +407,7 @@ static inline PyObject *make_integer(PyObject *py_int) {
         Py_INCREF(py_int);
         r->value = py_int;
     }
+
     return (PyObject *)r;
 }
 
@@ -445,6 +426,7 @@ static inline PyObject *make_complex_from_doubles(double real, double imag) {
     } else {
         Py_DECREF(pc);
     }
+
     return (PyObject *)r;
 }
 
@@ -454,11 +436,13 @@ static inline PyObject *make_string_from_pyobj(PyObject *py_str) {
         Py_INCREF(py_str);
         r->value = py_str;
     }
+
     return (PyObject *)r;
 }
 
 static inline PyObject *make_integer_value(PyObject *py_int) {
     if (!py_int) return NULL;
+
     PyObject *r = make_integer(py_int);
     Py_DECREF(py_int);
     return r;
@@ -466,22 +450,20 @@ static inline PyObject *make_integer_value(PyObject *py_int) {
 
 static inline PyObject *make_complex_value(PyObject *py_complex) {
     if (!py_complex) return NULL;
+
     MenaiComplex_Object *r = (MenaiComplex_Object *)Menai_ComplexType->tp_alloc(Menai_ComplexType, 0);
     if (r) {
         r->value = py_complex;
     } else {
         Py_DECREF(py_complex);
     }
+
     return (PyObject *)r;
 }
 
 static inline void bool_store(PyObject **regs, int slot, int cond) {
     reg_set(regs, slot, cond ? Menai_TRUE : Menai_FALSE);
 }
-
-/* ---------------------------------------------------------------------------
- * List elements accessor — returns borrowed reference
- * ------------------------------------------------------------------------- */
 
 static inline PyObject *
 menai_list_elements(PyObject *list_obj)
@@ -490,19 +472,11 @@ menai_list_elements(PyObject *list_obj)
     return ((MenaiList_Object *)list_obj)->elements;
 }
 
-/* ---------------------------------------------------------------------------
- * Complex value accessor — returns borrowed reference
- * ------------------------------------------------------------------------- */
-
 static inline PyObject *
 menai_complex_value(PyObject *obj)
 {
     return ((MenaiComplex_Object *)obj)->value;
 }
-
-/* ---------------------------------------------------------------------------
- * Error helpers
- * ------------------------------------------------------------------------- */
 
 PyObject *menai_raise_eval_error(const char *message);
 PyObject *menai_raise_eval_errorf(const char *fmt, ...);
@@ -524,59 +498,70 @@ require_type_impl(int ok, PyObject *val, const char *op_name, const char *noun)
 static inline int require_integer(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_INTEGER(val), val, op_name, "integer arguments");
 }
+
 static inline int require_float(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_FLOAT(val), val, op_name, "float arguments");
 }
+
 static inline int require_complex(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_COMPLEX(val), val, op_name, "complex arguments");
 }
+
 static inline int require_string(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_STRING(val), val, op_name, "string arguments");
 }
+
 static inline int require_list(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_LIST(val), val, op_name, "list arguments");
 }
+
 static inline int require_list_singular(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_LIST(val), val, op_name, "a list argument");
 }
+
 static inline int require_dict(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_DICT(val), val, op_name, "dict arguments");
 }
+
 static inline int require_set(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_SET(val), val, op_name, "set arguments");
 }
+
 static inline int require_set_singular(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_SET(val), val, op_name, "a set argument");
 }
+
 static inline int require_boolean(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_BOOLEAN(val), val, op_name, "boolean arguments");
 }
+
 static inline int require_function(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_FUNCTION(val), val, op_name, "function arguments");
 }
+
 static inline int require_function_singular(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_FUNCTION(val), val, op_name, "a function argument");
 }
+
 static inline int require_struct(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_STRUCT(val), val, op_name, "a struct argument");
 }
+
 static inline int require_structtype(PyObject *val, const char *op_name) {
     return require_type_impl(IS_MENAI_STRUCTTYPE(val), val, op_name, "a struct type argument");
 }
+
 static inline int require_symbol(PyObject *val, const char *op_name) {
     if (IS_MENAI_SYMBOL(val)) return 1;
     menai_raise_eval_errorf("%s: argument must be a symbol", op_name);
     return 0;
 }
+
 static inline int require_symbol_pair(PyObject *a, PyObject *b, const char *op_name) {
     if (IS_MENAI_SYMBOL(a) && IS_MENAI_SYMBOL(b)) return 1;
     menai_raise_eval_errorf("%s: arguments must be symbols", op_name);
     return 0;
 }
-
-/* ---------------------------------------------------------------------------
- * Error helpers
- * ------------------------------------------------------------------------- */
 
 PyObject *
 menai_raise_eval_error(const char *message)
@@ -593,26 +578,24 @@ menai_raise_eval_errorf(const char *fmt, ...)
     PyObject *msg = PyUnicode_FromFormatV(fmt, args);
     va_end(args);
     if (msg == NULL) return NULL;
+ 
     PyErr_SetObject(MenaiEvalError_type, msg);
     Py_DECREF(msg);
     return NULL;
 }
-
-/* ---------------------------------------------------------------------------
- * Shim init
- * ------------------------------------------------------------------------- */
 
 static int
 fetch_type(PyObject *module, const char *name, PyTypeObject **dst)
 {
     PyObject *obj = PyObject_GetAttrString(module, name);
     if (obj == NULL) return -1;
+ 
     if (!PyType_Check(obj)) {
-        PyErr_Format(PyExc_TypeError,
-                     "menai_vm_shim_init: %s is not a type", name);
+        PyErr_Format(PyExc_TypeError, "menai_vm_shim_init: %s is not a type", name);
         Py_DECREF(obj);
         return -1;
     }
+
     *dst = (PyTypeObject *)obj;
     /* Keep the reference alive in the module-level global. */
     return 0;
@@ -623,6 +606,7 @@ fetch_singleton(PyObject *module, const char *name, PyObject **dst)
 {
     PyObject *obj = PyObject_GetAttrString(module, name);
     if (obj == NULL) return -1;
+
     *dst = obj;
     /* Keep the reference alive in the module-level global. */
     return 0;
@@ -633,12 +617,13 @@ fetch_callable(PyObject *module, const char *name, PyObject **dst)
 {
     PyObject *obj = PyObject_GetAttrString(module, name);
     if (obj == NULL) return -1;
+
     if (!PyCallable_Check(obj)) {
-        PyErr_Format(PyExc_TypeError,
-                     "menai_vm_shim_init: %s is not callable", name);
+        PyErr_Format(PyExc_TypeError, "menai_vm_shim_init: %s is not callable", name);
         Py_DECREF(obj);
         return -1;
     }
+
     *dst = obj;
     return 0;
 }
@@ -649,36 +634,37 @@ menai_vm_shim_init(void)
     PyObject *vc = PyImport_ImportModule("menai.menai_value_c");
     if (vc == NULL) return -1;
 
-    if (fetch_type(vc, "MenaiNone",       &Menai_NoneType)       < 0) goto fail;
-    if (fetch_type(vc, "MenaiBoolean",    &Menai_BooleanType)    < 0) goto fail;
-    if (fetch_type(vc, "MenaiInteger",    &Menai_IntegerType)    < 0) goto fail;
-    if (fetch_type(vc, "MenaiFloat",      &Menai_FloatType)      < 0) goto fail;
-    if (fetch_type(vc, "MenaiComplex",    &Menai_ComplexType)    < 0) goto fail;
-    if (fetch_type(vc, "MenaiString",     &Menai_StringType)     < 0) goto fail;
-    if (fetch_type(vc, "MenaiSymbol",     &Menai_SymbolType)     < 0) goto fail;
-    if (fetch_type(vc, "MenaiList",       &Menai_ListType)       < 0) goto fail;
-    if (fetch_type(vc, "MenaiDict",       &Menai_DictType)       < 0) goto fail;
-    if (fetch_type(vc, "MenaiSet",        &Menai_SetType)        < 0) goto fail;
-    if (fetch_type(vc, "MenaiFunction",   &Menai_FunctionType)   < 0) goto fail;
+    if (fetch_type(vc, "MenaiNone", &Menai_NoneType) < 0) goto fail;
+    if (fetch_type(vc, "MenaiBoolean", &Menai_BooleanType) < 0) goto fail;
+    if (fetch_type(vc, "MenaiInteger", &Menai_IntegerType) < 0) goto fail;
+    if (fetch_type(vc, "MenaiFloat", &Menai_FloatType) < 0) goto fail;
+    if (fetch_type(vc, "MenaiComplex", &Menai_ComplexType) < 0) goto fail;
+    if (fetch_type(vc, "MenaiString", &Menai_StringType) < 0) goto fail;
+    if (fetch_type(vc, "MenaiSymbol", &Menai_SymbolType) < 0) goto fail;
+    if (fetch_type(vc, "MenaiList", &Menai_ListType) < 0) goto fail;
+    if (fetch_type(vc, "MenaiDict", &Menai_DictType) < 0) goto fail;
+    if (fetch_type(vc, "MenaiSet", &Menai_SetType) < 0) goto fail;
+    if (fetch_type(vc, "MenaiFunction", &Menai_FunctionType) < 0) goto fail;
     if (fetch_type(vc, "MenaiStructType", &Menai_StructTypeType) < 0) goto fail;
-    if (fetch_type(vc, "MenaiStruct",     &Menai_StructType)     < 0) goto fail;
+    if (fetch_type(vc, "MenaiStruct", &Menai_StructType) < 0) goto fail;
 
-    if (fetch_singleton(vc, "Menai_NONE",          &Menai_NONE)       < 0) goto fail;
-    if (fetch_singleton(vc, "Menai_BOOLEAN_TRUE",  &Menai_TRUE)       < 0) goto fail;
-    if (fetch_singleton(vc, "Menai_BOOLEAN_FALSE", &Menai_FALSE)      < 0) goto fail;
-    if (fetch_singleton(vc, "Menai_LIST_EMPTY",    &Menai_EMPTY_LIST) < 0) goto fail;
-    if (fetch_singleton(vc, "Menai_DICT_EMPTY",    &Menai_EMPTY_DICT) < 0) goto fail;
-    if (fetch_singleton(vc, "Menai_SET_EMPTY",     &Menai_EMPTY_SET)  < 0) goto fail;
+    if (fetch_singleton(vc, "Menai_NONE", &Menai_NONE) < 0) goto fail;
+    if (fetch_singleton(vc, "Menai_BOOLEAN_TRUE", &Menai_TRUE) < 0) goto fail;
+    if (fetch_singleton(vc, "Menai_BOOLEAN_FALSE", &Menai_FALSE) < 0) goto fail;
+    if (fetch_singleton(vc, "Menai_LIST_EMPTY", &Menai_EMPTY_LIST) < 0) goto fail;
+    if (fetch_singleton(vc, "Menai_DICT_EMPTY", &Menai_EMPTY_DICT) < 0) goto fail;
+    if (fetch_singleton(vc, "Menai_SET_EMPTY", &Menai_EMPTY_SET) < 0) goto fail;
 
     if (fetch_callable(vc, "convert_code_object", &fn_convert_code_object) < 0) goto fail;
-    if (fetch_callable(vc, "convert_value",       &fn_convert_value)       < 0) goto fail;
-    if (fetch_callable(vc, "to_slow",             &fn_to_slow)             < 0) goto fail;
+    if (fetch_callable(vc, "convert_value", &fn_convert_value) < 0) goto fail;
+    if (fetch_callable(vc, "to_slow", &fn_to_slow) < 0) goto fail;
 
     empty_tuple = PyTuple_New(0);
     if (empty_tuple == NULL) goto fail;
 
     PyObject *err_mod = PyImport_ImportModule("menai.menai_error");
     if (err_mod == NULL) goto fail;
+
     MenaiEvalError_type = PyObject_GetAttrString(err_mod, "MenaiEvalError");
     MenaiCancelledException_type = PyObject_GetAttrString(err_mod, "MenaiCancelledException");
     Py_DECREF(err_mod);
@@ -1018,6 +1004,7 @@ call_setup(Frame *new_frame, PyObject *func_obj,
         }
         PyObject *rest_list = menai_list_from_tuple(rest_tuple);
         if (rest_list == NULL) return -1;
+
         reg_set(regs, callee_base + min_arity, rest_list);
         Py_DECREF(rest_list);
 
@@ -1215,6 +1202,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 menai_raise_eval_error("If condition must be boolean");
                 goto error;
             }
+
             if (!menai_boolean_value(cond)) frame->ip = src1;
             break;
         }
@@ -1235,8 +1223,10 @@ execute_loop(PyObject *code, PyObject *globals,
                 menai_raise_eval_error("error: message must be a string");
                 goto error;
             }
-            PyObject *s = menai_get_attr(msg, "value");
+
+            PyObject *s = PyObject_GetAttrString(msg, "value");
             if (s == NULL) goto error;
+
             PyErr_SetObject(MenaiEvalError_type, s);
             Py_DECREF(s);
             goto error;
@@ -1655,12 +1645,16 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer+")) goto error;
             if (!require_integer(b, "integer+")) goto error;
+
             PyObject *av = menai_integer_value(a);
             if (!av) goto error;
+
             PyObject *bv = menai_integer_value(b);
             if (!bv) goto error;
+
             PyObject *_r = make_integer_value(PyNumber_Add(av, bv));
             if (!_r) goto error;
+
             reg_set(regs, base + dest, _r);
             Py_DECREF(_r);
             break;
@@ -1670,12 +1664,16 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-")) goto error;
             if (!require_integer(b, "integer-")) goto error;
+
             PyObject *av = menai_integer_value(a);
             if (!av) goto error;
+
             PyObject *bv = menai_integer_value(b);
             if (!bv) goto error;
+
             PyObject *_r = make_integer_value(PyNumber_Subtract(av, bv));
             if (!_r) goto error;
+
             reg_set(regs, base + dest, _r);
             Py_DECREF(_r);
             break;
@@ -1685,12 +1683,16 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer*")) goto error;
             if (!require_integer(b, "integer*")) goto error;
+
             PyObject *av = menai_integer_value(a);
             if (!av) goto error;
+
             PyObject *bv = menai_integer_value(b);
             if (!bv) goto error;
+
             PyObject *_r = make_integer_value(PyNumber_Multiply(av, bv));
             if (!_r) goto error;
+
             reg_set(regs, base + dest, _r);
             Py_DECREF(_r);
             break;
@@ -2326,8 +2328,10 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_FLOAT_TO_STRING: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float->string")) goto error;
+
             PyObject *_pf = PyFloat_FromDouble(menai_float_value(a));
             if (_pf == NULL) goto error;
+
             PyObject *py_str = PyObject_Str(_pf);
             Py_DECREF(_pf);
             if (py_str == NULL) goto error;
@@ -2551,17 +2555,20 @@ execute_loop(PyObject *code, PyObject *globals,
                     menai_raise_eval_error("Struct constructor called with wrong number of arguments");
                     goto error;
                 }
+
                 PyObject *fields = PyTuple_New(n_fields);
                 if (fields == NULL) {
                     Py_DECREF(raw_args);
                     Py_DECREF(raw_func);
                     goto error;
                 }
+
                 for (int i = 0; i < (int)n_fields; i++) {
                     PyObject *fv = PyTuple_GET_ITEM(elements, i);
                     Py_INCREF(fv);
                     PyTuple_SET_ITEM(fields, i, fv);
                 }
+
                 PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", raw_func, "fields", fields);
                 Py_DECREF(fields);
                 if (kwargs == NULL) {
@@ -2569,6 +2576,7 @@ execute_loop(PyObject *code, PyObject *globals,
                     Py_DECREF(raw_func);
                     goto error;
                 }
+
                 PyObject *retval = PyObject_Call((PyObject *)Menai_StructType, empty_tuple, kwargs);
                 Py_DECREF(kwargs);
                 if (retval == NULL) {
@@ -2576,6 +2584,7 @@ execute_loop(PyObject *code, PyObject *globals,
                     Py_DECREF(raw_func);
                     goto error;
                 }
+
                 int saved_return_dest = frame->return_dest;
                 frame_release(frame);
                 frame_depth--;
@@ -2585,6 +2594,7 @@ execute_loop(PyObject *code, PyObject *globals,
                     Py_DECREF(raw_func);
                     return retval;
                 }
+
                 reg_set(regs, caller->base + saved_return_dest, retval);
                 Py_DECREF(retval);
                 Py_DECREF(raw_args);
@@ -3097,10 +3107,13 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string-suffix?")) goto error;
             if (!require_string(b, "string-suffix?")) goto error;
+
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
+
             PyObject *sb = menai_string_value(b);
             if (sb == NULL) goto error;
+
             int r = PyUnicode_Tailmatch(sa, sb, 0, PY_SSIZE_T_MAX, 1);
             if (r < 0) goto error;
             bool_store(regs, base + dest, r);
@@ -3144,10 +3157,13 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             PyObject *sa = menai_string_value(a);
             if (sa == NULL) goto error;
+
             PyObject *bv = menai_integer_value(b);
             if (bv == NULL) goto error;
+
             PyObject *cv = menai_integer_value(c);
             if (cv == NULL) goto error;
+
             Py_ssize_t start = PyLong_AsSsize_t(bv), end = PyLong_AsSsize_t(cv);
             Py_ssize_t slen = PyUnicode_GET_LENGTH(sa);
             if (start < 0) {
