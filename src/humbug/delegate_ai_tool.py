@@ -458,6 +458,17 @@ class DelegateAITool(AITool):
             if parent_tab:
                 self._column_manager.unprotect_tab(parent_tab.tab_id())
 
+            # Move the child conversation tab to the next column to the right of the parent
+            if parent_tab:
+                parent_info = self._column_manager.get_tab_info_by_id(parent_tab.tab_id())
+                if parent_info:
+                    target_column = min(parent_info["column_index"] + 1, 5)
+                    try:
+                        self._column_manager.move_tab_to_column(conversation_tab.tab_id(), target_column)
+
+                    except ColumnManagerError:
+                        pass  # Best effort — tab is still functional if move fails
+
             # Now submit the prompt — the widget is listening and will display the user message
             await child_ai_conversation.submit_message(requester, task_prompt)
 
