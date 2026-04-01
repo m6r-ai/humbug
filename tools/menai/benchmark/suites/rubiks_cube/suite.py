@@ -397,7 +397,7 @@ def _ida_star_functional(
 class Suite(BenchmarkSuite):
     """Benchmark suite comparing Menai, idiomatic Python, and functional Python Rubik's cube IDA* solvers."""
 
-    name = "Rubiks Cube"
+    name = "rubiks_cube"
     description = "Solve scrambled Rubik's cubes of increasing depth using IDA*."
 
     def cases(self) -> list[BenchmarkCase]:

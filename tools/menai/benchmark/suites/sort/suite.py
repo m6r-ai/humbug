@@ -47,7 +47,7 @@ def _merge(left: list[int], right: list[int]) -> list[int]:
 class Suite(BenchmarkSuite):
     """Benchmark suite comparing Menai, idiomatic Python, and functional Python sort."""
 
-    name = "Sort"
+    name = "sort"
     description = "Sort a list of random integers at various sizes."
 
     def cases(self) -> list[BenchmarkCase]:

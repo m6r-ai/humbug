@@ -211,7 +211,7 @@ def _solve_python_functional(flat: list[int]) -> list[list[int]]:
 class Suite(BenchmarkSuite):
     """Benchmark suite comparing Menai, idiomatic Python, and functional Python sudoku solvers."""
 
-    name = "Sudoku"
+    name = "sudoku"
     description = "Solve sudoku puzzles of varying difficulty."
 
     def cases(self) -> list[BenchmarkCase]:
