@@ -396,14 +396,14 @@ static inline PyObject *menai_string_value(PyObject *o) {
 static inline void reg_set_own(PyObject **regs, int slot, PyObject *val) {
     PyObject *old = regs[slot];
     regs[slot] = val;
-    Py_XDECREF(old);
+    Py_DECREF(old);
 }
 
 static inline void reg_set_borrow(PyObject **regs, int slot, PyObject *val) {
     PyObject *old = regs[slot];
     Py_INCREF(val);
     regs[slot] = val;
-    Py_XDECREF(old);
+    Py_DECREF(old);
 }
 
 static inline PyObject *make_integer(PyObject *py_int) {
