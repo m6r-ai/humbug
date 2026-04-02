@@ -736,21 +736,8 @@ static inline int
 _bucket_index(Py_ssize_t n)
 {
     if (n <= 1) return 0;
-    /* Round up to next power of 2, then take log2 */
-    Py_ssize_t v = (Py_ssize_t)n - 1;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    if (sizeof(Py_ssize_t) > 4) v |= v >> 32;
-    v++;
-    int bucket = 0;
-    while (v > 1) {
-        v >>= 1;
-        bucket++;
-    }
-
+    /* ceil_log2(n) via count-leading-zeros — one instruction on x86/ARM. */
+    int bucket = (int)(sizeof(unsigned long) * 8) - __builtin_clzl((unsigned long)(n - 1));
     return bucket < LIST_CACHE_NUM_BUCKETS ? bucket : LIST_CACHE_NUM_BUCKETS - 1;
 }
 

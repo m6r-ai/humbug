@@ -406,6 +406,39 @@ static inline void reg_set_borrow(PyObject **regs, int slot, PyObject *val) {
     Py_DECREF(old);
 }
 
+/*
+ * pylong_compare — fast integer comparison bypassing PyObject_RichCompareBool.
+ *
+ * For the common case where both values fit in a C long, this reduces to two
+ * PyLong_AsLong calls and a C comparison — no Python dispatch overhead.
+ * Falls back to PyObject_RichCompareBool for bignums (where PyLong_AsLong
+ * returns -1 with OverflowError set).
+ *
+ * op must be one of Py_EQ, Py_NE, Py_LT, Py_GT, Py_LE, Py_GE.
+ */
+static inline int
+pylong_compare(PyObject *a, PyObject *b, int op)
+{
+    long la = PyLong_AsLong(a);
+    if (la != -1 || !PyErr_Occurred()) {
+        long lb = PyLong_AsLong(b);
+        if (lb != -1 || !PyErr_Occurred()) {
+            switch (op) {
+                case Py_EQ: return la == lb;
+                case Py_NE: return la != lb;
+                case Py_LT: return la <  lb;
+                case Py_GT: return la >  lb;
+                case Py_LE: return la <= lb;
+                case Py_GE: return la >= lb;
+            }
+        }
+        PyErr_Clear();
+    } else {
+        PyErr_Clear();
+    }
+    return PyObject_RichCompareBool(a, b, op);
+}
+
 static inline PyObject *make_integer(PyObject *py_int) {
     MenaiInteger_Object *r = (MenaiInteger_Object *)Menai_IntegerType->tp_alloc(Menai_IntegerType, 0);
     if (r) {
@@ -1440,7 +1473,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_symbol_pair(a, b, "symbol=?")) goto error;
             PyObject *na = menai_symbol_name(a);
             PyObject *nb = menai_symbol_name(b);
-            bool_store(regs, base + dest, PyObject_RichCompareBool(na, nb, Py_EQ));
+            bool_store(regs, base + dest, na == nb || PyUnicode_Compare(na, nb) == 0);
             break;
         }
 
@@ -1449,7 +1482,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_symbol_pair(a, b, "symbol!=?")) goto error;
             PyObject *na = menai_symbol_name(a);
             PyObject *nb = menai_symbol_name(b);
-            bool_store(regs, base + dest, PyObject_RichCompareBool(na, nb, Py_NE));
+            bool_store(regs, base + dest, na != nb && PyUnicode_Compare(na, nb) != 0);
             break;
         }
 
@@ -1531,7 +1564,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(b, "integer=?")) goto error;
             PyObject *av = menai_integer_value(a);
             PyObject *bv = menai_integer_value(b);
-            bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_EQ));
+            bool_store(regs, base + dest, pylong_compare(av, bv, Py_EQ));
             break;
         }
 
@@ -1541,7 +1574,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(b, "integer!=?")) goto error;
             PyObject *av = menai_integer_value(a);
             PyObject *bv = menai_integer_value(b);
-            bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_NE));
+            bool_store(regs, base + dest, pylong_compare(av, bv, Py_NE));
             break;
         }
 
@@ -1551,7 +1584,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(b, "integer<?")) goto error;
             PyObject *av = menai_integer_value(a);
             PyObject *bv = menai_integer_value(b);
-            bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_LT));
+            bool_store(regs, base + dest, pylong_compare(av, bv, Py_LT));
             break;
         }
 
@@ -1561,7 +1594,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(b, "integer>?")) goto error;
             PyObject *av = menai_integer_value(a);
             PyObject *bv = menai_integer_value(b);
-            bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_GT));
+            bool_store(regs, base + dest, pylong_compare(av, bv, Py_GT));
             break;
         }
 
@@ -1571,7 +1604,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(b, "integer<=?")) goto error;
             PyObject *av = menai_integer_value(a);
             PyObject *bv = menai_integer_value(b);
-            bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_LE));
+            bool_store(regs, base + dest, pylong_compare(av, bv, Py_LE));
             break;
         }
 
@@ -1581,7 +1614,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(b, "integer>=?")) goto error;
             PyObject *av = menai_integer_value(a);
             PyObject *bv = menai_integer_value(b);
-            bool_store(regs, base + dest, PyObject_RichCompareBool(av, bv, Py_GE));
+            bool_store(regs, base + dest, pylong_compare(av, bv, Py_GE));
             break;
         }
 
@@ -1668,15 +1701,13 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer/")) goto error;
             if (!require_integer(b, "integer/")) goto error;
             PyObject *bv = menai_integer_value(b);
-            PyObject *_zero = PyLong_FromLong(0);
-            if (_zero == NULL) goto error;
-            int _is_zero = PyObject_RichCompareBool(bv, _zero, Py_EQ);
-            Py_DECREF(_zero);
-            if (_is_zero < 0) goto error;
-            if (_is_zero) {
+            long _bvl = PyLong_AsLong(bv);
+            /* A bignum divisor (OverflowError from AsLong) is never zero. */
+            if (!PyErr_Occurred() && _bvl == 0) {
                 menai_raise_eval_error("Division by zero in 'integer/'");
                 goto error;
             }
+            PyErr_Clear();
             PyObject *av = menai_integer_value(a);
             PyObject *_res = PyNumber_FloorDivide(av, bv);
             PyObject *_r = make_integer_value(_res);
@@ -1690,15 +1721,12 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer%")) goto error;
             if (!require_integer(b, "integer%")) goto error;
             PyObject *bv = menai_integer_value(b);
-            PyObject *_zero = PyLong_FromLong(0);
-            if (_zero == NULL) goto error;
-            int _is_zero = PyObject_RichCompareBool(bv, _zero, Py_EQ);
-            Py_DECREF(_zero);
-            if (_is_zero < 0) goto error;
-            if (_is_zero) {
+            long _bvl = PyLong_AsLong(bv);
+            if (!PyErr_Occurred() && _bvl == 0) {
                 menai_raise_eval_error("Modulo by zero in 'integer%'");
                 goto error;
             }
+            PyErr_Clear();
             PyObject *av = menai_integer_value(a);
             PyObject *_res = PyNumber_Remainder(av, bv);
             PyObject *_r = make_integer_value(_res);
@@ -1712,15 +1740,13 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(a, "integer-expn")) goto error;
             if (!require_integer(b, "integer-expn")) goto error;
             PyObject *bv = menai_integer_value(b);
-            PyObject *_zero = PyLong_FromLong(0);
-            if (_zero == NULL) goto error;
-            int _is_neg = PyObject_RichCompareBool(bv, _zero, Py_LT);
-            Py_DECREF(_zero);
-            if (_is_neg < 0) goto error;
-            if (_is_neg) {
+            long _bvl = PyLong_AsLong(bv);
+            /* A bignum exponent (OverflowError) is always positive — only reject negative longs. */
+            if (!PyErr_Occurred() && _bvl < 0) {
                 menai_raise_eval_error("Function 'integer-expn' requires a non-negative exponent");
                 goto error;
             }
+            PyErr_Clear();
             PyObject *av = menai_integer_value(a);
             PyObject *_res = PyNumber_Power(av, bv, Py_None);
             PyObject *_r = make_integer_value(_res);
@@ -1795,7 +1821,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(b, "integer-min")) goto error;
             PyObject *_av = menai_integer_value(a);
             PyObject *_bv = menai_integer_value(b);
-            reg_set_borrow(regs, base + dest, PyObject_RichCompareBool(_av, _bv, Py_LE) ? a : b);
+            reg_set_borrow(regs, base + dest, pylong_compare(_av, _bv, Py_LE) ? a : b);
             break;
         }
 
@@ -1805,7 +1831,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(b, "integer-max")) goto error;
             PyObject *_av = menai_integer_value(a);
             PyObject *_bv = menai_integer_value(b);
-            reg_set_borrow(regs, base + dest, PyObject_RichCompareBool(_av, _bv, Py_GE) ? a : b);
+            reg_set_borrow(regs, base + dest, pylong_compare(_av, _bv, Py_GE) ? a : b);
             break;
         }
 
