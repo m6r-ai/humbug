@@ -147,9 +147,8 @@ PyObject *menai_list_from_tuple(PyObject *tup);
  * Bypasses PyObject_Call and argument parsing.  All arguments are borrowed.
  * ------------------------------------------------------------------------- */
 
-PyObject *menai_function_alloc(PyObject *parameters, PyObject *name,
-                               PyObject *bytecode, PyObject *captured_values,
-                               int is_variadic);
+PyObject *menai_function_alloc(PyObject *cache, PyObject *bytecode,
+                               PyObject *captured_values);
 
 /* ---------------------------------------------------------------------------
  * MenaiList inline accessors

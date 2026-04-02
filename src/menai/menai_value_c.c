@@ -1160,21 +1160,40 @@ menai_list_from_tuple(PyObject *tup)
  * menai_function_alloc — direct C constructor for MenaiFunction.
  *
  * Bypasses PyObject_Call and argument parsing entirely.  All reference
- * counting follows the same rules as MenaiFunction_new:
- *   - parameters, name, bytecode, captured_values: borrowed — we INCREF them.
- *   - is_variadic: plain C int.
+ * counting: bytecode and captured_values are borrowed — we INCREF them.
+ * All other fields are read from cache (borrowed from the tuple).
  *
- * The frame-setup cache fields (instrs, constants, names, local_count,
- * param_count) are populated from bytecode exactly as in MenaiFunction_new.
+ * cache is the _closure_cache tuple built by menai_convert_code_object:
+ *   [0] param_names_tup  (tuple of str)
+ *   [1] name             (str)
+ *   [2] is_variadic      (int: 0 or 1)
+ *   [3] ncap             (int: number of captures, unused here)
+ *   [4] instrs_obj       (array.array — borrowed ref kept alive by bytecode)
+ *   [5] constants        (list — borrowed ref kept alive by bytecode)
+ *   [6] names_list       (list — borrowed ref kept alive by bytecode)
+ *   [7] param_count      (int)
+ *   [8] local_count      (int)
+ *
+ * bytecode is stored as an owned ref so it keeps instrs_obj/constants/names
+ * alive for the lifetime of the function.
  * ------------------------------------------------------------------------- */
 
 PyObject *
-menai_function_alloc(PyObject *parameters, PyObject *name, PyObject *bytecode,
-                     PyObject *captured_values, int is_variadic)
+menai_function_alloc(PyObject *cache, PyObject *bytecode, PyObject *captured_values)
 {
     MenaiFunction_Object *self = (MenaiFunction_Object *)MenaiFunction_Type.tp_alloc(&MenaiFunction_Type, 0);
     if (!self)
         return NULL;
+
+    PyObject *parameters = PyTuple_GET_ITEM(cache, 0);
+    PyObject *name = PyTuple_GET_ITEM(cache, 1);
+    int is_variadic = (int)PyLong_AsLong(PyTuple_GET_ITEM(cache, 2));
+    /* cache[3] is ncap — used by the caller, not needed here */
+    PyObject *instrs_obj = PyTuple_GET_ITEM(cache, 4);
+    PyObject *constants = PyTuple_GET_ITEM(cache, 5);
+    PyObject *names_obj = PyTuple_GET_ITEM(cache, 6);
+    int param_count = (int)PyLong_AsLong(PyTuple_GET_ITEM(cache, 7));
+    int local_count = (int)PyLong_AsLong(PyTuple_GET_ITEM(cache, 8));
 
     Py_INCREF(parameters);
     self->parameters = parameters;
@@ -1185,40 +1204,21 @@ menai_function_alloc(PyObject *parameters, PyObject *name, PyObject *bytecode,
     Py_INCREF(captured_values);
     self->captured_values = captured_values;
     self->is_variadic = is_variadic;
-    self->instrs = NULL;
-    self->instrs_obj = NULL;
-    self->constants = NULL;
-    self->names = NULL;
-    self->code_len = 0;
-    self->local_count = 0;
-    self->param_count = 0;
+    self->param_count = param_count;
+    self->local_count = local_count;
+    self->constants = constants;  /* borrowed — bytecode keeps alive */
+    self->names = names_obj;  /* borrowed — bytecode keeps alive */
 
-    if (bytecode != Py_None) {
-        PyObject *pc = PyObject_GetAttrString(bytecode, "param_count");
-        self->param_count = pc ? (int)PyLong_AsLong(pc) : 0;
-        Py_XDECREF(pc);
-
-        PyObject *instrs_obj = PyObject_GetAttrString(bytecode, "instructions");
-        if (instrs_obj) {
-            Py_buffer view;
-            if (PyObject_GetBuffer(instrs_obj, &view, PyBUF_SIMPLE) == 0) {
-                self->instrs = (uint64_t *)view.buf;
-                self->instrs_obj = instrs_obj;
-                self->code_len = (int)(view.len / sizeof(uint64_t));
-                PyBuffer_Release(&view);
-            }
-        }
-        PyObject *constants = PyObject_GetAttrString(bytecode, "constants");
-        if (constants) self->constants = constants;
-        PyObject *names_obj = PyObject_GetAttrString(bytecode, "names");
-        if (names_obj) self->names = names_obj;
-        PyObject *lc = PyObject_GetAttrString(bytecode, "local_count");
-        if (lc) {
-            self->local_count = (int)PyLong_AsLong(lc);
-            Py_DECREF(lc);
-        }
+    Py_buffer view;
+    if (PyObject_GetBuffer(instrs_obj, &view, PyBUF_SIMPLE) == 0) {
+        self->instrs = (uint64_t *)view.buf;
+        self->instrs_obj = instrs_obj;  /* borrowed — bytecode keeps alive */
+        self->code_len = (int)(view.len / sizeof(uint64_t));
+        PyBuffer_Release(&view);
     } else {
-        self->param_count = (int)PyTuple_GET_SIZE(parameters);
+        self->instrs = NULL;
+        self->instrs_obj = NULL;
+        self->code_len = 0;
     }
 
     return (PyObject *)self;
@@ -2677,8 +2677,9 @@ menai_convert_code_object(PyObject *code)
         }
 
         /* Build _closure_cache = (param_names_tuple, name, is_variadic_int,
-         * ncap_int) on this child so OP_MAKE_CLOSURE needs only one
-         * PyObject_GetAttrString call at runtime instead of four. */
+         * ncap_int, instrs_obj, constants, names, param_count_int,
+         * local_count_int) on this child so OP_MAKE_CLOSURE and
+         * menai_function_alloc need zero PyObject_GetAttrString calls. */
         PyObject *param_names = PyObject_GetAttrString(child, "param_names");
         if (!param_names) {
             Py_DECREF(children);
@@ -2726,8 +2727,62 @@ menai_convert_code_object(PyObject *code)
         Py_ssize_t ncap = PyList_GET_SIZE(free_vars);
         Py_DECREF(free_vars);
 
-        PyObject *cache = Py_BuildValue("(OOii)", param_names_tup, cname,
-                                        is_variadic, (int)ncap);
+        PyObject *instrs_obj = PyObject_GetAttrString(child, "instructions");
+        if (!instrs_obj) {
+            Py_DECREF(cname);
+            Py_DECREF(param_names_tup);
+            Py_DECREF(children);
+            return NULL;
+        }
+
+        PyObject *constants = PyObject_GetAttrString(child, "constants");
+        if (!constants) {
+            Py_DECREF(instrs_obj);
+            Py_DECREF(cname);
+            Py_DECREF(param_names_tup);
+            Py_DECREF(children);
+            return NULL;
+        }
+
+        PyObject *names_list = PyObject_GetAttrString(child, "names");
+        if (!names_list) {
+            Py_DECREF(constants);
+            Py_DECREF(instrs_obj);
+            Py_DECREF(cname);
+            Py_DECREF(param_names_tup);
+            Py_DECREF(children);
+            return NULL;
+        }
+
+        PyObject *pc_obj = PyObject_GetAttrString(child, "param_count");
+        if (!pc_obj) {
+            Py_DECREF(names_list);
+            Py_DECREF(constants);
+            Py_DECREF(instrs_obj);
+            Py_DECREF(cname);
+            Py_DECREF(param_names_tup);
+            Py_DECREF(children);
+            return NULL;
+        }
+
+        PyObject *lc_obj = PyObject_GetAttrString(child, "local_count");
+        if (!lc_obj) {
+            Py_DECREF(pc_obj);
+            Py_DECREF(names_list);
+            Py_DECREF(constants);
+            Py_DECREF(instrs_obj);
+            Py_DECREF(cname);
+            Py_DECREF(param_names_tup);
+            Py_DECREF(children);
+            return NULL;
+        }
+
+        PyObject *cache = Py_BuildValue("(OOiiOOOOO)", param_names_tup, cname,
+                                        is_variadic, (int)ncap,
+                                        instrs_obj, constants, names_list,
+                                        pc_obj, lc_obj);
+        Py_DECREF(lc_obj); Py_DECREF(pc_obj);
+        Py_DECREF(names_list); Py_DECREF(constants); Py_DECREF(instrs_obj);
         Py_DECREF(param_names_tup);
         Py_DECREF(cname);
         if (!cache) {

@@ -2236,9 +2236,6 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_DECREF(code_objects);
             if (closure_cache == NULL) goto error;
 
-            PyObject *param_names = PyTuple_GET_ITEM(closure_cache, 0); /* borrowed */
-            PyObject *cname = PyTuple_GET_ITEM(closure_cache, 1); /* borrowed */
-            int is_variadic = (int)PyLong_AsLong(PyTuple_GET_ITEM(closure_cache, 2));
             Py_ssize_t ncap = (Py_ssize_t)PyLong_AsLong(PyTuple_GET_ITEM(closure_cache, 3));
 
             PyObject *cap_list = PyList_New(ncap);
@@ -2252,7 +2249,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 PyList_SET_ITEM(cap_list, i, Py_None);
             }
 
-            PyObject *func = menai_function_alloc(param_names, cname, child_code, cap_list, is_variadic);
+            PyObject *func = menai_function_alloc(closure_cache, child_code, cap_list);
             Py_DECREF(cap_list);
             Py_DECREF(closure_cache);
             if (func == NULL) goto error;
