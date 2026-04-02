@@ -797,6 +797,7 @@ _menai_list_cache_alloc_arr(Py_ssize_t n)
 static void
 _menai_list_cache_free_arr(PyObject **arr, Py_ssize_t n)
 {
+    for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(arr[i]);
     if (arr && n > 0 && n <= LIST_CACHE_MAX_SIZE) {
         int bucket = _bucket_index(n);
         if (_list_arr_counts[bucket] < LIST_CACHE_MAX_BUCKET) {
@@ -870,7 +871,6 @@ MenaiList_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
         self->elements = arr;
         self->length = n;
     } else {
-        for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(arr[i]);
         _menai_list_cache_free_arr(arr, n);
     }
     return (PyObject *)self;
@@ -884,7 +884,6 @@ MenaiList_dealloc(PyObject *self)
     lst->length = 0;
     PyObject **arr = lst->elements;
     lst->elements = NULL;
-    for (Py_ssize_t i = 0; i < n; i++) Py_XDECREF(arr[i]);
     _menai_list_cache_free_arr(arr, n);
     _menai_list_cache_free_obj((MenaiList_Object *)self);
 }
@@ -1033,7 +1032,6 @@ menai_list_from_array(PyObject **items, Py_ssize_t n)
 
     MenaiList_Object *obj = _menai_list_cache_alloc_obj();
     if (!obj) {
-        for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(arr[i]);
         _menai_list_cache_free_arr(arr, n);
         return NULL;
     }
@@ -1047,7 +1045,6 @@ menai_list_from_array_steal(PyObject **items, Py_ssize_t n)
 {
     MenaiList_Object *obj = _menai_list_cache_alloc_obj();
     if (!obj) {
-        for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(items[i]);
         _menai_list_cache_free_arr(items, n);
         return NULL;
     }
@@ -1078,7 +1075,6 @@ menai_list_from_tuple(PyObject *tup)
     Py_DECREF(tup);
     MenaiList_Object *obj = _menai_list_cache_alloc_obj();
     if (!obj) {
-        for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(arr[i]);
         _menai_list_cache_free_arr(arr, n);
         return NULL;
     }
