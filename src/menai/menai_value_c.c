@@ -1225,14 +1225,14 @@ menai_function_alloc(PyObject *cache, PyObject *bytecode, PyObject *captured_val
 }
 
 /* ---------------------------------------------------------------------------
- * _hashable_key — shared by MenaiDict and MenaiSet
+ * menai_hashable_key — shared by MenaiDict, MenaiSet, and the C VM
  *
  * Converts a MenaiValue key to a hashable Python tuple (tag, value).
  * Returns a new reference, or NULL on error (MenaiEvalError set).
  * ------------------------------------------------------------------------- */
 
-static PyObject *
-_hashable_key(PyObject *key)
+PyObject *
+menai_hashable_key(PyObject *key)
 {
     PyTypeObject *t = Py_TYPE(key);
 
@@ -1312,7 +1312,7 @@ MenaiDict_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     for (Py_ssize_t i = 0; i < n; i++) {
         PyObject *pair = PyTuple_GET_ITEM(pairs, i);
         PyObject *k = PyTuple_GET_ITEM(pair, 0);
-        PyObject *hk = _hashable_key(k);
+        PyObject *hk = menai_hashable_key(k);
         if (!hk) { Py_DECREF(lookup);
             Py_DECREF(pairs);
             return NULL;
@@ -1423,7 +1423,7 @@ static PyObject *
 MenaiDict_to_hashable_key(PyObject *self, PyObject *key)
 {
     (void)self;
-    return _hashable_key(key);
+    return menai_hashable_key(key);
 }
 
 static PyObject *
@@ -1507,7 +1507,7 @@ MenaiSet_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     Py_ssize_t n = PyTuple_GET_SIZE(src_tup);
     for (Py_ssize_t i = 0; i < n; i++) {
         PyObject *elem = PyTuple_GET_ITEM(src_tup, i);
-        PyObject *hk = _hashable_key(elem);
+        PyObject *hk = menai_hashable_key(elem);
         if (!hk) {
             Py_DECREF(deduped);
             Py_DECREF(seen);
@@ -1548,7 +1548,7 @@ MenaiSet_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     }
     n = PyTuple_GET_SIZE(elements);
     for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *hk = _hashable_key(PyTuple_GET_ITEM(elements, i));
+        PyObject *hk = menai_hashable_key(PyTuple_GET_ITEM(elements, i));
         if (!hk) {
             Py_DECREF(members_set);
             Py_DECREF(elements);

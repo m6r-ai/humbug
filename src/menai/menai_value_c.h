@@ -151,6 +151,14 @@ PyObject *menai_function_alloc(PyObject *cache, PyObject *bytecode,
                                PyObject *captured_values);
 
 /* ---------------------------------------------------------------------------
+ * menai_hashable_key — convert a MenaiValue key to a hashable Python tuple.
+ * Defined in menai_value_c.c (was static _hashable_key).
+ * Returns a new reference, or NULL on error (MenaiEvalError set).
+ * ------------------------------------------------------------------------- */
+
+PyObject *menai_hashable_key(PyObject *key);
+
+/* ---------------------------------------------------------------------------
  * MenaiList inline accessors
  * ------------------------------------------------------------------------- */
 
