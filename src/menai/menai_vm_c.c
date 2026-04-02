@@ -20,11 +20,11 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-/* Forward-declare Menai_ListType so the static inline constructors in the
- * header can reference it via MENAI_LIST_TYPEOBJ. */
-extern PyTypeObject *Menai_ListType;
-#define MENAI_LIST_TYPEOBJ Menai_ListType
+
 #include "menai_value_c.h"
+
+/* menai_value_c init — lives in the same .so */
+extern PyObject *_menai_value_c_init(void);
 
 /*
  * Limits
@@ -608,7 +608,7 @@ fetch_callable(PyObject *module, const char *name, PyObject **dst)
 int
 menai_vm_shim_init(void)
 {
-    PyObject *vc = PyImport_ImportModule("menai.menai_value_c");
+    PyObject *vc = _menai_value_c_init();
     if (vc == NULL) return -1;
 
     if (fetch_type(vc, "MenaiNone", &Menai_NoneType) < 0) goto fail;

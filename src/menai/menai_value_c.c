@@ -22,10 +22,9 @@
 #include <stddef.h>
 #include <string.h>
 
-/* Forward-declare MenaiList_Type so the static inline constructors in the
- * header can reference it via MENAI_LIST_TYPEOBJ before the full definition. */
+/* Forward-declare MenaiList_Type so the cache functions can reference it
+ * before the full definition below. */
 static PyTypeObject MenaiList_Type;
-#define MENAI_LIST_TYPEOBJ (&MenaiList_Type)
 #include "menai_value_c.h"
 
 /* ---------------------------------------------------------------------------
@@ -745,7 +744,137 @@ static PyTypeObject MenaiSymbol_Type = {
 
 /* ---------------------------------------------------------------------------
  * MenaiList
+ *
+ * Free-list cache for MenaiList_Object structs and element arrays.
  * ------------------------------------------------------------------------- */
+
+/* Cache constants */
+#define LIST_CACHE_NUM_BUCKETS 8
+#define LIST_CACHE_MAX_BUCKET  256
+#define LIST_CACHE_MAX_SIZE    128
+
+static Py_ssize_t _list_size_classes[LIST_CACHE_NUM_BUCKETS] = {
+    1, 2, 4, 8, 16, 32, 64, 128
+};
+
+/* Object free list — singly-linked via the elements pointer overlay */
+static MenaiList_Object *_list_obj_free = NULL;
+
+/* Element array cache — power-of-2 size buckets */
+static PyObject ***_list_arr_buckets[LIST_CACHE_NUM_BUCKETS];
+static int _list_arr_counts[LIST_CACHE_NUM_BUCKETS];
+
+static inline int
+_bucket_index(Py_ssize_t n)
+{
+    if (n <= 1) return 0;
+    /* Round up to next power of 2, then take log2 */
+    Py_ssize_t v = (Py_ssize_t)n - 1;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    if (sizeof(Py_ssize_t) > 4) v |= v >> 32;
+    v++;
+    int bucket = 0;
+    while (v > 1) {
+        v >>= 1;
+        bucket++;
+    }
+
+    return bucket < LIST_CACHE_NUM_BUCKETS ? bucket : LIST_CACHE_NUM_BUCKETS - 1;
+}
+
+static MenaiList_Object *
+_menai_list_cache_alloc_obj(void)
+{
+    if (_list_obj_free) {
+        MenaiList_Object *obj = _list_obj_free;
+        _list_obj_free = (MenaiList_Object *)obj->elements;
+        obj->elements = NULL;
+        obj->length = 0;
+        /* Restore refcount to 1 and re-track, matching what tp_alloc produces. */
+        Py_SET_REFCNT((PyObject *)obj, 1);
+        PyObject_GC_Track((PyObject *)obj);
+        return obj;
+    }
+    /* tp_alloc already tracks the object for GC types. */
+    return (MenaiList_Object *)MenaiList_Type.tp_alloc(&MenaiList_Type, 0);
+}
+
+static void
+_menai_list_cache_free_obj(MenaiList_Object *obj)
+{
+    /* Untrack from GC before putting on free list.  The elements pointer
+     * is about to be repurposed as the free-list link, so the GC must
+     * not see this object in a collection cycle. */
+    PyObject_GC_UnTrack((PyObject *)obj);
+    obj->elements = (PyObject **)_list_obj_free;
+    obj->length = 0;
+    _list_obj_free = obj;
+}
+
+static PyObject **
+_menai_list_cache_alloc_arr(Py_ssize_t n)
+{
+    if (n > 0 && n <= LIST_CACHE_MAX_SIZE) {
+        int bucket = _bucket_index(n);
+        if (_list_arr_counts[bucket] > 0) {
+            return _list_arr_buckets[bucket][--_list_arr_counts[bucket]];
+        }
+
+        /* No cached entry — allocate at the bucket's full size class so
+         * it can be safely recycled into this bucket later. */
+        n = _list_size_classes[bucket];
+    }
+
+    return (PyObject **)PyMem_Malloc(n * sizeof(PyObject *));
+}
+
+static void
+_menai_list_cache_free_arr(PyObject **arr, Py_ssize_t n)
+{
+    if (arr && n > 0 && n <= LIST_CACHE_MAX_SIZE) {
+        int bucket = _bucket_index(n);
+        if (_list_arr_counts[bucket] < LIST_CACHE_MAX_BUCKET) {
+            if (_list_arr_counts[bucket] == 0) {
+                _list_arr_buckets[bucket] = (PyObject ***)PyMem_Malloc(LIST_CACHE_MAX_BUCKET * sizeof(PyObject **));
+                if (!_list_arr_buckets[bucket]) return;
+            }
+
+            _list_arr_buckets[bucket][_list_arr_counts[bucket]++] = arr;
+            return;
+        }
+    }
+    PyMem_Free(arr);
+}
+
+static void
+_menai_list_cache_clear(void)
+{
+    /* Free every object on the free list.  Each was allocated via tp_alloc
+     * (_PyObject_GC_New) and must be released with tp_free. */
+    MenaiList_Object *obj = _list_obj_free;
+    while (obj) {
+        MenaiList_Object *next = (MenaiList_Object *)obj->elements;
+        MenaiList_Type.tp_free((PyObject *)obj);
+        obj = next;
+    }
+
+    _list_obj_free = NULL;
+    for (int i = 0; i < LIST_CACHE_NUM_BUCKETS; i++) {
+        for (int j = 0; j < _list_arr_counts[i]; j++)
+            PyMem_Free(_list_arr_buckets[i][j]);
+
+        if (_list_arr_buckets[i]) {
+            PyMem_Free(_list_arr_buckets[i]);
+            _list_arr_buckets[i] = NULL;
+        }
+
+        _list_arr_counts[i] = 0;
+    }
+}
 
 static PyObject *
 MenaiList_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -762,28 +891,25 @@ MenaiList_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     }
 
     Py_ssize_t n = tup ? PyTuple_GET_SIZE(tup) : 0;
-    PyObject **arr = NULL;
-    if (n > 0) {
-        arr = (PyObject **)PyMem_Malloc(n * sizeof(PyObject *));
-        if (!arr) {
-            Py_XDECREF(tup);
-            PyErr_NoMemory();
-            return NULL;
-        }
-        for (Py_ssize_t i = 0; i < n; i++) {
-            arr[i] = PyTuple_GET_ITEM(tup, i);
-            Py_INCREF(arr[i]);
-        }
+    PyObject **arr = n > 0 ? _menai_list_cache_alloc_arr(n) : NULL;
+    if (n > 0 && !arr) {
+        Py_XDECREF(tup);
+        PyErr_NoMemory();
+        return NULL;
+    }
+    for (Py_ssize_t i = 0; i < n; i++) {
+        arr[i] = PyTuple_GET_ITEM(tup, i);
+        Py_INCREF(arr[i]);
     }
     Py_XDECREF(tup);
 
-    MenaiList_Object *self = (MenaiList_Object *)type->tp_alloc(type, 0);
+    MenaiList_Object *self = _menai_list_cache_alloc_obj();
     if (self) {
         self->elements = arr;
         self->length = n;
     } else {
         for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(arr[i]);
-        PyMem_Free(arr);
+        _menai_list_cache_free_arr(arr, n);
     }
     return (PyObject *)self;
 }
@@ -791,11 +917,33 @@ MenaiList_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiList_dealloc(PyObject *self)
 {
+    /* tp_clear may have already dropped the elements; guard against that. */
     MenaiList_Object *lst = (MenaiList_Object *)self;
-    for (Py_ssize_t i = 0; i < lst->length; i++)
-        Py_XDECREF(lst->elements[i]);
-    PyMem_Free(lst->elements);
-    Py_TYPE(self)->tp_free(self);
+    if (lst->elements != NULL) {
+        Py_ssize_t n = lst->length;
+        lst->length = 0;
+        PyObject **arr = lst->elements;
+        lst->elements = NULL;
+        for (Py_ssize_t i = 0; i < n; i++) Py_XDECREF(arr[i]);
+        _menai_list_cache_free_arr(arr, n);
+    }
+
+    _menai_list_cache_free_obj((MenaiList_Object *)self);
+}
+
+static int
+MenaiList_clear(PyObject *self)
+{
+    MenaiList_Object *lst = (MenaiList_Object *)self;
+    Py_ssize_t n = lst->length;
+    /* Zero length and null the pointer before dropping refs, so that a
+     * re-entrant traverse during the Py_XDECREF chain sees an empty list. */
+    lst->length = 0;
+    PyObject **arr = lst->elements;
+    lst->elements = NULL;
+    for (Py_ssize_t i = 0; i < n; i++) Py_XDECREF(arr[i]);
+    _menai_list_cache_free_arr(arr, n);
+    return 0;
 }
 
 static int
@@ -923,11 +1071,90 @@ static PyTypeObject MenaiList_Type = {
     .tp_new       = MenaiList_new,
     .tp_dealloc   = MenaiList_dealloc,
     .tp_traverse  = MenaiList_traverse,
+    .tp_clear     = MenaiList_clear,
     .tp_methods   = MenaiList_methods,
     .tp_getset    = MenaiList_getset,
     .tp_richcompare = MenaiList_richcompare,
     .tp_hash      = MenaiList_hash,
 };
+
+/* ---------------------------------------------------------------------------
+ * MenaiList C-level constructors (non-inline, using free-list cache)
+ * ------------------------------------------------------------------------- */
+
+PyObject *
+menai_list_from_array(PyObject **items, Py_ssize_t n)
+{
+    PyObject **arr = NULL;
+    if (n > 0) {
+        arr = _menai_list_cache_alloc_arr(n);
+        if (!arr) {
+            PyErr_NoMemory();
+            return NULL;
+        }
+
+        for (Py_ssize_t i = 0; i < n; i++) {
+            arr[i] = items[i];
+            Py_INCREF(arr[i]);
+        }
+    }
+
+    MenaiList_Object *obj = _menai_list_cache_alloc_obj();
+    if (!obj) {
+        for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(arr[i]);
+        _menai_list_cache_free_arr(arr, n);
+        return NULL;
+    }
+    obj->elements = arr;
+    obj->length = n;
+    return (PyObject *)obj;
+}
+
+PyObject *
+menai_list_from_array_steal(PyObject **items, Py_ssize_t n)
+{
+    MenaiList_Object *obj = _menai_list_cache_alloc_obj();
+    if (!obj) {
+        for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(items[i]);
+        _menai_list_cache_free_arr(items, n);
+        return NULL;
+    }
+    obj->elements = items;
+    obj->length = n;
+    return (PyObject *)obj;
+}
+
+PyObject *
+menai_list_from_tuple(PyObject *tup)
+{
+    Py_ssize_t n = PyTuple_GET_SIZE(tup);
+    PyObject **arr = NULL;
+    if (n > 0) {
+        arr = _menai_list_cache_alloc_arr(n);
+        if (!arr) {
+            Py_DECREF(tup);
+            PyErr_NoMemory();
+            return NULL;
+        }
+
+        for (Py_ssize_t i = 0; i < n; i++) {
+            arr[i] = PyTuple_GET_ITEM(tup, i);
+            Py_INCREF(arr[i]);
+        }
+    }
+
+    Py_DECREF(tup);
+    MenaiList_Object *obj = _menai_list_cache_alloc_obj();
+    if (!obj) {
+        for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(arr[i]);
+        _menai_list_cache_free_arr(arr, n);
+        return NULL;
+    }
+
+    obj->elements = arr;
+    obj->length = n;
+    return (PyObject *)obj;
+}
 
 /* ---------------------------------------------------------------------------
  * _hashable_key — shared by MenaiDict and MenaiSet
@@ -2736,8 +2963,8 @@ static struct PyModuleDef module_def = {
     module_methods
 };
 
-PyMODINIT_FUNC
-PyInit_menai_value_c(void)
+PyObject *
+_menai_value_c_init(void)
 {
     /* Fetch slow-world types */
     PyObject *slow_mod = PyImport_ImportModule("menai.menai_value");

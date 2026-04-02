@@ -1,12 +1,11 @@
 """
-Build script for C extension modules.
+Build script for C extension module.
 
 Usage:
     python setup.py build_ext --inplace
 
-This compiles the C value type and C VM extensions and places the resulting
-.so files directly into src/menai/ alongside the pure-Python sources.
-PyInstaller will pick them up automatically from there.
+Compiles the Menai C value types and C VM into a single shared library.
+menai.menai_value_c is imported from menai_vm_c.so at runtime.
 
 This file is intentionally separate from pyproject.toml / hatchling, which
 handles the main application packaging.  The C extension build is a
@@ -17,22 +16,17 @@ from setuptools import Extension, setup
 
 import os
 
-# src/menai is both the package root and where the shared headers live.
 _MENAI_SRC = os.path.join("src", "menai")
 
 extensions = [
     Extension(
-        name="menai.menai_value_c",
-        sources=["src/menai/menai_value_c.c"],
+        name="menai.menai_vm_c",
+        sources=[
+            "src/menai/menai_value_c.c",
+            "src/menai/menai_vm_c.c",
+        ],
         include_dirs=[_MENAI_SRC],
         extra_compile_args=["-O2", "-std=c11"],
-    ),
-    Extension(
-        name="menai.menai_vm_c",
-        sources=["src/menai/menai_vm_c.c"],
-        include_dirs=[_MENAI_SRC],
-        extra_compile_args=["-O3", "-std=c11"],
-        py_limited_api=False,
     ),
 ]
 
