@@ -17,7 +17,7 @@ from menai.menai_vm_bytecode_validator import validate_bytecode
 
 
 try:
-    from menai.menai_vm_c import execute as _c_vm_execute
+    from menai.menai_vm_c import execute as _c_vm_execute  # type: ignore[import-not-found]
     _C_VM_AVAILABLE = True
 except ImportError:
     _c_vm_execute = None
