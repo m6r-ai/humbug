@@ -12,9 +12,9 @@ handles the main application packaging.  The C extension build is a
 development and release step, not part of the pip-installable package metadata.
 """
 
-from setuptools import Extension, setup
-
 import os
+
+from setuptools import Extension, setup
 
 _MENAI_SRC = os.path.join("src", "menai")
 

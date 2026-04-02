@@ -1157,6 +1157,74 @@ menai_list_from_tuple(PyObject *tup)
 }
 
 /* ---------------------------------------------------------------------------
+ * menai_function_alloc — direct C constructor for MenaiFunction.
+ *
+ * Bypasses PyObject_Call and argument parsing entirely.  All reference
+ * counting follows the same rules as MenaiFunction_new:
+ *   - parameters, name, bytecode, captured_values: borrowed — we INCREF them.
+ *   - is_variadic: plain C int.
+ *
+ * The frame-setup cache fields (instrs, constants, names, local_count,
+ * param_count) are populated from bytecode exactly as in MenaiFunction_new.
+ * ------------------------------------------------------------------------- */
+
+PyObject *
+menai_function_alloc(PyObject *parameters, PyObject *name, PyObject *bytecode,
+                     PyObject *captured_values, int is_variadic)
+{
+    MenaiFunction_Object *self = (MenaiFunction_Object *)MenaiFunction_Type.tp_alloc(&MenaiFunction_Type, 0);
+    if (!self)
+        return NULL;
+
+    Py_INCREF(parameters);
+    self->parameters = parameters;
+    Py_INCREF(name);
+    self->name = name;
+    Py_INCREF(bytecode);
+    self->bytecode = bytecode;
+    Py_INCREF(captured_values);
+    self->captured_values = captured_values;
+    self->is_variadic = is_variadic;
+    self->instrs = NULL;
+    self->instrs_obj = NULL;
+    self->constants = NULL;
+    self->names = NULL;
+    self->code_len = 0;
+    self->local_count = 0;
+    self->param_count = 0;
+
+    if (bytecode != Py_None) {
+        PyObject *pc = PyObject_GetAttrString(bytecode, "param_count");
+        self->param_count = pc ? (int)PyLong_AsLong(pc) : 0;
+        Py_XDECREF(pc);
+
+        PyObject *instrs_obj = PyObject_GetAttrString(bytecode, "instructions");
+        if (instrs_obj) {
+            Py_buffer view;
+            if (PyObject_GetBuffer(instrs_obj, &view, PyBUF_SIMPLE) == 0) {
+                self->instrs = (uint64_t *)view.buf;
+                self->instrs_obj = instrs_obj;
+                self->code_len = (int)(view.len / sizeof(uint64_t));
+                PyBuffer_Release(&view);
+            }
+        }
+        PyObject *constants = PyObject_GetAttrString(bytecode, "constants");
+        if (constants) self->constants = constants;
+        PyObject *names_obj = PyObject_GetAttrString(bytecode, "names");
+        if (names_obj) self->names = names_obj;
+        PyObject *lc = PyObject_GetAttrString(bytecode, "local_count");
+        if (lc) {
+            self->local_count = (int)PyLong_AsLong(lc);
+            Py_DECREF(lc);
+        }
+    } else {
+        self->param_count = (int)PyTuple_GET_SIZE(parameters);
+    }
+
+    return (PyObject *)self;
+}
+
+/* ---------------------------------------------------------------------------
  * _hashable_key — shared by MenaiDict and MenaiSet
  *
  * Converts a MenaiValue key to a hashable Python tuple (tag, value).
@@ -1168,10 +1236,8 @@ _hashable_key(PyObject *key)
 {
     PyTypeObject *t = Py_TYPE(key);
 
-    if (t == &MenaiString_Type)
-        return Py_BuildValue("(sO)", "str", ((MenaiString_Object *)key)->value);
-    if (t == &MenaiInteger_Type)
-        return Py_BuildValue("(sO)", "int", ((MenaiInteger_Object *)key)->value);
+    if (t == &MenaiString_Type) return Py_BuildValue("(sO)", "str", ((MenaiString_Object *)key)->value);
+    if (t == &MenaiInteger_Type) return Py_BuildValue("(sO)", "int", ((MenaiInteger_Object *)key)->value);
     if (t == &MenaiFloat_Type) {
         PyObject *pf = PyFloat_FromDouble(((MenaiFloat_Object *)key)->value);
         if (!pf) return NULL;
@@ -1179,16 +1245,14 @@ _hashable_key(PyObject *key)
         Py_DECREF(pf);
         return r;
     }
-    if (t == &MenaiComplex_Type)
-        return Py_BuildValue("(sO)", "cplx", ((MenaiComplex_Object *)key)->value);
+    if (t == &MenaiComplex_Type) return Py_BuildValue("(sO)", "cplx", ((MenaiComplex_Object *)key)->value);
     if (t == &MenaiBoolean_Type) {
         PyObject *bv = PyBool_FromLong(((MenaiBoolean_Object *)key)->value);
         PyObject *r = Py_BuildValue("(sO)", "bool", bv);
         Py_DECREF(bv);
         return r;
     }
-    if (t == &MenaiSymbol_Type)
-        return Py_BuildValue("(sO)", "sym", ((MenaiSymbol_Object *)key)->name);
+    if (t == &MenaiSymbol_Type) return Py_BuildValue("(sO)", "sym", ((MenaiSymbol_Object *)key)->name);
     if (t == &MenaiStruct_Type) {
         Py_hash_t h = PyObject_Hash(key);
         if (h == -1 && PyErr_Occurred()) {
@@ -1212,7 +1276,8 @@ _hashable_key(PyObject *key)
     PyErr_Format(MenaiEvalError_type,
         "Dict keys must be strings, numbers, booleans, or symbols, got %s",
         tn ? PyUnicode_AsUTF8(tn) : "?");
-    Py_XDECREF(tn);
+
+        Py_XDECREF(tn);
     return NULL;
 }
 
@@ -2605,7 +2670,74 @@ menai_convert_code_object(PyObject *code)
     if (!children) return NULL;
     n = PyList_GET_SIZE(children);
     for (Py_ssize_t i = 0; i < n; i++) {
-        if (!menai_convert_code_object(PyList_GET_ITEM(children, i))) {
+        PyObject *child = PyList_GET_ITEM(children, i);
+        if (!menai_convert_code_object(child)) {
+            Py_DECREF(children);
+            return NULL;
+        }
+
+        /* Build _closure_cache = (param_names_tuple, name, is_variadic_int,
+         * ncap_int) on this child so OP_MAKE_CLOSURE needs only one
+         * PyObject_GetAttrString call at runtime instead of four. */
+        PyObject *param_names = PyObject_GetAttrString(child, "param_names");
+        if (!param_names) {
+            Py_DECREF(children);
+            return NULL;
+        }
+
+        /* param_names is a list; convert to tuple for O(1) indexing */
+        PyObject *param_names_tup = PySequence_Tuple(param_names);
+        Py_DECREF(param_names);
+        if (!param_names_tup) {
+            Py_DECREF(children);
+            return NULL;
+        }
+
+        PyObject *cname = PyObject_GetAttrString(child, "name");
+        if (!cname) {
+            Py_DECREF(param_names_tup);
+            Py_DECREF(children);
+            return NULL;
+        }
+
+        PyObject *is_var = PyObject_GetAttrString(child, "is_variadic");
+        if (!is_var) {
+            Py_DECREF(cname);
+            Py_DECREF(param_names_tup);
+            Py_DECREF(children);
+            return NULL;
+        }
+        int is_variadic = PyObject_IsTrue(is_var);
+        Py_DECREF(is_var);
+        if (is_variadic < 0) {
+            Py_DECREF(cname);
+            Py_DECREF(param_names_tup);
+            Py_DECREF(children);
+            return NULL;
+        }
+
+        PyObject *free_vars = PyObject_GetAttrString(child, "free_vars");
+        if (!free_vars) {
+            Py_DECREF(cname);
+            Py_DECREF(param_names_tup);
+            Py_DECREF(children);
+            return NULL;
+        }
+        Py_ssize_t ncap = PyList_GET_SIZE(free_vars);
+        Py_DECREF(free_vars);
+
+        PyObject *cache = Py_BuildValue("(OOii)", param_names_tup, cname,
+                                        is_variadic, (int)ncap);
+        Py_DECREF(param_names_tup);
+        Py_DECREF(cname);
+        if (!cache) {
+            Py_DECREF(children);
+            return NULL;
+        }
+
+        int ok = PyObject_SetAttrString(child, "_closure_cache", cache);
+        Py_DECREF(cache);
+        if (ok < 0) {
             Py_DECREF(children);
             return NULL;
         }

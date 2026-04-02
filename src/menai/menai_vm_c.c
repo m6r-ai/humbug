@@ -2222,65 +2222,39 @@ execute_loop(PyObject *code, PyObject *globals,
              * src0 is the index into code_objects of the child CodeObject.
              * Creates a MenaiFunction with captured_values pre-allocated to
              * None, ready for PATCH_CLOSURE to fill in.
+             *
+             * All metadata is read from the _closure_cache tuple built once
+             * by menai_convert_code_object — zero PyObject_GetAttrString
+             * calls and no Python call machinery at runtime.
              */
             PyObject *code_objects = PyObject_GetAttrString(frame->code_obj, "code_objects");
             if (code_objects == NULL) goto error;
             PyObject *child_code = PyList_GET_ITEM(code_objects, src0);
-            /* child_code is borrowed from code_objects list */
 
-            PyObject *param_names = PyObject_GetAttrString(child_code, "param_names");
-            if (param_names == NULL) {
-                Py_DECREF(code_objects);
-                goto error;
-            }
-            PyObject *name = PyObject_GetAttrString(child_code, "name");
-            if (name == NULL) {
-                Py_DECREF(param_names);
-                Py_DECREF(code_objects);
-                goto error;
-            }
-            PyObject *is_var = PyObject_GetAttrString(child_code, "is_variadic");
-            if (is_var == NULL) {
-                Py_DECREF(name);
-                Py_DECREF(param_names);
-                Py_DECREF(code_objects);
-                goto error;
-            }
-            PyObject *free_vars = PyObject_GetAttrString(child_code, "free_vars");
-            if (free_vars == NULL) {
-                Py_DECREF(is_var);
-                Py_DECREF(name);
-                Py_DECREF(param_names);
-                Py_DECREF(code_objects);
-                goto error;
-            }
+            /* Unpack the cache tuple built at convert time */
+            PyObject *closure_cache = PyObject_GetAttrString(child_code, "_closure_cache");
+            Py_DECREF(code_objects);
+            if (closure_cache == NULL) goto error;
 
-            Py_ssize_t ncap = PyList_GET_SIZE(free_vars);
-            Py_DECREF(free_vars);
+            PyObject *param_names = PyTuple_GET_ITEM(closure_cache, 0); /* borrowed */
+            PyObject *cname = PyTuple_GET_ITEM(closure_cache, 1); /* borrowed */
+            int is_variadic = (int)PyLong_AsLong(PyTuple_GET_ITEM(closure_cache, 2));
+            Py_ssize_t ncap = (Py_ssize_t)PyLong_AsLong(PyTuple_GET_ITEM(closure_cache, 3));
 
-            /* Build captured_values list pre-filled with None */
             PyObject *cap_list = PyList_New(ncap);
             if (cap_list == NULL) {
-                Py_DECREF(is_var);
-                Py_DECREF(name);
-                Py_DECREF(param_names);
-                Py_DECREF(code_objects);
+                Py_DECREF(closure_cache);
                 goto error;
             }
+
             for (Py_ssize_t i = 0; i < ncap; i++) {
                 Py_INCREF(Py_None);
                 PyList_SET_ITEM(cap_list, i, Py_None);
             }
 
-            /* MenaiFunction(parameters, name, bytecode, captured_values, is_variadic) */
-            PyObject *func = PyObject_CallFunctionObjArgs(
-                (PyObject *)Menai_FunctionType,
-                param_names, name, child_code, cap_list, is_var, NULL);
+            PyObject *func = menai_function_alloc(param_names, cname, child_code, cap_list, is_variadic);
             Py_DECREF(cap_list);
-            Py_DECREF(is_var);
-            Py_DECREF(name);
-            Py_DECREF(param_names);
-            Py_DECREF(code_objects);
+            Py_DECREF(closure_cache);
             if (func == NULL) goto error;
             reg_set_own(regs, base + dest, func);
             break;

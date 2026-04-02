@@ -143,6 +143,15 @@ PyObject *menai_list_from_array_steal(PyObject **items, Py_ssize_t n);
 PyObject *menai_list_from_tuple(PyObject *tup);
 
 /* ---------------------------------------------------------------------------
+ * MenaiFunction C-level constructor — defined in menai_value_c.c.
+ * Bypasses PyObject_Call and argument parsing.  All arguments are borrowed.
+ * ------------------------------------------------------------------------- */
+
+PyObject *menai_function_alloc(PyObject *parameters, PyObject *name,
+                               PyObject *bytecode, PyObject *captured_values,
+                               int is_variadic);
+
+/* ---------------------------------------------------------------------------
  * MenaiList inline accessors
  * ------------------------------------------------------------------------- */
 
