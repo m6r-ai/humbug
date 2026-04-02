@@ -439,13 +439,15 @@ pylong_compare(PyObject *a, PyObject *b, int op)
     return PyObject_RichCompareBool(a, b, op);
 }
 
-static inline PyObject *make_integer(PyObject *py_int) {
+static inline PyObject *make_integer_value(PyObject *py_int) {
+    if (!py_int) return NULL;
+
     MenaiInteger_Object *r = (MenaiInteger_Object *)Menai_IntegerType->tp_alloc(Menai_IntegerType, 0);
     if (r) {
-        Py_INCREF(py_int);
         r->value = py_int;
+    } else {
+        Py_DECREF(py_int);
     }
-
     return (PyObject *)r;
 }
 
@@ -476,14 +478,6 @@ static inline PyObject *make_string_from_pyobj(PyObject *py_str) {
     }
 
     return (PyObject *)r;
-}
-
-static inline PyObject *make_integer_value(PyObject *py_int) {
-    if (!py_int) return NULL;
-
-    PyObject *r = make_integer(py_int);
-    Py_DECREF(py_int);
-    return r;
 }
 
 static inline PyObject *make_complex_value(PyObject *py_complex) {
@@ -1654,9 +1648,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(b, "integer+")) goto error;
 
             PyObject *av = menai_integer_value(a);
-
             PyObject *bv = menai_integer_value(b);
-
             PyObject *_r = make_integer_value(PyNumber_Add(av, bv));
             if (!_r) goto error;
 
@@ -1670,9 +1662,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(b, "integer-")) goto error;
 
             PyObject *av = menai_integer_value(a);
-
             PyObject *bv = menai_integer_value(b);
-
             PyObject *_r = make_integer_value(PyNumber_Subtract(av, bv));
             if (!_r) goto error;
 
@@ -1686,9 +1676,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_integer(b, "integer*")) goto error;
 
             PyObject *av = menai_integer_value(a);
-
             PyObject *bv = menai_integer_value(b);
-
             PyObject *_r = make_integer_value(PyNumber_Multiply(av, bv));
             if (!_r) goto error;
 
@@ -3129,8 +3117,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!has_dot && !has_e && !has_j) {
                 result = PyLong_FromUnicodeObject(sa, 10);
                 if (result) {
-                    PyObject *r = make_integer(result);
-                    Py_DECREF(result);
+                    PyObject *r = make_integer_value(result);
                     if (r == NULL) goto error;
                     reg_set_own(regs, base + dest, r);
                     break;
@@ -4255,8 +4242,7 @@ execute_loop(PyObject *code, PyObject *globals,
                     PyMem_Free(rng_arr);
                     goto error;
                 }
-                PyObject *mi = make_integer(iv);
-                Py_DECREF(iv);
+                PyObject *mi = make_integer_value(iv);
                 if (mi == NULL) {
                     for (Py_ssize_t k = 0; k < i; k++) Py_DECREF(rng_arr[k]);
                     PyMem_Free(rng_arr);
