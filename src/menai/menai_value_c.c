@@ -1139,6 +1139,27 @@ menai_function_alloc(PyObject *cache, PyObject *bytecode, PyObject *captured_val
 }
 
 /* ---------------------------------------------------------------------------
+ * menai_struct_alloc — direct C constructor for MenaiStruct.
+ *
+ * struct_type is borrowed (INCREF'd here).  fields_tup is stolen — on both
+ * success and failure the caller's reference is consumed.
+ * ------------------------------------------------------------------------- */
+
+PyObject *
+menai_struct_alloc(PyObject *struct_type, PyObject *fields_tup)
+{
+    MenaiStruct_Object *self = (MenaiStruct_Object *)MenaiStruct_Type.tp_alloc(&MenaiStruct_Type, 0);
+    if (!self) {
+        Py_DECREF(fields_tup);
+        return NULL;
+    }
+    Py_INCREF(struct_type);
+    self->struct_type = struct_type;
+    self->fields = fields_tup;  /* steal */
+    return (PyObject *)self;
+}
+
+/* ---------------------------------------------------------------------------
  * menai_hashable_key — shared by MenaiDict, MenaiSet, and the C VM
  *
  * Converts a MenaiValue key to a hashable Python tuple (tag, value).
@@ -1149,7 +1170,6 @@ PyObject *
 menai_hashable_key(PyObject *key)
 {
     PyTypeObject *t = Py_TYPE(key);
-
     if (t == &MenaiString_Type) return Py_BuildValue("(sO)", "str", ((MenaiString_Object *)key)->value);
     if (t == &MenaiInteger_Type) return Py_BuildValue("(sO)", "int", ((MenaiInteger_Object *)key)->value);
     if (t == &MenaiFloat_Type) {

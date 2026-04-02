@@ -152,6 +152,14 @@ PyObject *menai_function_alloc(PyObject *cache, PyObject *bytecode,
                                PyObject *captured_values);
 
 /* ---------------------------------------------------------------------------
+ * MenaiStruct C-level constructor — defined in menai_value_c.c.
+ * struct_type is borrowed (INCREF'd internally); fields_tup is stolen.
+ * Returns a new reference, or NULL on error.
+ * ------------------------------------------------------------------------- */
+
+PyObject *menai_struct_alloc(PyObject *struct_type, PyObject *fields_tup);
+
+/* ---------------------------------------------------------------------------
  * menai_hashable_key — convert a MenaiValue key to a hashable Python tuple.
  * Defined in menai_value_c.c (was static _hashable_key).
  * Returns a new reference, or NULL on error (MenaiEvalError set).
