@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, cast
 
 from ai import AIConversation, AIConversationEvent, AIConversationSettings, AIManager, AIMessageSource, AIReasoningCapability
 from ai_tool import (
@@ -462,7 +462,7 @@ class DelegateAITool(AITool):
             if parent_tab:
                 parent_info = self._column_manager.get_tab_info_by_id(parent_tab.tab_id())
                 if parent_info:
-                    target_column = min(parent_info["column_index"] + 1, 5)
+                    target_column = min(cast(int, parent_info["column_index"]) + 1, 5)
                     try:
                         self._column_manager.move_tab_to_column(conversation_tab.tab_id(), target_column)
 
