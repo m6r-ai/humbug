@@ -31,8 +31,15 @@ extern PyObject *_menai_value_c_init(void);
  */
 #define MAX_FRAME_DEPTH 1024
 
-/* Cancellation check interval — matches the Python VM default. */
-#define CANCEL_CHECK_INTERVAL 1000
+/*
+ * Cancellation check interval.
+ *
+ * PyErr_CheckSignals is not free — it was measured at ~6.7% of total CPU at
+ * an interval of 1000.  Menai is a pure functional language with no I/O side
+ * effects, so a few extra milliseconds of Ctrl-C latency is acceptable.
+ * 1 << 17 = 131072 instructions between checks.
+ */
+#define CANCEL_CHECK_INTERVAL (1 << 17)
 
 /*
  * Instruction encoding constants — must match menai_bytecode.py
@@ -1097,7 +1104,7 @@ execute_loop(PyObject *code, PyObject *globals,
 
     while (1) {
         /* Cancellation check */
-        if (++instr_count >= CANCEL_CHECK_INTERVAL) {
+        if ((++instr_count & (CANCEL_CHECK_INTERVAL - 1)) == 0) {
             instr_count = 0;
             if (PyErr_CheckSignals() < 0)
                 goto error;

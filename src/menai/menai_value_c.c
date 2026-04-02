@@ -246,16 +246,8 @@ MenaiInteger_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiInteger_dealloc(PyObject *self)
 {
-    PyObject_GC_UnTrack(self);
     Py_XDECREF(((MenaiInteger_Object *)self)->value);
     Py_TYPE(self)->tp_free(self);
-}
-
-static int
-MenaiInteger_traverse(PyObject *self, visitproc visit, void *arg)
-{
-    Py_VISIT(((MenaiInteger_Object *)self)->value);
-    return 0;
 }
 
 static PyObject *
@@ -315,10 +307,9 @@ static PyTypeObject MenaiInteger_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name      = "menai.menai_value_c.MenaiInteger",
     .tp_basicsize = sizeof(MenaiInteger_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
+    .tp_flags     = Py_TPFLAGS_DEFAULT,
     .tp_new       = MenaiInteger_new,
     .tp_dealloc   = MenaiInteger_dealloc,
-    .tp_traverse  = MenaiInteger_traverse,
     .tp_methods   = MenaiInteger_methods,
     .tp_getset    = MenaiInteger_getset,
     .tp_richcompare = MenaiInteger_richcompare,
@@ -443,16 +434,8 @@ MenaiComplex_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiComplex_dealloc(PyObject *self)
 {
-    PyObject_GC_UnTrack(self);
     Py_XDECREF(((MenaiComplex_Object *)self)->value);
     Py_TYPE(self)->tp_free(self);
-}
-
-static int
-MenaiComplex_traverse(PyObject *self, visitproc visit, void *arg)
-{
-    Py_VISIT(((MenaiComplex_Object *)self)->value);
-    return 0;
 }
 
 static PyObject *
@@ -526,10 +509,9 @@ static PyTypeObject MenaiComplex_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name      = "menai.menai_value_c.MenaiComplex",
     .tp_basicsize = sizeof(MenaiComplex_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
+    .tp_flags     = Py_TPFLAGS_DEFAULT,
     .tp_new       = MenaiComplex_new,
     .tp_dealloc   = MenaiComplex_dealloc,
-    .tp_traverse  = MenaiComplex_traverse,
     .tp_methods   = MenaiComplex_methods,
     .tp_getset    = MenaiComplex_getset,
     .tp_richcompare = MenaiComplex_richcompare,
@@ -555,16 +537,8 @@ MenaiString_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiString_dealloc(PyObject *self)
 {
-    PyObject_GC_UnTrack(self);
     Py_XDECREF(((MenaiString_Object *)self)->value);
     Py_TYPE(self)->tp_free(self);
-}
-
-static int
-MenaiString_traverse(PyObject *self, visitproc visit, void *arg)
-{
-    Py_VISIT(((MenaiString_Object *)self)->value);
-    return 0;
 }
 
 static PyObject *
@@ -636,10 +610,9 @@ static PyTypeObject MenaiString_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name      = "menai.menai_value_c.MenaiString",
     .tp_basicsize = sizeof(MenaiString_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
+    .tp_flags     = Py_TPFLAGS_DEFAULT,
     .tp_new       = MenaiString_new,
     .tp_dealloc   = MenaiString_dealloc,
-    .tp_traverse  = MenaiString_traverse,
     .tp_methods   = MenaiString_methods,
     .tp_getset    = MenaiString_getset,
     .tp_richcompare = MenaiString_richcompare,
@@ -665,16 +638,8 @@ MenaiSymbol_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiSymbol_dealloc(PyObject *self)
 {
-    PyObject_GC_UnTrack(self);
     Py_XDECREF(((MenaiSymbol_Object *)self)->name);
     Py_TYPE(self)->tp_free(self);
-}
-
-static int
-MenaiSymbol_traverse(PyObject *self, visitproc visit, void *arg)
-{
-    Py_VISIT(((MenaiSymbol_Object *)self)->name);
-    return 0;
 }
 
 static PyObject *
@@ -736,10 +701,9 @@ static PyTypeObject MenaiSymbol_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name      = "menai.menai_value_c.MenaiSymbol",
     .tp_basicsize = sizeof(MenaiSymbol_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
+    .tp_flags     = Py_TPFLAGS_DEFAULT,
     .tp_new       = MenaiSymbol_new,
     .tp_dealloc   = MenaiSymbol_dealloc,
-    .tp_traverse  = MenaiSymbol_traverse,
     .tp_methods   = MenaiSymbol_methods,
     .tp_getset    = MenaiSymbol_getset,
     .tp_richcompare = MenaiSymbol_richcompare,
@@ -798,22 +762,16 @@ _menai_list_cache_alloc_obj(void)
         _list_obj_free = (MenaiList_Object *)obj->elements;
         obj->elements = NULL;
         obj->length = 0;
-        /* Restore refcount to 1 and re-track, matching what tp_alloc produces. */
+        /* Restore refcount to 1, matching what tp_alloc produces. */
         Py_SET_REFCNT((PyObject *)obj, 1);
-        PyObject_GC_Track((PyObject *)obj);
         return obj;
     }
-    /* tp_alloc already tracks the object for GC types. */
     return (MenaiList_Object *)MenaiList_Type.tp_alloc(&MenaiList_Type, 0);
 }
 
 static void
 _menai_list_cache_free_obj(MenaiList_Object *obj)
 {
-    /* Untrack from GC before putting on free list.  The elements pointer
-     * is about to be repurposed as the free-list link, so the GC must
-     * not see this object in a collection cycle. */
-    PyObject_GC_UnTrack((PyObject *)obj);
     obj->elements = (PyObject **)_list_obj_free;
     obj->length = 0;
     _list_obj_free = obj;
@@ -921,42 +879,14 @@ MenaiList_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiList_dealloc(PyObject *self)
 {
-    /* tp_clear may have already dropped the elements; guard against that. */
-    MenaiList_Object *lst = (MenaiList_Object *)self;
-    if (lst->elements != NULL) {
-        Py_ssize_t n = lst->length;
-        lst->length = 0;
-        PyObject **arr = lst->elements;
-        lst->elements = NULL;
-        for (Py_ssize_t i = 0; i < n; i++) Py_XDECREF(arr[i]);
-        _menai_list_cache_free_arr(arr, n);
-    }
-
-    _menai_list_cache_free_obj((MenaiList_Object *)self);
-}
-
-static int
-MenaiList_clear(PyObject *self)
-{
     MenaiList_Object *lst = (MenaiList_Object *)self;
     Py_ssize_t n = lst->length;
-    /* Zero length and null the pointer before dropping refs, so that a
-     * re-entrant traverse during the Py_XDECREF chain sees an empty list. */
     lst->length = 0;
     PyObject **arr = lst->elements;
     lst->elements = NULL;
     for (Py_ssize_t i = 0; i < n; i++) Py_XDECREF(arr[i]);
     _menai_list_cache_free_arr(arr, n);
-    return 0;
-}
-
-static int
-MenaiList_traverse(PyObject *self, visitproc visit, void *arg)
-{
-    MenaiList_Object *lst = (MenaiList_Object *)self;
-    for (Py_ssize_t i = 0; i < lst->length; i++)
-        Py_VISIT(lst->elements[i]);
-    return 0;
+    _menai_list_cache_free_obj((MenaiList_Object *)self);
 }
 
 static PyObject *
@@ -1071,11 +1001,9 @@ static PyTypeObject MenaiList_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name      = "menai.menai_value_c.MenaiList",
     .tp_basicsize = sizeof(MenaiList_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
+    .tp_flags     = Py_TPFLAGS_DEFAULT,
     .tp_new       = MenaiList_new,
     .tp_dealloc   = MenaiList_dealloc,
-    .tp_traverse  = MenaiList_traverse,
-    .tp_clear     = MenaiList_clear,
     .tp_methods   = MenaiList_methods,
     .tp_getset    = MenaiList_getset,
     .tp_richcompare = MenaiList_richcompare,
@@ -1343,18 +1271,9 @@ MenaiDict_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiDict_dealloc(PyObject *self)
 {
-    PyObject_GC_UnTrack(self);
     Py_XDECREF(((MenaiDict_Object *)self)->pairs);
     Py_XDECREF(((MenaiDict_Object *)self)->lookup);
     Py_TYPE(self)->tp_free(self);
-}
-
-static int
-MenaiDict_traverse(PyObject *self, visitproc visit, void *arg)
-{
-    Py_VISIT(((MenaiDict_Object *)self)->pairs);
-    Py_VISIT(((MenaiDict_Object *)self)->lookup);
-    return 0;
 }
 
 static PyObject *
@@ -1465,10 +1384,9 @@ static PyTypeObject MenaiDict_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name      = "menai.menai_value_c.MenaiDict",
     .tp_basicsize = sizeof(MenaiDict_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
+    .tp_flags     = Py_TPFLAGS_DEFAULT,
     .tp_new       = MenaiDict_new,
     .tp_dealloc   = MenaiDict_dealloc,
-    .tp_traverse  = MenaiDict_traverse,
     .tp_methods   = MenaiDict_methods,
     .tp_getset    = MenaiDict_getset,
     .tp_richcompare = MenaiDict_richcompare,
@@ -1587,18 +1505,9 @@ MenaiSet_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiSet_dealloc(PyObject *self)
 {
-    PyObject_GC_UnTrack(self);
     Py_XDECREF(((MenaiSet_Object *)self)->elements);
     Py_XDECREF(((MenaiSet_Object *)self)->members);
     Py_TYPE(self)->tp_free(self);
-}
-
-static int
-MenaiSet_traverse(PyObject *self, visitproc visit, void *arg)
-{
-    Py_VISIT(((MenaiSet_Object *)self)->elements);
-    Py_VISIT(((MenaiSet_Object *)self)->members);
-    return 0;
 }
 
 static PyObject *
@@ -1691,10 +1600,9 @@ static PyTypeObject MenaiSet_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name      = "menai.menai_value_c.MenaiSet",
     .tp_basicsize = sizeof(MenaiSet_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
+    .tp_flags     = Py_TPFLAGS_DEFAULT,
     .tp_new       = MenaiSet_new,
     .tp_dealloc   = MenaiSet_dealloc,
-    .tp_traverse  = MenaiSet_traverse,
     .tp_methods   = MenaiSet_methods,
     .tp_getset    = MenaiSet_getset,
     .tp_richcompare = MenaiSet_richcompare,
@@ -2025,22 +1933,11 @@ MenaiStructType_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiStructType_dealloc(PyObject *self)
 {
-    PyObject_GC_UnTrack(self);
     MenaiStructType_Object *s = (MenaiStructType_Object *)self;
     Py_XDECREF(s->name);
     Py_XDECREF(s->field_names);
     Py_XDECREF(s->_field_index);
     Py_TYPE(self)->tp_free(self);
-}
-
-static int
-MenaiStructType_traverse(PyObject *self, visitproc visit, void *arg)
-{
-    MenaiStructType_Object *s = (MenaiStructType_Object *)self;
-    Py_VISIT(s->name);
-    Py_VISIT(s->field_names);
-    Py_VISIT(s->_field_index);
-    return 0;
 }
 
 static PyObject *
@@ -2143,10 +2040,9 @@ static PyTypeObject MenaiStructType_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name      = "menai.menai_value_c.MenaiStructType",
     .tp_basicsize = sizeof(MenaiStructType_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
+    .tp_flags     = Py_TPFLAGS_DEFAULT,
     .tp_new       = MenaiStructType_new,
     .tp_dealloc   = MenaiStructType_dealloc,
-    .tp_traverse  = MenaiStructType_traverse,
     .tp_methods   = MenaiStructType_methods,
     .tp_getset    = MenaiStructType_getset,
     .tp_richcompare = MenaiStructType_richcompare,
@@ -2183,18 +2079,9 @@ MenaiStruct_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiStruct_dealloc(PyObject *self)
 {
-    PyObject_GC_UnTrack(self);
     Py_XDECREF(((MenaiStruct_Object *)self)->struct_type);
     Py_XDECREF(((MenaiStruct_Object *)self)->fields);
     Py_TYPE(self)->tp_free(self);
-}
-
-static int
-MenaiStruct_traverse(PyObject *self, visitproc visit, void *arg)
-{
-    Py_VISIT(((MenaiStruct_Object *)self)->struct_type);
-    Py_VISIT(((MenaiStruct_Object *)self)->fields);
-    return 0;
 }
 
 static PyObject *
@@ -2309,10 +2196,9 @@ static PyTypeObject MenaiStruct_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name      = "menai.menai_value_c.MenaiStruct",
     .tp_basicsize = sizeof(MenaiStruct_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
+    .tp_flags     = Py_TPFLAGS_DEFAULT,
     .tp_new       = MenaiStruct_new,
     .tp_dealloc   = MenaiStruct_dealloc,
-    .tp_traverse  = MenaiStruct_traverse,
     .tp_methods   = MenaiStruct_methods,
     .tp_getset    = MenaiStruct_getset,
     .tp_richcompare = MenaiStruct_richcompare,
