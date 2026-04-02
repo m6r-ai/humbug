@@ -48,7 +48,6 @@ from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.conversation.conversation_ai_tool import ConversationAITool
 from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.tabs.editor.editor_ai_tool import EditorAITool
-from humbug.tabs.log.log_ai_tool import LogAITool
 from humbug.tabs.preview.preview_ai_tool import PreviewAITool
 from humbug.tabs.shell.commands.shell_command_clear import ShellCommandClear
 from humbug.tabs.shell.commands.shell_command_conversation import ShellCommandConversation
@@ -430,9 +429,6 @@ class MainWindow(QMainWindow):
         )
         self._ai_tool_manager.register_tool(
             ConversationAITool(self._column_manager), "Conversation: operations for interacting with conversation tabs"
-        )
-        self._ai_tool_manager.register_tool(
-            LogAITool(self._column_manager), "Log: operations for interacting with mindspace log tabs"
         )
         self._ai_tool_manager.register_tool(
             PreviewAITool(self._column_manager), "Preview: operations for interacting with preview tabs"

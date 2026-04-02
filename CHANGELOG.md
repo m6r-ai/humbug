@@ -11,6 +11,9 @@ New features:
 - Added Menai native C VM implementation and remove the cython version.
 - Added a new Menai benchmark performance test suite.  Removed the old JSON parser test.
 - Added a requirement for AI delegation to get user approval.
+- Removed the mindspace log AI tool.  It wasn't ever used, and more often than not confused AI models.
+- Removed the ability to open the system shell and mindspace log tabs in from the system tool.  These are tools specifically
+  for a human (developer) to use.
 
 Bug fixes:
 
