@@ -1178,6 +1178,9 @@ menai_list_from_tuple(PyObject *tup)
  *   [7] param_count      (int)
  *   [8] local_count      (int)
  *   [9] child_code       (CodeObject — used by OP_MAKE_CLOSURE, not here)
+ *  [10] child _code_caches (list or None — borrowed ref kept alive by bytecode)
+ *  [11] instrs raw pointer (int via PyLong_FromVoidPtr)
+ *  [12] code_len          (int)
  *
  * bytecode is stored as an owned ref so it keeps instrs_obj/constants/names
  * alive for the lifetime of the function.
@@ -1213,22 +1216,13 @@ menai_function_alloc(PyObject *cache, PyObject *bytecode, PyObject *captured_val
     self->local_count = local_count;
     self->constants = constants;  /* borrowed — bytecode keeps alive */
     self->names = names_obj;  /* borrowed — bytecode keeps alive */
-    PyObject *_cc = PyObject_GetAttrString(bytecode, "_code_caches");
-    self->closure_caches = (_cc && PyList_Check(_cc)) ? _cc : NULL;
-    Py_XDECREF(_cc);  /* drop owned ref — bytecode keeps it alive */
-    PyErr_Clear();
+    PyObject *_cc = PyTuple_GET_ITEM(cache, 10);
+    self->closure_caches = (_cc != Py_None && PyList_Check(_cc)) ? _cc : NULL;
+    /* borrowed — bytecode (which we own) keeps child._code_caches alive */
 
-    Py_buffer view;
-    if (PyObject_GetBuffer(instrs_obj, &view, PyBUF_SIMPLE) == 0) {
-        self->instrs = (uint64_t *)view.buf;
-        self->instrs_obj = instrs_obj;  /* borrowed — bytecode keeps alive */
-        self->code_len = (int)(view.len / sizeof(uint64_t));
-        PyBuffer_Release(&view);
-    } else {
-        self->instrs = NULL;
-        self->instrs_obj = NULL;
-        self->code_len = 0;
-    }
+    self->instrs     = (uint64_t *)PyLong_AsVoidPtr(PyTuple_GET_ITEM(cache, 11));
+    self->instrs_obj = instrs_obj;  /* borrowed — bytecode keeps alive */
+    self->code_len   = (int)PyLong_AsLong(PyTuple_GET_ITEM(cache, 12));
 
     return (PyObject *)self;
 }
@@ -2817,10 +2811,42 @@ menai_convert_code_object(PyObject *code)
             return NULL;
         }
 
-        PyObject *cache = Py_BuildValue("(OOiiOOOOOO)", param_names_tup, cname,
+        /* Fetch child._code_caches — already populated by the recursive call above. */
+        PyObject *child_cc = PyObject_GetAttrString(child, "_code_caches");
+        PyObject *child_cc_or_none = (child_cc && PyList_Check(child_cc)) ? child_cc : Py_None;
+        if (!child_cc) PyErr_Clear();
+
+        /* Pre-extract the raw instruction pointer and length from instrs_obj so
+         * menai_function_alloc needs zero PyObject_GetBuffer calls per closure. */
+        Py_buffer _view;
+        PyObject *instrs_ptr_obj = NULL;
+        PyObject *code_len_obj = NULL;
+        if (PyObject_GetBuffer(instrs_obj, &_view, PyBUF_SIMPLE) == 0) {
+            instrs_ptr_obj = PyLong_FromVoidPtr(_view.buf);
+            code_len_obj   = PyLong_FromSsize_t(_view.len / (Py_ssize_t)sizeof(uint64_t));
+            PyBuffer_Release(&_view);
+        }
+        if (!instrs_ptr_obj || !code_len_obj) {
+            Py_XDECREF(instrs_ptr_obj);
+            Py_XDECREF(code_len_obj);
+            Py_XDECREF(child_cc);
+            Py_DECREF(lc_obj); Py_DECREF(pc_obj);
+            Py_DECREF(names_list); Py_DECREF(constants); Py_DECREF(instrs_obj);
+            Py_DECREF(param_names_tup);
+            Py_DECREF(cname);
+            Py_DECREF(children);
+            return NULL;
+        }
+
+        PyObject *cache = Py_BuildValue("(OOiiOOOOOOOOO)", param_names_tup, cname,
                                         is_variadic, (int)ncap,
                                         instrs_obj, constants, names_list,
-                                        pc_obj, lc_obj, child);
+                                        pc_obj, lc_obj, child,
+                                        child_cc_or_none,
+                                        instrs_ptr_obj, code_len_obj);
+        Py_DECREF(code_len_obj);
+        Py_DECREF(instrs_ptr_obj);
+        Py_XDECREF(child_cc);  /* drop owned ref — bytecode keeps child._code_caches alive */
         Py_DECREF(lc_obj); Py_DECREF(pc_obj);
         Py_DECREF(names_list); Py_DECREF(constants); Py_DECREF(instrs_obj);
         Py_DECREF(param_names_tup);
