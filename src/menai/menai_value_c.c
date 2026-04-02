@@ -22,6 +22,10 @@
 #include <stddef.h>
 #include <string.h>
 
+/* Forward-declare MenaiList_Type so the static inline constructors in the
+ * header can reference it via MENAI_LIST_TYPEOBJ before the full definition. */
+static PyTypeObject MenaiList_Type;
+#define MENAI_LIST_TYPEOBJ (&MenaiList_Type)
 #include "menai_value_c.h"
 
 /* ---------------------------------------------------------------------------
@@ -35,7 +39,6 @@ static PyTypeObject MenaiFloat_Type;
 static PyTypeObject MenaiComplex_Type;
 static PyTypeObject MenaiString_Type;
 static PyTypeObject MenaiSymbol_Type;
-static PyTypeObject MenaiList_Type;
 static PyTypeObject MenaiDict_Type;
 static PyTypeObject MenaiSet_Type;
 static PyTypeObject MenaiFunction_Type;
@@ -752,19 +755,35 @@ MenaiList_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", kwlist, &elements))
         return NULL;
 
-    PyObject *tup;
-    if (elements == NULL) {
-        tup = PyTuple_New(0);
-    } else {
+    PyObject *tup = NULL;
+    if (elements != NULL) {
         tup = PySequence_Tuple(elements);
+        if (!tup) return NULL;
     }
-    if (!tup) return NULL;
+
+    Py_ssize_t n = tup ? PyTuple_GET_SIZE(tup) : 0;
+    PyObject **arr = NULL;
+    if (n > 0) {
+        arr = (PyObject **)PyMem_Malloc(n * sizeof(PyObject *));
+        if (!arr) {
+            Py_XDECREF(tup);
+            PyErr_NoMemory();
+            return NULL;
+        }
+        for (Py_ssize_t i = 0; i < n; i++) {
+            arr[i] = PyTuple_GET_ITEM(tup, i);
+            Py_INCREF(arr[i]);
+        }
+    }
+    Py_XDECREF(tup);
 
     MenaiList_Object *self = (MenaiList_Object *)type->tp_alloc(type, 0);
     if (self) {
-        self->elements = tup;
+        self->elements = arr;
+        self->length = n;
     } else {
-        Py_DECREF(tup);
+        for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(arr[i]);
+        PyMem_Free(arr);
     }
     return (PyObject *)self;
 }
@@ -772,14 +791,19 @@ MenaiList_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiList_dealloc(PyObject *self)
 {
-    Py_XDECREF(((MenaiList_Object *)self)->elements);
+    MenaiList_Object *lst = (MenaiList_Object *)self;
+    for (Py_ssize_t i = 0; i < lst->length; i++)
+        Py_XDECREF(lst->elements[i]);
+    PyMem_Free(lst->elements);
     Py_TYPE(self)->tp_free(self);
 }
 
 static int
 MenaiList_traverse(PyObject *self, visitproc visit, void *arg)
 {
-    Py_VISIT(((MenaiList_Object *)self)->elements);
+    MenaiList_Object *lst = (MenaiList_Object *)self;
+    for (Py_ssize_t i = 0; i < lst->length; i++)
+        Py_VISIT(lst->elements[i]);
     return 0;
 }
 
@@ -795,15 +819,15 @@ static PyObject *
 MenaiList_describe(PyObject *self, PyObject *args)
 {
     (void)args;
-    PyObject *elems = ((MenaiList_Object *)self)->elements;
-    Py_ssize_t n = PyTuple_GET_SIZE(elems);
+    MenaiList_Object *lst = (MenaiList_Object *)self;
+    Py_ssize_t n = lst->length;
     if (n == 0)
         return PyUnicode_FromString("()");
 
     PyObject *parts = PyList_New(n);
     if (!parts) return NULL;
     for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *desc = PyObject_CallMethod(PyTuple_GET_ITEM(elems, i), "describe", NULL);
+        PyObject *desc = PyObject_CallMethod(lst->elements[i], "describe", NULL);
         if (!desc) {
             Py_DECREF(parts);
             return NULL;
@@ -828,24 +852,56 @@ MenaiList_richcompare(PyObject *self, PyObject *other, int op)
         if (op == Py_NE) Py_RETURN_TRUE;
         Py_RETURN_NOTIMPLEMENTED;
     }
-    return PyObject_RichCompare(
-        ((MenaiList_Object *)self)->elements,
-        ((MenaiList_Object *)other)->elements, op);
+    MenaiList_Object *a = (MenaiList_Object *)self;
+    MenaiList_Object *b = (MenaiList_Object *)other;
+    if (op == Py_EQ) {
+        if (a->length != b->length) Py_RETURN_FALSE;
+        for (Py_ssize_t i = 0; i < a->length; i++) {
+            int eq = PyObject_RichCompareBool(a->elements[i], b->elements[i], Py_EQ);
+            if (eq < 0) return NULL;
+            if (!eq) Py_RETURN_FALSE;
+        }
+        Py_RETURN_TRUE;
+    }
+    if (op == Py_NE) {
+        if (a->length != b->length) Py_RETURN_TRUE;
+        for (Py_ssize_t i = 0; i < a->length; i++) {
+            int eq = PyObject_RichCompareBool(a->elements[i], b->elements[i], Py_EQ);
+            if (eq < 0) return NULL;
+            if (!eq) Py_RETURN_TRUE;
+        }
+        Py_RETURN_FALSE;
+    }
+    Py_RETURN_NOTIMPLEMENTED;
 }
 
 static Py_hash_t
 MenaiList_hash(PyObject *self)
 {
-    return PyObject_Hash(((MenaiList_Object *)self)->elements);
+    MenaiList_Object *lst = (MenaiList_Object *)self;
+    PyObject *tup = PyTuple_New(lst->length);
+    if (!tup) return -1;
+    for (Py_ssize_t i = 0; i < lst->length; i++) {
+        Py_INCREF(lst->elements[i]);
+        PyTuple_SET_ITEM(tup, i, lst->elements[i]);
+    }
+    Py_hash_t h = PyObject_Hash(tup);
+    Py_DECREF(tup);
+    return h;
 }
 
 static PyObject *
 MenaiList_get_elements(PyObject *self, void *closure)
 {
     (void)closure;
-    PyObject *e = ((MenaiList_Object *)self)->elements;
-    Py_INCREF(e);
-    return e;
+    MenaiList_Object *lst = (MenaiList_Object *)self;
+    PyObject *tup = PyTuple_New(lst->length);
+    if (!tup) return NULL;
+    for (Py_ssize_t i = 0; i < lst->length; i++) {
+        Py_INCREF(lst->elements[i]);
+        PyTuple_SET_ITEM(tup, i, lst->elements[i]);
+    }
+    return tup;
 }
 
 static PyGetSetDef MenaiList_getset[] = {
@@ -2062,27 +2118,19 @@ menai_convert_value(PyObject *src)
         PyObject *elems = PyObject_GetAttrString(src, "elements");
         if (!elems) return NULL;
         Py_ssize_t n = PyTuple_GET_SIZE(elems);
-        PyObject *fast_tup = PyTuple_New(n);
-        if (!fast_tup) {
-            Py_DECREF(elems);
-            return NULL;
-        }
+        PyObject **arr = n > 0 ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
+        if (n > 0 && !arr) { Py_DECREF(elems); PyErr_NoMemory(); return NULL; }
         for (Py_ssize_t i = 0; i < n; i++) {
-            PyObject *fe = menai_convert_value(PyTuple_GET_ITEM(elems, i));
-            if (!fe) {
-                Py_DECREF(fast_tup);
+            arr[i] = menai_convert_value(PyTuple_GET_ITEM(elems, i));
+            if (!arr[i]) {
+                for (Py_ssize_t j = 0; j < i; j++) Py_DECREF(arr[j]);
+                PyMem_Free(arr);
                 Py_DECREF(elems);
                 return NULL;
             }
-            PyTuple_SET_ITEM(fast_tup, i, fe);
         }
         Py_DECREF(elems);
-        PyObject *args = PyTuple_Pack(1, fast_tup);
-        Py_DECREF(fast_tup);
-        if (!args) return NULL;
-        PyObject *r = MenaiList_new(&MenaiList_Type, args, NULL);
-        Py_DECREF(args);
-        return r;
+        return menai_list_from_array_steal(arr, n);
     }
 
     if (t == Slow_DictType) {
@@ -2430,12 +2478,12 @@ _to_slow_memo(PyObject *src, PyObject *memo)
     else if (t == &MenaiList_Type) {
         /* Register placeholder before recursing */
         if (PyDict_SetItem(memo, key, Py_None) < 0) goto done;
-        PyObject *elems = ((MenaiList_Object *)src)->elements;
-        Py_ssize_t n = PyTuple_GET_SIZE(elems);
+        MenaiList_Object *lst = (MenaiList_Object *)src;
+        Py_ssize_t n = lst->length;
         PyObject *slow_tup = PyTuple_New(n);
         if (!slow_tup) goto done;
         for (Py_ssize_t i = 0; i < n; i++) {
-            PyObject *se = _to_slow_memo(PyTuple_GET_ITEM(elems, i), memo);
+            PyObject *se = _to_slow_memo(lst->elements[i], memo);
             if (!se) {
                 Py_DECREF(slow_tup);
                 goto done;

@@ -15,6 +15,7 @@ _SCRAMBLES: list[tuple[str, list[str]]] = [
     ("4-move", ["R", "U", "R'", "D"]),
     ("5-move", ["R", "U", "R'", "D", "F"]),
     ("6-move", ["R", "U", "R'", "D", "F", "R"]),
+    ("7-move", ["R", "U", "R'", "D", "F", "R", "U"]),
 ]
 
 _FACE_ORDER = ("U", "D", "F", "B", "L", "R")

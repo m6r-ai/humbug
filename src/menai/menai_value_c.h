@@ -61,7 +61,8 @@ typedef struct {
 
 typedef struct {
     PyObject_HEAD
-    PyObject *elements; /* Python tuple of MenaiValue* */
+    PyObject **elements; /* C array of MenaiValue* */
+    Py_ssize_t length;   /* number of elements */
 } MenaiList_Object;
 
 typedef struct {
@@ -128,6 +129,107 @@ typedef struct {
 typedef struct {
     PyObject_HEAD
 } MenaiNone_Object;
+
+/* ---------------------------------------------------------------------------
+ * MenaiList C-level constructors — static inline, defined here.
+ *
+ * Each compilation unit that includes this header must define
+ * MENAI_LIST_TYPEOBJ as the PyTypeObject* for MenaiList before including:
+ *
+ *   menai_value_c.c:  #define MENAI_LIST_TYPEOBJ (&MenaiList_Type)
+ *   menai_vm_c.c:     #define MENAI_LIST_TYPEOBJ Menai_ListType
+ *
+ * menai_list_from_array:       copy items, INCREF each element.
+ * menai_list_from_array_steal: take ownership without INCREFing.
+ * menai_list_from_tuple:       copy from tuple, INCREF each, DECREF tuple.
+ * ------------------------------------------------------------------------- */
+
+static inline PyObject *
+menai_list_from_array(PyObject **items, Py_ssize_t n)
+{
+    PyObject **arr = NULL;
+    if (n > 0) {
+        arr = (PyObject **)PyMem_Malloc(n * sizeof(PyObject *));
+        if (!arr) { PyErr_NoMemory(); return NULL; }
+        for (Py_ssize_t i = 0; i < n; i++) {
+            arr[i] = items[i];
+            Py_INCREF(arr[i]);
+        }
+    }
+    MenaiList_Object *obj =
+        (MenaiList_Object *)MENAI_LIST_TYPEOBJ->tp_alloc(MENAI_LIST_TYPEOBJ, 0);
+    if (!obj) {
+        for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(arr[i]);
+        PyMem_Free(arr);
+        return NULL;
+    }
+    obj->elements = arr;
+    obj->length = n;
+    return (PyObject *)obj;
+}
+
+static inline PyObject *
+menai_list_from_array_steal(PyObject **items, Py_ssize_t n)
+{
+    MenaiList_Object *obj =
+        (MenaiList_Object *)MENAI_LIST_TYPEOBJ->tp_alloc(MENAI_LIST_TYPEOBJ, 0);
+    if (!obj) {
+        for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(items[i]);
+        PyMem_Free(items);
+        return NULL;
+    }
+    obj->elements = items;
+    obj->length = n;
+    return (PyObject *)obj;
+}
+
+static inline PyObject *
+menai_list_from_tuple(PyObject *tup)
+{
+    Py_ssize_t n = PyTuple_GET_SIZE(tup);
+    PyObject **arr = NULL;
+    if (n > 0) {
+        arr = (PyObject **)PyMem_Malloc(n * sizeof(PyObject *));
+        if (!arr) { Py_DECREF(tup); PyErr_NoMemory(); return NULL; }
+        for (Py_ssize_t i = 0; i < n; i++) {
+            arr[i] = PyTuple_GET_ITEM(tup, i);
+            Py_INCREF(arr[i]);
+        }
+    }
+    Py_DECREF(tup);
+    MenaiList_Object *obj =
+        (MenaiList_Object *)MENAI_LIST_TYPEOBJ->tp_alloc(MENAI_LIST_TYPEOBJ, 0);
+    if (!obj) {
+        for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(arr[i]);
+        PyMem_Free(arr);
+        return NULL;
+    }
+    obj->elements = arr;
+    obj->length = n;
+    return (PyObject *)obj;
+}
+
+/* ---------------------------------------------------------------------------
+ * MenaiList inline accessors
+ * ------------------------------------------------------------------------- */
+
+static inline PyObject *
+menai_list_get(MenaiList_Object *list, Py_ssize_t i)
+{
+    return list->elements[i];
+}
+
+static inline PyObject **
+menai_list_elements(PyObject *list_obj)
+{
+    return ((MenaiList_Object *)list_obj)->elements;
+}
+
+static inline Py_ssize_t
+menai_list_length(PyObject *list_obj)
+{
+    return ((MenaiList_Object *)list_obj)->length;
+}
 
 /* ---------------------------------------------------------------------------
  * Conversion functions — defined in menai_value_c.c, called by the C VM

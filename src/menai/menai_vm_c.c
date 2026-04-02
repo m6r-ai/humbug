@@ -20,6 +20,10 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+/* Forward-declare Menai_ListType so the static inline constructors in the
+ * header can reference it via MENAI_LIST_TYPEOBJ. */
+extern PyTypeObject *Menai_ListType;
+#define MENAI_LIST_TYPEOBJ Menai_ListType
 #include "menai_value_c.h"
 
 /*
@@ -297,20 +301,6 @@ static PyObject *empty_tuple = NULL;  /* Cached PyTuple_New(0) — used for stru
 #define IS_MENAI_STRUCTTYPE(o) (Py_TYPE(o) == Menai_StructTypeType)
 #define IS_MENAI_STRUCT(o)     (Py_TYPE(o) == Menai_StructType)
 
-/* Wrap an already-built tuple as a MenaiList, stealing the tuple reference. */
-static inline PyObject *
-menai_list_from_tuple(PyObject *tup)
-{
-    MenaiList_Object *obj = (MenaiList_Object *)Menai_ListType->tp_alloc(Menai_ListType, 0);
-    if (obj == NULL) {
-        Py_DECREF(tup);
-        return NULL;
-    }
-
-    obj->elements = tup;  /* steal */
-    return (PyObject *)obj;
-}
-
 /*
  * Wrap an already-deduplicated elements tuple as a MenaiSet, stealing the
  * tuple reference.  Builds the frozenset of hashable keys using the same
@@ -461,13 +451,6 @@ static inline PyObject *make_complex_value(PyObject *py_complex) {
 
 static inline void bool_store(PyObject **regs, int slot, int cond) {
     reg_set_borrow(regs, slot, cond ? Menai_TRUE : Menai_FALSE);
-}
-
-static inline PyObject *
-menai_list_elements(PyObject *list_obj)
-{
-    /* Borrowed reference — no Py_INCREF, no Py_DECREF by caller */
-    return ((MenaiList_Object *)list_obj)->elements;
 }
 
 static inline PyObject *
@@ -989,14 +972,14 @@ call_setup(Frame *new_frame, PyObject *func_obj,
         }
         /* Pack excess args into a MenaiList for the rest parameter. */
         int rest_count = arity - min_arity;
-        PyObject *rest_tuple = PyTuple_New(rest_count);
-        if (rest_tuple == NULL) return -1;
+        PyObject **rest_arr = rest_count > 0
+            ? (PyObject **)PyMem_Malloc(rest_count * sizeof(PyObject *)) : NULL;
+        if (rest_count > 0 && !rest_arr) { PyErr_NoMemory(); return -1; }
         for (int k = 0; k < rest_count; k++) {
-            PyObject *elem = regs[callee_base + min_arity + k];
-            Py_INCREF(elem);
-            PyTuple_SET_ITEM(rest_tuple, k, elem);
+            rest_arr[k] = regs[callee_base + min_arity + k];
+            Py_INCREF(rest_arr[k]);
         }
-        PyObject *rest_list = menai_list_from_tuple(rest_tuple);
+        PyObject *rest_list = menai_list_from_array_steal(rest_arr, rest_count);
         if (rest_list == NULL) return -1;
 
         reg_set_own(regs, callee_base + min_arity, rest_list);
@@ -2335,8 +2318,8 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
 
-            PyObject *elements = ((MenaiList_Object *)raw_args)->elements;
-            int arity = (int)PyTuple_GET_SIZE(elements);
+            PyObject **elements = ((MenaiList_Object *)raw_args)->elements;
+            int arity = (int)((MenaiList_Object *)raw_args)->length;
 
             if (IS_MENAI_FUNCTION(raw_func)) {
                 if (frame_depth >= MAX_FRAME_DEPTH) {
@@ -2348,7 +2331,7 @@ execute_loop(PyObject *code, PyObject *globals,
 
                 /* Scatter list elements into the callee window */
                 for (int i = 0; i < arity; i++)
-                    reg_set_borrow(regs, callee_base + i, PyTuple_GET_ITEM(elements, i));
+                    reg_set_borrow(regs, callee_base + i, elements[i]);
 
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
@@ -2372,7 +2355,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 PyObject *fields = PyTuple_New(n_fields);
                 if (fields == NULL) goto error;
                 for (int i = 0; i < (int)n_fields; i++) {
-                    PyObject *fv = PyTuple_GET_ITEM(elements, i);
+                    PyObject *fv = elements[i];
                     Py_INCREF(fv);
                     PyTuple_SET_ITEM(fields, i, fv);
                 }
@@ -2410,12 +2393,12 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
 
-            PyObject *elements = ((MenaiList_Object *)raw_args)->elements;
-            int arity = (int)PyTuple_GET_SIZE(elements);
+            PyObject **elements = ((MenaiList_Object *)raw_args)->elements;
+            int arity = (int)((MenaiList_Object *)raw_args)->length;
 
             if (IS_MENAI_FUNCTION(raw_func)) {
                 /* Scatter args into base+0..arity-1 (reusing current frame's base) */
-                for (int i = 0; i < arity; i++) reg_set_borrow(regs, base + i, PyTuple_GET_ITEM(elements, i));
+                for (int i = 0; i < arity; i++) reg_set_borrow(regs, base + i, elements[i]);
                 Py_DECREF(raw_args);
 
                 /* Release old frame instructions, reuse frame */
@@ -2452,7 +2435,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 }
 
                 for (int i = 0; i < (int)n_fields; i++) {
-                    PyObject *fv = PyTuple_GET_ITEM(elements, i);
+                    PyObject *fv = elements[i];
                     Py_INCREF(fv);
                     PyTuple_SET_ITEM(fields, i, fv);
                 }
@@ -3214,10 +3197,16 @@ execute_loop(PyObject *code, PyObject *globals,
                     Py_DECREF(old);
                 }
             }
-            PyObject *tup = PyList_AsTuple(parts);
+            Py_ssize_t stl_n = PyList_GET_SIZE(parts);
+            PyObject **stl2_arr = stl_n > 0
+                ? (PyObject **)PyMem_Malloc(stl_n * sizeof(PyObject *)) : NULL;
+            if (stl_n > 0 && !stl2_arr) { Py_DECREF(parts); PyErr_NoMemory(); goto error; }
+            for (Py_ssize_t i = 0; i < stl_n; i++) {
+                stl2_arr[i] = PyList_GET_ITEM(parts, i);
+                Py_INCREF(stl2_arr[i]);
+            }
             Py_DECREF(parts);
-            if (tup == NULL) goto error;
-            PyObject *r = menai_list_from_tuple(tup);
+            PyObject *r = menai_list_from_array_steal(stl2_arr, stl_n);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3246,8 +3235,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_LIST_NULL_P: {
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-null?")) goto error;
-            PyObject *elems = menai_list_elements(a);
-            int is_null = (PyTuple_GET_SIZE(elems) == 0);
+            int is_null = (((MenaiList_Object *)a)->length == 0);
             bool_store(regs, base + dest, is_null);
             break;
         }
@@ -3255,8 +3243,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_LIST_LENGTH: {
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-length")) goto error;
-            PyObject *elems = menai_list_elements(a);
-            Py_ssize_t n = PyTuple_GET_SIZE(elems);
+            Py_ssize_t n = ((MenaiList_Object *)a)->length;
             PyObject *iv = PyLong_FromSsize_t(n);
             if (iv == NULL) goto error;
             PyObject *_r = make_integer_value(iv);
@@ -3268,27 +3255,32 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_LIST_FIRST: {
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-first")) goto error;
-            PyObject *elems = menai_list_elements(a);
-            if (PyTuple_GET_SIZE(elems) == 0) {
+            MenaiList_Object *lst_f = (MenaiList_Object *)a;
+            if (lst_f->length == 0) {
                 menai_raise_eval_error("Function 'list-first' requires a non-empty list");
                 goto error;
             }
-            PyObject *first = PyTuple_GET_ITEM(elems, 0);
-            reg_set_borrow(regs, base + dest, first);
+            reg_set_borrow(regs, base + dest, lst_f->elements[0]);
             break;
         }
 
         case OP_LIST_REST: {
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-rest")) goto error;
-            PyObject *elems = menai_list_elements(a);
-            if (PyTuple_GET_SIZE(elems) == 0) {
+            MenaiList_Object *lst_r = (MenaiList_Object *)a;
+            if (lst_r->length == 0) {
                 menai_raise_eval_error("Function 'list-rest' requires a non-empty list");
                 goto error;
             }
-            PyObject *rest = PyTuple_GetSlice(elems, 1, PY_SSIZE_T_MAX);
-            if (rest == NULL) goto error;
-            PyObject *r = menai_list_from_tuple(rest);
+            Py_ssize_t rest_n = lst_r->length - 1;
+            PyObject **rest_arr = rest_n > 0
+                ? (PyObject **)PyMem_Malloc(rest_n * sizeof(PyObject *)) : NULL;
+            if (rest_n > 0 && !rest_arr) { PyErr_NoMemory(); goto error; }
+            for (Py_ssize_t i = 0; i < rest_n; i++) {
+                rest_arr[i] = lst_r->elements[i + 1];
+                Py_INCREF(rest_arr[i]);
+            }
+            PyObject *r = menai_list_from_array_steal(rest_arr, rest_n);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3297,14 +3289,13 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_LIST_LAST: {
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-last")) goto error;
-            PyObject *elems = menai_list_elements(a);
-            Py_ssize_t n = PyTuple_GET_SIZE(elems);
+            MenaiList_Object *lst_l = (MenaiList_Object *)a;
+            Py_ssize_t n = lst_l->length;
             if (n == 0) {
                 menai_raise_eval_error("Function 'list-last' requires a non-empty list");
                 goto error;
             }
-            PyObject *last = PyTuple_GET_ITEM(elems, n - 1);
-            reg_set_borrow(regs, base + dest, last);
+            reg_set_borrow(regs, base + dest, lst_l->elements[n - 1]);
             break;
         }
 
@@ -3315,33 +3306,32 @@ execute_loop(PyObject *code, PyObject *globals,
                 menai_raise_eval_error("list-ref: index must be integer");
                 goto error;
             }
-            PyObject *elems = menai_list_elements(a);
+            MenaiList_Object *lst_ref = (MenaiList_Object *)a;
             PyObject *bv = menai_integer_value(b);
             Py_ssize_t idx = PyLong_AsSsize_t(bv);
-            Py_ssize_t n = PyTuple_GET_SIZE(elems);
+            Py_ssize_t n = lst_ref->length;
             if (idx < 0 || idx >= n) {
                 menai_raise_eval_errorf("list-ref: index out of range: %zd", idx);
                 goto error;
             }
-            reg_set_borrow(regs, base + dest, PyTuple_GET_ITEM(elems, idx));
+            reg_set_borrow(regs, base + dest, lst_ref->elements[idx]);
             break;
         }
 
         case OP_LIST_PREPEND: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_list(a, "list-prepend")) goto error;
-            PyObject *elems = menai_list_elements(a);
-            Py_ssize_t n = PyTuple_GET_SIZE(elems);
-            PyObject *new_tup = PyTuple_New(n + 1);
-            if (new_tup == NULL) goto error;
+            MenaiList_Object *lst_pre = (MenaiList_Object *)a;
+            Py_ssize_t n = lst_pre->length;
+            PyObject **pre_arr = (PyObject **)PyMem_Malloc((n + 1) * sizeof(PyObject *));
+            if (!pre_arr) { PyErr_NoMemory(); goto error; }
+            pre_arr[0] = item;
             Py_INCREF(item);
-            PyTuple_SET_ITEM(new_tup, 0, item);
             for (Py_ssize_t i = 0; i < n; i++) {
-                PyObject *e = PyTuple_GET_ITEM(elems, i);
-                Py_INCREF(e);
-                PyTuple_SET_ITEM(new_tup, i + 1, e);
+                pre_arr[i + 1] = lst_pre->elements[i];
+                Py_INCREF(pre_arr[i + 1]);
             }
-            PyObject *r = menai_list_from_tuple(new_tup);
+            PyObject *r = menai_list_from_array_steal(pre_arr, n + 1);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3350,18 +3340,17 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_LIST_APPEND: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_list(a, "list-append")) goto error;
-            PyObject *elems = menai_list_elements(a);
-            Py_ssize_t n = PyTuple_GET_SIZE(elems);
-            PyObject *new_tup = PyTuple_New(n + 1);
-            if (new_tup == NULL) goto error;
+            MenaiList_Object *lst_app = (MenaiList_Object *)a;
+            Py_ssize_t n = lst_app->length;
+            PyObject **app_arr = (PyObject **)PyMem_Malloc((n + 1) * sizeof(PyObject *));
+            if (!app_arr) { PyErr_NoMemory(); goto error; }
             for (Py_ssize_t i = 0; i < n; i++) {
-                PyObject *e = PyTuple_GET_ITEM(elems, i);
-                Py_INCREF(e);
-                PyTuple_SET_ITEM(new_tup, i, e);
+                app_arr[i] = lst_app->elements[i];
+                Py_INCREF(app_arr[i]);
             }
+            app_arr[n] = item;
             Py_INCREF(item);
-            PyTuple_SET_ITEM(new_tup, n, item);
-            PyObject *r = menai_list_from_tuple(new_tup);
+            PyObject *r = menai_list_from_array_steal(app_arr, n + 1);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3370,16 +3359,16 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_LIST_REVERSE: {
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-reverse")) goto error;
-            PyObject *elems = menai_list_elements(a);
-            Py_ssize_t n = PyTuple_GET_SIZE(elems);
-            PyObject *rev = PyTuple_New(n);
-            if (rev == NULL) goto error;
+            MenaiList_Object *lst_rev = (MenaiList_Object *)a;
+            Py_ssize_t n = lst_rev->length;
+            PyObject **rev_arr = n > 0
+                ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
+            if (n > 0 && !rev_arr) { PyErr_NoMemory(); goto error; }
             for (Py_ssize_t i = 0; i < n; i++) {
-                PyObject *e = PyTuple_GET_ITEM(elems, n - 1 - i);
-                Py_INCREF(e);
-                PyTuple_SET_ITEM(rev, i, e);
+                rev_arr[i] = lst_rev->elements[n - 1 - i];
+                Py_INCREF(rev_arr[i]);
             }
-            PyObject *r = menai_list_from_tuple(rev);
+            PyObject *r = menai_list_from_array_steal(rev_arr, n);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3389,11 +3378,22 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_list(a, "list-concat")) goto error;
             if (!require_list(b, "list-concat")) goto error;
-            PyObject *ea = menai_list_elements(a);
-            PyObject *eb = menai_list_elements(b);
-            PyObject *cat = PySequence_Concat(ea, eb);
-            if (cat == NULL) goto error;
-            PyObject *r = menai_list_from_tuple(cat);
+            MenaiList_Object *lst_ca = (MenaiList_Object *)a;
+            MenaiList_Object *lst_cb = (MenaiList_Object *)b;
+            Py_ssize_t na = lst_ca->length, nb = lst_cb->length;
+            Py_ssize_t nc = na + nb;
+            PyObject **cat_arr = nc > 0
+                ? (PyObject **)PyMem_Malloc(nc * sizeof(PyObject *)) : NULL;
+            if (nc > 0 && !cat_arr) { PyErr_NoMemory(); goto error; }
+            for (Py_ssize_t i = 0; i < na; i++) {
+                cat_arr[i] = lst_ca->elements[i];
+                Py_INCREF(cat_arr[i]);
+            }
+            for (Py_ssize_t i = 0; i < nb; i++) {
+                cat_arr[na + i] = lst_cb->elements[i];
+                Py_INCREF(cat_arr[na + i]);
+            }
+            PyObject *r = menai_list_from_array_steal(cat_arr, nc);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3402,21 +3402,25 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_LIST_MEMBER_P: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_list(a, "list-member?")) goto error;
-            PyObject *elems = menai_list_elements(a);
-            int found = PySequence_Contains(elems, item);
-            if (found < 0) goto error;
-            bool_store(regs, base + dest, found);
+            MenaiList_Object *lst_mem = (MenaiList_Object *)a;
+            int mem_found = 0;
+            for (Py_ssize_t i = 0; i < lst_mem->length; i++) {
+                int eq = PyObject_RichCompareBool(lst_mem->elements[i], item, Py_EQ);
+                if (eq < 0) goto error;
+                if (eq) { mem_found = 1; break; }
+            }
+            bool_store(regs, base + dest, mem_found);
             break;
         }
 
         case OP_LIST_INDEX: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_list(a, "list-index")) goto error;
-            PyObject *elems = menai_list_elements(a);
-            Py_ssize_t n = PyTuple_GET_SIZE(elems);
+            MenaiList_Object *lst_idx = (MenaiList_Object *)a;
+            Py_ssize_t n = lst_idx->length;
             Py_ssize_t found = -1;
             for (Py_ssize_t i = 0; i < n; i++) {
-                int eq = PyObject_RichCompareBool(PyTuple_GET_ITEM(elems, i), item, Py_EQ);
+                int eq = PyObject_RichCompareBool(lst_idx->elements[i], item, Py_EQ);
                 if (eq < 0) goto error;
                 if (eq) {
                     found = i;
@@ -3442,11 +3446,11 @@ execute_loop(PyObject *code, PyObject *globals,
                 menai_raise_eval_error("list-slice: indices must be integers");
                 goto error;
             }
-            PyObject *elems = menai_list_elements(a);
+            MenaiList_Object *lst_sl = (MenaiList_Object *)a;
             PyObject *bv = menai_integer_value(b);
             PyObject *cv = menai_integer_value(c);
             Py_ssize_t start = PyLong_AsSsize_t(bv), end = PyLong_AsSsize_t(cv);
-            Py_ssize_t n = PyTuple_GET_SIZE(elems);
+            Py_ssize_t n = lst_sl->length;
             if (start < 0) {
                 menai_raise_eval_errorf("list-slice start index cannot be negative: %zd", start);
                 goto error;
@@ -3467,9 +3471,15 @@ execute_loop(PyObject *code, PyObject *globals,
                 menai_raise_eval_errorf("list-slice start index (%zd) cannot be greater than end index (%zd)", start, end);
                 goto error;
             }
-            PyObject *sliced = PyTuple_GetSlice(elems, start, end);
-            if (sliced == NULL) goto error;
-            PyObject *r = menai_list_from_tuple(sliced);
+            Py_ssize_t sl_n = end - start;
+            PyObject **sl_arr = sl_n > 0
+                ? (PyObject **)PyMem_Malloc(sl_n * sizeof(PyObject *)) : NULL;
+            if (sl_n > 0 && !sl_arr) { PyErr_NoMemory(); goto error; }
+            for (Py_ssize_t i = 0; i < sl_n; i++) {
+                sl_arr[i] = lst_sl->elements[start + i];
+                Py_INCREF(sl_arr[i]);
+            }
+            PyObject *r = menai_list_from_array_steal(sl_arr, sl_n);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3478,31 +3488,33 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_LIST_REMOVE: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_list(a, "list-remove")) goto error;
-            PyObject *elems = menai_list_elements(a);
-            Py_ssize_t n = PyTuple_GET_SIZE(elems);
+            MenaiList_Object *lst_rm = (MenaiList_Object *)a;
+            Py_ssize_t n = lst_rm->length;
             /* Count non-matching elements first */
             Py_ssize_t keep = 0;
             for (Py_ssize_t i = 0; i < n; i++) {
-                int eq = PyObject_RichCompareBool(PyTuple_GET_ITEM(elems, i), item, Py_EQ);
+                int eq = PyObject_RichCompareBool(lst_rm->elements[i], item, Py_EQ);
                 if (eq < 0) goto error;
                 if (!eq) keep++;
             }
-            PyObject *new_tup = PyTuple_New(keep);
-            if (new_tup == NULL) goto error;
+            PyObject **rm_arr = keep > 0
+                ? (PyObject **)PyMem_Malloc(keep * sizeof(PyObject *)) : NULL;
+            if (keep > 0 && !rm_arr) { PyErr_NoMemory(); goto error; }
             Py_ssize_t j = 0;
             for (Py_ssize_t i = 0; i < n; i++) {
-                PyObject *e = PyTuple_GET_ITEM(elems, i);
+                PyObject *e = lst_rm->elements[i];
                 int eq = PyObject_RichCompareBool(e, item, Py_EQ);
                 if (eq < 0) {
-                    Py_DECREF(new_tup);
+                    for (Py_ssize_t k = 0; k < j; k++) Py_DECREF(rm_arr[k]);
+                    PyMem_Free(rm_arr);
                     goto error;
                 }
                 if (!eq) {
                     Py_INCREF(e);
-                    PyTuple_SET_ITEM(new_tup, j++, e);
+                    rm_arr[j++] = e;
                 }
             }
-            PyObject *r = menai_list_from_tuple(new_tup);
+            PyObject *r = menai_list_from_array_steal(rm_arr, keep);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3512,15 +3524,15 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_list(a, "list->string")) goto error;
             if (!require_string(b, "list->string")) goto error;
-            PyObject *elems = menai_list_elements(a);
+            MenaiList_Object *lst_ts = (MenaiList_Object *)a;
             PyObject *sep = menai_string_value(b);
-            Py_ssize_t n = PyTuple_GET_SIZE(elems);
+            Py_ssize_t n = lst_ts->length;
             PyObject *parts = PyList_New(n);
             if (parts == NULL) {
                 goto error;
             }
             for (Py_ssize_t i = 0; i < n; i++) {
-                PyObject *elem = PyTuple_GET_ITEM(elems, i);
+                PyObject *elem = lst_ts->elements[i];
                 if (!IS_MENAI_STRING(elem)) {
                     Py_DECREF(parts);
                     menai_raise_eval_error("list->string: all elements must be strings");
@@ -3547,8 +3559,15 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_LIST_TO_SET: {
             PyObject *a = regs[base + src0];
             if (!require_list_singular(a, "list->set")) goto error;
-            PyObject *elems = menai_list_elements(a);
-            PyObject *r = PyObject_CallOneArg((PyObject *)Menai_SetType, elems);
+            MenaiList_Object *lst_lts = (MenaiList_Object *)a;
+            PyObject *tmp_tup = PyTuple_New(lst_lts->length);
+            if (!tmp_tup) goto error;
+            for (Py_ssize_t i = 0; i < lst_lts->length; i++) {
+                Py_INCREF(lst_lts->elements[i]);
+                PyTuple_SET_ITEM(tmp_tup, i, lst_lts->elements[i]);
+            }
+            PyObject *r = PyObject_CallOneArg((PyObject *)Menai_SetType, tmp_tup);
+            Py_DECREF(tmp_tup);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3597,17 +3616,16 @@ execute_loop(PyObject *code, PyObject *globals,
                 /* Build manually from pairs */
                 PyObject *pairs = ((MenaiDict_Object *)a)->pairs;
                 Py_ssize_t n = PyTuple_GET_SIZE(pairs);
-                PyObject *tup = PyTuple_New(n);
-                if (tup == NULL) {
-                    goto error;
-                }
+                PyObject **dk_arr = n > 0
+                    ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
+                if (n > 0 && !dk_arr) { PyErr_NoMemory(); goto error; }
                 for (Py_ssize_t i = 0; i < n; i++) {
                     PyObject *pair = PyTuple_GET_ITEM(pairs, i);
                     PyObject *k = PyTuple_GET_ITEM(pair, 0);
                     Py_INCREF(k);
-                    PyTuple_SET_ITEM(tup, i, k);
+                    dk_arr[i] = k;
                 }
-                r = menai_list_from_tuple(tup);
+                r = menai_list_from_array_steal(dk_arr, n);
             }
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
@@ -3619,17 +3637,16 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_dict(a, "dict-values")) goto error;
             PyObject *pairs = ((MenaiDict_Object *)a)->pairs;
             Py_ssize_t n = PyTuple_GET_SIZE(pairs);
-            PyObject *tup = PyTuple_New(n);
-            if (tup == NULL) {
-                goto error;
-            }
+            PyObject **dv_arr = n > 0
+                ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
+            if (n > 0 && !dv_arr) { PyErr_NoMemory(); goto error; }
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *pair = PyTuple_GET_ITEM(pairs, i);
                 PyObject *v = PyTuple_GET_ITEM(pair, 1);
                 Py_INCREF(v);
-                PyTuple_SET_ITEM(tup, i, v);
+                dv_arr[i] = v;
             }
-            PyObject *r = menai_list_from_tuple(tup);
+            PyObject *r = menai_list_from_array_steal(dv_arr, n);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -4179,9 +4196,16 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_SET_TO_LIST: {
             PyObject *a = regs[base + src0];
             if (!require_set_singular(a, "set->list")) goto error;
-            PyObject *elems = ((MenaiSet_Object *)a)->elements;
-            Py_INCREF(elems);   /* menai_list_from_tuple steals; elements is borrowed */
-            PyObject *r = menai_list_from_tuple(elems);  /* steals elems */
+            PyObject *set_elems = ((MenaiSet_Object *)a)->elements;
+            Py_ssize_t set_n = PyTuple_GET_SIZE(set_elems);
+            PyObject **stl_arr = set_n > 0
+                ? (PyObject **)PyMem_Malloc(set_n * sizeof(PyObject *)) : NULL;
+            if (set_n > 0 && !stl_arr) { PyErr_NoMemory(); goto error; }
+            for (Py_ssize_t i = 0; i < set_n; i++) {
+                stl_arr[i] = PyTuple_GET_ITEM(set_elems, i);
+                Py_INCREF(stl_arr[i]);
+            }
+            PyObject *r = menai_list_from_array_steal(stl_arr, set_n);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -4207,25 +4231,28 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t n = 0;
             if (step > 0 && end > start) n = (end - start + step - 1) / step;
             else if (step < 0 && end < start) n = (start - end - step - 1) / (-step);
-            PyObject *tup = PyTuple_New(n);
-            if (tup == NULL) goto error;
+            PyObject **rng_arr = n > 0
+                ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
+            if (n > 0 && !rng_arr) { PyErr_NoMemory(); goto error; }
             long val = start;
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *iv = PyLong_FromLong(val);
                 if (iv == NULL) {
-                    Py_DECREF(tup);
+                    for (Py_ssize_t k = 0; k < i; k++) Py_DECREF(rng_arr[k]);
+                    PyMem_Free(rng_arr);
                     goto error;
                 }
                 PyObject *mi = make_integer(iv);
                 Py_DECREF(iv);
                 if (mi == NULL) {
-                    Py_DECREF(tup);
+                    for (Py_ssize_t k = 0; k < i; k++) Py_DECREF(rng_arr[k]);
+                    PyMem_Free(rng_arr);
                     goto error;
                 }
-                PyTuple_SET_ITEM(tup, i, mi);
+                rng_arr[i] = mi;
                 val += step;
             }
-            PyObject *r = menai_list_from_tuple(tup);
+            PyObject *r = menai_list_from_array_steal(rng_arr, n);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -4435,21 +4462,21 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_structtype(val, "struct-fields")) goto error;
             PyObject *field_names = ((MenaiStructType_Object *)val)->field_names;
             Py_ssize_t n = PyTuple_GET_SIZE(field_names);
-            PyObject *tup = PyTuple_New(n);
-            if (tup == NULL) {
-                goto error;
-            }
+            PyObject **sf_arr = n > 0
+                ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
+            if (n > 0 && !sf_arr) { PyErr_NoMemory(); goto error; }
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *fname = PyTuple_GET_ITEM(field_names, i);
                 /* Wrap in MenaiSymbol */
                 PyObject *sym = PyObject_CallOneArg((PyObject *)Menai_SymbolType, fname);
                 if (sym == NULL) {
-                    Py_DECREF(tup);
+                    for (Py_ssize_t k = 0; k < i; k++) Py_DECREF(sf_arr[k]);
+                    PyMem_Free(sf_arr);
                     goto error;
                 }
-                PyTuple_SET_ITEM(tup, i, sym);
+                sf_arr[i] = sym;
             }
-            PyObject *r = menai_list_from_tuple(tup);
+            PyObject *r = menai_list_from_array_steal(sf_arr, n);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
