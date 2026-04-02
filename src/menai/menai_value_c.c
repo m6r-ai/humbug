@@ -246,6 +246,7 @@ MenaiInteger_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiInteger_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     Py_XDECREF(((MenaiInteger_Object *)self)->value);
     Py_TYPE(self)->tp_free(self);
 }
@@ -442,6 +443,7 @@ MenaiComplex_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiComplex_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     Py_XDECREF(((MenaiComplex_Object *)self)->value);
     Py_TYPE(self)->tp_free(self);
 }
@@ -553,6 +555,7 @@ MenaiString_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiString_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     Py_XDECREF(((MenaiString_Object *)self)->value);
     Py_TYPE(self)->tp_free(self);
 }
@@ -662,6 +665,7 @@ MenaiSymbol_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiSymbol_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     Py_XDECREF(((MenaiSymbol_Object *)self)->name);
     Py_TYPE(self)->tp_free(self);
 }
@@ -1173,6 +1177,7 @@ menai_list_from_tuple(PyObject *tup)
  *   [6] names_list       (list — borrowed ref kept alive by bytecode)
  *   [7] param_count      (int)
  *   [8] local_count      (int)
+ *   [9] child_code       (CodeObject — used by OP_MAKE_CLOSURE, not here)
  *
  * bytecode is stored as an owned ref so it keeps instrs_obj/constants/names
  * alive for the lifetime of the function.
@@ -1208,6 +1213,10 @@ menai_function_alloc(PyObject *cache, PyObject *bytecode, PyObject *captured_val
     self->local_count = local_count;
     self->constants = constants;  /* borrowed — bytecode keeps alive */
     self->names = names_obj;  /* borrowed — bytecode keeps alive */
+    PyObject *_cc = PyObject_GetAttrString(bytecode, "_code_caches");
+    self->closure_caches = (_cc && PyList_Check(_cc)) ? _cc : NULL;
+    Py_XDECREF(_cc);  /* drop owned ref — bytecode keeps it alive */
+    PyErr_Clear();
 
     Py_buffer view;
     if (PyObject_GetBuffer(instrs_obj, &view, PyBUF_SIMPLE) == 0) {
@@ -1340,6 +1349,7 @@ MenaiDict_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiDict_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     Py_XDECREF(((MenaiDict_Object *)self)->pairs);
     Py_XDECREF(((MenaiDict_Object *)self)->lookup);
     Py_TYPE(self)->tp_free(self);
@@ -1583,6 +1593,7 @@ MenaiSet_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiSet_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     Py_XDECREF(((MenaiSet_Object *)self)->elements);
     Py_XDECREF(((MenaiSet_Object *)self)->members);
     Py_TYPE(self)->tp_free(self);
@@ -1746,6 +1757,7 @@ MenaiFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
         self->names = NULL;
         self->code_len = 0;
         self->local_count = 0;
+        self->closure_caches = NULL;
         /* Cache param_count from the bytecode object to avoid repeated
          * PyObject_GetAttrString calls in call_setup on every function call. */
         if (bytecode != Py_None) {
@@ -1781,6 +1793,10 @@ MenaiFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
                 self->local_count = (int)PyLong_AsLong(lc);
                 Py_DECREF(lc);
             }
+            PyObject *cc = PyObject_GetAttrString(bytecode, "_code_caches");
+            self->closure_caches = (cc && PyList_Check(cc)) ? cc : NULL;
+            Py_XDECREF(cc);  /* drop owned ref — bytecode (which we own) keeps it alive */
+            PyErr_Clear();
         } else {
             self->param_count = (int)PyTuple_GET_SIZE(params_tup);
         }
@@ -1794,6 +1810,7 @@ MenaiFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiFunction_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     MenaiFunction_Object *f = (MenaiFunction_Object *)self;
     Py_XDECREF(f->parameters);
     Py_XDECREF(f->name);
@@ -1818,6 +1835,14 @@ MenaiFunction_clear(PyObject *self)
 {
     MenaiFunction_Object *f = (MenaiFunction_Object *)self;
     Py_CLEAR(f->bytecode);
+    /* All of these are borrowed from bytecode — NULL them together so they
+     * never dangle after bytecode is cleared. */
+    f->instrs         = NULL;
+    f->instrs_obj     = NULL;
+    f->constants      = NULL;
+    f->names          = NULL;
+    f->closure_caches = NULL;
+    f->code_len       = 0;
     Py_CLEAR(f->captured_values);
     return 0;
 }
@@ -2006,6 +2031,7 @@ MenaiStructType_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiStructType_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     MenaiStructType_Object *s = (MenaiStructType_Object *)self;
     Py_XDECREF(s->name);
     Py_XDECREF(s->field_names);
@@ -2163,6 +2189,7 @@ MenaiStruct_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiStruct_dealloc(PyObject *self)
 {
+    PyObject_GC_UnTrack(self);
     Py_XDECREF(((MenaiStruct_Object *)self)->struct_type);
     Py_XDECREF(((MenaiStruct_Object *)self)->fields);
     Py_TYPE(self)->tp_free(self);
@@ -2631,12 +2658,41 @@ menai_convert_value(PyObject *src)
 PyObject *
 menai_convert_code_object(PyObject *code)
 {
-    /* Convert code.constants list in-place */
+    /* Guard against processing the same CodeObject twice.  This happens when
+     * a named function's CodeObject appears both as a MenaiFunction constant
+     * and as a direct child in code_objects.  The second call would rebuild
+     * _code_caches, freeing the list that MenaiFunction_Object.closure_caches
+     * already borrowed a pointer to, causing a use-after-free crash. */
+    PyObject *_existing = PyObject_GetAttrString(code, "_code_caches");
+    int _already_done = (_existing && PyList_Check(_existing));
+    Py_XDECREF(_existing);
+    PyErr_Clear();
+    if (_already_done) return code;
+
+    /* Convert code.constants list in-place.  For function constants, recurse
+     * into their bytecode first so that _code_caches is populated before
+     * MenaiFunction_new reads it — ensuring closure_caches is set correctly
+     * on the resulting MenaiFunction_Object from the very start. */
     PyObject *constants = PyObject_GetAttrString(code, "constants");
     if (!constants) return NULL;
     Py_ssize_t n = PyList_GET_SIZE(constants);
     for (Py_ssize_t i = 0; i < n; i++) {
         PyObject *orig = PyList_GET_ITEM(constants, i);
+        /* If this constant is a function (slow or already-fast), recurse into
+         * its bytecode before converting it so _code_caches is ready. */
+        PyObject *bc = PyObject_GetAttrString(orig, "bytecode");
+        if (bc == NULL) {
+            PyErr_Clear();  /* not a function — no bytecode attribute */
+        } else if (bc != Py_None) {
+            if (!menai_convert_code_object(bc)) {
+                Py_DECREF(bc);
+                Py_DECREF(constants);
+                return NULL;
+            }
+            Py_DECREF(bc);
+        } else {
+            Py_DECREF(bc);
+        }
         PyObject *fast = menai_convert_value(orig);
         if (!fast) {
             Py_DECREF(constants);
@@ -2644,24 +2700,6 @@ menai_convert_code_object(PyObject *code)
         }
         PyList_SET_ITEM(constants, i, fast);
         Py_DECREF(orig);
-    }
-    Py_DECREF(constants);
-
-    /* Recurse into any zero-capture MenaiFunction constants */
-    constants = PyObject_GetAttrString(code, "constants");
-    if (!constants) return NULL;
-    n = PyList_GET_SIZE(constants);
-    for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *c = PyList_GET_ITEM(constants, i);
-        if (Py_TYPE(c) == &MenaiFunction_Type) {
-            PyObject *bc = ((MenaiFunction_Object *)c)->bytecode;
-            if (bc && bc != Py_None) {
-                if (!menai_convert_code_object(bc)) {
-                    Py_DECREF(constants);
-                    return NULL;
-                }
-            }
-        }
     }
     Py_DECREF(constants);
 
@@ -2678,8 +2716,10 @@ menai_convert_code_object(PyObject *code)
 
         /* Build _closure_cache = (param_names_tuple, name, is_variadic_int,
          * ncap_int, instrs_obj, constants, names, param_count_int,
-         * local_count_int) on this child so OP_MAKE_CLOSURE and
-         * menai_function_alloc need zero PyObject_GetAttrString calls. */
+         * local_count_int, child_code) on this child so OP_MAKE_CLOSURE and
+         * menai_function_alloc need zero PyObject_GetAttrString calls.
+         * child_code at [9] lets OP_MAKE_CLOSURE pass bytecode to menai_function_alloc
+         * without fetching code_objects from the frame's code object. */
         PyObject *param_names = PyObject_GetAttrString(child, "param_names");
         if (!param_names) {
             Py_DECREF(children);
@@ -2777,10 +2817,10 @@ menai_convert_code_object(PyObject *code)
             return NULL;
         }
 
-        PyObject *cache = Py_BuildValue("(OOiiOOOOO)", param_names_tup, cname,
+        PyObject *cache = Py_BuildValue("(OOiiOOOOOO)", param_names_tup, cname,
                                         is_variadic, (int)ncap,
                                         instrs_obj, constants, names_list,
-                                        pc_obj, lc_obj);
+                                        pc_obj, lc_obj, child);
         Py_DECREF(lc_obj); Py_DECREF(pc_obj);
         Py_DECREF(names_list); Py_DECREF(constants); Py_DECREF(instrs_obj);
         Py_DECREF(param_names_tup);
@@ -2797,7 +2837,31 @@ menai_convert_code_object(PyObject *code)
             return NULL;
         }
     }
+
+    /* Build _code_caches — a list of each child's _closure_cache tuple,
+     * indexed by position in code_objects.  Stored on the parent so
+     * frame_setup can cache it once and OP_MAKE_CLOSURE uses PyList_GET_ITEM
+     * with zero PyObject_GetAttrString calls in the hot loop. */
+    n = PyList_GET_SIZE(children);
+    PyObject *code_caches = PyList_New(n);
+    if (!code_caches) {
+        Py_DECREF(children);
+        return NULL;
+    }
+    for (Py_ssize_t i = 0; i < n; i++) {
+        PyObject *cc = PyObject_GetAttrString(PyList_GET_ITEM(children, i), "_closure_cache");
+        if (!cc) {
+            Py_DECREF(code_caches);
+            Py_DECREF(children);
+            return NULL;
+        }
+        PyList_SET_ITEM(code_caches, i, cc);  /* steals ref */
+    }
     Py_DECREF(children);
+    int cc_ok = PyObject_SetAttrString(code, "_code_caches", code_caches);
+    Py_DECREF(code_caches);
+    if (cc_ok < 0) return NULL;
+
     return code;
 }
 

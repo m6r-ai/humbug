@@ -95,11 +95,12 @@ typedef struct {
      *
      * instrs_obj is a borrowed reference: bytecode (owned by this struct)
      * owns the array.array, so instrs_obj lives at least as long as we do.
-     * constants and names are likewise borrowed from bytecode. */
+     * constants, names, and closure_caches are likewise borrowed from bytecode. */
     uint64_t *instrs;          /* raw pointer into bytecode.instructions buffer */
     PyObject *instrs_obj;      /* array.array — borrowed ref, keeps buffer valid */
     PyObject *constants;       /* borrowed ref to bytecode.constants list */
     PyObject *names;           /* borrowed ref to bytecode.names list */
+    PyObject *closure_caches;  /* borrowed ref to bytecode._code_caches list, or NULL */
     int       code_len;        /* number of instructions */
     int       local_count;     /* number of local variable slots */
 } MenaiFunction_Object;

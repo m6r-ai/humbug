@@ -690,6 +690,7 @@ typedef struct {
     PyObject       *code_obj;         /* CodeObject — kept alive, not dereferenced in loop */
     PyObject       *constants;        /* borrowed ref — list of fast constant values */
     PyObject       *names;            /* borrowed ref — list of global name strings */
+    PyObject       *closure_caches;   /* borrowed ref — list of child _closure_cache tuples */
     uint64_t       *instrs;           /* raw C pointer into the array.array buffer */
     int             code_len;
     int             local_count;
@@ -768,8 +769,14 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
     Py_INCREF(code_obj);
     Py_XDECREF(f->code_obj);
     f->code_obj    = code_obj;
-    f->constants   = constants;   /* owned — from GetAttrString above */
-    f->names       = names;       /* owned — from GetAttrString above */
+    f->constants   = constants;   /* borrowed — f->code_obj keeps code_obj alive */
+    Py_DECREF(constants);         /* drop owned ref from GetAttrString */
+    f->names       = names;       /* borrowed — f->code_obj keeps code_obj alive */
+    Py_DECREF(names);             /* drop owned ref from GetAttrString */
+    PyObject *_cc = PyObject_GetAttrString(code_obj, "_code_caches");
+    f->closure_caches = (_cc && PyList_Check(_cc)) ? _cc : NULL;
+    Py_XDECREF(_cc);  /* drop owned ref — f->code_obj keeps code_obj alive */
+    PyErr_Clear();
     f->instrs      = (uint64_t *)view.buf;
     f->code_len    = (int)(view.len / sizeof(uint64_t));
     f->local_count = local_count;
@@ -798,6 +805,7 @@ frame_setup_func(Frame *f, MenaiFunction_Object *func,
     f->constants   = func->constants;
     f->names       = func->names;
     f->local_count = func->local_count;
+    f->closure_caches = func->closure_caches;  /* borrowed — func owns bytecode which owns it */
     f->ip          = 0;
     f->base        = base;
     f->return_dest = return_dest;
@@ -812,6 +820,7 @@ frame_release(Frame *f)
     f->instrs    = NULL;
     f->constants = NULL;
     f->names     = NULL;
+    f->closure_caches = NULL;
 }
 
 /* ---------------------------------------------------------------------------
@@ -1067,6 +1076,7 @@ execute_loop(PyObject *code, PyObject *globals,
         .constants = NULL,
         .names = NULL,
         .instrs = NULL,
+        .closure_caches = NULL,
     };
     frames[1] = (Frame){
         .is_sentinel = 0,
@@ -1074,6 +1084,7 @@ execute_loop(PyObject *code, PyObject *globals,
         .constants = NULL,
         .names = NULL,
         .instrs = NULL,
+        .closure_caches = NULL,
     };
 
     /* Set up frame at depth 1 for the top-level code object. */
@@ -1262,7 +1273,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 }
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
-                *new_frame = (Frame){ .code_obj = NULL,
+                *new_frame = (Frame){ .code_obj = NULL, .closure_caches = NULL,
                                       .constants = NULL, .names = NULL, .instrs = NULL };
 
                 if (call_setup(new_frame, raw, regs, callee_base,
@@ -2235,22 +2246,20 @@ execute_loop(PyObject *code, PyObject *globals,
              *
              * All metadata is read from the _closure_cache tuple built once
              * by menai_convert_code_object — zero PyObject_GetAttrString
-             * calls and no Python call machinery at runtime.
+             * calls in the hot loop; closure_caches is pre-loaded at frame
+             * setup time.
              */
-            PyObject *code_objects = PyObject_GetAttrString(frame->code_obj, "code_objects");
-            if (code_objects == NULL) goto error;
-            PyObject *child_code = PyList_GET_ITEM(code_objects, src0);
+            if (frame->closure_caches == NULL) {
+                menai_raise_eval_error("MAKE_CLOSURE: _code_caches not set on code object");
+                goto error;
+            }
 
-            /* Unpack the cache tuple built at convert time */
-            PyObject *closure_cache = PyObject_GetAttrString(child_code, "_closure_cache");
-            Py_DECREF(code_objects);
-            if (closure_cache == NULL) goto error;
+            PyObject *closure_cache = PyList_GET_ITEM(frame->closure_caches, src0);
 
             Py_ssize_t ncap = (Py_ssize_t)PyLong_AsLong(PyTuple_GET_ITEM(closure_cache, 3));
 
             PyObject *cap_list = PyList_New(ncap);
             if (cap_list == NULL) {
-                Py_DECREF(closure_cache);
                 goto error;
             }
 
@@ -2259,9 +2268,10 @@ execute_loop(PyObject *code, PyObject *globals,
                 PyList_SET_ITEM(cap_list, i, Py_None);
             }
 
+            /* child_code is the bytecode object stored in the cache at index 9 */
+            PyObject *child_code = PyTuple_GET_ITEM(closure_cache, 9);
             PyObject *func = menai_function_alloc(closure_cache, child_code, cap_list);
             Py_DECREF(cap_list);
-            Py_DECREF(closure_cache);
             if (func == NULL) goto error;
             reg_set_own(regs, base + dest, func);
             break;
@@ -2316,7 +2326,7 @@ execute_loop(PyObject *code, PyObject *globals,
 
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
-                *new_frame = (Frame){ .code_obj = NULL,
+                *new_frame = (Frame){ .code_obj = NULL, .closure_caches = NULL,
                                       .constants = NULL, .names = NULL, .instrs = NULL };
                 if (call_setup(new_frame, raw_func, regs, callee_base, arity, dest) < 0) {
                     frame_depth--;
