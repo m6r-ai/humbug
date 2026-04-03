@@ -45,217 +45,211 @@ extern PyObject *_menai_value_c_init(void);
  * Instruction encoding constants — must match menai_bytecode.py
  */
 #define OPCODE_SHIFT 48
-#define DEST_SHIFT   36
-#define SRC0_SHIFT   24
-#define SRC1_SHIFT   12
-#define FIELD_MASK   0xFFFu
-#define OPCODE_MASK  0xFFFFu
+#define DEST_SHIFT 36
+#define SRC0_SHIFT 24
+#define SRC1_SHIFT 12
+#define FIELD_MASK 0xFFFu
+#define OPCODE_MASK 0xFFFFu
 
 /*
  * Opcode values — must match menai_bytecode.py Opcode enum
  */
-#define OP_LOAD_NONE        0
-#define OP_LOAD_TRUE        1
-#define OP_LOAD_FALSE       2
-#define OP_LOAD_EMPTY_LIST  3
-#define OP_LOAD_EMPTY_DICT  4
-#define OP_LOAD_EMPTY_SET   5
-#define OP_LOAD_CONST       6
-#define OP_LOAD_NAME        7
-#define OP_MOVE             8
-#define OP_JUMP             20
-#define OP_JUMP_IF_FALSE    21
-#define OP_JUMP_IF_TRUE     22
-#define OP_RAISE_ERROR      23
-#define OP_MAKE_CLOSURE     30
-#define OP_PATCH_CLOSURE    31
-#define OP_CALL             32
-#define OP_TAIL_CALL        33
-#define OP_APPLY            34
-#define OP_TAIL_APPLY       35
-#define OP_RETURN           37
-#define OP_EMIT_TRACE       40
-
-/* Layer 3 — none/boolean/symbol/integer/float opcodes */
-#define OP_NONE_P                    50
-#define OP_FUNCTION_P                60
-#define OP_FUNCTION_EQ_P             61
-#define OP_FUNCTION_NEQ_P            62
-#define OP_FUNCTION_MIN_ARITY        63
-#define OP_FUNCTION_VARIADIC_P       64
-#define OP_FUNCTION_ACCEPTS_P        65
-#define OP_SYMBOL_P                  80
-#define OP_SYMBOL_EQ_P               81
-#define OP_SYMBOL_NEQ_P              82
-#define OP_SYMBOL_TO_STRING          83
-#define OP_BOOLEAN_P                100
-#define OP_BOOLEAN_EQ_P             101
-#define OP_BOOLEAN_NEQ_P            102
-#define OP_BOOLEAN_NOT              103
-#define OP_INTEGER_P                120
-#define OP_INTEGER_EQ_P             121
-#define OP_INTEGER_NEQ_P            122
-#define OP_INTEGER_LT_P             123
-#define OP_INTEGER_GT_P             124
-#define OP_INTEGER_LTE_P            125
-#define OP_INTEGER_GTE_P            126
-#define OP_INTEGER_ABS              127
-#define OP_INTEGER_ADD              128
-#define OP_INTEGER_SUB              129
-#define OP_INTEGER_MUL              130
-#define OP_INTEGER_DIV              131
-#define OP_INTEGER_MOD              132
-#define OP_INTEGER_NEG              133
-#define OP_INTEGER_EXPN             134
-#define OP_INTEGER_BIT_NOT          135
-#define OP_INTEGER_BIT_SHIFT_LEFT   136
-#define OP_INTEGER_BIT_SHIFT_RIGHT  137
-#define OP_INTEGER_BIT_OR           138
-#define OP_INTEGER_BIT_AND          139
-#define OP_INTEGER_BIT_XOR          140
-#define OP_INTEGER_MIN              141
-#define OP_INTEGER_MAX              142
-#define OP_INTEGER_TO_FLOAT         143
-#define OP_INTEGER_TO_COMPLEX       144
-#define OP_INTEGER_TO_STRING        145
+#define OP_LOAD_NONE 0
+#define OP_LOAD_TRUE 1
+#define OP_LOAD_FALSE 2
+#define OP_LOAD_EMPTY_LIST 3
+#define OP_LOAD_EMPTY_DICT 4
+#define OP_LOAD_EMPTY_SET 5
+#define OP_LOAD_CONST 6
+#define OP_LOAD_NAME 7
+#define OP_MOVE 8
+#define OP_JUMP 20
+#define OP_JUMP_IF_FALSE 21
+#define OP_JUMP_IF_TRUE 22
+#define OP_RAISE_ERROR 23
+#define OP_MAKE_CLOSURE 30
+#define OP_PATCH_CLOSURE 31
+#define OP_CALL 32
+#define OP_TAIL_CALL 33
+#define OP_APPLY 34
+#define OP_TAIL_APPLY 35
+#define OP_RETURN 37
+#define OP_EMIT_TRACE 40
+#define OP_NONE_P 50
+#define OP_FUNCTION_P 60
+#define OP_FUNCTION_EQ_P 61
+#define OP_FUNCTION_NEQ_P 62
+#define OP_FUNCTION_MIN_ARITY 63
+#define OP_FUNCTION_VARIADIC_P 64
+#define OP_FUNCTION_ACCEPTS_P 65
+#define OP_SYMBOL_P 80
+#define OP_SYMBOL_EQ_P 81
+#define OP_SYMBOL_NEQ_P 82
+#define OP_SYMBOL_TO_STRING 83
+#define OP_BOOLEAN_P 100
+#define OP_BOOLEAN_EQ_P 101
+#define OP_BOOLEAN_NEQ_P 102
+#define OP_BOOLEAN_NOT 103
+#define OP_INTEGER_P 120
+#define OP_INTEGER_EQ_P 121
+#define OP_INTEGER_NEQ_P 122
+#define OP_INTEGER_LT_P 123
+#define OP_INTEGER_GT_P 124
+#define OP_INTEGER_LTE_P 125
+#define OP_INTEGER_GTE_P 126
+#define OP_INTEGER_ABS 127
+#define OP_INTEGER_ADD 128
+#define OP_INTEGER_SUB 129
+#define OP_INTEGER_MUL 130
+#define OP_INTEGER_DIV 131
+#define OP_INTEGER_MOD 132
+#define OP_INTEGER_NEG 133
+#define OP_INTEGER_EXPN 134
+#define OP_INTEGER_BIT_NOT 135
+#define OP_INTEGER_BIT_SHIFT_LEFT 136
+#define OP_INTEGER_BIT_SHIFT_RIGHT 137
+#define OP_INTEGER_BIT_OR 138
+#define OP_INTEGER_BIT_AND 139
+#define OP_INTEGER_BIT_XOR 140
+#define OP_INTEGER_MIN 141
+#define OP_INTEGER_MAX 142
+#define OP_INTEGER_TO_FLOAT 143
+#define OP_INTEGER_TO_COMPLEX 144
+#define OP_INTEGER_TO_STRING 145
 #define OP_INTEGER_CODEPOINT_TO_STRING 146
-#define OP_FLOAT_P                  160
-#define OP_FLOAT_EQ_P               161
-#define OP_FLOAT_NEQ_P              162
-#define OP_FLOAT_LT_P               163
-#define OP_FLOAT_GT_P               164
-#define OP_FLOAT_LTE_P              165
-#define OP_FLOAT_GTE_P              166
-#define OP_FLOAT_NEG                167
-#define OP_FLOAT_ADD                168
-#define OP_FLOAT_SUB                169
-#define OP_FLOAT_MUL                170
-#define OP_FLOAT_DIV                171
-#define OP_FLOAT_FLOOR_DIV          172
-#define OP_FLOAT_MOD                173
-#define OP_FLOAT_EXP                174
-#define OP_FLOAT_EXPN               175
-#define OP_FLOAT_LOG                176
-#define OP_FLOAT_LOG10              177
-#define OP_FLOAT_LOG2               178
-#define OP_FLOAT_LOGN               179
-#define OP_FLOAT_SIN                180
-#define OP_FLOAT_COS                181
-#define OP_FLOAT_TAN                182
-#define OP_FLOAT_SQRT               183
-#define OP_FLOAT_ABS                184
-#define OP_FLOAT_TO_INTEGER         185
-#define OP_FLOAT_TO_COMPLEX         186
-#define OP_FLOAT_TO_STRING          187
-#define OP_FLOAT_FLOOR              188
-#define OP_FLOAT_CEIL               189
-#define OP_FLOAT_ROUND              190
-#define OP_FLOAT_MIN                191
-#define OP_FLOAT_MAX                192
-
-/* Layer 5 — structs, closures, apply */
-#define OP_MAKE_STRUCT       360
-#define OP_STRUCT_P          361
-#define OP_STRUCT_TYPE_P     362
-#define OP_STRUCT_GET        363
-#define OP_STRUCT_GET_IMM    364
-#define OP_STRUCT_SET        365
-#define OP_STRUCT_SET_IMM    366
-#define OP_STRUCT_EQ_P       367
-#define OP_STRUCT_NEQ_P      368
-#define OP_STRUCT_TYPE       369
-#define OP_STRUCT_TYPE_NAME  370
-#define OP_STRUCT_FIELDS     371
-
-/* Layer 4 — complex, string, list, dict, set, range */
-#define OP_COMPLEX_P                200
-#define OP_COMPLEX_EQ_P             201
-#define OP_COMPLEX_NEQ_P            202
-#define OP_COMPLEX_REAL             203
-#define OP_COMPLEX_IMAG             204
-#define OP_COMPLEX_ABS              205
-#define OP_COMPLEX_ADD              206
-#define OP_COMPLEX_SUB              207
-#define OP_COMPLEX_MUL              208
-#define OP_COMPLEX_DIV              209
-#define OP_COMPLEX_NEG              210
-#define OP_COMPLEX_EXP              211
-#define OP_COMPLEX_EXPN             212
-#define OP_COMPLEX_LOG              213
-#define OP_COMPLEX_LOG10            214
-#define OP_COMPLEX_LOGN             215
-#define OP_COMPLEX_SIN              216
-#define OP_COMPLEX_COS              217
-#define OP_COMPLEX_TAN              218
-#define OP_COMPLEX_SQRT             219
-#define OP_COMPLEX_TO_STRING        220
-#define OP_STRING_P                 240
-#define OP_STRING_EQ_P              241
-#define OP_STRING_NEQ_P             242
-#define OP_STRING_LT_P              243
-#define OP_STRING_GT_P              244
-#define OP_STRING_LTE_P             245
-#define OP_STRING_GTE_P             246
-#define OP_STRING_LENGTH            247
-#define OP_STRING_UPCASE            248
-#define OP_STRING_DOWNCASE          249
-#define OP_STRING_TRIM              250
-#define OP_STRING_TRIM_LEFT         251
-#define OP_STRING_TRIM_RIGHT        252
-#define OP_STRING_TO_INTEGER        253
-#define OP_STRING_TO_NUMBER         254
-#define OP_STRING_TO_LIST           255
-#define OP_STRING_REF               256
-#define OP_STRING_PREFIX_P          257
-#define OP_STRING_SUFFIX_P          258
-#define OP_STRING_CONCAT            259
-#define OP_STRING_SLICE             260
-#define OP_STRING_REPLACE           261
-#define OP_STRING_INDEX             262
+#define OP_FLOAT_P 160
+#define OP_FLOAT_EQ_P 161
+#define OP_FLOAT_NEQ_P 162
+#define OP_FLOAT_LT_P 163
+#define OP_FLOAT_GT_P 164
+#define OP_FLOAT_LTE_P 165
+#define OP_FLOAT_GTE_P 166
+#define OP_FLOAT_NEG 167
+#define OP_FLOAT_ADD 168
+#define OP_FLOAT_SUB 169
+#define OP_FLOAT_MUL 170
+#define OP_FLOAT_DIV 171
+#define OP_FLOAT_FLOOR_DIV 172
+#define OP_FLOAT_MOD 173
+#define OP_FLOAT_EXP 174
+#define OP_FLOAT_EXPN 175
+#define OP_FLOAT_LOG 176
+#define OP_FLOAT_LOG10 177
+#define OP_FLOAT_LOG2 178
+#define OP_FLOAT_LOGN 179
+#define OP_FLOAT_SIN 180
+#define OP_FLOAT_COS 181
+#define OP_FLOAT_TAN 182
+#define OP_FLOAT_SQRT 183
+#define OP_FLOAT_ABS 184
+#define OP_FLOAT_TO_INTEGER 185
+#define OP_FLOAT_TO_COMPLEX 186
+#define OP_FLOAT_TO_STRING 187
+#define OP_FLOAT_FLOOR 188
+#define OP_FLOAT_CEIL 189
+#define OP_FLOAT_ROUND 190
+#define OP_FLOAT_MIN 191
+#define OP_FLOAT_MAX 192
+#define OP_COMPLEX_P 200
+#define OP_COMPLEX_EQ_P 201
+#define OP_COMPLEX_NEQ_P 202
+#define OP_COMPLEX_REAL 203
+#define OP_COMPLEX_IMAG 204
+#define OP_COMPLEX_ABS 205
+#define OP_COMPLEX_ADD 206
+#define OP_COMPLEX_SUB 207
+#define OP_COMPLEX_MUL 208
+#define OP_COMPLEX_DIV 209
+#define OP_COMPLEX_NEG 210
+#define OP_COMPLEX_EXP 211
+#define OP_COMPLEX_EXPN 212
+#define OP_COMPLEX_LOG 213
+#define OP_COMPLEX_LOG10 214
+#define OP_COMPLEX_LOGN 215
+#define OP_COMPLEX_SIN 216
+#define OP_COMPLEX_COS 217
+#define OP_COMPLEX_TAN 218
+#define OP_COMPLEX_SQRT 219
+#define OP_COMPLEX_TO_STRING 220
+#define OP_STRING_P 240
+#define OP_STRING_EQ_P 241
+#define OP_STRING_NEQ_P 242
+#define OP_STRING_LT_P 243
+#define OP_STRING_GT_P 244
+#define OP_STRING_LTE_P 245
+#define OP_STRING_GTE_P 246
+#define OP_STRING_LENGTH 247
+#define OP_STRING_UPCASE 248
+#define OP_STRING_DOWNCASE 249
+#define OP_STRING_TRIM 250
+#define OP_STRING_TRIM_LEFT 251
+#define OP_STRING_TRIM_RIGHT 252
+#define OP_STRING_TO_INTEGER 253
+#define OP_STRING_TO_NUMBER 254
+#define OP_STRING_TO_LIST 255
+#define OP_STRING_REF 256
+#define OP_STRING_PREFIX_P 257
+#define OP_STRING_SUFFIX_P 258
+#define OP_STRING_CONCAT 259
+#define OP_STRING_SLICE 260
+#define OP_STRING_REPLACE 261
+#define OP_STRING_INDEX 262
 #define OP_STRING_TO_INTEGER_CODEPOINT 263
-#define OP_DICT_P                   280
-#define OP_DICT_EQ_P                281
-#define OP_DICT_NEQ_P               282
-#define OP_DICT_KEYS                283
-#define OP_DICT_VALUES              284
-#define OP_DICT_LENGTH              285
-#define OP_DICT_HAS_P               286
-#define OP_DICT_REMOVE              287
-#define OP_DICT_MERGE               288
-#define OP_DICT_SET                 289
-#define OP_DICT_GET                 290
-#define OP_LIST_P                   300
-#define OP_LIST_EQ_P                301
-#define OP_LIST_NEQ_P               302
-#define OP_LIST_PREPEND             303
-#define OP_LIST_APPEND              304
-#define OP_LIST_REVERSE             305
-#define OP_LIST_FIRST               306
-#define OP_LIST_REST                307
-#define OP_LIST_LAST                308
-#define OP_LIST_LENGTH              309
-#define OP_LIST_REF                 310
-#define OP_LIST_NULL_P              311
-#define OP_LIST_MEMBER_P            312
-#define OP_LIST_INDEX               313
-#define OP_LIST_SLICE               314
-#define OP_LIST_REMOVE              315
-#define OP_LIST_CONCAT              316
-#define OP_LIST_TO_STRING           317
-#define OP_LIST_TO_SET              318
-#define OP_SET_P                    340
-#define OP_SET_EQ_P                 341
-#define OP_SET_NEQ_P                342
-#define OP_SET_MEMBER_P             343
-#define OP_SET_ADD                  344
-#define OP_SET_REMOVE               345
-#define OP_SET_LENGTH               346
-#define OP_SET_UNION                347
-#define OP_SET_INTERSECTION         348
-#define OP_SET_DIFFERENCE           349
-#define OP_SET_SUBSET_P             350
-#define OP_SET_TO_LIST              351
-#define OP_RANGE                    380
+#define OP_DICT_P 280
+#define OP_DICT_EQ_P 281
+#define OP_DICT_NEQ_P 282
+#define OP_DICT_KEYS 283
+#define OP_DICT_VALUES 284
+#define OP_DICT_LENGTH 285
+#define OP_DICT_HAS_P 286
+#define OP_DICT_REMOVE 287
+#define OP_DICT_MERGE 288
+#define OP_DICT_SET 289
+#define OP_DICT_GET 290
+#define OP_LIST_P 300
+#define OP_LIST_EQ_P 301
+#define OP_LIST_NEQ_P 302
+#define OP_LIST_PREPEND 303
+#define OP_LIST_APPEND 304
+#define OP_LIST_REVERSE 305
+#define OP_LIST_FIRST 306
+#define OP_LIST_REST 307
+#define OP_LIST_LAST 308
+#define OP_LIST_LENGTH 309
+#define OP_LIST_REF 310
+#define OP_LIST_NULL_P 311
+#define OP_LIST_MEMBER_P 312
+#define OP_LIST_INDEX 313
+#define OP_LIST_SLICE 314
+#define OP_LIST_REMOVE 315
+#define OP_LIST_CONCAT 316
+#define OP_LIST_TO_STRING 317
+#define OP_LIST_TO_SET 318
+#define OP_SET_P 340
+#define OP_SET_EQ_P 341
+#define OP_SET_NEQ_P 342
+#define OP_SET_MEMBER_P 343
+#define OP_SET_ADD 344
+#define OP_SET_REMOVE 345
+#define OP_SET_LENGTH 346
+#define OP_SET_UNION 347
+#define OP_SET_INTERSECTION 348
+#define OP_SET_DIFFERENCE 349
+#define OP_SET_SUBSET_P 350
+#define OP_SET_TO_LIST 351
+#define OP_MAKE_STRUCT 360
+#define OP_STRUCT_P 361
+#define OP_STRUCT_TYPE_P 362
+#define OP_STRUCT_GET 363
+#define OP_STRUCT_GET_IMM 364
+#define OP_STRUCT_SET 365
+#define OP_STRUCT_SET_IMM 366
+#define OP_STRUCT_EQ_P 367
+#define OP_STRUCT_NEQ_P 368
+#define OP_STRUCT_TYPE 369
+#define OP_STRUCT_TYPE_NAME 370
+#define OP_STRUCT_FIELDS 371
+#define OP_RANGE 380
 
 /*
  * Shim state — definitions of the externs declared in menai_vm_shim.h
@@ -295,30 +289,30 @@ static PyObject *fn_to_slow = NULL;
  * in the hot loop use PyObject_CallMethodOneArg/NoArgs instead of the
  * format-string-parsing PyObject_CallMethod.
  */
-static PyObject *_str_upper   = NULL;
-static PyObject *_str_lower   = NULL;
-static PyObject *_str_strip   = NULL;
-static PyObject *_str_lstrip  = NULL;
-static PyObject *_str_rstrip  = NULL;
-static PyObject *_str_split   = NULL;
+static PyObject *_str_upper = NULL;
+static PyObject *_str_lower = NULL;
+static PyObject *_str_strip = NULL;
+static PyObject *_str_lstrip = NULL;
+static PyObject *_str_rstrip = NULL;
+static PyObject *_str_split = NULL;
 static PyObject *_str_replace = NULL;
 
 /*
  * Fast type-check macros
  */
-#define IS_MENAI_NONE(o)       (Py_TYPE(o) == Menai_NoneType)
-#define IS_MENAI_BOOLEAN(o)    (Py_TYPE(o) == Menai_BooleanType)
-#define IS_MENAI_INTEGER(o)    (Py_TYPE(o) == Menai_IntegerType)
-#define IS_MENAI_FLOAT(o)      (Py_TYPE(o) == Menai_FloatType)
-#define IS_MENAI_COMPLEX(o)    (Py_TYPE(o) == Menai_ComplexType)
-#define IS_MENAI_STRING(o)     (Py_TYPE(o) == Menai_StringType)
-#define IS_MENAI_SYMBOL(o)     (Py_TYPE(o) == Menai_SymbolType)
-#define IS_MENAI_LIST(o)       (Py_TYPE(o) == Menai_ListType)
-#define IS_MENAI_DICT(o)       (Py_TYPE(o) == Menai_DictType)
-#define IS_MENAI_SET(o)        (Py_TYPE(o) == Menai_SetType)
-#define IS_MENAI_FUNCTION(o)   (Py_TYPE(o) == Menai_FunctionType)
+#define IS_MENAI_NONE(o) (Py_TYPE(o) == Menai_NoneType)
+#define IS_MENAI_BOOLEAN(o) (Py_TYPE(o) == Menai_BooleanType)
+#define IS_MENAI_INTEGER(o) (Py_TYPE(o) == Menai_IntegerType)
+#define IS_MENAI_FLOAT(o) (Py_TYPE(o) == Menai_FloatType)
+#define IS_MENAI_COMPLEX(o) (Py_TYPE(o) == Menai_ComplexType)
+#define IS_MENAI_STRING(o) (Py_TYPE(o) == Menai_StringType)
+#define IS_MENAI_SYMBOL(o) (Py_TYPE(o) == Menai_SymbolType)
+#define IS_MENAI_LIST(o) (Py_TYPE(o) == Menai_ListType)
+#define IS_MENAI_DICT(o) (Py_TYPE(o) == Menai_DictType)
+#define IS_MENAI_SET(o) (Py_TYPE(o) == Menai_SetType)
+#define IS_MENAI_FUNCTION(o) (Py_TYPE(o) == Menai_FunctionType)
 #define IS_MENAI_STRUCTTYPE(o) (Py_TYPE(o) == Menai_StructTypeType)
-#define IS_MENAI_STRUCT(o)     (Py_TYPE(o) == Menai_StructType)
+#define IS_MENAI_STRUCT(o) (Py_TYPE(o) == Menai_StructType)
 
 /*
  * Wrap an already-deduplicated elements tuple as a MenaiSet, stealing the
@@ -679,12 +673,12 @@ menai_vm_shim_init(void)
     if (fetch_callable(vc, "convert_value", &fn_convert_value) < 0) goto fail;
     if (fetch_callable(vc, "to_slow", &fn_to_slow) < 0) goto fail;
 
-    _str_upper   = PyUnicode_InternFromString("upper");
-    _str_lower   = PyUnicode_InternFromString("lower");
-    _str_strip   = PyUnicode_InternFromString("strip");
-    _str_lstrip  = PyUnicode_InternFromString("lstrip");
-    _str_rstrip  = PyUnicode_InternFromString("rstrip");
-    _str_split   = PyUnicode_InternFromString("split");
+    _str_upper = PyUnicode_InternFromString("upper");
+    _str_lower = PyUnicode_InternFromString("lower");
+    _str_strip = PyUnicode_InternFromString("strip");
+    _str_lstrip = PyUnicode_InternFromString("lstrip");
+    _str_rstrip = PyUnicode_InternFromString("rstrip");
+    _str_split = PyUnicode_InternFromString("split");
     _str_replace = PyUnicode_InternFromString("replace");
     if (!_str_upper || !_str_lower || !_str_strip ||
         !_str_lstrip || !_str_rstrip || !_str_split || !_str_replace)
@@ -717,25 +711,18 @@ fail:
  * ------------------------------------------------------------------------- */
 
 typedef struct {
-    PyObject       *code_obj;         /* CodeObject — kept alive, not dereferenced in loop */
-    PyObject       *constants;        /* borrowed ref — list of fast constant values */
-    PyObject       *names;            /* borrowed ref — list of global name strings */
-    PyObject       *closure_caches;   /* borrowed ref — list of child _closure_cache tuples */
-    uint64_t       *instrs;           /* raw C pointer into the array.array buffer */
-    int             code_len;
-    int             local_count;
-    int             ip;
-    int             base;
-    int             return_dest;
-    int             is_sentinel;
+    PyObject *code_obj;         /* CodeObject — kept alive, not dereferenced in loop */
+    PyObject *constants;        /* borrowed ref — list of fast constant values */
+    PyObject *names;            /* borrowed ref — list of global name strings */
+    PyObject *closure_caches;   /* borrowed ref — list of child _closure_cache tuples */
+    uint64_t *instrs;           /* raw C pointer into the array.array buffer */
+    int code_len;
+    int local_count;
+    int ip;
+    int base;
+    int return_dest;
+    int is_sentinel;
 } Frame;
-
-/* ---------------------------------------------------------------------------
- * CodeObject attribute helpers
- *
- * All read once at frame-setup time, not in the hot loop.
- * Return -1 and set exception on failure.
- * ------------------------------------------------------------------------- */
 
 static int
 code_get_int(PyObject *code, const char *name, int *out)
@@ -749,7 +736,10 @@ code_get_int(PyObject *code, const char *name, int *out)
     return 0;
 }
 
-/* frame_setup — slow path used only for the top-level CodeObject at execute
+/*
+ * frame_setup
+ *
+ * Slow path used only for the top-level CodeObject at execute start
  * start.  All subsequent calls go through frame_setup_func which reads
  * pre-cached fields directly from MenaiFunction_Object.
  */
@@ -1023,8 +1013,7 @@ call_setup(Frame *new_frame, PyObject *func_obj,
         int min_arity = param_count - 1;
         if (arity < min_arity) {
             PyObject *name = func->name;
-            const char *fname = (name != NULL && name != Py_None)
-                                ? PyUnicode_AsUTF8(name) : "<lambda>";
+            const char *fname = (name != NULL && name != Py_None) ? PyUnicode_AsUTF8(name) : "<lambda>";
             menai_raise_eval_errorf(
                 "Function '%s' expects at least %d argument%s, got %d",
                 fname, min_arity, min_arity == 1 ? "" : "s", arity);
@@ -1058,24 +1047,7 @@ call_setup(Frame *new_frame, PyObject *func_obj,
     Py_ssize_t ncap = PyList_GET_SIZE(captured);
     for (Py_ssize_t i = 0; i < ncap; i++) {
         PyObject *cv = PyList_GET_ITEM(captured, i);
-        /* Most captures are already fast C types (set by OP_PATCH_CLOSURE
-            * from registers).  Prelude closures may hold slow-world values
-            * that were not converted at load time.  Check with IS_MENAI_*
-            * first to avoid a Python call in the common fast case. */
-        PyTypeObject *cvt = Py_TYPE(cv);
-        if (cvt == Menai_NoneType     || cvt == Menai_BooleanType  ||
-            cvt == Menai_IntegerType  || cvt == Menai_FloatType    ||
-            cvt == Menai_ComplexType  || cvt == Menai_StringType   ||
-            cvt == Menai_SymbolType   || cvt == Menai_ListType     ||
-            cvt == Menai_DictType     || cvt == Menai_SetType      ||
-            cvt == Menai_FunctionType || cvt == Menai_StructTypeType ||
-            cvt == Menai_StructType) {
-            reg_set_borrow(regs, callee_base + param_count + (int)i, cv);
-        } else {
-            PyObject *fast_cv = PyObject_CallOneArg(fn_convert_value, cv);
-            if (fast_cv == NULL) return -1;
-            reg_set_own(regs, callee_base + param_count + (int)i, fast_cv);
-        }
+        reg_set_borrow(regs, callee_base + param_count + (int)i, cv);
     }
 
     frame_setup_func(new_frame, func, bytecode, callee_base, return_dest);
@@ -4453,33 +4425,30 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     PyObject *constants_dict;
     PyObject *prelude_dict;
 
-    if (!PyArg_ParseTuple(args, "OOO", &code, &constants_dict, &prelude_dict))
-        return NULL;
+    if (!PyArg_ParseTuple(args, "OOO", &code, &constants_dict, &prelude_dict)) return NULL;
 
     /* Convert compiler-world constants in the code object tree to fast C types. */
     PyObject *_tmp = PyObject_CallOneArg(fn_convert_code_object, code);
-    if (_tmp == NULL)
-        return NULL;
+    if (_tmp == NULL) return NULL;
     Py_DECREF(_tmp);
 
     /* Convert constants dict (pi, e, etc.) from slow to fast types. */
     PyObject *fast_constants = PyDict_New();
     if (fast_constants == NULL) return NULL;
-    {
-        PyObject *ckey, *cval;
-        Py_ssize_t cpos = 0;
-        while (PyDict_Next(constants_dict, &cpos, &ckey, &cval)) {
-            PyObject *converted = PyObject_CallOneArg(fn_convert_value, cval);
-            if (converted == NULL) {
-                Py_DECREF(fast_constants);
-                return NULL;
-            }
-            int ok = PyDict_SetItem(fast_constants, ckey, converted);
-            Py_DECREF(converted);
-            if (ok < 0) {
-                Py_DECREF(fast_constants);
-                return NULL;
-            }
+
+    PyObject *ckey, *cval;
+    Py_ssize_t cpos = 0;
+    while (PyDict_Next(constants_dict, &cpos, &ckey, &cval)) {
+        PyObject *converted = PyObject_CallOneArg(fn_convert_value, cval);
+        if (converted == NULL) {
+            Py_DECREF(fast_constants);
+            return NULL;
+        }
+        int ok = PyDict_SetItem(fast_constants, ckey, converted);
+        Py_DECREF(converted);
+        if (ok < 0) {
+            Py_DECREF(fast_constants);
+            return NULL;
         }
     }
 
