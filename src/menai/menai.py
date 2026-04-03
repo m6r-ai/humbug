@@ -1139,6 +1139,37 @@ class Menai:
         # Load prelude once at initialization
         self._prelude = self._load_prelude(self.compiler, self.vm)
 
+    def compile(self, expression: str) -> 'CodeObject':
+        """
+        Compile a Menai expression to bytecode without executing it.
+
+        The returned CodeObject can be passed to `execute_raw` for
+        execution without re-compilation, allowing the compilation cost to
+        be separated from execution cost (useful for benchmarking).
+
+        Args:
+            expression: Menai expression string to compile
+
+        Returns:
+            Compiled bytecode ready for execution
+        """
+        return self.compiler.compile(expression)
+
+    def execute_raw(self, code: 'CodeObject') -> 'MenaiValue':
+        """
+        Execute compiled bytecode and return the raw MenaiValue.
+
+        Unlike `evaluate`, this does not convert the result to
+        Python types via to_python(), avoiding the traversal overhead.
+
+        Args:
+            code: Compiled code object (from `compile`)
+
+        Returns:
+            The result as a raw MenaiValue
+        """
+        return self.vm.execute(code, self.CONSTANTS, self._prelude)
+
     def _evaluate_raw(self, expression: str) -> 'MenaiValue':
         """
         Evaluate an Menai expression without error handling.
