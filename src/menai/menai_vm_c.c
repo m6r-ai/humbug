@@ -1023,7 +1023,10 @@ call_setup(Frame *new_frame, PyObject *func_obj,
         int rest_count = arity - min_arity;
         PyObject **rest_arr = rest_count > 0
             ? (PyObject **)PyMem_Malloc(rest_count * sizeof(PyObject *)) : NULL;
-        if (rest_count > 0 && !rest_arr) { PyErr_NoMemory(); return -1; }
+        if (rest_count > 0 && !rest_arr) {
+            PyErr_NoMemory();
+            return -1;
+        }
         for (int k = 0; k < rest_count; k++) {
             rest_arr[k] = regs[callee_base + min_arity + k];
             Py_INCREF(rest_arr[k]);
@@ -3147,7 +3150,11 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t stl_n = PyList_GET_SIZE(parts);
             PyObject **stl2_arr = stl_n > 0
                 ? (PyObject **)PyMem_Malloc(stl_n * sizeof(PyObject *)) : NULL;
-            if (stl_n > 0 && !stl2_arr) { Py_DECREF(parts); PyErr_NoMemory(); goto error; }
+            if (stl_n > 0 && !stl2_arr) {
+                Py_DECREF(parts);
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < stl_n; i++) {
                 stl2_arr[i] = PyList_GET_ITEM(parts, i);
                 Py_INCREF(stl2_arr[i]);
@@ -3222,7 +3229,10 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t rest_n = lst_r->length - 1;
             PyObject **rest_arr = rest_n > 0
                 ? (PyObject **)PyMem_Malloc(rest_n * sizeof(PyObject *)) : NULL;
-            if (rest_n > 0 && !rest_arr) { PyErr_NoMemory(); goto error; }
+            if (rest_n > 0 && !rest_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < rest_n; i++) {
                 rest_arr[i] = lst_r->elements[i + 1];
                 Py_INCREF(rest_arr[i]);
@@ -3271,7 +3281,10 @@ execute_loop(PyObject *code, PyObject *globals,
             MenaiList_Object *lst_pre = (MenaiList_Object *)a;
             Py_ssize_t n = lst_pre->length;
             PyObject **pre_arr = (PyObject **)PyMem_Malloc((n + 1) * sizeof(PyObject *));
-            if (!pre_arr) { PyErr_NoMemory(); goto error; }
+            if (!pre_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             pre_arr[0] = item;
             Py_INCREF(item);
             for (Py_ssize_t i = 0; i < n; i++) {
@@ -3290,7 +3303,10 @@ execute_loop(PyObject *code, PyObject *globals,
             MenaiList_Object *lst_app = (MenaiList_Object *)a;
             Py_ssize_t n = lst_app->length;
             PyObject **app_arr = (PyObject **)PyMem_Malloc((n + 1) * sizeof(PyObject *));
-            if (!app_arr) { PyErr_NoMemory(); goto error; }
+            if (!app_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < n; i++) {
                 app_arr[i] = lst_app->elements[i];
                 Py_INCREF(app_arr[i]);
@@ -3310,7 +3326,10 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t n = lst_rev->length;
             PyObject **rev_arr = n > 0
                 ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-            if (n > 0 && !rev_arr) { PyErr_NoMemory(); goto error; }
+            if (n > 0 && !rev_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < n; i++) {
                 rev_arr[i] = lst_rev->elements[n - 1 - i];
                 Py_INCREF(rev_arr[i]);
@@ -3331,7 +3350,10 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t nc = na + nb;
             PyObject **cat_arr = nc > 0
                 ? (PyObject **)PyMem_Malloc(nc * sizeof(PyObject *)) : NULL;
-            if (nc > 0 && !cat_arr) { PyErr_NoMemory(); goto error; }
+            if (nc > 0 && !cat_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < na; i++) {
                 cat_arr[i] = lst_ca->elements[i];
                 Py_INCREF(cat_arr[i]);
@@ -3354,7 +3376,10 @@ execute_loop(PyObject *code, PyObject *globals,
             for (Py_ssize_t i = 0; i < lst_mem->length; i++) {
                 int eq = PyObject_RichCompareBool(lst_mem->elements[i], item, Py_EQ);
                 if (eq < 0) goto error;
-                if (eq) { mem_found = 1; break; }
+                if (eq) {
+                    mem_found = 1;
+                    break;
+                }
             }
             bool_store(regs, base + dest, mem_found);
             break;
@@ -3421,7 +3446,10 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t sl_n = end - start;
             PyObject **sl_arr = sl_n > 0
                 ? (PyObject **)PyMem_Malloc(sl_n * sizeof(PyObject *)) : NULL;
-            if (sl_n > 0 && !sl_arr) { PyErr_NoMemory(); goto error; }
+            if (sl_n > 0 && !sl_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < sl_n; i++) {
                 sl_arr[i] = lst_sl->elements[start + i];
                 Py_INCREF(sl_arr[i]);
@@ -3446,7 +3474,10 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             PyObject **rm_arr = keep > 0
                 ? (PyObject **)PyMem_Malloc(keep * sizeof(PyObject *)) : NULL;
-            if (keep > 0 && !rm_arr) { PyErr_NoMemory(); goto error; }
+            if (keep > 0 && !rm_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             Py_ssize_t j = 0;
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *e = lst_rm->elements[i];
@@ -3565,7 +3596,10 @@ execute_loop(PyObject *code, PyObject *globals,
                 Py_ssize_t n = PyTuple_GET_SIZE(pairs);
                 PyObject **dk_arr = n > 0
                     ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-                if (n > 0 && !dk_arr) { PyErr_NoMemory(); goto error; }
+                if (n > 0 && !dk_arr) {
+                    PyErr_NoMemory();
+                    goto error;
+                }
                 for (Py_ssize_t i = 0; i < n; i++) {
                     PyObject *pair = PyTuple_GET_ITEM(pairs, i);
                     PyObject *k = PyTuple_GET_ITEM(pair, 0);
@@ -3586,7 +3620,10 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t n = PyTuple_GET_SIZE(pairs);
             PyObject **dv_arr = n > 0
                 ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-            if (n > 0 && !dv_arr) { PyErr_NoMemory(); goto error; }
+            if (n > 0 && !dv_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *pair = PyTuple_GET_ITEM(pairs, i);
                 PyObject *v = PyTuple_GET_ITEM(pair, 1);
@@ -4146,7 +4183,10 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t set_n = PyTuple_GET_SIZE(set_elems);
             PyObject **stl_arr = set_n > 0
                 ? (PyObject **)PyMem_Malloc(set_n * sizeof(PyObject *)) : NULL;
-            if (set_n > 0 && !stl_arr) { PyErr_NoMemory(); goto error; }
+            if (set_n > 0 && !stl_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < set_n; i++) {
                 stl_arr[i] = PyTuple_GET_ITEM(set_elems, i);
                 Py_INCREF(stl_arr[i]);
@@ -4179,7 +4219,10 @@ execute_loop(PyObject *code, PyObject *globals,
             else if (step < 0 && end < start) n = (start - end - step - 1) / (-step);
             PyObject **rng_arr = n > 0
                 ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-            if (n > 0 && !rng_arr) { PyErr_NoMemory(); goto error; }
+            if (n > 0 && !rng_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             long val = start;
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *iv = PyLong_FromLong(val);
@@ -4381,7 +4424,10 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t n = PyTuple_GET_SIZE(field_names);
             PyObject **sf_arr = n > 0
                 ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-            if (n > 0 && !sf_arr) { PyErr_NoMemory(); goto error; }
+            if (n > 0 && !sf_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *fname = PyTuple_GET_ITEM(field_names, i);
                 /* Wrap in MenaiSymbol */
