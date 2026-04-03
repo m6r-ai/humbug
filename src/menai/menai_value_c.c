@@ -1131,9 +1131,9 @@ menai_function_alloc(PyObject *cache, PyObject *bytecode, PyObject *captured_val
     self->closure_caches = (_cc != Py_None && PyList_Check(_cc)) ? _cc : NULL;
     /* borrowed — bytecode (which we own) keeps child._code_caches alive */
 
-    self->instrs     = (uint64_t *)PyLong_AsVoidPtr(PyTuple_GET_ITEM(cache, 11));
+    self->instrs = (uint64_t *)PyLong_AsVoidPtr(PyTuple_GET_ITEM(cache, 11));
     self->instrs_obj = instrs_obj;  /* borrowed — bytecode keeps alive */
-    self->code_len   = (int)PyLong_AsLong(PyTuple_GET_ITEM(cache, 12));
+    self->code_len = (int)PyLong_AsLong(PyTuple_GET_ITEM(cache, 12));
 
     return (PyObject *)self;
 }
@@ -2486,17 +2486,36 @@ menai_convert_value(PyObject *src)
             Py_XDECREF(is_var);
             return NULL;
         }
-        /* Copy captured_values as a plain list — not recursively converted
-         * here; call_setup converts lazily to handle letrec cycles. */
-        PyObject *cap_list = PySequence_List(cap);
-        Py_DECREF(cap);
+        /* Recursively convert captured_values to fast types.
+         * Prelude closures are fully-formed (no letrec None placeholders),
+         * so eager conversion is safe and eliminates the slow-type check
+         * in call_setup's hot path. */
+        Py_ssize_t ncap = PyList_GET_SIZE(cap);
+        PyObject *cap_list = PyList_New(ncap);
         if (!cap_list) {
+            Py_DECREF(cap);
             Py_DECREF(params);
             Py_DECREF(name);
             Py_DECREF(bc);
             Py_DECREF(is_var);
             return NULL;
         }
+        for (Py_ssize_t ci = 0; ci < ncap; ci++) {
+            PyObject *fast_cv = menai_convert_value(PyList_GET_ITEM(cap, ci));
+            if (!fast_cv) {
+                for (Py_ssize_t cj = 0; cj < ci; cj++)
+                    Py_DECREF(PyList_GET_ITEM(cap_list, cj));
+                Py_DECREF(cap);
+                Py_DECREF(cap_list);
+                Py_DECREF(params);
+                Py_DECREF(name);
+                Py_DECREF(bc);
+                Py_DECREF(is_var);
+                return NULL;
+            }
+            PyList_SET_ITEM(cap_list, ci, fast_cv);
+        }
+        Py_DECREF(cap);
         int iv = PyObject_IsTrue(is_var);
         Py_DECREF(is_var);
         if (iv < 0) {
