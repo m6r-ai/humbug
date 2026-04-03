@@ -399,9 +399,10 @@ class TerminalTab(TabBase):
         self._create_tracked_task(self._read_loop())
 
         # Log transfer for debugging
+        pid = self._terminal_process.get_process_id()
         self._logger.debug(
             "Transferred process %d from tab %s to tab %s",
-            self._terminal_process.get_process_id(),
+            pid if pid else -1,
             source_tab._tab_id,
             self._tab_id
         )

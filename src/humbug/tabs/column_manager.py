@@ -963,18 +963,22 @@ class ColumnManager(QWidget):
         current_column_number = self._tab_columns.index(protected_column) if \
             protected_column else self._tab_columns.index(self._active_column)
 
-        # If there's only one column, create a new one to the right
-        if len(self._tab_columns) == 1:
-            new_column = self._create_column(1)
+        # We want to use the column to the right of the protected tab if possible.
+        num_columns = len(self._tab_columns)
+        if current_column_number == (num_columns - 1) and num_columns < 6:
+            new_column = self._create_column(num_columns)
+            num_columns += 1
+            print("Created new column at index", num_columns - 1, "because protected column is at the end")
 
             # Set column sizes
             width = self.width()
-            self._column_splitter.setSizes([width // 2, width // 2])
+            sizes = [(width // num_columns) for _ in range(num_columns)]
+            self._column_splitter.setSizes(sizes)
 
             return new_column
 
         # Try to use the column to the right if possible
-        if current_column_number < len(self._tab_columns) - 1:
+        if current_column_number < num_columns - 1:
             return self._tab_columns[current_column_number + 1]
 
         # Otherwise use the column to the left
