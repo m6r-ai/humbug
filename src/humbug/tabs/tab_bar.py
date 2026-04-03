@@ -1,8 +1,8 @@
 from typing import cast
 
-from PySide6.QtWidgets import QTabBar, QWidget
-from PySide6.QtCore import QEvent, QObject
-from PySide6.QtGui import QHoverEvent, QCursor, QPainter, QPaintEvent, QPen
+from PySide6.QtWidgets import QTabBar, QWidget, QToolButton
+from PySide6.QtCore import QEvent, QObject, Qt, QTimer
+from PySide6.QtGui import QHoverEvent, QCursor, QPainter, QPaintEvent, QPen, QWheelEvent
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
@@ -14,12 +14,23 @@ class TabBar(QTabBar):
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
+
+        # Initialize all attributes before any Qt calls that may fire events
+        self.current_hovered_tab = -1
+        self._style_manager = StyleManager()
+        self._pending_scroll_steps = 0
+        self._scroll_pixel_accumulator = 0
+        self._scroll_pixels_per_step = 36
+
         self.setExpanding(False)
         self.setDocumentMode(True)
         self.setMouseTracking(True)
-        self.current_hovered_tab = -1
+        self.setUsesScrollButtons(True)
         self.installEventFilter(self)
-        self._style_manager = StyleManager()
+        self._tab_scroll_timer = QTimer(self)
+        self._tab_scroll_timer.setInterval(26)
+        self._tab_scroll_timer.timeout.connect(self._perform_smooth_tab_scroll)
+        self.apply_style()
 
     def update_tab_size(self) -> None:
         """
@@ -27,6 +38,119 @@ class TabBar(QTabBar):
         """
         self.adjustSize()
         self.updateGeometry()
+
+    def apply_style(self) -> None:
+        """Apply styling to the tab bar. Native scroll buttons are hidden; nav buttons live in the corner widget."""
+        self.setStyleSheet(f"""
+            QTabBar {{
+                border: none;
+                margin: 0px;
+                padding: 6px 8px 4px 8px;
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
+            }}
+            QTabBar::tab {{
+                border: none;
+                margin: 0px 4px 0px 0px;
+                padding: 4px 0px 6px 0px;
+            }}
+            QTabBar::scroller {{
+                width: 0px;
+            }}
+        """)
+        self._hide_native_scroll_buttons()
+
+    def _hide_native_scroll_buttons(self) -> None:
+        """Hide the native scroll buttons — scrolling is driven by the corner nav widget."""
+        for button in self.findChildren(QToolButton):
+            if button.arrowType() in (Qt.ArrowType.LeftArrow, Qt.ArrowType.RightArrow):
+                button.hide()
+
+    def _scroll_tabs(self, direction: int) -> bool:
+        """Scroll the tab strip by clicking the hidden native arrow buttons."""
+        arrow_type = Qt.ArrowType.RightArrow if direction > 0 else Qt.ArrowType.LeftArrow
+        for button in self.findChildren(QToolButton):
+            if button.arrowType() != arrow_type:
+                continue
+            if not button.isEnabled():
+                continue
+            button.click()
+            return True
+        return False
+
+    def scroll_tabs(self, direction: int) -> None:
+        """Public method for the corner nav widget to trigger scrolling. direction: -1 left, +1 right."""
+        self._queue_tab_scroll(direction)
+
+    def _queue_tab_scroll(self, steps: int) -> bool:
+        """Queue smooth scrolling of the tab strip."""
+        if steps == 0:
+            return False
+
+        if self._pending_scroll_steps != 0 and ((self._pending_scroll_steps > 0) != (steps > 0)):
+            self._pending_scroll_steps = 0
+
+        self._pending_scroll_steps += steps
+        self._perform_smooth_tab_scroll()
+        if self._pending_scroll_steps != 0:
+            self._tab_scroll_timer.start()
+
+        return True
+
+    def _perform_smooth_tab_scroll(self) -> None:
+        """Advance queued tab scrolling in small timed steps."""
+        if self._pending_scroll_steps == 0:
+            self._tab_scroll_timer.stop()
+            return
+
+        direction = 1 if self._pending_scroll_steps > 0 else -1
+        if not self._scroll_tabs(direction):
+            self._pending_scroll_steps = 0
+            self._tab_scroll_timer.stop()
+            return
+
+        self._pending_scroll_steps -= direction
+        if self._pending_scroll_steps == 0:
+            self._tab_scroll_timer.stop()
+
+    def wheelEvent(self, event: QWheelEvent) -> None:  # type: ignore[override]
+        """Use wheel or trackpad gestures to scroll the tab strip without showing a scrollbar."""
+        pixel_delta = event.pixelDelta()
+        angle_delta = event.angleDelta()
+
+        # Trackpad: use pixel-level accumulator for proportional, smooth scrolling
+        if pixel_delta.x() != 0 or pixel_delta.y() != 0:
+            px = pixel_delta.x() if pixel_delta.x() != 0 else pixel_delta.y()
+            self._scroll_pixel_accumulator += px
+            step_count = int(self._scroll_pixel_accumulator / self._scroll_pixels_per_step)
+            if step_count != 0:
+                self._scroll_pixel_accumulator -= step_count * self._scroll_pixels_per_step
+                step_count = max(-5, min(5, step_count))
+                if self._queue_tab_scroll(-step_count):
+                    event.accept()
+                    return
+            else:
+                event.accept()
+                return
+
+        # Mouse wheel: use angle delta
+        delta = angle_delta.x()
+        if delta == 0:
+            delta = angle_delta.y()
+
+        if delta != 0:
+            step_count = max(1, min(3, abs(delta) // 120))
+            if self._queue_tab_scroll(step_count if delta < 0 else -step_count):
+                event.accept()
+                return
+
+        super().wheelEvent(event)
+
+    def event(self, event: QEvent) -> bool:
+        """Re-hide native scroll buttons when Qt recreates them."""
+        handled = super().event(event)
+        if event.type() in (QEvent.Type.Show, QEvent.Type.LayoutRequest, QEvent.Type.ChildAdded):
+            self._hide_native_scroll_buttons()
+        return handled
 
     def set_tab_state(self, index: int, is_current: bool, is_updated: bool, is_active_column: bool) -> None:
         """

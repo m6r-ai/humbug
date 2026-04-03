@@ -2036,40 +2036,8 @@ class ColumnManager(QWidget):
 
     def _apply_tab_bar_style(self, tab_bar: QTabBar) -> None:
         """Apply styling to a specific tab bar."""
-        tab_bar.setStyleSheet(f"""
-            QTabBar {{
-                border: none;
-                margin: 0px;
-                padding: 6px 8px 4px 8px;
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
-            }}
-            QTabBar::tab {{
-                border: none;
-                margin: 0px 4px 0px 0px;
-                padding: 4px 0px 6px 0px;
-            }}
-            QTabBar::scroller {{
-                width: 28px;
-            }}
-            QTabBar QToolButton {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
-                border: 1px solid {self._style_manager.get_color_str(ColorRole.MENU_BORDER)};
-                border-radius: 9px;
-            }}
-            QTabBar QToolButton:hover {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
-            }}
-            QTabBar QToolButton::right-arrow {{
-                image: url({self._style_manager.get_icon_path('arrow-right')});
-                width: 12px;
-                height: 12px;
-            }}
-            QTabBar QToolButton::left-arrow {{
-                image: url({self._style_manager.get_icon_path('arrow-left')});
-                width: 12px;
-                height: 12px;
-            }}
-        """)
+        if isinstance(tab_bar, TabBar):
+            tab_bar.apply_style()
 
     def _apply_all_tab_bar_styles(self) -> None:
         """Apply styling to all tab bars in all columns."""

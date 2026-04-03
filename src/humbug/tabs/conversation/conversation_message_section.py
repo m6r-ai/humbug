@@ -103,11 +103,13 @@ class ConversationMessageSection(QFrame):
 
             # Add Copy button with icon
             self._copy_button = QToolButton()
+            self._copy_button.setCursor(Qt.CursorShape.PointingHandCursor)
             self._copy_button.clicked.connect(self._copy_all_content)
             self._header_layout.addWidget(self._copy_button)
 
             # Add Save As button with icon
             self._save_as_button = QToolButton()
+            self._save_as_button.setCursor(Qt.CursorShape.PointingHandCursor)
             self._save_as_button.clicked.connect(self._save_as)
             self._header_layout.addWidget(self._save_as_button)
 
@@ -416,14 +418,17 @@ class ConversationMessageSection(QFrame):
         icon_base_size = 14
         icon_scaled_size = int(icon_base_size * zoom_factor)
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
+        button_size = max(24, int(30 * zoom_factor))
 
         if self._copy_button:
             self._copy_button.setIcon(QIcon(self._style_manager.scale_icon("copy", icon_base_size)))
             self._copy_button.setIconSize(icon_size)
+            self._copy_button.setFixedSize(button_size, button_size)
 
         if self._save_as_button:
             self._save_as_button.setIcon(QIcon(self._style_manager.scale_icon("save", icon_base_size)))
             self._save_as_button.setIconSize(icon_size)
+            self._save_as_button.setFixedSize(button_size, button_size)
 
         # Only apply renderer style for MarkdownTextEdit
         if self._renderer is not None and self._content_node is not None:

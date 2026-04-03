@@ -104,11 +104,11 @@ class StyleManager(QObject):
             # Text colours
             # Dark: zinc-100/400/600  |  Light: zinc-950/500/400
             ColorRole.TEXT_PRIMARY: {
-                ColorMode.DARK: "#e5e7eb",
+                ColorMode.DARK: "#ffffff",
                 ColorMode.LIGHT: "#172033"
             },
             ColorRole.TEXT_BRIGHT: {
-                ColorMode.DARK: "#f8fafc",
+                ColorMode.DARK: "#ffffff",
                 ColorMode.LIGHT: "#111827"
             },
             ColorRole.TEXT_HEADING: {
@@ -120,7 +120,7 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#0d47a1"
             },
             ColorRole.TEXT_DISABLED: {
-                ColorMode.DARK: "#8a94a6",
+                ColorMode.DARK: "#ffffff",
                 ColorMode.LIGHT: "#7b8794"
             },
             ColorRole.TEXT_SELECTED: {
@@ -144,7 +144,7 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#2563eb"   # blue-600
             },
             ColorRole.TEXT_INACTIVE: {
-                ColorMode.DARK: "#94a3b8",
+                ColorMode.DARK: "#ffffff",
                 ColorMode.LIGHT: "#667085"
             },
             ColorRole.TEXT_EPHEMERAL: {
@@ -895,6 +895,8 @@ class StyleManager(QObject):
         icon_dir = os.path.expanduser("~/.humbug/icons")
         os.makedirs(icon_dir, exist_ok=True)
 
+        contrast_color = "#ffffff"
+
         # Create collapsed and expanded arrows for both themes
         for mode in ColorMode:
             color = self._colors[ColorRole.TEXT_PRIMARY][mode]
@@ -1108,6 +1110,20 @@ class StyleManager(QObject):
             self._create_active_inactive_theme_icons(True, suffix, color)
             self._create_active_inactive_theme_icons(False, suffix, inactive_color)
 
+        self._write_icon('check-contrast.svg', f'''
+            <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <path stroke="{contrast_color}" stroke-width="6" fill="none"
+                    d="M16,32 L28,44 L48,20" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        ''')
+
+        self._write_icon('close-contrast.svg', f'''
+            <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                <path stroke="{contrast_color}" stroke-width="6" fill="none"
+                    d="M16,16 L48,48 M48,16 L16,48"/>
+            </svg>
+        ''')
+
         # Create the standard application icon for about dialog
         self._write_icon('app-icon.svg', self._create_app_icon_svg('#4040c0', '#ffffff'))
 
@@ -1130,6 +1146,11 @@ class StyleManager(QObject):
         icon_dir = os.path.expanduser("~/.humbug/icons")
         theme = "dark" if self._color_mode == ColorMode.DARK else "light"
         return Path(os.path.join(icon_dir, f"{name}-{theme}.svg")).as_posix()
+
+    def get_static_icon_path(self, name: str) -> str:
+        """Get the path to a non-themed icon."""
+        icon_dir = os.path.expanduser("~/.humbug/icons")
+        return Path(os.path.join(icon_dir, f"{name}.svg")).as_posix()
 
     def scale_icon(self, icon_name: str, target_size: int) -> QPixmap:
         """
@@ -1349,6 +1370,45 @@ class StyleManager(QObject):
             }}
         """
 
+    def get_scrollbar_stylesheet(self, selector: str = "QScrollBar") -> str:
+        """Get the shared scrollbar stylesheet for the given selector prefix."""
+        scrollbar_size = 10
+        handle_minimum = 18
+        border_radius = scrollbar_size // 2
+
+        return f"""
+            {selector}:vertical {{
+                background-color: {self.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                width: {scrollbar_size}px;
+                border-radius: {border_radius}px;
+            }}
+            {selector}:horizontal {{
+                background-color: {self.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                height: {scrollbar_size}px;
+                border-radius: {border_radius}px;
+            }}
+            {selector}::handle:vertical {{
+                background-color: {self.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-height: {handle_minimum}px;
+                border-radius: {border_radius}px;
+            }}
+            {selector}::handle:horizontal {{
+                background-color: {self.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-width: {handle_minimum}px;
+                border-radius: {border_radius}px;
+            }}
+            {selector}::add-page:vertical, {selector}::sub-page:vertical,
+            {selector}::add-page:horizontal, {selector}::sub-page:horizontal {{
+                background: none;
+            }}
+            {selector}::add-line:vertical, {selector}::sub-line:vertical {{
+                height: 0px;
+            }}
+            {selector}::add-line:horizontal, {selector}::sub-line:horizontal {{
+                width: 0px;
+            }}
+        """
+
     def get_dialog_stylesheet(self) -> str:
         """
         Get a complete stylesheet for dialog windows.
@@ -1465,7 +1525,7 @@ class StyleManager(QObject):
             QCheckBox::indicator:checked {{
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
                 border: 1px solid {self.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
-                image: url({self.get_icon_path('check')});
+                image: url({self.get_static_icon_path('check-contrast')});
             }}
             QCheckBox:disabled {{
                 color: {self.get_color_str(ColorRole.TEXT_DISABLED)};
@@ -1615,20 +1675,5 @@ class StyleManager(QObject):
                 border: 1px solid {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
             }}
 
-            QScrollBar:vertical {{
-                background-color: {self.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-                border-radius: 6px;
-            }}
-            QScrollBar::handle:vertical {{
-                background-color: {self.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-                border-radius: 6px;
-            }}
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
+            {self.get_scrollbar_stylesheet()}
         """

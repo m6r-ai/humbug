@@ -1756,24 +1756,7 @@ class ConversationWidget(QWidget):
                 color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
             }}
 
-            QScrollBar:vertical {{
-                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 6px;
-                border-radius: 3px;
-            }}
-            QScrollBar::handle:vertical {{
-                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 30px;
-                border-radius: 3px;
-            }}
-            QScrollBar::add-page:vertical,
-            QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-            QScrollBar::add-line:vertical,
-            QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
+            {style_manager.get_scrollbar_stylesheet()}
         """
 
     def _apply_surface_palette(self) -> None:
@@ -2100,23 +2083,7 @@ class ConversationWidget(QWidget):
                 color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
             }}
 
-            /* Scrollbars within approval contexts */
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar:horizontal {{
-                height: 12px;
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::handle:horizontal {{
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::add-page:horizontal,
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::sub-page:horizontal {{
-                background: none;
-            }}
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::add-line:horizontal,
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
+            {style_manager.get_scrollbar_stylesheet("#ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar")}
 
             #ConversationMessage #_approval_approve_button[recommended="true"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
@@ -2262,36 +2229,28 @@ class ConversationWidget(QWidget):
             #ConversationMessage #ConversationMessageSection[section_style="text-user"] QToolButton:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_PRESSED)};
             }}
-            #ConversationMessage #ConversationMessageSection[section_style="code-system"] QToolButton:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+            #ConversationMessage #ConversationMessageSection[section_style="code-system"] QToolButton,
+            #ConversationMessage #ConversationMessageSection[section_style="code-user"] QToolButton {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: {max(10, int(12 * style_manager.zoom_factor()))}px;
+                padding: 0px;
+            }}
+            #ConversationMessage #ConversationMessageSection[section_style="code-system"] QToolButton:hover,
+            #ConversationMessage #ConversationMessageSection[section_style="code-user"] QToolButton:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
+                border-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
             }}
             #ConversationMessage #ConversationMessageSection[section_style="code-system"] QToolButton:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_PRESSED)};
-            }}
-            #ConversationMessage #ConversationMessageSection[section_style="code-user"] QToolButton:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
+                border-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
             }}
             #ConversationMessage #ConversationMessageSection[section_style="code-user"] QToolButton:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_PRESSED)};
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
+                border-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
             }}
 
-            /* Scrollbars within message sections */
-            #ConversationMessage #ConversationMessageSection QScrollBar:horizontal {{
-                height: 12px;
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            #ConversationMessage #ConversationMessageSection QScrollBar::handle:horizontal {{
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-            #ConversationMessage #ConversationMessageSection QScrollBar::add-page:horizontal,
-            #ConversationMessage #ConversationMessageSection QScrollBar::sub-page:horizontal {{
-                background: none;
-            }}
-            #ConversationMessage #ConversationMessageSection QScrollBar::add-line:horizontal,
-            #ConversationMessage #ConversationMessageSection QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
+            {style_manager.get_scrollbar_stylesheet("#ConversationMessage #ConversationMessageSection QScrollBar")}
         """
 
     def _on_style_changed(self) -> None:
@@ -2565,7 +2524,12 @@ class ConversationWidget(QWidget):
         if hist_index < 0 or all_messages[hist_index].source != AIMessageSource.USER:
             return
 
-        prompt = all_messages[hist_index].content
+        prompt = all_messages[hist_index].content or ""
+        restored_prompt = re.sub(
+            r'^📎 [^\n]*\n?', '',
+            ConversationMessage._to_display_text(prompt, for_edit=True),
+            flags=re.MULTILINE
+        ).strip()
 
         # Keep only the messages up to the specified history index
         preserved_history_messages = all_messages[:hist_index]
@@ -2613,10 +2577,11 @@ class ConversationWidget(QWidget):
             # Emit status update
             self.status_updated.emit()
 
-            # Focus input but do NOT restore deleted message text
+            # Restore the deleted user prompt so it can be revised and resubmitted.
             self._spotlighted_message_index = -1
+            self._input.set_plain_text(restored_prompt)
             self._input.set_spotlighted(True)
-            self._input.setFocus()
+            self._input.focus_end()
 
             # Scroll to bottom
             self._auto_scroll = True

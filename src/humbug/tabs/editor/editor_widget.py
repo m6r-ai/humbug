@@ -1059,23 +1059,7 @@ class EditorWidget(QPlainTextEdit):
                 selection-color: none;
             }}
 
-            QScrollBar:vertical, QScrollBar:horizontal {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-                height: 12px;
-            }}
-            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-                min-width: 20px;
-            }}
-            QScrollBar::add-page, QScrollBar::sub-page {{
-                background: none;
-            }}
-            QScrollBar::add-line, QScrollBar::sub-line {{
-                height: 0px;
-                width: 0px;
-            }}
+            {self._style_manager.get_scrollbar_stylesheet()}
 
             QAbstractScrollArea::corner {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
