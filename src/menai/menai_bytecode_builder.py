@@ -26,7 +26,7 @@ import array
 from dataclasses import dataclass, field
 from typing import Dict, List, Set, Tuple
 
-from menai.menai_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Instruction, Opcode, pack_instruction, make_instructions_array
+from menai.menai_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Opcode, pack_instruction, make_instructions_array
 from menai.menai_value import (
     MenaiBoolean,
     MenaiComplex,
@@ -65,16 +65,16 @@ from menai.menai_vcode import (
 from menai.menai_vcode_allocator import SlotMap, allocate_slots
 from menai.menai_vcode_peephole import peephole
 
+from menai.menai_bytecode import (
+    _OPCODE_SHIFT, _DEST_SHIFT, _SRC0_SHIFT, _SRC1_SHIFT,
+    _FIELD_MASK, _OPCODE_MASK,
+)
+
 
 UNARY_OPS  = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 1}
 BINARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 2}
 TERNARY_OPS = {name: op for name, (op, arity) in BUILTIN_OPCODE_MAP.items() if arity == 3}
 
-
-from menai.menai_bytecode import (
-    _OPCODE_SHIFT, _DEST_SHIFT, _SRC0_SHIFT, _SRC1_SHIFT,
-    _FIELD_MASK, _OPCODE_MASK,
-)
 
 _FIELD_NAMES = ('opcode', 'dest', 'src0', 'src1', 'src2')
 _SHIFTS = {

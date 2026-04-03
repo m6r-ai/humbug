@@ -3,9 +3,9 @@
 import cmath
 import difflib
 import math
-from typing import List, Dict, Any, cast, Protocol
+from typing import List, Dict, Any, cast, Protocol, Callable
 
-from menai.menai_bytecode import CodeObject, Opcode, Instruction, unpack_instruction
+from menai.menai_bytecode import CodeObject, Opcode, unpack_instruction
 from menai.menai_error import MenaiEvalError, MenaiCancelledException
 from menai.menai_value import (
     MenaiValue, MenaiBoolean, MenaiString, MenaiList, MenaiDict, MenaiFunction,
@@ -377,7 +377,7 @@ class MenaiVM:
 
         # Delegate to the C VM when available and no trace watcher is active.
         if _C_VM_AVAILABLE and self.trace_watcher is None and not self._cancelled:
-            return _c_vm_execute(code, constants, prelude_functions or {})
+            return cast(Callable, _c_vm_execute)(code, constants, prelude_functions or {})
 
         self.globals = constants.copy()
         if prelude_functions:
@@ -460,49 +460,49 @@ class MenaiVM:
         raise MenaiEvalError("Unimplemented opcode")
 
     def _op_load_none(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_NONE dest: Write #none into register dest."""
         self.regs[frame.base + dest] = Menai_NONE
         return None
 
     def _op_load_true(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_TRUE dest: Write boolean true into register dest."""
         self.regs[frame.base + dest] = Menai_BOOLEAN_TRUE
         return None
 
     def _op_load_false(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_FALSE dest: Write boolean false into register dest."""
         self.regs[frame.base + dest] = Menai_BOOLEAN_FALSE
         return None
 
     def _op_load_empty_list(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_EMPTY_LIST dest: Write empty list into register dest."""
         self.regs[frame.base + dest] = Menai_LIST_EMPTY
         return None
 
     def _op_load_empty_dict(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_EMPTY_DICT dest: Write empty dict into register dest."""
         self.regs[frame.base + dest] = Menai_DICT_EMPTY
         return None
 
     def _op_load_const(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_CONST dest, src0: Write constant[src0] into register dest."""
         self.regs[frame.base + dest] = frame.code.constants[src0]
         return None
 
     def _op_load_name(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_NAME dest, src0: Load global[names[src0]] into register dest."""
         name = frame.code.names[src0]
@@ -532,7 +532,7 @@ class MenaiVM:
         return None
 
     def _op_move(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """MOVE dest, src0: Copy the value in register src0 into register dest."""
         # Validator guarantees src0 is in bounds and initialized, dest is in bounds
@@ -542,14 +542,14 @@ class MenaiVM:
         return None
 
     def _op_jump(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """JUMP: Unconditional jump to instruction."""
         frame.ip = src0
         return None
 
     def _op_jump_if_false(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """JUMP_IF_FALSE r_src0, @target: Read condition from register src0, jump if false."""
         # Validator guarantees src0 is in bounds and target is valid
@@ -564,7 +564,7 @@ class MenaiVM:
         return None
 
     def _op_jump_if_true(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """JUMP_IF_TRUE r_src0, @target: Read condition from register src0, jump if true."""
         # Validator guarantees src0 is in bounds and target is valid
@@ -579,7 +579,7 @@ class MenaiVM:
         return None
 
     def _op_raise_error(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """RAISE_ERROR r_src0: Raise error with message string from register src0."""
         error_msg = self.regs[frame.base + src0]
@@ -591,7 +591,7 @@ class MenaiVM:
         raise MenaiEvalError(error_msg.value)
 
     def _op_make_closure(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """MAKE_CLOSURE dest, src0, 0: Create closure with all capture slots pre-set to None.
 
@@ -612,7 +612,7 @@ class MenaiVM:
         return None
 
     def _op_patch_closure(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _dest: int, src0: int, src1: int, src2: int
     ) -> MenaiValue | None:
         """
         PATCH_CLOSURE closure_reg, capture_idx, r_value_reg: Fill a free-var slot on a closure.
@@ -638,7 +638,7 @@ class MenaiVM:
         return None
 
     def _op_call(
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> _FrameChange | MenaiValue | None:
         """CALL dest, src0, src1: Call func in src0 with src1 args already in callee window; result to dest.
 
@@ -716,7 +716,7 @@ class MenaiVM:
         return _FRAME_CHANGE
 
     def _op_tail_call(
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _dest: int, src0: int, src1: int, _src2: int
     ) -> _FrameChange | MenaiValue:
         """TAIL_CALL src0, src1: Replace current frame with func in src0."""
         base = frame.base
@@ -793,7 +793,7 @@ class MenaiVM:
         return _FRAME_CHANGE
 
     def _op_apply(
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> _FrameChange | MenaiValue | None:
         """APPLY dest, src0, src1: Apply func in src0 to arg_list in register src1; result to dest."""
         base = frame.base
@@ -883,7 +883,7 @@ class MenaiVM:
         return _FRAME_CHANGE
 
     def _op_tail_apply(
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _dest: int, src0: int, src1: int, _src2: int
     ) -> _FrameChange | MenaiValue:
         """TAIL_APPLY src0, src1: Tail apply func in src0 to arg_list in register src1.
 
@@ -975,7 +975,7 @@ class MenaiVM:
         return _FRAME_CHANGE
 
     def _op_return(
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | _FrameChange:
         """RETURN src0: Pop frame, write return value into caller's dest register.
 
@@ -996,7 +996,7 @@ class MenaiVM:
         return _FRAME_CHANGE
 
     def _op_emit_trace(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, _dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """EMIT_TRACE src0: Read value from register src0 and emit to trace watcher."""
         message = self.regs[frame.base + src0]
@@ -1009,7 +1009,7 @@ class MenaiVM:
         return None
 
     def _op_function_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FUNCTION_P dest, src0: r_dest = (function? r_src0)"""
         base = frame.base
@@ -1019,7 +1019,7 @@ class MenaiVM:
         return None
 
     def _op_function_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FUNCTION_EQ_P dest, src0, src1: r_dest = (function=? r_src0 r_src1)"""
         base = frame.base
@@ -1042,7 +1042,7 @@ class MenaiVM:
         return None
 
     def _op_function_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FUNCTION_NEQ_P dest, src0, src1: r_dest = (function!=? r_src0 r_src1)"""
         base = frame.base
@@ -1065,7 +1065,7 @@ class MenaiVM:
         return None
 
     def _op_function_min_arity(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FUNCTION_MIN_ARITY dest, src0: r_dest = (function-min-arity r_src0)"""
         base = frame.base
@@ -1083,7 +1083,7 @@ class MenaiVM:
         return None
 
     def _op_function_variadic_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FUNCTION_VARIADIC_P dest, src0: r_dest = (function-variadic? r_src0)"""
         base = frame.base
@@ -1099,7 +1099,7 @@ class MenaiVM:
         return None
 
     def _op_function_accepts_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FUNCTION_ACCEPTS_P dest, src0, src1: r_dest = (function-accepts? r_src0 r_src1)"""
         base = frame.base
@@ -1130,7 +1130,7 @@ class MenaiVM:
         return None
 
     def _op_symbol_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """SYMBOL_P dest, src0: r_dest = (symbol? r_src0)"""
         base = frame.base
@@ -1140,7 +1140,7 @@ class MenaiVM:
         return None
 
     def _op_symbol_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """SYMBOL_EQ_P dest, src0, src1: r_dest = (symbol=? r_src0 r_src1)"""
         base = frame.base
@@ -1163,7 +1163,7 @@ class MenaiVM:
         return None
 
     def _op_symbol_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """SYMBOL_NEQ_P dest, src0, src1: r_dest = (symbol!=? r_src0 r_src1)"""
         base = frame.base
@@ -1186,7 +1186,7 @@ class MenaiVM:
         return None
 
     def _op_symbol_to_string(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """SYMBOL_TO_STRING dest, src0: r_dest = (symbol->string r_src0)"""
         base = frame.base
@@ -1202,7 +1202,7 @@ class MenaiVM:
         return None
 
     def _op_none_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """NONE_P dest, src0: r_dest = (none? r_src0)"""
         base = frame.base
@@ -1212,7 +1212,7 @@ class MenaiVM:
         return None
 
     def _op_boolean_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """BOOLEAN_P dest, src0: r_dest = (boolean? r_src0)"""
         base = frame.base
@@ -1222,7 +1222,7 @@ class MenaiVM:
         return None
 
     def _op_boolean_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """BOOLEAN_EQ_P dest, src0, src1: r_dest = (boolean=? r_src0 r_src1)"""
         base = frame.base
@@ -1239,7 +1239,7 @@ class MenaiVM:
         return None
 
     def _op_boolean_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """BOOLEAN_NEQ_P dest, src0, src1: r_dest = (boolean!=? r_src0 r_src1)"""
         base = frame.base
@@ -1256,7 +1256,7 @@ class MenaiVM:
         return None
 
     def _op_boolean_not(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """BOOLEAN_NOT dest, src0: r_dest = (boolean-not r_src0)"""
         base = frame.base
@@ -1269,7 +1269,7 @@ class MenaiVM:
         return None
 
     def _op_integer_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_P dest, src0: r_dest = (integer? r_src0)"""
         base = frame.base
@@ -1280,7 +1280,7 @@ class MenaiVM:
         return None
 
     def _op_integer_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_EQ_P dest, src0, src1: r_dest = (integer=? r_src0 r_src1)"""
         base = frame.base
@@ -1297,7 +1297,7 @@ class MenaiVM:
         return None
 
     def _op_integer_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_NEQ_P dest, src0, src1: r_dest = (integer!=? r_src0 r_src1)"""
         base = frame.base
@@ -1314,7 +1314,7 @@ class MenaiVM:
         return None
 
     def _op_integer_lt_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_LT_P dest, src0, src1: r_dest = (integer<? r_src0 r_src1)"""
         base = frame.base
@@ -1331,7 +1331,7 @@ class MenaiVM:
         return None
 
     def _op_integer_gt_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_GT_P dest, src0, src1: r_dest = (integer>? r_src0 r_src1)"""
         base = frame.base
@@ -1348,7 +1348,7 @@ class MenaiVM:
         return None
 
     def _op_integer_lte_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_LTE_P dest, src0, src1: r_dest = (integer<=? r_src0 r_src1)"""
         base = frame.base
@@ -1365,7 +1365,7 @@ class MenaiVM:
         return None
 
     def _op_integer_gte_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_GTE_P dest, src0, src1: r_dest = (integer>=? r_src0 r_src1)"""
         base = frame.base
@@ -1382,7 +1382,7 @@ class MenaiVM:
         return None
 
     def _op_integer_abs(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_ABS dest, src0: r_dest = (integer-abs r_src0)"""
         base = frame.base
@@ -1395,7 +1395,7 @@ class MenaiVM:
         return None
 
     def _op_integer_add(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_ADD dest, src0, src1: r_dest = (integer+ r_src0 r_src1)"""
         base = frame.base
@@ -1412,7 +1412,7 @@ class MenaiVM:
         return None
 
     def _op_integer_sub(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_SUB dest, src0, src1: r_dest = (integer- r_src0 r_src1)"""
         base = frame.base
@@ -1429,7 +1429,7 @@ class MenaiVM:
         return None
 
     def _op_integer_mul(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_MUL dest, src0, src1: r_dest = (integer* r_src0 r_src1)"""
         base = frame.base
@@ -1446,7 +1446,7 @@ class MenaiVM:
         return None
 
     def _op_integer_div(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_DIV dest, src0, src1: r_dest = (integer/ r_src0 r_src1)"""
         base = frame.base
@@ -1466,7 +1466,7 @@ class MenaiVM:
         return None
 
     def _op_integer_mod(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_MOD dest, src0, src1: r_dest = (integer% r_src0 r_src1)"""
         base = frame.base
@@ -1486,7 +1486,7 @@ class MenaiVM:
         return None
 
     def _op_integer_neg(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_NEG dest, src0: r_dest = (integer-neg r_src0)"""
         base = frame.base
@@ -1499,7 +1499,7 @@ class MenaiVM:
         return None
 
     def _op_integer_expn(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_EXPN dest, src0, src1: r_dest = (integer-expn r_src0 r_src1)"""
         base = frame.base
@@ -1519,7 +1519,7 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_not(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_NOT dest, src0: r_dest = (integer-bit-not r_src0)"""
         base = frame.base
@@ -1532,7 +1532,7 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_shift_left(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_SHIFT_LEFT dest, src0, src1: r_dest = (integer-bit-shift-left r_src0 r_src1)"""
         base = frame.base
@@ -1549,7 +1549,7 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_shift_right(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_SHIFT_RIGHT dest, src0, src1: r_dest = (integer-bit-shift-right r_src0 r_src1)"""
         base = frame.base
@@ -1566,7 +1566,7 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_or(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_OR dest, src0, src1: r_dest = (integer-bit-or r_src0 r_src1)"""
         base = frame.base
@@ -1583,7 +1583,7 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_and(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_AND dest, src0, src1: r_dest = (integer-bit-and r_src0 r_src1)"""
         base = frame.base
@@ -1600,7 +1600,7 @@ class MenaiVM:
         return None
 
     def _op_integer_bit_xor(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_BIT_XOR dest, src0, src1: r_dest = (integer-bit-xor r_src0 r_src1)"""
         base = frame.base
@@ -1617,7 +1617,7 @@ class MenaiVM:
         return None
 
     def _op_integer_min(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_MIN dest, src0, src1: r_dest = (integer-min r_src0 r_src1)"""
         base = frame.base
@@ -1634,7 +1634,7 @@ class MenaiVM:
         return None
 
     def _op_integer_max(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_MAX dest, src0, src1: r_dest = (integer-max r_src0 r_src1)"""
         base = frame.base
@@ -1651,7 +1651,7 @@ class MenaiVM:
         return None
 
     def _op_integer_to_float(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_TO_FLOAT dest, src0: r_dest = (integer->float r_src0)"""
         base = frame.base
@@ -1664,7 +1664,7 @@ class MenaiVM:
         return None
 
     def _op_integer_to_complex(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_TO_COMPLEX dest, src0, src1: r_dest = (integer->complex r_src0 r_src1)"""
         base = frame.base
@@ -1681,7 +1681,7 @@ class MenaiVM:
         return None
 
     def _op_integer_to_string(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_TO_STRING dest, src0, src1: r_dest = (integer->string r_src0 r_src1)"""
         base = frame.base
@@ -1720,7 +1720,7 @@ class MenaiVM:
         return None
 
     def _op_integer_codepoint_to_string(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """INTEGER_CODEPOINT_TO_STRING dest, src0: r_dest = (integer-codepoint->string r_src0)"""
         base = frame.base
@@ -1741,7 +1741,7 @@ class MenaiVM:
         return None
 
     def _op_float_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_P dest, src0: r_dest = (float? r_src0)"""
         base = frame.base
@@ -1752,7 +1752,7 @@ class MenaiVM:
         return None
 
     def _op_float_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_EQ_P dest, src0, src1: r_dest = (float=? r_src0 r_src1)"""
         base = frame.base
@@ -1769,7 +1769,7 @@ class MenaiVM:
         return None
 
     def _op_float_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_NEQ_P dest, src0, src1: r_dest = (float!=? r_src0 r_src1)"""
         base = frame.base
@@ -1786,7 +1786,7 @@ class MenaiVM:
         return None
 
     def _op_float_lt_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LT_P dest, src0, src1: r_dest = (float<? r_src0 r_src1)"""
         base = frame.base
@@ -1803,7 +1803,7 @@ class MenaiVM:
         return None
 
     def _op_float_gt_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_GT_P dest, src0, src1: r_dest = (float>? r_src0 r_src1)"""
         base = frame.base
@@ -1820,7 +1820,7 @@ class MenaiVM:
         return None
 
     def _op_float_lte_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LTE_P dest, src0, src1: r_dest = (float<=? r_src0 r_src1)"""
         base = frame.base
@@ -1837,7 +1837,7 @@ class MenaiVM:
         return None
 
     def _op_float_gte_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_GTE_P dest, src0, src1: r_dest = (float>=? r_src0 r_src1)"""
         base = frame.base
@@ -1854,7 +1854,7 @@ class MenaiVM:
         return None
 
     def _op_float_abs(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_ABS dest, src0: r_dest = (float-abs r_src0)"""
         base = frame.base
@@ -1867,7 +1867,7 @@ class MenaiVM:
         return None
 
     def _op_float_add(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_ADD dest, src0, src1: r_dest = (float+ r_src0 r_src1)"""
         base = frame.base
@@ -1884,7 +1884,7 @@ class MenaiVM:
         return None
 
     def _op_float_sub(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_SUB dest, src0, src1: r_dest = (float- r_src0 r_src1)"""
         base = frame.base
@@ -1901,7 +1901,7 @@ class MenaiVM:
         return None
 
     def _op_float_mul(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_MUL dest, src0, src1: r_dest = (float* r_src0 r_src1)"""
         base = frame.base
@@ -1918,7 +1918,7 @@ class MenaiVM:
         return None
 
     def _op_float_div(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_DIV dest, src0, src1: r_dest = (float/ r_src0 r_src1)"""
         base = frame.base
@@ -1938,7 +1938,7 @@ class MenaiVM:
         return None
 
     def _op_float_floor_div(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_FLOOR_DIV dest, src0, src1: r_dest = (float// r_src0 r_src1)"""
         base = frame.base
@@ -1958,7 +1958,7 @@ class MenaiVM:
         return None
 
     def _op_float_mod(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_MOD dest, src0, src1: r_dest = (float% r_src0 r_src1)"""
         base = frame.base
@@ -1978,7 +1978,7 @@ class MenaiVM:
         return None
 
     def _op_float_neg(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_NEG dest, src0: r_dest = (float-neg r_src0)"""
         base = frame.base
@@ -1991,7 +1991,7 @@ class MenaiVM:
         return None
 
     def _op_float_exp(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_EXP dest, src0: r_dest = (float-exp r_src0)"""
         base = frame.base
@@ -2004,7 +2004,7 @@ class MenaiVM:
         return None
 
     def _op_float_expn(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_EXPN dest, src0, src1: r_dest = (float-expn r_src0 r_src1)"""
         base = frame.base
@@ -2021,7 +2021,7 @@ class MenaiVM:
         return None
 
     def _op_float_log(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LOG dest, src0: r_dest = (float-log r_src0)"""
         base = frame.base
@@ -2041,7 +2041,7 @@ class MenaiVM:
         return None
 
     def _op_float_log10(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LOG10 dest, src0: r_dest = (float-log10 r_src0)"""
         base = frame.base
@@ -2061,7 +2061,7 @@ class MenaiVM:
         return None
 
     def _op_float_log2(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LOG2 dest, src0: r_dest = (float-log2 r_src0)"""
         base = frame.base
@@ -2081,7 +2081,7 @@ class MenaiVM:
         return None
 
     def _op_float_logn(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_LOGN dest, src0, src1: r_dest = (float-logn r_src0 r_src1)"""
         base = frame.base
@@ -2108,7 +2108,7 @@ class MenaiVM:
         return None
 
     def _op_float_sin(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_SIN dest, src0: r_dest = (float-sin r_src0)"""
         base = frame.base
@@ -2121,7 +2121,7 @@ class MenaiVM:
         return None
 
     def _op_float_cos(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_COS dest, src0: r_dest = (float-cos r_src0)"""
         base = frame.base
@@ -2134,7 +2134,7 @@ class MenaiVM:
         return None
 
     def _op_float_tan(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_TAN dest, src0: r_dest = (float-tan r_src0)"""
         base = frame.base
@@ -2147,7 +2147,7 @@ class MenaiVM:
         return None
 
     def _op_float_sqrt(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_SQRT dest, src0: r_dest = (float-sqrt r_src0)"""
         base = frame.base
@@ -2163,7 +2163,7 @@ class MenaiVM:
         return None
 
     def _op_float_to_integer(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_TO_INTEGER dest, src0: r_dest = (float->integer r_src0)"""
         base = frame.base
@@ -2176,7 +2176,7 @@ class MenaiVM:
         return None
 
     def _op_float_to_complex(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_TO_COMPLEX dest, src0, src1: r_dest = (float->complex r_src0 r_src1)"""
         base = frame.base
@@ -2193,7 +2193,7 @@ class MenaiVM:
         return None
 
     def _op_float_to_string(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_TO_STRING dest, src0: r_dest = (float->string r_src0)"""
         base = frame.base
@@ -2206,7 +2206,7 @@ class MenaiVM:
         return None
 
     def _op_float_floor(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_FLOOR dest, src0: r_dest = (float-floor r_src0)"""
         base = frame.base
@@ -2219,7 +2219,7 @@ class MenaiVM:
         return None
 
     def _op_float_ceil(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_CEIL dest, src0: r_dest = (float-ceil r_src0)"""
         base = frame.base
@@ -2232,7 +2232,7 @@ class MenaiVM:
         return None
 
     def _op_float_round(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_ROUND dest, src0: r_dest = (float-round r_src0)"""
         base = frame.base
@@ -2245,7 +2245,7 @@ class MenaiVM:
         return None
 
     def _op_float_min(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_MIN dest, src0, src1: r_dest = (float-min r_src0 r_src1)"""
         base = frame.base
@@ -2262,7 +2262,7 @@ class MenaiVM:
         return None
 
     def _op_float_max(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """FLOAT_MAX dest, src0, src1: r_dest = (float-max r_src0 r_src1)"""
         base = frame.base
@@ -2279,7 +2279,7 @@ class MenaiVM:
         return None
 
     def _op_complex_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_P dest, src0: r_dest = (complex? r_src0)"""
         base = frame.base
@@ -2290,7 +2290,7 @@ class MenaiVM:
         return None
 
     def _op_complex_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_EQ_P dest, src0, src1: r_dest = (complex=? r_src0 r_src1)"""
         base = frame.base
@@ -2307,7 +2307,7 @@ class MenaiVM:
         return None
 
     def _op_complex_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_NEQ_P dest, src0, src1: r_dest = (complex!=? r_src0 r_src1)"""
         base = frame.base
@@ -2324,7 +2324,7 @@ class MenaiVM:
         return None
 
     def _op_complex_real(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_REAL dest, src0: r_dest = (complex-real r_src0)"""
         base = frame.base
@@ -2337,7 +2337,7 @@ class MenaiVM:
         return None
 
     def _op_complex_imag(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_IMAG dest, src0: r_dest = (complex-imag r_src0)"""
         base = frame.base
@@ -2350,7 +2350,7 @@ class MenaiVM:
         return None
 
     def _op_complex_abs(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_ABS dest, src0: r_dest = (complex-abs r_src0)"""
         base = frame.base
@@ -2363,7 +2363,7 @@ class MenaiVM:
         return None
 
     def _op_complex_add(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_ADD dest, src0, src1: r_dest = (complex+ r_src0 r_src1)"""
         base = frame.base
@@ -2380,7 +2380,7 @@ class MenaiVM:
         return None
 
     def _op_complex_sub(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_SUB dest, src0, src1: r_dest = (complex- r_src0 r_src1)"""
         base = frame.base
@@ -2397,7 +2397,7 @@ class MenaiVM:
         return None
 
     def _op_complex_mul(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_MUL dest, src0, src1: r_dest = (complex* r_src0 r_src1)"""
         base = frame.base
@@ -2414,7 +2414,7 @@ class MenaiVM:
         return None
 
     def _op_complex_div(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_DIV dest, src0, src1: r_dest = (complex/ r_src0 r_src1)"""
         base = frame.base
@@ -2434,7 +2434,7 @@ class MenaiVM:
         return None
 
     def _op_complex_neg(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_NEG dest, src0: r_dest = (complex-neg r_src0)"""
         base = frame.base
@@ -2447,7 +2447,7 @@ class MenaiVM:
         return None
 
     def _op_complex_exp(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_EXP dest, src0: r_dest = (complex-exp r_src0)"""
         base = frame.base
@@ -2460,7 +2460,7 @@ class MenaiVM:
         return None
 
     def _op_complex_expn(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_EXPN dest, src0, src1: r_dest = (complex-expn r_src0 r_src1)"""
         base = frame.base
@@ -2477,7 +2477,7 @@ class MenaiVM:
         return None
 
     def _op_complex_log(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_LOG dest, src0: r_dest = (complex-log r_src0)"""
         base = frame.base
@@ -2490,7 +2490,7 @@ class MenaiVM:
         return None
 
     def _op_complex_log10(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_LOG10 dest, src0: r_dest = (complex-log10 r_src0)"""
         base = frame.base
@@ -2503,7 +2503,7 @@ class MenaiVM:
         return None
 
     def _op_complex_logn(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_LOGN dest, src0, src1: r_dest = (complex-logn r_src0 r_src1)"""
         base = frame.base
@@ -2523,7 +2523,7 @@ class MenaiVM:
         return None
 
     def _op_complex_sin(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_SIN dest, src0: r_dest = (complex-sin r_src0)"""
         base = frame.base
@@ -2536,7 +2536,7 @@ class MenaiVM:
         return None
 
     def _op_complex_cos(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_COS dest, src0: r_dest = (complex-cos r_src0)"""
         base = frame.base
@@ -2549,7 +2549,7 @@ class MenaiVM:
         return None
 
     def _op_complex_tan(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_TAN dest, src0: r_dest = (complex-tan r_src0)"""
         base = frame.base
@@ -2562,7 +2562,7 @@ class MenaiVM:
         return None
 
     def _op_complex_sqrt(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_SQRT dest, src0: r_dest = (complex-sqrt r_src0)"""
         base = frame.base
@@ -2575,7 +2575,7 @@ class MenaiVM:
         return None
 
     def _op_complex_to_string(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """COMPLEX_TO_STRING dest, src0: r_dest = (complex->string r_src0)"""
         base = frame.base
@@ -2588,7 +2588,7 @@ class MenaiVM:
         return None
 
     def _op_string_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_P dest, src0: r_dest = (string? r_src0)"""
         base = frame.base
@@ -2599,7 +2599,7 @@ class MenaiVM:
         return None
 
     def _op_string_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_EQ_P dest, src0, src1: r_dest = (string=? r_src0 r_src1)"""
         base = frame.base
@@ -2616,7 +2616,7 @@ class MenaiVM:
         return None
 
     def _op_string_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_NEQ_P dest, src0, src1: r_dest = (string!=? r_src0 r_src1)"""
         base = frame.base
@@ -2633,7 +2633,7 @@ class MenaiVM:
         return None
 
     def _op_string_lt_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_LT_P dest, src0, src1: r_dest = (string<? r_src0 r_src1)"""
         base = frame.base
@@ -2650,7 +2650,7 @@ class MenaiVM:
         return None
 
     def _op_string_gt_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_GT_P dest, src0, src1: r_dest = (string>? r_src0 r_src1)"""
         base = frame.base
@@ -2667,7 +2667,7 @@ class MenaiVM:
         return None
 
     def _op_string_lte_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_LTE_P dest, src0, src1: r_dest = (string<=? r_src0 r_src1)"""
         base = frame.base
@@ -2684,7 +2684,7 @@ class MenaiVM:
         return None
 
     def _op_string_gte_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_GTE_P dest, src0, src1: r_dest = (string>=? r_src0 r_src1)"""
         base = frame.base
@@ -2701,7 +2701,7 @@ class MenaiVM:
         return None
 
     def _op_string_length(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_LENGTH dest, src0: r_dest = (string-length r_src0)"""
         base = frame.base
@@ -2714,7 +2714,7 @@ class MenaiVM:
         return None
 
     def _op_string_upcase(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_UPCASE dest, src0: r_dest = (string-upcase r_src0)"""
         base = frame.base
@@ -2727,7 +2727,7 @@ class MenaiVM:
         return None
 
     def _op_string_downcase(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_DOWNCASE dest, src0: r_dest = (string-downcase r_src0)"""
         base = frame.base
@@ -2740,7 +2740,7 @@ class MenaiVM:
         return None
 
     def _op_string_trim(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TRIM dest, src0: r_dest = (string-trim r_src0)"""
         base = frame.base
@@ -2753,7 +2753,7 @@ class MenaiVM:
         return None
 
     def _op_string_trim_left(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TRIM_LEFT dest, src0: r_dest = (string-trim-left r_src0)"""
         base = frame.base
@@ -2766,7 +2766,7 @@ class MenaiVM:
         return None
 
     def _op_string_trim_right(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TRIM_RIGHT dest, src0: r_dest = (string-trim-right r_src0)"""
         base = frame.base
@@ -2779,7 +2779,7 @@ class MenaiVM:
         return None
 
     def _op_string_to_integer(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TO_INTEGER dest, src0, src1: r_dest = (string->integer r_src0 r_src1)"""
         base = frame.base
@@ -2806,7 +2806,7 @@ class MenaiVM:
             return None
 
     def _op_string_to_number(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TO_NUMBER dest, src0: r_dest = (string->number r_src0)"""
         base = frame.base
@@ -2834,7 +2834,7 @@ class MenaiVM:
             return None
 
     def _op_string_to_list(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TO_LIST dest, src0, src1: r_dest = (string->list r_src0 r_src1)"""
         base = frame.base
@@ -2855,7 +2855,7 @@ class MenaiVM:
         return None
 
     def _op_string_ref(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_REF dest, src0, src1: r_dest = (string-ref r_src0 r_src1)"""
         base = frame.base
@@ -2877,7 +2877,7 @@ class MenaiVM:
         return None
 
     def _op_string_prefix_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_PREFIX_P dest, src0, src1: r_dest = (string-prefix? r_src0 r_src1)"""
         base = frame.base
@@ -2894,7 +2894,7 @@ class MenaiVM:
         return None
 
     def _op_string_suffix_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_SUFFIX_P dest, src0, src1: r_dest = (string-suffix? r_src0 r_src1)"""
         base = frame.base
@@ -2972,7 +2972,7 @@ class MenaiVM:
         return None
 
     def _op_string_index(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+            self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_INDEX dest, src0, src1: r_dest = (string-index r_src0 r_src1)"""
         base = frame.base
@@ -2990,7 +2990,7 @@ class MenaiVM:
         return None
 
     def _op_string_to_integer_codepoint(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_TO_INTEGER_CODEPOINT dest, src0: r_dest = (string->integer-codepoint r_src0)"""
         base = frame.base
@@ -3011,7 +3011,7 @@ class MenaiVM:
         return None
 
     def _op_string_concat(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRING_CONCAT dest, src0, src1: r_dest = (string-concat r_src0 r_src1)"""
         base = frame.base
@@ -3028,7 +3028,7 @@ class MenaiVM:
         return None
 
     def _op_dict_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_P dest, src0: r_dest = (dict? r_src0)"""
         base = frame.base
@@ -3039,7 +3039,7 @@ class MenaiVM:
         return None
 
     def _op_dict_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_EQ_P dest, src0, src1: r_dest = (dict=? r_src0 r_src1)"""
         base = frame.base
@@ -3056,7 +3056,7 @@ class MenaiVM:
         return None
 
     def _op_dict_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_NEQ_P dest, src0, src1: r_dest = (dict!=? r_src0 r_src1)"""
         base = frame.base
@@ -3073,7 +3073,7 @@ class MenaiVM:
         return None
 
     def _op_dict_keys(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_KEYS dest, src0: r_dest = (dict-keys r_src0)"""
         base = frame.base
@@ -3086,7 +3086,7 @@ class MenaiVM:
         return None
 
     def _op_dict_values(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_VALUES dest, src0: r_dest = (dict-values r_src0)"""
         base = frame.base
@@ -3099,7 +3099,7 @@ class MenaiVM:
         return None
 
     def _op_dict_length(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_LENGTH dest, src0: r_dest = (dict-length r_src0)"""
         base = frame.base
@@ -3112,7 +3112,7 @@ class MenaiVM:
         return None
 
     def _op_dict_has_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_HAS_P dest, src0, src1: r_dest = (dict-has? r_src0 r_src1)"""
         base = frame.base
@@ -3131,7 +3131,7 @@ class MenaiVM:
         return None
 
     def _op_dict_remove(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_REMOVE dest, src0, src1: r_dest = (dict-remove r_src0 r_src1)"""
         base = frame.base
@@ -3154,7 +3154,7 @@ class MenaiVM:
         return None
 
     def _op_dict_merge(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """DICT_MERGE dest, src0, src1: r_dest = (dict-merge r_src0 r_src1)"""
         base = frame.base
@@ -3260,7 +3260,7 @@ class MenaiVM:
         return None
 
     def _op_list_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_P dest, src0: r_dest = (list? r_src0)"""
         base = frame.base
@@ -3271,7 +3271,7 @@ class MenaiVM:
         return None
 
     def _op_list_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_EQ_P dest, src0, src1: r_dest = (list=? r_src0 r_src1)"""
         base = frame.base
@@ -3288,7 +3288,7 @@ class MenaiVM:
         return None
 
     def _op_list_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_NEQ_P dest, src0, src1: r_dest = (list!=? r_src0 r_src1)"""
         base = frame.base
@@ -3305,7 +3305,7 @@ class MenaiVM:
         return None
 
     def _op_list_prepend(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_PREPEND dest, src0, src1: r_dest = (list-prepend r_src0 r_src1)"""
         base = frame.base
@@ -3318,7 +3318,7 @@ class MenaiVM:
         return None
 
     def _op_list_append(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_APPEND dest, src0, src1: r_dest = (list-append r_src0 r_src1)"""
         base = frame.base
@@ -3331,7 +3331,7 @@ class MenaiVM:
         return None
 
     def _op_list_reverse(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_REVERSE dest, src0: r_dest = (list-reverse r_src0)"""
         base = frame.base
@@ -3344,7 +3344,7 @@ class MenaiVM:
         return None
 
     def _op_list_first(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_FIRST dest, src0: r_dest = (list-first r_src0)"""
         base = frame.base
@@ -3360,7 +3360,7 @@ class MenaiVM:
         return None
 
     def _op_list_rest(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_REST dest, src0: r_dest = (list-rest r_src0)"""
         base = frame.base
@@ -3376,7 +3376,7 @@ class MenaiVM:
         return None
 
     def _op_list_last(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_LAST dest, src0: r_dest = (list-last r_src0)"""
         base = frame.base
@@ -3392,7 +3392,7 @@ class MenaiVM:
         return None
 
     def _op_list_length(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_LENGTH dest, src0: r_dest = (list-length r_src0)"""
         base = frame.base
@@ -3407,7 +3407,7 @@ class MenaiVM:
         return None
 
     def _op_list_ref(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_REF dest, src0, src1: r_dest = (list-ref r_src0 r_src1)"""
         base = frame.base
@@ -3435,7 +3435,7 @@ class MenaiVM:
         return None
 
     def _op_list_null_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_NULL_P dest, src0: r_dest = (list-null? r_src0)"""
         base = frame.base
@@ -3448,7 +3448,7 @@ class MenaiVM:
         return None
 
     def _op_list_member_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_MEMBER_P dest, src0, src1: r_dest = (list-member? r_src0 r_src1)"""
         base = frame.base
@@ -3461,7 +3461,7 @@ class MenaiVM:
         return None
 
     def _op_list_index(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_INDEX dest, src0, src1: r_dest = (list-index r_src0 r_src1)"""
         base = frame.base
@@ -3521,7 +3521,7 @@ class MenaiVM:
         return None
 
     def _op_list_remove(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_REMOVE dest, src0, src1: r_dest = (list-remove r_src0 r_src1)"""
         base = frame.base
@@ -3536,7 +3536,7 @@ class MenaiVM:
         return None
 
     def _op_list_concat(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_CONCAT dest, src0, src1: r_dest = (list-concat r_src0 r_src1)"""
         base = frame.base
@@ -3553,7 +3553,7 @@ class MenaiVM:
         return None
 
     def _op_list_to_string(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_TO_STRING dest, src0, src1: r_dest = (list->string r_src0 r_src1)"""
         base = frame.base
@@ -3577,7 +3577,7 @@ class MenaiVM:
         return None
 
     def _op_list_to_set(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LIST_TO_SET dest, src0: r_dest = (list->set r_src0)"""
         base = frame.base
@@ -3595,14 +3595,14 @@ class MenaiVM:
         return None
 
     def _op_load_empty_set(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, _src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_EMPTY_SET dest: r_dest = #{}"""
         self.regs[frame.base + dest] = Menai_SET_EMPTY
         return None
 
     def _op_set_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """SET_P dest, src0: r_dest = (set? r_src0)"""
         base = frame.base
@@ -3613,7 +3613,7 @@ class MenaiVM:
         return None
 
     def _op_set_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """SET_EQ_P dest, src0, src1: r_dest = (set=? r_src0 r_src1)"""
         base = frame.base
@@ -3630,7 +3630,7 @@ class MenaiVM:
         return None
 
     def _op_set_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """SET_NEQ_P dest, src0, src1: r_dest = (set!=? r_src0 r_src1)"""
         base = frame.base
@@ -3647,7 +3647,7 @@ class MenaiVM:
         return None
 
     def _op_set_member_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """SET_MEMBER_P dest, src0, src1: r_dest = (set-member? r_src0 r_src1)"""
         base = frame.base
@@ -3666,7 +3666,7 @@ class MenaiVM:
         return None
 
     def _op_set_add(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """SET_ADD dest, src0, src1: r_dest = (set-add r_src0 r_src1)"""
         base = frame.base
@@ -3690,7 +3690,7 @@ class MenaiVM:
         return None
 
     def _op_set_remove(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """SET_REMOVE dest, src0, src1: r_dest = (set-remove r_src0 r_src1)"""
         base = frame.base
@@ -3709,7 +3709,7 @@ class MenaiVM:
         return None
 
     def _op_set_length(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """SET_LENGTH dest, src0: r_dest = (set-length r_src0)"""
         base = frame.base
@@ -3722,7 +3722,7 @@ class MenaiVM:
         return None
 
     def _op_set_union(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """SET_UNION dest, src0, src1: r_dest = (set-union r_src0 r_src1)"""
         base = frame.base
@@ -3748,7 +3748,7 @@ class MenaiVM:
         return None
 
     def _op_set_intersection(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """SET_INTERSECTION dest, src0, src1: r_dest = (set-intersection r_src0 r_src1)"""
         base = frame.base
@@ -3768,7 +3768,7 @@ class MenaiVM:
         return None
 
     def _op_set_difference(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """SET_DIFFERENCE dest, src0, src1: r_dest = (set-difference r_src0 r_src1)"""
         base = frame.base
@@ -3788,7 +3788,7 @@ class MenaiVM:
         return None
 
     def _op_set_subset_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """SET_SUBSET_P dest, src0, src1: r_dest = (set-subset? r_src0 r_src1)"""
         base = frame.base
@@ -3805,7 +3805,7 @@ class MenaiVM:
         return None
 
     def _op_set_to_list(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """SET_TO_LIST dest, src0: r_dest = (set->list r_src0)"""
         base = frame.base
@@ -3818,7 +3818,7 @@ class MenaiVM:
         return None
 
     def _op_make_struct(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """
         MAKE_STRUCT dest, src0, src1: construct a struct.
@@ -3842,7 +3842,7 @@ class MenaiVM:
         return None
 
     def _op_struct_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRUCT_P dest, src0: r_dest = (struct? r_src0)"""
         base = frame.base
@@ -3852,7 +3852,7 @@ class MenaiVM:
         return None
 
     def _op_struct_type_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """
         STRUCT_TYPE_P dest, src0, src1: r_dest = (struct-type? r_src0 r_src1)
@@ -3876,7 +3876,7 @@ class MenaiVM:
         return None
 
     def _op_struct_get(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """
         STRUCT_GET dest, src0, src1: r_dest = (struct-get r_src0 r_src1)
@@ -3910,7 +3910,7 @@ class MenaiVM:
 
 
     def _op_struct_get_imm(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """
         STRUCT_GET_IMM dest, src0, imm: r_dest = (struct-get-imm r_src0 imm)
@@ -3997,7 +3997,7 @@ class MenaiVM:
         return None
 
     def _op_struct_eq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRUCT_EQ_P dest, src0, src1: r_dest = (struct=? r_src0 r_src1)"""
         base = frame.base
@@ -4019,7 +4019,7 @@ class MenaiVM:
         return None
 
     def _op_struct_neq_p(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRUCT_NEQ_P dest, src0, src1: r_dest = (struct!=? r_src0 r_src1)"""
         base = frame.base
@@ -4041,7 +4041,7 @@ class MenaiVM:
         return None
 
     def _op_struct_type(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRUCT_TYPE dest, src0: r_dest = (struct-type r_src0) — returns the MenaiStructType of an instance"""
         base = frame.base
@@ -4056,7 +4056,7 @@ class MenaiVM:
         return None
 
     def _op_struct_type_name(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRUCT_TYPE_NAME dest, src0: r_dest = (struct-type-name r_src0) — returns the name string"""
         base = frame.base
@@ -4071,7 +4071,7 @@ class MenaiVM:
         return None
 
     def _op_struct_fields(  # pylint: disable=useless-return
-        self, frame: Frame, dest: int, src0: int, src1: int, src2: int
+        self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """STRUCT_FIELDS dest, src0: r_dest = (struct-fields r_src0) — returns list of field name symbols"""
         base = frame.base
