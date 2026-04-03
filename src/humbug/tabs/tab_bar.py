@@ -1,7 +1,7 @@
 from typing import cast
 
 from PySide6.QtWidgets import QTabBar, QWidget, QToolButton
-from PySide6.QtCore import QEvent, QObject, Qt, QTimer
+from PySide6.QtCore import QEvent, QObject, Qt
 from PySide6.QtGui import QHoverEvent, QCursor, QPainter, QPaintEvent, QPen, QWheelEvent
 
 from humbug.color_role import ColorRole
@@ -18,18 +18,14 @@ class TabBar(QTabBar):
         # Initialize all attributes before any Qt calls that may fire events
         self.current_hovered_tab = -1
         self._style_manager = StyleManager()
-        self._pending_scroll_steps = 0
         self._scroll_pixel_accumulator = 0
-        self._scroll_pixels_per_step = 36
+        self._scroll_pixels_per_step = 28
 
         self.setExpanding(False)
         self.setDocumentMode(True)
         self.setMouseTracking(True)
         self.setUsesScrollButtons(True)
         self.installEventFilter(self)
-        self._tab_scroll_timer = QTimer(self)
-        self._tab_scroll_timer.setInterval(26)
-        self._tab_scroll_timer.timeout.connect(self._perform_smooth_tab_scroll)
         self.apply_style()
 
     def update_tab_size(self) -> None:
@@ -79,38 +75,21 @@ class TabBar(QTabBar):
 
     def scroll_tabs(self, direction: int) -> None:
         """Public method for the corner nav widget to trigger scrolling. direction: -1 left, +1 right."""
-        self._queue_tab_scroll(direction)
+        self._scroll_tabs(direction)
 
-    def _queue_tab_scroll(self, steps: int) -> bool:
-        """Queue smooth scrolling of the tab strip."""
+    def _scroll_tabs_by_steps(self, steps: int) -> bool:
+        """Scroll the tab strip immediately by the requested number of native steps."""
         if steps == 0:
             return False
 
-        if self._pending_scroll_steps != 0 and ((self._pending_scroll_steps > 0) != (steps > 0)):
-            self._pending_scroll_steps = 0
+        direction = 1 if steps > 0 else -1
+        moved = False
+        for _ in range(abs(steps)):
+            if not self._scroll_tabs(direction):
+                break
+            moved = True
 
-        self._pending_scroll_steps += steps
-        self._perform_smooth_tab_scroll()
-        if self._pending_scroll_steps != 0:
-            self._tab_scroll_timer.start()
-
-        return True
-
-    def _perform_smooth_tab_scroll(self) -> None:
-        """Advance queued tab scrolling in small timed steps."""
-        if self._pending_scroll_steps == 0:
-            self._tab_scroll_timer.stop()
-            return
-
-        direction = 1 if self._pending_scroll_steps > 0 else -1
-        if not self._scroll_tabs(direction):
-            self._pending_scroll_steps = 0
-            self._tab_scroll_timer.stop()
-            return
-
-        self._pending_scroll_steps -= direction
-        if self._pending_scroll_steps == 0:
-            self._tab_scroll_timer.stop()
+        return moved
 
     def wheelEvent(self, event: QWheelEvent) -> None:  # type: ignore[override]
         """Use wheel or trackpad gestures to scroll the tab strip without showing a scrollbar."""
@@ -124,8 +103,8 @@ class TabBar(QTabBar):
             step_count = int(self._scroll_pixel_accumulator / self._scroll_pixels_per_step)
             if step_count != 0:
                 self._scroll_pixel_accumulator -= step_count * self._scroll_pixels_per_step
-                step_count = max(-5, min(5, step_count))
-                if self._queue_tab_scroll(-step_count):
+                step_count = max(-4, min(4, step_count))
+                if self._scroll_tabs_by_steps(-step_count):
                     event.accept()
                     return
             else:
@@ -139,7 +118,7 @@ class TabBar(QTabBar):
 
         if delta != 0:
             step_count = max(1, min(3, abs(delta) // 120))
-            if self._queue_tab_scroll(step_count if delta < 0 else -step_count):
+            if self._scroll_tabs_by_steps(step_count if delta < 0 else -step_count):
                 event.accept()
                 return
 
