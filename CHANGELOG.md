@@ -6,11 +6,20 @@ New features:
 
 - Added an edit button to allow you to edit previous user messages.
 - The submit shortcut is now Cmd+Enter or Ctrl+Enter rather than Cmd+J or Ctrl+J.  This is more natural.
+- Removed Claude Sonnet 4.5 support (we have 4.6).
+- Added GLM 5.1 support
+- Added Menai native C VM implementation and remove the cython version.
+- Added a new Menai benchmark performance test suite.  Removed the old JSON parser test.
+- Added a requirement for AI delegation to get user approval.
+- Removed the mindspace log AI tool.  It wasn't ever used, and more often than not confused AI models.
+- Removed the ability to open the system shell and mindspace log tabs in from the system tool.  These are tools specifically
+  for a human (developer) to use.
 
 Bug fixes:
 
 - Improved filesystem and editor tool descriptions to help avoid problems related to escaping.
-- Fix problems with the Menai tool help
+- Fix problems with the Menai tool help.
+- Fixed a problem where delegated conversations did not show the initial prompt.
 
 ## v41 (2026-03-22)
 

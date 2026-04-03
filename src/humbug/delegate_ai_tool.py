@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, cast
 
 from ai import AIConversation, AIConversationEvent, AIConversationSettings, AIManager, AIMessageSource, AIReasoningCapability
 from ai_tool import (
@@ -178,7 +178,7 @@ class DelegateAITool(AITool):
         self,
         tool_call: AIToolCall,
         requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
+        request_authorization: AIToolAuthorizationCallback
     ) -> AIToolResult:
         """
         Delegate a task to a specialized child AI instance.
@@ -240,6 +240,22 @@ class DelegateAITool(AITool):
                 reasoning = model_config.reasoning_capabilities
 
         self._logger.debug("AI delegation requested with task: %s", task_prompt[:100])
+
+        # Request user authorization before delegating
+        session_info = "continue a previous session" if session_id == "current" else \
+                       "continue an existing session" if session_id else "start a new session"
+        model_info = f" using model '{model}'" if model else " using the default model"
+        temp_info = f" with temperature {temperature}" if temperature is not None else ""
+
+        context = (
+            f"The AI wants to delegate a task to a child AI instance.\n\n"
+            f"Session: {session_info}{model_info}{temp_info}\n\n"
+            f"Task prompt:\n{task_prompt[:500]}{'...' if len(task_prompt) > 500 else ''}"
+        )
+
+        authorized = await request_authorization("delegate_ai", arguments, context, None, False)
+        if not authorized:
+            raise AIToolAuthorizationDenied("User denied permission to delegate AI task")
 
         ai_conversation: AIConversation = requester_ref
 
@@ -419,19 +435,21 @@ class DelegateAITool(AITool):
             # Submit the prompt directly to the child AIConversation
             requester = parent_ai_conversation.conversation_settings().model
 
+            # Create the display tab first so it registers event callbacks before we submit the prompt.
+            # If we submit first, the MESSAGE_ADDED event for the user prompt fires before the
+            # widget is listening, and the prompt never appears in the on-screen history.
+
             # Protect the parent conversation tab so the child display tab lands in a different column
             parent_tab = self._column_manager.find_tab_by_ai_conversation(parent_ai_conversation)
             if parent_tab:
                 self._column_manager.protect_tab(parent_tab.tab_id())
 
-            await child_ai_conversation.submit_message(requester, task_prompt)
-
-            # Create the display tab, passing the already-running AIConversation
             try:
                 conversation_tab = self._column_manager.new_conversation(
                     child=True,
                     ai_conversation=child_ai_conversation
                 )
+
             except ColumnManagerError as e:
                 raise AIToolExecutionError(
                     f"Failed to create display tab for delegation: {str(e)}"
@@ -439,6 +457,20 @@ class DelegateAITool(AITool):
 
             if parent_tab:
                 self._column_manager.unprotect_tab(parent_tab.tab_id())
+
+            # Move the child conversation tab to the next column to the right of the parent
+            if parent_tab:
+                parent_info = self._column_manager.get_tab_info_by_id(parent_tab.tab_id())
+                if parent_info:
+                    target_column = min(cast(int, parent_info["column_index"]) + 1, 5)
+                    try:
+                        self._column_manager.move_tab_to_column(conversation_tab.tab_id(), target_column)
+
+                    except ColumnManagerError:
+                        pass  # Best effort — tab is still functional if move fails
+
+            # Now submit the prompt — the widget is listening and will display the user message
+            await child_ai_conversation.submit_message(requester, task_prompt)
 
             tab_guid = conversation_tab.tab_id()
             session_id = self._mindspace_manager.get_mindspace_relative_path(conversation_tab.path())

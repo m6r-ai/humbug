@@ -683,6 +683,10 @@ class CodeObject:
     source_line: int = 0  # Line number in source code where this function is defined
     source_file: str = ""  # Source file name (if available)
 
+    # Populated by the C VM at convert time; invisible to all Python-level operations.
+    _closure_cache: object = field(default=None, init=False, repr=False, compare=False, hash=False)
+    _code_caches: object = field(default=None, init=False, repr=False, compare=False, hash=False)
+
     def __post_init__(self) -> None:
         """Convert a plain list of Instruction objects to a packed array if needed.
 

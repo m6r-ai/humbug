@@ -147,24 +147,6 @@ class SystemAITool(AITool):
                 description="Create a new AI conversation tab, with optional model/temperature. "
                     "Returns the tab GUID for use with the conversation tool"
             ),
-            "show_system_shell_tab": AIToolOperationDefinition(
-                name="show_system_shell_tab",
-                handler=self._show_system_shell_tab,
-                extract_context=None,
-                allowed_parameters=set(),
-                required_parameters=set(),
-                description="Open a system shell tab. "
-                    "Returns the tab GUID for use with the terminal tool"
-            ),
-            "show_log_tab": AIToolOperationDefinition(
-                name="show_log_tab",
-                handler=self._show_log_tab,
-                extract_context=None,
-                allowed_parameters=set(),
-                required_parameters=set(),
-                description="Open the mindspace log tab. "
-                    "Returns the tab GUID for use with the log tool"
-            ),
             "open_preview_tab": AIToolOperationDefinition(
                 name="open_preview_tab",
                 handler=self._open_preview_tab,
@@ -485,67 +467,6 @@ class SystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to create conversation: {str(e)}") from e
-
-    async def _show_system_shell_tab(
-        self,
-        tool_call: AIToolCall,
-        requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Show the system shell tab."""
-        try:
-            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
-            self._column_manager.protect_tab(requester_tab.tab_id())
-
-            try:
-                shell_tab = self._column_manager.show_system_shell()
-
-            finally:
-                self._column_manager.unprotect_tab(requester_tab.tab_id())
-
-            tab_id = shell_tab.tab_id()
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI opened system shell\ntab ID: {tab_id}"
-            )
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=f"Opened system shell, tab ID: {tab_id}"
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to show system shell: {str(e)}") from e
-
-    async def _show_log_tab(
-        self,
-        tool_call: AIToolCall,
-        requester_ref: Any,
-        _request_authorization: AIToolAuthorizationCallback
-    ) -> AIToolResult:
-        """Show the mindspace log tab."""
-        try:
-            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
-            self._column_manager.protect_tab(requester_tab.tab_id())
-            try:
-                log_tab = self._column_manager.show_system_log()
-
-            finally:
-                self._column_manager.unprotect_tab(requester_tab.tab_id())
-
-            tab_id = log_tab.tab_id()
-            self._mindspace_manager.add_interaction(
-                MindspaceLogLevel.INFO,
-                f"AI opened mindspace log\ntab ID: {tab_id}"
-            )
-            return AIToolResult(
-                id=tool_call.id,
-                name="system",
-                content=f"Opened mindspace log, tab ID: {tab_id}"
-            )
-
-        except Exception as e:
-            raise AIToolExecutionError(f"Failed to show mindspace log: {str(e)}") from e
 
     async def _open_preview_tab(
         self,

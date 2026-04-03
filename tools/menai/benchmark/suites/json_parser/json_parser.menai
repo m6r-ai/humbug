@@ -1,0 +1,196 @@
+; JSON parser module — iterative (explicit stack) implementation.
+;
+; Uses an explicit work stack to avoid call-stack overflow on deeply nested JSON.
+; Each stack frame describes what to do when a sub-value is returned:
+;   (list "array"  s acc)      - resume building an array after an element
+;   (list "object" s d key)    - resume building an object after a value
+;
+; Exports: "parse" — takes a JSON string, returns the equivalent Menai value.
+;   JSON objects    -> dict
+;   JSON arrays     -> list
+;   JSON strings    -> string
+;   JSON integers   -> integer
+;   JSON floats     -> float
+;   JSON true/false -> #t / #f
+;   JSON null       -> #none
+; Raises a runtime error on malformed input.
+
+(letrec (
+
+  (skip-ws
+   (lambda (s pos)
+     (letrec ((loop (lambda (i)
+                      (if (integer>=? i (string-length s))
+                          i
+                          (let ((ch (string-ref s i)))
+                            (if (or (string=? ch " ")
+                                (or (string=? ch "\t")
+                                (or (string=? ch "\n")
+                                    (string=? ch "\r"))))
+                                (loop (integer+ i 1))
+                                i))))))
+       (loop pos))))
+
+  (is-digit?
+   (lambda (ch)
+     (and (string>=? ch "0") (string<=? ch "9"))))
+
+  (parse-string-chars
+   (lambda (s pos acc)
+     (letrec ((loop (lambda (i a)
+                      (if (integer>=? i (string-length s))
+                          (error "Unterminated string literal")
+                          (let ((ch (string-ref s i)))
+                            (if (string=? ch "\"")
+                                (list (list->string (list-reverse a)) (integer+ i 1))
+                                (if (string=? ch "\\")
+                                    (if (integer>=? (integer+ i 1) (string-length s))
+                                        (error "Unterminated escape sequence")
+                                        (let ((esc (string-ref s (integer+ i 1))))
+                                          (let ((unescaped
+                                                 (match esc
+                                                   ("\"" "\"") ("\\" "\\") ("/" "/")
+                                                   ("b" "\u0008") ("f" "\u000c")
+                                                   ("n" "\n") ("r" "\r") ("t" "\t")
+                                                   (_ #none))))
+                                            (if (none? unescaped)
+                                                (if (string=? esc "u")
+                                                    (if (integer>? (integer+ i 6) (string-length s))
+                                                        (error "Unterminated \\u escape sequence")
+                                                        (let ((hex (string-slice s (integer+ i 2) (integer+ i 6))))
+                                                          (let ((codepoint (string->integer hex 16)))
+                                                            (if (none? codepoint)
+                                                                (error "Invalid hex digits in \\u escape sequence")
+                                                                (loop (integer+ i 6) (list-prepend a (integer-codepoint->string codepoint)))))))
+                                                    (error "Unknown escape sequence in string"))
+                                                (loop (integer+ i 2) (list-prepend a unescaped))))))
+                                    (loop (integer+ i 1) (list-prepend a ch)))))))))
+       (loop pos acc))))
+
+  (scan-number-end
+   (lambda (s i len)
+     (letrec ((loop (lambda (j)
+                      (if (integer>=? j len)
+                          j
+                          (let ((ch (string-ref s j)))
+                            (if (or (string=? ch "-")
+                                (or (string=? ch "+")
+                                (or (string=? ch ".")
+                                (or (string=? ch "e")
+                                (or (string=? ch "E")
+                                    (is-digit? ch))))))
+                                (loop (integer+ j 1))
+                                j))))))
+       (loop i))))
+
+  (parse-number
+   (lambda (s pos)
+     (let ((end (scan-number-end s pos (string-length s))))
+       (let ((num-str (string-slice s pos end)))
+         (let ((n (string->number num-str)))
+           (if (none? n)
+               (error "Invalid number literal in JSON")
+               (list n end)))))))
+
+  (parse-keyword
+   (lambda (s pos kw val)
+     (let ((klen (string-length kw)))
+       (if (integer>? (integer+ pos klen) (string-length s))
+           (error "Unexpected end of input reading keyword")
+           (if (string=? (string-slice s pos (integer+ pos klen)) kw)
+               (list val (integer+ pos klen))
+               (error "Unrecognized keyword in JSON"))))))
+
+  ; Called after a value is parsed. Applies the top stack frame, or returns
+  ; the final value if the stack is empty.
+  (resume
+   (lambda (val pos stack)
+     (if (list-null? stack)
+         val
+         (let ((frame (list-first stack))
+               (rest-stack (list-rest stack)))
+           (if (string=? (list-first frame) "array")
+               ; Resume array: frame = ("array" s acc)
+               (let ((s   (list-ref frame 1))
+                     (acc (list-ref frame 2)))
+                 (let ((pos2 (skip-ws s pos)))
+                   (if (integer>=? pos2 (string-length s))
+                       (error "Unterminated array")
+                       (let ((ch (string-ref s pos2)))
+                         (if (string=? ch "]")
+                             (resume (list-append acc val) (integer+ pos2 1) rest-stack)
+                             (if (string=? ch ",")
+                                 (dispatch s (skip-ws s (integer+ pos2 1))
+                                           (list-prepend rest-stack (list "array" s (list-append acc val))))
+                                 (error "Expected , or ] in array")))))))
+               ; Resume object: frame = ("object" s d key)
+               (let ((s   (list-ref frame 1))
+                     (d   (list-ref frame 2))
+                     (key (list-ref frame 3)))
+                 (let ((pos2 (skip-ws s pos)))
+                   (if (integer>=? pos2 (string-length s))
+                       (error "Unterminated object")
+                       (let ((ch (string-ref s pos2)))
+                         (if (string=? ch "}")
+                             (resume (dict-set d key val) (integer+ pos2 1) rest-stack)
+                             (if (string=? ch ",")
+                                 (parse-object-key s (skip-ws s (integer+ pos2 1))
+                                                   (dict-set d key val) rest-stack)
+                                 (error "Expected , or } in object"))))))))))))
+
+  ; Parse the next key:value pair in an object.
+  (parse-object-key
+   (lambda (s pos d stack)
+     (if (integer>=? pos (string-length s))
+         (error "Unterminated object")
+         (if (string=? (string-ref s pos) "\"")
+             (let ((key-result (parse-string-chars s (integer+ pos 1) (list))))
+               (let ((key  (list-first key-result))
+                     (pos2 (skip-ws s (list-ref key-result 1))))
+                 (if (integer>=? pos2 (string-length s))
+                     (error "Expected : after object key")
+                     (if (string=? (string-ref s pos2) ":")
+                         (dispatch s (skip-ws s (integer+ pos2 1))
+                                   (list-prepend stack (list "object" s d key)))
+                         (error "Expected : after object key")))))
+             (error "Expected string key in object")))))
+
+  ; Dispatch: inspect the character at pos and begin parsing the appropriate value.
+  ; Always tail-calls resume (for scalars) or itself/parse-object-key (for containers).
+  (dispatch
+   (lambda (s pos stack)
+     (let ((pos2 (skip-ws s pos)))
+       (if (integer>=? pos2 (string-length s))
+           (error "Unexpected end of JSON input")
+           (let ((ch (string-ref s pos2)))
+             (if (string=? ch "{")
+                 (let ((pos3 (skip-ws s (integer+ pos2 1))))
+                   (if (integer>=? pos3 (string-length s))
+                       (error "Unterminated object")
+                       (if (string=? (string-ref s pos3) "}")
+                           (resume (dict) (integer+ pos3 1) stack)
+                           (parse-object-key s pos3 (dict) stack))))
+                 (if (string=? ch "[")
+                     (let ((pos3 (skip-ws s (integer+ pos2 1))))
+                       (if (integer>=? pos3 (string-length s))
+                           (error "Unterminated array")
+                           (if (string=? (string-ref s pos3) "]")
+                               (resume (list) (integer+ pos3 1) stack)
+                               (dispatch s pos3 (list-prepend stack (list "array" s (list)))))))
+                     (let ((scalar-result
+                            (if (string=? ch "\"")
+                                (parse-string-chars s (integer+ pos2 1) (list))
+                                (if (string=? ch "t")
+                                    (parse-keyword s pos2 "true" #t)
+                                    (if (string=? ch "f")
+                                        (parse-keyword s pos2 "false" #f)
+                                        (if (string=? ch "n")
+                                            (parse-keyword s pos2 "null" #none)
+                                            (if (or (string=? ch "-") (is-digit? ch))
+                                                (parse-number s pos2)
+                                               (error "Unexpected character in JSON"))))))))
+                        (resume (list-first scalar-result) (list-ref scalar-result 1) stack))))))))))
+
+; letrec body:
+(dict "parse" (lambda (json-string)
+           (dispatch json-string 0 (list)))))

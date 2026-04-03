@@ -1,0 +1,362 @@
+; Rubik's Cube Solver in Menai
+; Uses IDA* algorithm with heuristic based on misplaced stickers
+;
+; Cube representation: cube-repr struct with 6 face fields (U D F B L R), each a list of 9 stickers (0-5)
+; Face order: U(up/white), D(down/yellow), F(front/green), B(back/blue), L(left/orange), R(right/red)
+; Sticker positions on each face:
+;   0 1 2
+;   3 4 5
+;   6 7 8
+; Center (position 4) never moves and identifies the face color
+
+(letrec
+  ((cube-repr (struct (U D F B L R)))
+   (search-result (struct (found value)))
+
+   (solved-cube
+     (lambda ()
+       (cube-repr
+         (list 0 0 0 0 0 0 0 0 0)
+         (list 1 1 1 1 1 1 1 1 1)
+         (list 2 2 2 2 2 2 2 2 2)
+         (list 3 3 3 3 3 3 3 3 3)
+         (list 4 4 4 4 4 4 4 4 4)
+         (list 5 5 5 5 5 5 5 5 5))))
+
+   (get-sticker
+     (lambda (face pos)
+       (list-ref face pos)))
+
+   (rotate-face-cw
+     (lambda (face)
+       (list
+         (get-sticker face 6)
+         (get-sticker face 3)
+         (get-sticker face 0)
+         (get-sticker face 7)
+         (get-sticker face 4)
+         (get-sticker face 1)
+         (get-sticker face 8)
+         (get-sticker face 5)
+         (get-sticker face 2))))
+
+   (move-U
+     (lambda (cube)
+       (let* ((u (struct-get cube 'U))
+              (f (struct-get cube 'F))
+              (r (struct-get cube 'R))
+              (b (struct-get cube 'B))
+              (l (struct-get cube 'L)))
+         (cube-repr
+           (rotate-face-cw u)
+           (struct-get cube 'D)
+           (list (get-sticker r 0) (get-sticker r 1) (get-sticker r 2)
+                 (get-sticker f 3) (get-sticker f 4) (get-sticker f 5)
+                 (get-sticker f 6) (get-sticker f 7) (get-sticker f 8))
+           (list (get-sticker l 0) (get-sticker l 1) (get-sticker l 2)
+                 (get-sticker b 3) (get-sticker b 4) (get-sticker b 5)
+                 (get-sticker b 6) (get-sticker b 7) (get-sticker b 8))
+           (list (get-sticker f 0) (get-sticker f 1) (get-sticker f 2)
+                 (get-sticker l 3) (get-sticker l 4) (get-sticker l 5)
+                 (get-sticker l 6) (get-sticker l 7) (get-sticker l 8))
+           (list (get-sticker b 0) (get-sticker b 1) (get-sticker b 2)
+                 (get-sticker r 3) (get-sticker r 4) (get-sticker r 5)
+                 (get-sticker r 6) (get-sticker r 7) (get-sticker r 8))))))
+
+   (move-D
+     (lambda (cube)
+       (let* ((d (struct-get cube 'D))
+              (f (struct-get cube 'F))
+              (r (struct-get cube 'R))
+              (b (struct-get cube 'B))
+              (l (struct-get cube 'L)))
+         (cube-repr
+           (struct-get cube 'U)
+           (rotate-face-cw d)
+           (list (get-sticker f 0) (get-sticker f 1) (get-sticker f 2)
+                 (get-sticker f 3) (get-sticker f 4) (get-sticker f 5)
+                 (get-sticker l 6) (get-sticker l 7) (get-sticker l 8))
+           (list (get-sticker b 0) (get-sticker b 1) (get-sticker b 2)
+                 (get-sticker b 3) (get-sticker b 4) (get-sticker b 5)
+                 (get-sticker r 6) (get-sticker r 7) (get-sticker r 8))
+           (list (get-sticker l 0) (get-sticker l 1) (get-sticker l 2)
+                 (get-sticker l 3) (get-sticker l 4) (get-sticker l 5)
+                 (get-sticker b 6) (get-sticker b 7) (get-sticker b 8))
+           (list (get-sticker r 0) (get-sticker r 1) (get-sticker r 2)
+                 (get-sticker r 3) (get-sticker r 4) (get-sticker r 5)
+                 (get-sticker f 6) (get-sticker f 7) (get-sticker f 8))))))
+
+   (move-F
+     (lambda (cube)
+       (let* ((f (struct-get cube 'F))
+              (u (struct-get cube 'U))
+              (r (struct-get cube 'R))
+              (d (struct-get cube 'D))
+              (l (struct-get cube 'L)))
+         (cube-repr
+           (list (get-sticker u 0) (get-sticker u 1) (get-sticker u 2)
+                 (get-sticker u 3) (get-sticker u 4) (get-sticker u 5)
+                 (get-sticker l 8) (get-sticker l 5) (get-sticker l 2))
+           (list (get-sticker r 0) (get-sticker r 3) (get-sticker r 6)
+                 (get-sticker d 3) (get-sticker d 4) (get-sticker d 5)
+                 (get-sticker d 6) (get-sticker d 7) (get-sticker d 8))
+           (rotate-face-cw f)
+           (struct-get cube 'B)
+           (list (get-sticker l 0) (get-sticker l 1) (get-sticker d 2)
+                 (get-sticker l 3) (get-sticker l 4) (get-sticker d 1)
+                 (get-sticker l 6) (get-sticker l 7) (get-sticker d 0))
+           (list (get-sticker u 6) (get-sticker r 1) (get-sticker r 2)
+                 (get-sticker u 7) (get-sticker r 4) (get-sticker r 5)
+                 (get-sticker u 8) (get-sticker r 7) (get-sticker r 8))))))
+
+   (move-B
+     (lambda (cube)
+       (let* ((b (struct-get cube 'B))
+              (u (struct-get cube 'U))
+              (l (struct-get cube 'L))
+              (d (struct-get cube 'D))
+              (r (struct-get cube 'R)))
+         (cube-repr
+           (list (get-sticker r 8) (get-sticker r 5) (get-sticker r 2)
+                 (get-sticker u 3) (get-sticker u 4) (get-sticker u 5)
+                 (get-sticker u 6) (get-sticker u 7) (get-sticker u 8))
+           (list (get-sticker d 0) (get-sticker d 1) (get-sticker d 2)
+                 (get-sticker d 3) (get-sticker d 4) (get-sticker d 5)
+                 (get-sticker l 6) (get-sticker l 3) (get-sticker l 0))
+           (struct-get cube 'F)
+           (rotate-face-cw b)
+           (list (get-sticker u 2) (get-sticker l 1) (get-sticker l 2)
+                 (get-sticker u 1) (get-sticker l 4) (get-sticker l 5)
+                 (get-sticker u 0) (get-sticker l 7) (get-sticker l 8))
+           (list (get-sticker r 0) (get-sticker r 1) (get-sticker d 6)
+                 (get-sticker r 3) (get-sticker r 4) (get-sticker d 7)
+                 (get-sticker r 6) (get-sticker r 7) (get-sticker d 8))))))
+
+   (move-L
+     (lambda (cube)
+       (let* ((l (struct-get cube 'L))
+              (u (struct-get cube 'U))
+              (f (struct-get cube 'F))
+              (d (struct-get cube 'D))
+              (b (struct-get cube 'B)))
+         (cube-repr
+           (list (get-sticker b 8) (get-sticker u 1) (get-sticker u 2)
+                 (get-sticker b 5) (get-sticker u 4) (get-sticker u 5)
+                 (get-sticker b 2) (get-sticker u 7) (get-sticker u 8))
+           (list (get-sticker f 0) (get-sticker d 1) (get-sticker d 2)
+                 (get-sticker f 3) (get-sticker d 4) (get-sticker d 5)
+                 (get-sticker f 6) (get-sticker d 7) (get-sticker d 8))
+           (list (get-sticker u 0) (get-sticker f 1) (get-sticker f 2)
+                 (get-sticker u 3) (get-sticker f 4) (get-sticker f 5)
+                 (get-sticker u 6) (get-sticker f 7) (get-sticker f 8))
+           (list (get-sticker b 0) (get-sticker b 1) (get-sticker d 6)
+                 (get-sticker b 3) (get-sticker b 4) (get-sticker d 3)
+                 (get-sticker b 6) (get-sticker b 7) (get-sticker d 0))
+           (rotate-face-cw l)
+           (struct-get cube 'R)))))
+
+   (move-R
+     (lambda (cube)
+       (let* ((r (struct-get cube 'R))
+              (u (struct-get cube 'U))
+              (b (struct-get cube 'B))
+              (d (struct-get cube 'D))
+              (f (struct-get cube 'F)))
+         (cube-repr
+           (list (get-sticker u 0) (get-sticker u 1) (get-sticker f 2)
+                 (get-sticker u 3) (get-sticker u 4) (get-sticker f 5)
+                 (get-sticker u 6) (get-sticker u 7) (get-sticker f 8))
+           (list (get-sticker d 0) (get-sticker d 1) (get-sticker b 6)
+                 (get-sticker d 3) (get-sticker d 4) (get-sticker b 3)
+                 (get-sticker d 6) (get-sticker d 7) (get-sticker b 0))
+           (list (get-sticker f 0) (get-sticker f 1) (get-sticker d 2)
+                 (get-sticker f 3) (get-sticker f 4) (get-sticker d 5)
+                 (get-sticker f 6) (get-sticker f 7) (get-sticker d 8))
+           (list (get-sticker u 8) (get-sticker b 1) (get-sticker b 2)
+                 (get-sticker u 5) (get-sticker b 4) (get-sticker b 5)
+                 (get-sticker u 2) (get-sticker b 7) (get-sticker b 8))
+           (struct-get cube 'L)
+           (rotate-face-cw r)))))
+
+   (apply-move
+     (lambda (cube move-name)
+       (match move-name
+         ("U"  (move-U cube))
+         ("U'" (move-U (move-U (move-U cube))))
+         ("U2" (move-U (move-U cube)))
+         ("D"  (move-D cube))
+         ("D'" (move-D (move-D (move-D cube))))
+         ("D2" (move-D (move-D cube)))
+         ("F"  (move-F cube))
+         ("F'" (move-F (move-F (move-F cube))))
+         ("F2" (move-F (move-F cube)))
+         ("B"  (move-B cube))
+         ("B'" (move-B (move-B (move-B cube))))
+         ("B2" (move-B (move-B cube)))
+         ("L"  (move-L cube))
+         ("L'" (move-L (move-L (move-L cube))))
+         ("L2" (move-L (move-L cube)))
+         ("R"  (move-R cube))
+         ("R'" (move-R (move-R (move-R cube))))
+         ("R2" (move-R (move-R cube)))
+         (_ cube))))
+
+   (apply-moves
+     (lambda (cube moves)
+       (if (list-null? moves)
+           cube
+           (apply-moves (apply-move cube (list-first moves)) (list-rest moves)))))
+
+   (face-solved?
+     (lambda (face)
+       (let ((center (get-sticker face 4)))
+         (all-list? (lambda (s) (integer=? s center)) face))))
+
+   (cube-solved?
+     (lambda (cube)
+       (and (face-solved? (struct-get cube 'U))
+            (face-solved? (struct-get cube 'D))
+            (face-solved? (struct-get cube 'F))
+            (face-solved? (struct-get cube 'B))
+            (face-solved? (struct-get cube 'L))
+            (face-solved? (struct-get cube 'R)))))
+
+   (count-mismatched
+     (lambda (face)
+       (let ((center (get-sticker face 4)))
+         (list-length (filter-list (lambda (s) (integer!=? s center)) face)))))
+
+   (heuristic
+     (lambda (cube)
+       (let ((total (integer+
+                      (count-mismatched (struct-get cube 'U))
+                      (count-mismatched (struct-get cube 'D))
+                      (count-mismatched (struct-get cube 'F))
+                      (count-mismatched (struct-get cube 'B))
+                      (count-mismatched (struct-get cube 'L))
+                      (count-mismatched (struct-get cube 'R)))))
+         (integer/ total 8))))
+
+   (all-moves (list "U" "U'" "U2" "D" "D'" "D2"
+                    "F" "F'" "F2" "B" "B'" "B2"
+                    "L" "L'" "L2" "R" "R'" "R2"))
+
+   (move-face
+     (lambda (move)
+       (string-ref move 0)))
+
+   (same-face?
+     (lambda (m1 m2)
+       (string=? (move-face m1) (move-face m2))))
+
+   (inverse-move
+     (lambda (move)
+       (match move
+         ("U"  "U'") ("U'" "U") ("U2" "U2")
+         ("D"  "D'") ("D'" "D") ("D2" "D2")
+         ("F"  "F'") ("F'" "F") ("F2" "F2")
+         ("B"  "B'") ("B'" "B") ("B2" "B2")
+         ("L"  "L'") ("L'" "L") ("L2" "L2")
+         ("R"  "R'") ("R'" "R") ("R2" "R2")
+         (_ move))))
+
+   (should-prune?
+     (lambda (move last-move)
+       (or (same-face? move last-move)
+           (string=? move (inverse-move last-move)))))
+
+   (get-candidates
+     (lambda (last-move)
+       (if (boolean? last-move)
+           all-moves
+           (filter-list (lambda (m) (boolean-not (should-prune? m last-move))) all-moves))))
+
+   (search-moves
+     (lambda (cube bound g last-move path moves best-threshold)
+       (if (list-null? moves)
+           (search-result #f (if (boolean? best-threshold) (integer+ bound 1) best-threshold))
+           (let* ((move     (list-first moves))
+                  (new-cube (apply-move cube move))
+                  (new-path (list-concat path (list move)))
+                  (result   (ida-search new-cube bound (integer+ g 1) move new-path)))
+             (if (struct-get result 'found)
+                 result
+                 (search-moves cube bound g last-move path (list-rest moves)
+                   (if (boolean? best-threshold)
+                       (struct-get result 'value)
+                       (integer-min best-threshold (struct-get result 'value)))))))))
+
+   (ida-search
+     (lambda (cube bound g last-move path)
+       (let ((h (heuristic cube)))
+         (if (cube-solved? cube)
+             (search-result #t path)
+             (if (integer>? (integer+ g h) bound)
+                 (search-result #f (integer+ g h))
+                 (search-moves cube bound g last-move path (get-candidates last-move) #f))))))
+
+   (ida-star
+     (lambda (cube max-depth)
+       (letrec ((search-loop
+                  (lambda (bound)
+                    (if (integer>? bound max-depth)
+                        (search-result #f "Max depth exceeded")
+                        (let ((result (ida-search cube bound 0 #f (list))))
+                          (if (struct-get result 'found)
+                              result
+                              (search-loop (struct-get result 'value))))))))
+         (search-loop 0))))
+
+   (sticker->str
+     (lambda (s)
+       (match s
+         (0 "W") (1 "Y") (2 "G") (3 "B") (4 "O") (5 "R") (_ "?"))))
+
+   (face-row->str
+     (lambda (face row)
+       (let ((start (integer* row 3)))
+         (string-concat
+           (sticker->str (get-sticker face start))
+           (sticker->str (get-sticker face (integer+ start 1)))
+           (sticker->str (get-sticker face (integer+ start 2)))))))
+
+   (print-cube
+     (lambda (cube)
+       (let ((u (struct-get cube 'U))
+             (d (struct-get cube 'D))
+             (f (struct-get cube 'F))
+             (b (struct-get cube 'B))
+             (l (struct-get cube 'L))
+             (r (struct-get cube 'R)))
+         (string-concat
+           "    " (face-row->str u 0) "\n"
+           "    " (face-row->str u 1) "\n"
+           "    " (face-row->str u 2) "\n"
+           (face-row->str l 0) " " (face-row->str f 0) " " (face-row->str r 0) " " (face-row->str b 0) "\n"
+           (face-row->str l 1) " " (face-row->str f 1) " " (face-row->str r 1) " " (face-row->str b 1) "\n"
+           (face-row->str l 2) " " (face-row->str f 2) " " (face-row->str r 2) " " (face-row->str b 2) "\n"
+           "    " (face-row->str d 0) "\n"
+           "    " (face-row->str d 1) "\n"
+           "    " (face-row->str d 2) "\n"))))
+
+   (format-solution
+     (lambda (result)
+       (if (struct-get result 'found)
+           (string-concat "Solution found! Moves: " (list->string (struct-get result 'value) " "))
+           (string-concat "No solution: " (struct-get result 'value)))))
+
+   (make-cube
+     (lambda (u d f b l r)
+       (cube-repr u d f b l r))))
+
+  (dict
+    "solved-cube"     solved-cube
+    "apply-move"      apply-move
+    "apply-moves"     apply-moves
+    "cube-solved?"    cube-solved?
+    "heuristic"       heuristic
+    "ida-star"        ida-star
+    "print-cube"      print-cube
+    "format-solution" format-solution
+    "make-cube"       make-cube
+    "all-moves"       all-moves))

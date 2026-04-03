@@ -16,6 +16,14 @@ from menai.menai_value import (
 from menai.menai_vm_bytecode_validator import validate_bytecode
 
 
+try:
+    from menai.menai_vm_c import execute as _c_vm_execute  # type: ignore[import-not-found]
+    _C_VM_AVAILABLE = True
+except ImportError:
+    _c_vm_execute = None
+    _C_VM_AVAILABLE = False
+
+
 class MenaiTraceWatcher(Protocol):
     """Protocol for Menai trace watchers."""
     def on_trace(self, message: str) -> None:
@@ -366,6 +374,10 @@ class MenaiVM:
         # Validate bytecode before execution (if enabled)
         if self.validate_bytecode:
             validate_bytecode(code)
+
+        # Delegate to the C VM when available and no trace watcher is active.
+        if _C_VM_AVAILABLE and self.trace_watcher is None and not self._cancelled:
+            return _c_vm_execute(code, constants, prelude_functions or {})
 
         self.globals = constants.copy()
         if prelude_functions:

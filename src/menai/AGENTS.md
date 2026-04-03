@@ -103,7 +103,7 @@ expressive.  Do not add `cond`.
 
 ### Proper lists only
 
-`MenaiList` is backed by a Python tuple.  There are no cons cells and no improper lists.
+`MenaiList` is backed by a native C array (`PyObject **elements`, `Py_ssize_t length`).  There are no cons cells and no improper lists.
 `cons` requires its second argument to be a list.  This is intentional: improper lists
 add complexity for minimal benefit in a language without pattern-matched list destructuring
 at the cons-cell level.

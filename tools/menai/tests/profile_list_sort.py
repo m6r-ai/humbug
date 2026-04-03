@@ -24,12 +24,16 @@ import time
 from io import StringIO
 from pathlib import Path
 
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _SCRIPT_DIR.parent.parent.parent
+sys.path.insert(0, str(_REPO_ROOT / "src"))
+
 from menai import Menai
 
 
 DEFAULT_SIZES = [10, 50, 100, 250, 500, 1000, 2000]
 DEFAULT_ITERATIONS = 10
-MENAI_FILE = Path(__file__).parent / "list-sort.menai"
+MENAI_FILE = _SCRIPT_DIR / "list-sort.menai"
 
 
 def load_sort_source() -> str:
