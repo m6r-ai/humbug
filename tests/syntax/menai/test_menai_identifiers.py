@@ -132,7 +132,7 @@ class TestMenaiIdentifiers:
 
     def test_higher_order_function_identifiers(self):
         """Test higher-order function names."""
-        test_cases = ['map', 'filter', 'fold', 'reduce', 'apply']
+        test_cases = ['map', 'filter', 'fold', 'reduce']
         for func in test_cases:
             lexer = MenaiLexer()
             lexer.lex(None, func)

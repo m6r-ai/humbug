@@ -323,7 +323,7 @@ class TestMenaiAIToolModulePath:
         """Test that set_module_path clears the module cache."""
         # Create a module
         module_file = tmp_path / "test.menai"
-        module_file.write_text("(dict (list \"value\" 42))")
+        module_file.write_text("(dict \"value\" 42)")
 
         tool = MenaiAITool()
         tool.set_module_path([str(tmp_path)])
@@ -355,7 +355,7 @@ class TestMenaiAIToolModulePath:
     def test_module_path_persists_after_evaluation(self, tmp_path):
         """Test that module path persists after evaluations."""
         module_file = tmp_path / "test.menai"
-        module_file.write_text("(dict (list \"value\" 42))")
+        module_file.write_text("(dict \"value\" 42)")
 
         tool = MenaiAITool()
         tool.set_module_path([str(tmp_path)])
