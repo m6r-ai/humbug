@@ -70,6 +70,7 @@ class ShellWidget(QWidget):
         self._scroll_area.setFrameStyle(0)
         self._scroll_area.setWidgetResizable(True)
         self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._scroll_area.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
@@ -798,10 +799,11 @@ class ShellWidget(QWidget):
 
     def _on_style_changed(self) -> None:
         """Handle style changes by updating fonts and stylesheets."""
-        factor = self._style_manager.zoom_factor()
+        zoom_factor = self._style_manager.zoom_factor()
+        self._messages_container.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
         font = self.font()
         base_font_size = self._style_manager.base_font_size()
-        font.setPointSizeF(base_font_size * factor)
+        font.setPointSizeF(base_font_size * zoom_factor)
         self.setFont(font)
 
         for message in self._messages:

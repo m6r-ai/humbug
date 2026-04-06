@@ -151,6 +151,7 @@ class ConversationWidget(QWidget):
         self._scroll_area.setFrameStyle(0)
         self._scroll_area.setWidgetResizable(True)
         self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._scroll_area.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
@@ -2007,6 +2008,7 @@ class ConversationWidget(QWidget):
         spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
         self._messages_layout.setSpacing(spacing)
         self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
+        self._messages_container.setMaximumWidth(int(style_manager.nice_tab_width() * zoom_factor))
 
         font = self.font()
         base_font_size = style_manager.base_font_size()

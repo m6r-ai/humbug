@@ -82,6 +82,7 @@ class PreviewWidget(QWidget):
         self._scroll_area.setFrameStyle(0)
         self._scroll_area.setWidgetResizable(True)
         self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self._scroll_area.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
 
@@ -763,6 +764,9 @@ class PreviewWidget(QWidget):
 
     def _on_style_changed(self) -> None:
         """Handle style changes."""
+        zoom_factor = self._style_manager.zoom_factor()
+        self._content_container.setMaximumWidth(int(self._style_manager.nice_tab_width() * zoom_factor))
+
         # Apply style to all content blocks
         for content_block in self._content_blocks:
             content_block.apply_style()

@@ -1285,6 +1285,10 @@ class StyleManager(QObject):
         """Get the number of pixels to use in message bubble spacing."""
         return 10.0
 
+    def nice_tab_width(self) -> float:
+        """Get the ideal width for tabs to balance information density and readability."""
+        return 1024.0
+
     def get_menu_stylesheet(self) -> str:
         """Apply styling to a specific menu."""
         return f"""
