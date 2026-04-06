@@ -1140,7 +1140,7 @@ class Menai:
         # Load prelude once at initialization
         self._prelude = self._load_prelude(self.compiler, self.vm)
 
-    def compile(self, expression: str) -> 'CodeObject':
+    def compile(self, expression: str) -> CodeObject:
         """
         Compile a Menai expression to bytecode without executing it.
 
@@ -1156,7 +1156,7 @@ class Menai:
         """
         return self.compiler.compile(expression)
 
-    def execute_raw(self, code: 'CodeObject') -> 'MenaiValue':
+    def execute_raw(self, code: CodeObject) -> 'MenaiValue':
         """
         Execute compiled bytecode and return the raw MenaiValue.
 
