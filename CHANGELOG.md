@@ -16,6 +16,7 @@ New features:
   for a human (developer) to use.
 - Most tab types now use a more narrow default view to make them easier to read.
 - The tab label bar can now be scrolled using a mouse wheel.
+- Terminal tabs are now always at least 80 columns and have a horizontal scrollbar if the column is too narrow.
 
 Bug fixes:
 

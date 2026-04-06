@@ -49,8 +49,9 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Set up scrollbar behavior
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
+        self.horizontalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         self.setViewportMargins(4, 4, 4, 4)
@@ -182,15 +183,9 @@ class TerminalWidget(QAbstractScrollArea):
     def _update_dimensions(self) -> None:
         """Update terminal dimensions based on widget size and font metrics."""
 
-        # Get the width of the vertical scrollbar
-        scrollbar_width = self.verticalScrollBar().width()
-
-        # Calculate available viewport width, subtracting scrollbar width and margins
-        viewport_width = max(0, self.width() - scrollbar_width - (2 * 4))
-        viewport_height = self.height() - (2 * 4)
-
-        cols = int(max(viewport_width / self._char_width, 1))
-        rows = int(max(viewport_height / self._char_height, 1))
+        visible_cols = int(max(self.viewport().width() / self._char_width, 1))
+        cols = max(80, visible_cols)
+        rows = int(max(self.viewport().height() / self._char_height, 1))
 
         # Update state dimensions
         self._state.resize(rows, cols)
@@ -215,6 +210,16 @@ class TerminalWidget(QAbstractScrollArea):
         # If we were at bottom before, stay at bottom
         if old_at_bottom:
             vbar.setValue(vbar.maximum())
+
+        cols = self._state.terminal_columns()
+        viewport_width = self.viewport().width()
+        visible_cols = int(viewport_width / self._char_width)
+        excess_cols = max(0, cols - visible_cols)
+
+        hbar = self.horizontalScrollBar()
+        hbar.setRange(0, excess_cols)
+        hbar.setPageStep(visible_cols)
+        hbar.setSingleStep(1)
 
     def scroll_to_match(self, row: int) -> None:
         """
@@ -264,7 +269,8 @@ class TerminalWidget(QAbstractScrollArea):
 
             if 0 <= visible_cursor_row < terminal_rows:
                 # Only update the cursor region
-                cursor_x = cursor.col * self._char_width
+                h_offset = self.horizontalScrollBar().value()
+                cursor_x = cursor.col * self._char_width - h_offset
                 cursor_y = visible_cursor_row * self._char_height
 
                 # Create QRectF for precise cursor region, but convert to QRect for update
@@ -290,7 +296,8 @@ class TerminalWidget(QAbstractScrollArea):
         terminal_rows, terminal_cols = self._state.get_terminal_size()
 
         # Convert pixel position to viewport row/col
-        viewport_col = max(0, min(int(pos.x() / self._char_width), terminal_cols - 1))
+        h_offset = self.horizontalScrollBar().value()
+        viewport_col = max(0, min(int((pos.x() + h_offset) / self._char_width), terminal_cols - 1))
         viewport_row = max(0, min(int(pos.y() / self._char_height), terminal_rows - 1))
 
         # Adjust row for scroll position
@@ -424,13 +431,14 @@ class TerminalWidget(QAbstractScrollArea):
             event.ignore()
             return
 
-        # Calculate number of lines to scroll
-        delta = event.angleDelta().y()
-        lines = delta // 40  # Adjust divisor to control scroll speed
-
-        # Update scroll position
-        vbar = self.verticalScrollBar()
-        vbar.setValue(vbar.value() - lines)
+        if event.angleDelta().x() != 0:
+            cols = event.angleDelta().x() // 40
+            hbar = self.horizontalScrollBar()
+            hbar.setValue(hbar.value() - cols)
+        else:
+            lines = event.angleDelta().y() // 40
+            vbar = self.verticalScrollBar()
+            vbar.setValue(vbar.value() - lines)
 
         event.accept()
 
@@ -665,13 +673,14 @@ class TerminalWidget(QAbstractScrollArea):
         terminal_rows, terminal_cols = self._state.get_terminal_size()
         terminal_history_lines = self._state.terminal_history_lines()
         first_visible_line = self.verticalScrollBar().value()
+        h_offset = self.horizontalScrollBar().value() * self._char_width
 
         # Get clip region and calculate visible character range
         region = event.rect()
         start_row = int(region.top() / self._char_height)
         end_row = min(terminal_rows, int((region.bottom() + self._char_height - 1) / self._char_height))
-        start_col = int(region.left() / self._char_width)
-        end_col = min(terminal_cols, int((region.right() + self._char_width - 1) / self._char_width))
+        start_col = int((region.left() + h_offset) / self._char_width)
+        end_col = min(terminal_cols, int((region.right() + h_offset + self._char_width - 1) / self._char_width))
 
         # Pre-create QColor objects for default colors
         default_fg = QColor(self._default_fg.rgb())
@@ -732,7 +741,7 @@ class TerminalWidget(QAbstractScrollArea):
                     self._draw_character_run(
                         painter, current_run_start_col, y, current_text, current_attrs,
                         current_colors, default_fg, default_bg,
-                        font_variants, row, first_visible_line
+                        font_variants, row, first_visible_line, h_offset
                     )
 
                 # Start new run
@@ -746,7 +755,7 @@ class TerminalWidget(QAbstractScrollArea):
                 self._draw_character_run(
                     painter, current_run_start_col, y, current_text, current_attrs,
                     current_colors, default_fg, default_bg,
-                    font_variants, row, first_visible_line
+                    font_variants, row, first_visible_line, h_offset
                 )
 
         # Draw selection overlay if present
@@ -757,7 +766,8 @@ class TerminalWidget(QAbstractScrollArea):
                 first_visible_line,
                 terminal_rows,
                 terminal_cols,
-                terminal_history_lines
+                terminal_history_lines,
+                h_offset
             )
 
         # Draw cursor if visible
@@ -767,7 +777,8 @@ class TerminalWidget(QAbstractScrollArea):
                 buffer,
                 terminal_rows,
                 terminal_history_lines,
-                first_visible_line
+                first_visible_line,
+                h_offset
             )
 
     def _create_font_variant(
@@ -806,7 +817,8 @@ class TerminalWidget(QAbstractScrollArea):
         default_bg: QColor,
         font_variants: dict,
         row_index: int,
-        first_visible_line: int
+        first_visible_line: int,
+        h_offset: float = 0.0
     ) -> None:
         """Draw a run of characters with the same attributes efficiently."""
         if not text:
@@ -858,7 +870,7 @@ class TerminalWidget(QAbstractScrollArea):
             fg.setAlpha(255)
 
         # Calculate start x position
-        x_start = start_col * self._char_width
+        x_start = start_col * self._char_width - h_offset
 
         # If no highlights or blinking chars, draw entire run at once
         if not highlights and not attrs & TerminalCharacterAttributes.BLINK:
@@ -954,7 +966,8 @@ class TerminalWidget(QAbstractScrollArea):
         first_visible_line: int,
         terminal_rows: int,
         terminal_cols: int,
-        terminal_history_lines: int
+        terminal_history_lines: int,
+        h_offset: float = 0.0
     ) -> None:
         """Draw text selection overlay using floating-point positioning."""
         selection = cast(TerminalSelection, self._selection).normalize()
@@ -973,7 +986,7 @@ class TerminalWidget(QAbstractScrollArea):
 
             # Create selection rectangle using floating-point coordinates
             selection_rect = QRectF(
-                row_start * self._char_width,
+                row_start * self._char_width - h_offset,
                 y,
                 (row_end - row_start) * self._char_width,
                 self._char_height
@@ -989,7 +1002,7 @@ class TerminalWidget(QAbstractScrollArea):
                         char, _attrs, _fg, _bg = line.get_character(col)
                         # Draw text using floating-point position
                         painter.drawText(
-                            QPointF(col * self._char_width, y + self._char_ascent),
+                            QPointF(col * self._char_width - h_offset, y + self._char_ascent),
                             char
                         )
 
@@ -999,7 +1012,8 @@ class TerminalWidget(QAbstractScrollArea):
         buffer: TerminalBuffer,
         terminal_rows: int,
         terminal_history_lines: int,
-        first_visible_line: int
+        first_visible_line: int,
+        h_offset: float = 0.0
     ) -> None:
         """Draw terminal cursor using floating-point positioning."""
         # Don't draw if cursor should be hidden
@@ -1014,8 +1028,11 @@ class TerminalWidget(QAbstractScrollArea):
 
         if 0 <= visible_cursor_row < terminal_rows:
             # Calculate cursor position using floating-point coordinates
-            cursor_x = cursor.col * self._char_width
+            cursor_x = cursor.col * self._char_width - h_offset
             cursor_y = visible_cursor_row * self._char_height
+
+            if cursor_x < 0 or cursor_x >= self.viewport().width():
+                return
 
             if cursor_line < terminal_history_lines:
                 lines = buffer.lines()
