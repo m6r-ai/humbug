@@ -263,7 +263,7 @@ class PreviewContent:
 
             contents: List[Tuple[PreviewContentType, str]] = []
 
-            files = ["."]
+            files = []
 
             # If we're not in the root of the mindspace, add ".." entry
             rel_path = self._mindspace_manager.get_relative_path(directory_path)

@@ -1,8 +1,8 @@
 from typing import cast
 
-from PySide6.QtWidgets import QTabBar, QWidget
-from PySide6.QtCore import QEvent, QObject
-from PySide6.QtGui import QHoverEvent, QCursor, QPainter, QPaintEvent
+from PySide6.QtWidgets import QTabBar, QWidget, QToolButton
+from PySide6.QtCore import QEvent, QObject, Qt
+from PySide6.QtGui import QHoverEvent, QCursor, QPainter, QPaintEvent, QPen, QWheelEvent
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
@@ -14,12 +14,19 @@ class TabBar(QTabBar):
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
+
+        # Initialize all attributes before any Qt calls that may fire events
+        self.current_hovered_tab = -1
+        self._style_manager = StyleManager()
+        self._scroll_pixel_accumulator = 0
+        self._scroll_pixels_per_step = 28
+
         self.setExpanding(False)
         self.setDocumentMode(True)
         self.setMouseTracking(True)
-        self.current_hovered_tab = -1
+        self.setUsesScrollButtons(True)
         self.installEventFilter(self)
-        self._style_manager = StyleManager()
+        self.apply_style()
 
     def update_tab_size(self) -> None:
         """
@@ -27,6 +34,102 @@ class TabBar(QTabBar):
         """
         self.adjustSize()
         self.updateGeometry()
+
+    def apply_style(self) -> None:
+        """Apply styling to the tab bar. Native scroll buttons are hidden; nav buttons live in the corner widget."""
+        self.setStyleSheet(f"""
+            QTabBar {{
+                border: none;
+                margin: 0px;
+                padding: 6px 8px 4px 8px;
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
+            }}
+            QTabBar::tab {{
+                border: none;
+                margin: 0px 4px 0px 0px;
+                padding: 4px 0px 6px 0px;
+            }}
+            QTabBar::scroller {{
+                width: 0px;
+            }}
+        """)
+        self._hide_native_scroll_buttons()
+
+    def _hide_native_scroll_buttons(self) -> None:
+        """Hide the native scroll buttons — scrolling is driven by the corner nav widget."""
+        for button in self.findChildren(QToolButton):
+            if button.arrowType() in (Qt.ArrowType.LeftArrow, Qt.ArrowType.RightArrow):
+                button.hide()
+
+    def _scroll_tabs(self, direction: int) -> bool:
+        """Scroll the tab strip by clicking the hidden native arrow buttons."""
+        arrow_type = Qt.ArrowType.RightArrow if direction > 0 else Qt.ArrowType.LeftArrow
+        for button in self.findChildren(QToolButton):
+            if button.arrowType() != arrow_type:
+                continue
+            if not button.isEnabled():
+                continue
+            button.click()
+            return True
+        return False
+
+    def scroll_tabs(self, direction: int) -> None:
+        """Public method for the corner nav widget to trigger scrolling. direction: -1 left, +1 right."""
+        self._scroll_tabs(direction)
+
+    def _scroll_tabs_by_steps(self, steps: int) -> bool:
+        """Scroll the tab strip immediately by the requested number of native steps."""
+        if steps == 0:
+            return False
+
+        direction = 1 if steps > 0 else -1
+        moved = False
+        for _ in range(abs(steps)):
+            if not self._scroll_tabs(direction):
+                break
+            moved = True
+
+        return moved
+
+    def wheelEvent(self, event: QWheelEvent) -> None:  # type: ignore[override]
+        """Use wheel or trackpad gestures to scroll the tab strip without showing a scrollbar."""
+        pixel_delta = event.pixelDelta()
+        angle_delta = event.angleDelta()
+
+        # Trackpad: use pixel-level accumulator for proportional, smooth scrolling
+        if pixel_delta.x() != 0 or pixel_delta.y() != 0:
+            px = pixel_delta.x() if pixel_delta.x() != 0 else pixel_delta.y()
+            self._scroll_pixel_accumulator += px
+            step_count = int(self._scroll_pixel_accumulator / self._scroll_pixels_per_step)
+            if step_count != 0:
+                self._scroll_pixel_accumulator -= step_count * self._scroll_pixels_per_step
+                step_count = max(-4, min(4, step_count))
+                if self._scroll_tabs_by_steps(-step_count):
+                    event.accept()
+                    return
+            else:
+                event.accept()
+                return
+
+        # Mouse wheel: use angle delta
+        delta = angle_delta.x()
+        if delta == 0:
+            delta = angle_delta.y()
+
+        if delta != 0:
+            step_count = max(1, min(3, abs(delta) // 120))
+            if self._scroll_tabs_by_steps(step_count if delta < 0 else -step_count):
+                event.accept()
+                return
+
+        super().wheelEvent(event)
+
+    def event(self, event: QEvent) -> bool:
+        """Re-hide native scroll buttons when Qt recreates them."""
+        handled = super().event(event)
+        if event.type() in (QEvent.Type.Show, QEvent.Type.LayoutRequest, QEvent.Type.ChildAdded):
+            self._hide_native_scroll_buttons()
+        return handled
 
     def set_tab_state(self, index: int, is_current: bool, is_updated: bool, is_active_column: bool) -> None:
         """
@@ -82,103 +185,36 @@ class TabBar(QTabBar):
         Args:
             event: The paint event
         """
-        # Create painter
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        rightmost_tab_right = 0
+        painter.fillRect(self.rect(), self._style_manager.get_color(ColorRole.TAB_BAR_BACKGROUND))
 
-        # Calculate the top border thickness we need.  Annoyingly this has to based on whether we're full screen or
-        # not because full screen has no border whereas windows have a 1px border.
-        border_px = 2
-        parent = self.parentWidget()
-        while parent:
-            if parent.isFullScreen():
-                border_px = 1
-                break
-
-            parent = parent.parentWidget()
-
-        prev_is_current = False
-
-        # Paint each tab's background
         for index in range(self.count()):
-            # Get tab state
             tab_state = self.tabData(index)
             if not isinstance(tab_state, dict):
                 tab_state = {}
 
             is_current = tab_state.get('is_current', False)
-
             tab_rect = self.tabRect(index)
             if not tab_rect.intersects(event.rect()):
-                prev_is_current = is_current
-                continue  # Skip tabs not in the update region
-
-            # Track the rightmost position
-            rightmost_tab_right = max(rightmost_tab_right, tab_rect.right() + 1)
+                continue
 
             is_updated = tab_state.get('is_updated', False)
             is_active_column = tab_state.get('is_active_column', False)
             is_hovered = index == self.current_hovered_tab
 
-            # Get background color
             background_color = self._get_tab_background_color(is_active_column, is_current, is_updated, is_hovered)
             color = self._style_manager.get_color(background_color)
+            tab_pill_rect = tab_rect.adjusted(2, 3, -2, -1)
 
-            # Fill the tab background
-            painter.fillRect(tab_rect, color)
-
-            # Draw left border if we're not the first tab
-            if index > 0:
-                left_border_color = self._style_manager.get_color(
-                    ColorRole.SPLITTER if is_current or prev_is_current else ColorRole.TAB_SPLITTER
-                )
-                left_border_rect = tab_rect.adjusted(0, 0, -tab_rect.width() + 1, 0)
-                painter.fillRect(left_border_rect, left_border_color)
-
-            # Draw top border
-            border_color_role = ColorRole.TAB_SPLITTER
+            border_color_role = ColorRole.MENU_BORDER
             if is_current:
-                if is_active_column:
-                    border_color_role = ColorRole.TAB_BORDER_ACTIVE
+                border_color_role = ColorRole.TAB_BORDER_ACTIVE if is_active_column else ColorRole.SPLITTER
 
-                else:
-                    border_color_role = ColorRole.SPLITTER
+            painter.setBrush(color)
+            painter.setPen(QPen(self._style_manager.get_color(border_color_role), 1))
+            painter.drawRoundedRect(tab_pill_rect, 10, 10)
 
-            border_color = self._style_manager.get_color(border_color_role)
-            border_rect = tab_rect.adjusted(0, 0, 0, -tab_rect.height() + border_px)
-            painter.fillRect(border_rect, border_color)
-
-            # Draw bottom border for all tabs
-            bottom_border_color = self._style_manager.get_color(ColorRole.SPLITTER)
-            if not is_current:  # Only non-current tabs get bottom border
-                bottom_border_rect = tab_rect.adjusted(0, tab_rect.height() - 1, 0, 0)
-                painter.fillRect(bottom_border_rect, bottom_border_color)
-
-            prev_is_current = is_current
-
-        # Paint right edge of rightmost tab and bottom edge of empty space
-        if self.count() > 0 and rightmost_tab_right < self.width():
-            splitter_color = self._style_manager.get_color(
-                ColorRole.SPLITTER if prev_is_current else ColorRole.TAB_SPLITTER
-            )
-
-            # Paint right edge of the rightmost tab
-            right_edge_rect = self.rect()
-            right_edge_rect.setLeft(rightmost_tab_right)
-            right_edge_rect.setWidth(1)
-            painter.fillRect(right_edge_rect, splitter_color)
-
-            # Paint bottom edge of empty space to the right
-            if rightmost_tab_right + 1 < self.width():
-                empty_space_bottom_rect = self.rect()
-                empty_space_bottom_rect.setLeft(rightmost_tab_right + 1)
-                empty_space_bottom_rect.setTop(self.height() - 1)
-                empty_space_bottom_rect.setHeight(1)
-                colour = self._style_manager.get_color(ColorRole.SPLITTER)
-                painter.fillRect(empty_space_bottom_rect, colour)
-
-        # Let Qt paint the text and other tab elements on top
         super().paintEvent(event)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:

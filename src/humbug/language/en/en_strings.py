@@ -47,7 +47,7 @@ def get_english_strings() -> LanguageStrings:
         user_settings="User Settings",
 
         # Edit menu items
-        submit_message="Submit Message",
+        submit_message="Submit",
         undo="Undo",
         redo="Redo",
         cut="Cut",
@@ -64,6 +64,7 @@ def get_english_strings() -> LanguageStrings:
         reset_zoom="Reset Zoom",
         show_system_log="Show Mindspace Log",
         show_system_shell="Show Humbug Shell",
+        toggle_mindspace_panel="Toggle Mindspace Panel",
         show_all_columns="Show All Columns",
         split_column_left="Split Column Left",
         split_column_right="Split Column Right",
@@ -131,6 +132,7 @@ def get_english_strings() -> LanguageStrings:
         theme_dark="Dark",
         theme_light="Light",
         file_sort_order="File Sort Order",
+        open_chat_in_new_tab="Open chat in a new tab",
         sort_directories_first="Directories First",
         sort_alphabetical="Alphabetical",
 
@@ -188,6 +190,7 @@ def get_english_strings() -> LanguageStrings:
         # File dialog titles
         file_dialog_open_metaphor="Open Metaphor File",
         file_dialog_open_conversation="Open Conversation",
+        file_dialog_attach_document="Attach Document",
         file_dialog_open_file="Open File",
         file_dialog_save_file="Save File",
         file_dialog_new_mindspace="Create New Mindspace",
@@ -286,6 +289,7 @@ def get_english_strings() -> LanguageStrings:
         tooltip_delete_from_message="Delete conversation from this point",
         tooltip_edit_message="Edit this message",
         tooltip_edit_file="Edit this file",
+        tooltip_attach_document="Attach a document",
         tooltip_submit_message="Submit message",
         tooltip_stop_message="Stop current processing",
         tooltip_settings_message="Open conversation settings",

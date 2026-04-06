@@ -5,7 +5,8 @@ from difflib import unified_diff
 from typing import List, Tuple, Dict, Any, cast
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit, QFileDialog
-from PySide6.QtCore import Qt, QRect, Signal, QTimer
+from PySide6.QtCore import Qt, QRect, Signal, QTimer, QUrl
+from PySide6.QtGui import QDesktopServices
 from PySide6.QtGui import (
     QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QTextCharFormat,
     QResizeEvent, QPaintEvent, QTextDocument
@@ -119,9 +120,22 @@ class EditorWidget(QPlainTextEdit):
         # Update auto-backup based on current mindspace settings
         self._update_auto_backup_from_settings()
 
+    _BINARY_EXTENSIONS = {
+        '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.tiff', '.tif', '.webp', '.ico',
+        '.pdf', '.docx', '.doc', '.xlsx', '.xls', '.pptx', '.ppt',
+        '.zip', '.tar', '.gz', '.bz2', '.7z', '.rar',
+        '.exe', '.dmg', '.so', '.dylib', '.dll',
+        '.mp3', '.mp4', '.wav', '.mov', '.avi', '.mkv',
+    }
+
     def _load_file(self) -> None:
         """Load content from file path."""
         if not self._path or not os.path.exists(self._path):
+            return
+
+        ext = os.path.splitext(self._path)[1].lower()
+        if ext in self._BINARY_EXTENSIONS:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(self._path))
             return
 
         try:
@@ -1045,23 +1059,7 @@ class EditorWidget(QPlainTextEdit):
                 selection-color: none;
             }}
 
-            QScrollBar:vertical, QScrollBar:horizontal {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-                height: 12px;
-            }}
-            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-                min-width: 20px;
-            }}
-            QScrollBar::add-page, QScrollBar::sub-page {{
-                background: none;
-            }}
-            QScrollBar::add-line, QScrollBar::sub-line {{
-                height: 0px;
-                width: 0px;
-            }}
+            {self._style_manager.get_scrollbar_stylesheet()}
 
             QAbstractScrollArea::corner {{
                 background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};

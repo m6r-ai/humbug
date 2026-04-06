@@ -6,7 +6,7 @@ setting widget.
 """
 
 from typing import List
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget, QSizePolicy
 
 from humbug.min_height_plain_text_edit import MinHeightPlainTextEdit
 from humbug.settings.settings_field import SettingsField
@@ -38,6 +38,7 @@ class SettingsTextArea(SettingsField):
         super().__init__(label_text, parent)
 
         self._text_area = MinHeightPlainTextEdit()
+        self._text_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._text_area.setPlaceholderText(placeholder)
         self._text_area.textChanged.connect(self._on_text_changed)
         self._text_area.setObjectName("SettingsTextArea")

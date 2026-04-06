@@ -1,11 +1,13 @@
 """Input widget that matches history message styling."""
 
+import os
 import sys
-from typing import Dict, cast
 
-from PySide6.QtCore import Signal, Qt, QRect, QSize, QObject, QEvent
-from PySide6.QtGui import QTextCursor, QTextDocument, QIcon, QKeyEvent
-from PySide6.QtWidgets import QWidget, QToolButton
+from typing import Dict, List, Tuple , cast
+
+from PySide6.QtCore import Signal, Qt, QRect, QSize, QPoint , QObject , QEvent
+from PySide6.QtGui import QTextCursor, QTextDocument, QIcon , QKeyEvent 
+from PySide6.QtWidgets import QWidget, QToolButton, QHBoxLayout, QVBoxLayout, QLabel, QPushButton, QScrollArea, QFrame, QSizePolicy
 
 from ai import AIMessageSource
 
@@ -21,6 +23,7 @@ class ConversationInput(ConversationMessage):
     submit_requested = Signal()
     stop_requested = Signal()
     settings_requested = Signal()
+    attach_requested = Signal(QPoint)
     modified = Signal()
 
     def __init__(self, style: AIMessageSource, parent: QWidget | None = None) -> None:
@@ -30,15 +33,58 @@ class ConversationInput(ConversationMessage):
         self._submit_button: QToolButton | None = None
         self._stop_button: QToolButton | None = None
         self._settings_button: QToolButton | None = None
+        self._attach_button: QToolButton | None = None
+        self._attachments: List[Tuple[str, str, str]] = []  # (filename, content, upload_path)
+        self._attachments_bar: QWidget | None = None
+        self._chips_layout: QHBoxLayout | None = None
 
         super().__init__(style, parent=parent, is_input=True)
 
         # Connect text cursor signals
         self._text_area = self._sections[0].text_area()
+        self._text_area.setMinimumHeight(82)
 
         self._text_area.cursorPositionChanged.connect(self.cursor_position_changed)
         self._text_area.page_key_scroll_requested.connect(self.page_key_scroll_requested)
         self._text_area.installEventFilter(self)  # Install event filter for Ctrl+Enter
+
+        # Cap the input widget's vertical height to its natural content size.
+        # Without this the messages_layout stretch gives the input all available space.
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum)
+
+        # Attachments bar (shown between text area and banner when files are attached)
+        self._attachments_bar = QWidget(self)
+        self._attachments_bar.setObjectName("_attachments_bar")
+        chips_outer = QHBoxLayout(self._attachments_bar)
+        chips_outer.setContentsMargins(0, 2, 0, 2)
+        chips_outer.setSpacing(0)
+
+        chips_scroll = QScrollArea()
+        chips_scroll.setObjectName("_chips_scroll")
+        chips_scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        chips_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        chips_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        chips_scroll.setWidgetResizable(True)
+        chips_scroll.setFixedHeight(58)
+
+        chips_container = QWidget()
+        chips_container.setObjectName("_chips_container")
+        self._chips_layout = QHBoxLayout(chips_container)
+        self._chips_layout.setContentsMargins(4, 0, 4, 0)
+        self._chips_layout.setSpacing(4)
+        self._chips_layout.addStretch()
+        chips_scroll.setWidget(chips_container)
+        chips_outer.addWidget(chips_scroll)
+
+        self._attachments_bar.hide()
+        # Insert between sections_container and banner
+        self._layout.insertWidget(self._layout.count() - 1, self._attachments_bar)
+
+        # Create attach button — placed at the LEFT of the banner (bottom-left of input)
+        self._attach_button = QToolButton(self)
+        self._attach_button.setObjectName("_attach_button")
+        self._attach_button.clicked.connect(self._on_attach_button_clicked)
+        self._banner_layout.insertWidget(0, self._attach_button)
 
         # Create stop button (initially hidden)
         self._stop_button = QToolButton(self)
@@ -85,6 +131,9 @@ class ConversationInput(ConversationMessage):
 
         strings = self._language_manager.strings()
 
+        if self._attach_button:
+            self._attach_button.setToolTip(strings.tooltip_attach_document)
+
         if self._settings_button:
             self._settings_button.setToolTip(strings.tooltip_settings_message)
 
@@ -110,11 +159,20 @@ class ConversationInput(ConversationMessage):
     def apply_style(self) -> None:
         """Apply style changes."""
         super().apply_style()
+        self._text_area.setMinimumHeight(int(82 * self._style_manager.zoom_factor()))
 
         # Apply icon and styling
         icon_base_size = 14
         icon_scaled_size = int(icon_base_size * self._style_manager.zoom_factor())
         icon_size = QSize(icon_scaled_size, icon_scaled_size)
+
+        # Update attach button — plus icon in a rounded square
+        if self._attach_button:
+            attach_base_size = 18
+            attach_scaled_size = int(attach_base_size * self._style_manager.zoom_factor())
+            attach_icon_size = QSize(attach_scaled_size, attach_scaled_size)
+            self._attach_button.setIcon(QIcon(self._style_manager.scale_icon("plus", attach_base_size)))
+            self._attach_button.setIconSize(attach_icon_size)
 
         # Update submit/interrupt button
         if self._submit_button:
@@ -153,7 +211,7 @@ class ConversationInput(ConversationMessage):
 
     def _update_button_states(self) -> None:
         """Update button enabled states and visibility based on content and streaming status."""
-        has_content = bool(self.to_plain_text().strip())
+        has_content = bool(self.to_plain_text().strip()) or bool(self._attachments)
 
         if self._is_streaming:
             # Show both stop and interrupt buttons
@@ -162,7 +220,6 @@ class ConversationInput(ConversationMessage):
                 self._stop_button.setEnabled(True)
 
             if self._submit_button:
-                # Interrupt button only enabled if has content
                 self._submit_button.setEnabled(has_content)
 
         else:
@@ -171,7 +228,6 @@ class ConversationInput(ConversationMessage):
                 self._stop_button.hide()
 
             if self._submit_button:
-                # Submit button only enabled if has content
                 self._submit_button.setEnabled(has_content)
 
     def _on_submit_button_clicked(self) -> None:
@@ -185,6 +241,119 @@ class ConversationInput(ConversationMessage):
     def _on_settings_button_clicked(self) -> None:
         """Handle settings button click."""
         self.settings_requested.emit()
+
+    def _on_attach_button_clicked(self) -> None:
+        """Handle attach button click — emit the button's top-left global position."""
+        btn = self._attach_button
+        if btn is not None:
+            self.attach_requested.emit(btn.mapToGlobal(QPoint(0, 0)))
+        else:
+            self.attach_requested.emit(QPoint())
+
+    def add_attachment(self, filename: str, content: str, upload_path: str = "") -> None:
+        """Add a document attachment and show its chip in the bar."""
+        self._attachments.append((filename, content, upload_path))
+        self._rebuild_chips()
+        self._update_button_states()
+
+    def get_attachments(self) -> List[Tuple[str, str, str]]:
+        """Return the list of (filename, content, upload_path) attachments."""
+        return list(self._attachments)
+
+    def clear_attachments(self) -> None:
+        """Remove all attachments and hide the bar."""
+        self._attachments.clear()
+        self._rebuild_chips()
+        self._update_button_states()
+
+    @staticmethod
+    def _ext_color(filename: str) -> str:
+        """Return a background color hex string based on the file extension."""
+        colors = {
+            ".pdf": "#e05c4b",
+            ".docx": "#2b7cd3", ".doc": "#2b7cd3",
+            ".png": "#2eaa6e", ".jpg": "#2eaa6e", ".jpeg": "#2eaa6e", ".gif": "#2eaa6e",
+            ".csv": "#8e44ad",
+            ".json": "#e67e22", ".yaml": "#e67e22", ".yml": "#e67e22",
+            ".md": "#16a085", ".rst": "#16a085",
+            ".txt": "#7f8c8d",
+        }
+        return colors.get(os.path.splitext(filename)[1].lower(), "#7f8c8d")
+
+    def _rebuild_chips(self) -> None:
+        """Rebuild the attachment chips strip from the current attachments list."""
+        if self._chips_layout is None or self._attachments_bar is None:
+            return
+
+        # Remove all existing chip widgets (leave the trailing stretch)
+        while self._chips_layout.count() > 1:
+            item = self._chips_layout.takeAt(0)
+            if item and item.widget():
+                item.widget().deleteLater()
+
+        for index, (filename, _, _upload_path) in enumerate(self._attachments):
+            ext = os.path.splitext(filename)[1].upper().lstrip('.') or "FILE"
+            display_name = filename if len(filename) <= 18 else filename[:15] + "..."
+
+            chip = QWidget()
+            chip.setObjectName("_attachment_chip")
+            chip_layout = QHBoxLayout(chip)
+            chip_layout.setContentsMargins(6, 6, 8, 6)
+            chip_layout.setSpacing(8)
+
+            # Colored icon badge showing file type
+            icon_label = QLabel(ext[:4])
+            icon_label.setFixedSize(32, 32)
+            icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            icon_label.setStyleSheet(
+                f"background-color: {self._ext_color(filename)}; border-radius: 6px;"
+                " color: white; font-size: 7pt; font-weight: bold; border: none;"
+            )
+            chip_layout.addWidget(icon_label)
+
+            # Filename and type stacked vertically
+            info = QWidget()
+            info.setObjectName("_chip_info")
+            info_layout = QVBoxLayout(info)
+            info_layout.setContentsMargins(0, 0, 0, 0)
+            info_layout.setSpacing(1)
+
+            name_label = QLabel(display_name)
+            name_label.setObjectName("_chip_label")
+            info_layout.addWidget(name_label)
+
+            type_label = QLabel(ext[:4])
+            type_label.setObjectName("_chip_type_label")
+            info_layout.addWidget(type_label)
+
+            chip_layout.addWidget(info)
+
+            remove_btn = QPushButton("✕")
+            remove_btn.setObjectName("_chip_remove")
+            remove_btn.setFixedSize(16, 16)
+            remove_btn.setFlat(True)
+            remove_btn.clicked.connect(lambda _checked, i=index: self._remove_attachment(i))
+            chip_layout.addWidget(remove_btn)
+
+            self._chips_layout.insertWidget(self._chips_layout.count() - 1, chip)
+
+        self._attachments_bar.setVisible(bool(self._attachments))
+
+    def _remove_attachment(self, index: int) -> None:
+        """Remove the attachment at the given index."""
+        if 0 <= index < len(self._attachments):
+            _filename, _content, upload_path = self._attachments.pop(index)
+            if upload_path:
+                self.attachment_file_deleted.emit(upload_path)
+            self._rebuild_chips()
+            self._update_button_states()
+
+    def focus_end(self) -> None:
+        """Set focus to the input area and move the cursor to the end."""
+        cursor = self._text_area.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        self._text_area.setTextCursor(cursor)
+        self._text_area.setFocus()
 
     def clear(self) -> None:
         """Clear the input area."""

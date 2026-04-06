@@ -11,7 +11,7 @@ from typing import Dict, cast
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton, QScrollArea, QWidget, QFrame
 )
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Signal, Qt
 
 from ai import AIBackendSettings, AIManager
 
@@ -45,7 +45,7 @@ class UserSettingsDialog(QDialog):
         strings = self._language_manager.strings()
 
         self.setWindowTitle(strings.user_settings)
-        self.setMinimumWidth(800)
+        self.setMinimumWidth(1040)
         self.setMinimumHeight(700)
         self.setModal(True)
 
@@ -62,13 +62,18 @@ class UserSettingsDialog(QDialog):
         main_layout.setSpacing(12)
         main_layout.setContentsMargins(20, 20, 20, 20)
 
-        # Create a scroll area
         scroll_area = QScrollArea()
         scroll_area.setWidgetResizable(True)
         scroll_area.setFrameShape(QFrame.Shape.NoFrame)
 
-        # Create settings container
+        scroll_content = QWidget()
+        scroll_content_layout = QVBoxLayout()
+        scroll_content_layout.setContentsMargins(0, 0, 0, 0)
+        scroll_content_layout.setSpacing(0)
+
         self._settings_container = SettingsContainer()
+        self._settings_container.setMinimumWidth(960)
+        self._settings_container.setMaximumWidth(1160)
 
         # General settings section
         self._general_section = SettingsFactory.create_header(strings.general_settings)
@@ -123,8 +128,13 @@ class UserSettingsDialog(QDialog):
         ]
         self._file_sort_combo.set_items(sort_items)
 
+        self._open_chat_in_new_tab_checkbox = SettingsFactory.create_checkbox(
+            strings.open_chat_in_new_tab
+        )
+        self._settings_container.add_setting(self._open_chat_in_new_tab_checkbox)
+
         # Add some spacing between backends
-        spacer = SettingsFactory.create_spacer(24)
+        spacer = SettingsFactory.create_spacer(16)
         self._settings_container.add_setting(spacer)
 
         # External file access section
@@ -149,7 +159,7 @@ class UserSettingsDialog(QDialog):
         self._allow_external_access_checkbox.value_changed.connect(self._handle_external_access_enabled)
 
         # Add some spacing before AI backends
-        spacer = SettingsFactory.create_spacer(24)
+        spacer = SettingsFactory.create_spacer(16)
         self._settings_container.add_setting(spacer)
 
         # AI backends section
@@ -204,24 +214,29 @@ class UserSettingsDialog(QDialog):
             )
 
             # Add some spacing between backends
-            spacer = SettingsFactory.create_spacer(24)
+            spacer = SettingsFactory.create_spacer(16)
             self._settings_container.add_setting(spacer)
 
-        # Add stretch at the end to push all content up
         self._settings_container.add_stretch()
 
-        # Connect value changed signal
         self._settings_container.value_changed.connect(self._on_value_change)
 
-        # Set the scroll content
-        scroll_area.setWidget(self._settings_container)
-        main_layout.addWidget(scroll_area)
-        main_layout.addSpacing(20)
+        scroll_content_layout.addWidget(
+            self._settings_container,
+            0,
+            Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop
+        )
+        scroll_content.setLayout(scroll_content_layout)
 
-        # Button row
+        scroll_area.setWidget(scroll_content)
+        main_layout.addWidget(scroll_area)
+        main_layout.addSpacing(4)
+
         spacing = int(self._style_manager.message_bubble_spacing())
+        footer = QFrame()
         button_layout = QHBoxLayout()
         button_layout.setSpacing(spacing)
+        button_layout.setContentsMargins(0, 0, 0, 0)
         button_layout.addStretch()
 
         self.ok_button = QPushButton(strings.ok)
@@ -245,7 +260,8 @@ class UserSettingsDialog(QDialog):
             button_layout.addWidget(button)
 
         button_layout.addStretch()
-        main_layout.addLayout(button_layout)
+        footer.setLayout(button_layout)
+        main_layout.addWidget(footer)
         self.setLayout(main_layout)
 
         # Apply consistent dialog styling
@@ -383,6 +399,7 @@ class UserSettingsDialog(QDialog):
             font_size=self._font_size_spin.get_value(),
             theme=self._theme_combo.get_value(),
             file_sort_order=self._file_sort_combo.get_value(),
+            open_chat_in_new_tab=self._open_chat_in_new_tab_checkbox.get_value(),
             allow_external_file_access=self._allow_external_access_checkbox.get_value(),
             external_file_allowlist=self._external_allowlist_area.get_value(),
             external_file_denylist=self._external_denylist_area.get_value()
@@ -409,6 +426,7 @@ class UserSettingsDialog(QDialog):
             font_size=settings.font_size,
             theme=settings.theme,
             file_sort_order=settings.file_sort_order,
+            open_chat_in_new_tab=settings.open_chat_in_new_tab,
             allow_external_file_access=settings.allow_external_file_access,
             external_file_allowlist=settings.external_file_allowlist,
             external_file_denylist=settings.external_file_denylist
@@ -439,6 +457,9 @@ class UserSettingsDialog(QDialog):
 
         # Set file sort order
         self._file_sort_combo.set_value(settings.file_sort_order)
+
+        # Set chat open behavior
+        self._open_chat_in_new_tab_checkbox.set_value(settings.open_chat_in_new_tab)
 
         # Set external file access settings
         self._allow_external_access_checkbox.set_value(settings.allow_external_file_access)

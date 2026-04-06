@@ -64,6 +64,7 @@ def get_french_strings() -> LanguageStrings:
         reset_zoom="Réinitialiser le zoom",
         show_system_log="Afficher le journal de l'espace mental",
         show_system_shell="Afficher le shell Humbug",
+        toggle_mindspace_panel="Afficher ou masquer le panneau de l'espace mental",
         show_all_columns="Afficher toutes les colonnes",
         split_column_left="Diviser la colonne à gauche",
         split_column_right="Diviser la colonne à droite",
@@ -131,6 +132,7 @@ def get_french_strings() -> LanguageStrings:
         theme_dark="Sombre",
         theme_light="Clair",
         file_sort_order="Ordre de tri des fichiers",
+        open_chat_in_new_tab="Ouvrir la discussion dans un nouvel onglet",
         sort_directories_first="Dossiers en premier",
         sort_alphabetical="Alphabétique",
 
@@ -188,6 +190,7 @@ def get_french_strings() -> LanguageStrings:
         # File dialog titles
         file_dialog_open_metaphor="Ouvrir un fichier Metaphor",
         file_dialog_open_conversation="Ouvrir une conversation",
+        file_dialog_attach_document="Joindre un document",
         file_dialog_open_file="Ouvrir un fichier",
         file_dialog_save_file="Enregistrer le fichier",
         file_dialog_new_mindspace="Créer un nouvel espace mental",
@@ -286,6 +289,7 @@ def get_french_strings() -> LanguageStrings:
         tooltip_delete_from_message="Supprimer la conversation à partir d'ici",
         tooltip_edit_message="Modifier ce message",
         tooltip_edit_file="Modifier ce fichier",
+        tooltip_attach_document="Joindre un document",
         tooltip_submit_message="Envoyer le message",
         tooltip_stop_message="Arrêter le traitement du message",
         tooltip_settings_message="Ouvrir les paramètres de la conversation",

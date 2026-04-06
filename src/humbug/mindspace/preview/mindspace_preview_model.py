@@ -52,16 +52,7 @@ class MindspacePreviewModel(QSortFilterProxyModel):
         index = source_model.index(source_row, 0, source_parent)
         file_name = source_model.fileName(index)
         if file_name == ".":
-            # Only show current directory at the mindspace root level
-            # Check if the parent of this "." entry is the mindspace root
-            parent_path = source_model.filePath(source_parent) if source_parent.isValid() else ""
-
-            # Normalize paths for comparison
-            normalized_parent = os.path.normpath(parent_path) if parent_path else ""
-            normalized_mindspace = os.path.normpath(self._mindspace_root)
-
-            # Only show "." if we're at the mindspace root level
-            return normalized_parent == normalized_mindspace
+            return False
 
         # Always hide .humbug directory
         file_path = source_model.filePath(index)
@@ -83,13 +74,6 @@ class MindspacePreviewModel(QSortFilterProxyModel):
         # Get file names for both indexes
         left_name = source_model.fileName(source_left)
         right_name = source_model.fileName(source_right)
-
-        # "." always sorts to the top
-        if left_name == ".":
-            return True
-
-        if right_name == ".":
-            return False
 
         # Get file info for both indexes
         left_info = source_model.fileInfo(source_left)

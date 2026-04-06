@@ -146,24 +146,24 @@ class MarkdownRenderer(MarkdownASTVisitor):
         if previous_sibling and isinstance(
             previous_sibling, (MarkdownASTOrderedListNode, MarkdownASTUnorderedListNode, MarkdownASTCodeBlockNode)
         ):
-            block_format.setTopMargin(self._default_font_height)
+            block_format.setTopMargin(self._default_font_height * 1.5)
 
         # If there is no previous sibling, check if our parent is a list item.  If it is, we also need to add a top margin.
         elif not previous_sibling and node.parent and isinstance(node.parent, MarkdownASTListItemNode):
             if not tight:
-                block_format.setTopMargin(self._default_font_height)
+                block_format.setTopMargin(self._default_font_height * 1.5)
 
         # If the next sibling is a horizontal rule, we don't need a bottom margin
         next_sibling = node.next_sibling()
         if next_sibling and isinstance(next_sibling, MarkdownASTHorizontalRuleNode):
             block_format.setBottomMargin(0)
 
-        # If we are in a tight list, we don't need a bottom margin either
+        # If we are in a tight list, add a small gap between items for readability
         elif tight:
-            block_format.setBottomMargin(0)
+            block_format.setBottomMargin(self._default_font_height * 0.5)
 
         else:
-            block_format.setBottomMargin(self._default_font_height)
+            block_format.setBottomMargin(self._default_font_height * 0.5)
 
         self._cursor.setBlockFormat(block_format)
 

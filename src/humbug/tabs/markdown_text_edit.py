@@ -80,6 +80,9 @@ class MarkdownTextEdit(MinHeightTextEdit):
         space_width = style_manager.get_space_width()
         self.setTabStopDistance(space_width * 8)
         self.document().setIndentWidth(space_width * 4)
+        self.viewport().setAutoFillBackground(False)
+        self.setStyleSheet("background: transparent; border: none;")
+
 
         if self._highlighter:
             self._highlighter.rehighlight()

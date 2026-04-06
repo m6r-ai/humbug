@@ -2,9 +2,9 @@
 
 import os
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QToolButton, QPushButton
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QToolButton, QPushButton, QLabel
 from PySide6.QtCore import Qt, Signal, QSize
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QColor, QPalette
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -13,13 +13,14 @@ from humbug.mindspace.files.mindspace_files_view import MindspaceFilesView
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.mindspace.preview.mindspace_preview_view import MindspacePreviewView
-from humbug.style_manager import StyleManager
+from humbug.style_manager import StyleManager, ColorMode
 
 
 class MindspaceView(QWidget):
     """Main mindspace view widget containing files, conversations, and preview sections."""
 
     open_mindspace_requested = Signal()  # Emits when user clicks mindspace name
+    toggle_panel_requested = Signal()   # Emits when user clicks the collapse/expand button
     # Forward all file-related signals from all views
     file_clicked = Signal(MindspaceViewType, str, bool)  # Emits view type, path, and ephemeral flag when any file is clicked
     file_deleted = Signal(str)  # Emits path when file is deleted
@@ -33,6 +34,7 @@ class MindspaceView(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the mindspace view widget."""
         super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
@@ -47,6 +49,7 @@ class MindspaceView(QWidget):
         # Create header container for mindspace name
         self._header_widget = QWidget()
         self._header_widget.setObjectName("_header_widget")
+        self._header_widget.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         header_layout = QHBoxLayout(self._header_widget)
         header_layout.setContentsMargins(8, 6, 8, 6)
         header_layout.setSpacing(0)
@@ -66,10 +69,43 @@ class MindspaceView(QWidget):
         self._settings_button.hide()
         header_layout.addWidget(self._settings_button)
 
+        # Toggle button — collapses/expands the sidebar panel
+        self._toggle_button = QToolButton(self._header_widget)
+        self._toggle_button.setObjectName("_toggle_button")
+        self._toggle_button.clicked.connect(self.toggle_panel_requested.emit)
+        header_layout.addWidget(self._toggle_button)
+
         layout.addWidget(self._header_widget)
+
+        # Action buttons row: [+ New Conversation (expanding)] [New Folder (icon)]
+        self._action_row = QWidget()
+        self._action_row.setObjectName("_action_row")
+        action_layout = QHBoxLayout(self._action_row)
+        action_layout.setContentsMargins(10, 0, 10, 6)
+        action_layout.setSpacing(6)
+
+        self._new_conversation_button = QPushButton()
+        self._new_conversation_button.setObjectName("_new_conversation_button")
+        self._new_conversation_button.clicked.connect(self._on_new_conversation_clicked)
+        self._new_conversation_button.setEnabled(False)
+        action_layout.addWidget(self._new_conversation_button)
+
+        self._new_folder_button = QToolButton()
+        self._new_folder_button.setObjectName("_new_folder_button")
+        self._new_folder_button.clicked.connect(self._on_new_folder_clicked)
+        self._new_folder_button.setEnabled(False)
+        action_layout.addWidget(self._new_folder_button)
+
+        layout.addWidget(self._action_row)
+
+        # "NAVIGATION" section label
+        self._nav_label = QLabel()
+        self._nav_label.setObjectName("_nav_label")
+        layout.addWidget(self._nav_label)
 
         # Create splitter for mindspace views
         self._splitter = QSplitter(Qt.Orientation.Vertical)
+        self._splitter.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         layout.addWidget(self._splitter)
 
         # Add conversations view
@@ -136,6 +172,24 @@ class MindspaceView(QWidget):
         self._preview_view.file_moved.connect(self.file_moved.emit)
         self._preview_view.file_edited.connect(self.file_edited.emit)
         self._preview_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
+
+        # --- Icon rail (shown when the panel is collapsed to narrow mode) ---
+        self._icon_rail = QWidget()
+        self._icon_rail.setObjectName("_icon_rail")
+        self._icon_rail.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        icon_rail_layout = QVBoxLayout(self._icon_rail)
+        icon_rail_layout.setContentsMargins(6, 8, 6, 8)
+        icon_rail_layout.setSpacing(0)
+        icon_rail_layout.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
+
+        # Single expand button — click to slide the panel back open
+        self._rail_expand_btn = QToolButton()
+        self._rail_expand_btn.setObjectName("_rail_icon_btn")
+        self._rail_expand_btn.clicked.connect(self.toggle_panel_requested.emit)
+        icon_rail_layout.addWidget(self._rail_expand_btn, 0, Qt.AlignmentFlag.AlignHCenter)
+
+        layout.addWidget(self._icon_rail)
+        self._icon_rail.hide()  # hidden by default (full panel is shown)
 
         # Set initial label text
         self._mindspace_button.setText(self._language_manager.strings().mindspace_label_none)
@@ -282,15 +336,35 @@ class MindspaceView(QWidget):
         if not path:
             self._mindspace_button.setText(self._language_manager.strings().mindspace_label_none)
             self._settings_button.hide()
-
+            self._new_conversation_button.setEnabled(False)
+            self._new_folder_button.setEnabled(False)
         else:
             self._mindspace_button.setText(os.path.basename(path))
             self._settings_button.show()
+            self._new_conversation_button.setEnabled(True)
+            self._new_folder_button.setEnabled(True)
 
         # Forward to all views
         self._files_view.set_mindspace(path)
         self._conversations_view.set_mindspace(path)
         self._preview_view.set_mindspace(path)
+
+    def set_panel_collapsed(self, collapsed: bool) -> None:
+        """Switch between full panel and narrow icon-rail mode."""
+        self._header_widget.setVisible(not collapsed)
+        self._action_row.setVisible(not collapsed)
+        self._nav_label.setVisible(not collapsed)
+        self._splitter.setVisible(not collapsed)
+        self._icon_rail.setVisible(collapsed)
+        self._update_button_styling()
+
+    def _on_new_conversation_clicked(self) -> None:
+        """Handle New Conversation button click."""
+        self.new_conversation_requested.emit("")
+
+    def _on_new_folder_clicked(self) -> None:
+        """Handle New Folder button click — create a folder in the conversations tree."""
+        self._conversations_view.start_new_folder()
 
     def _on_settings_button_clicked(self) -> None:
         """Handle settings button click."""
@@ -310,6 +384,11 @@ class MindspaceView(QWidget):
         # Update settings button tooltip
         self._settings_button.setToolTip(self._language_manager.strings().mindspace_settings)
 
+        # Update new conversation button text and nav label
+        self._new_conversation_button.setText(f"+ {self._language_manager.strings().new_conversation}")
+        self._new_folder_button.setToolTip(self._language_manager.strings().new_folder)
+        self._nav_label.setText("NAVIGATION")
+
         self.apply_style()
 
     def _update_button_styling(self) -> None:
@@ -323,6 +402,32 @@ class MindspaceView(QWidget):
         self._settings_button.setIcon(QIcon(self._style_manager.scale_icon("cog", icon_base_size)))
         self._settings_button.setIconSize(icon_size)
 
+        # Update toggle button (panel collapse)
+        toggle_icon_name = (
+            "arrow-left"
+            if self.layoutDirection() == Qt.LayoutDirection.LeftToRight
+            else "arrow-right"
+        )
+        self._toggle_button.setIcon(QIcon(self._style_manager.scale_icon(toggle_icon_name, icon_base_size)))
+        self._toggle_button.setIconSize(icon_size)
+
+        # Folder button icon
+        folder_icon_size = QSize(icon_scaled_size, icon_scaled_size)
+        self._new_folder_button.setIcon(QIcon(self._style_manager.scale_icon("plus", icon_base_size)))
+        self._new_folder_button.setIconSize(folder_icon_size)
+
+        # Rail expand button icon
+        rail_base = 16
+        rail_size = QSize(int(rail_base * self._style_manager.zoom_factor()),
+                          int(rail_base * self._style_manager.zoom_factor()))
+        expand_icon_name = (
+            "arrow-right"
+            if self.layoutDirection() == Qt.LayoutDirection.LeftToRight
+            else "arrow-left"
+        )
+        self._rail_expand_btn.setIcon(QIcon(self._style_manager.scale_icon(expand_icon_name, rail_base)))
+        self._rail_expand_btn.setIconSize(rail_size)
+
     def apply_style(self) -> None:
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor()
@@ -333,6 +438,18 @@ class MindspaceView(QWidget):
         font.setPointSize(int(base_font_size * zoom_factor))
         self._mindspace_button.setFont(font)
 
+        # Update font size for new conversation button
+        btn_font = self._new_conversation_button.font()
+        btn_font.setPointSizeF(base_font_size * zoom_factor * 0.95)
+        btn_font.setBold(True)
+        self._new_conversation_button.setFont(btn_font)
+
+        # Update font for nav label
+        nav_font = self._nav_label.font()
+        nav_font.setPointSizeF(base_font_size * zoom_factor * 0.72)
+        nav_font.setBold(True)
+        self._nav_label.setFont(nav_font)
+
         # Update button styling
         self._update_button_styling()
 
@@ -342,42 +459,59 @@ class MindspaceView(QWidget):
         # the layout engine seems to be having trouble with it in RTL mode.
         if self.layoutDirection() == Qt.LayoutDirection.LeftToRight:
             expand_icon = "arrow-right"
-            tree_left_padding = 0
-            tree_right_padding = 8
+            tree_left_padding = 6
+            tree_right_padding = 10
 
         else:
             expand_icon = "arrow-left"
-            tree_left_padding = 8
-            tree_right_padding = 0
+            tree_left_padding = 10
+            tree_right_padding = 6
 
-        background_color = self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND)
+        panel_surface = self._style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)
+        panel_raised = self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+        sidebar_canvas = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
+        header_surface = (
+            "rgba(8, 12, 20, 0.94)"
+            if self._style_manager.color_mode() == ColorMode.DARK
+            else panel_surface
+        )
 
         # Style the mindspace view
         self.setStyleSheet(f"""
             {self._style_manager.get_menu_stylesheet()}
 
-            #_header_widget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND)};
-                margin: 0px;
-                padding: 0px;
-                border: none;
+            QWidget {{
+                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)};
             }}
 
-            #_header_widget #_settings_button {{
-                background-color: {background_color};
+            #_header_widget {{
+                background-color: {header_surface};
+                margin: 8px 8px 6px 8px;
+                padding: 0px;
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: 14px;
+            }}
+
+            #_header_widget #_settings_button,
+            #_header_widget #_toggle_button {{
+                background-color: transparent;
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
-                padding: 0px;
+                padding: 4px;
+                margin: 4px;
+                border-radius: 10px;
             }}
-            #_header_widget #_settings_button:hover {{
-                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_HOVER)};
+            #_header_widget #_settings_button:hover,
+            #_header_widget #_toggle_button:hover {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
             }}
-            #_header_widget #_settings_button:pressed {{
-                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_PRESSED)};
+            #_header_widget #_settings_button:pressed,
+            #_header_widget #_toggle_button:pressed {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_PRESSED)};
             }}
             #_header_widget #_settings_button:disabled {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-                background-color: {background_color};
+                background-color: transparent;
             }}
 
             #_header_widget #_mindspace_button {{
@@ -385,30 +519,108 @@ class MindspaceView(QWidget):
                 background-color: transparent;
                 border: none;
                 margin: 0px;
-                padding: 1px 3px 1px 3px;
+                padding: 10px 12px;
+                text-align: left;
+                font-weight: 700;
             }}
             #_header_widget #_mindspace_button:hover {{
-                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_HOVER)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+                border-radius: 10px;
             }}
             #_header_widget #_mindspace_button:pressed {{
-                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_NAME_BACKGROUND_PRESSED)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_PRESSED)};
+                border-radius: 10px;
             }}
             #_header_widget #_mindspace_button:disabled {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
                 background-color: transparent;
             }}
 
-            #MindspaceCollapsibleHeader {{
-                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_HEADING)};
-                border-radius: 0px;
+            #_new_conversation_button {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
+                color: #ffffff;
+                border: none;
+                border-radius: 10px;
+                padding: 10px 16px;
+                margin: 0px 10px 6px 10px;
+                text-align: center;
+                font-weight: 700;
+                letter-spacing: 0.2px;
+            }}
+            #_new_conversation_button:hover {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
+            }}
+            #_new_conversation_button:pressed {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)};
+            }}
+            #_new_conversation_button:disabled {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+            }}
+
+            QWidget#_action_row {{
+                background-color: transparent;
+            }}
+
+            QToolButton#_new_folder_button {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: 10px;
+                padding: 9px 10px;
+            }}
+            QToolButton#_new_folder_button:hover {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+            }}
+            QToolButton#_new_folder_button:pressed {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+            }}
+            QToolButton#_new_folder_button:disabled {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                border-color: transparent;
+            }}
+
+            QLabel#_nav_label {{
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                background-color: transparent;
+                border: none;
+                padding: 6px 14px 4px 14px;
+                letter-spacing: 0.8px;
+            }}
+
+            QWidget#_icon_rail {{
+                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)};
+                border-right: 1px solid {self._style_manager.get_color_str(ColorRole.MENU_BORDER)};
+            }}
+
+            QToolButton#_rail_icon_btn {{
+                background-color: transparent;
+                border: none;
+                border-radius: 8px;
+                padding: 6px;
                 margin: 0px;
-                padding: 0px 0px 1px 0px;
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            QToolButton#_rail_icon_btn:hover {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+            }}
+            QToolButton#_rail_icon_btn:pressed {{
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_PRESSED)};
+            }}
+
+            #MindspaceCollapsibleHeader {{
+                background-color: {panel_surface};
+                border-radius: 12px;
+                margin: 4px 8px;
+                padding: 0px;
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.MENU_BORDER)};
             }}
             #MindspaceCollapsibleHeader[splitter="true"] {{
-                border-top: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
+                border-top: 1px solid {self._style_manager.get_color_str(ColorRole.MENU_BORDER)};
             }}
             #MindspaceCollapsibleHeader[hovered="true"] {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
             }}
 
             #MindspaceCollapsibleHeader QLabel {{
@@ -417,44 +629,51 @@ class MindspaceView(QWidget):
                 border: none;
                 padding: 0px;
                 margin: 0px;
+                font-weight: 600;
             }}
 
             #MindspaceCollapsibleHeader QToolButton#_expand_button {{
                 background-color: transparent;
                 border: none;
-                padding: 0px 0px 0px 2px;
+                padding: 2px 2px 2px 4px;
                 margin: 0px;
             }}
 
             QWidget#_spacer_widget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)};
-                border-top: 1px solid {self._style_manager.get_color_str(ColorRole.SPLITTER)};
+                border-top: none;
             }}
 
             QSplitter::handle {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SPLITTER)};
-                margin: 0;
-                height: 0px;
+                background-color: transparent;
+                margin: 0 8px;
+                height: 6px;
             }}
 
             QTreeView {{
-                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)};
-                border: none;
-                padding: 0 {tree_left_padding}px 0 {tree_right_padding}px;
+                background-color: {panel_surface};
+                alternate-background-color: {panel_raised};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: 12px;
+                padding: 8px {tree_right_padding}px 8px {tree_left_padding}px;
+                margin: 0px 8px 8px 8px;
+                outline: none;
             }}
             QTreeView::item {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                padding: 2px 0 2px 0;
-                margin: 0px;
+                padding: 6px 8px 6px 4px;
+                margin: 1px 0px;
+                border-radius: 8px;
             }}
             QTreeView::item:selected {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_BRIGHT)};
             }}
             QTreeView::item:hover {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
             }}
             QTreeView::branch {{
-                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)};
+                background-color: {panel_surface};
             }}
             QTreeView::branch:has-children:!has-siblings:closed,
             QTreeView::branch:closed:has-children:has-siblings {{
@@ -472,28 +691,16 @@ class MindspaceView(QWidget):
             }}
 
             MindspaceRootDropWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)};
-                border: none;
+                background-color: {panel_surface};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: 12px;
             }}
             MindspaceRootDropWidget[is_drop_target="true"] {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
-                border: 1px solid {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER)};
             }}
 
-            QScrollBar:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-            }}
-            QScrollBar::handle:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-            }}
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
+            {self._style_manager.get_scrollbar_stylesheet()}
 
             QToolTip {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
@@ -531,6 +738,19 @@ class MindspaceView(QWidget):
                 selection-color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
         """)
+
+        canvas_color = QColor(sidebar_canvas)
+        panel_color = QColor(header_surface)
+        for widget, color in (
+            (self, canvas_color),
+            (self._header_widget, panel_color),
+            (self._splitter, canvas_color),
+        ):
+            palette = widget.palette()
+            palette.setColor(QPalette.ColorRole.Window, color)
+            palette.setColor(QPalette.ColorRole.Base, color)
+            widget.setPalette(palette)
+            widget.setAutoFillBackground(True)
 
         # Forward style updates to child views
         self._files_view.apply_style()

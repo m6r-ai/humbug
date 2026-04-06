@@ -1,7 +1,9 @@
-from PySide6.QtWidgets import QTabWidget, QWidget
-from PySide6.QtCore import Signal, QEvent, QObject
-from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent
+from PySide6.QtWidgets import QTabWidget, QWidget, QToolButton, QHBoxLayout, QSizePolicy
+from PySide6.QtCore import Signal, QEvent, QObject, Qt, QSize
+from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent, QIcon
 
+from humbug.color_role import ColorRole
+from humbug.style_manager import StyleManager
 from humbug.tabs.tab_bar import TabBar
 
 
@@ -25,8 +27,90 @@ class ColumnWidget(QTabWidget):
         self.setTabBar(TabBar(self))
         tab_bar = self.tabBar()
         tab_bar.setDrawBase(False)
-        tab_bar.setUsesScrollButtons(True)
         tab_bar.installEventFilter(self)
+
+        # Corner nav widget — keeps scroll buttons out of the tab area
+        self._style_manager = StyleManager()
+        nav = QWidget()
+        nav.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        nav_layout = QHBoxLayout(nav)
+        nav_layout.setContentsMargins(2, 2, 4, 2)
+        nav_layout.setSpacing(6)
+
+        self._scroll_left_btn = QToolButton()
+        self._scroll_left_btn.setArrowType(Qt.ArrowType.NoArrow)
+        self._scroll_left_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._scroll_left_btn.setAutoRepeat(True)
+        self._scroll_left_btn.setAutoRepeatDelay(200)
+        self._scroll_left_btn.setAutoRepeatInterval(50)
+        self._scroll_left_btn.clicked.connect(lambda: self._on_nav_scroll(-1))
+        nav_layout.addWidget(self._scroll_left_btn)
+
+        self._scroll_right_btn = QToolButton()
+        self._scroll_right_btn.setArrowType(Qt.ArrowType.NoArrow)
+        self._scroll_right_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._scroll_right_btn.setAutoRepeat(True)
+        self._scroll_right_btn.setAutoRepeatDelay(200)
+        self._scroll_right_btn.setAutoRepeatInterval(50)
+        self._scroll_right_btn.clicked.connect(lambda: self._on_nav_scroll(1))
+        nav_layout.addWidget(self._scroll_right_btn)
+
+        self.setCornerWidget(nav, Qt.Corner.TopRightCorner)
+        self._style_manager.style_changed.connect(self._apply_nav_style)
+        self._apply_nav_style()
+
+    def _apply_nav_style(self) -> None:
+        """Style the corner nav scroll buttons to match the copy/download action buttons."""
+        sm = self._style_manager
+        zoom = sm.zoom_factor()
+        button_size = max(24, int(30 * zoom))
+        icon_base_size = 16
+        icon_scaled_size = int(icon_base_size * zoom)
+        radius = max(10, int(button_size / 2.4))
+        surface = sm.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)
+        left_icon_name = "arrow-left" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-right"
+        right_icon_name = "arrow-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "arrow-left"
+        btn_style = f"""
+            QToolButton {{
+                background-color: {surface};
+                color: {sm.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border: 1px solid {sm.get_color_str(ColorRole.MENU_BORDER)};
+                padding: 0px;
+                margin: 0px;
+                border-radius: {radius}px;
+                min-width: {button_size}px;
+                min-height: {button_size}px;
+                max-width: {button_size}px;
+                max-height: {button_size}px;
+            }}
+            QToolButton:hover {{
+                background-color: {sm.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
+                color: {sm.get_color_str(ColorRole.TEXT_PRIMARY)};
+                border-color: {sm.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+            }}
+            QToolButton:pressed {{
+                background-color: {sm.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
+                border-color: {sm.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+            }}
+            QToolButton:disabled {{
+                background-color: {surface};
+                color: {sm.get_color_str(ColorRole.TEXT_DISABLED)};
+                border-color: {sm.get_color_str(ColorRole.MENU_BORDER)};
+            }}
+        """
+        icon_size = QSize(icon_scaled_size, icon_scaled_size)
+        self._scroll_left_btn.setIcon(QIcon(sm.scale_icon(left_icon_name, icon_base_size)))
+        self._scroll_left_btn.setIconSize(icon_size)
+        self._scroll_left_btn.setStyleSheet(btn_style)
+        self._scroll_right_btn.setIcon(QIcon(sm.scale_icon(right_icon_name, icon_base_size)))
+        self._scroll_right_btn.setIconSize(icon_size)
+        self._scroll_right_btn.setStyleSheet(btn_style)
+
+    def _on_nav_scroll(self, direction: int) -> None:
+        """Forward scroll request to the tab bar."""
+        tab_bar = self.tabBar()
+        assert isinstance(tab_bar, TabBar)
+        tab_bar.scroll_tabs(direction)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """Handle window activation and mouse events to detect active column."""

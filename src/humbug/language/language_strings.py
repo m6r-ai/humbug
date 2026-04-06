@@ -55,6 +55,7 @@ class LanguageStrings:
     reset_zoom: str
     show_system_log: str
     show_system_shell: str
+    toggle_mindspace_panel: str
     show_all_columns: str
     split_column_left: str
     split_column_right: str
@@ -122,6 +123,7 @@ class LanguageStrings:
     theme_dark: str
     theme_light: str
     file_sort_order: str
+    open_chat_in_new_tab: str
     sort_directories_first: str
     sort_alphabetical: str
 
@@ -176,6 +178,7 @@ class LanguageStrings:
     # File dialog titles
     file_dialog_open_metaphor: str
     file_dialog_open_conversation: str
+    file_dialog_attach_document: str
     file_dialog_open_file: str
     file_dialog_save_file: str
     file_dialog_new_mindspace: str
@@ -267,6 +270,7 @@ class LanguageStrings:
     tooltip_delete_from_message: str
     tooltip_edit_message: str
     tooltip_edit_file: str
+    tooltip_attach_document: str
     tooltip_submit_message: str
     tooltip_stop_message: str
     tooltip_settings_message: str

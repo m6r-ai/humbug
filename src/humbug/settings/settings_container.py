@@ -36,10 +36,10 @@ class SettingsContainer(QWidget):
 
         self._style_manager = StyleManager()
         self._settings: List[SettingsItem] = []
+        self.setObjectName("SettingsContainer")
 
-        # Create main layout with proper spacing
         self._layout = QVBoxLayout()
-        self._layout.setSpacing(0)
+        self._layout.setSpacing(8)
         self._layout.setContentsMargins(0, 0, 0, 0)
 
         self.setLayout(self._layout)

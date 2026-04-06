@@ -2,10 +2,10 @@
 
 from PySide6.QtWidgets import QVBoxLayout, QLabel, QFrame, QWidget, QPushButton
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent, QColor, QPalette
 
 from humbug.color_role import ColorRole
-from humbug.style_manager import StyleManager
+from humbug.style_manager import StyleManager, ColorMode
 from humbug.language.language_manager import LanguageManager
 from humbug.user.user_settings import UserSettings
 
@@ -184,6 +184,18 @@ class WelcomeWidget(QFrame):
         """Update styling when application style changes."""
         zoom_factor = self._style_manager.zoom_factor()
         base_font_size = self._style_manager.base_font_size()
+        background = (
+            "rgba(8, 12, 20, 0.96)"
+            if self._style_manager.color_mode() == ColorMode.DARK
+            else self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)
+        )
+
+        palette = self.palette()
+        canvas = QColor(background)
+        palette.setColor(QPalette.ColorRole.Window, canvas)
+        palette.setColor(QPalette.ColorRole.Base, canvas)
+        self.setPalette(palette)
+        self.setAutoFillBackground(True)
 
         # Update icon size
         icon_path = self._style_manager.get_icon_path("app-icon-disabled")
@@ -199,11 +211,12 @@ class WelcomeWidget(QFrame):
         self._settings_button.setStyleSheet(f"""
             QPushButton {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                border-radius: 4px;
-                padding: 10px 20px;
+                color: {self._style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
+                border: 1px solid {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
+                border-radius: 10px;
+                padding: 12px 22px;
                 font-size: {base_font_size * zoom_factor}pt;
+                font-weight: 700;
             }}
             QPushButton:hover {{
                 background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)};
@@ -216,19 +229,19 @@ class WelcomeWidget(QFrame):
         # Update colors and frame style
         self.setStyleSheet(f"""
             QFrame {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
+                background-color: {background};
                 border: none;
-                border-radius: {4 * zoom_factor}px;
+                border-radius: {12 * zoom_factor}px;
             }}
             QFrame > QLabel {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
                 background: none;
-                font-size: {base_font_size * 1.5}pt;
+                font-size: {base_font_size * 1.6}pt;
                 font-weight: bold;
             }}
             #message_label {{
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                font-size: {base_font_size}pt;
+                font-size: {base_font_size * 1.05}pt;
                 font-weight: normal;
             }}
         """)

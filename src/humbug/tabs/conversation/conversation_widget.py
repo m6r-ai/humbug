@@ -3,13 +3,16 @@
 import asyncio
 import logging
 import os
+import re
+import shutil
 from typing import Dict, List, Tuple, Any, Set, cast
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QSizePolicy,
+    QMenu, QWidgetAction, QFileDialog, QPushButton
 )
-from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
-from PySide6.QtGui import QCursor, QResizeEvent
+from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject, QUrl
+from PySide6.QtGui import QCursor, QResizeEvent, QDesktopServices, QColor, QIcon, QPixmap, QPalette
 
 from ai import (
     AIConversation, AIConversationEvent, AIConversationHistory,
@@ -22,10 +25,10 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.message_box import MessageBox, MessageBoxType, MessageBoxButton
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.style_manager import StyleManager
+from humbug.style_manager import StyleManager, ColorMode
 from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.conversation.conversation_input import ConversationInput
-from humbug.tabs.conversation.conversation_message import ConversationMessage
+from humbug.tabs.conversation.conversation_message import ConversationMessage, TypingIndicatorWidget
 
 
 class ConversationWidget(QWidget):
@@ -70,6 +73,7 @@ class ConversationWidget(QWidget):
         self._logger = logging.getLogger("ConversationWidget")
 
         self.setObjectName("ConversationWidget")
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         self._mindspace_manager = MindspaceManager()
 
@@ -100,6 +104,7 @@ class ConversationWidget(QWidget):
         self._messages: List[ConversationMessage] = []
         self._message_with_selection: ConversationMessage | None = None
         self._is_streaming = False
+        self._typing_indicator: TypingIndicatorWidget | None = None
 
         # Message border animation state (moved from ConversationInput)
         self._animated_message: ConversationMessage | None = None
@@ -148,11 +153,15 @@ class ConversationWidget(QWidget):
         # Set up the scroll area
         self._scroll_area = QScrollArea()
         self._scroll_area.setObjectName("ConversationScrollArea")
+        self._scroll_area.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._scroll_area.setFrameStyle(0)
         self._scroll_area.setWidgetResizable(True)
         self._scroll_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._scroll_area.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignTop)
+        self._scroll_area.viewport().setObjectName("ConversationViewport")
+        self._scroll_area.viewport().setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
         # Connect to the vertical scrollbar's change signals
         self._scroll_area.verticalScrollBar().valueChanged.connect(self._on_scroll_value_changed)
@@ -160,6 +169,8 @@ class ConversationWidget(QWidget):
 
         # Create messages container widget
         self._messages_container = QWidget()
+        self._messages_container.setObjectName("ConversationMessagesContainer")
+        self._messages_container.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self._messages_layout = QVBoxLayout(self._messages_container)
         self._messages_container.setLayout(self._messages_layout)
 
@@ -176,12 +187,21 @@ class ConversationWidget(QWidget):
         self._input.submit_requested.connect(self.submit)
         self._input.stop_requested.connect(self._on_stop_requested)
         self._input.settings_requested.connect(self._on_input_settings_requested)
+        self._input.attach_requested.connect(self._on_attach_requested)
+        self._input.attachment_file_deleted.connect(self._on_attachment_file_deleted)
         self._input.modified.connect(self.conversation_modified)
 
         style_manager.style_changed.connect(self._on_style_changed)
         self._on_style_changed()
 
         self._messages_layout.addStretch()
+
+        # Subtle separator line between history and input
+        self._input_separator = QWidget(self._messages_container)
+        self._input_separator.setObjectName("InputSeparator")
+        self._input_separator.setFixedHeight(1)
+        self._messages_layout.addWidget(self._input_separator)
+
         self._messages_layout.addWidget(self._input)
 
         self._messages_container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
@@ -385,6 +405,8 @@ class ConversationWidget(QWidget):
         msg_widget.tool_call_approved.connect(self._on_tool_call_approved)
         msg_widget.tool_call_i_am_unsure.connect(self._on_tool_call_i_am_unsure)
         msg_widget.tool_call_rejected.connect(self._on_tool_call_rejected)
+        msg_widget.attachment_file_deleted.connect(self._on_attachment_file_deleted)
+        msg_widget.link_clicked.connect(self._on_link_clicked)
 
         self._messages.append(msg_widget)
 
@@ -727,8 +749,29 @@ class ConversationWidget(QWidget):
         if self._animated_message != last_visible:
             self._transfer_animation_to_message(last_visible)
 
+    def _show_typing_indicator(self) -> None:
+        """Insert the typing indicator widget just before the input area."""
+        if self._typing_indicator:
+            return
+
+        self._typing_indicator = TypingIndicatorWidget(self._messages_container)
+        # Insert before the stretch (count - 2) and input (count - 1)
+        self._messages_layout.insertWidget(self._messages_layout.count() - 2, self._typing_indicator)
+
+    def _hide_typing_indicator(self) -> None:
+        """Remove the typing indicator widget if present."""
+        if not self._typing_indicator:
+            return
+
+        self._typing_indicator.stop()
+        self._messages_layout.removeWidget(self._typing_indicator)
+        self._typing_indicator.deleteLater()
+        self._typing_indicator = None
+
     def _stop_message_border_animation(self) -> None:
         """Stop all message border animation."""
+        self._hide_typing_indicator()
+
         if self._animated_message:
             self._animated_message.set_border_animation(False)
             self._animated_message = None
@@ -893,6 +936,10 @@ class ConversationWidget(QWidget):
         self._current_unfinished_message = message
         self._add_message(message)
 
+        # Show typing indicator after the user message so it appears below it
+        if message.source == AIMessageSource.USER and self._is_streaming:
+            self._show_typing_indicator()
+
         # Start animation if not already animating
         if not self._is_animating:
             self._start_message_border_animation()
@@ -921,6 +968,9 @@ class ConversationWidget(QWidget):
                 self._container_show_timer.stop()
 
             self._messages_container.setUpdatesEnabled(False)
+
+        if message.content:
+            self._hide_typing_indicator()
 
         for i in range(len(self._messages) - 1, -1, -1):
             if self._messages[i].message_id() == message.id:
@@ -1633,43 +1683,143 @@ class ConversationWidget(QWidget):
     def _build_widget_style(self) -> str:
         """Build styles for the conversation widget."""
         style_manager = self._style_manager
+        conversation_canvas = (
+            "rgba(8, 12, 20, 0.96)"
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)
+        )
 
         return f"""
             QWidget {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                background-color: {conversation_canvas};
             }}
 
             {style_manager.get_menu_stylesheet()}
 
             QScrollArea {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+                background-color: {conversation_canvas};
                 border: none;
             }}
 
-            QScrollBar:vertical {{
-                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
+            QScrollArea > QWidget > QWidget {{
+                background-color: {conversation_canvas};
+                border: none;
             }}
-            QScrollBar::handle:vertical {{
-                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
+
+            QWidget#ConversationMessagesContainer,
+            QWidget#ConversationViewport {{
+                background-color: {conversation_canvas};
+                border: none;
             }}
-            QScrollBar::add-page:vertical,
-            QScrollBar::sub-page:vertical {{
-                background: none;
+
+            #InputSeparator {{
+                background-color: {style_manager.get_color_str(ColorRole.MENU_BORDER)};
+                border: none;
             }}
-            QScrollBar::add-line:vertical,
-            QScrollBar::sub-line:vertical {{
-                height: 0px;
+
+            #_attachments_bar, #_chips_scroll, #_chips_container, #_chip_info,
+            #_display_chips_container, #_text_row {{
+                background-color: transparent;
+                border: none;
             }}
+
+            #_attachment_chip {{
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: 10px;
+            }}
+
+            #_chip_label {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                font-size: {style_manager.base_font_size() * style_manager.zoom_factor() * 0.9:.1f}pt;
+                font-weight: bold;
+                background: transparent;
+                border: none;
+            }}
+
+            #_chip_type_label {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                font-size: {style_manager.base_font_size() * style_manager.zoom_factor() * 0.75:.1f}pt;
+                background: transparent;
+                border: none;
+            }}
+
+            #_chip_remove {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                background: transparent;
+                border: none;
+                padding: 0;
+                font-size: {style_manager.base_font_size() * style_manager.zoom_factor() * 0.75:.1f}pt;
+            }}
+
+            #_chip_remove:hover {{
+                color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
+            }}
+
+            {style_manager.get_scrollbar_stylesheet()}
         """
+
+    def _apply_surface_palette(self) -> None:
+        """Force the conversation surfaces to use the correct background palette."""
+        canvas = QColor(
+            "rgba(8, 12, 20, 245)"
+            if self._style_manager.color_mode() == ColorMode.DARK
+            else self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)
+        )
+
+        for widget in (self, self._scroll_area, self._scroll_area.viewport(), self._messages_container):
+            palette = widget.palette()
+            palette.setColor(QPalette.ColorRole.Window, canvas)
+            palette.setColor(QPalette.ColorRole.Base, canvas)
+            widget.setPalette(palette)
+            widget.setAutoFillBackground(True)
 
     def _build_conversation_message_styles(self) -> str:
         """Build styles for the main message frame."""
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
-        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor)
+        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor * 1.4)
         label_font_size = style_manager.base_font_size() * zoom_factor * 0.8
+        input_surface = (
+            "rgba(9, 14, 24, 0.78)"
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)
+        )
+        input_hover = (
+            "rgba(15, 23, 38, 0.88)"
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)
+        )
+        submit_surface = (
+            style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)
+        )
+        submit_hover = (
+            style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER)
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)
+        )
+        submit_pressed = (
+            style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED)
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)
+        )
+        submit_text = (
+            style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.EDIT_BOX_BORDER)
+        )
+        submit_border = (
+            style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.MENU_BORDER)
+        )
+        action_button_surface = (
+            style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+            if style_manager.color_mode() == ColorMode.DARK
+            else style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)
+        )
 
         # The -2px padding above is to offset the 2px border so that the content area remains the same size
         return f"""
@@ -1677,17 +1827,24 @@ class ConversationWidget(QWidget):
                 margin: 0;
                 border-radius: {border_radius}px;
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
-                padding: -2px;
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
+                padding: -1px;
             }}
-            #ConversationMessage[message_source="user"],
+            #ConversationMessage[message_source="user"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
+            }}
             #ConversationMessage[message_source="user_input"],
             #ConversationMessage[message_source="ai_streaming"] {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
-                border: 2px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
+                background-color: {input_surface};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MENU_BORDER)};
+            }}
+            #ConversationMessage[message_source="ai"],
+            #ConversationMessage[message_source="reasoning"] {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_BORDER)};
             }}
 
-            #ConversationMessage #_banner,
             #ConversationMessage #_sections_container {{
                 background-color: transparent;
                 border: none;
@@ -1696,11 +1853,27 @@ class ConversationWidget(QWidget):
                 margin: 0;
             }}
 
+            #ConversationMessage #_banner {{
+                background-color: transparent;
+                border: none;
+                border-radius: 0;
+                padding: 0;
+                margin: 0;
+            }}
+
+            #ConversationMessage[message_source="user_input"] #_banner,
+            #ConversationMessage[message_source="user_queued"] #_banner {{
+                padding: 0;
+            }}
+
             #ConversationMessage #_role_label {{
                 margin: 0;
-                padding: 0;
+                padding: 2px 6px 2px 0;
                 border: none;
                 background-color: transparent;
+                font-size: {label_font_size:.1f}pt;
+                font-weight: 700;
+                letter-spacing: 0.3px;
             }}
             #ConversationMessage[message_source="user"] #_role_label {{
                 color: {style_manager.get_color_str(ColorRole.MESSAGE_USER)};
@@ -1735,14 +1908,21 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_fork_button,
             #ConversationMessage #_edit_button,
             #ConversationMessage #_delete_button,
+            #ConversationMessage #_attach_button,
             #ConversationMessage #_stop_button,
             #ConversationMessage #_submit_button,
             #ConversationMessage #_settings_button {{
-                background-color: transparent;
-                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
-                border: none;
-                padding: 0px;
+                background-color: {action_button_surface};
+                color: {style_manager.get_color_str(ColorRole.TEXT_INACTIVE)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MENU_BORDER)};
+                padding: 4px 6px;
                 margin: 0px;
+                border-radius: {int(10 * zoom_factor)}px;
+            }}
+            #ConversationMessage #_attach_button {{
+                background-color: transparent;
+                border: none;
+                padding: 2px 4px 2px 0px;
             }}
 
             #ConversationMessage #_copy_button:hover,
@@ -1750,10 +1930,16 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_fork_button:hover,
             #ConversationMessage #_edit_button:hover,
             #ConversationMessage #_delete_button:hover,
+            #ConversationMessage #_attach_button:hover,
             #ConversationMessage #_stop_button:hover,
             #ConversationMessage #_submit_button:hover,
             #ConversationMessage #_settings_button:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
+                background-color: {input_hover};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            #ConversationMessage #_attach_button:hover {{
+                background-color: transparent;
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
 
             #ConversationMessage #_copy_button:pressed,
@@ -1761,16 +1947,37 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_fork_button:pressed,
             #ConversationMessage #_edit_button:pressed,
             #ConversationMessage #_delete_button:pressed,
+            #ConversationMessage #_attach_button:pressed,
             #ConversationMessage #_stop_button:pressed,
             #ConversationMessage #_submit_button:pressed,
             #ConversationMessage #_settings_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+            #ConversationMessage #_attach_button:pressed {{
+                background-color: transparent;
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+            }}
+
+            #ConversationMessage #_submit_button:enabled {{
+                background-color: {submit_surface};
+                color: {submit_text};
+                border: 1px solid {submit_border};
+                border-radius: {int(10 * zoom_factor)}px;
+            }}
+            #ConversationMessage #_submit_button:enabled:hover {{
+                background-color: {submit_hover};
+                color: {submit_text};
+            }}
+            #ConversationMessage #_submit_button:enabled:pressed {{
+                background-color: {submit_pressed};
+                color: {submit_text};
             }}
 
             #ConversationMessage #_stop_button:disabled,
             #ConversationMessage #_submit_button:disabled {{
                 color: {style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
-                background-color: transparent;
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
             }}
 
             #ConversationMessage[message_source="user"] #_copy_button:hover,
@@ -1779,6 +1986,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage[message_source="user"] #_edit_button:hover,
             #ConversationMessage[message_source="user"] #_delete_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
 
             #ConversationMessage[message_source="user"] #_copy_button:pressed,
@@ -1787,6 +1995,7 @@ class ConversationWidget(QWidget):
             #ConversationMessage[message_source="user"] #_edit_button:pressed,
             #ConversationMessage[message_source="user"] #_delete_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_PRESSED)};
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
             }}
 
             #ConversationMessage #_approval_widget {{
@@ -1826,8 +2035,12 @@ class ConversationWidget(QWidget):
                 background-color: transparent;
                 border: none;
                 padding: 0;
-                margin: 0 0 {border_radius}px 0;
+                margin: 0;
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+            }}
+
+            #ConversationMessage #_edit_chips_container {{
+                background-color: transparent;
             }}
 
             #ConversationMessage #_edit_btn_row {{
@@ -1837,9 +2050,9 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_edit_confirm_button {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT)};
                 color: {style_manager.get_color_str(ColorRole.TEXT_RECOMMENDED)};
-                border: none;
-                border-radius: 4px;
-                padding: 4px 12px;
+                border: 1px solid {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_EDIT)};
+                border-radius: 10px;
+                padding: 6px 14px;
                 font-size: {label_font_size:.1f}pt;
             }}
 
@@ -1852,11 +2065,11 @@ class ConversationWidget(QWidget):
             }}
 
             #ConversationMessage #_edit_cancel_button {{
-                background-color: transparent;
+                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_SECONDARY)};
                 color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
                 border: 1px solid {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE)};
-                border-radius: 4px;
-                padding: 4px 12px;
+                border-radius: 10px;
+                padding: 6px 14px;
                 font-size: {label_font_size:.1f}pt;
             }}
 
@@ -1870,23 +2083,7 @@ class ConversationWidget(QWidget):
                 color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
             }}
 
-            /* Scrollbars within approval contexts */
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar:horizontal {{
-                height: 12px;
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::handle:horizontal {{
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::add-page:horizontal,
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::sub-page:horizontal {{
-                background: none;
-            }}
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::add-line:horizontal,
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
+            {style_manager.get_scrollbar_stylesheet("#ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar")}
 
             #ConversationMessage #_approval_approve_button[recommended="true"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
@@ -1940,7 +2137,7 @@ class ConversationWidget(QWidget):
         """Build styles for message sections."""
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
-        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor / 2)
+        border_radius = int(style_manager.message_bubble_spacing() * zoom_factor * 0.8)
         return f"""
             #ConversationMessage #ConversationMessageSection[section_style="text-system"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
@@ -1948,11 +2145,18 @@ class ConversationWidget(QWidget):
                 border-radius: {border_radius}px;
                 border: 0;
             }}
+            #ConversationMessage[message_source="ai"] #ConversationMessageSection[section_style="text-system"],
+            #ConversationMessage[message_source="reasoning"] #ConversationMessageSection[section_style="text-system"] {{
+                background-color: transparent;
+            }}
             #ConversationMessage #ConversationMessageSection[section_style="text-user"] {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND)};
                 margin: 0;
                 border-radius: {border_radius}px;
                 border: 0;
+            }}
+            #ConversationMessage[message_source="user_input"] #ConversationMessageSection[section_style="text-user"] {{
+                background-color: transparent;
             }}
             #ConversationMessage #ConversationMessageSection[section_style="code-system"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY)};
@@ -1980,9 +2184,15 @@ class ConversationWidget(QWidget):
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 background-color: transparent;
                 border: none;
-                padding: 0;
+                padding: 8px 6px;
                 margin: 0;
                 selection-background-color: {style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                line-height: 1.65;
+            }}
+
+            /* Extra top breathing room for user message content */
+            #ConversationMessage[message_source="user"] #ConversationMessageSection QTextEdit {{
+                padding-top: 8px;
             }}
 
             /* Labels (syntax headers) within message sections */
@@ -2019,36 +2229,28 @@ class ConversationWidget(QWidget):
             #ConversationMessage #ConversationMessageSection[section_style="text-user"] QToolButton:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_PRESSED)};
             }}
-            #ConversationMessage #ConversationMessageSection[section_style="code-system"] QToolButton:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+            #ConversationMessage #ConversationMessageSection[section_style="code-system"] QToolButton,
+            #ConversationMessage #ConversationMessageSection[section_style="code-user"] QToolButton {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MENU_BORDER)};
+                border-radius: {max(10, int(12 * style_manager.zoom_factor()))}px;
+                padding: 0px;
+            }}
+            #ConversationMessage #ConversationMessageSection[section_style="code-system"] QToolButton:hover,
+            #ConversationMessage #ConversationMessageSection[section_style="code-user"] QToolButton:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_HOVER)};
+                border-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
             }}
             #ConversationMessage #ConversationMessageSection[section_style="code-system"] QToolButton:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_PRESSED)};
-            }}
-            #ConversationMessage #ConversationMessageSection[section_style="code-user"] QToolButton:hover {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
+                border-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
             }}
             #ConversationMessage #ConversationMessageSection[section_style="code-user"] QToolButton:pressed {{
-                background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_PRESSED)};
+                background-color: {style_manager.get_color_str(ColorRole.BUTTON_SECONDARY_BACKGROUND_PRESSED)};
+                border-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_HOVER)};
             }}
 
-            /* Scrollbars within message sections */
-            #ConversationMessage #ConversationMessageSection QScrollBar:horizontal {{
-                height: 12px;
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            #ConversationMessage #ConversationMessageSection QScrollBar::handle:horizontal {{
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-            #ConversationMessage #ConversationMessageSection QScrollBar::add-page:horizontal,
-            #ConversationMessage #ConversationMessageSection QScrollBar::sub-page:horizontal {{
-                background: none;
-            }}
-            #ConversationMessage #ConversationMessageSection QScrollBar::add-line:horizontal,
-            #ConversationMessage #ConversationMessageSection QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
+            {style_manager.get_scrollbar_stylesheet("#ConversationMessage #ConversationMessageSection QScrollBar")}
         """
 
     def _on_style_changed(self) -> None:
@@ -2056,12 +2258,19 @@ class ConversationWidget(QWidget):
         style_manager = self._style_manager
         zoom_factor = style_manager.zoom_factor()
         spacing = int(style_manager.message_bubble_spacing() * zoom_factor)
-        self._messages_layout.setSpacing(spacing)
-        self._messages_layout.setContentsMargins(spacing, spacing, spacing, spacing)
+        msg_spacing = int(spacing * 1.8)
+        self._messages_layout.setSpacing(msg_spacing)
+        self._messages_layout.setContentsMargins(spacing * 3, msg_spacing, spacing * 3, msg_spacing)
+        self._messages_container.setMaximumWidth(int(900 * zoom_factor))
 
         font = self.font()
         base_font_size = style_manager.base_font_size()
         font.setPointSizeF(base_font_size * zoom_factor)
+        font.setFamilies([
+            "Söhne", "Inter", "SF Pro Text", "SF Pro Display",
+            "-apple-system", "BlinkMacSystemFont", "Segoe UI",
+            "Helvetica Neue", "Arial", "sans-serif"
+        ])
         self.setFont(font)
 
         stylesheet_parts = [
@@ -2072,6 +2281,7 @@ class ConversationWidget(QWidget):
 
         shared_stylesheet = "\n".join(stylesheet_parts)
         self.setStyleSheet(shared_stylesheet)
+        self._apply_surface_palette()
 
         for message in self._messages:
             if message.is_rendered():
@@ -2192,6 +2402,83 @@ class ConversationWidget(QWidget):
         except AIConversationTranscriptError as e:
             self._logger.error("Failed to update transcript after edit: %s", str(e))
 
+    def _on_message_edit_confirmed(self, new_text: str) -> None:
+        """Handle confirmed inline edit: truncate from that message onward and resubmit."""
+        if self._ai_conversation is None:
+            return
+
+        sender = self.sender()
+        if not isinstance(sender, ConversationMessage):
+            return
+
+        # Guard: only handle widgets that belong to THIS conversation
+        if sender not in self._messages:
+            return
+
+        widget_index = self._messages.index(sender)
+        if widget_index < 0 or widget_index >= len(self._messages):
+            return
+
+        if self._messages[widget_index].message_source() != AIMessageSource.USER:
+            return
+
+        if self._is_streaming:
+            self.cancel_current_tasks(False)
+            self._is_streaming = False
+            self._input.set_streaming(False)
+            self._stop_message_border_animation()
+            self._pending_messages.clear()
+            if self._update_timer.isActive():
+                self._update_timer.stop()
+
+            self.status_updated.emit()
+
+        ai_conversation = cast(AIConversation, self._ai_conversation)
+        history = ai_conversation.get_conversation_history()
+        all_messages = history.get_messages()
+
+        # Use message ID to find the correct position in history (independent of widget index)
+        message_id = sender.message_id()
+        hist_index = next((i for i, m in enumerate(all_messages) if m.id == message_id), -1)
+        if hist_index < 0 or all_messages[hist_index].source != AIMessageSource.USER:
+            return
+
+        preserved_history_messages = all_messages[:hist_index]
+        ai_conversation.load_message_history(preserved_history_messages)
+
+        preserved_messages = self._messages[:widget_index]
+
+        for i in range(len(self._messages) - 1, widget_index - 1, -1):
+            message_widget = self._messages[i]
+            if self._message_with_selection == message_widget:
+                self._message_with_selection = None
+
+            self._messages_layout.removeWidget(message_widget)
+            message_widget.deleteLater()
+
+        self._messages = preserved_messages
+
+        conversation_settings = ai_conversation.conversation_settings()
+        self._input.set_model(conversation_settings.model)
+
+        preserved_history = AIConversationHistory(preserved_history_messages, history.version(), history.parent())
+        try:
+            self._transcript_handler.write(preserved_history)
+
+            if self._animated_message and self._animated_message not in preserved_messages:
+                self._stop_message_border_animation()
+
+            self.status_updated.emit()
+            self._spotlighted_message_index = -1
+            self._auto_scroll = True
+
+            # Put new text in input and immediately submit
+            self._input.set_plain_text(new_text.strip())
+            self.submit()
+
+        except AIConversationTranscriptError as e:
+            self._logger.error("Failed to update transcript after edit: %s", str(e))
+
     def _on_message_delete_requested(self) -> None:
         """Handle request to delete conversation from a message onwards."""
         # Identify which message widget triggered the request
@@ -2199,11 +2486,13 @@ class ConversationWidget(QWidget):
         if not isinstance(sender, ConversationMessage):
             return
 
-        index = self._messages.index(sender)
-        if index < 0 or index >= len(self._messages):
+        if self._ai_conversation is None:
             return
 
-        assert self._messages[index].message_source() == AIMessageSource.USER, "Only user messages can be deleted."
+        if sender not in self._messages:
+            return
+
+        widget_index = self._messages.index(sender)
 
         # If we're currently streaming, cancel the AI interaction first
         if self._is_streaming:
@@ -2217,7 +2506,10 @@ class ConversationWidget(QWidget):
             if self._update_timer.isActive():
                 self._update_timer.stop()
 
-            self.status_updated.emit()
+        # Prevent the async completion handler from restoring old content (with XML) into the input
+        self._last_submitted_message = ""
+
+        self.status_updated.emit()
 
         # Update the underlying AI conversation history
         ai_conversation = cast(AIConversation, self._ai_conversation)
@@ -2226,20 +2518,38 @@ class ConversationWidget(QWidget):
         # Get all messages from history
         all_messages = history.get_messages()
 
-        assert all_messages[index].source == AIMessageSource.USER, "Only user messages can be deleted."
-        prompt = all_messages[index].content
+        # Use message ID to find the correct position in history (independent of widget index)
+        message_id = sender.message_id()
+        hist_index = next((i for i, m in enumerate(all_messages) if m.id == message_id), -1)
+        if hist_index < 0 or all_messages[hist_index].source != AIMessageSource.USER:
+            return
 
-        # Keep only the messages up to the specified index
-        preserved_history_messages = all_messages[:index]
+        prompt = all_messages[hist_index].content or ""
+        restored_prompt = re.sub(
+            r'^📎 [^\n]*\n?', '',
+            ConversationMessage._to_display_text(prompt, for_edit=True),
+            flags=re.MULTILINE
+        ).strip()
+
+        # Keep only the messages up to the specified history index
+        preserved_history_messages = all_messages[:hist_index]
+
+        # Delete any uploaded files attached to the messages being removed
+        for msg in all_messages[hist_index:]:
+            if msg.source == AIMessageSource.USER:
+                for upload_path in re.findall(
+                    r'<document[^>]+\s+path="([^"]+)"', msg.content or ""
+                ):
+                    self._on_attachment_file_deleted(upload_path)
 
         # Update the AI conversation history
         ai_conversation.load_message_history(preserved_history_messages)
 
-        # Store all messages up to but not including the specified index
-        preserved_messages = self._messages[:index]
+        # Store all message widgets up to but not including the specified widget index
+        preserved_messages = self._messages[:widget_index]
 
         # Remove message widgets from the layout and delete them
-        for i in range(len(self._messages) - 1, index - 1, -1):
+        for i in range(len(self._messages) - 1, widget_index - 1, -1):
             message_widget = self._messages[i]
             if self._message_with_selection == message_widget:
                 self._message_with_selection = None
@@ -2267,11 +2577,11 @@ class ConversationWidget(QWidget):
             # Emit status update
             self.status_updated.emit()
 
-            # Put the spotlight back to the input
+            # Restore the deleted user prompt so it can be revised and resubmitted.
             self._spotlighted_message_index = -1
-            self._input.set_content(prompt)
+            self._input.set_plain_text(restored_prompt)
             self._input.set_spotlighted(True)
-            self._input.setFocus()
+            self._input.focus_end()
 
             # Scroll to bottom
             self._auto_scroll = True
@@ -2339,12 +2649,25 @@ class ConversationWidget(QWidget):
     ) -> None:
         """Submit current input text."""
         content = self._input.to_plain_text().strip()
-        if not content:
+        attachments = self._input.get_attachments()
+
+        if not content and not attachments:
             return
 
         ai_conversation = cast(AIConversation, self._ai_conversation)
-        sanitized_content = self._sanitize_input(content)
+
+        # Prepend attached document content wrapped in XML tags
+        parts = []
+        for filename, doc_content, upload_path in attachments:
+            path_attr = f' path="{upload_path}"' if upload_path else ""
+            parts.append(f'<document filename="{filename}"{path_attr}>\n{doc_content}\n</document>')
+        if content:
+            parts.append(content)
+        combined = "\n\n".join(parts)
+
+        sanitized_content = self._sanitize_input(combined)
         self._input.clear()
+        self._input.clear_attachments()
 
         # We need to decide if we're already streaming or if this is a new message.
         if self._is_streaming:
@@ -2383,6 +2706,330 @@ class ConversationWidget(QWidget):
     def _on_input_settings_requested(self) -> None:
         """Handle settings request from input widget."""
         self.conversation_settings_requested.emit()
+
+    @staticmethod
+    def _file_ext_color(ext_lower: str) -> str:
+        """Return a hex background color for a file-type icon badge."""
+        colors = {
+            ".pdf": "#e05c4b", ".docx": "#2b7cd3", ".doc": "#2b7cd3",
+            ".png": "#2eaa6e", ".jpg": "#2eaa6e", ".jpeg": "#2eaa6e", ".gif": "#2eaa6e",
+            ".csv": "#8e44ad", ".json": "#e67e22", ".yaml": "#e67e22", ".yml": "#e67e22",
+            ".md": "#16a085", ".rst": "#16a085", ".txt": "#7f8c8d",
+        }
+        return colors.get(ext_lower, "#7f8c8d")
+
+    def _make_menu_item_widget(
+        self, parent: QMenu, icon_widget: QWidget, title: str,
+        subtitle: str = "", has_arrow: bool = False, hover_color: str = ""
+    ) -> QWidget:
+        """Build a rich widget-action row: icon | title / subtitle | optional arrow."""
+        sm = self._style_manager
+        text_primary = sm.get_color_str(ColorRole.TEXT_PRIMARY)
+        text_dim = sm.get_color_str(ColorRole.TEXT_DISABLED)
+        font_size = sm.base_font_size() * sm.zoom_factor()
+        hover_bg = hover_color or sm.get_color_str(ColorRole.MENU_HOVER)
+
+        container = QWidget(parent)
+        container.setFixedHeight(48 if subtitle else 44)
+        container.setStyleSheet("background: transparent; border-radius: 6px;")
+        row = QHBoxLayout(container)
+        row.setContentsMargins(12, 0, 12, 0)
+        row.setSpacing(12)
+        row.addWidget(icon_widget)
+
+        info = QWidget()
+        info.setStyleSheet("background: transparent; border: none;")
+        info_layout = QVBoxLayout(info)
+        info_layout.setContentsMargins(0, 0, 0, 0)
+        info_layout.setSpacing(1)
+
+        title_lbl = QLabel(title)
+        title_lbl.setStyleSheet(
+            f"color: {text_primary}; font-size: {font_size:.1f}pt;"
+            " background: transparent; border: none;"
+        )
+        info_layout.addWidget(title_lbl)
+        if subtitle:
+            sub_lbl = QLabel(subtitle)
+            sub_lbl.setStyleSheet(
+                f"color: {text_dim}; font-size: {font_size * 0.78:.1f}pt;"
+                " background: transparent; border: none;"
+            )
+            info_layout.addWidget(sub_lbl)
+
+        row.addWidget(info, 1)
+
+        if has_arrow:
+            arrow_lbl = QLabel("›")
+            arrow_lbl.setStyleSheet(
+                f"color: {text_dim}; font-size: {font_size * 1.2:.1f}pt;"
+                " background: transparent; border: none;"
+            )
+            row.addWidget(arrow_lbl)
+
+        container.setCursor(Qt.CursorShape.PointingHandCursor)
+        container.enterEvent = lambda _e, w=container, c=hover_bg: w.setStyleSheet(
+            f"background-color: {c}; border-radius: 6px;"
+        )
+        container.leaveEvent = lambda _e, w=container: w.setStyleSheet("background: transparent; border-radius: 6px;")
+        return container
+
+    def _make_icon_badge(self, parent: QWidget, color: str, text: str) -> QLabel:
+        """Return a 34×34 colored rounded-square badge label."""
+        sm = self._style_manager
+        bg = sm.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+        badge = QLabel(text, parent)
+        badge.setFixedSize(34, 34)
+        badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        badge.setStyleSheet(
+            f"background-color: {bg}; border-radius: 8px; border: none;"
+        )
+        # Inner icon label (centered)
+        inner = QLabel(text, badge)
+        inner.setFixedSize(20, 20)
+        inner.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        inner.setStyleSheet(
+            f"background-color: {color}; border-radius: 5px; color: white;"
+            f" font-size: 6pt; font-weight: bold; border: none;"
+        )
+        inner.move(7, 7)
+        return badge
+
+    def _on_attach_requested(self, btn_pos: QPoint) -> None:
+        """Show a ChatGPT-style popup menu above the attach button."""
+        sm = self._style_manager
+        font_size = sm.base_font_size() * sm.zoom_factor()
+        text_dim = sm.get_color_str(ColorRole.TEXT_DISABLED)
+        text_primary = sm.get_color_str(ColorRole.TEXT_PRIMARY)
+        menu_bg = sm.get_color_str(ColorRole.MENU_BACKGROUND)
+        menu_border = sm.get_color_str(ColorRole.MENU_BORDER)
+        hover_bg = sm.get_color_str(ColorRole.MENU_HOVER)
+        bg_tertiary = sm.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+
+        shared_css = f"""
+            QMenu {{
+                background-color: {menu_bg};
+                border: 1px solid {menu_border};
+                border-radius: 12px;
+                padding: 6px;
+            }}
+            QMenu::item {{ height: 0px; padding: 0px; margin: 0px; }}
+            QMenu::separator {{ height: 1px; background: {menu_border}; margin: 4px 10px; }}
+        """
+
+        # Subtle hover — slightly lighter/darker than menu background
+        light_hover = sm.get_color_str(ColorRole.BACKGROUND_TERTIARY)
+
+        menu = QMenu(self)
+        menu.setMinimumWidth(280)
+        menu.setStyleSheet(shared_css)
+
+        # ── "Add photos & files" ─────────────────────────────────────────
+        paperclip_icon = QLabel()
+        paperclip_icon.setFixedSize(32, 32)
+        paperclip_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        paperclip_icon.setStyleSheet("background: transparent; border: none;")
+        paperclip_icon.setPixmap(
+            QIcon(sm.scale_icon("paperclip", 18)).pixmap(20, 20)
+        )
+
+        add_widget = self._make_menu_item_widget(menu, paperclip_icon, "Add photos & files",
+                                                  hover_color=light_hover)
+        add_action = QWidgetAction(menu)
+        add_action.setDefaultWidget(add_widget)
+        menu.addAction(add_action)
+        add_widget.mousePressEvent = lambda _e: (menu.close(), self._open_file_dialog())
+
+        # ── "Recent files" submenu (no separator before it) ───────────────
+        recent_menu = QMenu(menu)
+        recent_menu.setMinimumWidth(300)
+        recent_menu.setStyleSheet(shared_css)
+
+        recent_icon = QLabel()
+        recent_icon.setFixedSize(32, 32)
+        recent_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        recent_icon.setStyleSheet("background: transparent; border: none;")
+        recent_icon.setPixmap(
+            QIcon(sm.scale_icon("clock", 18)).pixmap(22, 22)
+        )
+
+        recent_widget = self._make_menu_item_widget(menu, recent_icon, "Recent files",
+                                                     has_arrow=True, hover_color=light_hover)
+        recent_action = QWidgetAction(menu)
+        recent_action.setDefaultWidget(recent_widget)
+        menu.addAction(recent_action)
+        recent_widget.mousePressEvent = lambda _e, m=recent_menu, w=recent_widget: (
+            m.exec(w.mapToGlobal(QPoint(w.width(), 0)))
+        )
+
+        # ── Populate recent files submenu ─────────────────────────────────
+        recent_files: List[Tuple[float, str, str]] = []
+        if self._mindspace_manager.has_mindspace():
+            uploads_dir = self._mindspace_manager.get_absolute_path("files/uploads")
+            if os.path.isdir(uploads_dir):
+                for fname in os.listdir(uploads_dir):
+                    fpath = os.path.join(uploads_dir, fname)
+                    if os.path.isfile(fpath):
+                        recent_files.append((os.path.getmtime(fpath), fname, fpath))
+                recent_files.sort(reverse=True)
+                recent_files = recent_files[:10]
+
+        if not recent_files:
+            no_action = recent_menu.addAction("No recent files")
+            no_action.setEnabled(False)
+        else:
+            from datetime import datetime as _dt
+            for mtime, filename, filepath in recent_files:
+                ext_lower = os.path.splitext(filename)[1].lower()
+                ext_label = ext_lower.upper().lstrip('.') or "FILE"
+                badge_color = self._file_ext_color(ext_lower)
+                display_name = filename if len(filename) <= 24 else filename[:21] + "..."
+                date_str = _dt.fromtimestamp(mtime).strftime("%b %d, %I:%M %p")
+
+                # Badge
+                file_badge = QLabel(ext_label[:4])
+                file_badge.setFixedSize(34, 34)
+                file_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                file_badge.setStyleSheet(
+                    f"background-color: {badge_color}; border-radius: 8px;"
+                    " color: white; font-size: 6pt; font-weight: bold; border: none;"
+                )
+
+                item_widget = self._make_menu_item_widget(
+                    recent_menu, file_badge, display_name, date_str, hover_color=light_hover
+                )
+                item_widget.mousePressEvent = lambda _e, fp=filepath: (
+                    recent_menu.close(), menu.close(), self._attach_file_path(fp)
+                )
+
+                # Delete button — removes the file from disk and closes the menu
+                del_btn = QPushButton("✕")
+                del_btn.setFixedSize(20, 20)
+                del_btn.setFlat(True)
+                del_btn.setStyleSheet(
+                    f"color: {text_dim}; background: transparent; border: none;"
+                    " font-size: 9pt;"
+                )
+                del_btn.clicked.connect(
+                    lambda _checked, fp=filepath: (
+                        self._delete_recent_file(fp), recent_menu.close(), menu.close()
+                    )
+                )
+                item_widget.layout().addWidget(del_btn)
+
+                wa = QWidgetAction(recent_menu)
+                wa.setDefaultWidget(item_widget)
+                recent_menu.addAction(wa)
+
+        # ── Position menu ABOVE the attach button ─────────────────────────
+        menu.adjustSize()
+        menu_h = menu.sizeHint().height()
+        if menu_h < 60:
+            menu_h = 200  # safe fallback before layout completes
+        show_pos = QPoint(btn_pos.x() - 10, btn_pos.y() - menu_h - 6)
+        menu.exec(show_pos)
+
+    def _open_file_dialog(self) -> None:
+        """Open file-picker dialog and attach the chosen file."""
+        strings = self._language_manager.strings()
+        supported = (
+            "All supported (*.pdf *.docx *.txt *.md *.rst *.csv *.json *.yaml *.yml *.xml *.html *.htm "
+            "*.py *.js *.ts *.jsx *.tsx *.java *.c *.cpp *.h *.hpp *.cs "
+            "*.go *.rs *.rb *.php *.swift *.kt *.sh *.bash *.zsh "
+            "*.png *.jpg *.jpeg *.gif *.bmp *.webp);;"
+            "Images (*.png *.jpg *.jpeg *.gif *.bmp *.webp);;"
+            "PDF files (*.pdf);;"
+            "Word documents (*.docx);;"
+            "Text & code files (*.txt *.md *.rst *.csv *.json *.yaml *.yml *.xml *.html *.htm "
+            "*.py *.js *.ts *.jsx *.tsx *.java *.c *.cpp *.h *.hpp *.cs "
+            "*.go *.rs *.rb *.php *.swift *.kt *.sh *.bash *.zsh);;"
+            "All files (*)"
+        )
+        path, _ = QFileDialog.getOpenFileName(self, strings.file_dialog_attach_document, "", supported)
+        if path:
+            self._attach_file_path(path)
+
+    def _attach_file_path(self, path: str) -> None:
+        """Read a file at *path* and add it as an attachment to the input."""
+        filename = os.path.basename(path)
+        ext = os.path.splitext(path)[1].lower()
+
+        _image_exts = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp"}
+        try:
+            if ext == ".pdf":
+                content = self._read_pdf(path)
+            elif ext == ".docx":
+                content = self._read_docx(path)
+            elif ext in _image_exts:
+                content = ""  # images are stored by reference; content is the file itself
+            else:
+                with open(path, 'r', encoding='utf-8', errors='replace') as f:
+                    content = f.read()
+        except Exception as e:
+            self._logger.warning("Failed to read attachment %s: %s", path, str(e))
+            return
+
+        # Save a copy to files/uploads/ — skip the copy if it's already there
+        upload_path = ""
+        if self._mindspace_manager.has_mindspace():
+            try:
+                uploads_dir = self._mindspace_manager.ensure_mindspace_dir("files/uploads")
+                dest = os.path.join(uploads_dir, filename)
+                if os.path.abspath(path) != os.path.abspath(dest):
+                    shutil.copy2(path, dest)
+                upload_path = self._mindspace_manager.get_relative_path(dest)
+            except Exception as e:
+                self._logger.warning("Failed to save attachment to uploads: %s", str(e))
+
+        self._input.add_attachment(filename, content, upload_path)
+        self._input.focus_end()
+
+    def _read_pdf(self, path: str) -> str:
+        """Extract text from a PDF file using pypdf."""
+        from pypdf import PdfReader
+        reader = PdfReader(path)
+        pages = []
+        for i, page in enumerate(reader.pages, 1):
+            text = page.extract_text() or ""
+            if text.strip():
+                pages.append(f"[Page {i}]\n{text}")
+        return "\n\n".join(pages)
+
+    def _read_docx(self, path: str) -> str:
+        """Extract text from a Word document using python-docx."""
+        from docx import Document
+        doc = Document(path)
+        paragraphs = [p.text for p in doc.paragraphs if p.text.strip()]
+        return "\n\n".join(paragraphs)
+
+    def _delete_recent_file(self, filepath: str) -> None:
+        """Delete a file from disk (used when removing a recent-files entry)."""
+        try:
+            if os.path.isfile(filepath):
+                os.remove(filepath)
+        except Exception as e:
+            self._logger.warning("Failed to delete recent file '%s': %s", filepath, str(e))
+
+    def _on_attachment_file_deleted(self, upload_path: str) -> None:
+        """Delete an uploaded file from the mindspace when the user removes an attachment."""
+        if not upload_path or not self._mindspace_manager.has_mindspace():
+            return
+        try:
+            abs_path = self._mindspace_manager.get_absolute_path(upload_path)
+            if os.path.isfile(abs_path):
+                os.remove(abs_path)
+        except Exception as e:
+            self._logger.warning("Failed to delete uploaded file '%s': %s", upload_path, str(e))
+
+    def _on_link_clicked(self, url: str) -> None:
+        """Handle link clicks from message content (e.g. attachment filenames)."""
+        if url.startswith("humbug-file://"):
+            rel_path = url[len("humbug-file://"):]
+            if self._mindspace_manager.has_mindspace():
+                abs_path = self._mindspace_manager.get_absolute_path(rel_path)
+                QDesktopServices.openUrl(QUrl.fromLocalFile(abs_path))
+        else:
+            QDesktopServices.openUrl(QUrl(url))
 
     def get_conversation_history(self) -> AIConversationHistory:
         """Get the conversation history object."""
