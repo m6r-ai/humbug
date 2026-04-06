@@ -53,7 +53,7 @@ class Frame:
     __slots__ = ('code', 'code_len', 'ip', 'base', 'return_dest', 'is_sentinel')
 
     def __init__(self) -> None:
-        self.code: CodeObject = cast(CodeObject, None)
+        self.code: CodeObject | None = None
         self.code_len: int = 0
         self.ip: int = 0
         self.base: int = 0
@@ -445,7 +445,7 @@ class MenaiVM:
             if result is _FRAME_CHANGE:
                 # Frame changed (call, return, or tail call); re-sync.
                 frame = self._frames[self.frame_depth]
-                instructions = frame.code.instructions
+                instructions = cast(CodeObject, frame.code).instructions
                 instructions_len = frame.code_len
                 continue
 
@@ -498,14 +498,14 @@ class MenaiVM:
         self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_CONST dest, src0: Write constant[src0] into register dest."""
-        self.regs[frame.base + dest] = frame.code.constants[src0]
+        self.regs[frame.base + dest] = cast(CodeObject, frame.code).constants[src0]
         return None
 
     def _op_load_name(  # pylint: disable=useless-return
         self, frame: Frame, dest: int, src0: int, _src1: int, _src2: int
     ) -> MenaiValue | None:
         """LOAD_NAME dest, src0: Load global[names[src0]] into register dest."""
-        name = frame.code.names[src0]
+        name = cast(CodeObject, frame.code).names[src0]
 
         # Load from globals
         if name not in self.globals:
@@ -598,7 +598,7 @@ class MenaiVM:
         capture_count is always 0: all capture wiring is done by subsequent PATCH_CLOSURE
         instructions (both for letrec mutual-recursion and for ordinary non-letrec closures).
         """
-        closure_code = frame.code.code_objects[src0]
+        closure_code = cast(CodeObject, frame.code).code_objects[src0]
         closure = MenaiFunction(
             parameters=tuple(closure_code.param_names),
             name=closure_code.name,
@@ -667,7 +667,7 @@ class MenaiVM:
                     example=f"({func.name} {' '.join(func.field_names)})"
                 )
 
-            callee_base = base + frame.code.local_count
+            callee_base = base + cast(CodeObject, frame.code).local_count
             field_values = tuple(regs[callee_base + i] for i in range(n_fields))
             regs[base + dest] = MenaiStruct(struct_type=func, fields=field_values)
             return None
@@ -681,7 +681,7 @@ class MenaiVM:
         new_frame.code = code
         new_frame.code_len = len(code.instructions)
         new_frame.ip = 0
-        new_frame.base = base + frame.code.local_count
+        new_frame.base = base + cast(CodeObject, frame.code).local_count
         new_frame.return_dest = dest
         new_frame.is_sentinel = False
 
@@ -741,7 +741,7 @@ class MenaiVM:
                     example=f"({func.name} {' '.join(func.field_names)})"
                 )
 
-            local_count = frame.code.local_count
+            local_count = cast(CodeObject, frame.code).local_count
             field_values = tuple(regs[base + local_count + i] for i in range(n_fields))
             result = MenaiStruct(struct_type=func, fields=field_values)
             self.frame_depth -= 1
@@ -753,7 +753,7 @@ class MenaiVM:
             return _FRAME_CHANGE
 
         code = func.bytecode
-        local_count = frame.code.local_count
+        local_count = cast(CodeObject, frame.code).local_count
         n_args = src1
 
         # Move args from outgoing zone down to base slots 0..n-1.
@@ -846,7 +846,7 @@ class MenaiVM:
         new_frame.code = code
         new_frame.code_len = len(code.instructions)
         new_frame.ip = 0
-        new_frame.base = base + frame.code.local_count
+        new_frame.base = base + cast(CodeObject, frame.code).local_count
         new_frame.return_dest = dest
         new_frame.is_sentinel = False
         callee_base = new_frame.base

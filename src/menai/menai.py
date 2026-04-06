@@ -7,6 +7,7 @@ import os
 from typing import Union, Dict, List, Iterator
 from contextlib import contextmanager
 
+from menai.menai_bytecode import CodeObject
 from menai.menai_compiler import MenaiCompiler
 from menai.menai_ast import MenaiASTNode
 from menai.menai_value import MenaiDict, MenaiFunction, MenaiFloat, MenaiString, MenaiValue
