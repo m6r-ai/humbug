@@ -17,3 +17,4 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Added Windows installer.
 * UI improvement for the conversation input box.
 * Added feature to edit a previous user message.
+* Refactored scrollbar styling.

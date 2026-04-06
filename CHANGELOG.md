@@ -21,6 +21,10 @@ Bug fixes:
 - Fix problems with the Menai tool help.
 - Fixed a problem where delegated conversations did not show the initial prompt.
 
+Internal structure changes
+
+- Refactored all scrollbar styling into a common location.
+
 ## v41 (2026-03-22)
 
 New features:

@@ -1640,28 +1640,7 @@ class ConversationWidget(QWidget):
             }}
 
             {style_manager.get_menu_stylesheet()}
-
-            QScrollArea {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-
-            QScrollBar:vertical {{
-                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-            }}
-            QScrollBar::handle:vertical {{
-                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-            }}
-            QScrollBar::add-page:vertical,
-            QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-            QScrollBar::add-line:vertical,
-            QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
+            {style_manager.get_scrollbar_stylesheet()}
         """
 
     def _build_conversation_message_styles(self) -> str:
@@ -1870,23 +1849,9 @@ class ConversationWidget(QWidget):
                 color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
             }}
 
-            /* Scrollbars within approval contexts */
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar:horizontal {{
-                height: 12px;
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::handle:horizontal {{
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::add-page:horizontal,
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::sub-page:horizontal {{
-                background: none;
-            }}
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::add-line:horizontal,
-            #ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
+            {style_manager.get_scrollbar_stylesheet(
+                "#ConversationMessage #_approval_context_widget #_approval_context_text_edit QScrollBar"
+            )}
 
             #ConversationMessage #_approval_approve_button[recommended="true"] {{
                 background-color: {style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_RECOMMENDED)};
@@ -2032,23 +1997,7 @@ class ConversationWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.BACKGROUND_TERTIARY_PRESSED)};
             }}
 
-            /* Scrollbars within message sections */
-            #ConversationMessage #ConversationMessageSection QScrollBar:horizontal {{
-                height: 12px;
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            #ConversationMessage #ConversationMessageSection QScrollBar::handle:horizontal {{
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-            #ConversationMessage #ConversationMessageSection QScrollBar::add-page:horizontal,
-            #ConversationMessage #ConversationMessageSection QScrollBar::sub-page:horizontal {{
-                background: none;
-            }}
-            #ConversationMessage #ConversationMessageSection QScrollBar::add-line:horizontal,
-            #ConversationMessage #ConversationMessageSection QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
+            {style_manager.get_scrollbar_stylesheet("#ConversationMessage #ConversationMessageSection QScrollBar")}
         """
 
     def _on_style_changed(self) -> None:

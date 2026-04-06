@@ -594,26 +594,7 @@ class LogWidget(QWidget):
             }}
 
             {self._style_manager.get_menu_stylesheet()}
-
-            QScrollArea {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-
-            QScrollBar:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-            }}
-            QScrollBar::handle:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-            }}
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
+            {self._style_manager.get_scrollbar_stylesheet()}
         """
 
     def _build_log_message_styles(self) -> str:
@@ -671,25 +652,7 @@ class LogWidget(QWidget):
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
             }}
 
-            #LogMessage #_text_area QScrollBar:horizontal {{
-                height: 12px;
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-
-            #LogMessage #_text_area QScrollBar::handle:horizontal {{
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-
-            #LogMessage #_text_area QScrollBar::add-page:horizontal,
-            #LogMessage #_text_area QScrollBar::sub-page:horizontal {{
-                background: none;
-            }}
-
-            #LogMessage #_text_area QScrollBar::add-line:horizontal,
-            #LogMessage #_text_area QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
+            {style_manager.get_scrollbar_stylesheet("#LogMessage #_text_area QScrollBar")}
         """
 
     def _on_style_changed(self) -> None:

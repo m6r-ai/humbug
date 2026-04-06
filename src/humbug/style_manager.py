@@ -1310,6 +1310,40 @@ class StyleManager(QObject):
             }}
         """
 
+    def get_scrollbar_stylesheet(self, selector: str = "QScrollBar") -> str:
+        """Get the shared scrollbar stylesheet for the given selector prefix."""
+        scrollbar_size = 10
+        handle_minimum = 18
+
+        return f"""
+            {selector}:vertical {{
+                background-color: {self.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                width: {scrollbar_size}px;
+            }}
+            {selector}:horizontal {{
+                background-color: {self.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
+                height: {scrollbar_size}px;
+            }}
+            {selector}::handle:vertical {{
+                background-color: {self.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-height: {handle_minimum}px;
+            }}
+            {selector}::handle:horizontal {{
+                background-color: {self.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
+                min-width: {handle_minimum}px;
+            }}
+            {selector}::add-page:vertical, {selector}::sub-page:vertical,
+            {selector}::add-page:horizontal, {selector}::sub-page:horizontal {{
+                background: none;
+            }}
+            {selector}::add-line:vertical, {selector}::sub-line:vertical {{
+                height: 0px;
+            }}
+            {selector}::add-line:horizontal, {selector}::sub-line:horizontal {{
+                width: 0px;
+            }}
+        """
+
     def get_dialog_stylesheet(self) -> str:
         """
         Get a complete stylesheet for dialog windows.
@@ -1327,19 +1361,19 @@ class StyleManager(QObject):
             }}
 
             QScrollArea {{
-                background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                background-color: transparent;
                 border: none;
             }}
 
             QScrollArea > QWidget > QWidget {{
-                background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                background-color: transparent;
                 border: none;
             }}
 
             /* Labels */
             QLabel {{
                 color: {self.get_color_str(ColorRole.TEXT_PRIMARY)};
-                background-color: {self.get_color_str(ColorRole.BACKGROUND_DIALOG)};
+                background-color: transparent;
                 border: none;
                 border-radius: 4px;
                 padding: 0px;
@@ -1516,18 +1550,5 @@ class StyleManager(QObject):
                 background-color: {self.get_color_str(ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED)};
             }}
 
-            QScrollBar:vertical {{
-                background-color: {self.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-            }}
-            QScrollBar::handle:vertical {{
-                background-color: {self.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-            }}
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
+            {self.get_scrollbar_stylesheet()}
         """

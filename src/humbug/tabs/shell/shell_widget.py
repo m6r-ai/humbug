@@ -735,25 +735,7 @@ class ShellWidget(QWidget):
 
             {self._style_manager.get_menu_stylesheet()}
 
-            QScrollArea {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-
-            QScrollBar:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-            }}
-            QScrollBar::handle:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-            }}
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
+            {self._style_manager.get_scrollbar_stylesheet()}
         """
 
     def _build_shell_message_widget_styles(self) -> str:
@@ -811,22 +793,7 @@ class ShellWidget(QWidget):
                 background-color: transparent;
             }}
 
-            #ShellMessage #_text_area QScrollBar:horizontal {{
-                height: 12px;
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            #ShellMessage #_text_area QScrollBar::handle:horizontal {{
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-            #ShellMessage #_text_area QScrollBar::add-page:horizontal,
-            #ShellMessage #_text_area QScrollBar::sub-page:horizontal {{
-                background: none;
-            }}
-            #ShellMessage #_text_area QScrollBar::add-line:horizontal,
-            #ShellMessage #_text_area QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
+            {style_manager.get_scrollbar_stylesheet("#ShellMessage #_text_area QScrollBar")}
         """
 
     def _on_style_changed(self) -> None:

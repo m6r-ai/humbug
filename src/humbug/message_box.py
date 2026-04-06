@@ -219,20 +219,8 @@ class MessageBox(QDialog):
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 font-size: {base_font_size * zoom_factor}pt;
             }}
-            QScrollBar:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-            }}
-            QScrollBar::handle:vertical {{
-                background-color: {self._style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-            }}
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
+
+            {self._style_manager.get_scrollbar_stylesheet()}
         """)
 
         # Apply consistent dialog styling

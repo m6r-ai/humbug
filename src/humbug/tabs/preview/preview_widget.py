@@ -600,29 +600,8 @@ class PreviewWidget(QWidget):
                 border: none;
             }}
 
-            {self._style_manager.get_menu_stylesheet()}
-
-            QScrollArea {{
-                background-color: {style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                border: none;
-            }}
-
-            QScrollBar:vertical {{
-                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-                width: 12px;
-            }}
-            QScrollBar::handle:vertical {{
-                background-color: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-            }}
-            QScrollBar::add-page:vertical,
-            QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-            QScrollBar::add-line:vertical,
-            QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
+            {style_manager.get_menu_stylesheet()}
+            {style_manager.get_scrollbar_stylesheet()}
         """
 
     def _build_preview_file_content_style(self) -> str:
@@ -668,38 +647,7 @@ class PreviewWidget(QWidget):
                 background-color: transparent;
             }}
 
-            #PreviewFileContent #_text_area QScrollBar:horizontal {{
-                height: 12px;
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            #PreviewFileContent #_text_area QScrollBar::handle:horizontal {{
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-            #PreviewFileContent #_text_area QScrollBar::add-page:horizontal,
-            #PreviewFileContent #_text_area QScrollBar::sub-page:horizontal {{
-                background: none;
-            }}
-            #PreviewFileContent #_text_area QScrollBar::add-line:horizontal,
-            #PreviewFileContent #_text_area QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
-            #PreviewFileContent #_text_area QScrollBar:vertical {{
-                width: 12px;
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            #PreviewFileContent #_text_area QScrollBar::handle:vertical {{
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-height: 20px;
-            }}
-            #PreviewFileContent #_text_area QScrollBar::add-page:vertical,
-            #PreviewFileContent #_text_area QScrollBar::sub-page:vertical {{
-                background: none;
-            }}
-            #PreviewFileContent #_text_area QScrollBar::add-line:vertical,
-            #PreviewFileContent #_text_area QScrollBar::sub-line:vertical {{
-                height: 0px;
-            }}
+            {style_manager.get_scrollbar_stylesheet("#PreviewFileContent #_text_area QScrollBar")}
 
             #PreviewFileContent #_edit_button {{
                 background-color: transparent;
@@ -795,23 +743,7 @@ class PreviewWidget(QWidget):
                 padding: 0;
             }}
 
-            /* Scrollbars within sections */
-            #PreviewMarkdownContentSection QScrollBar:horizontal {{
-                height: 12px;
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_BACKGROUND)};
-            }}
-            #PreviewMarkdownContentSection QScrollBar::handle:horizontal {{
-                background: {style_manager.get_color_str(ColorRole.SCROLLBAR_HANDLE)};
-                min-width: 20px;
-            }}
-            #PreviewMarkdownContentSection QScrollBar::add-page:horizontal,
-            #PreviewMarkdownContentSection QScrollBar::sub-page:horizontal {{
-                background: none;
-            }}
-            #PreviewMarkdownContentSection QScrollBar::add-line:horizontal,
-            #PreviewMarkdownContentSection QScrollBar::sub-line:horizontal {{
-                width: 0px;
-            }}
+            {style_manager.get_scrollbar_stylesheet("#PreviewMarkdownContentSection QScrollBar")}
         """
 
     def _build_preview_markdown_preview_content_style(self) -> str:
