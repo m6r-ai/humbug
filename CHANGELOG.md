@@ -15,6 +15,7 @@ New features:
 - Removed the ability to open the system shell and mindspace log tabs in from the system tool.  These are tools specifically
   for a human (developer) to use.
 - Most tab types now use a more narrow default view to make them easier to read.
+- The tab label bar can now be scrolled using a mouse wheel.
 
 Bug fixes:
 

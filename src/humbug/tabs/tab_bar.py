@@ -1,8 +1,8 @@
 from typing import cast
 
-from PySide6.QtWidgets import QTabBar, QWidget
-from PySide6.QtCore import QEvent, QObject
-from PySide6.QtGui import QHoverEvent, QCursor, QPainter, QPaintEvent
+from PySide6.QtCore import QEvent, QObject, Qt
+from PySide6.QtGui import QHoverEvent, QCursor, QPainter, QPaintEvent, QWheelEvent
+from PySide6.QtWidgets import QTabBar, QWidget, QToolButton
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
@@ -17,7 +17,9 @@ class TabBar(QTabBar):
         self.setExpanding(False)
         self.setDocumentMode(True)
         self.setMouseTracking(True)
-        self.current_hovered_tab = -1
+        self._current_hovered_tab = -1
+        self._scroll_pixel_accumulator = 0
+        self._scroll_pixels_per_step = 32
         self.installEventFilter(self)
         self._style_manager = StyleManager()
 
@@ -27,6 +29,70 @@ class TabBar(QTabBar):
         """
         self.adjustSize()
         self.updateGeometry()
+
+    def _scroll_tabs(self, direction: int) -> bool:
+        """Scroll the tab strip by clicking the hidden native arrow buttons."""
+        arrow_type = Qt.ArrowType.RightArrow if direction > 0 else Qt.ArrowType.LeftArrow
+        for button in self.findChildren(QToolButton):
+            if button.arrowType() != arrow_type:
+                continue
+
+            if not button.isEnabled():
+                continue
+
+            button.click()
+            return True
+
+        return False
+
+    def _scroll_tabs_by_steps(self, steps: int) -> bool:
+        """Scroll the tab strip immediately by the requested number of native steps."""
+        if steps == 0:
+            return False
+
+        direction = 1 if steps > 0 else -1
+        moved = False
+        for _ in range(abs(steps)):
+            if not self._scroll_tabs(direction):
+                break
+
+            moved = True
+
+        return moved
+
+    def wheelEvent(self, event: QWheelEvent) -> None:
+        """Use wheel or trackpad gestures to scroll the tab strip without showing a scrollbar."""
+        pixel_delta = event.pixelDelta()
+        angle_delta = event.angleDelta()
+
+        # Trackpad: use pixel-level accumulator for proportional, smooth scrolling
+        if pixel_delta.x() != 0 or pixel_delta.y() != 0:
+            px = pixel_delta.x() if pixel_delta.x() != 0 else pixel_delta.y()
+            self._scroll_pixel_accumulator += px
+            step_count = int(self._scroll_pixel_accumulator / self._scroll_pixels_per_step)
+            if step_count != 0:
+                self._scroll_pixel_accumulator -= step_count * self._scroll_pixels_per_step
+                step_count = max(-4, min(4, step_count))
+                if self._scroll_tabs_by_steps(-step_count):
+                    event.accept()
+                    return
+
+            else:
+                event.accept()
+                return
+
+        # Mouse wheel: use angle delta
+        delta = angle_delta.x()
+        if delta == 0:
+            delta = angle_delta.y()
+
+        if delta != 0:
+            step_count = max(1, min(3, abs(delta) // 120))
+            if self._scroll_tabs_by_steps(step_count if delta < 0 else -step_count):
+                event.accept()
+                return
+
+        super().wheelEvent(event)
 
     def set_tab_state(self, index: int, is_current: bool, is_updated: bool, is_active_column: bool) -> None:
         """
@@ -119,7 +185,7 @@ class TabBar(QTabBar):
 
             is_updated = tab_state.get('is_updated', False)
             is_active_column = tab_state.get('is_active_column', False)
-            is_hovered = index == self.current_hovered_tab
+            is_hovered = index == self._current_hovered_tab
 
             # Get background color
             background_color = self._get_tab_background_color(is_active_column, is_current, is_updated, is_hovered)
@@ -198,9 +264,9 @@ class TabBar(QTabBar):
             tab_index = self.tabAt(pos)
 
             # Only emit signal when hovering over a new tab
-            if tab_index != self.current_hovered_tab:
-                old_hovered = self.current_hovered_tab
-                self.current_hovered_tab = tab_index
+            if tab_index != self._current_hovered_tab:
+                old_hovered = self._current_hovered_tab
+                self._current_hovered_tab = tab_index
 
                 # Update TabLabel hover states
                 if old_hovered != -1:
@@ -224,8 +290,8 @@ class TabBar(QTabBar):
 
         # If the mouse leaves the tab bar, reset the hover state
         elif event.type() == QEvent.Type.Leave:
-            if self.current_hovered_tab != -1:
-                old_hovered = self.current_hovered_tab
+            if self._current_hovered_tab != -1:
+                old_hovered = self._current_hovered_tab
 
                 # Update TabLabel hover state
                 label = self.tabButton(old_hovered, QTabBar.ButtonPosition.LeftSide)
@@ -233,7 +299,7 @@ class TabBar(QTabBar):
                     assert isinstance(label, TabLabel), "Expected TabLabel instance"
                     label.update_hover_state(False)
 
-                self.current_hovered_tab = -1
+                self._current_hovered_tab = -1
 
                 # Trigger repaint for the previously hovered tab
                 self.update(self.tabRect(old_hovered))
@@ -253,7 +319,7 @@ class TabBar(QTabBar):
                         assert isinstance(label, TabLabel), "Expected TabLabel instance"
                         label.update_hover_state(True)
 
-                self.current_hovered_tab = tab_index
+                self._current_hovered_tab = tab_index
 
         # Pass all other events to the parent class
         return super().eventFilter(watched, event)
