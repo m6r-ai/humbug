@@ -35,17 +35,25 @@ class TerminalWidget(QAbstractScrollArea):
     data_ready = Signal(bytes)  # Emitted when user input is ready
     size_changed = Signal()  # Emitted when terminal size changes
 
-    def __init__(self, parent: QWidget | None = None, scrollback_limit: int | None = None):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        scrollback_limit: int | None = None,
+        fixed_width: int | None = None
+    ) -> None:
         """
         Initialize terminal widget.
 
         Args:
             parent: Parent widget
             scrollback_limit: Maximum total lines to keep (including visible rows), None for unlimited
+            fixed_width: Fixed terminal width in columns, None for no fixed width
         """
         super().__init__(parent)
         self._logger = logging.getLogger("TerminalWidget")
         self._style_manager = StyleManager()
+
+        self._fixed_width = fixed_width
 
         # Set up scrollbar behavior
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
@@ -57,7 +65,7 @@ class TerminalWidget(QAbstractScrollArea):
         self.setViewportMargins(4, 4, 4, 4)
 
         # Initialize terminal state with scrollback limit
-        self._state = TerminalState(24, 80, scrollback_limit, self._on_terminal_response)
+        self._state = TerminalState(24, fixed_width or 80, scrollback_limit, self._on_terminal_response)
 
         # Initialize highlight tracking
         self._search_highlights: Dict[int, List[Tuple[int, int, bool]]] = {}
@@ -102,6 +110,9 @@ class TerminalWidget(QAbstractScrollArea):
         self._char_width: float = 0.0
         self._char_height: float = 0.0
         self._char_ascent: float = 0.0
+
+        # Horizontal centering offset in pixels (non-zero only when fixed_width is set)
+        self._center_offset: float = 0.0
 
         # Initialize size and connect signals
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -184,8 +195,14 @@ class TerminalWidget(QAbstractScrollArea):
         """Update terminal dimensions based on widget size and font metrics."""
 
         visible_cols = int(max(self.viewport().width() / self._char_width, 1))
-        cols = max(80, visible_cols)
+        cols = self._fixed_width or visible_cols
         rows = int(max(self.viewport().height() / self._char_height, 1))
+
+        if self._fixed_width:
+            terminal_pixel_width = self._fixed_width * self._char_width
+            self._center_offset = max(0.0, (self.viewport().width() - terminal_pixel_width) / 2.0)
+        else:
+            self._center_offset = 0.0
 
         # Update state dimensions
         self._state.resize(rows, cols)
@@ -270,7 +287,7 @@ class TerminalWidget(QAbstractScrollArea):
             if 0 <= visible_cursor_row < terminal_rows:
                 # Only update the cursor region
                 h_offset = self.horizontalScrollBar().value()
-                cursor_x = cursor.col * self._char_width - h_offset
+                cursor_x = self._center_offset + cursor.col * self._char_width - h_offset
                 cursor_y = visible_cursor_row * self._char_height
 
                 # Create QRectF for precise cursor region, but convert to QRect for update
@@ -297,7 +314,7 @@ class TerminalWidget(QAbstractScrollArea):
 
         # Convert pixel position to viewport row/col
         h_offset = self.horizontalScrollBar().value()
-        viewport_col = max(0, min(int((pos.x() + h_offset) / self._char_width), terminal_cols - 1))
+        viewport_col = max(0, min(int((pos.x() - self._center_offset + h_offset) / self._char_width), terminal_cols - 1))
         viewport_row = max(0, min(int(pos.y() / self._char_height), terminal_rows - 1))
 
         # Adjust row for scroll position
@@ -674,6 +691,7 @@ class TerminalWidget(QAbstractScrollArea):
         terminal_history_lines = self._state.terminal_history_lines()
         first_visible_line = self.verticalScrollBar().value()
         h_offset = self.horizontalScrollBar().value() * self._char_width
+        h_offset -= self._center_offset
 
         # Get clip region and calculate visible character range
         region = event.rect()

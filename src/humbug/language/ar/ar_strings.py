@@ -168,6 +168,8 @@ def get_arabic_strings() -> LanguageStrings:
             "تكوين سلوك مخزن التمرير المؤقت للطرفية. يخزن مخزن التمرير المؤقت سجل إخراج الطرفية "
             "الذي يمكنك التمرير للرجوع إليه."
         ),
+        terminal_fixed_width_enabled="تمكين العرض الثابت",
+        terminal_fixed_width="العرض الثابت (أعمدة)",
         terminal_scrollback_enabled="تحديد مخزن التمرير المؤقت",
         terminal_scrollback_lines="خطوط التمرير",
         terminal_close_on_exit="إغلاق الطرفية عند خروج الصدفة",

@@ -167,6 +167,8 @@ def get_french_strings() -> LanguageStrings:
             "Configurer le comportement du tampon de défilement du terminal. Le tampon de défilement "
             "stocke l'historique de sortie du terminal que vous pouvez faire défiler."
         ),
+        terminal_fixed_width_enabled="Activer la largeur fixe",
+        terminal_fixed_width="Largeur fixe (colonnes)",
         terminal_scrollback_enabled="Limiter le tampon de défilement",
         terminal_scrollback_lines="Lignes de défilement",
         terminal_close_on_exit="Fermer le terminal à la sortie du shell",

@@ -155,6 +155,8 @@ class LanguageStrings:
     backup_interval: str
     terminal_settings: str
     terminal_settings_description: str
+    terminal_fixed_width_enabled: str
+    terminal_fixed_width: str
     terminal_scrollback_enabled: str
     terminal_scrollback_lines: str
     terminal_close_on_exit: str

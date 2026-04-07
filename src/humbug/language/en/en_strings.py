@@ -167,6 +167,8 @@ def get_english_strings() -> LanguageStrings:
             "Configure terminal scrollback buffer behavior. The scrollback buffer stores terminal output "
             "history that you can scroll back through."
         ),
+        terminal_fixed_width_enabled="Enable fixed width",
+        terminal_fixed_width="Fixed width (columns)",
         terminal_scrollback_enabled="Limit Scrollback Buffer",
         terminal_scrollback_lines="Scrollback Lines",
         terminal_close_on_exit="Close terminal when shell exits",

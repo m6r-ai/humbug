@@ -24,6 +24,8 @@ class MindspaceSettings:
     tab_size: int = 4
     auto_backup: bool = False  # Default to off
     auto_backup_interval: int = 300  # Default 5 minutes in seconds
+    terminal_fixed_width_enabled: bool = True  # Default to a minimum width
+    terminal_fixed_width: int = 80  # Default minimum width in columns if enabled
     terminal_scrollback_enabled: bool = True  # Default to limited scrollback
     terminal_scrollback_lines: int = 10000  # Default 10000 lines
     terminal_close_on_exit: bool = True  # Default to native terminal behavior
@@ -246,6 +248,22 @@ class MindspaceSettings:
             auto_backup_interval = 300
 
         # Load terminal settings with validation
+        terminal_fixed_width_enabled = terminal.get("minimumWidthEnabled", True)
+        if not isinstance(terminal_fixed_width_enabled, bool):
+            cls._logger.warning(
+                "Invalid minimumWidthEnabled type in %s: expected bool, got %s. Using default.",
+                path, type(terminal_fixed_width_enabled).__name__
+            )
+            terminal_fixed_width_enabled = True
+
+        terminal_fixed_width = terminal.get("minimumWidth", 80)
+        if not isinstance(terminal_fixed_width, int):
+            cls._logger.warning(
+                "Invalid minimumWidth type in %s: expected int, got %s. Using default.",
+                path, type(terminal_fixed_width).__name__
+            )
+            terminal_fixed_width = 80
+
         terminal_scrollback_enabled = terminal.get("scrollbackEnabled", True)
         if not isinstance(terminal_scrollback_enabled, bool):
             cls._logger.warning(
@@ -285,6 +303,8 @@ class MindspaceSettings:
             tab_size=tab_size,
             auto_backup=auto_backup,
             auto_backup_interval=auto_backup_interval,
+            terminal_fixed_width_enabled=terminal_fixed_width_enabled,
+            terminal_fixed_width=terminal_fixed_width,
             terminal_scrollback_enabled=terminal_scrollback_enabled,
             terminal_scrollback_lines=terminal_scrollback_lines,
             terminal_close_on_exit=terminal_close_on_exit,
@@ -306,6 +326,8 @@ class MindspaceSettings:
                 "autoBackupInterval": self.auto_backup_interval,
             },
             "terminal": {
+                "minimumWidthEnabled": self.terminal_fixed_width_enabled,
+                "minimumWidth": self.terminal_fixed_width,
                 "scrollbackEnabled": self.terminal_scrollback_enabled,
                 "scrollbackLines": self.terminal_scrollback_lines,
                 "closeOnExit": self.terminal_close_on_exit,

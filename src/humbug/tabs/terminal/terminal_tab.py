@@ -96,6 +96,10 @@ class TerminalTab(TabBase):
         if settings.terminal_scrollback_enabled:
             scrollback_limit = settings.terminal_scrollback_lines
 
+        minimum_width = None
+        if settings.terminal_fixed_width_enabled:
+            minimum_width = settings.terminal_fixed_width
+
         # Create layout
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -110,7 +114,7 @@ class TerminalTab(TabBase):
         layout.addWidget(self._find_widget)
 
         # Create terminal widget with scrollback limit
-        self._terminal_widget = TerminalWidget(self, scrollback_limit)
+        self._terminal_widget = TerminalWidget(self, scrollback_limit, minimum_width)
         layout.addWidget(self._terminal_widget)
 
         # Connect signals
