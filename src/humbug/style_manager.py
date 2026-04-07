@@ -208,8 +208,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.TAB_BACKGROUND_INACTIVE: {
-                ColorMode.DARK: "#202020",
-                ColorMode.LIGHT: "#f0f0f0"
+                ColorMode.DARK: "#242424",
+                ColorMode.LIGHT: "#ececec"
             },
             ColorRole.TAB_BACKGROUND_HOVER: {
                 ColorMode.DARK: "#242454",
@@ -342,8 +342,8 @@ class StyleManager(QObject):
 
             # Message colours
             ColorRole.MESSAGE_BACKGROUND: {
-                ColorMode.DARK: "#181818",
-                ColorMode.LIGHT: "#f2f2f2"
+                ColorMode.DARK: "#121212",
+                ColorMode.LIGHT: "#fafafa"
             },
             ColorRole.MESSAGE_BACKGROUND_HOVER: {
                 ColorMode.DARK: "#383838",
@@ -366,8 +366,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#a0a0a0"
             },
             ColorRole.MESSAGE_BORDER: {
-                ColorMode.DARK: "#303030",
-                ColorMode.LIGHT: "#e2e2e2"
+                ColorMode.DARK: "#202020",
+                ColorMode.LIGHT: "#ececec"
             },
             ColorRole.MESSAGE_USER_BORDER: {
                 ColorMode.DARK: "#404040",
