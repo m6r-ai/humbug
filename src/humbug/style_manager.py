@@ -366,8 +366,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#a0a0a0"
             },
             ColorRole.MESSAGE_BORDER: {
-                ColorMode.DARK: "#202020",
-                ColorMode.LIGHT: "#ececec"
+                ColorMode.DARK: "#282828",
+                ColorMode.LIGHT: "#e8e8e8"
             },
             ColorRole.MESSAGE_USER_BORDER: {
                 ColorMode.DARK: "#404040",
