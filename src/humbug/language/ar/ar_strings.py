@@ -34,7 +34,6 @@ def get_arabic_strings() -> LanguageStrings:
         quit_humbug="خروج من هامبج",
         new_mindspace="مساحة ذهنية جديدة",
         new_conversation="محادثة جديدة",
-        new_metaphor_conversation="محادثة ميتافور جديدة...",
         new_file="ملف جديد",
         new_terminal="طرفية جديدة",
         open_mindspace="فتح مساحة ذهنية...",
@@ -152,7 +151,6 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_folders_title="تكوين مجلدات المساحة الذهنية",
         mindspace_path="مسار المساحة الذهنية",
         conversations_folder='إنشاء مجلد "conversations"',
-        metaphor_folder='إنشاء مجلد "metaphor"',
         src_folder='إنشاء مجلد "src"',
 
         # Mindspace settings
@@ -189,7 +187,6 @@ def get_arabic_strings() -> LanguageStrings:
         settings_visible_reasoning="تفكير مرئي",
 
         # File dialog titles
-        file_dialog_open_metaphor="فتح ملف ميتافور",
         file_dialog_open_conversation="فتح محادثة",
         file_dialog_open_file="فتح ملف",
         file_dialog_save_file="حفظ الملف",
@@ -198,7 +195,6 @@ def get_arabic_strings() -> LanguageStrings:
 
         # File dialog filters
         file_filter_all="كل الملفات (*.*)",
-        file_filter_metaphor="ملفات ميتافور (*.m6r)",
         file_filter_conversation="ملفات المحادثة (*.conv)",
 
         # Dialog titles
@@ -234,7 +230,6 @@ def get_arabic_strings() -> LanguageStrings:
         error_opening_conversation="لا يمكن تحميل {}: {}",
         error_forking_conversation="لا يمكن نسخ المحادثة: {}",
         error_opening_preview="لا يمكن فتح المعاينة: {}",
-        error_processing_metaphor="فشل في معالجة ملف ميتافور:\n\n{}",
         error_saving_mindspace_settings="فشل في حفظ الإعدادات: {}",
         error_saving_user_settings="فشل في حفظ إعدادات المستخدم: {}",
         cancel_conversation="هل أنت متأكد من أنك تريد إيقاف استجابة الذكاء الاصطناعي الحالية؟ سيؤدي هذا "
@@ -309,7 +304,7 @@ def get_arabic_strings() -> LanguageStrings:
         move_error_title="خطأ في النقل",
         move_error_exists="يوجد ملف أو مجلد بهذا الاسم بالفعل في الوجهة.",
         move_error_failed="تعذر نقل العنصر: {0}",
-        move_error_protected="لا يمكن نقل مجلدات النظام (conversations, metaphor, .humbug).",
+        move_error_protected="لا يمكن نقل مجلدات النظام (conversations, .humbug).",
 
         # Inline editor validation errors
         error_empty_name="لا يمكن أن يكون الاسم فارغاً",

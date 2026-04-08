@@ -33,7 +33,6 @@ def get_french_strings() -> LanguageStrings:
         quit_humbug="Quitter Humbug",
         new_mindspace="Nouvel espace mental",
         new_conversation="Nouvelle conversation",
-        new_metaphor_conversation="Nouvelle conversation Metaphor...",
         new_file="Nouveau fichier",
         new_terminal="Nouveau terminal",
         open_mindspace="Ouvrir espace mental...",
@@ -151,7 +150,6 @@ def get_french_strings() -> LanguageStrings:
         mindspace_folders_title="Configurer les dossiers de l'espace mental",
         mindspace_path="Chemin de l'espace mental",
         conversations_folder='Créer le dossier "conversations"',
-        metaphor_folder='Créer le dossier "metaphor"',
         src_folder='Créer le dossier "src"',
 
         # Mindspace settings
@@ -188,7 +186,6 @@ def get_french_strings() -> LanguageStrings:
         settings_visible_reasoning="Raisonnement visible",
 
         # File dialog titles
-        file_dialog_open_metaphor="Ouvrir un fichier Metaphor",
         file_dialog_open_conversation="Ouvrir une conversation",
         file_dialog_open_file="Ouvrir un fichier",
         file_dialog_save_file="Enregistrer le fichier",
@@ -197,7 +194,6 @@ def get_french_strings() -> LanguageStrings:
 
         # File dialog filters
         file_filter_all="Tous les fichiers (*.*)",
-        file_filter_metaphor="Fichiers Metaphor (*.m6r)",
         file_filter_conversation="Fichiers de conversation (*.conv)",
 
         # Dialog titles
@@ -233,7 +229,6 @@ def get_french_strings() -> LanguageStrings:
         error_opening_conversation="Impossible de charger {} : {}",
         error_forking_conversation="Impossible de dupliquer la conversation : {}",
         error_opening_preview="Impossible d'ouvrir l'aperçu : {}",
-        error_processing_metaphor="Échec du traitement du fichier Metaphor :\n\n{}",
         error_saving_mindspace_settings="Échec de l'enregistrement des paramètres : {}",
         error_saving_user_settings="Échec de l'enregistrement des paramètres utilisateur : {}",
         cancel_conversation="Êtes-vous sûr de vouloir arrêter la réponse actuelle de l'IA ? "
@@ -310,7 +305,7 @@ def get_french_strings() -> LanguageStrings:
         move_error_title="Erreur de déplacement",
         move_error_exists="Un fichier ou dossier avec ce nom existe déjà à la destination.",
         move_error_failed="Impossible de déplacer l'élément : {0}",
-        move_error_protected="Impossible de déplacer les dossiers système (conversations, metaphor, .humbug).",
+        move_error_protected="Impossible de déplacer les dossiers système (conversations, .humbug).",
 
         # Inline editor validation errors
         error_empty_name="Le nom ne peut pas être vide",

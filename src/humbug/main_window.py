@@ -13,11 +13,6 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 
-from metaphor import (
-    MetaphorASTBuilder, MetaphorASTBuilderError, MetaphorFormatVisitor, MetaphorASTRootNode,
-    format_errors, format_preamble
-)
-
 from ai_tool import AIToolManager
 from ai_tool.menai.menai_ai_tool import MenaiAITool
 from ai_tool.clock.clock_ai_tool import ClockAITool
@@ -101,10 +96,6 @@ class MainWindow(QMainWindow):
         self._new_conv_action = QAction(strings.new_conversation, self)
         self._new_conv_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
         self._new_conv_action.triggered.connect(self._on_new_conversation)
-
-        self._new_metaphor_conv_action = QAction(strings.new_metaphor_conversation, self)
-        self._new_metaphor_conv_action.setShortcut(QKeySequence("Ctrl+Shift+M"))
-        self._new_metaphor_conv_action.triggered.connect(self._on_new_metaphor_conversation)
 
         self._new_file_action = QAction(strings.new_file, self)
         self._new_file_action.setShortcut(QKeySequence.StandardKey.New)
@@ -252,7 +243,6 @@ class MainWindow(QMainWindow):
         self._file_menu = self._menu_bar.addMenu(strings.file_menu)
         self._file_menu.addAction(self._new_mindspace_action)
         self._file_menu.addAction(self._new_conv_action)
-        self._file_menu.addAction(self._new_metaphor_conv_action)
         self._file_menu.addAction(self._new_file_action)
         self._file_menu.addAction(self._new_terminal_action)
         self._file_menu.addSeparator()
@@ -457,7 +447,6 @@ class MainWindow(QMainWindow):
         has_mindspace = self._mindspace_manager.has_mindspace()
         self._close_mindspace_action.setEnabled(has_mindspace)
         self._new_conv_action.setEnabled(has_mindspace)
-        self._new_metaphor_conv_action.setEnabled(has_mindspace)
         self._new_file_action.setEnabled(has_mindspace)
         self._open_preview_action.setEnabled(has_mindspace)
         self._open_conv_action.setEnabled(has_mindspace)
@@ -520,7 +509,6 @@ class MainWindow(QMainWindow):
         self._quit_action.setText(strings.quit_humbug)
         self._new_mindspace_action.setText(strings.new_mindspace)
         self._new_conv_action.setText(strings.new_conversation)
-        self._new_metaphor_conv_action.setText(strings.new_metaphor_conversation)
         self._new_file_action.setText(strings.new_file)
         self._open_mindspace_action.setText(strings.open_mindspace)
         self._open_preview_action.setText(strings.open_preview)
@@ -1188,46 +1176,6 @@ class MainWindow(QMainWindow):
             external_allowlist=user_settings.external_file_allowlist,
             external_denylist=user_settings.external_file_denylist
         )
-
-    def _on_new_metaphor_conversation(self) -> None:
-        """Create new conversation from Metaphor file."""
-        # Show file dialog
-        self._menu_timer.stop()
-        strings = self._language_manager.strings()
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            strings.file_dialog_open_metaphor,
-            self._mindspace_manager.file_dialog_directory(),
-            f"{strings.file_filter_metaphor};;{strings.file_filter_all}"
-        )
-        self._menu_timer.start()
-
-        if not file_path:
-            return
-
-        self._mindspace_manager.update_file_dialog_directory(file_path)
-        search_path = self._mindspace_manager.mindspace_path()
-
-        metaphor_ast_builder = MetaphorASTBuilder(self._get_canonical_mindspace_path)
-        try:
-            syntax_tree = MetaphorASTRootNode()
-            metaphor_ast_builder.build_ast_from_file(syntax_tree, file_path, [search_path], search_path, [file_path])
-            formatter = MetaphorFormatVisitor()
-            prompt = format_preamble() + formatter.format(syntax_tree)
-
-        except MetaphorASTBuilderError as e:
-            self._column_manager.show_system_shell()
-            error = f"Metaphor compiler error prevented new Metaphor conversation:\n\n{format_errors(e.errors)}"
-            self._mindspace_manager.add_interaction(MindspaceLogLevel.WARN, error)
-            self._column_manager.show_system_log()
-            return
-
-        conversation_tab = self._on_new_conversation()
-        if conversation_tab is None:
-            return
-
-        # Set input text
-        conversation_tab.set_input_text(prompt)
 
     def _on_open_conversation(self) -> None:
         """Show open conversation dialog and create conversation tab."""

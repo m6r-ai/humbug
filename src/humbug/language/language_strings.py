@@ -24,7 +24,6 @@ class LanguageStrings:
     quit_humbug: str
     new_mindspace: str
     new_conversation: str
-    new_metaphor_conversation: str
     new_file: str
     new_terminal: str
     open_mindspace: str
@@ -142,7 +141,6 @@ class LanguageStrings:
     mindspace_folders_title: str
     mindspace_path: str
     conversations_folder: str
-    metaphor_folder: str
     src_folder: str
 
     # Mindspace settings
@@ -176,7 +174,6 @@ class LanguageStrings:
     settings_visible_reasoning: str
 
     # File dialog titles
-    file_dialog_open_metaphor: str
     file_dialog_open_conversation: str
     file_dialog_open_file: str
     file_dialog_save_file: str
@@ -185,7 +182,6 @@ class LanguageStrings:
 
     # File dialog filters
     file_filter_all: str
-    file_filter_metaphor: str
     file_filter_conversation: str
 
     # Dialog titles
@@ -221,7 +217,6 @@ class LanguageStrings:
     error_opening_conversation: str
     error_forking_conversation: str
     error_opening_preview: str
-    error_processing_metaphor: str
     error_saving_mindspace_settings: str
     error_saving_user_settings: str
     cancel_conversation: str

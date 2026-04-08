@@ -33,7 +33,6 @@ def get_english_strings() -> LanguageStrings:
         quit_humbug="Quit Humbug",
         new_mindspace="New Mindspace",
         new_conversation="New Conversation",
-        new_metaphor_conversation="New Metaphor Conversation...",
         new_file="New File",
         new_terminal="New Terminal",
         open_mindspace="Open Mindspace...",
@@ -151,7 +150,6 @@ def get_english_strings() -> LanguageStrings:
         mindspace_folders_title="Configure Mindspace Folders",
         mindspace_path="Mindspace Path",
         conversations_folder='Create "conversations" Folder',
-        metaphor_folder='Create "metaphor" Folder',
         src_folder='Create "src" Folder',
 
         # Mindspace settings
@@ -188,7 +186,6 @@ def get_english_strings() -> LanguageStrings:
         settings_visible_reasoning="Visible Reasoning",
 
         # File dialog titles
-        file_dialog_open_metaphor="Open Metaphor File",
         file_dialog_open_conversation="Open Conversation",
         file_dialog_open_file="Open File",
         file_dialog_save_file="Save File",
@@ -197,7 +194,6 @@ def get_english_strings() -> LanguageStrings:
 
         # File dialog filters
         file_filter_all="All Files (*.*)",
-        file_filter_metaphor="Metaphor Files (*.m6r)",
         file_filter_conversation="Conversation Files (*.conv)",
 
         # Dialog titles
@@ -233,7 +229,6 @@ def get_english_strings() -> LanguageStrings:
         error_opening_conversation="Could not load {}: {}",
         error_forking_conversation="Could not fork conversation: {}",
         error_opening_preview="Could not open preview: {}",
-        error_processing_metaphor="Failed to process Metaphor file:\n\n{}",
         error_saving_mindspace_settings="Failed to save mindspace settings: {}",
         error_saving_user_settings="Failed to save user settings: {}",
         cancel_conversation="Are you sure you want to stop the current AI response? "
@@ -310,7 +305,7 @@ def get_english_strings() -> LanguageStrings:
         move_error_title="Move Error",
         move_error_exists="A file or folder with this name already exists at the destination.",
         move_error_failed="Could not move item: {0}",
-        move_error_protected="Cannot move system folders (conversations, metaphor, .humbug).",
+        move_error_protected="Cannot move system folders (conversations, .humbug).",
 
         # Inline editor validation errors
         error_empty_name="Name cannot be empty",
