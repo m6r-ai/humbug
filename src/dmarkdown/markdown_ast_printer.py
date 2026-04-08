@@ -1,9 +1,7 @@
 """
 Visitor class to print markdown AST structures for debugging
 """
-from typing import List, Any, cast
-
-from dast import ASTNode
+from typing import List, Any
 
 from dmarkdown.markdown_ast_node import (
     MarkdownASTVisitor, MarkdownASTTextNode, MarkdownASTHeadingNode, MarkdownASTInlineCodeNode,
@@ -29,7 +27,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         """
         return "  " * self.indent_level
 
-    def generic_visit(self, node: ASTNode) -> List[Any]:
+    def generic_visit(self, node: MarkdownASTNode) -> List[Any]:
         """
         Default visit method that prints the node type.
 
@@ -39,7 +37,7 @@ class MarkdownASTPrinter(MarkdownASTVisitor):
         Returns:
             The results of visiting the children
         """
-        ast_node = cast(MarkdownASTNode, node)
+        ast_node = node
         node_name = node.__class__.__name__
         line_range = ""
         if ast_node.line_start is not None and ast_node.line_end is not None:
