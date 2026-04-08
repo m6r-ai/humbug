@@ -18,6 +18,7 @@ New features:
 - The tab label bar can now be scrolled using a mouse wheel.
 - Terminal tabs can now have a fixed width defined in the mindspace settings.  If the terminal is too wide for the tab
   then it will gain a horizontal scrollbar.  If it is too narrow then it will be centred.
+- Added smooth scrolling during selection operations within terminal tabs.
 
 Bug fixes:
 

@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt, Signal, QRect, QPoint, QTimer, QPointF, QRectF
 from PySide6.QtGui import (
     QPainter, QPaintEvent, QColor, QFontMetricsF,
     QResizeEvent, QKeyEvent, QMouseEvent, QFocusEvent,
-    QGuiApplication, QWheelEvent, QFont
+    QGuiApplication, QWheelEvent, QFont, QCursor
 )
 
 from terminal import TerminalCharacterAttributes, TerminalBuffer, TerminalState
@@ -125,6 +125,22 @@ class TerminalWidget(QAbstractScrollArea):
         self._current_match = -1
         self._last_search = ""
         self._selection_active = False
+
+        # Smooth scrolling
+        self._smooth_scroll_timer = QTimer(self)
+        self._smooth_scroll_timer.setInterval(16)  # ~60fps
+        self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
+        self._smooth_scroll_target: int = 0
+        self._smooth_scroll_start: int = 0
+        self._smooth_scroll_distance: int = 0
+        self._smooth_scroll_duration: int = 500  # ms
+        self._smooth_scroll_time: int = 0
+
+        # Drag-selection auto-scroll
+        self._drag_scroll_timer = QTimer(self)
+        self._drag_scroll_timer.setInterval(16)  # ~60fps
+        self._drag_scroll_timer.timeout.connect(self._update_drag_scroll)
+        self._drag_scroll_accumulator: float = 0.0
 
     def _update_colors(self) -> None:
         """Update color mappings in terminal state."""
@@ -254,16 +270,92 @@ class TerminalWidget(QAbstractScrollArea):
         # If row is outside visible area, scroll to it
         if viewport_row < 0:
             # Row is above visible area - scroll up
-            self.verticalScrollBar().setValue(row)
+            self._start_smooth_scroll(row)
         elif viewport_row >= visible_lines:
             # Row is below visible area - scroll down
             scroll_to = row - visible_lines + 1
-            self.verticalScrollBar().setValue(scroll_to)
+            self._start_smooth_scroll(scroll_to)
 
     def _scroll_to_bottom(self) -> None:
         """Scroll the view to show the bottom of the terminal."""
         vbar = self.verticalScrollBar()
         vbar.setValue(vbar.maximum())
+
+    def _start_smooth_scroll(self, target_value: int) -> None:
+        """
+        Start smooth scrolling animation to target value.
+
+        Args:
+            target_value: Target scroll position
+        """
+        vbar = self.verticalScrollBar()
+
+        if self._smooth_scroll_timer.isActive():
+            self._smooth_scroll_timer.stop()
+
+        self._smooth_scroll_start = vbar.value()
+        self._smooth_scroll_target = max(vbar.minimum(), min(vbar.maximum(), target_value))
+        self._smooth_scroll_distance = self._smooth_scroll_target - self._smooth_scroll_start
+        self._smooth_scroll_time = 0
+
+        self._smooth_scroll_timer.start()
+
+    def _update_smooth_scroll(self) -> None:
+        """Update the smooth scrolling animation."""
+        self._smooth_scroll_time += self._smooth_scroll_timer.interval()
+
+        progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
+
+        # Cubic ease-out
+        t = 1 - (1 - progress) ** 3
+
+        new_position = self._smooth_scroll_start + int(self._smooth_scroll_distance * t)
+        self.verticalScrollBar().setValue(new_position)
+
+        if progress >= 1.0:
+            self._smooth_scroll_timer.stop()
+
+    def _update_drag_scroll(self) -> None:
+        """Scroll the viewport during a click-and-drag selection that extends beyond the viewport."""
+        if not self._selecting:
+            self._drag_scroll_timer.stop()
+            return
+
+        viewport = self.viewport()
+        viewport_height = viewport.height()
+        mouse_pos = viewport.mapFromGlobal(QCursor.pos())
+        vbar = self.verticalScrollBar()
+
+        if mouse_pos.y() < 0:
+            distance_out = -mouse_pos.y()
+            rows_per_tick = min(50.0, distance_out / (5.0 * self._char_height))
+            self._drag_scroll_accumulator -= rows_per_tick
+
+        elif mouse_pos.y() > viewport_height:
+            distance_out = mouse_pos.y() - viewport_height
+            rows_per_tick = min(50.0, distance_out / (5.0 * self._char_height))
+            self._drag_scroll_accumulator += rows_per_tick
+
+        else:
+            self._drag_scroll_accumulator = 0.0
+
+        whole_rows = int(self._drag_scroll_accumulator)
+        if whole_rows != 0:
+            self._drag_scroll_accumulator -= whole_rows
+            new_val = max(vbar.minimum(), min(vbar.maximum(), vbar.value() + whole_rows))
+            vbar.setValue(new_val)
+
+        # Update the selection endpoint to track the current mouse position
+        row, col = self._pixel_pos_to_text_pos(mouse_pos)
+        if self._selection is not None:
+            self._selection.end_row = row
+            self._selection.end_col = col
+            self.viewport().update()
+
+    def _stop_drag_scroll(self) -> None:
+        """Stop the drag-selection auto-scroll timer."""
+        self._drag_scroll_timer.stop()
+        self._drag_scroll_accumulator = 0.0
 
     def _toggle_blink(self) -> None:
         """Toggle blink state and update display if needed."""
@@ -359,6 +451,7 @@ class TerminalWidget(QAbstractScrollArea):
             row, col = self._pixel_pos_to_text_pos(event.position().toPoint())
             self._selection = TerminalSelection(row, col, row, col)
             self.viewport().update()
+            self._drag_scroll_timer.start()
 
         # Handle mouse tracking if enabled
         if self._state.mouse_tracking().enabled:
@@ -381,6 +474,7 @@ class TerminalWidget(QAbstractScrollArea):
         """Handle mouse release for both tracking and selection."""
         if event.button() & Qt.MouseButton.LeftButton:
             self._selecting = False
+            self._stop_drag_scroll()
 
         # Handle mouse tracking if enabled
         if self._state.mouse_tracking().enabled:
@@ -399,12 +493,17 @@ class TerminalWidget(QAbstractScrollArea):
         """Handle mouse movement for selection and tracking."""
         # Handle text selection
         if self._selecting and self._selection is not None:
-            row, col = self._pixel_pos_to_text_pos(event.position().toPoint())
-            if (row != self._selection.end_row or
-                col != self._selection.end_col):
-                self._selection.end_row = row
-                self._selection.end_col = col
-                self.viewport().update()
+            pos = event.position().toPoint()
+            viewport_height = self.viewport().height()
+            if 0 <= pos.y() <= viewport_height:
+                row, col = self._pixel_pos_to_text_pos(pos)
+                if (row != self._selection.end_row or
+                    col != self._selection.end_col):
+                    self._selection.end_row = row
+                    self._selection.end_col = col
+                    self.viewport().update()
+
+            # When outside the viewport, _update_drag_scroll handles the selection update
 
         # Handle mouse tracking if enabled and in button event mode (1002) or any event mode (1003)
         if (
@@ -451,11 +550,14 @@ class TerminalWidget(QAbstractScrollArea):
         if event.angleDelta().x() != 0:
             cols = event.angleDelta().x() // 40
             hbar = self.horizontalScrollBar()
-            hbar.setValue(hbar.value() - cols)
+            target = max(hbar.minimum(), min(hbar.maximum(), hbar.value() - cols))
+            hbar.setValue(target)
+
         else:
             lines = event.angleDelta().y() // 40
             vbar = self.verticalScrollBar()
-            vbar.setValue(vbar.value() - lines)
+            target = max(vbar.minimum(), min(vbar.maximum(), vbar.value() - lines))
+            self._start_smooth_scroll(target)
 
         event.accept()
 
