@@ -54,7 +54,6 @@ from humbug.tabs.shell.commands.shell_command_conversation import ShellCommandCo
 from humbug.tabs.shell.commands.shell_command_edit import ShellCommandEdit
 from humbug.tabs.shell.commands.shell_command_help import ShellCommandHelp
 from humbug.tabs.shell.commands.shell_command_log import ShellCommandLog
-from humbug.tabs.shell.commands.shell_command_m6rc import ShellCommandM6rc
 from humbug.tabs.shell.commands.shell_command_terminal import ShellCommandTerminal
 from humbug.tabs.shell.commands.shell_command_preview import ShellCommandPreview
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
@@ -393,7 +392,6 @@ class MainWindow(QMainWindow):
         self._command_registry.register_command(ShellCommandConversation(self._column_manager))
         self._command_registry.register_command(ShellCommandEdit(self._column_manager))
         self._command_registry.register_command(ShellCommandLog(self._column_manager))
-        self._command_registry.register_command(ShellCommandM6rc(self._column_manager))
         self._command_registry.register_command(ShellCommandTerminal(self._column_manager))
         self._command_registry.register_command(ShellCommandPreview(self._column_manager))
 
