@@ -141,6 +141,7 @@ class TerminalWidget(QAbstractScrollArea):
         self._drag_scroll_timer.setInterval(16)  # ~60fps
         self._drag_scroll_timer.timeout.connect(self._update_drag_scroll)
         self._drag_scroll_accumulator: float = 0.0
+        self._wheel_pixel_accumulator: float = 0.0
 
     def _update_colors(self) -> None:
         """Update color mappings in terminal state."""
@@ -280,6 +281,24 @@ class TerminalWidget(QAbstractScrollArea):
         """Scroll the view to show the bottom of the terminal."""
         vbar = self.verticalScrollBar()
         vbar.setValue(vbar.maximum())
+
+    def _scroll_accumulate_pixels(self, pixels: int) -> None:
+        """
+        Handle trackpad pixel-delta vertical scrolling.
+
+        Accumulates fractional rows and applies whole rows directly to the
+        scrollbar so trackpad scrolling feels immediate and proportional.
+
+        Args:
+            pixels: Pixel delta from the wheel event (positive = scroll up)
+        """
+        self._wheel_pixel_accumulator += pixels / self._char_height
+        whole_rows = int(self._wheel_pixel_accumulator)
+        if whole_rows != 0:
+            self._wheel_pixel_accumulator -= whole_rows
+            vbar = self.verticalScrollBar()
+            new_val = max(vbar.minimum(), min(vbar.maximum(), vbar.value() - whole_rows))
+            vbar.setValue(new_val)
 
     def _start_smooth_scroll(self, target_value: int) -> None:
         """
@@ -547,14 +566,26 @@ class TerminalWidget(QAbstractScrollArea):
             event.ignore()
             return
 
-        if event.angleDelta().x() != 0:
-            cols = event.angleDelta().x() // 40
+        pixel_delta = event.pixelDelta()
+        angle_delta = event.angleDelta()
+
+        if pixel_delta.x() != 0:
+            hbar = self.horizontalScrollBar()
+            target = max(hbar.minimum(), min(hbar.maximum(), hbar.value() - pixel_delta.x()))
+            hbar.setValue(target)
+
+        elif angle_delta.x() != 0:
+            cols = angle_delta.x() // 40
             hbar = self.horizontalScrollBar()
             target = max(hbar.minimum(), min(hbar.maximum(), hbar.value() - cols))
             hbar.setValue(target)
 
-        else:
-            lines = event.angleDelta().y() // 40
+        if pixel_delta.y() != 0:
+            self._scroll_accumulate_pixels(pixel_delta.y())
+
+        elif angle_delta.y() != 0:
+            # Standard wheel click: angleDelta = 120 per notch, scroll 3 lines per notch
+            lines = angle_delta.y() * 3 // 120
             vbar = self.verticalScrollBar()
             target = max(vbar.minimum(), min(vbar.maximum(), vbar.value() - lines))
             self._start_smooth_scroll(target)
