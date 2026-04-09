@@ -3,7 +3,7 @@ import logging
 import os
 from typing import Dict, List, cast
 
-from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QHBoxLayout, QSpacerItem, QSizePolicy, QStackedWidget, QApplication
+from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer
 from PySide6.QtGui import QResizeEvent
 
@@ -21,6 +21,7 @@ from humbug.tabs.column_manager_error import ColumnManagerError
 from humbug.tabs.column_splitter import ColumnSplitter
 from humbug.tabs.column_widget import ColumnWidget
 from humbug.tabs.conversation.conversation_error import ConversationError
+from humbug.tabs.spacer_drop_widget import SpacerDropWidget
 from humbug.tabs.conversation.conversation_tab import ConversationTab
 from humbug.tabs.editor.editor_tab import EditorTab
 from humbug.tabs.log.log_tab import LogTab
@@ -88,11 +89,15 @@ class ColumnManager(QWidget):
         self._columns_layout = QHBoxLayout(self._columns_widget)
         self._columns_layout.setContentsMargins(0, 0, 0, 0)
         self._columns_layout.setSpacing(0)
-        self._left_spacer = QSpacerItem(0, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
-        self._right_spacer = QSpacerItem(0, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
-        self._columns_layout.addSpacerItem(self._left_spacer)
+        self._left_spacer = SpacerDropWidget()
+        self._left_spacer.setFixedWidth(0)
+        self._right_spacer = SpacerDropWidget()
+        self._right_spacer.setFixedWidth(0)
+        self._left_spacer.path_dropped.connect(self._on_left_spacer_path_dropped)
+        self._right_spacer.path_dropped.connect(self._on_right_spacer_path_dropped)
+        self._columns_layout.addWidget(self._left_spacer)
         self._columns_layout.addWidget(self._column_splitter)
-        self._columns_layout.addSpacerItem(self._right_spacer)
+        self._columns_layout.addWidget(self._right_spacer)
         self._stack.addWidget(self._columns_widget)
 
         # Connect to the splitter's moved signal
@@ -639,6 +644,33 @@ class ColumnManager(QWidget):
             return
 
         self._stack.setCurrentWidget(self._columns_widget)
+
+    def _on_left_spacer_path_dropped(self, source_type: str, path: str) -> None:
+        """Handle a path dropped onto the left spacer, opening it in a new leftmost column."""
+        new_column = self._create_column(0)
+        self._active_column = new_column
+        self._stack.setCurrentWidget(self._columns_widget)
+
+        tab = self._open_file_by_source_type(source_type, path, False)
+        if tab is not None:
+            return
+
+        if new_column.count() == 0 and len(self._tab_columns) > 1:
+            self._remove_column_and_resize(0, new_column)
+
+    def _on_right_spacer_path_dropped(self, source_type: str, path: str) -> None:
+        """Handle a path dropped onto the right spacer, opening it in a new rightmost column."""
+        new_index = len(self._tab_columns)
+        new_column = self._create_column(new_index)
+        self._active_column = new_column
+        self._stack.setCurrentWidget(self._columns_widget)
+
+        tab = self._open_file_by_source_type(source_type, path, False)
+        if tab is not None:
+            return
+
+        if new_column.count() == 0 and len(self._tab_columns) > 1:
+            self._remove_column_and_resize(new_index, new_column)
 
     def _on_column_splitter_splitter_moved(self, _pos: int, _index: int) -> None:
         """Handle splitter movement and potential column merging."""
@@ -2196,8 +2228,8 @@ class ColumnManager(QWidget):
                 sizes[i] = max(min_col_width, p)
 
             margin = (available - total_preferred) // 2
-            self._left_spacer.changeSize(margin, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
-            self._right_spacer.changeSize(margin, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+            self._left_spacer.setFixedWidth(margin)
+            self._right_spacer.setFixedWidth(margin)
 
         else:
             # Not enough room: scale proportionally, no spacers.
@@ -2205,8 +2237,8 @@ class ColumnManager(QWidget):
             for i, p in enumerate(col_preferred):
                 sizes[i] = max(min_col_width, int(p * scale))
 
-            self._left_spacer.changeSize(0, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
-            self._right_spacer.changeSize(0, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+            self._left_spacer.setFixedWidth(0)
+            self._right_spacer.setFixedWidth(0)
 
         print(f"Resizing columns: available={available}, total_pref={total_preferred}, sizes={sizes}")
         self._column_splitter.setSizes(sizes)
