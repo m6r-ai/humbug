@@ -211,7 +211,8 @@ class TerminalWidget(QAbstractScrollArea):
     def _update_dimensions(self) -> None:
         """Update terminal dimensions based on widget size and font metrics."""
 
-        visible_cols = int(max(self.viewport().width() / self._char_width, 1))
+        # Add a fraction to the viewport width when calculating the visible columns to avoid sub-pixel issues.
+        visible_cols = int(max((self.viewport().width() + 0.99) / self._char_width, 1))
         cols = self._fixed_width or visible_cols
         rows = int(max(self.viewport().height() / self._char_height, 1))
 
@@ -248,9 +249,10 @@ class TerminalWidget(QAbstractScrollArea):
 
         cols = self._state.terminal_columns()
         viewport_width = self.viewport().width()
-        visible_cols = int(viewport_width / self._char_width)
+
+        # Add a fraction to the viewport width when calculating the visible columns to avoid sub-pixel issues.
+        visible_cols = int((viewport_width + 0.99) / self._char_width)
         excess_cols = max(0, cols - visible_cols)
-        print("Updating horizontal scrollbar: view width =", viewport_width, "cols =", cols, "visible_cols =", visible_cols, "excess_cols =", excess_cols)
 
         hbar = self.horizontalScrollBar()
         hbar.setRange(0, excess_cols)
