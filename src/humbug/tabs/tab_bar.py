@@ -238,7 +238,7 @@ class TabBar(QTabBar):
             # Paint bottom edge of empty space to the right
             if rightmost_tab_right + 1 < self.width():
                 empty_space_bottom_rect = self.rect()
-                empty_space_bottom_rect.setLeft(rightmost_tab_right + 1)
+                empty_space_bottom_rect.setLeft(rightmost_tab_right)
                 empty_space_bottom_rect.setTop(self.height() - 1)
                 empty_space_bottom_rect.setHeight(1)
                 colour = self._style_manager.get_color(ColorRole.SPLITTER)

@@ -153,6 +153,7 @@ class TabLabel(QWidget):
             colour = ColorRole.TEXT_PRIMARY if show_active else ColorRole.TEXT_INACTIVE
 
         self._label.setStyleSheet(f"""
+            background-color: transparent;
             color: {self._style_manager.get_color_str(colour)};
         """)
 

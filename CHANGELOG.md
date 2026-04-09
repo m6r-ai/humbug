@@ -21,6 +21,7 @@ New features:
 - Added smooth scrolling during selection operations within terminal tabs.
 - Removed the Metaphor compiler and Metaphor conversations options.  Spec-driven development activities can now be more
   effectively implemented by simply asking an AI to read one or more spec files from the mindspace filesystem.
+- Give all tabs a "nice" default size and keep content in the middle of the application to improve usability.
 
 Bug fixes:
 

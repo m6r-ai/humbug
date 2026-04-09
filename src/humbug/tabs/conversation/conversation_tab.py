@@ -18,6 +18,7 @@ from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType
+from humbug.style_manager import StyleManager
 
 
 class ConversationTab(TabBase):
@@ -327,6 +328,11 @@ class ConversationTab(TabBase):
             requester: The AI model or user name submitting the message
         """
         self._conversation_widget.submit(requester)
+
+    def preferred_width(self) -> int | None:
+        """Return the preferred column width matching the conversation content max width."""
+        style_manager = StyleManager()
+        return int(style_manager.nice_tab_width() * style_manager.zoom_factor())
 
     def show_find(self) -> None:
         """Show the find widget."""

@@ -402,3 +402,12 @@ class TabBase(QFrame):
         Must be implemented by subclasses to provide their specific status.
         """
         raise NotImplementedError("Subclasses must implement update_status")
+
+    def preferred_width(self) -> int | None:
+        """
+        Return the preferred maximum pixel width for this tab's column, or None for no preference.
+
+        When None, the column containing this tab will take whatever space is available after
+        constrained columns have been allocated their preferred widths.
+        """
+        return None

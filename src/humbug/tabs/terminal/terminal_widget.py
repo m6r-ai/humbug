@@ -218,6 +218,7 @@ class TerminalWidget(QAbstractScrollArea):
         if self._fixed_width:
             terminal_pixel_width = self._fixed_width * self._char_width
             self._center_offset = max(0.0, (self.viewport().width() - terminal_pixel_width) / 2.0)
+
         else:
             self._center_offset = 0.0
 
@@ -249,6 +250,7 @@ class TerminalWidget(QAbstractScrollArea):
         viewport_width = self.viewport().width()
         visible_cols = int(viewport_width / self._char_width)
         excess_cols = max(0, cols - visible_cols)
+        print("Updating horizontal scrollbar: view width =", viewport_width, "cols =", cols, "visible_cols =", visible_cols, "excess_cols =", excess_cols)
 
         hbar = self.horizontalScrollBar()
         hbar.setRange(0, excess_cols)
@@ -272,6 +274,7 @@ class TerminalWidget(QAbstractScrollArea):
         if viewport_row < 0:
             # Row is above visible area - scroll up
             self._start_smooth_scroll(row)
+
         elif viewport_row >= visible_lines:
             # Row is below visible area - scroll down
             scroll_to = row - visible_lines + 1
@@ -1322,6 +1325,20 @@ class TerminalWidget(QAbstractScrollArea):
     def get_terminal_size(self) -> Tuple[int, int]:
         """Get current terminal dimensions."""
         return self._state.get_terminal_size()
+
+    def preferred_pixel_width(self) -> int | None:
+        """
+        Return the preferred pixel width for this terminal widget, or None if no fixed width is set.
+
+        The value includes the viewport margins so it represents the full widget width needed
+        to display the fixed-width grid without horizontal scrolling.
+        """
+        if self._fixed_width is None:
+            return None
+
+        margins = self.viewportMargins()
+        scrollbar_size = self._style_manager.get_scrollbar_size()
+        return int(self._fixed_width * self._char_width) + margins.left() + margins.right() + scrollbar_size
 
     def create_state_metadata(self) -> Dict:
         """Create metadata dictionary capturing widget state."""

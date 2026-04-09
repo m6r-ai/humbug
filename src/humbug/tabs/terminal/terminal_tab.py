@@ -536,6 +536,10 @@ class TerminalTab(TabBase):
         )
         self.status_message.emit(message)
 
+    def preferred_width(self) -> int | None:
+        """Return the preferred column width based on the fixed terminal grid width, if set."""
+        return self._terminal_widget.preferred_pixel_width()
+
     def _close_find(self) -> None:
         """Close the find widget and clear search state."""
         self._find_widget.hide()

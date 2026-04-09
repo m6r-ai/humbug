@@ -3,8 +3,9 @@ import logging
 import os
 from typing import Dict, List, cast
 
-from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QStackedWidget, QApplication
+from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QHBoxLayout, QSpacerItem, QSizePolicy, QStackedWidget, QApplication
 from PySide6.QtCore import Signal, QTimer
+from PySide6.QtGui import QResizeEvent
 
 from ai import AIConversation, AIConversationHistory, AIConversationSettings, AIReasoningCapability
 
@@ -54,6 +55,8 @@ class ColumnManager(QWidget):
         self._mindspace_manager = MindspaceManager()
         self._logger = logging.getLogger("ColumnManager")
 
+        self.setObjectName("ColumnManager")
+
         self._language_manager = LanguageManager()
 
         # Track MRU order for each column
@@ -76,15 +79,21 @@ class ColumnManager(QWidget):
 
         # Create widget to hold columns
         self._columns_widget = QWidget()
-        self._columns_layout = QVBoxLayout(self._columns_widget)
-        self._columns_layout.setContentsMargins(0, 0, 0, 0)
-        self._columns_layout.setSpacing(0)
-        self._stack.addWidget(self._columns_widget)
 
-        # Create splitter for columns
+        # Create splitter for columns before the layout so we can add it immediately
         self._column_splitter = ColumnSplitter()
         self._column_splitter.setHandleWidth(1)
+
+        # Wrap splitter in an HBox with fixed spacers either side for centring
+        self._columns_layout = QHBoxLayout(self._columns_widget)
+        self._columns_layout.setContentsMargins(0, 0, 0, 0)
+        self._columns_layout.setSpacing(0)
+        self._left_spacer = QSpacerItem(0, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+        self._right_spacer = QSpacerItem(0, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+        self._columns_layout.addSpacerItem(self._left_spacer)
         self._columns_layout.addWidget(self._column_splitter)
+        self._columns_layout.addSpacerItem(self._right_spacer)
+        self._stack.addWidget(self._columns_widget)
 
         # Connect to the splitter's moved signal
         self._column_splitter.splitterMoved.connect(self._on_column_splitter_splitter_moved)
@@ -797,6 +806,7 @@ class ColumnManager(QWidget):
         if tab_bar:
             self._apply_tab_bar_style(tab_bar)
 
+        self.show_all_columns()
         return column_widget
 
     def _remove_column_and_resize(self, column_number: int, column: ColumnWidget) -> None:
@@ -813,13 +823,8 @@ class ColumnManager(QWidget):
         del self._tab_columns[column_number]
         column.deleteLater()
 
-        # Resize splitter to evenly distribute space
-        if self._tab_columns:
-            width = self.width()
-            column_width = width // len(self._tab_columns)
-
-            # Note: We add 1 to column count because deletion hasn't processed yet
-            self._column_splitter.setSizes([column_width] * (len(self._tab_columns) + 1))
+        # Defer resizing to allow the column to be removed first.
+        QTimer.singleShot(0, self.show_all_columns)
 
     def _update_tabs(self, change_focus: bool=True) -> None:
         """ Update the state of all tabs and their labels. """
@@ -967,14 +972,7 @@ class ColumnManager(QWidget):
         num_columns = len(self._tab_columns)
         if current_column_number == (num_columns - 1) and num_columns < 6:
             new_column = self._create_column(num_columns)
-            num_columns += 1
-            print("Created new column at index", num_columns - 1, "because protected column is at the end")
-
-            # Set column sizes
-            width = self.width()
-            sizes = [(width // num_columns) for _ in range(num_columns)]
-            self._column_splitter.setSizes(sizes)
-
+            self.show_all_columns()
             return new_column
 
         # Try to use the column to the right if possible
@@ -1202,11 +1200,7 @@ class ColumnManager(QWidget):
             return
 
         self._move_tab_between_columns(current_tab, current_column, target_column)
-
-        # Resize splitter
-        num_columns = len(self._tab_columns)
-        sizes = [(self.width() // num_columns) for _ in range(num_columns)]
-        self._column_splitter.setSizes(sizes)
+        self.show_all_columns()
 
         self._active_column = target_column
 
@@ -2161,14 +2155,62 @@ class ColumnManager(QWidget):
         """Check if all columns can be shown."""
         return len(self._tab_columns) != 0
 
+    def resizeEvent(self, event: QResizeEvent) -> None:  # type: ignore[override]
+        """Reapply column sizing and margins when the widget is resized."""
+        super().resizeEvent(event)
+        if self._tab_columns:
+            self.show_all_columns()
+
     def show_all_columns(self) -> None:
-        """Show all columns in the tab manager."""
+        """Show all columns, sizing each to its preferred width where possible.
+
+        Each column is sized to its preferred width. Tabs that return None from preferred_width()
+        are treated as having a default preferred width of 1024px. If the total of all column
+        widths is less than the available width, symmetric spacers centre the content.
+        """
         if len(self._tab_columns) == 0:
             return
 
-        num_columns = len(self._tab_columns)
-        sizes = [(self.width() // num_columns) for _ in range(num_columns)]
+        min_col_width = 200
+        default_col_width = 1024
+        available = self.width()
+
+        # Compute each column's preferred width. Tabs returning None use the default.
+        col_preferred: List[int] = []
+        for column in self._tab_columns:
+            pref: int = default_col_width
+            for i in range(column.count()):
+                tab = cast(TabBase, column.widget(i))
+                tab_pref = tab.preferred_width()
+                if tab_pref is not None:
+                    pref = max(pref, tab_pref)
+
+            col_preferred.append(pref)
+
+        total_preferred = sum(max(min_col_width, p) for p in col_preferred)
+        sizes = [min_col_width] * len(self._tab_columns)
+
+        if total_preferred <= available:
+            # Enough room: give each column its preferred width and centre with spacers.
+            for i, p in enumerate(col_preferred):
+                sizes[i] = max(min_col_width, p)
+
+            margin = (available - total_preferred) // 2
+            self._left_spacer.changeSize(margin, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+            self._right_spacer.changeSize(margin, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+
+        else:
+            # Not enough room: scale proportionally, no spacers.
+            scale = available / total_preferred
+            for i, p in enumerate(col_preferred):
+                sizes[i] = max(min_col_width, int(p * scale))
+
+            self._left_spacer.changeSize(0, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+            self._right_spacer.changeSize(0, 0, QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
+
+        print(f"Resizing columns: available={available}, total_pref={total_preferred}, sizes={sizes}")
         self._column_splitter.setSizes(sizes)
+        self._columns_layout.invalidate()
 
     def can_submit_message(self) -> bool:
         """Check if the current tab can submit a message."""

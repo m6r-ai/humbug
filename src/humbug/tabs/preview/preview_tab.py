@@ -16,6 +16,7 @@ from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType
 from humbug.tabs.preview.preview_error import PreviewError
 from humbug.tabs.preview.preview_widget import PreviewWidget
+from humbug.style_manager import StyleManager
 
 
 class PreviewTab(TabBase):
@@ -195,6 +196,11 @@ class PreviewTab(TabBase):
             )
         )
         self.status_message.emit(message)
+
+    def preferred_width(self) -> int | None:
+        """Return the preferred column width matching the preview content max width."""
+        style_manager = StyleManager()
+        return int(style_manager.nice_tab_width() * style_manager.zoom_factor())
 
     def can_close_tab(self) -> bool:
         """Check if preview can be closed."""

@@ -200,16 +200,16 @@ class StyleManager(QObject):
 
             # Tab colours
             ColorRole.TAB_BAR_BACKGROUND: {
-                ColorMode.DARK: "#383838",
-                ColorMode.LIGHT: "#d0d0d0"
+                ColorMode.DARK: "#242424",
+                ColorMode.LIGHT: "#ececec"
             },
             ColorRole.TAB_BACKGROUND_ACTIVE: {
                 ColorMode.DARK: "#000000",
                 ColorMode.LIGHT: "#ffffff"
             },
             ColorRole.TAB_BACKGROUND_INACTIVE: {
-                ColorMode.DARK: "#242424",
-                ColorMode.LIGHT: "#ececec"
+                ColorMode.DARK: "#404040",
+                ColorMode.LIGHT: "#c8c8c8"
             },
             ColorRole.TAB_BACKGROUND_HOVER: {
                 ColorMode.DARK: "#242454",
@@ -310,8 +310,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#b0b0b0"
             },
             ColorRole.TAB_SPLITTER: {
-                ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#d0d0d0"
+                ColorMode.DARK: "#040404",
+                ColorMode.LIGHT: "#fcfcfc"
             },
 
             # Scroll bar elements
@@ -1314,9 +1314,13 @@ class StyleManager(QObject):
             }}
         """
 
+    def get_scrollbar_size(self) -> int:
+        """Get the standard scrollbar thickness in pixels."""
+        return 10
+
     def get_scrollbar_stylesheet(self, selector: str = "QScrollBar") -> str:
         """Get the shared scrollbar stylesheet for the given selector prefix."""
-        scrollbar_size = 10
+        scrollbar_size = self.get_scrollbar_size()
         handle_minimum = 18
 
         return f"""
