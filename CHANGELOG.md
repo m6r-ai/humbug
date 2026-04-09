@@ -19,6 +19,8 @@ New features:
 - Terminal tabs can now have a fixed width defined in the mindspace settings.  If the terminal is too wide for the tab
   then it will gain a horizontal scrollbar.  If it is too narrow then it will be centred.
 - Added smooth scrolling during selection operations within terminal tabs.
+- Removed the Metaphor compiler and Metaphor conversations options.  Spec-driven development activities can now be more
+  effectively implemented by simply asking an AI to read one or more spec files from the mindspace filesystem.
 
 Bug fixes:
 
