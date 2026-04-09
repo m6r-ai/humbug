@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QTabWidget, QWidget
 from PySide6.QtCore import Signal, QEvent, QObject
-from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent
+from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent
 
 from humbug.tabs.tab_bar import TabBar
 
@@ -28,6 +28,24 @@ class ColumnWidget(QTabWidget):
         tab_bar.setUsesScrollButtons(True)
         tab_bar.installEventFilter(self)
 
+    def _drop_insertion_index(self, pos_in_widget) -> int:
+        """
+        Compute the insertion index for a drop at the given widget-local position.
+
+        Returns a value in the range 0..count() inclusive.
+        """
+        tab_bar = self.tabBar()
+        pos = tab_bar.mapFromParent(pos_in_widget)
+        index = tab_bar.tabAt(pos)
+        if index == -1:
+            return self.count()
+
+        tab_rect = tab_bar.tabRect(index)
+        if pos.x() > tab_rect.center().x():
+            return index + 1
+
+        return index
+
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """Handle window activation and mouse events to detect active column."""
         if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.FocusIn):
@@ -49,35 +67,38 @@ class ColumnWidget(QTabWidget):
         """
         if event.mimeData().hasFormat("application/x-humbug-tab"):
             event.acceptProposedAction()
+            tab_bar = self.tabBar()
+            assert isinstance(tab_bar, TabBar)
+            tab_bar.set_drop_index(self._drop_insertion_index(event.pos()))
             return
 
         if event.mimeData().hasFormat("application/x-humbug-path"):
             event.acceptProposedAction()
+            tab_bar = self.tabBar()
+            assert isinstance(tab_bar, TabBar)
+            tab_bar.set_drop_index(self._drop_insertion_index(event.pos()))
             return
 
         event.ignore()
 
     def dragMoveEvent(self, event: QDragMoveEvent) -> None:
-        """
-        Handle drag move events to show insertion position.
-
-        Args:
-            event: The drag move event
-
-        Raises:
-            None
-        """
+        """Handle drag move events, updating the insertion indicator."""
         if (event.mimeData().hasFormat("application/x-humbug-tab") or
                 event.mimeData().hasFormat("application/x-humbug-path")):
             event.acceptProposedAction()
-
-            # Map cursor position to the tab bar to find insertion position
-            pos = self.tabBar().mapFromParent(event.pos())
-            _index = self.tabBar().tabAt(pos)
+            tab_bar = self.tabBar()
+            assert isinstance(tab_bar, TabBar)
+            tab_bar.set_drop_index(self._drop_insertion_index(event.pos()))
             return
-            # Note: Could add visual indicator of insertion position here if desired
 
         event.ignore()
+
+    def dragLeaveEvent(self, event: QDragLeaveEvent) -> None:
+        """Clear the insertion indicator when the drag leaves the widget."""
+        tab_bar = self.tabBar()
+        assert isinstance(tab_bar, TabBar)
+        tab_bar.clear_drop_index()
+        super().dragLeaveEvent(event)
 
     def dropEvent(self, event: QDropEvent) -> None:
         """
@@ -89,6 +110,10 @@ class ColumnWidget(QTabWidget):
         Raises:
             None
         """
+        tab_bar = self.tabBar()
+        assert isinstance(tab_bar, TabBar)
+        tab_bar.clear_drop_index()
+
         if event.mimeData().hasFormat("application/x-humbug-tab"):
             # Extract tab ID from mime data
             mime_data = event.mimeData().data("application/x-humbug-tab").data()

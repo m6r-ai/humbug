@@ -451,6 +451,12 @@ class StyleManager(QObject):
             },
 
             # Line numbers
+            ColorRole.DROP_TARGET_HIGHLIGHT: {
+                ColorMode.DARK: "#1a2a4a",
+                ColorMode.LIGHT: "#c8d8f8"
+            },
+
+            # Line numbers
             ColorRole.LINE_NUMBER: {
                 ColorMode.DARK: "#606060",
                 ColorMode.LIGHT: "#c0c0c0"

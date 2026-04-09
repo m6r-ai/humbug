@@ -1,6 +1,6 @@
 from typing import cast
 
-from PySide6.QtCore import QEvent, QObject, Qt
+from PySide6.QtCore import QEvent, QObject, QRect, Qt
 from PySide6.QtGui import QHoverEvent, QCursor, QPainter, QPaintEvent, QWheelEvent
 from PySide6.QtWidgets import QTabBar, QWidget, QToolButton
 
@@ -20,6 +20,7 @@ class TabBar(QTabBar):
         self._current_hovered_tab = -1
         self._scroll_pixel_accumulator = 0
         self._scroll_pixels_per_step = 32
+        self._drop_index = -1
         self.installEventFilter(self)
         self._style_manager = StyleManager()
 
@@ -29,6 +30,23 @@ class TabBar(QTabBar):
         """
         self.adjustSize()
         self.updateGeometry()
+
+    def set_drop_index(self, index: int) -> None:
+        """
+        Set the insertion index for an in-progress drag and trigger a repaint.
+
+        Args:
+            index: Insertion position (0..count inclusive); -1 clears the indicator.
+        """
+        if index != self._drop_index:
+            self._drop_index = index
+            self.update()
+
+    def clear_drop_index(self) -> None:
+        """Clear the drop insertion indicator and trigger a repaint."""
+        if self._drop_index != -1:
+            self._drop_index = -1
+            self.update()
 
     def _scroll_tabs(self, direction: int) -> bool:
         """Scroll the tab strip by clicking the hidden native arrow buttons."""
@@ -245,7 +263,30 @@ class TabBar(QTabBar):
                 painter.fillRect(empty_space_bottom_rect, colour)
 
         # Let Qt paint the text and other tab elements on top
+        painter.end()
         super().paintEvent(event)
+
+        # Draw the drop insertion bar on top of everything else.
+        if self._drop_index != -1:
+            bar_color = self._style_manager.get_color(ColorRole.TAB_BORDER_ACTIVE)
+            bar_width = 2
+
+            if self._drop_index < self.count():
+                # Draw at the left edge of the tab at drop_index.
+                tab_rect = self.tabRect(self._drop_index)
+                bar_x = tab_rect.left()
+            elif self.count() > 0:
+                # Append: draw at the right edge of the last tab.
+                tab_rect = self.tabRect(self.count() - 1)
+                bar_x = tab_rect.right() + 1
+            else:
+                # Empty tab bar: draw at the left edge.
+                bar_x = 0
+
+            bar_painter = QPainter(self)
+            bar_rect = QRect(bar_x, 0, bar_width, self.height())
+            bar_painter.fillRect(bar_rect, bar_color)
+            bar_painter.end()
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:
         """

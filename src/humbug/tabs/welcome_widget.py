@@ -2,7 +2,7 @@
 
 from PySide6.QtWidgets import QVBoxLayout, QLabel, QFrame, QWidget, QPushButton
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDropEvent, QPainter, QPaintEvent, QPixmap
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
@@ -20,6 +20,7 @@ class WelcomeWidget(QFrame):
         super().__init__(parent)
 
         self._has_ai_configured = False
+        self._drag_active = False
 
         self.setAcceptDrops(True)
 
@@ -140,9 +141,17 @@ class WelcomeWidget(QFrame):
         """
         if event.mimeData().hasFormat("application/x-humbug-path"):
             event.acceptProposedAction()
+            self._drag_active = True
+            self.update()
             return
 
         event.ignore()
+
+    def dragLeaveEvent(self, event: QDragLeaveEvent) -> None:
+        """Clear the highlight when the drag leaves."""
+        self._drag_active = False
+        self.update()
+        super().dragLeaveEvent(event)
 
     def dropEvent(self, event: QDropEvent) -> None:
         """
@@ -154,6 +163,9 @@ class WelcomeWidget(QFrame):
         Raises:
             UnicodeDecodeError: If the path data cannot be decoded as UTF-8
         """
+        self._drag_active = False
+        self.update()
+
         if event.mimeData().hasFormat("application/x-humbug-path"):
             mime_data = event.mimeData().data("application/x-humbug-path").data()
 
@@ -179,6 +191,17 @@ class WelcomeWidget(QFrame):
             return
 
         event.ignore()
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        """Paint a highlight overlay when a drag is active over this widget."""
+        super().paintEvent(event)
+        if not self._drag_active:
+            return
+
+        painter = QPainter(self)
+        color = self._style_manager.get_color(ColorRole.DROP_TARGET_HIGHLIGHT)
+        painter.fillRect(self.rect(), color)
+        painter.end()
 
     def _on_style_changed(self) -> None:
         """Update styling when application style changes."""

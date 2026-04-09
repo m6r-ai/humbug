@@ -1,6 +1,9 @@
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Signal
-from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent
+from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent, QPainter, QPaintEvent
+
+from humbug.color_role import ColorRole
+from humbug.style_manager import StyleManager
 
 
 class SpacerDropWidget(QWidget):
@@ -11,26 +14,39 @@ class SpacerDropWidget(QWidget):
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the spacer drop widget."""
         super().__init__(parent)
+        self._drag_active = False
+        self._style_manager = StyleManager()
         self.setAcceptDrops(True)
 
     def dragEnterEvent(self, event: QDragEnterEvent) -> None:
-        """Accept path drops."""
+        """Accept path drops and activate the highlight."""
         if event.mimeData().hasFormat("application/x-humbug-path"):
             event.acceptProposedAction()
+            self._drag_active = True
+            self.update()
             return
 
         event.ignore()
 
     def dragMoveEvent(self, event: QDragMoveEvent) -> None:
-        """Accept path drops during move."""
+        """Accept path drops during move, keeping the highlight active."""
         if event.mimeData().hasFormat("application/x-humbug-path"):
             event.acceptProposedAction()
             return
 
         event.ignore()
 
+    def dragLeaveEvent(self, event: QDragLeaveEvent) -> None:
+        """Clear the highlight when the drag leaves."""
+        self._drag_active = False
+        self.update()
+        super().dragLeaveEvent(event)
+
     def dropEvent(self, event: QDropEvent) -> None:
         """Handle path drops by emitting signal."""
+        self._drag_active = False
+        self.update()
+
         if event.mimeData().hasFormat("application/x-humbug-path"):
             mime_data = event.mimeData().data("application/x-humbug-path").data()
 
@@ -53,3 +69,14 @@ class SpacerDropWidget(QWidget):
             return
 
         event.ignore()
+
+    def paintEvent(self, event: QPaintEvent) -> None:
+        """Paint a highlight background when a drag is active over this widget."""
+        super().paintEvent(event)
+        if not self._drag_active:
+            return
+
+        painter = QPainter(self)
+        color = self._style_manager.get_color(ColorRole.DROP_TARGET_HIGHLIGHT)
+        painter.fillRect(self.rect(), color)
+        painter.end()
