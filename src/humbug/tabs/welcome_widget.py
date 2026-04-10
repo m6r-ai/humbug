@@ -41,7 +41,7 @@ class WelcomeWidget(QFrame):
         layout.addSpacing(20)  # Space between icon and title
 
         # Application name
-        self._title_label = QLabel("Humbug v42")
+        self._title_label = QLabel("Humbug v43")
         self._title_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
 
         # Add message and button for AI configuration
