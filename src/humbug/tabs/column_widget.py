@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QTabWidget, QWidget
-from PySide6.QtCore import Signal, QEvent, QObject
+from PySide6.QtCore import Signal, QEvent, QObject, QPoint
 from PySide6.QtGui import QDragEnterEvent, QDragLeaveEvent, QDragMoveEvent, QDropEvent
 
 from humbug.tabs.tab_bar import TabBar
@@ -28,7 +28,7 @@ class ColumnWidget(QTabWidget):
         tab_bar.setUsesScrollButtons(True)
         tab_bar.installEventFilter(self)
 
-    def _drop_insertion_index(self, pos_in_widget) -> int:
+    def _drop_insertion_index(self, pos_in_widget: QPoint) -> int:
         """
         Compute the insertion index for a drop at the given widget-local position.
 
