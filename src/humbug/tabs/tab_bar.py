@@ -268,17 +268,19 @@ class TabBar(QTabBar):
 
         # Draw the drop insertion bar on top of everything else.
         if self._drop_index != -1:
-            bar_color = self._style_manager.get_color(ColorRole.TAB_BORDER_ACTIVE)
+            bar_color = self._style_manager.get_color(ColorRole.DROP_TARGET_SEPARATOR_HIGHLIGHT)
             bar_width = 2
 
             if self._drop_index < self.count():
                 # Draw at the left edge of the tab at drop_index.
                 tab_rect = self.tabRect(self._drop_index)
                 bar_x = tab_rect.left()
+
             elif self.count() > 0:
                 # Append: draw at the right edge of the last tab.
                 tab_rect = self.tabRect(self.count() - 1)
                 bar_x = tab_rect.right() + 1
+
             else:
                 # Empty tab bar: draw at the left edge.
                 bar_x = 0

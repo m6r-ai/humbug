@@ -452,8 +452,12 @@ class StyleManager(QObject):
 
             # Line numbers
             ColorRole.DROP_TARGET_HIGHLIGHT: {
-                ColorMode.DARK: "#1a2a4a",
-                ColorMode.LIGHT: "#c8d8f8"
+                ColorMode.DARK: "#142454",
+                ColorMode.LIGHT: "#a8b8f8"
+            },
+            ColorRole.DROP_TARGET_SEPARATOR_HIGHLIGHT: {
+                ColorMode.DARK: "#a8b8f8",
+                ColorMode.LIGHT: "#142454"
             },
 
             # Line numbers
