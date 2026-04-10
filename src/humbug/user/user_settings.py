@@ -24,7 +24,7 @@ class UserSettings:
     ai_backends: Dict[str, AIBackendSettings] = field(default_factory=dict)
     language: LanguageCode = LanguageCode.EN
     font_size: float| None = None  # None means use the default font size
-    theme: ColorMode = ColorMode.DARK  # Default to dark mode
+    theme: ColorMode = ColorMode.SYSTEM  # Default to system mode
     file_sort_order: UserFileSortOrder = UserFileSortOrder.DIRECTORIES_FIRST
     allow_external_file_access: bool = True
     external_file_allowlist: List[str] = field(default_factory=list)
@@ -47,7 +47,7 @@ class UserSettings:
             },
             language=LanguageCode.EN,
             font_size=None,
-            theme=ColorMode.DARK,
+            theme=ColorMode.SYSTEM,
             file_sort_order=UserFileSortOrder.DIRECTORIES_FIRST,
             allow_external_file_access=True,
             external_file_allowlist=FilesystemAccessSettings.get_default_allowlist(),
@@ -231,13 +231,13 @@ class UserSettings:
             settings.font_size = font_size
 
         # Load theme if available, otherwise use default (dark mode)
-        theme_str = data.get("theme", "DARK")
+        theme_str = data.get("theme", "SYSTEM")
         if not isinstance(theme_str, str):
             cls._logger.warning(
                 "Invalid theme type in %s: expected str, got %s. Using default.",
                 path, type(theme_str).__name__
             )
-            settings.theme = ColorMode.DARK
+            settings.theme = ColorMode.SYSTEM
 
         else:
             try:
@@ -248,7 +248,7 @@ class UserSettings:
                     "Invalid theme '%s' in %s. Using default (DARK).",
                     theme_str, path
                 )
-                settings.theme = ColorMode.DARK
+                settings.theme = ColorMode.SYSTEM
 
         # Load file sort order if available, otherwise use default
         sort_order_str = data.get("fileSortOrder", "DIRECTORIES_FIRST")

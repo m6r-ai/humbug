@@ -127,6 +127,7 @@ def get_french_strings() -> LanguageStrings:
         # User Settings dialog - other settings
         select_language="Langue",
         font_size="Taille de police",
+        theme_system="Automatique",
         theme_dark="Sombre",
         theme_light="Clair",
         file_sort_order="Ordre de tri des fichiers",

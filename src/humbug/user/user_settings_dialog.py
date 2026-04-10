@@ -107,8 +107,9 @@ class UserSettingsDialog(QDialog):
 
         # Add theme options
         theme_items = [
-            (strings.theme_dark, ColorMode.DARK),
-            (strings.theme_light, ColorMode.LIGHT)
+            (strings.theme_system, ColorMode.SYSTEM),
+            (strings.theme_light, ColorMode.LIGHT),
+            (strings.theme_dark, ColorMode.DARK)
         ]
         self._theme_combo.set_items(theme_items)
 
@@ -301,8 +302,9 @@ class UserSettingsDialog(QDialog):
         # Update theme combo items
         current_theme = self._theme_combo.get_value()
         theme_items = [
-            (strings.theme_dark, ColorMode.DARK),
-            (strings.theme_light, ColorMode.LIGHT)
+            (strings.theme_system, ColorMode.SYSTEM),
+            (strings.theme_light, ColorMode.LIGHT),
+            (strings.theme_dark, ColorMode.DARK)
         ]
         self._theme_combo.set_label(strings.display_theme)
         self._theme_combo.set_items(theme_items)

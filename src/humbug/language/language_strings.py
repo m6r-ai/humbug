@@ -118,6 +118,7 @@ class LanguageStrings:
     # User Settings dialog - other settings
     select_language: str
     font_size: str
+    theme_system: str
     theme_dark: str
     theme_light: str
     file_sort_order: str

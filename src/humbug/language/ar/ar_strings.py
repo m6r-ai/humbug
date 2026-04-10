@@ -128,6 +128,7 @@ def get_arabic_strings() -> LanguageStrings:
         # User Settings dialog - other settings
         select_language="اللغة",
         font_size="حجم الخط",
+        theme_system="تلقائي",
         theme_dark="داكن",
         theme_light="فاتح",
         file_sort_order="ترتيب الملفات",

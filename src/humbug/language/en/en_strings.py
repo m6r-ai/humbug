@@ -127,6 +127,7 @@ def get_english_strings() -> LanguageStrings:
         # User Settings dialog - other settings
         select_language="Language",
         font_size="Font Size",
+        theme_system="Automatic",
         theme_dark="Dark",
         theme_light="Light",
         file_sort_order="File Sort Order",

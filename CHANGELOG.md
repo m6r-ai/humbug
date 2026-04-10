@@ -4,28 +4,29 @@
 
 New features:
 
-- Added an edit button to allow you to edit previous user messages.
-- The submit shortcut is now Cmd+Enter or Ctrl+Enter rather than Cmd+J or Ctrl+J.  This is more natural.
-- Removed Claude Sonnet 4.5 support (we have 4.6).
-- Added GLM 5.1 support
-- Added Menai native C VM implementation and remove the cython version.
-- Added a new Menai benchmark performance test suite.  Removed the old JSON parser test.
-- Added a requirement for AI delegation to get user approval.
-- Removed the mindspace log AI tool.  It wasn't ever used, and more often than not confused AI models.
+- Added GLM 5.1 model support
+- Added Gemma 4 model support
+- Removed Claude Sonnet 4.5 model support (we have 4.6).
+- Removed the Metaphor compiler and Metaphor conversations options.  Spec-driven development activities can now be more
+  effectively implemented by simply asking an AI to read one or more spec files from the mindspace filesystem.
 - Removed the ability to open the system shell and mindspace log tabs in from the system tool.  These are tools specifically
   for a human (developer) to use.
+- Removed the mindspace log AI tool.  It wasn't ever used, and more often than not confused AI models.
+- Added a requirement for AI delegation to get user approval.
+- Colour themes can now be "Automatic" as well as "Light" and "Dark".  Humbug will follow the system preference in automatic mode.
+- Improved visuals for the welcome widget (colours, rounded corners, and vertical spacing).
+- Added visual feedback and improved colours for drop targets.
+- Improved column layouts, including preferred tab width and centering columns in the manager view.
 - Most tab types now use a more narrow default view to make them easier to read.
+- Gave all tabs a "nice" default size and keep content in the middle of the application to improve usability.
+- Added an edit button to allow you to edit previous user messages.
+- The submit shortcut is now Cmd+Enter or Ctrl+Enter rather than Cmd+J or Ctrl+J.  This is more natural.
 - The tab label bar can now be scrolled using a mouse wheel.
 - Terminal tabs can now have a fixed width defined in the mindspace settings.  If the terminal is too wide for the tab
   then it will gain a horizontal scrollbar.  If it is too narrow then it will be centred.
 - Added smooth scrolling during selection operations within terminal tabs.
-- Removed the Metaphor compiler and Metaphor conversations options.  Spec-driven development activities can now be more
-  effectively implemented by simply asking an AI to read one or more spec files from the mindspace filesystem.
-- Improve visuals for the welcome widget (colours, rounded corners, and vertical spacing).
-- Added visual feedback and improved colours for drop targets.
-- Empty spacers in the column manager are now drop targets.
-- Improvements to column layouts, including preferred tab width and centering columns in the manager view.
-- Give all tabs a "nice" default size and keep content in the middle of the application to improve usability.
+- Added Menai native C VM implementation and remove the cython version.
+- Added a new Menai benchmark performance test suite.  Removed the old JSON parser test.
 
 Bug fixes:
 
