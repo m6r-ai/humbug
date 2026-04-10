@@ -775,8 +775,7 @@ class StyleManager(QObject):
         """
         return f'''
             <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="512" zoomAndPan="magnify" viewBox="0 0 384 384" height="512" preserveAspectRatio="xMidYMid meet" version="1.0"><defs><g/></defs>
-                <rect x="-38.4" width="460.8" fill="{text_color}" y="-38.399999" height="460.799983" fill-opacity="1"/>
-                <rect x="-38.4" width="460.8" fill="{bg_color}" y="-38.399999" height="460.799983" fill-opacity="1"/>
+                <rect x="0" y="0" width="384" height="384" rx="76" ry="76" fill="{bg_color}" fill-opacity="1"/>
                 <g fill="{text_color}" fill-opacity="1">
                     <g transform="translate(94.464843, 294.75626)">
                         <g>
@@ -1083,10 +1082,10 @@ class StyleManager(QObject):
         self._write_icon('app-icon.svg', self._create_app_icon_svg('#4040c0', '#ffffff'))
 
         # Create light mode disabled version
-        self._write_icon('app-icon-disabled-light.svg', self._create_app_icon_svg('#c0c0c0', '#e0e0e0'))
+        self._write_icon('app-icon-disabled-light.svg', self._create_app_icon_svg('#a0a0e0', '#ffffff'))
 
         # Create dark mode disabled version
-        self._write_icon('app-icon-disabled-dark.svg', self._create_app_icon_svg('#202020', '#404040'))
+        self._write_icon('app-icon-disabled-dark.svg', self._create_app_icon_svg('#404080', '#c0c0c0'))
 
     def get_icon_path(self, name: str) -> str:
         """

@@ -36,6 +36,7 @@ class WelcomeWidget(QFrame):
         self._icon_label = QLabel()
         self._icon_label.setAlignment(Qt.AlignmentFlag.AlignHCenter | Qt.AlignmentFlag.AlignBottom)
         layout.addStretch()
+        layout.addSpacing(30)
         layout.addWidget(self._icon_label)
         layout.addSpacing(20)  # Space between icon and title
 
@@ -211,7 +212,7 @@ class WelcomeWidget(QFrame):
         # Update icon size
         icon_path = self._style_manager.get_icon_path("app-icon-disabled")
         icon_pixmap = QPixmap(icon_path)
-        scaled_size = int(160 * zoom_factor)  # 160px base size for welcome screen
+        scaled_size = int(240 * zoom_factor)  # 240px base size for welcome screen
         self._icon_label.setPixmap(icon_pixmap.scaled(
             scaled_size, scaled_size,
             Qt.AspectRatioMode.KeepAspectRatio,
@@ -239,7 +240,7 @@ class WelcomeWidget(QFrame):
         # Update colors and frame style
         self.setStyleSheet(f"""
             QFrame {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BACKGROUND_PRIMARY)};
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
                 border: none;
                 border-radius: {4 * zoom_factor}px;
             }}
