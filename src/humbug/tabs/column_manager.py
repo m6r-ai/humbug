@@ -95,6 +95,8 @@ class ColumnManager(QWidget):
         self._right_spacer.setFixedWidth(0)
         self._left_spacer.path_dropped.connect(self._on_left_spacer_path_dropped)
         self._right_spacer.path_dropped.connect(self._on_right_spacer_path_dropped)
+        self._left_spacer.tab_dropped.connect(self._on_left_spacer_tab_dropped)
+        self._right_spacer.tab_dropped.connect(self._on_right_spacer_tab_dropped)
         self._columns_layout.addWidget(self._left_spacer)
         self._columns_layout.addWidget(self._column_splitter)
         self._columns_layout.addWidget(self._right_spacer)
@@ -536,6 +538,10 @@ class ColumnManager(QWidget):
         """
         # Save tab state before removal
         tab_state = tab.get_state(True)
+
+        # Moving a tab is a deliberate user action, so it is no longer ephemeral
+        tab_state.is_ephemeral = False
+
         tab_id = tab.tab_id()
         tab_title = self._tab_labels[tab_id].text()
 
@@ -671,6 +677,52 @@ class ColumnManager(QWidget):
 
         if new_column.count() == 0 and len(self._tab_columns) > 1:
             self._remove_column_and_resize(new_index, new_column)
+
+    def _on_left_spacer_tab_dropped(self, tab_id: str) -> None:
+        """Handle a tab dropped onto the left spacer, moving it to a new leftmost column."""
+        tab = self._tabs.get(tab_id)
+        if not tab:
+            return
+
+        source_column = self._find_column_for_tab(tab)
+        if source_column is None:
+            return
+
+        new_column = self._create_column(0)
+        self._active_column = new_column
+
+        self._move_tab_between_columns(tab, source_column, new_column)
+
+        # source_column index has shifted right by 1 due to the new column insertion
+        if source_column.count() == 0 and len(self._tab_columns) > 1:
+            source_column_index = self._tab_columns.index(source_column)
+            self._remove_column_and_resize(source_column_index, source_column)
+
+        self.show_all_columns()
+        self._update_tabs()
+
+    def _on_right_spacer_tab_dropped(self, tab_id: str) -> None:
+        """Handle a tab dropped onto the right spacer, moving it to a new rightmost column."""
+        tab = self._tabs.get(tab_id)
+        if not tab:
+            return
+
+        source_column = self._find_column_for_tab(tab)
+        if source_column is None:
+            return
+
+        new_index = len(self._tab_columns)
+        new_column = self._create_column(new_index)
+        self._active_column = new_column
+
+        self._move_tab_between_columns(tab, source_column, new_column)
+
+        if source_column.count() == 0 and len(self._tab_columns) > 1:
+            source_column_index = self._tab_columns.index(source_column)
+            self._remove_column_and_resize(source_column_index, source_column)
+
+        self.show_all_columns()
+        self._update_tabs()
 
     def _on_column_splitter_splitter_moved(self, _pos: int, _index: int) -> None:
         """Handle splitter movement and potential column merging."""
@@ -1158,6 +1210,25 @@ class ColumnManager(QWidget):
         if label:
             label.set_ephemeral(False)
 
+    def _move_tab_to_active_column(self, tab: TabBase) -> None:
+        """
+        Move a tab to the active column if it is not already there.
+
+        If the move leaves the source column empty it is removed.
+
+        Args:
+            tab: The tab to move
+        """
+        source_column = self._find_column_for_tab(tab)
+        if source_column is None or source_column == self._active_column:
+            return
+
+        self._move_tab_between_columns(tab, source_column, self._active_column)
+
+        if source_column.count() == 0 and len(self._tab_columns) > 1:
+            source_column_index = self._tab_columns.index(source_column)
+            self._remove_column_and_resize(source_column_index, source_column)
+
     def _on_tab_modified_state_changed(self, tab_id: str, modified: bool) -> None:
         """
         Update a tab's modified state.
@@ -1474,8 +1545,9 @@ class ColumnManager(QWidget):
         existing_tab = self._find_editor_tab_by_path(path)
         if existing_tab:
             if existing_tab.is_ephemeral() and not ephemeral:
-                # If the existing tab is ephemeral, convert it to permanent
                 self._make_tab_permanent(existing_tab)
+                self._move_tab_to_active_column(existing_tab)
+                existing_tab = cast(EditorTab, self._find_editor_tab_by_path(path))
 
             self._ensure_tab_not_in_protected_column(existing_tab)
             self._set_current_tab(existing_tab, ephemeral)
@@ -1556,8 +1628,9 @@ class ColumnManager(QWidget):
         existing_tab = self._find_conversation_tab_by_path(abs_path)
         if existing_tab:
             if existing_tab.is_ephemeral() and not ephemeral:
-                # If the existing tab is ephemeral, convert it to permanent
                 self._make_tab_permanent(existing_tab)
+                self._move_tab_to_active_column(existing_tab)
+                existing_tab = cast(ConversationTab, self._find_conversation_tab_by_path(abs_path))
 
             self._ensure_tab_not_in_protected_column(existing_tab)
             self._set_current_tab(existing_tab, ephemeral)
@@ -1705,8 +1778,9 @@ class ColumnManager(QWidget):
         existing_tab = self._find_preview_tab_by_path(path_minus_anchor)
         if existing_tab:
             if existing_tab.is_ephemeral() and not ephemeral:
-                # If the existing tab is ephemeral, convert it to permanent
                 self._make_tab_permanent(existing_tab)
+                self._move_tab_to_active_column(existing_tab)
+                existing_tab = cast(PreviewTab, self._find_preview_tab_by_path(path_minus_anchor))
 
             self._ensure_tab_not_in_protected_column(existing_tab)
             self._set_current_tab(existing_tab, ephemeral)

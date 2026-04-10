@@ -10,6 +10,7 @@ class SpacerDropWidget(QWidget):
     """A spacer widget that accepts path drops."""
 
     path_dropped = Signal(str, str)  # source_type, path
+    tab_dropped = Signal(str)  # tab_id
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the spacer drop widget."""
@@ -26,11 +27,21 @@ class SpacerDropWidget(QWidget):
             self.update()
             return
 
+        if event.mimeData().hasFormat("application/x-humbug-tab"):
+            event.acceptProposedAction()
+            self._drag_active = True
+            self.update()
+            return
+
         event.ignore()
 
     def dragMoveEvent(self, event: QDragMoveEvent) -> None:
         """Accept path drops during move, keeping the highlight active."""
         if event.mimeData().hasFormat("application/x-humbug-path"):
+            event.acceptProposedAction()
+            return
+
+        if event.mimeData().hasFormat("application/x-humbug-tab"):
             event.acceptProposedAction()
             return
 
@@ -65,6 +76,17 @@ class SpacerDropWidget(QWidget):
                 source_type = source_data.decode()
 
             self.path_dropped.emit(source_type, path)
+            event.acceptProposedAction()
+            return
+
+        if event.mimeData().hasFormat("application/x-humbug-tab"):
+            mime_data = event.mimeData().data("application/x-humbug-tab").data()
+
+            if not isinstance(mime_data, bytes):
+                mime_data = bytes(mime_data)
+
+            tab_id = mime_data.decode()
+            self.tab_dropped.emit(tab_id)
             event.acceptProposedAction()
             return
 
