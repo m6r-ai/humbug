@@ -154,6 +154,24 @@ class AIConversationSettings:
         ),
 
         # Ollama models
+        "gemma4:31b-cloud (Ollama)": AIModel(
+            name="gemma4:31b-cloud",
+            provider="ollama",
+            context_window=256000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "gemma4:31b-cloud (thinking) (Ollama)": AIModel(
+            name="gemma4:31b-cloud",
+            provider="ollama",
+            context_window=256000,
+            max_output_tokens=32768,
+            supports_temperature=True,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "glm-5 (Ollama)": AIModel(
             name="glm-5:cloud",
             provider="ollama",

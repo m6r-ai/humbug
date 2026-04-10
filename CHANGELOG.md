@@ -21,6 +21,10 @@ New features:
 - Added smooth scrolling during selection operations within terminal tabs.
 - Removed the Metaphor compiler and Metaphor conversations options.  Spec-driven development activities can now be more
   effectively implemented by simply asking an AI to read one or more spec files from the mindspace filesystem.
+- Improve visuals for the welcome widget (colours, rounded corners, and vertical spacing).
+- Added visual feedback and improved colours for drop targets.
+- Empty spacers in the column manager are now drop targets.
+- Improvements to column layouts, including preferred tab width and centering columns in the manager view.
 - Give all tabs a "nice" default size and keep content in the middle of the application to improve usability.
 
 Bug fixes:
@@ -28,6 +32,8 @@ Bug fixes:
 - Improved filesystem and editor tool descriptions to help avoid problems related to escaping.
 - Fix problems with the Menai tool help.
 - Fixed a problem where delegated conversations did not show the initial prompt.
+- Fixed problem with child model handling during delegation.
+- The default model for delegation is now the parent's model.
 
 Internal structure changes
 
