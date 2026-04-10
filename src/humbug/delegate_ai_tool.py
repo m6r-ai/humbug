@@ -198,6 +198,9 @@ class DelegateAITool(AITool):
         # Validate mindspace is open
         self._validate_mindspace_access()
 
+        mindspace_settings = self._mindspace_manager.settings()
+        assert mindspace_settings is not None, "Mindspace settings should not be None if mindspace is open"
+
         # Extract arguments
         arguments = tool_call.arguments
         task_prompt = self._get_required_str_value("task_prompt", arguments)
@@ -223,8 +226,11 @@ class DelegateAITool(AITool):
             if not 0.0 <= temperature <= 1.0:
                 raise AIToolExecutionError("'temperature' must be between 0.0 and 1.0")
 
+        else:
+            temperature = mindspace_settings.temperature
+
         # Validate model exists if provided
-        reasoning = None
+        reasoning = AIReasoningCapability.NO_REASONING
         if model:
             ai_backends = self._ai_manager.get_backends()
             available_models = list(AIConversationSettings.iter_models_by_backends(ai_backends))
@@ -380,9 +386,9 @@ class DelegateAITool(AITool):
         parent_ai_conversation: AIConversation,
         task_prompt: str,
         session_id: str | None,
-        model: str | None,
+        model: str,
         temperature: float | None,
-        reasoning_capability: AIReasoningCapability | None
+        reasoning_capability: AIReasoningCapability
     ) -> AIToolResult:
         """
         Delegate a task to an AI instance.
@@ -392,7 +398,7 @@ class DelegateAITool(AITool):
             parent_ai_conversation: The parent AIConversation making the request
             task_prompt: The prompt to send to the delegated AI
             session_id: ID of the existing session (None for new session)
-            model: AI model to use (None for default)
+            model: AI model to use
             temperature: Temperature setting (None for default)
             reasoning_capability: Reasoning capability setting
 
@@ -406,22 +412,10 @@ class DelegateAITool(AITool):
             # Ensure conversations directory exists
             self._mindspace_manager.ensure_mindspace_dir("conversations")
 
-            # Build settings for the child conversation
-            mindspace_settings = self._mindspace_manager.settings()
-            child_model = model or (mindspace_settings.model if mindspace_settings else None) or \
-                parent_ai_conversation.conversation_settings().model
-            child_temperature = temperature
-            if child_temperature is None and mindspace_settings:
-                child_temperature = mindspace_settings.temperature
-
-            child_reasoning = reasoning_capability
-            if child_reasoning is None and mindspace_settings:
-                child_reasoning = mindspace_settings.reasoning
-
             child_settings = AIConversationSettings(
-                model=child_model,
-                temperature=child_temperature if AIConversationSettings.supports_temperature(child_model) else None,
-                reasoning=child_reasoning or AIReasoningCapability.NO_REASONING
+                model=model,
+                temperature=temperature if AIConversationSettings.supports_temperature(model) else None,
+                reasoning=reasoning_capability
             )
 
             # Create the child AIConversation and configure it

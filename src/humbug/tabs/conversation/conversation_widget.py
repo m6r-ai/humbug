@@ -1506,8 +1506,8 @@ class ConversationWidget(QWidget):
             ai_conversation = cast(AIConversation, self._ai_conversation)
             ai_conversation.update_conversation_settings(default_settings)
             ai_conversation.load_message_history(messages)
-            conversation_settings = ai_conversation.conversation_settings()
-            self._input.set_model(conversation_settings.model)
+
+        self._input.set_model(self._ai_conversation.conversation_settings().model)
 
         for message in messages:
             message_widget = self._add_message_core(message)
