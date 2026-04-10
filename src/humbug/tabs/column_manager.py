@@ -464,6 +464,7 @@ class ColumnManager(QWidget):
         column.removeTab(index)
         tab_label.deleteLater()
         tab.deleteLater()
+        QTimer.singleShot(0, self.show_all_columns)
 
     def _add_tab_to_column(self, tab: TabBase, title: str, column: ColumnWidget) -> None:
         """
@@ -521,6 +522,7 @@ class ColumnManager(QWidget):
 
         # Update MRU order for the new tab
         self._update_mru_order(tab, column)
+        QTimer.singleShot(0, self.show_all_columns)
 
     def _move_tab_between_columns(
         self,
@@ -2314,7 +2316,6 @@ class ColumnManager(QWidget):
             self._left_spacer.setFixedWidth(0)
             self._right_spacer.setFixedWidth(0)
 
-        print(f"Resizing columns: available={available}, total_pref={total_preferred}, sizes={sizes}")
         self._column_splitter.setSizes(sizes)
         self._columns_layout.invalidate()
 
