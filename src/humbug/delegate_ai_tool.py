@@ -258,6 +258,8 @@ class DelegateAITool(AITool):
             raise AIToolAuthorizationDenied("User denied permission to delegate AI task")
 
         ai_conversation: AIConversation = requester_ref
+        if model is None:
+            model = ai_conversation.conversation_settings().model
 
         try:
             return await self._delegate_task(
