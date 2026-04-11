@@ -1266,6 +1266,7 @@ MenaiDict_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     if (self) {
         self->pairs  = pairs;
         self->lookup = lookup;
+        self->length = n;
     } else {
         Py_DECREF(pairs);
         Py_DECREF(lookup);
@@ -1499,7 +1500,8 @@ MenaiSet_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     MenaiSet_Object *self = (MenaiSet_Object *)type->tp_alloc(type, 0);
     if (self) {
         self->elements = elements;
-        self->members  = members;
+        self->members = members;
+        self->length = PyTuple_GET_SIZE(elements);
     } else {
         Py_DECREF(elements);
         Py_DECREF(members);

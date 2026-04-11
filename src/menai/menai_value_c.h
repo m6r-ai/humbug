@@ -69,12 +69,14 @@ typedef struct {
     PyObject_HEAD
     PyObject *pairs;    /* Python tuple of (key, value) 2-tuples */
     PyObject *lookup;   /* Python dict: hashable_key -> (key, value) */
+    Py_ssize_t length;  /* number of key-value pairs */
 } MenaiDict_Object;
 
 typedef struct {
     PyObject_HEAD
     PyObject *elements; /* Python tuple of MenaiValue* (ordered, deduplicated) */
     PyObject *members;  /* Python frozenset of hashable keys */
+    Py_ssize_t length;  /* number of elements */
 } MenaiSet_Object;
 
 /* ---------------------------------------------------------------------------
@@ -87,8 +89,9 @@ typedef struct {
     PyObject *name;            /* Python str or Py_None */
     PyObject *bytecode;        /* CodeObject or Py_None */
     PyObject *captured_values; /* Python list of MenaiValue* */
-    int       is_variadic;     /* C int: 0 or 1 */
-    int       param_count;     /* C int: number of fixed parameters */
+    int is_variadic;           /* C int: 0 or 1 */
+    int param_count;           /* C int: number of fixed parameters */
+
     /* Frame setup cache — populated once in MenaiFunction_new / menai_function_alloc
      * when bytecode is not None.  Eliminates all PyObject_GetAttrString calls
      * from the hot call_setup / frame_setup path.
@@ -108,8 +111,8 @@ typedef struct {
     PyObject *names;           /* borrowed ref to bytecode.names list */
     PyObject **names_items;    /* raw pointer into names ob_item array */
     PyObject *closure_caches;  /* borrowed ref to bytecode._code_caches list, or NULL */
-    int       code_len;        /* number of instructions */
-    int       local_count;     /* number of local variable slots */
+    int code_len;              /* number of instructions */
+    int local_count;           /* number of local variable slots */
 } MenaiFunction_Object;
 
 /* ---------------------------------------------------------------------------
@@ -119,7 +122,7 @@ typedef struct {
 typedef struct {
     PyObject_HEAD
     PyObject *name;         /* Python str */
-    int       tag;          /* unique integer tag */
+    int tag;                /* unique integer tag */
     PyObject *field_names;  /* Python tuple of str */
     PyObject *_field_index; /* Python dict: str -> int */
 } MenaiStructType_Object;

@@ -362,7 +362,8 @@ menai_set_from_elements(PyObject *elements)
     }
 
     obj->elements = elements;  /* steal */
-    obj->members  = members;   /* steal */
+    obj->members = members;    /* steal */
+    obj->length = n;
     return (PyObject *)obj;
 }
 
@@ -440,6 +441,30 @@ static inline PyObject *make_integer_value(PyObject *py_int) {
         r->value = py_int;
     } else {
         Py_DECREF(py_int);
+    }
+    return (PyObject *)r;
+}
+
+static inline PyObject *make_integer_from_ssize_t(Py_ssize_t n) {
+    PyObject *iv = PyLong_FromSsize_t(n);
+    if (!iv) return NULL;
+    MenaiInteger_Object *r = (MenaiInteger_Object *)Menai_IntegerType->tp_alloc(Menai_IntegerType, 0);
+    if (r) {
+        r->value = iv;
+    } else {
+        Py_DECREF(iv);
+    }
+    return (PyObject *)r;
+}
+
+static inline PyObject *make_integer_from_long(long n) {
+    PyObject *iv = PyLong_FromLong(n);
+    if (!iv) return NULL;
+    MenaiInteger_Object *r = (MenaiInteger_Object *)Menai_IntegerType->tp_alloc(Menai_IntegerType, 0);
+    if (r) {
+        r->value = iv;
+    } else {
+        Py_DECREF(iv);
     }
     return (PyObject *)r;
 }
@@ -1474,10 +1499,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_function_singular(f, "function-min-arity")) goto error;
             MenaiFunction_Object *fn = (MenaiFunction_Object *)f;
             int min_a = fn->is_variadic ? fn->param_count - 1 : fn->param_count;
-            PyObject *r = PyLong_FromLong(min_a);
-            if (r == NULL) goto error;
-            PyObject *_r = make_integer_value(r);
-            Py_DECREF(r);
+            PyObject *_r = make_integer_from_long(min_a);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -2762,9 +2784,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_string(a, "string-length")) goto error;
             PyObject *sv = menai_string_value(a);
             Py_ssize_t len = PyUnicode_GET_LENGTH(sv);
-            PyObject *r = PyLong_FromSsize_t(len);
-            if (r == NULL) goto error;
-            PyObject *_r = make_integer_value(r);
+            PyObject *_r = make_integer_from_ssize_t(len);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -2910,9 +2930,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
             PyObject *sa = menai_string_value(a);
-
             PyObject *bv = menai_integer_value(b);
-
             PyObject *cv = menai_integer_value(c);
 
             Py_ssize_t start = PyLong_AsSsize_t(bv), end = PyLong_AsSsize_t(cv);
@@ -2974,9 +2992,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (idx == -1) {
                 reg_set_borrow(regs, base + dest, Menai_NONE);
             } else {
-                PyObject *iv = PyLong_FromSsize_t(idx);
-                if (iv == NULL) goto error;
-                PyObject *_r = make_integer_value(iv);
+                PyObject *_r = make_integer_from_ssize_t(idx);
                 if (_r == NULL) goto error;
                 reg_set_own(regs, base + dest, _r);
             }
@@ -2993,9 +3009,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
             Py_UCS4 ch = PyUnicode_ReadChar(sa, 0);
-            PyObject *iv = PyLong_FromLong((long)ch);
-            if (iv == NULL) goto error;
-            PyObject *_r = make_integer_value(iv);
+            PyObject *_r = make_integer_from_long((long)ch);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -3195,9 +3209,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-length")) goto error;
             Py_ssize_t n = ((MenaiList_Object *)a)->length;
-            PyObject *iv = PyLong_FromSsize_t(n);
-            if (iv == NULL) goto error;
-            PyObject *_r = make_integer_value(iv);
+            PyObject *_r = make_integer_from_ssize_t(n);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -3399,9 +3411,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (found == -1) {
                 reg_set_borrow(regs, base + dest, Menai_NONE);
             } else {
-                PyObject *iv = PyLong_FromSsize_t(found);
-                if (iv == NULL) goto error;
-                PyObject *_r = make_integer_value(iv);
+                PyObject *_r = make_integer_from_ssize_t(found);
                 if (_r == NULL) goto error;
                 reg_set_own(regs, base + dest, _r);
             }
@@ -3571,11 +3581,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_DICT_LENGTH: {
             PyObject *a = regs[base + src0];
             if (!require_dict(a, "dict-length")) goto error;
-            PyObject *pairs = ((MenaiDict_Object *)a)->pairs;
-            Py_ssize_t n = PyTuple_GET_SIZE(pairs);
-            PyObject *iv = PyLong_FromSsize_t(n);
-            if (iv == NULL) goto error;
-            PyObject *_r = make_integer_value(iv);
+            PyObject *_r = make_integer_from_ssize_t(((MenaiDict_Object *)a)->length);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -3885,11 +3891,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_SET_LENGTH: {
             PyObject *a = regs[base + src0];
             if (!require_set_singular(a, "set-length")) goto error;
-            PyObject *elems = ((MenaiSet_Object *)a)->elements;
-            Py_ssize_t n = PyTuple_GET_SIZE(elems);
-            PyObject *iv = PyLong_FromSsize_t(n);
-            if (iv == NULL) goto error;
-            PyObject *_r = make_integer_value(iv);
+            PyObject *_r = make_integer_from_ssize_t(((MenaiSet_Object *)a)->length);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -4204,13 +4206,7 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             long val = start;
             for (Py_ssize_t i = 0; i < n; i++) {
-                PyObject *iv = PyLong_FromLong(val);
-                if (iv == NULL) {
-                    for (Py_ssize_t k = 0; k < i; k++) Py_DECREF(rng_arr[k]);
-                    PyMem_Free(rng_arr);
-                    goto error;
-                }
-                PyObject *mi = make_integer_value(iv);
+                PyObject *mi = make_integer_from_long(val);
                 if (mi == NULL) {
                     for (Py_ssize_t k = 0; k < i; k++) Py_DECREF(rng_arr[k]);
                     PyMem_Free(rng_arr);
