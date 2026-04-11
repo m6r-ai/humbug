@@ -712,7 +712,9 @@ fail:
 typedef struct {
     PyObject *code_obj;         /* CodeObject — kept alive, not dereferenced in loop */
     PyObject *constants;        /* borrowed ref — list of fast constant values */
+    PyObject **constants_items; /* raw pointer into constants ob_item array */
     PyObject *names;            /* borrowed ref — list of global name strings */
+    PyObject **names_items;     /* raw pointer into names ob_item array */
     PyObject *closure_caches;   /* borrowed ref — list of child _closure_cache tuples */
     uint64_t *instrs;           /* raw C pointer into the array.array buffer */
     int code_len;
@@ -787,20 +789,22 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
 
     Py_INCREF(code_obj);
     Py_XDECREF(f->code_obj);
-    f->code_obj    = code_obj;
-    f->constants   = constants;   /* borrowed — f->code_obj keeps code_obj alive */
+    f->code_obj = code_obj;
+    f->constants = constants;     /* borrowed — f->code_obj keeps code_obj alive */
     Py_DECREF(constants);         /* drop owned ref from GetAttrString */
-    f->names       = names;       /* borrowed — f->code_obj keeps code_obj alive */
+    f->constants_items = ((PyListObject *)constants)->ob_item;
+    f->names = names;             /* borrowed — f->code_obj keeps code_obj alive */
     Py_DECREF(names);             /* drop owned ref from GetAttrString */
+    f->names_items = ((PyListObject *)names)->ob_item;
     PyObject *_cc = PyObject_GetAttrString(code_obj, "_code_caches");
     f->closure_caches = (_cc && PyList_Check(_cc)) ? _cc : NULL;
     Py_XDECREF(_cc);  /* drop owned ref — f->code_obj keeps code_obj alive */
     PyErr_Clear();
-    f->instrs      = (uint64_t *)view.buf;
-    f->code_len    = (int)(view.len / sizeof(uint64_t));
+    f->instrs = (uint64_t *)view.buf;
+    f->code_len = (int)(view.len / sizeof(uint64_t));
     f->local_count = local_count;
-    f->ip          = 0;
-    f->base        = base;
+    f->ip = 0;
+    f->base = base;
     f->return_dest = return_dest;
     f->is_sentinel = 0;
     PyBuffer_Release(&view);
@@ -818,15 +822,17 @@ frame_setup_func(Frame *f, MenaiFunction_Object *func,
 {
     Py_INCREF(code_obj);
     Py_XDECREF(f->code_obj);
-    f->code_obj    = code_obj;
-    f->instrs      = func->instrs;
-    f->code_len    = func->code_len;
-    f->constants   = func->constants;
-    f->names       = func->names;
+    f->code_obj = code_obj;
+    f->instrs = func->instrs;
+    f->code_len = func->code_len;
+    f->constants = func->constants;
+    f->constants_items = func->constants_items;
+    f->names = func->names;
+    f->names_items = func->names_items;
     f->local_count = func->local_count;
     f->closure_caches = func->closure_caches;  /* borrowed — func owns bytecode which owns it */
-    f->ip          = 0;
-    f->base        = base;
+    f->ip = 0;
+    f->base = base;
     f->return_dest = return_dest;
     f->is_sentinel = 0;
 }
@@ -835,10 +841,12 @@ static void
 frame_release(Frame *f)
 {
     Py_XDECREF(f->code_obj);
-    f->code_obj  = NULL;
-    f->instrs    = NULL;
+    f->code_obj = NULL;
+    f->instrs = NULL;
     f->constants = NULL;
-    f->names     = NULL;
+    f->constants_items = NULL;
+    f->names = NULL;
+    f->names_items = NULL;
     f->closure_caches = NULL;
 }
 
@@ -1140,13 +1148,13 @@ execute_loop(PyObject *code, PyObject *globals,
             break;
 
         case OP_LOAD_CONST: {
-            PyObject *val = PyList_GET_ITEM(frame->constants, src0);
+            PyObject *val = frame->constants_items[src0];
             reg_set_borrow(regs, base + dest, val);
             break;
         }
 
         case OP_LOAD_NAME: {
-            PyObject *name = PyList_GET_ITEM(frame->names, src0);
+            PyObject *name = frame->names_items[src0];
             PyObject *val  = PyDict_GetItem(globals, name);
             if (val == NULL) {
                 /* Build a rich error with available variable names, matching

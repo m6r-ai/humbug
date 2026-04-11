@@ -1126,7 +1126,9 @@ menai_function_alloc(PyObject *cache, PyObject *bytecode, PyObject *captured_val
     self->param_count = param_count;
     self->local_count = local_count;
     self->constants = constants;  /* borrowed — bytecode keeps alive */
+    self->constants_items = PyList_Check(constants) ? ((PyListObject *)constants)->ob_item : NULL;
     self->names = names_obj;  /* borrowed — bytecode keeps alive */
+    self->names_items = PyList_Check(names_obj) ? ((PyListObject *)names_obj)->ob_item : NULL;
     PyObject *_cc = PyTuple_GET_ITEM(cache, 10);
     self->closure_caches = (_cc != Py_None && PyList_Check(_cc)) ? _cc : NULL;
     /* borrowed — bytecode (which we own) keeps child._code_caches alive */
@@ -1659,7 +1661,9 @@ MenaiFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
         self->instrs = NULL;
         self->instrs_obj = NULL;
         self->constants = NULL;
+        self->constants_items = NULL;
         self->names = NULL;
+        self->names_items = NULL;
         self->code_len = 0;
         self->local_count = 0;
         self->closure_caches = NULL;
@@ -1686,11 +1690,13 @@ MenaiFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
             PyObject *constants = PyObject_GetAttrString(bytecode, "constants");
             if (constants) {
                 self->constants = constants;  /* borrowed from bytecode */
+                self->constants_items = ((PyListObject *)constants)->ob_item;
                 /* Do not Py_DECREF — borrowed */
             }
             PyObject *names = PyObject_GetAttrString(bytecode, "names");
             if (names) {
                 self->names = names;  /* borrowed from bytecode */
+                self->names_items = ((PyListObject *)names)->ob_item;
                 /* Do not Py_DECREF — borrowed */
             }
             PyObject *lc = PyObject_GetAttrString(bytecode, "local_count");
@@ -1742,12 +1748,14 @@ MenaiFunction_clear(PyObject *self)
     Py_CLEAR(f->bytecode);
     /* All of these are borrowed from bytecode — NULL them together so they
      * never dangle after bytecode is cleared. */
-    f->instrs         = NULL;
-    f->instrs_obj     = NULL;
-    f->constants      = NULL;
-    f->names          = NULL;
+    f->instrs = NULL;
+    f->instrs_obj = NULL;
+    f->constants = NULL;
+    f->constants_items = NULL;
+    f->names = NULL;
+    f->names_items = NULL;
     f->closure_caches = NULL;
-    f->code_len       = 0;
+    f->code_len = 0;
     Py_CLEAR(f->captured_values);
     return 0;
 }

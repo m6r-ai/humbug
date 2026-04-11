@@ -2,6 +2,10 @@
 
 ## v43 (2026-04-xx)
 
+New features:
+
+- Improved performance across the Menai VM.
+
 ## v42 (2026-04-10)
 
 New features:

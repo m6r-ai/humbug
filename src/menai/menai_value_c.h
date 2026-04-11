@@ -89,17 +89,24 @@ typedef struct {
     PyObject *captured_values; /* Python list of MenaiValue* */
     int       is_variadic;     /* C int: 0 or 1 */
     int       param_count;     /* C int: number of fixed parameters */
-    /* Frame setup cache — populated once in MenaiFunction_new when bytecode
-     * is not None.  Eliminates all PyObject_GetAttrString calls from the
-     * hot call_setup / frame_setup path.
+    /* Frame setup cache — populated once in MenaiFunction_new / menai_function_alloc
+     * when bytecode is not None.  Eliminates all PyObject_GetAttrString calls
+     * from the hot call_setup / frame_setup path.
      *
      * instrs_obj is a borrowed reference: bytecode (owned by this struct)
      * owns the array.array, so instrs_obj lives at least as long as we do.
-     * constants, names, and closure_caches are likewise borrowed from bytecode. */
+     * constants, names, and closure_caches are likewise borrowed from bytecode.
+     *
+     * constants_items and names_items are raw pointers into the internal
+     * ob_item arrays of the constants and names Python lists respectively.
+     * They are valid for as long as constants/names are alive (i.e. for the
+     * lifetime of this function object). */
     uint64_t *instrs;          /* raw pointer into bytecode.instructions buffer */
     PyObject *instrs_obj;      /* array.array — borrowed ref, keeps buffer valid */
     PyObject *constants;       /* borrowed ref to bytecode.constants list */
+    PyObject **constants_items; /* raw pointer into constants ob_item array */
     PyObject *names;           /* borrowed ref to bytecode.names list */
+    PyObject **names_items;    /* raw pointer into names ob_item array */
     PyObject *closure_caches;  /* borrowed ref to bytecode._code_caches list, or NULL */
     int       code_len;        /* number of instructions */
     int       local_count;     /* number of local variable slots */
