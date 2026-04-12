@@ -26,25 +26,23 @@ static PyObject *_MenaiEvalError = NULL;
 static MenaiString_Object *
 _menai_string_alloc(Py_ssize_t len)
 {
-    /* tp_basicsize covers the header fields; tp_itemsize = sizeof(uint32_t)
+    /*
+     * tp_basicsize covers the header fields; tp_itemsize = sizeof(uint32_t)
      * covers each codepoint slot.  PyObject_NewVar uses these to compute the
-     * total allocation size: basicsize + len * itemsize. */
-    MenaiString_Object *obj = PyObject_NewVar(
-        MenaiString_Object, &MenaiString_Type, len);
-    if (obj == NULL)
-        return NULL;
+     * total allocation size: basicsize + len * itemsize.
+     */
+    MenaiString_Object *obj = PyObject_NewVar(MenaiString_Object, &MenaiString_Type, len);
+    if (obj == NULL) return NULL;
+
     obj->hash = -1;
     return obj;
 }
 
-/* ---------------------------------------------------------------------------
- * UTF-8 decoder
- *
- * Decodes a UTF-8 byte sequence into a freshly allocated uint32_t array.
+/*
+ * Decode a UTF-8 byte sequence into a freshly allocated uint32_t array.
  * Returns the codepoint count via *out_len.  The caller owns the array and
  * must PyMem_Free it.  Returns NULL on MemoryError or encoding error.
- * ------------------------------------------------------------------------- */
-
+ */
 static uint32_t *
 _utf8_decode(const char *utf8, Py_ssize_t nbytes, Py_ssize_t *out_len)
 {
@@ -63,8 +61,7 @@ _utf8_decode(const char *utf8, Py_ssize_t nbytes, Py_ssize_t *out_len)
             if (p + 3 > end || (p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80) goto bad_utf8;
             p += 3;
         } else if ((b & 0xF8) == 0xF0) {
-            if (p + 4 > end || (p[1] & 0xC0) != 0x80 ||
-                (p[2] & 0xC0) != 0x80 || (p[3] & 0xC0) != 0x80) goto bad_utf8;
+            if (p + 4 > end || (p[1] & 0xC0) != 0x80 || (p[2] & 0xC0) != 0x80 || (p[3] & 0xC0) != 0x80) goto bad_utf8;
             p += 4;
         } else {
             goto bad_utf8;
@@ -92,8 +89,7 @@ _utf8_decode(const char *utf8, Py_ssize_t nbytes, Py_ssize_t *out_len)
             cp = ((uint32_t)(b & 0x0F) << 12) | ((uint32_t)(p[1] & 0x3F) << 6) | (p[2] & 0x3F);
             p += 3;
         } else {
-            cp = ((uint32_t)(b & 0x07) << 18) | ((uint32_t)(p[1] & 0x3F) << 12) |
-                 ((uint32_t)(p[2] & 0x3F) << 6) | (p[3] & 0x3F);
+            cp = ((uint32_t)(b & 0x07) << 18) | ((uint32_t)(p[1] & 0x3F) << 12) | ((uint32_t)(p[2] & 0x3F) << 6) | (p[3] & 0x3F);
             p += 4;
         }
         buf[i] = cp;
@@ -107,15 +103,12 @@ bad_utf8:
     return NULL;
 }
 
-/* ---------------------------------------------------------------------------
- * UTF-8 encoder
- *
- * Encodes a uint32_t codepoint array into a newly allocated UTF-8 byte
+/*
+ * Encode a uint32_t codepoint array into a newly allocated UTF-8 byte
  * buffer (null-terminated).  Returns the byte count (excluding the null
  * terminator) via *out_nbytes.  The caller owns the buffer and must
  * PyMem_Free it.  Returns NULL on MemoryError.
- * ------------------------------------------------------------------------- */
-
+ */
 static char *
 _utf8_encode(const uint32_t *data, Py_ssize_t len, Py_ssize_t *out_nbytes)
 {
@@ -123,10 +116,10 @@ _utf8_encode(const uint32_t *data, Py_ssize_t len, Py_ssize_t *out_nbytes)
     Py_ssize_t nbytes = 0;
     for (Py_ssize_t i = 0; i < len; i++) {
         uint32_t cp = data[i];
-        if      (cp < 0x80)    nbytes += 1;
-        else if (cp < 0x800)   nbytes += 2;
+        if (cp < 0x80) nbytes += 1;
+        else if (cp < 0x800) nbytes += 2;
         else if (cp < 0x10000) nbytes += 3;
-        else                   nbytes += 4;
+        else nbytes += 4;
     }
 
     char *buf = (char *)PyMem_Malloc(nbytes + 1);
@@ -161,10 +154,6 @@ _utf8_encode(const uint32_t *data, Py_ssize_t len, Py_ssize_t *out_nbytes)
     return buf;
 }
 
-/* ---------------------------------------------------------------------------
- * Construction
- * ------------------------------------------------------------------------- */
-
 PyObject *
 menai_string_from_utf8(const char *utf8, Py_ssize_t nbytes)
 {
@@ -187,8 +176,7 @@ menai_string_from_codepoints(const uint32_t *cp, Py_ssize_t len)
 {
     MenaiString_Object *obj = _menai_string_alloc(len);
     if (!obj) return NULL;
-    if (len > 0)
-        memcpy(obj->data, cp, len * sizeof(uint32_t));
+    if (len > 0) memcpy(obj->data, cp, len * sizeof(uint32_t));
     return (PyObject *)obj;
 }
 
@@ -210,10 +198,6 @@ menai_string_from_pyunicode(PyObject *pystr)
     return menai_string_from_utf8(utf8, nbytes);
 }
 
-/* ---------------------------------------------------------------------------
- * Conversion out
- * ------------------------------------------------------------------------- */
-
 PyObject *
 menai_string_to_pyunicode(PyObject *s)
 {
@@ -226,10 +210,6 @@ menai_string_to_pyunicode(PyObject *s)
     return result;
 }
 
-/* ---------------------------------------------------------------------------
- * Comparison and hashing
- * ------------------------------------------------------------------------- */
-
 int
 menai_string_compare(PyObject *a, PyObject *b)
 {
@@ -239,10 +219,10 @@ menai_string_compare(PyObject *a, PyObject *b)
     Py_ssize_t min_len = la < lb ? la : lb;
     for (Py_ssize_t i = 0; i < min_len; i++) {
         if (ma->data[i] < mb->data[i]) return -1;
-        if (ma->data[i] > mb->data[i]) return  1;
+        if (ma->data[i] > mb->data[i]) return 1;
     }
     if (la < lb) return -1;
-    if (la > lb) return  1;
+    if (la > lb) return 1;
     return 0;
 }
 
@@ -260,8 +240,7 @@ Py_hash_t
 menai_string_hash(PyObject *s)
 {
     MenaiString_Object *ms = (MenaiString_Object *)s;
-    if (ms->hash != -1)
-        return ms->hash;
+    if (ms->hash != -1) return ms->hash;
 
     /* FNV-1a over the codepoint bytes. */
     Py_ssize_t len = Py_SIZE(ms);
@@ -279,17 +258,14 @@ menai_string_hash(PyObject *s)
     return result;
 }
 
-/* ---------------------------------------------------------------------------
- * String operations
- * ------------------------------------------------------------------------- */
-
 PyObject *
 menai_string_concat(PyObject *a, PyObject *b)
 {
-    Py_ssize_t la = Py_SIZE(a), lb = Py_SIZE(b);
+    Py_ssize_t la = Py_SIZE(a);
+    Py_ssize_t lb = Py_SIZE(b);
     MenaiString_Object *obj = _menai_string_alloc(la + lb);
     if (!obj) return NULL;
-    if (la > 0) memcpy(obj->data,      ((MenaiString_Object *)a)->data, (size_t)la * sizeof(uint32_t));
+    if (la > 0) memcpy(obj->data, ((MenaiString_Object *)a)->data, (size_t)la * sizeof(uint32_t));
     if (lb > 0) memcpy(obj->data + la, ((MenaiString_Object *)b)->data, (size_t)lb * sizeof(uint32_t));
     return (PyObject *)obj;
 }
@@ -303,8 +279,7 @@ menai_string_ref(PyObject *s, Py_ssize_t i)
 PyObject *
 menai_string_slice(PyObject *s, Py_ssize_t start, Py_ssize_t end)
 {
-    return menai_string_from_codepoints(
-        ((MenaiString_Object *)s)->data + start, end - start);
+    return menai_string_from_codepoints(((MenaiString_Object *)s)->data + start, end - start);
 }
 
 PyObject *
@@ -319,8 +294,7 @@ menai_string_upcase(PyObject *s)
         const MenaiUpcaseExpansion *exp = unicode_upcase_expansion(ms->data[i]);
         if (exp) {
             /* Count non-zero slots in the expansion. */
-            for (int j = 0; j < 3 && exp->expansion[j]; j++)
-                out_len++;
+            for (int j = 0; j < 3 && exp->expansion[j]; j++) out_len++;
         } else {
             out_len++;
         }
@@ -334,8 +308,7 @@ menai_string_upcase(PyObject *s)
     for (Py_ssize_t i = 0; i < len; i++) {
         const MenaiUpcaseExpansion *exp = unicode_upcase_expansion(ms->data[i]);
         if (exp) {
-            for (int j = 0; j < 3 && exp->expansion[j]; j++)
-                obj->data[k++] = exp->expansion[j];
+            for (int j = 0; j < 3 && exp->expansion[j]; j++) obj->data[k++] = exp->expansion[j];
         } else {
             obj->data[k++] = unicode_simple_upcase(ms->data[i]);
         }
@@ -350,8 +323,7 @@ menai_string_downcase(PyObject *s)
     Py_ssize_t len = Py_SIZE(ms);
     MenaiString_Object *obj = _menai_string_alloc(len);
     if (!obj) return NULL;
-    for (Py_ssize_t i = 0; i < len; i++)
-        obj->data[i] = unicode_simple_downcase(ms->data[i]);
+    for (Py_ssize_t i = 0; i < len; i++) obj->data[i] = unicode_simple_downcase(ms->data[i]);
     return (PyObject *)obj;
 }
 
@@ -361,8 +333,7 @@ menai_string_trim_left(PyObject *s)
     MenaiString_Object *ms = (MenaiString_Object *)s;
     Py_ssize_t len = Py_SIZE(ms);
     Py_ssize_t start = 0;
-    while (start < len && unicode_is_whitespace(ms->data[start]))
-        start++;
+    while (start < len && unicode_is_whitespace(ms->data[start])) start++;
     return menai_string_from_codepoints(ms->data + start, len - start);
 }
 
@@ -371,8 +342,7 @@ menai_string_trim_right(PyObject *s)
 {
     MenaiString_Object *ms = (MenaiString_Object *)s;
     Py_ssize_t end = Py_SIZE(ms);
-    while (end > 0 && unicode_is_whitespace(ms->data[end - 1]))
-        end--;
+    while (end > 0 && unicode_is_whitespace(ms->data[end - 1])) end--;
     return menai_string_from_codepoints(ms->data, end);
 }
 
@@ -382,10 +352,8 @@ menai_string_trim(PyObject *s)
     MenaiString_Object *ms = (MenaiString_Object *)s;
     Py_ssize_t len = Py_SIZE(ms);
     Py_ssize_t start = 0, end = len;
-    while (start < end && unicode_is_whitespace(ms->data[start]))
-        start++;
-    while (end > start && unicode_is_whitespace(ms->data[end - 1]))
-        end--;
+    while (start < end && unicode_is_whitespace(ms->data[start])) start++;
+    while (end > start && unicode_is_whitespace(ms->data[end - 1])) end--;
     return menai_string_from_codepoints(ms->data + start, end - start);
 }
 
@@ -402,8 +370,7 @@ menai_string_find(PyObject *haystack, PyObject *needle)
     /* Naive search — adequate for typical Menai string sizes. */
     Py_ssize_t limit = hlen - nlen;
     for (Py_ssize_t i = 0; i <= limit; i++) {
-        if (memcmp(mh->data + i, mn->data, (size_t)nlen * sizeof(uint32_t)) == 0)
-            return i;
+        if (memcmp(mh->data + i, mn->data, (size_t)nlen * sizeof(uint32_t)) == 0) return i;
     }
     return -1;
 }
@@ -425,23 +392,24 @@ menai_string_has_suffix(PyObject *s, PyObject *suffix)
     MenaiString_Object *msu = (MenaiString_Object *)suffix;
     Py_ssize_t slen = Py_SIZE(ms), sulen = Py_SIZE(msu);
     if (sulen > slen) return 0;
-    return memcmp(ms->data + (slen - sulen), msu->data,
-                  (size_t)sulen * sizeof(uint32_t)) == 0;
+    return memcmp(ms->data + (slen - sulen), msu->data, (size_t)sulen * sizeof(uint32_t)) == 0;
 }
 
 PyObject *
 menai_string_replace(PyObject *s, PyObject *from, PyObject *to)
 {
-    MenaiString_Object *ms   = (MenaiString_Object *)s;
-    MenaiString_Object *mfr  = (MenaiString_Object *)from;
-    MenaiString_Object *mto  = (MenaiString_Object *)to;
-    Py_ssize_t slen  = Py_SIZE(ms);
+    MenaiString_Object *ms = (MenaiString_Object *)s;
+    MenaiString_Object *mfr = (MenaiString_Object *)from;
+    MenaiString_Object *mto = (MenaiString_Object *)to;
+    Py_ssize_t slen = Py_SIZE(ms);
     Py_ssize_t frlen = Py_SIZE(mfr);
     Py_ssize_t tolen = Py_SIZE(mto);
 
     if (frlen == 0) {
-        /* Empty pattern: insert `to` before every codepoint and after the last.
-         * "hello".replace("", "X") -> "XhXeXlXlXoX"  (slen+1 insertions) */
+        /*
+         * Empty pattern: insert `to` before every codepoint and after the last.
+         * "hello".replace("", "X") -> "XhXeXlXlXoX"  (slen+1 insertions)
+         */
         Py_ssize_t out_len = slen + (slen + 1) * tolen;
         MenaiString_Object *obj = _menai_string_alloc(out_len);
         if (!obj) return NULL;
@@ -451,8 +419,7 @@ menai_string_replace(PyObject *s, PyObject *from, PyObject *to)
                 memcpy(obj->data + dst, mto->data, (size_t)tolen * sizeof(uint32_t));
                 dst += tolen;
             }
-            if (i < slen)
-                obj->data[dst++] = ms->data[i];
+            if (i < slen) obj->data[dst++] = ms->data[i];
         }
         return (PyObject *)obj;
     }
@@ -486,8 +453,7 @@ menai_string_replace(PyObject *s, PyObject *from, PyObject *to)
     Py_ssize_t src = 0, dst = 0;
     while (src <= slen - frlen) {
         if (memcmp(ms->data + src, mfr->data, (size_t)frlen * sizeof(uint32_t)) == 0) {
-            if (tolen > 0)
-                memcpy(obj->data + dst, mto->data, (size_t)tolen * sizeof(uint32_t));
+            if (tolen > 0) memcpy(obj->data + dst, mto->data, (size_t)tolen * sizeof(uint32_t));
             dst += tolen;
             src += frlen;
         } else {
@@ -500,10 +466,6 @@ menai_string_replace(PyObject *s, PyObject *from, PyObject *to)
 
     return (PyObject *)obj;
 }
-
-/* ---------------------------------------------------------------------------
- * PyTypeObject slots
- * ------------------------------------------------------------------------- */
 
 static void
 MenaiString_dealloc(PyObject *self)
@@ -565,33 +527,53 @@ MenaiString_describe(PyObject *self, PyObject *args)
     for (Py_ssize_t i = 0; i < len; i++) {
         uint32_t cp = ms->data[i];
         switch (cp) {
-            case '"':  *p++ = '\\'; *p++ = '"';  break;
-            case '\\': *p++ = '\\'; *p++ = '\\'; break;
-            case '\n': *p++ = '\\'; *p++ = 'n';  break;
-            case '\r': *p++ = '\\'; *p++ = 'r';  break;
-            case '\t': *p++ = '\\'; *p++ = 't';  break;
-            default:
-                if (cp < 0x20 || (cp >= 0x7F && cp <= 0xFF)) {
-                    p += sprintf(p, "\\u%04X", (unsigned)cp);
+        case '"':
+            *p++ = '\\';
+            *p++ = '"';
+            break;
+
+        case '\\':
+            *p++ = '\\';
+            *p++ = '\\';
+            break;
+
+        case '\n':
+            *p++ = '\\';
+            *p++ = 'n';
+            break;
+
+        case '\r':
+            *p++ = '\\';
+            *p++ = 'r';
+            break;
+
+        case '\t':
+            *p++ = '\\';
+            *p++ = 't';
+            break;
+
+        default:
+            if (cp < 0x20 || (cp >= 0x7F && cp <= 0xFF)) {
+                p += sprintf(p, "\\u%04X", (unsigned)cp);
+            } else {
+                /* Encode as UTF-8 inline. */
+                if (cp < 0x80) {
+                    *p++ = (char)cp;
+                } else if (cp < 0x800) {
+                    *p++ = (char)(0xC0 | (cp >> 6));
+                    *p++ = (char)(0x80 | (cp & 0x3F));
+                } else if (cp < 0x10000) {
+                    *p++ = (char)(0xE0 | (cp >> 12));
+                    *p++ = (char)(0x80 | ((cp >> 6) & 0x3F));
+                    *p++ = (char)(0x80 | (cp & 0x3F));
                 } else {
-                    /* Encode as UTF-8 inline. */
-                    if (cp < 0x80) {
-                        *p++ = (char)cp;
-                    } else if (cp < 0x800) {
-                        *p++ = (char)(0xC0 | (cp >> 6));
-                        *p++ = (char)(0x80 | (cp & 0x3F));
-                    } else if (cp < 0x10000) {
-                        *p++ = (char)(0xE0 | (cp >> 12));
-                        *p++ = (char)(0x80 | ((cp >> 6) & 0x3F));
-                        *p++ = (char)(0x80 | (cp & 0x3F));
-                    } else {
-                        *p++ = (char)(0xF0 | (cp >> 18));
-                        *p++ = (char)(0x80 | ((cp >> 12) & 0x3F));
-                        *p++ = (char)(0x80 | ((cp >> 6) & 0x3F));
-                        *p++ = (char)(0x80 | (cp & 0x3F));
-                    }
+                    *p++ = (char)(0xF0 | (cp >> 18));
+                    *p++ = (char)(0x80 | ((cp >> 12) & 0x3F));
+                    *p++ = (char)(0x80 | ((cp >> 6) & 0x3F));
+                    *p++ = (char)(0x80 | (cp & 0x3F));
                 }
-                break;
+            }
+            break;
         }
     }
     *p++ = '"';
@@ -616,26 +598,22 @@ static PyGetSetDef MenaiString_getset[] = {
 
 static PyMethodDef MenaiString_methods[] = {
     {"type_name", MenaiString_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiString_describe,  METH_NOARGS, NULL},
+    {"describe",  MenaiString_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 PyTypeObject MenaiString_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "menai.menai_vm_c.MenaiString",
+    .tp_name = "menai.menai_vm_c.MenaiString",
     .tp_basicsize = sizeof(MenaiString_Object),
-    .tp_itemsize  = sizeof(uint32_t),
-    .tp_flags     = Py_TPFLAGS_DEFAULT,
-    .tp_dealloc   = MenaiString_dealloc,
-    .tp_methods   = MenaiString_methods,
-    .tp_getset    = MenaiString_getset,
+    .tp_itemsize = sizeof(uint32_t),
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_dealloc = MenaiString_dealloc,
+    .tp_methods = MenaiString_methods,
+    .tp_getset = MenaiString_getset,
     .tp_richcompare = MenaiString_richcompare,
-    .tp_hash      = MenaiString_hash,
+    .tp_hash = MenaiString_hash,
 };
-
-/* ---------------------------------------------------------------------------
- * Module init
- * ------------------------------------------------------------------------- */
 
 int
 menai_vm_string_init(PyObject *eval_error_type)
