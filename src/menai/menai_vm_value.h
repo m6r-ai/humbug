@@ -26,10 +26,12 @@
 #include "menai_vm_none.h"
 #include "menai_vm_string.h"
 #include "menai_vm_set.h"
+#include "menai_vm_struct.h"
 #include "menai_vm_symbol.h"
 
 /* ---------------------------------------------------------------------------
- * Collection types (MenaiList is in menai_vm_list.h, MenaiSet is in menai_vm_set.h)
+ * Collection types (MenaiList is in menai_vm_list.h, MenaiSet is in menai_vm_set.h,
+ *                   MenaiStructType and MenaiStruct are in menai_vm_struct.h)
  * ------------------------------------------------------------------------- */
 
 typedef struct {
@@ -40,30 +42,10 @@ typedef struct {
 } MenaiDict_Object;
 
 /* ---------------------------------------------------------------------------
- * Struct types
- * ------------------------------------------------------------------------- */
-
-typedef struct {
-    PyObject_HEAD
-    PyObject *name;         /* Python str */
-    int tag;                /* unique integer tag */
-    PyObject *field_names;  /* Python tuple of str */
-    PyObject *_field_index; /* Python dict: str -> int */
-} MenaiStructType_Object;
-
-typedef struct {
-    PyObject_HEAD
-    PyObject *struct_type;  /* MenaiStructType_Object* */
-    PyObject *fields;       /* Python tuple of MenaiValue* */
-} MenaiStruct_Object;
-
-/* ---------------------------------------------------------------------------
  * MenaiStruct C-level constructor — defined in menai_value_c.c.
  * struct_type is borrowed (INCREF'd internally); fields_tup is stolen.
  * Returns a new reference, or NULL on error.
  * ------------------------------------------------------------------------- */
-
-PyObject *menai_struct_alloc(PyObject *struct_type, PyObject *fields_tup);
 
 /* ---------------------------------------------------------------------------
  * menai_hashable_key — convert a MenaiValue key to a hashable Python tuple.
