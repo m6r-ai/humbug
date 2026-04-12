@@ -22,26 +22,14 @@
 #include "menai_vm_complex.h"
 #include "menai_vm_function.h"
 #include "menai_vm_integer.h"
+#include "menai_vm_list.h"
 #include "menai_vm_none.h"
 #include "menai_vm_string.h"
 #include "menai_vm_symbol.h"
 
 /* ---------------------------------------------------------------------------
- * Types whose payload is a single Python object (MenaiInteger is in menai_vm_integer.h,
- *                                                 MenaiComplex is in menai_vm_complex.h,
- *                                                 MenaiString is in menai_vm_string.h,
- *                                                 MenaiSymbol is in menai_vm_symbol.h)
+ * Collection types (MenaiList is in menai_vm_list.h)
  * ------------------------------------------------------------------------- */
-
-/* ---------------------------------------------------------------------------
- * Collection types
- * ------------------------------------------------------------------------- */
-
-typedef struct {
-    PyObject_HEAD
-    PyObject **elements; /* C array of MenaiValue* */
-    Py_ssize_t length;   /* number of elements */
-} MenaiList_Object;
 
 typedef struct {
     PyObject_HEAD
@@ -76,18 +64,6 @@ typedef struct {
 } MenaiStruct_Object;
 
 /* ---------------------------------------------------------------------------
- * MenaiList C-level constructors — defined in menai_value_c.c.
- *
- * menai_list_from_array:       copy items, INCREF each element
- * menai_list_from_array_steal: take ownership without INCREFing
- * menai_list_from_tuple:       copy from tuple, INCREF each, DECREF tuple
- * ------------------------------------------------------------------------- */
-
-PyObject *menai_list_from_array(PyObject **items, Py_ssize_t n);
-PyObject *menai_list_from_array_steal(PyObject **items, Py_ssize_t n);
-PyObject *menai_list_from_tuple(PyObject *tup);
-
-/* ---------------------------------------------------------------------------
  * MenaiStruct C-level constructor — defined in menai_value_c.c.
  * struct_type is borrowed (INCREF'd internally); fields_tup is stolen.
  * Returns a new reference, or NULL on error.
@@ -102,28 +78,6 @@ PyObject *menai_struct_alloc(PyObject *struct_type, PyObject *fields_tup);
  * ------------------------------------------------------------------------- */
 
 PyObject *menai_hashable_key(PyObject *key);
-
-/* ---------------------------------------------------------------------------
- * MenaiList inline accessors
- * ------------------------------------------------------------------------- */
-
-static inline PyObject *
-menai_list_get(MenaiList_Object *list, Py_ssize_t i)
-{
-    return list->elements[i];
-}
-
-static inline PyObject **
-menai_list_elements(PyObject *list_obj)
-{
-    return ((MenaiList_Object *)list_obj)->elements;
-}
-
-static inline Py_ssize_t
-menai_list_length(PyObject *list_obj)
-{
-    return ((MenaiList_Object *)list_obj)->length;
-}
 
 /* ---------------------------------------------------------------------------
  * Conversion functions — defined in menai_value_c.c, called by the C VM
