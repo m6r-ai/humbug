@@ -19,22 +19,14 @@
 
 #include "menai_vm_float.h"
 #include "menai_vm_boolean.h"
+#include "menai_vm_integer.h"
 #include "menai_vm_none.h"
 #include "menai_vm_string.h"
 
 /* ---------------------------------------------------------------------------
- * Scalar types — fields stored as C primitives (MenaiBoolean is in menai_vm_boolean.h,
- *                                                MenaiFloat is in menai_vm_float.h)
+ * Types whose payload is a single Python object (MenaiInteger is in menai_vm_integer.h,
+ *                                                 MenaiString is in menai_vm_string.h)
  * ------------------------------------------------------------------------- */
-
-/* ---------------------------------------------------------------------------
- * Types whose payload is a single Python object (MenaiString is in menai_vm_string.h)
- * ------------------------------------------------------------------------- */
-
-typedef struct {
-    PyObject_HEAD
-    PyObject *value;    /* Python int (arbitrary precision) */
-} MenaiInteger_Object;
 
 typedef struct {
     PyObject_HEAD

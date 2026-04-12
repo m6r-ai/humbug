@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "menai_vm_float.h"
+#include "menai_vm_integer.h"
 #include "menai_vm_boolean.h"
 #include "menai_vm_none.h"
 #include "menai_vm_string.h"
@@ -35,7 +36,6 @@ static PyTypeObject MenaiList_Type;
  * Forward declarations of type objects
  * ------------------------------------------------------------------------- */
 
-static PyTypeObject MenaiInteger_Type;
 static PyTypeObject MenaiComplex_Type;
 static PyTypeObject MenaiSymbol_Type;
 static PyTypeObject MenaiDict_Type;
@@ -72,98 +72,6 @@ static PyTypeObject *Slow_StructType = NULL;
 
 /* Error type */
 static PyObject *MenaiEvalError_type = NULL;
-
-/* ---------------------------------------------------------------------------
- * MenaiInteger
- * ------------------------------------------------------------------------- */
-
-static PyObject *
-MenaiInteger_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
-{
-    PyObject *value = NULL;
-    static char *kwlist[] = {"value", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &value)) return NULL;
-    if (!PyLong_Check(value)) {
-        PyErr_SetString(PyExc_TypeError, "MenaiInteger requires an int");
-        return NULL;
-    }
-    MenaiInteger_Object *self = (MenaiInteger_Object *)type->tp_alloc(type, 0);
-    if (self) { Py_INCREF(value); self->value = value; }
-    return (PyObject *)self;
-}
-
-static void
-MenaiInteger_dealloc(PyObject *self)
-{
-    Py_XDECREF(((MenaiInteger_Object *)self)->value);
-    Py_TYPE(self)->tp_free(self);
-}
-
-static PyObject *
-MenaiInteger_type_name(PyObject *self, PyObject *args)
-{
-    (void)self; (void)args;
-    return PyUnicode_FromString("integer");
-}
-
-static PyObject *
-MenaiInteger_describe(PyObject *self, PyObject *args)
-{
-    (void)args;
-    return PyObject_Str(((MenaiInteger_Object *)self)->value);
-}
-
-static PyObject *
-MenaiInteger_richcompare(PyObject *self, PyObject *other, int op)
-{
-    if (Py_TYPE(other) != &MenaiInteger_Type) {
-        if (op == Py_EQ) Py_RETURN_FALSE;
-        if (op == Py_NE) Py_RETURN_TRUE;
-        Py_RETURN_NOTIMPLEMENTED;
-    }
-    return PyObject_RichCompare(
-        ((MenaiInteger_Object *)self)->value,
-        ((MenaiInteger_Object *)other)->value, op);
-}
-
-static Py_hash_t
-MenaiInteger_hash(PyObject *self)
-{
-    return PyObject_Hash(((MenaiInteger_Object *)self)->value);
-}
-
-static PyObject *
-MenaiInteger_get_value(PyObject *self, void *closure)
-{
-    (void)closure;
-    PyObject *v = ((MenaiInteger_Object *)self)->value;
-    Py_INCREF(v);
-    return v;
-}
-
-static PyGetSetDef MenaiInteger_getset[] = {
-    {"value", MenaiInteger_get_value, NULL, NULL, NULL},
-    {NULL, NULL, NULL, NULL, NULL}
-};
-
-static PyMethodDef MenaiInteger_methods[] = {
-    {"type_name", MenaiInteger_type_name, METH_NOARGS, NULL},
-    {"describe", MenaiInteger_describe, METH_NOARGS, NULL},
-    {NULL, NULL, 0, NULL}
-};
-
-static PyTypeObject MenaiInteger_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "menai.menai_vm_value.MenaiInteger",
-    .tp_basicsize = sizeof(MenaiInteger_Object),
-    .tp_flags = Py_TPFLAGS_DEFAULT,
-    .tp_new = MenaiInteger_new,
-    .tp_dealloc = MenaiInteger_dealloc,
-    .tp_methods = MenaiInteger_methods,
-    .tp_getset = MenaiInteger_getset,
-    .tp_richcompare = MenaiInteger_richcompare,
-    .tp_hash = MenaiInteger_hash,
-};
 
 /* ---------------------------------------------------------------------------
  * MenaiComplex
@@ -1930,12 +1838,10 @@ menai_convert_value(PyObject *src)
     if (t == Slow_IntegerType) {
         PyObject *v = PyObject_GetAttrString(src, "value");
         if (!v) return NULL;
-        PyObject *args = PyTuple_Pack(1, v);
-        Py_DECREF(v);
-        if (!args) return NULL;
-        PyObject *r = MenaiInteger_new(&MenaiInteger_Type, args, NULL);
-        Py_DECREF(args);
-        return r;
+        if (!PyLong_Check(v)) { Py_DECREF(v); PyErr_SetString(PyExc_TypeError, "MenaiInteger requires an int"); return NULL; }
+        MenaiInteger_Object *r = (MenaiInteger_Object *)MenaiInteger_Type.tp_alloc(&MenaiInteger_Type, 0);
+        if (r) { r->value = v; } else { Py_DECREF(v); }
+        return (PyObject *)r;
     }
 
     if (t == Slow_FloatType) {
@@ -2855,9 +2761,11 @@ _menai_vm_value_init(void)
     if (menai_vm_float_init() < 0)
         return NULL;
 
+    if (menai_vm_integer_init() < 0)
+        return NULL;
+
     /* Ready all types */
     PyTypeObject *types[] = {
-        &MenaiInteger_Type,
         &MenaiComplex_Type, &MenaiString_Type,  /* extern from menai_vm_string.c */
         &MenaiSymbol_Type, &MenaiList_Type, &MenaiDict_Type,
         &MenaiSet_Type, &MenaiFunction_Type, &MenaiStructType_Type,
@@ -2895,9 +2803,16 @@ _menai_vm_value_init(void)
         return NULL;
     }
 
+    /* Add MenaiInteger type — readied by menai_vm_integer_init() */
+    Py_INCREF(&MenaiInteger_Type);
+    if (PyModule_AddObject(module, "MenaiInteger", (PyObject *)&MenaiInteger_Type) < 0) {
+        Py_DECREF(&MenaiInteger_Type);
+        Py_DECREF(module);
+        return NULL;
+    }
+
     /* Add types */
     const char *type_names[] = {
-        "MenaiInteger",
         "MenaiComplex", "MenaiString", "MenaiSymbol", "MenaiList",
         "MenaiDict", "MenaiSet", "MenaiFunction", "MenaiStructType",
         "MenaiStruct"

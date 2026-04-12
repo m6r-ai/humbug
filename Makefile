@@ -31,6 +31,8 @@ C_SOURCES := \
 	src/menai/menai_vm_string_tables.h \
 	src/menai/menai_vm_float.c \
 	src/menai/menai_vm_float.h \
+	src/menai/menai_vm_integer.c \
+	src/menai/menai_vm_integer.h \
 	src/menai/menai_vm_boolean.c \
 	src/menai/menai_vm_boolean.h \
 	src/menai/menai_vm_value.c \

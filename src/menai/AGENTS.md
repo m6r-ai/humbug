@@ -146,3 +146,31 @@ For multi-line comments the open and close go on their own lines:
  * Where we have more than one line of text.
  */
 ```
+
+Do NOT use excess whitespace to line up things on adjacent lines.  E.g. never do:
+
+```c
+int x_with_long_name = 0;
+iny y                = 1;
+```
+
+Instead do:
+
+```c
+int x_with_long_name = 0;
+int y = 1;
+```
+
+Do NOT put code on the same line after an opening brace.  E.g. never do:
+
+```c
+if (foo) { something(); }
+```
+
+Instead do:
+
+```c
+if (foo) {
+    something();
+}
+```
