@@ -29,6 +29,8 @@ C_SOURCES := \
 	src/menai/menai_vm_string.c \
 	src/menai/menai_vm_string.h \
 	src/menai/menai_vm_string_tables.h \
+	src/menai/menai_vm_boolean.c \
+	src/menai/menai_vm_boolean.h \
 	src/menai/menai_vm_value.c \
 	src/menai/menai_vm_value.h \
 	src/menai/menai_vm_none.c \

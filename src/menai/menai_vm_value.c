@@ -22,6 +22,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "menai_vm_boolean.h"
 #include "menai_vm_none.h"
 #include "menai_vm_string.h"
 /* Forward-declare MenaiList_Type so the cache functions can reference it
@@ -33,7 +34,6 @@ static PyTypeObject MenaiList_Type;
  * Forward declarations of type objects
  * ------------------------------------------------------------------------- */
 
-static PyTypeObject MenaiBoolean_Type;
 static PyTypeObject MenaiInteger_Type;
 static PyTypeObject MenaiFloat_Type;
 static PyTypeObject MenaiComplex_Type;
@@ -48,8 +48,6 @@ static PyTypeObject MenaiStruct_Type;
  * Module-level singletons
  * ------------------------------------------------------------------------- */
 
-static PyObject *_Menai_TRUE = NULL;
-static PyObject *_Menai_FALSE = NULL;
 static PyObject *_Menai_EMPTY_LIST = NULL;
 static PyObject *_Menai_EMPTY_DICT = NULL;
 static PyObject *_Menai_EMPTY_SET = NULL;
@@ -74,88 +72,6 @@ static PyTypeObject *Slow_StructType = NULL;
 
 /* Error type */
 static PyObject *MenaiEvalError_type = NULL;
-
-/* ---------------------------------------------------------------------------
- * MenaiBoolean
- * ------------------------------------------------------------------------- */
-
-static PyObject *
-MenaiBoolean_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
-{
-    int value = 0;
-    static char *kwlist[] = {"value", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "p", kwlist, &value)) return NULL;
-    MenaiBoolean_Object *self = (MenaiBoolean_Object *)type->tp_alloc(type, 0);
-    if (self) self->value = value;
-    return (PyObject *)self;
-}
-
-static PyObject *
-MenaiBoolean_type_name(PyObject *self, PyObject *args)
-{
-    (void)self; (void)args;
-    return PyUnicode_FromString("boolean");
-}
-
-static PyObject *
-MenaiBoolean_describe(PyObject *self, PyObject *args)
-{
-    (void)args;
-    return PyUnicode_FromString(((MenaiBoolean_Object *)self)->value ? "#t" : "#f");
-}
-
-static PyObject *
-MenaiBoolean_richcompare(PyObject *self, PyObject *other, int op)
-{
-    if (Py_TYPE(other) != &MenaiBoolean_Type) {
-        if (op == Py_EQ) Py_RETURN_FALSE;
-        if (op == Py_NE) Py_RETURN_TRUE;
-        Py_RETURN_NOTIMPLEMENTED;
-    }
-    int a = ((MenaiBoolean_Object *)self)->value;
-    int b = ((MenaiBoolean_Object *)other)->value;
-    switch (op) {
-        case Py_EQ: return PyBool_FromLong(a == b);
-        case Py_NE: return PyBool_FromLong(a != b);
-        default: Py_RETURN_NOTIMPLEMENTED;
-    }
-}
-
-static Py_hash_t
-MenaiBoolean_hash(PyObject *self)
-{
-    return PyObject_Hash(((MenaiBoolean_Object *)self)->value ? Py_True : Py_False);
-}
-
-static PyObject *
-MenaiBoolean_get_value(PyObject *self, void *closure)
-{
-    (void)closure;
-    return PyBool_FromLong(((MenaiBoolean_Object *)self)->value);
-}
-
-static PyGetSetDef MenaiBoolean_getset[] = {
-    {"value", MenaiBoolean_get_value, NULL, NULL, NULL},
-    {NULL, NULL, NULL, NULL, NULL}
-};
-
-static PyMethodDef MenaiBoolean_methods[] = {
-    {"type_name", MenaiBoolean_type_name, METH_NOARGS, NULL},
-    {"describe", MenaiBoolean_describe, METH_NOARGS, NULL},
-    {NULL, NULL, 0, NULL}
-};
-
-static PyTypeObject MenaiBoolean_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "menai.menai_vm_value.MenaiBoolean",
-    .tp_basicsize = sizeof(MenaiBoolean_Object),
-    .tp_flags = Py_TPFLAGS_DEFAULT,
-    .tp_new = MenaiBoolean_new,
-    .tp_methods = MenaiBoolean_methods,
-    .tp_getset = MenaiBoolean_getset,
-    .tp_richcompare = MenaiBoolean_richcompare,
-    .tp_hash = MenaiBoolean_hash,
-};
 
 /* ---------------------------------------------------------------------------
  * MenaiInteger
@@ -2100,7 +2016,7 @@ menai_convert_value(PyObject *src)
         int b = PyObject_IsTrue(bv);
         Py_DECREF(bv);
         if (b < 0) return NULL;
-        PyObject *r = b ? _Menai_TRUE : _Menai_FALSE;
+        PyObject *r = b ? menai_boolean_true() : menai_boolean_false();
         Py_INCREF(r);
         return r;
     }
@@ -3027,9 +2943,12 @@ _menai_vm_value_init(void)
     if (menai_vm_none_init() < 0)
         return NULL;
 
+    if (menai_vm_boolean_init() < 0)
+        return NULL;
+
     /* Ready all types */
     PyTypeObject *types[] = {
-        &MenaiBoolean_Type, &MenaiInteger_Type,
+        &MenaiInteger_Type,
         &MenaiFloat_Type, &MenaiComplex_Type, &MenaiString_Type,  /* extern from menai_vm_string.c */
         &MenaiSymbol_Type, &MenaiList_Type, &MenaiDict_Type,
         &MenaiSet_Type, &MenaiFunction_Type, &MenaiStructType_Type,
@@ -3051,9 +2970,17 @@ _menai_vm_value_init(void)
         return NULL;
     }
 
+    /* Add MenaiBoolean type — readied by menai_vm_boolean_init() */
+    Py_INCREF(&MenaiBoolean_Type);
+    if (PyModule_AddObject(module, "MenaiBoolean", (PyObject *)&MenaiBoolean_Type) < 0) {
+        Py_DECREF(&MenaiBoolean_Type);
+        Py_DECREF(module);
+        return NULL;
+    }
+
     /* Add types */
     const char *type_names[] = {
-        "MenaiBoolean", "MenaiInteger", "MenaiFloat",
+        "MenaiInteger", "MenaiFloat",
         "MenaiComplex", "MenaiString", "MenaiSymbol", "MenaiList",
         "MenaiDict", "MenaiSet", "MenaiFunction", "MenaiStructType",
         "MenaiStruct"
@@ -3068,17 +2995,6 @@ _menai_vm_value_init(void)
     }
 
     /* Create singletons */
-    PyObject *true_args  = Py_BuildValue("(i)", 1);
-    PyObject *false_args = Py_BuildValue("(i)", 0);
-    _Menai_TRUE  = true_args  ? MenaiBoolean_new(&MenaiBoolean_Type, true_args,  NULL) : NULL;
-    _Menai_FALSE = false_args ? MenaiBoolean_new(&MenaiBoolean_Type, false_args, NULL) : NULL;
-    Py_XDECREF(true_args);
-    Py_XDECREF(false_args);
-    if (!_Menai_TRUE || !_Menai_FALSE) {
-        Py_DECREF(module);
-        return NULL;
-    }
-
     PyObject *empty_tup = PyTuple_New(0);
     if (!empty_tup) {
         Py_DECREF(module);
@@ -3102,12 +3018,25 @@ _menai_vm_value_init(void)
         return NULL;
     }
 
+    PyObject *bool_true = menai_boolean_true();
+    Py_INCREF(bool_true);
+    if (PyModule_AddObject(module, "Menai_BOOLEAN_TRUE", bool_true) < 0) {
+        Py_DECREF(bool_true);
+        Py_DECREF(module);
+        return NULL;
+    }
+    PyObject *bool_false = menai_boolean_false();
+    Py_INCREF(bool_false);
+    if (PyModule_AddObject(module, "Menai_BOOLEAN_FALSE", bool_false) < 0) {
+        Py_DECREF(bool_false);
+        Py_DECREF(module);
+        return NULL;
+    }
+
     struct {
         const char *name;
         PyObject **obj;
     } singletons[] = {
-        {"Menai_BOOLEAN_TRUE", &_Menai_TRUE},
-        {"Menai_BOOLEAN_FALSE", &_Menai_FALSE},
         {"Menai_LIST_EMPTY", &_Menai_EMPTY_LIST},
         {"Menai_DICT_EMPTY", &_Menai_EMPTY_DICT},
         {"Menai_SET_EMPTY", &_Menai_EMPTY_SET},

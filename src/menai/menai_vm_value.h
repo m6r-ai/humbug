@@ -17,17 +17,13 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include "menai_vm_boolean.h"
 #include "menai_vm_none.h"
 #include "menai_vm_string.h"
 
 /* ---------------------------------------------------------------------------
- * Scalar types — fields stored as C primitives
+ * Scalar types — fields stored as C primitives (MenaiBoolean is in menai_vm_boolean.h)
  * ------------------------------------------------------------------------- */
-
-typedef struct {
-    PyObject_HEAD
-    int value;          /* boolean: 0 or 1 */
-} MenaiBoolean_Object;
 
 typedef struct {
     PyObject_HEAD
