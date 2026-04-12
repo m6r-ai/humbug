@@ -22,6 +22,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "menai_vm_float.h"
 #include "menai_vm_boolean.h"
 #include "menai_vm_none.h"
 #include "menai_vm_string.h"
@@ -35,7 +36,6 @@ static PyTypeObject MenaiList_Type;
  * ------------------------------------------------------------------------- */
 
 static PyTypeObject MenaiInteger_Type;
-static PyTypeObject MenaiFloat_Type;
 static PyTypeObject MenaiComplex_Type;
 static PyTypeObject MenaiSymbol_Type;
 static PyTypeObject MenaiDict_Type;
@@ -163,100 +163,6 @@ static PyTypeObject MenaiInteger_Type = {
     .tp_getset = MenaiInteger_getset,
     .tp_richcompare = MenaiInteger_richcompare,
     .tp_hash = MenaiInteger_hash,
-};
-
-/* ---------------------------------------------------------------------------
- * MenaiFloat
- * ------------------------------------------------------------------------- */
-
-static PyObject *
-MenaiFloat_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
-{
-    double value = 0.0;
-    static char *kwlist[] = {"value", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "d", kwlist, &value)) return NULL;
-    MenaiFloat_Object *self = (MenaiFloat_Object *)type->tp_alloc(type, 0);
-    if (self) self->value = value;
-    return (PyObject *)self;
-}
-
-static PyObject *
-MenaiFloat_type_name(PyObject *self, PyObject *args)
-{
-    (void)self; (void)args;
-    return PyUnicode_FromString("float");
-}
-
-static PyObject *
-MenaiFloat_describe(PyObject *self, PyObject *args)
-{
-    (void)args;
-    PyObject *pf = PyFloat_FromDouble(((MenaiFloat_Object *)self)->value);
-    if (!pf) return NULL;
-    PyObject *s = PyObject_Str(pf);
-    Py_DECREF(pf);
-    return s;
-}
-
-static PyObject *
-MenaiFloat_richcompare(PyObject *self, PyObject *other, int op)
-{
-    if (Py_TYPE(other) != &MenaiFloat_Type) {
-        if (op == Py_EQ) Py_RETURN_FALSE;
-        if (op == Py_NE) Py_RETURN_TRUE;
-        Py_RETURN_NOTIMPLEMENTED;
-    }
-    double a = ((MenaiFloat_Object *)self)->value;
-    double b = ((MenaiFloat_Object *)other)->value;
-    switch (op) {
-        case Py_EQ: return PyBool_FromLong(a == b);
-        case Py_NE: return PyBool_FromLong(a != b);
-        case Py_LT: return PyBool_FromLong(a < b);
-        case Py_LE: return PyBool_FromLong(a <= b);
-        case Py_GT: return PyBool_FromLong(a > b);
-        case Py_GE: return PyBool_FromLong(a >= b);
-        default: Py_RETURN_NOTIMPLEMENTED;
-    }
-}
-
-static Py_hash_t
-MenaiFloat_hash(PyObject *self)
-{
-    PyObject *pf = PyFloat_FromDouble(((MenaiFloat_Object *)self)->value);
-    if (!pf) return -1;
-    Py_hash_t h = PyObject_Hash(pf);
-    Py_DECREF(pf);
-    return h;
-}
-
-static PyObject *
-MenaiFloat_get_value(PyObject *self, void *closure)
-{
-    (void)closure;
-    return PyFloat_FromDouble(((MenaiFloat_Object *)self)->value);
-}
-
-static PyGetSetDef MenaiFloat_getset[] = {
-    {"value", MenaiFloat_get_value, NULL, NULL, NULL},
-    {NULL, NULL, NULL, NULL, NULL}
-};
-
-static PyMethodDef MenaiFloat_methods[] = {
-    {"type_name", MenaiFloat_type_name, METH_NOARGS, NULL},
-    {"describe", MenaiFloat_describe, METH_NOARGS, NULL},
-    {NULL, NULL, 0, NULL}
-};
-
-static PyTypeObject MenaiFloat_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "menai.menai_vm_value.MenaiFloat",
-    .tp_basicsize = sizeof(MenaiFloat_Object),
-    .tp_flags = Py_TPFLAGS_DEFAULT,
-    .tp_new = MenaiFloat_new,
-    .tp_methods = MenaiFloat_methods,
-    .tp_getset = MenaiFloat_getset,
-    .tp_richcompare = MenaiFloat_richcompare,
-    .tp_hash = MenaiFloat_hash,
 };
 
 /* ---------------------------------------------------------------------------
@@ -2946,10 +2852,13 @@ _menai_vm_value_init(void)
     if (menai_vm_boolean_init() < 0)
         return NULL;
 
+    if (menai_vm_float_init() < 0)
+        return NULL;
+
     /* Ready all types */
     PyTypeObject *types[] = {
         &MenaiInteger_Type,
-        &MenaiFloat_Type, &MenaiComplex_Type, &MenaiString_Type,  /* extern from menai_vm_string.c */
+        &MenaiComplex_Type, &MenaiString_Type,  /* extern from menai_vm_string.c */
         &MenaiSymbol_Type, &MenaiList_Type, &MenaiDict_Type,
         &MenaiSet_Type, &MenaiFunction_Type, &MenaiStructType_Type,
         &MenaiStruct_Type
@@ -2978,9 +2887,17 @@ _menai_vm_value_init(void)
         return NULL;
     }
 
+    /* Add MenaiFloat type — readied by menai_vm_float_init() */
+    Py_INCREF(&MenaiFloat_Type);
+    if (PyModule_AddObject(module, "MenaiFloat", (PyObject *)&MenaiFloat_Type) < 0) {
+        Py_DECREF(&MenaiFloat_Type);
+        Py_DECREF(module);
+        return NULL;
+    }
+
     /* Add types */
     const char *type_names[] = {
-        "MenaiInteger", "MenaiFloat",
+        "MenaiInteger",
         "MenaiComplex", "MenaiString", "MenaiSymbol", "MenaiList",
         "MenaiDict", "MenaiSet", "MenaiFunction", "MenaiStructType",
         "MenaiStruct"

@@ -17,18 +17,15 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include "menai_vm_float.h"
 #include "menai_vm_boolean.h"
 #include "menai_vm_none.h"
 #include "menai_vm_string.h"
 
 /* ---------------------------------------------------------------------------
- * Scalar types — fields stored as C primitives (MenaiBoolean is in menai_vm_boolean.h)
+ * Scalar types — fields stored as C primitives (MenaiBoolean is in menai_vm_boolean.h,
+ *                                                MenaiFloat is in menai_vm_float.h)
  * ------------------------------------------------------------------------- */
-
-typedef struct {
-    PyObject_HEAD
-    double value;       /* float */
-} MenaiFloat_Object;
 
 /* ---------------------------------------------------------------------------
  * Types whose payload is a single Python object (MenaiString is in menai_vm_string.h)
