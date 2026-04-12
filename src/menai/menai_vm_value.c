@@ -24,6 +24,7 @@
 
 #include "menai_vm_float.h"
 #include "menai_vm_function.h"
+#include "menai_vm_symbol.h"
 #include "menai_vm_complex.h"
 #include "menai_vm_integer.h"
 #include "menai_vm_boolean.h"
@@ -38,7 +39,6 @@ static PyTypeObject MenaiList_Type;
  * Forward declarations of type objects
  * ------------------------------------------------------------------------- */
 
-static PyTypeObject MenaiSymbol_Type;
 static PyTypeObject MenaiDict_Type;
 static PyTypeObject MenaiSet_Type;
 static PyTypeObject MenaiStructType_Type;
@@ -72,96 +72,6 @@ static PyTypeObject *Slow_StructType = NULL;
 
 /* Error type */
 static PyObject *MenaiEvalError_type = NULL;
-
-/* ---------------------------------------------------------------------------
- * MenaiSymbol
- * ------------------------------------------------------------------------- */
-
-static PyObject *
-MenaiSymbol_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
-{
-    PyObject *name = NULL;
-    static char *kwlist[] = {"name", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "U", kwlist, &name)) return NULL;
-    MenaiSymbol_Object *self = (MenaiSymbol_Object *)type->tp_alloc(type, 0);
-    if (self) { Py_INCREF(name); self->name = name; }
-    return (PyObject *)self;
-}
-
-static void
-MenaiSymbol_dealloc(PyObject *self)
-{
-    Py_XDECREF(((MenaiSymbol_Object *)self)->name);
-    Py_TYPE(self)->tp_free(self);
-}
-
-static PyObject *
-MenaiSymbol_type_name(PyObject *self, PyObject *args)
-{
-    (void)self; (void)args;
-    return PyUnicode_FromString("symbol");
-}
-
-static PyObject *
-MenaiSymbol_describe(PyObject *self, PyObject *args)
-{
-    (void)args;
-    PyObject *n = ((MenaiSymbol_Object *)self)->name;
-    Py_INCREF(n);
-    return n;
-}
-
-static PyObject *
-MenaiSymbol_richcompare(PyObject *self, PyObject *other, int op)
-{
-    if (Py_TYPE(other) != &MenaiSymbol_Type) {
-        if (op == Py_EQ) Py_RETURN_FALSE;
-        if (op == Py_NE) Py_RETURN_TRUE;
-        Py_RETURN_NOTIMPLEMENTED;
-    }
-    return PyUnicode_RichCompare(
-        ((MenaiSymbol_Object *)self)->name,
-        ((MenaiSymbol_Object *)other)->name, op);
-}
-
-static Py_hash_t
-MenaiSymbol_hash(PyObject *self)
-{
-    return PyObject_Hash(((MenaiSymbol_Object *)self)->name);
-}
-
-static PyObject *
-MenaiSymbol_get_name(PyObject *self, void *closure)
-{
-    (void)closure;
-    PyObject *n = ((MenaiSymbol_Object *)self)->name;
-    Py_INCREF(n);
-    return n;
-}
-
-static PyGetSetDef MenaiSymbol_getset[] = {
-    {"name", MenaiSymbol_get_name, NULL, NULL, NULL},
-    {NULL, NULL, NULL, NULL, NULL}
-};
-
-static PyMethodDef MenaiSymbol_methods[] = {
-    {"type_name", MenaiSymbol_type_name, METH_NOARGS, NULL},
-    {"describe", MenaiSymbol_describe, METH_NOARGS, NULL},
-    {NULL, NULL, 0, NULL}
-};
-
-static PyTypeObject MenaiSymbol_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "menai.menai_vm_value.MenaiSymbol",
-    .tp_basicsize = sizeof(MenaiSymbol_Object),
-    .tp_flags = Py_TPFLAGS_DEFAULT,
-    .tp_new = MenaiSymbol_new,
-    .tp_dealloc = MenaiSymbol_dealloc,
-    .tp_methods = MenaiSymbol_methods,
-    .tp_getset = MenaiSymbol_getset,
-    .tp_richcompare = MenaiSymbol_richcompare,
-    .tp_hash = MenaiSymbol_hash,
-};
 
 /* ---------------------------------------------------------------------------
  * MenaiList
@@ -1422,12 +1332,9 @@ menai_convert_value(PyObject *src)
     if (t == Slow_SymbolType) {
         PyObject *n = PyObject_GetAttrString(src, "name");
         if (!n) return NULL;
-        PyObject *args = PyTuple_Pack(1, n);
-        Py_DECREF(n);
-        if (!args) return NULL;
-        PyObject *r = MenaiSymbol_new(&MenaiSymbol_Type, args, NULL);
-        Py_DECREF(args);
-        return r;
+        MenaiSymbol_Object *r = (MenaiSymbol_Object *)MenaiSymbol_Type.tp_alloc(&MenaiSymbol_Type, 0);
+        if (r) { r->name = n; } else { Py_DECREF(n); }
+        return (PyObject *)r;
     }
 
     if (t == Slow_ListType) {
@@ -2315,10 +2222,13 @@ _menai_vm_value_init(void)
     if (menai_vm_function_init() < 0)
         return NULL;
 
+    if (menai_vm_symbol_init() < 0)
+        return NULL;
+
     /* Ready all types */
     PyTypeObject *types[] = {
         &MenaiString_Type,  /* extern from menai_vm_string.c */
-        &MenaiSymbol_Type, &MenaiList_Type, &MenaiDict_Type,
+        &MenaiList_Type, &MenaiDict_Type,
         &MenaiSet_Type, &MenaiStructType_Type,
         &MenaiStruct_Type
     };
@@ -2378,9 +2288,17 @@ _menai_vm_value_init(void)
         return NULL;
     }
 
+    /* Add MenaiSymbol type — readied by menai_vm_symbol_init() */
+    Py_INCREF(&MenaiSymbol_Type);
+    if (PyModule_AddObject(module, "MenaiSymbol", (PyObject *)&MenaiSymbol_Type) < 0) {
+        Py_DECREF(&MenaiSymbol_Type);
+        Py_DECREF(module);
+        return NULL;
+    }
+
     /* Add types */
     const char *type_names[] = {
-        "MenaiString", "MenaiSymbol", "MenaiList",
+        "MenaiString", "MenaiList",
         "MenaiDict", "MenaiSet", "MenaiStructType",
         "MenaiStruct"
     };

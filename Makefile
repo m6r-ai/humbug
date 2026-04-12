@@ -31,6 +31,8 @@ C_SOURCES := \
 	src/menai/menai_vm_string_tables.h \
 	src/menai/menai_vm_function.c \
 	src/menai/menai_vm_function.h \
+	src/menai/menai_vm_symbol.c \
+	src/menai/menai_vm_symbol.h \
 	src/menai/menai_vm_complex.c \
 	src/menai/menai_vm_complex.h \
 	src/menai/menai_vm_float.c \

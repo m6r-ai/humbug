@@ -24,17 +24,14 @@
 #include "menai_vm_integer.h"
 #include "menai_vm_none.h"
 #include "menai_vm_string.h"
+#include "menai_vm_symbol.h"
 
 /* ---------------------------------------------------------------------------
  * Types whose payload is a single Python object (MenaiInteger is in menai_vm_integer.h,
  *                                                 MenaiComplex is in menai_vm_complex.h,
- *                                                 MenaiString is in menai_vm_string.h)
+ *                                                 MenaiString is in menai_vm_string.h,
+ *                                                 MenaiSymbol is in menai_vm_symbol.h)
  * ------------------------------------------------------------------------- */
-
-typedef struct {
-    PyObject_HEAD
-    PyObject *name;     /* Python str */
-} MenaiSymbol_Object;
 
 /* ---------------------------------------------------------------------------
  * Collection types
