@@ -23,6 +23,7 @@ extensions = [
         sources=[
             "src/menai/menai_vm_c.c",
             "src/menai/menai_vm_string.c",
+            "src/menai/menai_vm_function.c",
             "src/menai/menai_vm_complex.c",
             "src/menai/menai_vm_float.c",
             "src/menai/menai_vm_integer.c",
