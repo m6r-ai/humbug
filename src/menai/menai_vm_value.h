@@ -20,6 +20,7 @@
 #include "menai_vm_float.h"
 #include "menai_vm_boolean.h"
 #include "menai_vm_complex.h"
+#include "menai_vm_dict.h"
 #include "menai_vm_function.h"
 #include "menai_vm_integer.h"
 #include "menai_vm_list.h"
@@ -29,33 +30,14 @@
 #include "menai_vm_struct.h"
 #include "menai_vm_symbol.h"
 
-/* ---------------------------------------------------------------------------
- * Collection types (MenaiList is in menai_vm_list.h, MenaiSet is in menai_vm_set.h,
- *                   MenaiStructType and MenaiStruct are in menai_vm_struct.h)
- * ------------------------------------------------------------------------- */
-
-typedef struct {
-    PyObject_HEAD
-    PyObject *pairs;    /* Python tuple of (key, value) 2-tuples */
-    PyObject *lookup;   /* Python dict: hashable_key -> (key, value) */
-    Py_ssize_t length;  /* number of key-value pairs */
-} MenaiDict_Object;
-
-/* ---------------------------------------------------------------------------
- * MenaiStruct C-level constructor — defined in menai_value_c.c.
- * struct_type is borrowed (INCREF'd internally); fields_tup is stolen.
- * Returns a new reference, or NULL on error.
- * ------------------------------------------------------------------------- */
-
-/* ---------------------------------------------------------------------------
+/*
  * menai_hashable_key — convert a MenaiValue key to a hashable Python tuple.
- * Defined in menai_value_c.c (was static _hashable_key).
+ * Defined in menai_vm_dict.c.
  * Returns a new reference, or NULL on error (MenaiEvalError set).
- * ------------------------------------------------------------------------- */
-
+ */
 PyObject *menai_hashable_key(PyObject *key);
 
-/* ---------------------------------------------------------------------------
+/*
  * Conversion functions — defined in menai_value_c.c, called by the C VM
  *
  * convert_value: translate one slow menai_value.py object to a fast C type.
@@ -66,8 +48,7 @@ PyObject *menai_hashable_key(PyObject *key);
  *
  * to_slow: translate one fast C value back to a slow menai_value.py object.
  *   Returns a new reference, or NULL on error.
- * ------------------------------------------------------------------------- */
-
+ */
 PyObject *menai_convert_value(PyObject *src);
 PyObject *menai_convert_code_object(PyObject *code);
 PyObject *menai_to_slow(PyObject *src);
