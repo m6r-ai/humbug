@@ -21,11 +21,11 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "menai_value_c.h"
+#include "menai_vm_value.h"
 #include "menai_vm_string.h"
 
-/* menai_value_c init — lives in the same .so */
-extern PyObject *_menai_value_c_init(void);
+/* menai_vm_value init — lives in the same .so */
+extern PyObject *_menai_vm_value_init(void);
 
 /*
  * Limits
@@ -644,7 +644,7 @@ fetch_callable(PyObject *module, const char *name, PyObject **dst)
 int
 menai_vm_shim_init(void)
 {
-    PyObject *vc = _menai_value_c_init();
+    PyObject *vc = _menai_vm_value_init();
     if (vc == NULL) return -1;
 
     if (fetch_type(vc, "MenaiNone", &Menai_NoneType) < 0) goto fail;

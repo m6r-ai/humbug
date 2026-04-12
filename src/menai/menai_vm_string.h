@@ -145,7 +145,7 @@ int menai_string_has_suffix(PyObject *s, PyObject *suffix);
 PyObject *menai_string_replace(PyObject *s, PyObject *from, PyObject *to);
 
 /*
- * Module init — called once from menai_value_c._menai_value_c_init().
+ * Module init — called once from menai_vm_value._menai_vm_value_init().
  * eval_error_type is a borrowed reference to MenaiEvalError.
  * Returns 0 on success, -1 on failure (Python exception set).
  */

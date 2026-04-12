@@ -1,5 +1,5 @@
 /*
- * menai_value_c.c — native C implementation of all Menai runtime value types.
+ * menai_vm_value.c — native C implementation of all Menai runtime value types.
  *
  * Replaces menai_value_fast.pyx.  Defines the same types (MenaiNone,
  * MenaiBoolean, MenaiInteger, MenaiFloat, MenaiComplex, MenaiString,
@@ -12,7 +12,7 @@
  *   menai_convert_code_object() — walk CodeObject tree, convert constants
  *   menai_to_slow()             — fast C type -> slow menai_value.py
  *
- * Module name: menai.menai_value_c
+ * Module name: menai.menai_vm_value
  * Exported singletons: Menai_NONE, Menai_BOOLEAN_TRUE, Menai_BOOLEAN_FALSE,
  *                      Menai_LIST_EMPTY, Menai_DICT_EMPTY, Menai_SET_EMPTY
  */
@@ -26,7 +26,7 @@
 /* Forward-declare MenaiList_Type so the cache functions can reference it
  * before the full definition below. */
 static PyTypeObject MenaiList_Type;
-#include "menai_value_c.h"
+#include "menai_vm_value.h"
 
 /* ---------------------------------------------------------------------------
  * Forward declarations of type objects
@@ -48,37 +48,33 @@ static PyTypeObject MenaiStruct_Type;
  * Module-level singletons
  * ------------------------------------------------------------------------- */
 
-static PyObject *_Menai_NONE        = NULL;
-static PyObject *_Menai_TRUE        = NULL;
-static PyObject *_Menai_FALSE       = NULL;
-static PyObject *_Menai_EMPTY_LIST  = NULL;
-static PyObject *_Menai_EMPTY_DICT  = NULL;
-static PyObject *_Menai_EMPTY_SET   = NULL;
+static PyObject *_Menai_NONE = NULL;
+static PyObject *_Menai_TRUE = NULL;
+static PyObject *_Menai_FALSE = NULL;
+static PyObject *_Menai_EMPTY_LIST = NULL;
+static PyObject *_Menai_EMPTY_DICT = NULL;
+static PyObject *_Menai_EMPTY_SET = NULL;
 
 /* ---------------------------------------------------------------------------
  * Slow-world type objects — fetched once at module init
  * ------------------------------------------------------------------------- */
 
-static PyTypeObject *Slow_NoneType       = NULL;
-static PyTypeObject *Slow_BooleanType    = NULL;
-static PyTypeObject *Slow_IntegerType    = NULL;
-static PyTypeObject *Slow_FloatType      = NULL;
-static PyTypeObject *Slow_ComplexType    = NULL;
-static PyTypeObject *Slow_StringType     = NULL;
-static PyTypeObject *Slow_SymbolType     = NULL;
-static PyTypeObject *Slow_ListType       = NULL;
-static PyTypeObject *Slow_DictType       = NULL;
-static PyTypeObject *Slow_SetType        = NULL;
-static PyTypeObject *Slow_FunctionType   = NULL;
+static PyTypeObject *Slow_NoneType = NULL;
+static PyTypeObject *Slow_BooleanType = NULL;
+static PyTypeObject *Slow_IntegerType = NULL;
+static PyTypeObject *Slow_FloatType = NULL;
+static PyTypeObject *Slow_ComplexType = NULL;
+static PyTypeObject *Slow_StringType = NULL;
+static PyTypeObject *Slow_SymbolType = NULL;
+static PyTypeObject *Slow_ListType = NULL;
+static PyTypeObject *Slow_DictType = NULL;
+static PyTypeObject *Slow_SetType = NULL;
+static PyTypeObject *Slow_FunctionType = NULL;
 static PyTypeObject *Slow_StructTypeType = NULL;
-static PyTypeObject *Slow_StructType     = NULL;
+static PyTypeObject *Slow_StructType = NULL;
 
 /* Error type */
 static PyObject *MenaiEvalError_type = NULL;
-
-/* ---------------------------------------------------------------------------
- * Helpers
- * ------------------------------------------------------------------------- */
 
 /* ---------------------------------------------------------------------------
  * MenaiNone
@@ -109,10 +105,8 @@ MenaiNone_describe(PyObject *self, PyObject *args)
 static PyObject *
 MenaiNone_richcompare(PyObject *self, PyObject *other, int op)
 {
-    if (op == Py_EQ)
-        return PyBool_FromLong(Py_TYPE(other) == &MenaiNone_Type);
-    if (op == Py_NE)
-        return PyBool_FromLong(Py_TYPE(other) != &MenaiNone_Type);
+    if (op == Py_EQ) return PyBool_FromLong(Py_TYPE(other) == &MenaiNone_Type);
+    if (op == Py_NE) return PyBool_FromLong(Py_TYPE(other) != &MenaiNone_Type);
     Py_RETURN_NOTIMPLEMENTED;
 }
 
@@ -125,19 +119,19 @@ MenaiNone_hash(PyObject *self)
 
 static PyMethodDef MenaiNone_methods[] = {
     {"type_name", MenaiNone_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiNone_describe,  METH_NOARGS, NULL},
+    {"describe", MenaiNone_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 static PyTypeObject MenaiNone_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "menai.menai_value_c.MenaiNone",
+    .tp_name = "menai.menai_vm_value.MenaiNone",
     .tp_basicsize = sizeof(MenaiNone_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT,
-    .tp_new       = MenaiNone_new,
-    .tp_methods   = MenaiNone_methods,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiNone_new,
+    .tp_methods = MenaiNone_methods,
     .tp_richcompare = MenaiNone_richcompare,
-    .tp_hash      = MenaiNone_hash,
+    .tp_hash = MenaiNone_hash,
 };
 
 /* ---------------------------------------------------------------------------
@@ -149,8 +143,7 @@ MenaiBoolean_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     int value = 0;
     static char *kwlist[] = {"value", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "p", kwlist, &value))
-        return NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "p", kwlist, &value)) return NULL;
     MenaiBoolean_Object *self = (MenaiBoolean_Object *)type->tp_alloc(type, 0);
     if (self) self->value = value;
     return (PyObject *)self;
@@ -183,7 +176,7 @@ MenaiBoolean_richcompare(PyObject *self, PyObject *other, int op)
     switch (op) {
         case Py_EQ: return PyBool_FromLong(a == b);
         case Py_NE: return PyBool_FromLong(a != b);
-        default:    Py_RETURN_NOTIMPLEMENTED;
+        default: Py_RETURN_NOTIMPLEMENTED;
     }
 }
 
@@ -207,20 +200,20 @@ static PyGetSetDef MenaiBoolean_getset[] = {
 
 static PyMethodDef MenaiBoolean_methods[] = {
     {"type_name", MenaiBoolean_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiBoolean_describe,  METH_NOARGS, NULL},
+    {"describe", MenaiBoolean_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 static PyTypeObject MenaiBoolean_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "menai.menai_value_c.MenaiBoolean",
+    .tp_name = "menai.menai_vm_value.MenaiBoolean",
     .tp_basicsize = sizeof(MenaiBoolean_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT,
-    .tp_new       = MenaiBoolean_new,
-    .tp_methods   = MenaiBoolean_methods,
-    .tp_getset    = MenaiBoolean_getset,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiBoolean_new,
+    .tp_methods = MenaiBoolean_methods,
+    .tp_getset = MenaiBoolean_getset,
     .tp_richcompare = MenaiBoolean_richcompare,
-    .tp_hash      = MenaiBoolean_hash,
+    .tp_hash = MenaiBoolean_hash,
 };
 
 /* ---------------------------------------------------------------------------
@@ -232,8 +225,7 @@ MenaiInteger_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     PyObject *value = NULL;
     static char *kwlist[] = {"value", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &value))
-        return NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &value)) return NULL;
     if (!PyLong_Check(value)) {
         PyErr_SetString(PyExc_TypeError, "MenaiInteger requires an int");
         return NULL;
@@ -299,21 +291,21 @@ static PyGetSetDef MenaiInteger_getset[] = {
 
 static PyMethodDef MenaiInteger_methods[] = {
     {"type_name", MenaiInteger_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiInteger_describe,  METH_NOARGS, NULL},
+    {"describe", MenaiInteger_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 static PyTypeObject MenaiInteger_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "menai.menai_value_c.MenaiInteger",
+    .tp_name = "menai.menai_vm_value.MenaiInteger",
     .tp_basicsize = sizeof(MenaiInteger_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT,
-    .tp_new       = MenaiInteger_new,
-    .tp_dealloc   = MenaiInteger_dealloc,
-    .tp_methods   = MenaiInteger_methods,
-    .tp_getset    = MenaiInteger_getset,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiInteger_new,
+    .tp_dealloc = MenaiInteger_dealloc,
+    .tp_methods = MenaiInteger_methods,
+    .tp_getset = MenaiInteger_getset,
     .tp_richcompare = MenaiInteger_richcompare,
-    .tp_hash      = MenaiInteger_hash,
+    .tp_hash = MenaiInteger_hash,
 };
 
 /* ---------------------------------------------------------------------------
@@ -325,8 +317,7 @@ MenaiFloat_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     double value = 0.0;
     static char *kwlist[] = {"value", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "d", kwlist, &value))
-        return NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "d", kwlist, &value)) return NULL;
     MenaiFloat_Object *self = (MenaiFloat_Object *)type->tp_alloc(type, 0);
     if (self) self->value = value;
     return (PyObject *)self;
@@ -363,11 +354,11 @@ MenaiFloat_richcompare(PyObject *self, PyObject *other, int op)
     switch (op) {
         case Py_EQ: return PyBool_FromLong(a == b);
         case Py_NE: return PyBool_FromLong(a != b);
-        case Py_LT: return PyBool_FromLong(a <  b);
+        case Py_LT: return PyBool_FromLong(a < b);
         case Py_LE: return PyBool_FromLong(a <= b);
-        case Py_GT: return PyBool_FromLong(a >  b);
+        case Py_GT: return PyBool_FromLong(a > b);
         case Py_GE: return PyBool_FromLong(a >= b);
-        default:    Py_RETURN_NOTIMPLEMENTED;
+        default: Py_RETURN_NOTIMPLEMENTED;
     }
 }
 
@@ -395,20 +386,20 @@ static PyGetSetDef MenaiFloat_getset[] = {
 
 static PyMethodDef MenaiFloat_methods[] = {
     {"type_name", MenaiFloat_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiFloat_describe,  METH_NOARGS, NULL},
+    {"describe", MenaiFloat_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 static PyTypeObject MenaiFloat_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "menai.menai_value_c.MenaiFloat",
+    .tp_name = "menai.menai_vm_value.MenaiFloat",
     .tp_basicsize = sizeof(MenaiFloat_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT,
-    .tp_new       = MenaiFloat_new,
-    .tp_methods   = MenaiFloat_methods,
-    .tp_getset    = MenaiFloat_getset,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiFloat_new,
+    .tp_methods = MenaiFloat_methods,
+    .tp_getset = MenaiFloat_getset,
     .tp_richcompare = MenaiFloat_richcompare,
-    .tp_hash      = MenaiFloat_hash,
+    .tp_hash = MenaiFloat_hash,
 };
 
 /* ---------------------------------------------------------------------------
@@ -420,8 +411,7 @@ MenaiComplex_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     PyObject *value = NULL;
     static char *kwlist[] = {"value", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &value))
-        return NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &value)) return NULL;
     if (!PyComplex_Check(value)) {
         PyErr_SetString(PyExc_TypeError, "MenaiComplex requires a complex");
         return NULL;
@@ -501,21 +491,21 @@ static PyGetSetDef MenaiComplex_getset[] = {
 
 static PyMethodDef MenaiComplex_methods[] = {
     {"type_name", MenaiComplex_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiComplex_describe,  METH_NOARGS, NULL},
+    {"describe", MenaiComplex_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 static PyTypeObject MenaiComplex_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "menai.menai_value_c.MenaiComplex",
+    .tp_name = "menai.menai_vm_value.MenaiComplex",
     .tp_basicsize = sizeof(MenaiComplex_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT,
-    .tp_new       = MenaiComplex_new,
-    .tp_dealloc   = MenaiComplex_dealloc,
-    .tp_methods   = MenaiComplex_methods,
-    .tp_getset    = MenaiComplex_getset,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiComplex_new,
+    .tp_dealloc = MenaiComplex_dealloc,
+    .tp_methods = MenaiComplex_methods,
+    .tp_getset = MenaiComplex_getset,
     .tp_richcompare = MenaiComplex_richcompare,
-    .tp_hash      = MenaiComplex_hash,
+    .tp_hash = MenaiComplex_hash,
 };
 
 /* ---------------------------------------------------------------------------
@@ -527,8 +517,7 @@ MenaiSymbol_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     PyObject *name = NULL;
     static char *kwlist[] = {"name", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "U", kwlist, &name))
-        return NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "U", kwlist, &name)) return NULL;
     MenaiSymbol_Object *self = (MenaiSymbol_Object *)type->tp_alloc(type, 0);
     if (self) { Py_INCREF(name); self->name = name; }
     return (PyObject *)self;
@@ -592,21 +581,21 @@ static PyGetSetDef MenaiSymbol_getset[] = {
 
 static PyMethodDef MenaiSymbol_methods[] = {
     {"type_name", MenaiSymbol_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiSymbol_describe,  METH_NOARGS, NULL},
+    {"describe", MenaiSymbol_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 static PyTypeObject MenaiSymbol_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "menai.menai_value_c.MenaiSymbol",
+    .tp_name = "menai.menai_vm_value.MenaiSymbol",
     .tp_basicsize = sizeof(MenaiSymbol_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT,
-    .tp_new       = MenaiSymbol_new,
-    .tp_dealloc   = MenaiSymbol_dealloc,
-    .tp_methods   = MenaiSymbol_methods,
-    .tp_getset    = MenaiSymbol_getset,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiSymbol_new,
+    .tp_dealloc = MenaiSymbol_dealloc,
+    .tp_methods = MenaiSymbol_methods,
+    .tp_getset = MenaiSymbol_getset,
     .tp_richcompare = MenaiSymbol_richcompare,
-    .tp_hash      = MenaiSymbol_hash,
+    .tp_hash = MenaiSymbol_hash,
 };
 
 /* ---------------------------------------------------------------------------
@@ -617,8 +606,8 @@ static PyTypeObject MenaiSymbol_Type = {
 
 /* Cache constants */
 #define LIST_CACHE_NUM_BUCKETS 8
-#define LIST_CACHE_MAX_BUCKET  256
-#define LIST_CACHE_MAX_SIZE    128
+#define LIST_CACHE_MAX_BUCKET 256
+#define LIST_CACHE_MAX_SIZE 128
 
 static Py_ssize_t _list_size_classes[LIST_CACHE_NUM_BUCKETS] = {
     1, 2, 4, 8, 16, 32, 64, 128
@@ -878,21 +867,21 @@ static PyGetSetDef MenaiList_getset[] = {
 
 static PyMethodDef MenaiList_methods[] = {
     {"type_name", MenaiList_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiList_describe,  METH_NOARGS, NULL},
+    {"describe", MenaiList_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 static PyTypeObject MenaiList_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "menai.menai_value_c.MenaiList",
+    .tp_name = "menai.menai_vm_value.MenaiList",
     .tp_basicsize = sizeof(MenaiList_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT,
-    .tp_new       = MenaiList_new,
-    .tp_dealloc   = MenaiList_dealloc,
-    .tp_methods   = MenaiList_methods,
-    .tp_getset    = MenaiList_getset,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiList_new,
+    .tp_dealloc = MenaiList_dealloc,
+    .tp_methods = MenaiList_methods,
+    .tp_getset = MenaiList_getset,
     .tp_richcompare = MenaiList_richcompare,
-    .tp_hash      = MenaiList_hash,
+    .tp_hash = MenaiList_hash,
 };
 
 /* ---------------------------------------------------------------------------
@@ -1293,7 +1282,7 @@ static PyMethodDef MenaiDict_methods[] = {
 
 static PyTypeObject MenaiDict_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "menai.menai_value_c.MenaiDict",
+    .tp_name      = "menai.menai_vm_value.MenaiDict",
     .tp_basicsize = sizeof(MenaiDict_Object),
     .tp_flags     = Py_TPFLAGS_DEFAULT,
     .tp_new       = MenaiDict_new,
@@ -1510,7 +1499,7 @@ static PyMethodDef MenaiSet_methods[] = {
 
 static PyTypeObject MenaiSet_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "menai.menai_value_c.MenaiSet",
+    .tp_name      = "menai.menai_vm_value.MenaiSet",
     .tp_basicsize = sizeof(MenaiSet_Object),
     .tp_flags     = Py_TPFLAGS_DEFAULT,
     .tp_new       = MenaiSet_new,
@@ -1786,7 +1775,7 @@ static PyMethodDef MenaiFunction_methods[] = {
 
 static PyTypeObject MenaiFunction_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "menai.menai_value_c.MenaiFunction",
+    .tp_name      = "menai.menai_vm_value.MenaiFunction",
     .tp_basicsize = sizeof(MenaiFunction_Object),
     .tp_flags     = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
     .tp_new       = MenaiFunction_new,
@@ -1956,7 +1945,7 @@ static PyMethodDef MenaiStructType_methods[] = {
 
 static PyTypeObject MenaiStructType_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "menai.menai_value_c.MenaiStructType",
+    .tp_name      = "menai.menai_vm_value.MenaiStructType",
     .tp_basicsize = sizeof(MenaiStructType_Object),
     .tp_flags     = Py_TPFLAGS_DEFAULT,
     .tp_new       = MenaiStructType_new,
@@ -2112,7 +2101,7 @@ static PyMethodDef MenaiStruct_methods[] = {
 
 static PyTypeObject MenaiStruct_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "menai.menai_value_c.MenaiStruct",
+    .tp_name      = "menai.menai_vm_value.MenaiStruct",
     .tp_basicsize = sizeof(MenaiStruct_Object),
     .tp_flags     = Py_TPFLAGS_DEFAULT,
     .tp_new       = MenaiStruct_new,
@@ -3056,14 +3045,14 @@ static PyMethodDef module_methods[] = {
 
 static struct PyModuleDef module_def = {
     PyModuleDef_HEAD_INIT,
-    "menai.menai_value_c",
+    "menai.menai_vm_value",
     NULL,
     -1,
     module_methods
 };
 
 PyObject *
-_menai_value_c_init(void)
+_menai_vm_value_init(void)
 {
     /* Fetch slow-world types */
     PyObject *slow_mod = PyImport_ImportModule("menai.menai_value");

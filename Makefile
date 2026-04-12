@@ -13,8 +13,7 @@ PYTHON := $(shell test -f venv/bin/python && echo venv/bin/python || echo python
 #
 # Extension source files.
 #
-C_SOURCES := \
-	src/menai/menai_value_c.c \
+SO_CORE_SOURCES := \
 	src/menai/menai_vm_c.c
 
 #
@@ -23,7 +22,15 @@ C_SOURCES := \
 EXT_SUFFIX := $(shell $(PYTHON) -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
 
 SO_FILES := \
-	$(patsubst src/menai/%.c, src/menai/%$(EXT_SUFFIX), $(C_SOURCES))
+	$(patsubst src/menai/%.c, src/menai/%$(EXT_SUFFIX), $(SO_CORE_SOURCES))
+
+C_SOURCES := \
+	src/menai/menai_vm_c.c \
+	src/menai/menai_vm_string.c \
+	src/menai/menai_vm_string.h \
+	src/menai/menai_vm_string_tables.h \
+	src/menai/menai_vm_value.c \
+	src/menai/menai_vm_value.h
 
 #
 # Build all extensions in-place.
@@ -32,7 +39,7 @@ SO_FILES := \
 
 build: $(SO_FILES)
 
-$(SO_FILES): $(C_SOURCES) src/menai/menai_value_c.h
+$(SO_FILES): $(C_SOURCES)
 	@rm -f $(SO_FILES)
 	$(PYTHON) setup.py build_ext --inplace
 	@mkdir -p build && touch $@

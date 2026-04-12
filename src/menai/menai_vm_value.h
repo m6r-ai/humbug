@@ -1,5 +1,5 @@
 /*
- * menai_value_c.h — C struct definitions for all Menai runtime value types.
+ * menai_vm_value.h — C struct definitions for all Menai runtime value types.
  *
  * Included by menai_vm_shim.h and menai_value_c.c.  Provides the concrete
  * PyObject struct layouts so that the C VM can access fields directly by cast
@@ -11,8 +11,8 @@
  * directly.
  */
 
-#ifndef MENAI_VALUE_C_H
-#define MENAI_VALUE_C_H
+#ifndef MENAI_VM_VALUE_H
+#define MENAI_VM_VALUE_H
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
@@ -213,4 +213,4 @@ PyObject *menai_convert_value(PyObject *src);
 PyObject *menai_convert_code_object(PyObject *code);
 PyObject *menai_to_slow(PyObject *src);
 
-#endif /* MENAI_VALUE_C_H */
+#endif /* MENAI_VM_VALUE_H */
