@@ -22,6 +22,7 @@
 #include <string.h>
 
 #include "menai_value_c.h"
+#include "menai_vm_string.h"
 
 /* menai_value_c init — lives in the same .so */
 extern PyObject *_menai_value_c_init(void);
@@ -285,19 +286,6 @@ static PyObject *fn_convert_value = NULL;
 static PyObject *fn_to_slow = NULL;
 
 /*
- * Interned method name strings — cached at init time so string method calls
- * in the hot loop use PyObject_CallMethodOneArg/NoArgs instead of the
- * format-string-parsing PyObject_CallMethod.
- */
-static PyObject *_str_upper = NULL;
-static PyObject *_str_lower = NULL;
-static PyObject *_str_strip = NULL;
-static PyObject *_str_lstrip = NULL;
-static PyObject *_str_rstrip = NULL;
-static PyObject *_str_split = NULL;
-static PyObject *_str_replace = NULL;
-
-/*
  * Fast type-check macros
  */
 #define IS_MENAI_NONE(o) (Py_TYPE(o) == Menai_NoneType)
@@ -381,10 +369,6 @@ static inline PyObject *menai_integer_value(PyObject *o) {
 
 static inline PyObject *menai_symbol_name(PyObject *o) {
     return ((MenaiSymbol_Object *)o)->name;
-}
-
-static inline PyObject *menai_string_value(PyObject *o) {
-    return ((MenaiString_Object *)o)->value;
 }
 
 static inline void reg_set_own(PyObject **regs, int slot, PyObject *val) {
@@ -483,16 +467,6 @@ static inline PyObject *make_complex_from_doubles(double real, double imag) {
         r->value = pc;
     } else {
         Py_DECREF(pc);
-    }
-
-    return (PyObject *)r;
-}
-
-static inline PyObject *make_string_from_pyobj(PyObject *py_str) {
-    MenaiString_Object *r = (MenaiString_Object *)Menai_StringType->tp_alloc(Menai_StringType, 0);
-    if (r) {
-        Py_INCREF(py_str);
-        r->value = py_str;
     }
 
     return (PyObject *)r;
@@ -697,17 +671,6 @@ menai_vm_shim_init(void)
     if (fetch_callable(vc, "convert_code_object", &fn_convert_code_object) < 0) goto fail;
     if (fetch_callable(vc, "convert_value", &fn_convert_value) < 0) goto fail;
     if (fetch_callable(vc, "to_slow", &fn_to_slow) < 0) goto fail;
-
-    _str_upper = PyUnicode_InternFromString("upper");
-    _str_lower = PyUnicode_InternFromString("lower");
-    _str_strip = PyUnicode_InternFromString("strip");
-    _str_lstrip = PyUnicode_InternFromString("lstrip");
-    _str_rstrip = PyUnicode_InternFromString("rstrip");
-    _str_split = PyUnicode_InternFromString("split");
-    _str_replace = PyUnicode_InternFromString("replace");
-    if (!_str_upper || !_str_lower || !_str_strip ||
-        !_str_lstrip || !_str_rstrip || !_str_split || !_str_replace)
-        goto fail;
 
     PyObject *err_mod = PyImport_ImportModule("menai.menai_error");
     if (err_mod == NULL) goto fail;
@@ -1468,7 +1431,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0];
             if (!require_symbol(a, "symbol->string")) goto error;
             PyObject *name = menai_symbol_name(a);
-            PyObject *r = make_string_from_pyobj(name);
+            PyObject *r = menai_string_from_pyunicode(name);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -1848,14 +1811,13 @@ execute_loop(PyObject *code, PyObject *globals,
             if (radix == 10) {
                 py_str = PyObject_Str(av);
             } else {
-                /* Use Python's built-in format for other bases */
                 const char *fmt = (radix == 2) ? "b" : (radix == 8) ? "o" : "x";
                 PyObject *_fmt_str = PyUnicode_FromString(fmt);
                 py_str = PyObject_Format(av, _fmt_str);
                 Py_DECREF(_fmt_str);
             }
             if (py_str == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(py_str);
+            PyObject *r = menai_string_from_pyunicode(py_str);
             Py_DECREF(py_str);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
@@ -1873,10 +1835,7 @@ execute_loop(PyObject *code, PyObject *globals,
                     "integer-codepoint->string: invalid Unicode scalar value %ld", cp);
                 goto error;
             }
-            PyObject *py_str = PyUnicode_FromOrdinal((int)cp);
-            if (py_str == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(py_str);
-            Py_DECREF(py_str);
+            PyObject *r = menai_string_from_codepoint((uint32_t)cp);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -2225,14 +2184,12 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_FLOAT_TO_STRING: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float->string")) goto error;
-
             PyObject *_pf = PyFloat_FromDouble(menai_float_value(a));
             if (_pf == NULL) goto error;
-
             PyObject *py_str = PyObject_Str(_pf);
             Py_DECREF(_pf);
             if (py_str == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(py_str);
+            PyObject *r = menai_string_from_pyunicode(py_str);
             Py_DECREF(py_str);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
@@ -2696,7 +2653,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_complex(a, "complex->string")) goto error;
             PyObject *desc = PyObject_CallMethod(a, "describe", NULL);
             if (desc == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(desc);
+            PyObject *r = menai_string_from_pyunicode(desc);
             Py_DECREF(desc);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
@@ -2711,11 +2668,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string=?")) goto error;
             if (!require_string(b, "string=?")) goto error;
-            PyObject *_cmp = PyUnicode_RichCompare(((MenaiString_Object *)a)->value,
-                                                   ((MenaiString_Object *)b)->value, Py_EQ);
-            if (!_cmp) goto error;
-            bool_store(regs, base + dest, PyObject_IsTrue(_cmp));
-            Py_DECREF(_cmp);
+            bool_store(regs, base + dest, menai_string_equal(a, b));
             break;
         }
 
@@ -2723,11 +2676,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string!=?")) goto error;
             if (!require_string(b, "string!=?")) goto error;
-            PyObject *_cmp = PyUnicode_RichCompare(((MenaiString_Object *)a)->value,
-                                                   ((MenaiString_Object *)b)->value, Py_NE);
-            if (!_cmp) goto error;
-            bool_store(regs, base + dest, PyObject_IsTrue(_cmp));
-            Py_DECREF(_cmp);
+            bool_store(regs, base + dest, !menai_string_equal(a, b));
             break;
         }
 
@@ -2735,11 +2684,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string<?")) goto error;
             if (!require_string(b, "string<?")) goto error;
-            PyObject *_cmp = PyUnicode_RichCompare(((MenaiString_Object *)a)->value,
-                                                   ((MenaiString_Object *)b)->value, Py_LT);
-            if (!_cmp) goto error;
-            bool_store(regs, base + dest, PyObject_IsTrue(_cmp));
-            Py_DECREF(_cmp);
+            bool_store(regs, base + dest, menai_string_compare(a, b) < 0);
             break;
         }
 
@@ -2747,11 +2692,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string>?")) goto error;
             if (!require_string(b, "string>?")) goto error;
-            PyObject *_cmp = PyUnicode_RichCompare(((MenaiString_Object *)a)->value,
-                                                   ((MenaiString_Object *)b)->value, Py_GT);
-            if (!_cmp) goto error;
-            bool_store(regs, base + dest, PyObject_IsTrue(_cmp));
-            Py_DECREF(_cmp);
+            bool_store(regs, base + dest, menai_string_compare(a, b) > 0);
             break;
         }
 
@@ -2759,11 +2700,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string<=?")) goto error;
             if (!require_string(b, "string<=?")) goto error;
-            PyObject *_cmp = PyUnicode_RichCompare(((MenaiString_Object *)a)->value,
-                                                   ((MenaiString_Object *)b)->value, Py_LE);
-            if (!_cmp) goto error;
-            bool_store(regs, base + dest, PyObject_IsTrue(_cmp));
-            Py_DECREF(_cmp);
+            bool_store(regs, base + dest, menai_string_compare(a, b) <= 0);
             break;
         }
 
@@ -2771,20 +2708,14 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string>=?")) goto error;
             if (!require_string(b, "string>=?")) goto error;
-            PyObject *_cmp = PyUnicode_RichCompare(((MenaiString_Object *)a)->value,
-                                                   ((MenaiString_Object *)b)->value, Py_GE);
-            if (!_cmp) goto error;
-            bool_store(regs, base + dest, PyObject_IsTrue(_cmp));
-            Py_DECREF(_cmp);
+            bool_store(regs, base + dest, menai_string_compare(a, b) >= 0);
             break;
         }
 
         case OP_STRING_LENGTH: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-length")) goto error;
-            PyObject *sv = menai_string_value(a);
-            Py_ssize_t len = PyUnicode_GET_LENGTH(sv);
-            PyObject *_r = make_integer_from_ssize_t(len);
+            PyObject *_r = make_integer_from_ssize_t(menai_string_length(a));
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -2793,11 +2724,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_STRING_UPCASE: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-upcase")) goto error;
-            PyObject *sv = menai_string_value(a);
-            PyObject *up = PyObject_CallMethodNoArgs(sv, _str_upper);
-            if (up == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(up);
-            Py_DECREF(up);
+            PyObject *r = menai_string_upcase(a);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -2806,11 +2733,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_STRING_DOWNCASE: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-downcase")) goto error;
-            PyObject *sv = menai_string_value(a);
-            PyObject *lo = PyObject_CallMethodNoArgs(sv, _str_lower);
-            if (lo == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(lo);
-            Py_DECREF(lo);
+            PyObject *r = menai_string_downcase(a);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -2819,11 +2742,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_STRING_TRIM: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-trim")) goto error;
-            PyObject *sv = menai_string_value(a);
-            PyObject *t = PyObject_CallMethodNoArgs(sv, _str_strip);
-            if (t == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(t);
-            Py_DECREF(t);
+            PyObject *r = menai_string_trim(a);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -2832,11 +2751,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_STRING_TRIM_LEFT: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-trim-left")) goto error;
-            PyObject *sv = menai_string_value(a);
-            PyObject *t = PyObject_CallMethodNoArgs(sv, _str_lstrip);
-            if (t == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(t);
-            Py_DECREF(t);
+            PyObject *r = menai_string_trim_left(a);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -2845,11 +2760,7 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_STRING_TRIM_RIGHT: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string-trim-right")) goto error;
-            PyObject *sv = menai_string_value(a);
-            PyObject *t = PyObject_CallMethodNoArgs(sv, _str_rstrip);
-            if (t == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(t);
-            Py_DECREF(t);
+            PyObject *r = menai_string_trim_right(a);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -2859,12 +2770,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string-concat")) goto error;
             if (!require_string(b, "string-concat")) goto error;
-            PyObject *sa = menai_string_value(a);
-            PyObject *sb = menai_string_value(b);
-            PyObject *cat = PyUnicode_Concat(sa, sb);
-            if (cat == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(cat);
-            Py_DECREF(cat);
+            PyObject *r = menai_string_concat(a, b);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -2874,11 +2780,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string-prefix?")) goto error;
             if (!require_string(b, "string-prefix?")) goto error;
-            PyObject *sa = menai_string_value(a);
-            PyObject *sb = menai_string_value(b);
-            int r = PyUnicode_Tailmatch(sa, sb, 0, PY_SSIZE_T_MAX, -1);
-            if (r < 0) goto error;
-            bool_store(regs, base + dest, r);
+            bool_store(regs, base + dest, menai_string_has_prefix(a, b));
             break;
         }
 
@@ -2886,14 +2788,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string-suffix?")) goto error;
             if (!require_string(b, "string-suffix?")) goto error;
-
-            PyObject *sa = menai_string_value(a);
-
-            PyObject *sb = menai_string_value(b);
-
-            int r = PyUnicode_Tailmatch(sa, sb, 0, PY_SSIZE_T_MAX, 1);
-            if (r < 0) goto error;
-            bool_store(regs, base + dest, r);
+            bool_store(regs, base + dest, menai_string_has_suffix(a, b));
             break;
         }
 
@@ -2904,19 +2799,14 @@ execute_loop(PyObject *code, PyObject *globals,
                 menai_raise_eval_error("string-ref: index must be integer");
                 goto error;
             }
-            PyObject *sa = menai_string_value(a);
             PyObject *iv = menai_integer_value(b);
             Py_ssize_t idx = PyLong_AsSsize_t(iv);
-            Py_ssize_t slen = PyUnicode_GET_LENGTH(sa);
+            Py_ssize_t slen = menai_string_length(a);
             if (idx < 0 || idx >= slen) {
                 menai_raise_eval_errorf("string-ref index out of range: %zd", idx);
                 goto error;
             }
-            Py_UCS4 ch = PyUnicode_ReadChar(sa, idx);
-            PyObject *ch_str = PyUnicode_FromOrdinal((int)ch);
-            if (ch_str == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(ch_str);
-            Py_DECREF(ch_str);
+            PyObject *r = menai_string_ref(a, idx);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -2929,12 +2819,10 @@ execute_loop(PyObject *code, PyObject *globals,
                 menai_raise_eval_error("string-slice: indices must be integers");
                 goto error;
             }
-            PyObject *sa = menai_string_value(a);
             PyObject *bv = menai_integer_value(b);
             PyObject *cv = menai_integer_value(c);
-
             Py_ssize_t start = PyLong_AsSsize_t(bv), end = PyLong_AsSsize_t(cv);
-            Py_ssize_t slen = PyUnicode_GET_LENGTH(sa);
+            Py_ssize_t slen = menai_string_length(a);
             if (start < 0) {
                 menai_raise_eval_errorf("string-slice start index cannot be negative: %zd", start);
                 goto error;
@@ -2955,10 +2843,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 menai_raise_eval_errorf("string-slice start index (%zd) cannot be greater than end index (%zd)", start, end);
                 goto error;
             }
-            PyObject *sliced = PyUnicode_Substring(sa, start, end);
-            if (sliced == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(sliced);
-            Py_DECREF(sliced);
+            PyObject *r = menai_string_slice(a, start, end);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -2969,13 +2854,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_string(a, "string-replace")) goto error;
             if (!require_string(b, "string-replace")) goto error;
             if (!require_string(c, "string-replace")) goto error;
-            PyObject *sa = menai_string_value(a);
-            PyObject *sb = menai_string_value(b);
-            PyObject *sc = menai_string_value(c);
-            PyObject *replaced = PyObject_CallMethodObjArgs(sa, _str_replace, sb, sc, NULL);
-            if (replaced == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(replaced);
-            Py_DECREF(replaced);
+            PyObject *r = menai_string_replace(a, b, c);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -2985,10 +2864,8 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string-index")) goto error;
             if (!require_string(b, "string-index")) goto error;
-            PyObject *sa = menai_string_value(a);
-            PyObject *sb = menai_string_value(b);
-            Py_ssize_t idx = PyUnicode_Find(sa, sb, 0, PY_SSIZE_T_MAX, 1);
-            if (idx == -2) goto error; /* error */
+            Py_ssize_t idx = menai_string_find(a, b);
+            if (idx == -2) goto error;
             if (idx == -1) {
                 reg_set_borrow(regs, base + dest, Menai_NONE);
             } else {
@@ -3002,14 +2879,12 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_STRING_TO_INTEGER_CODEPOINT: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string->integer-codepoint")) goto error;
-            PyObject *sa = menai_string_value(a);
-            Py_ssize_t slen = PyUnicode_GET_LENGTH(sa);
+            Py_ssize_t slen = menai_string_length(a);
             if (slen != 1) {
                 menai_raise_eval_error("string->integer-codepoint: requires single-character string");
                 goto error;
             }
-            Py_UCS4 ch = PyUnicode_ReadChar(sa, 0);
-            PyObject *_r = make_integer_from_long((long)ch);
+            PyObject *_r = make_integer_from_long((long)menai_string_get(a, 0));
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -3030,11 +2905,13 @@ execute_loop(PyObject *code, PyObject *globals,
                 menai_raise_eval_errorf("string->integer radix must be 2, 8, 10, or 16, got %ld", radix);
                 goto error;
             }
-            PyObject *sa = menai_string_value(a);
-            PyObject *stripped = PyObject_CallMethodNoArgs(sa, _str_strip);
-            if (stripped == NULL) goto error;
-            PyObject *ri = PyLong_FromUnicodeObject(stripped, (int)radix);
-            Py_DECREF(stripped);
+            PyObject *trimmed = menai_string_trim(a);
+            if (trimmed == NULL) goto error;
+            PyObject *py_str = menai_string_to_pyunicode(trimmed);
+            Py_DECREF(trimmed);
+            if (py_str == NULL) goto error;
+            PyObject *ri = PyLong_FromUnicodeObject(py_str, (int)radix);
+            Py_DECREF(py_str);
             if (ri == NULL) {
                 PyErr_Clear();
                 reg_set_borrow(regs, base + dest, Menai_NONE);
@@ -3049,35 +2926,25 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_STRING_TO_NUMBER: {
             PyObject *a = regs[base + src0];
             if (!require_string(a, "string->number")) goto error;
-            /* Delegate to the Menai object's method via Python call */
-            PyObject *sa = menai_string_value(a);
-            /* Try int, then float, then complex — matching Python VM logic */
-            PyObject *result = NULL;
-            /* Check for 'j'/'J' → complex */
-            PyObject *lower = PyObject_CallMethodNoArgs(sa, _str_lower);
-            if (lower == NULL) goto error;
-            /* Use PyUnicode_Contains to avoid leaking temporary string objects */
-            PyObject *_j = PyUnicode_FromString("j");
-            PyObject *_dot = PyUnicode_FromString(".");
-            PyObject *_e = PyUnicode_FromString("e");
-            if (!_j || !_dot || !_e) {
-                Py_XDECREF(_j);
-                Py_XDECREF(_dot);
-                Py_XDECREF(_e);
-                Py_DECREF(lower);
-                goto error;
+            /* Scan codepoints directly to classify the string. */
+            Py_ssize_t slen = menai_string_length(a);
+            const uint32_t *sdata = menai_string_data(a);
+            int has_j = 0, has_dot = 0, has_e = 0;
+            for (Py_ssize_t _i = 0; _i < slen; _i++) {
+                uint32_t _cp = sdata[_i];
+                if (_cp == 'j' || _cp == 'J') has_j = 1;
+                else if (_cp == '.') has_dot = 1;
+                else if (_cp == 'e' || _cp == 'E') has_e = 1;
             }
-            int has_j = PyUnicode_Find(lower, _j, 0, PY_SSIZE_T_MAX, 1) >= 0;
-            int has_dot = PyUnicode_Find(sa, _dot, 0, PY_SSIZE_T_MAX, 1) >= 0;
-            int has_e = PyUnicode_Find(lower, _e, 0, PY_SSIZE_T_MAX, 1) >= 0;
-            Py_DECREF(_j);
-            Py_DECREF(_dot);
-            Py_DECREF(_e);
-            Py_DECREF(lower);
+            /* Convert to PyUnicode once for the Python numeric parsers. */
+            PyObject *sa = menai_string_to_pyunicode(a);
+            if (sa == NULL) goto error;
+            PyObject *result = NULL;
             if (!has_dot && !has_e && !has_j) {
                 result = PyLong_FromUnicodeObject(sa, 10);
                 if (result) {
                     PyObject *r = make_integer_value(result);
+                    Py_DECREF(sa);
                     if (r == NULL) goto error;
                     reg_set_own(regs, base + dest, r);
                     break;
@@ -3090,14 +2957,15 @@ execute_loop(PyObject *code, PyObject *globals,
                     PyObject *r = make_complex_from_doubles(PyComplex_RealAsDouble(result),
                                                             PyComplex_ImagAsDouble(result));
                     Py_DECREF(result);
+                    Py_DECREF(sa);
                     if (r == NULL) goto error;
                     reg_set_own(regs, base + dest, r);
                     break;
                 }
                 PyErr_Clear();
             }
-            /* Try float */
             result = PyFloat_FromString(sa);
+            Py_DECREF(sa);
             if (result) {
                 double dv = PyFloat_AsDouble(result);
                 Py_DECREF(result);
@@ -3116,62 +2984,59 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_string(a, "string->list")) goto error;
             if (!require_string(b, "string->list")) goto error;
-            PyObject *sa = menai_string_value(a);
-            PyObject *sb = menai_string_value(b);
-            PyObject *parts;
-            if (PyUnicode_GET_LENGTH(sb) == 0) {
-                /* Split into individual characters */
-                Py_ssize_t slen = PyUnicode_GET_LENGTH(sa);
-                parts = PyList_New(slen);
-                if (parts == NULL) {
-                    goto error;
-                }
-                for (Py_ssize_t i = 0; i < slen; i++) {
-                    PyObject *ch = PyUnicode_FromOrdinal(PyUnicode_ReadChar(sa, i));
-                    if (ch == NULL) {
-                        Py_DECREF(parts);
+            Py_ssize_t alen = menai_string_length(a);
+            Py_ssize_t blen = menai_string_length(b);
+            const uint32_t *adata = menai_string_data(a);
+            const uint32_t *bdata = menai_string_data(b);
+            PyObject *r;
+            if (blen == 0) {
+                /* Split into individual codepoints */
+                PyObject **stl_arr = alen > 0
+                    ? (PyObject **)PyMem_Malloc(alen * sizeof(PyObject *)) : NULL;
+                if (alen > 0 && !stl_arr) { PyErr_NoMemory(); goto error; }
+                for (Py_ssize_t i = 0; i < alen; i++) {
+                    stl_arr[i] = menai_string_from_codepoint(adata[i]);
+                    if (!stl_arr[i]) {
+                        for (Py_ssize_t k = 0; k < i; k++) Py_DECREF(stl_arr[k]);
+                        PyMem_Free(stl_arr);
                         goto error;
                     }
-                    PyObject *ms = make_string_from_pyobj(ch);
-                    Py_DECREF(ch);
-                    if (ms == NULL) {
-                        Py_DECREF(parts);
-                        goto error;
-                    }
-                    PyList_SET_ITEM(parts, i, ms);
                 }
+                r = menai_list_from_array_steal(stl_arr, alen);
             } else {
-                parts = PyObject_CallMethodOneArg(sa, _str_split, sb);
-                if (parts == NULL) {
-                    goto error;
-                }
-                /* Wrap each str in MenaiString */
-                Py_ssize_t n = PyList_GET_SIZE(parts);
-                for (Py_ssize_t i = 0; i < n; i++) {
-                    PyObject *ms = make_string_from_pyobj(PyList_GET_ITEM(parts, i));
-                    if (ms == NULL) {
-                        Py_DECREF(parts);
-                        goto error;
+                /* Split on delimiter — find occurrences and build list */
+                Py_ssize_t count = 0;
+                for (Py_ssize_t i = 0; i <= alen - blen; ) {
+                    if (memcmp(adata + i, bdata, (size_t)blen * sizeof(uint32_t)) == 0) {
+                        count++;
+                        i += blen;
+                    } else {
+                        i++;
                     }
-                    PyObject *old = PyList_GET_ITEM(parts, i);
-                    PyList_SET_ITEM(parts, i, ms);
-                    Py_DECREF(old);
                 }
+                Py_ssize_t nparts = count + 1;
+                PyObject **parts2 = (PyObject **)PyMem_Malloc(nparts * sizeof(PyObject *));
+                if (!parts2) { PyErr_NoMemory(); goto error; }
+                Py_ssize_t seg_start = 0, pi2 = 0;
+                for (Py_ssize_t i = 0; i <= alen; ) {
+                    int match = (i <= alen - blen) &&
+                        (memcmp(adata + i, bdata, (size_t)blen * sizeof(uint32_t)) == 0);
+                    if (match || i == alen) {
+                        parts2[pi2] = menai_string_from_codepoints(adata + seg_start, i - seg_start);
+                        if (!parts2[pi2]) {
+                            for (Py_ssize_t k = 0; k < pi2; k++) Py_DECREF(parts2[k]);
+                            PyMem_Free(parts2);
+                            goto error;
+                        }
+                        pi2++;
+                        if (match) { seg_start = i + blen; i += blen; }
+                        else break;
+                    } else {
+                        i++;
+                    }
+                }
+                r = menai_list_from_array_steal(parts2, pi2);
             }
-            Py_ssize_t stl_n = PyList_GET_SIZE(parts);
-            PyObject **stl2_arr = stl_n > 0
-                ? (PyObject **)PyMem_Malloc(stl_n * sizeof(PyObject *)) : NULL;
-            if (stl_n > 0 && !stl2_arr) {
-                Py_DECREF(parts);
-                PyErr_NoMemory();
-                goto error;
-            }
-            for (Py_ssize_t i = 0; i < stl_n; i++) {
-                stl2_arr[i] = PyList_GET_ITEM(parts, i);
-                Py_INCREF(stl2_arr[i]);
-            }
-            Py_DECREF(parts);
-            PyObject *r = menai_list_from_array_steal(stl2_arr, stl_n);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3510,32 +3375,38 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_list(a, "list->string")) goto error;
             if (!require_string(b, "list->string")) goto error;
             MenaiList_Object *lst_ts = (MenaiList_Object *)a;
-            PyObject *sep = menai_string_value(b);
             Py_ssize_t n = lst_ts->length;
-            PyObject *parts = PyList_New(n);
-            if (parts == NULL) {
-                goto error;
-            }
+            /* Validate all elements are strings first. */
             for (Py_ssize_t i = 0; i < n; i++) {
-                PyObject *elem = lst_ts->elements[i];
-                if (!IS_MENAI_STRING(elem)) {
-                    Py_DECREF(parts);
+                if (!IS_MENAI_STRING(lst_ts->elements[i])) {
                     menai_raise_eval_error("list->string: all elements must be strings");
                     goto error;
                 }
-                PyObject *sv = menai_string_value(elem);
-                if (sv == NULL) {
-                    Py_DECREF(parts);
-                    goto error;
-                }
-                Py_INCREF(sv);
-                PyList_SET_ITEM(parts, i, sv); /* sv is borrowed; INCREF gives parts its owned ref */
             }
-            PyObject *joined = PyUnicode_Join(sep, parts);
-            Py_DECREF(parts);
-            if (joined == NULL) goto error;
-            PyObject *r = make_string_from_pyobj(joined);
-            Py_DECREF(joined);
+            /* Compute total output length. */
+            Py_ssize_t sep_len = menai_string_length(b);
+            const uint32_t *sep_data = menai_string_data(b);
+            Py_ssize_t total = (n > 0) ? (n - 1) * sep_len : 0;
+            for (Py_ssize_t i = 0; i < n; i++)
+                total += menai_string_length(lst_ts->elements[i]);
+            MenaiString_Object *obj = (MenaiString_Object *)PyObject_NewVar(
+                MenaiString_Object, &MenaiString_Type, total);
+            if (!obj) goto error;
+            obj->hash = -1;
+            uint32_t *dst = obj->data;
+            for (Py_ssize_t i = 0; i < n; i++) {
+                if (i > 0 && sep_len > 0) {
+                    memcpy(dst, sep_data, (size_t)sep_len * sizeof(uint32_t));
+                    dst += sep_len;
+                }
+                Py_ssize_t elen = menai_string_length(lst_ts->elements[i]);
+                if (elen > 0) {
+                    memcpy(dst, menai_string_data(lst_ts->elements[i]),
+                           (size_t)elen * sizeof(uint32_t));
+                    dst += elen;
+                }
+            }
+            PyObject *r = (PyObject *)obj;
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -4386,7 +4257,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *val = regs[base + src0];
             if (!require_structtype(val, "struct-type-name")) goto error;
             PyObject *name = ((MenaiStructType_Object *)val)->name;
-            PyObject *r = make_string_from_pyobj(name);
+            PyObject *r = menai_string_from_pyunicode(name);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;

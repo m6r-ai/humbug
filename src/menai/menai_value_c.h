@@ -17,6 +17,8 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include "menai_vm_string.h"
+
 /* ---------------------------------------------------------------------------
  * Scalar types — fields stored as C primitives
  * ------------------------------------------------------------------------- */
@@ -32,7 +34,7 @@ typedef struct {
 } MenaiFloat_Object;
 
 /* ---------------------------------------------------------------------------
- * Types whose payload is a single Python object
+ * Types whose payload is a single Python object (MenaiString is in menai_vm_string.h)
  * ------------------------------------------------------------------------- */
 
 typedef struct {
@@ -44,11 +46,6 @@ typedef struct {
     PyObject_HEAD
     PyObject *value;    /* Python complex */
 } MenaiComplex_Object;
-
-typedef struct {
-    PyObject_HEAD
-    PyObject *value;    /* Python str */
-} MenaiString_Object;
 
 typedef struct {
     PyObject_HEAD

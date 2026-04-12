@@ -24,6 +24,7 @@ extensions = [
         sources=[
             "src/menai/menai_value_c.c",
             "src/menai/menai_vm_c.c",
+            "src/menai/menai_vm_string.c",
         ],
         include_dirs=[_MENAI_SRC],
         extra_compile_args=["-O2", "-std=c11"],

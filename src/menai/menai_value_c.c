@@ -22,6 +22,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "menai_vm_string.h"
 /* Forward-declare MenaiList_Type so the cache functions can reference it
  * before the full definition below. */
 static PyTypeObject MenaiList_Type;
@@ -36,7 +37,6 @@ static PyTypeObject MenaiBoolean_Type;
 static PyTypeObject MenaiInteger_Type;
 static PyTypeObject MenaiFloat_Type;
 static PyTypeObject MenaiComplex_Type;
-static PyTypeObject MenaiString_Type;
 static PyTypeObject MenaiSymbol_Type;
 static PyTypeObject MenaiDict_Type;
 static PyTypeObject MenaiSet_Type;
@@ -516,107 +516,6 @@ static PyTypeObject MenaiComplex_Type = {
     .tp_getset    = MenaiComplex_getset,
     .tp_richcompare = MenaiComplex_richcompare,
     .tp_hash      = MenaiComplex_hash,
-};
-
-/* ---------------------------------------------------------------------------
- * MenaiString
- * ------------------------------------------------------------------------- */
-
-static PyObject *
-MenaiString_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
-{
-    PyObject *value = NULL;
-    static char *kwlist[] = {"value", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "U", kwlist, &value))
-        return NULL;
-    MenaiString_Object *self = (MenaiString_Object *)type->tp_alloc(type, 0);
-    if (self) { Py_INCREF(value); self->value = value; }
-    return (PyObject *)self;
-}
-
-static void
-MenaiString_dealloc(PyObject *self)
-{
-    Py_XDECREF(((MenaiString_Object *)self)->value);
-    Py_TYPE(self)->tp_free(self);
-}
-
-static PyObject *
-MenaiString_type_name(PyObject *self, PyObject *args)
-{
-    (void)self; (void)args;
-    return PyUnicode_FromString("string");
-}
-
-static PyObject *
-MenaiString_describe(PyObject *self, PyObject *args)
-{
-    (void)args;
-    /* Delegate to slow type for the escape logic */
-    PyObject *mod = PyImport_ImportModule("menai.menai_value");
-    if (!mod) return NULL;
-    PyObject *cls = PyObject_GetAttrString(mod, "MenaiString");
-    Py_DECREF(mod);
-    if (!cls) return NULL;
-    PyObject *sv = ((MenaiString_Object *)self)->value;
-    PyObject *inst = PyObject_CallOneArg(cls, sv);
-    Py_DECREF(cls);
-    if (!inst) return NULL;
-    PyObject *result = PyObject_CallMethod(inst, "describe", NULL);
-    Py_DECREF(inst);
-    return result;
-}
-
-static PyObject *
-MenaiString_richcompare(PyObject *self, PyObject *other, int op)
-{
-    if (Py_TYPE(other) != &MenaiString_Type) {
-        if (op == Py_EQ) Py_RETURN_FALSE;
-        if (op == Py_NE) Py_RETURN_TRUE;
-        Py_RETURN_NOTIMPLEMENTED;
-    }
-    return PyUnicode_RichCompare(
-        ((MenaiString_Object *)self)->value,
-        ((MenaiString_Object *)other)->value, op);
-}
-
-static Py_hash_t
-MenaiString_hash(PyObject *self)
-{
-    return PyObject_Hash(((MenaiString_Object *)self)->value);
-}
-
-static PyObject *
-MenaiString_get_value(PyObject *self, void *closure)
-{
-    (void)closure;
-    PyObject *v = ((MenaiString_Object *)self)->value;
-    Py_INCREF(v);
-    return v;
-}
-
-static PyGetSetDef MenaiString_getset[] = {
-    {"value", MenaiString_get_value, NULL, NULL, NULL},
-    {NULL, NULL, NULL, NULL, NULL}
-};
-
-static PyMethodDef MenaiString_methods[] = {
-    {"type_name", MenaiString_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiString_describe,  METH_NOARGS, NULL},
-    {NULL, NULL, 0, NULL}
-};
-
-static PyTypeObject MenaiString_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name      = "menai.menai_value_c.MenaiString",
-    .tp_basicsize = sizeof(MenaiString_Object),
-    .tp_flags     = Py_TPFLAGS_DEFAULT,
-    .tp_new       = MenaiString_new,
-    .tp_dealloc   = MenaiString_dealloc,
-    .tp_methods   = MenaiString_methods,
-    .tp_getset    = MenaiString_getset,
-    .tp_richcompare = MenaiString_richcompare,
-    .tp_hash      = MenaiString_hash,
 };
 
 /* ---------------------------------------------------------------------------
@@ -1172,7 +1071,13 @@ PyObject *
 menai_hashable_key(PyObject *key)
 {
     PyTypeObject *t = Py_TYPE(key);
-    if (t == &MenaiString_Type) return Py_BuildValue("(sO)", "str", ((MenaiString_Object *)key)->value);
+    if (t == &MenaiString_Type) {
+        PyObject *pystr = menai_string_to_pyunicode(key);
+        if (!pystr) return NULL;
+        PyObject *r = Py_BuildValue("(sO)", "str", pystr);
+        Py_DECREF(pystr);
+        return r;
+    }
     if (t == &MenaiInteger_Type) return Py_BuildValue("(sO)", "int", ((MenaiInteger_Object *)key)->value);
     if (t == &MenaiFloat_Type) {
         PyObject *pf = PyFloat_FromDouble(((MenaiFloat_Object *)key)->value);
@@ -2307,11 +2212,8 @@ menai_convert_value(PyObject *src)
     if (t == Slow_StringType) {
         PyObject *v = PyObject_GetAttrString(src, "value");
         if (!v) return NULL;
-        PyObject *args = PyTuple_Pack(1, v);
+        PyObject *r = menai_string_from_pyunicode(v);
         Py_DECREF(v);
-        if (!args) return NULL;
-        PyObject *r = MenaiString_new(&MenaiString_Type, args, NULL);
-        Py_DECREF(args);
         return r;
     }
 
@@ -2883,7 +2785,11 @@ _to_slow_memo(PyObject *src, PyObject *memo)
     else if (t == &MenaiString_Type) {
         PyObject *cls = GET_SLOW_CLS("MenaiString");
         if (cls) {
-            result = PyObject_CallOneArg(cls, ((MenaiString_Object *)src)->value);
+            PyObject *pystr = menai_string_to_pyunicode(src);
+            if (pystr) {
+                result = PyObject_CallOneArg(cls, pystr);
+                Py_DECREF(pystr);
+            }
             Py_DECREF(cls);
         }
     }
@@ -3186,10 +3092,13 @@ _menai_value_c_init(void)
     Py_DECREF(err_mod);
     if (!MenaiEvalError_type) return NULL;
 
+    if (menai_vm_string_init(MenaiEvalError_type) < 0)
+        return NULL;
+
     /* Ready all types */
     PyTypeObject *types[] = {
         &MenaiNone_Type, &MenaiBoolean_Type, &MenaiInteger_Type,
-        &MenaiFloat_Type, &MenaiComplex_Type, &MenaiString_Type,
+        &MenaiFloat_Type, &MenaiComplex_Type, &MenaiString_Type,  /* extern from menai_vm_string.c */
         &MenaiSymbol_Type, &MenaiList_Type, &MenaiDict_Type,
         &MenaiSet_Type, &MenaiFunction_Type, &MenaiStructType_Type,
         &MenaiStruct_Type
