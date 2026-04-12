@@ -25,10 +25,11 @@
 #include "menai_vm_list.h"
 #include "menai_vm_none.h"
 #include "menai_vm_string.h"
+#include "menai_vm_set.h"
 #include "menai_vm_symbol.h"
 
 /* ---------------------------------------------------------------------------
- * Collection types (MenaiList is in menai_vm_list.h)
+ * Collection types (MenaiList is in menai_vm_list.h, MenaiSet is in menai_vm_set.h)
  * ------------------------------------------------------------------------- */
 
 typedef struct {
@@ -37,13 +38,6 @@ typedef struct {
     PyObject *lookup;   /* Python dict: hashable_key -> (key, value) */
     Py_ssize_t length;  /* number of key-value pairs */
 } MenaiDict_Object;
-
-typedef struct {
-    PyObject_HEAD
-    PyObject *elements; /* Python tuple of MenaiValue* (ordered, deduplicated) */
-    PyObject *members;  /* Python frozenset of hashable keys */
-    Py_ssize_t length;  /* number of elements */
-} MenaiSet_Object;
 
 /* ---------------------------------------------------------------------------
  * Struct types

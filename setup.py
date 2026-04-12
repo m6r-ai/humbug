@@ -25,6 +25,7 @@ extensions = [
             "src/menai/menai_vm_string.c",
             "src/menai/menai_vm_function.c",
             "src/menai/menai_vm_list.c",
+            "src/menai/menai_vm_set.c",
             "src/menai/menai_vm_symbol.c",
             "src/menai/menai_vm_complex.c",
             "src/menai/menai_vm_float.c",
