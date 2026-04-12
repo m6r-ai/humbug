@@ -23,6 +23,7 @@
 #include <string.h>
 
 #include "menai_vm_float.h"
+#include "menai_vm_complex.h"
 #include "menai_vm_integer.h"
 #include "menai_vm_boolean.h"
 #include "menai_vm_none.h"
@@ -36,7 +37,6 @@ static PyTypeObject MenaiList_Type;
  * Forward declarations of type objects
  * ------------------------------------------------------------------------- */
 
-static PyTypeObject MenaiComplex_Type;
 static PyTypeObject MenaiSymbol_Type;
 static PyTypeObject MenaiDict_Type;
 static PyTypeObject MenaiSet_Type;
@@ -72,112 +72,6 @@ static PyTypeObject *Slow_StructType = NULL;
 
 /* Error type */
 static PyObject *MenaiEvalError_type = NULL;
-
-/* ---------------------------------------------------------------------------
- * MenaiComplex
- * ------------------------------------------------------------------------- */
-
-static PyObject *
-MenaiComplex_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
-{
-    PyObject *value = NULL;
-    static char *kwlist[] = {"value", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &value)) return NULL;
-    if (!PyComplex_Check(value)) {
-        PyErr_SetString(PyExc_TypeError, "MenaiComplex requires a complex");
-        return NULL;
-    }
-    MenaiComplex_Object *self = (MenaiComplex_Object *)type->tp_alloc(type, 0);
-    if (self) { Py_INCREF(value); self->value = value; }
-    return (PyObject *)self;
-}
-
-static void
-MenaiComplex_dealloc(PyObject *self)
-{
-    Py_XDECREF(((MenaiComplex_Object *)self)->value);
-    Py_TYPE(self)->tp_free(self);
-}
-
-static PyObject *
-MenaiComplex_type_name(PyObject *self, PyObject *args)
-{
-    (void)self; (void)args;
-    return PyUnicode_FromString("complex");
-}
-
-static PyObject *
-MenaiComplex_describe(PyObject *self, PyObject *args)
-{
-    (void)args;
-    /* Delegate to the Python describe() logic via the slow type's method.
-     * This is only called for display, not in the hot loop. */
-    PyObject *cv = ((MenaiComplex_Object *)self)->value;
-
-    /* Format matching menai_value.py MenaiComplex.describe() */
-    PyObject *mod = PyImport_ImportModule("menai.menai_value");
-    if (!mod) return NULL;
-    PyObject *cls = PyObject_GetAttrString(mod, "MenaiComplex");
-    Py_DECREF(mod);
-    if (!cls) return NULL;
-    PyObject *inst = PyObject_CallOneArg(cls, cv);
-    Py_DECREF(cls);
-    if (!inst) return NULL;
-    PyObject *result = PyObject_CallMethod(inst, "describe", NULL);
-    Py_DECREF(inst);
-    return result;
-}
-
-static PyObject *
-MenaiComplex_richcompare(PyObject *self, PyObject *other, int op)
-{
-    if (Py_TYPE(other) != &MenaiComplex_Type) {
-        if (op == Py_EQ) Py_RETURN_FALSE;
-        if (op == Py_NE) Py_RETURN_TRUE;
-        Py_RETURN_NOTIMPLEMENTED;
-    }
-
-    return PyObject_RichCompare(((MenaiComplex_Object *)self)->value, ((MenaiComplex_Object *)other)->value, op);
-}
-
-static Py_hash_t
-MenaiComplex_hash(PyObject *self)
-{
-    return PyObject_Hash(((MenaiComplex_Object *)self)->value);
-}
-
-static PyObject *
-MenaiComplex_get_value(PyObject *self, void *closure)
-{
-    (void)closure;
-    PyObject *v = ((MenaiComplex_Object *)self)->value;
-    Py_INCREF(v);
-    return v;
-}
-
-static PyGetSetDef MenaiComplex_getset[] = {
-    {"value", MenaiComplex_get_value, NULL, NULL, NULL},
-    {NULL, NULL, NULL, NULL, NULL}
-};
-
-static PyMethodDef MenaiComplex_methods[] = {
-    {"type_name", MenaiComplex_type_name, METH_NOARGS, NULL},
-    {"describe", MenaiComplex_describe, METH_NOARGS, NULL},
-    {NULL, NULL, 0, NULL}
-};
-
-static PyTypeObject MenaiComplex_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "menai.menai_vm_value.MenaiComplex",
-    .tp_basicsize = sizeof(MenaiComplex_Object),
-    .tp_flags = Py_TPFLAGS_DEFAULT,
-    .tp_new = MenaiComplex_new,
-    .tp_dealloc = MenaiComplex_dealloc,
-    .tp_methods = MenaiComplex_methods,
-    .tp_getset = MenaiComplex_getset,
-    .tp_richcompare = MenaiComplex_richcompare,
-    .tp_hash = MenaiComplex_hash,
-};
 
 /* ---------------------------------------------------------------------------
  * MenaiSymbol
@@ -1858,12 +1752,10 @@ menai_convert_value(PyObject *src)
     if (t == Slow_ComplexType) {
         PyObject *v = PyObject_GetAttrString(src, "value");
         if (!v) return NULL;
-        PyObject *args = PyTuple_Pack(1, v);
-        Py_DECREF(v);
-        if (!args) return NULL;
-        PyObject *r = MenaiComplex_new(&MenaiComplex_Type, args, NULL);
-        Py_DECREF(args);
-        return r;
+        if (!PyComplex_Check(v)) { Py_DECREF(v); PyErr_SetString(PyExc_TypeError, "MenaiComplex requires a complex"); return NULL; }
+        MenaiComplex_Object *r = (MenaiComplex_Object *)MenaiComplex_Type.tp_alloc(&MenaiComplex_Type, 0);
+        if (r) { r->value = v; } else { Py_DECREF(v); }
+        return (PyObject *)r;
     }
 
     if (t == Slow_StringType) {
@@ -2764,9 +2656,12 @@ _menai_vm_value_init(void)
     if (menai_vm_integer_init() < 0)
         return NULL;
 
+    if (menai_vm_complex_init() < 0)
+        return NULL;
+
     /* Ready all types */
     PyTypeObject *types[] = {
-        &MenaiComplex_Type, &MenaiString_Type,  /* extern from menai_vm_string.c */
+        &MenaiString_Type,  /* extern from menai_vm_string.c */
         &MenaiSymbol_Type, &MenaiList_Type, &MenaiDict_Type,
         &MenaiSet_Type, &MenaiFunction_Type, &MenaiStructType_Type,
         &MenaiStruct_Type
@@ -2811,9 +2706,17 @@ _menai_vm_value_init(void)
         return NULL;
     }
 
+    /* Add MenaiComplex type — readied by menai_vm_complex_init() */
+    Py_INCREF(&MenaiComplex_Type);
+    if (PyModule_AddObject(module, "MenaiComplex", (PyObject *)&MenaiComplex_Type) < 0) {
+        Py_DECREF(&MenaiComplex_Type);
+        Py_DECREF(module);
+        return NULL;
+    }
+
     /* Add types */
     const char *type_names[] = {
-        "MenaiComplex", "MenaiString", "MenaiSymbol", "MenaiList",
+        "MenaiString", "MenaiSymbol", "MenaiList",
         "MenaiDict", "MenaiSet", "MenaiFunction", "MenaiStructType",
         "MenaiStruct"
     };

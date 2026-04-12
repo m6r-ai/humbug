@@ -19,19 +19,16 @@
 
 #include "menai_vm_float.h"
 #include "menai_vm_boolean.h"
+#include "menai_vm_complex.h"
 #include "menai_vm_integer.h"
 #include "menai_vm_none.h"
 #include "menai_vm_string.h"
 
 /* ---------------------------------------------------------------------------
  * Types whose payload is a single Python object (MenaiInteger is in menai_vm_integer.h,
+ *                                                 MenaiComplex is in menai_vm_complex.h,
  *                                                 MenaiString is in menai_vm_string.h)
  * ------------------------------------------------------------------------- */
-
-typedef struct {
-    PyObject_HEAD
-    PyObject *value;    /* Python complex */
-} MenaiComplex_Object;
 
 typedef struct {
     PyObject_HEAD
