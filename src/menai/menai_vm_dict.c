@@ -8,9 +8,6 @@
  *   menai_dict_new_empty()         — zero-pair dict for the singleton
  *   menai_dict_from_fast_pairs()   — build from a tuple of fast (k,v) pairs,
  *                                    used by menai_convert_value()
- *
- * menai_hashable_key() is also defined here — it is shared by MenaiDict,
- * MenaiSet (via menai_vm_value.h), and the C VM.
  */
 
 #define PY_SSIZE_T_CLEAN
@@ -18,67 +15,6 @@
 
 #include "menai_vm_dict.h"
 #include "menai_vm_value.h"
-
-static PyObject *MenaiEvalError_type = NULL;
-
-/* ---------------------------------------------------------------------------
- * menai_hashable_key — shared by MenaiDict, MenaiSet, and the C VM
- * ------------------------------------------------------------------------- */
-
-PyObject *
-menai_hashable_key(PyObject *key)
-{
-    PyTypeObject *t = Py_TYPE(key);
-    if (t == &MenaiString_Type) {
-        PyObject *pystr = menai_string_to_pyunicode(key);
-        if (!pystr) return NULL;
-        PyObject *r = Py_BuildValue("(sO)", "str", pystr);
-        Py_DECREF(pystr);
-        return r;
-    }
-    if (t == &MenaiInteger_Type) return Py_BuildValue("(sO)", "int", ((MenaiInteger_Object *)key)->value);
-    if (t == &MenaiFloat_Type) {
-        PyObject *pf = PyFloat_FromDouble(((MenaiFloat_Object *)key)->value);
-        if (!pf) return NULL;
-        PyObject *r = Py_BuildValue("(sO)", "flt", pf);
-        Py_DECREF(pf);
-        return r;
-    }
-    if (t == &MenaiComplex_Type) return Py_BuildValue("(sO)", "cplx", ((MenaiComplex_Object *)key)->value);
-    if (t == &MenaiBoolean_Type) {
-        PyObject *bv = PyBool_FromLong(((MenaiBoolean_Object *)key)->value);
-        PyObject *r = Py_BuildValue("(sO)", "bool", bv);
-        Py_DECREF(bv);
-        return r;
-    }
-    if (t == &MenaiSymbol_Type) return Py_BuildValue("(sO)", "sym", ((MenaiSymbol_Object *)key)->name);
-    if (t == &MenaiStruct_Type) {
-        Py_hash_t h = PyObject_Hash(key);
-        if (h == -1 && PyErr_Occurred()) {
-            /* Re-raise as MenaiEvalError */
-            PyObject *exc = PyErr_GetRaisedException();
-            PyObject *msg = PyObject_Str(exc);
-            Py_XDECREF(exc);
-            if (msg) {
-                PyErr_SetObject(MenaiEvalError_type, msg);
-                Py_DECREF(msg);
-            }
-            return NULL;
-        }
-        PyObject *hobj = PyLong_FromSsize_t((Py_ssize_t)h);
-        PyObject *r = Py_BuildValue("(sO)", "struct", hobj);
-        Py_DECREF(hobj);
-        return r;
-    }
-
-    PyObject *tn = PyObject_CallMethod(key, "type_name", NULL);
-    PyErr_Format(MenaiEvalError_type,
-        "Dict keys must be strings, numbers, booleans, or symbols, got %s",
-        tn ? PyUnicode_AsUTF8(tn) : "?");
-
-    Py_XDECREF(tn);
-    return NULL;
-}
 
 /* ---------------------------------------------------------------------------
  * MenaiDict
@@ -288,8 +224,7 @@ menai_dict_from_fast_pairs(PyObject *fast_pairs)
 }
 
 int
-menai_vm_dict_init(PyObject *eval_error_type)
+menai_vm_dict_init(void)
 {
-    MenaiEvalError_type = eval_error_type;
     return PyType_Ready(&MenaiDict_Type);
 }

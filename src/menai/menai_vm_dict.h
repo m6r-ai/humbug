@@ -36,9 +36,8 @@ PyObject *menai_dict_from_fast_pairs(PyObject *fast_pairs);
 
 /*
  * Module init — called once from _menai_vm_value_init().
- * eval_error_type is a borrowed reference to MenaiEvalError.
  * Returns 0 on success, -1 on failure (Python exception set).
  */
-int menai_vm_dict_init(PyObject *eval_error_type);
+int menai_vm_dict_init(void);
 
 #endif /* MENAI_VM_DICT_H */

@@ -32,7 +32,7 @@
 
 /*
  * menai_hashable_key — convert a MenaiValue key to a hashable Python tuple.
- * Defined in menai_vm_dict.c.
+ * Defined in menai_vm_value.c.
  * Returns a new reference, or NULL on error (MenaiEvalError set).
  */
 PyObject *menai_hashable_key(PyObject *key);
