@@ -22,6 +22,7 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "menai_vm_none.h"
 #include "menai_vm_string.h"
 /* Forward-declare MenaiList_Type so the cache functions can reference it
  * before the full definition below. */
@@ -32,7 +33,6 @@ static PyTypeObject MenaiList_Type;
  * Forward declarations of type objects
  * ------------------------------------------------------------------------- */
 
-static PyTypeObject MenaiNone_Type;
 static PyTypeObject MenaiBoolean_Type;
 static PyTypeObject MenaiInteger_Type;
 static PyTypeObject MenaiFloat_Type;
@@ -48,7 +48,6 @@ static PyTypeObject MenaiStruct_Type;
  * Module-level singletons
  * ------------------------------------------------------------------------- */
 
-static PyObject *_Menai_NONE = NULL;
 static PyObject *_Menai_TRUE = NULL;
 static PyObject *_Menai_FALSE = NULL;
 static PyObject *_Menai_EMPTY_LIST = NULL;
@@ -75,64 +74,6 @@ static PyTypeObject *Slow_StructType = NULL;
 
 /* Error type */
 static PyObject *MenaiEvalError_type = NULL;
-
-/* ---------------------------------------------------------------------------
- * MenaiNone
- * ------------------------------------------------------------------------- */
-
-static PyObject *
-MenaiNone_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
-{
-    (void)args; (void)kwargs;
-    MenaiNone_Object *self = (MenaiNone_Object *)type->tp_alloc(type, 0);
-    return (PyObject *)self;
-}
-
-static PyObject *
-MenaiNone_type_name(PyObject *self, PyObject *args)
-{
-    (void)self; (void)args;
-    return PyUnicode_FromString("none");
-}
-
-static PyObject *
-MenaiNone_describe(PyObject *self, PyObject *args)
-{
-    (void)self; (void)args;
-    return PyUnicode_FromString("#none");
-}
-
-static PyObject *
-MenaiNone_richcompare(PyObject *self, PyObject *other, int op)
-{
-    if (op == Py_EQ) return PyBool_FromLong(Py_TYPE(other) == &MenaiNone_Type);
-    if (op == Py_NE) return PyBool_FromLong(Py_TYPE(other) != &MenaiNone_Type);
-    Py_RETURN_NOTIMPLEMENTED;
-}
-
-static Py_hash_t
-MenaiNone_hash(PyObject *self)
-{
-    (void)self;
-    return PyObject_Hash(Py_None);
-}
-
-static PyMethodDef MenaiNone_methods[] = {
-    {"type_name", MenaiNone_type_name, METH_NOARGS, NULL},
-    {"describe", MenaiNone_describe, METH_NOARGS, NULL},
-    {NULL, NULL, 0, NULL}
-};
-
-static PyTypeObject MenaiNone_Type = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "menai.menai_vm_value.MenaiNone",
-    .tp_basicsize = sizeof(MenaiNone_Object),
-    .tp_flags = Py_TPFLAGS_DEFAULT,
-    .tp_new = MenaiNone_new,
-    .tp_methods = MenaiNone_methods,
-    .tp_richcompare = MenaiNone_richcompare,
-    .tp_hash = MenaiNone_hash,
-};
 
 /* ---------------------------------------------------------------------------
  * MenaiBoolean
@@ -2151,8 +2092,7 @@ menai_convert_value(PyObject *src)
     PyTypeObject *t = Py_TYPE(src);
 
     if (t == Slow_NoneType)
-        return _Menai_NONE ? (Py_INCREF(_Menai_NONE), _Menai_NONE)
-                           : PyObject_CallNoArgs((PyObject *)&MenaiNone_Type);
+        return (Py_INCREF(menai_none_singleton()), menai_none_singleton());
 
     if (t == Slow_BooleanType) {
         PyObject *bv = PyObject_GetAttrString(src, "value");
@@ -3084,9 +3024,12 @@ _menai_vm_value_init(void)
     if (menai_vm_string_init(MenaiEvalError_type) < 0)
         return NULL;
 
+    if (menai_vm_none_init() < 0)
+        return NULL;
+
     /* Ready all types */
     PyTypeObject *types[] = {
-        &MenaiNone_Type, &MenaiBoolean_Type, &MenaiInteger_Type,
+        &MenaiBoolean_Type, &MenaiInteger_Type,
         &MenaiFloat_Type, &MenaiComplex_Type, &MenaiString_Type,  /* extern from menai_vm_string.c */
         &MenaiSymbol_Type, &MenaiList_Type, &MenaiDict_Type,
         &MenaiSet_Type, &MenaiFunction_Type, &MenaiStructType_Type,
@@ -3100,9 +3043,17 @@ _menai_vm_value_init(void)
     PyObject *module = PyModule_Create(&module_def);
     if (!module) return NULL;
 
+    /* Add MenaiNone type — readied by menai_vm_none_init() */
+    Py_INCREF(&MenaiNone_Type);
+    if (PyModule_AddObject(module, "MenaiNone", (PyObject *)&MenaiNone_Type) < 0) {
+        Py_DECREF(&MenaiNone_Type);
+        Py_DECREF(module);
+        return NULL;
+    }
+
     /* Add types */
     const char *type_names[] = {
-        "MenaiNone", "MenaiBoolean", "MenaiInteger", "MenaiFloat",
+        "MenaiBoolean", "MenaiInteger", "MenaiFloat",
         "MenaiComplex", "MenaiString", "MenaiSymbol", "MenaiList",
         "MenaiDict", "MenaiSet", "MenaiFunction", "MenaiStructType",
         "MenaiStruct"
@@ -3117,12 +3068,6 @@ _menai_vm_value_init(void)
     }
 
     /* Create singletons */
-    _Menai_NONE = PyObject_CallNoArgs((PyObject *)&MenaiNone_Type);
-    if (!_Menai_NONE) {
-        Py_DECREF(module);
-        return NULL;
-    }
-
     PyObject *true_args  = Py_BuildValue("(i)", 1);
     PyObject *false_args = Py_BuildValue("(i)", 0);
     _Menai_TRUE  = true_args  ? MenaiBoolean_new(&MenaiBoolean_Type, true_args,  NULL) : NULL;
@@ -3149,11 +3094,18 @@ _menai_vm_value_init(void)
     }
 
     /* Add singletons to module */
+    PyObject *none_singleton = menai_none_singleton();
+    Py_INCREF(none_singleton);
+    if (PyModule_AddObject(module, "Menai_NONE", none_singleton) < 0) {
+        Py_DECREF(none_singleton);
+        Py_DECREF(module);
+        return NULL;
+    }
+
     struct {
         const char *name;
         PyObject **obj;
     } singletons[] = {
-        {"Menai_NONE", &_Menai_NONE},
         {"Menai_BOOLEAN_TRUE", &_Menai_TRUE},
         {"Menai_BOOLEAN_FALSE", &_Menai_FALSE},
         {"Menai_LIST_EMPTY", &_Menai_EMPTY_LIST},

@@ -30,7 +30,9 @@ C_SOURCES := \
 	src/menai/menai_vm_string.h \
 	src/menai/menai_vm_string_tables.h \
 	src/menai/menai_vm_value.c \
-	src/menai/menai_vm_value.h
+	src/menai/menai_vm_value.h \
+	src/menai/menai_vm_none.c \
+	src/menai/menai_vm_none.h
 
 #
 # Build all extensions in-place.

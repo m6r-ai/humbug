@@ -117,3 +117,32 @@ operators are type-specific (e.g. `integer+`, `float*`).  This is intentional.
 
 You can find tools related to Menai in tools/menai.
 
+## VM implementation
+
+We currently have a legacy Python VM implementation but we're replacing it with a C version.  When implementing any new
+functionality, consider that the aim is to remove all python code from the C-based VM.
+
+### C formatting
+
+Do NOT use lines of characters in comments.  E.g. never use something like:
+
+```c
+/* --------------------------------
+ * This is a bad comment - don't do this!
+ * -------------------------------- */
+```
+
+For single line comments put the open and close of the comment on the same line:
+
+```c
+/* This is a good single line comment */
+```
+
+For multi-line comments the open and close go on their own lines:
+
+```c
+/*
+ * This is a great multiline comment.
+ * Where we have more than one line of text.
+ */
+```

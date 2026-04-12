@@ -17,6 +17,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include "menai_vm_none.h"
 #include "menai_vm_string.h"
 
 /* ---------------------------------------------------------------------------
@@ -129,14 +130,6 @@ typedef struct {
     PyObject *struct_type;  /* MenaiStructType_Object* */
     PyObject *fields;       /* Python tuple of MenaiValue* */
 } MenaiStruct_Object;
-
-/* ---------------------------------------------------------------------------
- * MenaiNone has no fields beyond the PyObject header
- * ------------------------------------------------------------------------- */
-
-typedef struct {
-    PyObject_HEAD
-} MenaiNone_Object;
 
 /* ---------------------------------------------------------------------------
  * MenaiList C-level constructors — defined in menai_value_c.c.
