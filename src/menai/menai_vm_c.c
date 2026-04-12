@@ -1015,8 +1015,7 @@ call_setup(Frame *new_frame, PyObject *func_obj,
         }
         /* Pack excess args into a MenaiList for the rest parameter. */
         int rest_count = arity - min_arity;
-        PyObject **rest_arr = rest_count > 0
-            ? (PyObject **)PyMem_Malloc(rest_count * sizeof(PyObject *)) : NULL;
+        PyObject **rest_arr = rest_count > 0 ? (PyObject **)PyMem_Malloc(rest_count * sizeof(PyObject *)) : NULL;
         if (rest_count > 0 && !rest_arr) {
             PyErr_NoMemory();
             return -1;
@@ -1252,7 +1251,7 @@ execute_loop(PyObject *code, PyObject *globals,
 
         case OP_CALL: {
             PyObject *raw = regs[base + src0];
-            int arity     = src1;
+            int arity = src1;
 
             int callee_base = base + frame->local_count;
 
