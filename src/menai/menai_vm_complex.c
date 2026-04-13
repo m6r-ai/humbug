@@ -80,6 +80,7 @@ MenaiComplex_richcompare(PyObject *self, PyObject *other, int op)
         if (op == Py_NE) Py_RETURN_TRUE;
         Py_RETURN_NOTIMPLEMENTED;
     }
+
     double ar = ((MenaiComplex_Object *)self)->real;
     double ai = ((MenaiComplex_Object *)self)->imag;
     double br = ((MenaiComplex_Object *)other)->real;
@@ -87,7 +88,7 @@ MenaiComplex_richcompare(PyObject *self, PyObject *other, int op)
     switch (op) {
         case Py_EQ: return PyBool_FromLong(ar == br && ai == bi);
         case Py_NE: return PyBool_FromLong(ar != br || ai != bi);
-        default:    Py_RETURN_NOTIMPLEMENTED;
+        default: Py_RETURN_NOTIMPLEMENTED;
     }
 }
 
@@ -125,20 +126,20 @@ static PyGetSetDef MenaiComplex_getset[] = {
 
 static PyMethodDef MenaiComplex_methods[] = {
     {"type_name", MenaiComplex_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiComplex_describe,  METH_NOARGS, NULL},
+    {"describe", MenaiComplex_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 PyTypeObject MenaiComplex_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name        = "menai.menai_vm_value.MenaiComplex",
-    .tp_basicsize   = sizeof(MenaiComplex_Object),
-    .tp_flags       = Py_TPFLAGS_DEFAULT,
-    .tp_new         = MenaiComplex_new,
-    .tp_methods     = MenaiComplex_methods,
-    .tp_getset      = MenaiComplex_getset,
+    .tp_name = "menai.menai_vm_value.MenaiComplex",
+    .tp_basicsize = sizeof(MenaiComplex_Object),
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiComplex_new,
+    .tp_methods = MenaiComplex_methods,
+    .tp_getset = MenaiComplex_getset,
     .tp_richcompare = MenaiComplex_richcompare,
-    .tp_hash        = MenaiComplex_hash,
+    .tp_hash = MenaiComplex_hash,
 };
 
 int

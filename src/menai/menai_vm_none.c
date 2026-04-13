@@ -52,19 +52,19 @@ MenaiNone_hash(PyObject *self)
 
 static PyMethodDef MenaiNone_methods[] = {
     {"type_name", MenaiNone_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiNone_describe,  METH_NOARGS, NULL},
+    {"describe", MenaiNone_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 PyTypeObject MenaiNone_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name        = "menai.menai_vm_value.MenaiNone",
-    .tp_basicsize   = sizeof(MenaiNone_Object),
-    .tp_flags       = Py_TPFLAGS_DEFAULT,
-    .tp_new         = MenaiNone_new,
-    .tp_methods     = MenaiNone_methods,
+    .tp_name = "menai.menai_vm_value.MenaiNone",
+    .tp_basicsize = sizeof(MenaiNone_Object),
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiNone_new,
+    .tp_methods = MenaiNone_methods,
     .tp_richcompare = MenaiNone_richcompare,
-    .tp_hash        = MenaiNone_hash,
+    .tp_hash = MenaiNone_hash,
 };
 
 PyObject *
@@ -76,12 +76,10 @@ menai_none_singleton(void)
 int
 menai_vm_none_init(void)
 {
-    if (PyType_Ready(&MenaiNone_Type) < 0)
-        return -1;
+    if (PyType_Ready(&MenaiNone_Type) < 0) return -1;
 
     _Menai_NONE = PyObject_CallNoArgs((PyObject *)&MenaiNone_Type);
-    if (!_Menai_NONE)
-        return -1;
+    if (!_Menai_NONE) return -1;
 
     return 0;
 }

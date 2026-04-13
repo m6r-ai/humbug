@@ -25,6 +25,7 @@ MenaiSymbol_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     } else {
         Py_DECREF(name);
     }
+
     return (PyObject *)self;
 }
 
@@ -90,21 +91,21 @@ static PyGetSetDef MenaiSymbol_getset[] = {
 
 static PyMethodDef MenaiSymbol_methods[] = {
     {"type_name", MenaiSymbol_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiSymbol_describe,  METH_NOARGS, NULL},
+    {"describe", MenaiSymbol_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 PyTypeObject MenaiSymbol_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name        = "menai.menai_vm_value.MenaiSymbol",
-    .tp_basicsize   = sizeof(MenaiSymbol_Object),
-    .tp_flags       = Py_TPFLAGS_DEFAULT,
-    .tp_new         = MenaiSymbol_new,
-    .tp_dealloc     = MenaiSymbol_dealloc,
-    .tp_methods     = MenaiSymbol_methods,
-    .tp_getset      = MenaiSymbol_getset,
+    .tp_name = "menai.menai_vm_value.MenaiSymbol",
+    .tp_basicsize = sizeof(MenaiSymbol_Object),
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiSymbol_new,
+    .tp_dealloc = MenaiSymbol_dealloc,
+    .tp_methods = MenaiSymbol_methods,
+    .tp_getset = MenaiSymbol_getset,
     .tp_richcompare = MenaiSymbol_richcompare,
-    .tp_hash        = MenaiSymbol_hash,
+    .tp_hash = MenaiSymbol_hash,
 };
 
 PyObject *
@@ -118,6 +119,7 @@ menai_symbol_alloc(PyObject *name)
     } else {
         Py_DECREF(name);
     }
+
     return (PyObject *)self;
 }
 

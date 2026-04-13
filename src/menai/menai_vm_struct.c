@@ -15,19 +15,13 @@
 
 #include "menai_vm_struct.h"
 
-/* ---------------------------------------------------------------------------
- * MenaiStructType
- * ------------------------------------------------------------------------- */
-
 static PyObject *
 MenaiStructType_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     PyObject *name = NULL, *field_names = NULL;
     int tag = 0;
     static char *kwlist[] = {"name", "tag", "field_names", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "UiO", kwlist,
-                                     &name, &tag, &field_names))
-        return NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "UiO", kwlist, &name, &tag, &field_names)) return NULL;
 
     PyObject *fn_tup = PySequence_Tuple(field_names);
     if (!fn_tup) return NULL;
@@ -38,6 +32,7 @@ MenaiStructType_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
         Py_DECREF(fn_tup);
         return NULL;
     }
+
     Py_ssize_t n = PyTuple_GET_SIZE(fn_tup);
     for (Py_ssize_t i = 0; i < n; i++) {
         PyObject *idx = PyLong_FromSsize_t(i);
@@ -47,6 +42,7 @@ MenaiStructType_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
             Py_DECREF(fn_tup);
             return NULL;
         }
+
         Py_DECREF(idx);
     }
 
@@ -61,6 +57,7 @@ MenaiStructType_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
         Py_DECREF(fn_tup);
         Py_DECREF(fi);
     }
+
     return (PyObject *)self;
 }
 
@@ -91,6 +88,7 @@ MenaiStructType_describe(PyObject *self, PyObject *args)
     PyObject *fields_str = PyUnicode_Join(sep, s->field_names);
     Py_DECREF(sep);
     if (!fields_str) return NULL;
+
     PyObject *result = PyUnicode_FromFormat("<struct-type %U (%U)>", s->name, fields_str);
     Py_DECREF(fields_str);
     return result;
@@ -104,6 +102,7 @@ MenaiStructType_field_index(PyObject *self, PyObject *name)
         PyErr_SetObject(PyExc_KeyError, name);
         return NULL;
     }
+
     Py_INCREF(idx);
     return idx;
 }
@@ -116,12 +115,13 @@ MenaiStructType_richcompare(PyObject *self, PyObject *other, int op)
         if (op == Py_NE) Py_RETURN_TRUE;
         Py_RETURN_NOTIMPLEMENTED;
     }
+
     int a = ((MenaiStructType_Object *)self)->tag;
     int b = ((MenaiStructType_Object *)other)->tag;
     switch (op) {
         case Py_EQ: return PyBool_FromLong(a == b);
         case Py_NE: return PyBool_FromLong(a != b);
-        default:    Py_RETURN_NOTIMPLEMENTED;
+        default: Py_RETURN_NOTIMPLEMENTED;
     }
 }
 
@@ -157,30 +157,30 @@ MenaiStructType_get_field_names(PyObject *self, void *closure)
 }
 
 static PyGetSetDef MenaiStructType_getset[] = {
-    {"name",        MenaiStructType_get_name,        NULL, NULL, NULL},
-    {"tag",         MenaiStructType_get_tag,          NULL, NULL, NULL},
-    {"field_names", MenaiStructType_get_field_names,  NULL, NULL, NULL},
+    {"name", MenaiStructType_get_name, NULL, NULL, NULL},
+    {"tag", MenaiStructType_get_tag, NULL, NULL, NULL},
+    {"field_names", MenaiStructType_get_field_names, NULL, NULL, NULL},
     {NULL, NULL, NULL, NULL, NULL}
 };
 
 static PyMethodDef MenaiStructType_methods[] = {
-    {"type_name",   MenaiStructType_type_name,  METH_NOARGS, NULL},
-    {"describe",    MenaiStructType_describe,   METH_NOARGS, NULL},
-    {"field_index", MenaiStructType_field_index, METH_O,     NULL},
+    {"type_name", MenaiStructType_type_name, METH_NOARGS, NULL},
+    {"describe", MenaiStructType_describe, METH_NOARGS, NULL},
+    {"field_index", MenaiStructType_field_index, METH_O, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 PyTypeObject MenaiStructType_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name        = "menai.menai_vm_value.MenaiStructType",
-    .tp_basicsize   = sizeof(MenaiStructType_Object),
-    .tp_flags       = Py_TPFLAGS_DEFAULT,
-    .tp_new         = MenaiStructType_new,
-    .tp_dealloc     = MenaiStructType_dealloc,
-    .tp_methods     = MenaiStructType_methods,
-    .tp_getset      = MenaiStructType_getset,
+    .tp_name = "menai.menai_vm_value.MenaiStructType",
+    .tp_basicsize = sizeof(MenaiStructType_Object),
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiStructType_new,
+    .tp_dealloc = MenaiStructType_dealloc,
+    .tp_methods = MenaiStructType_methods,
+    .tp_getset = MenaiStructType_getset,
     .tp_richcompare = MenaiStructType_richcompare,
-    .tp_hash        = MenaiStructType_hash,
+    .tp_hash = MenaiStructType_hash,
 };
 
 /* ---------------------------------------------------------------------------
@@ -192,9 +192,7 @@ MenaiStruct_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     PyObject *struct_type = NULL, *fields = NULL;
     static char *kwlist[] = {"struct_type", "fields", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO", kwlist,
-                                     &struct_type, &fields))
-        return NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "OO", kwlist, &struct_type, &fields)) return NULL;
 
     PyObject *fields_tup = PySequence_Tuple(fields);
     if (!fields_tup) return NULL;
@@ -207,6 +205,7 @@ MenaiStruct_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     } else {
         Py_DECREF(fields_tup);
     }
+
     return (PyObject *)self;
 }
 
@@ -236,6 +235,7 @@ MenaiStruct_describe(PyObject *self, PyObject *args)
 
     PyObject *parts = PyList_New(n);
     if (!parts) return NULL;
+
     for (Py_ssize_t i = 0; i < n; i++) {
         PyObject *desc = PyObject_CallMethod(PyTuple_GET_ITEM(s->fields, i), "describe", NULL);
         if (!desc) {
@@ -244,6 +244,7 @@ MenaiStruct_describe(PyObject *self, PyObject *args)
         }
         PyList_SET_ITEM(parts, i, desc);
     }
+
     PyObject *sep = PyUnicode_FromString(" ");
     PyObject *joined = PyUnicode_Join(sep, parts);
     Py_DECREF(sep);
@@ -251,10 +252,9 @@ MenaiStruct_describe(PyObject *self, PyObject *args)
     if (!joined) return NULL;
 
     PyObject *result;
-    if (n == 0)
-        result = PyUnicode_FromFormat("(%U)", st->name);
-    else
-        result = PyUnicode_FromFormat("(%U %U)", st->name, joined);
+    if (n == 0) result = PyUnicode_FromFormat("(%U)", st->name);
+    else result = PyUnicode_FromFormat("(%U %U)", st->name, joined);
+
     Py_DECREF(joined);
     return result;
 }
@@ -275,6 +275,7 @@ MenaiStruct_richcompare(PyObject *self, PyObject *other, int op)
         if (!tag_eq) Py_RETURN_FALSE;
         return PyObject_RichCompare(a->fields, b->fields, Py_EQ);
     }
+
     if (op == Py_NE) {
         if (!tag_eq) Py_RETURN_TRUE;
         return PyObject_RichCompare(a->fields, b->fields, Py_NE);
@@ -288,9 +289,11 @@ MenaiStruct_hash(PyObject *self)
     MenaiStruct_Object *s = (MenaiStruct_Object *)self;
     Py_hash_t fh = PyObject_Hash(s->fields);
     if (fh == -1) return -1;
+
     int tag = ((MenaiStructType_Object *)s->struct_type)->tag;
     PyObject *pair = Py_BuildValue("(iN)", tag, PyLong_FromSsize_t(fh));
     if (!pair) return -1;
+
     Py_hash_t h = PyObject_Hash(pair);
     Py_DECREF(pair);
     return h;
@@ -316,32 +319,28 @@ MenaiStruct_get_fields(PyObject *self, void *closure)
 
 static PyGetSetDef MenaiStruct_getset[] = {
     {"struct_type", MenaiStruct_get_struct_type, NULL, NULL, NULL},
-    {"fields",      MenaiStruct_get_fields,      NULL, NULL, NULL},
+    {"fields", MenaiStruct_get_fields, NULL, NULL, NULL},
     {NULL, NULL, NULL, NULL, NULL}
 };
 
 static PyMethodDef MenaiStruct_methods[] = {
     {"type_name", MenaiStruct_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiStruct_describe,  METH_NOARGS, NULL},
+    {"describe", MenaiStruct_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 PyTypeObject MenaiStruct_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name        = "menai.menai_vm_value.MenaiStruct",
-    .tp_basicsize   = sizeof(MenaiStruct_Object),
-    .tp_flags       = Py_TPFLAGS_DEFAULT,
-    .tp_new         = MenaiStruct_new,
-    .tp_dealloc     = MenaiStruct_dealloc,
-    .tp_methods     = MenaiStruct_methods,
-    .tp_getset      = MenaiStruct_getset,
+    .tp_name = "menai.menai_vm_value.MenaiStruct",
+    .tp_basicsize = sizeof(MenaiStruct_Object),
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiStruct_new,
+    .tp_dealloc = MenaiStruct_dealloc,
+    .tp_methods = MenaiStruct_methods,
+    .tp_getset = MenaiStruct_getset,
     .tp_richcompare = MenaiStruct_richcompare,
-    .tp_hash        = MenaiStruct_hash,
+    .tp_hash = MenaiStruct_hash,
 };
-
-/* ---------------------------------------------------------------------------
- * Public C-level constructors
- * ------------------------------------------------------------------------- */
 
 PyObject *
 menai_struct_alloc(PyObject *struct_type, PyObject *fields_tup)
@@ -380,9 +379,8 @@ menai_struct_new_from_fast(PyObject *fast_st, PyObject *fast_fields_tup)
 int
 menai_vm_struct_init(void)
 {
-    if (PyType_Ready(&MenaiStructType_Type) < 0)
-        return -1;
-    if (PyType_Ready(&MenaiStruct_Type) < 0)
-        return -1;
+    if (PyType_Ready(&MenaiStructType_Type) < 0) return -1;
+    if (PyType_Ready(&MenaiStruct_Type) < 0) return -1;
+
     return 0;
 }

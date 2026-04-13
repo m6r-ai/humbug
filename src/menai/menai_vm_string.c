@@ -382,6 +382,7 @@ menai_string_has_prefix(PyObject *s, PyObject *prefix)
     MenaiString_Object *mp = (MenaiString_Object *)prefix;
     Py_ssize_t plen = Py_SIZE(mp);
     if (plen > Py_SIZE(ms)) return 0;
+
     return memcmp(ms->data, mp->data, (size_t)plen * sizeof(uint32_t)) == 0;
 }
 
@@ -392,6 +393,7 @@ menai_string_has_suffix(PyObject *s, PyObject *suffix)
     MenaiString_Object *msu = (MenaiString_Object *)suffix;
     Py_ssize_t slen = Py_SIZE(ms), sulen = Py_SIZE(msu);
     if (sulen > slen) return 0;
+
     return memcmp(ms->data + (slen - sulen), msu->data, (size_t)sulen * sizeof(uint32_t)) == 0;
 }
 
@@ -421,6 +423,7 @@ menai_string_replace(PyObject *s, PyObject *from, PyObject *to)
             }
             if (i < slen) obj->data[dst++] = ms->data[i];
         }
+
         return (PyObject *)obj;
     }
 
@@ -460,9 +463,9 @@ menai_string_replace(PyObject *s, PyObject *from, PyObject *to)
             obj->data[dst++] = ms->data[src++];
         }
     }
+
     /* Copy any remaining tail. */
-    while (src < slen)
-        obj->data[dst++] = ms->data[src++];
+    while (src < slen) obj->data[dst++] = ms->data[src++];
 
     return (PyObject *)obj;
 }
@@ -598,7 +601,7 @@ static PyGetSetDef MenaiString_getset[] = {
 
 static PyMethodDef MenaiString_methods[] = {
     {"type_name", MenaiString_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiString_describe, METH_NOARGS, NULL},
+    {"describe", MenaiString_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 

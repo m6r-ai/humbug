@@ -39,6 +39,7 @@ static inline int
 _bucket_index(Py_ssize_t n)
 {
     if (n <= 1) return 0;
+
     /* ceil_log2(n) via count-leading-zeros — one instruction on x86/ARM. */
     int bucket = (int)(sizeof(unsigned long) * 8) - __builtin_clzl((unsigned long)(n - 1));
     return bucket < LIST_CACHE_NUM_BUCKETS ? bucket : LIST_CACHE_NUM_BUCKETS - 1;
@@ -56,6 +57,7 @@ _menai_list_cache_alloc_obj(void)
         Py_SET_REFCNT((PyObject *)obj, 1);
         return obj;
     }
+
     return (MenaiList_Object *)MenaiList_Type.tp_alloc(&MenaiList_Type, 0);
 }
 
@@ -138,8 +140,7 @@ MenaiList_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     PyObject *elements = NULL;
     static char *kwlist[] = {"elements", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", kwlist, &elements))
-        return NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", kwlist, &elements)) return NULL;
 
     PyObject *tup = NULL;
     if (elements != NULL) {
@@ -154,6 +155,7 @@ MenaiList_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
         PyErr_NoMemory();
         return NULL;
     }
+
     for (Py_ssize_t i = 0; i < n; i++) {
         arr[i] = PyTuple_GET_ITEM(tup, i);
         Py_INCREF(arr[i]);
@@ -167,6 +169,7 @@ MenaiList_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     } else {
         _menai_list_cache_free_arr(arr, n);
     }
+
     return (PyObject *)self;
 }
 
@@ -207,13 +210,16 @@ MenaiList_describe(PyObject *self, PyObject *args)
             Py_DECREF(parts);
             return NULL;
         }
+
         PyList_SET_ITEM(parts, i, desc);
     }
+
     PyObject *sep = PyUnicode_FromString(" ");
     PyObject *joined = PyUnicode_Join(sep, parts);
     Py_DECREF(sep);
     Py_DECREF(parts);
     if (!joined) return NULL;
+
     PyObject *result = PyUnicode_FromFormat("(%U)", joined);
     Py_DECREF(joined);
     return result;
@@ -227,6 +233,7 @@ MenaiList_richcompare(PyObject *self, PyObject *other, int op)
         if (op == Py_NE) Py_RETURN_TRUE;
         Py_RETURN_NOTIMPLEMENTED;
     }
+
     MenaiList_Object *a = (MenaiList_Object *)self;
     MenaiList_Object *b = (MenaiList_Object *)other;
     if (op == Py_EQ) {
@@ -256,10 +263,12 @@ MenaiList_hash(PyObject *self)
     MenaiList_Object *lst = (MenaiList_Object *)self;
     PyObject *tup = PyTuple_New(lst->length);
     if (!tup) return -1;
+
     for (Py_ssize_t i = 0; i < lst->length; i++) {
         Py_INCREF(lst->elements[i]);
         PyTuple_SET_ITEM(tup, i, lst->elements[i]);
     }
+
     Py_hash_t h = PyObject_Hash(tup);
     Py_DECREF(tup);
     return h;
@@ -272,10 +281,12 @@ MenaiList_get_elements(PyObject *self, void *closure)
     MenaiList_Object *lst = (MenaiList_Object *)self;
     PyObject *tup = PyTuple_New(lst->length);
     if (!tup) return NULL;
+
     for (Py_ssize_t i = 0; i < lst->length; i++) {
         Py_INCREF(lst->elements[i]);
         PyTuple_SET_ITEM(tup, i, lst->elements[i]);
     }
+
     return tup;
 }
 
@@ -286,26 +297,22 @@ static PyGetSetDef MenaiList_getset[] = {
 
 static PyMethodDef MenaiList_methods[] = {
     {"type_name", MenaiList_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiList_describe,  METH_NOARGS, NULL},
+    {"describe", MenaiList_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 PyTypeObject MenaiList_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name        = "menai.menai_vm_value.MenaiList",
-    .tp_basicsize   = sizeof(MenaiList_Object),
-    .tp_flags       = Py_TPFLAGS_DEFAULT,
-    .tp_new         = MenaiList_new,
-    .tp_dealloc     = MenaiList_dealloc,
-    .tp_methods     = MenaiList_methods,
-    .tp_getset      = MenaiList_getset,
+    .tp_name = "menai.menai_vm_value.MenaiList",
+    .tp_basicsize = sizeof(MenaiList_Object),
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiList_new,
+    .tp_dealloc = MenaiList_dealloc,
+    .tp_methods = MenaiList_methods,
+    .tp_getset = MenaiList_getset,
     .tp_richcompare = MenaiList_richcompare,
-    .tp_hash        = MenaiList_hash,
+    .tp_hash = MenaiList_hash,
 };
-
-/* ---------------------------------------------------------------------------
- * C-level constructors
- * ------------------------------------------------------------------------- */
 
 PyObject *
 menai_list_from_array(PyObject **items, Py_ssize_t n)
@@ -383,6 +390,7 @@ menai_list_new_empty(void)
 {
     MenaiList_Object *obj = _menai_list_cache_alloc_obj();
     if (!obj) return NULL;
+
     obj->elements = NULL;
     obj->length = 0;
     return (PyObject *)obj;
@@ -391,8 +399,8 @@ menai_list_new_empty(void)
 int
 menai_vm_list_init(void)
 {
-    if (PyType_Ready(&MenaiList_Type) < 0)
-        return -1;
+    if (PyType_Ready(&MenaiList_Type) < 0) return -1;
+
     _menai_list_cache_clear();
     return 0;
 }

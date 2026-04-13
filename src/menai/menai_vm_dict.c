@@ -16,10 +16,6 @@
 #include "menai_vm_dict.h"
 #include "menai_vm_value.h"
 
-/* ---------------------------------------------------------------------------
- * MenaiDict
- * ------------------------------------------------------------------------- */
-
 static PyObject *
 MenaiDict_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
@@ -34,6 +30,7 @@ MenaiDict_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     } else {
         pairs = PySequence_Tuple(pairs_arg);
     }
+
     if (!pairs) return NULL;
 
     /* Build lookup dict */
@@ -96,11 +93,11 @@ MenaiDict_describe(PyObject *self, PyObject *args)
     (void)args;
     PyObject *pairs = ((MenaiDict_Object *)self)->pairs;
     Py_ssize_t n = PyTuple_GET_SIZE(pairs);
-    if (n == 0)
-        return PyUnicode_FromString("{}");
+    if (n == 0) return PyUnicode_FromString("{}");
 
     PyObject *parts = PyList_New(n);
     if (!parts) return NULL;
+
     for (Py_ssize_t i = 0; i < n; i++) {
         PyObject *pair = PyTuple_GET_ITEM(pairs, i);
         PyObject *kd = PyObject_CallMethod(PyTuple_GET_ITEM(pair, 0), "describe", NULL);
@@ -110,6 +107,7 @@ MenaiDict_describe(PyObject *self, PyObject *args)
             Py_DECREF(parts);
             return NULL;
         }
+
         PyObject *entry = PyUnicode_FromFormat("(%U %U)", kd, vd);
         Py_DECREF(kd);
         Py_DECREF(vd);
@@ -117,6 +115,7 @@ MenaiDict_describe(PyObject *self, PyObject *args)
             Py_DECREF(parts);
             return NULL;
         }
+
         PyList_SET_ITEM(parts, i, entry);
     }
     PyObject *sep = PyUnicode_FromString(" ");
@@ -124,6 +123,7 @@ MenaiDict_describe(PyObject *self, PyObject *args)
     Py_DECREF(sep);
     Py_DECREF(parts);
     if (!joined) return NULL;
+
     PyObject *result = PyUnicode_FromFormat("{%U}", joined);
     Py_DECREF(joined);
     return result;
@@ -174,29 +174,29 @@ MenaiDict_get_lookup(PyObject *self, void *closure)
 }
 
 static PyGetSetDef MenaiDict_getset[] = {
-    {"pairs",  MenaiDict_get_pairs,  NULL, NULL, NULL},
+    {"pairs", MenaiDict_get_pairs, NULL, NULL, NULL},
     {"lookup", MenaiDict_get_lookup, NULL, NULL, NULL},
     {NULL, NULL, NULL, NULL, NULL}
 };
 
 static PyMethodDef MenaiDict_methods[] = {
-    {"type_name",       MenaiDict_type_name,       METH_NOARGS,  NULL},
-    {"describe",        MenaiDict_describe,         METH_NOARGS,  NULL},
+    {"type_name", MenaiDict_type_name, METH_NOARGS, NULL},
+    {"describe", MenaiDict_describe, METH_NOARGS, NULL},
     {"to_hashable_key", (PyCFunction)MenaiDict_to_hashable_key, METH_O | METH_STATIC, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 PyTypeObject MenaiDict_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name        = "menai.menai_vm_value.MenaiDict",
-    .tp_basicsize   = sizeof(MenaiDict_Object),
-    .tp_flags       = Py_TPFLAGS_DEFAULT,
-    .tp_new         = MenaiDict_new,
-    .tp_dealloc     = MenaiDict_dealloc,
-    .tp_methods     = MenaiDict_methods,
-    .tp_getset      = MenaiDict_getset,
+    .tp_name = "menai.menai_vm_value.MenaiDict",
+    .tp_basicsize = sizeof(MenaiDict_Object),
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiDict_new,
+    .tp_dealloc = MenaiDict_dealloc,
+    .tp_methods = MenaiDict_methods,
+    .tp_getset = MenaiDict_getset,
     .tp_richcompare = MenaiDict_richcompare,
-    .tp_hash        = MenaiDict_hash,
+    .tp_hash = MenaiDict_hash,
 };
 
 PyObject *
@@ -204,9 +204,11 @@ menai_dict_new_empty(void)
 {
     PyObject *empty_tup = PyTuple_New(0);
     if (!empty_tup) return NULL;
+
     PyObject *args = PyTuple_Pack(1, empty_tup);
     Py_DECREF(empty_tup);
     if (!args) return NULL;
+
     PyObject *r = MenaiDict_new(&MenaiDict_Type, args, NULL);
     Py_DECREF(args);
     return r;
@@ -218,6 +220,7 @@ menai_dict_from_fast_pairs(PyObject *fast_pairs)
     PyObject *args = PyTuple_Pack(1, fast_pairs);
     Py_DECREF(fast_pairs);
     if (!args) return NULL;
+
     PyObject *r = MenaiDict_new(&MenaiDict_Type, args, NULL);
     Py_DECREF(args);
     return r;

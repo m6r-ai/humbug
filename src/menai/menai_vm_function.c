@@ -35,6 +35,7 @@ _cache_frame_fields(MenaiFunction_Object *self, PyObject *bytecode)
             self->code_len = (int)(view.len / sizeof(uint64_t));
             PyBuffer_Release(&view);
         }
+
         /* Do not Py_DECREF — borrowed from bytecode */
     }
     PyObject *constants = PyObject_GetAttrString(bytecode, "constants");
@@ -42,21 +43,25 @@ _cache_frame_fields(MenaiFunction_Object *self, PyObject *bytecode)
         self->constants = constants;
         self->constants_items = ((PyListObject *)constants)->ob_item;
     }
+
     PyObject *names = PyObject_GetAttrString(bytecode, "names");
     if (names) {
         self->names = names;
         self->names_items = ((PyListObject *)names)->ob_item;
     }
+
     PyObject *lc = PyObject_GetAttrString(bytecode, "local_count");
     if (lc) {
         self->local_count = (int)PyLong_AsLong(lc);
         Py_DECREF(lc);
     }
+
     PyObject *pc = PyObject_GetAttrString(bytecode, "param_count");
     if (pc) {
         self->param_count = (int)PyLong_AsLong(pc);
         Py_DECREF(pc);
     }
+
     PyObject *cc = PyObject_GetAttrString(bytecode, "_code_caches");
     self->closure_caches = (cc && PyList_Check(cc)) ? cc : NULL;
     Py_XDECREF(cc);
@@ -69,8 +74,7 @@ MenaiFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     PyObject *parameters = NULL, *name = Py_None, *bytecode = Py_None;
     PyObject *captured_values = NULL;
     int is_variadic = 0;
-    static char *kwlist[] = {"parameters", "name", "bytecode",
-                             "captured_values", "is_variadic", NULL};
+    static char *kwlist[] = {"parameters", "name", "bytecode", "captured_values", "is_variadic", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOOOp", kwlist,
                                      &parameters, &name, &bytecode,
                                      &captured_values, &is_variadic))
@@ -196,6 +200,7 @@ MenaiFunction_describe(PyObject *self, PyObject *args)
     PyObject *joined = PyUnicode_Join(sep, f->parameters);
     Py_DECREF(sep);
     if (!joined) return NULL;
+
     PyObject *result = PyUnicode_FromFormat("<lambda (%U)>", joined);
     Py_DECREF(joined);
     return result;
@@ -255,6 +260,7 @@ MenaiFunction_get_captured_values(PyObject *self, void *closure)
     Py_ssize_t ncap = Py_SIZE(f);
     PyObject *lst = PyList_New(ncap);
     if (!lst) return NULL;
+
     for (Py_ssize_t i = 0; i < ncap; i++) {
         PyObject *cv = f->captures[i] ? f->captures[i] : Py_None;
         Py_INCREF(cv);
@@ -276,6 +282,7 @@ MenaiFunction_set_captured_values(PyObject *self, PyObject *value, void *closure
         PyErr_SetString(PyExc_TypeError, "captured_values must be a list");
         return -1;
     }
+
     MenaiFunction_Object *f = (MenaiFunction_Object *)self;
     Py_ssize_t ncap = Py_SIZE(f);
     if (PyList_GET_SIZE(value) != ncap) {
@@ -283,12 +290,14 @@ MenaiFunction_set_captured_values(PyObject *self, PyObject *value, void *closure
                         "captured_values length does not match function capture count");
         return -1;
     }
+
     for (Py_ssize_t i = 0; i < ncap; i++) {
         PyObject *nv = PyList_GET_ITEM(value, i);
         Py_INCREF(nv);
         Py_XDECREF(f->captures[i]);
         f->captures[i] = nv;
     }
+
     return 0;
 }
 
@@ -307,35 +316,35 @@ MenaiFunction_get_param_count(PyObject *self, void *closure)
 }
 
 static PyGetSetDef MenaiFunction_getset[] = {
-    {"parameters",      MenaiFunction_get_parameters,      NULL,                              NULL, NULL},
-    {"name",            MenaiFunction_get_name,             NULL,                              NULL, NULL},
-    {"bytecode",        MenaiFunction_get_bytecode,         NULL,                              NULL, NULL},
+    {"parameters", MenaiFunction_get_parameters, NULL, NULL, NULL},
+    {"name", MenaiFunction_get_name, NULL, NULL, NULL},
+    {"bytecode", MenaiFunction_get_bytecode, NULL, NULL, NULL},
     {"captured_values", MenaiFunction_get_captured_values,  MenaiFunction_set_captured_values, NULL, NULL},
-    {"is_variadic",     MenaiFunction_get_is_variadic,      NULL,                              NULL, NULL},
-    {"param_count",     MenaiFunction_get_param_count,      NULL,                              NULL, NULL},
+    {"is_variadic", MenaiFunction_get_is_variadic, NULL, NULL, NULL},
+    {"param_count", MenaiFunction_get_param_count, NULL, NULL, NULL},
     {NULL, NULL, NULL, NULL, NULL}
 };
 
 static PyMethodDef MenaiFunction_methods[] = {
     {"type_name", MenaiFunction_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiFunction_describe,  METH_NOARGS, NULL},
+    {"describe", MenaiFunction_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 PyTypeObject MenaiFunction_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name        = "menai.menai_vm_value.MenaiFunction",
-    .tp_basicsize   = sizeof(MenaiFunction_Object) - sizeof(PyObject *),
-    .tp_itemsize    = sizeof(PyObject *),
-    .tp_flags       = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
-    .tp_new         = MenaiFunction_new,
-    .tp_dealloc     = MenaiFunction_dealloc,
-    .tp_traverse    = MenaiFunction_traverse,
-    .tp_clear       = MenaiFunction_clear,
-    .tp_methods     = MenaiFunction_methods,
-    .tp_getset      = MenaiFunction_getset,
+    .tp_name = "menai.menai_vm_value.MenaiFunction",
+    .tp_basicsize = sizeof(MenaiFunction_Object) - sizeof(PyObject *),
+    .tp_itemsize = sizeof(PyObject *),
+    .tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
+    .tp_new = MenaiFunction_new,
+    .tp_dealloc = MenaiFunction_dealloc,
+    .tp_traverse = MenaiFunction_traverse,
+    .tp_clear = MenaiFunction_clear,
+    .tp_methods = MenaiFunction_methods,
+    .tp_getset = MenaiFunction_getset,
     .tp_richcompare = MenaiFunction_richcompare,
-    .tp_hash        = MenaiFunction_hash,
+    .tp_hash = MenaiFunction_hash,
 };
 
 /*

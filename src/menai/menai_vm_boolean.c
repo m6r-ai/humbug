@@ -82,14 +82,14 @@ static PyMethodDef MenaiBoolean_methods[] = {
 
 PyTypeObject MenaiBoolean_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name        = "menai.menai_vm_value.MenaiBoolean",
-    .tp_basicsize   = sizeof(MenaiBoolean_Object),
-    .tp_flags       = Py_TPFLAGS_DEFAULT,
-    .tp_new         = MenaiBoolean_new,
-    .tp_methods     = MenaiBoolean_methods,
-    .tp_getset      = MenaiBoolean_getset,
+    .tp_name = "menai.menai_vm_value.MenaiBoolean",
+    .tp_basicsize = sizeof(MenaiBoolean_Object),
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiBoolean_new,
+    .tp_methods = MenaiBoolean_methods,
+    .tp_getset = MenaiBoolean_getset,
     .tp_richcompare = MenaiBoolean_richcompare,
-    .tp_hash        = MenaiBoolean_hash,
+    .tp_hash = MenaiBoolean_hash,
 };
 
 PyObject *
@@ -110,9 +110,9 @@ menai_vm_boolean_init(void)
     if (PyType_Ready(&MenaiBoolean_Type) < 0)
         return -1;
 
-    PyObject *true_args  = Py_BuildValue("(i)", 1);
+    PyObject *true_args = Py_BuildValue("(i)", 1);
     PyObject *false_args = Py_BuildValue("(i)", 0);
-    _Menai_TRUE  = true_args  ? MenaiBoolean_new(&MenaiBoolean_Type, true_args,  NULL) : NULL;
+    _Menai_TRUE = true_args ? MenaiBoolean_new(&MenaiBoolean_Type, true_args,  NULL) : NULL;
     _Menai_FALSE = false_args ? MenaiBoolean_new(&MenaiBoolean_Type, false_args, NULL) : NULL;
     Py_XDECREF(true_args);
     Py_XDECREF(false_args);

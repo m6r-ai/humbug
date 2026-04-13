@@ -20,8 +20,13 @@ MenaiInteger_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
         PyErr_SetString(PyExc_TypeError, "MenaiInteger requires an int");
         return NULL;
     }
+
     MenaiInteger_Object *self = (MenaiInteger_Object *)type->tp_alloc(type, 0);
-    if (self) { Py_INCREF(value); self->value = value; }
+    if (self) {
+        Py_INCREF(value);
+        self->value = value;
+    }
+
     return (PyObject *)self;
 }
 
@@ -54,6 +59,7 @@ MenaiInteger_richcompare(PyObject *self, PyObject *other, int op)
         if (op == Py_NE) Py_RETURN_TRUE;
         Py_RETURN_NOTIMPLEMENTED;
     }
+
     return PyObject_RichCompare(
         ((MenaiInteger_Object *)self)->value,
         ((MenaiInteger_Object *)other)->value, op);
@@ -81,21 +87,21 @@ static PyGetSetDef MenaiInteger_getset[] = {
 
 static PyMethodDef MenaiInteger_methods[] = {
     {"type_name", MenaiInteger_type_name, METH_NOARGS, NULL},
-    {"describe",  MenaiInteger_describe,  METH_NOARGS, NULL},
+    {"describe", MenaiInteger_describe, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 PyTypeObject MenaiInteger_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name        = "menai.menai_vm_value.MenaiInteger",
-    .tp_basicsize   = sizeof(MenaiInteger_Object),
-    .tp_flags       = Py_TPFLAGS_DEFAULT,
-    .tp_new         = MenaiInteger_new,
-    .tp_dealloc     = MenaiInteger_dealloc,
-    .tp_methods     = MenaiInteger_methods,
-    .tp_getset      = MenaiInteger_getset,
+    .tp_name = "menai.menai_vm_value.MenaiInteger",
+    .tp_basicsize = sizeof(MenaiInteger_Object),
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = MenaiInteger_new,
+    .tp_dealloc = MenaiInteger_dealloc,
+    .tp_methods = MenaiInteger_methods,
+    .tp_getset = MenaiInteger_getset,
     .tp_richcompare = MenaiInteger_richcompare,
-    .tp_hash        = MenaiInteger_hash,
+    .tp_hash = MenaiInteger_hash,
 };
 
 int
