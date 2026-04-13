@@ -214,11 +214,13 @@ menai_convert_value(PyObject *src)
     if (t == Slow_ComplexType) {
         PyObject *v = PyObject_GetAttrString(src, "value");
         if (!v) return NULL;
+
         MenaiComplex_Object *r = (MenaiComplex_Object *)MenaiComplex_Type.tp_alloc(&MenaiComplex_Type, 0);
         if (r) {
             r->real = PyComplex_RealAsDouble(v);
             r->imag = PyComplex_ImagAsDouble(v);
         }
+
         Py_DECREF(v);
         return (PyObject *)r;
     }
@@ -226,6 +228,7 @@ menai_convert_value(PyObject *src)
     if (t == Slow_StringType) {
         PyObject *v = PyObject_GetAttrString(src, "value");
         if (!v) return NULL;
+
         PyObject *r = menai_string_from_pyunicode(v);
         Py_DECREF(v);
         return r;
@@ -234,17 +237,30 @@ menai_convert_value(PyObject *src)
     if (t == Slow_SymbolType) {
         PyObject *n = PyObject_GetAttrString(src, "name");
         if (!n) return NULL;
+
+        PyUnicode_InternInPlace(&n);
         MenaiSymbol_Object *r = (MenaiSymbol_Object *)MenaiSymbol_Type.tp_alloc(&MenaiSymbol_Type, 0);
-        if (r) { r->name = n; } else { Py_DECREF(n); }
+        if (r) {
+            r->name = n;
+        } else {
+            Py_DECREF(n);
+        }
+
         return (PyObject *)r;
     }
 
     if (t == Slow_ListType) {
         PyObject *elems = PyObject_GetAttrString(src, "elements");
         if (!elems) return NULL;
+
         Py_ssize_t n = PyTuple_GET_SIZE(elems);
         PyObject **arr = n > 0 ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-        if (n > 0 && !arr) { Py_DECREF(elems); PyErr_NoMemory(); return NULL; }
+        if (n > 0 && !arr) {
+            Py_DECREF(elems);
+            PyErr_NoMemory();
+            return NULL;
+        }
+
         for (Py_ssize_t i = 0; i < n; i++) {
             arr[i] = menai_convert_value(PyTuple_GET_ITEM(elems, i));
             if (!arr[i]) {
@@ -254,6 +270,7 @@ menai_convert_value(PyObject *src)
                 return NULL;
             }
         }
+
         Py_DECREF(elems);
         return menai_list_from_array_steal(arr, n);
     }
@@ -267,6 +284,7 @@ menai_convert_value(PyObject *src)
             Py_DECREF(pairs);
             return NULL;
         }
+
         for (Py_ssize_t i = 0; i < n; i++) {
             PyObject *pair = PyTuple_GET_ITEM(pairs, i);
             PyObject *fk = menai_convert_value(PyTuple_GET_ITEM(pair, 0));
@@ -275,6 +293,7 @@ menai_convert_value(PyObject *src)
                 Py_DECREF(pairs);
                 return NULL;
             }
+
             PyObject *fv = menai_convert_value(PyTuple_GET_ITEM(pair, 1));
             if (!fv) {
                 Py_DECREF(fk);
@@ -282,6 +301,7 @@ menai_convert_value(PyObject *src)
                 Py_DECREF(pairs);
                 return NULL;
             }
+
             PyObject *fp = PyTuple_Pack(2, fk, fv);
             Py_DECREF(fk);
             Py_DECREF(fv);
@@ -290,8 +310,10 @@ menai_convert_value(PyObject *src)
                 Py_DECREF(pairs);
                 return NULL;
             }
+
             PyTuple_SET_ITEM(fast_pairs, i, fp);
         }
+
         Py_DECREF(pairs);
         return menai_dict_from_fast_pairs(fast_pairs);
     }
@@ -299,12 +321,14 @@ menai_convert_value(PyObject *src)
     if (t == Slow_SetType) {
         PyObject *elems = PyObject_GetAttrString(src, "elements");
         if (!elems) return NULL;
+
         Py_ssize_t n = PyTuple_GET_SIZE(elems);
         PyObject *fast_tup = PyTuple_New(n);
         if (!fast_tup) {
             Py_DECREF(elems);
             return NULL;
         }
+
         for (Py_ssize_t i = 0; i < n; i++) {
             PyObject *fe = menai_convert_value(PyTuple_GET_ITEM(elems, i));
             if (!fe) {
@@ -312,44 +336,50 @@ menai_convert_value(PyObject *src)
                 Py_DECREF(elems);
                 return NULL;
             }
+
             PyTuple_SET_ITEM(fast_tup, i, fe);
         }
+
         Py_DECREF(elems);
         return menai_set_from_fast_tuple(fast_tup);
     }
 
     if (t == Slow_StructTypeType) {
         PyObject *name = PyObject_GetAttrString(src, "name");
-        PyObject *tag  = PyObject_GetAttrString(src, "tag");
-        PyObject *fn   = PyObject_GetAttrString(src, "field_names");
+        PyObject *tag = PyObject_GetAttrString(src, "tag");
+        PyObject *fn = PyObject_GetAttrString(src, "field_names");
         if (!name || !tag || !fn) {
             Py_XDECREF(name);
             Py_XDECREF(tag);
             Py_XDECREF(fn);
             return NULL;
         }
+
         PyObject *args = PyTuple_Pack(3, name, tag, fn);
         Py_DECREF(name);
         Py_DECREF(tag);
         Py_DECREF(fn);
         if (!args) return NULL;
+
         return menai_struct_type_new_from_args(args);
     }
 
     if (t == Slow_StructType) {
-        PyObject *st     = PyObject_GetAttrString(src, "struct_type");
+        PyObject *st = PyObject_GetAttrString(src, "struct_type");
         PyObject *fields = PyObject_GetAttrString(src, "fields");
         if (!st || !fields) {
             Py_XDECREF(st);
             Py_XDECREF(fields);
             return NULL;
         }
+
         PyObject *fast_st = menai_convert_value(st);
         Py_DECREF(st);
         if (!fast_st) {
             Py_DECREF(fields);
             return NULL;
         }
+
         Py_ssize_t n = PyTuple_GET_SIZE(fields);
         PyObject *fast_fields = PyTuple_New(n);
         if (!fast_fields) {
@@ -357,6 +387,7 @@ menai_convert_value(PyObject *src)
             Py_DECREF(fields);
             return NULL;
         }
+
         for (Py_ssize_t i = 0; i < n; i++) {
             PyObject *ff = menai_convert_value(PyTuple_GET_ITEM(fields, i));
             if (!ff) {
@@ -365,18 +396,20 @@ menai_convert_value(PyObject *src)
                 Py_DECREF(fields);
                 return NULL;
             }
+
             PyTuple_SET_ITEM(fast_fields, i, ff);
         }
+
         Py_DECREF(fields);
         return menai_struct_new_from_fast(fast_st, fast_fields);
     }
 
     if (t == Slow_FunctionType) {
-        PyObject *params  = PyObject_GetAttrString(src, "parameters");
-        PyObject *name    = PyObject_GetAttrString(src, "name");
-        PyObject *bc      = PyObject_GetAttrString(src, "bytecode");
-        PyObject *cap     = PyObject_GetAttrString(src, "captured_values");
-        PyObject *is_var  = PyObject_GetAttrString(src, "is_variadic");
+        PyObject *params = PyObject_GetAttrString(src, "parameters");
+        PyObject *name = PyObject_GetAttrString(src, "name");
+        PyObject *bc = PyObject_GetAttrString(src, "bytecode");
+        PyObject *cap = PyObject_GetAttrString(src, "captured_values");
+        PyObject *is_var = PyObject_GetAttrString(src, "is_variadic");
         if (!params || !name || !bc || !cap || !is_var) {
             Py_XDECREF(params);
             Py_XDECREF(name);
@@ -385,6 +418,7 @@ menai_convert_value(PyObject *src)
             Py_XDECREF(is_var);
             return NULL;
         }
+
         /* Recursively convert captured_values to fast types.
          * Prelude closures are fully-formed (no letrec None placeholders),
          * so eager conversion is safe and eliminates the slow-type check
@@ -399,6 +433,7 @@ menai_convert_value(PyObject *src)
             Py_DECREF(is_var);
             return NULL;
         }
+
         for (Py_ssize_t ci = 0; ci < ncap; ci++) {
             PyObject *fast_cv = menai_convert_value(PyList_GET_ITEM(cap, ci));
             if (!fast_cv) {
@@ -411,8 +446,10 @@ menai_convert_value(PyObject *src)
                 Py_DECREF(is_var);
                 return NULL;
             }
+
             PyList_SET_ITEM(fast_cap, ci, fast_cv);
         }
+
         Py_DECREF(cap);
         int iv = PyObject_IsTrue(is_var);
         Py_DECREF(is_var);
@@ -423,12 +460,13 @@ menai_convert_value(PyObject *src)
             Py_DECREF(fast_cap);
             return NULL;
         }
+
         PyObject *kwargs = Py_BuildValue("{sOsOsOsOsi}",
-            "parameters",      params,
-            "name",            name,
-            "bytecode",        bc,
+            "parameters", params,
+            "name", name,
+            "bytecode", bc,
             "captured_values", fast_cap,
-            "is_variadic",     iv);
+            "is_variadic", iv);
         Py_DECREF(params);
         Py_DECREF(name);
         Py_DECREF(bc);
@@ -439,6 +477,7 @@ menai_convert_value(PyObject *src)
             Py_DECREF(kwargs);
             return NULL;
         }
+
         PyObject *r = menai_function_new_from_kwargs(empty, kwargs);
         Py_DECREF(empty);
         Py_DECREF(kwargs);

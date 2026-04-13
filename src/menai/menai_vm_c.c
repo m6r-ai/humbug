@@ -1389,7 +1389,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_symbol_pair(a, b, "symbol=?")) goto error;
             PyObject *na = menai_symbol_name(a);
             PyObject *nb = menai_symbol_name(b);
-            bool_store(regs, base + dest, na == nb || PyUnicode_Compare(na, nb) == 0);
+            bool_store(regs, base + dest, na == nb);
             break;
         }
 
@@ -1398,7 +1398,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_symbol_pair(a, b, "symbol!=?")) goto error;
             PyObject *na = menai_symbol_name(a);
             PyObject *nb = menai_symbol_name(b);
-            bool_store(regs, base + dest, na != nb && PyUnicode_Compare(na, nb) != 0);
+            bool_store(regs, base + dest, na != nb);
             break;
         }
 
@@ -4228,8 +4228,7 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *fname = PyTuple_GET_ITEM(field_names, i);
-                /* Wrap in MenaiSymbol */
-                PyObject *sym = PyObject_CallOneArg((PyObject *)Menai_SymbolType, fname);
+                PyObject *sym = menai_symbol_alloc(fname);
                 if (sym == NULL) {
                     for (Py_ssize_t k = 0; k < i; k++) Py_DECREF(sf_arr[k]);
                     PyMem_Free(sf_arr);

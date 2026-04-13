@@ -1,8 +1,9 @@
 /*
  * menai_vm_symbol.c — MenaiSymbol type implementation.
  *
- * MenaiSymbol wraps a Python str (the symbol name).  Values are allocated
- * on demand; there are no singletons.
+ * MenaiSymbol wraps an interned Python str.  Interning is applied at
+ * construction time so that symbol equality reduces to a single pointer
+ * comparison.
  */
 
 #define PY_SSIZE_T_CLEAN
@@ -16,8 +17,14 @@ MenaiSymbol_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     PyObject *name = NULL;
     static char *kwlist[] = {"name", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "U", kwlist, &name)) return NULL;
+    Py_INCREF(name);
+    PyUnicode_InternInPlace(&name);
     MenaiSymbol_Object *self = (MenaiSymbol_Object *)type->tp_alloc(type, 0);
-    if (self) { Py_INCREF(name); self->name = name; }
+    if (self) {
+        self->name = name;
+    } else {
+        Py_DECREF(name);
+    }
     return (PyObject *)self;
 }
 
@@ -52,9 +59,13 @@ MenaiSymbol_richcompare(PyObject *self, PyObject *other, int op)
         if (op == Py_NE) Py_RETURN_TRUE;
         Py_RETURN_NOTIMPLEMENTED;
     }
-    return PyUnicode_RichCompare(
-        ((MenaiSymbol_Object *)self)->name,
-        ((MenaiSymbol_Object *)other)->name, op);
+    PyObject *na = ((MenaiSymbol_Object *)self)->name;
+    PyObject *nb = ((MenaiSymbol_Object *)other)->name;
+    switch (op) {
+        case Py_EQ: return PyBool_FromLong(na == nb);
+        case Py_NE: return PyBool_FromLong(na != nb);
+        default:    Py_RETURN_NOTIMPLEMENTED;
+    }
 }
 
 static Py_hash_t
@@ -95,6 +106,20 @@ PyTypeObject MenaiSymbol_Type = {
     .tp_richcompare = MenaiSymbol_richcompare,
     .tp_hash        = MenaiSymbol_hash,
 };
+
+PyObject *
+menai_symbol_alloc(PyObject *name)
+{
+    Py_INCREF(name);
+    PyUnicode_InternInPlace(&name);
+    MenaiSymbol_Object *self = (MenaiSymbol_Object *)MenaiSymbol_Type.tp_alloc(&MenaiSymbol_Type, 0);
+    if (self) {
+        self->name = name;
+    } else {
+        Py_DECREF(name);
+    }
+    return (PyObject *)self;
+}
 
 int
 menai_vm_symbol_init(void)
