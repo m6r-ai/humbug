@@ -210,7 +210,7 @@ class EditorTab(TabBase):
             return
 
         # Stop watching old path
-        self._stop_file_watching()
+        self.stop_file_watching()
 
         self._path = path
         self._editor_widget.set_path(path)
@@ -236,7 +236,7 @@ class EditorTab(TabBase):
 
     def close_tab(self) -> None:
         """Close the tab and clean up resources."""
-        self._stop_file_watching()
+        self.stop_file_watching()
         self._editor_widget.close_widget()
 
     def can_save(self) -> bool:
@@ -251,7 +251,7 @@ class EditorTab(TabBase):
             bool: True if save was successful
         """
         # Disable file watching during save to avoid false change notifications
-        self._stop_file_watching()
+        self.stop_file_watching()
         result = self._editor_widget.save_file()
         self._start_file_watching(self._path)
         return result
@@ -268,7 +268,7 @@ class EditorTab(TabBase):
             bool: True if save was successful
         """
         # Disable file watching during save to avoid false change notifications
-        self._stop_file_watching()
+        self.stop_file_watching()
         result = self._editor_widget.save_file_as()
         self._start_file_watching(self._path)
         return result

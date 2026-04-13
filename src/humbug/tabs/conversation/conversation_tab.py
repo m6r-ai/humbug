@@ -172,7 +172,7 @@ class ConversationTab(TabBase):
         """
         # Stop watching old path
         if self._path != path:
-            self._stop_file_watching()
+            self.stop_file_watching()
 
         self._path = path
         self._conversation_widget.set_path(path)
@@ -254,7 +254,7 @@ class ConversationTab(TabBase):
 
     def close_tab(self) -> None:
         """Close the conversation."""
-        self._stop_file_watching()
+        self.stop_file_watching()
         self.cancel_current_tasks()
         self._conversation_widget.close_widget()
 

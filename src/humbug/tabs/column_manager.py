@@ -552,6 +552,8 @@ class ColumnManager(QWidget):
         if tab_id in source_mru:
             source_mru.remove(tab_id)
 
+        tab.stop_file_watching()
+
         # Remove from source
         self._remove_tab_from_column(tab, source_column)
 

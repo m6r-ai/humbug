@@ -178,7 +178,7 @@ class PreviewTab(TabBase):
         """
         # Stop watching old path
         if self._path != path:
-            self._stop_file_watching()
+            self.stop_file_watching()
 
         self._path = path
         self._preview_content_widget.set_path(path)
@@ -208,7 +208,7 @@ class PreviewTab(TabBase):
 
     def close_tab(self) -> None:
         """Close the preview tab."""
-        self._stop_file_watching()
+        self.stop_file_watching()
         self._preview_content_widget.close_widget()
 
     def get_state(self, temp_state: bool = False) -> TabState:

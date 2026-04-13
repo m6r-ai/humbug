@@ -153,7 +153,7 @@ class TabBase(QFrame):
         assert os.path.isabs(path), f"Path must be absolute: {path}"
 
         # Stop watching the old path if any
-        self._stop_file_watching()
+        self.stop_file_watching()
 
         try:
             self._file_watcher.watch_file(path, self._handle_file_changed)
@@ -165,7 +165,7 @@ class TabBase(QFrame):
         except Exception as e:
             self._logger.error("Failed to start file watching for %s: %s", path, str(e))
 
-    def _stop_file_watching(self) -> None:
+    def stop_file_watching(self) -> None:
         """Stop watching the current file."""
         if self._path:
             try:
