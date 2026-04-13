@@ -97,7 +97,7 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
 
                     # Check if this is a conversation file and hide its extension
                     if self._is_conversation_file_for_display(file_path):
-                        return self._get_display_name(filename, file_path)
+                        return self._get_display_name(filename)
 
         # For all other roles (including EditRole), return the original data
         return super().data(index, role)
@@ -121,67 +121,20 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
         _, ext = os.path.splitext(file_path.lower())
         return ext in ['.conv', '.json']
 
-    def _get_first_user_message(self, file_path: str) -> str | None:
-        """
-        Extract the first user message from a conversation file as a title.
-
-        Args:
-            file_path: Full path to the conversation file
-
-        Returns:
-            First line of the first user message, or None if not found
-        """
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-            messages = []
-            if isinstance(data, dict) and 'conversation' in data:
-                messages = data['conversation']
-            elif isinstance(data, list):
-                messages = data
-
-            for message in messages:
-                if isinstance(message, dict) and message.get('type') == 'user_message':
-                    content = message.get('content', '').strip()
-                    if content:
-                        # Strip <document> blocks so attached files don't pollute the title
-                        import re as _re
-                        text_only = _re.sub(r'<document[^>]*>.*?</document>', '', content, flags=_re.DOTALL).strip()
-                        if not text_only:
-                            # Only attachments — use the first filename as the title
-                            filenames = _re.findall(r'<document filename="([^"]+)"', content)
-                            text_only = filenames[0] if filenames else ""
-                        title = text_only.splitlines()[0][:50].strip()
-                        if title:
-                            return title
-
-        except (OSError, json.JSONDecodeError, KeyError):
-            pass
-
-        return None
-
-    def _get_display_name(self, filename: str, file_path: str = "") -> str:
+    def _get_display_name(self, filename: str) -> str:
         """
         Get the display name for a conversation file (without extension).
 
         Args:
             filename: Original filename
-            file_path: Full path to the file (used to derive title from content)
 
         Returns:
-            Display name: first user message if available, else filename without extension
+            Display name with conversation file extension removed
         """
         if not filename:
             return filename
 
-        # Try to get a meaningful title from conversation content
-        if file_path:
-            title = self._get_first_user_message(file_path)
-            if title:
-                return title
-
-        # Fall back to filename without extension
+        # Remove the final .conv or .json extension
         if filename.lower().endswith('.conv'):
             return filename[:-5]  # Remove '.conv'
 
@@ -342,7 +295,16 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
         file_name = source_model.fileName(index)
 
         if file_name == ".":
-            return False
+            # Only show current directory at the conversations root level
+            # Check if the parent of this "." entry is the conversations root
+            parent_path = source_model.filePath(source_parent) if source_parent.isValid() else ""
+
+            # Normalize paths for comparison
+            normalized_parent = os.path.normpath(parent_path) if parent_path else ""
+            normalized_conversations = os.path.normpath(self._conversations_root)
+
+            # Only show "." if we're at the conversations root level
+            return normalized_parent == normalized_conversations
 
         # Show all other items (no special filtering needed)
         return True
@@ -360,6 +322,13 @@ class MindspaceConversationsModel(QSortFilterProxyModel):
         # Get file names for both indexes
         left_name = source_model.fileName(source_left)
         right_name = source_model.fileName(source_right)
+
+        # "." always sorts to the top
+        if left_name == ".":
+            return True
+
+        if right_name == ".":
+            return False
 
         # Get file info for both indexes
         left_info = source_model.fileInfo(source_left)

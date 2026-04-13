@@ -227,16 +227,19 @@ class Suite(BenchmarkSuite):
 
     def implementations(self, menai: Menai) -> list[Implementation]:
         """Return Menai, idiomatic Python, and functional Python solver implementations."""
-        def run_menai(flat: list[int]) -> list[list[int]]:
-            """Solve the puzzle by calling the Menai sudoku-solver module."""
+        def prepare_menai(flat: list[int]) -> Any:
+            """Build expression string and compile to bytecode (untimed)."""
             board_expr = _board_to_menai(flat)
             expr = (
                 '(let ((sudoku (import "sudoku-solver")))'
                 ' (let ((solve-fn (dict-get sudoku "solve")))'
-                f" (solve-fn {board_expr})))"
+                f' (solve-fn {board_expr})))'
             )
-            result = cast(list, menai.evaluate(expr))
-            return [list(cast(list, row)) for row in result]
+            return menai.compile(expr)
+
+        def run_menai(code: Any) -> Any:
+            """Execute pre-compiled bytecode (timed)."""
+            return menai.execute_raw(code)
 
         def run_python_idiomatic(flat: list[int]) -> list[list[int]]:
             """Solve the puzzle using mutable backtracking."""
@@ -247,7 +250,7 @@ class Suite(BenchmarkSuite):
             return _solve_python_functional(flat)
 
         return [
-            Implementation(name="Menai", run=run_menai),
+            Implementation(name="Menai", run=run_menai, prepare=prepare_menai),
             Implementation(name="Python (idiomatic)", run=run_python_idiomatic),
             Implementation(name="Python (functional)", run=run_python_functional),
         ]

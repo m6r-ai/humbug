@@ -4,14 +4,12 @@ build-backend = "hatchling.build"
 
 [project]
 name = "humbug"
-version = "42"
+version = "43"
 requires-python = ">=3.10"
 dependencies = [
     "aiohttp",
     "certifi",
     "pyside6",
-    "pypdf",
-    "python-docx",
     "qasync"
 ]
 

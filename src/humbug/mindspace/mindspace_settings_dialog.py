@@ -139,6 +139,18 @@ class MindspaceSettingsDialog(QDialog):
         )
         self._settings_container.add_setting(terminal_section)
 
+        # Terminal minimum width enabled
+        self._terminal_fixed_width_check = SettingsFactory.create_checkbox(
+            strings.terminal_fixed_width_enabled
+        )
+        self._settings_container.add_setting(self._terminal_fixed_width_check)
+
+        # Terminal minimum width
+        self._terminal_fixed_width_spin = SettingsFactory.create_spinbox(
+            strings.terminal_fixed_width, 40, 200, 2
+        )
+        self._settings_container.add_setting(self._terminal_fixed_width_spin)
+
         # Terminal scrollback enabled
         self._terminal_scrollback_check = SettingsFactory.create_checkbox(
             strings.terminal_scrollback_enabled
@@ -162,6 +174,7 @@ class MindspaceSettingsDialog(QDialog):
 
         # Connect change handlers
         self._auto_backup_check.value_changed.connect(self._on_auto_backup_check_value_change)
+        self._terminal_fixed_width_check.value_changed.connect(self._on_terminal_fixed_width_check_value_change)
         self._terminal_scrollback_check.value_changed.connect(self._on_terminal_scrollback_check_value_change)
         self._model_combo.value_changed.connect(self._on_model_value_changed)
         self._settings_container.value_changed.connect(self._on_settings_value_changed)
@@ -219,6 +232,11 @@ class MindspaceSettingsDialog(QDialog):
         """Handle changes to auto backup checkbox."""
         auto_backup_checked = self._auto_backup_check.get_value()
         self._backup_interval_spin.set_enabled(auto_backup_checked)
+
+    def _on_terminal_fixed_width_check_value_change(self) -> None:
+        """Handle changes to terminal minimum width checkbox."""
+        minimum_width_enabled = self._terminal_fixed_width_check.get_value()
+        self._terminal_fixed_width_spin.set_enabled(minimum_width_enabled)
 
     def _on_terminal_scrollback_check_value_change(self) -> None:
         """Handle changes to terminal scrollback checkbox."""
@@ -285,6 +303,8 @@ class MindspaceSettingsDialog(QDialog):
             tab_size=self._tab_size_spin.get_value(),
             auto_backup=self._auto_backup_check.get_value(),
             auto_backup_interval=self._backup_interval_spin.get_value(),
+            terminal_fixed_width_enabled=self._terminal_fixed_width_check.get_value(),
+            terminal_fixed_width=self._terminal_fixed_width_spin.get_value(),
             terminal_scrollback_enabled=self._terminal_scrollback_check.get_value(),
             terminal_scrollback_lines=self._terminal_scrollback_spin.get_value(),
             terminal_close_on_exit=self._terminal_close_on_exit_check.get_value(),
@@ -302,6 +322,8 @@ class MindspaceSettingsDialog(QDialog):
             tab_size=settings.tab_size,
             auto_backup=settings.auto_backup,
             auto_backup_interval=settings.auto_backup_interval,
+            terminal_fixed_width_enabled=settings.terminal_fixed_width_enabled,
+            terminal_fixed_width=settings.terminal_fixed_width,
             terminal_scrollback_enabled=settings.terminal_scrollback_enabled,
             terminal_scrollback_lines=settings.terminal_scrollback_lines,
             terminal_close_on_exit=settings.terminal_close_on_exit,
@@ -319,6 +341,9 @@ class MindspaceSettingsDialog(QDialog):
         self._backup_interval_spin.set_enabled(settings.auto_backup)
 
         # Terminal settings
+        self._terminal_fixed_width_check.set_value(settings.terminal_fixed_width_enabled)
+        self._terminal_fixed_width_spin.set_value(settings.terminal_fixed_width)
+        self._terminal_fixed_width_spin.set_enabled(settings.terminal_fixed_width_enabled)
         self._terminal_scrollback_check.set_value(settings.terminal_scrollback_enabled)
         self._terminal_scrollback_spin.set_value(settings.terminal_scrollback_lines)
         self._terminal_scrollback_spin.set_enabled(settings.terminal_scrollback_enabled)

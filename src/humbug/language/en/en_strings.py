@@ -33,7 +33,6 @@ def get_english_strings() -> LanguageStrings:
         quit_humbug="Quit Humbug",
         new_mindspace="New Mindspace",
         new_conversation="New Conversation",
-        new_metaphor_conversation="New Metaphor Conversation...",
         new_file="New File",
         new_terminal="New Terminal",
         open_mindspace="Open Mindspace...",
@@ -47,7 +46,7 @@ def get_english_strings() -> LanguageStrings:
         user_settings="User Settings",
 
         # Edit menu items
-        submit_message="Submit",
+        submit_message="Submit Message",
         undo="Undo",
         redo="Redo",
         cut="Cut",
@@ -64,7 +63,6 @@ def get_english_strings() -> LanguageStrings:
         reset_zoom="Reset Zoom",
         show_system_log="Show Mindspace Log",
         show_system_shell="Show Humbug Shell",
-        toggle_mindspace_panel="Toggle Mindspace Panel",
         show_all_columns="Show All Columns",
         split_column_left="Split Column Left",
         split_column_right="Split Column Right",
@@ -129,10 +127,10 @@ def get_english_strings() -> LanguageStrings:
         # User Settings dialog - other settings
         select_language="Language",
         font_size="Font Size",
+        theme_system="Automatic",
         theme_dark="Dark",
         theme_light="Light",
         file_sort_order="File Sort Order",
-        open_chat_in_new_tab="Open chat in a new tab",
         sort_directories_first="Directories First",
         sort_alphabetical="Alphabetical",
 
@@ -153,7 +151,6 @@ def get_english_strings() -> LanguageStrings:
         mindspace_folders_title="Configure Mindspace Folders",
         mindspace_path="Mindspace Path",
         conversations_folder='Create "conversations" Folder',
-        metaphor_folder='Create "metaphor" Folder',
         src_folder='Create "src" Folder',
 
         # Mindspace settings
@@ -169,6 +166,8 @@ def get_english_strings() -> LanguageStrings:
             "Configure terminal scrollback buffer behavior. The scrollback buffer stores terminal output "
             "history that you can scroll back through."
         ),
+        terminal_fixed_width_enabled="Enable fixed width",
+        terminal_fixed_width="Fixed width (columns)",
         terminal_scrollback_enabled="Limit Scrollback Buffer",
         terminal_scrollback_lines="Scrollback Lines",
         terminal_close_on_exit="Close terminal when shell exits",
@@ -188,9 +187,7 @@ def get_english_strings() -> LanguageStrings:
         settings_visible_reasoning="Visible Reasoning",
 
         # File dialog titles
-        file_dialog_open_metaphor="Open Metaphor File",
         file_dialog_open_conversation="Open Conversation",
-        file_dialog_attach_document="Attach Document",
         file_dialog_open_file="Open File",
         file_dialog_save_file="Save File",
         file_dialog_new_mindspace="Create New Mindspace",
@@ -198,7 +195,6 @@ def get_english_strings() -> LanguageStrings:
 
         # File dialog filters
         file_filter_all="All Files (*.*)",
-        file_filter_metaphor="Metaphor Files (*.m6r)",
         file_filter_conversation="Conversation Files (*.conv)",
 
         # Dialog titles
@@ -234,7 +230,6 @@ def get_english_strings() -> LanguageStrings:
         error_opening_conversation="Could not load {}: {}",
         error_forking_conversation="Could not fork conversation: {}",
         error_opening_preview="Could not open preview: {}",
-        error_processing_metaphor="Failed to process Metaphor file:\n\n{}",
         error_saving_mindspace_settings="Failed to save mindspace settings: {}",
         error_saving_user_settings="Failed to save user settings: {}",
         cancel_conversation="Are you sure you want to stop the current AI response? "
@@ -289,7 +284,6 @@ def get_english_strings() -> LanguageStrings:
         tooltip_delete_from_message="Delete conversation from this point",
         tooltip_edit_message="Edit this message",
         tooltip_edit_file="Edit this file",
-        tooltip_attach_document="Attach a document",
         tooltip_submit_message="Submit message",
         tooltip_stop_message="Stop current processing",
         tooltip_settings_message="Open conversation settings",
@@ -312,7 +306,7 @@ def get_english_strings() -> LanguageStrings:
         move_error_title="Move Error",
         move_error_exists="A file or folder with this name already exists at the destination.",
         move_error_failed="Could not move item: {0}",
-        move_error_protected="Cannot move system folders (conversations, metaphor, .humbug).",
+        move_error_protected="Cannot move system folders (conversations, .humbug).",
 
         # Inline editor validation errors
         error_empty_name="Name cannot be empty",

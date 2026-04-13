@@ -33,7 +33,6 @@ def get_french_strings() -> LanguageStrings:
         quit_humbug="Quitter Humbug",
         new_mindspace="Nouvel espace mental",
         new_conversation="Nouvelle conversation",
-        new_metaphor_conversation="Nouvelle conversation Metaphor...",
         new_file="Nouveau fichier",
         new_terminal="Nouveau terminal",
         open_mindspace="Ouvrir espace mental...",
@@ -64,7 +63,6 @@ def get_french_strings() -> LanguageStrings:
         reset_zoom="Réinitialiser le zoom",
         show_system_log="Afficher le journal de l'espace mental",
         show_system_shell="Afficher le shell Humbug",
-        toggle_mindspace_panel="Afficher ou masquer le panneau de l'espace mental",
         show_all_columns="Afficher toutes les colonnes",
         split_column_left="Diviser la colonne à gauche",
         split_column_right="Diviser la colonne à droite",
@@ -129,10 +127,10 @@ def get_french_strings() -> LanguageStrings:
         # User Settings dialog - other settings
         select_language="Langue",
         font_size="Taille de police",
+        theme_system="Automatique",
         theme_dark="Sombre",
         theme_light="Clair",
         file_sort_order="Ordre de tri des fichiers",
-        open_chat_in_new_tab="Ouvrir la discussion dans un nouvel onglet",
         sort_directories_first="Dossiers en premier",
         sort_alphabetical="Alphabétique",
 
@@ -153,7 +151,6 @@ def get_french_strings() -> LanguageStrings:
         mindspace_folders_title="Configurer les dossiers de l'espace mental",
         mindspace_path="Chemin de l'espace mental",
         conversations_folder='Créer le dossier "conversations"',
-        metaphor_folder='Créer le dossier "metaphor"',
         src_folder='Créer le dossier "src"',
 
         # Mindspace settings
@@ -169,6 +166,8 @@ def get_french_strings() -> LanguageStrings:
             "Configurer le comportement du tampon de défilement du terminal. Le tampon de défilement "
             "stocke l'historique de sortie du terminal que vous pouvez faire défiler."
         ),
+        terminal_fixed_width_enabled="Activer la largeur fixe",
+        terminal_fixed_width="Largeur fixe (colonnes)",
         terminal_scrollback_enabled="Limiter le tampon de défilement",
         terminal_scrollback_lines="Lignes de défilement",
         terminal_close_on_exit="Fermer le terminal à la sortie du shell",
@@ -188,9 +187,7 @@ def get_french_strings() -> LanguageStrings:
         settings_visible_reasoning="Raisonnement visible",
 
         # File dialog titles
-        file_dialog_open_metaphor="Ouvrir un fichier Metaphor",
         file_dialog_open_conversation="Ouvrir une conversation",
-        file_dialog_attach_document="Joindre un document",
         file_dialog_open_file="Ouvrir un fichier",
         file_dialog_save_file="Enregistrer le fichier",
         file_dialog_new_mindspace="Créer un nouvel espace mental",
@@ -198,7 +195,6 @@ def get_french_strings() -> LanguageStrings:
 
         # File dialog filters
         file_filter_all="Tous les fichiers (*.*)",
-        file_filter_metaphor="Fichiers Metaphor (*.m6r)",
         file_filter_conversation="Fichiers de conversation (*.conv)",
 
         # Dialog titles
@@ -234,7 +230,6 @@ def get_french_strings() -> LanguageStrings:
         error_opening_conversation="Impossible de charger {} : {}",
         error_forking_conversation="Impossible de dupliquer la conversation : {}",
         error_opening_preview="Impossible d'ouvrir l'aperçu : {}",
-        error_processing_metaphor="Échec du traitement du fichier Metaphor :\n\n{}",
         error_saving_mindspace_settings="Échec de l'enregistrement des paramètres : {}",
         error_saving_user_settings="Échec de l'enregistrement des paramètres utilisateur : {}",
         cancel_conversation="Êtes-vous sûr de vouloir arrêter la réponse actuelle de l'IA ? "
@@ -289,7 +284,6 @@ def get_french_strings() -> LanguageStrings:
         tooltip_delete_from_message="Supprimer la conversation à partir d'ici",
         tooltip_edit_message="Modifier ce message",
         tooltip_edit_file="Modifier ce fichier",
-        tooltip_attach_document="Joindre un document",
         tooltip_submit_message="Envoyer le message",
         tooltip_stop_message="Arrêter le traitement du message",
         tooltip_settings_message="Ouvrir les paramètres de la conversation",
@@ -312,7 +306,7 @@ def get_french_strings() -> LanguageStrings:
         move_error_title="Erreur de déplacement",
         move_error_exists="Un fichier ou dossier avec ce nom existe déjà à la destination.",
         move_error_failed="Impossible de déplacer l'élément : {0}",
-        move_error_protected="Impossible de déplacer les dossiers système (conversations, metaphor, .humbug).",
+        move_error_protected="Impossible de déplacer les dossiers système (conversations, .humbug).",
 
         # Inline editor validation errors
         error_empty_name="Le nom ne peut pas être vide",

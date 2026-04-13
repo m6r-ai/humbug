@@ -215,6 +215,7 @@ class TabBar(QTabBar):
             painter.setPen(QPen(self._style_manager.get_color(border_color_role), 1))
             painter.drawRoundedRect(tab_pill_rect, 10, 10)
 
+        painter.end()
         super().paintEvent(event)
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:

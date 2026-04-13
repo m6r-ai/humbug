@@ -65,11 +65,15 @@ class Suite(BenchmarkSuite):
         """Return Menai, idiomatic Python, and functional Python implementations."""
         sort_expr = (_SUITE_DIR / "list-sort.menai").read_text(encoding="utf-8").strip()
 
-        def run_menai(lst: list[int]) -> list[int]:
-            """Evaluate the Menai sort expression on the given list."""
+        def prepare_menai(lst: list[int]) -> Any:
+            """Build the expression string and compile to bytecode (untimed)."""
             items = " ".join(str(n) for n in lst)
-            result = cast(list, menai.evaluate(f"({sort_expr} (list {items}))"))
-            return list(result)
+            expr = f"({sort_expr} (list {items}))"
+            return menai.compile(expr)
+
+        def run_menai(code: Any) -> Any:
+            """Execute pre-compiled bytecode (timed)."""
+            return menai.execute_raw(code)
 
         def run_python_idiomatic(lst: list[int]) -> list[int]:
             """Sort using Python's built-in sorted()."""
@@ -80,7 +84,7 @@ class Suite(BenchmarkSuite):
             return _merge_sort(lst)
 
         return [
-            Implementation(name="Menai", run=run_menai),
+            Implementation(name="Menai", run=run_menai, prepare=prepare_menai),
             Implementation(name="Python (idiomatic)", run=run_python_idiomatic),
             Implementation(name="Python (functional)", run=run_python_functional),
         ]

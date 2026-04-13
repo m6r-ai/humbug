@@ -24,7 +24,6 @@ class LanguageStrings:
     quit_humbug: str
     new_mindspace: str
     new_conversation: str
-    new_metaphor_conversation: str
     new_file: str
     new_terminal: str
     open_mindspace: str
@@ -55,7 +54,6 @@ class LanguageStrings:
     reset_zoom: str
     show_system_log: str
     show_system_shell: str
-    toggle_mindspace_panel: str
     show_all_columns: str
     split_column_left: str
     split_column_right: str
@@ -120,10 +118,10 @@ class LanguageStrings:
     # User Settings dialog - other settings
     select_language: str
     font_size: str
+    theme_system: str
     theme_dark: str
     theme_light: str
     file_sort_order: str
-    open_chat_in_new_tab: str
     sort_directories_first: str
     sort_alphabetical: str
 
@@ -144,7 +142,6 @@ class LanguageStrings:
     mindspace_folders_title: str
     mindspace_path: str
     conversations_folder: str
-    metaphor_folder: str
     src_folder: str
 
     # Mindspace settings
@@ -157,6 +154,8 @@ class LanguageStrings:
     backup_interval: str
     terminal_settings: str
     terminal_settings_description: str
+    terminal_fixed_width_enabled: str
+    terminal_fixed_width: str
     terminal_scrollback_enabled: str
     terminal_scrollback_lines: str
     terminal_close_on_exit: str
@@ -176,9 +175,7 @@ class LanguageStrings:
     settings_visible_reasoning: str
 
     # File dialog titles
-    file_dialog_open_metaphor: str
     file_dialog_open_conversation: str
-    file_dialog_attach_document: str
     file_dialog_open_file: str
     file_dialog_save_file: str
     file_dialog_new_mindspace: str
@@ -186,7 +183,6 @@ class LanguageStrings:
 
     # File dialog filters
     file_filter_all: str
-    file_filter_metaphor: str
     file_filter_conversation: str
 
     # Dialog titles
@@ -222,7 +218,6 @@ class LanguageStrings:
     error_opening_conversation: str
     error_forking_conversation: str
     error_opening_preview: str
-    error_processing_metaphor: str
     error_saving_mindspace_settings: str
     error_saving_user_settings: str
     cancel_conversation: str
@@ -270,7 +265,6 @@ class LanguageStrings:
     tooltip_delete_from_message: str
     tooltip_edit_message: str
     tooltip_edit_file: str
-    tooltip_attach_document: str
     tooltip_submit_message: str
     tooltip_stop_message: str
     tooltip_settings_message: str

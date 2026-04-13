@@ -25,10 +25,20 @@ class BenchmarkCase:
 
 @dataclass
 class Implementation:
-    """A named callable that can be timed against a BenchmarkCase."""
+    """A named callable that can be timed against a BenchmarkCase.
+
+    When *prepare* is provided it is called once **outside** the timed loop
+    with the case input.  Its return value is passed to *run* on every
+    timed iteration.  This lets implementations move string construction
+    and compilation out of the measured section.
+
+    When *prepare* is ``None`` (the default), *run* receives the case
+    input directly, preserving backward compatibility.
+    """
 
     name: str
     run: Callable
+    prepare: Callable | None = None
 
 
 @dataclass
@@ -98,12 +108,25 @@ class BenchmarkRunner:
                 result: Any = None
                 error: str | None = None
 
+                # Pre-timing setup: build strings, compile, etc.
+                if impl.prepare is not None:
+                    prepared = impl.prepare(case.input)
+                else:
+                    prepared = case.input
+
                 try:
                     for _ in range(case.iterations):
                         t0 = time.perf_counter()
-                        result = impl.run(case.input)
+                        raw = impl.run(prepared)
                         t1 = time.perf_counter()
                         times.append(t1 - t0)
+
+                    # Convert MenaiValue → Python outside the timed loop.
+                    if hasattr(raw, 'to_python'):
+                        result = raw.to_python()
+                    else:
+                        result = raw
+
                 except Exception as exc:
                     error = str(exc)
 
@@ -253,5 +276,6 @@ class BenchmarkReporter:
         ratio = ref_mean_s / impl_mean_s
         if ratio >= 1.0:
             return f"{ratio:.0f}x faster"
+
         else:
             return f"{1.0 / ratio:.0f}x slower"

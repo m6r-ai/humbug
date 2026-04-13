@@ -54,9 +54,13 @@ class Suite(BenchmarkSuite):
 
     def implementations(self, menai: Menai) -> list[Implementation]:
         """Return Menai, idiomatic Python, and functional Python parser implementations."""
-        def run_menai(json_str: str) -> Any:
-            """Parse using the Menai json_parser module."""
-            return menai.evaluate(_to_menai_expr(json_str))
+        def prepare_menai(json_str: str) -> Any:
+            """Build expression string and compile to bytecode (untimed)."""
+            return menai.compile(_to_menai_expr(json_str))
+
+        def run_menai(code: Any) -> Any:
+            """Execute pre-compiled bytecode (timed)."""
+            return menai.execute_raw(code)
 
         def run_python_idiomatic(json_str: str) -> Any:
             """Parse using Python's stdlib json.loads()."""
@@ -67,7 +71,7 @@ class Suite(BenchmarkSuite):
             return _parse_functional(json_str)
 
         return [
-            Implementation(name="Menai",               run=run_menai),
+            Implementation(name="Menai",               run=run_menai, prepare=prepare_menai),
             Implementation(name="Python (idiomatic)",  run=run_python_idiomatic),
             Implementation(name="Python (functional)", run=run_python_functional),
         ]

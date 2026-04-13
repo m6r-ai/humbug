@@ -28,12 +28,6 @@ Think of it as an operating system for human-AI collaboration.
   You can optimize for cost, and are future-proofed when you want to use something new.
   You can seamlessly switch between models, even switching mid-conversation.
 
-- **Structured context engineering with Metaphor**  
-
-  By going beyond ad-hoc prompts and making your intentions clear, you can get dramatically better results and lower operating costs.
-  Metaphor, Humbug’s open context and prompting language, turns intent into repeatable, composable, and auditable workflows.
-  It's a language for AI orchestration.
-
 - **Powerful, pluggable tools**  
 
   We designed computers to give humans better, faster, and more reliable tools.
@@ -88,16 +82,14 @@ Think of it as an operating system for human-AI collaboration.
 ## Examples of how Humbug has been bootstapped
 
 As noted before, Humbug has been developed by bootstrapping.
-Very early in its development it used a series of Metaphor prompts and involved a lot of copying and pasting in and out of web-based chat windows, but since v0.1 it has been used to help enhance itself.
 
 The `conversations` directory in the Humbug git repository includes a lot of discussions with AIs about improvements to itself.
 
 ## Learn more
 
 - **What's new:** [Latest updates](./CHANGELOG.md)
-- **Dive deeper:** [Getting started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor)
 - **Download:** [Download Humbug](https://github.com/m6r-ai/humbug/releases)
-- **Blog posts:** [Dave's blog posts about Humbug, Metaphor, and Menai](https://davehudson.io/blog)
+- **Blog posts:** [Dave's blog posts about Humbug and Menai](https://davehudson.io/blog)
 - **Developer notes:** [Dave's project notes](https://davehudson.io/notes)
 - **Menai summary:** [Menai project page](https://davehudson.io/projects/menai)
 - **Discord:** [Discord](https://discord.gg/GZhJ7ZtgwN)
@@ -155,5 +147,3 @@ Humbug is open source and the project welcomes contributions. If you're interest
 5. Initial configuration:
 
    If you load Humbug and don't have any AIs already configured, it will guide you how to use any AI API keys you have.
-
-   See [Getting Started with Metaphor](https://github.com/m6r-ai/getting-started-with-metaphor) for a step-by-step guide to getting Humbug up and running.

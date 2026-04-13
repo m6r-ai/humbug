@@ -2,15 +2,10 @@ import colorsys
 from datetime import datetime
 import logging
 
-import math
-import os
-import re
-from typing import Dict, List, Tuple, Any , cast
-import colorsys
-
+from typing import Dict, List, Tuple, Any, cast
 
 from PySide6.QtWidgets import (
-    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication, QTextEdit
+    QFrame, QVBoxLayout, QLabel, QHBoxLayout, QWidget, QToolButton, QFileDialog, QPushButton, QApplication
 )
 
 from PySide6.QtCore import Signal, QPoint, QSize, Qt, QEvent, QTimer , QObject
@@ -107,8 +102,6 @@ class TypingIndicatorWidget(QFrame):
             x = x_start + i * (dot_radius * 2 + gap)
             painter.drawEllipse(QPoint(int(x), int(y)), int(current_radius), int(current_radius))
 
-        painter.end()
-
 
 class ConversationMessage(QFrame):
     """Widget for displaying a single message in the conversation history with header."""
@@ -123,7 +116,6 @@ class ConversationMessage(QFrame):
     tool_call_approved = Signal(AIToolCall)
     tool_call_i_am_unsure = Signal()
     tool_call_rejected = Signal(str)
-    attachment_file_deleted = Signal(str)  # emits upload_path of deleted file
     link_clicked = Signal(str)             # emits URL / href from rendered content
 
     def __init__(
@@ -269,13 +261,6 @@ class ConversationMessage(QFrame):
         self._edit_text_edit: MarkdownTextEdit | None = None
         self._edit_confirm_button: QToolButton | None = None
         self._edit_cancel_button: QToolButton | None = None
-        # Tracks document blocks during inline editing: (xml_block, filename, upload_path)
-        self._edit_doc_blocks: List[Tuple[str, str, str]] = []
-        self._edit_chips_container: QWidget | None = None
-
-        # Display chips for attached documents in rendered USER messages
-        self._display_chips_container: QWidget | None = None
-        self._chip_paths: dict = {}  # maps chip QWidget -> upload_path for click handling
 
         # Container for message sections
         self._sections_container = QWidget(self)
@@ -284,12 +269,6 @@ class ConversationMessage(QFrame):
         self._sections_layout.setContentsMargins(0, 0, 0, 0)
         if not default_expanded:
             self._sections_container.hide()
-
-        # Inline edit area (hidden until edit mode is active)
-        self._edit_area: QWidget | None = None
-        self._edit_text_edit: QWidget | None = None  # will be a QTextEdit
-        self._edit_confirm_button: QToolButton | None = None
-        self._edit_cancel_button: QToolButton | None = None
 
         # Create layout
         self._layout = QVBoxLayout(self)
@@ -403,10 +382,6 @@ class ConversationMessage(QFrame):
         """Override paint event to paint custom borders."""
         super().paintEvent(arg__1)
 
-        painter = QPainter(self)
-        zoom_factor = self._style_manager.zoom_factor()
-        border_radius = int(self._style_manager.message_bubble_spacing() * zoom_factor)
-
         if self._is_border_animated:
             border_color = self._get_fade_color()
             border_width = 2
@@ -420,29 +395,25 @@ class ConversationMessage(QFrame):
             # Only draw a visible border for user messages and the input widget.
             # AI/reasoning messages use a transparent background (open text look).
             if current_style not in (AIMessageSource.USER,) and not self._is_input:
-                painter.end()
                 return
             border_color = self._style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)
             border_width = 1
 
-        # Enable antialiasing for smooth curves
+        zoom_factor = self._style_manager.zoom_factor()
+        border_radius = int(self._style_manager.message_bubble_spacing() * zoom_factor)
+
+        painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        # Set up the pen for the border
         pen = QPen(QColor(border_color), border_width)
         pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
         painter.setPen(pen)
-
-        # Don't fill the rectangle, just draw the border
         painter.setBrush(Qt.BrushStyle.NoBrush)
 
-        # Adjust rectangle to center the border line
-        # (QPainter draws the border centered on the rectangle edge)
         adjustment = (border_width + 1) // 2
         adjusted_rect = self.rect().adjusted(adjustment, adjustment, -adjustment, -adjustment)
-
-        # Draw the rounded rectangle border
         painter.drawRoundedRect(adjusted_rect, border_radius, border_radius)
+        painter.end()
 
     def is_rendered(self) -> bool:
         """Check if the message will be rendered."""
@@ -499,15 +470,11 @@ class ConversationMessage(QFrame):
                 self._pending_context = None
 
             self._sections_container.show()
-            if self._display_chips_container is not None:
-                self._display_chips_container.show()
             icon_name = "expand-down"
             tooltip = strings.tooltip_collapse_message
 
         else:
             self._sections_container.hide()
-            if self._display_chips_container is not None:
-                self._display_chips_container.hide()
             icon_name = "expand-right" if self.layoutDirection() == Qt.LayoutDirection.LeftToRight else "expand-left"
             tooltip = strings.tooltip_expand_message
 
@@ -594,6 +561,13 @@ class ConversationMessage(QFrame):
         if self._approval_i_am_unsure_button:
             self._approval_i_am_unsure_button.setText(strings.i_am_unsure_about_tool_call)
 
+        if self._approval_reject_button:
+            self._approval_reject_button.setText(strings.reject_tool_call)
+
+        if self._expand_button:
+            tooltip = strings.tooltip_collapse_message if self._is_expanded else strings.tooltip_expand_message
+            self._expand_button.setToolTip(tooltip)
+
     @staticmethod
     def _format_timestamp(timestamp: datetime) -> str:
         """Format timestamps for a cleaner message title line."""
@@ -641,13 +615,6 @@ class ConversationMessage(QFrame):
             titled_words.append(replacements.get(lowered, word.capitalize()))
 
         return " ".join(titled_words)
-
-        if self._approval_reject_button:
-            self._approval_reject_button.setText(strings.reject_tool_call)
-
-        if self._expand_button:
-            tooltip = strings.tooltip_collapse_message if self._is_expanded else strings.tooltip_expand_message
-            self._expand_button.setToolTip(tooltip)
 
     def _create_section_widget(self, syntax: ProgrammingLanguage | None = None) -> ConversationMessageSection:
         """
@@ -867,44 +834,6 @@ class ConversationMessage(QFrame):
             ColorRole.MESSAGE_USER_BORDER if current_style == AIMessageSource.USER else ColorRole.MESSAGE_BORDER
         )
 
-    @staticmethod
-    @staticmethod
-    def _to_display_text(text: str, for_edit: bool = False) -> str:
-        """Replace <document> blocks with a compact filename reference for display.
-
-        Args:
-            text: Raw message content possibly containing <document> blocks.
-            for_edit: When True, emit plain '📎 filename' without markdown markup.
-        """
-        def _replace(m: re.Match) -> str:
-            filename = m.group(1)
-            path = m.group(2) or ""
-            if for_edit:
-                return f"📎 {filename}"
-            if path:
-                return f"[**📎 {filename}**](humbug-file://{path})"
-            return f"**📎 {filename}**"
-
-        return re.sub(
-            r'<document filename="([^"]+)"(?:\s+path="([^"]*)")?>(.*?)</document>',
-            _replace,
-            text,
-            flags=re.DOTALL
-        ).strip()
-
-    @staticmethod
-    def _restore_documents(original: str, edited: str) -> str:
-        """Re-embed <document> XML blocks from original content into the edited text.
-
-        Replaces any '📎 filename' placeholders in the edited text with the
-        matching <document> block from the original message content.
-        """
-        docs = re.findall(r'(<document filename="([^"]+)"[^>]*>.*?</document>)', original, re.DOTALL)
-        result = edited
-        for xml_block, filename in docs:
-            result = result.replace(f"📎 {filename}", xml_block)
-        return result
-
     def set_content(self, text: str) -> None:
         """
         Set content with style, handling incremental updates for AI responses.
@@ -916,23 +845,9 @@ class ConversationMessage(QFrame):
         """
         self._message_content = text
 
-        if self._message_source == AIMessageSource.USER and not self._is_input:
-            # Extract document blocks and show as card chips; render only the text part
-            doc_blocks = [
-                (filename, path or "")
-                for _xml, filename, path, _content in re.findall(
-                    r'(<document filename="([^"]+)"(?:\s+path="([^"]*)")?>(.*?)</document>)',
-                    text, re.DOTALL
-                )
-            ]
-            self._update_display_chips(doc_blocks)
-            display_text = re.sub(r'<document[^>]*>.*?</document>\s*', '', text, flags=re.DOTALL).strip()
-        else:
-            display_text = self._to_display_text(text) if self._message_source == AIMessageSource.USER else text
-
         # Input widgets don't have multiple sections so handle them as a special case.
         if self._is_input:
-            self._sections[0].set_content(MarkdownASTTextNode(display_text))
+            self._sections[0].set_content(MarkdownASTTextNode(text))
             if text:
                 if not self._message_rendered:
                     self._message_rendered = True
@@ -942,8 +857,7 @@ class ConversationMessage(QFrame):
 
         # Check if we should defer rendering
         if not self._is_expanded:
-            # Store content for later rendering (use display text so deferred render also looks clean)
-            self._pending_content = display_text
+            self._pending_content = text
             self._pending_context = self._context
 
             # Show the message widget (even if collapsed)
@@ -954,7 +868,7 @@ class ConversationMessage(QFrame):
             return
 
         # Expanded - render immediately
-        self._render_content(display_text, self._context)
+        self._render_content(text, self._context)
 
     def _render_content(self, text: str, context: str | None) -> None:
         """
@@ -1067,20 +981,6 @@ class ConversationMessage(QFrame):
                 btn.hide()
         if self._expand_button is not None:
             self._expand_button.setEnabled(False)
-        if self._display_chips_container is not None:
-            self._display_chips_container.hide()
-
-        # Extract document blocks so we can show chips instead of raw XML
-        self._edit_doc_blocks = [
-            (xml_block, filename, path or "")
-            for xml_block, filename, path, _content in re.findall(
-                r'(<document filename="([^"]+)"(?:\s+path="([^"]*)")?>(.*?)</document>)',
-                self._message_content, re.DOTALL
-            )
-        ]
-        # Pure text portion (strip attachment placeholder lines)
-        display_for_edit = self._to_display_text(self._message_content, for_edit=True)
-        edit_text = re.sub(r'^📎 [^\n]*\n?', '', display_for_edit, flags=re.MULTILINE).strip()
 
         # Build the edit area
         zoom_factor = self._style_manager.zoom_factor()
@@ -1091,17 +991,10 @@ class ConversationMessage(QFrame):
         edit_layout.setContentsMargins(0, 0, 0, 0)
         edit_layout.setSpacing(spacing // 2)
 
-        # Attachment chips row (shown only when documents are attached)
-        if self._edit_doc_blocks:
-            self._edit_chips_container = QWidget(self._edit_area)
-            self._edit_chips_container.setObjectName("_edit_chips_container")
-            edit_layout.addWidget(self._edit_chips_container)
-            self._rebuild_edit_chips()
-
-        # Text area — contains only the message text, not document placeholders
+        # Text area
         text_edit = MarkdownTextEdit(True, self._edit_area)
         text_edit.setObjectName("_edit_text_edit")
-        text_edit.setPlainText(edit_text)
+        text_edit.setPlainText(self._message_content)
         text_edit.setMinimumHeight(80)
         text_edit.apply_style()
         text_edit.installEventFilter(self)
@@ -1116,13 +1009,13 @@ class ConversationMessage(QFrame):
         btn_layout.setSpacing(6)
         btn_layout.addStretch()
 
-        cancel_btn = QPushButton(self._edit_area)
+        cancel_btn = QToolButton(self._edit_area)
         cancel_btn.setObjectName("_edit_cancel_button")
         cancel_btn.clicked.connect(self._cancel_edit)
         self._edit_cancel_button = cancel_btn
         btn_layout.addWidget(cancel_btn)
 
-        confirm_btn = QPushButton(self._edit_area)
+        confirm_btn = QToolButton(self._edit_area)
         confirm_btn.setObjectName("_edit_confirm_button")
         confirm_btn.clicked.connect(self._confirm_edit)
         self._edit_confirm_button = confirm_btn
@@ -1137,170 +1030,6 @@ class ConversationMessage(QFrame):
         cursor.movePosition(cursor.MoveOperation.End)
         text_edit.setTextCursor(cursor)
 
-    def _update_display_chips(self, doc_blocks: List[Tuple[str, str]]) -> None:
-        """Create or rebuild the read-only card chips for attached documents in the message view."""
-        if not doc_blocks:
-            if self._display_chips_container is not None:
-                self._display_chips_container.hide()
-            return
-
-        if self._display_chips_container is None:
-            self._display_chips_container = QWidget(self)
-            self._display_chips_container.setObjectName("_display_chips_container")
-            # Insert between banner (index 0) and sections_container (index 1)
-            self._layout.insertWidget(1, self._display_chips_container)
-
-        container = self._display_chips_container
-
-        # Clear existing layout
-        old_layout = container.layout()
-        if old_layout is not None:
-            while old_layout.count():
-                item = old_layout.takeAt(0)
-                if item and item.widget():
-                    item.widget().deleteLater()
-            old_layout.deleteLater()
-
-        # Clear previous chip→path mapping
-        self._chip_paths.clear()
-
-        chips_layout = QHBoxLayout(container)
-        chips_layout.setContentsMargins(0, 6, 0, 2)
-        chips_layout.setSpacing(8)
-
-        ext_colors = {
-            ".pdf": "#e05c4b", ".docx": "#2b7cd3", ".doc": "#2b7cd3",
-            ".png": "#2eaa6e", ".jpg": "#2eaa6e", ".jpeg": "#2eaa6e", ".gif": "#2eaa6e",
-            ".csv": "#8e44ad", ".json": "#e67e22", ".yaml": "#e67e22", ".yml": "#e67e22",
-            ".md": "#16a085", ".rst": "#16a085", ".txt": "#7f8c8d",
-        }
-
-        for filename, path in doc_blocks:
-            ext_lower = os.path.splitext(filename)[1].lower()
-            ext = ext_lower.upper().lstrip('.') or "FILE"
-            ext_color = ext_colors.get(ext_lower, "#7f8c8d")
-            display_name = filename if len(filename) <= 18 else filename[:15] + "..."
-
-            chip = QWidget()
-            chip.setObjectName("_attachment_chip")
-            chip.setCursor(Qt.CursorShape.PointingHandCursor)
-            chip_layout = QHBoxLayout(chip)
-            chip_layout.setContentsMargins(6, 6, 10, 6)
-            chip_layout.setSpacing(8)
-
-            # Colored icon badge
-            icon_label = QLabel(ext[:4])
-            icon_label.setFixedSize(32, 32)
-            icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            icon_label.setStyleSheet(
-                f"background-color: {ext_color}; border-radius: 6px;"
-                " color: white; font-size: 7pt; font-weight: bold; border: none;"
-            )
-            chip_layout.addWidget(icon_label)
-
-            # Filename + type stacked vertically
-            info = QWidget()
-            info.setObjectName("_chip_info")
-            info_layout = QVBoxLayout(info)
-            info_layout.setContentsMargins(0, 0, 0, 0)
-            info_layout.setSpacing(1)
-
-            name_label = QLabel(display_name)
-            name_label.setObjectName("_chip_label")
-            info_layout.addWidget(name_label)
-
-            type_label = QLabel(ext[:4])
-            type_label.setObjectName("_chip_type_label")
-            info_layout.addWidget(type_label)
-
-            chip_layout.addWidget(info)
-            chips_layout.addWidget(chip)
-
-            # Register chip for click-to-open
-            if path:
-                self._chip_paths[chip] = path
-                chip.installEventFilter(self)
-
-        chips_layout.addStretch()
-        container.setVisible(self._is_expanded)
-
-    def _rebuild_edit_chips(self) -> None:
-        """Rebuild the attachment chips shown in the inline edit area."""
-        container = self._edit_chips_container
-        if container is None:
-            return
-
-        # Clear existing chips
-        old_layout = container.layout()
-        if old_layout is not None:
-            while old_layout.count():
-                item = old_layout.takeAt(0)
-                if item and item.widget():
-                    item.widget().deleteLater()
-            old_layout.deleteLater()
-
-        chips_layout = QHBoxLayout(container)
-        chips_layout.setContentsMargins(0, 2, 0, 2)
-        chips_layout.setSpacing(6)
-
-        for _idx, (_xml, filename, _path) in enumerate(self._edit_doc_blocks):
-            ext = os.path.splitext(filename)[1].upper().lstrip('.') or "FILE"
-            ext_colors = {
-                ".pdf": "#e05c4b", ".docx": "#2b7cd3", ".doc": "#2b7cd3",
-                ".png": "#2eaa6e", ".jpg": "#2eaa6e", ".jpeg": "#2eaa6e", ".gif": "#2eaa6e",
-                ".csv": "#8e44ad", ".json": "#e67e22", ".yaml": "#e67e22", ".yml": "#e67e22",
-                ".md": "#16a085", ".rst": "#16a085", ".txt": "#7f8c8d",
-            }
-            ext_color = ext_colors.get(os.path.splitext(filename)[1].lower(), "#7f8c8d")
-            display_name = filename if len(filename) <= 18 else filename[:15] + "..."
-
-            chip = QWidget()
-            chip.setObjectName("_attachment_chip")
-            chip_layout = QHBoxLayout(chip)
-            chip_layout.setContentsMargins(6, 6, 8, 6)
-            chip_layout.setSpacing(8)
-
-            # Colored icon badge
-            icon_label = QLabel(ext[:4])
-            icon_label.setFixedSize(32, 32)
-            icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            icon_label.setStyleSheet(
-                f"background-color: {ext_color}; border-radius: 6px;"
-                " color: white; font-size: 7pt; font-weight: bold; border: none;"
-            )
-            chip_layout.addWidget(icon_label)
-
-            # Filename + type stacked vertically
-            info = QWidget()
-            info.setObjectName("_chip_info")
-            info_layout = QVBoxLayout(info)
-            info_layout.setContentsMargins(0, 0, 0, 0)
-            info_layout.setSpacing(1)
-
-            name_label = QLabel(display_name)
-            name_label.setObjectName("_chip_label")
-            info_layout.addWidget(name_label)
-
-            type_label = QLabel(ext[:4])
-            type_label.setObjectName("_chip_type_label")
-            info_layout.addWidget(type_label)
-
-            chip_layout.addWidget(info)
-            chips_layout.addWidget(chip)
-
-        chips_layout.addStretch()
-        container.setVisible(bool(self._edit_doc_blocks))
-
-    def _delete_edit_attachment(self, index: int) -> None:
-        """Remove an attachment chip from the edit area and delete the uploaded file."""
-        if not 0 <= index < len(self._edit_doc_blocks):
-            return
-        _xml, _filename, upload_path = self._edit_doc_blocks[index]
-        self._edit_doc_blocks.pop(index)
-        if upload_path:
-            self.attachment_file_deleted.emit(upload_path)
-        self._rebuild_edit_chips()
-
     def _cancel_edit(self) -> None:
         """Cancel inline editing and restore the rendered content."""
         if self._edit_area is None:
@@ -1312,11 +1041,7 @@ class ConversationMessage(QFrame):
         self._edit_text_edit = None
         self._edit_confirm_button = None
         self._edit_cancel_button = None
-        self._edit_doc_blocks = []
-        self._edit_chips_container = None
         self._sections_container.show()
-        if self._display_chips_container is not None:
-            self._display_chips_container.show()
         for btn in (
             self._fork_message_button,
             self._edit_message_button,
@@ -1334,22 +1059,12 @@ class ConversationMessage(QFrame):
         if self._edit_text_edit is None:
             return
 
-        message_text = self._edit_text_edit.toPlainText().strip()
-        # Reconstruct from remaining document chips + edited text
-        parts = [xml_block for xml_block, _fname, _path in self._edit_doc_blocks]
-        if message_text:
-            parts.append(message_text)
-        new_text = "\n\n".join(parts)
+        new_text = self._edit_text_edit.toPlainText().strip()
         self._cancel_edit()  # clean up edit UI before emitting
         self.edit_confirmed.emit(new_text)
 
     def eventFilter(self, obj: QWidget, event: QEvent) -> bool:
-        """Intercept Ctrl+Enter in the inline editor to confirm, and chip clicks to open files."""
-        # Handle click on a document chip to open the file
-        if event.type() == QEvent.Type.MouseButtonPress and obj in self._chip_paths:
-            self.link_clicked.emit(f"humbug-file://{self._chip_paths[obj]}")
-            return True
-
+        """Intercept Ctrl+Enter in the inline editor to confirm."""
         if obj is self._edit_text_edit and event.type() == QEvent.Type.KeyPress:
             from PySide6.QtGui import QKeyEvent
             key_event = event  # type: ignore[assignment]

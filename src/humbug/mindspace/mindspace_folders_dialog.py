@@ -60,11 +60,6 @@ class MindspaceFoldersDialog(QDialog):
         self._conversations_check.setEnabled(False)  # Always required
         self._settings_container.add_setting(self._conversations_check)
 
-        # Metaphor folder option
-        self._metaphor_check = SettingsFactory.create_checkbox(strings.metaphor_folder)
-        self._metaphor_check.set_value(True)
-        self._settings_container.add_setting(self._metaphor_check)
-
         # Source folder option
         self._src_check = SettingsFactory.create_checkbox(strings.src_folder)
         self._src_check.set_value(False)
@@ -118,9 +113,6 @@ class MindspaceFoldersDialog(QDialog):
             List of folder names to create in mindspace
         """
         folders = ['conversations']  # Always create conversations folder
-
-        if self._metaphor_check.get_value():
-            folders.append('metaphor')
 
         if self._src_check.get_value():
             folders.append('src')

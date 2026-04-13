@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, List
 
 from PySide6.QtCore import QObject, Signal, QOperatingSystemVersion, Qt
-from PySide6.QtGui import QTextCharFormat, QFontDatabase, QColor, QFontMetricsF, QFont, QPixmap
+from PySide6.QtGui import QTextCharFormat, QFontDatabase, QColor, QFontMetricsF, QFont, QPixmap, QGuiApplication
 
 from syntax import TokenType
 
@@ -21,6 +21,7 @@ class ColorMode(Enum):
     """Enumeration for color theme modes."""
     LIGHT = auto()
     DARK = auto()
+    SYSTEM = auto()
 
 
 class StyleManager(QObject):
@@ -55,10 +56,14 @@ class StyleManager(QObject):
             self._base_font_size = self._determine_base_font_size()
             self._user_font_size: float | None = None
             self._initialized = True
-            self._color_mode = ColorMode.LIGHT  # Default to light mode
+            self._color_mode = ColorMode.SYSTEM  # Default to system mode
             self._colors: Dict[ColorRole, Dict[ColorMode, str]] = self._initialize_colors()
             self._highlights: Dict[TokenType, QTextCharFormat] = {}
             self._proportional_highlights: Dict[TokenType, QTextCharFormat] = {}
+
+            # Connect to OS-level colour scheme changes for SYSTEM mode
+            hints = QGuiApplication.styleHints()
+            hints.colorSchemeChanged.connect(self._on_system_color_scheme_changed)
 
             # Two-level icon cache for performance.  Level 1: Cache original loaded icons by path
             self._icon_cache: Dict[str, QPixmap] = {}
@@ -467,6 +472,16 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#dc2626"   # red-600
             },
 
+            # Drop target highlights
+            ColorRole.DROP_TARGET_HIGHLIGHT: {
+                ColorMode.DARK: "#1d4ed880",
+                ColorMode.LIGHT: "#bfdbfe80"
+            },
+            ColorRole.DROP_TARGET_SEPARATOR_HIGHLIGHT: {
+                ColorMode.DARK: "#3b82f6",
+                ColorMode.LIGHT: "#2563eb"
+            },
+
             # Line numbers
             ColorRole.LINE_NUMBER: {
                 ColorMode.DARK: "#52525b",   # zinc-600
@@ -723,7 +738,7 @@ class StyleManager(QObject):
         text_highlight = QTextCharFormat()
         text_highlight.setFontFamilies(self._code_font_families)
         text_highlight.setFontFixedPitch(True)
-        text_highlight.setForeground(QColor(self._colors[role][self._color_mode]))
+        text_highlight.setForeground(QColor(self._colors[role][self._resolve_color_mode()]))
 
         return text_highlight
 
@@ -765,7 +780,7 @@ class StyleManager(QObject):
 
     def _create_proportional_highlight(self, role: ColorRole) -> QTextCharFormat:
         text_highlight = QTextCharFormat()
-        text_highlight.setForeground(QColor(self._colors[role][self._color_mode]))
+        text_highlight.setForeground(QColor(self._colors[role][self._resolve_color_mode()]))
 
         return text_highlight
 
@@ -898,7 +913,7 @@ class StyleManager(QObject):
         contrast_color = "#ffffff"
 
         # Create collapsed and expanded arrows for both themes
-        for mode in ColorMode:
+        for mode in (ColorMode.LIGHT, ColorMode.DARK):
             color = self._colors[ColorRole.TEXT_PRIMARY][mode]
             inactive_color = self._colors[ColorRole.TEXT_INACTIVE][mode]
             suffix = mode.name.lower()
@@ -1144,7 +1159,7 @@ class StyleManager(QObject):
             Full path to the icon file
         """
         icon_dir = os.path.expanduser("~/.humbug/icons")
-        theme = "dark" if self._color_mode == ColorMode.DARK else "light"
+        theme = "dark" if self._resolve_color_mode() == ColorMode.DARK else "light"
         return Path(os.path.join(icon_dir, f"{name}-{theme}.svg")).as_posix()
 
     def get_static_icon_path(self, name: str) -> str:
@@ -1198,7 +1213,7 @@ class StyleManager(QObject):
         Raises:
             KeyError: If no color is defined for the role
         """
-        return QColor(self._colors[role][self._color_mode])
+        return QColor(self._colors[role][self._resolve_color_mode()])
 
     def get_color_str(self, role: ColorRole) -> str:
         """
@@ -1213,7 +1228,7 @@ class StyleManager(QObject):
         Raises:
             KeyError: If no color is defined for the role
         """
-        return self._colors[role][self._color_mode]
+        return self._colors[role][self._resolve_color_mode()]
 
     def get_highlight(self, token_type: TokenType) -> QTextCharFormat:
         """
@@ -1288,7 +1303,39 @@ class StyleManager(QObject):
 
     def color_mode(self) -> ColorMode:
         """Get the current color mode."""
+        return self._resolve_color_mode()
+
+    def user_color_mode(self) -> ColorMode:
+        """Get the user's color mode preference, which may be SYSTEM, LIGHT, or DARK."""
         return self._color_mode
+
+    def _resolve_color_mode(self) -> ColorMode:
+        """
+        Resolve the effective (LIGHT or DARK) color mode.
+
+        When the user preference is SYSTEM, the OS color scheme is queried.
+        Qt.ColorScheme.Unknown is treated as LIGHT.
+
+        Returns:
+            ColorMode.LIGHT or ColorMode.DARK
+        """
+        if self._color_mode != ColorMode.SYSTEM:
+            return self._color_mode
+
+        scheme = QGuiApplication.styleHints().colorScheme()
+        if scheme == Qt.ColorScheme.Dark:
+            return ColorMode.DARK
+
+        return ColorMode.LIGHT
+
+    def _on_system_color_scheme_changed(self) -> None:
+        """Handle OS-level color scheme changes when in SYSTEM mode."""
+        if self._color_mode == ColorMode.SYSTEM:
+            self._initialize_highlights()
+            self._initialize_proportional_highlights()
+            self._icon_cache.clear()
+            self._scaled_icon_cache.clear()
+            self.style_changed.emit()
 
     def set_color_mode(self, mode: ColorMode) -> None:
         """
@@ -1344,6 +1391,14 @@ class StyleManager(QObject):
     def message_bubble_spacing(self) -> float:
         """Get the number of pixels to use in message bubble spacing."""
         return 10.0
+
+    def nice_tab_width(self) -> float:
+        """Get the ideal width for tabs to balance information density and readability."""
+        return 1024.0
+
+    def get_scrollbar_size(self) -> int:
+        """Get the standard scrollbar thickness in pixels."""
+        return 10
 
     def get_menu_stylesheet(self) -> str:
         """Apply styling to a specific menu."""

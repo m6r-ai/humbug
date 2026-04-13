@@ -10,13 +10,8 @@ from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
     QLabel, QApplication, QDialog, QMenu, QStatusBar
 )
-from PySide6.QtCore import Qt, QTimer, QEvent, QVariantAnimation, QEasingCurve
+from PySide6.QtCore import Qt, QTimer, QEvent
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
-
-from metaphor import (
-    MetaphorASTBuilder, MetaphorASTBuilderError, MetaphorFormatVisitor, MetaphorASTRootNode,
-    format_errors, format_preamble
-)
 
 from ai_tool import AIToolManager
 from ai_tool.menai.menai_ai_tool import MenaiAITool
@@ -54,7 +49,6 @@ from humbug.tabs.shell.commands.shell_command_conversation import ShellCommandCo
 from humbug.tabs.shell.commands.shell_command_edit import ShellCommandEdit
 from humbug.tabs.shell.commands.shell_command_help import ShellCommandHelp
 from humbug.tabs.shell.commands.shell_command_log import ShellCommandLog
-from humbug.tabs.shell.commands.shell_command_m6rc import ShellCommandM6rc
 from humbug.tabs.shell.commands.shell_command_terminal import ShellCommandTerminal
 from humbug.tabs.shell.commands.shell_command_preview import ShellCommandPreview
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
@@ -102,10 +96,6 @@ class MainWindow(QMainWindow):
         self._new_conv_action = QAction(strings.new_conversation, self)
         self._new_conv_action.setShortcut(QKeySequence("Ctrl+Shift+N"))
         self._new_conv_action.triggered.connect(self._on_new_conversation)
-
-        self._new_metaphor_conv_action = QAction(strings.new_metaphor_conversation, self)
-        self._new_metaphor_conv_action.setShortcut(QKeySequence("Ctrl+Shift+M"))
-        self._new_metaphor_conv_action.triggered.connect(self._on_new_metaphor_conversation)
 
         self._new_file_action = QAction(strings.new_file, self)
         self._new_file_action.setShortcut(QKeySequence.StandardKey.New)
@@ -208,10 +198,6 @@ class MainWindow(QMainWindow):
         self._show_system_shell_action.setShortcut(QKeySequence("Ctrl+Shift+Y"))
         self._show_system_shell_action.triggered.connect(self._on_show_system_shell)
 
-        self._toggle_mindspace_panel_action = QAction(strings.toggle_mindspace_panel, self)
-        self._toggle_mindspace_panel_action.setShortcut(QKeySequence("Ctrl+Alt+B"))
-        self._toggle_mindspace_panel_action.triggered.connect(self._on_toggle_mindspace_panel)
-
         self._show_all_columns_action = QAction(strings.show_all_columns, self)
         self._show_all_columns_action.setShortcut(QKeySequence("Ctrl+\\"))
         self._show_all_columns_action.triggered.connect(self._on_show_all_columns)
@@ -257,7 +243,6 @@ class MainWindow(QMainWindow):
         self._file_menu = self._menu_bar.addMenu(strings.file_menu)
         self._file_menu.addAction(self._new_mindspace_action)
         self._file_menu.addAction(self._new_conv_action)
-        self._file_menu.addAction(self._new_metaphor_conv_action)
         self._file_menu.addAction(self._new_file_action)
         self._file_menu.addAction(self._new_terminal_action)
         self._file_menu.addSeparator()
@@ -299,7 +284,6 @@ class MainWindow(QMainWindow):
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._show_system_log_action)
         self._view_menu.addAction(self._show_system_shell_action)
-        self._view_menu.addAction(self._toggle_mindspace_panel_action)
         self._view_menu.addSeparator()
         self._view_menu.addAction(self._show_all_columns_action)
         self._view_menu.addAction(self._split_column_left_action)
@@ -336,7 +320,6 @@ class MainWindow(QMainWindow):
         self._mindspace_view.open_mindspace_requested.connect(self._on_open_mindspace)
         self._mindspace_view.settings_requested.connect(self._on_show_mindspace_settings_dialog)
         self._mindspace_view.new_conversation_requested.connect(self._on_mindspace_view_new_conversation_in_folder)
-        self._mindspace_view.toggle_panel_requested.connect(self._on_toggle_mindspace_panel)
         self._splitter.addWidget(self._mindspace_view)
 
         # Create tab manager in splitter
@@ -350,9 +333,6 @@ class MainWindow(QMainWindow):
 
         # Set initial mindspace view width
         self._splitter.setSizes([300, self.width() - 300])
-        self._mindspace_panel_width = 300
-        self._mindspace_panel_collapsed = False
-        self._splitter.splitterMoved.connect(self._on_main_splitter_moved)
 
         # Set the stretch factors: 0 for mindspace view (no stretch) and 1 for column manager (stretch to fill)
         self._splitter.setStretchFactor(0, 0)
@@ -402,7 +382,6 @@ class MainWindow(QMainWindow):
         self._command_registry.register_command(ShellCommandConversation(self._column_manager))
         self._command_registry.register_command(ShellCommandEdit(self._column_manager))
         self._command_registry.register_command(ShellCommandLog(self._column_manager))
-        self._command_registry.register_command(ShellCommandM6rc(self._column_manager))
         self._command_registry.register_command(ShellCommandTerminal(self._column_manager))
         self._command_registry.register_command(ShellCommandPreview(self._column_manager))
 
@@ -468,7 +447,6 @@ class MainWindow(QMainWindow):
         has_mindspace = self._mindspace_manager.has_mindspace()
         self._close_mindspace_action.setEnabled(has_mindspace)
         self._new_conv_action.setEnabled(has_mindspace)
-        self._new_metaphor_conv_action.setEnabled(has_mindspace)
         self._new_file_action.setEnabled(has_mindspace)
         self._open_preview_action.setEnabled(has_mindspace)
         self._open_conv_action.setEnabled(has_mindspace)
@@ -497,7 +475,6 @@ class MainWindow(QMainWindow):
         self._zoom_out_action.setEnabled(current_zoom > 0.5)
         self._show_system_log_action.setEnabled(has_mindspace)
         self._show_system_shell_action.setEnabled(has_mindspace)
-        self._toggle_mindspace_panel_action.setEnabled(True)
         self._show_all_columns_action.setEnabled(column_manager.can_show_all_columns())
         self._split_column_left_action.setEnabled(column_manager.can_split_column())
         self._split_column_right_action.setEnabled(column_manager.can_split_column())
@@ -532,7 +509,6 @@ class MainWindow(QMainWindow):
         self._quit_action.setText(strings.quit_humbug)
         self._new_mindspace_action.setText(strings.new_mindspace)
         self._new_conv_action.setText(strings.new_conversation)
-        self._new_metaphor_conv_action.setText(strings.new_metaphor_conversation)
         self._new_file_action.setText(strings.new_file)
         self._open_mindspace_action.setText(strings.open_mindspace)
         self._open_preview_action.setText(strings.open_preview)
@@ -562,9 +538,7 @@ class MainWindow(QMainWindow):
         self._zoom_in_action.setText(strings.zoom_in)
         self._zoom_out_action.setText(strings.zoom_out)
         self._reset_zoom_action.setText(strings.reset_zoom)
-        self._show_system_log_action.setText(strings.show_system_log)
         self._show_system_shell_action.setText(strings.show_system_shell)
-        self._toggle_mindspace_panel_action.setText(strings.toggle_mindspace_panel)
         self._show_all_columns_action.setText(strings.show_all_columns)
         self._split_column_left_action.setText(strings.split_column_left)
         self._split_column_right_action.setText(strings.split_column_right)
@@ -611,10 +585,19 @@ class MainWindow(QMainWindow):
         # Create the theme actions dictionary to store references
         self._theme_actions = {}
 
+        # Add Automatic (system) theme action
+        system_action = QAction(strings.theme_system, self)
+        system_action.setCheckable(True)
+        system_action.setChecked(self._style_manager.user_color_mode() == ColorMode.SYSTEM)
+        system_action.triggered.connect(lambda: self._set_color_mode(ColorMode.SYSTEM))
+        theme_action_group.addAction(system_action)
+        theme_menu.addAction(system_action)
+        self._theme_actions[ColorMode.SYSTEM] = system_action
+
         # Add Light theme action
         light_action = QAction(strings.theme_light, self)
         light_action.setCheckable(True)
-        light_action.setChecked(self._style_manager.color_mode() == ColorMode.LIGHT)
+        light_action.setChecked(self._style_manager.user_color_mode() == ColorMode.LIGHT)
         light_action.triggered.connect(lambda: self._set_color_mode(ColorMode.LIGHT))
         theme_action_group.addAction(light_action)
         theme_menu.addAction(light_action)
@@ -623,7 +606,7 @@ class MainWindow(QMainWindow):
         # Add Dark theme action
         dark_action = QAction(strings.theme_dark, self)
         dark_action.setCheckable(True)
-        dark_action.setChecked(self._style_manager.color_mode() == ColorMode.DARK)
+        dark_action.setChecked(self._style_manager.user_color_mode() == ColorMode.DARK)
         dark_action.triggered.connect(lambda: self._set_color_mode(ColorMode.DARK))
         theme_action_group.addAction(dark_action)
         theme_menu.addAction(dark_action)
@@ -635,7 +618,7 @@ class MainWindow(QMainWindow):
         """Update the theme menu to reflect the current selected theme."""
         # Set the checked state for the appropriate theme action
         for theme, action in self._theme_actions.items():
-            action.setChecked(theme == self._style_manager.color_mode())
+            action.setChecked(theme == self._style_manager.user_color_mode())
 
     def _set_color_mode(self, theme: ColorMode) -> None:
         """
@@ -996,80 +979,6 @@ class MainWindow(QMainWindow):
         """Show all columns equally."""
         self._column_manager.show_all_columns()
 
-    def _on_toggle_mindspace_panel(self) -> None:
-        """Toggle the visibility of the left mindspace panel."""
-        self._set_mindspace_panel_collapsed(not self._mindspace_panel_collapsed)
-
-    _ICON_RAIL_WIDTH = 44  # Width of the narrow icon rail when panel is collapsed
-
-    def _set_mindspace_panel_collapsed(self, collapsed: bool) -> None:
-        """Collapse or expand the mindspace panel while preserving its width."""
-        if collapsed == self._mindspace_panel_collapsed:
-            return
-
-        if collapsed:
-            current_width = self._splitter.sizes()[0]
-            if current_width > self._ICON_RAIL_WIDTH:
-                self._mindspace_panel_width = current_width
-            target = self._ICON_RAIL_WIDTH
-        else:
-            target = max(220, self._mindspace_panel_width)
-
-        self._mindspace_panel_collapsed = collapsed
-
-        # Switch icon rail on/off immediately so the user sees the right content
-        # as the panel slides, rather than a flash at the end
-        if collapsed:
-            self._mindspace_view.set_panel_collapsed(True)
-
-        self._animate_panel_width(target, on_done=None if collapsed else lambda: None)
-
-    def _animate_panel_width(self, target_width: int, on_done=None) -> None:
-        """Smoothly animate the sidebar to target_width pixels."""
-        # Stop any in-progress animation
-        if hasattr(self, '_panel_animation') and self._panel_animation is not None:
-            self._panel_animation.stop()
-
-        start_width = self._splitter.sizes()[0]
-        if start_width == target_width:
-            if on_done:
-                on_done()
-            return
-
-        anim = QVariantAnimation(self)
-        anim.setStartValue(float(start_width))
-        anim.setEndValue(float(target_width))
-        anim.setDuration(220)
-        anim.setEasingCurve(QEasingCurve.Type.OutCubic)
-
-        def _tick(value):
-            w = int(value)
-            self._splitter.setSizes([w, max(1, self.width() - w)])
-
-        def _finished():
-            self._panel_animation = None
-            # If expanding, switch to full panel content after slide completes
-            if target_width > self._ICON_RAIL_WIDTH:
-                self._mindspace_view.set_panel_collapsed(False)
-            if on_done:
-                on_done()
-
-        anim.valueChanged.connect(_tick)
-        anim.finished.connect(_finished)
-        anim.start()
-        self._panel_animation = anim
-
-    def _on_main_splitter_moved(self, _pos: int, _index: int) -> None:
-        """Track sidebar width changes so expand restores the last useful size."""
-        sidebar_width = self._splitter.sizes()[0]
-        now_collapsed = sidebar_width <= self._ICON_RAIL_WIDTH
-        if now_collapsed != self._mindspace_panel_collapsed:
-            self._mindspace_panel_collapsed = now_collapsed
-            self._mindspace_view.set_panel_collapsed(now_collapsed)
-
-        if sidebar_width > self._ICON_RAIL_WIDTH + 40:
-            self._mindspace_panel_width = sidebar_width
-
     def _on_split_column(self, split_left: bool) -> None:
         """Split the current column."""
         self._column_manager.split_column(split_left)
@@ -1168,6 +1077,11 @@ class MainWindow(QMainWindow):
         """Trigger repaint of main window splitter handle."""
         # The main window splitter uses custom painted handles, so we just need to trigger a repaint
         self._splitter.update()
+        self._column_manager.setStyleSheet(f"""
+            #ColumnManager QWidget {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
+            }}
+        """)
 
     def _on_new_conversation(self) -> ConversationTab | None:
         """Create new conversation tab."""
@@ -1217,11 +1131,6 @@ class MainWindow(QMainWindow):
     def _on_mindspace_view_new_conversation_in_folder(self, folder_path: str) -> None:
         """Create a new conversation in a specific folder."""
         if not self._mindspace_manager.has_mindspace():
-            return
-
-        # Empty path means default location — reuse the safe path that ensures the folder exists
-        if not folder_path:
-            self._on_new_conversation()
             return
 
         try:
@@ -1281,46 +1190,6 @@ class MainWindow(QMainWindow):
             external_allowlist=user_settings.external_file_allowlist,
             external_denylist=user_settings.external_file_denylist
         )
-
-    def _on_new_metaphor_conversation(self) -> None:
-        """Create new conversation from Metaphor file."""
-        # Show file dialog
-        self._menu_timer.stop()
-        strings = self._language_manager.strings()
-        file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            strings.file_dialog_open_metaphor,
-            self._mindspace_manager.file_dialog_directory(),
-            f"{strings.file_filter_metaphor};;{strings.file_filter_all}"
-        )
-        self._menu_timer.start()
-
-        if not file_path:
-            return
-
-        self._mindspace_manager.update_file_dialog_directory(file_path)
-        search_path = self._mindspace_manager.mindspace_path()
-
-        metaphor_ast_builder = MetaphorASTBuilder(self._get_canonical_mindspace_path)
-        try:
-            syntax_tree = MetaphorASTRootNode()
-            metaphor_ast_builder.build_ast_from_file(syntax_tree, file_path, [search_path], search_path, [file_path])
-            formatter = MetaphorFormatVisitor()
-            prompt = format_preamble() + formatter.format(syntax_tree)
-
-        except MetaphorASTBuilderError as e:
-            self._column_manager.show_system_shell()
-            error = f"Metaphor compiler error prevented new Metaphor conversation:\n\n{format_errors(e.errors)}"
-            self._mindspace_manager.add_interaction(MindspaceLogLevel.WARN, error)
-            self._column_manager.show_system_log()
-            return
-
-        conversation_tab = self._on_new_conversation()
-        if conversation_tab is None:
-            return
-
-        # Set input text
-        conversation_tab.set_input_text(prompt)
 
     def _on_open_conversation(self) -> None:
         """Show open conversation dialog and create conversation tab."""
@@ -1427,7 +1296,7 @@ class MainWindow(QMainWindow):
 
                 # Update theme from settings if it changed
                 new_theme = new_settings.theme
-                if new_theme != self._style_manager.color_mode():
+                if new_theme != self._style_manager.user_color_mode():
                     self._style_manager.set_color_mode(new_theme)
                     self._update_theme_menu()
 

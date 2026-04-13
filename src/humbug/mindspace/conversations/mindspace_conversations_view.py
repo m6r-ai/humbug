@@ -855,11 +855,6 @@ class MindspaceConversationsView(QWidget):
 
         menu.exec_(self._tree_view.viewport().mapToGlobal(position))
 
-    def start_new_folder(self) -> None:
-        """Create a new folder inside the conversations root."""
-        if self._conversations_path:
-            self._start_new_folder_creation(self._conversations_path)
-
     def _start_new_folder_creation(self, parent_path: str) -> None:
         """
         Start the creation of a new folder using inline editing.

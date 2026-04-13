@@ -5,7 +5,7 @@ This module defines the SettingsSpinBox class which provides an integer spin box
 setting widget.
 """
 
-from PySide6.QtWidgets import QWidget, QSpinBox, QSizePolicy
+from PySide6.QtWidgets import QWidget, QSpinBox
 
 from humbug.settings.settings_field import SettingsField
 
@@ -40,7 +40,6 @@ class SettingsSpinBox(SettingsField):
         super().__init__(label_text, parent)
 
         self._spin = QSpinBox()
-        self._spin.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._spin.setRange(min_value, max_value)
         self._spin.setSingleStep(step)
         self._spin.valueChanged.connect(self._on_value_changed)

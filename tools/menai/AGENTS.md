@@ -7,6 +7,19 @@ from any working directory.
 For invocation details (flags, options, examples) read the tool's own source
 file or its README where one exists.
 
+## benchmark — `benchmark/run.py`
+
+Compares Menai performance against idiomatic Python and pure-functional Python
+across a set of algorithmic benchmark suites.
+
+Each suite benchmarks three implementations of the same algorithm: Menai (run
+on the Menai VM), idiomatic Python (using mutation and built-ins), and
+functional Python (pure-functional style matching Menai's semantics). The
+first implementation (Menai) is the reference; all others are validated against
+it with per-suite correctness checks. Timing is reported as mean and minimum
+wall-clock time in milliseconds, with a speedup/slowdown ratio relative to the
+reference.
+
 ## checker — `checker/check.py`
 
 Validates parenthesis balance in a `.menai` file. Uses the Menai lexer so that

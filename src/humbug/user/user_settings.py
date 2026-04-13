@@ -24,9 +24,8 @@ class UserSettings:
     ai_backends: Dict[str, AIBackendSettings] = field(default_factory=dict)
     language: LanguageCode = LanguageCode.EN
     font_size: float| None = None  # None means use the default font size
-    theme: ColorMode = ColorMode.LIGHT  # Default to light mode
+    theme: ColorMode = ColorMode.SYSTEM  # Default to system mode
     file_sort_order: UserFileSortOrder = UserFileSortOrder.DIRECTORIES_FIRST
-    open_chat_in_new_tab: bool = False
     allow_external_file_access: bool = True
     external_file_allowlist: List[str] = field(default_factory=list)
     external_file_denylist: List[str] = field(default_factory=list)
@@ -48,9 +47,8 @@ class UserSettings:
             },
             language=LanguageCode.EN,
             font_size=None,
-            theme=ColorMode.LIGHT,
+            theme=ColorMode.SYSTEM,
             file_sort_order=UserFileSortOrder.DIRECTORIES_FIRST,
-            open_chat_in_new_tab=False,
             allow_external_file_access=True,
             external_file_allowlist=FilesystemAccessSettings.get_default_allowlist(),
             external_file_denylist=FilesystemAccessSettings.get_default_denylist()
@@ -232,14 +230,14 @@ class UserSettings:
         else:
             settings.font_size = font_size
 
-        # Load theme if available, otherwise use default (light mode)
-        theme_str = data.get("theme", "LIGHT")
+        # Load theme if available, otherwise use default (dark mode)
+        theme_str = data.get("theme", "SYSTEM")
         if not isinstance(theme_str, str):
             cls._logger.warning(
                 "Invalid theme type in %s: expected str, got %s. Using default.",
                 path, type(theme_str).__name__
             )
-            settings.theme = ColorMode.LIGHT
+            settings.theme = ColorMode.SYSTEM
 
         else:
             try:
@@ -247,10 +245,10 @@ class UserSettings:
 
             except (KeyError, ValueError):
                 cls._logger.warning(
-                    "Invalid theme '%s' in %s. Using default (LIGHT).",
+                    "Invalid theme '%s' in %s. Using default (DARK).",
                     theme_str, path
                 )
-                settings.theme = ColorMode.LIGHT
+                settings.theme = ColorMode.SYSTEM
 
         # Load file sort order if available, otherwise use default
         sort_order_str = data.get("fileSortOrder", "DIRECTORIES_FIRST")
@@ -272,14 +270,6 @@ class UserSettings:
                 )
                 settings.file_sort_order = UserFileSortOrder.DIRECTORIES_FIRST
 
-        open_chat_in_new_tab = data.get("openChatInNewTab", False)
-        if not isinstance(open_chat_in_new_tab, bool):
-            cls._logger.warning(
-                "Invalid openChatInNewTab type in %s: expected bool, got %s. Using default.",
-                path, type(open_chat_in_new_tab).__name__
-            )
-        else:
-            settings.open_chat_in_new_tab = open_chat_in_new_tab
 
         # Load external file access settings with validation
         allow_external = data.get("allowExternalFileAccess", True)
@@ -438,7 +428,6 @@ class UserSettings:
             "fontSize": self.font_size,
             "theme": self.theme.name,
             "fileSortOrder": self.file_sort_order.name,
-            "openChatInNewTab": self.open_chat_in_new_tab,
             "allowExternalFileAccess": self.allow_external_file_access,
             "externalFileAllowlist": self.external_file_allowlist,
             "externalFileDenylist": self.external_file_denylist

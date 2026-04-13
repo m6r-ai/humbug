@@ -137,6 +137,11 @@ class ColorRole(Enum):
     CLOSE_BUTTON_BACKGROUND_HOVER = auto()
                                         # Hover state close button background
 
+    # Drop target highlight
+    DROP_TARGET_HIGHLIGHT = auto()      # Background highlight for active drop targets
+    DROP_TARGET_SEPARATOR_HIGHLIGHT = auto()
+                                        # Highlight for separator when dragging between tabs
+
     # Editor line numbers
     LINE_NUMBER = auto()                # Line number
 

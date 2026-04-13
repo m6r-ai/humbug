@@ -34,7 +34,6 @@ def get_arabic_strings() -> LanguageStrings:
         quit_humbug="خروج من هامبج",
         new_mindspace="مساحة ذهنية جديدة",
         new_conversation="محادثة جديدة",
-        new_metaphor_conversation="محادثة ميتافور جديدة...",
         new_file="ملف جديد",
         new_terminal="طرفية جديدة",
         open_mindspace="فتح مساحة ذهنية...",
@@ -65,7 +64,6 @@ def get_arabic_strings() -> LanguageStrings:
         reset_zoom="إعادة تعيين التكبير",
         show_system_log="عرض سجل المساحة الذهنية",
         show_system_shell="عرض صدفة هامبغ",
-        toggle_mindspace_panel="إظهار أو إخفاء لوحة المساحة الذهنية",
         show_all_columns="عرض كل الأعمدة",
         split_column_left="تقسيم العمود لليسار",
         split_column_right="تقسيم العمود لليمين",
@@ -130,10 +128,10 @@ def get_arabic_strings() -> LanguageStrings:
         # User Settings dialog - other settings
         select_language="اللغة",
         font_size="حجم الخط",
+        theme_system="تلقائي",
         theme_dark="داكن",
         theme_light="فاتح",
         file_sort_order="ترتيب الملفات",
-        open_chat_in_new_tab="فتح المحادثة في تبويب جديد",
         sort_directories_first="المجلدات أولاً",
         sort_alphabetical="أبجدي",
 
@@ -154,7 +152,6 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_folders_title="تكوين مجلدات المساحة الذهنية",
         mindspace_path="مسار المساحة الذهنية",
         conversations_folder='إنشاء مجلد "conversations"',
-        metaphor_folder='إنشاء مجلد "metaphor"',
         src_folder='إنشاء مجلد "src"',
 
         # Mindspace settings
@@ -170,6 +167,8 @@ def get_arabic_strings() -> LanguageStrings:
             "تكوين سلوك مخزن التمرير المؤقت للطرفية. يخزن مخزن التمرير المؤقت سجل إخراج الطرفية "
             "الذي يمكنك التمرير للرجوع إليه."
         ),
+        terminal_fixed_width_enabled="تمكين العرض الثابت",
+        terminal_fixed_width="العرض الثابت (أعمدة)",
         terminal_scrollback_enabled="تحديد مخزن التمرير المؤقت",
         terminal_scrollback_lines="خطوط التمرير",
         terminal_close_on_exit="إغلاق الطرفية عند خروج الصدفة",
@@ -189,9 +188,7 @@ def get_arabic_strings() -> LanguageStrings:
         settings_visible_reasoning="تفكير مرئي",
 
         # File dialog titles
-        file_dialog_open_metaphor="فتح ملف ميتافور",
         file_dialog_open_conversation="فتح محادثة",
-        file_dialog_attach_document="إرفاق مستند",
         file_dialog_open_file="فتح ملف",
         file_dialog_save_file="حفظ الملف",
         file_dialog_new_mindspace="إنشاء مساحة ذهنية جديدة",
@@ -199,7 +196,6 @@ def get_arabic_strings() -> LanguageStrings:
 
         # File dialog filters
         file_filter_all="كل الملفات (*.*)",
-        file_filter_metaphor="ملفات ميتافور (*.m6r)",
         file_filter_conversation="ملفات المحادثة (*.conv)",
 
         # Dialog titles
@@ -235,7 +231,6 @@ def get_arabic_strings() -> LanguageStrings:
         error_opening_conversation="لا يمكن تحميل {}: {}",
         error_forking_conversation="لا يمكن نسخ المحادثة: {}",
         error_opening_preview="لا يمكن فتح المعاينة: {}",
-        error_processing_metaphor="فشل في معالجة ملف ميتافور:\n\n{}",
         error_saving_mindspace_settings="فشل في حفظ الإعدادات: {}",
         error_saving_user_settings="فشل في حفظ إعدادات المستخدم: {}",
         cancel_conversation="هل أنت متأكد من أنك تريد إيقاف استجابة الذكاء الاصطناعي الحالية؟ سيؤدي هذا "
@@ -290,7 +285,6 @@ def get_arabic_strings() -> LanguageStrings:
         tooltip_delete_from_message="حذف المحادثة من هذه النقطة",
         tooltip_edit_message="تحرير هذه الرسالة",
         tooltip_edit_file="تحرير هذا الملف",
-        tooltip_attach_document="إرفاق مستند",
         tooltip_submit_message="إرسال الرسالة",
         tooltip_stop_message="إيقاف المعالجة الحالية",
         tooltip_settings_message="فتح إعدادات المحادثة",
@@ -311,7 +305,7 @@ def get_arabic_strings() -> LanguageStrings:
         move_error_title="خطأ في النقل",
         move_error_exists="يوجد ملف أو مجلد بهذا الاسم بالفعل في الوجهة.",
         move_error_failed="تعذر نقل العنصر: {0}",
-        move_error_protected="لا يمكن نقل مجلدات النظام (conversations, metaphor, .humbug).",
+        move_error_protected="لا يمكن نقل مجلدات النظام (conversations, .humbug).",
 
         # Inline editor validation errors
         error_empty_name="لا يمكن أن يكون الاسم فارغاً",

@@ -45,217 +45,211 @@ extern PyObject *_menai_value_c_init(void);
  * Instruction encoding constants — must match menai_bytecode.py
  */
 #define OPCODE_SHIFT 48
-#define DEST_SHIFT   36
-#define SRC0_SHIFT   24
-#define SRC1_SHIFT   12
-#define FIELD_MASK   0xFFFu
-#define OPCODE_MASK  0xFFFFu
+#define DEST_SHIFT 36
+#define SRC0_SHIFT 24
+#define SRC1_SHIFT 12
+#define FIELD_MASK 0xFFFu
+#define OPCODE_MASK 0xFFFFu
 
 /*
  * Opcode values — must match menai_bytecode.py Opcode enum
  */
-#define OP_LOAD_NONE        0
-#define OP_LOAD_TRUE        1
-#define OP_LOAD_FALSE       2
-#define OP_LOAD_EMPTY_LIST  3
-#define OP_LOAD_EMPTY_DICT  4
-#define OP_LOAD_EMPTY_SET   5
-#define OP_LOAD_CONST       6
-#define OP_LOAD_NAME        7
-#define OP_MOVE             8
-#define OP_JUMP             20
-#define OP_JUMP_IF_FALSE    21
-#define OP_JUMP_IF_TRUE     22
-#define OP_RAISE_ERROR      23
-#define OP_MAKE_CLOSURE     30
-#define OP_PATCH_CLOSURE    31
-#define OP_CALL             32
-#define OP_TAIL_CALL        33
-#define OP_APPLY            34
-#define OP_TAIL_APPLY       35
-#define OP_RETURN           37
-#define OP_EMIT_TRACE       40
-
-/* Layer 3 — none/boolean/symbol/integer/float opcodes */
-#define OP_NONE_P                    50
-#define OP_FUNCTION_P                60
-#define OP_FUNCTION_EQ_P             61
-#define OP_FUNCTION_NEQ_P            62
-#define OP_FUNCTION_MIN_ARITY        63
-#define OP_FUNCTION_VARIADIC_P       64
-#define OP_FUNCTION_ACCEPTS_P        65
-#define OP_SYMBOL_P                  80
-#define OP_SYMBOL_EQ_P               81
-#define OP_SYMBOL_NEQ_P              82
-#define OP_SYMBOL_TO_STRING          83
-#define OP_BOOLEAN_P                100
-#define OP_BOOLEAN_EQ_P             101
-#define OP_BOOLEAN_NEQ_P            102
-#define OP_BOOLEAN_NOT              103
-#define OP_INTEGER_P                120
-#define OP_INTEGER_EQ_P             121
-#define OP_INTEGER_NEQ_P            122
-#define OP_INTEGER_LT_P             123
-#define OP_INTEGER_GT_P             124
-#define OP_INTEGER_LTE_P            125
-#define OP_INTEGER_GTE_P            126
-#define OP_INTEGER_ABS              127
-#define OP_INTEGER_ADD              128
-#define OP_INTEGER_SUB              129
-#define OP_INTEGER_MUL              130
-#define OP_INTEGER_DIV              131
-#define OP_INTEGER_MOD              132
-#define OP_INTEGER_NEG              133
-#define OP_INTEGER_EXPN             134
-#define OP_INTEGER_BIT_NOT          135
-#define OP_INTEGER_BIT_SHIFT_LEFT   136
-#define OP_INTEGER_BIT_SHIFT_RIGHT  137
-#define OP_INTEGER_BIT_OR           138
-#define OP_INTEGER_BIT_AND          139
-#define OP_INTEGER_BIT_XOR          140
-#define OP_INTEGER_MIN              141
-#define OP_INTEGER_MAX              142
-#define OP_INTEGER_TO_FLOAT         143
-#define OP_INTEGER_TO_COMPLEX       144
-#define OP_INTEGER_TO_STRING        145
+#define OP_LOAD_NONE 0
+#define OP_LOAD_TRUE 1
+#define OP_LOAD_FALSE 2
+#define OP_LOAD_EMPTY_LIST 3
+#define OP_LOAD_EMPTY_DICT 4
+#define OP_LOAD_EMPTY_SET 5
+#define OP_LOAD_CONST 6
+#define OP_LOAD_NAME 7
+#define OP_MOVE 8
+#define OP_JUMP 20
+#define OP_JUMP_IF_FALSE 21
+#define OP_JUMP_IF_TRUE 22
+#define OP_RAISE_ERROR 23
+#define OP_MAKE_CLOSURE 30
+#define OP_PATCH_CLOSURE 31
+#define OP_CALL 32
+#define OP_TAIL_CALL 33
+#define OP_APPLY 34
+#define OP_TAIL_APPLY 35
+#define OP_RETURN 37
+#define OP_EMIT_TRACE 40
+#define OP_NONE_P 50
+#define OP_FUNCTION_P 60
+#define OP_FUNCTION_EQ_P 61
+#define OP_FUNCTION_NEQ_P 62
+#define OP_FUNCTION_MIN_ARITY 63
+#define OP_FUNCTION_VARIADIC_P 64
+#define OP_FUNCTION_ACCEPTS_P 65
+#define OP_SYMBOL_P 80
+#define OP_SYMBOL_EQ_P 81
+#define OP_SYMBOL_NEQ_P 82
+#define OP_SYMBOL_TO_STRING 83
+#define OP_BOOLEAN_P 100
+#define OP_BOOLEAN_EQ_P 101
+#define OP_BOOLEAN_NEQ_P 102
+#define OP_BOOLEAN_NOT 103
+#define OP_INTEGER_P 120
+#define OP_INTEGER_EQ_P 121
+#define OP_INTEGER_NEQ_P 122
+#define OP_INTEGER_LT_P 123
+#define OP_INTEGER_GT_P 124
+#define OP_INTEGER_LTE_P 125
+#define OP_INTEGER_GTE_P 126
+#define OP_INTEGER_ABS 127
+#define OP_INTEGER_ADD 128
+#define OP_INTEGER_SUB 129
+#define OP_INTEGER_MUL 130
+#define OP_INTEGER_DIV 131
+#define OP_INTEGER_MOD 132
+#define OP_INTEGER_NEG 133
+#define OP_INTEGER_EXPN 134
+#define OP_INTEGER_BIT_NOT 135
+#define OP_INTEGER_BIT_SHIFT_LEFT 136
+#define OP_INTEGER_BIT_SHIFT_RIGHT 137
+#define OP_INTEGER_BIT_OR 138
+#define OP_INTEGER_BIT_AND 139
+#define OP_INTEGER_BIT_XOR 140
+#define OP_INTEGER_MIN 141
+#define OP_INTEGER_MAX 142
+#define OP_INTEGER_TO_FLOAT 143
+#define OP_INTEGER_TO_COMPLEX 144
+#define OP_INTEGER_TO_STRING 145
 #define OP_INTEGER_CODEPOINT_TO_STRING 146
-#define OP_FLOAT_P                  160
-#define OP_FLOAT_EQ_P               161
-#define OP_FLOAT_NEQ_P              162
-#define OP_FLOAT_LT_P               163
-#define OP_FLOAT_GT_P               164
-#define OP_FLOAT_LTE_P              165
-#define OP_FLOAT_GTE_P              166
-#define OP_FLOAT_NEG                167
-#define OP_FLOAT_ADD                168
-#define OP_FLOAT_SUB                169
-#define OP_FLOAT_MUL                170
-#define OP_FLOAT_DIV                171
-#define OP_FLOAT_FLOOR_DIV          172
-#define OP_FLOAT_MOD                173
-#define OP_FLOAT_EXP                174
-#define OP_FLOAT_EXPN               175
-#define OP_FLOAT_LOG                176
-#define OP_FLOAT_LOG10              177
-#define OP_FLOAT_LOG2               178
-#define OP_FLOAT_LOGN               179
-#define OP_FLOAT_SIN                180
-#define OP_FLOAT_COS                181
-#define OP_FLOAT_TAN                182
-#define OP_FLOAT_SQRT               183
-#define OP_FLOAT_ABS                184
-#define OP_FLOAT_TO_INTEGER         185
-#define OP_FLOAT_TO_COMPLEX         186
-#define OP_FLOAT_TO_STRING          187
-#define OP_FLOAT_FLOOR              188
-#define OP_FLOAT_CEIL               189
-#define OP_FLOAT_ROUND              190
-#define OP_FLOAT_MIN                191
-#define OP_FLOAT_MAX                192
-
-/* Layer 5 — structs, closures, apply */
-#define OP_MAKE_STRUCT       360
-#define OP_STRUCT_P          361
-#define OP_STRUCT_TYPE_P     362
-#define OP_STRUCT_GET        363
-#define OP_STRUCT_GET_IMM    364
-#define OP_STRUCT_SET        365
-#define OP_STRUCT_SET_IMM    366
-#define OP_STRUCT_EQ_P       367
-#define OP_STRUCT_NEQ_P      368
-#define OP_STRUCT_TYPE       369
-#define OP_STRUCT_TYPE_NAME  370
-#define OP_STRUCT_FIELDS     371
-
-/* Layer 4 — complex, string, list, dict, set, range */
-#define OP_COMPLEX_P                200
-#define OP_COMPLEX_EQ_P             201
-#define OP_COMPLEX_NEQ_P            202
-#define OP_COMPLEX_REAL             203
-#define OP_COMPLEX_IMAG             204
-#define OP_COMPLEX_ABS              205
-#define OP_COMPLEX_ADD              206
-#define OP_COMPLEX_SUB              207
-#define OP_COMPLEX_MUL              208
-#define OP_COMPLEX_DIV              209
-#define OP_COMPLEX_NEG              210
-#define OP_COMPLEX_EXP              211
-#define OP_COMPLEX_EXPN             212
-#define OP_COMPLEX_LOG              213
-#define OP_COMPLEX_LOG10            214
-#define OP_COMPLEX_LOGN             215
-#define OP_COMPLEX_SIN              216
-#define OP_COMPLEX_COS              217
-#define OP_COMPLEX_TAN              218
-#define OP_COMPLEX_SQRT             219
-#define OP_COMPLEX_TO_STRING        220
-#define OP_STRING_P                 240
-#define OP_STRING_EQ_P              241
-#define OP_STRING_NEQ_P             242
-#define OP_STRING_LT_P              243
-#define OP_STRING_GT_P              244
-#define OP_STRING_LTE_P             245
-#define OP_STRING_GTE_P             246
-#define OP_STRING_LENGTH            247
-#define OP_STRING_UPCASE            248
-#define OP_STRING_DOWNCASE          249
-#define OP_STRING_TRIM              250
-#define OP_STRING_TRIM_LEFT         251
-#define OP_STRING_TRIM_RIGHT        252
-#define OP_STRING_TO_INTEGER        253
-#define OP_STRING_TO_NUMBER         254
-#define OP_STRING_TO_LIST           255
-#define OP_STRING_REF               256
-#define OP_STRING_PREFIX_P          257
-#define OP_STRING_SUFFIX_P          258
-#define OP_STRING_CONCAT            259
-#define OP_STRING_SLICE             260
-#define OP_STRING_REPLACE           261
-#define OP_STRING_INDEX             262
+#define OP_FLOAT_P 160
+#define OP_FLOAT_EQ_P 161
+#define OP_FLOAT_NEQ_P 162
+#define OP_FLOAT_LT_P 163
+#define OP_FLOAT_GT_P 164
+#define OP_FLOAT_LTE_P 165
+#define OP_FLOAT_GTE_P 166
+#define OP_FLOAT_NEG 167
+#define OP_FLOAT_ADD 168
+#define OP_FLOAT_SUB 169
+#define OP_FLOAT_MUL 170
+#define OP_FLOAT_DIV 171
+#define OP_FLOAT_FLOOR_DIV 172
+#define OP_FLOAT_MOD 173
+#define OP_FLOAT_EXP 174
+#define OP_FLOAT_EXPN 175
+#define OP_FLOAT_LOG 176
+#define OP_FLOAT_LOG10 177
+#define OP_FLOAT_LOG2 178
+#define OP_FLOAT_LOGN 179
+#define OP_FLOAT_SIN 180
+#define OP_FLOAT_COS 181
+#define OP_FLOAT_TAN 182
+#define OP_FLOAT_SQRT 183
+#define OP_FLOAT_ABS 184
+#define OP_FLOAT_TO_INTEGER 185
+#define OP_FLOAT_TO_COMPLEX 186
+#define OP_FLOAT_TO_STRING 187
+#define OP_FLOAT_FLOOR 188
+#define OP_FLOAT_CEIL 189
+#define OP_FLOAT_ROUND 190
+#define OP_FLOAT_MIN 191
+#define OP_FLOAT_MAX 192
+#define OP_COMPLEX_P 200
+#define OP_COMPLEX_EQ_P 201
+#define OP_COMPLEX_NEQ_P 202
+#define OP_COMPLEX_REAL 203
+#define OP_COMPLEX_IMAG 204
+#define OP_COMPLEX_ABS 205
+#define OP_COMPLEX_ADD 206
+#define OP_COMPLEX_SUB 207
+#define OP_COMPLEX_MUL 208
+#define OP_COMPLEX_DIV 209
+#define OP_COMPLEX_NEG 210
+#define OP_COMPLEX_EXP 211
+#define OP_COMPLEX_EXPN 212
+#define OP_COMPLEX_LOG 213
+#define OP_COMPLEX_LOG10 214
+#define OP_COMPLEX_LOGN 215
+#define OP_COMPLEX_SIN 216
+#define OP_COMPLEX_COS 217
+#define OP_COMPLEX_TAN 218
+#define OP_COMPLEX_SQRT 219
+#define OP_COMPLEX_TO_STRING 220
+#define OP_STRING_P 240
+#define OP_STRING_EQ_P 241
+#define OP_STRING_NEQ_P 242
+#define OP_STRING_LT_P 243
+#define OP_STRING_GT_P 244
+#define OP_STRING_LTE_P 245
+#define OP_STRING_GTE_P 246
+#define OP_STRING_LENGTH 247
+#define OP_STRING_UPCASE 248
+#define OP_STRING_DOWNCASE 249
+#define OP_STRING_TRIM 250
+#define OP_STRING_TRIM_LEFT 251
+#define OP_STRING_TRIM_RIGHT 252
+#define OP_STRING_TO_INTEGER 253
+#define OP_STRING_TO_NUMBER 254
+#define OP_STRING_TO_LIST 255
+#define OP_STRING_REF 256
+#define OP_STRING_PREFIX_P 257
+#define OP_STRING_SUFFIX_P 258
+#define OP_STRING_CONCAT 259
+#define OP_STRING_SLICE 260
+#define OP_STRING_REPLACE 261
+#define OP_STRING_INDEX 262
 #define OP_STRING_TO_INTEGER_CODEPOINT 263
-#define OP_DICT_P                   280
-#define OP_DICT_EQ_P                281
-#define OP_DICT_NEQ_P               282
-#define OP_DICT_KEYS                283
-#define OP_DICT_VALUES              284
-#define OP_DICT_LENGTH              285
-#define OP_DICT_HAS_P               286
-#define OP_DICT_REMOVE              287
-#define OP_DICT_MERGE               288
-#define OP_DICT_SET                 289
-#define OP_DICT_GET                 290
-#define OP_LIST_P                   300
-#define OP_LIST_EQ_P                301
-#define OP_LIST_NEQ_P               302
-#define OP_LIST_PREPEND             303
-#define OP_LIST_APPEND              304
-#define OP_LIST_REVERSE             305
-#define OP_LIST_FIRST               306
-#define OP_LIST_REST                307
-#define OP_LIST_LAST                308
-#define OP_LIST_LENGTH              309
-#define OP_LIST_REF                 310
-#define OP_LIST_NULL_P              311
-#define OP_LIST_MEMBER_P            312
-#define OP_LIST_INDEX               313
-#define OP_LIST_SLICE               314
-#define OP_LIST_REMOVE              315
-#define OP_LIST_CONCAT              316
-#define OP_LIST_TO_STRING           317
-#define OP_LIST_TO_SET              318
-#define OP_SET_P                    340
-#define OP_SET_EQ_P                 341
-#define OP_SET_NEQ_P                342
-#define OP_SET_MEMBER_P             343
-#define OP_SET_ADD                  344
-#define OP_SET_REMOVE               345
-#define OP_SET_LENGTH               346
-#define OP_SET_UNION                347
-#define OP_SET_INTERSECTION         348
-#define OP_SET_DIFFERENCE           349
-#define OP_SET_SUBSET_P             350
-#define OP_SET_TO_LIST              351
-#define OP_RANGE                    380
+#define OP_DICT_P 280
+#define OP_DICT_EQ_P 281
+#define OP_DICT_NEQ_P 282
+#define OP_DICT_KEYS 283
+#define OP_DICT_VALUES 284
+#define OP_DICT_LENGTH 285
+#define OP_DICT_HAS_P 286
+#define OP_DICT_REMOVE 287
+#define OP_DICT_MERGE 288
+#define OP_DICT_SET 289
+#define OP_DICT_GET 290
+#define OP_LIST_P 300
+#define OP_LIST_EQ_P 301
+#define OP_LIST_NEQ_P 302
+#define OP_LIST_PREPEND 303
+#define OP_LIST_APPEND 304
+#define OP_LIST_REVERSE 305
+#define OP_LIST_FIRST 306
+#define OP_LIST_REST 307
+#define OP_LIST_LAST 308
+#define OP_LIST_LENGTH 309
+#define OP_LIST_REF 310
+#define OP_LIST_NULL_P 311
+#define OP_LIST_MEMBER_P 312
+#define OP_LIST_INDEX 313
+#define OP_LIST_SLICE 314
+#define OP_LIST_REMOVE 315
+#define OP_LIST_CONCAT 316
+#define OP_LIST_TO_STRING 317
+#define OP_LIST_TO_SET 318
+#define OP_SET_P 340
+#define OP_SET_EQ_P 341
+#define OP_SET_NEQ_P 342
+#define OP_SET_MEMBER_P 343
+#define OP_SET_ADD 344
+#define OP_SET_REMOVE 345
+#define OP_SET_LENGTH 346
+#define OP_SET_UNION 347
+#define OP_SET_INTERSECTION 348
+#define OP_SET_DIFFERENCE 349
+#define OP_SET_SUBSET_P 350
+#define OP_SET_TO_LIST 351
+#define OP_MAKE_STRUCT 360
+#define OP_STRUCT_P 361
+#define OP_STRUCT_TYPE_P 362
+#define OP_STRUCT_GET 363
+#define OP_STRUCT_GET_IMM 364
+#define OP_STRUCT_SET 365
+#define OP_STRUCT_SET_IMM 366
+#define OP_STRUCT_EQ_P 367
+#define OP_STRUCT_NEQ_P 368
+#define OP_STRUCT_TYPE 369
+#define OP_STRUCT_TYPE_NAME 370
+#define OP_STRUCT_FIELDS 371
+#define OP_RANGE 380
 
 /*
  * Shim state — definitions of the externs declared in menai_vm_shim.h
@@ -295,30 +289,30 @@ static PyObject *fn_to_slow = NULL;
  * in the hot loop use PyObject_CallMethodOneArg/NoArgs instead of the
  * format-string-parsing PyObject_CallMethod.
  */
-static PyObject *_str_upper   = NULL;
-static PyObject *_str_lower   = NULL;
-static PyObject *_str_strip   = NULL;
-static PyObject *_str_lstrip  = NULL;
-static PyObject *_str_rstrip  = NULL;
-static PyObject *_str_split   = NULL;
+static PyObject *_str_upper = NULL;
+static PyObject *_str_lower = NULL;
+static PyObject *_str_strip = NULL;
+static PyObject *_str_lstrip = NULL;
+static PyObject *_str_rstrip = NULL;
+static PyObject *_str_split = NULL;
 static PyObject *_str_replace = NULL;
 
 /*
  * Fast type-check macros
  */
-#define IS_MENAI_NONE(o)       (Py_TYPE(o) == Menai_NoneType)
-#define IS_MENAI_BOOLEAN(o)    (Py_TYPE(o) == Menai_BooleanType)
-#define IS_MENAI_INTEGER(o)    (Py_TYPE(o) == Menai_IntegerType)
-#define IS_MENAI_FLOAT(o)      (Py_TYPE(o) == Menai_FloatType)
-#define IS_MENAI_COMPLEX(o)    (Py_TYPE(o) == Menai_ComplexType)
-#define IS_MENAI_STRING(o)     (Py_TYPE(o) == Menai_StringType)
-#define IS_MENAI_SYMBOL(o)     (Py_TYPE(o) == Menai_SymbolType)
-#define IS_MENAI_LIST(o)       (Py_TYPE(o) == Menai_ListType)
-#define IS_MENAI_DICT(o)       (Py_TYPE(o) == Menai_DictType)
-#define IS_MENAI_SET(o)        (Py_TYPE(o) == Menai_SetType)
-#define IS_MENAI_FUNCTION(o)   (Py_TYPE(o) == Menai_FunctionType)
+#define IS_MENAI_NONE(o) (Py_TYPE(o) == Menai_NoneType)
+#define IS_MENAI_BOOLEAN(o) (Py_TYPE(o) == Menai_BooleanType)
+#define IS_MENAI_INTEGER(o) (Py_TYPE(o) == Menai_IntegerType)
+#define IS_MENAI_FLOAT(o) (Py_TYPE(o) == Menai_FloatType)
+#define IS_MENAI_COMPLEX(o) (Py_TYPE(o) == Menai_ComplexType)
+#define IS_MENAI_STRING(o) (Py_TYPE(o) == Menai_StringType)
+#define IS_MENAI_SYMBOL(o) (Py_TYPE(o) == Menai_SymbolType)
+#define IS_MENAI_LIST(o) (Py_TYPE(o) == Menai_ListType)
+#define IS_MENAI_DICT(o) (Py_TYPE(o) == Menai_DictType)
+#define IS_MENAI_SET(o) (Py_TYPE(o) == Menai_SetType)
+#define IS_MENAI_FUNCTION(o) (Py_TYPE(o) == Menai_FunctionType)
 #define IS_MENAI_STRUCTTYPE(o) (Py_TYPE(o) == Menai_StructTypeType)
-#define IS_MENAI_STRUCT(o)     (Py_TYPE(o) == Menai_StructType)
+#define IS_MENAI_STRUCT(o) (Py_TYPE(o) == Menai_StructType)
 
 /*
  * Wrap an already-deduplicated elements tuple as a MenaiSet, stealing the
@@ -425,8 +419,8 @@ pylong_compare(PyObject *a, PyObject *b, int op)
             switch (op) {
                 case Py_EQ: return la == lb;
                 case Py_NE: return la != lb;
-                case Py_LT: return la <  lb;
-                case Py_GT: return la >  lb;
+                case Py_LT: return la < lb;
+                case Py_GT: return la > lb;
                 case Py_LE: return la <= lb;
                 case Py_GE: return la >= lb;
             }
@@ -679,12 +673,12 @@ menai_vm_shim_init(void)
     if (fetch_callable(vc, "convert_value", &fn_convert_value) < 0) goto fail;
     if (fetch_callable(vc, "to_slow", &fn_to_slow) < 0) goto fail;
 
-    _str_upper   = PyUnicode_InternFromString("upper");
-    _str_lower   = PyUnicode_InternFromString("lower");
-    _str_strip   = PyUnicode_InternFromString("strip");
-    _str_lstrip  = PyUnicode_InternFromString("lstrip");
-    _str_rstrip  = PyUnicode_InternFromString("rstrip");
-    _str_split   = PyUnicode_InternFromString("split");
+    _str_upper = PyUnicode_InternFromString("upper");
+    _str_lower = PyUnicode_InternFromString("lower");
+    _str_strip = PyUnicode_InternFromString("strip");
+    _str_lstrip = PyUnicode_InternFromString("lstrip");
+    _str_rstrip = PyUnicode_InternFromString("rstrip");
+    _str_split = PyUnicode_InternFromString("split");
     _str_replace = PyUnicode_InternFromString("replace");
     if (!_str_upper || !_str_lower || !_str_strip ||
         !_str_lstrip || !_str_rstrip || !_str_split || !_str_replace)
@@ -706,7 +700,7 @@ fail:
     return -1;
 }
 
-/* ---------------------------------------------------------------------------
+/*
  * Frame struct
  *
  * The C VM maintains a fixed-size stack of Frame structs.  All fields are
@@ -714,28 +708,20 @@ fail:
  * kept alive by the frame stack.  constants, names, and local_count are
  * cached here at frame_setup time so the hot loop never calls
  * PyObject_GetAttrString on the code object.
- * ------------------------------------------------------------------------- */
-
+ */
 typedef struct {
-    PyObject       *code_obj;         /* CodeObject — kept alive, not dereferenced in loop */
-    PyObject       *constants;        /* borrowed ref — list of fast constant values */
-    PyObject       *names;            /* borrowed ref — list of global name strings */
-    PyObject       *closure_caches;   /* borrowed ref — list of child _closure_cache tuples */
-    uint64_t       *instrs;           /* raw C pointer into the array.array buffer */
-    int             code_len;
-    int             local_count;
-    int             ip;
-    int             base;
-    int             return_dest;
-    int             is_sentinel;
+    PyObject *code_obj;         /* CodeObject — kept alive, not dereferenced in loop */
+    PyObject *constants;        /* borrowed ref — list of fast constant values */
+    PyObject *names;            /* borrowed ref — list of global name strings */
+    PyObject *closure_caches;   /* borrowed ref — list of child _closure_cache tuples */
+    uint64_t *instrs;           /* raw C pointer into the array.array buffer */
+    int code_len;
+    int local_count;
+    int ip;
+    int base;
+    int return_dest;
+    int is_sentinel;
 } Frame;
-
-/* ---------------------------------------------------------------------------
- * CodeObject attribute helpers
- *
- * All read once at frame-setup time, not in the hot loop.
- * Return -1 and set exception on failure.
- * ------------------------------------------------------------------------- */
 
 static int
 code_get_int(PyObject *code, const char *name, int *out)
@@ -749,7 +735,10 @@ code_get_int(PyObject *code, const char *name, int *out)
     return 0;
 }
 
-/* frame_setup — slow path used only for the top-level CodeObject at execute
+/*
+ * frame_setup
+ *
+ * Slow path used only for the top-level CodeObject at execute start
  * start.  All subsequent calls go through frame_setup_func which reads
  * pre-cached fields directly from MenaiFunction_Object.
  */
@@ -875,6 +864,7 @@ regs_alloc(int max_depth, int max_locals)
         PyErr_NoMemory();
         return NULL;
     }
+
     for (Py_ssize_t i = 0; i < n; i++) {
         Py_INCREF(Menai_NONE);
         regs[i] = Menai_NONE;  /* owned reference */
@@ -892,8 +882,7 @@ regs_free(PyObject **regs, int max_depth, int max_locals)
 {
     if (regs == NULL) return;
     Py_ssize_t n = (Py_ssize_t)(max_depth + 1) * max_locals;
-    for (Py_ssize_t i = 0; i < n; i++)
-        Py_DECREF(regs[i]);  /* every slot is an owned reference */
+    for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(regs[i]);  /* every slot is an owned reference */
     PyMem_Free(regs);
 }
 
@@ -994,7 +983,7 @@ build_globals(PyObject *constants_dict, PyObject *prelude_dict)
     return globals;
 }
 
-/* ---------------------------------------------------------------------------
+/*
  * call_setup — shared logic for CALL and APPLY
  *
  * Sets up new_frame for a call to func_obj with arity arguments already
@@ -1006,8 +995,7 @@ build_globals(PyObject *constants_dict, PyObject *prelude_dict)
  *   - capture slot population
  *
  * Returns 0 on success, -1 on error (Python exception set).
- * ------------------------------------------------------------------------- */
-
+ */
 static int
 call_setup(Frame *new_frame, PyObject *func_obj,
            PyObject **regs, int callee_base, int arity,
@@ -1023,8 +1011,7 @@ call_setup(Frame *new_frame, PyObject *func_obj,
         int min_arity = param_count - 1;
         if (arity < min_arity) {
             PyObject *name = func->name;
-            const char *fname = (name != NULL && name != Py_None)
-                                ? PyUnicode_AsUTF8(name) : "<lambda>";
+            const char *fname = (name != NULL && name != Py_None) ? PyUnicode_AsUTF8(name) : "<lambda>";
             menai_raise_eval_errorf(
                 "Function '%s' expects at least %d argument%s, got %d",
                 fname, min_arity, min_arity == 1 ? "" : "s", arity);
@@ -1034,7 +1021,10 @@ call_setup(Frame *new_frame, PyObject *func_obj,
         int rest_count = arity - min_arity;
         PyObject **rest_arr = rest_count > 0
             ? (PyObject **)PyMem_Malloc(rest_count * sizeof(PyObject *)) : NULL;
-        if (rest_count > 0 && !rest_arr) { PyErr_NoMemory(); return -1; }
+        if (rest_count > 0 && !rest_arr) {
+            PyErr_NoMemory();
+            return -1;
+        }
         for (int k = 0; k < rest_count; k++) {
             rest_arr[k] = regs[callee_base + min_arity + k];
             Py_INCREF(rest_arr[k]);
@@ -1058,36 +1048,12 @@ call_setup(Frame *new_frame, PyObject *func_obj,
     Py_ssize_t ncap = PyList_GET_SIZE(captured);
     for (Py_ssize_t i = 0; i < ncap; i++) {
         PyObject *cv = PyList_GET_ITEM(captured, i);
-        /* Most captures are already fast C types (set by OP_PATCH_CLOSURE
-            * from registers).  Prelude closures may hold slow-world values
-            * that were not converted at load time.  Check with IS_MENAI_*
-            * first to avoid a Python call in the common fast case. */
-        PyTypeObject *cvt = Py_TYPE(cv);
-        if (cvt == Menai_NoneType     || cvt == Menai_BooleanType  ||
-            cvt == Menai_IntegerType  || cvt == Menai_FloatType    ||
-            cvt == Menai_ComplexType  || cvt == Menai_StringType   ||
-            cvt == Menai_SymbolType   || cvt == Menai_ListType     ||
-            cvt == Menai_DictType     || cvt == Menai_SetType      ||
-            cvt == Menai_FunctionType || cvt == Menai_StructTypeType ||
-            cvt == Menai_StructType) {
-            reg_set_borrow(regs, callee_base + param_count + (int)i, cv);
-        } else {
-            PyObject *fast_cv = PyObject_CallOneArg(fn_convert_value, cv);
-            if (fast_cv == NULL) return -1;
-            reg_set_own(regs, callee_base + param_count + (int)i, fast_cv);
-        }
+        reg_set_borrow(regs, callee_base + param_count + (int)i, cv);
     }
 
     frame_setup_func(new_frame, func, bytecode, callee_base, return_dest);
     return 0;
 }
-
-static PyObject *execute_loop(PyObject *code, PyObject *globals,
-                              PyObject **regs, int max_locals);
-
-/* ---------------------------------------------------------------------------
- * execute_loop — the main dispatch loop
- * ------------------------------------------------------------------------- */
 
 /*
  * Internal execute — called by menai_vm_c_execute after setup.
@@ -1149,8 +1115,6 @@ execute_loop(PyObject *code, PyObject *globals,
         int base = frame->base;
 
         switch (opcode) {
-
-        /* ----------------------------------------------------------------- */
         case OP_LOAD_NONE:
             reg_set_borrow(regs, base + dest, Menai_NONE);
             break;
@@ -3175,7 +3139,11 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t stl_n = PyList_GET_SIZE(parts);
             PyObject **stl2_arr = stl_n > 0
                 ? (PyObject **)PyMem_Malloc(stl_n * sizeof(PyObject *)) : NULL;
-            if (stl_n > 0 && !stl2_arr) { Py_DECREF(parts); PyErr_NoMemory(); goto error; }
+            if (stl_n > 0 && !stl2_arr) {
+                Py_DECREF(parts);
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < stl_n; i++) {
                 stl2_arr[i] = PyList_GET_ITEM(parts, i);
                 Py_INCREF(stl2_arr[i]);
@@ -3250,7 +3218,10 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t rest_n = lst_r->length - 1;
             PyObject **rest_arr = rest_n > 0
                 ? (PyObject **)PyMem_Malloc(rest_n * sizeof(PyObject *)) : NULL;
-            if (rest_n > 0 && !rest_arr) { PyErr_NoMemory(); goto error; }
+            if (rest_n > 0 && !rest_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < rest_n; i++) {
                 rest_arr[i] = lst_r->elements[i + 1];
                 Py_INCREF(rest_arr[i]);
@@ -3299,7 +3270,10 @@ execute_loop(PyObject *code, PyObject *globals,
             MenaiList_Object *lst_pre = (MenaiList_Object *)a;
             Py_ssize_t n = lst_pre->length;
             PyObject **pre_arr = (PyObject **)PyMem_Malloc((n + 1) * sizeof(PyObject *));
-            if (!pre_arr) { PyErr_NoMemory(); goto error; }
+            if (!pre_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             pre_arr[0] = item;
             Py_INCREF(item);
             for (Py_ssize_t i = 0; i < n; i++) {
@@ -3318,7 +3292,10 @@ execute_loop(PyObject *code, PyObject *globals,
             MenaiList_Object *lst_app = (MenaiList_Object *)a;
             Py_ssize_t n = lst_app->length;
             PyObject **app_arr = (PyObject **)PyMem_Malloc((n + 1) * sizeof(PyObject *));
-            if (!app_arr) { PyErr_NoMemory(); goto error; }
+            if (!app_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < n; i++) {
                 app_arr[i] = lst_app->elements[i];
                 Py_INCREF(app_arr[i]);
@@ -3338,7 +3315,10 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t n = lst_rev->length;
             PyObject **rev_arr = n > 0
                 ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-            if (n > 0 && !rev_arr) { PyErr_NoMemory(); goto error; }
+            if (n > 0 && !rev_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < n; i++) {
                 rev_arr[i] = lst_rev->elements[n - 1 - i];
                 Py_INCREF(rev_arr[i]);
@@ -3359,7 +3339,10 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t nc = na + nb;
             PyObject **cat_arr = nc > 0
                 ? (PyObject **)PyMem_Malloc(nc * sizeof(PyObject *)) : NULL;
-            if (nc > 0 && !cat_arr) { PyErr_NoMemory(); goto error; }
+            if (nc > 0 && !cat_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < na; i++) {
                 cat_arr[i] = lst_ca->elements[i];
                 Py_INCREF(cat_arr[i]);
@@ -3382,7 +3365,10 @@ execute_loop(PyObject *code, PyObject *globals,
             for (Py_ssize_t i = 0; i < lst_mem->length; i++) {
                 int eq = PyObject_RichCompareBool(lst_mem->elements[i], item, Py_EQ);
                 if (eq < 0) goto error;
-                if (eq) { mem_found = 1; break; }
+                if (eq) {
+                    mem_found = 1;
+                    break;
+                }
             }
             bool_store(regs, base + dest, mem_found);
             break;
@@ -3449,7 +3435,10 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t sl_n = end - start;
             PyObject **sl_arr = sl_n > 0
                 ? (PyObject **)PyMem_Malloc(sl_n * sizeof(PyObject *)) : NULL;
-            if (sl_n > 0 && !sl_arr) { PyErr_NoMemory(); goto error; }
+            if (sl_n > 0 && !sl_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < sl_n; i++) {
                 sl_arr[i] = lst_sl->elements[start + i];
                 Py_INCREF(sl_arr[i]);
@@ -3474,7 +3463,10 @@ execute_loop(PyObject *code, PyObject *globals,
             }
             PyObject **rm_arr = keep > 0
                 ? (PyObject **)PyMem_Malloc(keep * sizeof(PyObject *)) : NULL;
-            if (keep > 0 && !rm_arr) { PyErr_NoMemory(); goto error; }
+            if (keep > 0 && !rm_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             Py_ssize_t j = 0;
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *e = lst_rm->elements[i];
@@ -3584,24 +3576,21 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_DICT_KEYS: {
             PyObject *a = regs[base + src0];
             if (!require_dict(a, "dict-keys")) goto error;
-            PyObject *r = PyObject_CallMethod(a, "dict_keys_as_list", NULL);
-            /* dict-keys is a Python-level operation; delegate entirely */
-            if (r == NULL) {
-                PyErr_Clear();
-                /* Build manually from pairs */
-                PyObject *pairs = ((MenaiDict_Object *)a)->pairs;
-                Py_ssize_t n = PyTuple_GET_SIZE(pairs);
-                PyObject **dk_arr = n > 0
-                    ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-                if (n > 0 && !dk_arr) { PyErr_NoMemory(); goto error; }
-                for (Py_ssize_t i = 0; i < n; i++) {
-                    PyObject *pair = PyTuple_GET_ITEM(pairs, i);
-                    PyObject *k = PyTuple_GET_ITEM(pair, 0);
-                    Py_INCREF(k);
-                    dk_arr[i] = k;
-                }
-                r = menai_list_from_array_steal(dk_arr, n);
+            PyObject *pairs = ((MenaiDict_Object *)a)->pairs;
+            Py_ssize_t n = PyTuple_GET_SIZE(pairs);
+            PyObject **dk_arr = n > 0
+                ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
+            if (n > 0 && !dk_arr) {
+                PyErr_NoMemory();
+                goto error;
             }
+            for (Py_ssize_t i = 0; i < n; i++) {
+                PyObject *pair = PyTuple_GET_ITEM(pairs, i);
+                PyObject *k = PyTuple_GET_ITEM(pair, 0);
+                Py_INCREF(k);
+                dk_arr[i] = k;
+            }
+            PyObject *r = menai_list_from_array_steal(dk_arr, n);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3614,7 +3603,10 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t n = PyTuple_GET_SIZE(pairs);
             PyObject **dv_arr = n > 0
                 ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-            if (n > 0 && !dv_arr) { PyErr_NoMemory(); goto error; }
+            if (n > 0 && !dv_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *pair = PyTuple_GET_ITEM(pairs, i);
                 PyObject *v = PyTuple_GET_ITEM(pair, 1);
@@ -3647,14 +3639,16 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *hk = menai_hashable_key(key);
             if (hk == NULL) goto error;
             PyObject *lookup = ((MenaiDict_Object *)a)->lookup;
-            PyObject *entry = PyDict_GetItem(lookup, hk);
+            PyObject *entry = PyDict_GetItemWithError(lookup, hk);
             Py_DECREF(hk);
             if (entry != NULL) {
                 /* entry is (key, value) tuple */
                 PyObject *val = PyTuple_GET_ITEM(entry, 1);
                 reg_set_borrow(regs, base + dest, val);
-            } else {
+            } else if (!PyErr_Occurred()) {
                 reg_set_borrow(regs, base + dest, def);
+            } else {
+                goto error;
             }
             break;
         }
@@ -3663,75 +3657,64 @@ execute_loop(PyObject *code, PyObject *globals,
             /* src0=dict, src1=key, src2=value */
             PyObject *a = regs[base + src0], *key = regs[base + src1], *val = regs[base + src2];
             if (!require_dict(a, "dict-set")) goto error;
-            /* Build new pairs tuple with key inserted or updated */
-            PyObject *result = PyObject_CallMethod(
-                a, "dict_set_impl", "OO", key, val);
-            if (result == NULL) {
-                PyErr_Clear();
-                /* Build new pairs tuple manually */
-                PyObject *pairs = ((MenaiDict_Object *)a)->pairs;
-                PyObject *hk = menai_hashable_key(key);
-                if (hk == NULL) {
-                    goto error;
-                }
-                Py_ssize_t n = PyTuple_GET_SIZE(pairs);
-                /* Find if key exists */
-                int found = 0;
-                PyObject *new_pairs = PyList_New(0);
-                if (new_pairs == NULL) {
+            PyObject *pairs = ((MenaiDict_Object *)a)->pairs;
+            PyObject *hk = menai_hashable_key(key);
+            if (hk == NULL) goto error;
+            Py_ssize_t n = PyTuple_GET_SIZE(pairs);
+            int found = 0;
+            PyObject *new_pairs = PyList_New(0);
+            if (new_pairs == NULL) {
+                Py_DECREF(hk);
+                goto error;
+            }
+            for (Py_ssize_t i = 0; i < n; i++) {
+                PyObject *pair = PyTuple_GET_ITEM(pairs, i);
+                PyObject *k = PyTuple_GET_ITEM(pair, 0);
+                PyObject *khk = menai_hashable_key(k);
+                if (khk == NULL) {
+                    Py_DECREF(new_pairs);
                     Py_DECREF(hk);
                     goto error;
                 }
-                for (Py_ssize_t i = 0; i < n; i++) {
-                    PyObject *pair = PyTuple_GET_ITEM(pairs, i);
-                    PyObject *k = PyTuple_GET_ITEM(pair, 0);
-                    PyObject *khk = menai_hashable_key(k);
-                    if (khk == NULL) {
-                        Py_DECREF(new_pairs);
-                        Py_DECREF(hk);
-                        goto error;
-                    }
-                    int eq = PyObject_RichCompareBool(khk, hk, Py_EQ);
-                    Py_DECREF(khk);
-                    if (eq < 0) {
-                        Py_DECREF(new_pairs);
-                        Py_DECREF(hk);
-                        Py_DECREF(pairs);
-                        goto error;
-                    }
-                    PyObject *new_pair = eq ? PyTuple_Pack(2, key, val) : pair;
-                    if (eq) found = 1;
-                    if (new_pair == NULL) {
-                        Py_DECREF(new_pairs);
-                        Py_DECREF(hk);
-                        goto error;
-                    }
-                    if (!eq) Py_INCREF(new_pair);
-                    if (PyList_Append(new_pairs, new_pair) < 0) {
-                        Py_DECREF(new_pair);
-                        Py_DECREF(new_pairs);
-                        Py_DECREF(hk);
-                        goto error;
-                    }
-                    Py_DECREF(new_pair);
+                int eq = PyObject_RichCompareBool(khk, hk, Py_EQ);
+                Py_DECREF(khk);
+                if (eq < 0) {
+                    Py_DECREF(new_pairs);
+                    Py_DECREF(hk);
+                    goto error;
                 }
-                if (!found) {
-                    PyObject *new_pair = PyTuple_Pack(2, key, val);
-                    if (new_pair == NULL || PyList_Append(new_pairs, new_pair) < 0) {
-                        Py_XDECREF(new_pair);
-                        Py_DECREF(new_pairs);
-                        Py_DECREF(hk);
-                        goto error;
-                    }
-                    Py_DECREF(new_pair);
+                PyObject *new_pair = eq ? PyTuple_Pack(2, key, val) : pair;
+                if (eq) found = 1;
+                if (new_pair == NULL) {
+                    Py_DECREF(new_pairs);
+                    Py_DECREF(hk);
+                    goto error;
                 }
-                Py_DECREF(hk);
-                PyObject *new_tup = PyList_AsTuple(new_pairs);
-                Py_DECREF(new_pairs);
-                if (new_tup == NULL) goto error;
-                result = PyObject_CallOneArg((PyObject *)Menai_DictType, new_tup);
-                Py_DECREF(new_tup);
+                if (!eq) Py_INCREF(new_pair);
+                if (PyList_Append(new_pairs, new_pair) < 0) {
+                    Py_DECREF(new_pair);
+                    Py_DECREF(new_pairs);
+                    Py_DECREF(hk);
+                    goto error;
+                }
+                Py_DECREF(new_pair);
             }
+            if (!found) {
+                PyObject *new_pair = PyTuple_Pack(2, key, val);
+                if (new_pair == NULL || PyList_Append(new_pairs, new_pair) < 0) {
+                    Py_XDECREF(new_pair);
+                    Py_DECREF(new_pairs);
+                    Py_DECREF(hk);
+                    goto error;
+                }
+                Py_DECREF(new_pair);
+            }
+            Py_DECREF(hk);
+            PyObject *new_tup = PyList_AsTuple(new_pairs);
+            Py_DECREF(new_pairs);
+            if (new_tup == NULL) goto error;
+            PyObject *result = PyObject_CallOneArg((PyObject *)Menai_DictType, new_tup);
+            Py_DECREF(new_tup);
             if (result == NULL) goto error;
             reg_set_own(regs, base + dest, result);
             break;
@@ -3791,84 +3774,81 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_dict(a, "dict-merge")) goto error;
             if (!require_dict(b, "dict-merge")) goto error;
-            /* Delegate to the Python __add__ equivalent: call the Cython method */
-            PyObject *r = PyObject_CallMethod(a, "dict_merge_impl", "O", b);
-            if (r == NULL) {
-                PyErr_Clear();
-                /* Fallback: build merged dict manually */
-                PyObject *pa = ((MenaiDict_Object *)a)->pairs;
-                PyObject *pb = ((MenaiDict_Object *)b)->pairs;
-                /* a's pairs first, then b's new pairs */
-                PyObject *merged = PyList_New(0);
-                if (merged == NULL) {
-                    goto error;
-                }
-                PyObject *seen = PyDict_New();
-                if (seen == NULL) {
+            PyObject *pa = ((MenaiDict_Object *)a)->pairs;
+            PyObject *pb = ((MenaiDict_Object *)b)->pairs;
+            PyObject *b_lookup = ((MenaiDict_Object *)b)->lookup;
+            PyObject *merged = PyList_New(0);
+            if (merged == NULL) goto error;
+            PyObject *seen = PyDict_New();
+            if (seen == NULL) {
+                Py_DECREF(merged);
+                goto error;
+            }
+            /* Add a's pairs, using b's value if the key also exists in b */
+            Py_ssize_t na = PyTuple_GET_SIZE(pa);
+            for (Py_ssize_t i = 0; i < na; i++) {
+                PyObject *pair = PyTuple_GET_ITEM(pa, i);
+                PyObject *k = PyTuple_GET_ITEM(pair, 0);
+                PyObject *hk = menai_hashable_key(k);
+                if (hk == NULL) {
+                    Py_DECREF(seen);
                     Py_DECREF(merged);
                     goto error;
                 }
-                /* Add a's pairs (with b's values if key in b) */
-                PyObject *b_lookup = ((MenaiDict_Object *)b)->lookup;
-                Py_ssize_t na = PyTuple_GET_SIZE(pa);
-                for (Py_ssize_t i = 0; i < na; i++) {
-                    PyObject *pair = PyTuple_GET_ITEM(pa, i);
-                    PyObject *k = PyTuple_GET_ITEM(pair, 0);
-                    PyObject *hk = menai_hashable_key(k);
-                    if (hk == NULL) {
-                        Py_DECREF(b_lookup);
-                        Py_DECREF(seen);
-                        Py_DECREF(merged);
-                        goto error;
-                    }
-                    PyObject *b_entry = PyDict_GetItem(b_lookup, hk);
-                    PyObject *use_pair = b_entry ? b_entry : pair;
-                    Py_INCREF(use_pair);
-                    if (PyList_Append(merged, use_pair) < 0 || PyDict_SetItem(seen, hk, Py_True) < 0) {
-                        Py_DECREF(use_pair);
-                        Py_DECREF(hk);
-                        Py_DECREF(b_lookup);
-                        Py_DECREF(seen);
-                        Py_DECREF(merged);
-                        goto error;
-                    }
+                PyObject *b_entry = PyDict_GetItem(b_lookup, hk);
+                PyObject *use_pair = b_entry ? b_entry : pair;
+                Py_INCREF(use_pair);
+                if (PyList_Append(merged, use_pair) < 0) {
                     Py_DECREF(use_pair);
                     Py_DECREF(hk);
+                    Py_DECREF(seen);
+                    Py_DECREF(merged);
+                    goto error;
                 }
-                /* Add b's new pairs */
-                Py_ssize_t nb = PyTuple_GET_SIZE(pb);
-                for (Py_ssize_t i = 0; i < nb; i++) {
-                    PyObject *pair = PyTuple_GET_ITEM(pb, i);
-                    PyObject *k = PyTuple_GET_ITEM(pair, 0);
-                    PyObject *hk = menai_hashable_key(k);
-                    if (hk == NULL) {
-                        Py_DECREF(b_lookup);
+                Py_DECREF(use_pair);
+                if (PyDict_SetItem(seen, hk, Py_True) < 0) {
+                    Py_DECREF(hk);
+                    Py_DECREF(seen);
+                    Py_DECREF(merged);
+                    goto error;
+                }
+                Py_DECREF(hk);
+            }
+            /* Add b's pairs that are not already in a */
+            Py_ssize_t nb = PyTuple_GET_SIZE(pb);
+            for (Py_ssize_t i = 0; i < nb; i++) {
+                PyObject *pair = PyTuple_GET_ITEM(pb, i);
+                PyObject *k = PyTuple_GET_ITEM(pair, 0);
+                PyObject *hk = menai_hashable_key(k);
+                if (hk == NULL) {
+                    Py_DECREF(seen);
+                    Py_DECREF(merged);
+                    goto error;
+                }
+                int contains = PyDict_Contains(seen, hk);
+                Py_DECREF(hk);
+                if (contains < 0) {
+                    Py_DECREF(seen);
+                    Py_DECREF(merged);
+                    goto error;
+                }
+                if (!contains) {
+                    Py_INCREF(pair);
+                    if (PyList_Append(merged, pair) < 0) {
+                        Py_DECREF(pair);
                         Py_DECREF(seen);
                         Py_DECREF(merged);
                         goto error;
                     }
-                    if (!PyDict_Contains(seen, hk)) {
-                        Py_INCREF(pair);
-                        if (PyList_Append(merged, pair) < 0) {
-                            Py_DECREF(pair);
-                            Py_DECREF(hk);
-                            Py_DECREF(b_lookup);
-                            Py_DECREF(seen);
-                            Py_DECREF(merged);
-                            goto error;
-                        }
-                        Py_DECREF(pair);
-                    }
-                    Py_DECREF(hk);
+                    Py_DECREF(pair);
                 }
-                Py_DECREF(b_lookup);
-                Py_DECREF(seen);
-                PyObject *new_tup = PyList_AsTuple(merged);
-                Py_DECREF(merged);
-                if (new_tup == NULL) goto error;
-                r = PyObject_CallOneArg((PyObject *)Menai_DictType, new_tup);
-                Py_DECREF(new_tup);
             }
+            Py_DECREF(seen);
+            PyObject *new_tup = PyList_AsTuple(merged);
+            Py_DECREF(merged);
+            if (new_tup == NULL) goto error;
+            PyObject *r = PyObject_CallOneArg((PyObject *)Menai_DictType, new_tup);
+            Py_DECREF(new_tup);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -4174,7 +4154,10 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t set_n = PyTuple_GET_SIZE(set_elems);
             PyObject **stl_arr = set_n > 0
                 ? (PyObject **)PyMem_Malloc(set_n * sizeof(PyObject *)) : NULL;
-            if (set_n > 0 && !stl_arr) { PyErr_NoMemory(); goto error; }
+            if (set_n > 0 && !stl_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < set_n; i++) {
                 stl_arr[i] = PyTuple_GET_ITEM(set_elems, i);
                 Py_INCREF(stl_arr[i]);
@@ -4207,7 +4190,10 @@ execute_loop(PyObject *code, PyObject *globals,
             else if (step < 0 && end < start) n = (start - end - step - 1) / (-step);
             PyObject **rng_arr = n > 0
                 ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-            if (n > 0 && !rng_arr) { PyErr_NoMemory(); goto error; }
+            if (n > 0 && !rng_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             long val = start;
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *iv = PyLong_FromLong(val);
@@ -4409,7 +4395,10 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t n = PyTuple_GET_SIZE(field_names);
             PyObject **sf_arr = n > 0
                 ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-            if (n > 0 && !sf_arr) { PyErr_NoMemory(); goto error; }
+            if (n > 0 && !sf_arr) {
+                PyErr_NoMemory();
+                goto error;
+            }
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *fname = PyTuple_GET_ITEM(field_names, i);
                 /* Wrap in MenaiSymbol */
@@ -4453,33 +4442,30 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     PyObject *constants_dict;
     PyObject *prelude_dict;
 
-    if (!PyArg_ParseTuple(args, "OOO", &code, &constants_dict, &prelude_dict))
-        return NULL;
+    if (!PyArg_ParseTuple(args, "OOO", &code, &constants_dict, &prelude_dict)) return NULL;
 
     /* Convert compiler-world constants in the code object tree to fast C types. */
     PyObject *_tmp = PyObject_CallOneArg(fn_convert_code_object, code);
-    if (_tmp == NULL)
-        return NULL;
+    if (_tmp == NULL) return NULL;
     Py_DECREF(_tmp);
 
     /* Convert constants dict (pi, e, etc.) from slow to fast types. */
     PyObject *fast_constants = PyDict_New();
     if (fast_constants == NULL) return NULL;
-    {
-        PyObject *ckey, *cval;
-        Py_ssize_t cpos = 0;
-        while (PyDict_Next(constants_dict, &cpos, &ckey, &cval)) {
-            PyObject *converted = PyObject_CallOneArg(fn_convert_value, cval);
-            if (converted == NULL) {
-                Py_DECREF(fast_constants);
-                return NULL;
-            }
-            int ok = PyDict_SetItem(fast_constants, ckey, converted);
-            Py_DECREF(converted);
-            if (ok < 0) {
-                Py_DECREF(fast_constants);
-                return NULL;
-            }
+
+    PyObject *ckey, *cval;
+    Py_ssize_t cpos = 0;
+    while (PyDict_Next(constants_dict, &cpos, &ckey, &cval)) {
+        PyObject *converted = PyObject_CallOneArg(fn_convert_value, cval);
+        if (converted == NULL) {
+            Py_DECREF(fast_constants);
+            return NULL;
+        }
+        int ok = PyDict_SetItem(fast_constants, ckey, converted);
+        Py_DECREF(converted);
+        if (ok < 0) {
+            Py_DECREF(fast_constants);
+            return NULL;
         }
     }
 
@@ -4571,10 +4557,9 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     return slow_result;
 }
 
-/* ---------------------------------------------------------------------------
+/*
  * Module definition
- * ------------------------------------------------------------------------- */
-
+ */
 static PyMethodDef menai_vm_c_methods[] = {
     {
         "execute",

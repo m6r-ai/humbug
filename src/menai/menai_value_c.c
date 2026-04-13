@@ -1131,9 +1131,9 @@ menai_function_alloc(PyObject *cache, PyObject *bytecode, PyObject *captured_val
     self->closure_caches = (_cc != Py_None && PyList_Check(_cc)) ? _cc : NULL;
     /* borrowed — bytecode (which we own) keeps child._code_caches alive */
 
-    self->instrs     = (uint64_t *)PyLong_AsVoidPtr(PyTuple_GET_ITEM(cache, 11));
+    self->instrs = (uint64_t *)PyLong_AsVoidPtr(PyTuple_GET_ITEM(cache, 11));
     self->instrs_obj = instrs_obj;  /* borrowed — bytecode keeps alive */
-    self->code_len   = (int)PyLong_AsLong(PyTuple_GET_ITEM(cache, 12));
+    self->code_len = (int)PyLong_AsLong(PyTuple_GET_ITEM(cache, 12));
 
     return (PyObject *)self;
 }
@@ -2486,17 +2486,36 @@ menai_convert_value(PyObject *src)
             Py_XDECREF(is_var);
             return NULL;
         }
-        /* Copy captured_values as a plain list — not recursively converted
-         * here; call_setup converts lazily to handle letrec cycles. */
-        PyObject *cap_list = PySequence_List(cap);
-        Py_DECREF(cap);
+        /* Recursively convert captured_values to fast types.
+         * Prelude closures are fully-formed (no letrec None placeholders),
+         * so eager conversion is safe and eliminates the slow-type check
+         * in call_setup's hot path. */
+        Py_ssize_t ncap = PyList_GET_SIZE(cap);
+        PyObject *cap_list = PyList_New(ncap);
         if (!cap_list) {
+            Py_DECREF(cap);
             Py_DECREF(params);
             Py_DECREF(name);
             Py_DECREF(bc);
             Py_DECREF(is_var);
             return NULL;
         }
+        for (Py_ssize_t ci = 0; ci < ncap; ci++) {
+            PyObject *fast_cv = menai_convert_value(PyList_GET_ITEM(cap, ci));
+            if (!fast_cv) {
+                for (Py_ssize_t cj = 0; cj < ci; cj++)
+                    Py_DECREF(PyList_GET_ITEM(cap_list, cj));
+                Py_DECREF(cap);
+                Py_DECREF(cap_list);
+                Py_DECREF(params);
+                Py_DECREF(name);
+                Py_DECREF(bc);
+                Py_DECREF(is_var);
+                return NULL;
+            }
+            PyList_SET_ITEM(cap_list, ci, fast_cv);
+        }
+        Py_DECREF(cap);
         int iv = PyObject_IsTrue(is_var);
         Py_DECREF(is_var);
         if (iv < 0) {
@@ -2780,12 +2799,11 @@ menai_convert_code_object(PyObject *code)
     return code;
 }
 
+#define GET_SLOW_CLS(name) PyObject_GetAttrString(mod, name)
+
 /*
  * _to_slow_memo — cycle-safe implementation of menai_to_slow.
  */
-static PyObject *
-_to_slow_memo(PyObject *src, PyObject *memo);
-
 static PyObject *
 _to_slow_memo(PyObject *src, PyObject *memo)
 {
@@ -2812,8 +2830,6 @@ _to_slow_memo(PyObject *src, PyObject *memo)
     }
 
     PyObject *result = NULL;
-
-#define GET_SLOW_CLS(name) PyObject_GetAttrString(mod, name)
 
     if (t == &MenaiNone_Type) {
         PyObject *cls = GET_SLOW_CLS("MenaiNone");
@@ -3004,11 +3020,11 @@ _to_slow_memo(PyObject *src, PyObject *memo)
             PyObject *empty_list = PyList_New(0);
             if (empty_list) {
                 PyObject *kwargs = Py_BuildValue("{sOsOsOsOsi}",
-                    "parameters",      f->parameters,
-                    "name",            f->name,
-                    "bytecode",        f->bytecode,
+                    "parameters", f->parameters,
+                    "name", f->name,
+                    "bytecode", f->bytecode,
                     "captured_values", empty_list,
-                    "is_variadic",     f->is_variadic);
+                    "is_variadic", f->is_variadic);
                 Py_DECREF(empty_list);
                 if (kwargs) {
                     PyObject *empty_args = PyTuple_New(0);
@@ -3110,14 +3126,15 @@ fetch_slow_type(PyObject *mod, const char *name, PyTypeObject **dst)
 {
     PyObject *obj = PyObject_GetAttrString(mod, name);
     if (!obj) return -1;
+
     *dst = (PyTypeObject *)obj;
     return 0;
 }
 
 static PyMethodDef module_methods[] = {
-    {"convert_value",       py_convert_value,       METH_O, NULL},
+    {"convert_value", py_convert_value, METH_O, NULL},
     {"convert_code_object", py_convert_code_object, METH_O, NULL},
-    {"to_slow",             py_to_slow,             METH_O, NULL},
+    {"to_slow", py_to_slow, METH_O, NULL},
     {NULL, NULL, 0, NULL}
 };
 
@@ -3136,19 +3153,19 @@ _menai_value_c_init(void)
     PyObject *slow_mod = PyImport_ImportModule("menai.menai_value");
     if (!slow_mod) return NULL;
 
-    if (fetch_slow_type(slow_mod, "MenaiNone",       &Slow_NoneType)       < 0) goto fail;
-    if (fetch_slow_type(slow_mod, "MenaiBoolean",    &Slow_BooleanType)    < 0) goto fail;
-    if (fetch_slow_type(slow_mod, "MenaiInteger",    &Slow_IntegerType)    < 0) goto fail;
-    if (fetch_slow_type(slow_mod, "MenaiFloat",      &Slow_FloatType)      < 0) goto fail;
-    if (fetch_slow_type(slow_mod, "MenaiComplex",    &Slow_ComplexType)    < 0) goto fail;
-    if (fetch_slow_type(slow_mod, "MenaiString",     &Slow_StringType)     < 0) goto fail;
-    if (fetch_slow_type(slow_mod, "MenaiSymbol",     &Slow_SymbolType)     < 0) goto fail;
-    if (fetch_slow_type(slow_mod, "MenaiList",       &Slow_ListType)       < 0) goto fail;
-    if (fetch_slow_type(slow_mod, "MenaiDict",       &Slow_DictType)       < 0) goto fail;
-    if (fetch_slow_type(slow_mod, "MenaiSet",        &Slow_SetType)        < 0) goto fail;
-    if (fetch_slow_type(slow_mod, "MenaiFunction",   &Slow_FunctionType)   < 0) goto fail;
+    if (fetch_slow_type(slow_mod, "MenaiNone", &Slow_NoneType) < 0) goto fail;
+    if (fetch_slow_type(slow_mod, "MenaiBoolean", &Slow_BooleanType) < 0) goto fail;
+    if (fetch_slow_type(slow_mod, "MenaiInteger", &Slow_IntegerType) < 0) goto fail;
+    if (fetch_slow_type(slow_mod, "MenaiFloat", &Slow_FloatType) < 0) goto fail;
+    if (fetch_slow_type(slow_mod, "MenaiComplex", &Slow_ComplexType) < 0) goto fail;
+    if (fetch_slow_type(slow_mod, "MenaiString", &Slow_StringType) < 0) goto fail;
+    if (fetch_slow_type(slow_mod, "MenaiSymbol", &Slow_SymbolType) < 0) goto fail;
+    if (fetch_slow_type(slow_mod, "MenaiList", &Slow_ListType) < 0) goto fail;
+    if (fetch_slow_type(slow_mod, "MenaiDict", &Slow_DictType) < 0) goto fail;
+    if (fetch_slow_type(slow_mod, "MenaiSet", &Slow_SetType) < 0) goto fail;
+    if (fetch_slow_type(slow_mod, "MenaiFunction", &Slow_FunctionType) < 0) goto fail;
     if (fetch_slow_type(slow_mod, "MenaiStructType", &Slow_StructTypeType) < 0) goto fail;
-    if (fetch_slow_type(slow_mod, "MenaiStruct",     &Slow_StructType)     < 0) goto fail;
+    if (fetch_slow_type(slow_mod, "MenaiStruct", &Slow_StructType) < 0) goto fail;
     Py_DECREF(slow_mod);
     slow_mod = NULL;
 
@@ -3216,7 +3233,7 @@ _menai_value_c_init(void)
     }
     _Menai_EMPTY_LIST = MenaiList_new(&MenaiList_Type, empty_tup, NULL);
     _Menai_EMPTY_DICT = MenaiDict_new(&MenaiDict_Type, empty_tup, NULL);
-    _Menai_EMPTY_SET  = MenaiSet_new(&MenaiSet_Type,  empty_tup, NULL);
+    _Menai_EMPTY_SET = MenaiSet_new(&MenaiSet_Type,  empty_tup, NULL);
     Py_DECREF(empty_tup);
     if (!_Menai_EMPTY_LIST || !_Menai_EMPTY_DICT || !_Menai_EMPTY_SET) {
         Py_DECREF(module);
@@ -3228,12 +3245,12 @@ _menai_value_c_init(void)
         const char *name;
         PyObject **obj;
     } singletons[] = {
-        {"Menai_NONE",          &_Menai_NONE},
-        {"Menai_BOOLEAN_TRUE",  &_Menai_TRUE},
+        {"Menai_NONE", &_Menai_NONE},
+        {"Menai_BOOLEAN_TRUE", &_Menai_TRUE},
         {"Menai_BOOLEAN_FALSE", &_Menai_FALSE},
-        {"Menai_LIST_EMPTY",    &_Menai_EMPTY_LIST},
-        {"Menai_DICT_EMPTY",    &_Menai_EMPTY_DICT},
-        {"Menai_SET_EMPTY",     &_Menai_EMPTY_SET},
+        {"Menai_LIST_EMPTY", &_Menai_EMPTY_LIST},
+        {"Menai_DICT_EMPTY", &_Menai_EMPTY_DICT},
+        {"Menai_SET_EMPTY", &_Menai_EMPTY_SET},
     };
     for (int i = 0; i < (int)(sizeof(singletons)/sizeof(singletons[0])); i++) {
         Py_INCREF(*singletons[i].obj);

@@ -64,7 +64,6 @@ class SettingsCheckbox(SettingsField):
 
     def _on_style_changed(self) -> None:
         """Update checkbox styling."""
-        super()._on_style_changed()
         zoom_factor = self._style_manager.zoom_factor()
-        min_height = int(22 * zoom_factor)
+        min_height = int(18 * zoom_factor)
         self._checkbox.setMinimumHeight(min_height)

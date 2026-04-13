@@ -3,7 +3,7 @@
 import array
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Callable, Dict, List, Tuple, Union
+from typing import Callable, Dict, List, Tuple
 
 from menai.menai_value import MenaiValue
 
