@@ -29,6 +29,8 @@ class TabLabel(QWidget):
         """
         super().__init__(parent)
 
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setStyleSheet("background: transparent;")
         self.setToolTip(tool_tip)
         self._tab_id = tab_id
         self._icon_name = icon_name
