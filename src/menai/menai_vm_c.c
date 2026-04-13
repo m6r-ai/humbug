@@ -1250,7 +1250,7 @@ execute_loop(PyObject *code, PyObject *globals,
 
             } else if (IS_MENAI_STRUCTTYPE(raw)) {
                 /* Struct constructor call */
-                Py_ssize_t n_fields = PyTuple_GET_SIZE(((MenaiStructType_Object *)raw)->field_names);
+                int n_fields = ((MenaiStructType_Object *)raw)->nfields;
                 if (arity != (int)n_fields) {
                     PyObject *sname = ((MenaiStructType_Object *)raw)->name;
                     menai_raise_eval_errorf(
@@ -1258,17 +1258,9 @@ execute_loop(PyObject *code, PyObject *globals,
                         sname ? PyUnicode_AsUTF8(sname) : "?");
                     goto error;
                 }
-                PyObject *fields = PyTuple_New(n_fields);
-                if (fields == NULL) goto error;
-                for (int i = 0; i < (int)n_fields; i++) {
-                    PyObject *fv = regs[callee_base + i];
-                    Py_INCREF(fv);
-                    PyTuple_SET_ITEM(fields, i, fv);
-                }
-                PyObject *instance = menai_struct_alloc(raw, fields);
+                PyObject *instance = menai_struct_alloc(raw, &regs[callee_base], n_fields);
                 if (instance == NULL) goto error;
                 reg_set_own(regs, base + dest, instance);
-
             } else {
                 menai_raise_eval_error("Cannot call non-function value");
                 goto error;
@@ -1303,7 +1295,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 }
                 Py_DECREF(raw);
             } else if (IS_MENAI_STRUCTTYPE(raw)) {
-                Py_ssize_t n_fields = PyTuple_GET_SIZE(((MenaiStructType_Object *)raw)->field_names);
+                int n_fields = ((MenaiStructType_Object *)raw)->nfields;
                 if (n_args != (int)n_fields) {
                     PyObject *sname = ((MenaiStructType_Object *)raw)->name;
                     menai_raise_eval_errorf(
@@ -1312,17 +1304,7 @@ execute_loop(PyObject *code, PyObject *globals,
                     Py_DECREF(raw);
                     goto error;
                 }
-                PyObject *fields = PyTuple_New(n_fields);
-                if (fields == NULL) {
-                    Py_DECREF(raw);
-                    goto error;
-                }
-                for (int i = 0; i < (int)n_fields; i++) {
-                    PyObject *fv = regs[base + local_count + i];
-                    Py_INCREF(fv);
-                    PyTuple_SET_ITEM(fields, i, fv);
-                }
-                PyObject *instance = menai_struct_alloc(raw, fields);
+                PyObject *instance = menai_struct_alloc(raw, &regs[base + local_count], n_fields);
                 if (instance == NULL) {
                     Py_DECREF(raw);
                     goto error;
@@ -2256,23 +2238,19 @@ execute_loop(PyObject *code, PyObject *globals,
                     frame_depth--;
                     goto error;
                 }
+
                 frame = new_frame;
 
             } else if (IS_MENAI_STRUCTTYPE(raw_func)) {
-                Py_ssize_t n_fields = PyTuple_GET_SIZE(((MenaiStructType_Object *)raw_func)->field_names);
+                int n_fields = ((MenaiStructType_Object *)raw_func)->nfields;
                 if (arity != (int)n_fields) {
                     menai_raise_eval_error("Struct constructor called with wrong number of arguments");
                     goto error;
                 }
-                PyObject *fields = PyTuple_New(n_fields);
-                if (fields == NULL) goto error;
-                for (int i = 0; i < (int)n_fields; i++) {
-                    PyObject *fv = elements[i];
-                    Py_INCREF(fv);
-                    PyTuple_SET_ITEM(fields, i, fv);
-                }
-                PyObject *instance = menai_struct_alloc(raw_func, fields);
+
+                PyObject *instance = menai_struct_alloc(raw_func, elements, n_fields);
                 if (instance == NULL) goto error;
+
                 reg_set_own(regs, base + dest, instance);
             } else {
                 menai_raise_eval_error("apply: first argument must be a function");
@@ -2320,7 +2298,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 Py_DECREF(raw_func);
 
             } else if (IS_MENAI_STRUCTTYPE(raw_func)) {
-                Py_ssize_t n_fields = PyTuple_GET_SIZE(((MenaiStructType_Object *)raw_func)->field_names);
+                int n_fields = ((MenaiStructType_Object *)raw_func)->nfields;
                 if (arity != (int)n_fields) {
                     Py_DECREF(raw_func);
                     Py_DECREF(raw_args);
@@ -2328,20 +2306,7 @@ execute_loop(PyObject *code, PyObject *globals,
                     goto error;
                 }
 
-                PyObject *fields = PyTuple_New(n_fields);
-                if (fields == NULL) {
-                    Py_DECREF(raw_args);
-                    Py_DECREF(raw_func);
-                    goto error;
-                }
-
-                for (int i = 0; i < (int)n_fields; i++) {
-                    PyObject *fv = elements[i];
-                    Py_INCREF(fv);
-                    PyTuple_SET_ITEM(fields, i, fv);
-                }
-
-                PyObject *retval = menai_struct_alloc(raw_func, fields);
+                PyObject *retval = menai_struct_alloc(raw_func, elements, n_fields);
                 if (retval == NULL) {
                     Py_DECREF(raw_args);
                     Py_DECREF(raw_func);
@@ -4056,14 +4021,7 @@ execute_loop(PyObject *code, PyObject *globals,
                 goto error;
             }
             int n_fields = src1;
-            PyObject *fields = PyTuple_New(n_fields);
-            if (fields == NULL) goto error;
-            for (int i = 0; i < n_fields; i++) {
-                PyObject *fv = regs[base + src0 + 1 + i];
-                Py_INCREF(fv);
-                PyTuple_SET_ITEM(fields, i, fv);
-            }
-            PyObject *instance = menai_struct_alloc(struct_type, fields);
+            PyObject *instance = menai_struct_alloc(struct_type, &regs[base + src0 + 1], n_fields);
             if (instance == NULL) goto error;
             reg_set_own(regs, base + dest, instance);
             break;
@@ -4093,18 +4051,15 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_symbol(field_sym, "struct-get")) goto error;
             PyObject *stype = ((MenaiStruct_Object *)val)->struct_type;
             PyObject *name = menai_symbol_name(field_sym);
-            PyObject *idx = PyDict_GetItem(((MenaiStructType_Object *)stype)->_field_index, name);
-            if (idx == NULL) {
+            int fi = menai_struct_field_index((MenaiStructType_Object *)stype, name);
+            if (fi < 0) {
                 menai_raise_eval_errorf(
                     "'struct-get': struct '%s' has no field '%s'",
                     PyUnicode_AsUTF8(((MenaiStructType_Object *)stype)->name),
                     PyUnicode_AsUTF8(name));
                 goto error;
             }
-            Py_ssize_t fi = PyLong_AsSsize_t(idx);  /* idx borrowed from dict */
-            if (fi == -1 && PyErr_Occurred()) goto error;
-            PyObject *fields = ((MenaiStruct_Object *)val)->fields;
-            PyObject *fv = PyTuple_GET_ITEM(fields, fi);
+            PyObject *fv = ((MenaiStruct_Object *)val)->items[fi];
             reg_set_borrow(regs, base + dest, fv);
             break;
         }
@@ -4117,8 +4072,7 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *iv = menai_integer_value(fidx);
             Py_ssize_t fi = PyLong_AsSsize_t(iv);
             if (fi == -1 && PyErr_Occurred()) goto error;
-            PyObject *fields = ((MenaiStruct_Object *)val)->fields;
-            PyObject *fv = PyTuple_GET_ITEM(fields, fi);
+            PyObject *fv = ((MenaiStruct_Object *)val)->items[fi];
             reg_set_borrow(regs, base + dest, fv);
             break;
         }
@@ -4129,29 +4083,27 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_symbol(field_sym, "struct-set")) goto error;
             PyObject *stype = ((MenaiStruct_Object *)val)->struct_type;
             PyObject *name = menai_symbol_name(field_sym);
-            PyObject *idx = PyDict_GetItem(((MenaiStructType_Object *)stype)->_field_index, name);
-            if (idx == NULL) {
+            int fi = menai_struct_field_index((MenaiStructType_Object *)stype, name);
+            if (fi < 0) {
                 menai_raise_eval_errorf(
                     "'struct-set': struct '%s' has no field '%s'",
                     PyUnicode_AsUTF8(((MenaiStructType_Object *)stype)->name),
                     PyUnicode_AsUTF8(name));
                 goto error;
             }
-            Py_ssize_t fi = PyLong_AsSsize_t(idx);  /* idx borrowed from dict */
-            if (fi == -1 && PyErr_Occurred()) goto error;
-            PyObject *fields = ((MenaiStruct_Object *)val)->fields;
-            Py_ssize_t nf = PyTuple_GET_SIZE(fields);
-            PyObject *new_fields = PyTuple_New(nf);
-            if (new_fields == NULL) {
+            Py_ssize_t nf = Py_SIZE(val);
+            PyObject **tmp = (PyObject **)PyMem_Malloc(nf * sizeof(PyObject *));
+            if (!tmp) {
+                PyErr_NoMemory();
                 goto error;
             }
-            for (Py_ssize_t i = 0; i < nf; i++) {
-                PyObject *fv = (i == fi) ? new_val : PyTuple_GET_ITEM(fields, i);
-                Py_INCREF(fv);
-                PyTuple_SET_ITEM(new_fields, i, fv);
-            }
-            PyObject *r = menai_struct_alloc(stype, new_fields);
+
+            for (Py_ssize_t i = 0; i < nf; i++) tmp[i] = (i == fi) ? new_val : ((MenaiStruct_Object *)val)->items[i];
+
+            PyObject *r = menai_struct_alloc(stype, tmp, nf);
+            PyMem_Free(tmp);
             if (r == NULL) goto error;
+
             reg_set_own(regs, base + dest, r);
             break;
         }
@@ -4164,18 +4116,13 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t fi = PyLong_AsSsize_t(iv);
             if (fi == -1 && PyErr_Occurred()) goto error;
             PyObject *stype = ((MenaiStruct_Object *)val)->struct_type;
-            PyObject *fields = ((MenaiStruct_Object *)val)->fields;
-            Py_ssize_t nf = PyTuple_GET_SIZE(fields);
-            PyObject *new_fields = PyTuple_New(nf);
-            if (new_fields == NULL) {
-                goto error;
-            }
-            for (Py_ssize_t i = 0; i < nf; i++) {
-                PyObject *fv = (i == fi) ? new_val : PyTuple_GET_ITEM(fields, i);
-                Py_INCREF(fv);
-                PyTuple_SET_ITEM(new_fields, i, fv);
-            }
-            PyObject *r = menai_struct_alloc(stype, new_fields);
+            Py_ssize_t nf = Py_SIZE(val);
+            PyObject **tmp = (PyObject **)PyMem_Malloc(nf * sizeof(PyObject *));
+            if (!tmp) { PyErr_NoMemory(); goto error; }
+            for (Py_ssize_t i = 0; i < nf; i++)
+                tmp[i] = (i == fi) ? new_val : ((MenaiStruct_Object *)val)->items[i];
+            PyObject *r = menai_struct_alloc(stype, tmp, nf);
+            PyMem_Free(tmp);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -4185,7 +4132,16 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_struct(a, "struct=?")) goto error;
             if (!require_struct(b, "struct=?")) goto error;
-            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_EQ));
+            MenaiStruct_Object *sa = (MenaiStruct_Object *)a;
+            MenaiStruct_Object *sb = (MenaiStruct_Object *)b;
+            int eq = (((MenaiStructType_Object *)sa->struct_type)->tag ==
+                      ((MenaiStructType_Object *)sb->struct_type)->tag);
+            Py_ssize_t nf = Py_SIZE(sa);
+            for (Py_ssize_t i = 0; eq && i < nf; i++) {
+                eq = PyObject_RichCompareBool(sa->items[i], sb->items[i], Py_EQ);
+                if (eq < 0) goto error;
+            }
+            bool_store(regs, base + dest, eq);
             break;
         }
 
@@ -4193,15 +4149,26 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_struct(a, "struct!=?")) goto error;
             if (!require_struct(b, "struct!=?")) goto error;
-            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_NE));
+            MenaiStruct_Object *sa = (MenaiStruct_Object *)a;
+            MenaiStruct_Object *sb = (MenaiStruct_Object *)b;
+            int neq = (((MenaiStructType_Object *)sa->struct_type)->tag !=
+                       ((MenaiStructType_Object *)sb->struct_type)->tag);
+            if (!neq) {
+                Py_ssize_t nf = Py_SIZE(sa);
+                for (Py_ssize_t i = 0; i < nf; i++) {
+                    int eq = PyObject_RichCompareBool(sa->items[i], sb->items[i], Py_EQ);
+                    if (eq < 0) goto error;
+                    if (!eq) { neq = 1; break; }
+                }
+            }
+            bool_store(regs, base + dest, neq);
             break;
         }
 
         case OP_STRUCT_TYPE: {
             PyObject *val = regs[base + src0];
             if (!require_struct(val, "struct-type")) goto error;
-            PyObject *stype = ((MenaiStruct_Object *)val)->struct_type;
-            reg_set_borrow(regs, base + dest, stype);
+            reg_set_borrow(regs, base + dest, ((MenaiStruct_Object *)val)->struct_type);
             break;
         }
 

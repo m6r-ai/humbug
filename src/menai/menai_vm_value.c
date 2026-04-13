@@ -381,27 +381,34 @@ menai_convert_value(PyObject *src)
         }
 
         Py_ssize_t n = PyTuple_GET_SIZE(fields);
-        PyObject *fast_fields = PyTuple_New(n);
-        if (!fast_fields) {
+        PyObject **fast_arr = n > 0
+            ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
+        if (n > 0 && !fast_arr) {
             Py_DECREF(fast_st);
             Py_DECREF(fields);
+            PyErr_NoMemory();
             return NULL;
         }
 
         for (Py_ssize_t i = 0; i < n; i++) {
             PyObject *ff = menai_convert_value(PyTuple_GET_ITEM(fields, i));
             if (!ff) {
-                Py_DECREF(fast_fields);
+                for (Py_ssize_t j = 0; j < i; j++) Py_DECREF(fast_arr[j]);
+                PyMem_Free(fast_arr);
                 Py_DECREF(fast_st);
                 Py_DECREF(fields);
                 return NULL;
             }
 
-            PyTuple_SET_ITEM(fast_fields, i, ff);
+            fast_arr[i] = ff;
         }
 
         Py_DECREF(fields);
-        return menai_struct_new_from_fast(fast_st, fast_fields);
+        PyObject *r = menai_struct_alloc(fast_st, fast_arr, n);
+        for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(fast_arr[i]);
+        PyMem_Free(fast_arr);
+        Py_DECREF(fast_st);
+        return r;
     }
 
     if (t == Slow_FunctionType) {
@@ -926,14 +933,14 @@ _to_slow_memo(PyObject *src, PyObject *memo)
         MenaiStruct_Object *s = (MenaiStruct_Object *)src;
         PyObject *slow_st = _to_slow_memo(s->struct_type, memo);
         if (!slow_st) goto done;
-        Py_ssize_t n = PyTuple_GET_SIZE(s->fields);
+        Py_ssize_t n = Py_SIZE(s);
         PyObject *slow_fields = PyTuple_New(n);
         if (!slow_fields) {
             Py_DECREF(slow_st);
             goto done;
         }
         for (Py_ssize_t i = 0; i < n; i++) {
-            PyObject *sf = _to_slow_memo(PyTuple_GET_ITEM(s->fields, i), memo);
+            PyObject *sf = _to_slow_memo(s->items[i], memo);
             if (!sf) {
                 Py_DECREF(slow_fields);
                 Py_DECREF(slow_st);
