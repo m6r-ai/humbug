@@ -1,35 +1,28 @@
 /*
  * menai_vm_complex.c — MenaiComplex type implementation.
  *
- * MenaiComplex wraps a Python complex.  Values are allocated on demand;
- * there are no singletons.
+ * MenaiComplex stores a C double pair (real, imag).  Values are allocated
+ * on demand; there are no singletons.
  */
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <math.h>
 
 #include "menai_vm_complex.h"
 
 static PyObject *
 MenaiComplex_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
-    PyObject *value = NULL;
-    static char *kwlist[] = {"value", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &value)) return NULL;
-    if (!PyComplex_Check(value)) {
-        PyErr_SetString(PyExc_TypeError, "MenaiComplex requires a complex");
-        return NULL;
-    }
+    double real = 0.0, imag = 0.0;
+    static char *kwlist[] = {"real", "imag", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "dd", kwlist, &real, &imag)) return NULL;
     MenaiComplex_Object *self = (MenaiComplex_Object *)type->tp_alloc(type, 0);
-    if (self) { Py_INCREF(value); self->value = value; }
+    if (self) {
+        self->real = real;
+        self->imag = imag;
+    }
     return (PyObject *)self;
-}
-
-static void
-MenaiComplex_dealloc(PyObject *self)
-{
-    Py_XDECREF(((MenaiComplex_Object *)self)->value);
-    Py_TYPE(self)->tp_free(self);
 }
 
 static PyObject *
@@ -39,26 +32,44 @@ MenaiComplex_type_name(PyObject *self, PyObject *args)
     return PyUnicode_FromString("complex");
 }
 
-static PyObject *
+/*
+ * Format a single float component for describe():
+ * if the value is exactly representable as an integer, use integer notation.
+ */
+static int
+fmt_component(char *buf, size_t bufsize, double x)
+{
+    double ipart;
+    if (modf(x, &ipart) == 0.0 && ipart >= -1e15 && ipart <= 1e15) {
+        return snprintf(buf, bufsize, "%.0f", ipart);
+    }
+    return snprintf(buf, bufsize, "%g", x);
+}
+
+PyObject *
 MenaiComplex_describe(PyObject *self, PyObject *args)
 {
     (void)args;
-    /*
-     * Delegate to the Python describe() logic via the slow type's method.
-     * This is only called for display, not in the hot loop.
-     */
-    PyObject *cv = ((MenaiComplex_Object *)self)->value;
-    PyObject *mod = PyImport_ImportModule("menai.menai_value");
-    if (!mod) return NULL;
-    PyObject *cls = PyObject_GetAttrString(mod, "MenaiComplex");
-    Py_DECREF(mod);
-    if (!cls) return NULL;
-    PyObject *inst = PyObject_CallOneArg(cls, cv);
-    Py_DECREF(cls);
-    if (!inst) return NULL;
-    PyObject *result = PyObject_CallMethod(inst, "describe", NULL);
-    Py_DECREF(inst);
-    return result;
+    double r = ((MenaiComplex_Object *)self)->real;
+    double i = ((MenaiComplex_Object *)self)->imag;
+
+    char rbuf[64], ibuf[64], out[160];
+
+    if (r == 0.0 && i == 0.0) {
+        return PyUnicode_FromString("0+0j");
+    }
+
+    if (r == 0.0) {
+        fmt_component(ibuf, sizeof(ibuf), i);
+        snprintf(out, sizeof(out), "%sj", ibuf);
+        return PyUnicode_FromString(out);
+    }
+
+    fmt_component(rbuf, sizeof(rbuf), r);
+    fmt_component(ibuf, sizeof(ibuf), i >= 0.0 ? i : -i);
+    snprintf(out, sizeof(out), "%s%s%sj",
+             rbuf, i >= 0.0 ? "+" : "-", ibuf);
+    return PyUnicode_FromString(out);
 }
 
 static PyObject *
@@ -69,28 +80,46 @@ MenaiComplex_richcompare(PyObject *self, PyObject *other, int op)
         if (op == Py_NE) Py_RETURN_TRUE;
         Py_RETURN_NOTIMPLEMENTED;
     }
-    return PyObject_RichCompare(
-        ((MenaiComplex_Object *)self)->value,
-        ((MenaiComplex_Object *)other)->value, op);
+    double ar = ((MenaiComplex_Object *)self)->real;
+    double ai = ((MenaiComplex_Object *)self)->imag;
+    double br = ((MenaiComplex_Object *)other)->real;
+    double bi = ((MenaiComplex_Object *)other)->imag;
+    switch (op) {
+        case Py_EQ: return PyBool_FromLong(ar == br && ai == bi);
+        case Py_NE: return PyBool_FromLong(ar != br || ai != bi);
+        default:    Py_RETURN_NOTIMPLEMENTED;
+    }
 }
 
 static Py_hash_t
 MenaiComplex_hash(PyObject *self)
 {
-    return PyObject_Hash(((MenaiComplex_Object *)self)->value);
+    double r = ((MenaiComplex_Object *)self)->real;
+    double i = ((MenaiComplex_Object *)self)->imag;
+    PyObject *pc = PyComplex_FromDoubles(r, i);
+    if (!pc) return -1;
+    Py_hash_t h = PyObject_Hash(pc);
+    Py_DECREF(pc);
+    return h;
 }
 
 static PyObject *
-MenaiComplex_get_value(PyObject *self, void *closure)
+MenaiComplex_get_real(PyObject *self, void *closure)
 {
     (void)closure;
-    PyObject *v = ((MenaiComplex_Object *)self)->value;
-    Py_INCREF(v);
-    return v;
+    return PyFloat_FromDouble(((MenaiComplex_Object *)self)->real);
+}
+
+static PyObject *
+MenaiComplex_get_imag(PyObject *self, void *closure)
+{
+    (void)closure;
+    return PyFloat_FromDouble(((MenaiComplex_Object *)self)->imag);
 }
 
 static PyGetSetDef MenaiComplex_getset[] = {
-    {"value", MenaiComplex_get_value, NULL, NULL, NULL},
+    {"real", MenaiComplex_get_real, NULL, NULL, NULL},
+    {"imag", MenaiComplex_get_imag, NULL, NULL, NULL},
     {NULL, NULL, NULL, NULL, NULL}
 };
 
@@ -106,7 +135,6 @@ PyTypeObject MenaiComplex_Type = {
     .tp_basicsize   = sizeof(MenaiComplex_Object),
     .tp_flags       = Py_TPFLAGS_DEFAULT,
     .tp_new         = MenaiComplex_new,
-    .tp_dealloc     = MenaiComplex_dealloc,
     .tp_methods     = MenaiComplex_methods,
     .tp_getset      = MenaiComplex_getset,
     .tp_richcompare = MenaiComplex_richcompare,

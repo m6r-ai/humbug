@@ -1,7 +1,7 @@
 /*
  * menai_vm_complex.h — MenaiComplex type definition and API.
  *
- * MenaiComplex wraps a Python complex as its payload.  There are no
+ * MenaiComplex stores a C double pair (real, imag).  There are no
  * singletons; each value is allocated on demand.
  */
 
@@ -13,10 +13,17 @@
 
 typedef struct {
     PyObject_HEAD
-    PyObject *value;    /* Python complex */
+    double real;
+    double imag;
 } MenaiComplex_Object;
 
 extern PyTypeObject MenaiComplex_Type;
+
+/*
+ * Return a new Python unicode string describing the complex value.
+ * Called directly by the VM for OP_COMPLEX_TO_STRING.
+ */
+PyObject *MenaiComplex_describe(PyObject *self, PyObject *args);
 
 /*
  * Module init — called once from _menai_vm_value_init().

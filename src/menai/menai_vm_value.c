@@ -96,7 +96,14 @@ menai_hashable_key(PyObject *key)
         Py_DECREF(pf);
         return r;
     }
-    if (t == &MenaiComplex_Type) return Py_BuildValue("(sO)", "cplx", ((MenaiComplex_Object *)key)->value);
+    if (t == &MenaiComplex_Type) {
+        PyObject *pc = PyComplex_FromDoubles(((MenaiComplex_Object *)key)->real,
+                                             ((MenaiComplex_Object *)key)->imag);
+        if (!pc) return NULL;
+        PyObject *r = Py_BuildValue("(sO)", "cplx", pc);
+        Py_DECREF(pc);
+        return r;
+    }
     if (t == &MenaiBoolean_Type) {
         PyObject *bv = PyBool_FromLong(((MenaiBoolean_Object *)key)->value);
         PyObject *r = Py_BuildValue("(sO)", "bool", bv);
@@ -207,9 +214,12 @@ menai_convert_value(PyObject *src)
     if (t == Slow_ComplexType) {
         PyObject *v = PyObject_GetAttrString(src, "value");
         if (!v) return NULL;
-        if (!PyComplex_Check(v)) { Py_DECREF(v); PyErr_SetString(PyExc_TypeError, "MenaiComplex requires a complex"); return NULL; }
         MenaiComplex_Object *r = (MenaiComplex_Object *)MenaiComplex_Type.tp_alloc(&MenaiComplex_Type, 0);
-        if (r) { r->value = v; } else { Py_DECREF(v); }
+        if (r) {
+            r->real = PyComplex_RealAsDouble(v);
+            r->imag = PyComplex_ImagAsDouble(v);
+        }
+        Py_DECREF(v);
         return (PyObject *)r;
     }
 
@@ -755,7 +765,12 @@ _to_slow_memo(PyObject *src, PyObject *memo)
     else if (t == &MenaiComplex_Type) {
         PyObject *cls = GET_SLOW_CLS("MenaiComplex");
         if (cls) {
-            result = PyObject_CallOneArg(cls, ((MenaiComplex_Object *)src)->value);
+            PyObject *pc = PyComplex_FromDoubles(((MenaiComplex_Object *)src)->real,
+                                                 ((MenaiComplex_Object *)src)->imag);
+            if (pc) {
+                result = PyObject_CallOneArg(cls, pc);
+                Py_DECREF(pc);
+            }
             Py_DECREF(cls);
         }
     }
