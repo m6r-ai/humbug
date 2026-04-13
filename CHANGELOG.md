@@ -6,6 +6,11 @@ New features:
 
 - Improved performance across the Menai VM.
 
+Bug fixes:
+
+- Resolved a problem with the preferred width calculations for tabs.  This could make terminals use a horizontal scroll bar
+  when they didn't need to.
+
 ## v42 (2026-04-10)
 
 New features:

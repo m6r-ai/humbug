@@ -2298,6 +2298,8 @@ class ColumnManager(QWidget):
         total_preferred = sum(max(min_col_width, p) for p in col_preferred)
         sizes = [min_col_width] * len(self._tab_columns)
 
+        total_preferred += self._column_splitter.handleWidth() * (len(self._tab_columns) - 1)
+
         if total_preferred <= available:
             # Enough room: give each column its preferred width and centre with spacers.
             for i, p in enumerate(col_preferred):
