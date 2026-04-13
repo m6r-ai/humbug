@@ -2,8 +2,8 @@
  * menai_vm_function.c — MenaiFunction type implementation.
  *
  * MenaiFunction represents a Menai closure.  It holds parameters, bytecode,
- * captured values, and a frame-setup cache that eliminates PyObject_GetAttrString
- * calls from the hot call path.
+ * an inline C array of captured values, and a frame-setup cache that
+ * eliminates PyObject_GetAttrString calls from the hot call path.
  *
  * Also provides menai_function_alloc(), the direct C constructor used by
  * OP_MAKE_CLOSURE in the VM, and menai_function_new_from_kwargs(), used by
@@ -15,6 +15,53 @@
 #include <stdint.h>
 
 #include "menai_vm_function.h"
+
+/*
+ * _cache_frame_fields — populate the frame-setup cache fields on self from
+ * a bytecode CodeObject.  All refs are borrowed from bytecode (which self
+ * owns).  Errors during GetAttrString are suppressed via PyErr_Clear so that
+ * a missing optional attribute (e.g. _code_caches not yet set) does not fail
+ * construction.
+ */
+static void
+_cache_frame_fields(MenaiFunction_Object *self, PyObject *bytecode)
+{
+    PyObject *instrs_obj = PyObject_GetAttrString(bytecode, "instructions");
+    if (instrs_obj) {
+        Py_buffer view;
+        if (PyObject_GetBuffer(instrs_obj, &view, PyBUF_SIMPLE) == 0) {
+            self->instrs = (uint64_t *)view.buf;
+            self->instrs_obj = instrs_obj;
+            self->code_len = (int)(view.len / sizeof(uint64_t));
+            PyBuffer_Release(&view);
+        }
+        /* Do not Py_DECREF — borrowed from bytecode */
+    }
+    PyObject *constants = PyObject_GetAttrString(bytecode, "constants");
+    if (constants) {
+        self->constants = constants;
+        self->constants_items = ((PyListObject *)constants)->ob_item;
+    }
+    PyObject *names = PyObject_GetAttrString(bytecode, "names");
+    if (names) {
+        self->names = names;
+        self->names_items = ((PyListObject *)names)->ob_item;
+    }
+    PyObject *lc = PyObject_GetAttrString(bytecode, "local_count");
+    if (lc) {
+        self->local_count = (int)PyLong_AsLong(lc);
+        Py_DECREF(lc);
+    }
+    PyObject *pc = PyObject_GetAttrString(bytecode, "param_count");
+    if (pc) {
+        self->param_count = (int)PyLong_AsLong(pc);
+        Py_DECREF(pc);
+    }
+    PyObject *cc = PyObject_GetAttrString(bytecode, "_code_caches");
+    self->closure_caches = (cc && PyList_Check(cc)) ? cc : NULL;
+    Py_XDECREF(cc);
+    PyErr_Clear();
+}
 
 static PyObject *
 MenaiFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
@@ -32,87 +79,61 @@ MenaiFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     PyObject *params_tup = parameters ? PySequence_Tuple(parameters) : PyTuple_New(0);
     if (!params_tup) return NULL;
 
-    PyObject *cap_list = captured_values ? (Py_INCREF(captured_values), captured_values) : PyList_New(0);
-    if (!cap_list) {
-        Py_DECREF(params_tup);
-        return NULL;
-    }
-    if (!PyList_Check(cap_list)) {
-        PyObject *tmp = PySequence_List(cap_list);
-        Py_DECREF(cap_list);
-        cap_list = tmp;
-        if (!cap_list) {
+    /* Determine capture count from captured_values argument. */
+    Py_ssize_t ncap = 0;
+    if (captured_values && captured_values != Py_None) {
+        ncap = PySequence_Size(captured_values);
+        if (ncap < 0) {
             Py_DECREF(params_tup);
             return NULL;
         }
     }
 
-    MenaiFunction_Object *self = (MenaiFunction_Object *)type->tp_alloc(type, 0);
-    if (self) {
-        self->parameters = params_tup;
-        Py_INCREF(name);
-        self->name = name;
-        Py_INCREF(bytecode);
-        self->bytecode = bytecode;
-        self->captured_values = cap_list;
-        self->is_variadic = is_variadic;
-        self->instrs = NULL;
-        self->instrs_obj = NULL;
-        self->constants = NULL;
-        self->constants_items = NULL;
-        self->names = NULL;
-        self->names_items = NULL;
-        self->code_len = 0;
-        self->local_count = 0;
-        self->closure_caches = NULL;
-        /* Cache param_count from the bytecode object to avoid repeated
-         * PyObject_GetAttrString calls in call_setup on every function call. */
-        if (bytecode != Py_None) {
-            PyObject *pc = PyObject_GetAttrString(bytecode, "param_count");
-            self->param_count = pc ? (int)PyLong_AsLong(pc) : 0;
-            Py_XDECREF(pc);
+    MenaiFunction_Object *self = (MenaiFunction_Object *)type->tp_alloc(type, ncap);
+    if (!self) {
+        Py_DECREF(params_tup);
+        return NULL;
+    }
 
-            /* Populate the frame setup cache from the bytecode object.
-             * All refs are borrowed from bytecode, which we own. */
-            PyObject *instrs_obj = PyObject_GetAttrString(bytecode, "instructions");
-            if (instrs_obj) {
-                Py_buffer view;
-                if (PyObject_GetBuffer(instrs_obj, &view, PyBUF_SIMPLE) == 0) {
-                    self->instrs     = (uint64_t *)view.buf;
-                    self->instrs_obj = instrs_obj;  /* borrowed — bytecode owns it */
-                    self->code_len   = (int)(view.len / sizeof(uint64_t));
-                    PyBuffer_Release(&view);
-                }
-                /* Do not Py_DECREF instrs_obj — it is borrowed from bytecode */
+    self->parameters = params_tup;
+    Py_INCREF(name);
+    self->name = name;
+    Py_INCREF(bytecode);
+    self->bytecode = bytecode;
+    self->is_variadic = is_variadic;
+    self->instrs = NULL;
+    self->instrs_obj = NULL;
+    self->constants = NULL;
+    self->constants_items = NULL;
+    self->names = NULL;
+    self->names_items = NULL;
+    self->code_len = 0;
+    self->local_count = 0;
+    self->closure_caches = NULL;
+    self->param_count = 0;
+
+    /* Populate capture slots. */
+    if (captured_values && captured_values != Py_None) {
+        for (Py_ssize_t i = 0; i < ncap; i++) {
+            PyObject *cv = PySequence_GetItem(captured_values, i);
+            if (!cv) {
+                /* Partially initialised — zero remaining slots so dealloc is safe. */
+                for (Py_ssize_t j = i; j < ncap; j++) self->captures[j] = NULL;
+                Py_DECREF((PyObject *)self);
+                return NULL;
             }
-            PyObject *constants = PyObject_GetAttrString(bytecode, "constants");
-            if (constants) {
-                self->constants = constants;  /* borrowed from bytecode */
-                self->constants_items = ((PyListObject *)constants)->ob_item;
-                /* Do not Py_DECREF — borrowed */
-            }
-            PyObject *names = PyObject_GetAttrString(bytecode, "names");
-            if (names) {
-                self->names = names;  /* borrowed from bytecode */
-                self->names_items = ((PyListObject *)names)->ob_item;
-                /* Do not Py_DECREF — borrowed */
-            }
-            PyObject *lc = PyObject_GetAttrString(bytecode, "local_count");
-            if (lc) {
-                self->local_count = (int)PyLong_AsLong(lc);
-                Py_DECREF(lc);
-            }
-            PyObject *cc = PyObject_GetAttrString(bytecode, "_code_caches");
-            self->closure_caches = (cc && PyList_Check(cc)) ? cc : NULL;
-            Py_XDECREF(cc);  /* drop owned ref — bytecode (which we own) keeps it alive */
-            PyErr_Clear();
-        } else {
-            self->param_count = (int)PyTuple_GET_SIZE(params_tup);
+            self->captures[i] = cv;  /* owned */
         }
     } else {
-        Py_DECREF(params_tup);
-        Py_DECREF(cap_list);
+        for (Py_ssize_t i = 0; i < ncap; i++) self->captures[i] = NULL;
     }
+
+    if (bytecode != Py_None) {
+        _cache_frame_fields(self, bytecode);
+    } else {
+        self->param_count = (int)PyTuple_GET_SIZE(params_tup);
+    }
+
     return (PyObject *)self;
 }
 
@@ -124,7 +145,8 @@ MenaiFunction_dealloc(PyObject *self)
     Py_XDECREF(f->parameters);
     Py_XDECREF(f->name);
     Py_XDECREF(f->bytecode);
-    Py_XDECREF(f->captured_values);
+    Py_ssize_t ncap = Py_SIZE(f);
+    for (Py_ssize_t i = 0; i < ncap; i++) Py_XDECREF(f->captures[i]);
     Py_TYPE(self)->tp_free(self);
 }
 
@@ -135,7 +157,8 @@ MenaiFunction_traverse(PyObject *self, visitproc visit, void *arg)
     Py_VISIT(f->parameters);
     Py_VISIT(f->name);
     Py_VISIT(f->bytecode);
-    Py_VISIT(f->captured_values);
+    Py_ssize_t ncap = Py_SIZE(f);
+    for (Py_ssize_t i = 0; i < ncap; i++) Py_VISIT(f->captures[i]);
     return 0;
 }
 
@@ -144,8 +167,6 @@ MenaiFunction_clear(PyObject *self)
 {
     MenaiFunction_Object *f = (MenaiFunction_Object *)self;
     Py_CLEAR(f->bytecode);
-    /* All of these are borrowed from bytecode — NULL them together so they
-     * never dangle after bytecode is cleared. */
     f->instrs = NULL;
     f->instrs_obj = NULL;
     f->constants = NULL;
@@ -154,15 +175,15 @@ MenaiFunction_clear(PyObject *self)
     f->names_items = NULL;
     f->closure_caches = NULL;
     f->code_len = 0;
-    Py_CLEAR(f->captured_values);
+    Py_ssize_t ncap = Py_SIZE(f);
+    for (Py_ssize_t i = 0; i < ncap; i++) Py_CLEAR(f->captures[i]);
     return 0;
 }
 
 static PyObject *
 MenaiFunction_type_name(PyObject *self, PyObject *args)
 {
-    (void)self;
-    (void)args;
+    (void)self; (void)args;
     return PyUnicode_FromString("function");
 }
 
@@ -221,15 +242,32 @@ MenaiFunction_get_bytecode(PyObject *self, void *closure)
     return b;
 }
 
+/*
+ * captured_values getter — builds a Python list on demand from the inline
+ * capture array.  This is only used by the Python-facing API (to_slow,
+ * tests); the VM hot path reads captures[] directly.
+ */
 static PyObject *
 MenaiFunction_get_captured_values(PyObject *self, void *closure)
 {
     (void)closure;
-    PyObject *c = ((MenaiFunction_Object *)self)->captured_values;
-    Py_INCREF(c);
-    return c;
+    MenaiFunction_Object *f = (MenaiFunction_Object *)self;
+    Py_ssize_t ncap = Py_SIZE(f);
+    PyObject *lst = PyList_New(ncap);
+    if (!lst) return NULL;
+    for (Py_ssize_t i = 0; i < ncap; i++) {
+        PyObject *cv = f->captures[i] ? f->captures[i] : Py_None;
+        Py_INCREF(cv);
+        PyList_SET_ITEM(lst, i, cv);
+    }
+    return lst;
 }
 
+/*
+ * captured_values setter — copies values from a list into the inline array.
+ * The list must have exactly ob_size elements.  Used by to_slow's two-phase
+ * cycle-safe pattern when converting fast→slow.
+ */
 static int
 MenaiFunction_set_captured_values(PyObject *self, PyObject *value, void *closure)
 {
@@ -238,10 +276,19 @@ MenaiFunction_set_captured_values(PyObject *self, PyObject *value, void *closure
         PyErr_SetString(PyExc_TypeError, "captured_values must be a list");
         return -1;
     }
-    PyObject *old = ((MenaiFunction_Object *)self)->captured_values;
-    Py_INCREF(value);
-    ((MenaiFunction_Object *)self)->captured_values = value;
-    Py_XDECREF(old);
+    MenaiFunction_Object *f = (MenaiFunction_Object *)self;
+    Py_ssize_t ncap = Py_SIZE(f);
+    if (PyList_GET_SIZE(value) != ncap) {
+        PyErr_SetString(PyExc_ValueError,
+                        "captured_values length does not match function capture count");
+        return -1;
+    }
+    for (Py_ssize_t i = 0; i < ncap; i++) {
+        PyObject *nv = PyList_GET_ITEM(value, i);
+        Py_INCREF(nv);
+        Py_XDECREF(f->captures[i]);
+        f->captures[i] = nv;
+    }
     return 0;
 }
 
@@ -278,7 +325,8 @@ static PyMethodDef MenaiFunction_methods[] = {
 PyTypeObject MenaiFunction_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name        = "menai.menai_vm_value.MenaiFunction",
-    .tp_basicsize   = sizeof(MenaiFunction_Object),
+    .tp_basicsize   = sizeof(MenaiFunction_Object) - sizeof(PyObject *),
+    .tp_itemsize    = sizeof(PyObject *),
     .tp_flags       = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HAVE_GC,
     .tp_new         = MenaiFunction_new,
     .tp_dealloc     = MenaiFunction_dealloc,
@@ -293,39 +341,36 @@ PyTypeObject MenaiFunction_Type = {
 /*
  * menai_function_alloc — direct C constructor for MenaiFunction.
  *
- * Bypasses PyObject_Call and argument parsing entirely.  All reference
- * counting: bytecode and captured_values are borrowed — we INCREF them.
- * All other fields are read from cache (borrowed from the tuple).
+ * Allocates a function with ncap capture slots, all initialised to none_val
+ * (the Menai_NONE singleton).  cache, bytecode, and none_val are all
+ * borrowed; the function takes its own references.
  *
- * cache is the _closure_cache tuple built by menai_convert_code_object:
- *   [0] param_names_tup  (tuple of str)
- *   [1] name             (str)
- *   [2] is_variadic      (int: 0 or 1)
- *   [3] ncap             (int: number of captures, unused here)
- *   [4] instrs_obj       (array.array — borrowed ref kept alive by bytecode)
- *   [5] constants        (list — borrowed ref kept alive by bytecode)
- *   [6] names_list       (list — borrowed ref kept alive by bytecode)
- *   [7] param_count      (int)
- *   [8] local_count      (int)
- *   [9] child_code       (CodeObject — used by OP_MAKE_CLOSURE, not here)
- *  [10] child _code_caches (list or None — borrowed ref kept alive by bytecode)
- *  [11] instrs raw pointer (int via PyLong_FromVoidPtr)
- *  [12] code_len          (int)
- *
- * bytecode is stored as an owned ref so it keeps instrs_obj/constants/names
- * alive for the lifetime of the function.
+ * cache tuple layout:
+ *   [0]  param_names_tup  (tuple of str)
+ *   [1]  name             (str)
+ *   [2]  is_variadic      (int: 0 or 1)
+ *   [3]  ncap             (int — must equal the ncap argument)
+ *   [4]  instrs_obj       (array.array)
+ *   [5]  constants        (list)
+ *   [6]  names_list       (list)
+ *   [7]  param_count      (int)
+ *   [8]  local_count      (int)
+ *   [9]  child_code       (CodeObject)
+ *  [10]  child _code_caches (list or None)
+ *  [11]  instrs raw pointer (int via PyLong_FromVoidPtr)
+ *  [12]  code_len         (int)
  */
 PyObject *
-menai_function_alloc(PyObject *cache, PyObject *bytecode, PyObject *captured_values)
+menai_function_alloc(PyObject *cache, PyObject *bytecode,
+                     Py_ssize_t ncap, PyObject *none_val)
 {
-    MenaiFunction_Object *self = (MenaiFunction_Object *)MenaiFunction_Type.tp_alloc(&MenaiFunction_Type, 0);
-    if (!self)
-        return NULL;
+    MenaiFunction_Object *self = (MenaiFunction_Object *)
+        MenaiFunction_Type.tp_alloc(&MenaiFunction_Type, ncap);
+    if (!self) return NULL;
 
     PyObject *parameters = PyTuple_GET_ITEM(cache, 0);
     PyObject *name = PyTuple_GET_ITEM(cache, 1);
     int is_variadic = (int)PyLong_AsLong(PyTuple_GET_ITEM(cache, 2));
-    /* cache[3] is ncap — used by the caller, not needed here */
     PyObject *instrs_obj = PyTuple_GET_ITEM(cache, 4);
     PyObject *constants = PyTuple_GET_ITEM(cache, 5);
     PyObject *names_obj = PyTuple_GET_ITEM(cache, 6);
@@ -338,22 +383,23 @@ menai_function_alloc(PyObject *cache, PyObject *bytecode, PyObject *captured_val
     self->name = name;
     Py_INCREF(bytecode);
     self->bytecode = bytecode;
-    Py_INCREF(captured_values);
-    self->captured_values = captured_values;
     self->is_variadic = is_variadic;
     self->param_count = param_count;
     self->local_count = local_count;
-    self->constants = constants;  /* borrowed — bytecode keeps alive */
+    self->constants = constants;
     self->constants_items = PyList_Check(constants) ? ((PyListObject *)constants)->ob_item : NULL;
-    self->names = names_obj;  /* borrowed — bytecode keeps alive */
+    self->names = names_obj;
     self->names_items = PyList_Check(names_obj) ? ((PyListObject *)names_obj)->ob_item : NULL;
     PyObject *_cc = PyTuple_GET_ITEM(cache, 10);
     self->closure_caches = (_cc != Py_None && PyList_Check(_cc)) ? _cc : NULL;
-    /* borrowed — bytecode (which we own) keeps child._code_caches alive */
-
     self->instrs = (uint64_t *)PyLong_AsVoidPtr(PyTuple_GET_ITEM(cache, 11));
-    self->instrs_obj = instrs_obj;  /* borrowed — bytecode keeps alive */
+    self->instrs_obj = instrs_obj;
     self->code_len = (int)PyLong_AsLong(PyTuple_GET_ITEM(cache, 12));
+
+    for (Py_ssize_t i = 0; i < ncap; i++) {
+        Py_INCREF(none_val);
+        self->captures[i] = none_val;
+    }
 
     return (PyObject *)self;
 }

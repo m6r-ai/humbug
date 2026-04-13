@@ -1016,10 +1016,9 @@ call_setup(Frame *new_frame, PyObject *func_obj,
     }
 
     /* Populate capture slots: regs[callee_base + param_count + i] */
-    PyObject *captured = func->captured_values;
-    Py_ssize_t ncap = PyList_GET_SIZE(captured);
+    Py_ssize_t ncap = Py_SIZE(func);
     for (Py_ssize_t i = 0; i < ncap; i++) {
-        PyObject *cv = PyList_GET_ITEM(captured, i);
+        PyObject *cv = func->captures[i];
         reg_set_borrow(regs, callee_base + param_count + (int)i, cv);
     }
 
@@ -2193,20 +2192,9 @@ execute_loop(PyObject *code, PyObject *globals,
 
             Py_ssize_t ncap = (Py_ssize_t)PyLong_AsLong(PyTuple_GET_ITEM(closure_cache, 3));
 
-            PyObject *cap_list = PyList_New(ncap);
-            if (cap_list == NULL) {
-                goto error;
-            }
-
-            for (Py_ssize_t i = 0; i < ncap; i++) {
-                Py_INCREF(Py_None);
-                PyList_SET_ITEM(cap_list, i, Py_None);
-            }
-
             /* child_code is the bytecode object stored in the cache at index 9 */
             PyObject *child_code = PyTuple_GET_ITEM(closure_cache, 9);
-            PyObject *func = menai_function_alloc(closure_cache, child_code, cap_list);
-            Py_DECREF(cap_list);
+            PyObject *func = menai_function_alloc(closure_cache, child_code, ncap, Menai_NONE);
             if (func == NULL) goto error;
             reg_set_own(regs, base + dest, func);
             break;
@@ -2222,11 +2210,12 @@ execute_loop(PyObject *code, PyObject *globals,
                 menai_raise_eval_error("PATCH_CLOSURE requires a function");
                 goto error;
             }
-            PyObject *cap_list = ((MenaiFunction_Object *)closure)->captured_values;
             PyObject *val = regs[base + src2];
+            MenaiFunction_Object *fn = (MenaiFunction_Object *)closure;
+            PyObject *old = fn->captures[src1];
             Py_INCREF(val);
-            int set_ok = PyList_SetItem(cap_list, src1, val); /* steals val ref */
-            if (set_ok < 0) goto error;
+            fn->captures[src1] = val;
+            Py_DECREF(old);
             break;
         }
 

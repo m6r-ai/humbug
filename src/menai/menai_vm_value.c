@@ -390,8 +390,8 @@ menai_convert_value(PyObject *src)
          * so eager conversion is safe and eliminates the slow-type check
          * in call_setup's hot path. */
         Py_ssize_t ncap = PyList_GET_SIZE(cap);
-        PyObject *cap_list = PyList_New(ncap);
-        if (!cap_list) {
+        PyObject *fast_cap = PyList_New(ncap);
+        if (!fast_cap) {
             Py_DECREF(cap);
             Py_DECREF(params);
             Py_DECREF(name);
@@ -402,17 +402,16 @@ menai_convert_value(PyObject *src)
         for (Py_ssize_t ci = 0; ci < ncap; ci++) {
             PyObject *fast_cv = menai_convert_value(PyList_GET_ITEM(cap, ci));
             if (!fast_cv) {
-                for (Py_ssize_t cj = 0; cj < ci; cj++)
-                    Py_DECREF(PyList_GET_ITEM(cap_list, cj));
+                for (Py_ssize_t cj = 0; cj < ci; cj++) Py_DECREF(PyList_GET_ITEM(fast_cap, cj));
+                Py_DECREF(fast_cap);
                 Py_DECREF(cap);
-                Py_DECREF(cap_list);
                 Py_DECREF(params);
                 Py_DECREF(name);
                 Py_DECREF(bc);
                 Py_DECREF(is_var);
                 return NULL;
             }
-            PyList_SET_ITEM(cap_list, ci, fast_cv);
+            PyList_SET_ITEM(fast_cap, ci, fast_cv);
         }
         Py_DECREF(cap);
         int iv = PyObject_IsTrue(is_var);
@@ -421,19 +420,19 @@ menai_convert_value(PyObject *src)
             Py_DECREF(params);
             Py_DECREF(name);
             Py_DECREF(bc);
-            Py_DECREF(cap_list);
+            Py_DECREF(fast_cap);
             return NULL;
         }
         PyObject *kwargs = Py_BuildValue("{sOsOsOsOsi}",
             "parameters",      params,
             "name",            name,
             "bytecode",        bc,
-            "captured_values", cap_list,
+            "captured_values", fast_cap,
             "is_variadic",     iv);
         Py_DECREF(params);
         Py_DECREF(name);
         Py_DECREF(bc);
-        Py_DECREF(cap_list);
+        Py_DECREF(fast_cap);
         if (!kwargs) return NULL;
         PyObject *empty = PyTuple_New(0);
         if (!empty) {
@@ -952,7 +951,7 @@ _to_slow_memo(PyObject *src, PyObject *memo)
                 goto done;
             }
             /* Now fill captured_values */
-            Py_ssize_t n = PyList_GET_SIZE(f->captured_values);
+            Py_ssize_t n = Py_SIZE(f);
             PyObject *slow_caps = PyList_New(n);
             if (!slow_caps) {
                 Py_DECREF(result);
@@ -960,7 +959,7 @@ _to_slow_memo(PyObject *src, PyObject *memo)
                 goto done;
             }
             for (Py_ssize_t i = 0; i < n; i++) {
-                PyObject *sc = _to_slow_memo(PyList_GET_ITEM(f->captured_values, i), memo);
+                PyObject *sc = _to_slow_memo(f->captures[i], memo);
                 if (!sc) {
                     Py_DECREF(slow_caps);
                     Py_DECREF(result);
