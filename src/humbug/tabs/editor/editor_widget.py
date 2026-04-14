@@ -925,14 +925,24 @@ class EditorWidget(QPlainTextEdit):
         """
         if event.key() == Qt.Key.Key_Home:
             cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.MoveOperation.StartOfLine)
+            mode = (
+                QTextCursor.MoveMode.KeepAnchor
+                if event.modifiers() & Qt.KeyboardModifier.ShiftModifier
+                else QTextCursor.MoveMode.MoveAnchor
+            )
+            cursor.movePosition(QTextCursor.MoveOperation.StartOfLine, mode)
             self.setTextCursor(cursor)
             event.accept()
             return
 
         if event.key() == Qt.Key.Key_End:
             cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.MoveOperation.EndOfLine)
+            mode = (
+                QTextCursor.MoveMode.KeepAnchor
+                if event.modifiers() & Qt.KeyboardModifier.ShiftModifier
+                else QTextCursor.MoveMode.MoveAnchor
+            )
+            cursor.movePosition(QTextCursor.MoveOperation.EndOfLine, mode)
             self.setTextCursor(cursor)
             event.accept()
             return

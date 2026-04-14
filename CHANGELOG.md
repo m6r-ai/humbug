@@ -5,6 +5,7 @@
 New features:
 
 - Improved performance across the Menai VM.
+- Shift+Home/End now selects text in editor tabs, making things consistent with other shift+movement operations.
 
 Bug fixes:
 
