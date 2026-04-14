@@ -4,13 +4,14 @@ import logging
 from typing import List, Optional
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget
-from PySide6.QtCore import Qt, QRect, QSize
+from PySide6.QtCore import Qt, QRect
 from PySide6.QtGui import (
     QColor, QPainter, QPaintEvent, QResizeEvent, QTextBlockUserData, QTextBlock
 )
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
+from humbug.tabs.line_number_area import LineNumberArea
 from humbug.tabs.diff.diff_row import DiffRow, DiffRowType
 
 
@@ -23,32 +24,16 @@ class _LineData(QTextBlockUserData):
         self.line_no = line_no
 
 
-class _GutterWidget(QWidget):
-    """Narrow widget that paints line numbers to the left of the text area."""
-
-    def __init__(self, pane: 'DiffPane') -> None:
-        super().__init__(pane)
-        self._pane = pane
-
-    def sizeHint(self) -> QSize:
-        return QSize(self._pane.gutter_width(), 0)
-
-    def paintEvent(self, event: QPaintEvent) -> None:
-        self._pane.paint_gutter(event)
-
-
 class DiffPane(QPlainTextEdit):
     """Read-only pane displaying one side of a side-by-side diff.
 
-    The pane owns a narrow gutter widget that shows line numbers.  Background
+    The pane owns a LineNumberArea gutter that shows line numbers.  Background
     colours for each line are painted during the standard paint event using the
     row-type metadata stored in each QTextBlock.
 
     The pane hides its own vertical scrollbar; the parent DiffWidget provides a
     single shared scrollbar that drives both panes simultaneously.
     """
-
-    _GUTTER_PADDING = 6  # px of horizontal padding inside the gutter
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -61,7 +46,7 @@ class DiffPane(QPlainTextEdit):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.setFrameStyle(0)
 
-        self._gutter = _GutterWidget(self)
+        self._gutter = LineNumberArea(self, self._gutter_width, self._paint_gutter)
         self.blockCountChanged.connect(self._update_gutter_width)
         self.updateRequest.connect(self._update_gutter)
         self._update_gutter_width()
@@ -92,42 +77,6 @@ class DiffPane(QPlainTextEdit):
 
         cursor.endEditBlock()
 
-    def gutter_width(self) -> int:
-        """Return the pixel width required for the line-number gutter."""
-        digits = len(str(max(1, self.blockCount())))
-        char_width = self.fontMetrics().horizontalAdvance('9')
-        return self._GUTTER_PADDING * 2 + digits * char_width
-
-    def paint_gutter(self, event: QPaintEvent) -> None:
-        """Paint line numbers into the gutter widget."""
-        painter = QPainter(self._gutter)
-        bg = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE)
-        painter.fillRect(event.rect(), bg)
-
-        painter.setPen(self._style_manager.get_color(ColorRole.LINE_NUMBER))
-        painter.setFont(self.font())
-
-        block = self.firstVisibleBlock()
-        top = int(self.blockBoundingGeometry(block).translated(self.contentOffset()).top())
-        bottom = top + int(self.blockBoundingRect(block).height())
-
-        while block.isValid() and top <= event.rect().bottom():
-            if block.isVisible() and bottom >= event.rect().top():
-                data = block.userData()
-                if isinstance(data, _LineData) and data.line_no is not None:
-                    painter.drawText(
-                        0,
-                        top,
-                        self._gutter.width() - self._GUTTER_PADDING,
-                        self.fontMetrics().height(),
-                        Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
-                        str(data.line_no),
-                    )
-
-            block = block.next()
-            top = bottom
-            bottom = top + int(self.blockBoundingRect(block).height())
-
     def apply_style(self) -> None:
         """Reapply colours and font after a theme or zoom change."""
         zoom = self._style_manager.zoom_factor()
@@ -157,12 +106,63 @@ class DiffPane(QPlainTextEdit):
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         cr = self.contentsRect()
-        self._gutter.setGeometry(QRect(cr.left(), cr.top(), self.gutter_width(), cr.height()))
+        self._gutter.setGeometry(QRect(cr.left(), cr.top(), self._gutter_width(), cr.height()))
 
     def paintEvent(self, event: QPaintEvent) -> None:
         """Paint row backgrounds before the standard text painting."""
         self._paint_line_backgrounds(event)
         super().paintEvent(event)
+
+    def _gutter_width(self) -> int:
+        """Return the pixel width required for the line-number gutter.
+
+        Matches the editor's formula: (digits + 4) character widths, giving
+        2 character-widths of padding on each side of the number text.
+        """
+        digits = 1
+        max_num = max(1, self.blockCount())
+        while max_num >= 10:
+            max_num //= 10
+            digits += 1
+
+        digit_width = self.fontMetrics().horizontalAdvance('9')
+        return digit_width * (digits + 4)
+
+    def _paint_gutter(self, event: QPaintEvent) -> None:
+        """Paint line numbers into the gutter widget."""
+        painter = QPainter(self._gutter)
+        bg = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE)
+        painter.fillRect(event.rect(), bg)
+
+        painter.setPen(self._style_manager.get_color(ColorRole.LINE_NUMBER))
+        painter.setFont(self.font())
+
+        # Right margin matches the editor: 2 character-widths from the right edge
+        digit_width = self.fontMetrics().horizontalAdvance('9')
+        right_margin = digit_width * 2
+
+        block = self.firstVisibleBlock()
+        top = int(self.blockBoundingGeometry(block).translated(self.contentOffset()).top())
+        bottom = top + int(self.blockBoundingRect(block).height())
+
+        while block.isValid() and top <= event.rect().bottom():
+            if block.isVisible() and bottom >= event.rect().top():
+                data = block.userData()
+                if isinstance(data, _LineData) and data.line_no is not None:
+                    painter.drawText(
+                        QRect(
+                            0,
+                            top,
+                            self._gutter.width() - right_margin,
+                            self.fontMetrics().height(),
+                        ),
+                        Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter,
+                        str(data.line_no),
+                    )
+
+            block = block.next()
+            top = bottom
+            bottom = top + int(self.blockBoundingRect(block).height())
 
     def _paint_line_backgrounds(self, event: QPaintEvent) -> None:
         """Fill each visible block's background rectangle with its row colour."""
@@ -210,7 +210,7 @@ class DiffPane(QPlainTextEdit):
                 return None
 
     def _update_gutter_width(self) -> None:
-        self.setViewportMargins(self.gutter_width(), 0, 0, 0)
+        self.setViewportMargins(self._gutter_width(), 0, 0, 0)
 
     def _update_gutter(self, rect: QRect, dy: int) -> None:
         if dy:

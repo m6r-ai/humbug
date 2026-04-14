@@ -110,13 +110,12 @@ class DiffTab(TabBase):
     def preferred_width(self) -> int | None:
         """Return the preferred column width to comfortably display two 80-column panes."""
         style_manager = StyleManager()
-        zoom = style_manager.zoom_factor()
 
-        # Character width already accounts for zoom via get_space_width()
         char_width = style_manager.get_space_width()
 
-        # Gutter: 4 digit characters + padding on each side (matches DiffPane._GUTTER_PADDING = 6)
-        gutter_width = int(4 * char_width + 2 * 6 * zoom)
+        # Gutter: (digits + 4) character widths, matching the editor formula.
+        # Assume 4-digit line numbers as a reasonable estimate for sizing.
+        gutter_width = int((4 + 4) * char_width)
 
         # Each pane: gutter + 80 columns
         pane_width = gutter_width + int(80 * char_width)

@@ -22,7 +22,7 @@ from humbug.mindspace.mindspace_settings import MindspaceSettings
 from humbug.style_manager import StyleManager
 from humbug.tabs.code_block_highlighter import CodeBlockHighlighter
 from humbug.tabs.editor.editor_diff_applier import EditorDiffApplier
-from humbug.tabs.editor.editor_line_number_area import EditorLineNumberArea
+from humbug.tabs.line_number_area import LineNumberArea
 
 
 class EditorWidget(QPlainTextEdit):
@@ -64,7 +64,7 @@ class EditorWidget(QPlainTextEdit):
         self._init_colour_mode = self._style_manager.color_mode()
 
         # Setup line number area
-        self._line_number_area = EditorLineNumberArea(
+        self._line_number_area = LineNumberArea(
             self, self._line_number_area_width, self._line_number_area_paint_event
         )
         font = self._line_number_area.font()
