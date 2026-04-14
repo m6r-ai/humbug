@@ -250,12 +250,14 @@ def get_english_strings() -> LanguageStrings:
         system_status="System",
         log_status="Log",
         preview_status="Preview: {path}",
+        diff_status="Diff: {path} | {rows} changed rows",
 
         # Mindspace File Tree Edit Menu Errors and Options
         rename="Rename",
         delete="Delete",
         edit="Edit",
         preview="Preview",
+        diff="Diff",
         duplicate="Duplicate",
         sort_by="Sort By",
         sort_by_name="Sort by name",

@@ -317,6 +317,7 @@ class MainWindow(QMainWindow):
         self._mindspace_view.file_renamed.connect(self._on_mindspace_view_file_renamed)
         self._mindspace_view.file_edited.connect(self._on_mindspace_view_file_edited)
         self._mindspace_view.file_opened_in_preview.connect(self._on_mindspace_view_file_opened_in_preview)
+        self._mindspace_view.file_opened_in_diff.connect(self._on_mindspace_view_file_opened_in_diff)
         self._mindspace_view.open_mindspace_requested.connect(self._on_open_mindspace)
         self._mindspace_view.settings_requested.connect(self._on_show_mindspace_settings_dialog)
         self._mindspace_view.new_conversation_requested.connect(self._on_mindspace_view_new_conversation_in_folder)
@@ -890,6 +891,14 @@ class MainWindow(QMainWindow):
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
             f"User opened preview: '{path}'\ntab ID: {preview_tab.tab_id()}"
+        )
+
+    def _on_mindspace_view_file_opened_in_diff(self, path: str, ephemeral: bool) -> None:
+        """Handle request to open a file diff from the mindspace view."""
+        diff_tab = self._column_manager.open_diff(path, ephemeral)
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"User opened diff: '{path}'\ntab ID: {diff_tab.tab_id()}"
         )
 
     def _on_mindspace_view_file_clicked(self, source: MindspaceViewType, path: str, ephemeral: bool) -> None:

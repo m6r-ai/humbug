@@ -33,6 +33,7 @@ class MindspaceFilesView(QWidget):
     file_moved = Signal(str, str)  # Emits (old_path, new_path)
     file_edited = Signal(str, bool)  # Emits path and ephemeral flag when file is edited
     file_opened_in_preview = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in preview
+    file_opened_in_diff = Signal(str, bool)  # Emits path and ephemeral flag when file is opened in diff
     toggled = Signal(bool)  # Emitted when expand/collapse state changes (expanded state)
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -679,6 +680,8 @@ class MindspaceFilesView(QWidget):
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
                 preview_view_action = menu.addAction(strings.preview)
                 preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
+                diff_action = menu.addAction(strings.diff)
+                diff_action.triggered.connect(lambda: self._handle_diff_file(path))
                 duplicate_action = menu.addAction(strings.duplicate)
                 duplicate_action.triggered.connect(lambda: self._start_duplicate_file(path))
                 rename_action = menu.addAction(strings.rename)
@@ -828,6 +831,10 @@ class MindspaceFilesView(QWidget):
     def _handle_preview_view_file(self, path: str) -> None:
         """View a file in the preview."""
         self.file_opened_in_preview.emit(path, False)
+
+    def _handle_diff_file(self, path: str) -> None:
+        """Open a file diff view."""
+        self.file_opened_in_diff.emit(path, False)
 
     def _handle_delete_file(self, path: str) -> None:
         """Handle request to delete a file.

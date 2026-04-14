@@ -251,12 +251,14 @@ def get_arabic_strings() -> LanguageStrings:
         system_status="نظام",
         log_status="سجل",
         preview_status="معاينة: {path}",
+        diff_status="فرق: {path} | {rows} صفوف متغيرة",
 
         # Mindspace File Tree Edit Menu Errors and Options
         rename="إعادة التسمية",
         delete="حذف",
         edit="تحرير",
         preview="معاينة",
+        diff="فرق",
         duplicate="تكرار",
         sort_by="ترتيب حسب",
         sort_by_name="ترتيب حسب الاسم",

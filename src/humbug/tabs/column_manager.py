@@ -23,6 +23,7 @@ from humbug.tabs.column_widget import ColumnWidget
 from humbug.tabs.conversation.conversation_error import ConversationError
 from humbug.tabs.spacer_drop_widget import SpacerDropWidget
 from humbug.tabs.conversation.conversation_tab import ConversationTab
+from humbug.tabs.diff.diff_tab import DiffTab
 from humbug.tabs.editor.editor_tab import EditorTab
 from humbug.tabs.log.log_tab import LogTab
 from humbug.tabs.shell.shell_tab import ShellTab
@@ -497,6 +498,9 @@ class ColumnManager(QWidget):
 
         elif isinstance(tab, PreviewTab):
             icon = "preview"
+
+        elif isinstance(tab, DiffTab):
+            icon = "diff"
 
         tab_id = tab.tab_id()
         label = TabLabel(tab_id, icon, title, tool_tip)
@@ -1473,6 +1477,22 @@ class ColumnManager(QWidget):
 
         return None
 
+    def _find_diff_tab_by_path(self, path: str) -> DiffTab | None:
+        """
+        Find a diff tab by its path.
+
+        Args:
+            path: The path to search for
+
+        Returns:
+            The DiffTab if found, None otherwise
+        """
+        for tab in self._tabs.values():
+            if isinstance(tab, DiffTab) and tab.path() == path:
+                return tab
+
+        return None
+
     def _find_preview_tab_by_path(self, path: str) -> PreviewTab | None:
         """
         Find a preview tab by its path.
@@ -1561,6 +1581,26 @@ class ColumnManager(QWidget):
         editor.set_ephemeral(ephemeral)
         self._add_tab(editor, os.path.basename(path))
         return editor
+
+    def open_diff(self, path: str, ephemeral: bool) -> DiffTab:
+        """Open a file diff in a new or existing diff tab."""
+        assert os.path.isabs(path), "Path must be absolute"
+
+        existing_tab = self._find_diff_tab_by_path(path)
+        if existing_tab:
+            if existing_tab.is_ephemeral() and not ephemeral:
+                self._make_tab_permanent(existing_tab)
+                self._move_tab_to_active_column(existing_tab)
+                existing_tab = cast(DiffTab, self._find_diff_tab_by_path(path))
+
+            self._ensure_tab_not_in_protected_column(existing_tab)
+            self._set_current_tab(existing_tab, ephemeral)
+            return existing_tab
+
+        diff_tab = DiffTab("", path, self)
+        diff_tab.set_ephemeral(ephemeral)
+        self._add_tab(diff_tab, os.path.basename(path))
+        return diff_tab
 
     def new_conversation(
         self,
@@ -1875,6 +1915,9 @@ class ColumnManager(QWidget):
                 preview_tab.edit_file_requested.connect(self._on_preview_edit_file_requested)
                 return preview_tab
 
+            case TabType.DIFF:
+                return DiffTab.restore_from_state(state, self)
+
         return None
 
     def _get_tab_title(self, tab: TabBase, state: TabState) -> str:
@@ -1895,6 +1938,9 @@ class ColumnManager(QWidget):
             return "Terminal"
 
         if isinstance(tab, PreviewTab):
+            return os.path.basename(state.path)
+
+        if isinstance(tab, DiffTab):
             return os.path.basename(state.path)
 
         return os.path.basename(state.path)

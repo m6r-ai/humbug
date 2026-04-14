@@ -231,12 +231,14 @@ class LanguageStrings:
     system_status: str
     log_status: str
     preview_status: str
+    diff_status: str
 
     # Mindspace File Tree Edit Menu Errors and Options
     rename: str
     delete: str
     edit: str
     preview: str
+    diff: str
     duplicate: str
     sort_by: str
     sort_by_name: str

@@ -4,6 +4,7 @@ from enum import Enum, auto
 class TabType(Enum):
     """Enumeration of available tab types."""
     CONVERSATION = auto()
+    DIFF = auto()
     EDITOR = auto()
     LOG = auto()
     PREVIEW = auto()

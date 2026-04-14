@@ -250,12 +250,14 @@ def get_french_strings() -> LanguageStrings:
         system_status="Statut du système",
         log_status="Journal",
         preview_status="Aperçu : {path}",
+        diff_status="Diff : {path} | {rows} lignes modifiées",
 
         # Mindspace File Tree Edit Menu Errors and Options
         rename="Renommer",
         delete="Supprimer",
         edit="Modifier",
         preview="Aperçu",
+        diff="Diff",
         duplicate="Dupliquer",
         sort_by="Trier par",
         sort_by_name="Trier par nom",

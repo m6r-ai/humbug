@@ -145,6 +145,18 @@ class ColorRole(Enum):
     # Editor line numbers
     LINE_NUMBER = auto()                # Line number
 
+    # Diff view colours
+    DIFF_REMOVED_BACKGROUND = auto()    # Background for removed lines
+    DIFF_REMOVED_FOREGROUND = auto()    # Foreground for removed lines
+    DIFF_ADDED_BACKGROUND = auto()      # Background for added lines
+    DIFF_ADDED_FOREGROUND = auto()      # Foreground for added lines
+    DIFF_CHANGED_BACKGROUND = auto()    # Background for changed lines
+    DIFF_CHANGED_FOREGROUND = auto()    # Foreground for changed lines
+    DIFF_HEADER_BACKGROUND = auto()     # Background for hunk header lines
+    DIFF_HEADER_FOREGROUND = auto()     # Foreground for hunk header lines
+    DIFF_FILLER_BACKGROUND = auto()     # Background for filler (blank alignment) lines
+    DIFF_FILLER_FOREGROUND = auto()     # Foreground for filler lines (unused but consistent)
+
     # Syntax highlighting
     SYNTAX_ERROR = auto()               # Red
     SYNTAX_01 = auto()                  # Cyan

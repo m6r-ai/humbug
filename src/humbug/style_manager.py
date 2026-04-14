@@ -471,6 +471,48 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#c0c0c0"
             },
 
+            # Diff view colours
+            ColorRole.DIFF_REMOVED_BACKGROUND: {
+                ColorMode.DARK: "#3d1515",
+                ColorMode.LIGHT: "#fde8e8"
+            },
+            ColorRole.DIFF_REMOVED_FOREGROUND: {
+                ColorMode.DARK: "#f08080",
+                ColorMode.LIGHT: "#c03030"
+            },
+            ColorRole.DIFF_ADDED_BACKGROUND: {
+                ColorMode.DARK: "#143214",
+                ColorMode.LIGHT: "#e8fde8"
+            },
+            ColorRole.DIFF_ADDED_FOREGROUND: {
+                ColorMode.DARK: "#68b068",
+                ColorMode.LIGHT: "#207020"
+            },
+            ColorRole.DIFF_CHANGED_BACKGROUND: {
+                ColorMode.DARK: "#2a2a10",
+                ColorMode.LIGHT: "#fdfde8"
+            },
+            ColorRole.DIFF_CHANGED_FOREGROUND: {
+                ColorMode.DARK: "#d8d8d8",
+                ColorMode.LIGHT: "#202020"
+            },
+            ColorRole.DIFF_HEADER_BACKGROUND: {
+                ColorMode.DARK: "#1a1a2e",
+                ColorMode.LIGHT: "#e8e8fd"
+            },
+            ColorRole.DIFF_HEADER_FOREGROUND: {
+                ColorMode.DARK: "#8080c0",
+                ColorMode.LIGHT: "#4040a0"
+            },
+            ColorRole.DIFF_FILLER_BACKGROUND: {
+                ColorMode.DARK: "#141414",
+                ColorMode.LIGHT: "#f0f0f0"
+            },
+            ColorRole.DIFF_FILLER_FOREGROUND: {
+                ColorMode.DARK: "#141414",
+                ColorMode.LIGHT: "#f0f0f0"
+            },
+
             # Syntax highlighting
             ColorRole.SYNTAX_ERROR: {
                 ColorMode.DARK: "#ff0000",
@@ -884,6 +926,18 @@ class StyleManager(QObject):
                 <path d="M10 9L12 9" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M9 12L11 12" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M10 15L12 15" stroke="{color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+        ''')
+
+        # Diff tab icon — two vertical panes with a divider
+        self._write_icon(f'{prefix}diff-{suffix}.svg', f'''
+            <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="3" width="8" height="18" rx="1"
+                    stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
+                <rect x="14" y="3" width="8" height="18" rx="1"
+                    stroke="{color}" stroke-width="2" stroke-linejoin="round"/>
+                <line x1="12" y1="3" x2="12" y2="21"
+                    stroke="{color}" stroke-width="1.5" stroke-dasharray="2 2"/>
             </svg>
         ''')
 
