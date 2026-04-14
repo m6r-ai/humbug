@@ -10,6 +10,7 @@ from humbug.status_message import StatusMessage
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType
+from humbug.style_manager import StyleManager
 from humbug.tabs.diff.diff_widget import DiffWidget
 
 
@@ -105,6 +106,23 @@ class DiffTab(TabBase):
             )
         )
         self.status_message.emit(message)
+
+    def preferred_width(self) -> int | None:
+        """Return the preferred column width to comfortably display two 80-column panes."""
+        style_manager = StyleManager()
+        zoom = style_manager.zoom_factor()
+
+        # Character width already accounts for zoom via get_space_width()
+        char_width = style_manager.get_space_width()
+
+        # Gutter: 4 digit characters + padding on each side (matches DiffPane._GUTTER_PADDING = 6)
+        gutter_width = int(4 * char_width + 2 * 6 * zoom)
+
+        # Each pane: gutter + 80 columns
+        pane_width = gutter_width + int(80 * char_width)
+
+        # Total: two panes + splitter handle (1px) + shared scrollbar
+        return 2 * pane_width + 1 + style_manager.get_scrollbar_size()
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """Return serialisable state for mindspace persistence."""
