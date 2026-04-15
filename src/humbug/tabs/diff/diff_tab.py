@@ -5,6 +5,8 @@ import os
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
+from git import GitNotFoundError, GitNotRepositoryError, find_repo_root
+
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
 from humbug.tabs.tab_base import TabBase
@@ -137,6 +139,31 @@ class DiffTab(TabBase):
     def restore_from_state(cls, state: TabState, parent: QWidget) -> 'DiffTab':
         """Create and restore a diff tab from serialised state."""
         return cls(state.tab_id, state.path, parent)
+
+    @staticmethod
+    def can_restore(path: str) -> bool:
+        """
+        Return True if a diff tab for *path* can meaningfully be restored.
+
+        A diff tab is only useful when the file exists on disk and lives inside
+        a git repository.  If either condition fails the tab would open showing
+        nothing but an error message, so callers should skip it on restore.
+
+        Args:
+            path: Absolute path to the file that would be diffed.
+
+        Returns:
+            True if the file exists and is inside a git repository.
+        """
+        if not os.path.exists(path):
+            return False
+
+        try:
+            find_repo_root(path)
+            return True
+
+        except (GitNotFoundError, GitNotRepositoryError):
+            return False
 
     def can_close_tab(self) -> bool:
         """Diff tabs can always be closed."""

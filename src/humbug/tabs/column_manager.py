@@ -218,6 +218,9 @@ class ColumnManager(QWidget):
         elif isinstance(tab, PreviewTab):
             tab_type = "preview"
 
+        elif isinstance(tab, DiffTab):
+            tab_type = "diff"
+
         # Get relative path if available
         path = tab.path()
         relative_path = ""
@@ -1969,6 +1972,12 @@ class ColumnManager(QWidget):
             try:
                 state = TabState.from_dict(state_dict)
                 state.path = self._mindspace_manager.get_absolute_path(state.path)
+
+                if state.type == TabType.DIFF and not DiffTab.can_restore(state.path):
+                    self._logger.info(
+                        "Skipping diff tab restore: file missing or not in a git repo: %s", state.path
+                    )
+                    continue
 
                 tab = self._restore_tab_from_state(state)
                 if not tab:
