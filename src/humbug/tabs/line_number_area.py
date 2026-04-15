@@ -8,7 +8,8 @@ from PySide6.QtGui import QPaintEvent
 
 
 class LineNumberArea(QWidget):
-    """Widget that displays line numbers alongside a QPlainTextEdit.
+    """
+    Widget that displays line numbers alongside a QPlainTextEdit.
 
     Painting and width calculation are fully delegated to the owning editor
     via callables supplied at construction, keeping all logic in one place.

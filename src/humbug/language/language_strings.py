@@ -135,6 +135,8 @@ class LanguageStrings:
     mindspace_label_none: str
     mindspace_name_tooltip: str
     mindspace_files: str
+    mindspace_vcs: str
+    mindspace_vcs_no_repo: str
     mindspace_conversations: str
     mindspace_preview: str
 
