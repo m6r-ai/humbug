@@ -2,11 +2,9 @@
 
 import os
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QPoint
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import (
-    QListWidget, QListWidgetItem, QVBoxLayout, QWidget, QLabel
-)
+from PySide6.QtWidgets import QListWidget, QListWidgetItem, QMenu, QVBoxLayout, QWidget
 
 from git import VcsFileStatus, VcsStatusCode
 
@@ -14,25 +12,30 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHeader
 from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVcsPoller
+from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.style_manager import StyleManager
 
 
 _STATUS_LABELS: dict[VcsStatusCode, str] = {
-    VcsStatusCode.MODIFIED: "M",
-    VcsStatusCode.ADDED: "A",
-    VcsStatusCode.DELETED: "D",
-    VcsStatusCode.RENAMED: "R",
-    VcsStatusCode.COPIED: "C",
+    VcsStatusCode.MODIFIED:  "M",
+    VcsStatusCode.ADDED:     "A",
+    VcsStatusCode.DELETED:   "D",
+    VcsStatusCode.RENAMED:   "R",
+    VcsStatusCode.COPIED:    "C",
     VcsStatusCode.UNTRACKED: "?",
-    VcsStatusCode.UNKNOWN: "!",
+    VcsStatusCode.UNKNOWN:   "!",
 }
 
 
 class MindspaceVcsView(QWidget):
     """Sidebar panel showing VCS-modified files for the current mindspace."""
 
-    file_opened_in_diff = Signal(str, bool)   # path, ephemeral
-    toggled = Signal(bool)                    # expanded state
+    file_clicked = Signal(MindspaceViewType, str, bool)   # view type, path, ephemeral
+    file_edited = Signal(str, bool)                        # path, ephemeral
+    file_opened_in_preview = Signal(str, bool)             # path, ephemeral
+    file_opened_in_diff = Signal(str, bool)                # path, ephemeral
+    toggled = Signal(bool)                                 # expanded state
+    repo_available = Signal(bool)                          # True = repo found, False = hidden
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialise the VCS view."""
@@ -57,16 +60,11 @@ class MindspaceVcsView(QWidget):
         self._header.toggled.connect(self._on_header_toggled)
         layout.addWidget(self._header)
 
-        self._no_repo_label = QLabel(
-            self._language_manager.strings().mindspace_vcs_no_repo
-        )
-        self._no_repo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._no_repo_label.setObjectName("_no_repo_label")
-        layout.addWidget(self._no_repo_label)
-
         self._list_widget = QListWidget()
         self._list_widget.setObjectName("_list_widget")
         self._list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self._list_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self._list_widget.customContextMenuRequested.connect(self._show_context_menu)
         self._list_widget.itemClicked.connect(self._on_item_clicked)
         self._list_widget.itemActivated.connect(self._on_item_activated)
         layout.addWidget(self._list_widget)
@@ -75,7 +73,8 @@ class MindspaceVcsView(QWidget):
         self._poller.repo_state_changed.connect(self._on_repo_state_changed)
         self._poller.status_changed.connect(self._on_status_changed)
 
-        self._show_no_repo()
+        # Start hidden — only shown once a repo is confirmed present.
+        self.hide()
 
     def get_header_height(self) -> int:
         """Return the pixel height of the collapsible header."""
@@ -95,10 +94,8 @@ class MindspaceVcsView(QWidget):
         self._mindspace_path = path
         self._current_status = []
         self._list_widget.clear()
+        self.hide()
         self._poller.set_mindspace(path)
-
-        if not path:
-            self._show_no_repo()
 
     def apply_style(self) -> None:
         """Reapply theme and zoom-dependent styling."""
@@ -110,7 +107,6 @@ class MindspaceVcsView(QWidget):
         font.setPointSizeF(base * zoom)
         self.setFont(font)
         self._list_widget.setFont(font)
-        self._no_repo_label.setFont(font)
 
         self._rebuild_list()
         self._apply_stylesheet()
@@ -119,7 +115,6 @@ class MindspaceVcsView(QWidget):
         """Build and apply the widget stylesheet."""
         bg = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
         fg = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
-        disabled = self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)
         selected = self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)
         hover = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)
 
@@ -139,63 +134,32 @@ class MindspaceVcsView(QWidget):
             QListWidget#_list_widget::item:hover {{
                 background-color: {hover};
             }}
-            QLabel#_no_repo_label {{
-                color: {disabled};
-                background-color: {bg};
-                padding: 4px;
-            }}
         """)
 
     def _on_header_toggled(self, expanded: bool) -> None:
-        """Show or hide the content area when the header is toggled."""
+        """Show or hide the list when the header is toggled."""
         if expanded:
-            self._restore_content_visibility()
+            self._list_widget.show()
         else:
             self._list_widget.hide()
-            self._no_repo_label.hide()
 
         self.toggled.emit(expanded)
 
-    def _restore_content_visibility(self) -> None:
-        """Show the appropriate content widget based on current repo state."""
-        if self._poller._has_repo:
-            self._list_widget.show()
-            self._no_repo_label.hide()
-
-        else:
-            self._list_widget.hide()
-            self._no_repo_label.show()
-
-    def _show_no_repo(self) -> None:
-        """Display the 'no repository' placeholder."""
-        self._list_widget.hide()
-        if self._header.is_expanded():
-            self._no_repo_label.show()
-
-        else:
-            self._no_repo_label.hide()
-
-    def _show_list(self) -> None:
-        """Switch to showing the file list."""
-        self._no_repo_label.hide()
-        if self._header.is_expanded():
-            self._list_widget.show()
-
     def _on_repo_state_changed(self, has_repo: bool) -> None:
-        """React to the repository appearing or disappearing."""
+        """Show or hide the entire widget as the repository appears or disappears."""
         if has_repo:
-            self._show_list()
-
+            self.show()
         else:
             self._current_status = []
             self._list_widget.clear()
-            self._show_no_repo()
+            self.hide()
+
+        self.repo_available.emit(has_repo)
 
     def _on_status_changed(self, status: list[VcsFileStatus]) -> None:
         """Update the list when git status changes."""
         self._current_status = status
         self._rebuild_list()
-        self._show_list()
 
     def _rebuild_list(self) -> None:
         """Rebuild the QListWidget from the current status list."""
@@ -207,9 +171,38 @@ class MindspaceVcsView(QWidget):
             item = QListWidgetItem(f"{badge}  {display_name}")
             item.setData(Qt.ItemDataRole.UserRole, entry.path)
             item.setToolTip(entry.path)
-            color = self._color_for_code(entry.code)
-            item.setForeground(color)
+            item.setForeground(self._color_for_code(entry.code))
             self._list_widget.addItem(item)
+
+    def _show_context_menu(self, position: QPoint) -> None:
+        """Show a context menu for the item under the cursor.
+
+        Args:
+            position: Cursor position in list-widget viewport coordinates.
+        """
+        item = self._list_widget.itemAt(position)
+        if item is None:
+            return
+
+        path = item.data(Qt.ItemDataRole.UserRole)
+        if not path:
+            return
+
+        strings = self._language_manager.strings()
+        menu = QMenu(self)
+
+        diff_action = menu.addAction(strings.diff)
+        diff_action.triggered.connect(lambda: self.file_opened_in_diff.emit(path, False))
+
+        # Edit and preview are only meaningful for files that still exist on disk.
+        if os.path.exists(path):
+            edit_action = menu.addAction(strings.edit)
+            edit_action.triggered.connect(lambda: self.file_edited.emit(path, False))
+
+            preview_action = menu.addAction(strings.preview)
+            preview_action.triggered.connect(lambda: self.file_opened_in_preview.emit(path, False))
+
+        menu.exec_(self._list_widget.viewport().mapToGlobal(position))
 
     def _display_name(self, entry: VcsFileStatus) -> str:
         """
@@ -269,11 +262,10 @@ class MindspaceVcsView(QWidget):
         if code in (VcsStatusCode.RENAMED, VcsStatusCode.COPIED):
             return self._style_manager.get_color(ColorRole.DIFF_HEADER_FOREGROUND)
 
-        # MODIFIED, UNKNOWN, and anything else
         return self._style_manager.get_color(ColorRole.DIFF_CHANGED_FOREGROUND)
 
     def _on_item_clicked(self, item: QListWidgetItem) -> None:
-        """Open a diff tab ephemerally on single click."""
+        """Open an ephemeral diff tab on single click."""
         path = item.data(Qt.ItemDataRole.UserRole)
         if path:
             self.file_opened_in_diff.emit(path, True)
@@ -287,7 +279,4 @@ class MindspaceVcsView(QWidget):
     def _on_language_changed(self) -> None:
         """Update localised strings when the UI language changes."""
         self._header.set_title(self._language_manager.strings().mindspace_vcs)
-        self._no_repo_label.setText(
-            self._language_manager.strings().mindspace_vcs_no_repo
-        )
         self.apply_style()

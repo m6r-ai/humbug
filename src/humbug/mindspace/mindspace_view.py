@@ -141,6 +141,10 @@ class MindspaceView(QWidget):
 
         # Connect VCS view signals
         self._vcs_view.file_opened_in_diff.connect(self.file_opened_in_diff.emit)
+        self._vcs_view.file_clicked.connect(self.file_clicked.emit)
+        self._vcs_view.file_edited.connect(self.file_edited.emit)
+        self._vcs_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
+        self._vcs_view.repo_available.connect(self._on_vcs_repo_available)
 
         # Connect preview view signals - preview view clicks go to preview
         self._preview_view.file_clicked.connect(self.file_clicked.emit)
@@ -160,8 +164,9 @@ class MindspaceView(QWidget):
         # Calculate minimum height needed to show just the header
         conversations_header_height = self._conversations_view.get_header_height()
         conversations_expanded = self._conversations_view.is_expanded()
-        vcs_header_height = self._vcs_view.get_header_height()
-        vcs_expanded = self._vcs_view.is_expanded()
+        vcs_visible = self._vcs_view.isVisible()
+        vcs_header_height = self._vcs_view.get_header_height() if vcs_visible else 0
+        vcs_expanded = self._vcs_view.is_expanded() if vcs_visible else False
         files_header_height = self._files_view.get_header_height()
         files_expanded = self._files_view.is_expanded()
         preview_header_height = self._preview_view.get_header_height()
@@ -178,14 +183,14 @@ class MindspaceView(QWidget):
         else:
             self._conversations_view.setFixedHeight(conversations_header_height)
 
-        if vcs_expanded:
-            self._vcs_view.setMinimumHeight(
-                vcs_header_height + (vcs_header_height * 2 if vcs_expanded else 0)
-            )
-            self._vcs_view.setMaximumHeight(16777215)
-
+        if vcs_visible:
+            if vcs_expanded:
+                self._vcs_view.setMinimumHeight(vcs_header_height * 3)
+                self._vcs_view.setMaximumHeight(16777215)
+            else:
+                self._vcs_view.setFixedHeight(vcs_header_height)
         else:
-            self._vcs_view.setFixedHeight(vcs_header_height)
+            self._vcs_view.setFixedHeight(0)
 
         if files_expanded:
             self._files_view.setMinimumHeight(
@@ -226,6 +231,15 @@ class MindspaceView(QWidget):
         """
         self._update_splitter_sizes()
 
+    def _on_vcs_repo_available(self, _has_repo: bool) -> None:
+        """
+        Handle the VCS view appearing or disappearing as a repo is detected.
+
+        Args:
+            _has_repo: Whether a repository is now present.
+        """
+        self._update_splitter_sizes()
+
     def _on_files_toggled(self, _expanded: bool) -> None:
         """
         Handle files section expand/collapse.
@@ -249,7 +263,8 @@ class MindspaceView(QWidget):
         self._update_minimum_sizes()
 
         conversations_expanded = self._conversations_view.is_expanded()
-        vcs_expanded = self._vcs_view.is_expanded()
+        vcs_visible = self._vcs_view.isVisible()
+        vcs_expanded = self._vcs_view.is_expanded() if vcs_visible else False
         files_expanded = self._files_view.is_expanded()
         preview_expanded = self._preview_view.is_expanded()
 
@@ -264,19 +279,26 @@ class MindspaceView(QWidget):
 
         # Count expanded sections
         expanded_sections = sum([conversations_expanded, vcs_expanded, files_expanded, preview_expanded])
+        visible_collapsed = sum([
+            not conversations_expanded,
+            vcs_visible and not vcs_expanded,
+            not files_expanded,
+            not preview_expanded,
+        ])
 
         if expanded_sections == 0:
             # Give minimal space to all sections, all remaining space to spacer
-            spacer_size = total_height - (4 * header_height)
-            self._splitter.setSizes([header_height, header_height, header_height, header_height, spacer_size])
+            spacer_size = total_height - (visible_collapsed * header_height)
+            vcs_size = header_height if vcs_visible else 0
+            self._splitter.setSizes([header_height, vcs_size, header_height, header_height, spacer_size])
             return
 
         # We have one or more expanded sections - distribute space evenly among them
-        available_space = total_height - ((4 - expanded_sections) * header_height)
+        available_space = total_height - (visible_collapsed * header_height)
         section_space = available_space // expanded_sections
 
         conversations_space = section_space if conversations_expanded else header_height
-        vcs_space = section_space if vcs_expanded else header_height
+        vcs_space = (section_space if vcs_expanded else header_height) if vcs_visible else 0
         files_space = section_space if files_expanded else header_height
         preview_space = section_space if preview_expanded else header_height
 
