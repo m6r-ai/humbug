@@ -78,6 +78,18 @@ class MindspaceVcsPoller(QObject):
         if self._mindspace_path:
             self._poll()
 
+    def has_vcs_changes(self, path: str) -> bool:
+        """
+        Return whether the given path has VCS changes in the last poll.
+
+        Args:
+            path: Absolute path to the file to check.
+
+        Returns:
+            True if the file appears in the current VCS status, False otherwise.
+        """
+        return any(s.path == path for s in self._last_status)
+
     def _poll(self) -> None:
         """Single poll cycle: check repo presence then fetch status if present."""
         if not self._mindspace_path:

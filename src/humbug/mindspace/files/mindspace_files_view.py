@@ -22,6 +22,7 @@ from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVcsPoller
 
 
 class MindspaceFilesView(QWidget):
@@ -43,6 +44,7 @@ class MindspaceFilesView(QWidget):
         self._style_manager = StyleManager()
         self._logger = logging.getLogger("MindspaceFilesView")
         self._mindspace_manager = MindspaceManager()
+        self._vcs_poller = MindspaceVcsPoller()
 
         # Create layout
         layout = QVBoxLayout(self)
@@ -680,8 +682,10 @@ class MindspaceFilesView(QWidget):
                 edit_action.triggered.connect(lambda: self._handle_edit_file(path))
                 preview_view_action = menu.addAction(strings.preview)
                 preview_view_action.triggered.connect(lambda: self._handle_preview_view_file(path))
-                diff_action = menu.addAction(strings.diff)
-                diff_action.triggered.connect(lambda: self._handle_diff_file(path))
+                if self._vcs_poller.has_vcs_changes(path):
+                    diff_action = menu.addAction(strings.diff)
+                    diff_action.triggered.connect(lambda: self._handle_diff_file(path))
+
                 duplicate_action = menu.addAction(strings.duplicate)
                 duplicate_action.triggered.connect(lambda: self._start_duplicate_file(path))
                 rename_action = menu.addAction(strings.rename)
