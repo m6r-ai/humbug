@@ -2,9 +2,9 @@
 
 import logging
 import os
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollBar, QSplitter, QLabel
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollBar, QSplitter, QLabel, QSizePolicy
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QResizeEvent
 
@@ -52,6 +52,7 @@ class DiffWidget(QWidget):
         self._style_manager = StyleManager()
         self._rows: list[DiffRow] = []
         self._syncing = False
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         outer_layout = QVBoxLayout(self)
         outer_layout.setContentsMargins(0, 0, 0, 0)
@@ -98,6 +99,12 @@ class DiffWidget(QWidget):
         self._style_manager.style_changed.connect(self._on_style_changed)
         self._on_style_changed()
 
+        # Find state: flat list of (pane, start, end) tuples across both panes,
+        # ordered by row position so navigation feels natural.
+        self._find_matches: List[Tuple[str, int, int]] = []  # ('left'|'right', start, end)
+        self._find_current: int = -1
+        self._find_text: str = ""
+
     def load_diff(self) -> None:
         """Fetch both file versions and display the full side-by-side diff."""
         result = self._fetch_content()
@@ -128,6 +135,10 @@ class DiffWidget(QWidget):
         self._right_pane.set_syntax(language)
         self._show_panes()
         self.status_updated.emit()
+
+        # Re-run the active search against the new document content, if any.
+        if self._find_text:
+            self._run_find(self._find_text, forward=True, reset=True)
 
     def refresh(self) -> None:
         """Re-run the diff and update the display."""
@@ -286,3 +297,122 @@ class DiffWidget(QWidget):
 
         self._left_pane.apply_style()
         self._right_pane.apply_style()
+
+    # ------------------------------------------------------------------
+    # Find support
+    # ------------------------------------------------------------------
+
+    def find_text(self, text: str, forward: bool = True) -> Tuple[int, int]:
+        """Search for *text* across both panes and navigate to the next match.
+
+        Matches from the left pane and the right pane are merged in document
+        order (by character position) so that navigation follows the visual
+        top-to-bottom flow of the diff.  Both panes are highlighted
+        simultaneously: the active match is bright, all others are dim.
+
+        Args:
+            text: Text to search for.
+            forward: If True move to the next match; if False move to the
+                previous match.
+
+        Returns:
+            Tuple of (current_match_1based, total_matches).  Both values are
+            0 when there are no matches.
+        """
+        if text != self._find_text:
+            # New search term — rebuild the match list from scratch.
+            self._run_find(text, forward=forward, reset=True)
+        else:
+            self._run_find(text, forward=forward, reset=False)
+
+        return self.get_match_status()
+
+    def _run_find(self, text: str, forward: bool, reset: bool) -> None:
+        """Internal helper that (re)builds matches and advances the cursor.
+
+        Args:
+            text: Search string.
+            forward: Direction of navigation.
+            reset: If True, rebuild the match list; if False, only advance.
+        """
+        self._find_text = text
+
+        if reset or not self._find_matches:
+            self._find_current = -1
+            self._find_matches = []
+
+            if text:
+                # Collect matches from the left pane …
+                left_matches = self._left_pane.find_matches(text)
+                for start, end in left_matches:
+                    self._find_matches.append(("left", start, end))
+
+                # … and the right pane, interleaved by block (row) number so
+                # that navigation follows the visual order of the diff.
+                right_matches = self._right_pane.find_matches(text)
+                for start, end in right_matches:
+                    self._find_matches.append(("right", start, end))
+
+                # Sort by the block number of the match start so that left and
+                # right matches on the same row appear together, left first.
+                def _sort_key(item: Tuple[str, int, int]) -> Tuple[int, int]:
+                    pane_id, start, _end = item
+                    pane = self._left_pane if pane_id == "left" else self._right_pane
+                    block = pane.document().findBlock(start)
+                    return (block.blockNumber(), 0 if pane_id == "left" else 1)
+
+                self._find_matches.sort(key=_sort_key)
+
+        if not self._find_matches:
+            self._left_pane.clear_find()
+            self._right_pane.clear_find()
+            return
+
+        # Advance the current match index.
+        total = len(self._find_matches)
+        if self._find_current == -1:
+            self._find_current = 0 if forward else total - 1
+        elif forward:
+            self._find_current = (self._find_current + 1) % total
+        else:
+            self._find_current = (self._find_current - 1) % total
+
+        self._apply_highlights()
+
+        # Scroll the active pane to the current match.
+        pane_id, start, _end = self._find_matches[self._find_current]
+        pane = self._left_pane if pane_id == "left" else self._right_pane
+        pane.scroll_to_match(start)
+
+    def _apply_highlights(self) -> None:
+        """Repaint all match highlights in both panes."""
+        left_matches = [(s, e) for p, s, e in self._find_matches if p == "left"]
+        right_matches = [(s, e) for p, s, e in self._find_matches if p == "right"]
+
+        # Convert global current index to per-pane index.
+        pane_id = self._find_matches[self._find_current][0] if self._find_current != -1 else ""
+        left_current_local = -1
+        right_current_local = -1
+        if pane_id == "left":
+            left_current_local = sum(1 for p, s, e in self._find_matches[:self._find_current] if p == "left")
+        elif pane_id == "right":
+            right_current_local = sum(1 for p, s, e in self._find_matches[:self._find_current] if p == "right")
+
+        self._left_pane.highlight_matches(left_matches, left_current_local)
+        self._right_pane.highlight_matches(right_matches, right_current_local)
+
+    def get_match_status(self) -> Tuple[int, int]:
+        """Return (current_1based, total) for the find widget status label."""
+        total = len(self._find_matches)
+        if total == 0:
+            return 0, 0
+
+        return self._find_current + 1, total
+
+    def clear_find(self) -> None:
+        """Clear all find state and remove highlights from both panes."""
+        self._find_matches = []
+        self._find_current = -1
+        self._find_text = ""
+        self._left_pane.clear_find()
+        self._right_pane.clear_find()

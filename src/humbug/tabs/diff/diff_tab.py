@@ -13,6 +13,7 @@ from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType
 from humbug.style_manager import StyleManager
+from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.diff.diff_widget import DiffWidget
 
 
@@ -38,6 +39,14 @@ class DiffTab(TabBase):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
+
+        # Add find widget at top (initially hidden)
+        self._find_widget = FindWidget()
+        self._find_widget.hide()
+        self._find_widget.closed.connect(self._close_find)
+        self._find_widget.find_next.connect(lambda: self._find_next(True))
+        self._find_widget.find_previous.connect(lambda: self._find_next(False))
+        layout.addWidget(self._find_widget)
 
         self._diff_widget = DiffWidget(path, self)
         self._diff_widget.status_updated.connect(self.update_status)
@@ -222,4 +231,21 @@ class DiffTab(TabBase):
         pass
 
     def show_find(self) -> None:
-        pass
+        """Show the find widget."""
+        self._find_widget.show()
+        self._find_widget.setFocus()
+
+    def _close_find(self) -> None:
+        """Close the find widget and clear search highlights."""
+        self._find_widget.hide()
+        self._diff_widget.clear_find()
+
+    def _find_next(self, forward: bool = True) -> None:
+        """Find the next or previous match and update the status label.
+
+        Args:
+            forward: If True search forward; if False search backward.
+        """
+        text = self._find_widget.get_search_text()
+        current, total = self._diff_widget.find_text(text, forward)
+        self._find_widget.set_match_status(current, total)

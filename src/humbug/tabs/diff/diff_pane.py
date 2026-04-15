@@ -7,8 +7,9 @@ from PySide6.QtWidgets import QPlainTextEdit, QWidget
 from PySide6.QtCore import Qt, QRect
 from PySide6.QtGui import (
     QColor, QPainter, QPaintEvent, QResizeEvent, QTextBlockUserData, QTextBlock,
-    QSyntaxHighlighter, QTextCharFormat
+    QSyntaxHighlighter, QTextCharFormat, QTextCursor, QTextDocument
 )
+from PySide6.QtWidgets import QTextEdit
 
 from syntax import ProgrammingLanguage, ParserState, ParserRegistry, TokenType
 
@@ -336,3 +337,84 @@ class DiffPane(QPlainTextEdit):
 
         if rect.contains(self.viewport().rect()):
             self._update_gutter_width()
+
+    def find_matches(self, text: str) -> list[tuple[int, int]]:
+        """Find all occurrences of *text* in this pane's document.
+
+        Args:
+            text: The search string.  An empty string returns an empty list.
+
+        Returns:
+            List of (start, end) character-position pairs, one per match.
+        """
+        matches: list[tuple[int, int]] = []
+        if not text:
+            return matches
+
+        document = self.document()
+        cursor = QTextCursor(document)
+        while True:
+            cursor = document.find(text, cursor)
+            if cursor.isNull():
+                break
+
+            matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+
+        return matches
+
+    def highlight_matches(
+        self,
+        matches: list[tuple[int, int]],
+        current_index: int,
+    ) -> None:
+        """Apply extra-selection highlighting to the given match positions.
+
+        The match at *current_index* receives the bright highlight colour;
+        all others receive the dim colour.  Pass an empty *matches* list (or
+        *current_index* == -1) to clear all highlights.
+
+        Args:
+            matches: List of (start, end) character-position pairs to highlight.
+            current_index: Index into *matches* of the currently active match,
+                or -1 if none.
+        """
+        if not matches:
+            self.setExtraSelections([])
+            return
+
+        found_format = QTextCharFormat()
+        found_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_FOUND))
+        dim_found_format = QTextCharFormat()
+        dim_found_format.setBackground(self._style_manager.get_color(ColorRole.TEXT_FOUND_DIM))
+
+        selections: list[QTextEdit.ExtraSelection] = []
+        for i, (start, end) in enumerate(matches):
+            cursor = QTextCursor(self.document())
+            cursor.setPosition(start)
+            cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+
+            sel = QTextEdit.ExtraSelection()
+            sel.cursor = cursor  # type: ignore[attr-defined]
+            sel.format = found_format if i == current_index else dim_found_format  # type: ignore[attr-defined]
+            selections.append(sel)
+
+        self.setExtraSelections(selections)
+
+    def clear_find(self) -> None:
+        """Remove all find highlights from this pane."""
+        self.setExtraSelections([])
+
+    def scroll_to_match(self, start: int) -> None:
+        """Scroll the pane so the match at character position *start* is visible.
+
+        The pane's own vertical scrollbar is hidden (the shared scrollbar drives
+        it), so we move the text cursor and call ``ensureCursorVisible`` which
+        updates the scrollbar value and thus both panes together.
+
+        Args:
+            start: Character position of the match to scroll to.
+        """
+        cursor = QTextCursor(self.document())
+        cursor.setPosition(start)
+        self.setTextCursor(cursor)
+        self.ensureCursorVisible()
