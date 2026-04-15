@@ -42,8 +42,8 @@ humbug/
 Main application and GUI components.
 
 **Subdirectories:**
-- `tabs/` - Tab management (conversations, editors, terminals, preview, log)
-- `mindspace/` - Project workspace management
+- `tabs/` - Tab management (conversations, editors, terminals, preview, log, diff)
+- `mindspace/` - Project workspace management (conversations, files, preview, vcs)
 - `settings/` - Application and user settings
 - `user/` - User management
 - `language/` - Localization support
@@ -79,6 +79,9 @@ Handles saving and loading AI conversation history.
 
 ### `src/diff/`
 Unified diff parsing and application with fuzzy matching.
+
+### `src/git/`
+Lightweight, GUI-free tools for git operations.
 
 ### `src/dmarkdown/`
 Advanced markdown parsing to AST.

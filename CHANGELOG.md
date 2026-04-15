@@ -6,6 +6,7 @@ New features:
 
 - Improved performance across the Menai VM.
 - Added a new "diff" tab type that allows you to compare the current version of a file with the last version stored in git.
+- Added a new mindspace view for revision control, allowing you to see which files have been modified vs git `HEAD`.
 - Shift+Home/End now selects text in editor tabs, making things consistent with other shift+movement operations.
 
 Bug fixes:
