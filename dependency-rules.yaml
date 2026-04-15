@@ -25,11 +25,6 @@ modules:
     external_dependencies:
       - "standard_library"
 
-  dast:
-    internal_dependencies: []
-    external_dependencies:
-      - "standard_library"
-
   diff:
     internal_dependencies: []
     external_dependencies:
@@ -37,8 +32,12 @@ modules:
 
   dmarkdown:
     internal_dependencies:
-      - dast
       - syntax
+    external_dependencies:
+      - "standard_library"
+
+  git:
+    internal_dependencies: []
     external_dependencies:
       - "standard_library"
 
@@ -47,10 +46,9 @@ modules:
       - ai
       - ai_conversation_transcript
       - ai_tool
-      - dast
       - diff
       - dmarkdown
-      - metaphor
+      - git
       - syntax
       - terminal
     external_dependencies:
@@ -59,13 +57,6 @@ modules:
       - "qasync"
 
   menai:
-    external_dependencies:
-      - "standard_library"
-
-  metaphor:
-    internal_dependencies:
-      - dast
-      - syntax
     external_dependencies:
       - "standard_library"
 
