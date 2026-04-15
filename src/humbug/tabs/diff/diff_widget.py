@@ -2,14 +2,18 @@
 
 import logging
 import os
+from typing import List, Optional
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollBar, QSplitter, QLabel
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QResizeEvent
 
 from diff import DiffParser, DiffParseError
+from diff.diff_types import DiffHunk
 
-from git import GitCommandError, GitNotFoundError, GitNotRepositoryError, find_repo_root, get_file_diff
+from git import GitCommandError, GitNotFoundError, GitNotRepositoryError, find_repo_root, get_file_at_head, get_file_diff
+
+from syntax import ProgrammingLanguageUtils
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
@@ -24,6 +28,10 @@ class DiffWidget(QWidget):
     The widget owns two DiffPane instances arranged in a QSplitter.  A single
     external QScrollBar drives both panes' vertical position simultaneously.
     Horizontal scrolling is independent per pane.
+
+    Both the HEAD version and the working-tree version of the file are loaded in
+    full so that syntax highlighting can process each pane's document from top to
+    bottom with correct parser-state propagation.
 
     When the file has no differences against HEAD, or when git is unavailable,
     an appropriate message is displayed instead of the panes.
@@ -91,22 +99,33 @@ class DiffWidget(QWidget):
         self._on_style_changed()
 
     def load_diff(self) -> None:
-        """Compute and display the diff for the current file path."""
-        diff_text = self._compute_diff()
-        if diff_text is None:
+        """Fetch both file versions and display the full side-by-side diff."""
+        result = self._fetch_content()
+        if result is None:
             return
+
+        old_lines, new_lines, diff_text = result
 
         if not diff_text.strip():
             self._show_message(self._no_changes_message())
             return
 
-        rows = self._parse_diff(diff_text)
-        if rows is None:
+        hunks = self._parse_diff(diff_text)
+        if hunks is None:
             return
 
-        self._rows = rows
-        self._left_pane.load_rows(rows, use_left=True)
-        self._right_pane.load_rows(rows, use_left=False)
+        builder = DiffViewBuilder()
+        self._rows = builder.build(old_lines, new_lines, hunks)
+
+        # Load rows first so every block has its _BlockData attached before the
+        # highlighter runs.  set_syntax() triggers a full rehighlight, by which
+        # point all blocks carry the metadata the highlighter needs.
+        self._left_pane.load_rows(self._rows, use_left=True)
+        self._right_pane.load_rows(self._rows, use_left=False)
+
+        language = ProgrammingLanguageUtils.from_file_extension(self._path)
+        self._left_pane.set_syntax(language)
+        self._right_pane.set_syntax(language)
         self._show_panes()
         self.status_updated.emit()
 
@@ -132,15 +151,24 @@ class DiffWidget(QWidget):
         super().resizeEvent(event)
         self._update_shared_scrollbar()
 
-    def _compute_diff(self) -> str | None:
-        """Run git to obtain the diff text.
+    def _fetch_content(self) -> Optional[tuple[List[str], List[str], str]]:
+        """Retrieve the HEAD content, working-tree content, and diff text.
 
-        Returns the diff string (possibly empty), or None if an error occurred
-        that has already been surfaced to the user via the message label.
+        Returns a tuple of (old_lines, new_lines, diff_text), or None if an
+        error occurred that has already been surfaced via the message label.
+        Old lines are empty for untracked files (no HEAD version exists).
         """
         try:
             repo_root = find_repo_root(self._path)
-            return get_file_diff(repo_root, self._path)
+            diff_text = get_file_diff(repo_root, self._path)
+
+            head_content = get_file_at_head(repo_root, self._path)
+            old_lines = head_content.splitlines() if head_content is not None else []
+
+            with open(self._path, encoding="utf-8", errors="replace") as f:
+                new_lines = f.read().splitlines()
+
+            return old_lines, new_lines, diff_text
 
         except GitNotFoundError:
             self._show_message("git is not available on this system.")
@@ -160,16 +188,14 @@ class DiffWidget(QWidget):
             self._show_message(f"Could not read file: {e}")
             return None
 
-    def _parse_diff(self, diff_text: str) -> list[DiffRow] | None:
-        """Parse diff text into rows.
+    def _parse_diff(self, diff_text: str) -> Optional[List[DiffHunk]]:
+        """Parse diff text into hunks.
 
-        Returns the row list, or None if parsing failed.
+        Returns the hunk list, or None if parsing failed.
         """
         try:
             parser = DiffParser()
-            hunks = parser.parse(diff_text)
-            builder = DiffViewBuilder()
-            return builder.build(hunks)
+            return parser.parse(diff_text)
 
         except DiffParseError as e:
             self._logger.error("Failed to parse diff for '%s': %s", self._path, e)

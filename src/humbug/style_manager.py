@@ -473,42 +473,22 @@ class StyleManager(QObject):
 
             # Diff view colours
             ColorRole.DIFF_REMOVED_BACKGROUND: {
-                ColorMode.DARK: "#3d1515",
+                ColorMode.DARK: "#2c1414",
                 ColorMode.LIGHT: "#fde8e8"
             },
-            ColorRole.DIFF_REMOVED_FOREGROUND: {
-                ColorMode.DARK: "#f08080",
-                ColorMode.LIGHT: "#c03030"
-            },
             ColorRole.DIFF_ADDED_BACKGROUND: {
-                ColorMode.DARK: "#143214",
+                ColorMode.DARK: "#142014",
                 ColorMode.LIGHT: "#e8fde8"
             },
-            ColorRole.DIFF_ADDED_FOREGROUND: {
-                ColorMode.DARK: "#68b068",
-                ColorMode.LIGHT: "#207020"
-            },
             ColorRole.DIFF_CHANGED_BACKGROUND: {
-                ColorMode.DARK: "#2a2a10",
+                ColorMode.DARK: "#2c2c14",
                 ColorMode.LIGHT: "#fdfde8"
             },
-            ColorRole.DIFF_CHANGED_FOREGROUND: {
-                ColorMode.DARK: "#d8d8d8",
-                ColorMode.LIGHT: "#202020"
-            },
             ColorRole.DIFF_HEADER_BACKGROUND: {
-                ColorMode.DARK: "#1a1a2e",
+                ColorMode.DARK: "#141430",
                 ColorMode.LIGHT: "#e8e8fd"
             },
-            ColorRole.DIFF_HEADER_FOREGROUND: {
-                ColorMode.DARK: "#8080c0",
-                ColorMode.LIGHT: "#4040a0"
-            },
             ColorRole.DIFF_FILLER_BACKGROUND: {
-                ColorMode.DARK: "#141414",
-                ColorMode.LIGHT: "#f0f0f0"
-            },
-            ColorRole.DIFF_FILLER_FOREGROUND: {
                 ColorMode.DARK: "#141414",
                 ColorMode.LIGHT: "#f0f0f0"
             },

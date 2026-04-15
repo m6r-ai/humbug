@@ -1,4 +1,4 @@
-"""Converts parsed diff hunks into side-by-side row descriptors."""
+"""Converts full file content and parsed diff hunks into side-by-side row descriptors."""
 
 from typing import List
 
@@ -8,32 +8,45 @@ from humbug.tabs.diff.diff_row import DiffRow, DiffRowType
 
 
 class DiffViewBuilder:
-    """Transforms a list of DiffHunk objects into a flat list of DiffRow objects.
+    """Transforms two full file line lists and a list of DiffHunk objects into a flat
+    list of DiffRow objects suitable for side-by-side rendering.
 
-    Each DiffRow represents one line in both the left (old) and right (new) pane
-    of the side-by-side view.  The renderer iterates the row list once and draws
-    one line per pane per row, so both panes always advance together and a single
-    shared scrollbar value keeps them in sync.
+    Both the old (HEAD) and new (working tree) line lists are required so that
+    context lines outside hunks can be emitted in full, allowing a syntax
+    highlighter to process each pane's document from top to bottom with correct
+    parser-state propagation.
 
     Row types and their pane content:
 
     - CONTEXT : unchanged line — left and right carry identical text.
     - CHANGED : paired removal/addition — left has old text, right has new text.
-    - REMOVED : line exists only on the left — right_text is empty.
-    - ADDED   : line exists only on the right — left_text is empty.
-    - FILLER  : completely blank on both sides, reserved for future use such as
-                inter-hunk separators.
-    - HEADER  : hunk header (@@ ... @@) shown across the full width.
+    - REMOVED : line exists only on the left — right_text is empty string (blank
+                line in the right pane).
+    - ADDED   : line exists only on the right — left_text is empty string (blank
+                line in the left pane).
+    - FILLER  : blank placeholder on both sides, inserted to pad the shorter side
+                of an unequal changed block so both panes stay vertically aligned.
 
-    REMOVED and ADDED rows already encode a blank on the opposite side, so both
-    panes advance by the same number of rows without needing extra FILLER rows.
+    For a block where there are more removed lines than added lines, the surplus
+    removed lines become REMOVED rows (real text on left, blank on right).  For
+    the opposite case, surplus added lines become ADDED rows (blank on left, real
+    text on right).  No extra FILLER rows are needed in these cases because the
+    blank side of a REMOVED/ADDED row already occupies one document block in the
+    opposite pane.
+
+    FILLER rows are only needed when a changed block has removed lines on one side
+    and added lines on the other and the counts differ — but that is exactly the
+    REMOVED/ADDED case above.  The FILLER type is therefore reserved for future
+    use (e.g. inter-hunk separators) and is not emitted by this builder.
     """
 
-    def build(self, hunks: List[DiffHunk]) -> List[DiffRow]:
+    def build(self, old_lines: List[str], new_lines: List[str], hunks: List[DiffHunk]) -> List[DiffRow]:
         """
-        Build the flat row list for a complete diff.
+        Build the flat row list for a complete side-by-side diff.
 
         Args:
+            old_lines: All lines of the old (HEAD) file, without trailing newlines.
+            new_lines: All lines of the new (working tree) file, without trailing newlines.
             hunks: Parsed hunks from DiffParser, in file order.
 
         Returns:
@@ -41,69 +54,71 @@ class DiffViewBuilder:
         """
         rows: List[DiffRow] = []
 
+        # Cursors into each line list (0-indexed internally; hunk numbers are 1-indexed).
+        old_pos = 0
+        new_pos = 0
+
         for hunk in hunks:
-            self._emit_header(rows, hunk)
-            self._emit_hunk_body(rows, hunk)
+            # Emit context rows for lines before this hunk.
+            old_context_end = hunk.old_start - 1
+            new_context_end = hunk.new_start - 1
 
-        return rows
-
-    def _emit_header(self, rows: List[DiffRow], hunk: DiffHunk) -> None:
-        """Emit a HEADER row for the hunk's @@ line."""
-        header_text = (
-            f"@@ -{hunk.old_start},{hunk.old_count} "
-            f"+{hunk.new_start},{hunk.new_count} @@"
-        )
-        rows.append(DiffRow(
-            row_type=DiffRowType.HEADER,
-            left_text=header_text,
-            right_text="",
-            left_line_no=None,
-            right_line_no=None,
-        ))
-
-    def _emit_hunk_body(self, rows: List[DiffRow], hunk: DiffHunk) -> None:
-        """Emit all content rows for a single hunk.
-
-        Walks the hunk lines, accumulating runs of '-' and '+' lines.  Each
-        time a context line is encountered (or the hunk ends) the accumulated
-        run is flushed into paired rows.
-        """
-        old_line = hunk.old_start
-        new_line = hunk.new_start
-
-        removed_run: List[str] = []
-        added_run: List[str] = []
-
-        run_old_start = old_line
-        run_new_start = new_line
-
-        for diff_line in hunk.lines:
-            if diff_line.type == ' ':
-                self._flush_run(rows, removed_run, added_run, run_old_start, run_new_start)
-                old_line += len(removed_run)
-                new_line += len(added_run)
-                removed_run = []
-                added_run = []
-
+            while old_pos < old_context_end and new_pos < new_context_end:
                 rows.append(DiffRow(
                     row_type=DiffRowType.CONTEXT,
-                    left_text=diff_line.content,
-                    right_text=diff_line.content,
-                    left_line_no=old_line,
-                    right_line_no=new_line,
+                    left_text=old_lines[old_pos],
+                    right_text=new_lines[new_pos],
+                    left_line_no=old_pos + 1,
+                    right_line_no=new_pos + 1,
                 ))
-                old_line += 1
-                new_line += 1
-                run_old_start = old_line
-                run_new_start = new_line
+                old_pos += 1
+                new_pos += 1
 
-            elif diff_line.type == '-':
-                removed_run.append(diff_line.content)
+            # Collect removed and added runs within this hunk.
+            removed: List[str] = []
+            added: List[str] = []
 
-            elif diff_line.type == '+':
-                added_run.append(diff_line.content)
+            for diff_line in hunk.lines:
+                if diff_line.type == ' ':
+                    self._flush_run(rows, removed, added, old_pos, new_pos)
+                    old_pos += len(removed)
+                    new_pos += len(added)
+                    removed = []
+                    added = []
 
-        self._flush_run(rows, removed_run, added_run, run_old_start, run_new_start)
+                    rows.append(DiffRow(
+                        row_type=DiffRowType.CONTEXT,
+                        left_text=old_lines[old_pos],
+                        right_text=new_lines[new_pos],
+                        left_line_no=old_pos + 1,
+                        right_line_no=new_pos + 1,
+                    ))
+                    old_pos += 1
+                    new_pos += 1
+
+                elif diff_line.type == '-':
+                    removed.append(diff_line.content)
+
+                elif diff_line.type == '+':
+                    added.append(diff_line.content)
+
+            self._flush_run(rows, removed, added, old_pos, new_pos)
+            old_pos += len(removed)
+            new_pos += len(added)
+
+        # Emit any remaining context lines after the last hunk.
+        while old_pos < len(old_lines) and new_pos < len(new_lines):
+            rows.append(DiffRow(
+                row_type=DiffRowType.CONTEXT,
+                left_text=old_lines[old_pos],
+                right_text=new_lines[new_pos],
+                left_line_no=old_pos + 1,
+                right_line_no=new_pos + 1,
+            ))
+            old_pos += 1
+            new_pos += 1
+
+        return rows
 
     def _flush_run(
         self,
@@ -117,15 +132,16 @@ class DiffViewBuilder:
 
         Lines are paired 1-to-1 as CHANGED rows for as long as both sides have
         content.  Surplus lines on the longer side become REMOVED or ADDED rows,
-        which carry an empty string on the opposite side, keeping both panes at
-        the same row count for this run.
+        which carry an empty string on the opposite side.  This keeps both panes
+        at the same document block count for the run without needing separate
+        FILLER rows.
 
         Args:
             rows: Row list to append to.
             removed: Removed-line contents for this run.
             added: Added-line contents for this run.
-            old_start: 1-indexed line number of the first removed line.
-            new_start: 1-indexed line number of the first added line.
+            old_start: 0-indexed position of the first removed line.
+            new_start: 0-indexed position of the first added line.
         """
         if not removed and not added:
             return
@@ -137,8 +153,8 @@ class DiffViewBuilder:
                 row_type=DiffRowType.CHANGED,
                 left_text=removed[i],
                 right_text=added[i],
-                left_line_no=old_start + i,
-                right_line_no=new_start + i,
+                left_line_no=old_start + i + 1,
+                right_line_no=new_start + i + 1,
             ))
 
         for i in range(paired, len(removed)):
@@ -146,7 +162,7 @@ class DiffViewBuilder:
                 row_type=DiffRowType.REMOVED,
                 left_text=removed[i],
                 right_text="",
-                left_line_no=old_start + i,
+                left_line_no=old_start + i + 1,
                 right_line_no=None,
             ))
 
@@ -156,5 +172,5 @@ class DiffViewBuilder:
                 left_text="",
                 right_text=added[i],
                 left_line_no=None,
-                right_line_no=new_start + i,
+                right_line_no=new_start + i + 1,
             ))

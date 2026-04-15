@@ -2,7 +2,7 @@
 
 import os
 import subprocess
-from typing import List
+from typing import List, Optional
 
 from git.git_error import GitCommandError, GitNotFoundError, GitNotRepositoryError
 
@@ -197,3 +197,44 @@ def _untracked_file_diff(file_path: str) -> str:
     body = "".join(f"+{line}" if line.endswith("\n") else f"+{line}\n" for line in lines)
 
     return header + body
+
+
+def get_file_at_head(repo_root: str, file_path: str) -> Optional[str]:
+    """
+    Return the content of a file at HEAD, or None if the file is not tracked.
+
+    Uses ``git show HEAD:<relative-path>`` to retrieve the committed version of
+    the file.  Returns None for untracked files so callers can treat them as
+    having no prior content.
+
+    Args:
+        repo_root: Absolute path to the repository root.
+        file_path: Absolute path to the file.
+
+    Returns:
+        File content as a string, or None if the file is not tracked by git.
+
+    Raises:
+        GitNotFoundError: If git is not installed or not on PATH.
+        GitNotRepositoryError: If repo_root is not a git repository.
+        GitCommandError: If an unexpected git error occurs.
+    """
+    if not is_file_tracked(repo_root, file_path):
+        return None
+
+    rel_path = os.path.relpath(file_path, repo_root)
+    # Use forward slashes — git always expects POSIX-style paths in object refs.
+    rel_path_posix = rel_path.replace(os.sep, "/")
+
+    try:
+        return _run_git(
+            ["show", f"HEAD:{rel_path_posix}"],
+            cwd=repo_root
+        )
+
+    except GitCommandError as e:
+        # Return code 128 usually means the ref doesn't exist (e.g. initial commit
+        # with no HEAD yet).  Treat that as "no prior content".
+        if e.returncode == 128:
+            return None
+        raise
