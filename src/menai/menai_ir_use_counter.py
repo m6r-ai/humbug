@@ -6,8 +6,6 @@ variable, producing an IRUseCounts annotation that downstream passes
 (MenaiIRCopyPropagator, MenaiIRInlineOnce, MenaiIROptimizer) can consume.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple
 
