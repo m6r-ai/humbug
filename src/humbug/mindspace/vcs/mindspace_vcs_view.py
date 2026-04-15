@@ -2,9 +2,11 @@
 
 import os
 
-from PySide6.QtCore import Qt, Signal, QPoint
-from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QListWidget, QListWidgetItem, QMenu, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, QMimeData, QPoint, Signal
+from PySide6.QtGui import QColor, QDrag, QMouseEvent
+from PySide6.QtWidgets import (
+    QApplication, QListWidget, QListWidgetItem, QMenu, QVBoxLayout, QWidget
+)
 
 from git import VcsFileStatus, VcsStatusCode
 
@@ -25,6 +27,58 @@ _STATUS_LABELS: dict[VcsStatusCode, str] = {
     VcsStatusCode.UNTRACKED: "?",
     VcsStatusCode.UNKNOWN:   "!",
 }
+
+
+class _VcsList(QListWidget):
+    """QListWidget subclass that initiates Humbug path drags."""
+
+    def __init__(self, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._drag_start_pos: QPoint | None = None
+        self.setMouseTracking(True)
+        self.setToolTipDuration(10000)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._drag_start_pos = event.pos()
+
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if not (event.buttons() & Qt.MouseButton.LeftButton):
+            self._drag_start_pos = None
+            super().mouseMoveEvent(event)
+            return
+
+        if self._drag_start_pos is None:
+            super().mouseMoveEvent(event)
+            return
+
+        if (event.pos() - self._drag_start_pos).manhattanLength() < QApplication.startDragDistance():
+            super().mouseMoveEvent(event)
+            return
+
+        item = self.itemAt(self._drag_start_pos)
+        if item is None:
+            super().mouseMoveEvent(event)
+            return
+
+        path = item.data(Qt.ItemDataRole.UserRole)
+        if not path:
+            super().mouseMoveEvent(event)
+            return
+
+        mime_data = QMimeData()
+        mime_data.setData("application/x-humbug-path", path.encode())
+        mime_data.setData("application/x-humbug-source", b"vcs")
+
+        drag = QDrag(self)
+        drag.setMimeData(mime_data)
+        drag.setPixmap(self.viewport().grab(self.visualItemRect(item)))
+        drag.setHotSpot(event.pos() - self._drag_start_pos)
+        drag.exec_(Qt.DropAction.CopyAction)
+
+        self._drag_start_pos = None
 
 
 class MindspaceVcsView(QWidget):
@@ -60,7 +114,7 @@ class MindspaceVcsView(QWidget):
         self._header.toggled.connect(self._on_header_toggled)
         layout.addWidget(self._header)
 
-        self._list_widget = QListWidget()
+        self._list_widget = _VcsList()
         self._list_widget.setObjectName("_list_widget")
         self._list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._list_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)

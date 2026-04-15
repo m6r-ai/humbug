@@ -580,6 +580,17 @@ class ColumnManager(QWidget):
         Returns:
             Created tab or None if failed
         """
+        if source == MindspaceViewType.VCS:
+            if os.path.isdir(path):
+                return None
+
+            diff_tab = self.open_diff(path, ephemeral)
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"User opened diff: '{path}'\ntab ID: {diff_tab.tab_id()}"
+            )
+            return diff_tab
+
         if source == MindspaceViewType.CONVERSATIONS:
             if os.path.isdir(path):
                 return None
@@ -636,6 +647,7 @@ class ColumnManager(QWidget):
         mapping = {
             "conversations": MindspaceViewType.CONVERSATIONS,
             "files": MindspaceViewType.FILES,
+            "vcs": MindspaceViewType.VCS,
             "preview": MindspaceViewType.PREVIEW
         }
 
