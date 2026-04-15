@@ -1,6 +1,7 @@
 """Revision control status view for the mindspace sidebar."""
 
 import os
+import logging
 
 from PySide6.QtCore import Qt, QMimeData, QPoint, Signal
 from PySide6.QtGui import QColor, QDrag, QMouseEvent
@@ -13,6 +14,9 @@ from git import VcsFileStatus, VcsStatusCode
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHeader
+from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
+from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
+from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVcsPoller
 from humbug.mindspace.vcs.mindspace_vcs_delegate import MindspaceVcsDelegate
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
@@ -88,6 +92,7 @@ class MindspaceVcsView(QWidget):
     file_clicked = Signal(MindspaceViewType, str, bool)   # view type, path, ephemeral
     file_edited = Signal(str, bool)                        # path, ephemeral
     file_opened_in_preview = Signal(str, bool)             # path, ephemeral
+    file_deleted = Signal(str)                             # path
     file_opened_in_diff = Signal(str, bool)                # path, ephemeral
     toggled = Signal(bool)                                 # expanded state
     repo_available = Signal(bool)                          # True = repo found, False = hidden
@@ -97,6 +102,8 @@ class MindspaceVcsView(QWidget):
         super().__init__(parent)
 
         self._style_manager = StyleManager()
+        self._logger = logging.getLogger("MindspaceVcsView")
+        self._mindspace_manager = MindspaceManager()
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
@@ -263,7 +270,50 @@ class MindspaceVcsView(QWidget):
             preview_action = menu.addAction(strings.preview)
             preview_action.triggered.connect(lambda: self.file_opened_in_preview.emit(path, False))
 
+            delete_action = menu.addAction(strings.delete)
+            delete_action.triggered.connect(lambda: self._handle_delete_file(path))
+
         menu.exec_(self._list_widget.viewport().mapToGlobal(position))
+
+    def _handle_delete_file(self, path: str) -> None:
+        """Handle request to delete a file.
+
+        Args:
+            path: Path to the file to delete
+        """
+        strings = self._language_manager.strings()
+        result = MessageBox.show_message(
+            self,
+            MessageBoxType.WARNING,
+            strings.confirm_delete_title,
+            strings.confirm_delete_item_message.format(os.path.basename(path)) + "\n\n" + strings.delete_warning_detail,
+            [MessageBoxButton.YES, MessageBoxButton.NO],
+            True
+        )
+
+        if result != MessageBoxButton.YES:
+            return
+
+        try:
+            self.file_deleted.emit(path)
+            os.remove(path)
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"User deleted file '{path}'"
+            )
+
+        except FileNotFoundError:
+            pass
+
+        except OSError as e:
+            self._logger.error("Failed to delete file '%s': %s", path, str(e))
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.file_error_title,
+                strings.error_deleting_file.format(str(e)),
+                [MessageBoxButton.OK]
+            )
 
     def _display_name(self, entry: VcsFileStatus) -> str:
         """

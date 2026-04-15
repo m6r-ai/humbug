@@ -142,6 +142,7 @@ class MindspaceView(QWidget):
         # Connect VCS view signals
         self._vcs_view.file_opened_in_diff.connect(self.file_opened_in_diff.emit)
         self._vcs_view.file_clicked.connect(self.file_clicked.emit)
+        self._vcs_view.file_deleted.connect(self.file_deleted.emit)
         self._vcs_view.file_edited.connect(self.file_edited.emit)
         self._vcs_view.file_opened_in_preview.connect(self.file_opened_in_preview.emit)
         self._vcs_view.repo_available.connect(self._on_vcs_repo_available)
