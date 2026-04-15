@@ -14,6 +14,7 @@ from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
 from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHeader
 from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVcsPoller
+from humbug.mindspace.vcs.mindspace_vcs_delegate import MindspaceVcsDelegate
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.style_manager import StyleManager
 
@@ -121,6 +122,7 @@ class MindspaceVcsView(QWidget):
         self._list_widget.customContextMenuRequested.connect(self._show_context_menu)
         self._list_widget.itemClicked.connect(self._on_item_clicked)
         self._list_widget.itemActivated.connect(self._on_item_activated)
+        self._list_widget.setItemDelegate(MindspaceVcsDelegate(self._list_widget))
         layout.addWidget(self._list_widget)
 
         self._poller = MindspaceVcsPoller()
@@ -168,19 +170,24 @@ class MindspaceVcsView(QWidget):
     def _apply_stylesheet(self) -> None:
         """Build and apply the widget stylesheet."""
         bg = self._style_manager.get_color_str(ColorRole.MINDSPACE_BACKGROUND)
-        fg = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
         selected = self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)
         hover = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)
+
+        if self.layoutDirection() == Qt.LayoutDirection.LeftToRight:
+            list_padding = "2px 0 0 5px"
+        else:
+            list_padding = "2px 5px 0 0"
 
         self.setStyleSheet(f"""
             QListWidget#_list_widget {{
                 background-color: {bg};
                 border: none;
                 outline: none;
+                padding: {list_padding};
             }}
             QListWidget#_list_widget::item {{
-                color: {fg};
-                padding: 2px 4px;
+                padding: 2px 0 2px 0;
+                margin: 0px;
             }}
             QListWidget#_list_widget::item:selected {{
                 background-color: {selected};
@@ -308,15 +315,15 @@ class MindspaceVcsView(QWidget):
             QColor for the status entry foreground.
         """
         if code in (VcsStatusCode.ADDED, VcsStatusCode.UNTRACKED):
-            return self._style_manager.get_color(ColorRole.DIFF_ADDED_FOREGROUND)
+            return self._style_manager.get_color(ColorRole.VCS_ADDED)
 
         if code == VcsStatusCode.DELETED:
-            return self._style_manager.get_color(ColorRole.DIFF_REMOVED_FOREGROUND)
+            return self._style_manager.get_color(ColorRole.VCS_DELETED)
 
         if code in (VcsStatusCode.RENAMED, VcsStatusCode.COPIED):
-            return self._style_manager.get_color(ColorRole.DIFF_HEADER_FOREGROUND)
+            return self._style_manager.get_color(ColorRole.VCS_RENAMED)
 
-        return self._style_manager.get_color(ColorRole.DIFF_CHANGED_FOREGROUND)
+        return self._style_manager.get_color(ColorRole.VCS_MODIFIED)
 
     def _on_item_clicked(self, item: QListWidgetItem) -> None:
         """Open an ephemeral diff tab on single click."""

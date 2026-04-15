@@ -513,6 +513,24 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#f0f0f0"
             },
 
+            # VCS status colours
+            ColorRole.VCS_MODIFIED: {
+                ColorMode.DARK: "#f0c040",
+                ColorMode.LIGHT: "#c0a020"
+            },
+            ColorRole.VCS_ADDED: {
+                ColorMode.DARK: "#68b068",
+                ColorMode.LIGHT: "#207020"
+            },
+            ColorRole.VCS_DELETED: {
+                ColorMode.DARK: "#f08080",
+                ColorMode.LIGHT: "#c03030"
+            },
+            ColorRole.VCS_RENAMED: {
+                ColorMode.DARK: "#8080c0",
+                ColorMode.LIGHT: "#4040a0"
+            },
+
             # Syntax highlighting
             ColorRole.SYNTAX_ERROR: {
                 ColorMode.DARK: "#ff0000",

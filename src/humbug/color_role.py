@@ -157,6 +157,12 @@ class ColorRole(Enum):
     DIFF_FILLER_BACKGROUND = auto()     # Background for filler (blank alignment) lines
     DIFF_FILLER_FOREGROUND = auto()     # Foreground for filler lines (unused but consistent)
 
+    # VCS status colours
+    VCS_MODIFIED = auto()               # Modified file badge
+    VCS_ADDED = auto()                  # Added / untracked file badge
+    VCS_DELETED = auto()                # Deleted file badge
+    VCS_RENAMED = auto()                # Renamed / copied file badge
+
     # Syntax highlighting
     SYNTAX_ERROR = auto()               # Red
     SYNTAX_01 = auto()                  # Cyan
