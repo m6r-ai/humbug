@@ -1066,17 +1066,14 @@ class ShellWidget(QWidget):
         # Get position relative to the message widget
         pos_in_message = widget.select_and_scroll_to_position(position)
 
-        # Map position from message widget to the scroll area's coordinate system
-        # This is safe because we know the relationship between these widgets
-        pos_in_scroll_area = widget.mapTo(self._scroll_area.widget(), pos_in_message)
-
-        # Ensure the point is visible in the scroll area
-        self._scroll_area.ensureVisible(
-            pos_in_scroll_area.x(),  # x
-            pos_in_scroll_area.y(),  # y
-            10,  # xmargin
-            50   # ymargin - provide some context around the match
-        )
+        # Map the match position to the messages container coordinate system and
+        # smooth-scroll so the match sits roughly a quarter of the way down the viewport
+        pos_in_container = widget.mapTo(self._messages_container, pos_in_message)
+        viewport_height = self._scroll_area.viewport().height()
+        target = pos_in_container.y() - viewport_height // 4
+        scrollbar = self._scroll_area.verticalScrollBar()
+        target = max(scrollbar.minimum(), min(scrollbar.maximum(), target))
+        self._start_smooth_scroll(target)
 
     def _scroll_to_current_match(self) -> None:
         """Request scroll to ensure the current match is visible."""

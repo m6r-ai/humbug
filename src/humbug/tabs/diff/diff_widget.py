@@ -5,7 +5,7 @@ import os
 from typing import List, Optional, Tuple
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollBar, QSplitter, QLabel, QSizePolicy
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QResizeEvent
 
 from diff import DiffParser, DiffParseError
@@ -23,7 +23,8 @@ from humbug.tabs.diff.diff_view_builder import DiffViewBuilder
 
 
 class DiffWidget(QWidget):
-    """Widget displaying a side-by-side diff between the working tree and HEAD.
+    """
+    Widget displaying a side-by-side diff between the working tree and HEAD.
 
     The widget owns two DiffPane instances arranged in a QSplitter.  A single
     external QScrollBar drives both panes' vertical position simultaneously.
@@ -104,6 +105,16 @@ class DiffWidget(QWidget):
         self._find_matches: List[Tuple[str, int, int]] = []  # ('left'|'right', start, end)
         self._find_current: int = -1
         self._find_text: str = ""
+
+        # Smooth scrolling
+        self._smooth_scroll_timer = QTimer(self)
+        self._smooth_scroll_timer.setInterval(16)  # ~60fps
+        self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
+        self._smooth_scroll_target: int = 0
+        self._smooth_scroll_start: int = 0
+        self._smooth_scroll_distance: int = 0
+        self._smooth_scroll_duration: int = 500  # ms
+        self._smooth_scroll_time: int = 0
 
     def load_diff(self) -> None:
         """Fetch both file versions and display the full side-by-side diff."""
@@ -298,10 +309,6 @@ class DiffWidget(QWidget):
         self._left_pane.apply_style()
         self._right_pane.apply_style()
 
-    # ------------------------------------------------------------------
-    # Find support
-    # ------------------------------------------------------------------
-
     def find_text(self, text: str, forward: bool = True) -> Tuple[int, int]:
         """Search for *text* across both panes and navigate to the next match.
 
@@ -382,7 +389,7 @@ class DiffWidget(QWidget):
         # Scroll the active pane to the current match.
         pane_id, start, _end = self._find_matches[self._find_current]
         pane = self._left_pane if pane_id == "left" else self._right_pane
-        pane.scroll_to_match(start)
+        self._start_smooth_scroll(pane.target_scroll_for_match(start))
 
     def _apply_highlights(self) -> None:
         """Repaint all match highlights in both panes."""
@@ -400,6 +407,37 @@ class DiffWidget(QWidget):
 
         self._left_pane.highlight_matches(left_matches, left_current_local)
         self._right_pane.highlight_matches(right_matches, right_current_local)
+
+    def get_match_status(self) -> Tuple[int, int]:
+        """Return (current_1based, total) for the find widget status label."""
+
+    def _start_smooth_scroll(self, target_value: int) -> None:
+        """
+        Start smooth scrolling animation to target value.
+
+        Args:
+            target_value: Target scrollbar position
+        """
+        if self._smooth_scroll_timer.isActive():
+            self._smooth_scroll_timer.stop()
+
+        self._smooth_scroll_start = self._scrollbar.value()
+        self._smooth_scroll_target = max(
+            self._scrollbar.minimum(), min(self._scrollbar.maximum(), target_value)
+        )
+        self._smooth_scroll_distance = self._smooth_scroll_target - self._smooth_scroll_start
+        self._smooth_scroll_time = 0
+        self._smooth_scroll_timer.start()
+
+    def _update_smooth_scroll(self) -> None:
+        """Update the smooth scrolling animation."""
+        self._smooth_scroll_time += self._smooth_scroll_timer.interval()
+        progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
+        t = 1 - (1 - progress) ** 3
+        new_position = self._smooth_scroll_start + int(self._smooth_scroll_distance * t)
+        self._scrollbar.setValue(new_position)
+        if progress >= 1.0:
+            self._smooth_scroll_timer.stop()
 
     def get_match_status(self) -> Tuple[int, int]:
         """Return (current_1based, total) for the find widget status label."""

@@ -89,6 +89,16 @@ class EditorWidget(QPlainTextEdit):
         self._current_match = -1
         self._last_search = ""
 
+        # Smooth scrolling
+        self._smooth_scroll_timer = QTimer(self)
+        self._smooth_scroll_timer.setInterval(16)  # ~60fps
+        self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
+        self._smooth_scroll_target: int = 0
+        self._smooth_scroll_start: int = 0
+        self._smooth_scroll_distance: int = 0
+        self._smooth_scroll_duration: int = 500  # ms
+        self._smooth_scroll_time: int = 0
+
         # Syntax highlighting
         self._syntax = ProgrammingLanguage.TEXT
         self._highlighter = CodeBlockHighlighter(self.document())
@@ -592,7 +602,7 @@ class EditorWidget(QPlainTextEdit):
         )
 
         self.setTextCursor(cursor)
-        self.centerCursor()
+        self._start_smooth_scroll_to_cursor(cursor)
 
     def _get_cursor_position(self) -> Dict[str, int]:
         """
@@ -1199,11 +1209,42 @@ class EditorWidget(QPlainTextEdit):
             cursor = QTextCursor(self.document())
             cursor.setPosition(self._matches[match_index][0])
             self.setTextCursor(cursor)
-            self.centerCursor()
+            self._start_smooth_scroll_to_cursor(cursor)
 
     def _clear_highlights(self) -> None:
         """Clear all search highlights."""
         self.setExtraSelections([])
+
+    def _start_smooth_scroll_to_cursor(self, cursor: QTextCursor) -> None:
+        """
+        Start a smooth scroll to centre the given cursor position in the viewport.
+
+        Args:
+            cursor: The cursor whose block should be centred in the viewport
+        """
+        vbar = self.verticalScrollBar()
+        block_number = cursor.block().blockNumber()
+        visible_lines = self.viewport().height() // max(1, self.fontMetrics().lineSpacing())
+        target = max(vbar.minimum(), min(vbar.maximum(), block_number - visible_lines // 2))
+
+        if self._smooth_scroll_timer.isActive():
+            self._smooth_scroll_timer.stop()
+
+        self._smooth_scroll_start = vbar.value()
+        self._smooth_scroll_target = target
+        self._smooth_scroll_distance = target - self._smooth_scroll_start
+        self._smooth_scroll_time = 0
+        self._smooth_scroll_timer.start()
+
+    def _update_smooth_scroll(self) -> None:
+        """Update the smooth scrolling animation."""
+        self._smooth_scroll_time += self._smooth_scroll_timer.interval()
+        progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
+        t = 1 - (1 - progress) ** 3
+        new_position = self._smooth_scroll_start + int(self._smooth_scroll_distance * t)
+        self.verticalScrollBar().setValue(new_position)
+        if progress >= 1.0:
+            self._smooth_scroll_timer.stop()
 
     def get_match_status(self) -> Tuple[int, int]:
         """
@@ -1401,7 +1442,7 @@ class EditorWidget(QPlainTextEdit):
         )
 
         self.setTextCursor(cursor)
-        self.centerCursor()
+        self._start_smooth_scroll_to_cursor(cursor)
 
     def find_all_occurrences(self, search_text: str, case_sensitive: bool = False) -> List[Dict[str, Any]]:
         """
@@ -1544,7 +1585,7 @@ class EditorWidget(QPlainTextEdit):
         if result.success:
             # Set the cursor back to the editor to reflect the new position
             self.setTextCursor(cursor)
-            self.centerCursor()
+            self._start_smooth_scroll_to_cursor(cursor)
 
             self._set_modified(True)
 

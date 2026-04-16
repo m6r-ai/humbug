@@ -404,17 +404,22 @@ class DiffPane(QPlainTextEdit):
         """Remove all find highlights from this pane."""
         self.setExtraSelections([])
 
-    def scroll_to_match(self, start: int) -> None:
-        """Scroll the pane so the match at character position *start* is visible.
+    def target_scroll_for_match(self, start: int) -> int:
+        """Return the scrollbar value that would centre the match at *start* in the viewport.
 
         The pane's own vertical scrollbar is hidden (the shared scrollbar drives
-        it), so we move the text cursor and call ``ensureCursorVisible`` which
-        updates the scrollbar value and thus both panes together.
+        it), so we compute the target value without actually scrolling — the
+        caller (DiffWidget) will animate the shared scrollbar to that value.
 
         Args:
             start: Character position of the match to scroll to.
+
+        Returns:
+            Target vertical scrollbar value to centre the match.
         """
         cursor = QTextCursor(self.document())
         cursor.setPosition(start)
-        self.setTextCursor(cursor)
-        self.ensureCursorVisible()
+        block_number = cursor.block().blockNumber()
+        vbar = self.verticalScrollBar()
+        visible_lines = self.viewport().height() // max(1, self.fontMetrics().lineSpacing())
+        return max(vbar.minimum(), min(vbar.maximum(), block_number - visible_lines // 2))

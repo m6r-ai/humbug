@@ -8,6 +8,7 @@ New features:
 - Added a new "diff" tab type that allows you to compare the current version of a file with the last version stored in git.
 - Added a new mindspace view for revision control, allowing you to see which files have been modified vs git `HEAD`.
 - Shift+Home/End now selects text in editor tabs, making things consistent with other shift+movement operations.
+- Switched find operations to use smooth scrolling in all tab types.
 
 Bug fixes:
 
