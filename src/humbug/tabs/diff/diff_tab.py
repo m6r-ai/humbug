@@ -8,6 +8,7 @@ from PySide6.QtWidgets import QVBoxLayout, QWidget
 from git import GitNotFoundError, GitNotRepositoryError, find_repo_root
 
 from humbug.language.language_manager import LanguageManager
+from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVcsPoller
 from humbug.status_message import StatusMessage
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
@@ -56,6 +57,9 @@ class DiffTab(TabBase):
             self._diff_widget.load_diff()
             self._start_file_watching(path)
 
+        self._vcs_poller = MindspaceVcsPoller()
+        self._vcs_poller.status_changed.connect(self._on_vcs_status_changed)
+
         self.update_status()
 
     def set_active(self, widget: QWidget, active: bool) -> None:
@@ -81,6 +85,20 @@ class DiffTab(TabBase):
             changed_path: Path of the file that changed.
         """
         super()._handle_file_changed(changed_path)
+        self._diff_widget.refresh()
+        self.set_updated(True)
+
+    def _on_vcs_status_changed(self, _status: list) -> None:
+        """Refresh the diff when the VCS status of the repository changes.
+
+        A commit advances HEAD without touching the working-tree file, so the
+        file watcher never fires.  Subscribing to the VCS poller ensures we
+        re-run the diff (and show the 'no differences' message) after a commit.
+
+        Args:
+            _status: The new list of VcsFileStatus entries (unused; we always
+                refresh so the widget can re-evaluate the diff from scratch).
+        """
         self._diff_widget.refresh()
         self.set_updated(True)
 
@@ -181,6 +199,7 @@ class DiffTab(TabBase):
     def close_tab(self) -> None:
         """Stop file watching when the tab is closed."""
         self.stop_file_watching()
+        self._vcs_poller.status_changed.disconnect(self._on_vcs_status_changed)
 
     def can_save(self) -> bool:
         return False
