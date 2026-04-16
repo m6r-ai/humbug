@@ -4,9 +4,9 @@ import logging
 from typing import Dict, Any
 
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QWidget
+    QApplication, QDialog, QVBoxLayout, QWidget
 )
-from PySide6.QtCore import Signal
+from PySide6.QtCore import QObject, Signal
 
 from ai import AIConversation, AIConversationHistory, AIConversationSettings
 
@@ -86,6 +86,15 @@ class ConversationTab(TabBase):
             widget: The widget that triggered the activation change
             active: True if the tab is now active, False otherwise
         """
+        if active and not self._find_widget.isHidden():
+            focus_widget = QApplication.focusWidget()
+            current: QObject | None = focus_widget
+            while current is not None:
+                if current is self._find_widget:
+                    return
+
+                current = current.parent()
+
         self._conversation_widget.set_active(widget, active)
         if active:
             self.activated.emit()

@@ -14,6 +14,7 @@ Bug fixes:
 - Resolved a problem with the preferred width calculations for tabs.  This could make terminals use a horizontal scroll bar
   when they didn't need to.
 - Resolved a problem where tabs that were moved between columns did not result in files being unwatched.
+- Fixed broken find operations in conversation, Humbug shell, and mindspace log tabs.
 
 ## v42 (2026-04-10)
 
