@@ -15,6 +15,7 @@ from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_message import MindspaceMessage
 from humbug.style_manager import StyleManager
 from humbug.tabs.log.log_message import LogMessage
+from humbug.tabs.smooth_scroll import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 
 
 class LogWidget(QWidget):
@@ -105,12 +106,12 @@ class LogWidget(QWidget):
 
         # Timer for smooth animated scrolling
         self._smooth_scroll_timer = QTimer(self)
-        self._smooth_scroll_timer.setInterval(16)  # ~60fps
+        self._smooth_scroll_timer.setInterval(SMOOTH_SCROLL_INTERVAL_MS)
         self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
         self._smooth_scroll_target: int = 0
         self._smooth_scroll_start: int = 0
         self._smooth_scroll_distance: int = 0
-        self._smooth_scroll_duration: int = 500  # ms
+        self._smooth_scroll_duration: int = SMOOTH_SCROLL_DURATION_MS
         self._smooth_scroll_time: int = 0
 
         # Setup context menu

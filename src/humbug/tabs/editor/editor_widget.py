@@ -23,6 +23,7 @@ from humbug.style_manager import StyleManager
 from humbug.tabs.code_block_highlighter import CodeBlockHighlighter
 from humbug.tabs.editor.editor_diff_applier import EditorDiffApplier
 from humbug.tabs.line_number_area import LineNumberArea
+from humbug.tabs.smooth_scroll import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 
 
 class EditorWidget(QPlainTextEdit):
@@ -91,12 +92,12 @@ class EditorWidget(QPlainTextEdit):
 
         # Smooth scrolling
         self._smooth_scroll_timer = QTimer(self)
-        self._smooth_scroll_timer.setInterval(16)  # ~60fps
+        self._smooth_scroll_timer.setInterval(SMOOTH_SCROLL_INTERVAL_MS)
         self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
         self._smooth_scroll_target: int = 0
         self._smooth_scroll_start: int = 0
         self._smooth_scroll_distance: int = 0
-        self._smooth_scroll_duration: int = 500  # ms
+        self._smooth_scroll_duration: int = SMOOTH_SCROLL_DURATION_MS
         self._smooth_scroll_time: int = 0
 
         # Syntax highlighting

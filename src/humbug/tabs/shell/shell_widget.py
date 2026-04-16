@@ -19,6 +19,7 @@ from humbug.tabs.shell.shell_event import ShellEvent
 from humbug.tabs.shell.shell_history_manager import ShellHistoryManager
 from humbug.tabs.shell.shell_input import ShellInput
 from humbug.tabs.shell.shell_message import ShellMessage
+from humbug.tabs.smooth_scroll import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 
 
 class ShellWidget(QWidget):
@@ -124,12 +125,12 @@ class ShellWidget(QWidget):
 
         # Timer for smooth animated scrolling
         self._smooth_scroll_timer = QTimer(self)
-        self._smooth_scroll_timer.setInterval(16)  # ~60fps
+        self._smooth_scroll_timer.setInterval(SMOOTH_SCROLL_INTERVAL_MS)
         self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
         self._smooth_scroll_target: int = 0
         self._smooth_scroll_start: int = 0
         self._smooth_scroll_distance: int = 0
-        self._smooth_scroll_duration: int = 500  # ms
+        self._smooth_scroll_duration: int = SMOOTH_SCROLL_DURATION_MS
         self._smooth_scroll_time: int = 0
 
         # Setup context menu

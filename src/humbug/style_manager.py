@@ -477,7 +477,7 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#fde8e8"
             },
             ColorRole.DIFF_ADDED_BACKGROUND: {
-                ColorMode.DARK: "#142014",
+                ColorMode.DARK: "#142c14",
                 ColorMode.LIGHT: "#e8fde8"
             },
             ColorRole.DIFF_CHANGED_BACKGROUND: {
@@ -489,7 +489,7 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#e8e8fd"
             },
             ColorRole.DIFF_FILLER_BACKGROUND: {
-                ColorMode.DARK: "#141414",
+                ColorMode.DARK: "#1c1c1c",
                 ColorMode.LIGHT: "#f0f0f0"
             },
 

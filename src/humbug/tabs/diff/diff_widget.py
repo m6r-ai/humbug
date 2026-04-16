@@ -20,6 +20,7 @@ from humbug.style_manager import StyleManager
 from humbug.tabs.diff.diff_pane import DiffPane
 from humbug.tabs.diff.diff_row import DiffRow
 from humbug.tabs.diff.diff_view_builder import DiffViewBuilder
+from humbug.tabs.smooth_scroll import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 
 
 class DiffWidget(QWidget):
@@ -108,12 +109,12 @@ class DiffWidget(QWidget):
 
         # Smooth scrolling
         self._smooth_scroll_timer = QTimer(self)
-        self._smooth_scroll_timer.setInterval(16)  # ~60fps
+        self._smooth_scroll_timer.setInterval(SMOOTH_SCROLL_INTERVAL_MS)
         self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
         self._smooth_scroll_target: int = 0
         self._smooth_scroll_start: int = 0
         self._smooth_scroll_distance: int = 0
-        self._smooth_scroll_duration: int = 500  # ms
+        self._smooth_scroll_duration: int = SMOOTH_SCROLL_DURATION_MS
         self._smooth_scroll_time: int = 0
 
     def load_diff(self) -> None:

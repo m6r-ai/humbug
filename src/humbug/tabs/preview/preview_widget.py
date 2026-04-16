@@ -21,6 +21,7 @@ from humbug.tabs.preview.preview_error import PreviewIOError
 from humbug.tabs.preview.preview_file_content import PreviewFileContent
 from humbug.tabs.preview.preview_markdown_content import PreviewMarkdownContent
 from humbug.tabs.preview.preview_markdown_preview_content import PreviewMarkdownPreviewContent
+from humbug.tabs.smooth_scroll import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 
 
 class PreviewWidget(QWidget):
@@ -116,12 +117,12 @@ class PreviewWidget(QWidget):
 
         # Timer for smooth animated scrolling
         self._smooth_scroll_timer = QTimer(self)
-        self._smooth_scroll_timer.setInterval(16)  # ~60fps
+        self._smooth_scroll_timer.setInterval(SMOOTH_SCROLL_INTERVAL_MS)
         self._smooth_scroll_timer.timeout.connect(self._update_smooth_scroll)
         self._smooth_scroll_target: int = 0
         self._smooth_scroll_start: int = 0
         self._smooth_scroll_distance: int = 0
-        self._smooth_scroll_duration: int = 500  # ms
+        self._smooth_scroll_duration: int = SMOOTH_SCROLL_DURATION_MS
         self._smooth_scroll_time: int = 0
 
         # Setup context menu
