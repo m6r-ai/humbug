@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QPlainTextEdit, QWidget
 from PySide6.QtCore import Qt, QRect
 from PySide6.QtGui import (
     QColor, QPainter, QPaintEvent, QResizeEvent, QTextBlockUserData, QTextBlock,
-    QSyntaxHighlighter, QTextCharFormat, QTextCursor, QTextDocument
+    QSyntaxHighlighter, QTextCharFormat, QTextCursor
 )
 from PySide6.QtWidgets import QTextEdit
 
@@ -167,7 +167,8 @@ class DiffPane(QPlainTextEdit):
         self._highlighter.set_syntax(language)
 
     def load_rows(self, rows: List[DiffRow], use_left: bool) -> None:
-        """Populate the pane from a list of DiffRow objects.
+        """
+        Populate the pane from a list of DiffRow objects.
 
         Each row becomes one QTextBlock.  A _BlockData object carrying the
         row type and line number is attached to the block before the highlighter
@@ -367,7 +368,8 @@ class DiffPane(QPlainTextEdit):
         matches: list[tuple[int, int]],
         current_index: int,
     ) -> None:
-        """Apply extra-selection highlighting to the given match positions.
+        """
+        Apply extra-selection highlighting to the given match positions.
 
         The match at *current_index* receives the bright highlight colour;
         all others receive the dim colour.  Pass an empty *matches* list (or
@@ -405,7 +407,8 @@ class DiffPane(QPlainTextEdit):
         self.setExtraSelections([])
 
     def target_scroll_for_match(self, start: int) -> int:
-        """Return the scrollbar value that would centre the match at *start* in the viewport.
+        """
+        Return the scrollbar value that would centre the match at *start* in the viewport.
 
         The pane's own vertical scrollbar is hidden (the shared scrollbar drives
         it), so we compute the target value without actually scrolling — the

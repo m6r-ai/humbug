@@ -144,7 +144,7 @@ def get_french_strings() -> LanguageStrings:
         mindspace_label_none="Aucun espace mental actif",
         mindspace_name_tooltip="Cliquer pour ouvrir un autre espace mental",
         mindspace_files="Fichiers",
-        mindspace_vcs="Contrôle de révision",
+        mindspace_vcs="Fichiers modifiés",
         mindspace_vcs_no_repo="Aucun dépôt trouvé",
         mindspace_conversations="Conversations",
         mindspace_preview="Aperçu",

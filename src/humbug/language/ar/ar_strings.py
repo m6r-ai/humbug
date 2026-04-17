@@ -145,7 +145,7 @@ def get_arabic_strings() -> LanguageStrings:
         mindspace_label_none="لا توجد مساحة ذهنية نشطة",
         mindspace_name_tooltip="انقر لفتح مساحة ذهنية مختلفة",
         mindspace_files="ملفات",
-        mindspace_vcs="التحكم في المراجعة",
+        mindspace_vcs="الملفات المتغيرة",
         mindspace_vcs_no_repo="لم يتم العثور على مستودع",
         mindspace_conversations="محادثات",
         mindspace_preview="معاينة",

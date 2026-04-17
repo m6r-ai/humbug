@@ -175,7 +175,8 @@ class DiffWidget(QWidget):
         self._update_shared_scrollbar()
 
     def _fetch_content(self) -> Optional[tuple[List[str], List[str], str]]:
-        """Retrieve the HEAD content, working-tree content, and diff text.
+        """
+        Retrieve the HEAD content, working-tree content, and diff text.
 
         Returns a tuple of (old_lines, new_lines, diff_text), or None if an
         error occurred that has already been surfaced via the message label.
@@ -311,7 +312,8 @@ class DiffWidget(QWidget):
         self._right_pane.apply_style()
 
     def find_text(self, text: str, forward: bool = True) -> Tuple[int, int]:
-        """Search for *text* across both panes and navigate to the next match.
+        """
+        Search for *text* across both panes and navigate to the next match.
 
         Matches from the left pane and the right pane are merged in document
         order (by character position) so that navigation follows the visual
@@ -336,7 +338,8 @@ class DiffWidget(QWidget):
         return self.get_match_status()
 
     def _run_find(self, text: str, forward: bool, reset: bool) -> None:
-        """Internal helper that (re)builds matches and advances the cursor.
+        """
+        Internal helper that (re)builds matches and advances the cursor.
 
         Args:
             text: Search string.
@@ -380,8 +383,10 @@ class DiffWidget(QWidget):
         total = len(self._find_matches)
         if self._find_current == -1:
             self._find_current = 0 if forward else total - 1
+
         elif forward:
             self._find_current = (self._find_current + 1) % total
+
         else:
             self._find_current = (self._find_current - 1) % total
 
@@ -408,9 +413,6 @@ class DiffWidget(QWidget):
 
         self._left_pane.highlight_matches(left_matches, left_current_local)
         self._right_pane.highlight_matches(right_matches, right_current_local)
-
-    def get_match_status(self) -> Tuple[int, int]:
-        """Return (current_1based, total) for the find widget status label."""
 
     def _start_smooth_scroll(self, target_value: int) -> None:
         """

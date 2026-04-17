@@ -8,7 +8,8 @@ from humbug.tabs.diff.diff_row import DiffRow, DiffRowType
 
 
 class DiffViewBuilder:
-    """Transforms two full file line lists and a list of DiffHunk objects into a flat
+    """
+    Transforms two full file line lists and a list of DiffHunk objects into a flat
     list of DiffRow objects suitable for side-by-side rendering.
 
     Both the old (HEAD) and new (working tree) line lists are required so that
@@ -128,7 +129,8 @@ class DiffViewBuilder:
         old_start: int,
         new_start: int,
     ) -> None:
-        """Emit rows for a paired run of removed and added lines.
+        """
+        Emit rows for a paired run of removed and added lines.
 
         Lines are paired 1-to-1 as CHANGED rows for as long as both sides have
         content.  Surplus lines on the longer side become REMOVED or ADDED rows,
