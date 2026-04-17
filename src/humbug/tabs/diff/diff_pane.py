@@ -3,10 +3,10 @@
 import logging
 from typing import List, Optional
 
-from PySide6.QtWidgets import QPlainTextEdit, QWidget
+from PySide6.QtWidgets import QMenu, QPlainTextEdit, QWidget
 from PySide6.QtCore import Qt, QRect
 from PySide6.QtGui import (
-    QColor, QKeyEvent, QPainter, QPaintEvent, QResizeEvent, QTextBlockUserData, QTextBlock,
+    QColor, QContextMenuEvent, QKeyEvent, QPainter, QPaintEvent, QResizeEvent, QTextBlockUserData, QTextBlock,
     QSyntaxHighlighter, QTextCharFormat, QTextCursor
 )
 from PySide6.QtWidgets import QTextEdit
@@ -16,6 +16,7 @@ from syntax import ProgrammingLanguage, ParserState, ParserRegistry, TokenType
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
 from humbug.tabs.line_number_area import LineNumberArea
+from humbug.language.language_manager import LanguageManager
 from humbug.tabs.diff.diff_row import DiffRow, DiffRowType
 
 
@@ -158,6 +159,7 @@ class DiffPane(QPlainTextEdit):
         self._update_gutter_width()
 
         self._highlighter = _DiffPaneHighlighter(self)
+        self._language_manager = LanguageManager()
 
     def set_syntax(self, language: ProgrammingLanguage) -> None:
         """
@@ -235,6 +237,7 @@ class DiffPane(QPlainTextEdit):
                 border: none;
                 padding: 0px;
             }}
+            {self._style_manager.get_menu_stylesheet()}
         """)
 
         self._update_gutter_width()
@@ -250,6 +253,15 @@ class DiffPane(QPlainTextEdit):
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """Ignore all key events so they propagate to the parent for shortcut handling."""
         event.ignore()
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        """Show a styled context menu with a Copy action."""
+        menu = QMenu(self)
+        strings = self._language_manager.strings()
+        copy_action = menu.addAction(strings.copy)
+        copy_action.setEnabled(self.textCursor().hasSelection())
+        copy_action.triggered.connect(self.copy)
+        menu.exec_(event.globalPos())
 
     def paintEvent(self, event: QPaintEvent) -> None:
         """Paint row backgrounds before the standard text painting."""
