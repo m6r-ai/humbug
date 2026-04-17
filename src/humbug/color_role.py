@@ -149,6 +149,7 @@ class ColorRole(Enum):
     DIFF_REMOVED_BACKGROUND = auto()    # Background for removed lines
     DIFF_ADDED_BACKGROUND = auto()      # Background for added lines
     DIFF_CHANGED_BACKGROUND = auto()    # Background for changed lines
+    DIFF_HUNK_LINE_NUMBER = auto()      # Line number colour for the active hunk
 
     # VCS status colours
     VCS_MODIFIED = auto()               # Modified file badge

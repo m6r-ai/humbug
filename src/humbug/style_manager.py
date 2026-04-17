@@ -484,6 +484,10 @@ class StyleManager(QObject):
                 ColorMode.DARK: "#202040",
                 ColorMode.LIGHT: "#c8c8f0"
             },
+            ColorRole.DIFF_HUNK_LINE_NUMBER: {
+                ColorMode.DARK: "#e0e0e0",
+                ColorMode.LIGHT: "#202020"
+            },
 
             # VCS status colours
             ColorRole.VCS_MODIFIED: {

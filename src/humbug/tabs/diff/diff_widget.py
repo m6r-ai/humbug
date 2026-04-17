@@ -54,6 +54,8 @@ class DiffWidget(QWidget):
         self._style_manager = StyleManager()
         self._rows: list[DiffRow] = []
         self._syncing = False
+        self._cached_hunks: List[Tuple[int, int]] = []
+        self._current_hunk_index: int = -1
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         outer_layout = QVBoxLayout(self)
@@ -97,6 +99,7 @@ class DiffWidget(QWidget):
         # Keep the shared scrollbar range in sync with the left pane's range
         # (both panes always have the same row count so either would do).
         self._left_pane.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
+        self._scrollbar.valueChanged.connect(self._update_active_hunk)
 
         self._style_manager.style_changed.connect(self._on_style_changed)
         self._on_style_changed()
@@ -147,6 +150,9 @@ class DiffWidget(QWidget):
         self._right_pane.set_syntax(language)
         self._show_panes()
         self.status_updated.emit()
+        self._cached_hunks = self._hunks()
+        self._current_hunk_index = -1
+        self._update_active_hunk()
 
         # Re-run the active search against the new document content, if any.
         if self._find_text:
@@ -460,11 +466,29 @@ class DiffWidget(QWidget):
 
     def can_navigate_next_hunk(self) -> bool:
         """Return True if there is a hunk after the current scroll position."""
-        return self._find_next_hunk_row(forward=True, use_viewport_bottom=False) is not None
+        if not self._cached_hunks:
+            return False
+
+        if self._current_hunk_index == -1:
+            return True
+
+        if self._current_hunk_index < len(self._cached_hunks) - 1:
+            return True
+
+        return not self._current_hunk_is_centred()
 
     def can_navigate_previous_hunk(self) -> bool:
         """Return True if there is a hunk before the current scroll position."""
-        return self._find_next_hunk_row(forward=False, use_viewport_bottom=False) is not None
+        if not self._cached_hunks:
+            return False
+
+        if self._current_hunk_index > 0:
+            return True
+
+        if self._current_hunk_index == -1:
+            return False
+
+        return not self._current_hunk_is_centred()
 
     def navigate_next_hunk(self, forward: bool) -> None:
         """
@@ -473,54 +497,91 @@ class DiffWidget(QWidget):
         Args:
             forward: If True move to the next hunk; if False move to the previous.
         """
-        target = self._find_next_hunk_row(forward=forward)
-        if target is not None:
-            self._start_smooth_scroll(target)
+        if not self._cached_hunks:
+            return
 
-    def _find_next_hunk_row(self, forward: bool, use_viewport_bottom: bool = True) -> Optional[int]:
+        if forward:
+            if self._current_hunk_index < len(self._cached_hunks) - 1:
+                self._current_hunk_index += 1
+
+            elif self._current_hunk_is_centred():
+                return
+
+        else:
+            if self._current_hunk_index > 0:
+                self._current_hunk_index -= 1
+
+            elif self._current_hunk_index == -1 or self._current_hunk_is_centred():
+                return
+
+        start, end = self._cached_hunks[self._current_hunk_index]
+        self._set_active_hunk(start, end)
+        self._start_smooth_scroll(self._left_pane.target_scroll_for_block(start))
+
+    def _current_hunk_is_centred(self) -> bool:
+        """Return True if the scrollbar is already at the centred position for the current hunk."""
+        if self._current_hunk_index < 0 or not self._cached_hunks:
+            return False
+
+        start = self._cached_hunks[self._current_hunk_index][0]
+        target = self._left_pane.target_scroll_for_block(start)
+        return self._scrollbar.value() == target
+
+    def _hunks(self) -> List[Tuple[int, int]]:
         """
-        Return the scrollbar value to reach the start of the next or previous hunk.
+        Return (start, end) row index pairs for every hunk, in document order.
 
-        A hunk boundary is the first changed row after a run of context rows (or
-        the very first changed row in the document when moving forward, or the last
-        when moving backward).
-
-        Args:
-            forward: Direction of search.
-            use_viewport_bottom: If True (the default for navigation), require the
-                hunk to start below the bottom of the current viewport so we don't
-                jump to a hunk that is already fully visible.  If False (used for
-                the can-navigate checks), only require the hunk to be past the
-                current scroll position.
-
-        Returns:
-            Target scrollbar value, or None if no further hunk exists.
+        Both indices are inclusive.
         """
-        if not self._rows:
-            return None
-
         changed_types: Set[DiffRowType] = {DiffRowType.ADDED, DiffRowType.REMOVED, DiffRowType.CHANGED}
+        hunks: List[Tuple[int, int]] = []
+        hunk_start: int = -1
+        prev_was_changed = False
+        for i, row in enumerate(self._rows):
+            is_changed = row.row_type in changed_types
+            if is_changed and not prev_was_changed:
+                hunk_start = i
+
+            elif not is_changed and prev_was_changed:
+                hunks.append((hunk_start, i - 1))
+
+            prev_was_changed = is_changed
+
+        if prev_was_changed and hunk_start >= 0:
+            hunks.append((hunk_start, len(self._rows) - 1))
+
+        return hunks
+
+    def _set_active_hunk(self, start: int, end: int) -> None:
+        """Push a hunk range to both panes."""
+        self._left_pane.set_active_hunk(start, end)
+        self._right_pane.set_active_hunk(start, end)
+
+    def _update_active_hunk(self) -> None:
+        """
+        Highlight the hunk whose start row is nearest the centre of the viewport.
+
+        Called on every scroll-position change so the gutter colouring always
+        reflects what the user is looking at.
+        """
+        if self._smooth_scroll_timer.isActive():
+            return
+
+        if not self._cached_hunks:
+            self._set_active_hunk(-1, -1)
+            return
+
         current = self._scrollbar.value()
         visible_lines = (
             self._left_pane.viewport().height()
             // max(1, self._left_pane.fontMetrics().lineSpacing())
         )
-        forward_threshold = current + visible_lines if use_viewport_bottom else current
+        centre = current + visible_lines // 2
 
-        indices = range(len(self._rows)) if forward else range(len(self._rows) - 1, -1, -1)
-        prev_was_changed = False
-
-        for i in indices:
-            is_changed = self._rows[i].row_type in changed_types
-            # A hunk start (forward) is the first changed row after a context run.
-            # A hunk start (backward) is the first changed row before a context run.
-            if is_changed and not prev_was_changed:
-                if forward and i >= forward_threshold:
-                    return self._left_pane.target_scroll_for_block(i)
-
-                if not forward and i < current:
-                    return self._left_pane.target_scroll_for_block(i)
-
-            prev_was_changed = is_changed
-
-        return None
+        # Pick the hunk whose start is closest to the viewport centre.
+        nearest_start, nearest_end = min(self._cached_hunks, key=lambda h: abs(h[0] - centre))
+        # Update the tracked index to stay in sync with free-scroll position.
+        self._current_hunk_index = next(
+            i for i, h in enumerate(self._cached_hunks) if h[0] == nearest_start
+        )
+        self._set_active_hunk(nearest_start, nearest_end)

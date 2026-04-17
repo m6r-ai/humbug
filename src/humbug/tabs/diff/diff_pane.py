@@ -143,6 +143,8 @@ class DiffPane(QPlainTextEdit):
         super().__init__(parent)
         self._logger = logging.getLogger("DiffPane")
         self._style_manager = StyleManager()
+        self._active_hunk_start: int = -1
+        self._active_hunk_end: int = -1
 
         self.setReadOnly(True)
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
@@ -197,6 +199,21 @@ class DiffPane(QPlainTextEdit):
             block.setUserData(_BlockData(row.row_type, line_no))
 
         cursor.endEditBlock()
+
+    def set_active_hunk(self, start: int, end: int) -> None:
+        """
+        Set the row range of the currently active hunk for gutter highlighting.
+
+        Args:
+            start: First row index of the active hunk (inclusive), or -1 to clear.
+            end: Last row index of the active hunk (inclusive).
+        """
+        if self._active_hunk_start == start and self._active_hunk_end == end:
+            return
+
+        self._active_hunk_start = start
+        self._active_hunk_end = end
+        self._gutter.update()
 
     def apply_style(self) -> None:
         """Reapply colours and font after a theme or zoom change."""
@@ -256,7 +273,6 @@ class DiffPane(QPlainTextEdit):
         bg = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE)
         painter.fillRect(event.rect(), bg)
 
-        painter.setPen(self._style_manager.get_color(ColorRole.LINE_NUMBER))
         painter.setFont(self.font())
 
         digit_width = self.fontMetrics().horizontalAdvance('9')
@@ -270,6 +286,14 @@ class DiffPane(QPlainTextEdit):
             if block.isVisible() and bottom >= event.rect().top():
                 data = block.userData()
                 if isinstance(data, _BlockData) and data.line_no is not None:
+                    block_num = block.blockNumber()
+                    in_active_hunk = (
+                        self._active_hunk_start >= 0
+                        and self._active_hunk_start <= block_num <= self._active_hunk_end
+                    )
+                    painter.setPen(self._style_manager.get_color(
+                        ColorRole.DIFF_HUNK_LINE_NUMBER if in_active_hunk else ColorRole.LINE_NUMBER
+                    ))
                     painter.drawText(
                         QRect(
                             0,
