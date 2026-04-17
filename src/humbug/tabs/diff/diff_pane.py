@@ -317,12 +317,6 @@ class DiffPane(QPlainTextEdit):
             case DiffRowType.CHANGED:
                 return self._style_manager.get_color(ColorRole.DIFF_CHANGED_BACKGROUND)
 
-            case DiffRowType.HEADER:
-                return self._style_manager.get_color(ColorRole.DIFF_HEADER_BACKGROUND)
-
-            case DiffRowType.FILLER:
-                return self._style_manager.get_color(ColorRole.DIFF_FILLER_BACKGROUND)
-
             case _:
                 return None
 

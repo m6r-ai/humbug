@@ -473,24 +473,16 @@ class StyleManager(QObject):
 
             # Diff view colours
             ColorRole.DIFF_REMOVED_BACKGROUND: {
-                ColorMode.DARK: "#402828",
+                ColorMode.DARK: "#402020",
                 ColorMode.LIGHT: "#f0c8c8"
             },
             ColorRole.DIFF_ADDED_BACKGROUND: {
-                ColorMode.DARK: "#284028",
+                ColorMode.DARK: "#204020",
                 ColorMode.LIGHT: "#c8f0c8"
             },
             ColorRole.DIFF_CHANGED_BACKGROUND: {
-                ColorMode.DARK: "#404028",
-                ColorMode.LIGHT: "#f0f0c8"
-            },
-            ColorRole.DIFF_HEADER_BACKGROUND: {
-                ColorMode.DARK: "#282840",
+                ColorMode.DARK: "#202040",
                 ColorMode.LIGHT: "#c8c8f0"
-            },
-            ColorRole.DIFF_FILLER_BACKGROUND: {
-                ColorMode.DARK: "#303030",
-                ColorMode.LIGHT: "#d8d8d8"
             },
 
             # VCS status colours
