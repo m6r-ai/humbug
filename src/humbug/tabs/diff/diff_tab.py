@@ -13,7 +13,6 @@ from humbug.status_message import StatusMessage
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType
-from humbug.style_manager import StyleManager
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.diff.diff_widget import DiffWidget
 
@@ -139,20 +138,8 @@ class DiffTab(TabBase):
         self.status_message.emit(message)
 
     def preferred_width(self) -> int | None:
-        """Return the preferred column width to comfortably display two 80-column panes."""
-        style_manager = StyleManager()
-
-        char_width = style_manager.get_space_width()
-
-        # Gutter: (digits + 4) character widths, matching the editor formula.
-        # Assume 4-digit line numbers as a reasonable estimate for sizing.
-        gutter_width = int((4 + 4) * char_width)
-
-        # Each pane: gutter + 80 columns
-        pane_width = gutter_width + int(80 * char_width)
-
-        # Total: two panes + splitter handle (1px) + shared scrollbar
-        return 2 * pane_width + 1 + style_manager.get_scrollbar_size()
+        """Return the preferred column width: twice the default editor column width."""
+        return 2048
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """Return serialisable state for mindspace persistence."""
