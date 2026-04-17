@@ -112,6 +112,7 @@ def is_file_tracked(repo_root: str, file_path: str) -> bool:
     except GitCommandError as e:
         if e.returncode == 1:
             return False
+
         raise
 
 
@@ -238,4 +239,5 @@ def get_file_at_head(repo_root: str, file_path: str) -> Optional[str]:
         # with no HEAD yet).  Treat that as "no prior content".
         if e.returncode == 128:
             return None
+
         raise
