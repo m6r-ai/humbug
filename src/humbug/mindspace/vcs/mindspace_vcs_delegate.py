@@ -47,8 +47,10 @@ class MindspaceVcsDelegate(QStyledItemDelegate):
 
         if is_selected:
             bg = self._style_manager.get_color(ColorRole.TEXT_SELECTED)
+
         elif is_hovered:
             bg = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_HOVER)
+
         else:
             bg = self._style_manager.get_color(ColorRole.MINDSPACE_BACKGROUND)
 

@@ -1086,11 +1086,6 @@ class MainWindow(QMainWindow):
         """Trigger repaint of main window splitter handle."""
         # The main window splitter uses custom painted handles, so we just need to trigger a repaint
         self._splitter.update()
-        self._column_manager.setStyleSheet(f"""
-            #ColumnManager QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
-            }}
-        """)
 
     def _on_new_conversation(self) -> ConversationTab | None:
         """Create new conversation tab."""

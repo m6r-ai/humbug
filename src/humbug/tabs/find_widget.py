@@ -26,6 +26,8 @@ class FindWidget(QWidget):
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
 
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+
         # Create layout
         layout = QHBoxLayout()
         layout.setContentsMargins(4, 4, 4, 4)
@@ -94,7 +96,7 @@ class FindWidget(QWidget):
 
         self.setStyleSheet(f"""
             QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND)};
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
                 color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 font-size: {font_size}pt;
             }}

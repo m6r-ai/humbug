@@ -24,13 +24,13 @@ from humbug.style_manager import StyleManager
 
 
 _STATUS_LABELS: dict[VcsStatusCode, str] = {
-    VcsStatusCode.MODIFIED:  "M",
-    VcsStatusCode.ADDED:     "A",
-    VcsStatusCode.DELETED:   "D",
-    VcsStatusCode.RENAMED:   "R",
-    VcsStatusCode.COPIED:    "C",
+    VcsStatusCode.MODIFIED: "M",
+    VcsStatusCode.ADDED: "A",
+    VcsStatusCode.DELETED: "D",
+    VcsStatusCode.RENAMED: "R",
+    VcsStatusCode.COPIED: "C",
     VcsStatusCode.UNTRACKED: "?",
-    VcsStatusCode.UNKNOWN:   "!",
+    VcsStatusCode.UNKNOWN: "!",
 }
 
 
@@ -50,7 +50,7 @@ class _VcsList(QListWidget):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if not (event.buttons() & Qt.MouseButton.LeftButton):
+        if not event.buttons() & Qt.MouseButton.LeftButton:
             self._drag_start_pos = None
             super().mouseMoveEvent(event)
             return

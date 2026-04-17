@@ -2053,6 +2053,12 @@ class ColumnManager(QWidget):
 
     def apply_style(self) -> None:
         """Apply style changes from StyleManager."""
+        self.setStyleSheet(f"""
+            #ColumnManager QWidget {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
+            }}
+        """)
+
         # Apply styles to individual widgets
         self._update_column_splitter()
         self._apply_all_tab_bar_styles()

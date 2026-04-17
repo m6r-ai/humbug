@@ -231,7 +231,7 @@ class StyleManager(QObject):
 
             # Button colours
             ColorRole.BUTTON_BACKGROUND: {
-                ColorMode.DARK: "#0c0c0c",
+                ColorMode.DARK: "#202020",
                 ColorMode.LIGHT: "#e8e8e8"
             },
             ColorRole.BUTTON_BACKGROUND_PRESSED: {
@@ -473,24 +473,24 @@ class StyleManager(QObject):
 
             # Diff view colours
             ColorRole.DIFF_REMOVED_BACKGROUND: {
-                ColorMode.DARK: "#2c1414",
-                ColorMode.LIGHT: "#fde8e8"
+                ColorMode.DARK: "#402828",
+                ColorMode.LIGHT: "#f0c8c8"
             },
             ColorRole.DIFF_ADDED_BACKGROUND: {
-                ColorMode.DARK: "#142c14",
-                ColorMode.LIGHT: "#e8fde8"
+                ColorMode.DARK: "#284028",
+                ColorMode.LIGHT: "#c8f0c8"
             },
             ColorRole.DIFF_CHANGED_BACKGROUND: {
-                ColorMode.DARK: "#2c2c14",
-                ColorMode.LIGHT: "#fdfde8"
+                ColorMode.DARK: "#404028",
+                ColorMode.LIGHT: "#f0f0c8"
             },
             ColorRole.DIFF_HEADER_BACKGROUND: {
-                ColorMode.DARK: "#141430",
-                ColorMode.LIGHT: "#e8e8fd"
+                ColorMode.DARK: "#282840",
+                ColorMode.LIGHT: "#c8c8f0"
             },
             ColorRole.DIFF_FILLER_BACKGROUND: {
-                ColorMode.DARK: "#1c1c1c",
-                ColorMode.LIGHT: "#f0f0f0"
+                ColorMode.DARK: "#303030",
+                ColorMode.LIGHT: "#d8d8d8"
             },
 
             # VCS status colours
