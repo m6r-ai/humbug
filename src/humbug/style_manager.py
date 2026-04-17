@@ -481,7 +481,7 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#c8f0c8"
             },
             ColorRole.DIFF_CHANGED_BACKGROUND: {
-                ColorMode.DARK: "#202040",
+                ColorMode.DARK: "#202050",
                 ColorMode.LIGHT: "#c8c8f0"
             },
             ColorRole.DIFF_HUNK_LINE_NUMBER: {
