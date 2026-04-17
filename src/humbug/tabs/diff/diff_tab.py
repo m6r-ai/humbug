@@ -44,6 +44,7 @@ class DiffTab(TabBase):
         # Add find widget at top (initially hidden)
         self._find_widget = FindWidget(self)
         self._find_widget.hide()
+        self._find_widget.set_preferred_width(self.preferred_width)
         self._find_widget.closed.connect(self._close_find)
         self._find_widget.find_next.connect(lambda: self._find_next(True))
         self._find_widget.find_previous.connect(lambda: self._find_next(False))

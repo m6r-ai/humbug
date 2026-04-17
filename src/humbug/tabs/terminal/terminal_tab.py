@@ -116,6 +116,7 @@ class TerminalTab(TabBase):
         # Create terminal widget with scrollback limit
         self._terminal_widget = TerminalWidget(self, scrollback_limit, minimum_width)
         layout.addWidget(self._terminal_widget)
+        self._find_widget.set_preferred_width(self.preferred_width)
 
         # Connect signals
         self._terminal_widget.data_ready.connect(self._on_data_ready)

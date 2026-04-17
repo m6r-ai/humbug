@@ -1,12 +1,12 @@
 """Widget for handling find operations in editor."""
 
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 
 from PySide6.QtWidgets import (
     QWidget, QHBoxLayout, QLineEdit, QToolButton, QLabel
 )
 from PySide6.QtCore import Signal, Qt, QSize
-from PySide6.QtGui import QIcon, QFocusEvent, QKeyEvent, QCloseEvent
+from PySide6.QtGui import QIcon, QFocusEvent, QKeyEvent, QCloseEvent, QResizeEvent
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -25,37 +25,33 @@ class FindWidget(QWidget):
         super().__init__(parent)
         self._style_manager = StyleManager()
         self._language_manager = LanguageManager()
+        self._preferred_width_fn: Callable[[], int | None] | None = None
 
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
 
-        # Create layout
-        layout = QHBoxLayout()
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(4)
-        self.setLayout(layout)
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(4, 4, 4, 4)
+        self._layout.setSpacing(4)
 
-        # Create search input
         self._search_input = QLineEdit()
         self._search_input.textChanged.connect(self._on_text_changed)
         self._search_input.returnPressed.connect(self.find_next)
-        layout.addWidget(self._search_input)
+        self._layout.addWidget(self._search_input)
 
-        # Add status label
         self._status_label = QLabel()
-        layout.addWidget(self._status_label)
+        self._layout.addWidget(self._status_label)
 
-        # Create navigation buttons
         self._prev_button = QToolButton()
         self._prev_button.clicked.connect(self.find_previous)
-        layout.addWidget(self._prev_button)
+        self._layout.addWidget(self._prev_button)
 
         self._next_button = QToolButton()
         self._next_button.clicked.connect(self.find_next)
-        layout.addWidget(self._next_button)
+        self._layout.addWidget(self._next_button)
 
         self._close_button = QToolButton()
         self._close_button.clicked.connect(self.close)
-        layout.addWidget(self._close_button)
+        self._layout.addWidget(self._close_button)
 
         # Track current state
         self._matches = 0
@@ -74,7 +70,7 @@ class FindWidget(QWidget):
 
     def _on_style_changed(self) -> None:
         """Update styling when application style changes."""
-        # Update font size
+        self._update_margins()
         factor = self._style_manager.zoom_factor()
         font = self.font()
         base_font_size = self._style_manager.base_font_size()
@@ -129,6 +125,36 @@ class FindWidget(QWidget):
                 padding: 2px;
             }}
         """)
+
+    def _update_margins(self) -> None:
+        """Adjust layout margins to centre the controls when constrained."""
+        if self._preferred_width_fn is None:
+            self._layout.setContentsMargins(4, 4, 4, 4)
+            return
+
+        preferred = self._preferred_width_fn()
+        if preferred is None:
+            self._layout.setContentsMargins(4, 4, 4, 4)
+            return
+
+        available = self.width()
+        side = max(4, (available - preferred) // 2)
+        self._layout.setContentsMargins(side, 4, side, 4)
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        """Recompute centring margins whenever the widget is resized."""
+        super().resizeEvent(event)
+        self._update_margins()
+
+    def set_preferred_width(self, fn: Callable[[], int | None] | None) -> None:
+        """
+        Set a callable returning the preferred content width, or None for full-width layout.
+
+        Args:
+            fn: Callable returning pixel width to centre controls within, or None for full-width.
+        """
+        self._preferred_width_fn = fn
+        self._update_margins()
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
         """Handle key events."""

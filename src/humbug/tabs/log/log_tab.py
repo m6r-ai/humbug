@@ -18,6 +18,7 @@ from humbug.tabs.log.log_widget import LogWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType
+from humbug.style_manager import StyleManager
 
 
 class LogTab(TabBase):
@@ -48,6 +49,7 @@ class LogTab(TabBase):
         # Add find widget at top (initially hidden)
         self._find_widget = FindWidget(self)
         self._find_widget.hide()
+        self._find_widget.set_preferred_width(self.preferred_width)
         self._find_widget.closed.connect(self._close_find)
         self._find_widget.find_next.connect(lambda: self._find_next(True))
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
@@ -274,6 +276,11 @@ class LogTab(TabBase):
     def navigate_previous_message(self) -> None:
         """Navigate to the previous message."""
         self._log_widget.navigate_to_previous_message()
+
+    def preferred_width(self) -> int | None:
+        """Return the preferred column width matching the log content max width."""
+        style_manager = StyleManager()
+        return int(style_manager.nice_tab_width() * style_manager.zoom_factor())
 
     def update_status(self) -> None:
         """Update status bar with log tab information."""
