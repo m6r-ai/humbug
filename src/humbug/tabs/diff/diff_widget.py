@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import List, Optional, Tuple
+from typing import List, Optional, Set, Tuple
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollBar, QSplitter, QLabel, QSizePolicy
 from PySide6.QtCore import Qt, QTimer, Signal
@@ -18,7 +18,7 @@ from syntax import ProgrammingLanguageUtils
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
 from humbug.tabs.diff.diff_pane import DiffPane
-from humbug.tabs.diff.diff_row import DiffRow
+from humbug.tabs.diff.diff_row import DiffRow, DiffRowType
 from humbug.tabs.diff.diff_view_builder import DiffViewBuilder
 from humbug.tabs.smooth_scroll import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 
@@ -457,3 +457,70 @@ class DiffWidget(QWidget):
         self._find_text = ""
         self._left_pane.clear_find()
         self._right_pane.clear_find()
+
+    def can_navigate_next_hunk(self) -> bool:
+        """Return True if there is a hunk after the current scroll position."""
+        return self._find_next_hunk_row(forward=True, use_viewport_bottom=False) is not None
+
+    def can_navigate_previous_hunk(self) -> bool:
+        """Return True if there is a hunk before the current scroll position."""
+        return self._find_next_hunk_row(forward=False, use_viewport_bottom=False) is not None
+
+    def navigate_next_hunk(self, forward: bool) -> None:
+        """
+        Scroll to the first row of the next (or previous) hunk.
+
+        Args:
+            forward: If True move to the next hunk; if False move to the previous.
+        """
+        target = self._find_next_hunk_row(forward=forward)
+        if target is not None:
+            self._start_smooth_scroll(target)
+
+    def _find_next_hunk_row(self, forward: bool, use_viewport_bottom: bool = True) -> Optional[int]:
+        """
+        Return the scrollbar value to reach the start of the next or previous hunk.
+
+        A hunk boundary is the first changed row after a run of context rows (or
+        the very first changed row in the document when moving forward, or the last
+        when moving backward).
+
+        Args:
+            forward: Direction of search.
+            use_viewport_bottom: If True (the default for navigation), require the
+                hunk to start below the bottom of the current viewport so we don't
+                jump to a hunk that is already fully visible.  If False (used for
+                the can-navigate checks), only require the hunk to be past the
+                current scroll position.
+
+        Returns:
+            Target scrollbar value, or None if no further hunk exists.
+        """
+        if not self._rows:
+            return None
+
+        changed_types: Set[DiffRowType] = {DiffRowType.ADDED, DiffRowType.REMOVED, DiffRowType.CHANGED}
+        current = self._scrollbar.value()
+        visible_lines = (
+            self._left_pane.viewport().height()
+            // max(1, self._left_pane.fontMetrics().lineSpacing())
+        )
+        forward_threshold = current + visible_lines if use_viewport_bottom else current
+
+        indices = range(len(self._rows)) if forward else range(len(self._rows) - 1, -1, -1)
+        prev_was_changed = False
+
+        for i in indices:
+            is_changed = self._rows[i].row_type in changed_types
+            # A hunk start (forward) is the first changed row after a context run.
+            # A hunk start (backward) is the first changed row before a context run.
+            if is_changed and not prev_was_changed:
+                if forward and i >= forward_threshold:
+                    return self._left_pane.target_scroll_for_block(i)
+
+                if not forward and i < current:
+                    return self._left_pane.target_scroll_for_block(i)
+
+            prev_was_changed = is_changed
+
+        return None

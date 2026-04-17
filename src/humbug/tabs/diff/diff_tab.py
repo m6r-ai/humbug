@@ -269,3 +269,19 @@ class DiffTab(TabBase):
         text = self._find_widget.get_search_text()
         current, total = self._diff_widget.find_text(text, forward)
         self._find_widget.set_match_status(current, total)
+
+    def can_navigate_next_message(self) -> bool:
+        """Return True if there is a hunk after the current scroll position."""
+        return self._diff_widget.can_navigate_next_hunk()
+
+    def navigate_next_message(self) -> None:
+        """Scroll to the next hunk."""
+        self._diff_widget.navigate_next_hunk(forward=True)
+
+    def can_navigate_previous_message(self) -> bool:
+        """Return True if there is a hunk before the current scroll position."""
+        return self._diff_widget.can_navigate_previous_hunk()
+
+    def navigate_previous_message(self) -> None:
+        """Scroll to the previous hunk."""
+        self._diff_widget.navigate_next_hunk(forward=False)

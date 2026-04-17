@@ -63,6 +63,8 @@ class LanguageStrings:
     swap_column_right: str
     next_message: str
     previous_message: str
+    next_hunk: str
+    previous_hunk: str
 
     # Message roles and labels
     role_you: str

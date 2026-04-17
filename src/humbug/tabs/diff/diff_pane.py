@@ -6,7 +6,7 @@ from typing import List, Optional
 from PySide6.QtWidgets import QPlainTextEdit, QWidget
 from PySide6.QtCore import Qt, QRect
 from PySide6.QtGui import (
-    QColor, QPainter, QPaintEvent, QResizeEvent, QTextBlockUserData, QTextBlock,
+    QColor, QKeyEvent, QPainter, QPaintEvent, QResizeEvent, QTextBlockUserData, QTextBlock,
     QSyntaxHighlighter, QTextCharFormat, QTextCursor
 )
 from PySide6.QtWidgets import QTextEdit
@@ -230,6 +230,10 @@ class DiffPane(QPlainTextEdit):
         cr = self.contentsRect()
         self._gutter.setGeometry(QRect(cr.left(), cr.top(), self._gutter_width(), cr.height()))
 
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        """Ignore all key events so they propagate to the parent for shortcut handling."""
+        event.ignore()
+
     def paintEvent(self, event: QPaintEvent) -> None:
         """Paint row backgrounds before the standard text painting."""
         self._paint_line_backgrounds(event)
@@ -417,6 +421,20 @@ class DiffPane(QPlainTextEdit):
         cursor = QTextCursor(self.document())
         cursor.setPosition(start)
         block_number = cursor.block().blockNumber()
+        vbar = self.verticalScrollBar()
+        visible_lines = self.viewport().height() // max(1, self.fontMetrics().lineSpacing())
+        return max(vbar.minimum(), min(vbar.maximum(), block_number - visible_lines // 2))
+
+    def target_scroll_for_block(self, block_number: int) -> int:
+        """
+        Return the scrollbar value that would centre *block_number* in the viewport.
+
+        Args:
+            block_number: Zero-based block (row) index to centre.
+
+        Returns:
+            Target vertical scrollbar value to centre the block.
+        """
         vbar = self.verticalScrollBar()
         visible_lines = self.viewport().height() // max(1, self.fontMetrics().lineSpacing())
         return max(vbar.minimum(), min(vbar.maximum(), block_number - visible_lines // 2))

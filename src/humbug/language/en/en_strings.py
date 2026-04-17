@@ -72,6 +72,8 @@ def get_english_strings() -> LanguageStrings:
         swap_column_right="Swap Column Right",
         next_message="Next Message",
         previous_message="Previous Message",
+        next_hunk="Next Hunk",
+        previous_hunk="Previous Hunk",
 
         # Message roles
         role_you="You",

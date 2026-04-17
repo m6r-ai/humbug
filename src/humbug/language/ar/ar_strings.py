@@ -73,6 +73,8 @@ def get_arabic_strings() -> LanguageStrings:
         swap_column_right="عمود المبادلة لليمين",
         next_message="الرسالة التالية",
         previous_message="الرسالة السابقة",
+        next_hunk="التعديل التالي",
+        previous_hunk="التعديل السابق",
 
         # Message roles
         role_you="أنت",

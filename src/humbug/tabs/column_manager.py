@@ -2436,15 +2436,20 @@ class ColumnManager(QWidget):
     def can_navigate_next_message(self) -> bool:
         """Check if next message navigation is possible."""
         tab = self.get_current_tab()
-        if not isinstance(tab, ConversationTab | LogTab | ShellTab):
+        if not isinstance(tab, ConversationTab | DiffTab | LogTab | ShellTab):
             return False
 
         return tab.can_navigate_next_message()
 
+    def is_navigating_as_hunks(self) -> bool:
+        """Return True if the current tab navigates by hunks rather than messages."""
+        tab = self.get_current_tab()
+        return isinstance(tab, DiffTab)
+
     def navigate_next_message(self) -> None:
         """Navigate to next message in the tab."""
         tab = self.get_current_tab()
-        if not isinstance(tab, ConversationTab | LogTab | ShellTab):
+        if not isinstance(tab, ConversationTab | DiffTab | LogTab | ShellTab):
             return
 
         tab.navigate_next_message()
@@ -2452,7 +2457,7 @@ class ColumnManager(QWidget):
     def can_navigate_previous_message(self) -> bool:
         """Check if previous message navigation is possible."""
         tab = self.get_current_tab()
-        if not isinstance(tab, ConversationTab | LogTab | ShellTab):
+        if not isinstance(tab, ConversationTab | DiffTab | LogTab | ShellTab):
             return False
 
         return tab.can_navigate_previous_message()
@@ -2460,7 +2465,7 @@ class ColumnManager(QWidget):
     def navigate_previous_message(self) -> None:
         """Navigate to previous message in the tab."""
         tab = self.get_current_tab()
-        if not isinstance(tab, ConversationTab | LogTab | ShellTab):
+        if not isinstance(tab, ConversationTab | DiffTab | LogTab | ShellTab):
             return
 
         tab.navigate_previous_message()

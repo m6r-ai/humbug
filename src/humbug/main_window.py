@@ -485,9 +485,12 @@ class MainWindow(QMainWindow):
         self._swap_column_right_action.setEnabled(column_manager.can_swap_column(not left_to_right))
         self._next_message_action.setEnabled(column_manager.can_navigate_next_message())
         self._previous_message_action.setEnabled(column_manager.can_navigate_previous_message())
+        self._update_navigation_action_text()
 
     def _on_language_changed(self) -> None:
         """Update UI text when language changes."""
+        self._update_navigation_action_text()
+
         app = cast(QApplication, QApplication.instance())
         left_to_right = self._language_manager.left_to_right()
         if left_to_right:
@@ -547,8 +550,6 @@ class MainWindow(QMainWindow):
         self._merge_column_right_action.setText(strings.merge_column_right)
         self._swap_column_left_action.setText(strings.swap_column_left)
         self._swap_column_right_action.setText(strings.swap_column_right)
-        self._next_message_action.setText(strings.next_message)
-        self._previous_message_action.setText(strings.previous_message)
 
         # Our logic for left and right reverses for right-to-left languages
         left_to_right = self._language_manager.left_to_right()
@@ -566,6 +567,17 @@ class MainWindow(QMainWindow):
         self._swap_column_right_action.triggered.connect(lambda: self._on_swap_column(not left_to_right))
 
         self._on_style_changed()
+
+    def _update_navigation_action_text(self) -> None:
+        """Set the next/previous action labels to match the current tab type."""
+        strings = self._language_manager.strings()
+        if self._column_manager.is_navigating_as_hunks():
+            self._next_message_action.setText(strings.next_hunk)
+            self._previous_message_action.setText(strings.previous_hunk)
+
+        else:
+            self._next_message_action.setText(strings.next_message)
+            self._previous_message_action.setText(strings.previous_message)
 
     def _create_theme_menu(self) -> QMenu:
         """

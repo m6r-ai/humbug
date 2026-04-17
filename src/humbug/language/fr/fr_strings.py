@@ -72,6 +72,8 @@ def get_french_strings() -> LanguageStrings:
         swap_column_right="Échanger la colonne de droite",
         next_message="Message Suivant",
         previous_message="Message Précédent",
+        next_hunk="Modification Suivante",
+        previous_hunk="Modification Précédente",
 
         # Message roles
         role_you="Vous",
