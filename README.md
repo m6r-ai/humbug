@@ -102,11 +102,20 @@ Humbug is open source and the project welcomes contributions. If you're interest
 ## Requirements
 
 - Python 3.10 or higher
-- You will need API keys for most cloud-based LLMs, but some are available for free, and Ollama will run locally without API keys.
+- API keys for most cloud-based LLMs (some are free; Ollama runs locally without API keys)
+
+Runtime dependencies (installed automatically):
 - PySide6 (the GUI framework)
 - qasync (allows the GUI framework to work nicely with async Python code)
 - aiohttp (async HTTP client)
 - certifi (SSL/TLS root certificates to allow TLS network connections without any other system changes)
+
+Developer dependencies (installed automatically with `.[dev]`):
+- setuptools (required to build the Menai C extension)
+- pytest + pytest-cov (test runner and coverage)
+- mypy (static type checking)
+- pylint (linting)
+- pyinstaller (building standalone application bundles)
 
 ## Developer installation
 
@@ -126,24 +135,18 @@ Humbug is open source and the project welcomes contributions. If you're interest
    venv\Scripts\activate
    ```
 
-2. Install build tools:
+2. Install all dependencies (runtime and developer tools):
 
    ```bash
-   pip install build
+   pip install -e ".[dev]"
    ```
 
-3. Install in development mode:
-
-   ```bash
-   pip install -e .
-   ```
-
-4. Launch the application:
+3. Launch the application:
 
    ```bash
    python -m humbug
    ```
 
-5. Initial configuration:
+4. Initial configuration:
 
    If you load Humbug and don't have any AIs already configured, it will guide you how to use any AI API keys you have.
