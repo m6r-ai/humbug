@@ -197,6 +197,7 @@ def get_french_strings() -> LanguageStrings:
         file_dialog_save_file="Enregistrer le fichier",
         file_dialog_new_mindspace="Créer un nouvel espace mental",
         file_dialog_open_mindspace="Ouvrir un espace mental",
+        file_dialog_attach_file="Joindre un fichier",
 
         # File dialog filters
         file_filter_all="Tous les fichiers (*.*)",
@@ -294,8 +295,13 @@ def get_french_strings() -> LanguageStrings:
         tooltip_submit_message="Envoyer le message",
         tooltip_stop_message="Arrêter le traitement du message",
         tooltip_settings_message="Ouvrir les paramètres de la conversation",
+        tooltip_attach_file="Joindre un fichier",
         tooltip_expand_message="Étendre le message",
         tooltip_collapse_message="Réduire le message",
+        warning_file_too_large=(
+            "'{filename}' fait {size_kb}Ko, ce qui dépasse la limite recommandée de 100Ko. "
+            "Les fichiers volumineux peuvent utiliser beaucoup de fenêtre de contexte. Joindre quand même ?"
+        ),
 
         delete_from_here_title="Supprimer les messages",
         delete_from_here_message=(

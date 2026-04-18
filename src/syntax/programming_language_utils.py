@@ -29,6 +29,7 @@ class ProgrammingLanguageUtils:
     # Mapping from lowercase language names to enum members
     _NAME_TO_LANGUAGE: Dict[str, ProgrammingLanguage] = {
         "aifpl": ProgrammingLanguage.MENAI,
+        "bash": ProgrammingLanguage.BASH,
         "c": ProgrammingLanguage.C,
         "c++": ProgrammingLanguage.CPP,
         "cpp": ProgrammingLanguage.CPP,
@@ -37,6 +38,7 @@ class ProgrammingLanguageUtils:
         "css": ProgrammingLanguage.CSS,
         "go": ProgrammingLanguage.GO,
         "diff": ProgrammingLanguage.DIFF,
+        "fish": ProgrammingLanguage.BASH,
         "html": ProgrammingLanguage.HTML,
         "java": ProgrammingLanguage.JAVA,
         "javascript": ProgrammingLanguage.JAVASCRIPT,
@@ -52,21 +54,29 @@ class ProgrammingLanguageUtils:
         "m6r": ProgrammingLanguage.METAPHOR,
         "move": ProgrammingLanguage.MOVE,
         "patch": ProgrammingLanguage.DIFF,
+        "php": ProgrammingLanguage.PHP,
         "plaintext": ProgrammingLanguage.TEXT,
         "python": ProgrammingLanguage.PYTHON,
         "py": ProgrammingLanguage.PYTHON,
+        "rb": ProgrammingLanguage.RUBY,
+        "ruby": ProgrammingLanguage.RUBY,
         "rust": ProgrammingLanguage.RUST,
         "rs": ProgrammingLanguage.RUST,
         "scheme": ProgrammingLanguage.SCHEME,
         "scm": ProgrammingLanguage.SCHEME,
+        "sh": ProgrammingLanguage.BASH,
         "sol": ProgrammingLanguage.SOLIDITY,
         "solidity": ProgrammingLanguage.SOLIDITY,
         "swift": ProgrammingLanguage.SWIFT,
+        "toml": ProgrammingLanguage.TOML,
         "typescript": ProgrammingLanguage.TYPESCRIPT,
         "ts": ProgrammingLanguage.TYPESCRIPT,
         "text": ProgrammingLanguage.TEXT,
         "txt": ProgrammingLanguage.TEXT,
         "xml": ProgrammingLanguage.XML,
+        "yaml": ProgrammingLanguage.YAML,
+        "yml": ProgrammingLanguage.YAML,
+        "zsh": ProgrammingLanguage.BASH,
 
         # Empty string defaults to text
         "": ProgrammingLanguage.TEXT
@@ -74,6 +84,7 @@ class ProgrammingLanguageUtils:
 
     # Mapping from enum members to lowercase language names
     _LANGUAGE_TO_NAME: Dict[ProgrammingLanguage, str] = {
+        ProgrammingLanguage.BASH: "bash",
         ProgrammingLanguage.C: "c",
         ProgrammingLanguage.CPP: "cpp",
         ProgrammingLanguage.CSHARP: "csharp",
@@ -90,28 +101,38 @@ class ProgrammingLanguageUtils:
         ProgrammingLanguage.MENAI: "menai",
         ProgrammingLanguage.METAPHOR: "metaphor",
         ProgrammingLanguage.MOVE: "move",
+        ProgrammingLanguage.PHP: "php",
         ProgrammingLanguage.PYTHON: "python",
+        ProgrammingLanguage.RUBY: "ruby",
         ProgrammingLanguage.RUST: "rust",
         ProgrammingLanguage.SCHEME: "scheme",
         ProgrammingLanguage.SOLIDITY: "solidity",
         ProgrammingLanguage.SWIFT: "swift",
+        ProgrammingLanguage.TOML: "toml",
         ProgrammingLanguage.TYPESCRIPT: "typescript",
         ProgrammingLanguage.TEXT: "plaintext",
         ProgrammingLanguage.UNKNOWN: "",
-        ProgrammingLanguage.XML: "xml"
+        ProgrammingLanguage.XML: "xml",
+        ProgrammingLanguage.YAML: "yaml",
     }
 
     # Mapping from file extensions to programming languages
     _EXTENSION_TO_LANGUAGE: Dict[str, ProgrammingLanguage] = {
         '.aifpl': ProgrammingLanguage.MENAI,
+        '.bash': ProgrammingLanguage.BASH,
         '.c': ProgrammingLanguage.C,
         '.cc': ProgrammingLanguage.CPP,
+        '.cfg': ProgrammingLanguage.TEXT,
+        '.conf': ProgrammingLanguage.TEXT,
         '.conv': ProgrammingLanguage.JSON,
         '.cpp': ProgrammingLanguage.CPP,
         '.cs': ProgrammingLanguage.CSHARP,
         '.css': ProgrammingLanguage.CSS,
+        '.csv': ProgrammingLanguage.TEXT,
         '.cxx': ProgrammingLanguage.CPP,
         '.diff': ProgrammingLanguage.DIFF,
+        '.env': ProgrammingLanguage.TEXT,
+        '.fish': ProgrammingLanguage.BASH,
         '.go': ProgrammingLanguage.GO,
         '.h': ProgrammingLanguage.C,
         '.hh': ProgrammingLanguage.CPP,
@@ -119,6 +140,7 @@ class ProgrammingLanguageUtils:
         '.html': ProgrammingLanguage.HTML,
         '.htm': ProgrammingLanguage.HTML,
         '.hxx': ProgrammingLanguage.CPP,
+        '.ini': ProgrammingLanguage.TEXT,
         '.java': ProgrammingLanguage.JAVA,
         '.js': ProgrammingLanguage.JAVASCRIPT,
         '.json': ProgrammingLanguage.JSON,
@@ -131,21 +153,30 @@ class ProgrammingLanguageUtils:
         '.menai': ProgrammingLanguage.MENAI,
         '.move': ProgrammingLanguage.MOVE,
         '.patch': ProgrammingLanguage.DIFF,
+        '.php': ProgrammingLanguage.PHP,
         '.py': ProgrammingLanguage.PYTHON,
         '.pyw': ProgrammingLanguage.PYTHON,
         '.pyi': ProgrammingLanguage.PYTHON,
+        '.rb': ProgrammingLanguage.RUBY,
+        '.rst': ProgrammingLanguage.TEXT,
         '.rs': ProgrammingLanguage.RUST,
         '.scm': ProgrammingLanguage.SCHEME,
+        '.sh': ProgrammingLanguage.BASH,
         '.sol': ProgrammingLanguage.SOLIDITY,
         '.swift': ProgrammingLanguage.SWIFT,
+        '.toml': ProgrammingLanguage.TOML,
         '.ts': ProgrammingLanguage.TYPESCRIPT,
         '.tsx': ProgrammingLanguage.TYPESCRIPT,
         '.txt': ProgrammingLanguage.TEXT,
-        '.xml': ProgrammingLanguage.XML
+        '.xml': ProgrammingLanguage.XML,
+        '.yaml': ProgrammingLanguage.YAML,
+        '.yml': ProgrammingLanguage.YAML,
+        '.zsh': ProgrammingLanguage.BASH,
     }
 
     # Mapping from programming languages to display names
     _LANGUAGE_TO_DISPLAY_NAME: Dict[ProgrammingLanguage, str] = {
+        ProgrammingLanguage.BASH: "Bash",
         ProgrammingLanguage.C: "C",
         ProgrammingLanguage.CPP: "C++",
         ProgrammingLanguage.CSHARP: "C#",
@@ -162,19 +193,24 @@ class ProgrammingLanguageUtils:
         ProgrammingLanguage.MENAI: "Menai",
         ProgrammingLanguage.METAPHOR: "Metaphor",
         ProgrammingLanguage.MOVE: "Move",
+        ProgrammingLanguage.PHP: "PHP",
         ProgrammingLanguage.PYTHON: "Python",
+        ProgrammingLanguage.RUBY: "Ruby",
         ProgrammingLanguage.RUST: "Rust",
         ProgrammingLanguage.SCHEME: "Scheme",
         ProgrammingLanguage.SOLIDITY: "Solidity",
         ProgrammingLanguage.SWIFT: "Swift",
+        ProgrammingLanguage.TOML: "TOML",
         ProgrammingLanguage.TYPESCRIPT: "TypeScript",
         ProgrammingLanguage.TEXT: "None",
         ProgrammingLanguage.UNKNOWN: "Unknown",
-        ProgrammingLanguage.XML: "XML"
+        ProgrammingLanguage.XML: "XML",
+        ProgrammingLanguage.YAML: "YAML",
     }
 
     # Mapping from programming languages to file extensions (with leading dot)
     _LANGUAGE_TO_EXTENSION: Dict[ProgrammingLanguage, str] = {
+        ProgrammingLanguage.BASH: ".sh",
         ProgrammingLanguage.C: ".c",
         ProgrammingLanguage.CPP: ".cpp",
         ProgrammingLanguage.CSHARP: ".cs",
@@ -191,15 +227,19 @@ class ProgrammingLanguageUtils:
         ProgrammingLanguage.MENAI: ".menai",
         ProgrammingLanguage.METAPHOR: ".m6r",
         ProgrammingLanguage.MOVE: ".move",
+        ProgrammingLanguage.PHP: ".php",
         ProgrammingLanguage.PYTHON: ".py",
+        ProgrammingLanguage.RUBY: ".rb",
         ProgrammingLanguage.RUST: ".rs",
         ProgrammingLanguage.SCHEME: ".scm",
         ProgrammingLanguage.SOLIDITY: ".sol",
         ProgrammingLanguage.SWIFT: ".swift",
+        ProgrammingLanguage.TOML: ".toml",
         ProgrammingLanguage.TYPESCRIPT: ".ts",
         ProgrammingLanguage.TEXT: ".txt",
         ProgrammingLanguage.UNKNOWN: ".txt",
-        ProgrammingLanguage.XML: ".xml"
+        ProgrammingLanguage.XML: ".xml",
+        ProgrammingLanguage.YAML: ".yaml",
     }
 
     @classmethod

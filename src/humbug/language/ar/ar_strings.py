@@ -198,6 +198,7 @@ def get_arabic_strings() -> LanguageStrings:
         file_dialog_save_file="حفظ الملف",
         file_dialog_new_mindspace="إنشاء مساحة ذهنية جديدة",
         file_dialog_open_mindspace="فتح مساحة ذهنية",
+        file_dialog_attach_file="إرفاق ملف",
 
         # File dialog filters
         file_filter_all="كل الملفات (*.*)",
@@ -295,8 +296,13 @@ def get_arabic_strings() -> LanguageStrings:
         tooltip_submit_message="إرسال الرسالة",
         tooltip_stop_message="إيقاف المعالجة الحالية",
         tooltip_settings_message="فتح إعدادات المحادثة",
+        tooltip_attach_file="إرفاق ملف",
         tooltip_expand_message="توسيع الرسالة",
         tooltip_collapse_message="طي الرسالة",
+        warning_file_too_large=(
+            "'{filename}' حجمه {size_kb}كيلوبايت، وهو يتجاوز الحد الموصى به البالغ 100 كيلوبايت. قد تستهلك "
+            "الملفات الكبيرة جزءاً كبيراً من نافذة السياق. هل تريد الإرفاق على أي حال؟"
+        ),
 
         delete_from_here_title="حذف الرسائل",
         delete_from_here_message="هل أنت متأكد من أنك تريد حذف هذه الرسالة وجميع الرسائل اللاحقة؟ لا يمكن التراجع عن هذا الإجراء.",

@@ -351,12 +351,12 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#f8f8f8"
             },
             ColorRole.MESSAGE_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#383838",
-                ColorMode.LIGHT: "#d8d8d8"
+                ColorMode.DARK: "#404040",
+                ColorMode.LIGHT: "#c4c4c4"
             },
             ColorRole.MESSAGE_BACKGROUND_PRESSED: {
-                ColorMode.DARK: "#505050",
-                ColorMode.LIGHT: "#c0c0c0"
+                ColorMode.DARK: "#585858",
+                ColorMode.LIGHT: "#b0b0b0"
             },
             ColorRole.MESSAGE_USER_BACKGROUND: {
                 ColorMode.DARK: "#282828",
@@ -369,6 +369,10 @@ class StyleManager(QObject):
             ColorRole.MESSAGE_USER_BACKGROUND_PRESSED: {
                 ColorMode.DARK: "#606060",
                 ColorMode.LIGHT: "#a0a0a0"
+            },
+            ColorRole.MESSAGE_ATTACHMENT_BACKGROUND: {
+                ColorMode.DARK: "#383838",
+                ColorMode.LIGHT: "#f0f0f0"
             },
             ColorRole.MESSAGE_BORDER: {
                 ColorMode.DARK: "#282828",
@@ -1125,6 +1129,13 @@ class StyleManager(QObject):
                 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="32" cy="32" r="28" fill="none" stroke="{color}" stroke-width="6"/>
                     <rect x="20" y="20" width="24" height="24" fill="{color}" stroke="none"/>
+                </svg>
+            ''')
+
+            self._write_icon(f'paperclip-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M56 32 L34 54 C28 60 19 60 13 54 C7 48 7 39 13 33 L39 8 C43 4 49 4 53 8 C57 12 57 18 53 22 L29 46 C27 48 24 48 22 46 C20 44 20 41 22 39 L44 17"
+                          fill="none" stroke="{color}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             ''')
 

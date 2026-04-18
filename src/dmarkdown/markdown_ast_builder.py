@@ -220,7 +220,11 @@ class MarkdownASTBuilder:
             True if this line should be treated as a continuation
         """
         parser = ParserRegistry.create_parser(self._embedded_language)
-        assert parser is not None, f"No parser registered for language: {self._embedded_language.name}"
+
+        # If we can't find a specific parser then default to "text"
+        if parser is None:
+            parser = ParserRegistry.create_parser(ProgrammingLanguage.TEXT)
+            assert parser is not None
 
         # Parse the line and check if we're in a continuation
         new_state = parser.parse(self._embedded_parser_state, line_content)

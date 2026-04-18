@@ -111,6 +111,7 @@ class ColorRole(Enum):
     MESSAGE_USER_BACKGROUND = auto()    # Message background for user messages
     MESSAGE_USER_BACKGROUND_HOVER = auto()   # Message background hover for user messages
     MESSAGE_USER_BACKGROUND_PRESSED = auto() # Message background pressed for user messages
+    MESSAGE_ATTACHMENT_BACKGROUND = auto()   # Background for attachment widgets
     MESSAGE_BORDER = auto()             # Message border
     MESSAGE_USER_BORDER = auto()        # Message border for user messages
     MESSAGE_SPOTLIGHTED = auto()        # For highlighting the spotlighted message

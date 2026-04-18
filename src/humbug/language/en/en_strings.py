@@ -197,6 +197,7 @@ def get_english_strings() -> LanguageStrings:
         file_dialog_save_file="Save File",
         file_dialog_new_mindspace="Create New Mindspace",
         file_dialog_open_mindspace="Open Mindspace",
+        file_dialog_attach_file="Attach File",
 
         # File dialog filters
         file_filter_all="All Files (*.*)",
@@ -294,8 +295,13 @@ def get_english_strings() -> LanguageStrings:
         tooltip_submit_message="Submit message",
         tooltip_stop_message="Stop current processing",
         tooltip_settings_message="Open conversation settings",
+        tooltip_attach_file="Attach a file",
         tooltip_expand_message="Expand message",
         tooltip_collapse_message="Collapse message",
+        warning_file_too_large=(
+            "'{filename}' is {size_kb}KB, which exceeds the recommended 100KB limit. "
+            "Large files may use a lot of context window. Attach anyway?"
+        ),
 
         delete_from_here_title="Delete Messages",
         delete_from_here_message=(

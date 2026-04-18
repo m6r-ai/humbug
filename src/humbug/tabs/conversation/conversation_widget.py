@@ -6,7 +6,7 @@ import os
 from typing import Dict, List, Tuple, Any, Set, cast
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
+    QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu, QFileDialog
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
 from PySide6.QtGui import QCursor, QResizeEvent
@@ -17,6 +17,7 @@ from ai import (
 )
 from ai_conversation_transcript import AIConversationTranscriptError, AIConversationTranscriptHandler
 from ai_tool import AIToolCall
+from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -178,6 +179,7 @@ class ConversationWidget(QWidget):
         self._input.submit_requested.connect(self.submit)
         self._input.stop_requested.connect(self._on_stop_requested)
         self._input.settings_requested.connect(self._on_input_settings_requested)
+        self._input.attach_requested.connect(self._on_attach_requested)
         self._input.modified.connect(self.conversation_modified)
 
         style_manager.style_changed.connect(self._on_style_changed)
@@ -1306,6 +1308,7 @@ class ConversationWidget(QWidget):
                 self._spotlighted_message_index = last_visible_index
                 self._spotlight_message()
                 return True
+
             return False
 
         # Find the previous visible message
@@ -1719,7 +1722,8 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_delete_button,
             #ConversationMessage #_stop_button,
             #ConversationMessage #_submit_button,
-            #ConversationMessage #_settings_button {{
+            #ConversationMessage #_settings_button,
+            #ConversationMessage #_attach_button {{
                 background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
@@ -1734,7 +1738,8 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_delete_button:hover,
             #ConversationMessage #_stop_button:hover,
             #ConversationMessage #_submit_button:hover,
-            #ConversationMessage #_settings_button:hover {{
+            #ConversationMessage #_settings_button:hover,
+            #ConversationMessage #_attach_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
             }}
 
@@ -1745,7 +1750,8 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_delete_button:pressed,
             #ConversationMessage #_stop_button:pressed,
             #ConversationMessage #_submit_button:pressed,
-            #ConversationMessage #_settings_button:pressed {{
+            #ConversationMessage #_settings_button:pressed,
+            #ConversationMessage #_attach_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
             }}
 
@@ -1814,6 +1820,38 @@ class ConversationWidget(QWidget):
 
             #ConversationMessage #_edit_btn_row {{
                 background-color: transparent;
+            }}
+
+            #ConversationMessage #_attachments_bar {{
+                background-color: transparent;
+                border: none;
+            }}
+
+            #ConversationMessage #_attachment_widget {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_ATTACHMENT_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
+                border-radius: 4px;
+            }}
+
+            #ConversationMessage #_attachment_label {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: transparent;
+                font-size: {label_font_size:.1f}pt;
+            }}
+
+            #ConversationMessage #_attachment_remove {{
+                background-color: transparent;
+                border: none;
+                padding: 0;
+                margin: 0;
+            }}
+
+            #ConversationMessage #_attachment_remove:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
+            }}
+
+            #ConversationMessage #_attachment_remove:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_PRESSED)};
             }}
 
             #ConversationMessage #_edit_confirm_button {{
@@ -2292,12 +2330,28 @@ class ConversationWidget(QWidget):
     ) -> None:
         """Submit current input text."""
         content = self._input.to_plain_text().strip()
-        if not content:
+        attachments = self._input.get_attachments()
+        if not content and not attachments:
             return
 
         ai_conversation = cast(AIConversation, self._ai_conversation)
-        sanitized_content = self._sanitize_input(content)
+
+        # Prepend each attached file as a fenced code block before the message text.
+        parts = []
+        for filename, file_content in attachments:
+            language = ProgrammingLanguageUtils.get_name(
+                ProgrammingLanguageUtils.from_file_extension(filename)
+            )
+            parts.append(f"`{filename}`:\n```{language}\n{file_content}\n```")
+
+        if content:
+            parts.append(content)
+
+        combined = "\n\n".join(parts)
+
+        sanitized_content = self._sanitize_input(combined)
         self._input.clear()
+        self._input.clear_attachments()
 
         # We need to decide if we're already streaming or if this is a new message.
         if self._is_streaming:
@@ -2336,6 +2390,40 @@ class ConversationWidget(QWidget):
     def _on_input_settings_requested(self) -> None:
         """Handle settings request from input widget."""
         self.conversation_settings_requested.emit()
+
+    def _on_attach_requested(self) -> None:
+        """Handle attach file request: open file dialog and attach selected file."""
+        strings = self._language_manager.strings()
+        extensions = ProgrammingLanguageUtils.get_supported_file_extensions()
+        ext_pattern = " ".join(f"*{ext}" for ext in sorted(extensions))
+        file_filter = f"Text and code files ({ext_pattern});;All files (*)"
+        path, _ = QFileDialog.getOpenFileName(self, strings.file_dialog_attach_file, "", file_filter)
+        if not path:
+            return
+
+        file_size = os.path.getsize(path)
+        size_kb = file_size // 1024
+        if file_size > 100 * 1024:
+            filename = os.path.basename(path)
+            result = MessageBox.show_message(
+                self,
+                MessageBoxType.WARNING,
+                strings.file_error_title,
+                strings.warning_file_too_large.format(filename=filename, size_kb=size_kb),
+                [MessageBoxButton.YES, MessageBoxButton.NO]
+            )
+            if result != MessageBoxButton.YES:
+                return
+
+        try:
+            with open(path, encoding='utf-8', errors='replace') as f:
+                content = f.read()
+
+        except Exception as e:
+            self._logger.warning("Failed to read attachment %s: %s", path, str(e))
+            return
+
+        self._input.add_attachment(os.path.basename(path), content)
 
     def get_conversation_history(self) -> AIConversationHistory:
         """Get the conversation history object."""

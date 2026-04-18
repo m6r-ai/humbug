@@ -185,6 +185,7 @@ class LanguageStrings:
     file_dialog_save_file: str
     file_dialog_new_mindspace: str
     file_dialog_open_mindspace: str
+    file_dialog_attach_file: str
 
     # File dialog filters
     file_filter_all: str
@@ -275,8 +276,10 @@ class LanguageStrings:
     tooltip_submit_message: str
     tooltip_stop_message: str
     tooltip_settings_message: str
+    tooltip_attach_file: str
     tooltip_expand_message: str
     tooltip_collapse_message: str
+    warning_file_too_large: str
 
     delete_from_here_title: str
     delete_from_here_message: str
