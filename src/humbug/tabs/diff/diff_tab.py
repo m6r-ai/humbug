@@ -54,7 +54,7 @@ class DiffTab(TabBase):
         layout.addWidget(self._diff_widget)
 
         if path:
-            self._diff_widget.load_diff()
+            self._diff_widget.load_diff(initial_load=True)
             self._start_file_watching(path)
 
         self._vcs_poller = MindspaceVCSPoller()

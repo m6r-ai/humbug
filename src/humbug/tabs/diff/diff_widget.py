@@ -120,8 +120,13 @@ class DiffWidget(QWidget):
         self._smooth_scroll_duration: int = SMOOTH_SCROLL_DURATION_MS
         self._smooth_scroll_time: int = 0
 
-    def load_diff(self) -> None:
-        """Fetch both file versions and display the full side-by-side diff."""
+    def load_diff(self, initial_load: bool = False) -> None:
+        """
+        Fetch both file versions and display the full side-by-side diff.
+
+        Args:
+            initial_load: If True, scroll to the first hunk after loading.
+        """
         result = self._fetch_content()
         if result is None:
             return
@@ -153,6 +158,14 @@ class DiffWidget(QWidget):
         self._cached_hunks = self._hunks()
         self._current_hunk_index = -1
         self._update_active_hunk()
+
+        if initial_load and self._cached_hunks:
+            start = self._cached_hunks[0][0]
+            self._current_hunk_index = 0
+            self._set_active_hunk(self._cached_hunks[0][0], self._cached_hunks[0][1])
+            QTimer.singleShot(0, lambda: self._start_smooth_scroll(
+                self._left_pane.target_scroll_for_block(start)
+            ))
 
         # Re-run the active search against the new document content, if any.
         if self._find_text:
@@ -443,9 +456,20 @@ class DiffWidget(QWidget):
         self._smooth_scroll_time += self._smooth_scroll_timer.interval()
         progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
         t = 1 - (1 - progress) ** 3
-        new_position = self._smooth_scroll_start + int(self._smooth_scroll_distance * t)
+
+        # Add 0.5 lines of bias so that int() truncation crosses each line boundary
+        # slightly early, avoiding a visible "jump" at the very end of the animation
+        # where the easing curve decelerates so slowly that the final line is only
+        # reached on the last tick, well after the scroll appears to have stopped.
+        new_position = min(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t + 0.5),
+        ) if self._smooth_scroll_distance > 0 else max(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t - 0.5),
+        )
         self._scrollbar.setValue(new_position)
-        if progress >= 1.0:
+        if progress >= 1.0 or new_position == self._smooth_scroll_target:
             self._smooth_scroll_timer.stop()
 
     def get_match_status(self) -> Tuple[int, int]:

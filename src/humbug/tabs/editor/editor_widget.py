@@ -1242,9 +1242,20 @@ class EditorWidget(QPlainTextEdit):
         self._smooth_scroll_time += self._smooth_scroll_timer.interval()
         progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
         t = 1 - (1 - progress) ** 3
-        new_position = self._smooth_scroll_start + int(self._smooth_scroll_distance * t)
+
+        # Add 0.5 lines of bias so that int() truncation crosses each line boundary
+        # slightly early, avoiding a visible "jump" at the very end of the animation
+        # where the easing curve decelerates so slowly that the final line is only
+        # reached on the last tick, well after the scroll appears to have stopped.
+        new_position = min(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t + 0.5),
+        ) if self._smooth_scroll_distance > 0 else max(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t - 0.5),
+        )
         self.verticalScrollBar().setValue(new_position)
-        if progress >= 1.0:
+        if progress >= 1.0 or new_position == self._smooth_scroll_target:
             self._smooth_scroll_timer.stop()
 
     def get_match_status(self) -> Tuple[int, int]:
