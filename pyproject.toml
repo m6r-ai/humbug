@@ -16,6 +16,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "mypy",
+    "types-PySide6",
     "pylint",
     "pyinstaller",
     "pytest",
@@ -92,6 +93,9 @@ output-format = "colorized"
 
 [tool.pylint.master]
 extension-pkg-whitelist = "PySide6"
+
+[tool.pylint.typecheck]
+ignored-modules = ["PySide6.*"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"

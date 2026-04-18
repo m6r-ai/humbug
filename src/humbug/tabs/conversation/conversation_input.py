@@ -241,8 +241,9 @@ class ConversationInput(ConversationMessage):
         # Remove all existing attachment widgets, leaving the trailing stretch.
         while self._attachments_layout.count() > 1:
             item = self._attachments_layout.takeAt(0)
-            if item and item.widget():
-                item.widget().deleteLater()
+            widget = item.widget() if item else None
+            if widget:
+                widget.deleteLater()
 
         for index, (filename, _) in enumerate(self._attachments):
             attachment_widget = QWidget()

@@ -26,9 +26,11 @@ def _run_git(args: List[str], cwd: str) -> str:
         GitNotFoundError: If git is not installed or not on PATH
         GitCommandError: If the command exits with a non-zero return code
     """
-    kwargs = {}
     if sys.platform == "win32":
-        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+        creationflags = subprocess.CREATE_NO_WINDOW
+
+    else:
+        creationflags = 0
 
     try:
         result = subprocess.run(
@@ -39,7 +41,7 @@ def _run_git(args: List[str], cwd: str) -> str:
             text=True,
             encoding="utf-8",
             timeout=_GIT_TIMEOUT,
-            **kwargs
+            creationflags=creationflags,
         )
 
     except FileNotFoundError as e:
