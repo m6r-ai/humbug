@@ -118,7 +118,8 @@ class MindspaceVCSDelegate(QStyledItemDelegate):
         index: QModelIndex | QPersistentModelIndex,
     ) -> QSize:
         """Return a size hint with appropriate row height."""
-        hint = super().sizeHint(option, index)
         zoom = self._style_manager.zoom_factor()
-        hint.setHeight(max(hint.height(), round(24 * zoom)))
-        return hint
+        fm = option.fontMetrics  # type: ignore
+        line_height = fm.height()
+        row_height = max(line_height + round(8 * zoom), round(24 * zoom))
+        return QSize(super().sizeHint(option, index).width(), row_height)

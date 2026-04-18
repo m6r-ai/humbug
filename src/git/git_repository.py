@@ -1,6 +1,7 @@
 """Git repository operations."""
 
 import os
+import sys
 import subprocess
 from typing import List, Optional
 
@@ -25,6 +26,10 @@ def _run_git(args: List[str], cwd: str) -> str:
         GitNotFoundError: If git is not installed or not on PATH
         GitCommandError: If the command exits with a non-zero return code
     """
+    kwargs = {}
+    if sys.platform == "win32":
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+
     try:
         result = subprocess.run(
             ["git"] + args,
@@ -33,7 +38,8 @@ def _run_git(args: List[str], cwd: str) -> str:
             capture_output=True,
             text=True,
             encoding="utf-8",
-            timeout=_GIT_TIMEOUT
+            timeout=_GIT_TIMEOUT,
+            **kwargs
         )
 
     except FileNotFoundError as e:

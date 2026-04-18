@@ -33,6 +33,7 @@ class MindspaceVCSPoller(QObject):
         """Create or return singleton instance."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
+
         return cls._instance
 
     def __init__(self) -> None:
@@ -126,6 +127,7 @@ class MindspaceVCSPoller(QObject):
             git_dir = os.path.join(self._repo_root, ".git")
             if os.path.exists(git_dir):
                 return self._repo_root
+
             # .git has gone — fall through to full scan.
 
         # Walk up from the mindspace looking for a .git directory.
@@ -134,13 +136,14 @@ class MindspaceVCSPoller(QObject):
             if os.path.exists(os.path.join(candidate, ".git")):
                 try:
                     return find_repo_root(candidate)
+
                 except (GitNotFoundError, GitNotRepositoryError, GitCommandError) as e:
-                    self._logger.debug("find_repo_root failed for '%s': %s", candidate, e)
                     return ""
 
             parent = os.path.dirname(candidate)
             if parent == candidate:
                 break
+
             candidate = parent
 
         return ""
@@ -151,9 +154,11 @@ class MindspaceVCSPoller(QObject):
         """
         try:
             new_status = get_status(self._repo_root, self._mindspace_path)
+
         except GitNotFoundError as e:
             self._logger.warning("git not found: %s", e)
             return
+
         except (GitNotRepositoryError, GitCommandError) as e:
             self._logger.debug("git status failed: %s", e)
             return

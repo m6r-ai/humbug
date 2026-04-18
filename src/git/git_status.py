@@ -1,6 +1,7 @@
 """Git working-tree status query."""
 
 import os
+import sys
 from dataclasses import dataclass
 from enum import Enum, auto
 
@@ -148,6 +149,10 @@ def _within_mindspace(abs_path: str, mindspace_path: str) -> bool:
     Returns:
         True if abs_path is within mindspace_path.
     """
+    if sys.platform == "win32":
+        abs_path = os.path.normpath(abs_path).lower()
+        mindspace_path = os.path.normpath(mindspace_path).lower()
+
     try:
         common = os.path.commonpath([abs_path, mindspace_path])
         return common == mindspace_path
