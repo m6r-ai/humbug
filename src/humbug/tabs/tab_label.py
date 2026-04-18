@@ -260,10 +260,10 @@ class TabLabel(QWidget):
                     outline: none;
                     padding: 0px;
                     margin: 0px;
-                    background: {style_manager.get_color_str(base_color)};
+                    background-color: {style_manager.get_color_str(base_color)};
                 }}
                 QToolButton:hover {{
-                    background: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER)};
+                    background-color: {style_manager.get_color_str(ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER)};
                 }}
             """
             show_active = self._is_current and self._is_active_column
