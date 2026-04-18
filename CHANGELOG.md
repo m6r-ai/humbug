@@ -1,5 +1,13 @@
 # Change log for Humbug
 
+## v44 (2026-04-19)
+
+New features:
+
+Bug fixes:
+
+- The mindspace label did not display correctly.
+
 ## v43 (2026-04-18)
 
 New features:

@@ -342,7 +342,7 @@ class MindspaceView(QWidget):
             self._settings_button.hide()
 
         else:
-            self._mindspace_button.setText(os.path.basename(path))
+            self._mindspace_button.setText(os.path.basename(path.rstrip('\\/')))
             self._settings_button.show()
 
         # Forward to all views
