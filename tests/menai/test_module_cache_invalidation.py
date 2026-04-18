@@ -421,7 +421,7 @@ class TestCacheInvalidationEdgeCases:
     def test_unicode_content_hashing(self, tmp_path):
         """Test that Unicode content is hashed correctly."""
         module_file = tmp_path / "unicode.menai"
-        module_file.write_text("; Comment: 你好世界 🌍\n(dict \"greeting\" \"hello\")")
+        module_file.write_text("; Comment: 你好世界 🌍\n(dict \"greeting\" \"hello\")", encoding="utf-8")
 
         menai = Menai(module_path=[str(tmp_path)])
 
@@ -430,7 +430,7 @@ class TestCacheInvalidationEdgeCases:
         assert "unicode" in menai.module_hashes
 
         # Modify Unicode content
-        module_file.write_text("; Comment: 再见世界 🌏\n(dict \"greeting\" \"hello\")")
+        module_file.write_text("; Comment: 再见世界 🌏\n(dict \"greeting\" \"hello\")", encoding="utf-8")
 
         # Should detect change
         hash1 = menai.module_hashes["unicode"]
