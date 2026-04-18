@@ -9,6 +9,7 @@ New features:
 - Added a new mindspace view for revision control, allowing you to see which files have been modified vs git `HEAD`.
 - Shift+Home/End now selects text in editor tabs, making things consistent with other shift+movement operations.
 - Switched find operations to use smooth scrolling in all tab types.
+- Added the ability to attach (and remove) files in a prompt.
 
 Bug fixes:
 
@@ -16,6 +17,7 @@ Bug fixes:
   when they didn't need to.
 - Resolved a problem where tabs that were moved between columns did not result in files being unwatched.
 - Fixed broken find operations in conversation, Humbug shell, and mindspace log tabs.
+- Resolved a problem with smooth scrolling operations that could make things appear to "jump" right at the end of the scroll.
 
 ## v42 (2026-04-10)
 
