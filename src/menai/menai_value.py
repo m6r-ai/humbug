@@ -549,9 +549,9 @@ class MenaiStruct(MenaiValue):
 
 
 # Module-level singletons — there is only one #none value.
-Menai_NONE = MenaiNone()
-Menai_BOOLEAN_TRUE = MenaiBoolean(True)
-Menai_BOOLEAN_FALSE = MenaiBoolean(False)
-Menai_LIST_EMPTY = MenaiList(())
-Menai_DICT_EMPTY = MenaiDict(())
-Menai_SET_EMPTY = MenaiSet(())
+Menai_NONE = MenaiNone()  # pylint: disable=invalid-name
+Menai_BOOLEAN_TRUE = MenaiBoolean(True)  # pylint: disable=invalid-name
+Menai_BOOLEAN_FALSE = MenaiBoolean(False)  # pylint: disable=invalid-name
+Menai_LIST_EMPTY = MenaiList(())  # pylint: disable=invalid-name
+Menai_DICT_EMPTY = MenaiDict(())  # pylint: disable=invalid-name
+Menai_SET_EMPTY = MenaiSet(())  # pylint: disable=invalid-name

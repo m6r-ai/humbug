@@ -231,7 +231,7 @@ class MenaiCFGTraceInstr:
 # Union of all non-terminator instruction types.
 # MenaiCFGPatchClosureInstr is intentionally excluded — it has no result and
 # is stored in MenaiCFGBlock.patch_instrs rather than MenaiCFGBlock.instrs.
-MenaiCFGInstr = (
+MenaiCFGInstr = (  # pylint: disable=invalid-name
     MenaiCFGConstInstr
     | MenaiCFGGlobalInstr
     | MenaiCFGParamInstr
@@ -317,7 +317,7 @@ class MenaiCFGRaiseTerm:
 
 
 # Union of all terminator types.
-MenaiCFGTerminator = (
+MenaiCFGTerminator = (  # pylint: disable=invalid-name
     MenaiCFGJumpTerm
     | MenaiCFGBranchTerm
     | MenaiCFGReturnTerm

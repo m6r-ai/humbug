@@ -216,7 +216,7 @@ class MenaiVCodeRaise:
 
 
 # Union of all VCode instruction types.
-MenaiVCodeInstr = (
+MenaiVCodeInstr = (  # pylint: disable=invalid-name
     MenaiVCodeLabel
     | MenaiVCodeMove
     | MenaiVCodeLoadConst

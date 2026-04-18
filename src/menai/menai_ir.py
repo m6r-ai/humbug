@@ -171,7 +171,7 @@ class MenaiIRBuildStruct:
 
 
 # Union type for all expression plans
-MenaiIRExpr = (
+MenaiIRExpr = (  # pylint: disable=invalid-name
     MenaiIRConstant |
     MenaiIRVariable |
     MenaiIRIf |
