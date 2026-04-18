@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
 )
 from PySide6.QtCore import Signal, Qt, QPoint, QTimer
-from PySide6.QtGui import QCursor, QResizeEvent
+from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -486,6 +486,10 @@ class PreviewWidget(QWidget):
             if distance_out > viewport_height * 2:
                 scrollbar.setValue(scrollbar.minimum())
             else:
+                screen = QGuiApplication.screenAt(QCursor.pos())
+                if screen is None or QCursor.pos().y() <= screen.availableGeometry().top() + 4:
+                    distance_out = 250
+
                 scroll_amount = min(50, max(10, distance_out // 5))
                 new_val = max(scrollbar.minimum(), current_val - scroll_amount)
                 scrollbar.setValue(new_val)
@@ -496,6 +500,10 @@ class PreviewWidget(QWidget):
             if distance_out > viewport_height * 2:
                 scrollbar.setValue(scrollbar.maximum())
             else:
+                screen = QGuiApplication.screenAt(QCursor.pos())
+                if screen is None or QCursor.pos().y() >= screen.availableGeometry().bottom() - 4:
+                    distance_out = 250
+
                 scroll_amount = min(50, max(10, distance_out // 5))
                 new_val = min(scrollbar.maximum(), current_val + scroll_amount)
                 scrollbar.setValue(new_val)

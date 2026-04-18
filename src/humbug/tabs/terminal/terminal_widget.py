@@ -351,13 +351,21 @@ class TerminalWidget(QAbstractScrollArea):
         vbar = self.verticalScrollBar()
 
         if mouse_pos.y() < 0:
-            distance_out = -mouse_pos.y()
-            rows_per_tick = min(50.0, distance_out / (5.0 * self._char_height))
+            distance_out: float = float(-mouse_pos.y())
+            screen = QGuiApplication.screenAt(QCursor.pos())
+            if screen is None or QCursor.pos().y() <= screen.availableGeometry().top() + 4:
+                distance_out = 5.0 * self._char_height * 5.0
+
+            rows_per_tick = min(5.0, distance_out / (5.0 * self._char_height))
             self._drag_scroll_accumulator -= rows_per_tick
 
         elif mouse_pos.y() > viewport_height:
-            distance_out = mouse_pos.y() - viewport_height
-            rows_per_tick = min(50.0, distance_out / (5.0 * self._char_height))
+            distance_out = float(mouse_pos.y() - viewport_height)
+            screen = QGuiApplication.screenAt(QCursor.pos())
+            if screen is None or QCursor.pos().y() >= screen.availableGeometry().bottom() - 4:
+                distance_out = 5.0 * self._char_height * 5.0
+
+            rows_per_tick = min(5.0, distance_out / (5.0 * self._char_height))
             self._drag_scroll_accumulator += rows_per_tick
 
         else:

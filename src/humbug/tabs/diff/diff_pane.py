@@ -21,7 +21,8 @@ from humbug.tabs.diff.diff_row import DiffRow, DiffRowType
 
 
 class _BlockData(QTextBlockUserData):
-    """Per-block metadata combining diff row info and syntax highlighter parser state.
+    """
+    Per-block metadata combining diff row info and syntax highlighter parser state.
 
     Keeping both pieces of data in a single QTextBlockUserData subclass avoids
     the problem of the syntax highlighter's setUserData call overwriting the diff
@@ -37,7 +38,8 @@ class _BlockData(QTextBlockUserData):
 
 
 class _DiffPaneHighlighter(QSyntaxHighlighter):
-    """Syntax highlighter for a DiffPane document.
+    """
+    Syntax highlighter for a DiffPane document.
 
     This is a slimmed-down highlighter that stores its parser state in the
     combined _BlockData object already attached to each block by load_rows(),
@@ -129,7 +131,8 @@ class _DiffPaneHighlighter(QSyntaxHighlighter):
 
 
 class DiffPane(QPlainTextEdit):
-    """Read-only pane displaying one side of a side-by-side diff.
+    """
+    Read-only pane displaying one side of a side-by-side diff.
 
     The pane owns a LineNumberArea gutter that shows line numbers and a
     _DiffPaneHighlighter for syntax highlighting.  Background colours for each
@@ -230,12 +233,15 @@ class DiffPane(QPlainTextEdit):
 
         bg = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
         fg = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        sel = self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)
         self.setStyleSheet(f"""
             QPlainTextEdit {{
                 background-color: {bg};
                 color: {fg};
                 border: none;
                 padding: 0px;
+                selection-background-color: {sel};
+                selection-color: none;
             }}
             {self._style_manager.get_menu_stylesheet()}
         """)
