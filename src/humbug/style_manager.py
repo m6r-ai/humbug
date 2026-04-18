@@ -214,19 +214,19 @@ class StyleManager(QObject):
             },
             ColorRole.TAB_BACKGROUND_INACTIVE: {
                 ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#c8c8c8"
+                ColorMode.LIGHT: "#d0d0d0"
             },
             ColorRole.TAB_BACKGROUND_HOVER: {
                 ColorMode.DARK: "#242454",
-                ColorMode.LIGHT: "#b8b8f8"
+                ColorMode.LIGHT: "#c8c8ff"
             },
             ColorRole.TAB_BACKGROUND_UPDATED: {
                 ColorMode.DARK: "#3c2054",
                 ColorMode.LIGHT: "#f0d0f8"
             },
             ColorRole.TAB_BORDER_ACTIVE: {
-                ColorMode.DARK: "#a0d0ff",
-                ColorMode.LIGHT: "#ff3018"
+                ColorMode.DARK: "#e03826",
+                ColorMode.LIGHT: "#ff4030"
             },
 
             # Button colours
@@ -256,27 +256,27 @@ class StyleManager(QObject):
             },
             ColorRole.BUTTON_BACKGROUND_RECOMMENDED: {
                 ColorMode.DARK: "#2050c0",
-                ColorMode.LIGHT: "#3060d0"
+                ColorMode.LIGHT: "#6080e0"
             },
             ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED: {
                 ColorMode.DARK: "#4070e0",
-                ColorMode.LIGHT: "#1040b0"
+                ColorMode.LIGHT: "#4060c0"
             },
             ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER: {
                 ColorMode.DARK: "#3060d0",
-                ColorMode.LIGHT: "#2050c0"
+                ColorMode.LIGHT: "#5070d0"
             },
             ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE: {
                 ColorMode.DARK: "#c03020",
-                ColorMode.LIGHT: "#d04030"
+                ColorMode.LIGHT: "#e06048"
             },
             ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED: {
                 ColorMode.DARK: "#e05040",
-                ColorMode.LIGHT: "#b02010"
+                ColorMode.LIGHT: "#c04030"
             },
             ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER: {
                 ColorMode.DARK: "#d04030",
-                ColorMode.LIGHT: "#c03020"
+                ColorMode.LIGHT: "#d0503c"
             },
             ColorRole.BUTTON_BACKGROUND_EDIT: {
                 ColorMode.DARK: "#b07010",
@@ -451,8 +451,8 @@ class StyleManager(QObject):
 
             # Close button states
             ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#d04030",
-                ColorMode.LIGHT: "#c03020"
+                ColorMode.DARK: "#e03030",
+                ColorMode.LIGHT: "#ff7070"
             },
 
             # Line numbers
