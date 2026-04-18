@@ -103,8 +103,8 @@ if sys.platform != 'win32':
         bundle_identifier='ai.m6r.humbug',
         info_plist={
             'CFBundleDisplayName': 'Humbug',
-            'CFBundleShortVersionString': '43',
-            'CFBundleVersion': '43',
+            'CFBundleShortVersionString': '44',
+            'CFBundleVersion': '44',
             'NSPrincipalClass': 'NSApplication',
             'NSAppleScriptEnabled': False
         }
