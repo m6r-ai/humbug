@@ -13,6 +13,16 @@ dependencies = [
     "qasync"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "mypy",
+    "pylint",
+    "pyinstaller",
+    "pytest",
+    "pytest-cov",
+    "setuptools",
+]
+
 [tool.coverage.run]
 source = ["metaphor"]
 branch = true
