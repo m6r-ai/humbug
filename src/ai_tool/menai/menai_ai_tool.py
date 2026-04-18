@@ -16,7 +16,7 @@ from ai_tool import (
 
 
 class MenaiAITool(AITool):
-    """Menai calculator tool with LISP-like syntax."""
+    """Menai tool with LISP-like syntax."""
 
     def __init__(self) -> None:
         """
@@ -36,7 +36,10 @@ class MenaiAITool(AITool):
         return self._build_definition_from_operations(
             name="menai",
             description_prefix=(
-                "The Menai (AI Functional Programming Language) is a pure functional programming language. "
+                "The menai tool lets you to compile and execute Menai programs. "
+                "You MUST NOT attempt to guess Menai syntax and MUST read the help before "
+                "attempting to use this tool. "
+                "Menai is a unique pure functional programming language. "
                 "It is ideal for everything from simple calculations to complex algorithms. "
                 "Menai has no side effects, so it does not require user approvals to use it. "
                 "When annotating Menai code, use triple backticks with `menai`\n\n"

@@ -66,7 +66,9 @@ class SystemAITool(AITool):
                 AIToolParameter(
                     name="file_path",
                     type="string",
-                    description="Path to file or directory (for open_editor_tab, open_conversation_tab, open_preview_tab, open_diff_tab)",
+                    description=(
+                        "Path to file or directory (for open_editor_tab, open_conversation_tab, open_preview_tab, open_diff_tab)"
+                    ),
                     required=False
                 ),
                 AIToolParameter(
