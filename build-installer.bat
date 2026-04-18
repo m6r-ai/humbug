@@ -4,7 +4,15 @@ setlocal
 echo === Building Humbug ===
 
 echo.
-echo [1/2] Running PyInstaller...
+echo [1/3] Building C extension...
+python setup.py build_ext --inplace
+if %ERRORLEVEL% neq 0 (
+    echo ERROR: C extension build failed.
+    exit /b 1
+)
+
+echo.
+echo [2/3] Running PyInstaller...
 pyinstaller humbug.spec --clean
 if %ERRORLEVEL% neq 0 (
     echo ERROR: PyInstaller failed.
@@ -12,7 +20,7 @@ if %ERRORLEVEL% neq 0 (
 )
 
 echo.
-echo [2/2] Running Inno Setup compiler...
+echo [3/3] Running Inno Setup compiler...
 
 set ISCC=""
 if exist "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" set ISCC="C:\Program Files (x86)\Inno Setup 6\ISCC.exe"

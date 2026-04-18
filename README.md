@@ -102,6 +102,10 @@ Humbug is open source and the project welcomes contributions. If you're interest
 ## Requirements
 
 - Python 3.10 or higher
+- **Windows only:** [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+  (Visual C++ 14.0 or later) — required to compile the Menai C extension.
+  During installation, select the **"Desktop development with C++"** workload.
+  This is a one-time setup; once installed it is used automatically by `setup.py`.
 - API keys for most cloud-based LLMs (some are free; Ollama runs locally without API keys)
 
 Runtime dependencies (installed automatically):
@@ -147,6 +151,14 @@ Developer dependencies (installed automatically with `.[dev]`):
    python -m humbug
    ```
 
-4. Initial configuration:
+4. Build the Menai C extension:
+
+   ```bash
+   python setup.py build_ext --inplace
+   ```
+
+   This compiles the C VM for Menai. Without it Humbug falls back to the slower Python VM automatically, so this step is optional but recommended for performance.
+
+5. Initial configuration:
 
    If you load Humbug and don't have any AIs already configured, it will guide you how to use any AI API keys you have.

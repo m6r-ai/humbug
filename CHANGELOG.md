@@ -5,6 +5,7 @@
 New features:
 
 - Improved performance across the Menai VM.
+- The C implementation of the Menai VM now compiles and runs on Windows as well as on MacOS.
 - Added a new "diff" tab type that allows you to compare the current version of a file with the last version stored in git.
 - Added a new mindspace view for revision control, allowing you to see which files have been modified vs git `HEAD`.
 - Shift+Home/End now selects text in editor tabs, making things consistent with other shift+movement operations.
@@ -18,6 +19,8 @@ Bug fixes:
 - Resolved a problem where tabs that were moved between columns did not result in files being unwatched.
 - Fixed broken find operations in conversation, Humbug shell, and mindspace log tabs.
 - Resolved a problem with smooth scrolling operations that could make things appear to "jump" right at the end of the scroll.
+- Fixed the selection colour in terminal tabs.
+- Enabled faster drag-scrolling in all tab types.
 
 ## v42 (2026-04-10)
 

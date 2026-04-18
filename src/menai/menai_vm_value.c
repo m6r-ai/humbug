@@ -115,9 +115,13 @@ menai_hashable_key(PyObject *key)
         Py_hash_t h = PyObject_Hash(key);
         if (h == -1 && PyErr_Occurred()) {
             /* Re-raise as MenaiEvalError */
-            PyObject *exc = PyErr_GetRaisedException();
-            PyObject *msg = PyObject_Str(exc);
-            Py_XDECREF(exc);
+            PyObject *exc_type, *exc_value, *exc_tb;
+            PyErr_Fetch(&exc_type, &exc_value, &exc_tb);
+            PyErr_NormalizeException(&exc_type, &exc_value, &exc_tb);
+            PyObject *msg = exc_value ? PyObject_Str(exc_value) : NULL;
+            Py_XDECREF(exc_type);
+            Py_XDECREF(exc_value);
+            Py_XDECREF(exc_tb);
             if (msg) {
                 PyErr_SetObject(MenaiEvalError_type, msg);
                 Py_DECREF(msg);
