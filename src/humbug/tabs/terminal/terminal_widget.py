@@ -1130,8 +1130,8 @@ class TerminalWidget(QAbstractScrollArea):
         visible_start_row = selection.start_row - first_visible_line
         visible_end_row = selection.end_row - first_visible_line
 
-        selection_color = self.palette().highlight().color()
-        selection_text_color = self.palette().highlightedText().color()
+        selection_color = self._style_manager.get_color(ColorRole.TEXT_SELECTED)
+        selection_text_color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
 
         lines = self._state.current_buffer().lines()
 
