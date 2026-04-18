@@ -39,6 +39,7 @@ def get_english_strings() -> LanguageStrings:
         open_conversation="Open Conversation...",
         open_file="Open File...",
         open_preview="Open Preview...",
+        open_diff="Open Diff...",
         save="Save",
         save_as="Save As...",
         close_mindspace="Close Mindspace",

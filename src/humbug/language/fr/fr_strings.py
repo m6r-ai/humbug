@@ -39,6 +39,7 @@ def get_french_strings() -> LanguageStrings:
         open_conversation="Ouvrir conversation...",
         open_file="Ouvrir fichier...",
         open_preview="Ouvrir aperçu...",
+        open_diff="Ouvrir diff...",
         save="Enregistrer",
         save_as="Enregistrer sous...",
         close_mindspace="Fermer l'espace mental",

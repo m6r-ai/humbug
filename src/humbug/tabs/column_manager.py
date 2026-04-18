@@ -2248,6 +2248,15 @@ class ColumnManager(QWidget):
             )
             self.close_tab_by_id(preview_tab.tab_id(), True)
 
+        # Close any diff tab we may have had for this file
+        diff_tab = self._find_diff_tab_by_path(path)
+        if diff_tab:
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"Deleted '{path}' - closed diff tab\ntab ID: {diff_tab.tab_id()}"
+            )
+            self.close_tab_by_id(diff_tab.tab_id(), True)
+
     def close_all_tabs(self) -> bool:
         """
         Close all open tabs.

@@ -30,6 +30,7 @@ class LanguageStrings:
     open_conversation: str
     open_file: str
     open_preview: str
+    open_diff: str
     save: str
     save_as: str
     close_mindspace: str

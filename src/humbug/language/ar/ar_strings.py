@@ -40,6 +40,7 @@ def get_arabic_strings() -> LanguageStrings:
         open_conversation="فتح محادثة...",
         open_file="فتح ملف...",
         open_preview="فتح معاينة...",
+        open_diff="فتح فروق...",
         save="حفظ",
         save_as="حفظ باسم...",
         close_mindspace="إغلاق المساحة الذهنية",
