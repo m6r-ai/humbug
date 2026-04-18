@@ -24,6 +24,12 @@ class MindspaceFileWatcher(QObject):
     Uses file modification time and directory contents to detect changes.
     Designed for use with remote filesystems where inotify may not work reliably.
 
+    Each (path, callback) registration maintains its own independent FileInfo
+    baseline.  This means two watchers on the same file (e.g. an editor tab and
+    a diff tab) are completely independent: re-registering one after a deliberate
+    write refreshes only that watcher's baseline, leaving the other's stale so it
+    still sees the change.
+
     Implements singleton pattern to provide global access to file watching state.
     """
 
@@ -47,8 +53,10 @@ class MindspaceFileWatcher(QObject):
         if not hasattr(self, '_initialized'):
             super().__init__()
             self._poll_interval = poll_interval
-            self._watched_files: Dict[str, FileInfo] = {}  # path -> file info
-            self._callbacks: Dict[str, Set[Callable[[str], None]]] = {}  # path -> callbacks
+            # Per-registration baseline: (path, callback) -> FileInfo
+            self._watched_files: Dict[tuple, FileInfo] = {}
+            # Path -> set of callbacks, used to iterate callbacks per path
+            self._callbacks: Dict[str, Set[Callable[[str], None]]] = {}
             self._timer = QTimer(self)
             self._timer.timeout.connect(self._poll_files)
             self._timer.setSingleShot(False)
@@ -59,35 +67,32 @@ class MindspaceFileWatcher(QObject):
         """
         Register a file for watching with a callback.
 
+        Each registration gets its own independent FileInfo baseline snapshotted
+        at the moment of registration.
+
         Args:
             file_path: Absolute path to the file or directory to watch
             callback: Function to call when the file changes, receives the changed path
         """
-        # Normalize path
         normalized_path = os.path.abspath(file_path)
 
-        # Add callback
         if normalized_path not in self._callbacks:
             self._callbacks[normalized_path] = set()
 
         self._callbacks[normalized_path].add(callback)
 
-        # Initialize file info if not already watched
-        if normalized_path not in self._watched_files:
-            try:
-                self._watched_files[normalized_path] = self._get_file_info(normalized_path)
-                self._logger.debug("Started watching file: %s", normalized_path)
+        try:
+            self._watched_files[(normalized_path, callback)] = self._get_file_info(normalized_path)
+            self._logger.debug("Started watching file: %s", normalized_path)
 
-            except OSError as e:
-                self._logger.warning("Failed to get initial info for %s: %s", normalized_path, str(e))
-                # Still add to watched files, but mark as non-existent
-                self._watched_files[normalized_path] = FileInfo(
-                    mtime=0.0,
-                    exists=False,
-                    is_dir=False
-                )
+        except OSError as e:
+            self._logger.warning("Failed to get initial info for %s: %s", normalized_path, str(e))
+            self._watched_files[(normalized_path, callback)] = FileInfo(
+                mtime=0.0,
+                exists=False,
+                is_dir=False
+            )
 
-        # Start polling if not already running
         if not self._running:
             self.start()
 
@@ -101,18 +106,15 @@ class MindspaceFileWatcher(QObject):
         """
         normalized_path = os.path.abspath(file_path)
 
+        self._watched_files.pop((normalized_path, callback), None)
+
         if normalized_path in self._callbacks:
             self._callbacks[normalized_path].discard(callback)
 
-            # If no more callbacks for this file, stop watching it
             if not self._callbacks[normalized_path]:
                 del self._callbacks[normalized_path]
-                if normalized_path in self._watched_files:
-                    del self._watched_files[normalized_path]
-
                 self._logger.debug("Stopped watching file: %s", normalized_path)
 
-        # Stop polling if no files are being watched
         if not self._callbacks and self._running:
             self.stop()
 
@@ -154,63 +156,58 @@ class MindspaceFileWatcher(QObject):
     def _poll_files(self) -> None:
         """Check all watched files for changes."""
         try:
-            # Create a copy of the paths to avoid issues if the dict changes during iteration
-            paths_to_check = list(self._watched_files.keys())
+            # Stat each unique path once, then compare against each registration's
+            # individual baseline.
+            unique_paths = list(self._callbacks.keys())
+            current_infos: Dict[str, FileInfo] = {}
 
-            for file_path in paths_to_check:
+            for file_path in unique_paths:
                 try:
-                    # Get current file info
-                    current_info = self._get_file_info(file_path)
+                    current_infos[file_path] = self._get_file_info(file_path)
 
-                    # Skip if file is no longer being watched (edge case)
-                    if file_path not in self._watched_files:
+                except OSError as e:
+                    self._logger.warning("Error checking file %s: %s", file_path, str(e))
+
+            # Iterate over a snapshot of registrations to avoid mutation issues.
+            for (file_path, callback), old_info in list(self._watched_files.items()):
+                try:
+                    current_info = current_infos.get(file_path)
+                    if current_info is None:
                         continue
 
-                    old_info = self._watched_files[file_path]
+                    # Skip if this registration was removed during iteration.
+                    if (file_path, callback) not in self._watched_files:
+                        continue
+
                     changed = False
 
-                    # Check if file existence changed
                     if current_info.exists != old_info.exists:
                         changed = True
                         if current_info.exists:
                             self._logger.debug("File appeared: %s", file_path)
-
                         else:
                             self._logger.debug("File disappeared: %s", file_path)
 
-                    # Check if modification time changed (only for existing files)
                     elif current_info.exists and current_info.mtime != old_info.mtime:
                         changed = True
                         self._logger.debug("File modified: %s", file_path)
 
-                    # Check if directory contents changed (for directories)
                     elif (current_info.exists and current_info.is_dir and
                           current_info.dir_contents != old_info.dir_contents):
                         changed = True
                         self._logger.debug("Directory contents changed: %s", file_path)
 
                     if changed:
-                        # Update stored info
-                        self._watched_files[file_path] = current_info
+                        self._watched_files[(file_path, callback)] = current_info
 
-                        # Notify all callbacks for this file
-                        callbacks = self._callbacks.get(file_path, set()).copy()
+                        try:
+                            callback(file_path)
 
-                        # Call callbacks
-                        for callback in callbacks:
-                            try:
-                                callback(file_path)
-
-                            except Exception as e:
-                                self._logger.error("Error in file change callback for %s: %s",
-                                                 file_path, str(e), exc_info=True)
-
-                except OSError as e:
-                    self._logger.warning("Error checking file %s: %s", file_path, str(e))
+                        except Exception as e:
+                            self._logger.error("Error in file change callback for %s: %s", file_path, str(e), exc_info=True)
 
                 except Exception as e:
-                    self._logger.error("Unexpected error checking file %s: %s",
-                                     file_path, str(e), exc_info=True)
+                    self._logger.error("Unexpected error checking file %s: %s", file_path, str(e), exc_info=True)
 
         except Exception as e:
             self._logger.error("Error in file polling: %s", str(e), exc_info=True)
@@ -235,4 +232,4 @@ class MindspaceFileWatcher(QObject):
 
     def get_watched_files(self) -> Set[str]:
         """Get a copy of all currently watched file paths."""
-        return set(self._watched_files.keys())
+        return set(self._callbacks.keys())
