@@ -137,7 +137,7 @@ class MindspaceVCSPoller(QObject):
                 try:
                     return find_repo_root(candidate)
 
-                except (GitNotFoundError, GitNotRepositoryError, GitCommandError) as e:
+                except (GitNotFoundError, GitNotRepositoryError, GitCommandError):
                     return ""
 
             parent = os.path.dirname(candidate)
