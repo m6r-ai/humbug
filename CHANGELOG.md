@@ -21,6 +21,7 @@ Bug fixes:
 - Resolved a problem with smooth scrolling operations that could make things appear to "jump" right at the end of the scroll.
 - Fixed the selection colour in terminal tabs.
 - Enabled faster drag-scrolling in all tab types.
+- Resolved a problem that could cause file watching to trigger unnecessary reloads of tab content.
 
 ## v42 (2026-04-10)
 
