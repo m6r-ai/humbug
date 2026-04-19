@@ -4,6 +4,8 @@
 
 New features:
 
+- Added support for case-sensitive and regexp matching in the various find controls.
+
 Bug fixes:
 
 - The mindspace label did not display correctly.
