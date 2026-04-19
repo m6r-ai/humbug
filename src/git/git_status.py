@@ -149,9 +149,11 @@ def _within_mindspace(abs_path: str, mindspace_path: str) -> bool:
     Returns:
         True if abs_path is within mindspace_path.
     """
+    mindspace_path = os.path.normpath(mindspace_path)
+
     if sys.platform == "win32":
         abs_path = os.path.normpath(abs_path).lower()
-        mindspace_path = os.path.normpath(mindspace_path).lower()
+        mindspace_path = mindspace_path.lower()
 
     try:
         common = os.path.commonpath([abs_path, mindspace_path])

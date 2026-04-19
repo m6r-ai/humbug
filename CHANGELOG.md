@@ -7,6 +7,7 @@ New features:
 Bug fixes:
 
 - The mindspace label did not display correctly.
+- Resolve a problem with changed files not rendering correctly after updating all system build files.
 
 ## v43 (2026-04-18)
 
