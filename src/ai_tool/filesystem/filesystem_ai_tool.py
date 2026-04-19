@@ -189,6 +189,12 @@ class FileSystemAITool(AITool):
                     required=False
                 ),
                 AIToolParameter(
+                    name="name",
+                    type="string",
+                    description="Filename glob pattern to match (e.g. 'AGENTS.md', '*.py') for find_files operation",
+                    required=False
+                ),
+                AIToolParameter(
                     name="max_results",
                     type="integer",
                     description="Maximum number of matching lines to return (search_file and search_files operations)",
@@ -341,6 +347,17 @@ class FileSystemAITool(AITool):
                     "Note: match content is returned as JSON-encoded strings, so special characters "
                     "(double quotes, backslashes, etc.) will appear escaped — these escape sequences "
                     "are not present in the source."
+            ),
+            "find_files": AIToolOperationDefinition(
+                name="find_files",
+                handler=self._find_files,
+                extract_context=None,
+                allowed_parameters={"path", "name", "max_results"},
+                required_parameters={"path"},
+                description="Recursively find files whose names match a glob pattern under a directory. "
+                    "Use the name parameter to specify the filename pattern (e.g. 'AGENTS.md', '*.py'). "
+                    "If name is omitted, all files are returned. "
+                    "Returns a list of matching relative paths."
             )
         }
 
@@ -1519,6 +1536,63 @@ class FileSystemAITool(AITool):
             "truncated": truncated,
             "files_with_matches": len(files_with_matches),
             "results": files_with_matches
+        }
+
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content=json.dumps(result, indent=2),
+            context="json"
+        )
+
+    async def _find_files(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Recursively find files whose names match a glob pattern under a directory."""
+        arguments = tool_call.arguments
+        path_arg = self._get_required_str_value("path", arguments)
+        path, display_path = await self._validate_and_resolve_path(
+            "path", path_arg, tool_call, request_authorization, allow_external=True
+        )
+
+        if not path.exists():
+            raise AIToolExecutionError(f"Directory does not exist: {path_arg}")
+
+        if not path.is_dir():
+            raise AIToolExecutionError(f"Path is not a directory: {path_arg}")
+
+        name = self._get_optional_str_value("name", arguments, None)
+        max_results = self._get_optional_int_value("max_results", arguments, 1000)
+
+        matches: List[str] = []
+        truncated = False
+
+        for file_path in sorted(path.rglob("*")):
+            if not file_path.is_file():
+                continue
+
+            if name and not fnmatch.fnmatch(file_path.name, name):
+                continue
+
+            try:
+                rel = file_path.relative_to(path)
+                matches.append(str(Path(display_path) / rel))
+            except ValueError:
+                matches.append(str(file_path))
+
+            if len(matches) >= cast(int, max_results):
+                truncated = True
+                break
+
+        result = {
+            "directory": display_path,
+            "name": name,
+            "total_matches": len(matches),
+            "truncated": truncated,
+            "matches": matches
         }
 
         return AIToolResult(
