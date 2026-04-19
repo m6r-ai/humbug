@@ -4,8 +4,8 @@ import logging
 from typing import List, Tuple, cast
 
 from PySide6.QtWidgets import QVBoxLayout, QFrame, QTextEdit, QLabel, QHBoxLayout, QWidget
-from PySide6.QtCore import Signal, Qt, QPoint, QObject, QEvent
-from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor
+from PySide6.QtCore import Signal, Qt, QPoint, QObject, QEvent, QRegularExpression
+from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QTextDocument
 
 from dmarkdown import MarkdownASTNode, MarkdownASTCodeBlockNode
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
@@ -279,12 +279,14 @@ class PreviewMarkdownContentSection(QFrame):
             self._renderer.apply_style()
             self._renderer.visit(self._content_node)
 
-    def find_text(self, text: str) -> List[Tuple[int, int]]:
+    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Tuple[int, int]]:
         """
         Find all instances of text in this section.
 
         Args:
             text: Text to search for
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
 
         Returns:
             List of (start_position, end_position) tuples for each match
@@ -293,12 +295,33 @@ class PreviewMarkdownContentSection(QFrame):
         matches = []
         cursor = QTextCursor(document)
 
-        while True:
-            cursor = document.find(text, cursor)
-            if cursor.isNull():
-                break
+        if regexp:
+            flags = QRegularExpression.PatternOption(0)
+            if not case_sensitive:
+                flags |= QRegularExpression.PatternOption.CaseInsensitiveOption
 
-            matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+            pattern = QRegularExpression(text, flags)
+            if not pattern.isValid():
+                return []
+
+            while True:
+                cursor = document.find(pattern, cursor)
+                if cursor.isNull():
+                    break
+
+                matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+
+        else:
+            find_flags = QTextDocument.FindFlag(0)
+            if case_sensitive:
+                find_flags |= QTextDocument.FindFlag.FindCaseSensitively
+
+            while True:
+                cursor = document.find(text, cursor, find_flags)
+                if cursor.isNull():
+                    break
+
+                matches.append((cursor.selectionStart(), cursor.selectionEnd()))
 
         return matches
 

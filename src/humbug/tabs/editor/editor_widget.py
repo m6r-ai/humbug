@@ -5,7 +5,7 @@ from difflib import unified_diff
 from typing import List, Tuple, Dict, Any, cast
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit, QFileDialog
-from PySide6.QtCore import Qt, QRect, Signal, QTimer
+from PySide6.QtCore import Qt, QRect, Signal, QTimer, QRegularExpression
 from PySide6.QtGui import (
     QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QTextCharFormat,
     QResizeEvent, QPaintEvent, QTextDocument
@@ -88,7 +88,7 @@ class EditorWidget(QPlainTextEdit):
         # Initialize find functionality
         self._matches: List[Tuple[int, int]] = []  # List of (start, end) positions
         self._current_match = -1
-        self._last_search = ""
+        self._last_search: tuple = ("", False, False)
 
         # Smooth scrolling
         self._smooth_scroll_timer = QTimer(self)
@@ -1100,7 +1100,14 @@ class EditorWidget(QPlainTextEdit):
 
         return closest_index
 
-    def find_text(self, text: str, forward: bool = True, move_cursor: bool = True) -> None:
+    def find_text(
+        self,
+        text: str,
+        forward: bool = True,
+        move_cursor: bool = True,
+        case_sensitive: bool = False,
+        regexp: bool = False
+    ) -> None:
         """
         Find all instances of text and highlight them.
 
@@ -1108,25 +1115,46 @@ class EditorWidget(QPlainTextEdit):
             text: Text to search for
             forward: Whether to search forward from current position (only used when move_cursor is True)
             move_cursor: Whether to move cursor to a match (True for user navigation, False for automatic updates)
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
         """
         # Clear existing highlights if search text changed
-        if text != self._last_search:
+        if (text, case_sensitive, regexp) != self._last_search:
             self._clear_highlights()
             self._matches = []
             self._current_match = -1
-            self._last_search = text
+            self._last_search = (text, case_sensitive, regexp)
 
         document = self.document()
 
         # Find all matches if this is a new search
         if not self._matches and text:
             cursor = QTextCursor(document)
-            while True:
-                cursor = document.find(text, cursor)
-                if cursor.isNull():
-                    break
+            if regexp:
+                flags = QRegularExpression.PatternOption(0)
+                if not case_sensitive:
+                    flags |= QRegularExpression.PatternOption.CaseInsensitiveOption
 
-                self._matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+                pattern = QRegularExpression(text, flags)
+                if pattern.isValid():
+                    while True:
+                        cursor = document.find(pattern, cursor)
+                        if cursor.isNull():
+                            break
+
+                        self._matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+
+            else:
+                find_flags = QTextDocument.FindFlag(0)
+                if case_sensitive:
+                    find_flags |= QTextDocument.FindFlag.FindCaseSensitively
+
+                while True:
+                    cursor = document.find(text, cursor, find_flags)
+                    if cursor.isNull():
+                        break
+
+                    self._matches.append((cursor.selectionStart(), cursor.selectionEnd()))
 
         if not self._matches:
             return
@@ -1272,7 +1300,7 @@ class EditorWidget(QPlainTextEdit):
         self._clear_highlights()
         self._matches = []
         self._current_match = -1
-        self._last_search = ""
+        self._last_search = ("", False, False)
 
     def can_undo(self) -> bool:
         """Check if undo is available."""

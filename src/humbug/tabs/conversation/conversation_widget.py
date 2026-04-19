@@ -227,7 +227,7 @@ class ConversationWidget(QWidget):
         self._matches: List[Tuple[ConversationMessage, List[Tuple[int, int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
-        self._last_search = ""
+        self._last_search: tuple = ("", False, False)
         self._highlighted_widgets: Set[ConversationMessage] = set()
 
         # Create transcript handler with provided filename, then load the transcript data
@@ -2657,13 +2657,15 @@ class ConversationWidget(QWidget):
 
         return ""
 
-    def find_text(self, text: str, forward: bool = True) -> Tuple[int, int]:
+    def find_text(self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False) -> Tuple[int, int]:
         """
         Find all instances of text and highlight them.
 
         Args:
             text: Text to search for
             forward: Whether to search forward from current position
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
 
         Returns:
             Tuple of (current_match, total_matches)
@@ -2672,17 +2674,17 @@ class ConversationWidget(QWidget):
         widgets = self._messages + [self._input]
 
         # Clear existing highlights if search text changed
-        if text != self._last_search:
+        if (text, case_sensitive, regexp) != self._last_search:
             self._clear_highlights()
             self._matches = []
             self._current_widget_index = -1
             self._current_match_index = -1
-            self._last_search = text
+            self._last_search = (text, case_sensitive, regexp)
 
         # Find all matches if this is a new search
         if not self._matches and text:
             for widget in widgets:
-                widget_matches = widget.find_text(text)
+                widget_matches = widget.find_text(text, case_sensitive, regexp)
                 if widget_matches:
                     self._matches.append((widget, widget_matches))
 
@@ -2795,8 +2797,8 @@ class ConversationWidget(QWidget):
 
             # Re-search this specific message to get accurate section positions
             # after rendering (the raw text positions won't map correctly to sections)
-            search_text = self._last_search
-            new_matches = widget.find_text(search_text)
+            search_text, case_sensitive, regexp = self._last_search
+            new_matches = widget.find_text(search_text, case_sensitive, regexp)
 
             # Update the matches for this widget
             self._matches[self._current_widget_index] = (widget, new_matches)
@@ -2844,7 +2846,7 @@ class ConversationWidget(QWidget):
         self._matches = []
         self._current_widget_index = -1
         self._current_match_index = -1
-        self._last_search = ""
+        self._last_search = ("", False, False)
 
     # AI Tool Support Methods
 

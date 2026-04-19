@@ -109,6 +109,7 @@ class DiffWidget(QWidget):
         self._find_matches: List[Tuple[str, int, int]] = []  # ('left'|'right', start, end)
         self._find_current: int = -1
         self._find_text: str = ""
+        self._find_key: tuple = ("", False, False)
 
         # Smooth scrolling
         self._smooth_scroll_timer = QTimer(self)
@@ -330,7 +331,7 @@ class DiffWidget(QWidget):
         self._left_pane.apply_style()
         self._right_pane.apply_style()
 
-    def find_text(self, text: str, forward: bool = True) -> Tuple[int, int]:
+    def find_text(self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False) -> Tuple[int, int]:
         """
         Search for *text* across both panes and navigate to the next match.
 
@@ -343,20 +344,22 @@ class DiffWidget(QWidget):
             text: Text to search for.
             forward: If True move to the next match; if False move to the
                 previous match.
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
 
         Returns:
             Tuple of (current_match_1based, total_matches).  Both values are
             0 when there are no matches.
         """
-        if text != self._find_text:
+        if (text, case_sensitive, regexp) != self._find_key:
             # New search term — rebuild the match list from scratch.
-            self._run_find(text, forward=forward, reset=True)
+            self._run_find(text, forward=forward, reset=True, case_sensitive=case_sensitive, regexp=regexp)
         else:
-            self._run_find(text, forward=forward, reset=False)
+            self._run_find(text, forward=forward, reset=False, case_sensitive=case_sensitive, regexp=regexp)
 
         return self.get_match_status()
 
-    def _run_find(self, text: str, forward: bool, reset: bool) -> None:
+    def _run_find(self, text: str, forward: bool, reset: bool, case_sensitive: bool = False, regexp: bool = False) -> None:
         """
         Internal helper that (re)builds matches and advances the cursor.
 
@@ -364,8 +367,11 @@ class DiffWidget(QWidget):
             text: Search string.
             forward: Direction of navigation.
             reset: If True, rebuild the match list; if False, only advance.
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
         """
         self._find_text = text
+        self._find_key = (text, case_sensitive, regexp)
 
         if reset or not self._find_matches:
             self._find_current = -1
@@ -373,13 +379,13 @@ class DiffWidget(QWidget):
 
             if text:
                 # Collect matches from the left pane …
-                left_matches = self._left_pane.find_matches(text)
+                left_matches = self._left_pane.find_matches(text, case_sensitive, regexp)
                 for start, end in left_matches:
                     self._find_matches.append(("left", start, end))
 
                 # … and the right pane, interleaved by block (row) number so
                 # that navigation follows the visual order of the diff.
-                right_matches = self._right_pane.find_matches(text)
+                right_matches = self._right_pane.find_matches(text, case_sensitive, regexp)
                 for start, end in right_matches:
                     self._find_matches.append(("right", start, end))
 
@@ -485,6 +491,7 @@ class DiffWidget(QWidget):
         self._find_matches = []
         self._find_current = -1
         self._find_text = ""
+        self._find_key = ("", False, False)
         self._left_pane.clear_find()
         self._right_pane.clear_find()
 

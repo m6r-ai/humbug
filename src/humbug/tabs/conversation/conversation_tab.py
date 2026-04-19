@@ -6,7 +6,7 @@ from typing import Dict, Any
 from PySide6.QtWidgets import (
     QApplication, QDialog, QVBoxLayout, QWidget
 )
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal, QRegularExpression
 
 from ai import AIConversation, AIConversationHistory, AIConversationSettings
 
@@ -366,7 +366,14 @@ class ConversationTab(TabBase):
     def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        current, total = self._conversation_widget.find_text(text, forward)
+        case_sensitive = self._find_widget.is_case_sensitive()
+        regexp = self._find_widget.is_regexp()
+        if regexp:
+            if text and not QRegularExpression(text).isValid():
+                self._find_widget.set_invalid_regexp()
+                return
+
+        current, total = self._conversation_widget.find_text(text, forward, case_sensitive=case_sensitive, regexp=regexp)
         self._find_widget.set_match_status(current, total)
 
     def cancel_current_tasks(self) -> None:

@@ -139,7 +139,7 @@ class PreviewWidget(QWidget):
         self._matches: List[Tuple[PreviewContentWidget, List[Tuple[int, int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
-        self._last_search = ""
+        self._last_search: tuple = ("", False, False)
         self._highlighted_widgets: Set[PreviewContentWidget] = set()
 
     def activate(self) -> None:
@@ -237,10 +237,14 @@ class PreviewWidget(QWidget):
                     break
 
         # Restore find state if there was an active search
-        if find_state['last_search']:
+        last_search = find_state['last_search']
+        search_text = last_search[0] if isinstance(last_search, tuple) else last_search
+        if search_text:
             # Re-run the search to restore highlights
-            self._last_search = ""  # Reset to force re-search
-            _current, total = self.find_text(find_state['last_search'], True)
+            self._last_search = ("", False, False)  # Reset to force re-search
+            case_sensitive = last_search[1] if isinstance(last_search, tuple) else False
+            regexp = last_search[2] if isinstance(last_search, tuple) else False
+            _current, total = self.find_text(search_text, True, case_sensitive, regexp)
 
             # Try to restore the current match position
             if (find_state['current_widget_index'] >= 0 and
@@ -249,7 +253,7 @@ class PreviewWidget(QWidget):
                 target_match = (find_state['current_widget_index'] *
                               (find_state['current_match_index'] + 1))
                 for _ in range(min(target_match, total)):
-                    self.find_text(find_state['last_search'], True)
+                    self.find_text(search_text, True, case_sensitive, regexp)
 
         # Emit refresh signal
         self.content_refreshed.emit()
@@ -823,13 +827,15 @@ class PreviewWidget(QWidget):
         """Close the preview widget and clean up resources."""
         self._unregister_file_watching()
 
-    def find_text(self, text: str, forward: bool = True) -> Tuple[int, int]:
+    def find_text(self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False) -> Tuple[int, int]:
         """
         Find all instances of text and highlight them.
 
         Args:
             text: Text to search for
             forward: Whether to search forward from current position
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
 
         Returns:
             Tuple of (current_match, total_matches)
@@ -838,17 +844,17 @@ class PreviewWidget(QWidget):
         widgets = self._content_blocks
 
         # Clear existing highlights if search text changed
-        if text != self._last_search:
+        if (text, case_sensitive, regexp) != self._last_search:
             self._clear_highlights()
             self._matches = []
             self._current_widget_index = -1
             self._current_match_index = -1
-            self._last_search = text
+            self._last_search = (text, case_sensitive, regexp)
 
         # Find all matches if this is a new search
         if not self._matches and text:
             for widget in widgets:
-                widget_matches = widget.find_text(text)
+                widget_matches = widget.find_text(text, case_sensitive, regexp)
                 if widget_matches:
                     self._matches.append((widget, widget_matches))
 
@@ -980,7 +986,7 @@ class PreviewWidget(QWidget):
         self._matches = []
         self._current_widget_index = -1
         self._current_match_index = -1
-        self._last_search = ""
+        self._last_search = ("", False, False)
 
     def create_state_metadata(self) -> Dict[str, Any]:
         """

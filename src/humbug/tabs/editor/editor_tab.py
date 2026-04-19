@@ -4,7 +4,7 @@ import logging
 from PySide6.QtWidgets import (
     QVBoxLayout, QWidget
 )
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, QRegularExpression
 
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
@@ -110,8 +110,10 @@ class EditorTab(TabBase):
         previous_match_index = current_match - 1 if current_match > 0 else -1  # Convert to 0-based
 
         # Clear current search state and re-search without moving cursor
+        case_sensitive = self._find_widget.is_case_sensitive()
+        regexp = self._find_widget.is_regexp()
         self._editor_widget.clear_find()
-        self._editor_widget.find_text(search_text, True, move_cursor=False)
+        self._editor_widget.find_text(search_text, True, move_cursor=False, case_sensitive=case_sensitive, regexp=regexp)
 
         # Try to restore the same match index if possible
         new_current, new_total = self._editor_widget.get_match_status()
@@ -344,7 +346,14 @@ class EditorTab(TabBase):
     def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        self._editor_widget.find_text(text, forward)  # move_cursor defaults to True for user navigation
+        case_sensitive = self._find_widget.is_case_sensitive()
+        regexp = self._find_widget.is_regexp()
+        if regexp:
+            if text and not QRegularExpression(text).isValid():
+                self._find_widget.set_invalid_regexp()
+                return
+
+        self._editor_widget.find_text(text, forward, case_sensitive=case_sensitive, regexp=regexp)
         current, total = self._editor_widget.get_match_status()
         self._find_widget.set_match_status(current, total)
 

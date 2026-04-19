@@ -94,6 +94,9 @@ def get_arabic_strings() -> LanguageStrings:
         find_placeholder="بحث",
         find_no_matches="لا توجد نتائج",
         find_match_count="{current} من {total}",
+        find_match_case="مطابقة الحالة",
+        find_use_regexp="استخدام التعبير النمطي",
+        find_invalid_regexp="تعبير نمطي غير صالح",
 
         # Input widget
         processing_message="محادثة مع {model} (Esc للإلغاء، {key} للإرسال)",

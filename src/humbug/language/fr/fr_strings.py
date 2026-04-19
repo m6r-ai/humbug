@@ -93,6 +93,9 @@ def get_french_strings() -> LanguageStrings:
         find_placeholder="Rechercher",
         find_no_matches="Aucun résultat",
         find_match_count="{current} sur {total}",
+        find_match_case="Respecter la casse",
+        find_use_regexp="Utiliser une expression régulière",
+        find_invalid_regexp="Expression invalide",
 
         # Input widget
         processing_message="Discuter avec {model}... (Échap pour annuler, {key} pour envoyer)",

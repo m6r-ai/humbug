@@ -84,6 +84,9 @@ class LanguageStrings:
     find_placeholder: str
     find_no_matches: str
     find_match_count: str  # Format: "{current} of {total}"
+    find_match_case: str
+    find_use_regexp: str
+    find_invalid_regexp: str
 
     # Input widget
     processing_message: str

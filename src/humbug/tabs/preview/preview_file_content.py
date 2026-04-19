@@ -4,8 +4,8 @@ import logging
 from typing import List, Tuple, Callable
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget, QHBoxLayout, QLabel, QToolButton, QTextEdit
-from PySide6.QtCore import QPoint, Qt, QSize
-from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QIcon
+from PySide6.QtCore import QPoint, Qt, QSize, QRegularExpression
+from PySide6.QtGui import QCursor, QMouseEvent, QTextCursor, QTextCharFormat, QColor, QIcon, QTextDocument
 
 from syntax import ProgrammingLanguage, ProgrammingLanguageUtils
 
@@ -210,12 +210,14 @@ class PreviewFileContent(PreviewContentWidget):
         cursor.clearSelection()
         self._text_area.setTextCursor(cursor)
 
-    def find_text(self, text: str) -> List[Tuple[int, int, int]]:
+    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Tuple[int, int, int]]:
         """
         Find all instances of text in this content.
 
         Args:
             text: Text to search for
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
 
         Returns:
             List of (section, start_position, end_position) tuples for each match
@@ -224,14 +226,35 @@ class PreviewFileContent(PreviewContentWidget):
         matches = []
         cursor = QTextCursor(document)
 
-        while True:
-            cursor = document.find(text, cursor)
-            if cursor.isNull():
-                break
+        if regexp:
+            flags = QRegularExpression.PatternOption(0)
+            if not case_sensitive:
+                flags |= QRegularExpression.PatternOption.CaseInsensitiveOption
 
-            # For compatibility with the PreviewContent interface, we use section 0
-            # as there's only one section in source content
-            matches.append((0, cursor.selectionStart(), cursor.selectionEnd()))
+            pattern = QRegularExpression(text, flags)
+            if not pattern.isValid():
+                return []
+
+            while True:
+                cursor = document.find(pattern, cursor)
+                if cursor.isNull():
+                    break
+
+                matches.append((0, cursor.selectionStart(), cursor.selectionEnd()))
+
+        else:
+            find_flags = QTextDocument.FindFlag(0)
+            if case_sensitive:
+                find_flags |= QTextDocument.FindFlag.FindCaseSensitively
+
+            while True:
+                cursor = document.find(text, cursor, find_flags)
+                if cursor.isNull():
+                    break
+
+                # For compatibility with the PreviewContent interface, we use section 0
+                # as there's only one section in source content
+                matches.append((0, cursor.selectionStart(), cursor.selectionEnd()))
 
         return matches
 

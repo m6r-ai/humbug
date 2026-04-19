@@ -93,6 +93,9 @@ def get_english_strings() -> LanguageStrings:
         find_placeholder="Find",
         find_no_matches="No matches",
         find_match_count="{current} of {total}",
+        find_match_case="Match Case",
+        find_use_regexp="Use Regular Expression",
+        find_invalid_regexp="Invalid regexp",
 
         # Input widget
         processing_message="Chat with {model} (Esc to cancel, {key} to submit)",

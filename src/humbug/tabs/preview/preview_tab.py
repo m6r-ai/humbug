@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict, cast
 
-from PySide6.QtCore import QUrl, Signal
+from PySide6.QtCore import QUrl, Signal, QRegularExpression
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
@@ -332,7 +332,14 @@ class PreviewTab(TabBase):
     def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        current, total = self._preview_content_widget.find_text(text, forward)
+        case_sensitive = self._find_widget.is_case_sensitive()
+        regexp = self._find_widget.is_regexp()
+        if regexp:
+            if text and not QRegularExpression(text).isValid():
+                self._find_widget.set_invalid_regexp()
+                return
+
+        current, total = self._preview_content_widget.find_text(text, forward, case_sensitive=case_sensitive, regexp=regexp)
         self._find_widget.set_match_status(current, total)
 
     def get_preview_info(self) -> Dict[str, Any]:

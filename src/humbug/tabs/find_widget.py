@@ -38,6 +38,18 @@ class FindWidget(QWidget):
         self._search_input.returnPressed.connect(self.find_next)
         self._layout.addWidget(self._search_input)
 
+        self._match_case_button = QToolButton()
+        self._match_case_button.setCheckable(True)
+        self._match_case_button.setChecked(False)
+        self._match_case_button.clicked.connect(self._on_mode_changed)
+        self._layout.addWidget(self._match_case_button)
+
+        self._regexp_button = QToolButton()
+        self._regexp_button.setCheckable(True)
+        self._regexp_button.setChecked(False)
+        self._regexp_button.clicked.connect(self._on_mode_changed)
+        self._layout.addWidget(self._regexp_button)
+
         self._status_label = QLabel()
         self._layout.addWidget(self._status_label)
 
@@ -65,6 +77,8 @@ class FindWidget(QWidget):
     def _on_language_changed(self) -> None:
         strings = self._language_manager.strings()
         self._search_input.setPlaceholderText(strings.find_placeholder)
+        self._match_case_button.setToolTip(strings.find_match_case)
+        self._regexp_button.setToolTip(strings.find_use_regexp)
         self._update_match_status()
         self._on_style_changed()
 
@@ -90,37 +104,53 @@ class FindWidget(QWidget):
         self._next_button.setIconSize(icon_size)
         self._close_button.setIconSize(icon_size)
 
+        button_bg = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)
+        button_hover = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)
+        button_pressed = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)
+        button_checked = self._style_manager.get_color_str(ColorRole.TEXT_FOUND_DIM)
+        button_disabled = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)
+        text_primary = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        text_disabled = self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)
+        tab_bg = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
+        text_selected = self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)
+
         self.setStyleSheet(f"""
             QWidget {{
-                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {tab_bg};
+                color: {text_primary};
                 font-size: {font_size}pt;
             }}
             QLineEdit {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {button_bg};
+                color: {text_primary};
                 border: none;
                 padding: 2px;
-                selection-background-color: {self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)};
+                selection-background-color: {text_selected};
             }}
             QToolButton {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: {button_bg};
+                color: {text_primary};
                 border: none;
                 padding: 2px;
             }}
             QToolButton:hover {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)};
+                background-color: {button_hover};
             }}
             QToolButton:pressed {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)};
+                background-color: {button_pressed};
+            }}
+            QToolButton:checked {{
+                background-color: {button_checked};
+            }}
+            QToolButton:checked:hover {{
+                background-color: {button_hover};
             }}
             QToolButton:disabled {{
-                background-color: {self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)};
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)};
+                background-color: {button_disabled};
+                color: {text_disabled};
             }}
             QLabel {{
-                color: {self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                color: {text_primary};
                 border: none;
                 padding: 2px;
             }}
@@ -177,14 +207,12 @@ class FindWidget(QWidget):
 
     def _update_match_status(self) -> None:
         """Update the match status display."""
-
         strings = self._language_manager.strings()
         if self._matches > 0:
             self._status_label.setText(strings.find_match_count.format(
                 current=self._current_match,
                 total=self._matches
             ))
-
         else:
             self._status_label.setText(strings.find_no_matches)
 
@@ -205,8 +233,20 @@ class FindWidget(QWidget):
         self._current_match = current
         self._update_match_status()
 
+    def set_invalid_regexp(self) -> None:
+        """Show an invalid regexp indicator in the status label."""
+        strings = self._language_manager.strings()
+        self._status_label.setText(strings.find_invalid_regexp)
+        self._status_label.show()
+        self._prev_button.setEnabled(False)
+        self._next_button.setEnabled(False)
+
     def _on_text_changed(self) -> None:
         """Handle changes to search text."""
+        self.find_next.emit()
+
+    def _on_mode_changed(self) -> None:
+        """Handle changes to match-case or regexp toggle."""
         self.find_next.emit()
 
     def get_search_text(self) -> str:
@@ -218,6 +258,14 @@ class FindWidget(QWidget):
         self._search_input.setText(text)
         self._search_input.selectAll()
 
+    def is_case_sensitive(self) -> bool:
+        """Return True if match-case mode is active."""
+        return self._match_case_button.isChecked()
+
+    def is_regexp(self) -> bool:
+        """Return True if regular-expression mode is active."""
+        return self._regexp_button.isChecked()
+
     def create_state_metadata(self) -> Dict[str, Any]:
         """
         Create state metadata for persistence during tab moves.
@@ -227,7 +275,9 @@ class FindWidget(QWidget):
         """
         return {
             'search_text': self.get_search_text(),
-            'is_visible': not self.isHidden()
+            'is_visible': not self.isHidden(),
+            'match_case': self.is_case_sensitive(),
+            'regexp': self.is_regexp(),
         }
 
     def restore_from_metadata(self, metadata: Dict[str, Any]) -> None:
@@ -241,12 +291,17 @@ class FindWidget(QWidget):
             if 'search_text' in metadata:
                 self.set_search_text(metadata['search_text'])
 
+            if 'match_case' in metadata:
+                self._match_case_button.setChecked(bool(metadata['match_case']))
+
+            if 'regexp' in metadata:
+                self._regexp_button.setChecked(bool(metadata['regexp']))
+
             # Reset match status since we're not re-executing searches
             self.set_match_status(0, 0)
 
             if metadata.get('is_visible', False):
                 self.show()
-
             else:
                 self.hide()
 
