@@ -96,6 +96,10 @@ def get_french_strings() -> LanguageStrings:
         find_match_case="Respecter la casse",
         find_use_regexp="Utiliser une expression régulière",
         find_invalid_regexp="Expression invalide",
+        replace_placeholder="Remplacer",
+        replace_button="Remplacer",
+        replace_all_button="Remplacer tout",
+        replace_count="{count} remplacé(s)",
 
         # Input widget
         processing_message="Discuter avec {model}... (Échap pour annuler, {key} pour envoyer)",

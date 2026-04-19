@@ -87,6 +87,10 @@ class LanguageStrings:
     find_match_case: str
     find_use_regexp: str
     find_invalid_regexp: str
+    replace_placeholder: str
+    replace_button: str
+    replace_all_button: str
+    replace_count: str  # Format: "{count} replaced"
 
     # Input widget
     processing_message: str

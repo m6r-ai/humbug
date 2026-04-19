@@ -96,6 +96,10 @@ def get_english_strings() -> LanguageStrings:
         find_match_case="Match Case",
         find_use_regexp="Use Regular Expression",
         find_invalid_regexp="Invalid regexp",
+        replace_placeholder="Replace",
+        replace_button="Replace",
+        replace_all_button="Replace All",
+        replace_count="{count} replaced",
 
         # Input widget
         processing_message="Chat with {model} (Esc to cancel, {key} to submit)",

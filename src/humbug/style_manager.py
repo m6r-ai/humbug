@@ -232,7 +232,7 @@ class StyleManager(QObject):
 
             # Button colours
             ColorRole.BUTTON_BACKGROUND: {
-                ColorMode.DARK: "#202020",
+                ColorMode.DARK: "#303030",
                 ColorMode.LIGHT: "#e8e8e8"
             },
             ColorRole.BUTTON_BACKGROUND_PRESSED: {

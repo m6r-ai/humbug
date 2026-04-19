@@ -636,9 +636,9 @@ class ColumnManager(QWidget):
             )
             return editor_tab
 
-        except Exception:
+        except Exception as e:
             self._logger.exception("Failed to open file: %s", path)
-            raise ColumnManagerError(f"Failed to open file: {path}")
+            raise ColumnManagerError(f"Failed to open file: {path}") from e
 
     def _open_file_by_source_type(self, source_type: str, path: str, ephemeral: bool) -> TabBase | None:
         """

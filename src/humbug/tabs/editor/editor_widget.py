@@ -1305,6 +1305,107 @@ class EditorWidget(QPlainTextEdit):
         self._current_match = -1
         self._last_search = ("", False, False)
 
+    def replace_current(self, replace_text: str) -> bool:
+        """
+        Replace the current highlighted match with replace_text and advance to the next match.
+
+        When regexp mode was used for the last search, back-references in replace_text
+        (e.g. \\1, \\2) are expanded using the captured groups of the current match.
+
+        Args:
+            replace_text: Text to substitute for the current match.
+
+        Returns:
+            True if a replacement was made, False if there was no current match.
+        """
+        if self._current_match < 0 or not self._matches:
+            return False
+
+        start, end = self._matches[self._current_match]
+        _search_text, case_sensitive, regexp = self._last_search
+
+        actual_replacement = replace_text
+        if regexp and _search_text:
+            flags = QRegularExpression.PatternOption(0)
+            if not case_sensitive:
+                flags |= QRegularExpression.PatternOption.CaseInsensitiveOption
+
+            pattern = QRegularExpression(_search_text, flags)
+            if pattern.isValid():
+                document_text = self.toPlainText()
+                match_text = document_text[start:end]
+                re_match = pattern.match(match_text)
+                if re_match.hasMatch():
+                    actual_replacement = replace_text
+                    for i in range(1, re_match.lastCapturedIndex() + 1):
+                        actual_replacement = actual_replacement.replace(f"\\{i}", re_match.captured(i))
+
+        cursor = QTextCursor(self.document())
+        cursor.setPosition(start)
+        cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+        cursor.insertText(actual_replacement)
+
+        self._set_modified(True)
+
+        # Re-run the search from scratch so match positions are updated, then advance
+        search_text, case_sensitive, regexp = self._last_search
+        self.clear_find()
+        if search_text:
+            self.find_text(search_text, forward=True, move_cursor=True, case_sensitive=case_sensitive, regexp=regexp)
+
+        return True
+
+    def replace_all(self, replace_text: str) -> int:
+        """
+        Replace all current matches with replace_text in a single undoable operation.
+
+        Args:
+            replace_text: Text to substitute for each match.
+
+        Returns:
+            Number of replacements made.
+        """
+        if not self._matches:
+            return 0
+
+        search_text, case_sensitive, regexp = self._last_search
+        count = len(self._matches)
+
+        original_text = self.toPlainText()
+        cursor = QTextCursor(self.document())
+        cursor.beginEditBlock()
+        try:
+            # Iterate in reverse so earlier positions stay valid after each replacement
+            for start, end in reversed(self._matches):
+                actual_replacement = replace_text
+                if regexp and search_text:
+                    flags = QRegularExpression.PatternOption(0)
+                    if not case_sensitive:
+                        flags |= QRegularExpression.PatternOption.CaseInsensitiveOption
+
+                    pattern = QRegularExpression(search_text, flags)
+                    if pattern.isValid():
+                        match_text = original_text[start:end]
+                        re_match = pattern.match(match_text)
+                        if re_match.hasMatch():
+                            actual_replacement = replace_text
+                            for i in range(1, re_match.lastCapturedIndex() + 1):
+                                actual_replacement = actual_replacement.replace(
+                                    f"\\{i}", re_match.captured(i)
+                                )
+
+                replace_cursor = QTextCursor(self.document())
+                replace_cursor.setPosition(start)
+                replace_cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+                replace_cursor.insertText(actual_replacement)
+
+        finally:
+            cursor.endEditBlock()
+
+        self._set_modified(True)
+        self.clear_find()
+        return count
+
     def can_undo(self) -> bool:
         """Check if undo is available."""
         return self.document().isUndoAvailable()

@@ -97,6 +97,10 @@ def get_arabic_strings() -> LanguageStrings:
         find_match_case="مطابقة الحالة",
         find_use_regexp="استخدام التعبير النمطي",
         find_invalid_regexp="تعبير نمطي غير صالح",
+        replace_placeholder="استبدال",
+        replace_button="استبدال",
+        replace_all_button="استبدال الكل",
+        replace_count="{count} تم استبداله",
 
         # Input widget
         processing_message="محادثة مع {model} (Esc للإلغاء، {key} للإرسال)",

@@ -44,9 +44,12 @@ class EditorTab(TabBase):
         # Add find widget at top (initially hidden)
         self._find_widget = FindWidget(self)
         self._find_widget.hide()
+        self._find_widget.enable_replace_row()
         self._find_widget.closed.connect(self._close_find)
         self._find_widget.find_next.connect(lambda: self._find_next(True))
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
+        self._find_widget.replace_current.connect(self._replace_current)
+        self._find_widget.replace_all.connect(self._replace_all)
         layout.addWidget(self._find_widget)
 
         # Create editor widget
@@ -356,6 +359,24 @@ class EditorTab(TabBase):
         self._editor_widget.find_text(text, forward, case_sensitive=case_sensitive, regexp=regexp)
         current, total = self._editor_widget.get_match_status()
         self._find_widget.set_match_status(current, total)
+
+    def _replace_current(self, replace_text: str) -> None:
+        """Replace the current match and advance to the next."""
+        self._editor_widget.replace_current(replace_text)
+        current, total = self._editor_widget.get_match_status()
+        self._find_widget.set_match_status(current, total)
+
+    def _replace_all(self, replace_text: str) -> None:
+        """Replace all matches and update the status display."""
+        count = self._editor_widget.replace_all(replace_text)
+        if count > 0:
+            strings = self._language_manager.strings()
+            status_text = strings.replace_count.format(count=count)
+            self._find_widget.set_match_status(0, 0)
+            self._find_widget.set_status_text(status_text)
+
+        else:
+            self._find_widget.set_match_status(0, 0)
 
     def get_text_range(self, start_line: int | None = None, end_line: int | None = None) -> str:
         """
