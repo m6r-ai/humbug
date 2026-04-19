@@ -628,12 +628,17 @@ class ColumnManager(QWidget):
         if os.path.isdir(path):
             return None
 
-        editor_tab = self.open_file(path, ephemeral)
-        self._mindspace_manager.add_interaction(
-            MindspaceLogLevel.INFO,
-            f"User opened file: '{path}'\ntab ID: {editor_tab.tab_id()}"
-        )
-        return editor_tab
+        try:
+            editor_tab = self.open_file(path, ephemeral)
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"User opened file: '{path}'\ntab ID: {editor_tab.tab_id()}"
+            )
+            return editor_tab
+
+        except Exception:
+            self._logger.exception("Failed to open file: %s", path)
+            raise ColumnManagerError(f"Failed to open file: {path}")
 
     def _open_file_by_source_type(self, source_type: str, path: str, ephemeral: bool) -> TabBase | None:
         """

@@ -928,7 +928,17 @@ class MainWindow(QMainWindow):
 
     def _on_mindspace_view_file_clicked(self, source: MindspaceViewType, path: str, ephemeral: bool) -> None:
         """Handle click of a file from the mindspace view."""
-        self._column_manager.open_file_by_mindspace_view_type(source, path, ephemeral)
+        try:
+            self._column_manager.open_file_by_mindspace_view_type(source, path, ephemeral)
+
+        except ColumnManagerError as e:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_opening_file_title,
+                str(e)
+            )
 
     def _on_mindspace_view_file_deleted(self, path: str) -> None:
         """Handle deletion of a file by closing any open tab.
@@ -978,7 +988,7 @@ class MainWindow(QMainWindow):
                 f"User opened editor for file: '{path}'\nTab ID: {editor_tab.tab_id()}"
             )
 
-        except OSError as e:
+        except Exception as e:
             strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
@@ -989,13 +999,33 @@ class MainWindow(QMainWindow):
 
     def _on_save_file(self) -> None:
         """Save the current file."""
-        path = self._column_manager.save_file()
-        self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
+        try:
+            path = self._column_manager.save_file()
+            self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
+
+        except Exception as e:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_saving_file_title,
+                str(e)
+            )
 
     def _on_save_file_as(self) -> None:
         """Save the current file with a new name."""
-        path = self._column_manager.save_file_as()
-        self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
+        try:
+            path = self._column_manager.save_file_as()
+            self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
+
+        except Exception as e:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_saving_file_title,
+                str(e)
+            )
 
     def _on_open_preview(self) -> None:
         """Open the preview page in a new tab."""

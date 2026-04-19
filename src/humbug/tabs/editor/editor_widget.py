@@ -135,23 +135,12 @@ class EditorWidget(QPlainTextEdit):
         if not self._path or not os.path.exists(self._path):
             return
 
-        try:
-            with open(self._path, 'r', encoding='utf-8') as f:
-                content = f.read()
+        with open(self._path, 'r', encoding='utf-8') as f:
+            content = f.read()
 
-            self.setPlainText(content)
-            self._last_save_content = content
-            self._set_modified(False)
-
-        except Exception as e:
-            self._logger.error("Failed to load file '%s': %s", self._path, str(e))
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.error_opening_file_title,
-                strings.could_not_open.format(self._path, str(e))
-            )
+        self.setPlainText(content)
+        self._last_save_content = content
+        self._set_modified(False)
 
     def refresh_content(self) -> None:
         """
@@ -417,7 +406,17 @@ class EditorWidget(QPlainTextEdit):
         )
 
         if result == MessageBoxButton.SAVE:
-            return self.save_file()
+            try:
+                return self.save_file()
+
+            except Exception as e:
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
+                    strings.error_saving_file_title,
+                    strings.could_not_save.format(document_name, str(e))
+                )
+                return False
 
         if result == MessageBoxButton.DISCARD:
             self._set_modified(False)
@@ -441,35 +440,24 @@ class EditorWidget(QPlainTextEdit):
         if not self._path:
             return self.save_file_as()
 
+        content = self.toPlainText()
+        with open(self._path, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        self._last_save_content = content
+        self._set_modified(False)
+
+        # Delete any backup files
+        backup_file = f"{self._path}.backup"
         try:
-            content = self.toPlainText()
-            with open(self._path, 'w', encoding='utf-8') as f:
-                f.write(content)
+            if os.path.exists(backup_file):
+                os.remove(backup_file)
 
-            self._last_save_content = content
-            self._set_modified(False)
+        except OSError as e:
+            self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
 
-            # Delete any backup files
-            backup_file = f"{self._path}.backup"
-            try:
-                if os.path.exists(backup_file):
-                    os.remove(backup_file)
-
-            except OSError as e:
-                self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
-
-            self.file_saved.emit(self._path)
-            return True
-
-        except Exception as e:
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.error_saving_file_title,
-                strings.could_not_save.format(self._path, str(e))
-            )
-            return False
+        self.file_saved.emit(self._path)
+        return True
 
     def save_file_as(self) -> bool:
         """
@@ -500,7 +488,18 @@ class EditorWidget(QPlainTextEdit):
         self._mindspace_manager.update_file_dialog_directory(filename)
         self.set_path(filename)
 
-        return self.save_file()
+        try:
+            return self.save_file()
+
+        except Exception as e:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_saving_file_title,
+                strings.could_not_save.format(filename, str(e))
+            )
+            return False
 
     def get_status_info(self) -> Dict[str, Any]:
         """
