@@ -304,8 +304,12 @@ class PreviewMarkdownContentSection(QFrame):
             if not pattern.isValid():
                 return []
 
+            find_flags = QTextDocument.FindFlag(0)
+            if case_sensitive:
+                find_flags |= QTextDocument.FindFlag.FindCaseSensitively
+
             while True:
-                cursor = document.find(pattern, cursor)
+                cursor = document.find(pattern, cursor, find_flags)
                 if cursor.isNull():
                     break
 
