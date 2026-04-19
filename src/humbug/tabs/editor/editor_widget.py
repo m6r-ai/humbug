@@ -1488,13 +1488,14 @@ class EditorWidget(QPlainTextEdit):
         self.setTextCursor(cursor)
         self._start_smooth_scroll_to_cursor(cursor)
 
-    def find_all_occurrences(self, search_text: str, case_sensitive: bool = False) -> List[Dict[str, Any]]:
+    def find_all_occurrences(self, search_text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Dict[str, Any]]:
         """
         Find all occurrences of text in the document.
 
         Args:
             search_text: Text to search for
             case_sensitive: Whether search should be case-sensitive
+            regexp: If True, treat search_text as a regular expression.
 
         Returns:
             List of dictionaries with match information:
@@ -1502,6 +1503,9 @@ class EditorWidget(QPlainTextEdit):
             - column: Column number (1-indexed)
             - match_text: The matched text
             - context: Line of text containing the match
+
+        Raises:
+            ValueError: If regexp is True and search_text is not a valid regular expression.
         """
         if not search_text:
             return []
@@ -1513,25 +1517,49 @@ class EditorWidget(QPlainTextEdit):
         if case_sensitive:
             find_flags |= QTextDocument.FindFlag.FindCaseSensitively
 
-        cursor = QTextCursor(document)
-        while True:
-            cursor = document.find(search_text, cursor, find_flags)
-            if cursor.isNull():
-                break
+        if regexp:
+            pattern_flags = QRegularExpression.PatternOption(0)
+            if not case_sensitive:
+                pattern_flags |= QRegularExpression.PatternOption.CaseInsensitiveOption
 
-            line = cursor.blockNumber() + 1
-            column = cursor.columnNumber() + 1
-            match_text = cursor.selectedText()
+            pattern = QRegularExpression(search_text, pattern_flags)
+            if not pattern.isValid():
+                raise ValueError(f"Invalid regular expression: {pattern.errorString()}")
 
-            block = cursor.block()
-            context = block.text()
+            cursor = QTextCursor(document)
+            while True:
+                cursor = document.find(pattern, cursor, find_flags)
+                if cursor.isNull():
+                    break
 
-            matches.append({
-                'line': line,
-                'column': column,
-                'match_text': match_text,
-                'context': context
-            })
+                line = cursor.blockNumber() + 1
+                column = cursor.columnNumber() + 1
+                match_text = cursor.selectedText()
+                block = cursor.block()
+                matches.append({
+                    'line': line,
+                    'column': column,
+                    'match_text': match_text,
+                    'context': block.text()
+                })
+
+        else:
+            cursor = QTextCursor(document)
+            while True:
+                cursor = document.find(search_text, cursor, find_flags)
+                if cursor.isNull():
+                    break
+
+                line = cursor.blockNumber() + 1
+                column = cursor.columnNumber() + 1
+                match_text = cursor.selectedText()
+                block = cursor.block()
+                matches.append({
+                    'line': line,
+                    'column': column,
+                    'match_text': match_text,
+                    'context': block.text()
+                })
 
         return matches
 

@@ -1057,7 +1057,8 @@ class PreviewWidget(QWidget):
         self,
         search_text: str,
         case_sensitive: bool = False,
-        max_results: int = 50
+        max_results: int = 50,
+        regexp: bool = False
     ) -> Dict[str, Any]:
         """
         Search for text across all content blocks.
@@ -1066,9 +1067,13 @@ class PreviewWidget(QWidget):
             search_text: Text to search for
             case_sensitive: Whether search should be case-sensitive
             max_results: Maximum number of results to return
+            regexp: If True, treat search_text as a regular expression.
 
         Returns:
             Dictionary containing search results with matches and context
+
+        Raises:
+            ValueError: If regexp is True and search_text is not a valid regular expression.
         """
         if not search_text:
             return {
@@ -1079,14 +1084,20 @@ class PreviewWidget(QWidget):
                 "matches": []
             }
 
+        if regexp:
+            flags = 0 if case_sensitive else re.IGNORECASE
+            try:
+                re.compile(search_text, flags)
+
+            except re.error as e:
+                raise ValueError(f"Invalid regular expression: {e}") from e
+
         # Perform search across all content blocks
         all_matches = []
 
         for block_idx, content_block in enumerate(self._content_blocks):
-            # Use existing find_text method
-            # Note: Some content widgets may not support case_sensitive parameter
             try:
-                widget_matches = content_block.find_text(search_text)
+                widget_matches = content_block.find_text(search_text, case_sensitive, regexp)
 
             except Exception:
                 widget_matches = []

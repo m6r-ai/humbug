@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import os
+import re
 from typing import Dict, List, Tuple, Any, Set, cast
 
 from PySide6.QtWidgets import (
@@ -3010,7 +3011,8 @@ class ConversationWidget(QWidget):
         search_text: str,
         case_sensitive: bool = False,
         message_types: List[str] | None = None,
-        max_results: int = 50
+        max_results: int = 50,
+        regexp: bool = False
     ) -> Dict[str, Any]:
         """
         Search for text across all messages.
@@ -3020,9 +3022,13 @@ class ConversationWidget(QWidget):
             case_sensitive: Case-sensitive search
             message_types: Filter to specific message types
             max_results: Maximum results to return
+            regexp: If True, treat search_text as a regular expression.
 
         Returns:
             Dictionary containing search results
+
+        Raises:
+            ValueError: If regexp is True and search_text is not a valid regular expression.
         """
         if self._ai_conversation is None:
             raise ValueError("No conversation available")
@@ -3048,9 +3054,16 @@ class ConversationWidget(QWidget):
         history = self.get_conversation_history()
         messages = history.get_messages()
 
-        # Prepare search
-        search_str = search_text if case_sensitive else search_text.lower()
         matches = []
+
+        if regexp:
+            flags = 0 if case_sensitive else re.IGNORECASE
+            try:
+                pattern = re.compile(search_text, flags)
+            except re.error as e:
+                raise ValueError(f"Invalid regular expression: {e}") from e
+        else:
+            pattern = None
 
         for idx, msg in enumerate(messages):
             # Apply type filter
@@ -3060,36 +3073,52 @@ class ConversationWidget(QWidget):
                     continue
 
             # Search in content
-            content = msg.content if case_sensitive else msg.content.lower()
-            pos = 0
+            content = msg.content
 
-            while True:
-                pos = content.find(search_str, pos)
-                if pos == -1:
-                    break
+            if pattern is not None:
+                for m in pattern.finditer(content):
+                    pos = m.start()
+                    matched = m.group()
+                    context_start = max(0, pos - 50)
+                    context_end = min(len(content), m.end() + 50)
+                    matches.append({
+                        "message_index": idx,
+                        "message_id": msg.id,
+                        "message_type": msg.source_str(),
+                        "timestamp": msg.timestamp.isoformat(),
+                        "match_position": pos,
+                        "context_before": content[context_start:pos],
+                        "match_text": matched,
+                        "context_after": content[m.end():context_end]
+                    })
+                    if len(matches) >= max_results:
+                        break
 
-                # Extract context (50 chars before and after)
-                context_start = max(0, pos - 50)
-                context_end = min(len(msg.content), pos + len(search_text) + 50)
+            else:
+                search_str = search_text if case_sensitive else search_text.lower()
+                haystack = content if case_sensitive else content.lower()
+                pos = 0
+                while True:
+                    pos = haystack.find(search_str, pos)
+                    if pos == -1:
+                        break
 
-                match_info = {
-                    "message_index": idx,
-                    "message_id": msg.id,
-                    "message_type": msg.source_str(),
-                    "timestamp": msg.timestamp.isoformat(),
-                    "match_position": pos,
-                    "context_before": msg.content[context_start:pos],
-                    "match_text": msg.content[pos:pos + len(search_text)],
-                    "context_after": msg.content[pos + len(search_text):context_end]
-                }
+                    context_start = max(0, pos - 50)
+                    context_end = min(len(content), pos + len(search_text) + 50)
+                    matches.append({
+                        "message_index": idx,
+                        "message_id": msg.id,
+                        "message_type": msg.source_str(),
+                        "timestamp": msg.timestamp.isoformat(),
+                        "match_position": pos,
+                        "context_before": content[context_start:pos],
+                        "match_text": content[pos:pos + len(search_text)],
+                        "context_after": content[pos + len(search_text):context_end]
+                    })
+                    if len(matches) >= max_results:
+                        break
 
-                matches.append(match_info)
-
-                # Check if we've hit the limit
-                if len(matches) >= max_results:
-                    break
-
-                pos += 1
+                    pos += 1
 
             if len(matches) >= max_results:
                 break

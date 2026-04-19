@@ -471,11 +471,12 @@ class ConversationTab(TabBase):
         search_text: str,
         case_sensitive: bool = False,
         message_types: list[str] | None = None,
-        max_results: int = 50
+        max_results: int = 50,
+        regexp: bool = False
     ) -> Dict[str, Any]:
         """Search for text across all messages."""
         return self._conversation_widget.search_messages(
-            search_text, case_sensitive, message_types, max_results
+            search_text, case_sensitive, message_types, max_results, regexp
         )
 
     def scroll_to_message(

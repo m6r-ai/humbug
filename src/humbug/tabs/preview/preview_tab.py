@@ -355,7 +355,8 @@ class PreviewTab(TabBase):
         self,
         search_text: str,
         case_sensitive: bool = False,
-        max_results: int = 50
+        max_results: int = 50,
+        regexp: bool = False
     ) -> Dict[str, Any]:
         """
         Search for text across all content blocks.
@@ -364,11 +365,12 @@ class PreviewTab(TabBase):
             search_text: Text to search for
             case_sensitive: Whether search should be case-sensitive
             max_results: Maximum number of results to return
+            regexp: If True, treat search_text as a regular expression.
 
         Returns:
             Dictionary containing search results with matches and context
         """
-        return self._preview_content_widget.search_content(search_text, case_sensitive, max_results)
+        return self._preview_content_widget.search_content(search_text, case_sensitive, max_results, regexp)
 
     def scroll_to_content_position(
         self,

@@ -388,18 +388,19 @@ class EditorTab(TabBase):
         """
         self._editor_widget.goto_line(line, column)
 
-    def find_all_occurrences(self, search_text: str, case_sensitive: bool = False) -> List[Dict[str, Any]]:
+    def find_all_occurrences(self, search_text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Dict[str, Any]]:
         """
         Find all occurrences of text in the document.
 
         Args:
             search_text: Text to search for
             case_sensitive: Whether search should be case-sensitive
+            regexp: If True, treat search_text as a regular expression.
 
         Returns:
             List of match information dictionaries
         """
-        return self._editor_widget.find_all_occurrences(search_text, case_sensitive)
+        return self._editor_widget.find_all_occurrences(search_text, case_sensitive, regexp)
 
     def get_selected_text(self) -> str:
         """

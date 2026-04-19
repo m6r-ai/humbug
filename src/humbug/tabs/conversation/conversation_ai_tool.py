@@ -113,6 +113,12 @@ class ConversationAITool(AITool):
                     required=False
                 ),
                 AIToolParameter(
+                    name="regexp",
+                    type="boolean",
+                    description="Whether to treat search_text as a regular expression (for search operation)",
+                    required=False
+                ),
+                AIToolParameter(
                     name="max_results",
                     type="integer",
                     description="Maximum number of search results to return",
@@ -166,11 +172,11 @@ class ConversationAITool(AITool):
                 name="search",
                 handler=self._search,
                 extract_context=None,
-                allowed_parameters={"tab_id", "search_text", "case_sensitive", "message_types", "max_results"},
+                allowed_parameters={"tab_id", "search_text", "case_sensitive", "regexp", "message_types", "max_results"},
                 required_parameters={"tab_id", "search_text"},
                 description="Search for text across all messages in a conversation. "
                     "Returns matches with surrounding context. Supports case-sensitive search, "
-                    "filtering by message types, and limiting results"
+                    "filtering by message types, limiting results, and regular expression matching"
             ),
             "scroll_to": AIToolOperationDefinition(
                 name="scroll_to",
@@ -388,19 +394,27 @@ class ConversationAITool(AITool):
         case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
         message_types = self._get_optional_list_value("message_types", arguments)
         max_results = cast(int, self._get_optional_int_value("max_results", arguments, 50))
+        regexp = self._get_optional_bool_value("regexp", arguments, False)
 
         # Validate message types if provided
         self._validate_message_types(message_types)
 
         try:
             result = conversation_tab.search_messages(
-                search_text, case_sensitive, message_types, max_results
+                search_text, case_sensitive, message_types, max_results, regexp
             )
 
-            case_desc = " (case-sensitive)" if case_sensitive else ""
+            flags = []
+            if case_sensitive:
+                flags.append("case-sensitive")
+
+            if regexp:
+                flags.append("regexp")
+
+            flag_desc = f" ({', '.join(flags)})" if flags else ""
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI searched conversation for '{search_text}'{case_desc}: "
+                f"AI searched conversation for '{search_text}'{flag_desc}: "
                 f"{result['total_matches']} matches\ntab ID: {tab_id}"
             )
 
@@ -410,6 +424,9 @@ class ConversationAITool(AITool):
                 content=json.dumps(result, indent=2),
                 context="json"
             )
+
+        except ValueError as e:
+            raise AIToolExecutionError(str(e)) from e
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to search conversation: {str(e)}") from e
