@@ -81,17 +81,19 @@ class PreviewMarkdownPreviewContent(PreviewContentWidget):
         """Clear any text selection in this content."""
         self._markdown_content.clear_selection()
 
-    def find_text(self, text: str) -> List[Tuple[int, int, int]]:
+    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Tuple[int, int, int]]:
         """
         Find all instances of text in this content.
 
         Args:
             text: Text to search for
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
 
         Returns:
             List of (section, start_position, end_position) tuples for each match
         """
-        return self._markdown_content.find_text(text)
+        return self._markdown_content.find_text(text, case_sensitive, regexp)
 
     def find_element_by_id(self, element_id: str) -> Tuple[int, int, int] | None:
         """

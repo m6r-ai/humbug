@@ -1,6 +1,7 @@
 import colorsys
 from datetime import datetime
 import logging
+import re
 from typing import Dict, List, Tuple, Any, cast
 
 from PySide6.QtWidgets import (
@@ -1094,7 +1095,12 @@ class ConversationMessage(QFrame):
 
         return all_matches
 
-    def _find_text_in_raw_content(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Tuple[int, int, int]]:
+    def _find_text_in_raw_content(
+        self,
+        text: str,
+        case_sensitive: bool = False,
+        regexp: bool = False
+    ) -> List[Tuple[int, int, int]]:
         """
         Search in raw unrendered content (case-insensitive).
 
@@ -1115,14 +1121,16 @@ class ConversationMessage(QFrame):
         matches = []
 
         if regexp:
-            import re
             flags = 0 if case_sensitive else re.IGNORECASE
             try:
                 pattern = re.compile(text, flags)
+
             except re.error:
                 return []
+
             for m in pattern.finditer(self._pending_content):
                 matches.append((0, m.start(), m.end()))
+
         else:
             content = self._pending_content if case_sensitive else self._pending_content.lower()
             search = text if case_sensitive else text.lower()
@@ -1131,6 +1139,7 @@ class ConversationMessage(QFrame):
                 pos = content.find(search, pos)
                 if pos == -1:
                     break
+
                 matches.append((0, pos, pos + len(text)))
                 pos += 1
 
