@@ -98,16 +98,21 @@ class FindWidget(QWidget):
         self._next_button.setIcon(QIcon(self._style_manager.scale_icon(next_icon, 15)))
         self._close_button.setIcon(QIcon(self._style_manager.scale_icon("close", 15)))
 
+        self._match_case_button.setIcon(QIcon(self._style_manager.scale_icon("find-match-case", 15)))
+        self._regexp_button.setIcon(QIcon(self._style_manager.scale_icon("find-regexp", 15)))
+
         scaled_size = int(15 * factor)
         icon_size = QSize(scaled_size, scaled_size)
         self._prev_button.setIconSize(icon_size)
         self._next_button.setIconSize(icon_size)
         self._close_button.setIconSize(icon_size)
+        self._match_case_button.setIconSize(icon_size)
+        self._regexp_button.setIconSize(icon_size)
 
         button_bg = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND)
         button_hover = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)
         button_pressed = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)
-        button_checked = self._style_manager.get_color_str(ColorRole.TEXT_FOUND_DIM)
+        button_checked = self._style_manager.get_color_str(ColorRole.TEXT_FOUND)
         button_disabled = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)
         text_primary = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
         text_disabled = self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)

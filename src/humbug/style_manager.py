@@ -1,4 +1,5 @@
-"""Style manager for handling application-wide style and zoom settings.
+"""
+Style manager for handling application-wide style and zoom settings.
 
 Implements a singleton pattern to maintain consistent styling across components.
 Provides signals for style changes and utilities for scaled size calculations.
@@ -1141,6 +1142,29 @@ class StyleManager(QObject):
 
             self._create_active_inactive_theme_icons(True, suffix, color)
             self._create_active_inactive_theme_icons(False, suffix, inactive_color)
+
+            # Match-case toggle icon — "Aa" letterform
+            self._write_icon(f'find-match-case-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <text x="3" y="48" font-family="sans-serif" font-size="48"
+                        fill="{color}">Aa</text>
+                </svg>
+            ''')
+
+            # Regexp toggle icon — ".*" pattern
+            self._write_icon(f'find-regexp-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="14" cy="36" r="5" fill="{color}"/>#
+                    <line x1="40" y1="16" x2="40" y2="44"
+                        stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="26" y1="22" x2="54" y2="38"
+                        stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="54" y1="22" x2="26" y2="38"
+                        stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="4" y1="54" x2="60" y2="54"
+                        stroke="{color}" stroke-width="4" stroke-linecap="round"/>
+                </svg>
+            ''')
 
         # Create the standard application icon for about dialog
         self._write_icon('app-icon.svg', self._create_app_icon_svg('#4040c0', '#ffffff'))
