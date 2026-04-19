@@ -1155,11 +1155,11 @@ class StyleManager(QObject):
             self._write_icon(f'find-regexp-{suffix}.svg', f'''
                 <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
                     <circle cx="14" cy="36" r="5" fill="{color}"/>#
-                    <line x1="40" y1="16" x2="40" y2="44"
+                    <line x1="42" y1="16" x2="42" y2="44"
                         stroke="{color}" stroke-width="5" stroke-linecap="round"/>
-                    <line x1="26" y1="22" x2="54" y2="38"
+                    <line x1="30" y1="22" x2="54" y2="38"
                         stroke="{color}" stroke-width="5" stroke-linecap="round"/>
-                    <line x1="54" y1="22" x2="26" y2="38"
+                    <line x1="54" y1="22" x2="30" y2="38"
                         stroke="{color}" stroke-width="5" stroke-linecap="round"/>
                     <line x1="4" y1="54" x2="60" y2="54"
                         stroke="{color}" stroke-width="4" stroke-linecap="round"/>

@@ -41,12 +41,14 @@ class FindWidget(QWidget):
         self._match_case_button = QToolButton()
         self._match_case_button.setCheckable(True)
         self._match_case_button.setChecked(False)
+        self._match_case_button.setObjectName("toggleButton")
         self._match_case_button.clicked.connect(self._on_mode_changed)
         self._layout.addWidget(self._match_case_button)
 
         self._regexp_button = QToolButton()
         self._regexp_button.setCheckable(True)
         self._regexp_button.setChecked(False)
+        self._regexp_button.setObjectName("toggleButton")
         self._regexp_button.clicked.connect(self._on_mode_changed)
         self._layout.addWidget(self._regexp_button)
 
@@ -113,6 +115,7 @@ class FindWidget(QWidget):
         button_hover = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_HOVER)
         button_pressed = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_PRESSED)
         button_checked = self._style_manager.get_color_str(ColorRole.TEXT_FOUND)
+        button_checked_hover = self._style_manager.get_color_str(ColorRole.TEXT_FOUND_DIM)
         button_disabled = self._style_manager.get_color_str(ColorRole.BUTTON_BACKGROUND_DISABLED)
         text_primary = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
         text_disabled = self._style_manager.get_color_str(ColorRole.TEXT_DISABLED)
@@ -144,11 +147,20 @@ class FindWidget(QWidget):
             QToolButton:pressed {{
                 background-color: {button_pressed};
             }}
-            QToolButton:checked {{
+            QToolButton#toggleButton:hover {{
+                background-color: {button_checked_hover};
+            }}
+            QToolButton#toggleButton:pressed {{
                 background-color: {button_checked};
             }}
-            QToolButton:checked:hover {{
-                background-color: {button_hover};
+            QToolButton#toggleButton:checked {{
+                background-color: {button_checked};
+            }}
+            QToolButton#toggleButton:checked:hover {{
+                background-color: {button_checked_hover};
+            }}
+            QToolButton#toggleButton:checked:pressed {{
+                background-color: {button_bg};
             }}
             QToolButton:disabled {{
                 background-color: {button_disabled};
