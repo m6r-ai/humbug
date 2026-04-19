@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import fnmatch
 import shutil
 import tempfile
@@ -158,6 +159,36 @@ class FileSystemAITool(AITool):
                     type="boolean",
                     description="If True, validate diff without applying changes (for apply_diff operation)",
                     required=False
+                ),
+                AIToolParameter(
+                    name="search_text",
+                    type="string",
+                    description="Text or regular expression to search for (for search_file and search_files operations)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="case_sensitive",
+                    type="boolean",
+                    description="Whether search should be case-sensitive (for search_file and search_files operations)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="regexp",
+                    type="boolean",
+                    description="Whether to treat search_text as a regular expression (for search_file and search_files operations)",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="include",
+                    type="string",
+                    description="Glob pattern to filter filenames (e.g. '*.py') for search_files operation",
+                    required=False
+                ),
+                AIToolParameter(
+                    name="max_results",
+                    type="integer",
+                    description="Maximum number of matching lines to return (for search_file and search_files operations)",
+                    required=False
                 )
             ]
         )
@@ -280,6 +311,26 @@ class FileSystemAITool(AITool):
                 required_parameters={"path"},
                 description="Get detailed information about file or directory. "
                     "If format is not specified timestamps are in ISO format."
+            ),
+            "search_file": AIToolOperationDefinition(
+                name="search_file",
+                handler=self._search_file,
+                extract_context=None,
+                allowed_parameters={"path", "search_text", "case_sensitive", "regexp", "max_results", "encoding"},
+                required_parameters={"path", "search_text"},
+                description="Search for text or a regular expression within a single file. "
+                    "Returns matching lines with line numbers. Supports case_sensitive and regexp flags. "
+                    "Obeys the same external file access rules as read_file."
+            ),
+            "search_files": AIToolOperationDefinition(
+                name="search_files",
+                handler=self._search_files,
+                extract_context=None,
+                allowed_parameters={"path", "search_text", "case_sensitive", "regexp", "include", "max_results", "encoding"},
+                required_parameters={"path", "search_text"},
+                description="Recursively search for text or a regular expression across all files under a directory. "
+                    "Results are grouped by file. Use include to filter by filename glob (e.g. '*.py'). "
+                    "Each file encountered obeys the same external file access rules as read_file."
             )
         }
 
@@ -1260,6 +1311,203 @@ class FileSystemAITool(AITool):
 
         except OSError as e:
             raise AIToolExecutionError(f"Failed to get info: {str(e)}") from e
+
+    def _compile_search_pattern(self, search_text: str, case_sensitive: bool, regexp: bool) -> re.Pattern:
+        """
+        Compile a search pattern from the given parameters.
+
+        Args:
+            search_text: Text or regexp to search for
+            case_sensitive: Whether the match is case-sensitive
+            regexp: If True, treat search_text as a regular expression
+
+        Returns:
+            Compiled re.Pattern
+
+        Raises:
+            AIToolExecutionError: If regexp is True and search_text is not a valid pattern
+        """
+        flags = 0 if case_sensitive else re.IGNORECASE
+        if regexp:
+            try:
+                return re.compile(search_text, flags)
+            except re.error as e:
+                raise AIToolExecutionError(f"Invalid regular expression: {e}") from e
+
+        return re.compile(re.escape(search_text), flags)
+
+    async def _search_file(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Search for text within a single file."""
+        arguments = tool_call.arguments
+        path_arg = self._get_required_str_value("path", arguments)
+        path, display_path = await self._validate_and_resolve_path(
+            "path", path_arg, tool_call, request_authorization, allow_external=True
+        )
+
+        if not path.exists():
+            raise AIToolExecutionError(f"File does not exist: {path_arg}")
+
+        if not path.is_file():
+            raise AIToolExecutionError(f"Path is not a file: {path_arg}")
+
+        file_size = path.stat().st_size
+        if file_size > self._max_file_size_bytes:
+            size_mb = file_size / (1024 * 1024)
+            max_mb = self._max_file_size_bytes / (1024 * 1024)
+            raise AIToolExecutionError(f"File too large: {size_mb:.1f}MB (max: {max_mb:.1f}MB)")
+
+        search_text = self._get_required_str_value("search_text", arguments)
+        case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
+        regexp = self._get_optional_bool_value("regexp", arguments, False)
+        max_results = self._get_optional_int_value("max_results", arguments, 1000)
+        encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
+
+        pattern = self._compile_search_pattern(search_text, case_sensitive, regexp)
+
+        try:
+            with open(path, 'r', encoding=encoding) as f:
+                lines = f.readlines()
+
+        except UnicodeDecodeError as e:
+            raise AIToolExecutionError(
+                f"Failed to decode file with encoding '{encoding}': {str(e)}. Try a different encoding."
+            ) from e
+
+        except PermissionError as e:
+            raise AIToolExecutionError(f"Permission denied reading file: {str(e)}") from e
+
+        except OSError as e:
+            raise AIToolExecutionError(f"Failed to read file: {str(e)}") from e
+
+        matches = []
+        for line_num, line in enumerate(lines, 1):
+            if pattern.search(line):
+                matches.append({"line": line_num, "content": line.rstrip("\n")})
+                if len(matches) >= cast(int, max_results):
+                    break
+
+        result = {
+            "path": display_path,
+            "search_text": search_text,
+            "case_sensitive": case_sensitive,
+            "regexp": regexp,
+            "match_count": len(matches),
+            "truncated": len(matches) >= cast(int, max_results),
+            "matches": matches
+        }
+
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content=json.dumps(result, indent=2),
+            context="json"
+        )
+
+    async def _search_files(
+        self,
+        tool_call: AIToolCall,
+        _requester_ref: Any,
+        request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Recursively search for text across all files under a directory."""
+        arguments = tool_call.arguments
+        path_arg = self._get_required_str_value("path", arguments)
+        path, display_path = await self._validate_and_resolve_path(
+            "path", path_arg, tool_call, request_authorization, allow_external=True
+        )
+
+        if not path.exists():
+            raise AIToolExecutionError(f"Directory does not exist: {path_arg}")
+
+        if not path.is_dir():
+            raise AIToolExecutionError(f"Path is not a directory: {path_arg}")
+
+        search_text = self._get_required_str_value("search_text", arguments)
+        case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
+        regexp = self._get_optional_bool_value("regexp", arguments, False)
+        include = self._get_optional_str_value("include", arguments, None)
+        max_results = self._get_optional_int_value("max_results", arguments, 1000)
+        encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
+
+        pattern = self._compile_search_pattern(search_text, case_sensitive, regexp)
+
+        total_matches = 0
+        truncated = False
+        files_with_matches: List[Dict[str, Any]] = []
+
+        for file_path in sorted(path.rglob("*")):
+            if not file_path.is_file():
+                continue
+
+            if include and not fnmatch.fnmatch(file_path.name, include):
+                continue
+
+            if file_path.stat().st_size > self._max_file_size_bytes:
+                continue
+
+            # Check access for each file individually
+            try:
+                await self._validate_and_resolve_path(
+                    "path", str(file_path), tool_call, request_authorization, allow_external=True
+                )
+            except (AIToolExecutionError, AIToolAuthorizationDenied):
+                continue
+
+            try:
+                with open(file_path, 'r', encoding=encoding) as f:
+                    lines = f.readlines()
+
+            except (UnicodeDecodeError, PermissionError, OSError):
+                continue
+
+            file_matches = []
+            for line_num, line in enumerate(lines, 1):
+                if pattern.search(line):
+                    file_matches.append({"line": line_num, "content": line.rstrip("\n")})
+                    total_matches += 1
+                    if total_matches >= cast(int, max_results):
+                        truncated = True
+                        break
+
+            if file_matches:
+                try:
+                    rel = file_path.relative_to(path)
+                    file_display_path = str(Path(display_path) / rel)
+                except ValueError:
+                    file_display_path = str(file_path)
+
+                files_with_matches.append({
+                    "path": file_display_path,
+                    "match_count": len(file_matches),
+                    "matches": file_matches
+                })
+
+            if truncated:
+                break
+
+        result = {
+            "directory": display_path,
+            "search_text": search_text,
+            "case_sensitive": case_sensitive,
+            "regexp": regexp,
+            "include": include,
+            "total_matches": total_matches,
+            "truncated": truncated,
+            "files_with_matches": len(files_with_matches),
+            "results": files_with_matches
+        }
+
+        return AIToolResult(
+            id=tool_call.id,
+            name="filesystem",
+            content=json.dumps(result, indent=2),
+            context="json"
+        )
 
     def _apply_diff_to_file_context(self, arguments: Dict[str, Any]) -> str | None:
         """Extract context for append_to_file operation."""
