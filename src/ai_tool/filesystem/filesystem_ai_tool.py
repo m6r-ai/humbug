@@ -66,17 +66,18 @@ class FileSystemAITool(AITool):
         base_description = (
             f"The filesystem tool lets you (the AI) perform various file and directory operations. "
             f"Write operations are restricted to the current mindspace and require user authorization. "
-            f"Read operations (read_file, read_file_lines, list_directory, get_info) can access files outside the mindspace when "
+            f"Read and search operations can access files outside the mindspace when "
             f"external file access is enabled (currently: {external_access_status}). "
         )
 
         if settings.allow_external_access:
-            base_description += "External reads are subject to allowlist/denylist rules and user approval. "
+            base_description += "External reads are subject to allowlist rules and user approval. "
 
         else:
             base_description += "Enable in user settings to access system files. "
 
         base_description += (
+            f"The denied paths list applies to all file access, including within the mindspace. "
             f"Maximum file size: {self._max_file_size_bytes // (1024 * 1024)}MB."
         )
 
@@ -133,7 +134,7 @@ class FileSystemAITool(AITool):
                 AIToolParameter(
                     name="create_parents",
                     type="boolean",
-                    description="Create parent directories if they don't exist (for write operations)",
+                    description="Create parent directories if they don't exist (write operations)",
                     required=False
                 ),
                 AIToolParameter(
@@ -157,25 +158,25 @@ class FileSystemAITool(AITool):
                 AIToolParameter(
                     name="dry_run",
                     type="boolean",
-                    description="If True, validate diff without applying changes (for apply_diff operation)",
+                    description="If True, validate diff without applying changes (apply_diff operation)",
                     required=False
                 ),
                 AIToolParameter(
                     name="search_text",
                     type="string",
-                    description="Text or regular expression to search for (for search_file and search_files operations)",
+                    description="Text or regular expression to search for (search_file and search_files operations)",
                     required=False
                 ),
                 AIToolParameter(
                     name="case_sensitive",
                     type="boolean",
-                    description="Whether search should be case-sensitive (for search_file and search_files operations)",
+                    description="Whether search should be case-sensitive (search_file and search_files operations)",
                     required=False
                 ),
                 AIToolParameter(
                     name="regexp",
                     type="boolean",
-                    description="Whether to treat search_text as a regular expression (for search_file and search_files operations)",
+                    description="Whether to treat search_text as a regular expression (search_file and search_files operations)",
                     required=False
                 ),
                 AIToolParameter(
@@ -187,7 +188,7 @@ class FileSystemAITool(AITool):
                 AIToolParameter(
                     name="max_results",
                     type="integer",
-                    description="Maximum number of matching lines to return (for search_file and search_files operations)",
+                    description="Maximum number of matching lines to return (search_file and search_files operations)",
                     required=False
                 )
             ]
