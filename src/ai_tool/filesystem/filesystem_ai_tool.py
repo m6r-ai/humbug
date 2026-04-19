@@ -1400,7 +1400,7 @@ class FileSystemAITool(AITool):
         search_text = self._get_required_str_value("search_text", arguments)
         case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
         regexp = self._get_optional_bool_value("regexp", arguments, False)
-        max_results = self._get_optional_int_value("max_results", arguments, 1000)
+        max_results = self._get_optional_int_value("max_results", arguments, 100)
         encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
 
         pattern = self._compile_search_pattern(search_text, case_sensitive, regexp)
@@ -1467,7 +1467,7 @@ class FileSystemAITool(AITool):
         case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
         regexp = self._get_optional_bool_value("regexp", arguments, False)
         include = self._get_optional_str_value("include", arguments, None)
-        max_results = self._get_optional_int_value("max_results", arguments, 1000)
+        max_results = self._get_optional_int_value("max_results", arguments, 50)
         encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
 
         pattern = self._compile_search_pattern(search_text, case_sensitive, regexp)
