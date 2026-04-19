@@ -141,10 +141,10 @@ def get_english_strings() -> LanguageStrings:
         sort_alphabetical="Alphabetical",
 
         # User Settings dialog - external file access
-        external_file_access="External File Access",
+        external_file_access="File Access",
         allow_external_file_access="Allow AI to read files outside mindspace",
         external_file_allowlist="Allowed paths (glob patterns, one per line):",
-        external_file_denylist="Denied paths (glob patterns, one per line):",
+        external_file_denylist="Always denied paths (glob patterns, one per line):",
 
         # Mindspace tree
         mindspace_label_none="No mindspace active",

@@ -11,6 +11,8 @@ Bug fixes:
 
 - The mindspace label did not display correctly.
 - Resolve a problem with changed files not rendering correctly after updating all system build files.
+- The user settings file deny list was accidently being enabled/disabled by the toggle to allow reads outside the
+  current mindspace.  The deny list should always be active!
 
 ## v43 (2026-04-18)
 

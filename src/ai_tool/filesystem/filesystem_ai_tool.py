@@ -364,7 +364,16 @@ class FileSystemAITool(AITool):
 
         try:
             # Try to resolve within mindspace first
-            return self._resolve_path(path_str)
+            resolved_path, display_path = self._resolve_path(path_str)
+
+            # Apply denylist even for mindspace paths
+            settings = self._get_access_settings()
+            if self._match_glob_patterns(str(resolved_path), settings.external_denylist):
+                raise AIToolExecutionError(
+                    f"{key}: access denied: '{display_path}' matches a denied path pattern."
+                )
+
+            return resolved_path, display_path
 
         except ValueError as e:
             # Path is outside mindspace boundaries
