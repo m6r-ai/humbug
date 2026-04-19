@@ -164,7 +164,10 @@ class FileSystemAITool(AITool):
                 AIToolParameter(
                     name="search_text",
                     type="string",
-                    description="Text or regular expression to search for (search_file and search_files operations)",
+                    description="Text or regular expression to search for (search_file and search_files operations). "
+                        "When regexp is true, use Python regex syntax with standard JSON string encoding: "
+                        "use '|' for alternation (no backslash needed), and write exactly one '\\' in the JSON "
+                        "for each backslash in the regex (e.g. '\\d' in JSON gives the regex \\d).",
                     required=False
                 ),
                 AIToolParameter(
@@ -321,7 +324,10 @@ class FileSystemAITool(AITool):
                 required_parameters={"path", "search_text"},
                 description="Search for text or a regular expression within a single file. "
                     "Returns matching lines with line numbers. Supports case_sensitive and regexp flags. "
-                    "Obeys the same external file access rules as read_file."
+                    "Obeys the same external file access rules as read_file. "
+                    "Note: match content is returned as JSON-encoded strings, so special characters "
+                    "(double quotes, backslashes, etc.) will appear escaped — these escape sequences "
+                    "are not present in the source."
             ),
             "search_files": AIToolOperationDefinition(
                 name="search_files",
@@ -331,7 +337,10 @@ class FileSystemAITool(AITool):
                 required_parameters={"path", "search_text"},
                 description="Recursively search for text or a regular expression across all files under a directory. "
                     "Results are grouped by file. Use include to filter by filename glob (e.g. '*.py'). "
-                    "Each file encountered obeys the same external file access rules as read_file."
+                    "Each file encountered obeys the same external file access rules as read_file. "
+                    "Note: match content is returned as JSON-encoded strings, so special characters "
+                    "(double quotes, backslashes, etc.) will appear escaped — these escape sequences "
+                    "are not present in the source."
             )
         }
 
