@@ -6,6 +6,8 @@ New features:
 
 - Added support for case-sensitive and regexp matching in the various find controls.
 - Added support for case-sensitive and regexp matching in the various AI tools that interact with tabs.
+- Added Claude Opus 4.7 support.
+- Replaced GLM 5 with GLM 5.1 on Ollama.
 
 Bug fixes:
 

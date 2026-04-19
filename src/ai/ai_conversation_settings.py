@@ -47,6 +47,24 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
+        "claude-opus-4-7": AIModel(
+            name="claude-opus-4-7",
+            provider="anthropic",
+            context_window=1000000,
+            max_output_tokens=32000,  # This is actually 64000 but that's too much
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.NO_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
+        "claude-opus-4-7 (thinking)": AIModel(
+            name="claude-opus-4-7",
+            provider="anthropic",
+            context_window=1000000,
+            max_output_tokens=32000,  # This is actuall 64000 but that's too much
+            supports_temperature=False,
+            reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
+            tool_capabilities=ToolCapability.FUNCTION_CALLING
+        ),
         "claude-opus-4-6": AIModel(
             name="claude-opus-4-6",
             provider="anthropic",
@@ -172,8 +190,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.VISIBLE_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "glm-5 (Ollama)": AIModel(
-            name="glm-5:cloud",
+        "glm-5.1 (Ollama)": AIModel(
+            name="glm-5.1:cloud",
             provider="ollama",
             context_window=200000,
             max_output_tokens=32768,
@@ -181,8 +199,8 @@ class AIConversationSettings:
             reasoning_capabilities=AIReasoningCapability.NO_REASONING,
             tool_capabilities=ToolCapability.FUNCTION_CALLING
         ),
-        "glm-5 (thinking) (Ollama)": AIModel(
-            name="glm-5:cloud",
+        "glm-5.1 (thinking) (Ollama)": AIModel(
+            name="glm-5.1:cloud",
             provider="ollama",
             context_window=200000,
             max_output_tokens=32768,
