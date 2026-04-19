@@ -40,6 +40,8 @@ class DiffWidget(QWidget):
     """
 
     status_updated = Signal()
+    open_in_editor_requested = Signal()
+    open_in_preview_requested = Signal()
 
     def __init__(self, path: str, parent: QWidget | None = None) -> None:
         """
@@ -95,6 +97,12 @@ class DiffWidget(QWidget):
         self._left_pane.verticalScrollBar().valueChanged.connect(self._on_left_scrolled)
         self._right_pane.verticalScrollBar().valueChanged.connect(self._on_right_scrolled)
         self._scrollbar.valueChanged.connect(self._on_shared_scrollbar_moved)
+
+        # Wire pane open requests up to widget-level signals.
+        self._left_pane.open_in_editor_requested.connect(self.open_in_editor_requested)
+        self._right_pane.open_in_editor_requested.connect(self.open_in_editor_requested)
+        self._left_pane.open_in_preview_requested.connect(self.open_in_preview_requested)
+        self._right_pane.open_in_preview_requested.connect(self.open_in_preview_requested)
 
         # Keep the shared scrollbar range in sync with the left pane's range
         # (both panes always have the same row count so either would do).

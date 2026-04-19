@@ -1618,6 +1618,8 @@ class ColumnManager(QWidget):
             return existing_tab
 
         diff_tab = DiffTab("", path, self)
+        diff_tab.open_file_requested.connect(self._on_diff_open_file_requested)
+        diff_tab.open_preview_requested.connect(self._on_diff_open_preview_requested)
         diff_tab.set_ephemeral(ephemeral)
         self._add_tab(diff_tab, os.path.basename(path))
         return diff_tab
@@ -1829,6 +1831,14 @@ class ColumnManager(QWidget):
         """Edit a file from a preview page."""
         self.edit_file_requested.emit(path)
 
+    def _on_diff_open_file_requested(self, path: str) -> None:
+        """Open a file in an editor tab from a diff tab context menu."""
+        self.open_file(path, False)
+
+    def _on_diff_open_preview_requested(self, path: str) -> None:
+        """Open a file in a preview tab from a diff tab context menu."""
+        self.open_preview_page(path, False)
+
     def open_preview_page(self, path: str, ephemeral: bool) -> PreviewTab:
         """Open a preview page."""
         assert os.path.isabs(path), "Path must be absolute"
@@ -1936,7 +1946,10 @@ class ColumnManager(QWidget):
                 return preview_tab
 
             case TabType.DIFF:
-                return DiffTab.restore_from_state(state, self)
+                diff_tab = DiffTab.restore_from_state(state, self)
+                diff_tab.open_file_requested.connect(self._on_diff_open_file_requested)
+                diff_tab.open_preview_requested.connect(self._on_diff_open_preview_requested)
+                return diff_tab
 
         return None
 

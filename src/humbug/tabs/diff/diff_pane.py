@@ -4,7 +4,7 @@ import logging
 from typing import List, Optional
 
 from PySide6.QtWidgets import QMenu, QPlainTextEdit, QWidget
-from PySide6.QtCore import Qt, QRect, QRegularExpression
+from PySide6.QtCore import Qt, QRect, QRegularExpression, Signal
 from PySide6.QtGui import (
     QColor, QContextMenuEvent, QKeyEvent, QPainter, QPaintEvent, QResizeEvent, QTextBlockUserData, QTextBlock,
     QSyntaxHighlighter, QTextCharFormat, QTextCursor, QTextDocument
@@ -143,6 +143,9 @@ class DiffPane(QPlainTextEdit):
     single shared scrollbar that drives both panes simultaneously.
     """
 
+    open_in_editor_requested = Signal()
+    open_in_preview_requested = Signal()
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._logger = logging.getLogger("DiffPane")
@@ -267,6 +270,11 @@ class DiffPane(QPlainTextEdit):
         copy_action = menu.addAction(strings.copy)
         copy_action.setEnabled(self.textCursor().hasSelection())
         copy_action.triggered.connect(self.copy)
+        menu.addSeparator()
+        edit_action = menu.addAction(strings.edit)
+        edit_action.triggered.connect(self.open_in_editor_requested)
+        preview_action = menu.addAction(strings.preview)
+        preview_action.triggered.connect(self.open_in_preview_requested)
         menu.exec_(event.globalPos())
 
     def paintEvent(self, event: QPaintEvent) -> None:

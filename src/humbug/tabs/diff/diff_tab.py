@@ -4,7 +4,7 @@ import logging
 import os
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget
-from PySide6.QtCore import QRegularExpression
+from PySide6.QtCore import QRegularExpression, Signal
 
 from git import GitNotFoundError, GitNotRepositoryError, find_repo_root
 
@@ -20,6 +20,9 @@ from humbug.tabs.diff.diff_widget import DiffWidget
 
 class DiffTab(TabBase):
     """Tab showing a side-by-side diff between the working tree and HEAD for one file."""
+
+    open_file_requested = Signal(str)
+    open_preview_requested = Signal(str)
 
     def __init__(self, tab_id: str, path: str, parent: QWidget | None = None) -> None:
         """
@@ -52,6 +55,8 @@ class DiffTab(TabBase):
 
         self._diff_widget = DiffWidget(path, self)
         self._diff_widget.status_updated.connect(self.update_status)
+        self._diff_widget.open_in_editor_requested.connect(lambda: self.open_file_requested.emit(self._path))
+        self._diff_widget.open_in_preview_requested.connect(lambda: self.open_preview_requested.emit(self._path))
         layout.addWidget(self._diff_widget)
 
         if path:
