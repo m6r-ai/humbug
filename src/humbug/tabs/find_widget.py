@@ -82,11 +82,11 @@ class FindWidget(QWidget):
         find_controls = QHBoxLayout()
         find_controls.setContentsMargins(0, 0, 0, 0)
         find_controls.setSpacing(4)
-        find_controls.addWidget(self._match_case_button)
-        find_controls.addWidget(self._regexp_button)
         find_controls.addWidget(self._status_label)
         find_controls.addWidget(self._prev_button)
         find_controls.addWidget(self._next_button)
+        find_controls.addWidget(self._match_case_button)
+        find_controls.addWidget(self._regexp_button)
         find_controls.addWidget(self._close_button)
         self._grid.addLayout(find_controls, 0, 2)
 
