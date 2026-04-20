@@ -93,6 +93,7 @@ static inline mc_t mc_logn(mc_t a, mc_t b) {
 
 #include "menai_vm_value.h"
 #include "menai_vm_string.h"
+#include "menai_vm_hashtable.h"
 
 /* menai_vm_value init — lives in the same .so */
 extern PyObject *_menai_vm_value_init(void);
@@ -2928,7 +2929,10 @@ execute_loop(PyObject *code, PyObject *globals,
                 /* Split into individual codepoints */
                 PyObject **stl_arr = alen > 0
                     ? (PyObject **)PyMem_Malloc(alen * sizeof(PyObject *)) : NULL;
-                if (alen > 0 && !stl_arr) { PyErr_NoMemory(); goto error; }
+                if (alen > 0 && !stl_arr) {
+                    PyErr_NoMemory();
+                    goto error;
+                }
                 for (Py_ssize_t i = 0; i < alen; i++) {
                     stl_arr[i] = menai_string_from_codepoint(adata[i]);
                     if (!stl_arr[i]) {
@@ -2951,7 +2955,10 @@ execute_loop(PyObject *code, PyObject *globals,
                 }
                 Py_ssize_t nparts = count + 1;
                 PyObject **parts2 = (PyObject **)PyMem_Malloc(nparts * sizeof(PyObject *));
-                if (!parts2) { PyErr_NoMemory(); goto error; }
+                if (!parts2) {
+                    PyErr_NoMemory();
+                    goto error;
+                }
                 Py_ssize_t seg_start = 0, pi2 = 0;
                 for (Py_ssize_t i = 0; i <= alen; ) {
                     int match = (i <= alen - blen) &&
@@ -3352,43 +3359,50 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!require_list_singular(a, "list->set")) goto error;
             MenaiList_Object *lst = (MenaiList_Object *)a;
             Py_ssize_t n = lst->length;
-            /* Deduplicate in a single pass */
             PyObject **nelems = n > 0 ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-            PyObject **nhkeys = n > 0 ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-            if (n > 0 && (!nelems || !nhkeys)) {
-                PyMem_Free(nelems); PyMem_Free(nhkeys);
+            Py_hash_t *nhashes = n > 0 ? (Py_hash_t *)PyMem_Malloc(n * sizeof(Py_hash_t)) : NULL;
+            if (n > 0 && (!nelems || !nhashes)) {
+                PyMem_Free(nelems);
+                PyMem_Free(nhashes);
                 PyErr_NoMemory();
                 goto error;
             }
-            PyObject *seen = n > 0 ? PySet_New(NULL) : NULL;
-            if (n > 0 && !seen) {
-                PyMem_Free(nelems); PyMem_Free(nhkeys);
+            MenaiHashTable lts_seen;
+            int lts_err = 0;
+            if (n > 0 && menai_ht_init(&lts_seen, n) < 0) {
+                PyMem_Free(nelems);
+                PyMem_Free(nhashes);
                 goto error;
             }
             Py_ssize_t out = 0;
-            int lts_err = 0;
             for (Py_ssize_t i = 0; i < n && !lts_err; i++) {
                 PyObject *elem = lst->elements[i];
-                PyObject *hk = menai_hashable_key(elem);
-                if (!hk) { lts_err = 1; break; }
-                int has = PySet_Contains(seen, hk);
-                if (has < 0) { Py_DECREF(hk); lts_err = 1; break; }
-                if (!has) {
-                    if (PySet_Add(seen, hk) < 0) { Py_DECREF(hk); lts_err = 1; break; }
-                    Py_INCREF(elem); nelems[out] = elem;
-                    nhkeys[out] = hk;
+                Py_hash_t h = menai_value_hash(elem);
+                if (h == -1) {
+                    lts_err = 1;
+                    break;
+                }
+                Py_ssize_t existing = menai_ht_lookup(&lts_seen, elem, h);
+                if (existing == -2) {
+                    lts_err = 1;
+                    break;
+                }
+                if (existing < 0) {
+                    menai_ht_insert(&lts_seen, elem, h, out);
+                    Py_INCREF(elem);
+                    nelems[out] = elem;
+                    nhashes[out] = h;
                     out++;
-                } else {
-                    Py_DECREF(hk);
                 }
             }
-            Py_XDECREF(seen);
+            if (n > 0) menai_ht_free(&lts_seen);
             if (lts_err) {
-                for (Py_ssize_t k = 0; k < out; k++) { Py_DECREF(nelems[k]); Py_DECREF(nhkeys[k]); }
-                PyMem_Free(nelems); PyMem_Free(nhkeys);
+                for (Py_ssize_t k = 0; k < out; k++) Py_DECREF(nelems[k]);
+                PyMem_Free(nelems);
+                PyMem_Free(nhashes);
                 goto error;
             }
-            PyObject *r = menai_set_from_arrays_steal(nelems, nhkeys, out);
+            PyObject *r = menai_set_from_arrays_steal(nelems, nhashes, out);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3402,7 +3416,28 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_dict(a, "dict=?")) goto error;
             if (!require_dict(b, "dict=?")) goto error;
-            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_EQ));
+            MenaiDict_Object *da = (MenaiDict_Object *)a;
+            MenaiDict_Object *db = (MenaiDict_Object *)b;
+            int eq = (da->length == db->length);
+            for (Py_ssize_t i = 0; eq && i < da->length; i++) {
+                if (da->hashes[i] != db->hashes[i]) {
+                    eq = 0;
+                    break;
+                }
+                int keq = menai_value_equal(da->keys[i], db->keys[i]);
+                if (keq < 0) goto error;
+                if (!keq) {
+                    eq = 0;
+                    break;
+                }
+                int veq = menai_value_equal(da->values[i], db->values[i]);
+                if (veq < 0) goto error;
+                if (!veq) {
+                    eq = 0;
+                    break;
+                }
+            }
+            bool_store(regs, base + dest, eq);
             break;
         }
 
@@ -3410,7 +3445,28 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_dict(a, "dict!=?")) goto error;
             if (!require_dict(b, "dict!=?")) goto error;
-            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_NE));
+            MenaiDict_Object *da = (MenaiDict_Object *)a;
+            MenaiDict_Object *db = (MenaiDict_Object *)b;
+            int neq = (da->length != db->length);
+            for (Py_ssize_t i = 0; !neq && i < da->length; i++) {
+                if (da->hashes[i] != db->hashes[i]) {
+                    neq = 1;
+                    break;
+                }
+                int keq = menai_value_equal(da->keys[i], db->keys[i]);
+                if (keq < 0) goto error;
+                if (!keq) {
+                    neq = 1;
+                    break;
+                }
+                int veq = menai_value_equal(da->values[i], db->values[i]);
+                if (veq < 0) goto error;
+                if (!veq) {
+                    neq = 1;
+                    break;
+                }
+            }
+            bool_store(regs, base + dest, neq);
             break;
         }
 
@@ -3468,12 +3524,10 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_DICT_HAS_P: {
             PyObject *a = regs[base + src0], *key = regs[base + src1];
             if (!require_dict(a, "dict-has?")) goto error;
-            PyObject *r = menai_hashable_key(key);
-            if (r == NULL) goto error;
-            PyObject *lookup = ((MenaiDict_Object *)a)->lookup;
-            int has = PyDict_Contains(lookup, r);
-            Py_DECREF(r);
-            if (has < 0) goto error;
+            MenaiDict_Object *d = (MenaiDict_Object *)a;
+            Py_hash_t h = menai_value_hash(key);
+            if (h == -1) goto error;
+            int has = (menai_ht_lookup(&d->ht, key, h) >= 0);
             bool_store(regs, base + dest, has);
             break;
         }
@@ -3483,18 +3537,14 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *key = regs[base + src1], *def = regs[base + src2];
             if (!require_dict(a, "dict-get")) goto error;
             MenaiDict_Object *d = (MenaiDict_Object *)a;
-            PyObject *hk = menai_hashable_key(key);
-            if (hk == NULL) goto error;
-            PyObject *idx_obj = PyDict_GetItemWithError(d->lookup, hk);
-            Py_DECREF(hk);
-            if (idx_obj != NULL) {
-                Py_ssize_t idx = PyLong_AsSsize_t(idx_obj);
-                if (idx == -1 && PyErr_Occurred()) goto error;
+            Py_hash_t h = menai_value_hash(key);
+            if (h == -1) goto error;
+            Py_ssize_t idx = menai_ht_lookup(&d->ht, key, h);
+            if (idx == -2) goto error;
+            if (idx >= 0) {
                 reg_set_borrow(regs, base + dest, d->values[idx]);
-            } else if (!PyErr_Occurred()) {
-                reg_set_borrow(regs, base + dest, def);
             } else {
-                goto error;
+                reg_set_borrow(regs, base + dest, def);
             }
             break;
         }
@@ -3504,52 +3554,53 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *key = regs[base + src1], *val = regs[base + src2];
             if (!require_dict(a, "dict-set")) goto error;
             MenaiDict_Object *d = (MenaiDict_Object *)a;
-            PyObject *hk = menai_hashable_key(key);
-            if (hk == NULL) goto error;
-            PyObject *existing = PyDict_GetItem(d->lookup, hk);
+            Py_hash_t h = menai_value_hash(key);
+            if (h == -1) goto error;
+            Py_ssize_t replace_idx = menai_ht_lookup(&d->ht, key, h);
+            if (replace_idx == -2) goto error;
             Py_ssize_t n = d->length;
-            Py_ssize_t new_n = existing ? n : n + 1;
+            Py_ssize_t new_n = (replace_idx >= 0) ? n : n + 1;
             PyObject **nkeys = (PyObject **)PyMem_Malloc(new_n * sizeof(PyObject *));
             PyObject **nvals = (PyObject **)PyMem_Malloc(new_n * sizeof(PyObject *));
-            PyObject **nhkeys = (PyObject **)PyMem_Malloc(new_n * sizeof(PyObject *));
-            if (!nkeys || !nvals || !nhkeys) {
-                PyMem_Free(nkeys); PyMem_Free(nvals); PyMem_Free(nhkeys);
-                Py_DECREF(hk);
+            Py_hash_t *nhashes = (Py_hash_t *)PyMem_Malloc(new_n * sizeof(Py_hash_t));
+            if (!nkeys || !nvals || !nhashes) {
+                PyMem_Free(nkeys);
+                PyMem_Free(nvals);
+                PyMem_Free(nhashes);
                 PyErr_NoMemory();
                 goto error;
             }
-            if (existing) {
-                Py_ssize_t replace_idx = PyLong_AsSsize_t(existing);
-                if (replace_idx == -1 && PyErr_Occurred()) {
-                    PyMem_Free(nkeys); PyMem_Free(nvals); PyMem_Free(nhkeys);
-                    Py_DECREF(hk);
-                    goto error;
-                }
+            if (replace_idx >= 0) {
                 for (Py_ssize_t i = 0; i < n; i++) {
                     if (i == replace_idx) {
-                        Py_INCREF(key); nkeys[i] = key;
-                        Py_INCREF(val); nvals[i] = val;
-                        nhkeys[i] = hk; /* transfer ownership */
-                        hk = NULL;
+                        Py_INCREF(key);
+                        nkeys[i] = key;
+                        Py_INCREF(val);
+                        nvals[i] = val;
+                        nhashes[i] = h;
                     } else {
-                        Py_INCREF(d->keys[i]); nkeys[i] = d->keys[i];
-                        Py_INCREF(d->values[i]); nvals[i] = d->values[i];
-                        Py_INCREF(d->hkeys[i]); nhkeys[i] = d->hkeys[i];
+                        Py_INCREF(d->keys[i]);
+                        nkeys[i] = d->keys[i];
+                        Py_INCREF(d->values[i]);
+                        nvals[i] = d->values[i];
+                        nhashes[i] = d->hashes[i];
                     }
                 }
             } else {
                 for (Py_ssize_t i = 0; i < n; i++) {
-                    Py_INCREF(d->keys[i]); nkeys[i] = d->keys[i];
-                    Py_INCREF(d->values[i]); nvals[i] = d->values[i];
-                    Py_INCREF(d->hkeys[i]); nhkeys[i] = d->hkeys[i];
+                    Py_INCREF(d->keys[i]);
+                    nkeys[i] = d->keys[i];
+                    Py_INCREF(d->values[i]);
+                    nvals[i] = d->values[i];
+                    nhashes[i] = d->hashes[i];
                 }
-                Py_INCREF(key); nkeys[n] = key;
-                Py_INCREF(val); nvals[n] = val;
-                nhkeys[n] = hk; /* transfer ownership */
-                hk = NULL;
+                Py_INCREF(key);
+                nkeys[n] = key;
+                Py_INCREF(val);
+                nvals[n] = val;
+                nhashes[n] = h;
             }
-            Py_XDECREF(hk);
-            PyObject *result = menai_dict_from_arrays_steal(nkeys, nvals, nhkeys, new_n);
+            PyObject *result = menai_dict_from_arrays_steal(nkeys, nvals, nhashes, new_n);
             if (result == NULL) goto error;
             reg_set_own(regs, base + dest, result);
             break;
@@ -3559,35 +3610,36 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *key = regs[base + src1];
             if (!require_dict(a, "dict-remove")) goto error;
             MenaiDict_Object *d = (MenaiDict_Object *)a;
-            PyObject *hk = menai_hashable_key(key);
-            if (hk == NULL) goto error;
-            PyObject *existing = PyDict_GetItem(d->lookup, hk);
-            Py_DECREF(hk);
-            if (!existing) {
-                /* Key not present — return same dict */
+            Py_hash_t h = menai_value_hash(key);
+            if (h == -1) goto error;
+            Py_ssize_t remove_idx = menai_ht_lookup(&d->ht, key, h);
+            if (remove_idx == -2) goto error;
+            if (remove_idx < 0) {
                 reg_set_borrow(regs, base + dest, a);
                 break;
             }
-            Py_ssize_t remove_idx = PyLong_AsSsize_t(existing);
-            if (remove_idx == -1 && PyErr_Occurred()) goto error;
             Py_ssize_t n = d->length;
             Py_ssize_t new_n = n - 1;
             PyObject **nkeys = new_n > 0 ? (PyObject **)PyMem_Malloc(new_n * sizeof(PyObject *)) : NULL;
             PyObject **nvals = new_n > 0 ? (PyObject **)PyMem_Malloc(new_n * sizeof(PyObject *)) : NULL;
-            PyObject **nhkeys = new_n > 0 ? (PyObject **)PyMem_Malloc(new_n * sizeof(PyObject *)) : NULL;
-            if (new_n > 0 && (!nkeys || !nvals || !nhkeys)) {
-                PyMem_Free(nkeys); PyMem_Free(nvals); PyMem_Free(nhkeys);
+            Py_hash_t *nhashes = new_n > 0 ? (Py_hash_t *)PyMem_Malloc(new_n * sizeof(Py_hash_t)) : NULL;
+            if (new_n > 0 && (!nkeys || !nvals || !nhashes)) {
+                PyMem_Free(nkeys);
+                PyMem_Free(nvals);
+                PyMem_Free(nhashes);
                 PyErr_NoMemory();
                 goto error;
             }
             for (Py_ssize_t i = 0, j = 0; i < n; i++) {
                 if (i == remove_idx) continue;
-                Py_INCREF(d->keys[i]); nkeys[j] = d->keys[i];
-                Py_INCREF(d->values[i]); nvals[j] = d->values[i];
-                Py_INCREF(d->hkeys[i]); nhkeys[j] = d->hkeys[i];
+                Py_INCREF(d->keys[i]);
+                nkeys[j] = d->keys[i];
+                Py_INCREF(d->values[i]);
+                nvals[j] = d->values[i];
+                nhashes[j] = d->hashes[i];
                 j++;
             }
-            PyObject *r = menai_dict_from_arrays_steal(nkeys, nvals, nhkeys, new_n);
+            PyObject *r = menai_dict_from_arrays_steal(nkeys, nvals, nhashes, new_n);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3600,50 +3652,66 @@ execute_loop(PyObject *code, PyObject *globals,
             MenaiDict_Object *da = (MenaiDict_Object *)a;
             MenaiDict_Object *db = (MenaiDict_Object *)b;
             Py_ssize_t na = da->length, nb = db->length;
-            /* Upper bound: all of a plus all of b (dedup reduces this) */
             Py_ssize_t cap = na + nb;
             PyObject **nkeys = cap > 0 ? (PyObject **)PyMem_Malloc(cap * sizeof(PyObject *)) : NULL;
             PyObject **nvals = cap > 0 ? (PyObject **)PyMem_Malloc(cap * sizeof(PyObject *)) : NULL;
-            PyObject **nhkeys = cap > 0 ? (PyObject **)PyMem_Malloc(cap * sizeof(PyObject *)) : NULL;
-            if (cap > 0 && (!nkeys || !nvals || !nhkeys)) {
-                PyMem_Free(nkeys); PyMem_Free(nvals); PyMem_Free(nhkeys);
+            Py_hash_t *nhashes = cap > 0 ? (Py_hash_t *)PyMem_Malloc(cap * sizeof(Py_hash_t)) : NULL;
+            if (cap > 0 && (!nkeys || !nvals || !nhashes)) {
+                PyMem_Free(nkeys);
+                PyMem_Free(nvals);
+                PyMem_Free(nhashes);
                 PyErr_NoMemory();
                 goto error;
             }
             Py_ssize_t out = 0;
             /* Add a's entries, using b's value where b overrides */
             for (Py_ssize_t i = 0; i < na; i++) {
-                PyObject *b_idx_obj = PyDict_GetItem(db->lookup, da->hkeys[i]);
-                if (b_idx_obj) {
-                    Py_ssize_t bi = PyLong_AsSsize_t(b_idx_obj);
-                    if (bi == -1 && PyErr_Occurred()) {
-                        for (Py_ssize_t k = 0; k < out; k++) {
-                            Py_DECREF(nkeys[k]); Py_DECREF(nvals[k]); Py_DECREF(nhkeys[k]);
-                        }
-                        PyMem_Free(nkeys); PyMem_Free(nvals); PyMem_Free(nhkeys);
-                        goto error;
+                Py_ssize_t bi = menai_ht_lookup(&db->ht, da->keys[i], da->hashes[i]);
+                if (bi == -2) {
+                    for (Py_ssize_t k = 0; k < out; k++) {
+                        Py_DECREF(nkeys[k]);
+                        Py_DECREF(nvals[k]);
                     }
-                    /* Use a's key and hkey, b's value */
-                    Py_INCREF(da->keys[i]); nkeys[out] = da->keys[i];
-                    Py_INCREF(db->values[bi]); nvals[out] = db->values[bi];
-                    Py_INCREF(da->hkeys[i]); nhkeys[out] = da->hkeys[i];
+                    PyMem_Free(nkeys);
+                    PyMem_Free(nvals);
+                    PyMem_Free(nhashes);
+                    goto error;
+                }
+                Py_INCREF(da->keys[i]);
+                nkeys[out] = da->keys[i];
+                nhashes[out] = da->hashes[i];
+                if (bi >= 0) {
+                    Py_INCREF(db->values[bi]);
+                    nvals[out] = db->values[bi];
                 } else {
-                    Py_INCREF(da->keys[i]); nkeys[out] = da->keys[i];
-                    Py_INCREF(da->values[i]); nvals[out] = da->values[i];
-                    Py_INCREF(da->hkeys[i]); nhkeys[out] = da->hkeys[i];
+                    Py_INCREF(da->values[i]);
+                    nvals[out] = da->values[i];
                 }
                 out++;
             }
-            /* Add b's entries not already in a */
+            /* Add b's entries not in a */
             for (Py_ssize_t i = 0; i < nb; i++) {
-                if (!PyDict_GetItem(da->lookup, db->hkeys[i])) {
-                    Py_INCREF(db->keys[i]); nkeys[out] = db->keys[i];
-                    Py_INCREF(db->values[i]); nvals[out] = db->values[i];
-                    Py_INCREF(db->hkeys[i]); nhkeys[out] = db->hkeys[i];
+                Py_ssize_t ai = menai_ht_lookup(&da->ht, db->keys[i], db->hashes[i]);
+                if (ai == -2) {
+                    for (Py_ssize_t k = 0; k < out; k++) {
+                        Py_DECREF(nkeys[k]);
+                        Py_DECREF(nvals[k]);
+                    }
+                    PyMem_Free(nkeys);
+                    PyMem_Free(nvals);
+                    PyMem_Free(nhashes);
+                    goto error;
+                }
+                if (ai < 0) {
+                    Py_INCREF(db->keys[i]);
+                    nkeys[out] = db->keys[i];
+                    Py_INCREF(db->values[i]);
+                    nvals[out] = db->values[i];
+                    nhashes[out] = db->hashes[i];
                     out++;
                 }
             }
-            PyObject *r = menai_dict_from_arrays_steal(nkeys, nvals, nhkeys, out);
+            PyObject *r = menai_dict_from_arrays_steal(nkeys, nvals, nhashes, out);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3657,7 +3725,18 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_set(a, "set=?")) goto error;
             if (!require_set(b, "set=?")) goto error;
-            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_EQ));
+            MenaiSet_Object *sa = (MenaiSet_Object *)a;
+            MenaiSet_Object *sb = (MenaiSet_Object *)b;
+            int eq = (sa->length == sb->length);
+            for (Py_ssize_t i = 0; eq && i < sa->length; i++) {
+                Py_ssize_t idx = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
+                if (idx == -2) goto error;
+                if (idx < 0) {
+                    eq = 0;
+                    break;
+                }
+            }
+            bool_store(regs, base + dest, eq);
             break;
         }
 
@@ -3665,7 +3744,18 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_set(a, "set!=?")) goto error;
             if (!require_set(b, "set!=?")) goto error;
-            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_NE));
+            MenaiSet_Object *sa = (MenaiSet_Object *)a;
+            MenaiSet_Object *sb = (MenaiSet_Object *)b;
+            int neq = (sa->length != sb->length);
+            for (Py_ssize_t i = 0; !neq && i < sa->length; i++) {
+                Py_ssize_t idx = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
+                if (idx == -2) goto error;
+                if (idx < 0) {
+                    neq = 1;
+                    break;
+                }
+            }
+            bool_store(regs, base + dest, neq);
             break;
         }
 
@@ -3681,13 +3771,12 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_SET_MEMBER_P: {
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_set_singular(a, "set-member?")) goto error;
-            PyObject *hk = menai_hashable_key(item);
-            if (hk == NULL) goto error;
-            PyObject *members = ((MenaiSet_Object *)a)->members;
-            int has = PySequence_Contains(members, hk);
-            Py_DECREF(hk);
-            if (has < 0) goto error;
-            bool_store(regs, base + dest, has);
+            MenaiSet_Object *s = (MenaiSet_Object *)a;
+            Py_hash_t h = menai_value_hash(item);
+            if (h == -1) goto error;
+            Py_ssize_t idx = menai_ht_lookup(&s->ht, item, h);
+            if (idx == -2) goto error;
+            bool_store(regs, base + dest, idx >= 0);
             break;
         }
 
@@ -3695,33 +3784,31 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_set_singular(a, "set-add")) goto error;
             MenaiSet_Object *s = (MenaiSet_Object *)a;
-            PyObject *hk = menai_hashable_key(item);
-            if (hk == NULL) goto error;
-            int has = PySequence_Contains(s->members, hk);
-            if (has < 0) {
-                Py_DECREF(hk);
-                goto error;
-            }
-            if (has) {
-                Py_DECREF(hk);
+            Py_hash_t h = menai_value_hash(item);
+            if (h == -1) goto error;
+            Py_ssize_t existing = menai_ht_lookup(&s->ht, item, h);
+            if (existing == -2) goto error;
+            if (existing >= 0) {
                 reg_set_borrow(regs, base + dest, a);
             } else {
                 Py_ssize_t n = s->length;
                 PyObject **nelems = (PyObject **)PyMem_Malloc((n + 1) * sizeof(PyObject *));
-                PyObject **nhkeys = (PyObject **)PyMem_Malloc((n + 1) * sizeof(PyObject *));
-                if (!nelems || !nhkeys) {
-                    PyMem_Free(nelems); PyMem_Free(nhkeys);
-                    Py_DECREF(hk);
+                Py_hash_t *nhashes = (Py_hash_t *)PyMem_Malloc((n + 1) * sizeof(Py_hash_t));
+                if (!nelems || !nhashes) {
+                    PyMem_Free(nelems);
+                    PyMem_Free(nhashes);
                     PyErr_NoMemory();
                     goto error;
                 }
                 for (Py_ssize_t i = 0; i < n; i++) {
-                    Py_INCREF(s->elements[i]); nelems[i] = s->elements[i];
-                    Py_INCREF(s->hkeys[i]); nhkeys[i] = s->hkeys[i];
+                    Py_INCREF(s->elements[i]);
+                    nelems[i] = s->elements[i];
+                    nhashes[i] = s->hashes[i];
                 }
-                Py_INCREF(item); nelems[n] = item;
-                nhkeys[n] = hk; /* transfer ownership */
-                PyObject *r = menai_set_from_arrays_steal(nelems, nhkeys, n + 1);
+                Py_INCREF(item);
+                nelems[n] = item;
+                nhashes[n] = h;
+                PyObject *r = menai_set_from_arrays_steal(nelems, nhashes, n + 1);
                 if (r == NULL) goto error;
                 reg_set_own(regs, base + dest, r);
             }
@@ -3732,47 +3819,32 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *item = regs[base + src1];
             if (!require_set_singular(a, "set-remove")) goto error;
             MenaiSet_Object *s = (MenaiSet_Object *)a;
-            PyObject *hk = menai_hashable_key(item);
-            if (hk == NULL) goto error;
-            int has = PySequence_Contains(s->members, hk);
-            if (has < 0) {
-                Py_DECREF(hk);
-                goto error;
-            }
-            if (!has) {
-                Py_DECREF(hk);
+            Py_hash_t h = menai_value_hash(item);
+            if (h == -1) goto error;
+            Py_ssize_t remove_idx = menai_ht_lookup(&s->ht, item, h);
+            if (remove_idx == -2) goto error;
+            if (remove_idx < 0) {
                 reg_set_borrow(regs, base + dest, a);
                 break;
             }
             Py_ssize_t n = s->length;
             Py_ssize_t new_n = n - 1;
             PyObject **nelems = new_n > 0 ? (PyObject **)PyMem_Malloc(new_n * sizeof(PyObject *)) : NULL;
-            PyObject **nhkeys = new_n > 0 ? (PyObject **)PyMem_Malloc(new_n * sizeof(PyObject *)) : NULL;
-            if (new_n > 0 && (!nelems || !nhkeys)) {
-                PyMem_Free(nelems); PyMem_Free(nhkeys);
-                Py_DECREF(hk);
+            Py_hash_t *nhashes = new_n > 0 ? (Py_hash_t *)PyMem_Malloc(new_n * sizeof(Py_hash_t)) : NULL;
+            if (new_n > 0 && (!nelems || !nhashes)) {
+                PyMem_Free(nelems);
+                PyMem_Free(nhashes);
                 PyErr_NoMemory();
                 goto error;
             }
-            Py_ssize_t j = 0;
-            for (Py_ssize_t i = 0; i < n; i++) {
-                int eq = PyObject_RichCompareBool(s->hkeys[i], hk, Py_EQ);
-                if (eq < 0) {
-                    for (Py_ssize_t k = 0; k < j; k++) {
-                        Py_DECREF(nelems[k]); Py_DECREF(nhkeys[k]);
-                    }
-                    PyMem_Free(nelems); PyMem_Free(nhkeys);
-                    Py_DECREF(hk);
-                    goto error;
-                }
-                if (!eq) {
-                    Py_INCREF(s->elements[i]); nelems[j] = s->elements[i];
-                    Py_INCREF(s->hkeys[i]); nhkeys[j] = s->hkeys[i];
-                    j++;
-                }
+            for (Py_ssize_t i = 0, j = 0; i < n; i++) {
+                if (i == remove_idx) continue;
+                Py_INCREF(s->elements[i]);
+                nelems[j] = s->elements[i];
+                nhashes[j] = s->hashes[i];
+                j++;
             }
-            Py_DECREF(hk);
-            PyObject *r = menai_set_from_arrays_steal(nelems, nhkeys, new_n);
+            PyObject *r = menai_set_from_arrays_steal(nelems, nhashes, new_n);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3787,34 +3859,38 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t na = sa->length, nb = sb->length;
             Py_ssize_t cap = na + nb;
             PyObject **nelems = cap > 0 ? (PyObject **)PyMem_Malloc(cap * sizeof(PyObject *)) : NULL;
-            PyObject **nhkeys = cap > 0 ? (PyObject **)PyMem_Malloc(cap * sizeof(PyObject *)) : NULL;
-            if (cap > 0 && (!nelems || !nhkeys)) {
-                PyMem_Free(nelems); PyMem_Free(nhkeys);
+            Py_hash_t *nhashes = cap > 0 ? (Py_hash_t *)PyMem_Malloc(cap * sizeof(Py_hash_t)) : NULL;
+            if (cap > 0 && (!nelems || !nhashes)) {
+                PyMem_Free(nelems);
+                PyMem_Free(nhashes);
                 PyErr_NoMemory();
                 goto error;
             }
             Py_ssize_t out = 0;
             for (Py_ssize_t i = 0; i < na; i++) {
-                Py_INCREF(sa->elements[i]); nelems[out] = sa->elements[i];
-                Py_INCREF(sa->hkeys[i]); nhkeys[out] = sa->hkeys[i];
+                Py_INCREF(sa->elements[i]);
+                nelems[out] = sa->elements[i];
+                nhashes[out] = sa->hashes[i];
                 out++;
             }
             for (Py_ssize_t i = 0; i < nb; i++) {
-                int in_a = PySequence_Contains(sa->members, sb->hkeys[i]);
-                if (in_a < 0) {
+                Py_ssize_t in_a = menai_ht_lookup(&sa->ht, sb->elements[i], sb->hashes[i]);
+                if (in_a == -2) {
                     for (Py_ssize_t k = 0; k < out; k++) {
-                        Py_DECREF(nelems[k]); Py_DECREF(nhkeys[k]);
+                        Py_DECREF(nelems[k]);
                     }
-                    PyMem_Free(nelems); PyMem_Free(nhkeys);
+                    PyMem_Free(nelems);
+                    PyMem_Free(nhashes);
                     goto error;
                 }
-                if (!in_a) {
-                    Py_INCREF(sb->elements[i]); nelems[out] = sb->elements[i];
-                    Py_INCREF(sb->hkeys[i]); nhkeys[out] = sb->hkeys[i];
+                if (in_a < 0) {
+                    Py_INCREF(sb->elements[i]);
+                    nelems[out] = sb->elements[i];
+                    nhashes[out] = sb->hashes[i];
                     out++;
                 }
             }
-            PyObject *r = menai_set_from_arrays_steal(nelems, nhkeys, out);
+            PyObject *r = menai_set_from_arrays_steal(nelems, nhashes, out);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3828,29 +3904,32 @@ execute_loop(PyObject *code, PyObject *globals,
             MenaiSet_Object *sb = (MenaiSet_Object *)b;
             Py_ssize_t na = sa->length;
             PyObject **nelems = na > 0 ? (PyObject **)PyMem_Malloc(na * sizeof(PyObject *)) : NULL;
-            PyObject **nhkeys = na > 0 ? (PyObject **)PyMem_Malloc(na * sizeof(PyObject *)) : NULL;
-            if (na > 0 && (!nelems || !nhkeys)) {
-                PyMem_Free(nelems); PyMem_Free(nhkeys);
+            Py_hash_t *nhashes = na > 0 ? (Py_hash_t *)PyMem_Malloc(na * sizeof(Py_hash_t)) : NULL;
+            if (na > 0 && (!nelems || !nhashes)) {
+                PyMem_Free(nelems);
+                PyMem_Free(nhashes);
                 PyErr_NoMemory();
                 goto error;
             }
             Py_ssize_t out = 0;
             for (Py_ssize_t i = 0; i < na; i++) {
-                int in_b = PySequence_Contains(sb->members, sa->hkeys[i]);
-                if (in_b < 0) {
+                Py_ssize_t in_b = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
+                if (in_b == -2) {
                     for (Py_ssize_t k = 0; k < out; k++) {
-                        Py_DECREF(nelems[k]); Py_DECREF(nhkeys[k]);
+                        Py_DECREF(nelems[k]);
                     }
-                    PyMem_Free(nelems); PyMem_Free(nhkeys);
+                    PyMem_Free(nelems);
+                    PyMem_Free(nhashes);
                     goto error;
                 }
-                if (in_b) {
-                    Py_INCREF(sa->elements[i]); nelems[out] = sa->elements[i];
-                    Py_INCREF(sa->hkeys[i]); nhkeys[out] = sa->hkeys[i];
+                if (in_b >= 0) {
+                    Py_INCREF(sa->elements[i]);
+                    nelems[out] = sa->elements[i];
+                    nhashes[out] = sa->hashes[i];
                     out++;
                 }
             }
-            PyObject *r = menai_set_from_arrays_steal(nelems, nhkeys, out);
+            PyObject *r = menai_set_from_arrays_steal(nelems, nhashes, out);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3864,29 +3943,31 @@ execute_loop(PyObject *code, PyObject *globals,
             MenaiSet_Object *sb = (MenaiSet_Object *)b;
             Py_ssize_t na = sa->length;
             PyObject **nelems = na > 0 ? (PyObject **)PyMem_Malloc(na * sizeof(PyObject *)) : NULL;
-            PyObject **nhkeys = na > 0 ? (PyObject **)PyMem_Malloc(na * sizeof(PyObject *)) : NULL;
-            if (na > 0 && (!nelems || !nhkeys)) {
-                PyMem_Free(nelems); PyMem_Free(nhkeys);
+            Py_hash_t *nhashes = na > 0 ? (Py_hash_t *)PyMem_Malloc(na * sizeof(Py_hash_t)) : NULL;
+            if (na > 0 && (!nelems || !nhashes)) {
+                PyMem_Free(nelems);
+                PyMem_Free(nhashes);
                 PyErr_NoMemory();
                 goto error;
             }
             Py_ssize_t out = 0;
             for (Py_ssize_t i = 0; i < na; i++) {
-                int in_b = PySequence_Contains(sb->members, sa->hkeys[i]);
-                if (in_b < 0) {
+                Py_ssize_t in_b = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
+                if (in_b == -2) {
                     for (Py_ssize_t k = 0; k < out; k++) {
-                        Py_DECREF(nelems[k]); Py_DECREF(nhkeys[k]);
+                        Py_DECREF(nelems[k]);
                     }
-                    PyMem_Free(nelems); PyMem_Free(nhkeys);
+                    PyMem_Free(nelems);
+                    PyMem_Free(nhashes);
                     goto error;
                 }
-                if (!in_b) {
+                if (in_b < 0) {
                     Py_INCREF(sa->elements[i]); nelems[out] = sa->elements[i];
-                    Py_INCREF(sa->hkeys[i]); nhkeys[out] = sa->hkeys[i];
+                    nhashes[out] = sa->hashes[i];
                     out++;
                 }
             }
-            PyObject *r = menai_set_from_arrays_steal(nelems, nhkeys, out);
+            PyObject *r = menai_set_from_arrays_steal(nelems, nhashes, out);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3896,10 +3977,22 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_set(a, "set-subset?")) goto error;
             if (!require_set(b, "set-subset?")) goto error;
-            PyObject *ma = ((MenaiSet_Object *)a)->members;
-            PyObject *mb = ((MenaiSet_Object *)b)->members;
-            /* frozenset.issubset: use PyObject_CallMethod */
-            bool_store(regs, base + dest, PyObject_RichCompareBool(ma, mb, Py_LE));
+            MenaiSet_Object *sa = (MenaiSet_Object *)a;
+            MenaiSet_Object *sb = (MenaiSet_Object *)b;
+            if (sa->length > sb->length) {
+                bool_store(regs, base + dest, 0);
+                break;
+            }
+            int is_subset = 1;
+            for (Py_ssize_t i = 0; i < sa->length; i++) {
+                Py_ssize_t idx = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
+                if (idx == -2) goto error;
+                if (idx < 0) {
+                    is_subset = 0;
+                    break;
+                }
+            }
+            bool_store(regs, base + dest, is_subset);
             break;
         }
 
@@ -4076,9 +4169,13 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *stype = ((MenaiStruct_Object *)val)->struct_type;
             Py_ssize_t nf = Py_SIZE(val);
             PyObject **tmp = (PyObject **)PyMem_Malloc(nf * sizeof(PyObject *));
-            if (!tmp) { PyErr_NoMemory(); goto error; }
-            for (Py_ssize_t i = 0; i < nf; i++)
+            if (!tmp) {
+                PyErr_NoMemory();
+                goto error;
+            }
+            for (Py_ssize_t i = 0; i < nf; i++) {
                 tmp[i] = (i == fi) ? new_val : ((MenaiStruct_Object *)val)->items[i];
+            }
             PyObject *r = menai_struct_alloc(stype, tmp, nf);
             PyMem_Free(tmp);
             if (r == NULL) goto error;
@@ -4116,7 +4213,10 @@ execute_loop(PyObject *code, PyObject *globals,
                 for (Py_ssize_t i = 0; i < nf; i++) {
                     int eq = PyObject_RichCompareBool(sa->items[i], sb->items[i], Py_EQ);
                     if (eq < 0) goto error;
-                    if (!eq) { neq = 1; break; }
+                    if (!eq) {
+                        neq = 1;
+                        break;
+                    }
                 }
             }
             bool_store(regs, base + dest, neq);

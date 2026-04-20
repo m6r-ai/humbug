@@ -35,24 +35,18 @@
 #include "menai_vm_none.h"
 #include "menai_vm_string.h"
 #include "menai_vm_value.h"
+#include "menai_vm_hashtable.h"
 
-/* ---------------------------------------------------------------------------
- * Forward declarations of type objects
- * ------------------------------------------------------------------------- */
-
-
-/* ---------------------------------------------------------------------------
+/*
  * Module-level singletons
- * ------------------------------------------------------------------------- */
-
+ */
 static PyObject *_Menai_EMPTY_LIST = NULL;
 static PyObject *_Menai_EMPTY_DICT = NULL;
 static PyObject *_Menai_EMPTY_SET = NULL;
 
-/* ---------------------------------------------------------------------------
+/*
  * Slow-world type objects — fetched once at module init
- * ------------------------------------------------------------------------- */
-
+ */
 static PyTypeObject *Slow_NoneType = NULL;
 static PyTypeObject *Slow_BooleanType = NULL;
 static PyTypeObject *Slow_IntegerType = NULL;
@@ -68,84 +62,7 @@ static PyTypeObject *Slow_StructTypeType = NULL;
 static PyTypeObject *Slow_StructType = NULL;
 
 /* Error type */
-static PyObject *MenaiEvalError_type = NULL;
-
-/* ---------------------------------------------------------------------------
- * menai_hashable_key — convert a MenaiValue key to a hashable Python tuple.
- *
- * Shared by MenaiDict, MenaiSet, and the C VM.  Lives here because it is a
- * cross-cutting value-system utility, not specific to any one collection type.
- * ------------------------------------------------------------------------- */
-
-PyObject *
-menai_hashable_key(PyObject *key)
-{
-    PyTypeObject *t = Py_TYPE(key);
-    if (t == &MenaiString_Type) {
-        PyObject *pystr = menai_string_to_pyunicode(key);
-        if (!pystr) return NULL;
-        PyObject *r = Py_BuildValue("(sO)", "str", pystr);
-        Py_DECREF(pystr);
-        return r;
-    }
-    if (t == &MenaiInteger_Type) return Py_BuildValue("(sO)", "int", ((MenaiInteger_Object *)key)->value);
-    if (t == &MenaiFloat_Type) {
-        PyObject *pf = PyFloat_FromDouble(((MenaiFloat_Object *)key)->value);
-        if (!pf) return NULL;
-        PyObject *r = Py_BuildValue("(sO)", "flt", pf);
-        Py_DECREF(pf);
-        return r;
-    }
-    if (t == &MenaiComplex_Type) {
-        PyObject *pc = PyComplex_FromDoubles(((MenaiComplex_Object *)key)->real,
-                                             ((MenaiComplex_Object *)key)->imag);
-        if (!pc) return NULL;
-        PyObject *r = Py_BuildValue("(sO)", "cplx", pc);
-        Py_DECREF(pc);
-        return r;
-    }
-    if (t == &MenaiBoolean_Type) {
-        PyObject *bv = PyBool_FromLong(((MenaiBoolean_Object *)key)->value);
-        PyObject *r = Py_BuildValue("(sO)", "bool", bv);
-        Py_DECREF(bv);
-        return r;
-    }
-    if (t == &MenaiSymbol_Type) return Py_BuildValue("(sO)", "sym", ((MenaiSymbol_Object *)key)->name);
-    if (t == &MenaiStruct_Type) {
-        Py_hash_t h = PyObject_Hash(key);
-        if (h == -1 && PyErr_Occurred()) {
-            /* Re-raise as MenaiEvalError */
-            PyObject *exc_type, *exc_value, *exc_tb;
-            PyErr_Fetch(&exc_type, &exc_value, &exc_tb);
-            PyErr_NormalizeException(&exc_type, &exc_value, &exc_tb);
-            PyObject *msg = exc_value ? PyObject_Str(exc_value) : NULL;
-            Py_XDECREF(exc_type);
-            Py_XDECREF(exc_value);
-            Py_XDECREF(exc_tb);
-            if (msg) {
-                PyErr_SetObject(MenaiEvalError_type, msg);
-                Py_DECREF(msg);
-            }
-            return NULL;
-        }
-        PyObject *hobj = PyLong_FromSsize_t((Py_ssize_t)h);
-        PyObject *r = Py_BuildValue("(sO)", "struct", hobj);
-        Py_DECREF(hobj);
-        return r;
-    }
-
-    PyObject *tn = PyObject_CallMethod(key, "type_name", NULL);
-    PyErr_Format(MenaiEvalError_type,
-        "Dict keys must be strings, numbers, booleans, or symbols, got %s",
-        tn ? PyUnicode_AsUTF8(tn) : "?");
-
-    Py_XDECREF(tn);
-    return NULL;
-}
-
-/* ===========================================================================
- * Conversion functions
- * =========================================================================*/
+PyObject *MenaiEvalError_type = NULL;
 
 /*
  * _is_fast — return 1 if obj is already a fast C value type.
@@ -198,9 +115,17 @@ menai_convert_value(PyObject *src)
     if (t == Slow_IntegerType) {
         PyObject *v = PyObject_GetAttrString(src, "value");
         if (!v) return NULL;
-        if (!PyLong_Check(v)) { Py_DECREF(v); PyErr_SetString(PyExc_TypeError, "MenaiInteger requires an int"); return NULL; }
+        if (!PyLong_Check(v)) {
+            Py_DECREF(v);
+            PyErr_SetString(PyExc_TypeError, "MenaiInteger requires an int");
+            return NULL;
+        }
         MenaiInteger_Object *r = (MenaiInteger_Object *)MenaiInteger_Type.tp_alloc(&MenaiInteger_Type, 0);
-        if (r) { r->value = v; } else { Py_DECREF(v); }
+        if (r) {
+            r->value = v;
+        } else {
+            Py_DECREF(v);
+        }
         return (PyObject *)r;
     }
 
@@ -287,12 +212,12 @@ menai_convert_value(PyObject *src)
             ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
         PyObject **values = n > 0
             ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-        PyObject **hkeys = n > 0
-            ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-        if (n > 0 && (!keys || !values || !hkeys)) {
+        Py_hash_t *hashes = n > 0
+            ? (Py_hash_t *)PyMem_Malloc(n * sizeof(Py_hash_t)) : NULL;
+        if (n > 0 && (!keys || !values || !hashes)) {
             PyMem_Free(keys);
             PyMem_Free(values);
-            PyMem_Free(hkeys);
+            PyMem_Free(hashes);
             Py_DECREF(pairs);
             PyErr_NoMemory();
             return NULL;
@@ -304,11 +229,10 @@ menai_convert_value(PyObject *src)
                 for (Py_ssize_t j = 0; j < i; j++) {
                     Py_DECREF(keys[j]);
                     Py_DECREF(values[j]);
-                    Py_DECREF(hkeys[j]);
                 }
                 PyMem_Free(keys);
                 PyMem_Free(values);
-                PyMem_Free(hkeys);
+                PyMem_Free(hashes);
                 Py_DECREF(pairs);
                 return NULL;
             }
@@ -318,35 +242,33 @@ menai_convert_value(PyObject *src)
                 for (Py_ssize_t j = 0; j < i; j++) {
                     Py_DECREF(keys[j]);
                     Py_DECREF(values[j]);
-                    Py_DECREF(hkeys[j]);
                 }
                 PyMem_Free(keys);
                 PyMem_Free(values);
-                PyMem_Free(hkeys);
+                PyMem_Free(hashes);
                 Py_DECREF(pairs);
                 return NULL;
             }
-            PyObject *hk = menai_hashable_key(fk);
-            if (!hk) {
+            Py_hash_t h = menai_value_hash(fk);
+            if (h == -1) {
                 Py_DECREF(fk);
                 Py_DECREF(fv);
                 for (Py_ssize_t j = 0; j < i; j++) {
                     Py_DECREF(keys[j]);
                     Py_DECREF(values[j]);
-                    Py_DECREF(hkeys[j]);
                 }
                 PyMem_Free(keys);
                 PyMem_Free(values);
-                PyMem_Free(hkeys);
+                PyMem_Free(hashes);
                 Py_DECREF(pairs);
                 return NULL;
             }
             keys[i] = fk;
             values[i] = fv;
-            hkeys[i] = hk;
+            hashes[i] = h;
         }
         Py_DECREF(pairs);
-        return menai_dict_from_arrays_steal(keys, values, hkeys, n);
+        return menai_dict_from_arrays_steal(keys, values, hashes, n);
     }
 
     if (t == Slow_SetType) {
@@ -355,11 +277,11 @@ menai_convert_value(PyObject *src)
         Py_ssize_t n = PyTuple_GET_SIZE(elems);
         PyObject **elements = n > 0
             ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-        PyObject **hkeys = n > 0
-            ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
-        if (n > 0 && (!elements || !hkeys)) {
+        Py_hash_t *hashes = n > 0
+            ? (Py_hash_t *)PyMem_Malloc(n * sizeof(Py_hash_t)) : NULL;
+        if (n > 0 && (!elements || !hashes)) {
             PyMem_Free(elements);
-            PyMem_Free(hkeys);
+            PyMem_Free(hashes);
             Py_DECREF(elems);
             PyErr_NoMemory();
             return NULL;
@@ -369,30 +291,28 @@ menai_convert_value(PyObject *src)
             if (!fe) {
                 for (Py_ssize_t j = 0; j < i; j++) {
                     Py_DECREF(elements[j]);
-                    Py_DECREF(hkeys[j]);
                 }
                 PyMem_Free(elements);
-                PyMem_Free(hkeys);
+                PyMem_Free(hashes);
                 Py_DECREF(elems);
                 return NULL;
             }
-            PyObject *hk = menai_hashable_key(fe);
-            if (!hk) {
+            Py_hash_t h = menai_value_hash(fe);
+            if (h == -1) {
                 Py_DECREF(fe);
                 for (Py_ssize_t j = 0; j < i; j++) {
                     Py_DECREF(elements[j]);
-                    Py_DECREF(hkeys[j]);
                 }
                 PyMem_Free(elements);
-                PyMem_Free(hkeys);
+                PyMem_Free(hashes);
                 Py_DECREF(elems);
                 return NULL;
             }
             elements[i] = fe;
-            hkeys[i] = hk;
+            hashes[i] = h;
         }
         Py_DECREF(elems);
-        return menai_set_from_arrays_steal(elements, hkeys, n);
+        return menai_set_from_arrays_steal(elements, hashes, n);
     }
 
     if (t == Slow_StructTypeType) {
@@ -733,8 +653,11 @@ menai_convert_code_object(PyObject *code)
             Py_XDECREF(instrs_ptr_obj);
             Py_XDECREF(code_len_obj);
             Py_XDECREF(child_cc);
-            Py_DECREF(lc_obj); Py_DECREF(pc_obj);
-            Py_DECREF(names_list); Py_DECREF(constants); Py_DECREF(instrs_obj);
+            Py_DECREF(lc_obj);
+            Py_DECREF(pc_obj);
+            Py_DECREF(names_list);
+            Py_DECREF(constants);
+            Py_DECREF(instrs_obj);
             Py_DECREF(param_names_tup);
             Py_DECREF(cname);
             Py_DECREF(children);
@@ -750,8 +673,11 @@ menai_convert_code_object(PyObject *code)
         Py_DECREF(code_len_obj);
         Py_DECREF(instrs_ptr_obj);
         Py_XDECREF(child_cc);  /* drop owned ref — bytecode keeps child._code_caches alive */
-        Py_DECREF(lc_obj); Py_DECREF(pc_obj);
-        Py_DECREF(names_list); Py_DECREF(constants); Py_DECREF(instrs_obj);
+        Py_DECREF(lc_obj);
+        Py_DECREF(pc_obj);
+        Py_DECREF(names_list);
+        Py_DECREF(constants);
+        Py_DECREF(instrs_obj);
         Py_DECREF(param_names_tup);
         Py_DECREF(cname);
         if (!cache) {
@@ -767,10 +693,12 @@ menai_convert_code_object(PyObject *code)
         }
     }
 
-    /* Build _code_caches — a list of each child's _closure_cache tuple,
+    /*
+     * Build _code_caches — a list of each child's _closure_cache tuple,
      * indexed by position in code_objects.  Stored on the parent so
      * frame_setup can cache it once and OP_MAKE_CLOSURE uses PyList_GET_ITEM
-     * with zero PyObject_GetAttrString calls in the hot loop. */
+     * with zero PyObject_GetAttrString calls in the hot loop.
+     */
     n = PyList_GET_SIZE(children);
     PyObject *code_caches = PyList_New(n);
     if (!code_caches) {
@@ -1386,7 +1314,8 @@ _menai_vm_value_init(void)
         Py_INCREF(*singletons[i].obj);
         if (PyModule_AddObject(module, singletons[i].name, *singletons[i].obj) < 0) {
             Py_DECREF(*singletons[i].obj);
-            Py_DECREF(module); return NULL;
+            Py_DECREF(module);
+            return NULL;
         }
     }
 

@@ -25,6 +25,7 @@ extensions = [
         sources=[
             "src/menai/menai_vm_c.c",
             "src/menai/menai_vm_string.c",
+            "src/menai/menai_vm_hashtable.c",
             "src/menai/menai_vm_dict.c",
             "src/menai/menai_vm_function.c",
             "src/menai/menai_vm_list.c",

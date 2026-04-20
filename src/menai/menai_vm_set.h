@@ -2,15 +2,16 @@
  * menai_vm_set.h — MenaiSet type definition and API.
  *
  * MenaiSet stores an ordered, deduplicated sequence of elements as two
- * parallel C arrays (elements, hkeys) plus a Python frozenset for O(1)
- * membership testing.  Canonical hash keys are computed once at construction
- * time and stored in hkeys, so set operations never recompute them.
+ * parallel C arrays (elements, hashes) plus a pure-C MenaiHashTable for O(1)
+ * membership testing.  Hash values are computed once at construction time via
+ * menai_value_hash() and stored in hashes[], so set operations never
+ * recompute them.
  *
  * Invariants:
- *   - elements[i] and hkeys[i] are owned references.
- *   - hkeys[i] == menai_hashable_key(elements[i]), computed once at construction.
- *   - members == frozenset(hkeys[i] for i in range(length)).
- *   - No duplicate elements: all hkeys[i] are distinct.
+ *   - elements[i] is an owned reference.
+ *   - hashes[i] == menai_value_hash(elements[i]), computed once at construction.
+ *   - ht maps elements[i] (by value equality) to index i.
+ *   - No duplicate elements: all elements[i] are distinct by menai_value_equal.
  *   - Insertion order is preserved by the array indices.
  */
 
@@ -20,12 +21,14 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include "menai_vm_hashtable.h"
+
 typedef struct {
     PyObject_HEAD
-    PyObject **elements; /* C array of original MenaiValues, length entries */
-    PyObject **hkeys;    /* C array of canonical hashable keys, length entries */
-    PyObject *members;   /* Python frozenset of hkeys for O(1) membership */
-    Py_ssize_t length;
+    PyObject     **elements; /* C array of original MenaiValues */
+    Py_hash_t     *hashes;   /* C array of menai_value_hash(elements[i]) */
+    MenaiHashTable ht;       /* pure-C hash table for O(1) membership */
+    Py_ssize_t     length;
 } MenaiSet_Object;
 
 extern PyTypeObject MenaiSet_Type;
@@ -40,15 +43,16 @@ PyObject *menai_set_new_empty(void);
 /*
  * menai_set_from_arrays_steal — build a MenaiSet from two parallel C arrays.
  *
- * elements and hkeys must each have n entries.  Both arrays and their
- * contents are stolen: on success the arrays are owned by the new set; on
- * failure the arrays are freed and all contained references are released.
- * The caller must guarantee that hkeys[i] == menai_hashable_key(elements[i])
- * and that all hkeys are distinct (i.e. elements are already deduplicated).
+ * elements must have n entries; hashes[i] must equal
+ * menai_value_hash(elements[i]) for every i.  Both arrays and their contents
+ * are stolen: on success the arrays are owned by the new set; on failure the
+ * arrays are freed and all contained references are released.
+ * The caller must guarantee that all elements are distinct (already
+ * deduplicated).
  *
  * Returns a new reference, or NULL on error.
  */
-PyObject *menai_set_from_arrays_steal(PyObject **elements, PyObject **hkeys,
+PyObject *menai_set_from_arrays_steal(PyObject **elements, Py_hash_t *hashes,
                                       Py_ssize_t n);
 
 /*

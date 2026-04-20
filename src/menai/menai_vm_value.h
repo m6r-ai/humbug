@@ -31,13 +31,6 @@
 #include "menai_vm_symbol.h"
 
 /*
- * menai_hashable_key — convert a MenaiValue key to a hashable Python tuple.
- * Defined in menai_vm_value.c.
- * Returns a new reference, or NULL on error (MenaiEvalError set).
- */
-PyObject *menai_hashable_key(PyObject *key);
-
-/*
  * Conversion functions — defined in menai_value_c.c, called by the C VM
  *
  * convert_value: translate one slow menai_value.py object to a fast C type.
