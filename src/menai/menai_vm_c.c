@@ -966,34 +966,62 @@ max_local_count(PyObject *code)
 }
 
 /*
- * GlobalsTable — flat sorted array of (name, value) pairs for O(log n) lookup.
+ * GlobalsTable — open-addressing hash table for O(1) name lookup.
  *
  * Built once before execution starts from the constants and prelude dicts.
  * Never mutated during execution.  Values are owned references.
+ *
+ * Lookup takes the UTF-8 string from frame->names_items[src0] (extracted once
+ * at build time via PyUnicode_AsUTF8, cached in each slot).  The hash is a
+ * FNV-1a string hash so the hot path cost is one hash + one strcmp per probe.
+ * The slot count is the smallest power of 2 satisfying slot_count * 2 / 3 >= count.
  */
 typedef struct {
-    const char *name;  /* UTF-8 string owned by the source PyUnicode object */
+    const char *name;  /* UTF-8 — points into PyUnicode internal buffer; NULL = empty */
+    Py_hash_t hash;    /* FNV-1a hash of name */
+    PyObject *value;   /* owned MenaiValue reference — valid only when name != NULL */
+} GlobalsSlot;
+
+typedef struct {
+    const char *name;  /* UTF-8 — points into PyUnicode internal buffer */
     PyObject *value;   /* owned MenaiValue reference */
 } GlobalsEntry;
 
 typedef struct {
-    GlobalsEntry *entries;
-    Py_ssize_t count;
+    GlobalsSlot *slots;     /* hash table — slot_count entries */
+    GlobalsEntry *entries;  /* flat array — count entries, for iteration */
+    Py_ssize_t slot_count;  /* power of 2 */
+    Py_ssize_t count;       /* number of live entries */
 } GlobalsTable;
-
-static int
-_globals_entry_cmp(const void *a, const void *b)
-{
-    return strcmp(((const GlobalsEntry *)a)->name, ((const GlobalsEntry *)b)->name);
-}
 
 static void
 globals_free(GlobalsTable *gt)
 {
     for (Py_ssize_t i = 0; i < gt->count; i++) Py_XDECREF(gt->entries[i].value);
+    PyMem_Free(gt->slots);
     PyMem_Free(gt->entries);
+    gt->slots = NULL;
     gt->entries = NULL;
+    gt->slot_count = 0;
     gt->count = 0;
+}
+
+/*
+ * _globals_str_hash — FNV-1a hash of a UTF-8 C string.
+ *
+ * Returns a value in [0, PY_SSIZE_T_MAX]; never -1.
+ */
+static inline Py_hash_t
+_globals_str_hash(const char *s)
+{
+    Py_uhash_t h = 14695981039346656037ULL;  /* FNV offset basis */
+    const unsigned char *p = (const unsigned char *)s;
+    while (*p) {
+        h ^= (Py_uhash_t)*p++;
+        h *= 1099511628211ULL;  /* FNV prime */
+    }
+    Py_hash_t r = (Py_hash_t)(h & (Py_uhash_t)PY_SSIZE_T_MAX);
+    return r == -1 ? -2 : r;
 }
 
 /*
@@ -1010,12 +1038,30 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, PyObject *prelude_dict
     Py_ssize_t np = (prelude_dict && prelude_dict != Py_None) ? PyDict_Size(prelude_dict) : 0;
     Py_ssize_t total = nc + np;
 
-    gt->entries = total > 0 ? (GlobalsEntry *)PyMem_Malloc(total * sizeof(GlobalsEntry)) : NULL;
+    gt->slots = NULL;
+    gt->entries = NULL;
+    gt->slot_count = 0;
     gt->count = 0;
 
-    if (total > 0 && gt->entries == NULL) {
-        PyErr_NoMemory();
-        return -1;
+    if (total > 0) {
+        gt->entries = (GlobalsEntry *)PyMem_Malloc(total * sizeof(GlobalsEntry));
+        if (gt->entries == NULL) {
+            PyErr_NoMemory();
+            return -1;
+        }
+        /* Slot count: smallest power of 2 with slot_count * 2 / 3 >= total */
+        Py_ssize_t min_slots = (total * 3 + 1) / 2;
+        Py_ssize_t sc = 4;
+        while (sc < min_slots) sc <<= 1;
+        gt->slots = (GlobalsSlot *)PyMem_Malloc(sc * sizeof(GlobalsSlot));
+        if (gt->slots == NULL) {
+            PyMem_Free(gt->entries);
+            gt->entries = NULL;
+            PyErr_NoMemory();
+            return -1;
+        }
+        memset(gt->slots, 0, sc * sizeof(GlobalsSlot));
+        gt->slot_count = sc;
     }
 
     PyObject *key, *val;
@@ -1026,7 +1072,13 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, PyObject *prelude_dict
             globals_free(gt);
             return -1;
         }
-        gt->entries[gt->count].name = PyUnicode_AsUTF8(key);
+        const char *name_utf8 = PyUnicode_AsUTF8(key);
+        if (name_utf8 == NULL) {
+            Py_DECREF(converted);
+            globals_free(gt);
+            return -1;
+        }
+        gt->entries[gt->count].name = name_utf8;
         gt->entries[gt->count].value = converted;
         gt->count++;
     }
@@ -1039,28 +1091,54 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, PyObject *prelude_dict
                 globals_free(gt);
                 return -1;
             }
-            gt->entries[gt->count].name = PyUnicode_AsUTF8(key);
+            const char *name_utf8 = PyUnicode_AsUTF8(key);
+            if (name_utf8 == NULL) {
+                Py_DECREF(converted);
+                globals_free(gt);
+                return -1;
+            }
+            gt->entries[gt->count].name = name_utf8;
             gt->entries[gt->count].value = converted;
             gt->count++;
         }
     }
 
-    qsort(gt->entries, gt->count, sizeof(GlobalsEntry), _globals_entry_cmp);
+    /* Populate the hash table from the entries array. */
+    Py_ssize_t mask = gt->slot_count - 1;
+    for (Py_ssize_t i = 0; i < gt->count; i++) {
+        const char *name = gt->entries[i].name;
+        Py_hash_t h = _globals_str_hash(name);
+        Py_uhash_t perturb = (Py_uhash_t)h;
+        Py_ssize_t slot = (Py_ssize_t)(perturb & (Py_uhash_t)mask);
+        for (;;) {
+            if (gt->slots[slot].name == NULL) {
+                gt->slots[slot].name = name;
+                gt->slots[slot].hash = h;
+                gt->slots[slot].value = gt->entries[i].value;
+                break;
+            }
+            perturb >>= 5;
+            slot = (Py_ssize_t)((5 * (Py_uhash_t)slot + 1 + perturb) & (Py_uhash_t)mask);
+        }
+    }
     return 0;
 }
 
 static PyObject *
 globals_lookup(const GlobalsTable *gt, const char *name)
 {
-    Py_ssize_t lo = 0, hi = gt->count - 1;
-    while (lo <= hi) {
-        Py_ssize_t mid = (lo + hi) / 2;
-        int cmp = strcmp(gt->entries[mid].name, name);
-        if (cmp == 0) return gt->entries[mid].value;
-        if (cmp < 0) lo = mid + 1;
-        else hi = mid - 1;
+    if (gt->slot_count == 0) return NULL;
+    Py_hash_t h = _globals_str_hash(name);
+    Py_ssize_t mask = gt->slot_count - 1;
+    Py_uhash_t perturb = (Py_uhash_t)h;
+    Py_ssize_t slot = (Py_ssize_t)(perturb & (Py_uhash_t)mask);
+    for (;;) {
+        GlobalsSlot *s = &gt->slots[slot];
+        if (s->name == NULL) return NULL;
+        if (s->hash == h && strcmp(s->name, name) == 0) return s->value;
+        perturb >>= 5;
+        slot = (Py_ssize_t)((5 * (Py_uhash_t)slot + 1 + perturb) & (Py_uhash_t)mask);
     }
-    return NULL;
 }
 
 /*
@@ -1224,8 +1302,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
         }
 
         case OP_LOAD_NAME: {
-            PyObject *name = frame->names_items[src0];
-            const char *name_str = PyUnicode_AsUTF8(name);
+            const char *name_str = PyUnicode_AsUTF8(frame->names_items[src0]);
             PyObject *val = globals_lookup(globals, name_str);
             if (val == NULL) {
                 /* Build a rich error listing up to 10 available names. */
