@@ -10,7 +10,7 @@ class SpacerDropWidget(QWidget):
     """A spacer widget that accepts path drops."""
 
     path_dropped = Signal(str, str)  # source_type, path
-    tab_dropped = Signal(str)  # tab_id
+    tab_dropped = Signal(str, str)  # tab_id, source_manager_id
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the spacer drop widget."""
@@ -86,7 +86,14 @@ class SpacerDropWidget(QWidget):
                 mime_data = bytes(mime_data)
 
             tab_id = mime_data.decode()
-            self.tab_dropped.emit(tab_id)
+            source_manager_id = ""
+            if event.mimeData().hasFormat("application/x-humbug-tab-manager"):
+                source_data = event.mimeData().data("application/x-humbug-tab-manager").data()
+                if not isinstance(source_data, bytes):
+                    source_data = bytes(source_data)
+                source_manager_id = source_data.decode()
+
+            self.tab_dropped.emit(tab_id, source_manager_id)
             event.acceptProposedAction()
             return
 

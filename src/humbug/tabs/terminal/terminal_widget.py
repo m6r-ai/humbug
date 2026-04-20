@@ -111,7 +111,7 @@ class TerminalWidget(QAbstractScrollArea):
         self._char_height: float = 0.0
         self._char_ascent: float = 0.0
 
-        # Horizontal centering offset in pixels (non-zero only when fixed_width is set)
+        # Horizontal offset in pixels. Fixed-width terminals stay left-aligned.
         self._center_offset: float = 0.0
 
         # Initialize size and connect signals
@@ -216,12 +216,7 @@ class TerminalWidget(QAbstractScrollArea):
         cols = self._fixed_width or visible_cols
         rows = int(max(self.viewport().height() / self._char_height, 1))
 
-        if self._fixed_width:
-            terminal_pixel_width = self._fixed_width * self._char_width
-            self._center_offset = max(0.0, (self.viewport().width() - terminal_pixel_width) / 2.0)
-
-        else:
-            self._center_offset = 0.0
+        self._center_offset = 0.0
 
         # Update state dimensions
         self._state.resize(rows, cols)

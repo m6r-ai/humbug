@@ -8,9 +8,9 @@ from typing import cast, Dict, Tuple
 
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QMenuBar, QFileDialog,
-    QLabel, QApplication, QDialog, QMenu, QStatusBar
+    QLabel, QApplication, QDialog, QMenu, QStatusBar, QSplitter
 )
-from PySide6.QtCore import Qt, QTimer, QEvent
+from PySide6.QtCore import Qt, QTimer, QEvent, QPoint, QVariantAnimation, QEasingCurve
 from PySide6.QtGui import QKeyEvent, QAction, QKeySequence, QActionGroup
 
 from ai_tool import AIToolManager
@@ -330,12 +330,54 @@ class MainWindow(QMainWindow):
         self._column_manager.open_preview_link_requested.connect(self._on_column_manager_open_preview_link_requested)
         self._column_manager.edit_file_requested.connect(self._on_column_manager_edit_file_requested)
         self._column_manager.user_settings_requested.connect(self._on_show_user_settings_dialog)
-        self._splitter.addWidget(self._column_manager)
+        self._column_manager.tab_context_menu_requested.connect(self._on_main_panel_tab_context_menu)
+        self._column_manager.cross_manager_tab_drop_requested.connect(self._on_cross_manager_tab_drop_requested)
+        self._column_manager.cross_manager_spacer_drop_requested.connect(self._on_cross_manager_spacer_drop_requested)
+
+        # Vertical splitter holds main columns (top) and bottom panel (bottom)
+        self._content_splitter = QSplitter(Qt.Orientation.Vertical)
+        self._content_splitter.setChildrenCollapsible(True)
+        self._content_splitter.setOpaqueResize(False)
+        self._content_splitter.setHandleWidth(1)
+        self._content_splitter.splitterMoved.connect(self._on_content_splitter_moved)
+        self._column_manager.setMinimumHeight(0)
+        self._content_splitter.addWidget(self._column_manager)
+        self._content_splitter.setStretchFactor(0, 1)
+
+        # Bottom panel: a second ColumnManager used for terminal tabs
+        self._bottom_panel = ColumnManager(self)
+        self._bottom_panel.tab_changed.connect(self._on_bottom_panel_tab_changed)
+        self._bottom_panel.fork_from_index_requested.connect(self._on_column_manager_fork_from_index_requested)
+        self._bottom_panel.open_preview_link_requested.connect(self._on_column_manager_open_preview_link_requested)
+        self._bottom_panel.edit_file_requested.connect(self._on_column_manager_edit_file_requested)
+        self._bottom_panel.user_settings_requested.connect(self._on_show_user_settings_dialog)
+        self._bottom_panel.tab_context_menu_requested.connect(self._on_bottom_panel_tab_context_menu)
+        self._bottom_panel.cross_manager_tab_drop_requested.connect(self._on_cross_manager_tab_drop_requested)
+        self._bottom_panel.cross_manager_spacer_drop_requested.connect(self._on_cross_manager_spacer_drop_requested)
+        self._bottom_panel.new_terminal_requested.connect(self._on_new_bottom_terminal)
+        self._bottom_panel.disable_column_centering()
+        self._bottom_panel.enable_terminal_add_button()
+        self._bottom_panel.setMinimumHeight(0)
+        self._content_splitter.addWidget(self._bottom_panel)
+        self._content_splitter.setStretchFactor(1, 0)
+        self._content_splitter.setCollapsible(0, False)
+        self._content_splitter.setCollapsible(1, True)
+        self._bottom_panel.hide()
+        self._bottom_panel_height = 240
+        self._bottom_panel_default_height = 240
+        self._bottom_panel_animation = QVariantAnimation(self)
+        self._bottom_panel_animation.setDuration(180)
+        self._bottom_panel_animation.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self._bottom_panel_animation.valueChanged.connect(self._on_bottom_panel_animation_value_changed)
+        self._bottom_panel_animation.finished.connect(self._on_bottom_panel_animation_finished)
+        self._bottom_panel_animation_target_visible = False
+
+        self._splitter.addWidget(self._content_splitter)
 
         # Set initial mindspace view width
         self._splitter.setSizes([300, self.width() - 300])
 
-        # Set the stretch factors: 0 for mindspace view (no stretch) and 1 for column manager (stretch to fill)
+        # Set the stretch factors: 0 for mindspace view (no stretch) and 1 for content splitter (stretch to fill)
         self._splitter.setStretchFactor(0, 0)
         self._splitter.setStretchFactor(1, 1)
 
@@ -355,6 +397,7 @@ class MainWindow(QMainWindow):
 
         self.setStatusBar(self._status_bar)
         self._column_manager.status_message.connect(self._on_column_manager_status_message)
+        self._bottom_panel.status_message.connect(self._on_column_manager_status_message)
 
         # Connect to exception notifier for canary functionality
         self._canary_active = False
@@ -433,6 +476,7 @@ class MainWindow(QMainWindow):
         # If our window state changes then update the column manager's style
         if event.type() == QEvent.Type.WindowStateChange:
             self._column_manager.apply_style()
+            self._bottom_panel.apply_style()
 
         return super().changeEvent(event)
 
@@ -456,7 +500,7 @@ class MainWindow(QMainWindow):
         self._mindspace_settings_action.setEnabled(has_mindspace)
 
         # Update tab-specific actions
-        column_manager = self._column_manager
+        column_manager = self._active_column_manager()
         self._save_action.setEnabled(column_manager.can_save_file())
         self._save_as_action.setEnabled(column_manager.can_save_file_as())
         self._close_tab_action.setEnabled(column_manager.can_close_tab())
@@ -653,6 +697,172 @@ class MainWindow(QMainWindow):
         view_type = self._map_tab_to_mindspace_view(current_tab)
         self._mindspace_view.reveal_and_select_file(view_type, path)
 
+    def _on_bottom_panel_tab_changed(self) -> None:
+        """Hide the bottom panel when its last tab is closed."""
+        if not self._bottom_panel.has_tabs():
+            self._hide_bottom_panel()
+
+    def _set_bottom_panel_height(self, panel_height: int) -> None:
+        """Apply a specific bottom panel height to the content splitter."""
+        total = self._content_splitter.height()
+        bounded_height = max(0, min(panel_height, total))
+        self._content_splitter.setSizes([max(0, total - bounded_height), bounded_height])
+
+    def _animate_bottom_panel_height(self, target_height: int, visible_at_end: bool) -> None:
+        """Animate the bottom panel height to the target value."""
+        total = self._content_splitter.height()
+        if total <= 0:
+            if visible_at_end:
+                self._content_splitter.setHandleWidth(1)
+                self._bottom_panel.show()
+            else:
+                self._content_splitter.setHandleWidth(0)
+                self._bottom_panel.hide()
+            return
+
+        current_sizes = self._content_splitter.sizes()
+        current_height = current_sizes[1] if len(current_sizes) > 1 else 0
+        target_height = max(0, min(target_height, total))
+
+        if visible_at_end:
+            self._content_splitter.setHandleWidth(1)
+            self._bottom_panel.show()
+
+        if self._bottom_panel_animation.state() == QVariantAnimation.State.Running:
+            self._bottom_panel_animation.stop()
+
+        self._bottom_panel_animation_target_visible = visible_at_end
+        self._bottom_panel_animation.setStartValue(current_height)
+        self._bottom_panel_animation.setEndValue(target_height)
+        self._bottom_panel_animation.start()
+
+    def _on_bottom_panel_animation_value_changed(self, value: object) -> None:
+        """Update the splitter sizes while the bottom panel animation runs."""
+        if not isinstance(value, int):
+            return
+
+        self._set_bottom_panel_height(value)
+
+    def _on_bottom_panel_animation_finished(self) -> None:
+        """Finalize bottom panel visibility after animation completes."""
+        if self._bottom_panel_animation_target_visible:
+            self._content_splitter.setHandleWidth(1)
+            return
+
+        self._content_splitter.setHandleWidth(0)
+        self._bottom_panel.hide()
+        self._set_bottom_panel_height(0)
+
+    def _hide_bottom_panel(self) -> None:
+        """Collapse and hide the bottom panel cleanly."""
+        self._animate_bottom_panel_height(0, False)
+
+    def _on_content_splitter_moved(self, _pos: int, _index: int) -> None:
+        """Remember the user's preferred bottom panel height during manual resize."""
+        if self._bottom_panel.isHidden():
+            return
+
+        sizes = self._content_splitter.sizes()
+        if len(sizes) > 1 and sizes[1] > 24:
+            self._bottom_panel_height = sizes[1]
+
+    def _manager_for_drag_source_id(self, source_manager_id: str) -> ColumnManager | None:
+        """Resolve a drag source identifier to the matching column manager."""
+        if source_manager_id == self._column_manager.drag_source_id():
+            return self._column_manager
+
+        if source_manager_id == self._bottom_panel.drag_source_id():
+            return self._bottom_panel
+
+        return None
+
+    def _show_bottom_panel_if_needed(self) -> None:
+        """Ensure the bottom panel is visible with a reasonable initial size."""
+        if not self._bottom_panel.isHidden():
+            return
+
+        total = self._content_splitter.height()
+        preferred_height = self._bottom_panel_height or self._bottom_panel_default_height
+        panel_height = min(preferred_height, max(120, total // 2))
+        self._animate_bottom_panel_height(panel_height, True)
+
+    def _active_column_manager(self) -> ColumnManager:
+        """Return the manager that currently owns focus, defaulting to the main manager."""
+        focus_widget = QApplication.focusWidget()
+        current = focus_widget
+        while current:
+            if current is self._bottom_panel:
+                return self._bottom_panel
+
+            if current is self._column_manager:
+                return self._column_manager
+
+            current = current.parentWidget()
+
+        return self._column_manager
+
+    def _on_cross_manager_tab_drop_requested(
+        self,
+        source_manager_id: str,
+        tab_id: str,
+        target_column: object,
+        target_index: int
+    ) -> None:
+        """Move a tab between the main and bottom managers via drag and drop."""
+        destination_manager = cast(ColumnManager | None, self.sender())
+        if destination_manager is None:
+            return
+
+        source_manager = self._manager_for_drag_source_id(source_manager_id)
+        if source_manager is None or source_manager is destination_manager:
+            return
+
+        result = source_manager.extract_tab_state(tab_id)
+        if not result:
+            return
+
+        state, title = result
+        if destination_manager is self._bottom_panel:
+            self._show_bottom_panel_if_needed()
+
+        destination_manager.import_tab_from_state(
+            state,
+            title,
+            cast(object, target_column),
+            target_index
+        )
+
+        if source_manager is self._bottom_panel and not self._bottom_panel.has_tabs():
+            self._hide_bottom_panel()
+
+    def _on_cross_manager_spacer_drop_requested(
+        self,
+        source_manager_id: str,
+        tab_id: str,
+        edge: str
+    ) -> None:
+        """Move a tab between managers via spacer-edge drag and drop."""
+        destination_manager = cast(ColumnManager | None, self.sender())
+        if destination_manager is None:
+            return
+
+        source_manager = self._manager_for_drag_source_id(source_manager_id)
+        if source_manager is None or source_manager is destination_manager:
+            return
+
+        result = source_manager.extract_tab_state(tab_id)
+        if not result:
+            return
+
+        state, title = result
+        if destination_manager is self._bottom_panel:
+            self._show_bottom_panel_if_needed()
+
+        destination_manager.import_tab_from_state_to_edge(state, title, edge)
+
+        if source_manager is self._bottom_panel and not self._bottom_panel.has_tabs():
+            self._hide_bottom_panel()
+
     def _on_column_manager_status_message(self, message: StatusMessage) -> None:
         """Update status bar with new message."""
         self._status_message_label.setText(message.text)
@@ -834,25 +1044,30 @@ class MainWindow(QMainWindow):
         self._menai_tool.set_module_path([mindspace_path])
 
     def _close_all_tabs(self) -> bool:
-        return self._column_manager.close_all_tabs()
+        if not self._column_manager.close_all_tabs():
+            return False
+
+        self._bottom_panel.close_all_tabs()
+        self._hide_bottom_panel()
+        return True
 
     def _undo(self) -> None:
-        self._column_manager.undo()
+        self._active_column_manager().undo()
 
     def _redo(self) -> None:
-        self._column_manager.redo()
+        self._active_column_manager().redo()
 
     def _cut(self) -> None:
-        self._column_manager.cut()
+        self._active_column_manager().cut()
 
     def _copy(self) -> None:
-        self._column_manager.copy()
+        self._active_column_manager().copy()
 
     def _paste(self) -> None:
-        self._column_manager.paste()
+        self._active_column_manager().paste()
 
     def _find(self) -> None:
-        self._column_manager.show_find()
+        self._active_column_manager().show_find()
 
     def _on_show_about_dialog(self) -> None:
         """Show the About dialog."""
@@ -860,11 +1075,48 @@ class MainWindow(QMainWindow):
         dialog.exec()
 
     def _on_new_terminal(self) -> None:
-        """Create a new terminal tab."""
+        """Create a new terminal tab at the current position."""
         if not self._mindspace_manager.has_mindspace():
             return
 
         self._column_manager.new_terminal()
+
+    def _on_new_bottom_terminal(self) -> None:
+        """Create a new terminal directly in the bottom panel."""
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        self._show_bottom_panel_if_needed()
+        self._bottom_panel.new_terminal()
+
+    def _on_main_panel_tab_context_menu(self, tab_id: str, pos: QPoint) -> None:
+        """Show context menu for a terminal tab in the main panel."""
+        menu = QMenu(self)
+        move_action = menu.addAction("Move to Bottom")
+        action = menu.exec(pos)
+        if action == move_action:
+            result = self._column_manager.extract_tab_state(tab_id)
+            if result:
+                state, title = result
+                self._bottom_panel.import_tab_from_state(state, title)
+                if self._bottom_panel.isHidden():
+                    total = self._content_splitter.height()
+                    panel_height = max(200, total // 3)
+                    self._content_splitter.setSizes([total - panel_height, panel_height])
+                    self._bottom_panel.show()
+
+    def _on_bottom_panel_tab_context_menu(self, tab_id: str, pos: QPoint) -> None:
+        """Show context menu for a terminal tab in the bottom panel."""
+        menu = QMenu(self)
+        move_action = menu.addAction("Move to Right")
+        action = menu.exec(pos)
+        if action == move_action:
+            result = self._bottom_panel.extract_tab_state(tab_id)
+            if result:
+                state, title = result
+                self._column_manager.import_tab_from_state(state, title)
+                if not self._bottom_panel.has_tabs():
+                    self._bottom_panel.hide()
 
     def _on_new_file(self) -> None:
         """Create a new empty editor tab."""
@@ -1011,6 +1263,7 @@ class MainWindow(QMainWindow):
         # Apply styles to the mindspace view and column manager
         self._mindspace_view.apply_style()
         self._column_manager.apply_style()
+        self._bottom_panel.apply_style()
 
     def _apply_menubar_style(self) -> None:
         """Apply styling to menu bar."""
@@ -1086,9 +1339,16 @@ class MainWindow(QMainWindow):
         """Trigger repaint of main window splitter handle."""
         # The main window splitter uses custom painted handles, so we just need to trigger a repaint
         self._splitter.update()
-        self._column_manager.setStyleSheet(f"""
+        column_manager_stylesheet = f"""
             #ColumnManager QWidget {{
                 background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
+            }}
+        """
+        self._column_manager.setStyleSheet(column_manager_stylesheet)
+        self._bottom_panel.setStyleSheet(column_manager_stylesheet)
+        self._content_splitter.setStyleSheet(f"""
+            QSplitter::handle {{
+                background-color: {self._style_manager.get_color_str(ColorRole.SPLITTER)};
             }}
         """)
 
@@ -1269,12 +1529,13 @@ class MainWindow(QMainWindow):
 
     def _on_close_tab(self) -> None:
         """Close the current tab."""
-        tab = self._column_manager.get_current_tab()
+        column_manager = self._active_column_manager()
+        tab = column_manager.get_current_tab()
         if tab is None:
             self._logger.error("No current tab to close")
             return
 
-        self._column_manager.close_tab()
+        column_manager.close_tab()
         self._mindspace_manager.add_interaction(
             MindspaceLogLevel.INFO,
             f"User closed tab\nTab ID: {tab.tab_id()}"

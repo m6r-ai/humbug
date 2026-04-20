@@ -3,9 +3,9 @@ import logging
 import os
 from typing import Dict, List, cast
 
-from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication
-from PySide6.QtCore import Signal, QTimer
-from PySide6.QtGui import QResizeEvent
+from PySide6.QtWidgets import QTabBar, QWidget, QVBoxLayout, QHBoxLayout, QStackedWidget, QApplication, QToolButton
+from PySide6.QtCore import Signal, QTimer, QPoint, Qt, QSize
+from PySide6.QtGui import QResizeEvent, QIcon
 
 from ai import AIConversation, AIConversationHistory, AIConversationSettings, AIReasoningCapability
 
@@ -48,6 +48,10 @@ class ColumnManager(QWidget):
     open_preview_link_requested = Signal(str)
     edit_file_requested = Signal(str)
     user_settings_requested = Signal()
+    tab_context_menu_requested = Signal(str, object)  # tab_id, global QPoint
+    cross_manager_tab_drop_requested = Signal(str, str, object, int)  # source_manager_id, tab_id, target_column, target_index
+    cross_manager_spacer_drop_requested = Signal(str, str, str)  # source_manager_id, tab_id, side
+    new_terminal_requested = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         """Initialize the tab manager."""
@@ -63,6 +67,8 @@ class ColumnManager(QWidget):
 
         # Track MRU order for each column
         self._column_mru_order: Dict[ColumnWidget, List[str]] = {}
+        self._drag_source_id = str(id(self))
+        self._show_terminal_add_button = False
 
         # Create main layout
         main_layout = QVBoxLayout(self)
@@ -507,7 +513,9 @@ class ColumnManager(QWidget):
 
         tab_id = tab.tab_id()
         label = TabLabel(tab_id, icon, title, tool_tip)
+        label.set_drag_source_id(self._drag_source_id)
         label.close_clicked.connect(lambda: self._on_tab_label_close_clicked(tab_id))
+        label.context_menu_requested.connect(self._on_tab_label_context_menu_requested)
         tab.activated.connect(lambda: self._on_tab_activated(tab))
         tab.updated_state_changed.connect(self._on_tab_updated_state_changed)
         tab.modified_state_changed.connect(self._on_tab_modified_state_changed)
@@ -701,8 +709,12 @@ class ColumnManager(QWidget):
         if new_column.count() == 0 and len(self._tab_columns) > 1:
             self._remove_column_and_resize(new_index, new_column)
 
-    def _on_left_spacer_tab_dropped(self, tab_id: str) -> None:
+    def _on_left_spacer_tab_dropped(self, tab_id: str, source_manager_id: str) -> None:
         """Handle a tab dropped onto the left spacer, moving it to a new leftmost column."""
+        if source_manager_id and source_manager_id != self._drag_source_id:
+            self.cross_manager_spacer_drop_requested.emit(source_manager_id, tab_id, "left")
+            return
+
         tab = self._tabs.get(tab_id)
         if not tab:
             return
@@ -724,8 +736,12 @@ class ColumnManager(QWidget):
         self.show_all_columns()
         self._update_tabs()
 
-    def _on_right_spacer_tab_dropped(self, tab_id: str) -> None:
+    def _on_right_spacer_tab_dropped(self, tab_id: str, source_manager_id: str) -> None:
         """Handle a tab dropped onto the right spacer, moving it to a new rightmost column."""
+        if source_manager_id and source_manager_id != self._drag_source_id:
+            self.cross_manager_spacer_drop_requested.emit(source_manager_id, tab_id, "right")
+            return
+
         tab = self._tabs.get(tab_id)
         if not tab:
             return
@@ -777,7 +793,13 @@ class ColumnManager(QWidget):
                     self._update_tabs()
                     break
 
-    def _on_column_widget_tab_dropped(self, tab_id: str, target_column: ColumnWidget, target_index: int) -> None:
+    def _on_column_widget_tab_dropped(
+        self,
+        tab_id: str,
+        source_manager_id: str,
+        target_column: ColumnWidget,
+        target_index: int
+    ) -> None:
         """
         Handle a tab being dropped into a new position.
 
@@ -786,6 +808,10 @@ class ColumnManager(QWidget):
             target_column: Column where the tab was dropped
             target_index: Target position in the column
         """
+        if source_manager_id and source_manager_id != self._drag_source_id:
+            self.cross_manager_tab_drop_requested.emit(source_manager_id, tab_id, target_column, target_index)
+            return
+
         tab = self._tabs.get(tab_id)
         if not tab:
             return
@@ -913,8 +939,47 @@ class ColumnManager(QWidget):
         if tab_bar:
             self._apply_tab_bar_style(tab_bar)
 
+        self._configure_column_corner_widget(column_widget)
+
         self.show_all_columns()
         return column_widget
+
+    def _configure_column_corner_widget(self, column_widget: ColumnWidget) -> None:
+        """Configure the optional top-right corner widget for a column."""
+        if not self._show_terminal_add_button:
+            column_widget.setCornerWidget(None, Qt.Corner.TopRightCorner)
+            return
+
+        button = QToolButton(column_widget)
+        button.setIcon(QIcon(self._style_manager.scale_icon("plus", 14)))
+        button.setIconSize(QSize(14, 14))
+        button.setAutoRaise(True)
+        button.setToolTip("New Terminal")
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        button.setFixedSize(24, 24)
+        button.setStyleSheet(f"""
+            QToolButton {{
+                background: transparent;
+                border: none;
+                border-radius: 6px;
+                padding: 0px;
+                margin: 2px 6px 2px 4px;
+            }}
+            QToolButton:hover {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_HOVER)};
+            }}
+            QToolButton:pressed {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)};
+            }}
+        """)
+        button.clicked.connect(self.new_terminal_requested.emit)
+        column_widget.setCornerWidget(button, Qt.Corner.TopRightCorner)
+
+    def enable_terminal_add_button(self) -> None:
+        """Show a plus button on each column tab bar for creating new terminals."""
+        self._show_terminal_add_button = True
+        for column in self._tab_columns:
+            self._configure_column_corner_widget(column)
 
     def _remove_column_and_resize(self, column_number: int, column: ColumnWidget) -> None:
         """
@@ -1183,6 +1248,7 @@ class ColumnManager(QWidget):
         if not self._tabs:
             self.status_message.emit(StatusMessage(""))
             self._stack.setCurrentWidget(self._welcome_widget)
+            self.tab_changed.emit()
 
     def _find_column_for_tab(self, tab: TabBase) -> ColumnWidget | None:
         """Find which column contains the given tab."""
@@ -1201,6 +1267,118 @@ class ColumnManager(QWidget):
         """
         widget = self._active_column.currentWidget()
         return cast(TabBase, widget) if widget else None
+
+    def has_tabs(self) -> bool:
+        """Return True if there is at least one open tab."""
+        return bool(self._tabs)
+
+    def drag_source_id(self) -> str:
+        """Return the drag/drop source identifier for this manager."""
+        return self._drag_source_id
+
+    def disable_column_centering(self) -> None:
+        """Hide the left and right spacers so columns expand to full width."""
+        self._left_spacer.hide()
+        self._right_spacer.hide()
+
+    def _on_tab_label_context_menu_requested(self, tab_id: str, pos: QPoint) -> None:
+        """Forward context menu requests for tabs."""
+        if tab_id in self._tabs:
+            self.tab_context_menu_requested.emit(tab_id, pos)
+
+    def extract_tab_state(self, tab_id: str) -> "tuple[TabState, str] | None":
+        """Remove a tab from this manager and return its state and title for adoption elsewhere.
+
+        Args:
+            tab_id: ID of the tab to extract
+
+        Returns:
+            Tuple of (TabState, title) or None if not found
+        """
+        tab = self._tabs.get(tab_id)
+        if not tab:
+            return None
+
+        column = self._find_column_for_tab(tab)
+        if not column:
+            return None
+
+        title = self._tab_labels[tab_id].text()
+        tab_state = tab.get_state(True)
+        was_current = column.currentWidget() == tab
+        next_tab = None
+
+        if was_current and column.count() > 1:
+            next_tab = self._get_next_mru_tab(column, excluding_tab_id=tab_id)
+            if next_tab:
+                column.setCurrentWidget(next_tab)
+
+        mru_list = self._column_mru_order[column]
+        if tab_id in mru_list:
+            mru_list.remove(tab_id)
+
+        tab.stop_file_watching()
+        self._remove_tab_from_column(tab, column)
+
+        if column.count() == 0 and len(self._tab_columns) > 1:
+            column_number = self._tab_columns.index(column)
+            if self._active_column == column:
+                new_active_column = 1 if column_number == 0 else column_number - 1
+                self._active_column = self._tab_columns[new_active_column]
+
+            self._remove_column_and_resize(column_number, column)
+            self._update_tabs()
+
+        if not self._tabs:
+            self.status_message.emit(StatusMessage(""))
+            self._stack.setCurrentWidget(self._welcome_widget)
+
+        return tab_state, title
+
+    def import_tab_from_state(
+        self,
+        state: "TabState",
+        title: str,
+        target_column: ColumnWidget | None = None,
+        target_index: int | None = None
+    ) -> None:
+        """Create a tab from state and add it to this manager's active column.
+
+        Args:
+            state: Saved tab state
+            title: Tab title to display
+        """
+        new_tab = self._restore_tab_from_state(state)
+        if not new_tab:
+            return
+
+        if not self._tab_columns:
+            self._create_column(0)
+            self._active_column = self._tab_columns[0]
+
+        if target_column not in self._tab_columns:
+            target_column = self._active_column
+
+        self._stack.setCurrentWidget(self._columns_widget)
+        self._add_tab_to_column(new_tab, title, target_column)
+
+        if target_index is not None:
+            current_index = target_column.indexOf(new_tab)
+            bounded_target_index = max(0, min(target_index, target_column.count() - 1))
+            if current_index != bounded_target_index:
+                target_column.tabBar().moveTab(current_index, bounded_target_index)
+
+        self._active_column = target_column
+        self._update_tabs()
+
+    def import_tab_from_state_to_edge(self, state: "TabState", title: str, edge: str) -> None:
+        """Create a tab from state and place it in a new edge column."""
+        new_index = 0 if edge == "left" else len(self._tab_columns)
+        new_column = self._create_column(new_index)
+        self._active_column = new_column
+        self._stack.setCurrentWidget(self._columns_widget)
+        self.import_tab_from_state(state, title, new_column, 0)
+        self.show_all_columns()
 
     def _set_current_tab(self, tab: TabBase, ephemeral: bool) -> None:
         """
@@ -1797,7 +1975,7 @@ class ColumnManager(QWidget):
             self.unprotect_tab(conversation_tab.tab_id())
 
     def new_terminal(self, command: str | None = None) -> TerminalTab:
-        """Create new terminal tab.
+        """Create new terminal tab at the current position.
 
         Args:
             command: Optional command to run in terminal
@@ -1806,14 +1984,35 @@ class ColumnManager(QWidget):
             Created terminal tab
         """
         terminal = TerminalTab("", command, self)
-
-        if command:
-            title = os.path.basename(command)
-
-        else:
-            title = "Terminal"
-
+        title = os.path.basename(command) if command else "Terminal"
         self._add_tab(terminal, title)
+        return terminal
+
+    def new_terminal_at_bottom(self, command: str | None = None) -> TerminalTab:
+        """Create new terminal tab in a dedicated rightmost column (bottom panel).
+
+        If a column already exists to the right of all content columns it is
+        reused; otherwise a new column is created at the far right.
+
+        Args:
+            command: Optional command to run in terminal
+
+        Returns:
+            Created terminal tab
+        """
+        terminal = TerminalTab("", command, self)
+        title = os.path.basename(command) if command else "Terminal"
+
+        # Always open in the last (rightmost) column, creating one if needed
+        if len(self._tab_columns) < 6:
+            bottom_column = self._create_column(len(self._tab_columns))
+        else:
+            bottom_column = self._tab_columns[-1]
+
+        self._add_tab_to_column(terminal, title, bottom_column)
+        self._active_column = bottom_column
+        self.show_all_columns()
+        self._update_tabs()
         return terminal
 
     def _on_preview_open_link_requested(self, path: str) -> None:

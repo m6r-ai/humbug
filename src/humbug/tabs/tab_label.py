@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (
     QWidget, QLabel, QToolButton, QHBoxLayout, QSizePolicy, QApplication
 )
 from PySide6.QtCore import Signal, QSize, Qt, QMimeData, QPoint
-from PySide6.QtGui import QIcon, QPixmap, QDrag, QMouseEvent, QFontMetricsF
+from PySide6.QtGui import QIcon, QPixmap, QDrag, QMouseEvent, QFontMetricsF, QContextMenuEvent
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
@@ -15,6 +15,7 @@ class TabLabel(QWidget):
 
     close_clicked = Signal()
     drag_started = Signal()
+    context_menu_requested = Signal(str, QPoint)  # tab_id, global_pos
 
     def __init__(self, tab_id: str, icon_name: str, text: str, tool_tip: str, parent: QWidget | None = None) -> None:
         """
@@ -40,6 +41,7 @@ class TabLabel(QWidget):
         self._file_missing = False
         self._style_manager = StyleManager()
         self._drag_start_pos: QPoint | None = None
+        self._drag_source_id = ""
 
         self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
 
@@ -49,10 +51,12 @@ class TabLabel(QWidget):
         self._type_label = QLabel()
         self._type_label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
         self._type_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._type_label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._layout.addWidget(self._type_label)
 
         self._label = QLabel(text)
         self._label.setIndent(0)
+        self._label.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
         self._layout.addWidget(self._label)
 
         self._close_button = QToolButton()
@@ -178,6 +182,7 @@ class TabLabel(QWidget):
         mime_data = QMimeData()
         # Store the tab ID for identification
         mime_data.setData("application/x-humbug-tab", self._tab_id.encode())
+        mime_data.setData("application/x-humbug-tab-manager", self._drag_source_id.encode())
         drag.setMimeData(mime_data)
 
         # Create pixmap for drag visual feedback
@@ -212,10 +217,19 @@ class TabLabel(QWidget):
         # Execute drag operation
         drag.exec_(Qt.DropAction.MoveAction)
 
+    def set_drag_source_id(self, drag_source_id: str) -> None:
+        """Set the identifier for the manager that owns this tab."""
+        self._drag_source_id = drag_source_id
+
     def mouseReleaseEvent(self, event: QMouseEvent) -> None:
         """Handle mouse release events."""
         self._drag_start_pos = None
         super().mouseReleaseEvent(event)
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        """Emit a signal so the context menu can be handled by the parent."""
+        self.context_menu_requested.emit(self._tab_id, event.globalPos())
+        event.accept()
 
     def update_hover_state(self, is_hovered: bool) -> None:
         """Handle updates to the hover state for the label."""
