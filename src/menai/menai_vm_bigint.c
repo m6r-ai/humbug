@@ -16,6 +16,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
+#include <limits.h>
 
 #include "menai_vm_bigint.h"
 
@@ -650,6 +651,89 @@ fail:
     menai_int_free(&digit_int);
     menai_int_free(&tmp);
     return -1;
+}
+
+/*
+ * Parse a UTF-32 codepoint array as an integer in the given base.
+ * Since all valid digit characters are ASCII, each codepoint is validated
+ * against 0x7F before being cast to char and forwarded to menai_int_from_string
+ * via a temporary UTF-8 buffer.
+ */
+int
+menai_int_from_codepoints(const uint32_t *data, Py_ssize_t len, int base, MenaiInt *a)
+{
+    if (base != 2 && base != 8 && base != 10 && base != 16) {
+        PyErr_SetString(PyExc_ValueError, "invalid base");
+        return -1;
+    }
+
+    /* Allow a leading sign plus all digit characters — all ASCII. */
+    char *buf = (char *)PyMem_Malloc((size_t)(len + 1));
+    if (!buf) {
+        PyErr_NoMemory();
+        return -1;
+    }
+
+    for (Py_ssize_t i = 0; i < len; i++) {
+        if (data[i] > 0x7F) {
+            PyMem_Free(buf);
+            PyErr_SetString(PyExc_ValueError, "non-ASCII character in integer string");
+            return -1;
+        }
+        buf[i] = (char)data[i];
+    }
+    buf[len] = '\0';
+
+    int result = menai_int_from_string(buf, base, a);
+    PyMem_Free(buf);
+    return result;
+}
+
+/*
+ * Convert trunc(v) to a MenaiInt.  v must be finite.
+ *
+ * Fast path: if trunc(v) fits in a long, delegate to menai_int_from_long.
+ * Slow path: decompose the magnitude via frexp into 32-bit limbs, then
+ * set the sign.  This avoids any Python C API call.
+ */
+int
+menai_int_from_double(double v, MenaiInt *a)
+{
+    /* Work with the magnitude; v is already trunc()'d by the caller. */
+    double t = v < 0.0 ? -v : v;
+    if (!isfinite(t)) {
+        PyErr_SetString(PyExc_ValueError, "cannot convert non-finite float to integer");
+        return -1;
+    }
+
+    /* Fast path: magnitude fits in a non-negative long. */
+    if (t <= (double)LONG_MAX) {
+        long lv = (long)v;
+        return menai_int_from_long(lv, a);
+    }
+
+    /* Slow path: decompose into 32-bit base-2^32 limbs using ldexp/frexp. */
+    int exp;
+    double frac = frexp(t, &exp);  /* t == frac * 2^exp, 0.5 <= frac < 1.0 */
+    /* Number of 32-bit limbs needed: ceil(exp / 32) */
+    Py_ssize_t nlimbs = (exp + 31) / 32;
+    uint32_t *digits = (uint32_t *)PyMem_Malloc((size_t)nlimbs * sizeof(uint32_t));
+    if (!digits) {
+        PyErr_NoMemory();
+        return -1;
+    }
+    for (Py_ssize_t i = nlimbs - 1; i >= 0; i--) {
+        frac *= 4294967296.0;  /* frac * 2^32 */
+        uint32_t limb = (uint32_t)frac;
+        digits[i] = limb;
+        frac -= (double)limb;
+    }
+    menai_int_free(a);
+    a->digits = digits;
+    a->length = nlimbs;
+    a->sign = (v < 0.0) ? -1 : 1;
+    _menai_int_normalize(a);
+    return 0;
 }
 
 /* Return 1 if the value of a fits in a C long, 0 otherwise. */

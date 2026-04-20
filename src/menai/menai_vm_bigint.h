@@ -78,6 +78,21 @@ int menai_int_from_pylong(PyObject *obj, MenaiInt *a);
 int menai_int_from_string(const char *s, int base, MenaiInt *a);
 
 /*
+ * Parse a UTF-32 codepoint array of length len in the given base (2, 8, 10,
+ * or 16) and store the result in a.  An optional leading '+' or '-' is
+ * accepted.  All valid integer literals in any supported base are ASCII-only,
+ * so each codepoint is simply cast to char after a range check.
+ * Returns 0 on success, -1 on error (ValueError set for bad input).
+ */
+int menai_int_from_codepoints(const uint32_t *data, Py_ssize_t len, int base, MenaiInt *a);
+
+/*
+ * Convert the truncated value of v (i.e. trunc(v)) to a MenaiInt.
+ * v must be finite. Returns 0 on success, -1 on error.
+ */
+int menai_int_from_double(double v, MenaiInt *a);
+
+/*
  * Convert to primitive types.
  */
 

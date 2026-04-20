@@ -130,6 +130,10 @@ static inline int _menai_mul_overflow(long a, long b, long *r) {
 /* menai_vm_value init — lives in the same .so */
 extern PyObject *_menai_vm_value_init(void);
 
+extern PyObject *menai_convert_value(PyObject *src);
+extern PyObject *menai_convert_code_object(PyObject *code);
+extern PyObject *menai_to_slow(PyObject *src);
+
 /*
  * Limits
  */
@@ -384,9 +388,6 @@ PyObject *Menai_EMPTY_SET = NULL;
  */
 static PyObject *MenaiEvalError_type = NULL;
 static PyObject *MenaiCancelledException_type = NULL;
-static PyObject *fn_convert_code_object = NULL;
-static PyObject *fn_convert_value = NULL;
-static PyObject *fn_to_slow = NULL;
 
 /*
  * Fast type-check macros
@@ -516,13 +517,32 @@ static inline void bool_store(PyObject **regs, int slot, int cond) {
 PyObject *menai_raise_eval_error(const char *message);
 PyObject *menai_raise_eval_errorf(const char *fmt, ...);
 
+static const char *
+menai_type_name(PyObject *val)
+{
+    PyTypeObject *t = Py_TYPE(val);
+    if (t == Menai_NoneType)       return "none";
+    if (t == Menai_BooleanType)    return "boolean";
+    if (t == Menai_IntegerType)    return "integer";
+    if (t == Menai_FloatType)      return "float";
+    if (t == Menai_ComplexType)    return "complex";
+    if (t == Menai_StringType)     return "string";
+    if (t == Menai_SymbolType)     return "symbol";
+    if (t == Menai_ListType)       return "list";
+    if (t == Menai_DictType)       return "dict";
+    if (t == Menai_SetType)        return "set";
+    if (t == Menai_FunctionType)   return "function";
+    if (t == Menai_StructTypeType) return "struct-type";
+    if (t == Menai_StructType)     return "struct";
+    return "unknown";
+}
+
 static inline int
 require_type_impl(int ok, PyObject *val, const char *op_name, const char *noun)
 {
     if (ok) return 1;
-    PyObject *tn = PyObject_CallMethod(val, "type_name", NULL);
-    menai_raise_eval_errorf("Function '%s' requires %s, got %s", op_name, noun, tn ? PyUnicode_AsUTF8(tn) : "?");
-    Py_XDECREF(tn);
+    menai_raise_eval_errorf("Function '%s' requires %s, got %s",
+                            op_name, noun, menai_type_name(val));
     return 0;
 }
 
@@ -643,22 +663,6 @@ fetch_singleton(PyObject *module, const char *name, PyObject **dst)
     return 0;
 }
 
-static int
-fetch_callable(PyObject *module, const char *name, PyObject **dst)
-{
-    PyObject *obj = PyObject_GetAttrString(module, name);
-    if (obj == NULL) return -1;
-
-    if (!PyCallable_Check(obj)) {
-        PyErr_Format(PyExc_TypeError, "menai_vm_shim_init: %s is not callable", name);
-        Py_DECREF(obj);
-        return -1;
-    }
-
-    *dst = obj;
-    return 0;
-}
-
 int
 menai_vm_shim_init(void)
 {
@@ -685,10 +689,6 @@ menai_vm_shim_init(void)
     if (fetch_singleton(vc, "Menai_LIST_EMPTY", &Menai_EMPTY_LIST) < 0) goto fail;
     if (fetch_singleton(vc, "Menai_DICT_EMPTY", &Menai_EMPTY_DICT) < 0) goto fail;
     if (fetch_singleton(vc, "Menai_SET_EMPTY", &Menai_EMPTY_SET) < 0) goto fail;
-
-    if (fetch_callable(vc, "convert_code_object", &fn_convert_code_object) < 0) goto fail;
-    if (fetch_callable(vc, "convert_value", &fn_convert_value) < 0) goto fail;
-    if (fetch_callable(vc, "to_slow", &fn_to_slow) < 0) goto fail;
 
     PyObject *err_mod = PyImport_ImportModule("menai.menai_error");
     if (err_mod == NULL) goto fail;
@@ -1089,7 +1089,7 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, PyObject *prelude_dict
     PyObject *key, *val;
     Py_ssize_t pos = 0;
     while (PyDict_Next(constants_dict, &pos, &key, &val)) {
-        PyObject *converted = PyObject_CallOneArg(fn_convert_value, val);
+        PyObject *converted = menai_convert_value(val);
         if (converted == NULL) {
             globals_free(gt);
             return -1;
@@ -1108,7 +1108,7 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, PyObject *prelude_dict
     if (np > 0) {
         pos = 0;
         while (PyDict_Next(prelude_dict, &pos, &key, &val)) {
-            PyObject *converted = PyObject_CallOneArg(fn_convert_value, val);
+            PyObject *converted = menai_convert_value(val);
             if (converted == NULL) {
                 globals_free(gt);
                 return -1;
@@ -1388,10 +1388,8 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("error: message must be a string");
                 goto error;
             }
-
-            PyObject *s = PyObject_GetAttrString(msg, "value");
+            PyObject *s = menai_string_to_pyunicode(msg);
             if (s == NULL) goto error;
-
             PyErr_SetObject(MenaiEvalError_type, s);
             Py_DECREF(s);
             goto error;
@@ -2512,10 +2510,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             double v = menai_float_value(a);
             MenaiInt res;
             menai_int_init(&res);
-            PyObject *py_int = PyLong_FromDouble(trunc(v));
-            if (py_int == NULL) goto error;
-            if (menai_int_from_pylong(py_int, &res) < 0) { Py_DECREF(py_int); goto error; }
-            Py_DECREF(py_int);
+            if (menai_int_from_double(trunc(v), &res) < 0) goto error;
             PyObject *_r = menai_integer_from_bigint(res);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
@@ -2535,13 +2530,11 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
         case OP_FLOAT_TO_STRING: {
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float->string")) goto error;
-            PyObject *_pf = PyFloat_FromDouble(menai_float_value(a));
-            if (_pf == NULL) goto error;
-            PyObject *py_str = PyObject_Str(_pf);
-            Py_DECREF(_pf);
-            if (py_str == NULL) goto error;
-            PyObject *r = menai_string_from_pyunicode(py_str);
-            Py_DECREF(py_str);
+            char *_fsbuf = PyOS_double_to_string(menai_float_value(a), 'r', 0,
+                                                 Py_DTSF_ADD_DOT_0, NULL);
+            if (_fsbuf == NULL) goto error;
+            PyObject *r = menai_string_from_utf8(_fsbuf, (Py_ssize_t)strlen(_fsbuf));
+            PyMem_Free(_fsbuf);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3221,20 +3214,18 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *trimmed = menai_string_trim(a);
             if (trimmed == NULL) goto error;
-            PyObject *py_str = menai_string_to_pyunicode(trimmed);
+            MenaiInt sti_tmp;
+            menai_int_init(&sti_tmp);
+            int sti_ok = menai_int_from_codepoints(
+                menai_string_data(trimmed),
+                menai_string_length(trimmed),
+                (int)radix, &sti_tmp);
             Py_DECREF(trimmed);
-            if (py_str == NULL) goto error;
-            PyObject *ri = PyLong_FromUnicodeObject(py_str, (int)radix);
-            Py_DECREF(py_str);
-            if (ri == NULL) {
+            if (sti_ok < 0) {
                 PyErr_Clear();
                 reg_set_borrow(regs, base + dest, Menai_NONE);
             } else {
-                MenaiInt tmp;
-                menai_int_init(&tmp);
-                if (menai_int_from_pylong(ri, &tmp) < 0) { Py_DECREF(ri); goto error; }
-                Py_DECREF(ri);
-                PyObject *_r = menai_integer_from_bigint(tmp);
+                PyObject *_r = menai_integer_from_bigint(sti_tmp);
                 if (_r == NULL) goto error;
                 reg_set_own(regs, base + dest, _r);
             }
@@ -3254,19 +3245,12 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 else if (_cp == '.') has_dot = 1;
                 else if (_cp == 'e' || _cp == 'E') has_e = 1;
             }
-            /* Convert to PyUnicode once for the Python numeric parsers. */
-            PyObject *sa = menai_string_to_pyunicode(a);
-            if (sa == NULL) goto error;
-            PyObject *result = NULL;
             if (!has_dot && !has_e && !has_j) {
-                result = PyLong_FromUnicodeObject(sa, 10);
-                if (result) {
-                    MenaiInt tmp;
-                    menai_int_init(&tmp);
-                    if (menai_int_from_pylong(result, &tmp) < 0) { Py_DECREF(result); Py_DECREF(sa); goto error; }
-                    Py_DECREF(result);
-                    PyObject *r = menai_integer_from_bigint(tmp);
-                    Py_DECREF(sa);
+                /* Try integer parse directly on the codepoint array. */
+                MenaiInt stn_tmp;
+                menai_int_init(&stn_tmp);
+                if (menai_int_from_codepoints(sdata, slen, 10, &stn_tmp) == 0) {
+                    PyObject *r = menai_integer_from_bigint(stn_tmp);
                     if (r == NULL) goto error;
                     reg_set_own(regs, base + dest, r);
                     break;
@@ -3274,29 +3258,52 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 PyErr_Clear();
             }
             if (has_j) {
-                result = PyObject_CallOneArg((PyObject *)&PyComplex_Type, sa);
-                if (result != NULL) {
-                    PyObject *r = make_complex(PyComplex_RealAsDouble(result),
-                                               PyComplex_ImagAsDouble(result));
-                    Py_DECREF(result);
-                    Py_DECREF(sa);
+                /*
+                 * Complex literal parse — still uses Python's complex()
+                 * constructor as a C-native complex literal parser would be
+                 * non-trivial to implement correctly.
+                 */
+                PyObject *sa_j = menai_string_to_pyunicode(a);
+                if (sa_j == NULL) goto error;
+                PyObject *cplx = PyObject_CallOneArg((PyObject *)&PyComplex_Type, sa_j);
+                Py_DECREF(sa_j);
+                if (cplx != NULL) {
+                    PyObject *r = make_complex(PyComplex_RealAsDouble(cplx),
+                                               PyComplex_ImagAsDouble(cplx));
+                    Py_DECREF(cplx);
                     if (r == NULL) goto error;
                     reg_set_own(regs, base + dest, r);
                     break;
                 }
                 PyErr_Clear();
             }
-            result = PyFloat_FromString(sa);
-            Py_DECREF(sa);
-            if (result) {
-                double dv = PyFloat_AsDouble(result);
-                Py_DECREF(result);
-                PyObject *_r = make_float(dv);
-                if (_r == NULL) goto error;
-                reg_set_own(regs, base + dest, _r);
-            } else {
-                PyErr_Clear();
-                reg_set_borrow(regs, base + dest, Menai_NONE);
+            {
+                /* Float parse via strtod on a temporary UTF-8 buffer.
+                 * Valid float literals are ASCII-only so this is safe. */
+                char *stn_fbuf = (char *)PyMem_Malloc((size_t)(slen + 1));
+                if (!stn_fbuf) { PyErr_NoMemory(); goto error; }
+                int stn_ascii_ok = 1;
+                for (Py_ssize_t _i = 0; _i < slen; _i++) {
+                    if (sdata[_i] > 0x7F) { stn_ascii_ok = 0; break; }
+                    stn_fbuf[_i] = (char)sdata[_i];
+                }
+                stn_fbuf[slen] = '\0';
+                if (!stn_ascii_ok) {
+                    PyMem_Free(stn_fbuf);
+                    reg_set_borrow(regs, base + dest, Menai_NONE);
+                    break;
+                }
+                char *stn_end = NULL;
+                double stn_dv = strtod(stn_fbuf, &stn_end);
+                int stn_ok = (stn_end != stn_fbuf && *stn_end == '\0');
+                PyMem_Free(stn_fbuf);
+                if (stn_ok) {
+                    PyObject *_r = make_float(stn_dv);
+                    if (_r == NULL) goto error;
+                    reg_set_own(regs, base + dest, _r);
+                } else {
+                    reg_set_borrow(regs, base + dest, Menai_NONE);
+                }
             }
             break;
         }
@@ -4655,9 +4662,7 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     if (!PyArg_ParseTuple(args, "OOO", &code, &constants_dict, &prelude_dict)) return NULL;
 
     /* Convert compiler-world constants in the code object tree to fast C types. */
-    PyObject *_tmp = PyObject_CallOneArg(fn_convert_code_object, code);
-    if (_tmp == NULL) return NULL;
-    Py_DECREF(_tmp);
+    if (menai_convert_code_object(code) == NULL) return NULL;
 
     /* Build the globals table (constants + prelude), converting values to fast C types. */
     GlobalsTable globals;
@@ -4675,13 +4680,8 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     for (Py_ssize_t i = 0; i < globals.count; i++) {
         PyObject *val = globals.entries[i].value;
         if (IS_MENAI_FUNCTION(val)) {
-            PyObject *bc = PyObject_GetAttrString(val, "bytecode");
-            if (bc == NULL) {
-                globals_free(&globals);
-                return NULL;
-            }
+            PyObject *bc = ((MenaiFunction_Object *)val)->bytecode;
             int n = max_local_count(bc);
-            Py_DECREF(bc);
             if (n < 0) {
                 globals_free(&globals);
                 return NULL;
@@ -4709,7 +4709,7 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
         return NULL;
 
     /* Convert fast C types back to compiler-world types. */
-    PyObject *slow_result = PyObject_CallOneArg(fn_to_slow, result);
+    PyObject *slow_result = menai_to_slow(result);
     Py_DECREF(result);
     return slow_result;
 }
