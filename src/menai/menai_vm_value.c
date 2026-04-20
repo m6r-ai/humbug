@@ -283,69 +283,116 @@ menai_convert_value(PyObject *src)
         PyObject *pairs = PyObject_GetAttrString(src, "pairs");
         if (!pairs) return NULL;
         Py_ssize_t n = PyTuple_GET_SIZE(pairs);
-        PyObject *fast_pairs = PyTuple_New(n);
-        if (!fast_pairs) {
+        PyObject **keys = n > 0
+            ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
+        PyObject **values = n > 0
+            ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
+        PyObject **hkeys = n > 0
+            ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
+        if (n > 0 && (!keys || !values || !hkeys)) {
+            PyMem_Free(keys);
+            PyMem_Free(values);
+            PyMem_Free(hkeys);
             Py_DECREF(pairs);
+            PyErr_NoMemory();
             return NULL;
         }
-
         for (Py_ssize_t i = 0; i < n; i++) {
             PyObject *pair = PyTuple_GET_ITEM(pairs, i);
             PyObject *fk = menai_convert_value(PyTuple_GET_ITEM(pair, 0));
             if (!fk) {
-                Py_DECREF(fast_pairs);
+                for (Py_ssize_t j = 0; j < i; j++) {
+                    Py_DECREF(keys[j]);
+                    Py_DECREF(values[j]);
+                    Py_DECREF(hkeys[j]);
+                }
+                PyMem_Free(keys);
+                PyMem_Free(values);
+                PyMem_Free(hkeys);
                 Py_DECREF(pairs);
                 return NULL;
             }
-
             PyObject *fv = menai_convert_value(PyTuple_GET_ITEM(pair, 1));
             if (!fv) {
                 Py_DECREF(fk);
-                Py_DECREF(fast_pairs);
+                for (Py_ssize_t j = 0; j < i; j++) {
+                    Py_DECREF(keys[j]);
+                    Py_DECREF(values[j]);
+                    Py_DECREF(hkeys[j]);
+                }
+                PyMem_Free(keys);
+                PyMem_Free(values);
+                PyMem_Free(hkeys);
                 Py_DECREF(pairs);
                 return NULL;
             }
-
-            PyObject *fp = PyTuple_Pack(2, fk, fv);
-            Py_DECREF(fk);
-            Py_DECREF(fv);
-            if (!fp) {
-                Py_DECREF(fast_pairs);
+            PyObject *hk = menai_hashable_key(fk);
+            if (!hk) {
+                Py_DECREF(fk);
+                Py_DECREF(fv);
+                for (Py_ssize_t j = 0; j < i; j++) {
+                    Py_DECREF(keys[j]);
+                    Py_DECREF(values[j]);
+                    Py_DECREF(hkeys[j]);
+                }
+                PyMem_Free(keys);
+                PyMem_Free(values);
+                PyMem_Free(hkeys);
                 Py_DECREF(pairs);
                 return NULL;
             }
-
-            PyTuple_SET_ITEM(fast_pairs, i, fp);
+            keys[i] = fk;
+            values[i] = fv;
+            hkeys[i] = hk;
         }
-
         Py_DECREF(pairs);
-        return menai_dict_from_fast_pairs(fast_pairs);
+        return menai_dict_from_arrays_steal(keys, values, hkeys, n);
     }
 
     if (t == Slow_SetType) {
         PyObject *elems = PyObject_GetAttrString(src, "elements");
         if (!elems) return NULL;
-
         Py_ssize_t n = PyTuple_GET_SIZE(elems);
-        PyObject *fast_tup = PyTuple_New(n);
-        if (!fast_tup) {
+        PyObject **elements = n > 0
+            ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
+        PyObject **hkeys = n > 0
+            ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
+        if (n > 0 && (!elements || !hkeys)) {
+            PyMem_Free(elements);
+            PyMem_Free(hkeys);
             Py_DECREF(elems);
+            PyErr_NoMemory();
             return NULL;
         }
-
         for (Py_ssize_t i = 0; i < n; i++) {
             PyObject *fe = menai_convert_value(PyTuple_GET_ITEM(elems, i));
             if (!fe) {
-                Py_DECREF(fast_tup);
+                for (Py_ssize_t j = 0; j < i; j++) {
+                    Py_DECREF(elements[j]);
+                    Py_DECREF(hkeys[j]);
+                }
+                PyMem_Free(elements);
+                PyMem_Free(hkeys);
                 Py_DECREF(elems);
                 return NULL;
             }
-
-            PyTuple_SET_ITEM(fast_tup, i, fe);
+            PyObject *hk = menai_hashable_key(fe);
+            if (!hk) {
+                Py_DECREF(fe);
+                for (Py_ssize_t j = 0; j < i; j++) {
+                    Py_DECREF(elements[j]);
+                    Py_DECREF(hkeys[j]);
+                }
+                PyMem_Free(elements);
+                PyMem_Free(hkeys);
+                Py_DECREF(elems);
+                return NULL;
+            }
+            elements[i] = fe;
+            hkeys[i] = hk;
         }
-
         Py_DECREF(elems);
-        return menai_set_from_fast_tuple(fast_tup);
+        return menai_set_from_arrays_steal(elements, hkeys, n);
     }
 
     if (t == Slow_StructTypeType) {
@@ -866,18 +913,17 @@ _to_slow_memo(PyObject *src, PyObject *memo)
     }
     else if (t == &MenaiDict_Type) {
         if (PyDict_SetItem(memo, key, Py_None) < 0) goto done;
-        PyObject *pairs = ((MenaiDict_Object *)src)->pairs;
-        Py_ssize_t n = PyTuple_GET_SIZE(pairs);
+        MenaiDict_Object *d = (MenaiDict_Object *)src;
+        Py_ssize_t n = d->length;
         PyObject *slow_pairs = PyTuple_New(n);
         if (!slow_pairs) goto done;
         for (Py_ssize_t i = 0; i < n; i++) {
-            PyObject *pair = PyTuple_GET_ITEM(pairs, i);
-            PyObject *sk = _to_slow_memo(PyTuple_GET_ITEM(pair, 0), memo);
+            PyObject *sk = _to_slow_memo(d->keys[i], memo);
             if (!sk) {
                 Py_DECREF(slow_pairs);
                 goto done;
             }
-            PyObject *sv = _to_slow_memo(PyTuple_GET_ITEM(pair, 1), memo);
+            PyObject *sv = _to_slow_memo(d->values[i], memo);
             if (!sv) {
                 Py_DECREF(sk);
                 Py_DECREF(slow_pairs);
@@ -902,12 +948,12 @@ _to_slow_memo(PyObject *src, PyObject *memo)
     }
     else if (t == &MenaiSet_Type) {
         if (PyDict_SetItem(memo, key, Py_None) < 0) goto done;
-        PyObject *elems = ((MenaiSet_Object *)src)->elements;
-        Py_ssize_t n = PyTuple_GET_SIZE(elems);
+        MenaiSet_Object *s = (MenaiSet_Object *)src;
+        Py_ssize_t n = s->length;
         PyObject *slow_tup = PyTuple_New(n);
         if (!slow_tup) goto done;
         for (Py_ssize_t i = 0; i < n; i++) {
-            PyObject *se = _to_slow_memo(PyTuple_GET_ITEM(elems, i), memo);
+            PyObject *se = _to_slow_memo(s->elements[i], memo);
             if (!se) {
                 Py_DECREF(slow_tup);
                 goto done;

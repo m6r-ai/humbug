@@ -1,13 +1,16 @@
 /*
  * menai_vm_dict.c — MenaiDict type implementation.
  *
- * MenaiDict stores an ordered tuple of (key, value) pairs and a Python dict
- * mapping hashable keys to pairs for O(1) lookup.
+ * MenaiDict stores an ordered sequence of key-value entries as three parallel
+ * C arrays (keys, values, hkeys) plus a Python dict mapping canonical hash
+ * keys to integer indices for O(1) lookup.  Canonical hash keys are computed
+ * once at construction time and reused for all subsequent operations.
  *
- * Also provides:
- *   menai_dict_new_empty()         — zero-pair dict for the singleton
- *   menai_dict_from_fast_pairs()   — build from a tuple of fast (k,v) pairs,
- *                                    used by menai_convert_value()
+ * The primary construction path for VM operations is menai_dict_from_arrays_steal,
+ * which takes already-prepared parallel arrays and builds the lookup dict in a
+ * single pass.  The Python-callable MenaiDict() constructor (MenaiDict_new) is
+ * used only for the empty-dict singleton and for slow-path construction from
+ * Python-level sequences.
  */
 
 #define PY_SSIZE_T_CLEAN
@@ -16,66 +19,196 @@
 #include "menai_vm_dict.h"
 #include "menai_vm_value.h"
 
+/*
+ * _dict_alloc_arrays — allocate three parallel PyObject* arrays of size n.
+ *
+ * On success, *out_keys, *out_values, and *out_hkeys each point to a freshly
+ * allocated array of n pointers (uninitialised).  Returns 0 on success, -1
+ * on MemoryError with all three pointers set to NULL.
+ */
+static int
+_dict_alloc_arrays(Py_ssize_t n, PyObject ***out_keys,
+                   PyObject ***out_values, PyObject ***out_hkeys)
+{
+    *out_keys = NULL;
+    *out_values = NULL;
+    *out_hkeys = NULL;
+    if (n == 0) return 0;
+
+    *out_keys = (PyObject **)PyMem_Malloc(n * sizeof(PyObject *));
+    if (!*out_keys) goto oom;
+
+    *out_values = (PyObject **)PyMem_Malloc(n * sizeof(PyObject *));
+    if (!*out_values) goto oom;
+
+    *out_hkeys = (PyObject **)PyMem_Malloc(n * sizeof(PyObject *));
+    if (!*out_hkeys) goto oom;
+
+    return 0;
+
+oom:
+    PyMem_Free(*out_keys);
+    PyMem_Free(*out_values);
+    *out_keys = NULL;
+    *out_values = NULL;
+    *out_hkeys = NULL;
+    PyErr_NoMemory();
+    return -1;
+}
+
+/*
+ * _dict_free_arrays — release n owned references in each array and free them.
+ * Any NULL array pointer is safely ignored.
+ */
+static void
+_dict_free_arrays(PyObject **keys, PyObject **values, PyObject **hkeys,
+                  Py_ssize_t n)
+{
+    if (keys) {
+        for (Py_ssize_t i = 0; i < n; i++) Py_XDECREF(keys[i]);
+        PyMem_Free(keys);
+    }
+    if (values) {
+        for (Py_ssize_t i = 0; i < n; i++) Py_XDECREF(values[i]);
+        PyMem_Free(values);
+    }
+    if (hkeys) {
+        for (Py_ssize_t i = 0; i < n; i++) Py_XDECREF(hkeys[i]);
+        PyMem_Free(hkeys);
+    }
+}
+
+/*
+ * _dict_build_lookup — build a Python dict mapping hkeys[i] -> PyLong(i).
+ *
+ * Returns a new reference to the lookup dict, or NULL on error.
+ * Does not consume or modify the arrays.
+ */
+static PyObject *
+_dict_build_lookup(PyObject **hkeys, Py_ssize_t n)
+{
+    PyObject *lookup = PyDict_New();
+    if (!lookup) return NULL;
+
+    for (Py_ssize_t i = 0; i < n; i++) {
+        PyObject *idx = PyLong_FromSsize_t(i);
+        if (!idx) {
+            Py_DECREF(lookup);
+            return NULL;
+        }
+        int ok = PyDict_SetItem(lookup, hkeys[i], idx);
+        Py_DECREF(idx);
+        if (ok < 0) {
+            Py_DECREF(lookup);
+            return NULL;
+        }
+    }
+    return lookup;
+}
+
+/*
+ * menai_dict_from_arrays_steal — the primary fast constructor.
+ *
+ * Takes ownership of keys, values, and hkeys arrays (and their contents).
+ * Builds the lookup dict from hkeys then wraps everything in a MenaiDict.
+ * Frees all arrays on failure.
+ */
+PyObject *
+menai_dict_from_arrays_steal(PyObject **keys, PyObject **values,
+                              PyObject **hkeys, Py_ssize_t n)
+{
+    PyObject *lookup = _dict_build_lookup(hkeys, n);
+    if (!lookup) {
+        _dict_free_arrays(keys, values, hkeys, n);
+        return NULL;
+    }
+
+    MenaiDict_Object *obj =
+        (MenaiDict_Object *)MenaiDict_Type.tp_alloc(&MenaiDict_Type, 0);
+    if (!obj) {
+        Py_DECREF(lookup);
+        _dict_free_arrays(keys, values, hkeys, n);
+        return NULL;
+    }
+
+    obj->keys = keys;
+    obj->values = values;
+    obj->hkeys = hkeys;
+    obj->lookup = lookup;
+    obj->length = n;
+    return (PyObject *)obj;
+}
+
+/*
+ * MenaiDict_new — Python-callable constructor: MenaiDict(pairs=None).
+ *
+ * pairs may be any sequence of (key, value) 2-tuples.  Used for the
+ * empty-dict singleton and for the Python-level MenaiDict() call path.
+ * VM operations use menai_dict_from_arrays_steal instead.
+ */
 static PyObject *
 MenaiDict_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
+    (void)type;
     PyObject *pairs_arg = NULL;
     static char *kwlist[] = {"pairs", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", kwlist, &pairs_arg))
         return NULL;
 
-    PyObject *pairs;
-    if (pairs_arg == NULL) {
-        pairs = PyTuple_New(0);
-    } else {
-        pairs = PySequence_Tuple(pairs_arg);
+    if (pairs_arg == NULL || PySequence_Size(pairs_arg) == 0) {
+        return menai_dict_new_empty();
     }
 
-    if (!pairs) return NULL;
+    PyObject *src = PySequence_Tuple(pairs_arg);
+    if (!src) return NULL;
 
-    /* Build lookup dict */
-    PyObject *lookup = PyDict_New();
-    if (!lookup) {
-        Py_DECREF(pairs);
+    Py_ssize_t n = PyTuple_GET_SIZE(src);
+    PyObject **keys = NULL, **values = NULL, **hkeys = NULL;
+    if (_dict_alloc_arrays(n, &keys, &values, &hkeys) < 0) {
+        Py_DECREF(src);
         return NULL;
     }
 
-    Py_ssize_t n = PyTuple_GET_SIZE(pairs);
     for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *pair = PyTuple_GET_ITEM(pairs, i);
+        PyObject *pair = PyTuple_GET_ITEM(src, i);
         PyObject *k = PyTuple_GET_ITEM(pair, 0);
+        PyObject *v = PyTuple_GET_ITEM(pair, 1);
         PyObject *hk = menai_hashable_key(k);
         if (!hk) {
-            Py_DECREF(lookup);
-            Py_DECREF(pairs);
+            /* Free the i entries already initialised. */
+            for (Py_ssize_t j = 0; j < i; j++) {
+                Py_DECREF(keys[j]);
+                Py_DECREF(values[j]);
+                Py_DECREF(hkeys[j]);
+            }
+            PyMem_Free(keys);
+            PyMem_Free(values);
+            PyMem_Free(hkeys);
+            Py_DECREF(src);
             return NULL;
         }
-        if (PyDict_SetItem(lookup, hk, pair) < 0) {
-            Py_DECREF(hk);
-            Py_DECREF(lookup);
-            Py_DECREF(pairs);
-            return NULL;
-        }
-        Py_DECREF(hk);
+        Py_INCREF(k);
+        Py_INCREF(v);
+        keys[i] = k;
+        values[i] = v;
+        hkeys[i] = hk;
     }
+    Py_DECREF(src);
 
-    MenaiDict_Object *self = (MenaiDict_Object *)type->tp_alloc(type, 0);
-    if (self) {
-        self->pairs  = pairs;
-        self->lookup = lookup;
-        self->length = n;
-    } else {
-        Py_DECREF(pairs);
-        Py_DECREF(lookup);
-    }
-    return (PyObject *)self;
+    return menai_dict_from_arrays_steal(keys, values, hkeys, n);
 }
 
 static void
 MenaiDict_dealloc(PyObject *self)
 {
-    Py_XDECREF(((MenaiDict_Object *)self)->pairs);
-    Py_XDECREF(((MenaiDict_Object *)self)->lookup);
+    MenaiDict_Object *d = (MenaiDict_Object *)self;
+    Py_ssize_t n = d->length;
+    _dict_free_arrays(d->keys, d->values, d->hkeys, n);
+    Py_XDECREF(d->lookup);
+    d->keys = NULL;
+    d->values = NULL;
+    d->hkeys = NULL;
+    d->lookup = NULL;
     Py_TYPE(self)->tp_free(self);
 }
 
@@ -91,23 +224,23 @@ static PyObject *
 MenaiDict_describe(PyObject *self, PyObject *args)
 {
     (void)args;
-    PyObject *pairs = ((MenaiDict_Object *)self)->pairs;
-    Py_ssize_t n = PyTuple_GET_SIZE(pairs);
+    MenaiDict_Object *d = (MenaiDict_Object *)self;
+    Py_ssize_t n = d->length;
     if (n == 0) return PyUnicode_FromString("{}");
 
     PyObject *parts = PyList_New(n);
     if (!parts) return NULL;
 
     for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *pair = PyTuple_GET_ITEM(pairs, i);
-        PyObject *kd = PyObject_CallMethod(PyTuple_GET_ITEM(pair, 0), "describe", NULL);
-        PyObject *vd = kd ? PyObject_CallMethod(PyTuple_GET_ITEM(pair, 1), "describe", NULL) : NULL;
+        PyObject *kd = PyObject_CallMethod(d->keys[i], "describe", NULL);
+        PyObject *vd = kd
+            ? PyObject_CallMethod(d->values[i], "describe", NULL)
+            : NULL;
         if (!vd) {
             Py_XDECREF(kd);
             Py_DECREF(parts);
             return NULL;
         }
-
         PyObject *entry = PyUnicode_FromFormat("(%U %U)", kd, vd);
         Py_DECREF(kd);
         Py_DECREF(vd);
@@ -115,9 +248,9 @@ MenaiDict_describe(PyObject *self, PyObject *args)
             Py_DECREF(parts);
             return NULL;
         }
-
         PyList_SET_ITEM(parts, i, entry);
     }
+
     PyObject *sep = PyUnicode_FromString(" ");
     PyObject *joined = PyUnicode_Join(sep, parts);
     Py_DECREF(sep);
@@ -137,93 +270,107 @@ MenaiDict_richcompare(PyObject *self, PyObject *other, int op)
         if (op == Py_NE) Py_RETURN_TRUE;
         Py_RETURN_NOTIMPLEMENTED;
     }
-    return PyObject_RichCompare(
-        ((MenaiDict_Object *)self)->pairs,
-        ((MenaiDict_Object *)other)->pairs, op);
+
+    MenaiDict_Object *a = (MenaiDict_Object *)self;
+    MenaiDict_Object *b = (MenaiDict_Object *)other;
+
+    if (op == Py_EQ) {
+        if (a->length != b->length) Py_RETURN_FALSE;
+        for (Py_ssize_t i = 0; i < a->length; i++) {
+            int keq = PyObject_RichCompareBool(a->hkeys[i], b->hkeys[i], Py_EQ);
+            if (keq <= 0) {
+                if (keq < 0) return NULL;
+                Py_RETURN_FALSE;
+            }
+            int veq = PyObject_RichCompareBool(a->values[i], b->values[i], Py_EQ);
+            if (veq <= 0) {
+                if (veq < 0) return NULL;
+                Py_RETURN_FALSE;
+            }
+        }
+        Py_RETURN_TRUE;
+    }
+
+    if (op == Py_NE) {
+        if (a->length != b->length) Py_RETURN_TRUE;
+        for (Py_ssize_t i = 0; i < a->length; i++) {
+            int keq = PyObject_RichCompareBool(a->hkeys[i], b->hkeys[i], Py_EQ);
+            if (keq < 0) return NULL;
+            if (!keq) Py_RETURN_TRUE;
+            int veq = PyObject_RichCompareBool(a->values[i], b->values[i], Py_EQ);
+            if (veq < 0) return NULL;
+            if (!veq) Py_RETURN_TRUE;
+        }
+        Py_RETURN_FALSE;
+    }
+
+    Py_RETURN_NOTIMPLEMENTED;
 }
 
 static Py_hash_t
 MenaiDict_hash(PyObject *self)
 {
-    return PyObject_Hash(((MenaiDict_Object *)self)->pairs);
-}
+    MenaiDict_Object *d = (MenaiDict_Object *)self;
+    Py_ssize_t n = d->length;
 
-static PyObject *
-MenaiDict_to_hashable_key(PyObject *self, PyObject *key)
-{
-    (void)self;
-    return menai_hashable_key(key);
-}
+    /*
+     * Build a temporary tuple of (hkey, value) pairs and hash that.
+     * Dicts are rarely used as keys so this path is uncommon.
+     */
+    PyObject *tup = PyTuple_New(n);
+    if (!tup) return -1;
 
-static PyObject *
-MenaiDict_get_pairs(PyObject *self, void *closure)
-{
-    (void)closure;
-    PyObject *p = ((MenaiDict_Object *)self)->pairs;
-    Py_INCREF(p);
-    return p;
-}
+    for (Py_ssize_t i = 0; i < n; i++) {
+        PyObject *pair = PyTuple_Pack(2, d->hkeys[i], d->values[i]);
+        if (!pair) {
+            Py_DECREF(tup);
+            return -1;
+        }
+        PyTuple_SET_ITEM(tup, i, pair);
+    }
 
-static PyObject *
-MenaiDict_get_lookup(PyObject *self, void *closure)
-{
-    (void)closure;
-    PyObject *l = ((MenaiDict_Object *)self)->lookup;
-    Py_INCREF(l);
-    return l;
+    Py_hash_t h = PyObject_Hash(tup);
+    Py_DECREF(tup);
+    return h;
 }
-
-static PyGetSetDef MenaiDict_getset[] = {
-    {"pairs", MenaiDict_get_pairs, NULL, NULL, NULL},
-    {"lookup", MenaiDict_get_lookup, NULL, NULL, NULL},
-    {NULL, NULL, NULL, NULL, NULL}
-};
 
 static PyMethodDef MenaiDict_methods[] = {
     {"type_name", MenaiDict_type_name, METH_NOARGS, NULL},
-    {"describe", MenaiDict_describe, METH_NOARGS, NULL},
-    {"to_hashable_key", (PyCFunction)MenaiDict_to_hashable_key, METH_O | METH_STATIC, NULL},
+    {"describe",  MenaiDict_describe,  METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 PyTypeObject MenaiDict_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "menai.menai_vm_value.MenaiDict",
+    .tp_name      = "menai.menai_vm_value.MenaiDict",
     .tp_basicsize = sizeof(MenaiDict_Object),
-    .tp_flags = Py_TPFLAGS_DEFAULT,
-    .tp_new = MenaiDict_new,
-    .tp_dealloc = MenaiDict_dealloc,
-    .tp_methods = MenaiDict_methods,
-    .tp_getset = MenaiDict_getset,
+    .tp_flags     = Py_TPFLAGS_DEFAULT,
+    .tp_new       = MenaiDict_new,
+    .tp_dealloc   = MenaiDict_dealloc,
+    .tp_methods   = MenaiDict_methods,
     .tp_richcompare = MenaiDict_richcompare,
-    .tp_hash = MenaiDict_hash,
+    .tp_hash      = MenaiDict_hash,
 };
 
 PyObject *
 menai_dict_new_empty(void)
 {
-    PyObject *empty_tup = PyTuple_New(0);
-    if (!empty_tup) return NULL;
+    MenaiDict_Object *obj =
+        (MenaiDict_Object *)MenaiDict_Type.tp_alloc(&MenaiDict_Type, 0);
+    if (!obj) return NULL;
 
-    PyObject *args = PyTuple_Pack(1, empty_tup);
-    Py_DECREF(empty_tup);
-    if (!args) return NULL;
+    PyObject *lookup = PyDict_New();
+    if (!lookup) {
+        Py_DECREF(obj);
+        return NULL;
+    }
 
-    PyObject *r = MenaiDict_new(&MenaiDict_Type, args, NULL);
-    Py_DECREF(args);
-    return r;
-}
-
-PyObject *
-menai_dict_from_fast_pairs(PyObject *fast_pairs)
-{
-    PyObject *args = PyTuple_Pack(1, fast_pairs);
-    Py_DECREF(fast_pairs);
-    if (!args) return NULL;
-
-    PyObject *r = MenaiDict_new(&MenaiDict_Type, args, NULL);
-    Py_DECREF(args);
-    return r;
+    obj->keys = NULL;
+    obj->values = NULL;
+    obj->hkeys = NULL;
+    obj->lookup = lookup;
+    obj->length = 0;
+    return (PyObject *)obj;
 }
 
 int

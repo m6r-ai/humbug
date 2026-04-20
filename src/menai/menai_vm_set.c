@@ -1,13 +1,16 @@
 /*
  * menai_vm_set.c — MenaiSet type implementation.
  *
- * MenaiSet stores an ordered, deduplicated tuple of elements alongside a
- * frozenset of hashable keys for O(1) membership testing.
+ * MenaiSet stores an ordered, deduplicated sequence of elements as two
+ * parallel C arrays (elements, hkeys) plus a Python frozenset of canonical
+ * hash keys for O(1) membership testing.  Canonical hash keys are computed
+ * once at construction time and reused for all subsequent set operations.
  *
- * Also provides:
- *   menai_set_new_empty()         — zero-element set for the singleton
- *   menai_set_from_fast_tuple()   — build from a tuple of fast values,
- *                                   used by menai_convert_value()
+ * The primary construction path for VM operations is menai_set_from_arrays_steal,
+ * which takes already-prepared parallel arrays and builds the members frozenset
+ * in a single pass.  The Python-callable MenaiSet() constructor (MenaiSet_new)
+ * is used only for the empty-set singleton and for slow-path construction from
+ * Python-level sequences.
  */
 
 #define PY_SSIZE_T_CLEAN
@@ -16,126 +19,188 @@
 #include "menai_vm_set.h"
 #include "menai_vm_value.h"
 
+/*
+ * _set_free_arrays — release n owned references in each array and free them.
+ * Any NULL array pointer is safely ignored.
+ */
+static void
+_set_free_arrays(PyObject **elements, PyObject **hkeys, Py_ssize_t n)
+{
+    if (elements) {
+        for (Py_ssize_t i = 0; i < n; i++) Py_XDECREF(elements[i]);
+        PyMem_Free(elements);
+    }
+    if (hkeys) {
+        for (Py_ssize_t i = 0; i < n; i++) Py_XDECREF(hkeys[i]);
+        PyMem_Free(hkeys);
+    }
+}
+
+/*
+ * _set_build_members — build a frozenset from an array of hkeys.
+ *
+ * Returns a new reference, or NULL on error.
+ * Does not consume or modify the array.
+ */
+static PyObject *
+_set_build_members(PyObject **hkeys, Py_ssize_t n)
+{
+    PyObject *mset = PySet_New(NULL);
+    if (!mset) return NULL;
+
+    for (Py_ssize_t i = 0; i < n; i++) {
+        if (PySet_Add(mset, hkeys[i]) < 0) {
+            Py_DECREF(mset);
+            return NULL;
+        }
+    }
+
+    PyObject *members = PyFrozenSet_New(mset);
+    Py_DECREF(mset);
+    return members;
+}
+
+/*
+ * menai_set_from_arrays_steal — the primary fast constructor.
+ *
+ * Takes ownership of elements and hkeys arrays (and their contents).
+ * Builds the members frozenset from hkeys then wraps everything in a MenaiSet.
+ * Frees both arrays on failure.
+ */
+PyObject *
+menai_set_from_arrays_steal(PyObject **elements, PyObject **hkeys, Py_ssize_t n)
+{
+    PyObject *members = _set_build_members(hkeys, n);
+    if (!members) {
+        _set_free_arrays(elements, hkeys, n);
+        return NULL;
+    }
+
+    MenaiSet_Object *obj =
+        (MenaiSet_Object *)MenaiSet_Type.tp_alloc(&MenaiSet_Type, 0);
+    if (!obj) {
+        Py_DECREF(members);
+        _set_free_arrays(elements, hkeys, n);
+        return NULL;
+    }
+
+    obj->elements = elements;
+    obj->hkeys = hkeys;
+    obj->members = members;
+    obj->length = n;
+    return (PyObject *)obj;
+}
+
+/*
+ * MenaiSet_new — Python-callable constructor: MenaiSet(elements=None).
+ *
+ * elements may be any sequence of MenaiValues.  Handles deduplication.
+ * Used for the empty-set singleton and for the Python-level MenaiSet() call
+ * path.  VM operations use menai_set_from_arrays_steal instead.
+ */
 static PyObject *
 MenaiSet_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
+    (void)type;
     PyObject *elements_arg = NULL;
     static char *kwlist[] = {"elements", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", kwlist, &elements_arg)) return NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|O", kwlist, &elements_arg))
+        return NULL;
 
-    PyObject *src_tup;
-    if (elements_arg == NULL) {
-        src_tup = PyTuple_New(0);
-    } else {
-        src_tup = PySequence_Tuple(elements_arg);
+    if (elements_arg == NULL || PySequence_Size(elements_arg) == 0)
+        return menai_set_new_empty();
+
+    PyObject *src = PySequence_Tuple(elements_arg);
+    if (!src) return NULL;
+
+    Py_ssize_t src_n = PyTuple_GET_SIZE(src);
+
+    /* Deduplicate in a single pass, computing hkeys as we go. */
+    PyObject **elements = (PyObject **)PyMem_Malloc(src_n * sizeof(PyObject *));
+    PyObject **hkeys = (PyObject **)PyMem_Malloc(src_n * sizeof(PyObject *));
+    if (!elements || !hkeys) {
+        PyMem_Free(elements);
+        PyMem_Free(hkeys);
+        Py_DECREF(src);
+        PyErr_NoMemory();
+        return NULL;
     }
 
-    if (!src_tup) return NULL;
-
-    /* Deduplicate, preserving order */
     PyObject *seen = PySet_New(NULL);
     if (!seen) {
-        Py_DECREF(src_tup);
-        return NULL;
-    }
-    PyObject *deduped = PyList_New(0);
-    if (!deduped) {
-        Py_DECREF(seen);
-        Py_DECREF(src_tup);
+        PyMem_Free(elements);
+        PyMem_Free(hkeys);
+        Py_DECREF(src);
         return NULL;
     }
 
-    Py_ssize_t n = PyTuple_GET_SIZE(src_tup);
-    for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *elem = PyTuple_GET_ITEM(src_tup, i);
+    Py_ssize_t out = 0;
+    for (Py_ssize_t i = 0; i < src_n; i++) {
+        PyObject *elem = PyTuple_GET_ITEM(src, i);
         PyObject *hk = menai_hashable_key(elem);
         if (!hk) {
-            Py_DECREF(deduped);
+            _set_free_arrays(elements, hkeys, out);
             Py_DECREF(seen);
-            Py_DECREF(src_tup);
+            Py_DECREF(src);
             return NULL;
         }
 
         int has = PySet_Contains(seen, hk);
         if (has < 0) {
             Py_DECREF(hk);
-            Py_DECREF(deduped);
+            _set_free_arrays(elements, hkeys, out);
             Py_DECREF(seen);
-            Py_DECREF(src_tup);
+            Py_DECREF(src);
             return NULL;
         }
 
         if (!has) {
-            if (PySet_Add(seen, hk) < 0 || PyList_Append(deduped, elem) < 0) {
+            if (PySet_Add(seen, hk) < 0) {
                 Py_DECREF(hk);
-                Py_DECREF(deduped);
+                _set_free_arrays(elements, hkeys, out);
                 Py_DECREF(seen);
-                Py_DECREF(src_tup);
+                Py_DECREF(src);
                 return NULL;
             }
+            Py_INCREF(elem);
+            elements[out] = elem;
+            hkeys[out] = hk;  /* steal hk */
+            out++;
+        } else {
+            Py_DECREF(hk);
         }
-
-        Py_DECREF(hk);
     }
 
     Py_DECREF(seen);
-    Py_DECREF(src_tup);
+    Py_DECREF(src);
 
-    PyObject *elements = PyList_AsTuple(deduped);
-    Py_DECREF(deduped);
-    if (!elements) return NULL;
-
-    /* Build frozenset of hashable keys */
-    PyObject *members_set = PySet_New(NULL);
-    if (!members_set) {
-        Py_DECREF(elements);
-        return NULL;
+    if (out == 0) {
+        PyMem_Free(elements);
+        PyMem_Free(hkeys);
+        return menai_set_new_empty();
     }
 
-    n = PyTuple_GET_SIZE(elements);
-    for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *hk = menai_hashable_key(PyTuple_GET_ITEM(elements, i));
-        if (!hk) {
-            Py_DECREF(members_set);
-            Py_DECREF(elements);
-            return NULL;
-        }
-
-        if (PySet_Add(members_set, hk) < 0) {
-            Py_DECREF(hk);
-            Py_DECREF(members_set);
-            Py_DECREF(elements);
-            return NULL;
-        }
-
-        Py_DECREF(hk);
+    /* Shrink arrays to actual size if deduplication removed elements. */
+    if (out < src_n) {
+        PyObject **te = (PyObject **)PyMem_Realloc(elements, out * sizeof(PyObject *));
+        PyObject **th = (PyObject **)PyMem_Realloc(hkeys, out * sizeof(PyObject *));
+        if (te) elements = te;
+        if (th) hkeys = th;
     }
 
-    PyObject *members = PyFrozenSet_New(members_set);
-    Py_DECREF(members_set);
-    if (!members) {
-        Py_DECREF(elements);
-        return NULL;
-    }
-
-    MenaiSet_Object *self = (MenaiSet_Object *)type->tp_alloc(type, 0);
-    if (self) {
-        self->elements = elements;
-        self->members = members;
-        self->length = PyTuple_GET_SIZE(elements);
-    } else {
-        Py_DECREF(elements);
-        Py_DECREF(members);
-    }
-
-    return (PyObject *)self;
+    return menai_set_from_arrays_steal(elements, hkeys, out);
 }
 
 static void
 MenaiSet_dealloc(PyObject *self)
 {
-    Py_XDECREF(((MenaiSet_Object *)self)->elements);
-    Py_XDECREF(((MenaiSet_Object *)self)->members);
+    MenaiSet_Object *s = (MenaiSet_Object *)self;
+    Py_ssize_t n = s->length;
+    _set_free_arrays(s->elements, s->hkeys, n);
+    Py_XDECREF(s->members);
+    s->elements = NULL;
+    s->hkeys = NULL;
+    s->members = NULL;
     Py_TYPE(self)->tp_free(self);
 }
 
@@ -151,14 +216,15 @@ static PyObject *
 MenaiSet_describe(PyObject *self, PyObject *args)
 {
     (void)args;
-    PyObject *elems = ((MenaiSet_Object *)self)->elements;
-    Py_ssize_t n = PyTuple_GET_SIZE(elems);
+    MenaiSet_Object *s = (MenaiSet_Object *)self;
+    Py_ssize_t n = s->length;
     if (n == 0) return PyUnicode_FromString("#{}");
 
     PyObject *parts = PyList_New(n);
     if (!parts) return NULL;
+
     for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *desc = PyObject_CallMethod(PyTuple_GET_ITEM(elems, i), "describe", NULL);
+        PyObject *desc = PyObject_CallMethod(s->elements[i], "describe", NULL);
         if (!desc) {
             Py_DECREF(parts);
             return NULL;
@@ -186,6 +252,7 @@ MenaiSet_richcompare(PyObject *self, PyObject *other, int op)
         Py_RETURN_NOTIMPLEMENTED;
     }
 
+    /* Set equality/inequality is membership-based, not order-based. */
     return PyObject_RichCompare(
         ((MenaiSet_Object *)self)->members,
         ((MenaiSet_Object *)other)->members, op);
@@ -197,74 +264,42 @@ MenaiSet_hash(PyObject *self)
     return PyObject_Hash(((MenaiSet_Object *)self)->members);
 }
 
-static PyObject *
-MenaiSet_get_elements(PyObject *self, void *closure)
-{
-    (void)closure;
-    PyObject *e = ((MenaiSet_Object *)self)->elements;
-    Py_INCREF(e);
-    return e;
-}
-
-static PyObject *
-MenaiSet_get_members(PyObject *self, void *closure)
-{
-    (void)closure;
-    PyObject *m = ((MenaiSet_Object *)self)->members;
-    Py_INCREF(m);
-    return m;
-}
-
-static PyGetSetDef MenaiSet_getset[] = {
-    {"elements", MenaiSet_get_elements, NULL, NULL, NULL},
-    {"members", MenaiSet_get_members, NULL, NULL, NULL},
-    {NULL, NULL, NULL, NULL, NULL}
-};
-
 static PyMethodDef MenaiSet_methods[] = {
     {"type_name", MenaiSet_type_name, METH_NOARGS, NULL},
-    {"describe", MenaiSet_describe, METH_NOARGS, NULL},
+    {"describe",  MenaiSet_describe,  METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
 PyTypeObject MenaiSet_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "menai.menai_vm_value.MenaiSet",
+    .tp_name      = "menai.menai_vm_value.MenaiSet",
     .tp_basicsize = sizeof(MenaiSet_Object),
-    .tp_flags = Py_TPFLAGS_DEFAULT,
-    .tp_new = MenaiSet_new,
-    .tp_dealloc = MenaiSet_dealloc,
-    .tp_methods = MenaiSet_methods,
-    .tp_getset = MenaiSet_getset,
+    .tp_flags     = Py_TPFLAGS_DEFAULT,
+    .tp_new       = MenaiSet_new,
+    .tp_dealloc   = MenaiSet_dealloc,
+    .tp_methods   = MenaiSet_methods,
     .tp_richcompare = MenaiSet_richcompare,
-    .tp_hash = MenaiSet_hash,
+    .tp_hash      = MenaiSet_hash,
 };
 
 PyObject *
 menai_set_new_empty(void)
 {
-    PyObject *empty_tup = PyTuple_New(0);
-    if (!empty_tup) return NULL;
+    MenaiSet_Object *obj =
+        (MenaiSet_Object *)MenaiSet_Type.tp_alloc(&MenaiSet_Type, 0);
+    if (!obj) return NULL;
 
-    PyObject *args = PyTuple_Pack(1, empty_tup);
-    Py_DECREF(empty_tup);
-    if (!args) return NULL;
+    PyObject *members = PyFrozenSet_New(NULL);
+    if (!members) {
+        Py_DECREF(obj);
+        return NULL;
+    }
 
-    PyObject *r = MenaiSet_new(&MenaiSet_Type, args, NULL);
-    Py_DECREF(args);
-    return r;
-}
-
-PyObject *
-menai_set_from_fast_tuple(PyObject *fast_tup)
-{
-    PyObject *args = PyTuple_Pack(1, fast_tup);
-    Py_DECREF(fast_tup);
-    if (!args) return NULL;
-
-    PyObject *r = MenaiSet_new(&MenaiSet_Type, args, NULL);
-    Py_DECREF(args);
-    return r;
+    obj->elements = NULL;
+    obj->hkeys = NULL;
+    obj->members = members;
+    obj->length = 0;
+    return (PyObject *)obj;
 }
 
 int
