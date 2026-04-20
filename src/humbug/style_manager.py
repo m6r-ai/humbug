@@ -526,8 +526,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#202020"
             },
             ColorRole.SYNTAX_03: {
-                ColorMode.DARK: "#68b068",
-                ColorMode.LIGHT: "#407040"
+                ColorMode.DARK: "#68c068",
+                ColorMode.LIGHT: "#40a040"
             },
             ColorRole.SYNTAX_04: {
                 ColorMode.DARK: "#ffa0eb",
@@ -558,8 +558,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#a000a0"
             },
             ColorRole.SYNTAX_11: {
-                ColorMode.DARK: "#80b0f0",
-                ColorMode.LIGHT: "#0060c0"
+                ColorMode.DARK: "#80a0f0",
+                ColorMode.LIGHT: "#0040c0"
             },
             ColorRole.SYNTAX_12: {
                 ColorMode.DARK: "#f08080",
@@ -595,7 +595,7 @@ class StyleManager(QObject):
             },
             ColorRole.SYNTAX_20: {
                 ColorMode.DARK: "#c05040",
-                ColorMode.LIGHT: "#803828"
+                ColorMode.LIGHT: "#b03828"
             },
             ColorRole.SYNTAX_21: {
                 ColorMode.DARK: "#30c090",
