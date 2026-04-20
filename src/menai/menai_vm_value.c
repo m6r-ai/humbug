@@ -703,6 +703,7 @@ menai_convert_code_object(PyObject *code)
         cc->is_variadic = is_variadic;
         cc->ncap = ncap;
         cc->code_len = code_len;
+        cc->closure_caches_items = child_cc_list ? ((PyListObject *)child_cc_list)->ob_item : NULL;
 
         /* child_cc ownership transferred to cc->closure_caches if it was a list;
          * otherwise drop the ref here. */

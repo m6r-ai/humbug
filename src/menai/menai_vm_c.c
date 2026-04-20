@@ -700,6 +700,7 @@ typedef struct {
     PyObject *names;            /* borrowed ref — list of global name strings */
     PyObject **names_items;     /* raw pointer into names ob_item array */
     PyObject *closure_caches;   /* borrowed ref — list of child _closure_cache tuples */
+    PyObject **closure_caches_items; /* raw pointer into closure_caches ob_item, or NULL */
     uint64_t *instrs;           /* raw C pointer into the array.array buffer */
     int code_len;
     int local_count;
@@ -782,6 +783,7 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
     f->names_items = ((PyListObject *)names)->ob_item;
     PyObject *_cc = PyObject_GetAttrString(code_obj, "_code_caches");
     f->closure_caches = (_cc && PyList_Check(_cc)) ? _cc : NULL;
+    f->closure_caches_items = f->closure_caches ? ((PyListObject *)f->closure_caches)->ob_item : NULL;
     Py_XDECREF(_cc);  /* drop owned ref — f->code_obj keeps code_obj alive */
     PyErr_Clear();
     f->instrs = (uint64_t *)view.buf;
@@ -815,6 +817,7 @@ frame_setup_func(Frame *f, MenaiFunction_Object *func,
     f->names_items = func->names_items;
     f->local_count = func->local_count;
     f->closure_caches = func->closure_caches;  /* borrowed — func owns bytecode which owns it */
+    f->closure_caches_items = func->closure_caches_items;
     f->ip = 0;
     f->base = base;
     f->return_dest = return_dest;
@@ -832,6 +835,7 @@ frame_release(Frame *f)
     f->names = NULL;
     f->names_items = NULL;
     f->closure_caches = NULL;
+    f->closure_caches_items = NULL;
 }
 
 /* ---------------------------------------------------------------------------
@@ -2259,9 +2263,8 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            PyObject *capsule = PyList_GET_ITEM(frame->closure_caches, src0);
-            const ClosureCache *cc = (const ClosureCache *)PyCapsule_GetPointer(
-                capsule, CLOSURE_CACHE_CAPSULE_NAME);
+            PyObject *capsule = frame->closure_caches_items[src0];
+            const ClosureCache *cc = (const ClosureCache *)PyCapsule_GetPointer(capsule, CLOSURE_CACHE_CAPSULE_NAME);
             if (cc == NULL) goto error;
             PyObject *func = menai_function_alloc(cc, Menai_NONE);
             if (func == NULL) goto error;

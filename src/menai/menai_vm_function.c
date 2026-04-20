@@ -64,6 +64,7 @@ _cache_frame_fields(MenaiFunction_Object *self, PyObject *bytecode)
 
     PyObject *cc = PyObject_GetAttrString(bytecode, "_code_caches");
     self->closure_caches = (cc && PyList_Check(cc)) ? cc : NULL;
+    self->closure_caches_items = self->closure_caches ? ((PyListObject *)self->closure_caches)->ob_item : NULL;
     Py_XDECREF(cc);
     PyErr_Clear();
 }
@@ -114,6 +115,7 @@ MenaiFunction_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     self->code_len = 0;
     self->local_count = 0;
     self->closure_caches = NULL;
+    self->closure_caches_items = NULL;
     self->param_count = 0;
 
     /* Populate capture slots. */
@@ -377,6 +379,7 @@ menai_function_alloc(const ClosureCache *cache, PyObject *none_val)
     self->names_items = cache->names_list
         ? ((PyListObject *)cache->names_list)->ob_item : NULL;
     self->closure_caches = cache->closure_caches;
+    self->closure_caches_items = cache->closure_caches_items;
     self->instrs = cache->instrs;
     self->instrs_obj = cache->instrs_obj;
     self->code_len = cache->code_len;

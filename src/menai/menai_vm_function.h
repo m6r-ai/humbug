@@ -34,6 +34,7 @@ typedef struct {
     PyObject *constants;    /* list of fast MenaiValues */
     PyObject *names_list;   /* list of global name strings */
     PyObject *closure_caches; /* list of grandchild ClosureCache capsules, or NULL */
+    PyObject **closure_caches_items; /* raw pointer into closure_caches ob_item, or NULL */
     uint64_t *instrs;       /* raw pointer into instrs_obj buffer */
     int param_count;
     int local_count;
@@ -60,6 +61,7 @@ typedef struct {
     PyObject *names;               /* borrowed ref to bytecode.names list */
     PyObject **names_items;        /* raw pointer into names ob_item array */
     PyObject *closure_caches;      /* borrowed ref to bytecode._code_caches, or NULL */
+    PyObject **closure_caches_items; /* raw pointer into closure_caches ob_item, or NULL */
     int code_len;
     int local_count;
 
