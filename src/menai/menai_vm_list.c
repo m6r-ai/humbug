@@ -267,7 +267,6 @@ MenaiList_richcompare(PyObject *self, PyObject *other, int op)
         if (a->length != b->length) Py_RETURN_FALSE;
         for (Py_ssize_t i = 0; i < a->length; i++) {
             int eq = menai_value_equal(a->elements[i], b->elements[i]);
-            if (eq < 0) return NULL;
             if (!eq) Py_RETURN_FALSE;
         }
         Py_RETURN_TRUE;
@@ -276,7 +275,6 @@ MenaiList_richcompare(PyObject *self, PyObject *other, int op)
         if (a->length != b->length) Py_RETURN_TRUE;
         for (Py_ssize_t i = 0; i < a->length; i++) {
             int eq = menai_value_equal(a->elements[i], b->elements[i]);
-            if (eq < 0) return NULL;
             if (!eq) Py_RETURN_TRUE;
         }
         Py_RETURN_FALSE;

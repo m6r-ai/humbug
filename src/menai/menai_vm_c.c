@@ -3379,7 +3379,6 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_list(a, "list=?")) goto error;
             if (!require_list(b, "list=?")) goto error;
             int eq = menai_value_equal(a, b);
-            if (eq < 0) goto error;
             bool_store(regs, base + dest, eq);
             break;
         }
@@ -3389,7 +3388,6 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_list(a, "list!=?")) goto error;
             if (!require_list(b, "list!=?")) goto error;
             int eq = menai_value_equal(a, b);
-            if (eq < 0) goto error;
             bool_store(regs, base + dest, !eq);
             break;
         }
@@ -3571,7 +3569,6 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             int mem_found = 0;
             for (Py_ssize_t i = 0; i < lst_mem->length; i++) {
                 int eq = menai_value_equal(lst_mem->elements[i], item);
-                if (eq < 0) goto error;
                 if (eq) {
                     mem_found = 1;
                     break;
@@ -3589,7 +3586,6 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             Py_ssize_t found = -1;
             for (Py_ssize_t i = 0; i < n; i++) {
                 int eq = menai_value_equal(lst_idx->elements[i], item);
-                if (eq < 0) goto error;
                 if (eq) {
                     found = i;
                     break;
@@ -3655,7 +3651,6 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             Py_ssize_t keep = 0;
             for (Py_ssize_t i = 0; i < n; i++) {
                 int eq = menai_value_equal(lst_rm->elements[i], item);
-                if (eq < 0) goto error;
                 if (!eq) keep++;
             }
             PyObject **rm_arr = keep > 0
@@ -3668,11 +3663,6 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *e = lst_rm->elements[i];
                 int eq = menai_value_equal(e, item);
-                if (eq < 0) {
-                    for (Py_ssize_t k = 0; k < j; k++) Py_DECREF(rm_arr[k]);
-                    PyMem_Free(rm_arr);
-                    goto error;
-                }
                 if (!eq) {
                     Py_INCREF(e);
                     rm_arr[j++] = e;
@@ -3797,13 +3787,11 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                     break;
                 }
                 int keq = menai_value_equal(da->keys[i], db->keys[i]);
-                if (keq < 0) goto error;
                 if (!keq) {
                     eq = 0;
                     break;
                 }
                 int veq = menai_value_equal(da->values[i], db->values[i]);
-                if (veq < 0) goto error;
                 if (!veq) {
                     eq = 0;
                     break;
@@ -3826,13 +3814,11 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                     break;
                 }
                 int keq = menai_value_equal(da->keys[i], db->keys[i]);
-                if (keq < 0) goto error;
                 if (!keq) {
                     neq = 1;
                     break;
                 }
                 int veq = menai_value_equal(da->values[i], db->values[i]);
-                if (veq < 0) goto error;
                 if (!veq) {
                     neq = 1;
                     break;
@@ -4570,7 +4556,6 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             Py_ssize_t nf = Py_SIZE(sa);
             for (Py_ssize_t i = 0; eq && i < nf; i++) {
                 eq = menai_value_equal(sa->items[i], sb->items[i]);
-                if (eq < 0) goto error;
             }
             bool_store(regs, base + dest, eq);
             break;
@@ -4588,7 +4573,6 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 Py_ssize_t nf = Py_SIZE(sa);
                 for (Py_ssize_t i = 0; i < nf; i++) {
                     int eq = menai_value_equal(sa->items[i], sb->items[i]);
-                    if (eq < 0) goto error;
                     if (!eq) {
                         neq = 1;
                         break;

@@ -239,10 +239,8 @@ MenaiDict_richcompare(PyObject *self, PyObject *other, int op)
         for (Py_ssize_t i = 0; i < a->length; i++) {
             if (a->hashes[i] != b->hashes[i]) Py_RETURN_FALSE;
             int keq = menai_value_equal(a->keys[i], b->keys[i]);
-            if (keq < 0) return NULL;
             if (!keq) Py_RETURN_FALSE;
             int veq = menai_value_equal(a->values[i], b->values[i]);
-            if (veq < 0) return NULL;
             if (!veq) Py_RETURN_FALSE;
         }
         Py_RETURN_TRUE;
@@ -253,10 +251,8 @@ MenaiDict_richcompare(PyObject *self, PyObject *other, int op)
         for (Py_ssize_t i = 0; i < a->length; i++) {
             if (a->hashes[i] != b->hashes[i]) Py_RETURN_TRUE;
             int keq = menai_value_equal(a->keys[i], b->keys[i]);
-            if (keq < 0) return NULL;
             if (!keq) Py_RETURN_TRUE;
             int veq = menai_value_equal(a->values[i], b->values[i]);
-            if (veq < 0) return NULL;
             if (!veq) Py_RETURN_TRUE;
         }
         Py_RETURN_FALSE;

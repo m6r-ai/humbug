@@ -152,17 +152,9 @@ MenaiInteger_hash(PyObject *self)
 {
     MenaiInteger_Object *obj = (MenaiInteger_Object *)self;
     if (!obj->is_big) {
-        /*
-         * For small values, delegate to CPython's hash of the equivalent
-         * PyLong to guarantee compatibility with Python int hashing.
-         */
-        PyObject *iv = PyLong_FromLong(obj->small);
-        if (iv == NULL) {
-            return -1;
-        }
-        Py_hash_t h = PyObject_Hash(iv);
-        Py_DECREF(iv);
-        return h;
+        /* CPython's hash of an integer is the value itself, -1 mapped to -2. */
+        Py_hash_t h = (Py_hash_t)obj->small;
+        return h == -1 ? -2 : h;
     }
     return menai_int_hash(&obj->big);
 }

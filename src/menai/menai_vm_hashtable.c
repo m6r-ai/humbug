@@ -72,9 +72,18 @@ menai_value_hash(PyObject *val)
     if (t == &MenaiBoolean_Type)
         return (Py_hash_t)((MenaiBoolean_Object *)val)->value;
 
-    /* MenaiInteger — delegate to MenaiInteger_hash via the type slot */
+    /* MenaiInteger — inline fast path for small values; bigint path for large. */
     if (t == &MenaiInteger_Type) {
-        return PyObject_Hash(val);
+        MenaiInteger_Object *obj = (MenaiInteger_Object *)val;
+        if (!obj->is_big) {
+            /*
+             * CPython's hash of a small integer is the value itself, with
+             * -1 mapped to -2 (the unhashable sentinel is never a valid hash).
+             */
+            Py_hash_t h = (Py_hash_t)obj->small;
+            return h == -1 ? -2 : h;
+        }
+        return menai_int_hash(&obj->big);
     }
 
     /* MenaiFloat — use _Py_HashDouble directly to avoid boxing */
@@ -165,8 +174,12 @@ menai_value_equal(PyObject *a, PyObject *b)
         if (!ia->is_big && !ib->is_big) {
             return ia->small == ib->small;
         }
-        /* At least one is big — use the richcompare slot */
-        return PyObject_RichCompareBool(a, b, Py_EQ);
+        if (ia->is_big != ib->is_big) {
+            /* One small, one big — a long value can never equal a bignum. */
+            return 0;
+        }
+        /* Both big. */
+        return menai_int_eq(&ia->big, &ib->big);
     }
 
     if (ta == &MenaiFloat_Type) {
@@ -202,7 +215,7 @@ menai_value_equal(PyObject *a, PyObject *b)
         if (n != Py_SIZE(sb)) return 0;
         for (Py_ssize_t i = 0; i < n; i++) {
             int eq = menai_value_equal(sa->items[i], sb->items[i]);
-            if (eq <= 0) return eq;
+            if (!eq) return 0;
         }
         return 1;
     }
@@ -213,7 +226,7 @@ menai_value_equal(PyObject *a, PyObject *b)
         if (la->length != lb->length) return 0;
         for (Py_ssize_t i = 0; i < la->length; i++) {
             int eq = menai_value_equal(la->elements[i], lb->elements[i]);
-            if (eq <= 0) return eq;
+            if (!eq) return 0;
         }
         return 1;
     }
@@ -225,9 +238,9 @@ menai_value_equal(PyObject *a, PyObject *b)
         for (Py_ssize_t i = 0; i < da->length; i++) {
             if (da->hashes[i] != db->hashes[i]) return 0;
             int keq = menai_value_equal(da->keys[i], db->keys[i]);
-            if (keq <= 0) return keq;
+            if (!keq) return 0;
             int veq = menai_value_equal(da->values[i], db->values[i]);
-            if (veq <= 0) return veq;
+            if (!veq) return 0;
         }
         return 1;
     }
@@ -238,7 +251,6 @@ menai_value_equal(PyObject *a, PyObject *b)
         if (sa->length != sb->length) return 0;
         for (Py_ssize_t i = 0; i < sa->length; i++) {
             Py_ssize_t idx = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
-            if (idx == -2) return -1;
             if (idx == -1) return 0;
         }
         return 1;
@@ -317,7 +329,6 @@ menai_ht_lookup(const MenaiHashTable *ht, PyObject *key, Py_hash_t hash)
             return -1;  /* empty slot — key not present */
         if (s->hash == hash) {
             int eq = menai_value_equal(s->key, key);
-            if (eq < 0) return -2;  /* error */
             if (eq) return s->index;
         }
         /* Probe: same sequence CPython uses */

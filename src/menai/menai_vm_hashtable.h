@@ -41,8 +41,8 @@ Py_hash_t menai_value_hash(PyObject *val);
 /*
  * menai_value_equal — structural equality for two MenaiValues.
  *
- * Returns 1 if equal, 0 if not equal, -1 on error (Python exception set).
- * Never allocates Python objects for primitive types.
+ * Returns 1 if equal, 0 if not equal.  Never fails, never returns -1.
+ * All Menai value types are comparable by value without Python API calls.
  */
 int menai_value_equal(PyObject *a, PyObject *b);
 
@@ -98,7 +98,7 @@ void menai_ht_free(MenaiHashTable *ht);
  * menai_ht_lookup — find the index stored for key.
  *
  * hash must equal menai_value_hash(key).
- * Returns the stored index (>= 0) if found, -1 if not found, -2 on error.
+ * Returns the stored index (>= 0) if found, -1 if not found.
  */
 Py_ssize_t menai_ht_lookup(const MenaiHashTable *ht, PyObject *key, Py_hash_t hash);
 

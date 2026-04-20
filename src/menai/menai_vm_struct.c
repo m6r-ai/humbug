@@ -287,7 +287,6 @@ MenaiStruct_richcompare(PyObject *self, PyObject *other, int op)
         Py_ssize_t n = Py_SIZE(a);
         for (Py_ssize_t i = 0; i < n; i++) {
             int eq = menai_value_equal(a->items[i], b->items[i]);
-            if (eq < 0) return NULL;
             if (!eq) Py_RETURN_FALSE;
         }
         Py_RETURN_TRUE;
@@ -298,7 +297,6 @@ MenaiStruct_richcompare(PyObject *self, PyObject *other, int op)
         Py_ssize_t n = Py_SIZE(a);
         for (Py_ssize_t i = 0; i < n; i++) {
             int eq = menai_value_equal(a->items[i], b->items[i]);
-            if (eq < 0) return NULL;
             if (!eq) Py_RETURN_TRUE;
         }
 
