@@ -3189,23 +3189,11 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
         case OP_LIST_REST: {
             PyObject *a = regs[base + src0];
             if (!require_list(a, "list-rest")) goto error;
-            MenaiList_Object *lst_r = (MenaiList_Object *)a;
-            if (lst_r->length == 0) {
+            if (((MenaiList_Object *)a)->length == 0) {
                 menai_raise_eval_error("Function 'list-rest' requires a non-empty list");
                 goto error;
             }
-            Py_ssize_t rest_n = lst_r->length - 1;
-            PyObject **rest_arr = rest_n > 0
-                ? (PyObject **)PyMem_Malloc(rest_n * sizeof(PyObject *)) : NULL;
-            if (rest_n > 0 && !rest_arr) {
-                PyErr_NoMemory();
-                goto error;
-            }
-            for (Py_ssize_t i = 0; i < rest_n; i++) {
-                rest_arr[i] = lst_r->elements[i + 1];
-                Py_INCREF(rest_arr[i]);
-            }
-            PyObject *r = menai_list_from_array_steal(rest_arr, rest_n);
+            PyObject *r = menai_list_rest(a);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -3409,18 +3397,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 menai_raise_eval_errorf("list-slice start index (%zd) cannot be greater than end index (%zd)", start, end);
                 goto error;
             }
-            Py_ssize_t sl_n = end - start;
-            PyObject **sl_arr = sl_n > 0
-                ? (PyObject **)PyMem_Malloc(sl_n * sizeof(PyObject *)) : NULL;
-            if (sl_n > 0 && !sl_arr) {
-                PyErr_NoMemory();
-                goto error;
-            }
-            for (Py_ssize_t i = 0; i < sl_n; i++) {
-                sl_arr[i] = lst_sl->elements[start + i];
-                Py_INCREF(sl_arr[i]);
-            }
-            PyObject *r = menai_list_from_array_steal(sl_arr, sl_n);
+            PyObject *r = menai_list_slice(a, start, end);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;

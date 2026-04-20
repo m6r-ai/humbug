@@ -68,6 +68,7 @@ _menai_list_cache_alloc_obj(void)
         _list_obj_free = (MenaiList_Object *)obj->elements;
         obj->elements = NULL;
         obj->length = 0;
+        obj->owner = NULL;
         /* Restore refcount to 1, matching what tp_alloc produces. */
         Py_SET_REFCNT((PyObject *)obj, 1);
         return obj;
@@ -80,6 +81,7 @@ static void
 _menai_list_cache_free_obj(MenaiList_Object *obj)
 {
     obj->elements = (PyObject **)_list_obj_free;
+    obj->owner = NULL;
     obj->length = 0;
     _list_obj_free = obj;
 }
@@ -192,11 +194,21 @@ static void
 MenaiList_dealloc(PyObject *self)
 {
     MenaiList_Object *lst = (MenaiList_Object *)self;
-    Py_ssize_t n = lst->length;
-    lst->length = 0;
-    PyObject **arr = lst->elements;
-    lst->elements = NULL;
-    _menai_list_cache_free_arr(arr, n);
+    if (lst->owner != NULL) {
+        /* View — release the backing list; do not touch the element array. */
+        PyObject *owner = lst->owner;
+        lst->owner = NULL;
+        lst->elements = NULL;
+        lst->length = 0;
+        Py_DECREF(owner);
+    } else {
+        /* Owner — free the element array in the normal way. */
+        Py_ssize_t n = lst->length;
+        lst->length = 0;
+        PyObject **arr = lst->elements;
+        lst->elements = NULL;
+        _menai_list_cache_free_arr(arr, n);
+    }
     _menai_list_cache_free_obj((MenaiList_Object *)self);
 }
 
@@ -409,6 +421,59 @@ menai_list_new_empty(void)
     obj->elements = NULL;
     obj->length = 0;
     return (PyObject *)obj;
+}
+
+PyObject *
+menai_list_rest(PyObject *lst_obj)
+{
+    MenaiList_Object *lst = (MenaiList_Object *)lst_obj;
+    if (lst->length == 0) {
+        PyErr_SetString(PyExc_RuntimeError,
+            "Function 'list-rest' requires a non-empty list");
+        return NULL;
+    }
+
+    /*
+     * Resolve the owner: if lst is itself a view, use its owner so we never
+     * build a chain — all views point directly at the root array owner.
+     */
+    PyObject *owner = (lst->owner != NULL) ? lst->owner : lst_obj;
+
+    MenaiList_Object *view = _menai_list_cache_alloc_obj();
+    if (view == NULL) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    Py_INCREF(owner);
+    view->owner = owner;
+    view->elements = lst->elements + 1;
+    view->length = lst->length - 1;
+    return (PyObject *)view;
+}
+
+PyObject *
+menai_list_slice(PyObject *lst_obj, Py_ssize_t start, Py_ssize_t end)
+{
+    MenaiList_Object *lst = (MenaiList_Object *)lst_obj;
+
+    /*
+     * Resolve the owner: if lst is itself a view, point at its owner so
+     * all views are depth-1 from the root array owner.
+     */
+    PyObject *owner = (lst->owner != NULL) ? lst->owner : lst_obj;
+
+    MenaiList_Object *view = _menai_list_cache_alloc_obj();
+    if (view == NULL) {
+        PyErr_NoMemory();
+        return NULL;
+    }
+
+    Py_INCREF(owner);
+    view->owner = owner;
+    view->elements = lst->elements + start;
+    view->length = end - start;
+    return (PyObject *)view;
 }
 
 int

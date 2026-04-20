@@ -19,8 +19,15 @@
 
 typedef struct {
     PyObject_HEAD
-    PyObject **elements; /* C array of MenaiValue* */
-    Py_ssize_t length;   /* number of elements */
+    PyObject **elements; /* pointer to first live element */
+    Py_ssize_t length;   /* number of live elements */
+    /*
+     * owner is non-NULL when this list is a slice view into another list's
+     * element array.  In that case elements points into owner->elements and
+     * must not be freed; only Py_DECREF(owner) is needed on dealloc.
+     * owner always points to a list with owner == NULL (never a chain).
+     */
+    PyObject *owner;
 } MenaiList_Object;
 
 extern PyTypeObject MenaiList_Type;
@@ -49,6 +56,26 @@ PyObject *menai_list_from_tuple(PyObject *tup);
  * Returns a new reference, or NULL on error.
  */
 PyObject *menai_list_new_empty(void);
+
+/*
+ * menai_list_rest — return a slice view of lst starting at element 1.
+ *
+ * If lst is empty, raises MenaiEvalError and returns NULL.
+ * If lst has one element, returns the Menai_EMPTY_LIST singleton (borrowed
+ * from the caller — the caller must reg_set_borrow it).
+ * Otherwise returns a new MenaiList_Object that shares lst's backing array
+ * without copying or INCREFing any elements.
+ */
+PyObject *menai_list_rest(PyObject *lst);
+
+/*
+ * menai_list_slice — return a slice view of lst covering [start, end).
+ *
+ * start and end must already be validated by the caller (0 <= start <= end
+ * <= lst->length).  Returns a new MenaiList_Object that shares lst's backing
+ * array without copying or INCREFing any elements.
+ */
+PyObject *menai_list_slice(PyObject *lst, Py_ssize_t start, Py_ssize_t end);
 
 /*
  * Module init — called once from _menai_vm_value_init().
