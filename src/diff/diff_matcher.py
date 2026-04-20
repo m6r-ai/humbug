@@ -88,6 +88,14 @@ class DiffMatcher(ABC):
         # Fuzzy search failed - scan the entire file for an exact match outside the window.
         # If found, record its location so the caller can report a more actionable error.
         out_of_range = self._full_file_exact_search(hunk.old_start, expected_lines, document)
+
+        # When the hunk had no line numbers (bare @@), old_count and new_count are both 0
+        # as a sentinel. In that case an out-of-range exact match is still a valid result
+        # rather than an error, because the diff had no position hint to begin with.
+        if out_of_range is not None and hunk.old_count == 0 and hunk.new_count == 0:
+            actual = self._get_document_lines(document, out_of_range, len(expected_lines))
+            return MatchResult(success=True, location=out_of_range, confidence=1.0, actual_lines=actual)
+
         fuzzy_result.out_of_range_location = out_of_range
         return fuzzy_result
 

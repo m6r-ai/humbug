@@ -148,6 +148,25 @@ class TestDiffParserEdgeCases:
         with pytest.raises(DiffParseError, match="Invalid hunk header"):
             parser.parse(diff_text)
 
+    def test_parse_bare_at_at_header(self):
+        """Test that a bare @@ with no line numbers is accepted and uses sentinel location."""
+        parser = DiffParser()
+        diff_text = """@@
+-old line
++new line
+ context line
+"""
+        hunks = parser.parse(diff_text)
+
+        assert len(hunks) == 1
+        hunk = hunks[0]
+        # Sentinel values: old_start=1, old_count=0, new_count=0 signal "location unknown"
+        assert hunk.old_start == 1
+        assert hunk.old_count == 0
+        assert hunk.new_start == 1
+        assert hunk.new_count == 0
+        assert len(hunk.lines) == 3
+
     def test_parse_missing_hunk_header_raises_error(self):
         """Test that diff without hunk header raises error."""
         parser = DiffParser()

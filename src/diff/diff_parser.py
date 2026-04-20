@@ -79,12 +79,22 @@ class DiffParser:
         # Parse hunk header: @@ -old_start,old_count +new_start,new_count @@
         match = re.match(r'^@@\s+-(\d+)(?:,(\d+))?\s+\+(\d+)(?:,(\d+))?\s+@@', header)
         if not match:
-            raise DiffParseError(f"Invalid hunk header format: {header}")
+            # A bare @@ with no line numbers is treated as "location unknown".
+            # old_start=1 causes the matcher's full-file fuzzy search to find
+            # the correct position from the context/deletion lines alone.
+            if not re.match(r'^@@\s*$', header):
+                raise DiffParseError(f"Invalid hunk header format: {header}")
 
-        old_start = int(match.group(1))
-        old_count = int(match.group(2)) if match.group(2) else 1
-        new_start = int(match.group(3))
-        new_count = int(match.group(4)) if match.group(4) else 1
+            old_start = 1
+            old_count = 0
+            new_start = 1
+            new_count = 0
+
+        else:
+            old_start = int(match.group(1))
+            old_count = int(match.group(2)) if match.group(2) else 1
+            new_start = int(match.group(3))
+            new_count = int(match.group(4)) if match.group(4) else 1
 
         # Parse hunk lines
         hunk_lines: List[DiffLine] = []

@@ -2,6 +2,10 @@
 
 ## v45 (2026-xx-xx)
 
+New features:
+
+- If an AI generates a diff hunk with `@@` but with no line numbers, the diff applier will try to find with a fuzzy match.
+
 ## v44 (2026-04-19)
 
 New features:
