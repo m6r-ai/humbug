@@ -165,7 +165,7 @@ class FileSystemAITool(AITool):
                     name="search_text",
                     type="string",
                     description="Text or regular expression to search for (search_file and search_files operations). "
-                        "When regexp is true, use Python regex syntax with standard JSON string encoding: "
+                        "When regexp is true, use Python regex (do NOT use vim regex) syntax with standard JSON string encoding: "
                         "use '|' for alternation (no backslash needed), and write exactly one '\\' in the JSON "
                         "for each backslash in the regex (e.g. '\\d' in JSON gives the regex \\d).",
                     required=False
