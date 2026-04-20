@@ -8,6 +8,8 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include "menai_vm_hashtable.h"
+
 #include "menai_vm_float.h"
 
 static PyObject *
@@ -34,11 +36,11 @@ static PyObject *
 MenaiFloat_describe(PyObject *self, PyObject *args)
 {
     (void)args;
-    PyObject *pf = PyFloat_FromDouble(((MenaiFloat_Object *)self)->value);
-    if (!pf) return NULL;
-
-    PyObject *s = PyObject_Str(pf);
-    Py_DECREF(pf);
+    char *buf = PyOS_double_to_string(((MenaiFloat_Object *)self)->value,
+                                      'r', 0, Py_DTSF_ADD_DOT_0, NULL);
+    if (!buf) return NULL;
+    PyObject *s = PyUnicode_FromString(buf);
+    PyMem_Free(buf);
     return s;
 }
 
@@ -67,12 +69,7 @@ MenaiFloat_richcompare(PyObject *self, PyObject *other, int op)
 static Py_hash_t
 MenaiFloat_hash(PyObject *self)
 {
-    PyObject *pf = PyFloat_FromDouble(((MenaiFloat_Object *)self)->value);
-    if (!pf) return -1;
-
-    Py_hash_t h = PyObject_Hash(pf);
-    Py_DECREF(pf);
-    return h;
+    return menai_hash_double(((MenaiFloat_Object *)self)->value);
 }
 
 static PyObject *

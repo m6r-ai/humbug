@@ -21,9 +21,41 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include <stdint.h>
+#include <string.h>
+
 /* ---------------------------------------------------------------------------
  * Value hash and equality
  * ------------------------------------------------------------------------- */
+
+/*
+ * menai_hash_double — hash a C double without any Python API calls.
+ *
+ * Reinterprets the IEEE 754 bit pattern as a uint64_t via memcpy (safe
+ * under strict aliasing rules) then applies a finalisation mix so that
+ * nearby values produce well-distributed hashes.  NaN is normalised to a
+ * fixed bit pattern before mixing so all NaN values hash identically.
+ * The result is mapped away from -1 (the CPython "error" sentinel).
+ *
+ * This is a Menai-internal hash — it does not need to match Python's
+ * float hash, because Menai floats and integers are never equal and are
+ * never mixed in the same dict or set.
+ */
+static inline Py_hash_t
+menai_hash_double(double v)
+{
+    uint64_t bits;
+    if (v != v) bits = 0x7FF8000000000000ULL;  /* canonical quiet NaN */
+    else memcpy(&bits, &v, sizeof(bits));
+    /* Finalisation mix from SplitMix64 */
+    bits ^= bits >> 30;
+    bits *= 0xbf58476d1ce4e5b9ULL;
+    bits ^= bits >> 27;
+    bits *= 0x94d049bb133111ebULL;
+    bits ^= bits >> 31;
+    Py_hash_t h = (Py_hash_t)(bits & (uint64_t)PY_SSIZE_T_MAX);
+    return h == -1 ? -2 : h;
+}
 
 /*
  * menai_value_hash — compute a Py_hash_t for a MenaiValue.

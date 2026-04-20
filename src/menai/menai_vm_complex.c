@@ -9,6 +9,8 @@
 #include <Python.h>
 #include <math.h>
 
+#include "menai_vm_hashtable.h"
+
 #include "menai_vm_complex.h"
 
 static PyObject *
@@ -95,13 +97,11 @@ MenaiComplex_richcompare(PyObject *self, PyObject *other, int op)
 static Py_hash_t
 MenaiComplex_hash(PyObject *self)
 {
-    double r = ((MenaiComplex_Object *)self)->real;
-    double i = ((MenaiComplex_Object *)self)->imag;
-    PyObject *pc = PyComplex_FromDoubles(r, i);
-    if (!pc) return -1;
-    Py_hash_t h = PyObject_Hash(pc);
-    Py_DECREF(pc);
-    return h;
+    Py_hash_t hr = menai_hash_double(((MenaiComplex_Object *)self)->real);
+    Py_hash_t hi = menai_hash_double(((MenaiComplex_Object *)self)->imag);
+    Py_uhash_t acc = (Py_uhash_t)hr * 1000003UL ^ (Py_uhash_t)hi;
+    Py_hash_t h = (Py_hash_t)(acc & (Py_uhash_t)PY_SSIZE_T_MAX);
+    return h == -1 ? -2 : h;
 }
 
 static PyObject *

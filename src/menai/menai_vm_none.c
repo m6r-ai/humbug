@@ -47,7 +47,7 @@ static Py_hash_t
 MenaiNone_hash(PyObject *self)
 {
     (void)self;
-    return PyObject_Hash(Py_None);
+    return (Py_hash_t)0x4e6f6e65UL;  /* "None" — matches menai_value_hash */
 }
 
 static PyMethodDef MenaiNone_methods[] = {

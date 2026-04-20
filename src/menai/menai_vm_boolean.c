@@ -59,7 +59,8 @@ MenaiBoolean_richcompare(PyObject *self, PyObject *other, int op)
 static Py_hash_t
 MenaiBoolean_hash(PyObject *self)
 {
-    return PyObject_Hash(((MenaiBoolean_Object *)self)->value ? Py_True : Py_False);
+    /* Menai booleans hash to 0 (false) or 1 (true), matching Python's convention. */
+    return (Py_hash_t)((MenaiBoolean_Object *)self)->value;
 }
 
 static PyObject *

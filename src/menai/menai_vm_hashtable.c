@@ -86,23 +86,19 @@ menai_value_hash(PyObject *val)
         return menai_int_hash(&obj->big);
     }
 
-    /* MenaiFloat — use _Py_HashDouble directly to avoid boxing */
+    /* MenaiFloat */
     if (t == &MenaiFloat_Type) {
-        Py_hash_t h = _Py_HashDouble(val, ((MenaiFloat_Object *)val)->value);
-        return h;
+        return menai_hash_double(((MenaiFloat_Object *)val)->value);
     }
 
-    /* MenaiComplex — combine real and imag hashes */
+    /* MenaiComplex */
     if (t == &MenaiComplex_Type) {
         MenaiComplex_Object *c = (MenaiComplex_Object *)val;
-        Py_hash_t hr = _Py_HashDouble(val, c->real);
-        if (hr == -1) return -1;
-        Py_hash_t hi = _Py_HashDouble(val, c->imag);
-        if (hi == -1) return -1;
-        Py_uhash_t acc = 0x636f6d70UL;  /* "comp" */
-        acc = _hash_combine(acc, hr);
-        acc = _hash_combine(acc, hi);
-        return _hash_finalise(acc, 2);
+        Py_hash_t hr = menai_hash_double(c->real);
+        Py_hash_t hi = menai_hash_double(c->imag);
+        Py_uhash_t acc = (Py_uhash_t)hr * 1000003UL ^ (Py_uhash_t)hi;
+        Py_hash_t h = (Py_hash_t)(acc & (Py_uhash_t)PY_SSIZE_T_MAX);
+        return h == -1 ? -2 : h;
     }
 
     /* MenaiString — use cached FNV-1a hash */
