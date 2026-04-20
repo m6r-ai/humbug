@@ -14,6 +14,7 @@
 
 #include "menai_vm_struct.h"
 #include "menai_vm_symbol.h"
+#include "menai_vm_hashtable.h"
 
 /*
  * _build_struct_type — shared constructor body for MenaiStructType.
@@ -285,7 +286,7 @@ MenaiStruct_richcompare(PyObject *self, PyObject *other, int op)
         if (tag_a != tag_b) Py_RETURN_FALSE;
         Py_ssize_t n = Py_SIZE(a);
         for (Py_ssize_t i = 0; i < n; i++) {
-            int eq = PyObject_RichCompareBool(a->items[i], b->items[i], Py_EQ);
+            int eq = menai_value_equal(a->items[i], b->items[i]);
             if (eq < 0) return NULL;
             if (!eq) Py_RETURN_FALSE;
         }
@@ -296,7 +297,7 @@ MenaiStruct_richcompare(PyObject *self, PyObject *other, int op)
         if (tag_a != tag_b) Py_RETURN_TRUE;
         Py_ssize_t n = Py_SIZE(a);
         for (Py_ssize_t i = 0; i < n; i++) {
-            int eq = PyObject_RichCompareBool(a->items[i], b->items[i], Py_EQ);
+            int eq = menai_value_equal(a->items[i], b->items[i]);
             if (eq < 0) return NULL;
             if (!eq) Py_RETURN_TRUE;
         }

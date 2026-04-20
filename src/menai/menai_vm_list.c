@@ -18,6 +18,7 @@
 #endif
 
 #include "menai_vm_list.h"
+#include "menai_vm_hashtable.h"
 
 /* ---------------------------------------------------------------------------
  * Free-list cache
@@ -253,7 +254,7 @@ MenaiList_richcompare(PyObject *self, PyObject *other, int op)
     if (op == Py_EQ) {
         if (a->length != b->length) Py_RETURN_FALSE;
         for (Py_ssize_t i = 0; i < a->length; i++) {
-            int eq = PyObject_RichCompareBool(a->elements[i], b->elements[i], Py_EQ);
+            int eq = menai_value_equal(a->elements[i], b->elements[i]);
             if (eq < 0) return NULL;
             if (!eq) Py_RETURN_FALSE;
         }
@@ -262,7 +263,7 @@ MenaiList_richcompare(PyObject *self, PyObject *other, int op)
     if (op == Py_NE) {
         if (a->length != b->length) Py_RETURN_TRUE;
         for (Py_ssize_t i = 0; i < a->length; i++) {
-            int eq = PyObject_RichCompareBool(a->elements[i], b->elements[i], Py_EQ);
+            int eq = menai_value_equal(a->elements[i], b->elements[i]);
             if (eq < 0) return NULL;
             if (!eq) Py_RETURN_TRUE;
         }

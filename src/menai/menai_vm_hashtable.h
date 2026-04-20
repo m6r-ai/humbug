@@ -64,15 +64,15 @@ int menai_value_equal(PyObject *a, PyObject *b);
 #define MENAI_HT_MAX_LOAD_DEN 3   /* load factor denominator */
 
 typedef struct {
-    PyObject  *key;     /* borrowed ref to MenaiValue; NULL = empty slot */
-    Py_hash_t  hash;    /* cached hash of key */
+    PyObject *key;      /* borrowed ref to MenaiValue; NULL = empty slot */
+    Py_hash_t hash;     /* cached hash of key */
     Py_ssize_t index;   /* index into the owning dict/set's element arrays */
 } MenaiHashSlot;
 
 typedef struct {
     MenaiHashSlot *slots;
-    Py_ssize_t     slot_count;  /* power of 2; 0 means uninitialised */
-    Py_ssize_t     used;
+    Py_ssize_t slot_count;  /* power of 2; 0 means uninitialised */
+    Py_ssize_t used;
 } MenaiHashTable;
 
 /*
@@ -100,8 +100,7 @@ void menai_ht_free(MenaiHashTable *ht);
  * hash must equal menai_value_hash(key).
  * Returns the stored index (>= 0) if found, -1 if not found, -2 on error.
  */
-Py_ssize_t menai_ht_lookup(const MenaiHashTable *ht, PyObject *key,
-                            Py_hash_t hash);
+Py_ssize_t menai_ht_lookup(const MenaiHashTable *ht, PyObject *key, Py_hash_t hash);
 
 /*
  * menai_ht_insert — insert a key/index pair into the table.
@@ -112,8 +111,7 @@ Py_ssize_t menai_ht_lookup(const MenaiHashTable *ht, PyObject *key,
  * The key pointer is stored as a borrowed reference — the owning
  * dict/set's element arrays keep it alive.
  */
-void menai_ht_insert(MenaiHashTable *ht, PyObject *key, Py_hash_t hash,
-                     Py_ssize_t index);
+void menai_ht_insert(MenaiHashTable *ht, PyObject *key, Py_hash_t hash, Py_ssize_t index);
 
 /*
  * menai_ht_build — build a hash table from parallel key and hash arrays.
@@ -124,7 +122,6 @@ void menai_ht_insert(MenaiHashTable *ht, PyObject *key, Py_hash_t hash,
  *
  * Returns 0 on success, -1 on MemoryError.
  */
-int menai_ht_build(MenaiHashTable *ht, PyObject **keys,
-                   const Py_hash_t *hashes, Py_ssize_t n);
+int menai_ht_build(MenaiHashTable *ht, PyObject **keys, const Py_hash_t *hashes, Py_ssize_t n);
 
 #endif /* MENAI_VM_HASHTABLE_H */

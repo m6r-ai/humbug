@@ -154,22 +154,20 @@ menai_value_equal(PyObject *a, PyObject *b)
     /* Different types are never equal */
     if (ta != tb) return 0;
 
-    if (ta == &MenaiNone_Type)
-        return 1;  /* singleton */
+    if (ta == &MenaiNone_Type) return 1;  /* singleton */
 
-    if (ta == &MenaiBoolean_Type)
-        return ((MenaiBoolean_Object *)a)->value ==
-               ((MenaiBoolean_Object *)b)->value;
+    if (ta == &MenaiBoolean_Type) {
+        return ((MenaiBoolean_Object *)a)->value == ((MenaiBoolean_Object *)b)->value;
+    }
 
-    if (ta == &MenaiInteger_Type)
+    if (ta == &MenaiInteger_Type) {
         /* PyObject_RichCompareBool is unavoidable for arbitrary precision */
-        return PyObject_RichCompareBool(
-            ((MenaiInteger_Object *)a)->value,
-            ((MenaiInteger_Object *)b)->value, Py_EQ);
+        return PyObject_RichCompareBool(((MenaiInteger_Object *)a)->value, ((MenaiInteger_Object *)b)->value, Py_EQ);
+    }
 
-    if (ta == &MenaiFloat_Type)
-        return ((MenaiFloat_Object *)a)->value ==
-               ((MenaiFloat_Object *)b)->value;
+    if (ta == &MenaiFloat_Type) {
+        return ((MenaiFloat_Object *)a)->value == ((MenaiFloat_Object *)b)->value;
+    }
 
     if (ta == &MenaiComplex_Type) {
         MenaiComplex_Object *ca = (MenaiComplex_Object *)a;
@@ -177,29 +175,67 @@ menai_value_equal(PyObject *a, PyObject *b)
         return ca->real == cb->real && ca->imag == cb->imag;
     }
 
-    if (ta == &MenaiString_Type)
+    if (ta == &MenaiString_Type) {
         return menai_string_equal(a, b);
+    }
 
-    if (ta == &MenaiSymbol_Type)
+    if (ta == &MenaiSymbol_Type) {
         /* Symbols are interned — pointer equality suffices */
-        return ((MenaiSymbol_Object *)a)->name ==
-               ((MenaiSymbol_Object *)b)->name;
+        return ((MenaiSymbol_Object *)a)->name == ((MenaiSymbol_Object *)b)->name;
+    }
 
-    if (ta == &MenaiStructType_Type)
-        return ((MenaiStructType_Object *)a)->tag ==
-               ((MenaiStructType_Object *)b)->tag;
+    if (ta == &MenaiStructType_Type) {
+        return ((MenaiStructType_Object *)a)->tag == ((MenaiStructType_Object *)b)->tag;
+    }
 
     if (ta == &MenaiStruct_Type) {
         MenaiStruct_Object *sa = (MenaiStruct_Object *)a;
         MenaiStruct_Object *sb = (MenaiStruct_Object *)b;
-        if (((MenaiStructType_Object *)sa->struct_type)->tag !=
-            ((MenaiStructType_Object *)sb->struct_type)->tag)
+        if (((MenaiStructType_Object *)sa->struct_type)->tag != ((MenaiStructType_Object *)sb->struct_type)->tag) {
             return 0;
+        }
         Py_ssize_t n = Py_SIZE(sa);
         if (n != Py_SIZE(sb)) return 0;
         for (Py_ssize_t i = 0; i < n; i++) {
             int eq = menai_value_equal(sa->items[i], sb->items[i]);
             if (eq <= 0) return eq;
+        }
+        return 1;
+    }
+
+    if (ta == &MenaiList_Type) {
+        MenaiList_Object *la = (MenaiList_Object *)a;
+        MenaiList_Object *lb = (MenaiList_Object *)b;
+        if (la->length != lb->length) return 0;
+        for (Py_ssize_t i = 0; i < la->length; i++) {
+            int eq = menai_value_equal(la->elements[i], lb->elements[i]);
+            if (eq <= 0) return eq;
+        }
+        return 1;
+    }
+
+    if (ta == &MenaiDict_Type) {
+        MenaiDict_Object *da = (MenaiDict_Object *)a;
+        MenaiDict_Object *db = (MenaiDict_Object *)b;
+        if (da->length != db->length) return 0;
+        for (Py_ssize_t i = 0; i < da->length; i++) {
+            if (da->hashes[i] != db->hashes[i]) return 0;
+            int keq = menai_value_equal(da->keys[i], db->keys[i]);
+            if (keq <= 0) return keq;
+            int veq = menai_value_equal(da->values[i], db->values[i]);
+            if (veq <= 0) return veq;
+        }
+        return 1;
+    }
+
+    if (ta == &MenaiSet_Type) {
+        MenaiSet_Object *sa = (MenaiSet_Object *)a;
+        MenaiSet_Object *sb = (MenaiSet_Object *)b;
+        if (sa->length != sb->length) return 0;
+        for (Py_ssize_t i = 0; i < sa->length; i++) {
+            Py_ssize_t idx = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
+            if (idx == -2) return -1;
+            if (idx == -1) return 0;
         }
         return 1;
     }
@@ -287,8 +323,7 @@ menai_ht_lookup(const MenaiHashTable *ht, PyObject *key, Py_hash_t hash)
 }
 
 void
-menai_ht_insert(MenaiHashTable *ht, PyObject *key, Py_hash_t hash,
-                Py_ssize_t index)
+menai_ht_insert(MenaiHashTable *ht, PyObject *key, Py_hash_t hash, Py_ssize_t index)
 {
     Py_ssize_t mask = ht->slot_count - 1;
     Py_uhash_t perturb = (Py_uhash_t)hash;
@@ -309,11 +344,9 @@ menai_ht_insert(MenaiHashTable *ht, PyObject *key, Py_hash_t hash,
 }
 
 int
-menai_ht_build(MenaiHashTable *ht, PyObject **keys,
-               const Py_hash_t *hashes, Py_ssize_t n)
+menai_ht_build(MenaiHashTable *ht, PyObject **keys, const Py_hash_t *hashes, Py_ssize_t n)
 {
     if (menai_ht_init(ht, n) < 0) return -1;
-    for (Py_ssize_t i = 0; i < n; i++)
-        menai_ht_insert(ht, keys[i], hashes[i], i);
+    for (Py_ssize_t i = 0; i < n; i++) menai_ht_insert(ht, keys[i], hashes[i], i);
     return 0;
 }

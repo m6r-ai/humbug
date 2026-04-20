@@ -2992,7 +2992,9 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_list(a, "list=?")) goto error;
             if (!require_list(b, "list=?")) goto error;
-            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_EQ));
+            int eq = menai_value_equal(a, b);
+            if (eq < 0) goto error;
+            bool_store(regs, base + dest, eq);
             break;
         }
 
@@ -3000,7 +3002,9 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_list(a, "list!=?")) goto error;
             if (!require_list(b, "list!=?")) goto error;
-            bool_store(regs, base + dest, PyObject_RichCompareBool(a, b, Py_NE));
+            int eq = menai_value_equal(a, b);
+            if (eq < 0) goto error;
+            bool_store(regs, base + dest, !eq);
             break;
         }
 
@@ -3190,7 +3194,7 @@ execute_loop(PyObject *code, PyObject *globals,
             MenaiList_Object *lst_mem = (MenaiList_Object *)a;
             int mem_found = 0;
             for (Py_ssize_t i = 0; i < lst_mem->length; i++) {
-                int eq = PyObject_RichCompareBool(lst_mem->elements[i], item, Py_EQ);
+                int eq = menai_value_equal(lst_mem->elements[i], item);
                 if (eq < 0) goto error;
                 if (eq) {
                     mem_found = 1;
@@ -3208,7 +3212,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t n = lst_idx->length;
             Py_ssize_t found = -1;
             for (Py_ssize_t i = 0; i < n; i++) {
-                int eq = PyObject_RichCompareBool(lst_idx->elements[i], item, Py_EQ);
+                int eq = menai_value_equal(lst_idx->elements[i], item);
                 if (eq < 0) goto error;
                 if (eq) {
                     found = i;
@@ -3282,7 +3286,7 @@ execute_loop(PyObject *code, PyObject *globals,
             /* Count non-matching elements first */
             Py_ssize_t keep = 0;
             for (Py_ssize_t i = 0; i < n; i++) {
-                int eq = PyObject_RichCompareBool(lst_rm->elements[i], item, Py_EQ);
+                int eq = menai_value_equal(lst_rm->elements[i], item);
                 if (eq < 0) goto error;
                 if (!eq) keep++;
             }
@@ -3295,7 +3299,7 @@ execute_loop(PyObject *code, PyObject *globals,
             Py_ssize_t j = 0;
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *e = lst_rm->elements[i];
-                int eq = PyObject_RichCompareBool(e, item, Py_EQ);
+                int eq = menai_value_equal(e, item);
                 if (eq < 0) {
                     for (Py_ssize_t k = 0; k < j; k++) Py_DECREF(rm_arr[k]);
                     PyMem_Free(rm_arr);
@@ -4193,7 +4197,7 @@ execute_loop(PyObject *code, PyObject *globals,
                       ((MenaiStructType_Object *)sb->struct_type)->tag);
             Py_ssize_t nf = Py_SIZE(sa);
             for (Py_ssize_t i = 0; eq && i < nf; i++) {
-                eq = PyObject_RichCompareBool(sa->items[i], sb->items[i], Py_EQ);
+                eq = menai_value_equal(sa->items[i], sb->items[i]);
                 if (eq < 0) goto error;
             }
             bool_store(regs, base + dest, eq);
@@ -4211,7 +4215,7 @@ execute_loop(PyObject *code, PyObject *globals,
             if (!neq) {
                 Py_ssize_t nf = Py_SIZE(sa);
                 for (Py_ssize_t i = 0; i < nf; i++) {
-                    int eq = PyObject_RichCompareBool(sa->items[i], sb->items[i], Py_EQ);
+                    int eq = menai_value_equal(sa->items[i], sb->items[i]);
                     if (eq < 0) goto error;
                     if (!eq) {
                         neq = 1;
