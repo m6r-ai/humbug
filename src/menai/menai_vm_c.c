@@ -954,25 +954,101 @@ max_local_count(PyObject *code)
 }
 
 /*
- * build_globals
- *      Merge constants and prelude into a flat PyObject* dict
+ * GlobalsTable — flat sorted array of (name, value) pairs for O(log n) lookup.
  *
- * The C VM looks up globals by name on LOAD_NAME.  We build a Python dict
- * once at the start of execute() and keep it for the duration.
+ * Built once before execution starts from the constants and prelude dicts.
+ * Never mutated during execution.  Values are owned references.
  */
-static PyObject *
-build_globals(PyObject *constants_dict, PyObject *prelude_dict)
-{
-    PyObject *globals = PyDict_Copy(constants_dict);
-    if (globals == NULL) return NULL;
+typedef struct {
+    const char *name;  /* UTF-8 string owned by the source PyUnicode object */
+    PyObject *value;   /* owned MenaiValue reference */
+} GlobalsEntry;
 
-    if (prelude_dict != Py_None && PyDict_Size(prelude_dict) > 0) {
-        if (PyDict_Merge(globals, prelude_dict, 1) < 0) {
-            Py_DECREF(globals);
-            return NULL;
+typedef struct {
+    GlobalsEntry *entries;
+    Py_ssize_t count;
+} GlobalsTable;
+
+static int
+_globals_entry_cmp(const void *a, const void *b)
+{
+    return strcmp(((const GlobalsEntry *)a)->name, ((const GlobalsEntry *)b)->name);
+}
+
+static void
+globals_free(GlobalsTable *gt)
+{
+    for (Py_ssize_t i = 0; i < gt->count; i++) Py_XDECREF(gt->entries[i].value);
+    PyMem_Free(gt->entries);
+    gt->entries = NULL;
+    gt->count = 0;
+}
+
+/*
+ * globals_build — build a GlobalsTable from one or two Python dicts.
+ *
+ * prelude_dict may be NULL or Py_None.  Values from both dicts are converted
+ * to fast C types via fn_convert_value before being stored.  Returns 0 on
+ * success, -1 on error with a Python exception set.
+ */
+static int
+globals_build(GlobalsTable *gt, PyObject *constants_dict, PyObject *prelude_dict)
+{
+    Py_ssize_t nc = PyDict_Size(constants_dict);
+    Py_ssize_t np = (prelude_dict && prelude_dict != Py_None) ? PyDict_Size(prelude_dict) : 0;
+    Py_ssize_t total = nc + np;
+
+    gt->entries = total > 0 ? (GlobalsEntry *)PyMem_Malloc(total * sizeof(GlobalsEntry)) : NULL;
+    gt->count = 0;
+
+    if (total > 0 && gt->entries == NULL) {
+        PyErr_NoMemory();
+        return -1;
+    }
+
+    PyObject *key, *val;
+    Py_ssize_t pos = 0;
+    while (PyDict_Next(constants_dict, &pos, &key, &val)) {
+        PyObject *converted = PyObject_CallOneArg(fn_convert_value, val);
+        if (converted == NULL) {
+            globals_free(gt);
+            return -1;
+        }
+        gt->entries[gt->count].name = PyUnicode_AsUTF8(key);
+        gt->entries[gt->count].value = converted;
+        gt->count++;
+    }
+
+    if (np > 0) {
+        pos = 0;
+        while (PyDict_Next(prelude_dict, &pos, &key, &val)) {
+            PyObject *converted = PyObject_CallOneArg(fn_convert_value, val);
+            if (converted == NULL) {
+                globals_free(gt);
+                return -1;
+            }
+            gt->entries[gt->count].name = PyUnicode_AsUTF8(key);
+            gt->entries[gt->count].value = converted;
+            gt->count++;
         }
     }
-    return globals;
+
+    qsort(gt->entries, gt->count, sizeof(GlobalsEntry), _globals_entry_cmp);
+    return 0;
+}
+
+static PyObject *
+globals_lookup(const GlobalsTable *gt, const char *name)
+{
+    Py_ssize_t lo = 0, hi = gt->count - 1;
+    while (lo <= hi) {
+        Py_ssize_t mid = (lo + hi) / 2;
+        int cmp = strcmp(gt->entries[mid].name, name);
+        if (cmp == 0) return gt->entries[mid].value;
+        if (cmp < 0) lo = mid + 1;
+        else hi = mid - 1;
+    }
+    return NULL;
 }
 
 /*
@@ -1051,7 +1127,7 @@ call_setup(Frame *new_frame, PyObject *func_obj,
  * Caller is responsible for calling to_slow() on the result.
  */
 static PyObject *
-execute_loop(PyObject *code, PyObject *globals,
+execute_loop(PyObject *code, const GlobalsTable *globals,
              PyObject **regs, int max_locals)
 {
     /* Frame stack — depth 0 is the sentinel. */
@@ -1137,42 +1213,29 @@ execute_loop(PyObject *code, PyObject *globals,
 
         case OP_LOAD_NAME: {
             PyObject *name = frame->names_items[src0];
-            PyObject *val  = PyDict_GetItem(globals, name);
+            const char *name_str = PyUnicode_AsUTF8(name);
+            PyObject *val = globals_lookup(globals, name_str);
             if (val == NULL) {
-                /* Build a rich error with available variable names, matching
-                 * the Python VM's error format. */
-                PyObject *keys = PyDict_Keys(globals);
-                const char *name_str = PyUnicode_AsUTF8(name);
-                if (keys != NULL) {
-                    Py_ssize_t nk = PyList_GET_SIZE(keys);
-                    Py_ssize_t show = nk < 10 ? nk : 10;
-                    PyObject *parts = PyList_New(show);
-                    if (parts != NULL) {
-                        for (Py_ssize_t i = 0; i < show; i++) {
-                            PyObject *k = PyList_GET_ITEM(keys, i);
-                            Py_INCREF(k);
-                            PyList_SET_ITEM(parts, i, k);
-                        }
-                        PyObject *sep = PyUnicode_FromString(", ");
-                        PyObject *joined = PyUnicode_Join(sep, parts);
-                        Py_DECREF(sep);
-                        Py_DECREF(parts);
-                        if (joined != NULL) {
-                            menai_raise_eval_errorf(
-                                "Undefined variable: '%s'\n  Available variables: %s%s",
-                                name_str, PyUnicode_AsUTF8(joined),
-                                nk > 10 ? "..." : "");
-                            Py_DECREF(joined);
-                        } else {
-                            menai_raise_eval_errorf("Undefined variable: '%s'", name_str);
-                        }
-                    } else {
-                        menai_raise_eval_errorf("Undefined variable: '%s'", name_str);
+                /* Build a rich error listing up to 10 available names. */
+                Py_ssize_t nk = globals->count;
+                Py_ssize_t show = nk < 10 ? nk : 10;
+                char buf[1024];
+                int off = 0;
+                for (Py_ssize_t i = 0; i < show && off < (int)sizeof(buf) - 2; i++) {
+                    if (i > 0 && off < (int)sizeof(buf) - 4) {
+                        buf[off++] = ',';
+                        buf[off++] = ' ';
                     }
-                    Py_DECREF(keys);
-                } else {
-                    menai_raise_eval_errorf("Undefined variable: '%s'", name_str);
+                    const char *kn = globals->entries[i].name;
+                    int klen = (int)strlen(kn);
+                    if (off + klen >= (int)sizeof(buf) - 4) break;
+                    memcpy(buf + off, kn, klen);
+                    off += klen;
                 }
+                buf[off] = '\0';
+                menai_raise_eval_errorf(
+                    "Undefined variable: '%s'\n  Available variables: %s%s",
+                    name_str, buf, nk > 10 ? "..." : "");
                 goto error;
             }
             reg_set_borrow(regs, base + dest, val);
@@ -4304,104 +4367,51 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     if (_tmp == NULL) return NULL;
     Py_DECREF(_tmp);
 
-    /* Convert constants dict (pi, e, etc.) from slow to fast types. */
-    PyObject *fast_constants = PyDict_New();
-    if (fast_constants == NULL) return NULL;
-
-    PyObject *ckey, *cval;
-    Py_ssize_t cpos = 0;
-    while (PyDict_Next(constants_dict, &cpos, &ckey, &cval)) {
-        PyObject *converted = PyObject_CallOneArg(fn_convert_value, cval);
-        if (converted == NULL) {
-            Py_DECREF(fast_constants);
-            return NULL;
-        }
-        int ok = PyDict_SetItem(fast_constants, ckey, converted);
-        Py_DECREF(converted);
-        if (ok < 0) {
-            Py_DECREF(fast_constants);
-            return NULL;
-        }
-    }
-
-    /* Build the globals dict (constants + prelude), converting prelude values
-     * from slow compiler-world types to fast C types. */
-    PyObject *globals;
-    if (prelude_dict != Py_None && PyDict_Size(prelude_dict) > 0) {
-        PyObject *fast_prelude = PyDict_New();
-        if (fast_prelude == NULL) {
-            Py_DECREF(fast_constants);
-            return NULL;
-        }
-        PyObject *pkey, *pval;
-        Py_ssize_t ppos = 0;
-        while (PyDict_Next(prelude_dict, &ppos, &pkey, &pval)) {
-            PyObject *converted = PyObject_CallOneArg(fn_convert_value, pval);
-            if (converted == NULL) {
-                Py_DECREF(fast_prelude);
-                Py_DECREF(fast_constants);
-                return NULL;
-            }
-            int ok = PyDict_SetItem(fast_prelude, pkey, converted);
-            Py_DECREF(converted);
-            if (ok < 0) {
-                Py_DECREF(fast_prelude);
-                Py_DECREF(fast_constants);
-                return NULL;
-            }
-        }
-        globals = build_globals(fast_constants, fast_prelude);
-        Py_DECREF(fast_prelude);
-    } else {
-        globals = build_globals(fast_constants, prelude_dict);
-    }
-    Py_DECREF(fast_constants);
-    if (globals == NULL)
+    /* Build the globals table (constants + prelude), converting values to fast C types. */
+    GlobalsTable globals;
+    if (globals_build(&globals, constants_dict, prelude_dict) < 0)
         return NULL;
 
     /* Compute the register window size. */
     int max_locals = max_local_count(code);
     if (max_locals < 0) {
-        Py_DECREF(globals);
+        globals_free(&globals);
         return NULL;
     }
 
     /* Also scan prelude functions for their max_local_count. */
-    if (prelude_dict != Py_None && PyDict_Size(prelude_dict) > 0) {
-        PyObject *key, *val;
-        Py_ssize_t pos = 0;
-        while (PyDict_Next(globals, &pos, &key, &val)) {
-            if (IS_MENAI_FUNCTION(val)) {
-                PyObject *bc = PyObject_GetAttrString(val, "bytecode");
-                if (bc == NULL) {
-                    Py_DECREF(globals);
-                    return NULL;
-                }
-                int n = max_local_count(bc);
-                Py_DECREF(bc);
-                if (n < 0) {
-                    Py_DECREF(globals);
-                    return NULL;
-                }
-                if (n > max_locals)
-                    max_locals = n;
+    for (Py_ssize_t i = 0; i < globals.count; i++) {
+        PyObject *val = globals.entries[i].value;
+        if (IS_MENAI_FUNCTION(val)) {
+            PyObject *bc = PyObject_GetAttrString(val, "bytecode");
+            if (bc == NULL) {
+                globals_free(&globals);
+                return NULL;
             }
+            int n = max_local_count(bc);
+            Py_DECREF(bc);
+            if (n < 0) {
+                globals_free(&globals);
+                return NULL;
+            }
+            if (n > max_locals)
+                max_locals = n;
         }
     }
 
     /* Allocate the register array. */
     PyObject **regs = regs_alloc(MAX_FRAME_DEPTH, max_locals);
     if (regs == NULL) {
-        Py_DECREF(globals);
+        globals_free(&globals);
         return NULL;
     }
 
     /* Run the VM. */
-    PyObject *result = execute_loop(code, globals, regs, max_locals);
+    PyObject *result = execute_loop(code, &globals, regs, max_locals);
 
     /* Clean up. */
     regs_free(regs, MAX_FRAME_DEPTH, max_locals);
-    Py_DECREF(globals);
+    globals_free(&globals);
 
     if (result == NULL)
         return NULL;
