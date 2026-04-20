@@ -1,5 +1,5 @@
 #define MyAppName "Humbug"
-#define MyAppVersion "43"
+#define MyAppVersion "45"
 #define MyAppPublisher "m6r.ai"
 #define MyAppURL "https://github.com/m6r-ai/humbug"
 #define MyAppExeName "Humbug.exe"
