@@ -3,13 +3,14 @@
 import asyncio
 import logging
 import os
+import re
 from typing import Dict, List, Tuple, Any, Set, cast
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
+    QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu, QFileDialog
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
-from PySide6.QtGui import QCursor, QResizeEvent
+from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
 
 from ai import (
     AIConversation, AIConversationEvent, AIConversationHistory,
@@ -17,6 +18,7 @@ from ai import (
 )
 from ai_conversation_transcript import AIConversationTranscriptError, AIConversationTranscriptHandler
 from ai_tool import AIToolCall
+from syntax.programming_language_utils import ProgrammingLanguageUtils
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -178,6 +180,7 @@ class ConversationWidget(QWidget):
         self._input.submit_requested.connect(self.submit)
         self._input.stop_requested.connect(self._on_stop_requested)
         self._input.settings_requested.connect(self._on_input_settings_requested)
+        self._input.attach_requested.connect(self._on_attach_requested)
         self._input.modified.connect(self.conversation_modified)
 
         style_manager.style_changed.connect(self._on_style_changed)
@@ -225,7 +228,7 @@ class ConversationWidget(QWidget):
         self._matches: List[Tuple[ConversationMessage, List[Tuple[int, int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
-        self._last_search = ""
+        self._last_search: tuple = ("", False, False)
         self._highlighted_widgets: Set[ConversationMessage] = set()
 
         # Create transcript handler with provided filename, then load the transcript data
@@ -1066,6 +1069,10 @@ class ConversationWidget(QWidget):
                 scrollbar.setValue(scrollbar.minimum())
 
             else:
+                screen = QGuiApplication.screenAt(QCursor.pos())
+                if screen is None or QCursor.pos().y() <= screen.availableGeometry().top() + 4:
+                    distance_out = 250
+
                 scroll_amount = min(50, max(10, distance_out // 5))
                 new_val = max(scrollbar.minimum(), current_val - scroll_amount)
                 scrollbar.setValue(new_val)
@@ -1077,6 +1084,10 @@ class ConversationWidget(QWidget):
                 scrollbar.setValue(scrollbar.maximum())
 
             else:
+                screen = QGuiApplication.screenAt(QCursor.pos())
+                if screen is None or QCursor.pos().y() >= screen.availableGeometry().bottom() - 4:
+                    distance_out = 250
+
                 scroll_amount = min(50, max(10, distance_out // 5))
                 new_val = min(scrollbar.maximum(), current_val + scroll_amount)
                 scrollbar.setValue(new_val)
@@ -1109,22 +1120,23 @@ class ConversationWidget(QWidget):
     def _update_smooth_scroll(self) -> None:
         """Update the smooth scrolling animation."""
         self._smooth_scroll_time += self._smooth_scroll_timer.interval()
-
-        # Calculate progress (0 to 1)
         progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
-
-        # Apply easing function (ease out cubic)
         t = 1 - (1 - progress) ** 3
 
-        # Calculate new position
-        new_position = self._smooth_scroll_start + int(self._smooth_scroll_distance * t)
-
-        # Update scrollbar position
+        # Add 0.5 lines of bias so that int() truncation crosses each pixel boundary
+        # slightly early, avoiding a visible "jump" at the very end of the animation
+        # where the easing curve decelerates so slowly that the final line is only
+        # reached on the last tick, well after the scroll appears to have stopped.
+        new_position = min(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t + 0.5),
+        ) if self._smooth_scroll_distance > 0 else max(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t - 0.5),
+        )
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(new_position)
-
-        # Stop the timer when animation is complete
-        if progress >= 1.0:
+        if progress >= 1.0 or new_position == self._smooth_scroll_target:
             self._smooth_scroll_timer.stop()
 
     def update_conversation_settings(self, new_settings: AIConversationSettings) -> None:
@@ -1305,6 +1317,7 @@ class ConversationWidget(QWidget):
                 self._spotlighted_message_index = last_visible_index
                 self._spotlight_message()
                 return True
+
             return False
 
         # Find the previous visible message
@@ -1718,7 +1731,8 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_delete_button,
             #ConversationMessage #_stop_button,
             #ConversationMessage #_submit_button,
-            #ConversationMessage #_settings_button {{
+            #ConversationMessage #_settings_button,
+            #ConversationMessage #_attach_button {{
                 background-color: transparent;
                 color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
                 border: none;
@@ -1733,7 +1747,8 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_delete_button:hover,
             #ConversationMessage #_stop_button:hover,
             #ConversationMessage #_submit_button:hover,
-            #ConversationMessage #_settings_button:hover {{
+            #ConversationMessage #_settings_button:hover,
+            #ConversationMessage #_attach_button:hover {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_HOVER)};
             }}
 
@@ -1744,7 +1759,8 @@ class ConversationWidget(QWidget):
             #ConversationMessage #_delete_button:pressed,
             #ConversationMessage #_stop_button:pressed,
             #ConversationMessage #_submit_button:pressed,
-            #ConversationMessage #_settings_button:pressed {{
+            #ConversationMessage #_settings_button:pressed,
+            #ConversationMessage #_attach_button:pressed {{
                 background-color: {style_manager.get_color_str(ColorRole.MESSAGE_BACKGROUND_PRESSED)};
             }}
 
@@ -1813,6 +1829,38 @@ class ConversationWidget(QWidget):
 
             #ConversationMessage #_edit_btn_row {{
                 background-color: transparent;
+            }}
+
+            #ConversationMessage #_attachments_bar {{
+                background-color: transparent;
+                border: none;
+            }}
+
+            #ConversationMessage #_attachment_widget {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_ATTACHMENT_BACKGROUND)};
+                border: 1px solid {style_manager.get_color_str(ColorRole.MESSAGE_USER_BORDER)};
+                border-radius: 4px;
+            }}
+
+            #ConversationMessage #_attachment_label {{
+                color: {style_manager.get_color_str(ColorRole.TEXT_PRIMARY)};
+                background-color: transparent;
+                font-size: {label_font_size:.1f}pt;
+            }}
+
+            #ConversationMessage #_attachment_remove {{
+                background-color: transparent;
+                border: none;
+                padding: 0;
+                margin: 0;
+            }}
+
+            #ConversationMessage #_attachment_remove:hover {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_HOVER)};
+            }}
+
+            #ConversationMessage #_attachment_remove:pressed {{
+                background-color: {style_manager.get_color_str(ColorRole.MESSAGE_USER_BACKGROUND_PRESSED)};
             }}
 
             #ConversationMessage #_edit_confirm_button {{
@@ -2291,12 +2339,28 @@ class ConversationWidget(QWidget):
     ) -> None:
         """Submit current input text."""
         content = self._input.to_plain_text().strip()
-        if not content:
+        attachments = self._input.get_attachments()
+        if not content and not attachments:
             return
 
         ai_conversation = cast(AIConversation, self._ai_conversation)
-        sanitized_content = self._sanitize_input(content)
+
+        # Prepend each attached file as a fenced code block before the message text.
+        parts = []
+        for filename, file_content in attachments:
+            language = ProgrammingLanguageUtils.get_name(
+                ProgrammingLanguageUtils.from_file_extension(filename)
+            )
+            parts.append(f"`{filename}`:\n```{language}\n{file_content}\n```")
+
+        if content:
+            parts.append(content)
+
+        combined = "\n\n".join(parts)
+
+        sanitized_content = self._sanitize_input(combined)
         self._input.clear()
+        self._input.clear_attachments()
 
         # We need to decide if we're already streaming or if this is a new message.
         if self._is_streaming:
@@ -2335,6 +2399,40 @@ class ConversationWidget(QWidget):
     def _on_input_settings_requested(self) -> None:
         """Handle settings request from input widget."""
         self.conversation_settings_requested.emit()
+
+    def _on_attach_requested(self) -> None:
+        """Handle attach file request: open file dialog and attach selected file."""
+        strings = self._language_manager.strings()
+        extensions = ProgrammingLanguageUtils.get_supported_file_extensions()
+        ext_pattern = " ".join(f"*{ext}" for ext in sorted(extensions))
+        file_filter = f"Text and code files ({ext_pattern});;All files (*)"
+        path, _ = QFileDialog.getOpenFileName(self, strings.file_dialog_attach_file, "", file_filter)
+        if not path:
+            return
+
+        file_size = os.path.getsize(path)
+        size_kb = file_size // 1024
+        if file_size > 100 * 1024:
+            filename = os.path.basename(path)
+            result = MessageBox.show_message(
+                self,
+                MessageBoxType.WARNING,
+                strings.file_error_title,
+                strings.warning_file_too_large.format(filename=filename, size_kb=size_kb),
+                [MessageBoxButton.YES, MessageBoxButton.NO]
+            )
+            if result != MessageBoxButton.YES:
+                return
+
+        try:
+            with open(path, encoding='utf-8', errors='replace') as f:
+                content = f.read()
+
+        except Exception as e:
+            self._logger.warning("Failed to read attachment %s: %s", path, str(e))
+            return
+
+        self._input.add_attachment(os.path.basename(path), content)
 
     def get_conversation_history(self) -> AIConversationHistory:
         """Get the conversation history object."""
@@ -2560,13 +2658,15 @@ class ConversationWidget(QWidget):
 
         return ""
 
-    def find_text(self, text: str, forward: bool = True) -> Tuple[int, int]:
+    def find_text(self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False) -> Tuple[int, int]:
         """
         Find all instances of text and highlight them.
 
         Args:
             text: Text to search for
             forward: Whether to search forward from current position
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
 
         Returns:
             Tuple of (current_match, total_matches)
@@ -2575,17 +2675,17 @@ class ConversationWidget(QWidget):
         widgets = self._messages + [self._input]
 
         # Clear existing highlights if search text changed
-        if text != self._last_search:
+        if (text, case_sensitive, regexp) != self._last_search:
             self._clear_highlights()
             self._matches = []
             self._current_widget_index = -1
             self._current_match_index = -1
-            self._last_search = text
+            self._last_search = (text, case_sensitive, regexp)
 
         # Find all matches if this is a new search
         if not self._matches and text:
             for widget in widgets:
-                widget_matches = widget.find_text(text)
+                widget_matches = widget.find_text(text, case_sensitive, regexp)
                 if widget_matches:
                     self._matches.append((widget, widget_matches))
 
@@ -2698,8 +2798,8 @@ class ConversationWidget(QWidget):
 
             # Re-search this specific message to get accurate section positions
             # after rendering (the raw text positions won't map correctly to sections)
-            search_text = self._last_search
-            new_matches = widget.find_text(search_text)
+            search_text, case_sensitive, regexp = self._last_search
+            new_matches = widget.find_text(search_text, case_sensitive, regexp)
 
             # Update the matches for this widget
             self._matches[self._current_widget_index] = (widget, new_matches)
@@ -2747,7 +2847,7 @@ class ConversationWidget(QWidget):
         self._matches = []
         self._current_widget_index = -1
         self._current_match_index = -1
-        self._last_search = ""
+        self._last_search = ("", False, False)
 
     # AI Tool Support Methods
 
@@ -2911,7 +3011,8 @@ class ConversationWidget(QWidget):
         search_text: str,
         case_sensitive: bool = False,
         message_types: List[str] | None = None,
-        max_results: int = 50
+        max_results: int = 50,
+        regexp: bool = False
     ) -> Dict[str, Any]:
         """
         Search for text across all messages.
@@ -2921,9 +3022,13 @@ class ConversationWidget(QWidget):
             case_sensitive: Case-sensitive search
             message_types: Filter to specific message types
             max_results: Maximum results to return
+            regexp: If True, treat search_text as a regular expression.
 
         Returns:
             Dictionary containing search results
+
+        Raises:
+            ValueError: If regexp is True and search_text is not a valid regular expression.
         """
         if self._ai_conversation is None:
             raise ValueError("No conversation available")
@@ -2949,9 +3054,16 @@ class ConversationWidget(QWidget):
         history = self.get_conversation_history()
         messages = history.get_messages()
 
-        # Prepare search
-        search_str = search_text if case_sensitive else search_text.lower()
         matches = []
+
+        if regexp:
+            flags = 0 if case_sensitive else re.IGNORECASE
+            try:
+                pattern = re.compile(search_text, flags)
+            except re.error as e:
+                raise ValueError(f"Invalid regular expression: {e}") from e
+        else:
+            pattern = None
 
         for idx, msg in enumerate(messages):
             # Apply type filter
@@ -2961,36 +3073,52 @@ class ConversationWidget(QWidget):
                     continue
 
             # Search in content
-            content = msg.content if case_sensitive else msg.content.lower()
-            pos = 0
+            content = msg.content
 
-            while True:
-                pos = content.find(search_str, pos)
-                if pos == -1:
-                    break
+            if pattern is not None:
+                for m in pattern.finditer(content):
+                    pos = m.start()
+                    matched = m.group()
+                    context_start = max(0, pos - 50)
+                    context_end = min(len(content), m.end() + 50)
+                    matches.append({
+                        "message_index": idx,
+                        "message_id": msg.id,
+                        "message_type": msg.source_str(),
+                        "timestamp": msg.timestamp.isoformat(),
+                        "match_position": pos,
+                        "context_before": content[context_start:pos],
+                        "match_text": matched,
+                        "context_after": content[m.end():context_end]
+                    })
+                    if len(matches) >= max_results:
+                        break
 
-                # Extract context (50 chars before and after)
-                context_start = max(0, pos - 50)
-                context_end = min(len(msg.content), pos + len(search_text) + 50)
+            else:
+                search_str = search_text if case_sensitive else search_text.lower()
+                haystack = content if case_sensitive else content.lower()
+                pos = 0
+                while True:
+                    pos = haystack.find(search_str, pos)
+                    if pos == -1:
+                        break
 
-                match_info = {
-                    "message_index": idx,
-                    "message_id": msg.id,
-                    "message_type": msg.source_str(),
-                    "timestamp": msg.timestamp.isoformat(),
-                    "match_position": pos,
-                    "context_before": msg.content[context_start:pos],
-                    "match_text": msg.content[pos:pos + len(search_text)],
-                    "context_after": msg.content[pos + len(search_text):context_end]
-                }
+                    context_start = max(0, pos - 50)
+                    context_end = min(len(content), pos + len(search_text) + 50)
+                    matches.append({
+                        "message_index": idx,
+                        "message_id": msg.id,
+                        "message_type": msg.source_str(),
+                        "timestamp": msg.timestamp.isoformat(),
+                        "match_position": pos,
+                        "context_before": content[context_start:pos],
+                        "match_text": content[pos:pos + len(search_text)],
+                        "context_after": content[pos + len(search_text):context_end]
+                    })
+                    if len(matches) >= max_results:
+                        break
 
-                matches.append(match_info)
-
-                # Check if we've hit the limit
-                if len(matches) >= max_results:
-                    break
-
-                pos += 1
+                    pos += 1
 
             if len(matches) >= max_results:
                 break

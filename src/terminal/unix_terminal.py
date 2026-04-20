@@ -211,7 +211,7 @@ class UnixTerminal(TerminalBase):
         loop = asyncio.get_event_loop()
         try:
             # Wait for data with select
-            r, _w, _e = await loop.run_in_executor(
+            select_result: tuple[list[int], list[int], list[int]] = await loop.run_in_executor(
                 None,
                 select.select,
                 [self._main_fd],
@@ -219,6 +219,7 @@ class UnixTerminal(TerminalBase):
                 [],
                 0.1
             )
+            r, _w, _e = select_result
 
             if not r:
                 return b''  # No data available within timeout

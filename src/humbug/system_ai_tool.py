@@ -66,7 +66,9 @@ class SystemAITool(AITool):
                 AIToolParameter(
                     name="file_path",
                     type="string",
-                    description="Path to file or directory (for open_editor_tab, open_conversation_tab, open_preview_tab)",
+                    description=(
+                        "Path to file or directory (for open_editor_tab, open_conversation_tab, open_preview_tab, open_diff_tab)"
+                    ),
                     required=False
                 ),
                 AIToolParameter(
@@ -155,6 +157,15 @@ class SystemAITool(AITool):
                 required_parameters=set(),
                 description="Open a file/directory in a preview view tab. "
                     "If no file_path provided, opens mindspace root. "
+                    "Returns the tab GUID for use with the preview tool"
+            ),
+            "open_diff_tab": AIToolOperationDefinition(
+                name="open_diff_tab",
+                handler=self._open_diff_tab,
+                extract_context=None,
+                allowed_parameters={"file_path"},
+                required_parameters={"file_path"},
+                description="Open a side-by-side git diff tab showing working-tree vs HEAD for a file. "
                     "Returns the tab GUID for use with the preview tool"
             ),
             "get_tab_info": AIToolOperationDefinition(
@@ -515,6 +526,49 @@ class SystemAITool(AITool):
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to open preview: {str(e)}") from e
+
+    async def _open_diff_tab(
+        self,
+        tool_call: AIToolCall,
+        requester_ref: Any,
+        _request_authorization: AIToolAuthorizationCallback
+    ) -> AIToolResult:
+        """Open a side-by-side git diff tab for a file."""
+        arguments = tool_call.arguments
+
+        file_path_arg = self._get_required_str_value("file_path", arguments)
+        file_path = self._validate_and_resolve_path(file_path_arg)
+
+        if not os.path.exists(file_path):
+            raise AIToolExecutionError(f"File not found: '{file_path_arg}'")
+
+        if os.path.isdir(file_path):
+            raise AIToolExecutionError(f"Cannot diff a directory: '{file_path_arg}'")
+
+        try:
+            requester_tab = cast(ConversationTab, self._column_manager.find_tab_by_ai_conversation(requester_ref))
+            self._column_manager.protect_tab(requester_tab.tab_id())
+
+            try:
+                diff_tab = self._column_manager.open_diff(file_path, False)
+
+            finally:
+                self._column_manager.unprotect_tab(requester_tab.tab_id())
+
+            relative_path = self._mindspace_manager.get_relative_path(file_path)
+            tab_id = diff_tab.tab_id()
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"AI opened diff for file: '{relative_path}'\ntab ID: {tab_id}"
+            )
+            return AIToolResult(
+                id=tool_call.id,
+                name="system",
+                content=f"Opened diff tab for file: '{relative_path}', tab ID: {tab_id}"
+            )
+
+        except Exception as e:
+            raise AIToolExecutionError(f"Failed to open diff for '{file_path_arg}': {str(e)}") from e
 
     async def _get_tab_info(
         self,

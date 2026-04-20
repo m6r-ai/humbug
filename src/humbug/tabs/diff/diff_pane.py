@@ -3,10 +3,10 @@
 import logging
 from typing import List, Optional
 
-from PySide6.QtWidgets import QPlainTextEdit, QWidget
-from PySide6.QtCore import Qt, QRect
+from PySide6.QtWidgets import QMenu, QPlainTextEdit, QWidget
+from PySide6.QtCore import Qt, QRect, QRegularExpression, Signal
 from PySide6.QtGui import (
-    QColor, QPainter, QPaintEvent, QResizeEvent, QTextBlockUserData, QTextBlock,
+    QColor, QContextMenuEvent, QKeyEvent, QPainter, QPaintEvent, QResizeEvent, QTextBlockUserData, QTextBlock,
     QSyntaxHighlighter, QTextCharFormat, QTextCursor, QTextDocument
 )
 from PySide6.QtWidgets import QTextEdit
@@ -16,11 +16,13 @@ from syntax import ProgrammingLanguage, ParserState, ParserRegistry, TokenType
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
 from humbug.tabs.line_number_area import LineNumberArea
+from humbug.language.language_manager import LanguageManager
 from humbug.tabs.diff.diff_row import DiffRow, DiffRowType
 
 
 class _BlockData(QTextBlockUserData):
-    """Per-block metadata combining diff row info and syntax highlighter parser state.
+    """
+    Per-block metadata combining diff row info and syntax highlighter parser state.
 
     Keeping both pieces of data in a single QTextBlockUserData subclass avoids
     the problem of the syntax highlighter's setUserData call overwriting the diff
@@ -36,7 +38,8 @@ class _BlockData(QTextBlockUserData):
 
 
 class _DiffPaneHighlighter(QSyntaxHighlighter):
-    """Syntax highlighter for a DiffPane document.
+    """
+    Syntax highlighter for a DiffPane document.
 
     This is a slimmed-down highlighter that stores its parser state in the
     combined _BlockData object already attached to each block by load_rows(),
@@ -128,7 +131,8 @@ class _DiffPaneHighlighter(QSyntaxHighlighter):
 
 
 class DiffPane(QPlainTextEdit):
-    """Read-only pane displaying one side of a side-by-side diff.
+    """
+    Read-only pane displaying one side of a side-by-side diff.
 
     The pane owns a LineNumberArea gutter that shows line numbers and a
     _DiffPaneHighlighter for syntax highlighting.  Background colours for each
@@ -139,10 +143,15 @@ class DiffPane(QPlainTextEdit):
     single shared scrollbar that drives both panes simultaneously.
     """
 
+    open_in_editor_requested = Signal()
+    open_in_preview_requested = Signal()
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._logger = logging.getLogger("DiffPane")
         self._style_manager = StyleManager()
+        self._active_hunk_start: int = -1
+        self._active_hunk_end: int = -1
 
         self.setReadOnly(True)
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
@@ -156,6 +165,7 @@ class DiffPane(QPlainTextEdit):
         self._update_gutter_width()
 
         self._highlighter = _DiffPaneHighlighter(self)
+        self._language_manager = LanguageManager()
 
     def set_syntax(self, language: ProgrammingLanguage) -> None:
         """
@@ -167,7 +177,8 @@ class DiffPane(QPlainTextEdit):
         self._highlighter.set_syntax(language)
 
     def load_rows(self, rows: List[DiffRow], use_left: bool) -> None:
-        """Populate the pane from a list of DiffRow objects.
+        """
+        Populate the pane from a list of DiffRow objects.
 
         Each row becomes one QTextBlock.  A _BlockData object carrying the
         row type and line number is attached to the block before the highlighter
@@ -197,6 +208,21 @@ class DiffPane(QPlainTextEdit):
 
         cursor.endEditBlock()
 
+    def set_active_hunk(self, start: int, end: int) -> None:
+        """
+        Set the row range of the currently active hunk for gutter highlighting.
+
+        Args:
+            start: First row index of the active hunk (inclusive), or -1 to clear.
+            end: Last row index of the active hunk (inclusive).
+        """
+        if self._active_hunk_start == start and self._active_hunk_end == end:
+            return
+
+        self._active_hunk_start = start
+        self._active_hunk_end = end
+        self._gutter.update()
+
     def apply_style(self) -> None:
         """Reapply colours and font after a theme or zoom change."""
         zoom = self._style_manager.zoom_factor()
@@ -210,13 +236,17 @@ class DiffPane(QPlainTextEdit):
 
         bg = self._style_manager.get_color_str(ColorRole.TAB_BACKGROUND_ACTIVE)
         fg = self._style_manager.get_color_str(ColorRole.TEXT_PRIMARY)
+        sel = self._style_manager.get_color_str(ColorRole.TEXT_SELECTED)
         self.setStyleSheet(f"""
             QPlainTextEdit {{
                 background-color: {bg};
                 color: {fg};
                 border: none;
                 padding: 0px;
+                selection-background-color: {sel};
+                selection-color: none;
             }}
+            {self._style_manager.get_menu_stylesheet()}
         """)
 
         self._update_gutter_width()
@@ -228,6 +258,24 @@ class DiffPane(QPlainTextEdit):
         super().resizeEvent(event)
         cr = self.contentsRect()
         self._gutter.setGeometry(QRect(cr.left(), cr.top(), self._gutter_width(), cr.height()))
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        """Ignore all key events so they propagate to the parent for shortcut handling."""
+        event.ignore()
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        """Show a styled context menu with a Copy action."""
+        menu = QMenu(self)
+        strings = self._language_manager.strings()
+        copy_action = menu.addAction(strings.copy)
+        copy_action.setEnabled(self.textCursor().hasSelection())
+        copy_action.triggered.connect(self.copy)
+        menu.addSeparator()
+        edit_action = menu.addAction(strings.edit)
+        edit_action.triggered.connect(self.open_in_editor_requested)
+        preview_action = menu.addAction(strings.preview)
+        preview_action.triggered.connect(self.open_in_preview_requested)
+        menu.exec_(event.globalPos())
 
     def paintEvent(self, event: QPaintEvent) -> None:
         """Paint row backgrounds before the standard text painting."""
@@ -251,7 +299,6 @@ class DiffPane(QPlainTextEdit):
         bg = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_ACTIVE)
         painter.fillRect(event.rect(), bg)
 
-        painter.setPen(self._style_manager.get_color(ColorRole.LINE_NUMBER))
         painter.setFont(self.font())
 
         digit_width = self.fontMetrics().horizontalAdvance('9')
@@ -265,6 +312,14 @@ class DiffPane(QPlainTextEdit):
             if block.isVisible() and bottom >= event.rect().top():
                 data = block.userData()
                 if isinstance(data, _BlockData) and data.line_no is not None:
+                    block_num = block.blockNumber()
+                    in_active_hunk = (
+                        self._active_hunk_start >= 0
+                        and self._active_hunk_start <= block_num <= self._active_hunk_end
+                    )
+                    painter.setPen(self._style_manager.get_color(
+                        ColorRole.DIFF_HUNK_LINE_NUMBER if in_active_hunk else ColorRole.LINE_NUMBER
+                    ))
                     painter.drawText(
                         QRect(
                             0,
@@ -316,12 +371,6 @@ class DiffPane(QPlainTextEdit):
             case DiffRowType.CHANGED:
                 return self._style_manager.get_color(ColorRole.DIFF_CHANGED_BACKGROUND)
 
-            case DiffRowType.HEADER:
-                return self._style_manager.get_color(ColorRole.DIFF_HEADER_BACKGROUND)
-
-            case DiffRowType.FILLER:
-                return self._style_manager.get_color(ColorRole.DIFF_FILLER_BACKGROUND)
-
             case _:
                 return None
 
@@ -338,11 +387,13 @@ class DiffPane(QPlainTextEdit):
         if rect.contains(self.viewport().rect()):
             self._update_gutter_width()
 
-    def find_matches(self, text: str) -> list[tuple[int, int]]:
+    def find_matches(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> list[tuple[int, int]]:
         """Find all occurrences of *text* in this pane's document.
 
         Args:
             text: The search string.  An empty string returns an empty list.
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a QRegularExpression pattern.
 
         Returns:
             List of (start, end) character-position pairs, one per match.
@@ -353,12 +404,38 @@ class DiffPane(QPlainTextEdit):
 
         document = self.document()
         cursor = QTextCursor(document)
-        while True:
-            cursor = document.find(text, cursor)
-            if cursor.isNull():
-                break
 
-            matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+        if regexp:
+            flags = QRegularExpression.PatternOption(0)
+            if not case_sensitive:
+                flags |= QRegularExpression.PatternOption.CaseInsensitiveOption
+
+            pattern = QRegularExpression(text, flags)
+            if not pattern.isValid():
+                return []
+
+            find_flags = QTextDocument.FindFlag(0)
+            if case_sensitive:
+                find_flags |= QTextDocument.FindFlag.FindCaseSensitively
+
+            while True:
+                cursor = document.find(pattern, cursor, find_flags)
+                if cursor.isNull():
+                    break
+
+                matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+
+        else:
+            find_flags = QTextDocument.FindFlag(0)
+            if case_sensitive:
+                find_flags |= QTextDocument.FindFlag.FindCaseSensitively
+
+            while True:
+                cursor = document.find(text, cursor, find_flags)
+                if cursor.isNull():
+                    break
+
+                matches.append((cursor.selectionStart(), cursor.selectionEnd()))
 
         return matches
 
@@ -367,7 +444,8 @@ class DiffPane(QPlainTextEdit):
         matches: list[tuple[int, int]],
         current_index: int,
     ) -> None:
-        """Apply extra-selection highlighting to the given match positions.
+        """
+        Apply extra-selection highlighting to the given match positions.
 
         The match at *current_index* receives the bright highlight colour;
         all others receive the dim colour.  Pass an empty *matches* list (or
@@ -405,7 +483,8 @@ class DiffPane(QPlainTextEdit):
         self.setExtraSelections([])
 
     def target_scroll_for_match(self, start: int) -> int:
-        """Return the scrollbar value that would centre the match at *start* in the viewport.
+        """
+        Return the scrollbar value that would centre the match at *start* in the viewport.
 
         The pane's own vertical scrollbar is hidden (the shared scrollbar drives
         it), so we compute the target value without actually scrolling — the
@@ -420,6 +499,20 @@ class DiffPane(QPlainTextEdit):
         cursor = QTextCursor(self.document())
         cursor.setPosition(start)
         block_number = cursor.block().blockNumber()
+        vbar = self.verticalScrollBar()
+        visible_lines = self.viewport().height() // max(1, self.fontMetrics().lineSpacing())
+        return max(vbar.minimum(), min(vbar.maximum(), block_number - visible_lines // 2))
+
+    def target_scroll_for_block(self, block_number: int) -> int:
+        """
+        Return the scrollbar value that would centre *block_number* in the viewport.
+
+        Args:
+            block_number: Zero-based block (row) index to centre.
+
+        Returns:
+            Target vertical scrollbar value to centre the block.
+        """
         vbar = self.verticalScrollBar()
         visible_lines = self.viewport().height() // max(1, self.fontMetrics().lineSpacing())
         return max(vbar.minimum(), min(vbar.maximum(), block_number - visible_lines // 2))

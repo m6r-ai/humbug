@@ -3,6 +3,7 @@
 # PyInstaller config file
 #
 import os
+import glob
 import sys
 from PyInstaller.utils.hooks import collect_data_files
 import certifi
@@ -11,13 +12,22 @@ codesign_id = os.environ['CODESIGN_IDENTITY'] if 'CODESIGN_IDENTITY' in os.envir
 
 block_cipher = None
 
+# On Windows, explicitly collect the in-place compiled Menai C extension (.pyd).
+# PyInstaller does not reliably auto-discover extensions built inplace outside
+# the main package tree, so we glob for it and pass it via binaries.
+if sys.platform == 'win32':
+    _pyd_files = glob.glob('src/menai/menai_vm_c*.pyd')
+    _extra_binaries = [(_pyd, 'menai') for _pyd in _pyd_files]
+else:
+    _extra_binaries = []
+
 # Collect certifi's CA bundle
 certifi_data = collect_data_files("certifi")
 
 a = Analysis(
     ['src/humbug/__main__.py'],
     pathex=['src'],
-    binaries=[],
+    binaries=_extra_binaries,
     datas=certifi_data,
     hiddenimports=[],
     hookspath=[],
@@ -93,8 +103,8 @@ if sys.platform != 'win32':
         bundle_identifier='ai.m6r.humbug',
         info_plist={
             'CFBundleDisplayName': 'Humbug',
-            'CFBundleShortVersionString': '43',
-            'CFBundleVersion': '43',
+            'CFBundleShortVersionString': '44',
+            'CFBundleVersion': '44',
             'NSPrincipalClass': 'NSApplication',
             'NSAppleScriptEnabled': False
         }

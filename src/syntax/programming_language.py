@@ -4,6 +4,7 @@ from enum import IntEnum, auto
 class ProgrammingLanguage(IntEnum):
     """Programming language enum."""
     UNKNOWN = -1
+    BASH = auto()
     C = auto()
     CPP = auto()
     CSHARP = auto()
@@ -20,11 +21,15 @@ class ProgrammingLanguage(IntEnum):
     MENAI = auto()
     METAPHOR = auto()
     MOVE = auto()
+    PHP = auto()
     PYTHON = auto()
+    RUBY = auto()
     RUST = auto()
     SCHEME = auto()
     SOLIDITY = auto()
     SWIFT = auto()
     TEXT = auto()
+    TOML = auto()
     TYPESCRIPT = auto()
     XML = auto()
+    YAML = auto()

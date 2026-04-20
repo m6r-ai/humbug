@@ -1,14 +1,14 @@
 """Item delegate for the VCS status list."""
 
-from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QRect, Qt
+from PySide6.QtCore import QModelIndex, QPersistentModelIndex, QRect, QSize, Qt
 from PySide6.QtGui import QBrush, QColor, QPainter
-from PySide6.QtWidgets import QStyledItemDelegate, QStyleOptionViewItem, QWidget
+from PySide6.QtWidgets import QStyle, QStyledItemDelegate, QStyleOptionViewItem, QWidget
 
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
 
 
-class MindspaceVcsDelegate(QStyledItemDelegate):
+class MindspaceVCSDelegate(QStyledItemDelegate):
     """
     Delegate that renders each VCS status entry as two visual columns.
 
@@ -37,18 +37,21 @@ class MindspaceVcsDelegate(QStyledItemDelegate):
         """Paint the background then the badge and path as separate columns."""
         painter.save()
 
+        # rect and state are valid properties but PySide6 does not expose them correctly
         rect: QRect = option.rect  # type: ignore
-        state = option.state  # type: ignore
+        state = QStyle.StateFlag(option.state)  # type: ignore
 
         # Draw background manually so we never call super().paint() which
         # would also render the display-role text and cause double drawing.
-        is_selected = bool(state & option.state.State_Selected)
-        is_hovered = bool(state & option.state.State_MouseOver)
+        is_selected = bool(state & QStyle.StateFlag.State_Selected)
+        is_hovered = bool(state & QStyle.StateFlag.State_MouseOver)
 
         if is_selected:
             bg = self._style_manager.get_color(ColorRole.TEXT_SELECTED)
+
         elif is_hovered:
             bg = self._style_manager.get_color(ColorRole.TAB_BACKGROUND_HOVER)
+
         else:
             bg = self._style_manager.get_color(ColorRole.MINDSPACE_BACKGROUND)
 
@@ -73,6 +76,7 @@ class MindspaceVcsDelegate(QStyledItemDelegate):
         display_text: str = index.data(Qt.ItemDataRole.DisplayRole) or ""
         if "  " in display_text:
             badge_char, _, path_text = display_text.partition("  ")
+
         else:
             badge_char = display_text[:1]
             path_text = display_text[2:]
@@ -112,9 +116,10 @@ class MindspaceVcsDelegate(QStyledItemDelegate):
         self,
         option: QStyleOptionViewItem,
         index: QModelIndex | QPersistentModelIndex,
-    ) -> object:
+    ) -> QSize:
         """Return a size hint with appropriate row height."""
-        hint = super().sizeHint(option, index)
         zoom = self._style_manager.zoom_factor()
-        hint.setHeight(max(hint.height(), round(24 * zoom)))
-        return hint
+        fm = option.fontMetrics  # type: ignore
+        line_height = fm.height()
+        row_height = max(line_height + round(8 * zoom), round(24 * zoom))
+        return QSize(super().sizeHint(option, index).width(), row_height)

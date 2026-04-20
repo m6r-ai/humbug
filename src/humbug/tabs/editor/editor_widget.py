@@ -5,7 +5,7 @@ from difflib import unified_diff
 from typing import List, Tuple, Dict, Any, cast
 
 from PySide6.QtWidgets import QPlainTextEdit, QWidget, QTextEdit, QFileDialog
-from PySide6.QtCore import Qt, QRect, Signal, QTimer
+from PySide6.QtCore import Qt, QRect, Signal, QTimer, QRegularExpression
 from PySide6.QtGui import (
     QPainter, QTextCursor, QKeyEvent, QPalette, QBrush, QTextCharFormat,
     QResizeEvent, QPaintEvent, QTextDocument
@@ -88,7 +88,7 @@ class EditorWidget(QPlainTextEdit):
         # Initialize find functionality
         self._matches: List[Tuple[int, int]] = []  # List of (start, end) positions
         self._current_match = -1
-        self._last_search = ""
+        self._last_search: tuple = ("", False, False)
 
         # Smooth scrolling
         self._smooth_scroll_timer = QTimer(self)
@@ -135,23 +135,12 @@ class EditorWidget(QPlainTextEdit):
         if not self._path or not os.path.exists(self._path):
             return
 
-        try:
-            with open(self._path, 'r', encoding='utf-8') as f:
-                content = f.read()
+        with open(self._path, 'r', encoding='utf-8') as f:
+            content = f.read()
 
-            self.setPlainText(content)
-            self._last_save_content = content
-            self._set_modified(False)
-
-        except Exception as e:
-            self._logger.error("Failed to load file '%s': %s", self._path, str(e))
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.error_opening_file_title,
-                strings.could_not_open.format(self._path, str(e))
-            )
+        self.setPlainText(content)
+        self._last_save_content = content
+        self._set_modified(False)
 
     def refresh_content(self) -> None:
         """
@@ -417,7 +406,17 @@ class EditorWidget(QPlainTextEdit):
         )
 
         if result == MessageBoxButton.SAVE:
-            return self.save_file()
+            try:
+                return self.save_file()
+
+            except Exception as e:
+                MessageBox.show_message(
+                    self,
+                    MessageBoxType.CRITICAL,
+                    strings.error_saving_file_title,
+                    strings.could_not_save.format(document_name, str(e))
+                )
+                return False
 
         if result == MessageBoxButton.DISCARD:
             self._set_modified(False)
@@ -441,35 +440,24 @@ class EditorWidget(QPlainTextEdit):
         if not self._path:
             return self.save_file_as()
 
+        content = self.toPlainText()
+        with open(self._path, 'w', encoding='utf-8') as f:
+            f.write(content)
+
+        self._last_save_content = content
+        self._set_modified(False)
+
+        # Delete any backup files
+        backup_file = f"{self._path}.backup"
         try:
-            content = self.toPlainText()
-            with open(self._path, 'w', encoding='utf-8') as f:
-                f.write(content)
+            if os.path.exists(backup_file):
+                os.remove(backup_file)
 
-            self._last_save_content = content
-            self._set_modified(False)
+        except OSError as e:
+            self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
 
-            # Delete any backup files
-            backup_file = f"{self._path}.backup"
-            try:
-                if os.path.exists(backup_file):
-                    os.remove(backup_file)
-
-            except OSError as e:
-                self._logger.warning("Failed to remove backup file %s: %s", backup_file, str(e))
-
-            self.file_saved.emit(self._path)
-            return True
-
-        except Exception as e:
-            strings = self._language_manager.strings()
-            MessageBox.show_message(
-                self,
-                MessageBoxType.CRITICAL,
-                strings.error_saving_file_title,
-                strings.could_not_save.format(self._path, str(e))
-            )
-            return False
+        self.file_saved.emit(self._path)
+        return True
 
     def save_file_as(self) -> bool:
         """
@@ -500,7 +488,18 @@ class EditorWidget(QPlainTextEdit):
         self._mindspace_manager.update_file_dialog_directory(filename)
         self.set_path(filename)
 
-        return self.save_file()
+        try:
+            return self.save_file()
+
+        except Exception as e:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_saving_file_title,
+                strings.could_not_save.format(filename, str(e))
+            )
+            return False
 
     def get_status_info(self) -> Dict[str, Any]:
         """
@@ -1100,7 +1099,14 @@ class EditorWidget(QPlainTextEdit):
 
         return closest_index
 
-    def find_text(self, text: str, forward: bool = True, move_cursor: bool = True) -> None:
+    def find_text(
+        self,
+        text: str,
+        forward: bool = True,
+        move_cursor: bool = True,
+        case_sensitive: bool = False,
+        regexp: bool = False
+    ) -> None:
         """
         Find all instances of text and highlight them.
 
@@ -1108,25 +1114,50 @@ class EditorWidget(QPlainTextEdit):
             text: Text to search for
             forward: Whether to search forward from current position (only used when move_cursor is True)
             move_cursor: Whether to move cursor to a match (True for user navigation, False for automatic updates)
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
         """
         # Clear existing highlights if search text changed
-        if text != self._last_search:
+        if (text, case_sensitive, regexp) != self._last_search:
             self._clear_highlights()
             self._matches = []
             self._current_match = -1
-            self._last_search = text
+            self._last_search = (text, case_sensitive, regexp)
 
         document = self.document()
 
         # Find all matches if this is a new search
         if not self._matches and text:
             cursor = QTextCursor(document)
-            while True:
-                cursor = document.find(text, cursor)
-                if cursor.isNull():
-                    break
+            if regexp:
+                flags = QRegularExpression.PatternOption(0)
+                if not case_sensitive:
+                    flags |= QRegularExpression.PatternOption.CaseInsensitiveOption
 
-                self._matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+                pattern = QRegularExpression(text, flags)
+                if pattern.isValid():
+                    find_flags = QTextDocument.FindFlag(0)
+                    if case_sensitive:
+                        find_flags |= QTextDocument.FindFlag.FindCaseSensitively
+
+                    while True:
+                        cursor = document.find(pattern, cursor, find_flags)
+                        if cursor.isNull():
+                            break
+
+                        self._matches.append((cursor.selectionStart(), cursor.selectionEnd()))
+
+            else:
+                find_flags = QTextDocument.FindFlag(0)
+                if case_sensitive:
+                    find_flags |= QTextDocument.FindFlag.FindCaseSensitively
+
+                while True:
+                    cursor = document.find(text, cursor, find_flags)
+                    if cursor.isNull():
+                        break
+
+                    self._matches.append((cursor.selectionStart(), cursor.selectionEnd()))
 
         if not self._matches:
             return
@@ -1242,9 +1273,20 @@ class EditorWidget(QPlainTextEdit):
         self._smooth_scroll_time += self._smooth_scroll_timer.interval()
         progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
         t = 1 - (1 - progress) ** 3
-        new_position = self._smooth_scroll_start + int(self._smooth_scroll_distance * t)
+
+        # Add 0.5 lines of bias so that int() truncation crosses each line boundary
+        # slightly early, avoiding a visible "jump" at the very end of the animation
+        # where the easing curve decelerates so slowly that the final line is only
+        # reached on the last tick, well after the scroll appears to have stopped.
+        new_position = min(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t + 0.5),
+        ) if self._smooth_scroll_distance > 0 else max(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t - 0.5),
+        )
         self.verticalScrollBar().setValue(new_position)
-        if progress >= 1.0:
+        if progress >= 1.0 or new_position == self._smooth_scroll_target:
             self._smooth_scroll_timer.stop()
 
     def get_match_status(self) -> Tuple[int, int]:
@@ -1261,7 +1303,108 @@ class EditorWidget(QPlainTextEdit):
         self._clear_highlights()
         self._matches = []
         self._current_match = -1
-        self._last_search = ""
+        self._last_search = ("", False, False)
+
+    def replace_current(self, replace_text: str) -> bool:
+        """
+        Replace the current highlighted match with replace_text and advance to the next match.
+
+        When regexp mode was used for the last search, back-references in replace_text
+        (e.g. \\1, \\2) are expanded using the captured groups of the current match.
+
+        Args:
+            replace_text: Text to substitute for the current match.
+
+        Returns:
+            True if a replacement was made, False if there was no current match.
+        """
+        if self._current_match < 0 or not self._matches:
+            return False
+
+        start, end = self._matches[self._current_match]
+        _search_text, case_sensitive, regexp = self._last_search
+
+        actual_replacement = replace_text
+        if regexp and _search_text:
+            flags = QRegularExpression.PatternOption(0)
+            if not case_sensitive:
+                flags |= QRegularExpression.PatternOption.CaseInsensitiveOption
+
+            pattern = QRegularExpression(_search_text, flags)
+            if pattern.isValid():
+                document_text = self.toPlainText()
+                match_text = document_text[start:end]
+                re_match = pattern.match(match_text)
+                if re_match.hasMatch():
+                    actual_replacement = replace_text
+                    for i in range(1, re_match.lastCapturedIndex() + 1):
+                        actual_replacement = actual_replacement.replace(f"\\{i}", re_match.captured(i))
+
+        cursor = QTextCursor(self.document())
+        cursor.setPosition(start)
+        cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+        cursor.insertText(actual_replacement)
+
+        self._set_modified(True)
+
+        # Re-run the search from scratch so match positions are updated, then advance
+        search_text, case_sensitive, regexp = self._last_search
+        self.clear_find()
+        if search_text:
+            self.find_text(search_text, forward=True, move_cursor=True, case_sensitive=case_sensitive, regexp=regexp)
+
+        return True
+
+    def replace_all(self, replace_text: str) -> int:
+        """
+        Replace all current matches with replace_text in a single undoable operation.
+
+        Args:
+            replace_text: Text to substitute for each match.
+
+        Returns:
+            Number of replacements made.
+        """
+        if not self._matches:
+            return 0
+
+        search_text, case_sensitive, regexp = self._last_search
+        count = len(self._matches)
+
+        original_text = self.toPlainText()
+        cursor = QTextCursor(self.document())
+        cursor.beginEditBlock()
+        try:
+            # Iterate in reverse so earlier positions stay valid after each replacement
+            for start, end in reversed(self._matches):
+                actual_replacement = replace_text
+                if regexp and search_text:
+                    flags = QRegularExpression.PatternOption(0)
+                    if not case_sensitive:
+                        flags |= QRegularExpression.PatternOption.CaseInsensitiveOption
+
+                    pattern = QRegularExpression(search_text, flags)
+                    if pattern.isValid():
+                        match_text = original_text[start:end]
+                        re_match = pattern.match(match_text)
+                        if re_match.hasMatch():
+                            actual_replacement = replace_text
+                            for i in range(1, re_match.lastCapturedIndex() + 1):
+                                actual_replacement = actual_replacement.replace(
+                                    f"\\{i}", re_match.captured(i)
+                                )
+
+                replace_cursor = QTextCursor(self.document())
+                replace_cursor.setPosition(start)
+                replace_cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+                replace_cursor.insertText(actual_replacement)
+
+        finally:
+            cursor.endEditBlock()
+
+        self._set_modified(True)
+        self.clear_find()
+        return count
 
     def can_undo(self) -> bool:
         """Check if undo is available."""
@@ -1445,13 +1588,14 @@ class EditorWidget(QPlainTextEdit):
         self.setTextCursor(cursor)
         self._start_smooth_scroll_to_cursor(cursor)
 
-    def find_all_occurrences(self, search_text: str, case_sensitive: bool = False) -> List[Dict[str, Any]]:
+    def find_all_occurrences(self, search_text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Dict[str, Any]]:
         """
         Find all occurrences of text in the document.
 
         Args:
             search_text: Text to search for
             case_sensitive: Whether search should be case-sensitive
+            regexp: If True, treat search_text as a regular expression.
 
         Returns:
             List of dictionaries with match information:
@@ -1459,6 +1603,9 @@ class EditorWidget(QPlainTextEdit):
             - column: Column number (1-indexed)
             - match_text: The matched text
             - context: Line of text containing the match
+
+        Raises:
+            ValueError: If regexp is True and search_text is not a valid regular expression.
         """
         if not search_text:
             return []
@@ -1470,25 +1617,49 @@ class EditorWidget(QPlainTextEdit):
         if case_sensitive:
             find_flags |= QTextDocument.FindFlag.FindCaseSensitively
 
-        cursor = QTextCursor(document)
-        while True:
-            cursor = document.find(search_text, cursor, find_flags)
-            if cursor.isNull():
-                break
+        if regexp:
+            pattern_flags = QRegularExpression.PatternOption(0)
+            if not case_sensitive:
+                pattern_flags |= QRegularExpression.PatternOption.CaseInsensitiveOption
 
-            line = cursor.blockNumber() + 1
-            column = cursor.columnNumber() + 1
-            match_text = cursor.selectedText()
+            pattern = QRegularExpression(search_text, pattern_flags)
+            if not pattern.isValid():
+                raise ValueError(f"Invalid regular expression: {pattern.errorString()}")
 
-            block = cursor.block()
-            context = block.text()
+            cursor = QTextCursor(document)
+            while True:
+                cursor = document.find(pattern, cursor, find_flags)
+                if cursor.isNull():
+                    break
 
-            matches.append({
-                'line': line,
-                'column': column,
-                'match_text': match_text,
-                'context': context
-            })
+                line = cursor.blockNumber() + 1
+                column = cursor.columnNumber() + 1
+                match_text = cursor.selectedText()
+                block = cursor.block()
+                matches.append({
+                    'line': line,
+                    'column': column,
+                    'match_text': match_text,
+                    'context': block.text()
+                })
+
+        else:
+            cursor = QTextCursor(document)
+            while True:
+                cursor = document.find(search_text, cursor, find_flags)
+                if cursor.isNull():
+                    break
+
+                line = cursor.blockNumber() + 1
+                column = cursor.columnNumber() + 1
+                match_text = cursor.selectedText()
+                block = cursor.block()
+                matches.append({
+                    'line': line,
+                    'column': column,
+                    'match_text': match_text,
+                    'context': block.text()
+                })
 
         return matches
 

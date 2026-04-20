@@ -4,22 +4,25 @@ import logging
 import os
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtCore import QRegularExpression, Signal
 
 from git import GitNotFoundError, GitNotRepositoryError, find_repo_root
 
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVcsPoller
+from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVCSPoller
 from humbug.status_message import StatusMessage
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType
-from humbug.style_manager import StyleManager
 from humbug.tabs.find_widget import FindWidget
 from humbug.tabs.diff.diff_widget import DiffWidget
 
 
 class DiffTab(TabBase):
     """Tab showing a side-by-side diff between the working tree and HEAD for one file."""
+
+    open_file_requested = Signal(str)
+    open_preview_requested = Signal(str)
 
     def __init__(self, tab_id: str, path: str, parent: QWidget | None = None) -> None:
         """
@@ -42,8 +45,9 @@ class DiffTab(TabBase):
         layout.setSpacing(0)
 
         # Add find widget at top (initially hidden)
-        self._find_widget = FindWidget()
+        self._find_widget = FindWidget(self)
         self._find_widget.hide()
+        self._find_widget.set_preferred_width(self.preferred_width)
         self._find_widget.closed.connect(self._close_find)
         self._find_widget.find_next.connect(lambda: self._find_next(True))
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
@@ -51,13 +55,15 @@ class DiffTab(TabBase):
 
         self._diff_widget = DiffWidget(path, self)
         self._diff_widget.status_updated.connect(self.update_status)
+        self._diff_widget.open_in_editor_requested.connect(lambda: self.open_file_requested.emit(self._path))
+        self._diff_widget.open_in_preview_requested.connect(lambda: self.open_preview_requested.emit(self._path))
         layout.addWidget(self._diff_widget)
 
         if path:
-            self._diff_widget.load_diff()
+            self._diff_widget.load_diff(initial_load=True)
             self._start_file_watching(path)
 
-        self._vcs_poller = MindspaceVcsPoller()
+        self._vcs_poller = MindspaceVCSPoller()
         self._vcs_poller.status_changed.connect(self._on_vcs_status_changed)
 
         self.update_status()
@@ -89,14 +95,15 @@ class DiffTab(TabBase):
         self.set_updated(True)
 
     def _on_vcs_status_changed(self, _status: list) -> None:
-        """Refresh the diff when the VCS status of the repository changes.
+        """
+        Refresh the diff when the VCS status of the repository changes.
 
         A commit advances HEAD without touching the working-tree file, so the
         file watcher never fires.  Subscribing to the VCS poller ensures we
         re-run the diff (and show the 'no differences' message) after a commit.
 
         Args:
-            _status: The new list of VcsFileStatus entries (unused; we always
+            _status: The new list of VCSFileStatus entries (unused; we always
                 refresh so the widget can re-evaluate the diff from scratch).
         """
         self._diff_widget.refresh()
@@ -137,20 +144,8 @@ class DiffTab(TabBase):
         self.status_message.emit(message)
 
     def preferred_width(self) -> int | None:
-        """Return the preferred column width to comfortably display two 80-column panes."""
-        style_manager = StyleManager()
-
-        char_width = style_manager.get_space_width()
-
-        # Gutter: (digits + 4) character widths, matching the editor formula.
-        # Assume 4-digit line numbers as a reasonable estimate for sizing.
-        gutter_width = int((4 + 4) * char_width)
-
-        # Each pane: gutter + 80 columns
-        pane_width = gutter_width + int(80 * char_width)
-
-        # Total: two panes + splitter handle (1px) + shared scrollbar
-        return 2 * pane_width + 1 + style_manager.get_scrollbar_size()
+        """Return the preferred column width: twice the default editor column width."""
+        return 2048
 
     def get_state(self, temp_state: bool = False) -> TabState:
         """Return serialisable state for mindspace persistence."""
@@ -266,5 +261,28 @@ class DiffTab(TabBase):
             forward: If True search forward; if False search backward.
         """
         text = self._find_widget.get_search_text()
-        current, total = self._diff_widget.find_text(text, forward)
+        case_sensitive = self._find_widget.is_case_sensitive()
+        regexp = self._find_widget.is_regexp()
+        if regexp:
+            if text and not QRegularExpression(text).isValid():
+                self._find_widget.set_invalid_regexp()
+                return
+
+        current, total = self._diff_widget.find_text(text, forward, case_sensitive=case_sensitive, regexp=regexp)
         self._find_widget.set_match_status(current, total)
+
+    def can_navigate_next_message(self) -> bool:
+        """Return True if there is a hunk after the current scroll position."""
+        return self._diff_widget.can_navigate_next_hunk()
+
+    def navigate_next_message(self) -> None:
+        """Scroll to the next hunk."""
+        self._diff_widget.navigate_next_hunk(forward=True)
+
+    def can_navigate_previous_message(self) -> bool:
+        """Return True if there is a hunk before the current scroll position."""
+        return self._diff_widget.can_navigate_previous_hunk()
+
+    def navigate_previous_message(self) -> None:
+        """Scroll to the previous hunk."""
+        self._diff_widget.navigate_next_hunk(forward=False)

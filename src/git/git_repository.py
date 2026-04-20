@@ -1,6 +1,7 @@
 """Git repository operations."""
 
 import os
+import sys
 import subprocess
 from typing import List, Optional
 
@@ -25,14 +26,22 @@ def _run_git(args: List[str], cwd: str) -> str:
         GitNotFoundError: If git is not installed or not on PATH
         GitCommandError: If the command exits with a non-zero return code
     """
+    if sys.platform == "win32":
+        creationflags = subprocess.CREATE_NO_WINDOW
+
+    else:
+        creationflags = 0
+
     try:
         result = subprocess.run(
             ["git"] + args,
             cwd=cwd,
+            check=False,
             capture_output=True,
             text=True,
             encoding="utf-8",
-            timeout=_GIT_TIMEOUT
+            timeout=_GIT_TIMEOUT,
+            creationflags=creationflags,
         )
 
     except FileNotFoundError as e:
@@ -111,6 +120,7 @@ def is_file_tracked(repo_root: str, file_path: str) -> bool:
     except GitCommandError as e:
         if e.returncode == 1:
             return False
+
         raise
 
 
@@ -237,4 +247,5 @@ def get_file_at_head(repo_root: str, file_path: str) -> Optional[str]:
         # with no HEAD yet).  Treat that as "no prior content".
         if e.returncode == 128:
             return None
+
         raise

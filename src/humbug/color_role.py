@@ -111,6 +111,7 @@ class ColorRole(Enum):
     MESSAGE_USER_BACKGROUND = auto()    # Message background for user messages
     MESSAGE_USER_BACKGROUND_HOVER = auto()   # Message background hover for user messages
     MESSAGE_USER_BACKGROUND_PRESSED = auto() # Message background pressed for user messages
+    MESSAGE_ATTACHMENT_BACKGROUND = auto()   # Background for attachment widgets
     MESSAGE_BORDER = auto()             # Message border
     MESSAGE_USER_BORDER = auto()        # Message border for user messages
     MESSAGE_SPOTLIGHTED = auto()        # For highlighting the spotlighted message
@@ -149,8 +150,7 @@ class ColorRole(Enum):
     DIFF_REMOVED_BACKGROUND = auto()    # Background for removed lines
     DIFF_ADDED_BACKGROUND = auto()      # Background for added lines
     DIFF_CHANGED_BACKGROUND = auto()    # Background for changed lines
-    DIFF_HEADER_BACKGROUND = auto()     # Background for hunk header lines
-    DIFF_FILLER_BACKGROUND = auto()     # Background for filler (blank alignment) lines
+    DIFF_HUNK_LINE_NUMBER = auto()      # Line number colour for the active hunk
 
     # VCS status colours
     VCS_MODIFIED = auto()               # Modified file badge

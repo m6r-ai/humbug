@@ -39,6 +39,7 @@ def get_english_strings() -> LanguageStrings:
         open_conversation="Open Conversation...",
         open_file="Open File...",
         open_preview="Open Preview...",
+        open_diff="Open Diff...",
         save="Save",
         save_as="Save As...",
         close_mindspace="Close Mindspace",
@@ -72,6 +73,8 @@ def get_english_strings() -> LanguageStrings:
         swap_column_right="Swap Column Right",
         next_message="Next Message",
         previous_message="Previous Message",
+        next_hunk="Next Hunk",
+        previous_hunk="Previous Hunk",
 
         # Message roles
         role_you="You",
@@ -90,6 +93,13 @@ def get_english_strings() -> LanguageStrings:
         find_placeholder="Find",
         find_no_matches="No matches",
         find_match_count="{current} of {total}",
+        find_match_case="Match Case",
+        find_use_regexp="Use Regular Expression",
+        find_invalid_regexp="Invalid regexp",
+        replace_placeholder="Replace",
+        replace_button="Replace",
+        replace_all_button="Replace All",
+        replace_count="{count} replaced",
 
         # Input widget
         processing_message="Chat with {model} (Esc to cancel, {key} to submit)",
@@ -135,16 +145,16 @@ def get_english_strings() -> LanguageStrings:
         sort_alphabetical="Alphabetical",
 
         # User Settings dialog - external file access
-        external_file_access="External File Access",
+        external_file_access="File Access",
         allow_external_file_access="Allow AI to read files outside mindspace",
         external_file_allowlist="Allowed paths (glob patterns, one per line):",
-        external_file_denylist="Denied paths (glob patterns, one per line):",
+        external_file_denylist="Always denied paths (glob patterns, one per line):",
 
         # Mindspace tree
         mindspace_label_none="No mindspace active",
         mindspace_name_tooltip="Click to open a different mindspace",
         mindspace_files="Files",
-        mindspace_vcs="Revision Control",
+        mindspace_vcs="Changed Files",
         mindspace_vcs_no_repo="No repository found",
         mindspace_conversations="Conversations",
         mindspace_preview="Preview",
@@ -194,6 +204,7 @@ def get_english_strings() -> LanguageStrings:
         file_dialog_save_file="Save File",
         file_dialog_new_mindspace="Create New Mindspace",
         file_dialog_open_mindspace="Open Mindspace",
+        file_dialog_attach_file="Attach File",
 
         # File dialog filters
         file_filter_all="All Files (*.*)",
@@ -291,8 +302,13 @@ def get_english_strings() -> LanguageStrings:
         tooltip_submit_message="Submit message",
         tooltip_stop_message="Stop current processing",
         tooltip_settings_message="Open conversation settings",
+        tooltip_attach_file="Attach a file",
         tooltip_expand_message="Expand message",
         tooltip_collapse_message="Collapse message",
+        warning_file_too_large=(
+            "'{filename}' is {size_kb}KB, which exceeds the recommended 100KB limit. "
+            "Large files may use a lot of context window. Attach anyway?"
+        ),
 
         delete_from_here_title="Delete Messages",
         delete_from_here_message=(

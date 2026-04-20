@@ -1,14 +1,33 @@
 # Change log for Humbug
 
-## v43 (2026-04-xx)
+## v44 (2026-04-19)
+
+New features:
+
+- Added support for case-sensitive and regexp matching in the various find controls.
+- Added support for case-sensitive and regexp matching in the various AI tools that interact with tabs.
+- Added support for regexp replace operations in editor tabs.
+- Added Claude Opus 4.7 support.
+- Replaced GLM 5 with GLM 5.1 on Ollama.
+
+Bug fixes:
+
+- The mindspace label did not display correctly.
+- Resolve a problem with changed files not rendering correctly after updating all system build files.
+- The user settings file deny list was accidently being enabled/disabled by the toggle to allow reads outside the
+  current mindspace.  The deny list should always be active!
+
+## v43 (2026-04-18)
 
 New features:
 
 - Improved performance across the Menai VM.
+- The C implementation of the Menai VM now compiles and runs on Windows as well as on MacOS.
 - Added a new "diff" tab type that allows you to compare the current version of a file with the last version stored in git.
 - Added a new mindspace view for revision control, allowing you to see which files have been modified vs git `HEAD`.
 - Shift+Home/End now selects text in editor tabs, making things consistent with other shift+movement operations.
 - Switched find operations to use smooth scrolling in all tab types.
+- Added the ability to attach (and remove) files in a prompt.
 
 Bug fixes:
 
@@ -16,6 +35,10 @@ Bug fixes:
   when they didn't need to.
 - Resolved a problem where tabs that were moved between columns did not result in files being unwatched.
 - Fixed broken find operations in conversation, Humbug shell, and mindspace log tabs.
+- Resolved a problem with smooth scrolling operations that could make things appear to "jump" right at the end of the scroll.
+- Fixed the selection colour in terminal tabs.
+- Enabled faster drag-scrolling in all tab types.
+- Resolved a problem that could cause file watching to trigger unnecessary reloads of tab content.
 
 ## v42 (2026-04-10)
 

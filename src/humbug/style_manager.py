@@ -1,4 +1,5 @@
-"""Style manager for handling application-wide style and zoom settings.
+"""
+Style manager for handling application-wide style and zoom settings.
 
 Implements a singleton pattern to maintain consistent styling across components.
 Provides signals for style changes and utilities for scaled size calculations.
@@ -214,24 +215,24 @@ class StyleManager(QObject):
             },
             ColorRole.TAB_BACKGROUND_INACTIVE: {
                 ColorMode.DARK: "#404040",
-                ColorMode.LIGHT: "#c8c8c8"
+                ColorMode.LIGHT: "#d0d0d0"
             },
             ColorRole.TAB_BACKGROUND_HOVER: {
                 ColorMode.DARK: "#242454",
-                ColorMode.LIGHT: "#b8b8f8"
+                ColorMode.LIGHT: "#c8c8ff"
             },
             ColorRole.TAB_BACKGROUND_UPDATED: {
                 ColorMode.DARK: "#3c2054",
                 ColorMode.LIGHT: "#f0d0f8"
             },
             ColorRole.TAB_BORDER_ACTIVE: {
-                ColorMode.DARK: "#a0d0ff",
-                ColorMode.LIGHT: "#ff3018"
+                ColorMode.DARK: "#e03826",
+                ColorMode.LIGHT: "#ff4030"
             },
 
             # Button colours
             ColorRole.BUTTON_BACKGROUND: {
-                ColorMode.DARK: "#0c0c0c",
+                ColorMode.DARK: "#303030",
                 ColorMode.LIGHT: "#e8e8e8"
             },
             ColorRole.BUTTON_BACKGROUND_PRESSED: {
@@ -256,27 +257,27 @@ class StyleManager(QObject):
             },
             ColorRole.BUTTON_BACKGROUND_RECOMMENDED: {
                 ColorMode.DARK: "#2050c0",
-                ColorMode.LIGHT: "#3060d0"
+                ColorMode.LIGHT: "#6080e0"
             },
             ColorRole.BUTTON_BACKGROUND_RECOMMENDED_PRESSED: {
                 ColorMode.DARK: "#4070e0",
-                ColorMode.LIGHT: "#1040b0"
+                ColorMode.LIGHT: "#4060c0"
             },
             ColorRole.BUTTON_BACKGROUND_RECOMMENDED_HOVER: {
                 ColorMode.DARK: "#3060d0",
-                ColorMode.LIGHT: "#2050c0"
+                ColorMode.LIGHT: "#5070d0"
             },
             ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE: {
                 ColorMode.DARK: "#c03020",
-                ColorMode.LIGHT: "#d04030"
+                ColorMode.LIGHT: "#e06048"
             },
             ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_PRESSED: {
                 ColorMode.DARK: "#e05040",
-                ColorMode.LIGHT: "#b02010"
+                ColorMode.LIGHT: "#c04030"
             },
             ColorRole.BUTTON_BACKGROUND_DESTRUCTIVE_HOVER: {
                 ColorMode.DARK: "#d04030",
-                ColorMode.LIGHT: "#c03020"
+                ColorMode.LIGHT: "#d0503c"
             },
             ColorRole.BUTTON_BACKGROUND_EDIT: {
                 ColorMode.DARK: "#b07010",
@@ -351,12 +352,12 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#f8f8f8"
             },
             ColorRole.MESSAGE_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#383838",
-                ColorMode.LIGHT: "#d8d8d8"
+                ColorMode.DARK: "#404040",
+                ColorMode.LIGHT: "#c4c4c4"
             },
             ColorRole.MESSAGE_BACKGROUND_PRESSED: {
-                ColorMode.DARK: "#505050",
-                ColorMode.LIGHT: "#c0c0c0"
+                ColorMode.DARK: "#585858",
+                ColorMode.LIGHT: "#b0b0b0"
             },
             ColorRole.MESSAGE_USER_BACKGROUND: {
                 ColorMode.DARK: "#282828",
@@ -369,6 +370,10 @@ class StyleManager(QObject):
             ColorRole.MESSAGE_USER_BACKGROUND_PRESSED: {
                 ColorMode.DARK: "#606060",
                 ColorMode.LIGHT: "#a0a0a0"
+            },
+            ColorRole.MESSAGE_ATTACHMENT_BACKGROUND: {
+                ColorMode.DARK: "#383838",
+                ColorMode.LIGHT: "#f0f0f0"
             },
             ColorRole.MESSAGE_BORDER: {
                 ColorMode.DARK: "#282828",
@@ -451,8 +456,8 @@ class StyleManager(QObject):
 
             # Close button states
             ColorRole.CLOSE_BUTTON_BACKGROUND_HOVER: {
-                ColorMode.DARK: "#d04030",
-                ColorMode.LIGHT: "#c03020"
+                ColorMode.DARK: "#e03030",
+                ColorMode.LIGHT: "#ff7070"
             },
 
             # Line numbers
@@ -473,24 +478,20 @@ class StyleManager(QObject):
 
             # Diff view colours
             ColorRole.DIFF_REMOVED_BACKGROUND: {
-                ColorMode.DARK: "#2c1414",
-                ColorMode.LIGHT: "#fde8e8"
+                ColorMode.DARK: "#402020",
+                ColorMode.LIGHT: "#f0c8c8"
             },
             ColorRole.DIFF_ADDED_BACKGROUND: {
-                ColorMode.DARK: "#142c14",
-                ColorMode.LIGHT: "#e8fde8"
+                ColorMode.DARK: "#204020",
+                ColorMode.LIGHT: "#c8f0c8"
             },
             ColorRole.DIFF_CHANGED_BACKGROUND: {
-                ColorMode.DARK: "#2c2c14",
-                ColorMode.LIGHT: "#fdfde8"
+                ColorMode.DARK: "#202050",
+                ColorMode.LIGHT: "#c8c8f0"
             },
-            ColorRole.DIFF_HEADER_BACKGROUND: {
-                ColorMode.DARK: "#141430",
-                ColorMode.LIGHT: "#e8e8fd"
-            },
-            ColorRole.DIFF_FILLER_BACKGROUND: {
-                ColorMode.DARK: "#1c1c1c",
-                ColorMode.LIGHT: "#f0f0f0"
+            ColorRole.DIFF_HUNK_LINE_NUMBER: {
+                ColorMode.DARK: "#e0e0e0",
+                ColorMode.LIGHT: "#202020"
             },
 
             # VCS status colours
@@ -525,8 +526,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#202020"
             },
             ColorRole.SYNTAX_03: {
-                ColorMode.DARK: "#68b068",
-                ColorMode.LIGHT: "#407040"
+                ColorMode.DARK: "#68c068",
+                ColorMode.LIGHT: "#40a040"
             },
             ColorRole.SYNTAX_04: {
                 ColorMode.DARK: "#ffa0eb",
@@ -557,8 +558,8 @@ class StyleManager(QObject):
                 ColorMode.LIGHT: "#a000a0"
             },
             ColorRole.SYNTAX_11: {
-                ColorMode.DARK: "#80b0f0",
-                ColorMode.LIGHT: "#0060c0"
+                ColorMode.DARK: "#80a0f0",
+                ColorMode.LIGHT: "#0040c0"
             },
             ColorRole.SYNTAX_12: {
                 ColorMode.DARK: "#f08080",
@@ -594,7 +595,7 @@ class StyleManager(QObject):
             },
             ColorRole.SYNTAX_20: {
                 ColorMode.DARK: "#c05040",
-                ColorMode.LIGHT: "#803828"
+                ColorMode.LIGHT: "#b03828"
             },
             ColorRole.SYNTAX_21: {
                 ColorMode.DARK: "#30c090",
@@ -1132,8 +1133,38 @@ class StyleManager(QObject):
                 </svg>
             ''')
 
+            self._write_icon(f'paperclip-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M56 32 L34 54 C28 60 19 60 13 54 C7 48 7 39 13 33 L39 8 C43 4 49 4 53 8 C57 12 57 18 53 22 L29 46 C27 48 24 48 22 46 C20 44 20 41 22 39 L44 17"
+                          fill="none" stroke="{color}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            ''')
+
             self._create_active_inactive_theme_icons(True, suffix, color)
             self._create_active_inactive_theme_icons(False, suffix, inactive_color)
+
+            # Match-case toggle icon — "Aa" letterform
+            self._write_icon(f'find-match-case-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <text x="3" y="48" font-family="sans-serif" font-size="48"
+                        fill="{color}">Aa</text>
+                </svg>
+            ''')
+
+            # Regexp toggle icon — ".*" pattern
+            self._write_icon(f'find-regexp-{suffix}.svg', f'''
+                <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="14" cy="36" r="5" fill="{color}"/>#
+                    <line x1="42" y1="16" x2="42" y2="44"
+                        stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="30" y1="22" x2="54" y2="38"
+                        stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="54" y1="22" x2="30" y2="38"
+                        stroke="{color}" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="4" y1="54" x2="60" y2="54"
+                        stroke="{color}" stroke-width="4" stroke-linecap="round"/>
+                </svg>
+            ''')
 
         # Create the standard application icon for about dialog
         self._write_icon('app-icon.svg', self._create_app_icon_svg('#4040c0', '#ffffff'))

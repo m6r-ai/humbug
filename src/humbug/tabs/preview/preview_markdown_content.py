@@ -161,19 +161,21 @@ class PreviewMarkdownContent(PreviewContentWidget):
         for section in self._sections:
             section.apply_style()
 
-    def find_text(self, text: str) -> List[Tuple[int, int, int]]:
+    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Tuple[int, int, int]]:
         """
         Find all instances of text in this content.
 
         Args:
             text: Text to search for
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
 
         Returns:
             List of (section, start_position, end_position) tuples for each match
         """
         all_matches: List[Tuple[int, int, int]] = []
         for i, section in enumerate(self._sections):
-            section_matches = section.find_text(text)
+            section_matches = section.find_text(text, case_sensitive, regexp)
             if section_matches:
                 # Include the section with each match
                 for match in section_matches:

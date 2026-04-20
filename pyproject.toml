@@ -4,13 +4,24 @@ build-backend = "hatchling.build"
 
 [project]
 name = "humbug"
-version = "43"
+version = "44"
 requires-python = ">=3.10"
 dependencies = [
     "aiohttp",
     "certifi",
     "pyside6",
     "qasync"
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy",
+    "types-PySide6",
+    "pylint",
+    "pyinstaller",
+    "pytest",
+    "pytest-cov",
+    "setuptools",
 ]
 
 [tool.coverage.run]
@@ -82,6 +93,9 @@ output-format = "colorized"
 
 [tool.pylint.master]
 extension-pkg-whitelist = "PySide6"
+
+[tool.pylint.typecheck]
+ignored-modules = ["PySide6.*"]
 
 [tool.pytest.ini_options]
 minversion = "7.0"

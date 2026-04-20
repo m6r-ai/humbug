@@ -39,6 +39,7 @@ def get_french_strings() -> LanguageStrings:
         open_conversation="Ouvrir conversation...",
         open_file="Ouvrir fichier...",
         open_preview="Ouvrir aperçu...",
+        open_diff="Ouvrir diff...",
         save="Enregistrer",
         save_as="Enregistrer sous...",
         close_mindspace="Fermer l'espace mental",
@@ -72,6 +73,8 @@ def get_french_strings() -> LanguageStrings:
         swap_column_right="Échanger la colonne de droite",
         next_message="Message Suivant",
         previous_message="Message Précédent",
+        next_hunk="Modification Suivante",
+        previous_hunk="Modification Précédente",
 
         # Message roles
         role_you="Vous",
@@ -90,6 +93,13 @@ def get_french_strings() -> LanguageStrings:
         find_placeholder="Rechercher",
         find_no_matches="Aucun résultat",
         find_match_count="{current} sur {total}",
+        find_match_case="Respecter la casse",
+        find_use_regexp="Utiliser une expression régulière",
+        find_invalid_regexp="Expression invalide",
+        replace_placeholder="Remplacer",
+        replace_button="Remplacer",
+        replace_all_button="Remplacer tout",
+        replace_count="{count} remplacé(s)",
 
         # Input widget
         processing_message="Discuter avec {model}... (Échap pour annuler, {key} pour envoyer)",
@@ -135,16 +145,16 @@ def get_french_strings() -> LanguageStrings:
         sort_alphabetical="Alphabétique",
 
         # User Settings dialog - external file access
-        external_file_access="Accès aux fichiers externes",
+        external_file_access="Accès aux fichiers",
         allow_external_file_access="Autoriser l'IA à lire des fichiers en dehors du mindspace",
         external_file_allowlist="Chemins autorisés (motifs glob, un par ligne) :",
-        external_file_denylist="Chemins refusés (motifs glob, un par ligne) :",
+        external_file_denylist="Chemins toujours refusés (motifs glob, un par ligne) :",
 
         # Mindspace tree
         mindspace_label_none="Aucun espace mental actif",
         mindspace_name_tooltip="Cliquer pour ouvrir un autre espace mental",
         mindspace_files="Fichiers",
-        mindspace_vcs="Contrôle de révision",
+        mindspace_vcs="Fichiers modifiés",
         mindspace_vcs_no_repo="Aucun dépôt trouvé",
         mindspace_conversations="Conversations",
         mindspace_preview="Aperçu",
@@ -194,6 +204,7 @@ def get_french_strings() -> LanguageStrings:
         file_dialog_save_file="Enregistrer le fichier",
         file_dialog_new_mindspace="Créer un nouvel espace mental",
         file_dialog_open_mindspace="Ouvrir un espace mental",
+        file_dialog_attach_file="Joindre un fichier",
 
         # File dialog filters
         file_filter_all="Tous les fichiers (*.*)",
@@ -291,8 +302,13 @@ def get_french_strings() -> LanguageStrings:
         tooltip_submit_message="Envoyer le message",
         tooltip_stop_message="Arrêter le traitement du message",
         tooltip_settings_message="Ouvrir les paramètres de la conversation",
+        tooltip_attach_file="Joindre un fichier",
         tooltip_expand_message="Étendre le message",
         tooltip_collapse_message="Réduire le message",
+        warning_file_too_large=(
+            "'{filename}' fait {size_kb}Ko, ce qui dépasse la limite recommandée de 100Ko. "
+            "Les fichiers volumineux peuvent utiliser beaucoup de fenêtre de contexte. Joindre quand même ?"
+        ),
 
         delete_from_here_title="Supprimer les messages",
         delete_from_here_message=(

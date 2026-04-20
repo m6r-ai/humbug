@@ -24,7 +24,7 @@ class TestFileSystemAIToolDefinition:
         assert isinstance(definition, AIToolDefinition)
         assert definition.name == "filesystem"
         assert "The filesystem tool lets you" in definition.description
-        assert len(definition.parameters) == 11
+        assert len(definition.parameters) == 16
 
     def test_operation_parameter_definition(self, mock_path_resolver, mock_access_settings):
         """Test the operation parameter definition."""
@@ -41,7 +41,7 @@ class TestFileSystemAIToolDefinition:
             "read_file", "read_file_lines", "write_file", "append_to_file",
             "apply_diff_to_file", "delete_file", "copy_file",
             "list_directory", "create_directory", "remove_directory",
-            "move", "get_info"
+            "move", "get_info", "search_file", "search_files"
         ]
 
     def test_path_parameter_definition(self, mock_path_resolver, mock_access_settings):
@@ -67,6 +67,11 @@ class TestFileSystemAIToolDefinition:
         assert "destination" in param_names
         assert "encoding" in param_names
         assert "create_parents" in param_names
+        assert "search_text" in param_names
+        assert "case_sensitive" in param_names
+        assert "regexp" in param_names
+        assert "include" in param_names
+        assert "max_results" in param_names
 
         # Check encoding parameter has correct enum
         encoding_param = next(p for p in definition.parameters if p.name == "encoding")

@@ -5,6 +5,7 @@ import logging
 from typing import Any, Coroutine, Dict, Set
 
 from PySide6.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtCore import QRegularExpression
 
 from terminal import TerminalBase, create_terminal
 
@@ -116,6 +117,7 @@ class TerminalTab(TabBase):
         # Create terminal widget with scrollback limit
         self._terminal_widget = TerminalWidget(self, scrollback_limit, minimum_width)
         layout.addWidget(self._terminal_widget)
+        self._find_widget.set_preferred_width(self.preferred_width)
 
         # Connect signals
         self._terminal_widget.data_ready.connect(self._on_data_ready)
@@ -548,7 +550,14 @@ class TerminalTab(TabBase):
     def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        self._terminal_widget.find_text(text, forward)
+        case_sensitive = self._find_widget.is_case_sensitive()
+        regexp = self._find_widget.is_regexp()
+        if regexp:
+            if text and not QRegularExpression(text).isValid():
+                self._find_widget.set_invalid_regexp()
+                return
+
+        self._terminal_widget.find_text(text, forward, case_sensitive, regexp)
         current, total = self._terminal_widget.get_match_status()
         self._find_widget.set_match_status(current, total)
 

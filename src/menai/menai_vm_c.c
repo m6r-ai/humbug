@@ -15,11 +15,32 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <math.h>
-#include <complex.h>
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
+
+/*
+ * Portable complex arithmetic — avoids <complex.h>, which is unsupported on MSVC.
+ *
+ * All complex math is expressed in terms of <math.h> functions (exp, log, sin,
+ * cos, tan, sqrt, atan2, hypot), which are available on every target platform.
+ */
+typedef struct { double re; double im; } mc_t;
+
+static inline mc_t mc(double re, double im)       { mc_t z = {re, im}; return z; }
+static inline int  mc_zero(mc_t z)                { return z.re == 0.0 && z.im == 0.0; }
+static inline mc_t mc_mul(mc_t a, mc_t b)         { return mc(a.re*b.re - a.im*b.im, a.re*b.im + a.im*b.re); }
+static inline mc_t mc_div(mc_t a, mc_t b)         { double d = b.re*b.re + b.im*b.im; return mc((a.re*b.re + a.im*b.im)/d, (a.im*b.re - a.re*b.im)/d); }
+static inline mc_t mc_exp(mc_t z)                 { double e = exp(z.re); return mc(e*cos(z.im), e*sin(z.im)); }
+static inline mc_t mc_log(mc_t z)                 { return mc(log(hypot(z.re, z.im)), atan2(z.im, z.re)); }
+static inline mc_t mc_pow(mc_t a, mc_t b)         { return mc_zero(a) ? mc(0.0, 0.0) : mc_exp(mc_mul(b, mc_log(a))); }
+static inline mc_t mc_sqrt(mc_t z)                { double r = hypot(z.re, z.im); double s = sqrt((r + z.re) / 2.0); double t = (z.im >= 0.0 ? 1.0 : -1.0) * sqrt((r - z.re) / 2.0); return mc(s, t); }
+static inline mc_t mc_sin(mc_t z)                 { return mc(sin(z.re)*cosh(z.im), cos(z.re)*sinh(z.im)); }
+static inline mc_t mc_cos(mc_t z)                 { return mc(cos(z.re)*cosh(z.im), -sin(z.re)*sinh(z.im)); }
+static inline mc_t mc_tan(mc_t z)                 { return mc_div(mc_sin(z), mc_cos(z)); }
+static inline mc_t mc_log10(mc_t z)               { mc_t l = mc_log(z); double s = 1.0/log(10.0); return mc(l.re*s, l.im*s); }
+static inline mc_t mc_logn(mc_t a, mc_t b)        { return mc_div(mc_log(a), mc_log(b)); }
 
 #include "menai_vm_value.h"
 #include "menai_vm_string.h"
@@ -2462,10 +2483,10 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_complex(a, "complex-expn")) goto error;
             if (!require_complex(b, "complex-expn")) goto error;
-            double complex za = ((MenaiComplex_Object *)a)->real + ((MenaiComplex_Object *)a)->imag * I;
-            double complex zb = ((MenaiComplex_Object *)b)->real + ((MenaiComplex_Object *)b)->imag * I;
-            double complex cr = cpow(za, zb);
-            PyObject *_r = make_complex(creal(cr), cimag(cr));
+            mc_t za = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
+            mc_t zb = mc(((MenaiComplex_Object *)b)->real, ((MenaiComplex_Object *)b)->imag);
+            mc_t cr = mc_pow(za, zb);
+            PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -2474,9 +2495,9 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_COMPLEX_EXP: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-exp")) goto error;
-            double complex z = ((MenaiComplex_Object *)a)->real + ((MenaiComplex_Object *)a)->imag * I;
-            double complex cr = cexp(z);
-            PyObject *_r = make_complex(creal(cr), cimag(cr));
+            mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
+            mc_t cr = mc_exp(z);
+            PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -2485,9 +2506,9 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_COMPLEX_LOG: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-log")) goto error;
-            double complex z = ((MenaiComplex_Object *)a)->real + ((MenaiComplex_Object *)a)->imag * I;
-            double complex cr = clog(z);
-            PyObject *_r = make_complex(creal(cr), cimag(cr));
+            mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
+            mc_t cr = mc_log(z);
+            PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -2496,9 +2517,9 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_COMPLEX_LOG10: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-log10")) goto error;
-            double complex z = ((MenaiComplex_Object *)a)->real + ((MenaiComplex_Object *)a)->imag * I;
-            double complex cr = clog(z) / log(10.0);
-            PyObject *_r = make_complex(creal(cr), cimag(cr));
+            mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
+            mc_t cr = mc_log10(z);
+            PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -2507,9 +2528,9 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_COMPLEX_SIN: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-sin")) goto error;
-            double complex z = ((MenaiComplex_Object *)a)->real + ((MenaiComplex_Object *)a)->imag * I;
-            double complex cr = csin(z);
-            PyObject *_r = make_complex(creal(cr), cimag(cr));
+            mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
+            mc_t cr = mc_sin(z);
+            PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -2518,9 +2539,9 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_COMPLEX_COS: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-cos")) goto error;
-            double complex z = ((MenaiComplex_Object *)a)->real + ((MenaiComplex_Object *)a)->imag * I;
-            double complex cr = ccos(z);
-            PyObject *_r = make_complex(creal(cr), cimag(cr));
+            mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
+            mc_t cr = mc_cos(z);
+            PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -2529,9 +2550,9 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_COMPLEX_TAN: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-tan")) goto error;
-            double complex z = ((MenaiComplex_Object *)a)->real + ((MenaiComplex_Object *)a)->imag * I;
-            double complex cr = ctan(z);
-            PyObject *_r = make_complex(creal(cr), cimag(cr));
+            mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
+            mc_t cr = mc_tan(z);
+            PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -2540,9 +2561,9 @@ execute_loop(PyObject *code, PyObject *globals,
         case OP_COMPLEX_SQRT: {
             PyObject *a = regs[base + src0];
             if (!require_complex(a, "complex-sqrt")) goto error;
-            double complex z = ((MenaiComplex_Object *)a)->real + ((MenaiComplex_Object *)a)->imag * I;
-            double complex cr = csqrt(z);
-            PyObject *_r = make_complex(creal(cr), cimag(cr));
+            mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
+            mc_t cr = mc_sqrt(z);
+            PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -2552,14 +2573,14 @@ execute_loop(PyObject *code, PyObject *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_complex(a, "complex-logn")) goto error;
             if (!require_complex(b, "complex-logn")) goto error;
-            double complex za = ((MenaiComplex_Object *)a)->real + ((MenaiComplex_Object *)a)->imag * I;
-            double complex zb = ((MenaiComplex_Object *)b)->real + ((MenaiComplex_Object *)b)->imag * I;
-            if (zb == 0.0) {
+            mc_t za = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
+            mc_t zb = mc(((MenaiComplex_Object *)b)->real, ((MenaiComplex_Object *)b)->imag);
+            if (mc_zero(zb)) {
                 menai_raise_eval_error("Function 'complex-logn' requires a non-zero base");
                 goto error;
             }
-            double complex cr = clog(za) / clog(zb);
-            PyObject *_r = make_complex(creal(cr), cimag(cr));
+            mc_t cr = mc_logn(za, zb);
+            PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;

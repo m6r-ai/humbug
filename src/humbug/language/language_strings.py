@@ -30,6 +30,7 @@ class LanguageStrings:
     open_conversation: str
     open_file: str
     open_preview: str
+    open_diff: str
     save: str
     save_as: str
     close_mindspace: str
@@ -63,6 +64,8 @@ class LanguageStrings:
     swap_column_right: str
     next_message: str
     previous_message: str
+    next_hunk: str
+    previous_hunk: str
 
     # Message roles and labels
     role_you: str
@@ -81,6 +84,13 @@ class LanguageStrings:
     find_placeholder: str
     find_no_matches: str
     find_match_count: str  # Format: "{current} of {total}"
+    find_match_case: str
+    find_use_regexp: str
+    find_invalid_regexp: str
+    replace_placeholder: str
+    replace_button: str
+    replace_all_button: str
+    replace_count: str  # Format: "{count} replaced"
 
     # Input widget
     processing_message: str
@@ -182,6 +192,7 @@ class LanguageStrings:
     file_dialog_save_file: str
     file_dialog_new_mindspace: str
     file_dialog_open_mindspace: str
+    file_dialog_attach_file: str
 
     # File dialog filters
     file_filter_all: str
@@ -272,8 +283,10 @@ class LanguageStrings:
     tooltip_submit_message: str
     tooltip_stop_message: str
     tooltip_settings_message: str
+    tooltip_attach_file: str
     tooltip_expand_message: str
     tooltip_collapse_message: str
+    warning_file_too_large: str
 
     delete_from_here_title: str
     delete_from_here_message: str

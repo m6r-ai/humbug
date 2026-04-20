@@ -22,7 +22,7 @@ from humbug.mindspace.mindspace_tree_style import MindspaceTreeStyle
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.style_manager import StyleManager
 from humbug.language.language_manager import LanguageManager
-from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVcsPoller
+from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVCSPoller
 
 
 class MindspaceFilesView(QWidget):
@@ -44,7 +44,7 @@ class MindspaceFilesView(QWidget):
         self._style_manager = StyleManager()
         self._logger = logging.getLogger("MindspaceFilesView")
         self._mindspace_manager = MindspaceManager()
-        self._vcs_poller = MindspaceVcsPoller()
+        self._vcs_poller = MindspaceVCSPoller()
 
         # Create layout
         layout = QVBoxLayout(self)

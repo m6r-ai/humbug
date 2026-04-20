@@ -6,13 +6,13 @@ import os
 from PySide6.QtCore import QObject, QTimer, Signal
 
 from git import GitCommandError, GitNotFoundError, GitNotRepositoryError
-from git import VcsFileStatus, find_repo_root, get_status
+from git import VCSFileStatus, find_repo_root, get_status
 
 
 _POLL_INTERVAL_MS = 2000
 
 
-class MindspaceVcsPoller(QObject):
+class MindspaceVCSPoller(QObject):
     """
     Singleton background poller that tracks git repository state for a mindspace.
 
@@ -24,15 +24,16 @@ class MindspaceVcsPoller(QObject):
     """
 
     repo_state_changed = Signal(bool)               # True = repo found, False = no repo
-    status_changed = Signal(list)                   # list[VcsFileStatus]
+    status_changed = Signal(list)                   # list[VCSFileStatus]
 
     _instance = None
-    _logger = logging.getLogger("MindspaceVcsPoller")
+    _logger = logging.getLogger("MindspaceVCSPoller")
 
-    def __new__(cls) -> 'MindspaceVcsPoller':
+    def __new__(cls) -> 'MindspaceVCSPoller':
         """Create or return singleton instance."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
+
         return cls._instance
 
     def __init__(self) -> None:
@@ -46,7 +47,7 @@ class MindspaceVcsPoller(QObject):
         self._mindspace_path: str = ""
         self._repo_root: str = ""
         self._has_repo: bool = False
-        self._last_status: list[VcsFileStatus] = []
+        self._last_status: list[VCSFileStatus] = []
 
         self._timer = QTimer(self)
         self._timer.setInterval(_POLL_INTERVAL_MS)
@@ -126,6 +127,7 @@ class MindspaceVcsPoller(QObject):
             git_dir = os.path.join(self._repo_root, ".git")
             if os.path.exists(git_dir):
                 return self._repo_root
+
             # .git has gone — fall through to full scan.
 
         # Walk up from the mindspace looking for a .git directory.
@@ -134,13 +136,14 @@ class MindspaceVcsPoller(QObject):
             if os.path.exists(os.path.join(candidate, ".git")):
                 try:
                     return find_repo_root(candidate)
-                except (GitNotFoundError, GitNotRepositoryError, GitCommandError) as e:
-                    self._logger.debug("find_repo_root failed for '%s': %s", candidate, e)
+
+                except (GitNotFoundError, GitNotRepositoryError, GitCommandError):
                     return ""
 
             parent = os.path.dirname(candidate)
             if parent == candidate:
                 break
+
             candidate = parent
 
         return ""
@@ -151,9 +154,11 @@ class MindspaceVcsPoller(QObject):
         """
         try:
             new_status = get_status(self._repo_root, self._mindspace_path)
+
         except GitNotFoundError as e:
             self._logger.warning("git not found: %s", e)
             return
+
         except (GitNotRepositoryError, GitCommandError) as e:
             self._logger.debug("git status failed: %s", e)
             return

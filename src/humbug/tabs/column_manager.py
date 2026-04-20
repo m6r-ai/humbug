@@ -636,12 +636,17 @@ class ColumnManager(QWidget):
         if os.path.isdir(path):
             return None
 
-        editor_tab = self.open_file(path, ephemeral)
-        self._mindspace_manager.add_interaction(
-            MindspaceLogLevel.INFO,
-            f"User opened file: '{path}'\ntab ID: {editor_tab.tab_id()}"
-        )
-        return editor_tab
+        try:
+            editor_tab = self.open_file(path, ephemeral)
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"User opened file: '{path}'\ntab ID: {editor_tab.tab_id()}"
+            )
+            return editor_tab
+
+        except Exception as e:
+            self._logger.exception("Failed to open file: %s", path)
+            raise ColumnManagerError(f"Failed to open file: {path}") from e
 
     def _open_file_by_source_type(self, source_type: str, path: str, ephemeral: bool) -> TabBase | None:
         """
@@ -1791,6 +1796,8 @@ class ColumnManager(QWidget):
             return existing_tab
 
         diff_tab = DiffTab("", path, self)
+        diff_tab.open_file_requested.connect(self._on_diff_open_file_requested)
+        diff_tab.open_preview_requested.connect(self._on_diff_open_preview_requested)
         diff_tab.set_ephemeral(ephemeral)
         self._add_tab(diff_tab, os.path.basename(path))
         return diff_tab
@@ -2023,6 +2030,14 @@ class ColumnManager(QWidget):
         """Edit a file from a preview page."""
         self.edit_file_requested.emit(path)
 
+    def _on_diff_open_file_requested(self, path: str) -> None:
+        """Open a file in an editor tab from a diff tab context menu."""
+        self.open_file(path, False)
+
+    def _on_diff_open_preview_requested(self, path: str) -> None:
+        """Open a file in a preview tab from a diff tab context menu."""
+        self.open_preview_page(path, False)
+
     def open_preview_page(self, path: str, ephemeral: bool) -> PreviewTab:
         """Open a preview page."""
         assert os.path.isabs(path), "Path must be absolute"
@@ -2130,7 +2145,10 @@ class ColumnManager(QWidget):
                 return preview_tab
 
             case TabType.DIFF:
-                return DiffTab.restore_from_state(state, self)
+                diff_tab = DiffTab.restore_from_state(state, self)
+                diff_tab.open_file_requested.connect(self._on_diff_open_file_requested)
+                diff_tab.open_preview_requested.connect(self._on_diff_open_preview_requested)
+                return diff_tab
 
         return None
 
@@ -2252,6 +2270,12 @@ class ColumnManager(QWidget):
 
     def apply_style(self) -> None:
         """Apply style changes from StyleManager."""
+        self.setStyleSheet(f"""
+            #ColumnManager QWidget {{
+                background-color: {self._style_manager.get_color_str(ColorRole.TAB_BAR_BACKGROUND)};
+            }}
+        """)
+
         # Apply styles to individual widgets
         self._update_column_splitter()
         self._apply_all_tab_bar_styles()
@@ -2441,6 +2465,15 @@ class ColumnManager(QWidget):
             )
             self.close_tab_by_id(preview_tab.tab_id(), True)
 
+        # Close any diff tab we may have had for this file
+        diff_tab = self._find_diff_tab_by_path(path)
+        if diff_tab:
+            self._mindspace_manager.add_interaction(
+                MindspaceLogLevel.INFO,
+                f"Deleted '{path}' - closed diff tab\ntab ID: {diff_tab.tab_id()}"
+            )
+            self.close_tab_by_id(diff_tab.tab_id(), True)
+
     def close_all_tabs(self) -> bool:
         """
         Close all open tabs.
@@ -2629,15 +2662,20 @@ class ColumnManager(QWidget):
     def can_navigate_next_message(self) -> bool:
         """Check if next message navigation is possible."""
         tab = self.get_current_tab()
-        if not isinstance(tab, ConversationTab | LogTab | ShellTab):
+        if not isinstance(tab, ConversationTab | DiffTab | LogTab | ShellTab):
             return False
 
         return tab.can_navigate_next_message()
 
+    def is_navigating_as_hunks(self) -> bool:
+        """Return True if the current tab navigates by hunks rather than messages."""
+        tab = self.get_current_tab()
+        return isinstance(tab, DiffTab)
+
     def navigate_next_message(self) -> None:
         """Navigate to next message in the tab."""
         tab = self.get_current_tab()
-        if not isinstance(tab, ConversationTab | LogTab | ShellTab):
+        if not isinstance(tab, ConversationTab | DiffTab | LogTab | ShellTab):
             return
 
         tab.navigate_next_message()
@@ -2645,7 +2683,7 @@ class ColumnManager(QWidget):
     def can_navigate_previous_message(self) -> bool:
         """Check if previous message navigation is possible."""
         tab = self.get_current_tab()
-        if not isinstance(tab, ConversationTab | LogTab | ShellTab):
+        if not isinstance(tab, ConversationTab | DiffTab | LogTab | ShellTab):
             return False
 
         return tab.can_navigate_previous_message()
@@ -2653,7 +2691,7 @@ class ColumnManager(QWidget):
     def navigate_previous_message(self) -> None:
         """Navigate to previous message in the tab."""
         tab = self.get_current_tab()
-        if not isinstance(tab, ConversationTab | LogTab | ShellTab):
+        if not isinstance(tab, ConversationTab | DiffTab | LogTab | ShellTab):
             return
 
         tab.navigate_previous_message()

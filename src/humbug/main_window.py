@@ -46,6 +46,7 @@ from humbug.tabs.editor.editor_ai_tool import EditorAITool
 from humbug.tabs.preview.preview_ai_tool import PreviewAITool
 from humbug.tabs.shell.commands.shell_command_clear import ShellCommandClear
 from humbug.tabs.shell.commands.shell_command_conversation import ShellCommandConversation
+from humbug.tabs.shell.commands.shell_command_diff import ShellCommandDiff
 from humbug.tabs.shell.commands.shell_command_edit import ShellCommandEdit
 from humbug.tabs.shell.commands.shell_command_help import ShellCommandHelp
 from humbug.tabs.shell.commands.shell_command_log import ShellCommandLog
@@ -53,6 +54,7 @@ from humbug.tabs.shell.commands.shell_command_terminal import ShellCommandTermin
 from humbug.tabs.shell.commands.shell_command_preview import ShellCommandPreview
 from humbug.tabs.shell.shell_command_registry import ShellCommandRegistry
 from humbug.tabs.tab_base import TabBase
+from humbug.tabs.diff.diff_tab import DiffTab
 from humbug.tabs.terminal.terminal_ai_tool import TerminalAITool
 from humbug.tabs.preview.preview_tab import PreviewTab
 from humbug.user.user_manager import UserManager, UserError
@@ -112,6 +114,10 @@ class MainWindow(QMainWindow):
         self._open_preview_action = QAction(strings.open_preview, self)
         self._open_preview_action.setShortcut(QKeySequence("Ctrl+Shift+W"))
         self._open_preview_action.triggered.connect(self._on_open_preview)
+
+        self._open_diff_action = QAction(strings.open_diff, self)
+        self._open_diff_action.setShortcut(QKeySequence("Ctrl+Shift+D"))
+        self._open_diff_action.triggered.connect(self._on_open_diff)
 
         self._open_conv_action = QAction(strings.open_conversation, self)
         self._open_conv_action.setShortcut(QKeySequence("Ctrl+Shift+O"))
@@ -248,6 +254,7 @@ class MainWindow(QMainWindow):
         self._file_menu.addSeparator()
         self._file_menu.addAction(self._open_mindspace_action)
         self._file_menu.addAction(self._open_preview_action)
+        self._file_menu.addAction(self._open_diff_action)
         self._file_menu.addAction(self._open_conv_action)
         self._file_menu.addAction(self._open_file_action)
         self._file_menu.addSeparator()
@@ -428,6 +435,7 @@ class MainWindow(QMainWindow):
         self._command_registry.register_command(ShellCommandLog(self._column_manager))
         self._command_registry.register_command(ShellCommandTerminal(self._column_manager))
         self._command_registry.register_command(ShellCommandPreview(self._column_manager))
+        self._command_registry.register_command(ShellCommandDiff(self._column_manager))
 
         # Register help command last so it can see all other commands
         self._command_registry.register_command(ShellCommandHelp(self._command_registry))
@@ -494,6 +502,7 @@ class MainWindow(QMainWindow):
         self._new_conv_action.setEnabled(has_mindspace)
         self._new_file_action.setEnabled(has_mindspace)
         self._open_preview_action.setEnabled(has_mindspace)
+        self._open_diff_action.setEnabled(has_mindspace)
         self._open_conv_action.setEnabled(has_mindspace)
         self._open_file_action.setEnabled(has_mindspace)
         self._new_terminal_action.setEnabled(has_mindspace)
@@ -529,9 +538,12 @@ class MainWindow(QMainWindow):
         self._swap_column_right_action.setEnabled(column_manager.can_swap_column(not left_to_right))
         self._next_message_action.setEnabled(column_manager.can_navigate_next_message())
         self._previous_message_action.setEnabled(column_manager.can_navigate_previous_message())
+        self._update_navigation_action_text()
 
     def _on_language_changed(self) -> None:
         """Update UI text when language changes."""
+        self._update_navigation_action_text()
+
         app = cast(QApplication, QApplication.instance())
         left_to_right = self._language_manager.left_to_right()
         if left_to_right:
@@ -557,6 +569,7 @@ class MainWindow(QMainWindow):
         self._new_file_action.setText(strings.new_file)
         self._open_mindspace_action.setText(strings.open_mindspace)
         self._open_preview_action.setText(strings.open_preview)
+        self._open_diff_action.setText(strings.open_diff)
         self._open_conv_action.setText(strings.open_conversation)
         self._open_file_action.setText(strings.open_file)
         self._save_action.setText(strings.save)
@@ -591,8 +604,6 @@ class MainWindow(QMainWindow):
         self._merge_column_right_action.setText(strings.merge_column_right)
         self._swap_column_left_action.setText(strings.swap_column_left)
         self._swap_column_right_action.setText(strings.swap_column_right)
-        self._next_message_action.setText(strings.next_message)
-        self._previous_message_action.setText(strings.previous_message)
 
         # Our logic for left and right reverses for right-to-left languages
         left_to_right = self._language_manager.left_to_right()
@@ -610,6 +621,17 @@ class MainWindow(QMainWindow):
         self._swap_column_right_action.triggered.connect(lambda: self._on_swap_column(not left_to_right))
 
         self._on_style_changed()
+
+    def _update_navigation_action_text(self) -> None:
+        """Set the next/previous action labels to match the current tab type."""
+        strings = self._language_manager.strings()
+        if self._column_manager.is_navigating_as_hunks():
+            self._next_message_action.setText(strings.next_hunk)
+            self._previous_message_action.setText(strings.previous_hunk)
+
+        else:
+            self._next_message_action.setText(strings.next_message)
+            self._previous_message_action.setText(strings.previous_message)
 
     def _create_theme_menu(self) -> QMenu:
         """
@@ -681,6 +703,9 @@ class MainWindow(QMainWindow):
 
         if isinstance(tab, PreviewTab):
             return MindspaceViewType.PREVIEW
+
+        if isinstance(tab, DiffTab):
+            return MindspaceViewType.VCS
 
         return MindspaceViewType.FILES
 
@@ -1155,7 +1180,17 @@ class MainWindow(QMainWindow):
 
     def _on_mindspace_view_file_clicked(self, source: MindspaceViewType, path: str, ephemeral: bool) -> None:
         """Handle click of a file from the mindspace view."""
-        self._column_manager.open_file_by_mindspace_view_type(source, path, ephemeral)
+        try:
+            self._column_manager.open_file_by_mindspace_view_type(source, path, ephemeral)
+
+        except ColumnManagerError as e:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_opening_file_title,
+                str(e)
+            )
 
     def _on_mindspace_view_file_deleted(self, path: str) -> None:
         """Handle deletion of a file by closing any open tab.
@@ -1205,7 +1240,7 @@ class MainWindow(QMainWindow):
                 f"User opened editor for file: '{path}'\nTab ID: {editor_tab.tab_id()}"
             )
 
-        except OSError as e:
+        except Exception as e:
             strings = self._language_manager.strings()
             MessageBox.show_message(
                 self,
@@ -1216,17 +1251,61 @@ class MainWindow(QMainWindow):
 
     def _on_save_file(self) -> None:
         """Save the current file."""
-        path = self._column_manager.save_file()
-        self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
+        try:
+            path = self._column_manager.save_file()
+            self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
+
+        except Exception as e:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_saving_file_title,
+                str(e)
+            )
 
     def _on_save_file_as(self) -> None:
         """Save the current file with a new name."""
-        path = self._column_manager.save_file_as()
-        self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
+        try:
+            path = self._column_manager.save_file_as()
+            self._mindspace_view.reveal_and_select_file(MindspaceViewType.FILES, path)
+
+        except Exception as e:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.error_saving_file_title,
+                str(e)
+            )
 
     def _on_open_preview(self) -> None:
         """Open the preview page in a new tab."""
         self._column_manager.open_preview_page(self._mindspace_manager.get_absolute_path("."), False)
+
+    def _on_open_diff(self) -> None:
+        """Show open file dialog and open a diff tab for the selected file."""
+        if not self._mindspace_manager.has_mindspace():
+            return
+
+        self._menu_timer.stop()
+        strings = self._language_manager.strings()
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            strings.open_diff,
+            self._mindspace_manager.file_dialog_directory()
+        )
+        self._menu_timer.start()
+
+        if not file_path:
+            return
+
+        self._mindspace_manager.update_file_dialog_directory(file_path)
+        diff_tab = self._column_manager.open_diff(file_path, False)
+        self._mindspace_manager.add_interaction(
+            MindspaceLogLevel.INFO,
+            f"User opened diff: '{file_path}'\ntab ID: {diff_tab.tab_id()}"
+        )
 
     def _on_show_system_log(self) -> None:
         """Show the log tab."""

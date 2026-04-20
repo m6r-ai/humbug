@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Dict, cast
 
-from PySide6.QtCore import QUrl, Signal
+from PySide6.QtCore import QUrl, Signal, QRegularExpression
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QVBoxLayout, QWidget
 
@@ -52,8 +52,9 @@ class PreviewTab(TabBase):
         layout.setSpacing(0)
 
         # Add find widget at top (initially hidden)
-        self._find_widget = FindWidget()
+        self._find_widget = FindWidget(self)
         self._find_widget.hide()
+        self._find_widget.set_preferred_width(self.preferred_width)
         self._find_widget.closed.connect(self._close_find)
         self._find_widget.find_next.connect(lambda: self._find_next(True))
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
@@ -331,7 +332,14 @@ class PreviewTab(TabBase):
     def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        current, total = self._preview_content_widget.find_text(text, forward)
+        case_sensitive = self._find_widget.is_case_sensitive()
+        regexp = self._find_widget.is_regexp()
+        if regexp:
+            if text and not QRegularExpression(text).isValid():
+                self._find_widget.set_invalid_regexp()
+                return
+
+        current, total = self._preview_content_widget.find_text(text, forward, case_sensitive=case_sensitive, regexp=regexp)
         self._find_widget.set_match_status(current, total)
 
     def get_preview_info(self) -> Dict[str, Any]:
@@ -347,7 +355,8 @@ class PreviewTab(TabBase):
         self,
         search_text: str,
         case_sensitive: bool = False,
-        max_results: int = 50
+        max_results: int = 50,
+        regexp: bool = False
     ) -> Dict[str, Any]:
         """
         Search for text across all content blocks.
@@ -356,11 +365,12 @@ class PreviewTab(TabBase):
             search_text: Text to search for
             case_sensitive: Whether search should be case-sensitive
             max_results: Maximum number of results to return
+            regexp: If True, treat search_text as a regular expression.
 
         Returns:
             Dictionary containing search results with matches and context
         """
-        return self._preview_content_widget.search_content(search_text, case_sensitive, max_results)
+        return self._preview_content_widget.search_content(search_text, case_sensitive, max_results, regexp)
 
     def scroll_to_content_position(
         self,

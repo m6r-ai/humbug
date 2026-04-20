@@ -1,4 +1,4 @@
-"""Revision control status view for the mindspace sidebar."""
+"""Changed files status view for the mindspace sidebar."""
 
 import os
 import logging
@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QApplication, QListWidget, QListWidgetItem, QMenu, QVBoxLayout, QWidget
 )
 
-from git import VcsFileStatus, VcsStatusCode
+from git import VCSFileStatus, VCSStatusCode
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -17,24 +17,24 @@ from humbug.mindspace.mindspace_collapsible_header import MindspaceCollapsibleHe
 from humbug.message_box import MessageBox, MessageBoxButton, MessageBoxType
 from humbug.mindspace.mindspace_log_level import MindspaceLogLevel
 from humbug.mindspace.mindspace_manager import MindspaceManager
-from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVcsPoller
-from humbug.mindspace.vcs.mindspace_vcs_delegate import MindspaceVcsDelegate
+from humbug.mindspace.vcs.mindspace_vcs_poller import MindspaceVCSPoller
+from humbug.mindspace.vcs.mindspace_vcs_delegate import MindspaceVCSDelegate
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
 from humbug.style_manager import StyleManager
 
 
-_STATUS_LABELS: dict[VcsStatusCode, str] = {
-    VcsStatusCode.MODIFIED:  "M",
-    VcsStatusCode.ADDED:     "A",
-    VcsStatusCode.DELETED:   "D",
-    VcsStatusCode.RENAMED:   "R",
-    VcsStatusCode.COPIED:    "C",
-    VcsStatusCode.UNTRACKED: "?",
-    VcsStatusCode.UNKNOWN:   "!",
+_STATUS_LABELS: dict[VCSStatusCode, str] = {
+    VCSStatusCode.MODIFIED: "M",
+    VCSStatusCode.ADDED: "A",
+    VCSStatusCode.DELETED: "D",
+    VCSStatusCode.RENAMED: "R",
+    VCSStatusCode.COPIED: "C",
+    VCSStatusCode.UNTRACKED: "?",
+    VCSStatusCode.UNKNOWN: "!",
 }
 
 
-class _VcsList(QListWidget):
+class _VCSList(QListWidget):
     """QListWidget subclass that initiates Humbug path drags."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
@@ -50,7 +50,7 @@ class _VcsList(QListWidget):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
-        if not (event.buttons() & Qt.MouseButton.LeftButton):
+        if not event.buttons() & Qt.MouseButton.LeftButton:
             self._drag_start_pos = None
             super().mouseMoveEvent(event)
             return
@@ -86,7 +86,7 @@ class _VcsList(QListWidget):
         self._drag_start_pos = None
 
 
-class MindspaceVcsView(QWidget):
+class MindspaceVCSView(QWidget):
     """Sidebar panel showing VCS-modified files for the current mindspace."""
 
     file_clicked = Signal(MindspaceViewType, str, bool)   # view type, path, ephemeral
@@ -102,13 +102,13 @@ class MindspaceVcsView(QWidget):
         super().__init__(parent)
 
         self._style_manager = StyleManager()
-        self._logger = logging.getLogger("MindspaceVcsView")
+        self._logger = logging.getLogger("MindspaceVCSView")
         self._mindspace_manager = MindspaceManager()
         self._language_manager = LanguageManager()
         self._language_manager.language_changed.connect(self._on_language_changed)
 
         self._mindspace_path: str = ""
-        self._current_status: list[VcsFileStatus] = []
+        self._current_status: list[VCSFileStatus] = []
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -122,17 +122,17 @@ class MindspaceVcsView(QWidget):
         self._header.toggled.connect(self._on_header_toggled)
         layout.addWidget(self._header)
 
-        self._list_widget = _VcsList()
+        self._list_widget = _VCSList()
         self._list_widget.setObjectName("_list_widget")
         self._list_widget.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._list_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self._list_widget.customContextMenuRequested.connect(self._show_context_menu)
         self._list_widget.itemClicked.connect(self._on_item_clicked)
         self._list_widget.itemActivated.connect(self._on_item_activated)
-        self._list_widget.setItemDelegate(MindspaceVcsDelegate(self._list_widget))
+        self._list_widget.setItemDelegate(MindspaceVCSDelegate(self._list_widget))
         layout.addWidget(self._list_widget)
 
-        self._poller = MindspaceVcsPoller()
+        self._poller = MindspaceVCSPoller()
         self._poller.repo_state_changed.connect(self._on_repo_state_changed)
         self._poller.status_changed.connect(self._on_status_changed)
 
@@ -224,7 +224,7 @@ class MindspaceVcsView(QWidget):
 
         self.repo_available.emit(has_repo)
 
-    def _on_status_changed(self, status: list[VcsFileStatus]) -> None:
+    def _on_status_changed(self, status: list[VCSFileStatus]) -> None:
         """Update the list when git status changes."""
         self._current_status = status
         self._rebuild_list()
@@ -315,7 +315,7 @@ class MindspaceVcsView(QWidget):
                 [MessageBoxButton.OK]
             )
 
-    def _display_name(self, entry: VcsFileStatus) -> str:
+    def _display_name(self, entry: VCSFileStatus) -> str:
         """
         Return a short display name for a status entry.
 
@@ -323,14 +323,14 @@ class MindspaceVcsView(QWidget):
         path relative to the mindspace root.
 
         Args:
-            entry: The VcsFileStatus entry to format.
+            entry: The VCSFileStatus entry to format.
 
         Returns:
             Human-readable display string.
         """
         rel = self._rel_path(entry.path)
 
-        if entry.code in (VcsStatusCode.RENAMED, VcsStatusCode.COPIED) and entry.original_path:
+        if entry.code in (VCSStatusCode.RENAMED, VCSStatusCode.COPIED) and entry.original_path:
             old_rel = self._rel_path(entry.original_path)
             return f"{old_rel} → {rel}"
 
@@ -354,23 +354,23 @@ class MindspaceVcsView(QWidget):
 
         return os.path.basename(abs_path)
 
-    def _color_for_code(self, code: VcsStatusCode) -> QColor:
+    def _color_for_code(self, code: VCSStatusCode) -> QColor:
         """
         Return the theme-appropriate foreground colour for a status code.
 
         Args:
-            code: The VcsStatusCode to look up.
+            code: The VCSStatusCode to look up.
 
         Returns:
             QColor for the status entry foreground.
         """
-        if code in (VcsStatusCode.ADDED, VcsStatusCode.UNTRACKED):
+        if code in (VCSStatusCode.ADDED, VCSStatusCode.UNTRACKED):
             return self._style_manager.get_color(ColorRole.VCS_ADDED)
 
-        if code == VcsStatusCode.DELETED:
+        if code == VCSStatusCode.DELETED:
             return self._style_manager.get_color(ColorRole.VCS_DELETED)
 
-        if code in (VcsStatusCode.RENAMED, VcsStatusCode.COPIED):
+        if code in (VCSStatusCode.RENAMED, VCSStatusCode.COPIED):
             return self._style_manager.get_color(ColorRole.VCS_RENAMED)
 
         return self._style_manager.get_color(ColorRole.VCS_MODIFIED)

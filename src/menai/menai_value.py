@@ -285,22 +285,73 @@ class MenaiList(MenaiValue):
     elements: Tuple[MenaiValue, ...] = ()
 
     def to_python(self) -> List[Any]:
-        """Convert to Python list with Python values."""
-        return [elem.to_python() for elem in self.elements]
+        """Convert to Python list with Python values, iteratively to avoid stack overflow."""
+        if not self.elements:
+            return []
+
+        # Each work-stack frame is (elements_tuple, current_index, accumulated_list).
+        # When current_index reaches len(elements), the list is complete and we pop.
+        work: list = [(self.elements, 0, [])]
+        while work:
+            elems, idx, acc = work[-1]
+            if idx == len(elems):
+                work.pop()
+                result = acc
+                if work:
+                    parent_elems, parent_idx, parent_acc = work[-1]
+                    parent_acc.append(result)
+                    work[-1] = (parent_elems, parent_idx + 1, parent_acc)
+
+                else:
+                    return result
+
+            else:
+                child = elems[idx]
+                if isinstance(child, MenaiList):
+                    work[-1] = (elems, idx, acc)
+                    work.append((child.elements, 0, []))
+
+                else:
+                    acc.append(child.to_python())
+                    work[-1] = (elems, idx + 1, acc)
+
+        return []  # unreachable, satisfies type checker
 
     def type_name(self) -> str:
         return "list"
 
     def describe(self) -> str:
-        # Format list: (element1 element2 ...)
-        if len(self.elements) == 0:
+        """Format as a Lisp-style list, iteratively to avoid stack overflow."""
+        if not self.elements:
             return "()"
 
-        formatted_elements = []
-        for element in self.elements:
-            formatted_elements.append(element.describe())
+        # Each work-stack frame is (elements_tuple, current_index, accumulated_strings).
+        # When current_index reaches len(elements), we join and pop.
+        work: list = [(self.elements, 0, [])]
+        while work:
+            elems, idx, acc = work[-1]
+            if idx == len(elems):
+                work.pop()
+                result = "(" + " ".join(acc) + ")"
+                if work:
+                    parent_elems, parent_idx, parent_acc = work[-1]
+                    parent_acc.append(result)
+                    work[-1] = (parent_elems, parent_idx + 1, parent_acc)
 
-        return f"({' '.join(formatted_elements)})"
+                else:
+                    return result
+
+            else:
+                child = elems[idx]
+                if isinstance(child, MenaiList):
+                    work[-1] = (elems, idx, acc)
+                    work.append((child.elements, 0, []))
+
+                else:
+                    acc.append(child.describe())
+                    work[-1] = (elems, idx + 1, acc)
+
+        return "()"  # unreachable, satisfies type checker
 
 
 class MenaiDict(MenaiValue):
@@ -549,9 +600,9 @@ class MenaiStruct(MenaiValue):
 
 
 # Module-level singletons — there is only one #none value.
-Menai_NONE = MenaiNone()
-Menai_BOOLEAN_TRUE = MenaiBoolean(True)
-Menai_BOOLEAN_FALSE = MenaiBoolean(False)
-Menai_LIST_EMPTY = MenaiList(())
-Menai_DICT_EMPTY = MenaiDict(())
-Menai_SET_EMPTY = MenaiSet(())
+Menai_NONE = MenaiNone()  # pylint: disable=invalid-name
+Menai_BOOLEAN_TRUE = MenaiBoolean(True)  # pylint: disable=invalid-name
+Menai_BOOLEAN_FALSE = MenaiBoolean(False)  # pylint: disable=invalid-name
+Menai_LIST_EMPTY = MenaiList(())  # pylint: disable=invalid-name
+Menai_DICT_EMPTY = MenaiDict(())  # pylint: disable=invalid-name
+Menai_SET_EMPTY = MenaiSet(())  # pylint: disable=invalid-name

@@ -4,7 +4,7 @@ import logging
 from PySide6.QtWidgets import (
     QVBoxLayout, QWidget
 )
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QTimer, QRegularExpression
 
 from humbug.language.language_manager import LanguageManager
 from humbug.status_message import StatusMessage
@@ -42,11 +42,14 @@ class EditorTab(TabBase):
         layout.setSpacing(0)
 
         # Add find widget at top (initially hidden)
-        self._find_widget = FindWidget()
+        self._find_widget = FindWidget(self)
         self._find_widget.hide()
+        self._find_widget.enable_replace_row()
         self._find_widget.closed.connect(self._close_find)
         self._find_widget.find_next.connect(lambda: self._find_next(True))
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
+        self._find_widget.replace_current.connect(self._replace_current)
+        self._find_widget.replace_all.connect(self._replace_all)
         layout.addWidget(self._find_widget)
 
         # Create editor widget
@@ -110,8 +113,10 @@ class EditorTab(TabBase):
         previous_match_index = current_match - 1 if current_match > 0 else -1  # Convert to 0-based
 
         # Clear current search state and re-search without moving cursor
+        case_sensitive = self._find_widget.is_case_sensitive()
+        regexp = self._find_widget.is_regexp()
         self._editor_widget.clear_find()
-        self._editor_widget.find_text(search_text, True, move_cursor=False)
+        self._editor_widget.find_text(search_text, True, move_cursor=False, case_sensitive=case_sensitive, regexp=regexp)
 
         # Try to restore the same match index if possible
         new_current, new_total = self._editor_widget.get_match_status()
@@ -344,9 +349,34 @@ class EditorTab(TabBase):
     def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        self._editor_widget.find_text(text, forward)  # move_cursor defaults to True for user navigation
+        case_sensitive = self._find_widget.is_case_sensitive()
+        regexp = self._find_widget.is_regexp()
+        if regexp:
+            if text and not QRegularExpression(text).isValid():
+                self._find_widget.set_invalid_regexp()
+                return
+
+        self._editor_widget.find_text(text, forward, case_sensitive=case_sensitive, regexp=regexp)
         current, total = self._editor_widget.get_match_status()
         self._find_widget.set_match_status(current, total)
+
+    def _replace_current(self, replace_text: str) -> None:
+        """Replace the current match and advance to the next."""
+        self._editor_widget.replace_current(replace_text)
+        current, total = self._editor_widget.get_match_status()
+        self._find_widget.set_match_status(current, total)
+
+    def _replace_all(self, replace_text: str) -> None:
+        """Replace all matches and update the status display."""
+        count = self._editor_widget.replace_all(replace_text)
+        if count > 0:
+            strings = self._language_manager.strings()
+            status_text = strings.replace_count.format(count=count)
+            self._find_widget.set_match_status(0, 0)
+            self._find_widget.set_status_text(status_text)
+
+        else:
+            self._find_widget.set_match_status(0, 0)
 
     def get_text_range(self, start_line: int | None = None, end_line: int | None = None) -> str:
         """
@@ -379,18 +409,19 @@ class EditorTab(TabBase):
         """
         self._editor_widget.goto_line(line, column)
 
-    def find_all_occurrences(self, search_text: str, case_sensitive: bool = False) -> List[Dict[str, Any]]:
+    def find_all_occurrences(self, search_text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Dict[str, Any]]:
         """
         Find all occurrences of text in the document.
 
         Args:
             search_text: Text to search for
             case_sensitive: Whether search should be case-sensitive
+            regexp: If True, treat search_text as a regular expression.
 
         Returns:
             List of match information dictionaries
         """
-        return self._editor_widget.find_all_occurrences(search_text, case_sensitive)
+        return self._editor_widget.find_all_occurrences(search_text, case_sensitive, regexp)
 
     def get_selected_text(self) -> str:
         """

@@ -13,6 +13,9 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
 
 #include "menai_vm_list.h"
 
@@ -40,8 +43,19 @@ _bucket_index(Py_ssize_t n)
 {
     if (n <= 1) return 0;
 
-    /* ceil_log2(n) via count-leading-zeros — one instruction on x86/ARM. */
+    /* ceil_log2(n): find the position of the highest set bit in (n-1). */
+#if defined(_MSC_VER)
+    unsigned long idx;
+    _BitScanReverse(&idx, (unsigned long)(n - 1));
+    int bucket = (int)(idx + 1);
+#elif defined(__GNUC__) || defined(__clang__)
     int bucket = (int)(sizeof(unsigned long) * 8) - __builtin_clzl((unsigned long)(n - 1));
+#else
+    int bucket = 0;
+    unsigned long v = (unsigned long)(n - 1);
+    while (v >>= 1) bucket++;
+    bucket++;
+#endif
     return bucket < LIST_CACHE_NUM_BUCKETS ? bucket : LIST_CACHE_NUM_BUCKETS - 1;
 }
 

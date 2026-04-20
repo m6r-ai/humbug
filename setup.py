@@ -13,6 +13,8 @@ development and release step, not part of the pip-installable package metadata.
 
 import os
 
+import sys
+
 from setuptools import Extension, setup
 
 _MENAI_SRC = os.path.join("src", "menai")
@@ -37,7 +39,10 @@ extensions = [
             "src/menai/menai_vm_value.c",
         ],
         include_dirs=[_MENAI_SRC],
-        extra_compile_args=["-O2", "-std=c11"],
+        extra_compile_args=(
+            ["/O2", "/std:c11"] if sys.platform == "win32"
+            else ["-O2", "-std=c11"]
+        ),
     ),
 ]
 

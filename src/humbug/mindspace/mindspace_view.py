@@ -12,7 +12,7 @@ from humbug.mindspace.conversations.mindspace_conversations_view import Mindspac
 from humbug.mindspace.files.mindspace_files_view import MindspaceFilesView
 from humbug.mindspace.mindspace_manager import MindspaceManager
 from humbug.mindspace.mindspace_view_type import MindspaceViewType
-from humbug.mindspace.vcs.mindspace_vcs_view import MindspaceVcsView
+from humbug.mindspace.vcs.mindspace_vcs_view import MindspaceVCSView
 from humbug.mindspace.preview.mindspace_preview_view import MindspacePreviewView
 from humbug.style_manager import StyleManager
 
@@ -79,7 +79,7 @@ class MindspaceView(QWidget):
         self._splitter.addWidget(self._conversations_view)
 
         # Add VCS view (between conversations and files)
-        self._vcs_view = MindspaceVcsView()
+        self._vcs_view = MindspaceVCSView()
         self._splitter.addWidget(self._vcs_view)
 
         # Add files view
@@ -342,7 +342,7 @@ class MindspaceView(QWidget):
             self._settings_button.hide()
 
         else:
-            self._mindspace_button.setText(os.path.basename(path))
+            self._mindspace_button.setText(os.path.basename(path.rstrip('\\/')))
             self._settings_button.show()
 
         # Forward to all views

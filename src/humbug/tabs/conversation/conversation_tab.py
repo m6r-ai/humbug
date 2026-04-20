@@ -6,7 +6,7 @@ from typing import Dict, Any
 from PySide6.QtWidgets import (
     QApplication, QDialog, QVBoxLayout, QWidget
 )
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject, Signal, QRegularExpression
 
 from ai import AIConversation, AIConversationHistory, AIConversationSettings
 
@@ -53,8 +53,9 @@ class ConversationTab(TabBase):
         layout.setSpacing(0)
 
         # Add find widget at top (initially hidden)
-        self._find_widget = FindWidget()
+        self._find_widget = FindWidget(self)
         self._find_widget.hide()
+        self._find_widget.set_preferred_width(self.preferred_width)
         self._find_widget.closed.connect(self._close_find)
         self._find_widget.find_next.connect(lambda: self._find_next(True))
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
@@ -365,7 +366,14 @@ class ConversationTab(TabBase):
     def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""
         text = self._find_widget.get_search_text()
-        current, total = self._conversation_widget.find_text(text, forward)
+        case_sensitive = self._find_widget.is_case_sensitive()
+        regexp = self._find_widget.is_regexp()
+        if regexp:
+            if text and not QRegularExpression(text).isValid():
+                self._find_widget.set_invalid_regexp()
+                return
+
+        current, total = self._conversation_widget.find_text(text, forward, case_sensitive=case_sensitive, regexp=regexp)
         self._find_widget.set_match_status(current, total)
 
     def cancel_current_tasks(self) -> None:
@@ -463,11 +471,12 @@ class ConversationTab(TabBase):
         search_text: str,
         case_sensitive: bool = False,
         message_types: list[str] | None = None,
-        max_results: int = 50
+        max_results: int = 50,
+        regexp: bool = False
     ) -> Dict[str, Any]:
         """Search for text across all messages."""
         return self._conversation_widget.search_messages(
-            search_text, case_sensitive, message_types, max_results
+            search_text, case_sensitive, message_types, max_results, regexp
         )
 
     def scroll_to_message(

@@ -40,6 +40,7 @@ def get_arabic_strings() -> LanguageStrings:
         open_conversation="فتح محادثة...",
         open_file="فتح ملف...",
         open_preview="فتح معاينة...",
+        open_diff="فتح فروق...",
         save="حفظ",
         save_as="حفظ باسم...",
         close_mindspace="إغلاق المساحة الذهنية",
@@ -73,6 +74,8 @@ def get_arabic_strings() -> LanguageStrings:
         swap_column_right="عمود المبادلة لليمين",
         next_message="الرسالة التالية",
         previous_message="الرسالة السابقة",
+        next_hunk="التعديل التالي",
+        previous_hunk="التعديل السابق",
 
         # Message roles
         role_you="أنت",
@@ -91,6 +94,13 @@ def get_arabic_strings() -> LanguageStrings:
         find_placeholder="بحث",
         find_no_matches="لا توجد نتائج",
         find_match_count="{current} من {total}",
+        find_match_case="مطابقة الحالة",
+        find_use_regexp="استخدام التعبير النمطي",
+        find_invalid_regexp="تعبير نمطي غير صالح",
+        replace_placeholder="استبدال",
+        replace_button="استبدال",
+        replace_all_button="استبدال الكل",
+        replace_count="{count} تم استبداله",
 
         # Input widget
         processing_message="محادثة مع {model} (Esc للإلغاء، {key} للإرسال)",
@@ -136,16 +146,16 @@ def get_arabic_strings() -> LanguageStrings:
         sort_alphabetical="أبجدي",
 
         # User Settings dialog - external file access
-        external_file_access="الوصول إلى الملفات الخارجية",
+        external_file_access="الوصول إلى الملفات",
         allow_external_file_access="السماح للذكاء الاصطناعي بقراءة الملفات خارج المساحة الذهنية",
         external_file_allowlist="المسارات المسموح بها (أنماط glob، واحد لكل سطر):",
-        external_file_denylist="المسارات المرفوضة (أنماط glob، واحد لكل سطر):",
+        external_file_denylist="المسارات المرفوضة دائماً (أنماط glob، واحد لكل سطر):",
 
         # Mindspace tree
         mindspace_label_none="لا توجد مساحة ذهنية نشطة",
         mindspace_name_tooltip="انقر لفتح مساحة ذهنية مختلفة",
         mindspace_files="ملفات",
-        mindspace_vcs="التحكم في المراجعة",
+        mindspace_vcs="الملفات المتغيرة",
         mindspace_vcs_no_repo="لم يتم العثور على مستودع",
         mindspace_conversations="محادثات",
         mindspace_preview="معاينة",
@@ -195,6 +205,7 @@ def get_arabic_strings() -> LanguageStrings:
         file_dialog_save_file="حفظ الملف",
         file_dialog_new_mindspace="إنشاء مساحة ذهنية جديدة",
         file_dialog_open_mindspace="فتح مساحة ذهنية",
+        file_dialog_attach_file="إرفاق ملف",
 
         # File dialog filters
         file_filter_all="كل الملفات (*.*)",
@@ -292,8 +303,13 @@ def get_arabic_strings() -> LanguageStrings:
         tooltip_submit_message="إرسال الرسالة",
         tooltip_stop_message="إيقاف المعالجة الحالية",
         tooltip_settings_message="فتح إعدادات المحادثة",
+        tooltip_attach_file="إرفاق ملف",
         tooltip_expand_message="توسيع الرسالة",
         tooltip_collapse_message="طي الرسالة",
+        warning_file_too_large=(
+            "'{filename}' حجمه {size_kb}كيلوبايت، وهو يتجاوز الحد الموصى به البالغ 100 كيلوبايت. قد تستهلك "
+            "الملفات الكبيرة جزءاً كبيراً من نافذة السياق. هل تريد الإرفاق على أي حال؟"
+        ),
 
         delete_from_here_title="حذف الرسائل",
         delete_from_here_message="هل أنت متأكد من أنك تريد حذف هذه الرسالة وجميع الرسائل اللاحقة؟ لا يمكن التراجع عن هذا الإجراء.",

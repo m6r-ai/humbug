@@ -274,7 +274,6 @@ class UserSettingsDialog(QDialog):
         """Enable or disable external file access fields based on checkbox state."""
         enabled = self._allow_external_access_checkbox.get_value()
         self._external_allowlist_area.set_enabled(enabled)
-        self._external_denylist_area.set_enabled(enabled)
 
     def _on_language_changed(self) -> None:
         """Update all dialog texts with current language strings."""
@@ -449,7 +448,6 @@ class UserSettingsDialog(QDialog):
 
         # Update enabled state of external file access fields
         self._external_allowlist_area.set_enabled(settings.allow_external_file_access)
-        self._external_denylist_area.set_enabled(settings.allow_external_file_access)
 
         # Reset the modified state
         self._settings_container.reset_modified_state()

@@ -2,7 +2,7 @@
 
 import logging
 import os
-from typing import List, Optional, Tuple
+from typing import List, Optional, Set, Tuple
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollBar, QSplitter, QLabel, QSizePolicy
 from PySide6.QtCore import Qt, QTimer, Signal
@@ -18,7 +18,7 @@ from syntax import ProgrammingLanguageUtils
 from humbug.color_role import ColorRole
 from humbug.style_manager import StyleManager
 from humbug.tabs.diff.diff_pane import DiffPane
-from humbug.tabs.diff.diff_row import DiffRow
+from humbug.tabs.diff.diff_row import DiffRow, DiffRowType
 from humbug.tabs.diff.diff_view_builder import DiffViewBuilder
 from humbug.tabs.smooth_scroll import SMOOTH_SCROLL_DURATION_MS, SMOOTH_SCROLL_INTERVAL_MS
 
@@ -40,6 +40,8 @@ class DiffWidget(QWidget):
     """
 
     status_updated = Signal()
+    open_in_editor_requested = Signal()
+    open_in_preview_requested = Signal()
 
     def __init__(self, path: str, parent: QWidget | None = None) -> None:
         """
@@ -54,6 +56,8 @@ class DiffWidget(QWidget):
         self._style_manager = StyleManager()
         self._rows: list[DiffRow] = []
         self._syncing = False
+        self._cached_hunks: List[Tuple[int, int]] = []
+        self._current_hunk_index: int = -1
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         outer_layout = QVBoxLayout(self)
@@ -94,9 +98,16 @@ class DiffWidget(QWidget):
         self._right_pane.verticalScrollBar().valueChanged.connect(self._on_right_scrolled)
         self._scrollbar.valueChanged.connect(self._on_shared_scrollbar_moved)
 
+        # Wire pane open requests up to widget-level signals.
+        self._left_pane.open_in_editor_requested.connect(self.open_in_editor_requested)
+        self._right_pane.open_in_editor_requested.connect(self.open_in_editor_requested)
+        self._left_pane.open_in_preview_requested.connect(self.open_in_preview_requested)
+        self._right_pane.open_in_preview_requested.connect(self.open_in_preview_requested)
+
         # Keep the shared scrollbar range in sync with the left pane's range
         # (both panes always have the same row count so either would do).
         self._left_pane.verticalScrollBar().rangeChanged.connect(self._on_scroll_range_changed)
+        self._scrollbar.valueChanged.connect(self._update_active_hunk)
 
         self._style_manager.style_changed.connect(self._on_style_changed)
         self._on_style_changed()
@@ -106,6 +117,7 @@ class DiffWidget(QWidget):
         self._find_matches: List[Tuple[str, int, int]] = []  # ('left'|'right', start, end)
         self._find_current: int = -1
         self._find_text: str = ""
+        self._find_key: tuple = ("", False, False)
 
         # Smooth scrolling
         self._smooth_scroll_timer = QTimer(self)
@@ -117,8 +129,13 @@ class DiffWidget(QWidget):
         self._smooth_scroll_duration: int = SMOOTH_SCROLL_DURATION_MS
         self._smooth_scroll_time: int = 0
 
-    def load_diff(self) -> None:
-        """Fetch both file versions and display the full side-by-side diff."""
+    def load_diff(self, initial_load: bool = False) -> None:
+        """
+        Fetch both file versions and display the full side-by-side diff.
+
+        Args:
+            initial_load: If True, scroll to the first hunk after loading.
+        """
         result = self._fetch_content()
         if result is None:
             return
@@ -147,6 +164,17 @@ class DiffWidget(QWidget):
         self._right_pane.set_syntax(language)
         self._show_panes()
         self.status_updated.emit()
+        self._cached_hunks = self._hunks()
+        self._current_hunk_index = -1
+        self._update_active_hunk()
+
+        if initial_load and self._cached_hunks:
+            start = self._cached_hunks[0][0]
+            self._current_hunk_index = 0
+            self._set_active_hunk(self._cached_hunks[0][0], self._cached_hunks[0][1])
+            QTimer.singleShot(0, lambda: self._start_smooth_scroll(
+                self._left_pane.target_scroll_for_block(start)
+            ))
 
         # Re-run the active search against the new document content, if any.
         if self._find_text:
@@ -175,7 +203,8 @@ class DiffWidget(QWidget):
         self._update_shared_scrollbar()
 
     def _fetch_content(self) -> Optional[tuple[List[str], List[str], str]]:
-        """Retrieve the HEAD content, working-tree content, and diff text.
+        """
+        Retrieve the HEAD content, working-tree content, and diff text.
 
         Returns a tuple of (old_lines, new_lines, diff_text), or None if an
         error occurred that has already been surfaced via the message label.
@@ -310,8 +339,9 @@ class DiffWidget(QWidget):
         self._left_pane.apply_style()
         self._right_pane.apply_style()
 
-    def find_text(self, text: str, forward: bool = True) -> Tuple[int, int]:
-        """Search for *text* across both panes and navigate to the next match.
+    def find_text(self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False) -> Tuple[int, int]:
+        """
+        Search for *text* across both panes and navigate to the next match.
 
         Matches from the left pane and the right pane are merged in document
         order (by character position) so that navigation follows the visual
@@ -322,28 +352,34 @@ class DiffWidget(QWidget):
             text: Text to search for.
             forward: If True move to the next match; if False move to the
                 previous match.
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
 
         Returns:
             Tuple of (current_match_1based, total_matches).  Both values are
             0 when there are no matches.
         """
-        if text != self._find_text:
+        if (text, case_sensitive, regexp) != self._find_key:
             # New search term — rebuild the match list from scratch.
-            self._run_find(text, forward=forward, reset=True)
+            self._run_find(text, forward=forward, reset=True, case_sensitive=case_sensitive, regexp=regexp)
         else:
-            self._run_find(text, forward=forward, reset=False)
+            self._run_find(text, forward=forward, reset=False, case_sensitive=case_sensitive, regexp=regexp)
 
         return self.get_match_status()
 
-    def _run_find(self, text: str, forward: bool, reset: bool) -> None:
-        """Internal helper that (re)builds matches and advances the cursor.
+    def _run_find(self, text: str, forward: bool, reset: bool, case_sensitive: bool = False, regexp: bool = False) -> None:
+        """
+        Internal helper that (re)builds matches and advances the cursor.
 
         Args:
             text: Search string.
             forward: Direction of navigation.
             reset: If True, rebuild the match list; if False, only advance.
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
         """
         self._find_text = text
+        self._find_key = (text, case_sensitive, regexp)
 
         if reset or not self._find_matches:
             self._find_current = -1
@@ -351,13 +387,13 @@ class DiffWidget(QWidget):
 
             if text:
                 # Collect matches from the left pane …
-                left_matches = self._left_pane.find_matches(text)
+                left_matches = self._left_pane.find_matches(text, case_sensitive, regexp)
                 for start, end in left_matches:
                     self._find_matches.append(("left", start, end))
 
                 # … and the right pane, interleaved by block (row) number so
                 # that navigation follows the visual order of the diff.
-                right_matches = self._right_pane.find_matches(text)
+                right_matches = self._right_pane.find_matches(text, case_sensitive, regexp)
                 for start, end in right_matches:
                     self._find_matches.append(("right", start, end))
 
@@ -380,8 +416,10 @@ class DiffWidget(QWidget):
         total = len(self._find_matches)
         if self._find_current == -1:
             self._find_current = 0 if forward else total - 1
+
         elif forward:
             self._find_current = (self._find_current + 1) % total
+
         else:
             self._find_current = (self._find_current - 1) % total
 
@@ -409,9 +447,6 @@ class DiffWidget(QWidget):
         self._left_pane.highlight_matches(left_matches, left_current_local)
         self._right_pane.highlight_matches(right_matches, right_current_local)
 
-    def get_match_status(self) -> Tuple[int, int]:
-        """Return (current_1based, total) for the find widget status label."""
-
     def _start_smooth_scroll(self, target_value: int) -> None:
         """
         Start smooth scrolling animation to target value.
@@ -435,9 +470,20 @@ class DiffWidget(QWidget):
         self._smooth_scroll_time += self._smooth_scroll_timer.interval()
         progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
         t = 1 - (1 - progress) ** 3
-        new_position = self._smooth_scroll_start + int(self._smooth_scroll_distance * t)
+
+        # Add 0.5 lines of bias so that int() truncation crosses each line boundary
+        # slightly early, avoiding a visible "jump" at the very end of the animation
+        # where the easing curve decelerates so slowly that the final line is only
+        # reached on the last tick, well after the scroll appears to have stopped.
+        new_position = min(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t + 0.5),
+        ) if self._smooth_scroll_distance > 0 else max(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t - 0.5),
+        )
         self._scrollbar.setValue(new_position)
-        if progress >= 1.0:
+        if progress >= 1.0 or new_position == self._smooth_scroll_target:
             self._smooth_scroll_timer.stop()
 
     def get_match_status(self) -> Tuple[int, int]:
@@ -453,5 +499,128 @@ class DiffWidget(QWidget):
         self._find_matches = []
         self._find_current = -1
         self._find_text = ""
+        self._find_key = ("", False, False)
         self._left_pane.clear_find()
         self._right_pane.clear_find()
+
+    def can_navigate_next_hunk(self) -> bool:
+        """Return True if there is a hunk after the current scroll position."""
+        if not self._cached_hunks:
+            return False
+
+        if self._current_hunk_index == -1:
+            return True
+
+        if self._current_hunk_index < len(self._cached_hunks) - 1:
+            return True
+
+        return not self._current_hunk_is_centred()
+
+    def can_navigate_previous_hunk(self) -> bool:
+        """Return True if there is a hunk before the current scroll position."""
+        if not self._cached_hunks:
+            return False
+
+        if self._current_hunk_index > 0:
+            return True
+
+        if self._current_hunk_index == -1:
+            return False
+
+        return not self._current_hunk_is_centred()
+
+    def navigate_next_hunk(self, forward: bool) -> None:
+        """
+        Scroll to the first row of the next (or previous) hunk.
+
+        Args:
+            forward: If True move to the next hunk; if False move to the previous.
+        """
+        if not self._cached_hunks:
+            return
+
+        if forward:
+            if self._current_hunk_index < len(self._cached_hunks) - 1:
+                self._current_hunk_index += 1
+
+            elif self._current_hunk_is_centred():
+                return
+
+        else:
+            if self._current_hunk_index > 0:
+                self._current_hunk_index -= 1
+
+            elif self._current_hunk_index == -1 or self._current_hunk_is_centred():
+                return
+
+        start, end = self._cached_hunks[self._current_hunk_index]
+        self._set_active_hunk(start, end)
+        self._start_smooth_scroll(self._left_pane.target_scroll_for_block(start))
+
+    def _current_hunk_is_centred(self) -> bool:
+        """Return True if the scrollbar is already at the centred position for the current hunk."""
+        if self._current_hunk_index < 0 or not self._cached_hunks:
+            return False
+
+        start = self._cached_hunks[self._current_hunk_index][0]
+        target = self._left_pane.target_scroll_for_block(start)
+        return self._scrollbar.value() == target
+
+    def _hunks(self) -> List[Tuple[int, int]]:
+        """
+        Return (start, end) row index pairs for every hunk, in document order.
+
+        Both indices are inclusive.
+        """
+        changed_types: Set[DiffRowType] = {DiffRowType.ADDED, DiffRowType.REMOVED, DiffRowType.CHANGED}
+        hunks: List[Tuple[int, int]] = []
+        hunk_start: int = -1
+        prev_was_changed = False
+        for i, row in enumerate(self._rows):
+            is_changed = row.row_type in changed_types
+            if is_changed and not prev_was_changed:
+                hunk_start = i
+
+            elif not is_changed and prev_was_changed:
+                hunks.append((hunk_start, i - 1))
+
+            prev_was_changed = is_changed
+
+        if prev_was_changed and hunk_start >= 0:
+            hunks.append((hunk_start, len(self._rows) - 1))
+
+        return hunks
+
+    def _set_active_hunk(self, start: int, end: int) -> None:
+        """Push a hunk range to both panes."""
+        self._left_pane.set_active_hunk(start, end)
+        self._right_pane.set_active_hunk(start, end)
+
+    def _update_active_hunk(self) -> None:
+        """
+        Highlight the hunk whose start row is nearest the centre of the viewport.
+
+        Called on every scroll-position change so the gutter colouring always
+        reflects what the user is looking at.
+        """
+        if self._smooth_scroll_timer.isActive():
+            return
+
+        if not self._cached_hunks:
+            self._set_active_hunk(-1, -1)
+            return
+
+        current = self._scrollbar.value()
+        visible_lines = (
+            self._left_pane.viewport().height()
+            // max(1, self._left_pane.fontMetrics().lineSpacing())
+        )
+        centre = current + visible_lines // 2
+
+        # Pick the hunk whose start is closest to the viewport centre.
+        nearest_start, nearest_end = min(self._cached_hunks, key=lambda h: abs(h[0] - centre))
+        # Update the tracked index to stay in sync with free-scroll position.
+        self._current_hunk_index = next(
+            i for i, h in enumerate(self._cached_hunks) if h[0] == nearest_start
+        )
+        self._set_active_hunk(nearest_start, nearest_end)

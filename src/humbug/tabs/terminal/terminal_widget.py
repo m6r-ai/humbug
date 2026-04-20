@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 import logging
+import re
 from typing import Tuple, Dict, List, cast
 
 from PySide6.QtWidgets import QWidget, QAbstractScrollArea, QMenu
@@ -123,7 +124,7 @@ class TerminalWidget(QAbstractScrollArea):
         # Find functionality attributes
         self._matches: List[TerminalMatch] = []
         self._current_match = -1
-        self._last_search = ""
+        self._last_search: tuple = ("", True, False)
         self._selection_active = False
 
         # Smooth scrolling
@@ -346,13 +347,21 @@ class TerminalWidget(QAbstractScrollArea):
         vbar = self.verticalScrollBar()
 
         if mouse_pos.y() < 0:
-            distance_out = -mouse_pos.y()
-            rows_per_tick = min(50.0, distance_out / (5.0 * self._char_height))
+            distance_out: float = float(-mouse_pos.y())
+            screen = QGuiApplication.screenAt(QCursor.pos())
+            if screen is None or QCursor.pos().y() <= screen.availableGeometry().top() + 4:
+                distance_out = 5.0 * self._char_height * 5.0
+
+            rows_per_tick = min(5.0, distance_out / (5.0 * self._char_height))
             self._drag_scroll_accumulator -= rows_per_tick
 
         elif mouse_pos.y() > viewport_height:
-            distance_out = mouse_pos.y() - viewport_height
-            rows_per_tick = min(50.0, distance_out / (5.0 * self._char_height))
+            distance_out = float(mouse_pos.y() - viewport_height)
+            screen = QGuiApplication.screenAt(QCursor.pos())
+            if screen is None or QCursor.pos().y() >= screen.availableGeometry().bottom() - 4:
+                distance_out = 5.0 * self._char_height * 5.0
+
+            rows_per_tick = min(5.0, distance_out / (5.0 * self._char_height))
             self._drag_scroll_accumulator += rows_per_tick
 
         else:
@@ -1125,8 +1134,8 @@ class TerminalWidget(QAbstractScrollArea):
         visible_start_row = selection.start_row - first_visible_line
         visible_end_row = selection.end_row - first_visible_line
 
-        selection_color = self.palette().highlight().color()
-        selection_text_color = self.palette().highlightedText().color()
+        selection_color = self._style_manager.get_color(ColorRole.TEXT_SELECTED)
+        selection_text_color = self._style_manager.get_color(ColorRole.TEXT_PRIMARY)
 
         lines = self._state.current_buffer().lines()
 
@@ -1388,20 +1397,22 @@ class TerminalWidget(QAbstractScrollArea):
         return self._search_highlights.get(row, [])
 
     # Integrated find functionality methods
-    def find_text(self, text: str, forward: bool = True) -> None:
+    def find_text(self, text: str, forward: bool = True, case_sensitive: bool = True, regexp: bool = False) -> None:
         """
         Find all instances of text and highlight them.
 
         Args:
             text: Text to search for
             forward: Whether to search forward from current position
+            case_sensitive: Whether to match case
+            regexp: Whether to treat text as a regular expression
         """
         # Clear existing highlights if search text changed
-        if text != self._last_search:
+        if (text, case_sensitive, regexp) != self._last_search:
             self.clear_search_highlights()
             self._matches = []
             self._current_match = -1
-            self._last_search = text
+            self._last_search = (text, case_sensitive, regexp)
 
             # Find all matches
             if text:
@@ -1422,19 +1433,30 @@ class TerminalWidget(QAbstractScrollArea):
 
                     # Find all matches in this line
                     pos = 0
-                    while True:
-                        pos = line_text.find(text, pos)
-                        if pos == -1:
-                            break
+                    if regexp:
+                        flags = 0 if case_sensitive else re.IGNORECASE
+                        for m in re.finditer(text, line_text, flags):
+                            self._matches.append(TerminalMatch(
+                                row=row,
+                                start_col=m.start(),
+                                end_col=m.end(),
+                                is_current=False
+                            ))
+                    else:
+                        search_text = text if case_sensitive else text.lower()
+                        search_line = line_text if case_sensitive else line_text.lower()
+                        while True:
+                            pos = search_line.find(search_text, pos)
+                            if pos == -1:
+                                break
 
-                        # Add match to list
-                        self._matches.append(TerminalMatch(
-                            row=row,
-                            start_col=pos,
-                            end_col=pos + len(text),
-                            is_current=False  # All matches start as non-current
-                        ))
-                        pos += 1
+                            self._matches.append(TerminalMatch(
+                                row=row,
+                                start_col=pos,
+                                end_col=pos + len(text),
+                                is_current=False
+                            ))
+                            pos += 1
 
                 # Set selection active if we found any matches
                 self._selection_active = bool(self._matches)
@@ -1490,7 +1512,7 @@ class TerminalWidget(QAbstractScrollArea):
         """Clear all find state."""
         self._matches = []
         self._current_match = -1
-        self._last_search = ""
+        self._last_search = ("", True, False)
         self._selection_active = False
         self.clear_search_highlights()
 

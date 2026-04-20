@@ -107,7 +107,7 @@ class MindspaceTreeDelegate(QStyledItemDelegate):
 
     def createEditor(
         self,
-        parent: QWidget,
+        parent: QWidget | None,
         _option: QStyleOptionViewItem,
         index: QModelIndex | QPersistentModelIndex
     ) -> QWidget:

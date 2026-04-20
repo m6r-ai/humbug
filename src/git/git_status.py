@@ -1,6 +1,7 @@
 """Git working-tree status query."""
 
 import os
+import sys
 from dataclasses import dataclass
 from enum import Enum, auto
 
@@ -8,7 +9,7 @@ from git.git_error import GitCommandError
 from git.git_repository import _run_git
 
 
-class VcsStatusCode(Enum):
+class VCSStatusCode(Enum):
     """Normalised status category for a changed file."""
     MODIFIED = auto()
     ADDED = auto()
@@ -20,16 +21,16 @@ class VcsStatusCode(Enum):
 
 
 @dataclass(frozen=True)
-class VcsFileStatus:
+class VCSFileStatus:
     """Status information for a single file reported by git."""
-    code: VcsStatusCode
+    code: VCSStatusCode
     path: str                       # Absolute path to the file (new path for renames)
     original_path: str | None       # Absolute path to the original file (renames/copies only)
 
 
-def _xy_to_code(xy: str) -> VcsStatusCode:
+def _xy_to_code(xy: str) -> VCSStatusCode:
     """
-    Map a porcelain XY status string to a VcsStatusCode.
+    Map a porcelain XY status string to a VCSStatusCode.
 
     The X column is the index (staged) status; the Y column is the
     working-tree status.  We collapse both into a single category,
@@ -39,33 +40,33 @@ def _xy_to_code(xy: str) -> VcsStatusCode:
         xy: Two-character porcelain status string.
 
     Returns:
-        Corresponding VcsStatusCode.
+        Corresponding VCSStatusCode.
     """
     if xy == "??":
-        return VcsStatusCode.UNTRACKED
+        return VCSStatusCode.UNTRACKED
 
     x, y = xy[0], xy[1]
 
     for char in (y, x):
         if char == "M":
-            return VcsStatusCode.MODIFIED
+            return VCSStatusCode.MODIFIED
 
         if char == "A":
-            return VcsStatusCode.ADDED
+            return VCSStatusCode.ADDED
 
         if char == "D":
-            return VcsStatusCode.DELETED
+            return VCSStatusCode.DELETED
 
         if char == "R":
-            return VcsStatusCode.RENAMED
+            return VCSStatusCode.RENAMED
 
         if char == "C":
-            return VcsStatusCode.COPIED
+            return VCSStatusCode.COPIED
 
-    return VcsStatusCode.UNKNOWN
+    return VCSStatusCode.UNKNOWN
 
 
-def get_status(repo_root: str, mindspace_path: str) -> list[VcsFileStatus]:
+def get_status(repo_root: str, mindspace_path: str) -> list[VCSFileStatus]:
     """
     Return the list of changed files within *mindspace_path*.
 
@@ -79,7 +80,7 @@ def get_status(repo_root: str, mindspace_path: str) -> list[VcsFileStatus]:
             files within this subtree are included in the result.
 
     Returns:
-        List of VcsFileStatus objects, one per changed file.
+        List of VCSFileStatus objects, one per changed file.
 
     Raises:
         GitNotFoundError: If git is not installed or not on PATH.
@@ -93,7 +94,7 @@ def get_status(repo_root: str, mindspace_path: str) -> list[VcsFileStatus]:
     except GitCommandError as e:
         raise e
 
-    entries: list[VcsFileStatus] = []
+    entries: list[VCSFileStatus] = []
 
     if not raw:
         return entries
@@ -118,7 +119,7 @@ def get_status(repo_root: str, mindspace_path: str) -> list[VcsFileStatus]:
 
         original_path: str | None = None
 
-        if code in (VcsStatusCode.RENAMED, VcsStatusCode.COPIED):
+        if code in (VCSStatusCode.RENAMED, VCSStatusCode.COPIED):
             # The next token is the *source* (original) path.
             if i < len(tokens):
                 original_rel = tokens[i]
@@ -132,7 +133,7 @@ def get_status(repo_root: str, mindspace_path: str) -> list[VcsFileStatus]:
         if not _within_mindspace(abs_path, mindspace_path):
             continue
 
-        entries.append(VcsFileStatus(code=code, path=abs_path, original_path=original_path))
+        entries.append(VCSFileStatus(code=code, path=abs_path, original_path=original_path))
 
     return entries
 
@@ -148,6 +149,12 @@ def _within_mindspace(abs_path: str, mindspace_path: str) -> bool:
     Returns:
         True if abs_path is within mindspace_path.
     """
+    mindspace_path = os.path.normpath(mindspace_path)
+
+    if sys.platform == "win32":
+        abs_path = os.path.normpath(abs_path).lower()
+        mindspace_path = mindspace_path.lower()
+
     try:
         common = os.path.commonpath([abs_path, mindspace_path])
         return common == mindspace_path

@@ -1,6 +1,7 @@
 import colorsys
 from datetime import datetime
 import logging
+import re
 from typing import Dict, List, Tuple, Any, cast
 
 from PySide6.QtWidgets import (
@@ -1064,29 +1065,29 @@ class ConversationMessage(QFrame):
         if self._edit_text_edit is not None:
             self._edit_text_edit.apply_style()
 
-    def find_text(self, text: str) -> List[Tuple[int, int, int]]:
+    def find_text(self, text: str, case_sensitive: bool = False, regexp: bool = False) -> List[Tuple[int, int, int]]:
         """
         Find all instances of text in this message.
 
         For collapsed messages with pending content, searches the raw text.
         For expanded messages, searches rendered sections.
 
-        Note: Search is case-insensitive.
-
         Args:
             text: Text to search for
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
 
         Returns:
             List of (section, start_position, end_position) tuples for each match
         """
         # If collapsed with pending content, search raw text
         if not self._is_expanded and self._pending_content:
-            return self._find_text_in_raw_content(text)
+            return self._find_text_in_raw_content(text, case_sensitive, regexp)
 
         # Otherwise search rendered sections normally
         all_matches: List[Tuple[int, int, int]] = []
         for i, section in enumerate(self._sections):
-            section_matches = section.find_text(text)
+            section_matches = section.find_text(text, case_sensitive, regexp)
             if section_matches:
                 # Include the section with each match
                 for match in section_matches:
@@ -1094,7 +1095,12 @@ class ConversationMessage(QFrame):
 
         return all_matches
 
-    def _find_text_in_raw_content(self, text: str) -> List[Tuple[int, int, int]]:
+    def _find_text_in_raw_content(
+        self,
+        text: str,
+        case_sensitive: bool = False,
+        regexp: bool = False
+    ) -> List[Tuple[int, int, int]]:
         """
         Search in raw unrendered content (case-insensitive).
 
@@ -1103,6 +1109,8 @@ class ConversationMessage(QFrame):
 
         Args:
             text: Text to search for
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
 
         Returns:
             List of (section, start_position, end_position) tuples for each match
@@ -1111,18 +1119,29 @@ class ConversationMessage(QFrame):
             return []
 
         matches = []
-        content_lower = self._pending_content.lower()
-        search_lower = text.lower()
-        pos = 0
 
-        while True:
-            pos = content_lower.find(search_lower, pos)
-            if pos == -1:
-                break
+        if regexp:
+            flags = 0 if case_sensitive else re.IGNORECASE
+            try:
+                pattern = re.compile(text, flags)
 
-            # All matches reported as section 0 (placeholder)
-            matches.append((0, pos, pos + len(text)))
-            pos += 1
+            except re.error:
+                return []
+
+            for m in pattern.finditer(self._pending_content):
+                matches.append((0, m.start(), m.end()))
+
+        else:
+            content = self._pending_content if case_sensitive else self._pending_content.lower()
+            search = text if case_sensitive else text.lower()
+            pos = 0
+            while True:
+                pos = content.find(search, pos)
+                if pos == -1:
+                    break
+
+                matches.append((0, pos, pos + len(text)))
+                pos += 1
 
         return matches
 

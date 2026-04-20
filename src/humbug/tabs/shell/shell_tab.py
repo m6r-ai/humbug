@@ -17,6 +17,7 @@ from humbug.tabs.shell.shell_widget import ShellWidget
 from humbug.tabs.tab_base import TabBase
 from humbug.tabs.tab_state import TabState
 from humbug.tabs.tab_type import TabType
+from humbug.style_manager import StyleManager
 
 
 class ShellTab(TabBase):
@@ -45,8 +46,9 @@ class ShellTab(TabBase):
         layout.setSpacing(0)
 
         # Add find widget at top (initially hidden)
-        self._find_widget = FindWidget()
+        self._find_widget = FindWidget(self)
         self._find_widget.hide()
+        self._find_widget.set_preferred_width(self.preferred_width)
         self._find_widget.closed.connect(self._close_find)
         self._find_widget.find_next.connect(lambda: self._find_next(True))
         self._find_widget.find_previous.connect(lambda: self._find_next(False))
@@ -267,6 +269,11 @@ class ShellTab(TabBase):
     def set_input_text(self, text: str) -> None:
         """Set the input text."""
         self._shell_widget.set_input_text(text)
+
+    def preferred_width(self) -> int | None:
+        """Return the preferred column width matching the shell content max width."""
+        style_manager = StyleManager()
+        return int(style_manager.nice_tab_width() * style_manager.zoom_factor())
 
     def update_status(self) -> None:
         """Update status bar with shell tab information."""

@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
 )
 from PySide6.QtCore import Signal, Qt, QPoint, QTimer
-from PySide6.QtGui import QCursor, QResizeEvent
+from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -139,7 +139,7 @@ class PreviewWidget(QWidget):
         self._matches: List[Tuple[PreviewContentWidget, List[Tuple[int, int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
-        self._last_search = ""
+        self._last_search: tuple = ("", False, False)
         self._highlighted_widgets: Set[PreviewContentWidget] = set()
 
     def activate(self) -> None:
@@ -237,10 +237,14 @@ class PreviewWidget(QWidget):
                     break
 
         # Restore find state if there was an active search
-        if find_state['last_search']:
+        last_search = find_state['last_search']
+        search_text = last_search[0] if isinstance(last_search, tuple) else last_search
+        if search_text:
             # Re-run the search to restore highlights
-            self._last_search = ""  # Reset to force re-search
-            _current, total = self.find_text(find_state['last_search'], True)
+            self._last_search = ("", False, False)  # Reset to force re-search
+            case_sensitive = last_search[1] if isinstance(last_search, tuple) else False
+            regexp = last_search[2] if isinstance(last_search, tuple) else False
+            _current, total = self.find_text(search_text, True, case_sensitive, regexp)
 
             # Try to restore the current match position
             if (find_state['current_widget_index'] >= 0 and
@@ -249,7 +253,7 @@ class PreviewWidget(QWidget):
                 target_match = (find_state['current_widget_index'] *
                               (find_state['current_match_index'] + 1))
                 for _ in range(min(target_match, total)):
-                    self.find_text(find_state['last_search'], True)
+                    self.find_text(search_text, True, case_sensitive, regexp)
 
         # Emit refresh signal
         self.content_refreshed.emit()
@@ -433,22 +437,23 @@ class PreviewWidget(QWidget):
     def _update_smooth_scroll(self) -> None:
         """Update the smooth scrolling animation."""
         self._smooth_scroll_time += self._smooth_scroll_timer.interval()
-
-        # Calculate progress (0 to 1)
         progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
-
-        # Apply easing function (ease out cubic)
         t = 1 - (1 - progress) ** 3
 
-        # Calculate new position
-        new_position = self._smooth_scroll_start + int(self._smooth_scroll_distance * t)
-
-        # Update scrollbar position
+        # Add 0.5 lines of bias so that int() truncation crosses each pixel boundary
+        # slightly early, avoiding a visible "jump" at the very end of the animation
+        # where the easing curve decelerates so slowly that the final line is only
+        # reached on the last tick, well after the scroll appears to have stopped.
+        new_position = min(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t + 0.5),
+        ) if self._smooth_scroll_distance > 0 else max(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t - 0.5),
+        )
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(new_position)
-
-        # Stop the timer when animation is complete
-        if progress >= 1.0:
+        if progress >= 1.0 or new_position == self._smooth_scroll_target:
             self._smooth_scroll_timer.stop()
 
     def _on_scroll_requested(self, mouse_pos: QPoint) -> None:
@@ -485,6 +490,10 @@ class PreviewWidget(QWidget):
             if distance_out > viewport_height * 2:
                 scrollbar.setValue(scrollbar.minimum())
             else:
+                screen = QGuiApplication.screenAt(QCursor.pos())
+                if screen is None or QCursor.pos().y() <= screen.availableGeometry().top() + 4:
+                    distance_out = 250
+
                 scroll_amount = min(50, max(10, distance_out // 5))
                 new_val = max(scrollbar.minimum(), current_val - scroll_amount)
                 scrollbar.setValue(new_val)
@@ -495,6 +504,10 @@ class PreviewWidget(QWidget):
             if distance_out > viewport_height * 2:
                 scrollbar.setValue(scrollbar.maximum())
             else:
+                screen = QGuiApplication.screenAt(QCursor.pos())
+                if screen is None or QCursor.pos().y() >= screen.availableGeometry().bottom() - 4:
+                    distance_out = 250
+
                 scroll_amount = min(50, max(10, distance_out // 5))
                 new_val = min(scrollbar.maximum(), current_val + scroll_amount)
                 scrollbar.setValue(new_val)
@@ -814,13 +827,15 @@ class PreviewWidget(QWidget):
         """Close the preview widget and clean up resources."""
         self._unregister_file_watching()
 
-    def find_text(self, text: str, forward: bool = True) -> Tuple[int, int]:
+    def find_text(self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False) -> Tuple[int, int]:
         """
         Find all instances of text and highlight them.
 
         Args:
             text: Text to search for
             forward: Whether to search forward from current position
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
 
         Returns:
             Tuple of (current_match, total_matches)
@@ -829,17 +844,17 @@ class PreviewWidget(QWidget):
         widgets = self._content_blocks
 
         # Clear existing highlights if search text changed
-        if text != self._last_search:
+        if (text, case_sensitive, regexp) != self._last_search:
             self._clear_highlights()
             self._matches = []
             self._current_widget_index = -1
             self._current_match_index = -1
-            self._last_search = text
+            self._last_search = (text, case_sensitive, regexp)
 
         # Find all matches if this is a new search
         if not self._matches and text:
             for widget in widgets:
-                widget_matches = widget.find_text(text)
+                widget_matches = widget.find_text(text, case_sensitive, regexp)
                 if widget_matches:
                     self._matches.append((widget, widget_matches))
 
@@ -971,7 +986,7 @@ class PreviewWidget(QWidget):
         self._matches = []
         self._current_widget_index = -1
         self._current_match_index = -1
-        self._last_search = ""
+        self._last_search = ("", False, False)
 
     def create_state_metadata(self) -> Dict[str, Any]:
         """
@@ -1042,7 +1057,8 @@ class PreviewWidget(QWidget):
         self,
         search_text: str,
         case_sensitive: bool = False,
-        max_results: int = 50
+        max_results: int = 50,
+        regexp: bool = False
     ) -> Dict[str, Any]:
         """
         Search for text across all content blocks.
@@ -1051,9 +1067,13 @@ class PreviewWidget(QWidget):
             search_text: Text to search for
             case_sensitive: Whether search should be case-sensitive
             max_results: Maximum number of results to return
+            regexp: If True, treat search_text as a regular expression.
 
         Returns:
             Dictionary containing search results with matches and context
+
+        Raises:
+            ValueError: If regexp is True and search_text is not a valid regular expression.
         """
         if not search_text:
             return {
@@ -1064,14 +1084,20 @@ class PreviewWidget(QWidget):
                 "matches": []
             }
 
+        if regexp:
+            flags = 0 if case_sensitive else re.IGNORECASE
+            try:
+                re.compile(search_text, flags)
+
+            except re.error as e:
+                raise ValueError(f"Invalid regular expression: {e}") from e
+
         # Perform search across all content blocks
         all_matches = []
 
         for block_idx, content_block in enumerate(self._content_blocks):
-            # Use existing find_text method
-            # Note: Some content widgets may not support case_sensitive parameter
             try:
-                widget_matches = content_block.find_text(search_text)
+                widget_matches = content_block.find_text(search_text, case_sensitive, regexp)
 
             except Exception:
                 widget_matches = []

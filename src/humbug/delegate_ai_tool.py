@@ -74,6 +74,8 @@ class DelegateAITool(AITool):
                 "context in it. If you need to provide something that is already in the filesystem, tell the "
                 "delegated AI where to read it and do not provide the contents in the task_prompt. If the content is not "
                 "already in the filesystem, you must provide it in the task_prompt.\n"
+                "- When you delegate one or more tasks you will be blocked until the child/children AIs complete "
+                "their work.\n"
                 "- You can provide your current conversation context to a new child AI instance. This is very "
                 "useful if your context has a lot of information that is relevant to the task, but this can also limit the "
                 "amount of new context the child AI can process\n\n"

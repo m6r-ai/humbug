@@ -8,7 +8,8 @@ from humbug.tabs.diff.diff_row import DiffRow, DiffRowType
 
 
 class DiffViewBuilder:
-    """Transforms two full file line lists and a list of DiffHunk objects into a flat
+    """
+    Transforms two full file line lists and a list of DiffHunk objects into a flat
     list of DiffRow objects suitable for side-by-side rendering.
 
     Both the old (HEAD) and new (working tree) line lists are required so that
@@ -24,20 +25,11 @@ class DiffViewBuilder:
                 line in the right pane).
     - ADDED   : line exists only on the right — left_text is empty string (blank
                 line in the left pane).
-    - FILLER  : blank placeholder on both sides, inserted to pad the shorter side
-                of an unequal changed block so both panes stay vertically aligned.
 
     For a block where there are more removed lines than added lines, the surplus
     removed lines become REMOVED rows (real text on left, blank on right).  For
     the opposite case, surplus added lines become ADDED rows (blank on left, real
-    text on right).  No extra FILLER rows are needed in these cases because the
-    blank side of a REMOVED/ADDED row already occupies one document block in the
-    opposite pane.
-
-    FILLER rows are only needed when a changed block has removed lines on one side
-    and added lines on the other and the counts differ — but that is exactly the
-    REMOVED/ADDED case above.  The FILLER type is therefore reserved for future
-    use (e.g. inter-hunk separators) and is not emitted by this builder.
+    text on right).
     """
 
     def build(self, old_lines: List[str], new_lines: List[str], hunks: List[DiffHunk]) -> List[DiffRow]:
@@ -128,13 +120,13 @@ class DiffViewBuilder:
         old_start: int,
         new_start: int,
     ) -> None:
-        """Emit rows for a paired run of removed and added lines.
+        """
+        Emit rows for a paired run of removed and added lines.
 
         Lines are paired 1-to-1 as CHANGED rows for as long as both sides have
         content.  Surplus lines on the longer side become REMOVED or ADDED rows,
         which carry an empty string on the opposite side.  This keeps both panes
-        at the same document block count for the run without needing separate
-        FILLER rows.
+        at the same document block count.
 
         Args:
             rows: Row list to append to.

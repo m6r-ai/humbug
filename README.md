@@ -3,7 +3,7 @@
 Humbug is a modular, extensible platform that aims to let you and your AIs work on ideas together.
 Think of it as an operating system for human-AI collaboration.
 
-![Humbug in action](docs/v0.22-demo.gif)
+![Humbug in action](docs/v44-demo.gif)
 
 ## What are the core ideas?
 
@@ -13,10 +13,30 @@ Think of it as an operating system for human-AI collaboration.
   Humbug treats both humans and AIs as first-class actors.
   All tools, including the GUI, are designed to be available for both to use, so it's faster and easier to get things done (there's still work to do on this though).
 
+- **Conversations drive agentic workflows**
+
+  The core of Humbug is its conversation capability.
+  You talk to the AI about what you want to achieve and let it work out the rest.
+  Humbug's tool framework helps the AI "discover" whatever it needs, then lets it edit content and run tools to achieve what you want.
+
+- **Powerful, pluggable AI tools**
+
+  We designed computers to give humans better, faster, and more reliable tools.
+  Humbug's tool framework sets out to do the same for AIs.
+  It enables your LLMs to do task delegation, dynamic filesystem operations, deal with time, apply complex logic with a custom pure functional programming language (Menai), and orchestrate its own UI.
+
+  Humbug’s tool system is flexible, secure, and designed to make it easy to add new capabilities.
+
+- **Human-in-the-loop**
+
+  Human languages are plagued with ambiguity and LLMs can get tripped up by these in very similar ways to other people do.
+  While other AI frameworks hide what's going on, Humbug's approach is to give you visibility of everything.
+  You get to see potential problems and apply course-corrections before they lead to expensive mistakes.
+
 - **Bootstrapped: built using itself**  
 
   Each version of Humbug has been built using the previous version.
-  This has meant over 80% of the code has been built by LLMs.
+  This has meant over 90% of the code has been built by LLMs.
   This isn't just "vibe-coded", however!
   Using each ever more capable version of Humbug to help design and build its successor has freed up huge amounts of human time to think about bigger design problems.
   The tireless ability of LLMs to morph software into new forms also means the software has a clean, highly modular architecture.
@@ -28,19 +48,11 @@ Think of it as an operating system for human-AI collaboration.
   You can optimize for cost, and are future-proofed when you want to use something new.
   You can seamlessly switch between models, even switching mid-conversation.
 
-- **Powerful, pluggable tools**  
+- **Rich user interactions**
 
-  We designed computers to give humans better, faster, and more reliable tools.
-  Humbug's tool framework sets out to do the same for AIs.
-  Extends your LLMs with task delegation, dynamic filesystem operations, a clock, a custom pure functional programming language (Menai), and UI orchestration.
-  Humbug’s tool system is flexible, secure, and designed to make it easy to add new capabilities.
-  Task delegation allows one LLM to make use of one or more other LLMs.
-  Menai (AI Functional Programming Language) is a pure functional language designed for AIs to use for calculations, string processing, or other algorithmic tasks.
-  The UI supports simultaneous conversations, file editing with syntax highlights, markdown preview pages, terminal emulators, a system shell, a system log, and revision control integration with a sidebar and side-by-side diff tabs for comparing working-tree files against git HEAD.
-  UI orchestration means your AI can help you work and visualize things using any of these tools too.
-  LLMs can check the status of terminal tabs and issue commands to them (subject to user approval).
-  LLMs can also control and edit files using editor tabs.
-  LLMs can search and query the contents of conversation tabs.
+  Humbug's UI supports simultaneous conversations, file editing with syntax highlights, markdown preview pages, terminal emulators, a system shell, and a system log.
+  It also features git version control integration with a sidebar and side-by-side diff tabs so your work need never be lost.
+  UI orchestration means your AI can drive these tools the same way you do, enabling a fully agentic experience.
 
 - **Menai: a programming language designed for AIs**  
 
@@ -102,11 +114,24 @@ Humbug is open source and the project welcomes contributions. If you're interest
 ## Requirements
 
 - Python 3.10 or higher
-- You will need API keys for most cloud-based LLMs, but some are available for free, and Ollama will run locally without API keys.
+- **Windows only:** [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+  (Visual C++ 14.0 or later) — required to compile the Menai C extension.
+  During installation, select the **"Desktop development with C++"** workload.
+  This is a one-time setup; once installed it is used automatically by `setup.py`.
+- API keys for most cloud-based LLMs (some are free; Ollama runs locally without API keys)
+
+Runtime dependencies (installed automatically):
 - PySide6 (the GUI framework)
 - qasync (allows the GUI framework to work nicely with async Python code)
 - aiohttp (async HTTP client)
 - certifi (SSL/TLS root certificates to allow TLS network connections without any other system changes)
+
+Developer dependencies (installed automatically with `.[dev]`):
+- setuptools (required to build the Menai C extension)
+- pytest + pytest-cov (test runner and coverage)
+- mypy (static type checking)
+- pylint (linting)
+- pyinstaller (building standalone application bundles)
 
 ## Developer installation
 
@@ -126,23 +151,25 @@ Humbug is open source and the project welcomes contributions. If you're interest
    venv\Scripts\activate
    ```
 
-2. Install build tools:
+2. Install all dependencies (runtime and developer tools):
 
    ```bash
-   pip install build
+   pip install -e ".[dev]"
    ```
 
-3. Install in development mode:
-
-   ```bash
-   pip install -e .
-   ```
-
-4. Launch the application:
+3. Launch the application:
 
    ```bash
    python -m humbug
    ```
+
+4. Build the Menai C extension:
+
+   ```bash
+   python setup.py build_ext --inplace
+   ```
+
+   This compiles the C VM for Menai. Without it Humbug falls back to the slower Python VM automatically, so this step is optional but recommended for performance.
 
 5. Initial configuration:
 

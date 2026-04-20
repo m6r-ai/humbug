@@ -96,6 +96,12 @@ class EditorAITool(AITool):
                     required=False
                 ),
                 AIToolParameter(
+                    name="regexp",
+                    type="boolean",
+                    description="Whether to treat search_text as a regular expression (for search operation)",
+                    required=False
+                ),
+                AIToolParameter(
                     name="diff_content",
                     type="string",
                     description="Unified diff content to apply (for apply_diff operation)",
@@ -162,10 +168,11 @@ class EditorAITool(AITool):
                 name="search",
                 handler=self._search,
                 extract_context=None,
-                allowed_parameters={"tab_id", "search_text", "case_sensitive"},
+                allowed_parameters={"tab_id", "search_text", "case_sensitive", "regexp"},
                 required_parameters={"tab_id", "search_text"},
                 description="Find precise line numbers for all occurrences of text in an editor tab. "
-                    "Returns list of matches with line (1-indexed), column (1-indexed), and context"
+                    "Returns list of matches with line (1-indexed), column (1-indexed), and context. "
+                    "Supports optional case-sensitive and regular expression matching"
             ),
             "get_selected_text": AIToolOperationDefinition(
                 name="get_selected_text",
@@ -431,26 +438,35 @@ class EditorAITool(AITool):
         search_text = self._get_required_str_value("search_text", arguments)
 
         case_sensitive = self._get_optional_bool_value("case_sensitive", arguments, False)
+        regexp = self._get_optional_bool_value("regexp", arguments, False)
 
         try:
-            matches = editor_tab.find_all_occurrences(search_text, case_sensitive)
+            matches = editor_tab.find_all_occurrences(search_text, case_sensitive, regexp)
 
-            case_desc = " (case-sensitive)" if case_sensitive else ""
+            flags = []
+            if case_sensitive:
+                flags.append("case-sensitive")
+
+            if regexp:
+                flags.append("regexp")
+
+            flag_desc = f" ({', '.join(flags)})" if flags else ""
             self._mindspace_manager.add_interaction(
                 MindspaceLogLevel.INFO,
-                f"AI searched for '{search_text}'{case_desc}: {len(matches)} matches\ntab ID: {tab_id}"
+                f"AI searched for '{search_text}'{flag_desc}: {len(matches)} matches\ntab ID: {tab_id}"
             )
 
             if not matches:
                 return AIToolResult(
                     id=tool_call.id,
                     name="editor",
-                    content=f"No matches found for '{search_text}'{case_desc}"
+                    content=f"No matches found for '{search_text}'{flag_desc}"
                 )
 
             result = {
                 "search_text": search_text,
                 "case_sensitive": case_sensitive,
+                "regexp": regexp,
                 "match_count": len(matches),
                 "matches": matches
             }
@@ -461,6 +477,9 @@ class EditorAITool(AITool):
                 content=json.dumps(result, indent=2),
                 context="json"
             )
+
+        except ValueError as e:
+            raise AIToolExecutionError(str(e)) from e
 
         except Exception as e:
             raise AIToolExecutionError(f"Failed to search in editor: {str(e)}") from e

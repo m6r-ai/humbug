@@ -96,7 +96,7 @@ class PreviewContentWidget(QFrame):
         This method should clear any text selection in the content widget.
         """
 
-    def find_text(self, _text: str) -> List[Tuple[int, int, int]]:
+    def find_text(self, _text: str, _case_sensitive: bool = False, _regexp: bool = False) -> List[Tuple[int, int, int]]:
         """
         Find all instances of text in this content.
 

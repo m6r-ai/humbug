@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QScrollArea, QSizePolicy, QMenu
 )
 from PySide6.QtCore import QTimer, QPoint, Qt, Signal, QObject
-from PySide6.QtGui import QCursor, QResizeEvent
+from PySide6.QtGui import QCursor, QGuiApplication, QResizeEvent
 
 from humbug.color_role import ColorRole
 from humbug.language.language_manager import LanguageManager
@@ -129,7 +129,7 @@ class LogWidget(QWidget):
         self._matches: List[Tuple[LogMessage, List[Tuple[int, int]]]] = []
         self._current_widget_index = -1
         self._current_match_index = -1
-        self._last_search = ""
+        self._last_search: tuple = ("", False, False)
         self._highlighted_widgets: Set[LogMessage] = set()
 
         # Load messages when initialized
@@ -262,6 +262,10 @@ class LogWidget(QWidget):
                 scrollbar.setValue(scrollbar.minimum())
 
             else:
+                screen = QGuiApplication.screenAt(QCursor.pos())
+                if screen is None or QCursor.pos().y() <= screen.availableGeometry().top() + 4:
+                    distance_out = 250
+
                 scroll_amount = min(50, max(10, distance_out // 5))
                 new_val = max(scrollbar.minimum(), current_val - scroll_amount)
                 scrollbar.setValue(new_val)
@@ -273,6 +277,10 @@ class LogWidget(QWidget):
                 scrollbar.setValue(scrollbar.maximum())
 
             else:
+                screen = QGuiApplication.screenAt(QCursor.pos())
+                if screen is None or QCursor.pos().y() >= screen.availableGeometry().bottom() - 4:
+                    distance_out = 250
+
                 scroll_amount = min(50, max(10, distance_out // 5))
                 new_val = min(scrollbar.maximum(), current_val + scroll_amount)
                 scrollbar.setValue(new_val)
@@ -305,22 +313,23 @@ class LogWidget(QWidget):
     def _update_smooth_scroll(self) -> None:
         """Update the smooth scrolling animation."""
         self._smooth_scroll_time += self._smooth_scroll_timer.interval()
-
-        # Calculate progress (0 to 1)
         progress = min(1.0, self._smooth_scroll_time / self._smooth_scroll_duration)
-
-        # Apply easing function (ease out cubic)
         t = 1 - (1 - progress) ** 3
 
-        # Calculate new position
-        new_position = self._smooth_scroll_start + int(self._smooth_scroll_distance * t)
-
-        # Update scrollbar position
+        # Add 0.5 lines of bias so that int() truncation crosses each pixel boundary
+        # slightly early, avoiding a visible "jump" at the very end of the animation
+        # where the easing curve decelerates so slowly that the final line is only
+        # reached on the last tick, well after the scroll appears to have stopped.
+        new_position = min(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t + 0.5),
+        ) if self._smooth_scroll_distance > 0 else max(
+            self._smooth_scroll_target,
+            self._smooth_scroll_start + int(self._smooth_scroll_distance * t - 0.5),
+        )
         scrollbar = self._scroll_area.verticalScrollBar()
         scrollbar.setValue(new_position)
-
-        # Stop the timer when animation is complete
-        if progress >= 1.0:
+        if progress >= 1.0 or new_position == self._smooth_scroll_target:
             self._smooth_scroll_timer.stop()
 
     def _on_scroll_value_changed(self, value: int) -> None:
@@ -759,13 +768,15 @@ class LogWidget(QWidget):
 
         return ""
 
-    def find_text(self, text: str, forward: bool = True) -> Tuple[int, int]:
+    def find_text(self, text: str, forward: bool = True, case_sensitive: bool = False, regexp: bool = False) -> Tuple[int, int]:
         """
         Find all instances of text and highlight them.
 
         Args:
             text: Text to search for
             forward: Whether to search forward from current position
+            case_sensitive: If True, match case exactly.
+            regexp: If True, treat text as a regular expression.
 
         Returns:
             Tuple of (current_match, total_matches)
@@ -774,17 +785,17 @@ class LogWidget(QWidget):
         widgets = self._messages
 
         # Clear existing highlights if search text changed
-        if text != self._last_search:
+        if (text, case_sensitive, regexp) != self._last_search:
             self._clear_highlights()
             self._matches = []
             self._current_widget_index = -1
             self._current_match_index = -1
-            self._last_search = text
+            self._last_search = (text, case_sensitive, regexp)
 
         # Find all matches if this is a new search
         if not self._matches and text:
             for widget in widgets:
-                widget_matches = widget.find_text(text)
+                widget_matches = widget.find_text(text, case_sensitive, regexp)
                 if widget_matches:
                     self._matches.append((widget, widget_matches))
 
@@ -886,7 +897,7 @@ class LogWidget(QWidget):
         self._matches = []
         self._current_widget_index = -1
         self._current_match_index = -1
-        self._last_search = ""
+        self._last_search = ("", False, False)
 
     def get_match_status(self) -> Tuple[int, int]:
         """
