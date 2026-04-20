@@ -897,59 +897,67 @@ max_local_count(PyObject *code)
     if (children == NULL)
         return -1;
 
-    /* Iterative DFS using a Python list as a stack. */
-    PyObject *stack = PyList_New(0);
+    /* Iterative DFS using a plain C pointer stack of borrowed refs. */
+    Py_ssize_t stack_cap = 16;
+    Py_ssize_t stack_top = 0;
+    PyObject **stack = (PyObject **)PyMem_Malloc(stack_cap * sizeof(PyObject *));
     if (stack == NULL) {
         Py_DECREF(children);
+        PyErr_NoMemory();
         return -1;
     }
 
     Py_ssize_t n = PyList_GET_SIZE(children);
     for (Py_ssize_t i = 0; i < n; i++) {
-        if (PyList_Append(stack, PyList_GET_ITEM(children, i)) < 0) {
-            Py_DECREF(children);
-            Py_DECREF(stack);
-            return -1;
+        if (stack_top == stack_cap) {
+            stack_cap *= 2;
+            PyObject **tmp = (PyObject **)PyMem_Realloc(stack, stack_cap * sizeof(PyObject *));
+            if (tmp == NULL) {
+                Py_DECREF(children);
+                PyMem_Free(stack);
+                PyErr_NoMemory();
+                return -1;
+            }
+            stack = tmp;
         }
+        stack[stack_top++] = PyList_GET_ITEM(children, i);
     }
     Py_DECREF(children);
 
-    while (PyList_GET_SIZE(stack) > 0) {
-        Py_ssize_t last = PyList_GET_SIZE(stack) - 1;
-        PyObject *co = PyList_GET_ITEM(stack, last);
-        Py_INCREF(co);
-        if (PyList_SetSlice(stack, last, last + 1, NULL) < 0) {
-            Py_DECREF(co);
-            Py_DECREF(stack);
-            return -1;
-        }
+    while (stack_top > 0) {
+        PyObject *co = stack[--stack_top];
 
         int lc = 0, oa = 0;
         if (code_get_int(co, "local_count", &lc) < 0 ||
             code_get_int(co, "outgoing_arg_slots", &oa) < 0) {
-            Py_DECREF(co);
-            Py_DECREF(stack);
+            PyMem_Free(stack);
             return -1;
         }
         if (lc + oa > best) best = lc + oa;
 
         PyObject *sub = PyObject_GetAttrString(co, "code_objects");
-        Py_DECREF(co);
         if (sub == NULL) {
-            Py_DECREF(stack);
+            PyMem_Free(stack);
             return -1;
         }
         Py_ssize_t m = PyList_GET_SIZE(sub);
         for (Py_ssize_t i = 0; i < m; i++) {
-            if (PyList_Append(stack, PyList_GET_ITEM(sub, i)) < 0) {
-                Py_DECREF(sub);
-                Py_DECREF(stack);
-                return -1;
+            if (stack_top == stack_cap) {
+                stack_cap *= 2;
+                PyObject **tmp = (PyObject **)PyMem_Realloc(stack, stack_cap * sizeof(PyObject *));
+                if (tmp == NULL) {
+                    Py_DECREF(sub);
+                    PyMem_Free(stack);
+                    PyErr_NoMemory();
+                    return -1;
+                }
+                stack = tmp;
             }
+            stack[stack_top++] = PyList_GET_ITEM(sub, i);
         }
         Py_DECREF(sub);
     }
-    Py_DECREF(stack);
+    PyMem_Free(stack);
     return best;
 }
 
