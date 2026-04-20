@@ -6,7 +6,7 @@ from typing import List, Optional, Set, Tuple
 
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QScrollBar, QSplitter, QLabel, QSizePolicy
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QResizeEvent
+from PySide6.QtGui import QKeyEvent, QResizeEvent
 
 from diff import DiffParser, DiffParseError
 from diff.diff_types import DiffHunk
@@ -58,7 +58,9 @@ class DiffWidget(QWidget):
         self._syncing = False
         self._cached_hunks: List[Tuple[int, int]] = []
         self._current_hunk_index: int = -1
+        self._hunk_scroll_target: int = -1
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
         outer_layout = QVBoxLayout(self)
         outer_layout.setContentsMargins(0, 0, 0, 0)
@@ -201,6 +203,39 @@ class DiffWidget(QWidget):
     def resizeEvent(self, event: QResizeEvent) -> None:
         super().resizeEvent(event)
         self._update_shared_scrollbar()
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        """Handle keyboard scrolling for the shared scrollbar."""
+        key = event.key()
+        bar = self._scrollbar
+
+        _NAVIGATION_MODIFIERS = (
+            Qt.KeyboardModifier.AltModifier
+            | Qt.KeyboardModifier.ControlModifier
+            | Qt.KeyboardModifier.ShiftModifier
+        )
+        if event.modifiers() & _NAVIGATION_MODIFIERS:
+            super().keyPressEvent(event)
+            return
+
+        if key == Qt.Key.Key_Up:
+            bar.setValue(bar.value() - bar.singleStep())
+            event.accept()
+
+        elif key == Qt.Key.Key_Down:
+            bar.setValue(bar.value() + bar.singleStep())
+            event.accept()
+
+        elif key == Qt.Key.Key_PageUp:
+            bar.setValue(bar.value() - bar.pageStep())
+            event.accept()
+
+        elif key == Qt.Key.Key_PageDown:
+            bar.setValue(bar.value() + bar.pageStep())
+            event.accept()
+
+        else:
+            super().keyPressEvent(event)
 
     def _fetch_content(self) -> Optional[tuple[List[str], List[str], str]]:
         """
@@ -556,15 +591,14 @@ class DiffWidget(QWidget):
         start, end = self._cached_hunks[self._current_hunk_index]
         self._set_active_hunk(start, end)
         self._start_smooth_scroll(self._left_pane.target_scroll_for_block(start))
+        self._hunk_scroll_target = self._smooth_scroll_target
 
     def _current_hunk_is_centred(self) -> bool:
         """Return True if the scrollbar is already at the centred position for the current hunk."""
         if self._current_hunk_index < 0 or not self._cached_hunks:
             return False
 
-        start = self._cached_hunks[self._current_hunk_index][0]
-        target = self._left_pane.target_scroll_for_block(start)
-        return self._scrollbar.value() == target
+        return self._scrollbar.value() == self._hunk_scroll_target
 
     def _hunks(self) -> List[Tuple[int, int]]:
         """
@@ -620,7 +654,8 @@ class DiffWidget(QWidget):
         # Pick the hunk whose start is closest to the viewport centre.
         nearest_start, nearest_end = min(self._cached_hunks, key=lambda h: abs(h[0] - centre))
         # Update the tracked index to stay in sync with free-scroll position.
-        self._current_hunk_index = next(
+        new_index = next(
             i for i, h in enumerate(self._cached_hunks) if h[0] == nearest_start
         )
+        self._current_hunk_index = new_index
         self._set_active_hunk(nearest_start, nearest_end)
