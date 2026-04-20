@@ -3,7 +3,7 @@
 Humbug is a modular, extensible platform that aims to let you and your AIs work on ideas together.
 Think of it as an operating system for human-AI collaboration.
 
-![Humbug in action](docs/v0.22-demo.gif)
+![Humbug in action](docs/v44-demo.gif)
 
 ## What are the core ideas?
 
