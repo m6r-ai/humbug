@@ -1,12 +1,14 @@
 /*
  * menai_vm_integer.c — MenaiInteger type implementation.
  *
- * MenaiInteger wraps a Python int (arbitrary precision).  Values are
- * allocated on demand; there are no singletons.
+ * Three-tier representation: small integer cache for [-5, 256], inline long
+ * for values that fit in a C long, and MenaiInt bignum for everything else.
+ * The Python C API is only used at the boundary (convert_value / to_slow).
  */
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <string.h>
 
 #include "menai_vm_integer.h"
 
@@ -17,44 +19,53 @@ MenaiInteger_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
     PyObject *value = NULL;
     static char *kwlist[] = {"value", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &value)) return NULL;
+    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &value)) {
+        return NULL;
+    }
     if (!PyLong_Check(value)) {
         PyErr_SetString(PyExc_TypeError, "MenaiInteger requires an int");
         return NULL;
     }
 
-    MenaiInteger_Object *self = (MenaiInteger_Object *)type->tp_alloc(type, 0);
-    if (self) {
-        Py_INCREF(value);
-        self->value = value;
+    int overflow = 0;
+    long v = PyLong_AsLongAndOverflow(value, &overflow);
+    if (!overflow) {
+        if (v == -1 && PyErr_Occurred()) {
+            return NULL;
+        }
+        return menai_integer_from_long(v);
     }
 
-    return (PyObject *)self;
+    MenaiInt big;
+    menai_int_init(&big);
+    if (menai_int_from_pylong(value, &big) < 0) {
+        return NULL;
+    }
+    return menai_integer_from_bigint(big);
 }
 
 static void
 MenaiInteger_dealloc(PyObject *self)
 {
     MenaiInteger_Object *obj = (MenaiInteger_Object *)self;
-    if (obj->value != NULL) {
-        long v = PyLong_AsLong(obj->value);
-        if (PyErr_Occurred()) {
-            /* Bignum — not cached, clear the OverflowError and free normally. */
-            PyErr_Clear();
-        } else if (v >= MENAI_INT_CACHE_MIN && v <= MENAI_INT_CACHE_MAX) {
+    if (!obj->is_big) {
+        long v = obj->small;
+        if (v >= MENAI_INT_CACHE_MIN && v <= MENAI_INT_CACHE_MAX) {
             /* Cached singleton — must never be freed. Restore refcount. */
             Py_SET_REFCNT(self, 1);
             return;
         }
+    } else {
+        menai_int_free(&obj->big);
     }
-    Py_XDECREF(((MenaiInteger_Object *)self)->value);
     Py_TYPE(self)->tp_free(self);
 }
 
 static PyObject *
 MenaiInteger_type_name(PyObject *self, PyObject *args)
 {
-    (void)self; (void)args;
+    (void)self;
+    (void)args;
     return PyUnicode_FromString("integer");
 }
 
@@ -62,7 +73,17 @@ static PyObject *
 MenaiInteger_describe(PyObject *self, PyObject *args)
 {
     (void)args;
-    return PyObject_Str(((MenaiInteger_Object *)self)->value);
+    MenaiInteger_Object *obj = (MenaiInteger_Object *)self;
+    if (!obj->is_big) {
+        return PyUnicode_FromFormat("%ld", obj->small);
+    }
+    char *s = NULL;
+    if (menai_int_to_string(&obj->big, 10, &s) < 0) {
+        return NULL;
+    }
+    PyObject *r = PyUnicode_FromString(s);
+    PyMem_Free(s);
+    return r;
 }
 
 static PyObject *
@@ -74,24 +95,87 @@ MenaiInteger_richcompare(PyObject *self, PyObject *other, int op)
         Py_RETURN_NOTIMPLEMENTED;
     }
 
-    return PyObject_RichCompare(
-        ((MenaiInteger_Object *)self)->value,
-        ((MenaiInteger_Object *)other)->value, op);
+    MenaiInteger_Object *a = (MenaiInteger_Object *)self;
+    MenaiInteger_Object *b = (MenaiInteger_Object *)other;
+
+    /*
+     * Build temporary MenaiInts on the stack for small values so we can
+     * use the unified menai_int_* comparison path.
+     */
+    MenaiInt tmp_a, tmp_b;
+    menai_int_init(&tmp_a);
+    menai_int_init(&tmp_b);
+
+    const MenaiInt *pa;
+    const MenaiInt *pb;
+
+    if (!a->is_big) {
+        if (menai_int_from_long(a->small, &tmp_a) < 0) {
+            return NULL;
+        }
+        pa = &tmp_a;
+    } else {
+        pa = &a->big;
+    }
+
+    if (!b->is_big) {
+        if (menai_int_from_long(b->small, &tmp_b) < 0) {
+            menai_int_free(&tmp_a);
+            return NULL;
+        }
+        pb = &tmp_b;
+    } else {
+        pb = &b->big;
+    }
+
+    int result;
+    switch (op) {
+        case Py_EQ: result = menai_int_eq(pa, pb); break;
+        case Py_NE: result = menai_int_ne(pa, pb); break;
+        case Py_LT: result = menai_int_lt(pa, pb); break;
+        case Py_GT: result = menai_int_gt(pa, pb); break;
+        case Py_LE: result = menai_int_le(pa, pb); break;
+        case Py_GE: result = menai_int_ge(pa, pb); break;
+        default:
+            menai_int_free(&tmp_a);
+            menai_int_free(&tmp_b);
+            Py_RETURN_NOTIMPLEMENTED;
+    }
+
+    menai_int_free(&tmp_a);
+    menai_int_free(&tmp_b);
+    return result ? Py_True : Py_False;
 }
 
 static Py_hash_t
 MenaiInteger_hash(PyObject *self)
 {
-    return PyObject_Hash(((MenaiInteger_Object *)self)->value);
+    MenaiInteger_Object *obj = (MenaiInteger_Object *)self;
+    if (!obj->is_big) {
+        /*
+         * For small values, delegate to CPython's hash of the equivalent
+         * PyLong to guarantee compatibility with Python int hashing.
+         */
+        PyObject *iv = PyLong_FromLong(obj->small);
+        if (iv == NULL) {
+            return -1;
+        }
+        Py_hash_t h = PyObject_Hash(iv);
+        Py_DECREF(iv);
+        return h;
+    }
+    return menai_int_hash(&obj->big);
 }
 
 static PyObject *
 MenaiInteger_get_value(PyObject *self, void *closure)
 {
     (void)closure;
-    PyObject *v = ((MenaiInteger_Object *)self)->value;
-    Py_INCREF(v);
-    return v;
+    MenaiInteger_Object *obj = (MenaiInteger_Object *)self;
+    if (!obj->is_big) {
+        return PyLong_FromLong(obj->small);
+    }
+    return menai_int_to_pylong(&obj->big);
 }
 
 static PyGetSetDef MenaiInteger_getset[] = {
@@ -127,31 +211,59 @@ menai_integer_from_long(long n)
         return cached;
     }
 
-    PyObject *iv = PyLong_FromLong(n);
-    if (!iv) return NULL;
     MenaiInteger_Object *r = (MenaiInteger_Object *)MenaiInteger_Type.tp_alloc(&MenaiInteger_Type, 0);
-    if (r) {
-        r->value = iv;
-    } else {
-        Py_DECREF(iv);
+    if (r == NULL) {
+        return NULL;
     }
+    r->is_big = 0;
+    r->small = n;
+    menai_int_init(&r->big);
+    return (PyObject *)r;
+}
+
+PyObject *
+menai_integer_from_bigint(MenaiInt src)
+{
+    /*
+     * If the value fits in a long, demote to small representation so the
+     * inline fast path is used for subsequent operations.
+     */
+    if (menai_int_fits_long(&src)) {
+        long v;
+        if (menai_int_to_long(&src, &v) < 0) {
+            menai_int_free(&src);
+            return NULL;
+        }
+        menai_int_free(&src);
+        return menai_integer_from_long(v);
+    }
+
+    MenaiInteger_Object *r = (MenaiInteger_Object *)MenaiInteger_Type.tp_alloc(&MenaiInteger_Type, 0);
+    if (r == NULL) {
+        menai_int_free(&src);
+        return NULL;
+    }
+    r->is_big = 1;
+    r->small = 0;
+    r->big = src; /* transfer ownership */
     return (PyObject *)r;
 }
 
 int
 menai_vm_integer_init(void)
 {
-    if (PyType_Ready(&MenaiInteger_Type) < 0) return -1;
+    if (PyType_Ready(&MenaiInteger_Type) < 0) {
+        return -1;
+    }
 
     for (long v = MENAI_INT_CACHE_MIN; v <= MENAI_INT_CACHE_MAX; v++) {
-        PyObject *iv = PyLong_FromLong(v);
-        if (!iv) return -1;
         MenaiInteger_Object *obj = (MenaiInteger_Object *)MenaiInteger_Type.tp_alloc(&MenaiInteger_Type, 0);
-        if (!obj) {
-            Py_DECREF(iv);
+        if (obj == NULL) {
             return -1;
         }
-        obj->value = iv;
+        obj->is_big = 0;
+        obj->small = v;
+        menai_int_init(&obj->big);
         _integer_cache[v - MENAI_INT_CACHE_MIN] = (PyObject *)obj;
     }
     return 0;

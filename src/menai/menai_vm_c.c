@@ -94,6 +94,38 @@ static inline mc_t mc_logn(mc_t a, mc_t b) {
 #include "menai_vm_value.h"
 #include "menai_vm_string.h"
 #include "menai_vm_hashtable.h"
+#include "menai_vm_integer.h"
+
+/*
+ * Portable overflow-detecting arithmetic for the small-integer fast paths.
+ *
+ * _menai_add_overflow(a, b, &result) returns 1 if a+b overflows long, 0 otherwise.
+ * _menai_sub_overflow and _menai_mul_overflow follow the same convention.
+ */
+#if defined(__GNUC__) || defined(__clang__)
+#define _menai_add_overflow(a, b, rp) __builtin_add_overflow((a), (b), (rp))
+#define _menai_sub_overflow(a, b, rp) __builtin_sub_overflow((a), (b), (rp))
+#define _menai_mul_overflow(a, b, rp) __builtin_mul_overflow((a), (b), (rp))
+#else
+static inline int _menai_add_overflow(long a, long b, long *r) {
+    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+    unsigned long ur = ua + ub;
+    *r = (long)ur;
+    return (a > 0 && b > 0 && *r < 0) || (a < 0 && b < 0 && *r > 0);
+}
+static inline int _menai_sub_overflow(long a, long b, long *r) {
+    unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
+    unsigned long ur = ua - ub;
+    *r = (long)ur;
+    return (b < 0 && a > 0 && *r < 0) || (b > 0 && a < 0 && *r > 0);
+}
+static inline int _menai_mul_overflow(long a, long b, long *r) {
+    /* Conservative: use double to detect overflow. */
+    double d = (double)a * (double)b;
+    *r = (long)((unsigned long)a * (unsigned long)b);
+    return d > (double)LONG_MAX || d < (double)LONG_MIN;
+}
+#endif
 
 /* menai_vm_value init — lives in the same .so */
 extern PyObject *_menai_vm_value_init(void);
@@ -382,10 +414,6 @@ static inline double menai_float_value(PyObject *o) {
     return ((MenaiFloat_Object *)o)->value;
 }
 
-static inline PyObject *menai_integer_value(PyObject *o) {
-    return ((MenaiInteger_Object *)o)->value;
-}
-
 static inline PyObject *menai_symbol_name(PyObject *o) {
     return ((MenaiSymbol_Object *)o)->name;
 }
@@ -404,75 +432,62 @@ static inline void reg_set_borrow(PyObject **regs, int slot, PyObject *val) {
 }
 
 /*
- * pylong_compare — fast integer comparison bypassing PyObject_RichCompareBool.
+ * menai_integer_compare — compare two MenaiInteger objects using MenaiInt.
  *
- * For the common case where both values fit in a C long, this reduces to two
- * PyLong_AsLong calls and a C comparison — no Python dispatch overhead.
- * Falls back to PyObject_RichCompareBool for bignums (where PyLong_AsLong
- * returns -1 with OverflowError set).
+ * Fast path for the common case where both are small (is_big == 0): plain C
+ * comparison of the long values.  Falls back to menai_int_* for big integers.
  *
  * op must be one of Py_EQ, Py_NE, Py_LT, Py_GT, Py_LE, Py_GE.
+ * Never fails.
  */
 static inline int
-pylong_compare(PyObject *a, PyObject *b, int op)
+menai_integer_compare(PyObject *a, PyObject *b, int op)
 {
-    long la = PyLong_AsLong(a);
-    if (la != -1 || !PyErr_Occurred()) {
-        long lb = PyLong_AsLong(b);
-        if (lb != -1 || !PyErr_Occurred()) {
-            switch (op) {
-                case Py_EQ: return la == lb;
-                case Py_NE: return la != lb;
-                case Py_LT: return la < lb;
-                case Py_GT: return la > lb;
-                case Py_LE: return la <= lb;
-                case Py_GE: return la >= lb;
-            }
+    MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+    MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+    if (!ia->is_big && !ib->is_big) {
+        long la = ia->small, lb = ib->small;
+        switch (op) {
+            case Py_EQ: return la == lb;
+            case Py_NE: return la != lb;
+            case Py_LT: return la < lb;
+            case Py_GT: return la > lb;
+            case Py_LE: return la <= lb;
+            case Py_GE: return la >= lb;
         }
-        PyErr_Clear();
-    } else {
-        PyErr_Clear();
     }
-    return PyObject_RichCompareBool(a, b, op);
+    const MenaiInt *ma = ia->is_big ? &ia->big : NULL;
+    const MenaiInt *mb = ib->is_big ? &ib->big : NULL;
+    MenaiInt tmp_a, tmp_b;
+    menai_int_init(&tmp_a);
+    menai_int_init(&tmp_b);
+    if (!ia->is_big) menai_int_from_long(ia->small, &tmp_a);
+    if (!ib->is_big) menai_int_from_long(ib->small, &tmp_b);
+    const MenaiInt *pa = ia->is_big ? ma : &tmp_a;
+    const MenaiInt *pb = ib->is_big ? mb : &tmp_b;
+    int result;
+    switch (op) {
+        case Py_EQ: result = menai_int_eq(pa, pb); break;
+        case Py_NE: result = menai_int_ne(pa, pb); break;
+        case Py_LT: result = menai_int_lt(pa, pb); break;
+        case Py_GT: result = menai_int_gt(pa, pb); break;
+        case Py_LE: result = menai_int_le(pa, pb); break;
+        case Py_GE: result = menai_int_ge(pa, pb); break;
+        default: result = 0; break;
+    }
+    menai_int_free(&tmp_a);
+    menai_int_free(&tmp_b);
+    return result;
 }
 
 /*
- * make_integer_value — wrap an already-computed PyLong in a MenaiInteger.
+ * make_integer_from_ssize_t — create a MenaiInteger from a Py_ssize_t.
  *
- * Takes ownership of py_int (consumes the reference from PyNumber_Add etc.).
- * Checks the cache first: if py_int's value is in range, returns the cached
- * singleton (INCREF'd) and DECREFs py_int.  Otherwise allocates a fresh
- * MenaiInteger_Object that owns py_int.
+ * Py_ssize_t fits in a long on all supported platforms, so this is a direct
+ * delegation to menai_integer_from_long.
  */
-static inline PyObject *make_integer_value(PyObject *py_int) {
-    if (!py_int) return NULL;
-    long v = PyLong_AsLong(py_int);
-    if (!PyErr_Occurred() && v >= MENAI_INT_CACHE_MIN && v <= MENAI_INT_CACHE_MAX) {
-        Py_DECREF(py_int);
-        return menai_integer_from_long(v);
-    }
-    PyErr_Clear();
-    MenaiInteger_Object *r = (MenaiInteger_Object *)Menai_IntegerType->tp_alloc(Menai_IntegerType, 0);
-    if (r) {
-        r->value = py_int;
-    } else {
-        Py_DECREF(py_int);
-    }
-    return (PyObject *)r;
-}
-
 static inline PyObject *make_integer_from_ssize_t(Py_ssize_t n) {
-    if (n >= MENAI_INT_CACHE_MIN && n <= MENAI_INT_CACHE_MAX)
-        return menai_integer_from_long((long)n);
-    PyObject *iv = PyLong_FromSsize_t(n);
-    if (!iv) return NULL;
-    MenaiInteger_Object *r = (MenaiInteger_Object *)Menai_IntegerType->tp_alloc(Menai_IntegerType, 0);
-    if (r) {
-        r->value = iv;
-    } else {
-        Py_DECREF(iv);
-    }
-    return (PyObject *)r;
+    return menai_integer_from_long((long)n);
 }
 
 static inline PyObject *make_integer_from_long(long n) {
@@ -1618,13 +1633,18 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             MenaiFunction_Object *fn = (MenaiFunction_Object *)f;
             int pc = fn->param_count;
             int is_var = fn->is_variadic;
-            PyObject *n_py = menai_integer_value(n_obj);
-            long n = PyLong_AsLong(n_py);
-            if (n == -1 && PyErr_Occurred()) goto error;
+            MenaiInteger_Object *n_io = (MenaiInteger_Object *)n_obj;
+            long n;
+            if (!n_io->is_big) {
+                n = n_io->small;
+            } else {
+                if (menai_int_to_long(&n_io->big, &n) < 0) goto error;
+            }
             int accepts = is_var ? (n >= pc - 1) : (n == pc);
             bool_store(regs, base + dest, accepts);
             break;
         }
+
 
         case OP_INTEGER_P:
             bool_store(regs, base + dest, IS_MENAI_INTEGER(regs[base + src0]));
@@ -1635,9 +1655,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer=?")) goto error;
             if (!require_integer(b, "integer=?")) goto error;
-            PyObject *av = menai_integer_value(a);
-            PyObject *bv = menai_integer_value(b);
-            bool_store(regs, base + dest, pylong_compare(av, bv, Py_EQ));
+            bool_store(regs, base + dest, menai_integer_compare(a, b, Py_EQ));
             break;
         }
 
@@ -1645,9 +1663,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer!=?")) goto error;
             if (!require_integer(b, "integer!=?")) goto error;
-            PyObject *av = menai_integer_value(a);
-            PyObject *bv = menai_integer_value(b);
-            bool_store(regs, base + dest, pylong_compare(av, bv, Py_NE));
+            bool_store(regs, base + dest, menai_integer_compare(a, b, Py_NE));
             break;
         }
 
@@ -1655,9 +1671,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer<?")) goto error;
             if (!require_integer(b, "integer<?")) goto error;
-            PyObject *av = menai_integer_value(a);
-            PyObject *bv = menai_integer_value(b);
-            bool_store(regs, base + dest, pylong_compare(av, bv, Py_LT));
+            bool_store(regs, base + dest, menai_integer_compare(a, b, Py_LT));
             break;
         }
 
@@ -1665,9 +1679,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer>?")) goto error;
             if (!require_integer(b, "integer>?")) goto error;
-            PyObject *av = menai_integer_value(a);
-            PyObject *bv = menai_integer_value(b);
-            bool_store(regs, base + dest, pylong_compare(av, bv, Py_GT));
+            bool_store(regs, base + dest, menai_integer_compare(a, b, Py_GT));
             break;
         }
 
@@ -1675,9 +1687,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer<=?")) goto error;
             if (!require_integer(b, "integer<=?")) goto error;
-            PyObject *av = menai_integer_value(a);
-            PyObject *bv = menai_integer_value(b);
-            bool_store(regs, base + dest, pylong_compare(av, bv, Py_LE));
+            bool_store(regs, base + dest, menai_integer_compare(a, b, Py_LE));
             break;
         }
 
@@ -1685,17 +1695,39 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer>=?")) goto error;
             if (!require_integer(b, "integer>=?")) goto error;
-            PyObject *av = menai_integer_value(a);
-            PyObject *bv = menai_integer_value(b);
-            bool_store(regs, base + dest, pylong_compare(av, bv, Py_GE));
+            bool_store(regs, base + dest, menai_integer_compare(a, b, Py_GE));
             break;
         }
 
         case OP_INTEGER_ABS: {
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer-abs")) goto error;
-            PyObject *av = menai_integer_value(a);
-            PyObject *_r = make_integer_value(PyNumber_Absolute(av));
+            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            if (!ia->is_big) {
+                long sv = ia->small;
+                long rv = sv < 0 ? -sv : sv;
+                /* LONG_MIN has no positive counterpart — promote to bigint. */
+                if (sv == LONG_MIN) {
+                    MenaiInt tmp, res;
+                    menai_int_init(&tmp);
+                    menai_int_init(&res);
+                    if (menai_int_from_long(sv, &tmp) < 0) goto error;
+                    if (menai_int_abs(&tmp, &res) < 0) { menai_int_free(&tmp); goto error; }
+                    menai_int_free(&tmp);
+                    PyObject *_r = menai_integer_from_bigint(res);
+                    if (!_r) goto error;
+                    reg_set_own(regs, base + dest, _r);
+                    break;
+                }
+                PyObject *_r = menai_integer_from_long(rv);
+                if (!_r) goto error;
+                reg_set_own(regs, base + dest, _r);
+                break;
+            }
+            MenaiInt res;
+            menai_int_init(&res);
+            if (menai_int_abs(&ia->big, &res) < 0) goto error;
+            PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -1704,8 +1736,31 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
         case OP_INTEGER_NEG: {
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer-neg")) goto error;
-            PyObject *av = menai_integer_value(a);
-            PyObject *_r = make_integer_value(PyNumber_Negative(av));
+            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            if (!ia->is_big) {
+                long sv = ia->small;
+                /* LONG_MIN negation overflows — promote to bigint. */
+                if (sv == LONG_MIN) {
+                    MenaiInt tmp, res;
+                    menai_int_init(&tmp);
+                    menai_int_init(&res);
+                    if (menai_int_from_long(sv, &tmp) < 0) goto error;
+                    if (menai_int_neg(&tmp, &res) < 0) { menai_int_free(&tmp); goto error; }
+                    menai_int_free(&tmp);
+                    PyObject *_r = menai_integer_from_bigint(res);
+                    if (!_r) goto error;
+                    reg_set_own(regs, base + dest, _r);
+                    break;
+                }
+                PyObject *_r = menai_integer_from_long(-sv);
+                if (!_r) goto error;
+                reg_set_own(regs, base + dest, _r);
+                break;
+            }
+            MenaiInt res;
+            menai_int_init(&res);
+            if (menai_int_neg(&ia->big, &res) < 0) goto error;
+            PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -1714,8 +1769,18 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
         case OP_INTEGER_BIT_NOT: {
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer-bit-not")) goto error;
-            PyObject *av = menai_integer_value(a);
-            PyObject *_r = make_integer_value(PyNumber_Invert(av));
+            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            MenaiInt tmp, res;
+            menai_int_init(&tmp);
+            menai_int_init(&res);
+            if (!ia->is_big) {
+                if (menai_int_from_long(ia->small, &tmp) < 0) goto error;
+            } else {
+                if (menai_int_copy(&ia->big, &tmp) < 0) goto error;
+            }
+            if (menai_int_not(&tmp, &res) < 0) { menai_int_free(&tmp); goto error; }
+            menai_int_free(&tmp);
+            PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -1725,12 +1790,27 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer+")) goto error;
             if (!require_integer(b, "integer+")) goto error;
-
-            PyObject *av = menai_integer_value(a);
-            PyObject *bv = menai_integer_value(b);
-            PyObject *_r = make_integer_value(PyNumber_Add(av, bv));
+            if (!((MenaiInteger_Object *)a)->is_big && !((MenaiInteger_Object *)b)->is_big) {
+                long la = ((MenaiInteger_Object *)a)->small;
+                long lb = ((MenaiInteger_Object *)b)->small;
+                long lr;
+                if (!_menai_add_overflow(la, lb, &lr)) {
+                    PyObject *_r = menai_integer_from_long(lr);
+                    if (!_r) goto error;
+                    reg_set_own(regs, base + dest, _r);
+                    break;
+                }
+            }
+            MenaiInt av, bv, res;
+            menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
+            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
+            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
+            if (menai_int_add(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            menai_int_free(&av); menai_int_free(&bv);
+            PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
-
             reg_set_own(regs, base + dest, _r);
             break;
         }
@@ -1739,12 +1819,27 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-")) goto error;
             if (!require_integer(b, "integer-")) goto error;
-
-            PyObject *av = menai_integer_value(a);
-            PyObject *bv = menai_integer_value(b);
-            PyObject *_r = make_integer_value(PyNumber_Subtract(av, bv));
+            if (!((MenaiInteger_Object *)a)->is_big && !((MenaiInteger_Object *)b)->is_big) {
+                long la = ((MenaiInteger_Object *)a)->small;
+                long lb = ((MenaiInteger_Object *)b)->small;
+                long lr;
+                if (!_menai_sub_overflow(la, lb, &lr)) {
+                    PyObject *_r = menai_integer_from_long(lr);
+                    if (!_r) goto error;
+                    reg_set_own(regs, base + dest, _r);
+                    break;
+                }
+            }
+            MenaiInt av, bv, res;
+            menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
+            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
+            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
+            if (menai_int_sub(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            menai_int_free(&av); menai_int_free(&bv);
+            PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
-
             reg_set_own(regs, base + dest, _r);
             break;
         }
@@ -1753,12 +1848,27 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer*")) goto error;
             if (!require_integer(b, "integer*")) goto error;
-
-            PyObject *av = menai_integer_value(a);
-            PyObject *bv = menai_integer_value(b);
-            PyObject *_r = make_integer_value(PyNumber_Multiply(av, bv));
+            if (!((MenaiInteger_Object *)a)->is_big && !((MenaiInteger_Object *)b)->is_big) {
+                long la = ((MenaiInteger_Object *)a)->small;
+                long lb = ((MenaiInteger_Object *)b)->small;
+                long lr;
+                if (!_menai_mul_overflow(la, lb, &lr)) {
+                    PyObject *_r = menai_integer_from_long(lr);
+                    if (!_r) goto error;
+                    reg_set_own(regs, base + dest, _r);
+                    break;
+                }
+            }
+            MenaiInt av, bv, res;
+            menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
+            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
+            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
+            if (menai_int_mul(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            menai_int_free(&av); menai_int_free(&bv);
+            PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
-
             reg_set_own(regs, base + dest, _r);
             break;
         }
@@ -1767,17 +1877,24 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer/")) goto error;
             if (!require_integer(b, "integer/")) goto error;
-            PyObject *bv = menai_integer_value(b);
-            long _bvl = PyLong_AsLong(bv);
-            /* A bignum divisor (OverflowError from AsLong) is never zero. */
-            if (!PyErr_Occurred() && _bvl == 0) {
+            {
+                MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+                int b_is_zero = (!ib->is_big && ib->small == 0) ||
+                                (ib->is_big && ib->big.sign == 0);
+                if (b_is_zero) {
                 menai_raise_eval_error("Division by zero in 'integer/'");
                 goto error;
+                }
             }
-            PyErr_Clear();
-            PyObject *av = menai_integer_value(a);
-            PyObject *_res = PyNumber_FloorDivide(av, bv);
-            PyObject *_r = make_integer_value(_res);
+            MenaiInt av, bv, res;
+            menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
+            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
+            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
+            if (menai_int_floordiv(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            menai_int_free(&av); menai_int_free(&bv);
+            PyObject *_r = menai_integer_from_bigint(res);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -1787,16 +1904,24 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer%")) goto error;
             if (!require_integer(b, "integer%")) goto error;
-            PyObject *bv = menai_integer_value(b);
-            long _bvl = PyLong_AsLong(bv);
-            if (!PyErr_Occurred() && _bvl == 0) {
+            {
+                MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+                int b_is_zero = (!ib->is_big && ib->small == 0) ||
+                                (ib->is_big && ib->big.sign == 0);
+                if (b_is_zero) {
                 menai_raise_eval_error("Modulo by zero in 'integer%'");
                 goto error;
+                }
             }
-            PyErr_Clear();
-            PyObject *av = menai_integer_value(a);
-            PyObject *_res = PyNumber_Remainder(av, bv);
-            PyObject *_r = make_integer_value(_res);
+            MenaiInt av, bv, res;
+            menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
+            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
+            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
+            if (menai_int_mod(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            menai_int_free(&av); menai_int_free(&bv);
+            PyObject *_r = menai_integer_from_bigint(res);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -1806,17 +1931,24 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-expn")) goto error;
             if (!require_integer(b, "integer-expn")) goto error;
-            PyObject *bv = menai_integer_value(b);
-            long _bvl = PyLong_AsLong(bv);
-            /* A bignum exponent (OverflowError) is always positive — only reject negative longs. */
-            if (!PyErr_Occurred() && _bvl < 0) {
+            {
+                MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+                int b_is_neg = (!ib->is_big && ib->small < 0) ||
+                               (ib->is_big && ib->big.sign == -1);
+                if (b_is_neg) {
                 menai_raise_eval_error("Function 'integer-expn' requires a non-negative exponent");
                 goto error;
+                }
             }
-            PyErr_Clear();
-            PyObject *av = menai_integer_value(a);
-            PyObject *_res = PyNumber_Power(av, bv, Py_None);
-            PyObject *_r = make_integer_value(_res);
+            MenaiInt av, bv, res;
+            menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
+            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
+            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
+            if (menai_int_pow(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            menai_int_free(&av); menai_int_free(&bv);
+            PyObject *_r = menai_integer_from_bigint(res);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -1826,9 +1958,15 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-or")) goto error;
             if (!require_integer(b, "integer-bit-or")) goto error;
-            PyObject *av = menai_integer_value(a);
-            PyObject *bv = menai_integer_value(b);
-            PyObject *_r = make_integer_value(PyNumber_Or(av, bv));
+            MenaiInt av, bv, res;
+            menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
+            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
+            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
+            if (menai_int_or(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            menai_int_free(&av); menai_int_free(&bv);
+            PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -1838,9 +1976,15 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-and")) goto error;
             if (!require_integer(b, "integer-bit-and")) goto error;
-            PyObject *av = menai_integer_value(a);
-            PyObject *bv = menai_integer_value(b);
-            PyObject *_r = make_integer_value(PyNumber_And(av, bv));
+            MenaiInt av, bv, res;
+            menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
+            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
+            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
+            if (menai_int_and(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            menai_int_free(&av); menai_int_free(&bv);
+            PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -1850,9 +1994,15 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-xor")) goto error;
             if (!require_integer(b, "integer-bit-xor")) goto error;
-            PyObject *av = menai_integer_value(a);
-            PyObject *bv = menai_integer_value(b);
-            PyObject *_r = make_integer_value(PyNumber_Xor(av, bv));
+            MenaiInt av, bv, res;
+            menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
+            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
+            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
+            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
+            if (menai_int_xor(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            menai_int_free(&av); menai_int_free(&bv);
+            PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -1862,11 +2012,35 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-shift-left")) goto error;
             if (!require_integer(b, "integer-bit-shift-left")) goto error;
-            PyObject *av = menai_integer_value(a);
-            PyObject *bv = menai_integer_value(b);
-            PyObject *_r = make_integer_value(PyNumber_Lshift(av, bv));
-            if (!_r) goto error;
-            reg_set_own(regs, base + dest, _r);
+            {
+                MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+                long shift;
+                if (!ib->is_big) {
+                    shift = ib->small;
+                } else {
+                    if (!menai_int_fits_long(&ib->big)) {
+                        menai_raise_eval_error("integer-bit-shift-left: shift amount too large");
+                        goto error;
+                    }
+                    if (menai_int_to_long(&ib->big, &shift) < 0) goto error;
+                }
+                if (shift < 0) {
+                    menai_raise_eval_error("integer-bit-shift-left: shift amount must be non-negative");
+                    goto error;
+                }
+                MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+                MenaiInt av, res;
+                menai_int_init(&av); menai_int_init(&res);
+                if (!ia->is_big) { if (menai_int_from_long(ia->small, &av) < 0) goto error; }
+                else { if (menai_int_copy(&ia->big, &av) < 0) goto error; }
+                if (menai_int_shift_left(&av, (Py_ssize_t)shift, &res) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+                menai_int_free(&av);
+                PyObject *_r = menai_integer_from_bigint(res);
+                if (!_r) goto error;
+                reg_set_own(regs, base + dest, _r);
+            }
             break;
         }
 
@@ -1874,11 +2048,35 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-shift-right")) goto error;
             if (!require_integer(b, "integer-bit-shift-right")) goto error;
-            PyObject *av = menai_integer_value(a);
-            PyObject *bv = menai_integer_value(b);
-            PyObject *_r = make_integer_value(PyNumber_Rshift(av, bv));
-            if (!_r) goto error;
-            reg_set_own(regs, base + dest, _r);
+            {
+                MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+                long shift;
+                if (!ib->is_big) {
+                    shift = ib->small;
+                } else {
+                    if (!menai_int_fits_long(&ib->big)) {
+                        menai_raise_eval_error("integer-bit-shift-right: shift amount too large");
+                        goto error;
+                    }
+                    if (menai_int_to_long(&ib->big, &shift) < 0) goto error;
+                }
+                if (shift < 0) {
+                    menai_raise_eval_error("integer-bit-shift-right: shift amount must be non-negative");
+                    goto error;
+                }
+                MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+                MenaiInt av, res;
+                menai_int_init(&av); menai_int_init(&res);
+                if (!ia->is_big) { if (menai_int_from_long(ia->small, &av) < 0) goto error; }
+                else { if (menai_int_copy(&ia->big, &av) < 0) goto error; }
+                if (menai_int_shift_right(&av, (Py_ssize_t)shift, &res) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+                menai_int_free(&av);
+                PyObject *_r = menai_integer_from_bigint(res);
+                if (!_r) goto error;
+                reg_set_own(regs, base + dest, _r);
+            }
             break;
         }
 
@@ -1886,9 +2084,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-min")) goto error;
             if (!require_integer(b, "integer-min")) goto error;
-            PyObject *_av = menai_integer_value(a);
-            PyObject *_bv = menai_integer_value(b);
-            reg_set_borrow(regs, base + dest, pylong_compare(_av, _bv, Py_LE) ? a : b);
+            reg_set_borrow(regs, base + dest, menai_integer_compare(a, b, Py_LE) ? a : b);
             break;
         }
 
@@ -1896,18 +2092,20 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-max")) goto error;
             if (!require_integer(b, "integer-max")) goto error;
-            PyObject *_av = menai_integer_value(a);
-            PyObject *_bv = menai_integer_value(b);
-            reg_set_borrow(regs, base + dest, pylong_compare(_av, _bv, Py_GE) ? a : b);
+            reg_set_borrow(regs, base + dest, menai_integer_compare(a, b, Py_GE) ? a : b);
             break;
         }
 
         case OP_INTEGER_TO_FLOAT: {
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer->float")) goto error;
-            PyObject *_av = menai_integer_value(a);
-            double d = PyLong_AsDouble(_av);
-            if (d == -1.0 && PyErr_Occurred()) goto error;
+            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            double d;
+            if (!ia->is_big) {
+                d = (double)ia->small;
+            } else {
+                if (menai_int_to_double(&ia->big, &d) < 0) goto error;
+            }
             PyObject *_r = make_float(d);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
@@ -1918,12 +2116,19 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer->complex")) goto error;
             if (!require_integer(b, "integer->complex")) goto error;
-            PyObject *_av = menai_integer_value(a);
-            double re = PyLong_AsDouble(_av);
-            if (re == -1.0 && PyErr_Occurred()) goto error;
-            PyObject *_bv = menai_integer_value(b);
-            double im = PyLong_AsDouble(_bv);
-            if (im == -1.0 && PyErr_Occurred()) goto error;
+            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            double re, im;
+            if (!ia->is_big) {
+                re = (double)ia->small;
+            } else {
+                if (menai_int_to_double(&ia->big, &re) < 0) goto error;
+            }
+            if (!ib->is_big) {
+                im = (double)ib->small;
+            } else {
+                if (menai_int_to_double(&ib->big, &im) < 0) goto error;
+            }
             PyObject *r = make_complex(re, im);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
@@ -1934,26 +2139,29 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer->string")) goto error;
             if (!require_integer(b, "integer->string")) goto error;
-            PyObject *_bv = menai_integer_value(b);
-            long radix = PyLong_AsLong(_bv);
-            if (radix == -1 && PyErr_Occurred()) goto error;
+            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            long radix;
+            if (!ib->is_big) {
+                radix = ib->small;
+            } else {
+                if (menai_int_to_long(&ib->big, &radix) < 0) goto error;
+            }
             if (radix != 2 && radix != 8 && radix != 10 && radix != 16) {
                 menai_raise_eval_errorf("integer->string: radix must be 2, 8, 10, or 16, got %ld", radix);
                 goto error;
             }
-            PyObject *av = menai_integer_value(a);
-            PyObject *py_str;
-            if (radix == 10) {
-                py_str = PyObject_Str(av);
-            } else {
-                const char *fmt = (radix == 2) ? "b" : (radix == 8) ? "o" : "x";
-                PyObject *_fmt_str = PyUnicode_FromString(fmt);
-                py_str = PyObject_Format(av, _fmt_str);
-                Py_DECREF(_fmt_str);
+            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            MenaiInt tmp;
+            menai_int_init(&tmp);
+            if (!ia->is_big) { if (menai_int_from_long(ia->small, &tmp) < 0) goto error; }
+            else { if (menai_int_copy(&ia->big, &tmp) < 0) goto error; }
+            char *cstr = NULL;
+            if (menai_int_to_string(&tmp, (int)radix, &cstr) < 0) {
+                menai_int_free(&tmp); goto error;
             }
-            if (py_str == NULL) goto error;
-            PyObject *r = menai_string_from_pyunicode(py_str);
-            Py_DECREF(py_str);
+            menai_int_free(&tmp);
+            PyObject *r = menai_string_from_utf8(cstr, (Py_ssize_t)strlen(cstr));
+            PyMem_Free(cstr);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;
@@ -1962,9 +2170,13 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
         case OP_INTEGER_CODEPOINT_TO_STRING: {
             PyObject *a = regs[base + src0];
             if (!require_integer(a, "integer-codepoint->string")) goto error;
-            PyObject *_av = menai_integer_value(a);
-            long cp = PyLong_AsLong(_av);
-            if (cp == -1 && PyErr_Occurred()) goto error;
+            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            long cp;
+            if (!ia->is_big) {
+                cp = ia->small;
+            } else {
+                if (menai_int_to_long(&ia->big, &cp) < 0) goto error;
+            }
             if (cp < 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) {
                 menai_raise_eval_errorf(
                     "integer-codepoint->string: invalid Unicode scalar value %ld", cp);
@@ -2298,9 +2510,13 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0];
             if (!require_float(a, "float->integer")) goto error;
             double v = menai_float_value(a);
+            MenaiInt res;
+            menai_int_init(&res);
             PyObject *py_int = PyLong_FromDouble(trunc(v));
             if (py_int == NULL) goto error;
-            PyObject *_r = make_integer_value(py_int);
+            if (menai_int_from_pylong(py_int, &res) < 0) { Py_DECREF(py_int); goto error; }
+            Py_DECREF(py_int);
+            PyObject *_r = menai_integer_from_bigint(res);
             if (_r == NULL) goto error;
             reg_set_own(regs, base + dest, _r);
             break;
@@ -2890,8 +3106,11 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("string-ref: index must be integer");
                 goto error;
             }
-            PyObject *iv = menai_integer_value(b);
-            Py_ssize_t idx = PyLong_AsSsize_t(iv);
+            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            long idx_l;
+            if (!ib->is_big) { idx_l = ib->small; }
+            else { if (menai_int_to_long(&ib->big, &idx_l) < 0) goto error; }
+            Py_ssize_t idx = (Py_ssize_t)idx_l;
             Py_ssize_t slen = menai_string_length(a);
             if (idx < 0 || idx >= slen) {
                 menai_raise_eval_errorf("string-ref index out of range: %zd", idx);
@@ -2910,9 +3129,12 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("string-slice: indices must be integers");
                 goto error;
             }
-            PyObject *bv = menai_integer_value(b);
-            PyObject *cv = menai_integer_value(c);
-            Py_ssize_t start = PyLong_AsSsize_t(bv), end = PyLong_AsSsize_t(cv);
+            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            MenaiInteger_Object *ic = (MenaiInteger_Object *)c;
+            long start_l, end_l;
+            if (!ib->is_big) { start_l = ib->small; } else { if (menai_int_to_long(&ib->big, &start_l) < 0) goto error; }
+            if (!ic->is_big) { end_l = ic->small; } else { if (menai_int_to_long(&ic->big, &end_l) < 0) goto error; }
+            Py_ssize_t start = (Py_ssize_t)start_l, end = (Py_ssize_t)end_l;
             Py_ssize_t slen = menai_string_length(a);
             if (start < 0) {
                 menai_raise_eval_errorf("string-slice start index cannot be negative: %zd", start);
@@ -2989,9 +3211,10 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("string->integer: radix must be integer");
                 goto error;
             }
-            PyObject *bv = menai_integer_value(b);
-            long radix = PyLong_AsLong(bv);
-            if (radix == -1 && PyErr_Occurred()) goto error;
+            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            long radix;
+            if (!ib->is_big) { radix = ib->small; }
+            else { if (menai_int_to_long(&ib->big, &radix) < 0) goto error; }
             if (radix != 2 && radix != 8 && radix != 10 && radix != 16) {
                 menai_raise_eval_errorf("string->integer radix must be 2, 8, 10, or 16, got %ld", radix);
                 goto error;
@@ -3007,7 +3230,11 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 PyErr_Clear();
                 reg_set_borrow(regs, base + dest, Menai_NONE);
             } else {
-                PyObject *_r = make_integer_value(ri);
+                MenaiInt tmp;
+                menai_int_init(&tmp);
+                if (menai_int_from_pylong(ri, &tmp) < 0) { Py_DECREF(ri); goto error; }
+                Py_DECREF(ri);
+                PyObject *_r = menai_integer_from_bigint(tmp);
                 if (_r == NULL) goto error;
                 reg_set_own(regs, base + dest, _r);
             }
@@ -3034,7 +3261,11 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!has_dot && !has_e && !has_j) {
                 result = PyLong_FromUnicodeObject(sa, 10);
                 if (result) {
-                    PyObject *r = make_integer_value(result);
+                    MenaiInt tmp;
+                    menai_int_init(&tmp);
+                    if (menai_int_from_pylong(result, &tmp) < 0) { Py_DECREF(result); Py_DECREF(sa); goto error; }
+                    Py_DECREF(result);
+                    PyObject *r = menai_integer_from_bigint(tmp);
                     Py_DECREF(sa);
                     if (r == NULL) goto error;
                     reg_set_own(regs, base + dest, r);
@@ -3227,8 +3458,10 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 goto error;
             }
             MenaiList_Object *lst_ref = (MenaiList_Object *)a;
-            PyObject *bv = menai_integer_value(b);
-            Py_ssize_t idx = PyLong_AsSsize_t(bv);
+            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            long idx_l;
+            if (!ib->is_big) { idx_l = ib->small; } else { if (menai_int_to_long(&ib->big, &idx_l) < 0) goto error; }
+            Py_ssize_t idx = (Py_ssize_t)idx_l;
             Py_ssize_t n = lst_ref->length;
             if (idx < 0 || idx >= n) {
                 menai_raise_eval_errorf("list-ref: index out of range: %zd", idx);
@@ -3380,9 +3613,12 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 goto error;
             }
             MenaiList_Object *lst_sl = (MenaiList_Object *)a;
-            PyObject *bv = menai_integer_value(b);
-            PyObject *cv = menai_integer_value(c);
-            Py_ssize_t start = PyLong_AsSsize_t(bv), end = PyLong_AsSsize_t(cv);
+            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            MenaiInteger_Object *ic = (MenaiInteger_Object *)c;
+            long start_l, end_l;
+            if (!ib->is_big) { start_l = ib->small; } else { if (menai_int_to_long(&ib->big, &start_l) < 0) goto error; }
+            if (!ic->is_big) { end_l = ic->small; } else { if (menai_int_to_long(&ic->big, &end_l) < 0) goto error; }
+            Py_ssize_t start = (Py_ssize_t)start_l, end = (Py_ssize_t)end_l;
             Py_ssize_t n = lst_sl->length;
             if (start < 0) {
                 menai_raise_eval_errorf("list-slice start index cannot be negative: %zd", start);
@@ -4160,11 +4396,13 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("range requires integer arguments");
                 goto error;
             }
-            PyObject *av = menai_integer_value(ra);
-            PyObject *bv = menai_integer_value(rb);
-            PyObject *cv = menai_integer_value(rc);
-            long start = PyLong_AsLong(av), end = PyLong_AsLong(bv), step = PyLong_AsLong(cv);
-            if ((start == -1 || end == -1 || step == -1) && PyErr_Occurred()) goto error;
+            MenaiInteger_Object *ia = (MenaiInteger_Object *)ra;
+            MenaiInteger_Object *ib = (MenaiInteger_Object *)rb;
+            MenaiInteger_Object *ic = (MenaiInteger_Object *)rc;
+            long start, end, step;
+            if (!ia->is_big) { start = ia->small; } else { if (menai_int_to_long(&ia->big, &start) < 0) goto error; }
+            if (!ib->is_big) { end = ib->small; } else { if (menai_int_to_long(&ib->big, &end) < 0) goto error; }
+            if (!ic->is_big) { step = ic->small; } else { if (menai_int_to_long(&ic->big, &step) < 0) goto error; }
             if (step == 0) {
                 menai_raise_eval_error("range: step cannot be zero");
                 goto error;
@@ -4256,9 +4494,10 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *val = regs[base + src0], *fidx = regs[base + src1];
             if (!require_struct(val, "struct-get-imm")) goto error;
             if (!require_integer(fidx, "struct-get-imm")) goto error;
-            PyObject *iv = menai_integer_value(fidx);
-            Py_ssize_t fi = PyLong_AsSsize_t(iv);
-            if (fi == -1 && PyErr_Occurred()) goto error;
+            MenaiInteger_Object *fi_io = (MenaiInteger_Object *)fidx;
+            long fi_l;
+            if (!fi_io->is_big) { fi_l = fi_io->small; } else { if (menai_int_to_long(&fi_io->big, &fi_l) < 0) goto error; }
+            Py_ssize_t fi = (Py_ssize_t)fi_l;
             PyObject *fv = ((MenaiStruct_Object *)val)->items[fi];
             reg_set_borrow(regs, base + dest, fv);
             break;
@@ -4299,9 +4538,10 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *val = regs[base + src0], *fidx = regs[base + src1], *new_val = regs[base + src2];
             if (!require_struct(val, "struct-set-imm")) goto error;
             if (!require_integer(fidx, "struct-set-imm")) goto error;
-            PyObject *iv = menai_integer_value(fidx);
-            Py_ssize_t fi = PyLong_AsSsize_t(iv);
-            if (fi == -1 && PyErr_Occurred()) goto error;
+            MenaiInteger_Object *fi_io = (MenaiInteger_Object *)fidx;
+            long fi_l;
+            if (!fi_io->is_big) { fi_l = fi_io->small; } else { if (menai_int_to_long(&fi_io->big, &fi_l) < 0) goto error; }
+            Py_ssize_t fi = (Py_ssize_t)fi_l;
             PyObject *stype = ((MenaiStruct_Object *)val)->struct_type;
             Py_ssize_t nf = Py_SIZE(val);
             PyObject **tmp = (PyObject **)PyMem_Malloc(nf * sizeof(PyObject *));

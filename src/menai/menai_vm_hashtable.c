@@ -72,10 +72,9 @@ menai_value_hash(PyObject *val)
     if (t == &MenaiBoolean_Type)
         return (Py_hash_t)((MenaiBoolean_Object *)val)->value;
 
-    /* MenaiInteger — delegate to PyLong hash (unavoidable: arbitrary precision) */
+    /* MenaiInteger — delegate to MenaiInteger_hash via the type slot */
     if (t == &MenaiInteger_Type) {
-        Py_hash_t h = PyObject_Hash(((MenaiInteger_Object *)val)->value);
-        return h;
+        return PyObject_Hash(val);
     }
 
     /* MenaiFloat — use _Py_HashDouble directly to avoid boxing */
@@ -161,8 +160,13 @@ menai_value_equal(PyObject *a, PyObject *b)
     }
 
     if (ta == &MenaiInteger_Type) {
-        /* PyObject_RichCompareBool is unavoidable for arbitrary precision */
-        return PyObject_RichCompareBool(((MenaiInteger_Object *)a)->value, ((MenaiInteger_Object *)b)->value, Py_EQ);
+        MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+        MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+        if (!ia->is_big && !ib->is_big) {
+            return ia->small == ib->small;
+        }
+        /* At least one is big — use the richcompare slot */
+        return PyObject_RichCompareBool(a, b, Py_EQ);
     }
 
     if (ta == &MenaiFloat_Type) {

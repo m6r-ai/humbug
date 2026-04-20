@@ -120,19 +120,25 @@ menai_convert_value(PyObject *src)
             PyErr_SetString(PyExc_TypeError, "MenaiInteger requires an int");
             return NULL;
         }
-        long lv = PyLong_AsLong(v);
-        if (!PyErr_Occurred() && lv >= MENAI_INT_CACHE_MIN && lv <= MENAI_INT_CACHE_MAX) {
+        int overflow = 0;
+        long lv = PyLong_AsLongAndOverflow(v, &overflow);
+        if (!overflow) {
+            if (lv == -1 && PyErr_Occurred()) {
+                Py_DECREF(v);
+                return NULL;
+            }
             Py_DECREF(v);
             return menai_integer_from_long(lv);
         }
-        PyErr_Clear();
-        MenaiInteger_Object *r = (MenaiInteger_Object *)MenaiInteger_Type.tp_alloc(&MenaiInteger_Type, 0);
-        if (r) {
-            r->value = v;
-        } else {
+        /* Bignum — convert via MenaiInt */
+        MenaiInt big;
+        menai_int_init(&big);
+        if (menai_int_from_pylong(v, &big) < 0) {
             Py_DECREF(v);
+            return NULL;
         }
-        return (PyObject *)r;
+        Py_DECREF(v);
+        return menai_integer_from_bigint(big);
     }
 
     if (t == Slow_FloatType) {
@@ -816,7 +822,17 @@ _to_slow_memo(PyObject *src, PyObject *memo)
     else if (t == &MenaiInteger_Type) {
         PyObject *cls = GET_SLOW_CLS("MenaiInteger");
         if (cls) {
-            result = PyObject_CallOneArg(cls, ((MenaiInteger_Object *)src)->value);
+            MenaiInteger_Object *obj = (MenaiInteger_Object *)src;
+            PyObject *pylong;
+            if (!obj->is_big) {
+                pylong = PyLong_FromLong(obj->small);
+            } else {
+                pylong = menai_int_to_pylong(&obj->big);
+            }
+            if (pylong != NULL) {
+                result = PyObject_CallOneArg(cls, pylong);
+                Py_DECREF(pylong);
+            }
             Py_DECREF(cls);
         }
     }
