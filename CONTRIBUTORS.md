@@ -13,6 +13,7 @@ Tharik Amanullah [tharikajis-dev](https://github.com/tharikajis-dev)
 * Added feature to edit a previous user message.
 * Refactored scrollbar styling.
 * Added support for mousewheel scrolling of tab bars.
+* Designed the original file attachment concept for conversations.
 
 Cameron McFarlane [Camium02](https://github.com/Camium02)
 
