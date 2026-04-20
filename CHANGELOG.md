@@ -5,7 +5,12 @@
 New features:
 
 - If an AI generates a diff hunk with `@@` but with no line numbers, the diff applier will try to find with a fuzzy match.
-- Dramatically import the performance of Menai dict and set containers.
+- Dramatically improve the performance of Menai dict and set containers.
+- Added keyboard scrolling of diff tabs
+
+Bug fixes:
+
+- Tighten guidance on regexp syntax.
 
 ## v44 (2026-04-19)
 
