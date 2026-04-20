@@ -2250,23 +2250,20 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
              * Creates a MenaiFunction with captured_values pre-allocated to
              * None, ready for PATCH_CLOSURE to fill in.
              *
-             * All metadata is read from the _closure_cache tuple built once
-             * by menai_convert_code_object — zero PyObject_GetAttrString
-             * calls in the hot loop; closure_caches is pre-loaded at frame
-             * setup time.
+             * All metadata is read from the ClosureCache struct stored in a
+             * PyCapsule built once by menai_convert_code_object — zero
+             * PyTuple_GET_ITEM or PyLong_AsLong calls on this path.
              */
             if (frame->closure_caches == NULL) {
                 menai_raise_eval_error("MAKE_CLOSURE: _code_caches not set on code object");
                 goto error;
             }
 
-            PyObject *closure_cache = PyList_GET_ITEM(frame->closure_caches, src0);
-
-            Py_ssize_t ncap = (Py_ssize_t)PyLong_AsLong(PyTuple_GET_ITEM(closure_cache, 3));
-
-            /* child_code is the bytecode object stored in the cache at index 9 */
-            PyObject *child_code = PyTuple_GET_ITEM(closure_cache, 9);
-            PyObject *func = menai_function_alloc(closure_cache, child_code, ncap, Menai_NONE);
+            PyObject *capsule = PyList_GET_ITEM(frame->closure_caches, src0);
+            const ClosureCache *cc = (const ClosureCache *)PyCapsule_GetPointer(
+                capsule, CLOSURE_CACHE_CAPSULE_NAME);
+            if (cc == NULL) goto error;
+            PyObject *func = menai_function_alloc(cc, Menai_NONE);
             if (func == NULL) goto error;
             reg_set_own(regs, base + dest, func);
             break;
@@ -4318,25 +4315,24 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
         case OP_STRUCT_FIELDS: {
             PyObject *val = regs[base + src0];
             if (!require_structtype(val, "struct-fields")) goto error;
-            PyObject *field_names = ((MenaiStructType_Object *)val)->field_names;
-            Py_ssize_t n = PyTuple_GET_SIZE(field_names);
+            MenaiStructType_Object *st = (MenaiStructType_Object *)val;
+            int n = st->nfields;
             PyObject **sf_arr = n > 0
                 ? (PyObject **)PyMem_Malloc(n * sizeof(PyObject *)) : NULL;
             if (n > 0 && !sf_arr) {
                 PyErr_NoMemory();
                 goto error;
             }
-            for (Py_ssize_t i = 0; i < n; i++) {
-                PyObject *fname = PyTuple_GET_ITEM(field_names, i);
-                PyObject *sym = menai_symbol_alloc(fname);
+            for (int i = 0; i < n; i++) {
+                PyObject *sym = menai_symbol_alloc(st->fields[i].name);
                 if (sym == NULL) {
-                    for (Py_ssize_t k = 0; k < i; k++) Py_DECREF(sf_arr[k]);
+                    for (int k = 0; k < i; k++) Py_DECREF(sf_arr[k]);
                     PyMem_Free(sf_arr);
                     goto error;
                 }
                 sf_arr[i] = sym;
             }
-            PyObject *r = menai_list_from_array_steal(sf_arr, n);
+            PyObject *r = menai_list_from_array_steal(sf_arr, (Py_ssize_t)n);
             if (r == NULL) goto error;
             reg_set_own(regs, base + dest, r);
             break;

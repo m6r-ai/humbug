@@ -466,6 +466,21 @@ menai_convert_value(PyObject *src)
     return NULL;
 }
 
+static void
+_closure_cache_capsule_destructor(PyObject *capsule)
+{
+    ClosureCache *cc = (ClosureCache *)PyCapsule_GetPointer(
+        capsule, CLOSURE_CACHE_CAPSULE_NAME);
+    if (!cc) return;
+    Py_XDECREF(cc->parameters);
+    Py_XDECREF(cc->name);
+    Py_XDECREF(cc->instrs_obj);
+    Py_XDECREF(cc->constants);
+    Py_XDECREF(cc->names_list);
+    Py_XDECREF(cc->closure_caches);
+    PyMem_Free(cc);
+}
+
 /*
  * menai_convert_code_object — walk a CodeObject tree, converting all
  * constants lists in-place from slow to fast types.
@@ -531,19 +546,16 @@ menai_convert_code_object(PyObject *code)
             return NULL;
         }
 
-        /* Build _closure_cache = (param_names_tuple, name, is_variadic_int,
-         * ncap_int, instrs_obj, constants, names, param_count_int,
-         * local_count_int, child_code) on this child so OP_MAKE_CLOSURE and
-         * menai_function_alloc need zero PyObject_GetAttrString calls.
-         * child_code at [9] lets OP_MAKE_CLOSURE pass bytecode to menai_function_alloc
-         * without fetching code_objects from the frame's code object. */
+        /* Build a ClosureCache struct for this child and wrap it in a PyCapsule.
+         * OP_MAKE_CLOSURE unwraps the capsule and passes the struct pointer
+         * directly to menai_function_alloc — zero PyTuple_GET_ITEM or
+         * PyLong_AsLong calls on the hot closure-creation path. */
         PyObject *param_names = PyObject_GetAttrString(child, "param_names");
         if (!param_names) {
             Py_DECREF(children);
             return NULL;
         }
 
-        /* param_names is a list; convert to tuple for O(1) indexing */
         PyObject *param_names_tup = PySequence_Tuple(param_names);
         Py_DECREF(param_names);
         if (!param_names_tup) {
@@ -636,22 +648,17 @@ menai_convert_code_object(PyObject *code)
 
         /* Fetch child._code_caches — already populated by the recursive call above. */
         PyObject *child_cc = PyObject_GetAttrString(child, "_code_caches");
-        PyObject *child_cc_or_none = (child_cc && PyList_Check(child_cc)) ? child_cc : Py_None;
+        PyObject *child_cc_list = (child_cc && PyList_Check(child_cc)) ? child_cc : NULL;
         if (!child_cc) PyErr_Clear();
 
-        /* Pre-extract the raw instruction pointer and length from instrs_obj so
-         * menai_function_alloc needs zero PyObject_GetBuffer calls per closure. */
         Py_buffer _view;
-        PyObject *instrs_ptr_obj = NULL;
-        PyObject *code_len_obj = NULL;
+        uint64_t *instrs_ptr = NULL;
+        int code_len = 0;
         if (PyObject_GetBuffer(instrs_obj, &_view, PyBUF_SIMPLE) == 0) {
-            instrs_ptr_obj = PyLong_FromVoidPtr(_view.buf);
-            code_len_obj   = PyLong_FromSsize_t(_view.len / (Py_ssize_t)sizeof(uint64_t));
+            instrs_ptr = (uint64_t *)_view.buf;
+            code_len = (int)(_view.len / sizeof(uint64_t));
             PyBuffer_Release(&_view);
-        }
-        if (!instrs_ptr_obj || !code_len_obj) {
-            Py_XDECREF(instrs_ptr_obj);
-            Py_XDECREF(code_len_obj);
+        } else {
             Py_XDECREF(child_cc);
             Py_DECREF(lc_obj);
             Py_DECREF(pc_obj);
@@ -664,29 +671,58 @@ menai_convert_code_object(PyObject *code)
             return NULL;
         }
 
-        PyObject *cache = Py_BuildValue("(OOiiOOOOOOOOO)", param_names_tup, cname,
-                                        is_variadic, (int)ncap,
-                                        instrs_obj, constants, names_list,
-                                        pc_obj, lc_obj, child,
-                                        child_cc_or_none,
-                                        instrs_ptr_obj, code_len_obj);
-        Py_DECREF(code_len_obj);
-        Py_DECREF(instrs_ptr_obj);
-        Py_XDECREF(child_cc);  /* drop owned ref — bytecode keeps child._code_caches alive */
+        ClosureCache *cc = (ClosureCache *)PyMem_Malloc(sizeof(ClosureCache));
+        if (!cc) {
+            Py_XDECREF(child_cc);
+            Py_DECREF(lc_obj);
+            Py_DECREF(pc_obj);
+            Py_DECREF(names_list);
+            Py_DECREF(constants);
+            Py_DECREF(instrs_obj);
+            Py_DECREF(param_names_tup);
+            Py_DECREF(cname);
+            Py_DECREF(children);
+            PyErr_NoMemory();
+            return NULL;
+        }
+
+        /* The ClosureCache owns references to all its PyObject* fields.
+         * The destructor will DECREF them.  bytecode (child) is not owned here
+         * — it is kept alive by the parent's code_objects list for the
+         * duration of execution. */
+        cc->parameters = param_names_tup;
+        cc->name = cname;
+        cc->bytecode = child;
+        cc->instrs_obj = instrs_obj;
+        cc->constants = constants;
+        cc->names_list = names_list;
+        cc->closure_caches = child_cc_list;  /* owned if non-NULL (child_cc ref) */
+        cc->instrs = instrs_ptr;
+        cc->param_count = (int)PyLong_AsLong(pc_obj);
+        cc->local_count = (int)PyLong_AsLong(lc_obj);
+        cc->is_variadic = is_variadic;
+        cc->ncap = ncap;
+        cc->code_len = code_len;
+
+        /* child_cc ownership transferred to cc->closure_caches if it was a list;
+         * otherwise drop the ref here. */
+        if (child_cc && child_cc != child_cc_list)
+            Py_DECREF(child_cc);
         Py_DECREF(lc_obj);
         Py_DECREF(pc_obj);
-        Py_DECREF(names_list);
-        Py_DECREF(constants);
-        Py_DECREF(instrs_obj);
-        Py_DECREF(param_names_tup);
-        Py_DECREF(cname);
-        if (!cache) {
+        /* names_list, constants, instrs_obj, param_names_tup, cname are now
+         * owned by cc — do not DECREF them here. */
+
+        PyObject *capsule = PyCapsule_New(cc, CLOSURE_CACHE_CAPSULE_NAME,
+                                          _closure_cache_capsule_destructor);
+        if (!capsule) {
+            PyMem_Free(cc);
             Py_DECREF(children);
             return NULL;
         }
 
-        int ok = PyObject_SetAttrString(child, "_closure_cache", cache);
-        Py_DECREF(cache);
+        int ok = PyObject_SetAttrString(child, "_closure_cache", capsule);
+        Py_DECREF(capsule);
         if (ok < 0) {
             Py_DECREF(children);
             return NULL;

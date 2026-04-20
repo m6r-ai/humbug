@@ -350,62 +350,38 @@ PyTypeObject MenaiFunction_Type = {
 /*
  * menai_function_alloc — direct C constructor for MenaiFunction.
  *
- * Allocates a function with ncap capture slots, all initialised to none_val
- * (the Menai_NONE singleton).  cache, bytecode, and none_val are all
- * borrowed; the function takes its own references.
- *
- * cache tuple layout:
- *   [0]  param_names_tup  (tuple of str)
- *   [1]  name             (str)
- *   [2]  is_variadic      (int: 0 or 1)
- *   [3]  ncap             (int — must equal the ncap argument)
- *   [4]  instrs_obj       (array.array)
- *   [5]  constants        (list)
- *   [6]  names_list       (list)
- *   [7]  param_count      (int)
- *   [8]  local_count      (int)
- *   [9]  child_code       (CodeObject)
- *  [10]  child _code_caches (list or None)
- *  [11]  instrs raw pointer (int via PyLong_FromVoidPtr)
- *  [12]  code_len         (int)
+ * Allocates a function with cache->ncap capture slots, all initialised to
+ * none_val.  cache is a borrowed pointer; none_val is a borrowed reference.
+ * The function takes its own references to the PyObject* fields it needs.
  */
 PyObject *
-menai_function_alloc(PyObject *cache, PyObject *bytecode,
-                     Py_ssize_t ncap, PyObject *none_val)
+menai_function_alloc(const ClosureCache *cache, PyObject *none_val)
 {
     MenaiFunction_Object *self = (MenaiFunction_Object *)
-        MenaiFunction_Type.tp_alloc(&MenaiFunction_Type, ncap);
+        MenaiFunction_Type.tp_alloc(&MenaiFunction_Type, cache->ncap);
     if (!self) return NULL;
 
-    PyObject *parameters = PyTuple_GET_ITEM(cache, 0);
-    PyObject *name = PyTuple_GET_ITEM(cache, 1);
-    int is_variadic = (int)PyLong_AsLong(PyTuple_GET_ITEM(cache, 2));
-    PyObject *instrs_obj = PyTuple_GET_ITEM(cache, 4);
-    PyObject *constants = PyTuple_GET_ITEM(cache, 5);
-    PyObject *names_obj = PyTuple_GET_ITEM(cache, 6);
-    int param_count = (int)PyLong_AsLong(PyTuple_GET_ITEM(cache, 7));
-    int local_count = (int)PyLong_AsLong(PyTuple_GET_ITEM(cache, 8));
+    Py_INCREF(cache->parameters);
+    self->parameters = cache->parameters;
+    Py_INCREF(cache->name);
+    self->name = cache->name;
+    Py_INCREF(cache->bytecode);
+    self->bytecode = cache->bytecode;
+    self->is_variadic = cache->is_variadic;
+    self->param_count = cache->param_count;
+    self->local_count = cache->local_count;
+    self->constants = cache->constants;
+    self->constants_items = cache->constants
+        ? ((PyListObject *)cache->constants)->ob_item : NULL;
+    self->names = cache->names_list;
+    self->names_items = cache->names_list
+        ? ((PyListObject *)cache->names_list)->ob_item : NULL;
+    self->closure_caches = cache->closure_caches;
+    self->instrs = cache->instrs;
+    self->instrs_obj = cache->instrs_obj;
+    self->code_len = cache->code_len;
 
-    Py_INCREF(parameters);
-    self->parameters = parameters;
-    Py_INCREF(name);
-    self->name = name;
-    Py_INCREF(bytecode);
-    self->bytecode = bytecode;
-    self->is_variadic = is_variadic;
-    self->param_count = param_count;
-    self->local_count = local_count;
-    self->constants = constants;
-    self->constants_items = PyList_Check(constants) ? ((PyListObject *)constants)->ob_item : NULL;
-    self->names = names_obj;
-    self->names_items = PyList_Check(names_obj) ? ((PyListObject *)names_obj)->ob_item : NULL;
-    PyObject *_cc = PyTuple_GET_ITEM(cache, 10);
-    self->closure_caches = (_cc != Py_None && PyList_Check(_cc)) ? _cc : NULL;
-    self->instrs = (uint64_t *)PyLong_AsVoidPtr(PyTuple_GET_ITEM(cache, 11));
-    self->instrs_obj = instrs_obj;
-    self->code_len = (int)PyLong_AsLong(PyTuple_GET_ITEM(cache, 12));
-
-    for (Py_ssize_t i = 0; i < ncap; i++) {
+    for (Py_ssize_t i = 0; i < cache->ncap; i++) {
         Py_INCREF(none_val);
         self->captures[i] = none_val;
     }
