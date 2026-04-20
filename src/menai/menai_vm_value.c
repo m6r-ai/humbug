@@ -120,6 +120,12 @@ menai_convert_value(PyObject *src)
             PyErr_SetString(PyExc_TypeError, "MenaiInteger requires an int");
             return NULL;
         }
+        long lv = PyLong_AsLong(v);
+        if (!PyErr_Occurred() && lv >= MENAI_INT_CACHE_MIN && lv <= MENAI_INT_CACHE_MAX) {
+            Py_DECREF(v);
+            return menai_integer_from_long(lv);
+        }
+        PyErr_Clear();
         MenaiInteger_Object *r = (MenaiInteger_Object *)MenaiInteger_Type.tp_alloc(&MenaiInteger_Type, 0);
         if (r) {
             r->value = v;

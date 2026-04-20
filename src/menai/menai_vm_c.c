@@ -436,9 +436,22 @@ pylong_compare(PyObject *a, PyObject *b, int op)
     return PyObject_RichCompareBool(a, b, op);
 }
 
+/*
+ * make_integer_value — wrap an already-computed PyLong in a MenaiInteger.
+ *
+ * Takes ownership of py_int (consumes the reference from PyNumber_Add etc.).
+ * Checks the cache first: if py_int's value is in range, returns the cached
+ * singleton (INCREF'd) and DECREFs py_int.  Otherwise allocates a fresh
+ * MenaiInteger_Object that owns py_int.
+ */
 static inline PyObject *make_integer_value(PyObject *py_int) {
     if (!py_int) return NULL;
-
+    long v = PyLong_AsLong(py_int);
+    if (!PyErr_Occurred() && v >= MENAI_INT_CACHE_MIN && v <= MENAI_INT_CACHE_MAX) {
+        Py_DECREF(py_int);
+        return menai_integer_from_long(v);
+    }
+    PyErr_Clear();
     MenaiInteger_Object *r = (MenaiInteger_Object *)Menai_IntegerType->tp_alloc(Menai_IntegerType, 0);
     if (r) {
         r->value = py_int;
@@ -449,6 +462,8 @@ static inline PyObject *make_integer_value(PyObject *py_int) {
 }
 
 static inline PyObject *make_integer_from_ssize_t(Py_ssize_t n) {
+    if (n >= MENAI_INT_CACHE_MIN && n <= MENAI_INT_CACHE_MAX)
+        return menai_integer_from_long((long)n);
     PyObject *iv = PyLong_FromSsize_t(n);
     if (!iv) return NULL;
     MenaiInteger_Object *r = (MenaiInteger_Object *)Menai_IntegerType->tp_alloc(Menai_IntegerType, 0);
@@ -461,15 +476,7 @@ static inline PyObject *make_integer_from_ssize_t(Py_ssize_t n) {
 }
 
 static inline PyObject *make_integer_from_long(long n) {
-    PyObject *iv = PyLong_FromLong(n);
-    if (!iv) return NULL;
-    MenaiInteger_Object *r = (MenaiInteger_Object *)Menai_IntegerType->tp_alloc(Menai_IntegerType, 0);
-    if (r) {
-        r->value = iv;
-    } else {
-        Py_DECREF(iv);
-    }
-    return (PyObject *)r;
+    return menai_integer_from_long(n);
 }
 
 static inline PyObject *make_float(double v) {

@@ -10,6 +10,8 @@
 
 #include "menai_vm_integer.h"
 
+static PyObject *_integer_cache[MENAI_INT_CACHE_SIZE];
+
 static PyObject *
 MenaiInteger_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 {
@@ -33,6 +35,18 @@ MenaiInteger_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 static void
 MenaiInteger_dealloc(PyObject *self)
 {
+    MenaiInteger_Object *obj = (MenaiInteger_Object *)self;
+    if (obj->value != NULL) {
+        long v = PyLong_AsLong(obj->value);
+        if (PyErr_Occurred()) {
+            /* Bignum — not cached, clear the OverflowError and free normally. */
+            PyErr_Clear();
+        } else if (v >= MENAI_INT_CACHE_MIN && v <= MENAI_INT_CACHE_MAX) {
+            /* Cached singleton — must never be freed. Restore refcount. */
+            Py_SET_REFCNT(self, 1);
+            return;
+        }
+    }
     Py_XDECREF(((MenaiInteger_Object *)self)->value);
     Py_TYPE(self)->tp_free(self);
 }
@@ -104,8 +118,41 @@ PyTypeObject MenaiInteger_Type = {
     .tp_hash = MenaiInteger_hash,
 };
 
+PyObject *
+menai_integer_from_long(long n)
+{
+    if (n >= MENAI_INT_CACHE_MIN && n <= MENAI_INT_CACHE_MAX) {
+        PyObject *cached = _integer_cache[n - MENAI_INT_CACHE_MIN];
+        Py_INCREF(cached);
+        return cached;
+    }
+
+    PyObject *iv = PyLong_FromLong(n);
+    if (!iv) return NULL;
+    MenaiInteger_Object *r = (MenaiInteger_Object *)MenaiInteger_Type.tp_alloc(&MenaiInteger_Type, 0);
+    if (r) {
+        r->value = iv;
+    } else {
+        Py_DECREF(iv);
+    }
+    return (PyObject *)r;
+}
+
 int
 menai_vm_integer_init(void)
 {
-    return PyType_Ready(&MenaiInteger_Type);
+    if (PyType_Ready(&MenaiInteger_Type) < 0) return -1;
+
+    for (long v = MENAI_INT_CACHE_MIN; v <= MENAI_INT_CACHE_MAX; v++) {
+        PyObject *iv = PyLong_FromLong(v);
+        if (!iv) return -1;
+        MenaiInteger_Object *obj = (MenaiInteger_Object *)MenaiInteger_Type.tp_alloc(&MenaiInteger_Type, 0);
+        if (!obj) {
+            Py_DECREF(iv);
+            return -1;
+        }
+        obj->value = iv;
+        _integer_cache[v - MENAI_INT_CACHE_MIN] = (PyObject *)obj;
+    }
+    return 0;
 }
