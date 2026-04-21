@@ -6,13 +6,15 @@ New features:
 
 - If an AI generates a diff hunk with `@@` but with no line numbers, the diff applier will try to find with a fuzzy match.
 - Dramatically improve the performance of the Menai VM.
-- Added keyboard scrolling of diff tabs
+- Added keyboard scrolling of diff tabs.
 
 Bug fixes:
 
 - Tighten guidance on regexp syntax.
 - Despite instructions, and AI may use the wrong alternation format in regexps.  If we get no results using an escaped form,
   but get results when it's unescaped, the tool will now return the results and warning that it had to remove the escaping.
+- If you highlight text and the open the find control in a diff tab it now uses the selected text as the initial search
+  option.
 
 ## v44 (2026-04-19)
 
