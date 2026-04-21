@@ -17,7 +17,7 @@
 static MenaiValue _integer_cache[MENAI_INT_CACHE_SIZE];
 
 static void
-MenaiInteger_dealloc(PyObject *self)
+MenaiInteger_dealloc(MenaiValue self)
 {
     MenaiInteger_Object *obj = (MenaiInteger_Object *)self;
     if (!obj->is_big) {
@@ -41,7 +41,7 @@ PyTypeObject MenaiInteger_Type = {
     "menai.MenaiInteger",          /* tp_name */
     sizeof(MenaiInteger_Object),   /* tp_basicsize */
     0,                             /* tp_itemsize */
-    MenaiInteger_dealloc,                  /* tp_dealloc */
+    (destructor)MenaiInteger_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     Py_TPFLAGS_DEFAULT,
 };
@@ -61,7 +61,7 @@ menai_integer_from_long(long n)
 
     r->ob_refcnt = 1;
     r->ob_type = &MenaiInteger_Type;
-    r->ob_destructor = (menai_destructor)MenaiInteger_dealloc;
+    r->ob_destructor = MenaiInteger_dealloc;
     r->is_big = 0;
     r->small = n;
     menai_int_init(&r->big);
@@ -94,7 +94,7 @@ menai_integer_from_bigint(MenaiInt src)
 
     r->ob_refcnt = 1;
     r->ob_type = &MenaiInteger_Type;
-    r->ob_destructor = (menai_destructor)MenaiInteger_dealloc;
+    r->ob_destructor = MenaiInteger_dealloc;
     r->is_big = 1;
     r->small = 0;
     r->big = src; /* transfer ownership */
@@ -113,7 +113,7 @@ menai_vm_integer_init(void)
 
         obj->ob_refcnt = 1;
         obj->ob_type = &MenaiInteger_Type;
-        obj->ob_destructor = (menai_destructor)MenaiInteger_dealloc;
+        obj->ob_destructor = MenaiInteger_dealloc;
         obj->is_big = 0;
         obj->small = v;
         menai_int_init(&obj->big);

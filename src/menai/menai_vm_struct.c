@@ -23,7 +23,7 @@
  * ------------------------------------------------------------------------- */
 
 static void
-MenaiStructType_dealloc(PyObject *self)
+MenaiStructType_dealloc(MenaiValue self)
 {
     MenaiStructType_Object *s = (MenaiStructType_Object *)self;
     Py_XDECREF(s->name);
@@ -38,7 +38,7 @@ PyTypeObject MenaiStructType_Type = {
     "menai.MenaiStructType",          /* tp_name */
     sizeof(MenaiStructType_Object),   /* tp_basicsize */
     0,                             /* tp_itemsize */
-    MenaiStructType_dealloc,                  /* tp_dealloc */
+    (destructor)MenaiStructType_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     Py_TPFLAGS_DEFAULT,
 };
@@ -63,7 +63,7 @@ _build_struct_type(PyObject *name, int tag, PyObject *fn_tup)
 
     self->ob_refcnt = 1;
     self->ob_type = &MenaiStructType_Type;
-    self->ob_destructor = (menai_destructor)MenaiStructType_dealloc;
+    self->ob_destructor = MenaiStructType_dealloc;
     Py_INCREF(name);
     self->name = name;
     self->tag = tag;
@@ -99,7 +99,7 @@ menai_struct_type_new_from_args(PyObject *args)
  * ------------------------------------------------------------------------- */
 
 static void
-MenaiStruct_dealloc(PyObject *self)
+MenaiStruct_dealloc(MenaiValue self)
 {
     MenaiStruct_Object *s = (MenaiStruct_Object *)self;
     menai_xrelease(s->struct_type);
@@ -113,7 +113,7 @@ PyTypeObject MenaiStruct_Type = {
     "menai.MenaiStruct",          /* tp_name */
     sizeof(MenaiStruct_Object) - sizeof(MenaiValue),   /* tp_basicsize */
     0,                             /* tp_itemsize */
-    MenaiStruct_dealloc,                  /* tp_dealloc */
+    (destructor)MenaiStruct_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     Py_TPFLAGS_DEFAULT,
 };
@@ -128,7 +128,7 @@ menai_struct_alloc(MenaiValue struct_type, MenaiValue *field_values,
 
     self->ob_refcnt = 1;
     self->ob_type = &MenaiStruct_Type;
-    self->ob_destructor = (menai_destructor)MenaiStruct_dealloc;
+    self->ob_destructor = MenaiStruct_dealloc;
     self->nfields = (int)nfields;
     menai_retain(struct_type);
     self->struct_type = struct_type;

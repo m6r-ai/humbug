@@ -22,7 +22,7 @@
 #include "menai_vm_memory.h"
 #include "menai_vm_hashtable.h"
 
-static void MenaiList_dealloc(PyObject *self);
+static void MenaiList_dealloc(MenaiValue self);
 
 /* ---------------------------------------------------------------------------
  * Free-list cache
@@ -81,7 +81,7 @@ _menai_list_cache_alloc_obj(void)
 
     obj->ob_refcnt = 1;
     obj->ob_type = &MenaiList_Type;
-    obj->ob_destructor = (menai_destructor)MenaiList_dealloc;
+    obj->ob_destructor = MenaiList_dealloc;
     obj->elements = NULL;
     obj->length = 0;
     obj->owner = NULL;
@@ -168,7 +168,7 @@ _menai_list_cache_clear(void)
  * ------------------------------------------------------------------------- */
 
 static void
-MenaiList_dealloc(PyObject *self)
+MenaiList_dealloc(MenaiValue self)
 {
     MenaiList_Object *lst = (MenaiList_Object *)self;
     if (lst->owner != NULL) {
@@ -194,7 +194,7 @@ PyTypeObject MenaiList_Type = {
     "menai.MenaiList",          /* tp_name */
     sizeof(MenaiList_Object),   /* tp_basicsize */
     0,                             /* tp_itemsize */
-    MenaiList_dealloc,                  /* tp_dealloc */
+    (destructor)MenaiList_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     Py_TPFLAGS_DEFAULT,
 };

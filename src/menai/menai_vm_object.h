@@ -62,7 +62,7 @@ typedef PyTypeObject MenaiType;
  *       double value;
  *   } MenaiFloat_Object;
  */
-typedef void (*menai_destructor)(void *);
+typedef void (*menai_destructor)(MenaiValue);
 
 #define MenaiObject_HEAD              \
     size_t ob_refcnt;                 \

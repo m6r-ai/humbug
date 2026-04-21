@@ -33,7 +33,7 @@ _set_free_arrays(MenaiValue *elements, Py_hash_t *hashes, Py_ssize_t n)
 }
 
 static void
-MenaiSet_dealloc(PyObject *self)
+MenaiSet_dealloc(MenaiValue self)
 {
     MenaiSet_Object *s = (MenaiSet_Object *)self;
     _set_free_arrays(s->elements, s->hashes, s->length);
@@ -46,7 +46,7 @@ PyTypeObject MenaiSet_Type = {
     "menai.MenaiSet",          /* tp_name */
     sizeof(MenaiSet_Object),   /* tp_basicsize */
     0,                             /* tp_itemsize */
-    MenaiSet_dealloc,                  /* tp_dealloc */
+    (destructor)MenaiSet_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     Py_TPFLAGS_DEFAULT,
 };
@@ -62,7 +62,7 @@ menai_set_from_arrays_steal(MenaiValue *elements, Py_hash_t *hashes, Py_ssize_t 
 
     obj->ob_refcnt = 1;
     obj->ob_type = &MenaiSet_Type;
-    obj->ob_destructor = (menai_destructor)MenaiSet_dealloc;
+    obj->ob_destructor = MenaiSet_dealloc;
 
     if (menai_ht_build(&obj->ht, elements, hashes, n) < 0) {
         _set_free_arrays(elements, hashes, n);
@@ -85,7 +85,7 @@ menai_set_new_empty(void)
 
     obj->ob_refcnt = 1;
     obj->ob_type = &MenaiSet_Type;
-    obj->ob_destructor = (menai_destructor)MenaiSet_dealloc;
+    obj->ob_destructor = MenaiSet_dealloc;
     obj->elements = NULL;
     obj->hashes = NULL;
     obj->ht.slots = NULL;

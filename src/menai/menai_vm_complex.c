@@ -9,7 +9,7 @@
 #include "menai_vm_complex.h"
 
 static void
-MenaiComplex_dealloc(PyObject *self)
+MenaiComplex_dealloc(MenaiValue self)
 {
     free(self);
 }
@@ -19,7 +19,7 @@ PyTypeObject MenaiComplex_Type = {
     "menai.MenaiComplex",          /* tp_name */
     sizeof(MenaiComplex_Object),   /* tp_basicsize */
     0,                             /* tp_itemsize */
-    MenaiComplex_dealloc,          /* tp_dealloc */
+    (destructor)MenaiComplex_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     Py_TPFLAGS_DEFAULT,
 };
@@ -31,7 +31,7 @@ menai_complex_alloc(double real, double imag)
     if (self == NULL) return NULL;
     self->ob_refcnt = 1;
     self->ob_type = &MenaiComplex_Type;
-    self->ob_destructor = (menai_destructor)MenaiComplex_dealloc;
+    self->ob_destructor = MenaiComplex_dealloc;
     self->real = real;
     self->imag = imag;
     return (MenaiValue)self;

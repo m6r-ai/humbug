@@ -13,9 +13,9 @@
 #include "menai_vm_symbol.h"
 
 static void
-MenaiSymbol_dealloc(PyObject *self)
+MenaiSymbol_dealloc(MenaiValue self)
 {
-    Py_XDECREF(((MenaiSymbol_Object *)self)->name);
+    Py_XDECREF(((MenaiSymbol_Object *)self)->name);  /* name is a Python-owned interned str */
     free(self);
 }
 
@@ -24,7 +24,7 @@ PyTypeObject MenaiSymbol_Type = {
     "menai.MenaiSymbol",          /* tp_name */
     sizeof(MenaiSymbol_Object),   /* tp_basicsize */
     0,                            /* tp_itemsize */
-    MenaiSymbol_dealloc,          /* tp_dealloc */
+    (destructor)MenaiSymbol_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     Py_TPFLAGS_DEFAULT,
 };
@@ -43,7 +43,7 @@ menai_symbol_alloc(PyObject *name)
 
     self->ob_refcnt = 1;
     self->ob_type = &MenaiSymbol_Type;
-    self->ob_destructor = (menai_destructor)MenaiSymbol_dealloc;
+    self->ob_destructor = MenaiSymbol_dealloc;
     self->name = name;
 
     return (MenaiValue)self;

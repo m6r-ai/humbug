@@ -16,7 +16,7 @@
 #include "menai_vm_string.h"
 #include "menai_vm_string_tables.h"
 
-static void MenaiString_dealloc(PyObject *self);
+static void MenaiString_dealloc(MenaiValue self);
 
 /* MenaiEvalError — fetched at init time by menai_vm_string_init(). */
 static PyObject *_MenaiEvalError = NULL;
@@ -36,7 +36,7 @@ _menai_string_alloc(Py_ssize_t len)
 
     obj->ob_refcnt = 1;
     obj->ob_type = &MenaiString_Type;
-    obj->ob_destructor = (menai_destructor)MenaiString_dealloc;
+    obj->ob_destructor = MenaiString_dealloc;
     obj->length = len;
     obj->hash = -1;
 
@@ -44,7 +44,7 @@ _menai_string_alloc(Py_ssize_t len)
 }
 
 static void
-MenaiString_dealloc(PyObject *self)
+MenaiString_dealloc(MenaiValue self)
 {
     /* Data is inline — one free covers the whole allocation. */
     free(self);
@@ -55,7 +55,7 @@ PyTypeObject MenaiString_Type = {
     "menai.MenaiString",          /* tp_name */
     sizeof(MenaiString_Object),   /* tp_basicsize */
     0,                             /* tp_itemsize */
-    MenaiString_dealloc,                  /* tp_dealloc */
+    (destructor)MenaiString_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     Py_TPFLAGS_DEFAULT,
 };

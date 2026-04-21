@@ -15,7 +15,7 @@
 #include "menai_vm_memory.h"
 
 static void
-MenaiFunction_dealloc(PyObject *self)
+MenaiFunction_dealloc(MenaiValue self)
 {
     MenaiFunction_Object *f = (MenaiFunction_Object *)self;
     menai_code_object_release(f->bytecode);
@@ -29,7 +29,7 @@ PyTypeObject MenaiFunction_Type = {
     "menai.MenaiFunction",                        /* tp_name */
     sizeof(MenaiFunction_Object) - sizeof(MenaiValue), /* tp_basicsize */
     0,                                            /* tp_itemsize */
-    MenaiFunction_dealloc,                        /* tp_dealloc */
+    (destructor)MenaiFunction_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     Py_TPFLAGS_DEFAULT,
 };
@@ -44,7 +44,7 @@ menai_function_alloc(MenaiCodeObject *co, MenaiValue none_val)
 
     self->ob_refcnt = 1;
     self->ob_type = &MenaiFunction_Type;
-    self->ob_destructor = (menai_destructor)MenaiFunction_dealloc;
+    self->ob_destructor = MenaiFunction_dealloc;
     self->ncap = ncap;
     menai_code_object_retain(co);
     self->bytecode = co;
