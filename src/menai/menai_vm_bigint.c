@@ -5,8 +5,7 @@
  * Zero: sign=0, length=0, digits=NULL.
  *
  * All heap allocation uses PyMem_Malloc / PyMem_Realloc / PyMem_Free.
- * Only menai_int_from_pylong, menai_int_to_pylong, and menai_int_hash
- * may call the Python C API.
+ * Only menai_int_from_pylong and menai_int_to_pylong may call the Python C API.
  */
 
 #define PY_SSIZE_T_CLEAN
@@ -459,12 +458,11 @@ menai_int_from_pylong(PyObject *obj, MenaiInt *a)
     }
 
     /* Large value: use _PyLong_AsByteArray. */
-    PyObject *zero = PyLong_FromLong(0);
-    if (zero == NULL) {
+    int sign = 0;
+    if (PyLong_GetSign(obj, &sign) < 0) {
         return -1;
     }
-    int is_neg = (PyObject_RichCompareBool(obj, zero, Py_LT) == 1);
-    Py_DECREF(zero);
+    int is_neg = (sign < 0);
 
     /* Get number of bits. */
     size_t nbits = (size_t)_PyLong_NumBits(obj);
@@ -961,17 +959,33 @@ menai_int_to_string(const MenaiInt *a, int base, char **out)
     return 0;
 }
 
-/* Compute a Py_hash_t compatible with CPython's integer hash. */
+/*
+ * Compute a hash for a using FNV-1a over the 32-bit digits, then mix in the
+ * sign.  Zero always hashes to 0.  The result is never -1 (which is reserved
+ * as an error sentinel by convention); -1 is remapped to -2.
+ */
 Py_hash_t
 menai_int_hash(const MenaiInt *a)
 {
-    PyObject *obj = menai_int_to_pylong(a);
-    if (obj == NULL) {
-        return -1;
+    if (a->sign == 0) {
+        return 0;
     }
-    Py_hash_t h = PyObject_Hash(obj);
-    Py_DECREF(obj);
-    return h;
+
+    /* FNV-1a, 64-bit variant. */
+    uint64_t h = 14695981039346656037ULL;
+    for (Py_ssize_t i = 0; i < a->length; i++) {
+        uint32_t d = a->digits[i];
+        h ^= (uint64_t)(d & 0xFF);         h *= 1099511628211ULL;
+        h ^= (uint64_t)((d >> 8) & 0xFF);  h *= 1099511628211ULL;
+        h ^= (uint64_t)((d >> 16) & 0xFF); h *= 1099511628211ULL;
+        h ^= (uint64_t)((d >> 24) & 0xFF); h *= 1099511628211ULL;
+    }
+    if (a->sign == -1) {
+        h = ~h;
+    }
+
+    Py_hash_t result = (Py_hash_t)h;
+    return (result == -1) ? -2 : result;
 }
 
 /* result = a + b */

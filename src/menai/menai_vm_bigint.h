@@ -23,8 +23,8 @@
  *   is set.
  *
  * Python API boundary:
- *   Only menai_int_from_pylong, menai_int_to_pylong, and menai_int_hash
- *   may call the Python C API.  All other functions are pure C.
+ *   Only menai_int_from_pylong and menai_int_to_pylong may call the Python
+ *   C API.  All other functions are pure C.
  *
  * Memory:
  *   All heap allocation uses PyMem_Malloc / PyMem_Realloc / PyMem_Free.
@@ -128,11 +128,8 @@ PyObject *menai_int_to_pylong(const MenaiInt *a);
 int menai_int_to_string(const MenaiInt *a, int base, char **out);
 
 /*
- * Compute a Py_hash_t for a compatible with CPython's integer hash algorithm,
- * so that MenaiInt values used as dict keys are consistent with Python int keys.
- * Returns -2 (not -1) for values whose hash would mathematically be -1,
- * following CPython convention. Returns -1 only to signal an internal error.
- * May use the Python C API.
+ * Compute a hash for a.  Zero hashes to 0.  The result is never -1; values
+ * that would hash to -1 are remapped to -2 by convention.  Never fails.
  */
 Py_hash_t menai_int_hash(const MenaiInt *a);
 
