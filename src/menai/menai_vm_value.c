@@ -463,7 +463,7 @@ menai_value_describe_integer(MenaiValue val)
     char *s = NULL;
     if (menai_int_to_string(&obj->big, 10, &s) < 0) return NULL;
     PyObject *r = PyUnicode_FromString(s);
-    PyMem_Free(s);
+    free(s);
     return r;
 }
 

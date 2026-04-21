@@ -27,8 +27,8 @@
  *   C API.  All other functions are pure C.
  *
  * Memory:
- *   All heap allocation uses PyMem_Malloc / PyMem_Realloc / PyMem_Free.
- *   Strings returned by menai_int_to_string must be freed with PyMem_Free.
+ *   All heap allocation uses malloc / free.
+ *   Strings returned by menai_int_to_string must be freed with free().
  */
 
 #ifndef MENAI_VM_BIGINT_H

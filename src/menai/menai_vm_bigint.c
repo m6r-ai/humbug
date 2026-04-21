@@ -4,13 +4,13 @@
  * Representation: sign-magnitude, base 2^32, little-endian digits.
  * Zero: sign=0, length=0, digits=NULL.
  *
- * All heap allocation uses PyMem_Malloc / PyMem_Realloc / PyMem_Free.
  * Only menai_int_from_pylong and menai_int_to_pylong may call the Python C API.
  */
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include <stdlib.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -48,7 +48,7 @@ _menai_int_normalize(MenaiInt *a)
     }
     if (a->length == 0) {
         if (a->digits != NULL) {
-            PyMem_Free(a->digits);
+            free(a->digits);
             a->digits = NULL;
         }
         a->sign = 0;
@@ -81,7 +81,7 @@ _menai_int_add_mag(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
 {
     Py_ssize_t max_len = (a->length > b->length) ? a->length : b->length;
     Py_ssize_t out_len = max_len + 1;
-    uint32_t *digits = (uint32_t *)PyMem_Malloc((size_t)out_len * sizeof(uint32_t));
+    uint32_t *digits = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (digits == NULL) {
         PyErr_NoMemory();
         return -1;
@@ -112,7 +112,7 @@ _menai_int_sub_mag(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
 {
     /* |a| >= |b| is a precondition. */
     Py_ssize_t out_len = a->length;
-    uint32_t *digits = (uint32_t *)PyMem_Malloc((size_t)out_len * sizeof(uint32_t));
+    uint32_t *digits = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (digits == NULL) {
         PyErr_NoMemory();
         return -1;
@@ -154,7 +154,7 @@ _menai_int_divmod_1(
         return 0;
     }
 
-    uint32_t *qdigits = (uint32_t *)PyMem_Malloc((size_t)a->length * sizeof(uint32_t));
+    uint32_t *qdigits = (uint32_t *)malloc((size_t)a->length * sizeof(uint32_t));
     if (qdigits == NULL) {
         PyErr_NoMemory();
         return -1;
@@ -210,14 +210,14 @@ _menai_int_divmod_mag(
 
     /* Allocate shifted copies: un has m+1 digits, vn has n digits. */
     Py_ssize_t un_len = m + 1;
-    uint32_t *un = (uint32_t *)PyMem_Malloc((size_t)un_len * sizeof(uint32_t));
+    uint32_t *un = (uint32_t *)malloc((size_t)un_len * sizeof(uint32_t));
     if (un == NULL) {
         PyErr_NoMemory();
         return -1;
     }
-    uint32_t *vn = (uint32_t *)PyMem_Malloc((size_t)n * sizeof(uint32_t));
+    uint32_t *vn = (uint32_t *)malloc((size_t)n * sizeof(uint32_t));
     if (vn == NULL) {
-        PyMem_Free(un);
+        free(un);
         PyErr_NoMemory();
         return -1;
     }
@@ -254,10 +254,10 @@ _menai_int_divmod_mag(
     }
 
     Py_ssize_t q_len = m - n + 1;
-    uint32_t *qdigits = (uint32_t *)PyMem_Malloc((size_t)q_len * sizeof(uint32_t));
+    uint32_t *qdigits = (uint32_t *)malloc((size_t)q_len * sizeof(uint32_t));
     if (qdigits == NULL) {
-        PyMem_Free(un);
-        PyMem_Free(vn);
+        free(un);
+        free(vn);
         PyErr_NoMemory();
         return -1;
     }
@@ -329,10 +329,10 @@ _menai_int_divmod_mag(
     _menai_int_normalize(quotient);
 
     /* Unnormalize remainder: shift un right by d bits. */
-    uint32_t *rdigits = (uint32_t *)PyMem_Malloc((size_t)n * sizeof(uint32_t));
+    uint32_t *rdigits = (uint32_t *)malloc((size_t)n * sizeof(uint32_t));
     if (rdigits == NULL) {
-        PyMem_Free(un);
-        PyMem_Free(vn);
+        free(un);
+        free(vn);
         PyErr_NoMemory();
         return -1;
     }
@@ -355,8 +355,8 @@ _menai_int_divmod_mag(
     remainder->sign = 1;
     _menai_int_normalize(remainder);
 
-    PyMem_Free(un);
-    PyMem_Free(vn);
+    free(un);
+    free(vn);
     return 0;
 }
 
@@ -365,7 +365,7 @@ void
 menai_int_free(MenaiInt *a)
 {
     if (a->digits != NULL) {
-        PyMem_Free(a->digits);
+        free(a->digits);
         a->digits = NULL;
     }
     a->length = 0;
@@ -380,7 +380,7 @@ menai_int_copy(const MenaiInt *src, MenaiInt *dst)
         menai_int_free(dst);
         return 0;
     }
-    uint32_t *digits = (uint32_t *)PyMem_Malloc((size_t)src->length * sizeof(uint32_t));
+    uint32_t *digits = (uint32_t *)malloc((size_t)src->length * sizeof(uint32_t));
     if (digits == NULL) {
         PyErr_NoMemory();
         return -1;
@@ -421,7 +421,7 @@ menai_int_from_long(long v, MenaiInt *a)
         len = 2;
     }
 
-    uint32_t *digits = (uint32_t *)PyMem_Malloc((size_t)len * sizeof(uint32_t));
+    uint32_t *digits = (uint32_t *)malloc((size_t)len * sizeof(uint32_t));
     if (digits == NULL) {
         PyErr_NoMemory();
         return -1;
@@ -479,7 +479,7 @@ menai_int_from_pylong(PyObject *obj, MenaiInt *a)
         nbytes = 1;
     }
 
-    unsigned char *buf = (unsigned char *)PyMem_Malloc(nbytes);
+    unsigned char *buf = (unsigned char *)malloc(nbytes);
     if (buf == NULL) {
         PyErr_NoMemory();
         return -1;
@@ -492,7 +492,7 @@ menai_int_from_pylong(PyObject *obj, MenaiInt *a)
     int bytearray_ret = _PyLong_AsByteArray((PyLongObject *)obj, buf, nbytes, 1, 1);
 #endif
     if (bytearray_ret < 0) {
-        PyMem_Free(buf);
+        free(buf);
         return -1;
     }
 
@@ -509,9 +509,9 @@ menai_int_from_pylong(PyObject *obj, MenaiInt *a)
 
     /* Pack bytes into 32-bit digits (little-endian). */
     Py_ssize_t ndigits = (Py_ssize_t)((nbytes + 3) / 4);
-    uint32_t *digits = (uint32_t *)PyMem_Malloc((size_t)ndigits * sizeof(uint32_t));
+    uint32_t *digits = (uint32_t *)malloc((size_t)ndigits * sizeof(uint32_t));
     if (digits == NULL) {
-        PyMem_Free(buf);
+        free(buf);
         PyErr_NoMemory();
         return -1;
     }
@@ -527,7 +527,7 @@ menai_int_from_pylong(PyObject *obj, MenaiInt *a)
         digits[i] = d;
     }
 
-    PyMem_Free(buf);
+    free(buf);
     menai_int_free(a);
     a->digits = digits;
     a->length = ndigits;
@@ -666,7 +666,7 @@ menai_int_from_codepoints(const uint32_t *data, Py_ssize_t len, int base, MenaiI
     }
 
     /* Allow a leading sign plus all digit characters — all ASCII. */
-    char *buf = (char *)PyMem_Malloc((size_t)(len + 1));
+    char *buf = (char *)malloc((size_t)(len + 1));
     if (!buf) {
         PyErr_NoMemory();
         return -1;
@@ -674,7 +674,7 @@ menai_int_from_codepoints(const uint32_t *data, Py_ssize_t len, int base, MenaiI
 
     for (Py_ssize_t i = 0; i < len; i++) {
         if (data[i] > 0x7F) {
-            PyMem_Free(buf);
+            free(buf);
             PyErr_SetString(PyExc_ValueError, "non-ASCII character in integer string");
             return -1;
         }
@@ -683,7 +683,7 @@ menai_int_from_codepoints(const uint32_t *data, Py_ssize_t len, int base, MenaiI
     buf[len] = '\0';
 
     int result = menai_int_from_string(buf, base, a);
-    PyMem_Free(buf);
+    free(buf);
     return result;
 }
 
@@ -715,7 +715,7 @@ menai_int_from_double(double v, MenaiInt *a)
     double frac = frexp(t, &exp);  /* t == frac * 2^exp, 0.5 <= frac < 1.0 */
     /* Number of 32-bit limbs needed: ceil(exp / 32) */
     Py_ssize_t nlimbs = (exp + 31) / 32;
-    uint32_t *digits = (uint32_t *)PyMem_Malloc((size_t)nlimbs * sizeof(uint32_t));
+    uint32_t *digits = (uint32_t *)malloc((size_t)nlimbs * sizeof(uint32_t));
     if (!digits) {
         PyErr_NoMemory();
         return -1;
@@ -838,7 +838,7 @@ menai_int_to_pylong(const MenaiInt *a)
 
     /* Pack digits into a byte array (little-endian). */
     size_t nbytes = (size_t)a->length * 4;
-    unsigned char *buf = (unsigned char *)PyMem_Malloc(nbytes);
+    unsigned char *buf = (unsigned char *)malloc(nbytes);
     if (buf == NULL) {
         PyErr_NoMemory();
         return NULL;
@@ -853,7 +853,7 @@ menai_int_to_pylong(const MenaiInt *a)
     }
 
     PyObject *result = _PyLong_FromByteArray(buf, nbytes, 1, 0);
-    PyMem_Free(buf);
+    free(buf);
     if (result == NULL) {
         return NULL;
     }
@@ -877,7 +877,7 @@ menai_int_to_string(const MenaiInt *a, int base, char **out)
     }
 
     if (a->length == 0) {
-        char *s = (char *)PyMem_Malloc(2);
+        char *s = (char *)malloc(2);
         if (s == NULL) {
             PyErr_NoMemory();
             return -1;
@@ -910,7 +910,7 @@ menai_int_to_string(const MenaiInt *a, int base, char **out)
         max_chars = a->length * 10 + 4;
     }
 
-    char *buf = (char *)PyMem_Malloc((size_t)max_chars);
+    char *buf = (char *)malloc((size_t)max_chars);
     if (buf == NULL) {
         menai_int_free(&tmp);
         PyErr_NoMemory();
@@ -928,7 +928,7 @@ menai_int_to_string(const MenaiInt *a, int base, char **out)
         if (_menai_int_divmod_1(&tmp, (uint32_t)base, &quotient, &rem) < 0) {
             menai_int_free(&tmp);
             menai_int_free(&quotient);
-            PyMem_Free(buf);
+            free(buf);
             return -1;
         }
         menai_int_free(&tmp);
@@ -1089,7 +1089,7 @@ menai_int_mul(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
     }
 
     Py_ssize_t out_len = a->length + b->length;
-    uint32_t *digits = (uint32_t *)PyMem_Malloc((size_t)out_len * sizeof(uint32_t));
+    uint32_t *digits = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (digits == NULL) {
         PyErr_NoMemory();
         return -1;
@@ -1384,7 +1384,7 @@ fail:
 
 /*
  * Convert a MenaiInt to a two's complement digit array of length *len_out.
- * The caller must free the returned array with PyMem_Free.
+ * The caller must free the returned array with free().
  * For positive numbers: digits as-is, with a leading zero word to ensure
  * the sign bit is clear.
  * For negative numbers: flip bits and add 1.
@@ -1394,7 +1394,7 @@ static uint32_t *
 _to_twos_complement(const MenaiInt *a, Py_ssize_t *len_out)
 {
     Py_ssize_t len = a->length + 1; /* extra word for sign bit */
-    uint32_t *buf = (uint32_t *)PyMem_Malloc((size_t)len * sizeof(uint32_t));
+    uint32_t *buf = (uint32_t *)malloc((size_t)len * sizeof(uint32_t));
     if (buf == NULL) {
         PyErr_NoMemory();
         return NULL;
@@ -1440,7 +1440,7 @@ _from_twos_complement(const uint32_t *buf, Py_ssize_t len, MenaiInt *result)
 
     if (!is_neg) {
         /* Positive: copy digits directly. */
-        uint32_t *digits = (uint32_t *)PyMem_Malloc((size_t)len * sizeof(uint32_t));
+        uint32_t *digits = (uint32_t *)malloc((size_t)len * sizeof(uint32_t));
         if (digits == NULL) {
             PyErr_NoMemory();
             return -1;
@@ -1454,7 +1454,7 @@ _from_twos_complement(const uint32_t *buf, Py_ssize_t len, MenaiInt *result)
         _menai_int_normalize(result);
     } else {
         /* Negative: negate to get magnitude. */
-        uint32_t *digits = (uint32_t *)PyMem_Malloc((size_t)len * sizeof(uint32_t));
+        uint32_t *digits = (uint32_t *)malloc((size_t)len * sizeof(uint32_t));
         if (digits == NULL) {
             PyErr_NoMemory();
             return -1;
@@ -1484,15 +1484,15 @@ menai_int_and(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
     }
     uint32_t *tb = _to_twos_complement(b, &lb);
     if (tb == NULL) {
-        PyMem_Free(ta);
+        free(ta);
         return -1;
     }
 
     Py_ssize_t out_len = (la > lb) ? la : lb;
-    uint32_t *out = (uint32_t *)PyMem_Malloc((size_t)out_len * sizeof(uint32_t));
+    uint32_t *out = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (out == NULL) {
-        PyMem_Free(ta);
-        PyMem_Free(tb);
+        free(ta);
+        free(tb);
         PyErr_NoMemory();
         return -1;
     }
@@ -1507,11 +1507,11 @@ menai_int_and(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
         out[i] = da & db;
     }
 
-    PyMem_Free(ta);
-    PyMem_Free(tb);
+    free(ta);
+    free(tb);
 
     int ret = _from_twos_complement(out, out_len, result);
-    PyMem_Free(out);
+    free(out);
     return ret;
 }
 
@@ -1526,15 +1526,15 @@ menai_int_or(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
     }
     uint32_t *tb = _to_twos_complement(b, &lb);
     if (tb == NULL) {
-        PyMem_Free(ta);
+        free(ta);
         return -1;
     }
 
     Py_ssize_t out_len = (la > lb) ? la : lb;
-    uint32_t *out = (uint32_t *)PyMem_Malloc((size_t)out_len * sizeof(uint32_t));
+    uint32_t *out = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (out == NULL) {
-        PyMem_Free(ta);
-        PyMem_Free(tb);
+        free(ta);
+        free(tb);
         PyErr_NoMemory();
         return -1;
     }
@@ -1548,11 +1548,11 @@ menai_int_or(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
         out[i] = da | db;
     }
 
-    PyMem_Free(ta);
-    PyMem_Free(tb);
+    free(ta);
+    free(tb);
 
     int ret = _from_twos_complement(out, out_len, result);
-    PyMem_Free(out);
+    free(out);
     return ret;
 }
 
@@ -1567,15 +1567,15 @@ menai_int_xor(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
     }
     uint32_t *tb = _to_twos_complement(b, &lb);
     if (tb == NULL) {
-        PyMem_Free(ta);
+        free(ta);
         return -1;
     }
 
     Py_ssize_t out_len = (la > lb) ? la : lb;
-    uint32_t *out = (uint32_t *)PyMem_Malloc((size_t)out_len * sizeof(uint32_t));
+    uint32_t *out = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (out == NULL) {
-        PyMem_Free(ta);
-        PyMem_Free(tb);
+        free(ta);
+        free(tb);
         PyErr_NoMemory();
         return -1;
     }
@@ -1589,11 +1589,11 @@ menai_int_xor(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
         out[i] = da ^ db;
     }
 
-    PyMem_Free(ta);
-    PyMem_Free(tb);
+    free(ta);
+    free(tb);
 
     int ret = _from_twos_complement(out, out_len, result);
-    PyMem_Free(out);
+    free(out);
     return ret;
 }
 
@@ -1646,7 +1646,7 @@ menai_int_shift_left(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
     int bit_shift = (int)(shift % 32);
 
     Py_ssize_t out_len = a->length + word_shift + 1;
-    uint32_t *digits = (uint32_t *)PyMem_Malloc((size_t)out_len * sizeof(uint32_t));
+    uint32_t *digits = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (digits == NULL) {
         PyErr_NoMemory();
         return -1;
@@ -1731,7 +1731,7 @@ menai_int_shift_right(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
     }
 
     Py_ssize_t out_len = a->length - word_shift;
-    uint32_t *digits = (uint32_t *)PyMem_Malloc((size_t)out_len * sizeof(uint32_t));
+    uint32_t *digits = (uint32_t *)malloc((size_t)out_len * sizeof(uint32_t));
     if (digits == NULL) {
         PyErr_NoMemory();
         return -1;

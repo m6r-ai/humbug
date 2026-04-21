@@ -1863,7 +1863,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
             menai_int_free(&tmp);
             MenaiValue r = menai_string_from_utf8(cstr, (Py_ssize_t)strlen(cstr));
-            PyMem_Free(cstr);
+            free(cstr);
             if (r == NULL) goto error;
             menai_reg_set_own(regs, base + dest, r);
             break;
