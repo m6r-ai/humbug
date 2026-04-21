@@ -11,48 +11,23 @@ UNAME := $(shell uname -s)
 PYTHON := $(shell test -f venv/bin/python && echo venv/bin/python || echo python3)
 
 #
-# Extension source files.
+# Extension entry point — the single .c file that defines the Python module.
 #
-SO_CORE_SOURCES := \
-	src/menai/menai_vm_c.c
+SO_CORE_SOURCES := src/menai/menai_vm_c.c
 
 #
-# Derive the expected .so names from the Python ABI tag.
+# All C source and header files in the menai VM directory — any change to any
+# of them triggers a rebuild.
+#
+C_SOURCES := $(wildcard src/menai/menai_vm_*.[ch])
+
+#
+# Derive the expected .so name from the Python ABI tag.
 #
 EXT_SUFFIX := $(shell $(PYTHON) -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
 
 SO_FILES := \
 	$(patsubst src/menai/%.c, src/menai/%$(EXT_SUFFIX), $(SO_CORE_SOURCES))
-
-C_SOURCES := \
-	src/menai/menai_vm_c.c \
-	src/menai/menai_vm_string.c \
-	src/menai/menai_vm_string.h \
-	src/menai/menai_vm_string_tables.h \
-	src/menai/menai_vm_dict.c \
-	src/menai/menai_vm_dict.h \
-	src/menai/menai_vm_function.c \
-	src/menai/menai_vm_function.h \
-	src/menai/menai_vm_symbol.c \
-	src/menai/menai_vm_symbol.h \
-	src/menai/menai_vm_list.c \
-	src/menai/menai_vm_list.h \
-	src/menai/menai_vm_set.c \
-	src/menai/menai_vm_set.h \
-	src/menai/menai_vm_struct.c \
-	src/menai/menai_vm_struct.h \
-	src/menai/menai_vm_complex.c \
-	src/menai/menai_vm_complex.h \
-	src/menai/menai_vm_float.c \
-	src/menai/menai_vm_float.h \
-	src/menai/menai_vm_integer.c \
-	src/menai/menai_vm_integer.h \
-	src/menai/menai_vm_boolean.c \
-	src/menai/menai_vm_boolean.h \
-	src/menai/menai_vm_value.c \
-	src/menai/menai_vm_value.h \
-	src/menai/menai_vm_none.c \
-	src/menai/menai_vm_none.h
 
 #
 # Build all extensions in-place.
@@ -63,6 +38,7 @@ build: $(SO_FILES)
 
 $(SO_FILES): $(C_SOURCES)
 	@rm -f $(SO_FILES)
+	@rm -rf build/temp.* build/lib.*
 	$(PYTHON) setup.py build_ext --inplace
 	@mkdir -p build && touch $@
 

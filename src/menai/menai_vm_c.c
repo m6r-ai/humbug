@@ -95,6 +95,7 @@ static inline mc_t mc_logn(mc_t a, mc_t b) {
 #include "menai_vm_string.h"
 #include "menai_vm_hashtable.h"
 #include "menai_vm_integer.h"
+#include "menai_vm_memory.h"
 
 /*
  * Portable overflow-detecting arithmetic for the small-integer fast paths.
@@ -419,19 +420,6 @@ static inline PyObject *menai_symbol_name(PyObject *o) {
     return ((MenaiSymbol_Object *)o)->name;
 }
 
-static inline void reg_set_own(PyObject **regs, int slot, PyObject *val) {
-    PyObject *old = regs[slot];
-    regs[slot] = val;
-    Py_DECREF(old);
-}
-
-static inline void reg_set_borrow(PyObject **regs, int slot, PyObject *val) {
-    PyObject *old = regs[slot];
-    Py_INCREF(val);
-    regs[slot] = val;
-    Py_DECREF(old);
-}
-
 /*
  * menai_integer_compare — compare two MenaiInteger objects using MenaiInt.
  *
@@ -511,7 +499,7 @@ static inline PyObject *make_complex(double real, double imag) {
 }
 
 static inline void bool_store(PyObject **regs, int slot, int cond) {
-    reg_set_borrow(regs, slot, cond ? Menai_TRUE : Menai_FALSE);
+    menai_reg_set_borrow(regs, slot, cond ? Menai_TRUE : Menai_FALSE);
 }
 
 PyObject *menai_raise_eval_error(const char *message);
@@ -794,7 +782,7 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
     }
 
     Py_INCREF(code_obj);
-    Py_XDECREF(f->code_obj);
+    menai_xrelease(f->code_obj);
     f->code_obj = code_obj;
     f->constants = constants;     /* borrowed — f->code_obj keeps code_obj alive */
     Py_DECREF(constants);         /* drop owned ref from GetAttrString */
@@ -825,43 +813,8 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
  * The register array is a flat PyObject* array:
  *   regs[depth * max_locals + slot]
  * All slots are initialised to Menai_NONE (borrowed — the singleton is
- * kept alive by the module).  reg_set_own/reg_set_borrow manage reference counts correctly.
+ * kept alive by the module).  menai_reg_set_own/menai_reg_set_borrow manage reference counts correctly.
  * ------------------------------------------------------------------------- */
-
-/*
- * Allocate and initialise the register array.
- * Returns NULL and sets MemoryError on failure.
- */
-static PyObject **
-regs_alloc(int max_depth, int max_locals)
-{
-    Py_ssize_t n = (Py_ssize_t)(max_depth + 1) * max_locals;
-    PyObject **regs = (PyObject **)PyMem_Malloc(n * sizeof(PyObject *));
-    if (regs == NULL) {
-        PyErr_NoMemory();
-        return NULL;
-    }
-
-    for (Py_ssize_t i = 0; i < n; i++) {
-        Py_INCREF(Menai_NONE);
-        regs[i] = Menai_NONE;  /* owned reference */
-    }
-    return regs;
-}
-
-/*
- * Release all owned references in the register array and free it.
- * Slots that hold something other than Menai_NONE were set via reg_set_own/reg_set_borrow
- * and have an owned reference.
- */
-static void
-regs_free(PyObject **regs, int max_depth, int max_locals)
-{
-    if (regs == NULL) return;
-    Py_ssize_t n = (Py_ssize_t)(max_depth + 1) * max_locals;
-    for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(regs[i]);  /* every slot is an owned reference */
-    PyMem_Free(regs);
-}
 
 /* ---------------------------------------------------------------------------
  * max_local_count — mirrors MenaiVM._max_local_count()
@@ -978,7 +931,7 @@ typedef struct {
 static void
 globals_free(GlobalsTable *gt)
 {
-    for (Py_ssize_t i = 0; i < gt->count; i++) Py_XDECREF(gt->entries[i].value);
+    for (Py_ssize_t i = 0; i < gt->count; i++) menai_xrelease(gt->entries[i].value);
     PyMem_Free(gt->slots);
     PyMem_Free(gt->entries);
     gt->slots = NULL;
@@ -1055,7 +1008,7 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, PyObject *prelude_dict
         }
         const char *name_utf8 = PyUnicode_AsUTF8(key);
         if (name_utf8 == NULL) {
-            Py_DECREF(converted);
+            menai_release(converted);
             globals_free(gt);
             return -1;
         }
@@ -1074,7 +1027,7 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, PyObject *prelude_dict
             }
             const char *name_utf8 = PyUnicode_AsUTF8(key);
             if (name_utf8 == NULL) {
-                Py_DECREF(converted);
+                menai_release(converted);
                 globals_free(gt);
                 return -1;
             }
@@ -1165,12 +1118,12 @@ call_setup(Frame *new_frame, PyObject *func_obj,
         }
         for (int k = 0; k < rest_count; k++) {
             rest_arr[k] = regs[callee_base + min_arity + k];
-            Py_INCREF(rest_arr[k]);
+            menai_retain(rest_arr[k]);
         }
         PyObject *rest_list = menai_list_from_array_steal(rest_arr, rest_count);
         if (rest_list == NULL) return -1;
 
-        reg_set_own(regs, callee_base + min_arity, rest_list);
+        menai_reg_set_own(regs, callee_base + min_arity, rest_list);
 
     } else if (arity != param_count) {
         PyObject *name = func->name;
@@ -1185,7 +1138,7 @@ call_setup(Frame *new_frame, PyObject *func_obj,
     Py_ssize_t ncap = Py_SIZE(func);
     for (Py_ssize_t i = 0; i < ncap; i++) {
         PyObject *cv = func->captures[i];
-        reg_set_borrow(regs, callee_base + param_count + (int)i, cv);
+        menai_reg_set_borrow(regs, callee_base + param_count + (int)i, cv);
     }
 
     new_frame->code_obj = bytecode;
@@ -1265,32 +1218,32 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
 
         switch (opcode) {
         case OP_LOAD_NONE:
-            reg_set_borrow(regs, base + dest, Menai_NONE);
+            menai_reg_set_borrow(regs, base + dest, Menai_NONE);
             break;
 
         case OP_LOAD_TRUE:
-            reg_set_borrow(regs, base + dest, Menai_TRUE);
+            menai_reg_set_borrow(regs, base + dest, Menai_TRUE);
             break;
 
         case OP_LOAD_FALSE:
-            reg_set_borrow(regs, base + dest, Menai_FALSE);
+            menai_reg_set_borrow(regs, base + dest, Menai_FALSE);
             break;
 
         case OP_LOAD_EMPTY_LIST:
-            reg_set_borrow(regs, base + dest, Menai_EMPTY_LIST);
+            menai_reg_set_borrow(regs, base + dest, Menai_EMPTY_LIST);
             break;
 
         case OP_LOAD_EMPTY_DICT:
-            reg_set_borrow(regs, base + dest, Menai_EMPTY_DICT);
+            menai_reg_set_borrow(regs, base + dest, Menai_EMPTY_DICT);
             break;
 
         case OP_LOAD_EMPTY_SET:
-            reg_set_borrow(regs, base + dest, Menai_EMPTY_SET);
+            menai_reg_set_borrow(regs, base + dest, Menai_EMPTY_SET);
             break;
 
         case OP_LOAD_CONST: {
             PyObject *val = frame->constants_items[src0];
-            reg_set_borrow(regs, base + dest, val);
+            menai_reg_set_borrow(regs, base + dest, val);
             break;
         }
 
@@ -1320,12 +1273,12 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                     name_str, buf, nk > 10 ? "..." : "");
                 goto error;
             }
-            reg_set_borrow(regs, base + dest, val);
+            menai_reg_set_borrow(regs, base + dest, val);
             break;
         }
 
         case OP_MOVE:
-            reg_set_borrow(regs, base + dest, regs[base + src0]);
+            menai_reg_set_borrow(regs, base + dest, regs[base + src0]);
             break;
 
         case OP_JUMP:
@@ -1368,10 +1321,10 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
 
         case OP_RETURN: {
             PyObject *retval = regs[base + src0];
-            Py_INCREF(retval);
+            menai_retain(retval);
 
             int saved_return_dest = frame->return_dest;
-            Py_XDECREF(frame->code_obj);
+            menai_xrelease(frame->code_obj);
             frame_depth--;
             Frame *caller = &frames[frame_depth];
 
@@ -1381,7 +1334,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
 
             /* Store result into caller's register window. */
-            reg_set_own(regs, caller->base + saved_return_dest, retval);
+            menai_reg_set_own(regs, caller->base + saved_return_dest, retval);
 
             frame = caller;
             break;
@@ -1403,7 +1356,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 *new_frame = (Frame){ .code_obj = NULL, .closure_caches = NULL,
                                       .constants = NULL, .names = NULL, .instrs = NULL };
 
-                Py_INCREF(((MenaiFunction_Object *)raw)->bytecode);
+                menai_retain(((MenaiFunction_Object *)raw)->bytecode);
                 if (call_setup(new_frame, raw, regs, callee_base, arity, dest) < 0) {
                     frame_depth--;
                     goto error;
@@ -1422,7 +1375,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 }
                 PyObject *instance = menai_struct_alloc(raw, &regs[callee_base], n_fields);
                 if (instance == NULL) goto error;
-                reg_set_own(regs, base + dest, instance);
+                menai_reg_set_own(regs, base + dest, instance);
             } else {
                 menai_raise_eval_error("Cannot call non-function value");
                 goto error;
@@ -1436,7 +1389,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             /* Take an owned reference before the arg-moving loop.
              * The loop may overwrite regs[base+src0] if src0 < n_args,
              * which would decrement raw's refcount to zero and free it. */
-            Py_INCREF(raw);
+            menai_retain(raw);
 
             int local_count = frame->local_count;
 
@@ -1444,21 +1397,21 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 /* Move outgoing args down to base+0..n_args-1 in place. */
                 for (int i = 0; i < n_args; i++) {
                     PyObject *v = regs[base + local_count + i];
-                    reg_set_borrow(regs, base + i, v);
+                    menai_reg_set_borrow(regs, base + i, v);
                 }
 
                 /* Reuse current frame — release old code_obj and instructions. */
-                Py_DECREF(frame->code_obj);
+                menai_release(frame->code_obj);
                 frame->code_obj = NULL;
                 frame->instrs = NULL;
 
                 int saved_return_dest = frame->return_dest;
-                Py_INCREF(((MenaiFunction_Object *)raw)->bytecode);
+                menai_retain(((MenaiFunction_Object *)raw)->bytecode);
                 if (call_setup(frame, raw, regs, base, n_args, saved_return_dest) < 0) {
-                    Py_DECREF(raw);
+                    menai_release(raw);
                     goto error;
                 }
-                Py_DECREF(raw);
+                menai_release(raw);
             } else if (IS_MENAI_STRUCTTYPE(raw)) {
                 int n_fields = ((MenaiStructType_Object *)raw)->nfields;
                 if (n_args != (int)n_fields) {
@@ -1466,30 +1419,30 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                     menai_raise_eval_errorf(
                         "Struct constructor '%s' called with wrong number of arguments",
                         sname ? PyUnicode_AsUTF8(sname) : "?");
-                    Py_DECREF(raw);
+                    menai_release(raw);
                     goto error;
                 }
                 PyObject *instance = menai_struct_alloc(raw, &regs[base + local_count], n_fields);
                 if (instance == NULL) {
-                    Py_DECREF(raw);
+                    menai_release(raw);
                     goto error;
                 }
 
                 /* Tail-return the struct: pop frame and deliver to caller. */
                 PyObject *retval = instance;
                 int saved_return_dest = frame->return_dest;
-                Py_XDECREF(frame->code_obj);
+                menai_xrelease(frame->code_obj);
                 frame_depth--;
                 Frame *caller = &frames[frame_depth];
                 if (caller->is_sentinel) {
-                    Py_DECREF(raw);
+                    menai_release(raw);
                     return retval;
                 }
-                reg_set_own(regs, caller->base + saved_return_dest, retval);
-                Py_DECREF(raw);
+                menai_reg_set_own(regs, caller->base + saved_return_dest, retval);
+                menai_release(raw);
                 frame = caller;
             } else {
-                Py_DECREF(raw);
+                menai_release(raw);
                 menai_raise_eval_error("Cannot call non-function value");
                 goto error;
             }
@@ -1555,7 +1508,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *name = menai_symbol_name(a);
             PyObject *r = menai_string_from_pyunicode(name);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -1586,7 +1539,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             int min_a = fn->is_variadic ? fn->param_count - 1 : fn->param_count;
             PyObject *_r = make_integer_from_long(min_a);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -1688,12 +1641,12 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                     menai_int_free(&tmp);
                     PyObject *_r = menai_integer_from_bigint(res);
                     if (!_r) goto error;
-                    reg_set_own(regs, base + dest, _r);
+                    menai_reg_set_own(regs, base + dest, _r);
                     break;
                 }
                 PyObject *_r = menai_integer_from_long(rv);
                 if (!_r) goto error;
-                reg_set_own(regs, base + dest, _r);
+                menai_reg_set_own(regs, base + dest, _r);
                 break;
             }
             MenaiInt res;
@@ -1701,7 +1654,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (menai_int_abs(&ia->big, &res) < 0) goto error;
             PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -1721,12 +1674,12 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                     menai_int_free(&tmp);
                     PyObject *_r = menai_integer_from_bigint(res);
                     if (!_r) goto error;
-                    reg_set_own(regs, base + dest, _r);
+                    menai_reg_set_own(regs, base + dest, _r);
                     break;
                 }
                 PyObject *_r = menai_integer_from_long(-sv);
                 if (!_r) goto error;
-                reg_set_own(regs, base + dest, _r);
+                menai_reg_set_own(regs, base + dest, _r);
                 break;
             }
             MenaiInt res;
@@ -1734,7 +1687,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (menai_int_neg(&ia->big, &res) < 0) goto error;
             PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -1754,7 +1707,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             menai_int_free(&tmp);
             PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -1769,7 +1722,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 if (!_menai_add_overflow(la, lb, &lr)) {
                     PyObject *_r = menai_integer_from_long(lr);
                     if (!_r) goto error;
-                    reg_set_own(regs, base + dest, _r);
+                    menai_reg_set_own(regs, base + dest, _r);
                     break;
                 }
             }
@@ -1783,7 +1736,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             menai_int_free(&av); menai_int_free(&bv);
             PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -1798,7 +1751,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 if (!_menai_sub_overflow(la, lb, &lr)) {
                     PyObject *_r = menai_integer_from_long(lr);
                     if (!_r) goto error;
-                    reg_set_own(regs, base + dest, _r);
+                    menai_reg_set_own(regs, base + dest, _r);
                     break;
                 }
             }
@@ -1812,7 +1765,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             menai_int_free(&av); menai_int_free(&bv);
             PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -1827,7 +1780,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 if (!_menai_mul_overflow(la, lb, &lr)) {
                     PyObject *_r = menai_integer_from_long(lr);
                     if (!_r) goto error;
-                    reg_set_own(regs, base + dest, _r);
+                    menai_reg_set_own(regs, base + dest, _r);
                     break;
                 }
             }
@@ -1841,7 +1794,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             menai_int_free(&av); menai_int_free(&bv);
             PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -1868,7 +1821,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             menai_int_free(&av); menai_int_free(&bv);
             PyObject *_r = menai_integer_from_bigint(res);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -1895,7 +1848,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             menai_int_free(&av); menai_int_free(&bv);
             PyObject *_r = menai_integer_from_bigint(res);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -1922,7 +1875,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             menai_int_free(&av); menai_int_free(&bv);
             PyObject *_r = menai_integer_from_bigint(res);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -1940,7 +1893,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             menai_int_free(&av); menai_int_free(&bv);
             PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -1958,7 +1911,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             menai_int_free(&av); menai_int_free(&bv);
             PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -1976,7 +1929,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             menai_int_free(&av); menai_int_free(&bv);
             PyObject *_r = menai_integer_from_bigint(res);
             if (!_r) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2011,7 +1964,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 menai_int_free(&av);
                 PyObject *_r = menai_integer_from_bigint(res);
                 if (!_r) goto error;
-                reg_set_own(regs, base + dest, _r);
+                menai_reg_set_own(regs, base + dest, _r);
             }
             break;
         }
@@ -2047,7 +2000,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 menai_int_free(&av);
                 PyObject *_r = menai_integer_from_bigint(res);
                 if (!_r) goto error;
-                reg_set_own(regs, base + dest, _r);
+                menai_reg_set_own(regs, base + dest, _r);
             }
             break;
         }
@@ -2056,7 +2009,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-min")) goto error;
             if (!require_integer(b, "integer-min")) goto error;
-            reg_set_borrow(regs, base + dest, menai_integer_compare(a, b, Py_LE) ? a : b);
+            menai_reg_set_borrow(regs, base + dest, menai_integer_compare(a, b, Py_LE) ? a : b);
             break;
         }
 
@@ -2064,7 +2017,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *a = regs[base + src0], *b = regs[base + src1];
             if (!require_integer(a, "integer-max")) goto error;
             if (!require_integer(b, "integer-max")) goto error;
-            reg_set_borrow(regs, base + dest, menai_integer_compare(a, b, Py_GE) ? a : b);
+            menai_reg_set_borrow(regs, base + dest, menai_integer_compare(a, b, Py_GE) ? a : b);
             break;
         }
 
@@ -2080,7 +2033,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *_r = make_float(d);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2103,7 +2056,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *r = make_complex(re, im);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -2135,7 +2088,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *r = menai_string_from_utf8(cstr, (Py_ssize_t)strlen(cstr));
             PyMem_Free(cstr);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -2156,7 +2109,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *r = menai_string_from_codepoint((uint32_t)cp);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -2217,7 +2170,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_float(a, "float-neg")) goto error;
             PyObject *_r = make_float(-menai_float_value(a));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2228,7 +2181,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             {
                 PyObject *_r = make_float(fabs(v));
                 if (_r == NULL) goto error;
-                reg_set_own(regs, base + dest, _r);
+                menai_reg_set_own(regs, base + dest, _r);
             }
             break;
         }
@@ -2239,7 +2192,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_float(b, "float+")) goto error;
             PyObject *_r = make_float(menai_float_value(a) + menai_float_value(b));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2249,7 +2202,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_float(b, "float-")) goto error;
             PyObject *_r = make_float(menai_float_value(a) - menai_float_value(b));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2259,7 +2212,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_float(b, "float*")) goto error;
             PyObject *_r = make_float(menai_float_value(a) * menai_float_value(b));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2274,7 +2227,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *_r = make_float(menai_float_value(a) / bv);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2289,7 +2242,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *_r = make_float(floor(menai_float_value(a) / bv));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2304,7 +2257,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *_r = make_float(fmod(menai_float_value(a), bv));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2313,7 +2266,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_float(a, "float-exp")) goto error;
             PyObject *_r = make_float(exp(menai_float_value(a)));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2323,7 +2276,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_float(b, "float-expn")) goto error;
             PyObject *_r = make_float(pow(menai_float_value(a), menai_float_value(b)));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2337,7 +2290,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *_r = make_float(v == 0.0 ? -INFINITY : log(v));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2351,7 +2304,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *_r = make_float(v == 0.0 ? -INFINITY : log10(v));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2365,7 +2318,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *_r = make_float(v == 0.0 ? -INFINITY : log2(v));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2384,7 +2337,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *_r = make_float(av == 0.0 ? -INFINITY : log(av) / log(bv));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2393,7 +2346,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_float(a, "float-sin")) goto error;
             PyObject *_r = make_float(sin(menai_float_value(a)));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2402,7 +2355,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_float(a, "float-cos")) goto error;
             PyObject *_r = make_float(cos(menai_float_value(a)));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2411,7 +2364,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_float(a, "float-tan")) goto error;
             PyObject *_r = make_float(tan(menai_float_value(a)));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2425,7 +2378,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *_r = make_float(sqrt(v));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2434,7 +2387,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_float(a, "float-floor")) goto error;
             PyObject *_r = make_float(floor(menai_float_value(a)));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2443,7 +2396,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_float(a, "float-ceil")) goto error;
             PyObject *_r = make_float(ceil(menai_float_value(a)));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2452,7 +2405,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_float(a, "float-round")) goto error;
             PyObject *_r = make_float(round(menai_float_value(a)));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2463,7 +2416,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             double av = menai_float_value(a), bv = menai_float_value(b);
             PyObject *_r = make_float(av <= bv ? av : bv);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2474,7 +2427,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             double av = menai_float_value(a), bv = menai_float_value(b);
             PyObject *_r = make_float(av >= bv ? av : bv);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2487,7 +2440,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (menai_int_from_double(trunc(v), &res) < 0) goto error;
             PyObject *_r = menai_integer_from_bigint(res);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2497,7 +2450,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_float(b, "float->complex")) goto error;
             PyObject *r = make_complex(menai_float_value(a), menai_float_value(b));
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -2510,7 +2463,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *r = menai_string_from_utf8(_fsbuf, (Py_ssize_t)strlen(_fsbuf));
             PyMem_Free(_fsbuf);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -2535,7 +2488,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (cc == NULL) goto error;
             PyObject *func = menai_function_alloc(cc, Menai_NONE);
             if (func == NULL) goto error;
-            reg_set_own(regs, base + dest, func);
+            menai_reg_set_own(regs, base + dest, func);
             break;
         }
 
@@ -2552,9 +2505,9 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *val = regs[base + src2];
             MenaiFunction_Object *fn = (MenaiFunction_Object *)closure;
             PyObject *old = fn->captures[src1];
-            Py_INCREF(val);
+            menai_retain(val);
             fn->captures[src1] = val;
-            Py_DECREF(old);
+            menai_release(old);
             break;
         }
 
@@ -2585,14 +2538,14 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
 
                 /* Scatter list elements into the callee window */
                 for (int i = 0; i < arity; i++)
-                    reg_set_borrow(regs, callee_base + i, elements[i]);
+                    menai_reg_set_borrow(regs, callee_base + i, elements[i]);
 
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
                 *new_frame = (Frame){ .code_obj = NULL, .closure_caches = NULL,
                                       .constants = NULL, .names = NULL, .instrs = NULL };
 
-                Py_INCREF(((MenaiFunction_Object *)raw_func)->bytecode);
+                menai_retain(((MenaiFunction_Object *)raw_func)->bytecode);
                 if (call_setup(new_frame, raw_func, regs, callee_base, arity, dest) < 0) {
                     frame_depth--;
                     goto error;
@@ -2610,7 +2563,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 PyObject *instance = menai_struct_alloc(raw_func, elements, n_fields);
                 if (instance == NULL) goto error;
 
-                reg_set_own(regs, base + dest, instance);
+                menai_reg_set_own(regs, base + dest, instance);
             } else {
                 menai_raise_eval_error("apply: first argument must be a function");
                 goto error;
@@ -2628,12 +2581,12 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *raw_args = regs[base + src1];
             /* Own raw_func before the scatter loop which may overwrite its slot. */
             /* Own raw_args for the same reason — src1 may be < arity. */
-            Py_INCREF(raw_func);
-            Py_INCREF(raw_args);
+            menai_retain(raw_func);
+            menai_retain(raw_args);
 
             if (!IS_MENAI_LIST(raw_args)) {
-                Py_DECREF(raw_func);
-                Py_DECREF(raw_args);
+                menai_release(raw_func);
+                menai_release(raw_args);
                 menai_raise_eval_error("apply: second argument must be a list");
                 goto error;
             }
@@ -2643,55 +2596,55 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
 
             if (IS_MENAI_FUNCTION(raw_func)) {
                 /* Scatter args into base+0..arity-1 (reusing current frame's base) */
-                for (int i = 0; i < arity; i++) reg_set_borrow(regs, base + i, elements[i]);
-                Py_DECREF(raw_args);
+                for (int i = 0; i < arity; i++) menai_reg_set_borrow(regs, base + i, elements[i]);
+                menai_release(raw_args);
 
                 /* Release old code_obj and instructions, reuse frame. */
-                Py_DECREF(frame->code_obj);
+                menai_release(frame->code_obj);
                 frame->code_obj = NULL;
                 frame->instrs = NULL;
 
                 int saved_return_dest = frame->return_dest;
-                Py_INCREF(((MenaiFunction_Object *)raw_func)->bytecode);
+                menai_retain(((MenaiFunction_Object *)raw_func)->bytecode);
                 if (call_setup(frame, raw_func, regs, base, arity, saved_return_dest) < 0) {
-                    Py_DECREF(raw_func);
+                    menai_release(raw_func);
                     goto error;
                 }
-                Py_DECREF(raw_func);
+                menai_release(raw_func);
 
             } else if (IS_MENAI_STRUCTTYPE(raw_func)) {
                 int n_fields = ((MenaiStructType_Object *)raw_func)->nfields;
                 if (arity != (int)n_fields) {
-                    Py_DECREF(raw_func);
-                    Py_DECREF(raw_args);
+                    menai_release(raw_func);
+                    menai_release(raw_args);
                     menai_raise_eval_error("Struct constructor called with wrong number of arguments");
                     goto error;
                 }
 
                 PyObject *retval = menai_struct_alloc(raw_func, elements, n_fields);
                 if (retval == NULL) {
-                    Py_DECREF(raw_args);
-                    Py_DECREF(raw_func);
+                    menai_release(raw_args);
+                    menai_release(raw_func);
                     goto error;
                 }
 
                 int saved_return_dest = frame->return_dest;
-                Py_XDECREF(frame->code_obj);
+                menai_xrelease(frame->code_obj);
                 frame_depth--;
                 Frame *caller = &frames[frame_depth];
                 if (caller->is_sentinel) {
-                    Py_DECREF(raw_args);
-                    Py_DECREF(raw_func);
+                    menai_release(raw_args);
+                    menai_release(raw_func);
                     return retval;
                 }
 
-                reg_set_own(regs, caller->base + saved_return_dest, retval);
-                Py_DECREF(raw_args);
-                Py_DECREF(raw_func);
+                menai_reg_set_own(regs, caller->base + saved_return_dest, retval);
+                menai_release(raw_args);
+                menai_release(raw_func);
                 frame = caller;
             } else {
-                Py_DECREF(raw_func);
-                Py_DECREF(raw_args);
+                menai_release(raw_func);
+                menai_release(raw_args);
                 menai_raise_eval_error("apply: first argument must be a function");
                 goto error;
             }
@@ -2731,7 +2684,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_complex(a, "complex-real")) goto error;
             PyObject *_fr = make_float(((MenaiComplex_Object *)a)->real);
             if (_fr == NULL) goto error;
-            reg_set_own(regs, base + dest, _fr);
+            menai_reg_set_own(regs, base + dest, _fr);
             break;
         }
 
@@ -2740,7 +2693,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_complex(a, "complex-imag")) goto error;
             PyObject *_fr = make_float(((MenaiComplex_Object *)a)->imag);
             if (_fr == NULL) goto error;
-            reg_set_own(regs, base + dest, _fr);
+            menai_reg_set_own(regs, base + dest, _fr);
             break;
         }
 
@@ -2751,7 +2704,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             double im = ((MenaiComplex_Object *)a)->imag;
             PyObject *_fr = make_float(sqrt(re * re + im * im));
             if (_fr == NULL) goto error;
-            reg_set_own(regs, base + dest, _fr);
+            menai_reg_set_own(regs, base + dest, _fr);
             break;
         }
 
@@ -2761,7 +2714,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *_r = make_complex(-((MenaiComplex_Object *)a)->real,
                                         -((MenaiComplex_Object *)a)->imag);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2773,7 +2726,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 ((MenaiComplex_Object *)a)->real + ((MenaiComplex_Object *)b)->real,
                 ((MenaiComplex_Object *)a)->imag + ((MenaiComplex_Object *)b)->imag);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2785,7 +2738,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 ((MenaiComplex_Object *)a)->real - ((MenaiComplex_Object *)b)->real,
                 ((MenaiComplex_Object *)a)->imag - ((MenaiComplex_Object *)b)->imag);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2797,7 +2750,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             double br = ((MenaiComplex_Object *)b)->real, bi = ((MenaiComplex_Object *)b)->imag;
             PyObject *_r = make_complex(ar * br - ai * bi, ar * bi + ai * br);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2816,7 +2769,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 (ar * br + ai * bi) / denom,
                 (ai * br - ar * bi) / denom);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2829,7 +2782,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             mc_t cr = mc_pow(za, zb);
             PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2840,7 +2793,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             mc_t cr = mc_exp(z);
             PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2851,7 +2804,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             mc_t cr = mc_log(z);
             PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2862,7 +2815,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             mc_t cr = mc_log10(z);
             PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2873,7 +2826,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             mc_t cr = mc_sin(z);
             PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2884,7 +2837,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             mc_t cr = mc_cos(z);
             PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2895,7 +2848,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             mc_t cr = mc_tan(z);
             PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2906,7 +2859,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             mc_t cr = mc_sqrt(z);
             PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2923,7 +2876,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             mc_t cr = mc_logn(za, zb);
             PyObject *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -2935,7 +2888,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *r = menai_string_from_pyunicode(py_str);
             Py_DECREF(py_str);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -2996,7 +2949,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_string(a, "string-length")) goto error;
             PyObject *_r = make_integer_from_ssize_t(menai_string_length(a));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -3005,7 +2958,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_string(a, "string-upcase")) goto error;
             PyObject *r = menai_string_upcase(a);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3014,7 +2967,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_string(a, "string-downcase")) goto error;
             PyObject *r = menai_string_downcase(a);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3023,7 +2976,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_string(a, "string-trim")) goto error;
             PyObject *r = menai_string_trim(a);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3032,7 +2985,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_string(a, "string-trim-left")) goto error;
             PyObject *r = menai_string_trim_left(a);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3041,7 +2994,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_string(a, "string-trim-right")) goto error;
             PyObject *r = menai_string_trim_right(a);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3051,7 +3004,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_string(b, "string-concat")) goto error;
             PyObject *r = menai_string_concat(a, b);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3090,7 +3043,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *r = menai_string_ref(a, idx);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3130,7 +3083,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *r = menai_string_slice(a, start, end);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3141,7 +3094,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_string(c, "string-replace")) goto error;
             PyObject *r = menai_string_replace(a, b, c);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3152,11 +3105,11 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             Py_ssize_t idx = menai_string_find(a, b);
             if (idx == -2) goto error;
             if (idx == -1) {
-                reg_set_borrow(regs, base + dest, Menai_NONE);
+                menai_reg_set_borrow(regs, base + dest, Menai_NONE);
             } else {
                 PyObject *_r = make_integer_from_ssize_t(idx);
                 if (_r == NULL) goto error;
-                reg_set_own(regs, base + dest, _r);
+                menai_reg_set_own(regs, base + dest, _r);
             }
             break;
         }
@@ -3171,7 +3124,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *_r = make_integer_from_long((long)menai_string_get(a, 0));
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -3199,14 +3152,14 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 menai_string_data(trimmed),
                 menai_string_length(trimmed),
                 (int)radix, &sti_tmp);
-            Py_DECREF(trimmed);
+            menai_release(trimmed);
             if (sti_ok < 0) {
                 PyErr_Clear();
-                reg_set_borrow(regs, base + dest, Menai_NONE);
+                menai_reg_set_borrow(regs, base + dest, Menai_NONE);
             } else {
                 PyObject *_r = menai_integer_from_bigint(sti_tmp);
                 if (_r == NULL) goto error;
-                reg_set_own(regs, base + dest, _r);
+                menai_reg_set_own(regs, base + dest, _r);
             }
             break;
         }
@@ -3231,7 +3184,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 if (menai_int_from_codepoints(sdata, slen, 10, &stn_tmp) == 0) {
                     PyObject *r = menai_integer_from_bigint(stn_tmp);
                     if (r == NULL) goto error;
-                    reg_set_own(regs, base + dest, r);
+                    menai_reg_set_own(regs, base + dest, r);
                     break;
                 }
                 PyErr_Clear();
@@ -3251,7 +3204,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                                                PyComplex_ImagAsDouble(cplx));
                     Py_DECREF(cplx);
                     if (r == NULL) goto error;
-                    reg_set_own(regs, base + dest, r);
+                    menai_reg_set_own(regs, base + dest, r);
                     break;
                 }
                 PyErr_Clear();
@@ -3269,7 +3222,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 stn_fbuf[slen] = '\0';
                 if (!stn_ascii_ok) {
                     PyMem_Free(stn_fbuf);
-                    reg_set_borrow(regs, base + dest, Menai_NONE);
+                    menai_reg_set_borrow(regs, base + dest, Menai_NONE);
                     break;
                 }
                 char *stn_end = NULL;
@@ -3279,9 +3232,9 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 if (stn_ok) {
                     PyObject *_r = make_float(stn_dv);
                     if (_r == NULL) goto error;
-                    reg_set_own(regs, base + dest, _r);
+                    menai_reg_set_own(regs, base + dest, _r);
                 } else {
-                    reg_set_borrow(regs, base + dest, Menai_NONE);
+                    menai_reg_set_borrow(regs, base + dest, Menai_NONE);
                 }
             }
             break;
@@ -3308,7 +3261,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 for (Py_ssize_t i = 0; i < alen; i++) {
                     stl_arr[i] = menai_string_from_codepoint(adata[i]);
                     if (!stl_arr[i]) {
-                        for (Py_ssize_t k = 0; k < i; k++) Py_DECREF(stl_arr[k]);
+                        for (Py_ssize_t k = 0; k < i; k++) menai_release(stl_arr[k]);
                         PyMem_Free(stl_arr);
                         goto error;
                     }
@@ -3338,7 +3291,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                     if (match || i == alen) {
                         parts2[pi2] = menai_string_from_codepoints(adata + seg_start, i - seg_start);
                         if (!parts2[pi2]) {
-                            for (Py_ssize_t k = 0; k < pi2; k++) Py_DECREF(parts2[k]);
+                            for (Py_ssize_t k = 0; k < pi2; k++) menai_release(parts2[k]);
                             PyMem_Free(parts2);
                             goto error;
                         }
@@ -3352,7 +3305,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 r = menai_list_from_array_steal(parts2, pi2);
             }
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3392,7 +3345,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             Py_ssize_t n = ((MenaiList_Object *)a)->length;
             PyObject *_r = make_integer_from_ssize_t(n);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -3404,7 +3357,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("Function 'list-first' requires a non-empty list");
                 goto error;
             }
-            reg_set_borrow(regs, base + dest, lst_f->elements[0]);
+            menai_reg_set_borrow(regs, base + dest, lst_f->elements[0]);
             break;
         }
 
@@ -3417,7 +3370,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *r = menai_list_rest(a);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3430,7 +3383,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("Function 'list-last' requires a non-empty list");
                 goto error;
             }
-            reg_set_borrow(regs, base + dest, lst_l->elements[n - 1]);
+            menai_reg_set_borrow(regs, base + dest, lst_l->elements[n - 1]);
             break;
         }
 
@@ -3451,7 +3404,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 menai_raise_eval_errorf("list-ref: index out of range: %zd", idx);
                 goto error;
             }
-            reg_set_borrow(regs, base + dest, lst_ref->elements[idx]);
+            menai_reg_set_borrow(regs, base + dest, lst_ref->elements[idx]);
             break;
         }
 
@@ -3466,14 +3419,14 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 goto error;
             }
             pre_arr[0] = item;
-            Py_INCREF(item);
+            menai_retain(item);
             for (Py_ssize_t i = 0; i < n; i++) {
                 pre_arr[i + 1] = lst_pre->elements[i];
-                Py_INCREF(pre_arr[i + 1]);
+                menai_retain(pre_arr[i + 1]);
             }
             PyObject *r = menai_list_from_array_steal(pre_arr, n + 1);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3489,13 +3442,13 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             for (Py_ssize_t i = 0; i < n; i++) {
                 app_arr[i] = lst_app->elements[i];
-                Py_INCREF(app_arr[i]);
+                menai_retain(app_arr[i]);
             }
             app_arr[n] = item;
-            Py_INCREF(item);
+            menai_retain(item);
             PyObject *r = menai_list_from_array_steal(app_arr, n + 1);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3512,11 +3465,11 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             for (Py_ssize_t i = 0; i < n; i++) {
                 rev_arr[i] = lst_rev->elements[n - 1 - i];
-                Py_INCREF(rev_arr[i]);
+                menai_retain(rev_arr[i]);
             }
             PyObject *r = menai_list_from_array_steal(rev_arr, n);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3536,15 +3489,15 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             for (Py_ssize_t i = 0; i < na; i++) {
                 cat_arr[i] = lst_ca->elements[i];
-                Py_INCREF(cat_arr[i]);
+                menai_retain(cat_arr[i]);
             }
             for (Py_ssize_t i = 0; i < nb; i++) {
                 cat_arr[na + i] = lst_cb->elements[i];
-                Py_INCREF(cat_arr[na + i]);
+                menai_retain(cat_arr[na + i]);
             }
             PyObject *r = menai_list_from_array_steal(cat_arr, nc);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3578,11 +3531,11 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 }
             }
             if (found == -1) {
-                reg_set_borrow(regs, base + dest, Menai_NONE);
+                menai_reg_set_borrow(regs, base + dest, Menai_NONE);
             } else {
                 PyObject *_r = make_integer_from_ssize_t(found);
                 if (_r == NULL) goto error;
-                reg_set_own(regs, base + dest, _r);
+                menai_reg_set_own(regs, base + dest, _r);
             }
             break;
         }
@@ -3624,7 +3577,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *r = menai_list_slice(a, start, end);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3650,13 +3603,13 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 PyObject *e = lst_rm->elements[i];
                 int eq = menai_value_equal(e, item);
                 if (!eq) {
-                    Py_INCREF(e);
+                    menai_retain(e);
                     rm_arr[j++] = e;
                 }
             }
             PyObject *r = menai_list_from_array_steal(rm_arr, keep);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3698,7 +3651,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *r = (PyObject *)obj;
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3737,7 +3690,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 }
                 if (existing < 0) {
                     menai_ht_insert(&lts_seen, elem, h, out);
-                    Py_INCREF(elem);
+                    menai_retain(elem);
                     nelems[out] = elem;
                     nhashes[out] = h;
                     out++;
@@ -3745,14 +3698,14 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             if (n > 0) menai_ht_free(&lts_seen);
             if (lts_err) {
-                for (Py_ssize_t k = 0; k < out; k++) Py_DECREF(nelems[k]);
+                for (Py_ssize_t k = 0; k < out; k++) menai_release(nelems[k]);
                 PyMem_Free(nelems);
                 PyMem_Free(nhashes);
                 goto error;
             }
             PyObject *r = menai_set_from_arrays_steal(nelems, nhashes, out);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3819,7 +3772,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_dict(a, "dict-length")) goto error;
             PyObject *_r = make_integer_from_ssize_t(((MenaiDict_Object *)a)->length);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -3835,12 +3788,12 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 goto error;
             }
             for (Py_ssize_t i = 0; i < n; i++) {
-                Py_INCREF(d->keys[i]);
+                menai_retain(d->keys[i]);
                 dk_arr[i] = d->keys[i];
             }
             PyObject *r = menai_list_from_array_steal(dk_arr, n);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3856,12 +3809,12 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 goto error;
             }
             for (Py_ssize_t i = 0; i < n; i++) {
-                Py_INCREF(d->values[i]);
+                menai_retain(d->values[i]);
                 dv_arr[i] = d->values[i];
             }
             PyObject *r = menai_list_from_array_steal(dv_arr, n);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -3886,9 +3839,9 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             Py_ssize_t idx = menai_ht_lookup(&d->ht, key, h);
             if (idx == -2) goto error;
             if (idx >= 0) {
-                reg_set_borrow(regs, base + dest, d->values[idx]);
+                menai_reg_set_borrow(regs, base + dest, d->values[idx]);
             } else {
-                reg_set_borrow(regs, base + dest, def);
+                menai_reg_set_borrow(regs, base + dest, def);
             }
             break;
         }
@@ -3917,36 +3870,36 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (replace_idx >= 0) {
                 for (Py_ssize_t i = 0; i < n; i++) {
                     if (i == replace_idx) {
-                        Py_INCREF(key);
+                        menai_retain(key);
                         nkeys[i] = key;
-                        Py_INCREF(val);
+                        menai_retain(val);
                         nvals[i] = val;
                         nhashes[i] = h;
                     } else {
-                        Py_INCREF(d->keys[i]);
+                        menai_retain(d->keys[i]);
                         nkeys[i] = d->keys[i];
-                        Py_INCREF(d->values[i]);
+                        menai_retain(d->values[i]);
                         nvals[i] = d->values[i];
                         nhashes[i] = d->hashes[i];
                     }
                 }
             } else {
                 for (Py_ssize_t i = 0; i < n; i++) {
-                    Py_INCREF(d->keys[i]);
+                    menai_retain(d->keys[i]);
                     nkeys[i] = d->keys[i];
-                    Py_INCREF(d->values[i]);
+                    menai_retain(d->values[i]);
                     nvals[i] = d->values[i];
                     nhashes[i] = d->hashes[i];
                 }
-                Py_INCREF(key);
+                menai_retain(key);
                 nkeys[n] = key;
-                Py_INCREF(val);
+                menai_retain(val);
                 nvals[n] = val;
                 nhashes[n] = h;
             }
             PyObject *result = menai_dict_from_arrays_steal(nkeys, nvals, nhashes, new_n);
             if (result == NULL) goto error;
-            reg_set_own(regs, base + dest, result);
+            menai_reg_set_own(regs, base + dest, result);
             break;
         }
 
@@ -3959,7 +3912,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             Py_ssize_t remove_idx = menai_ht_lookup(&d->ht, key, h);
             if (remove_idx == -2) goto error;
             if (remove_idx < 0) {
-                reg_set_borrow(regs, base + dest, a);
+                menai_reg_set_borrow(regs, base + dest, a);
                 break;
             }
             Py_ssize_t n = d->length;
@@ -3976,16 +3929,16 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             for (Py_ssize_t i = 0, j = 0; i < n; i++) {
                 if (i == remove_idx) continue;
-                Py_INCREF(d->keys[i]);
+                menai_retain(d->keys[i]);
                 nkeys[j] = d->keys[i];
-                Py_INCREF(d->values[i]);
+                menai_retain(d->values[i]);
                 nvals[j] = d->values[i];
                 nhashes[j] = d->hashes[i];
                 j++;
             }
             PyObject *r = menai_dict_from_arrays_steal(nkeys, nvals, nhashes, new_n);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -4013,22 +3966,22 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 Py_ssize_t bi = menai_ht_lookup(&db->ht, da->keys[i], da->hashes[i]);
                 if (bi == -2) {
                     for (Py_ssize_t k = 0; k < out; k++) {
-                        Py_DECREF(nkeys[k]);
-                        Py_DECREF(nvals[k]);
+                        menai_release(nkeys[k]);
+                        menai_release(nvals[k]);
                     }
                     PyMem_Free(nkeys);
                     PyMem_Free(nvals);
                     PyMem_Free(nhashes);
                     goto error;
                 }
-                Py_INCREF(da->keys[i]);
+                menai_retain(da->keys[i]);
                 nkeys[out] = da->keys[i];
                 nhashes[out] = da->hashes[i];
                 if (bi >= 0) {
-                    Py_INCREF(db->values[bi]);
+                    menai_retain(db->values[bi]);
                     nvals[out] = db->values[bi];
                 } else {
-                    Py_INCREF(da->values[i]);
+                    menai_retain(da->values[i]);
                     nvals[out] = da->values[i];
                 }
                 out++;
@@ -4038,8 +3991,8 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 Py_ssize_t ai = menai_ht_lookup(&da->ht, db->keys[i], db->hashes[i]);
                 if (ai == -2) {
                     for (Py_ssize_t k = 0; k < out; k++) {
-                        Py_DECREF(nkeys[k]);
-                        Py_DECREF(nvals[k]);
+                        menai_release(nkeys[k]);
+                        menai_release(nvals[k]);
                     }
                     PyMem_Free(nkeys);
                     PyMem_Free(nvals);
@@ -4047,9 +4000,9 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                     goto error;
                 }
                 if (ai < 0) {
-                    Py_INCREF(db->keys[i]);
+                    menai_retain(db->keys[i]);
                     nkeys[out] = db->keys[i];
-                    Py_INCREF(db->values[i]);
+                    menai_retain(db->values[i]);
                     nvals[out] = db->values[i];
                     nhashes[out] = db->hashes[i];
                     out++;
@@ -4057,7 +4010,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *r = menai_dict_from_arrays_steal(nkeys, nvals, nhashes, out);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -4108,7 +4061,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_set_singular(a, "set-length")) goto error;
             PyObject *_r = make_integer_from_ssize_t(((MenaiSet_Object *)a)->length);
             if (_r == NULL) goto error;
-            reg_set_own(regs, base + dest, _r);
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
@@ -4133,7 +4086,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             Py_ssize_t existing = menai_ht_lookup(&s->ht, item, h);
             if (existing == -2) goto error;
             if (existing >= 0) {
-                reg_set_borrow(regs, base + dest, a);
+                menai_reg_set_borrow(regs, base + dest, a);
             } else {
                 Py_ssize_t n = s->length;
                 PyObject **nelems = (PyObject **)PyMem_Malloc((n + 1) * sizeof(PyObject *));
@@ -4145,16 +4098,16 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                     goto error;
                 }
                 for (Py_ssize_t i = 0; i < n; i++) {
-                    Py_INCREF(s->elements[i]);
+                    menai_retain(s->elements[i]);
                     nelems[i] = s->elements[i];
                     nhashes[i] = s->hashes[i];
                 }
-                Py_INCREF(item);
+                menai_retain(item);
                 nelems[n] = item;
                 nhashes[n] = h;
                 PyObject *r = menai_set_from_arrays_steal(nelems, nhashes, n + 1);
                 if (r == NULL) goto error;
-                reg_set_own(regs, base + dest, r);
+                menai_reg_set_own(regs, base + dest, r);
             }
             break;
         }
@@ -4168,7 +4121,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             Py_ssize_t remove_idx = menai_ht_lookup(&s->ht, item, h);
             if (remove_idx == -2) goto error;
             if (remove_idx < 0) {
-                reg_set_borrow(regs, base + dest, a);
+                menai_reg_set_borrow(regs, base + dest, a);
                 break;
             }
             Py_ssize_t n = s->length;
@@ -4183,14 +4136,14 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             for (Py_ssize_t i = 0, j = 0; i < n; i++) {
                 if (i == remove_idx) continue;
-                Py_INCREF(s->elements[i]);
+                menai_retain(s->elements[i]);
                 nelems[j] = s->elements[i];
                 nhashes[j] = s->hashes[i];
                 j++;
             }
             PyObject *r = menai_set_from_arrays_steal(nelems, nhashes, new_n);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -4212,7 +4165,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             Py_ssize_t out = 0;
             for (Py_ssize_t i = 0; i < na; i++) {
-                Py_INCREF(sa->elements[i]);
+                menai_retain(sa->elements[i]);
                 nelems[out] = sa->elements[i];
                 nhashes[out] = sa->hashes[i];
                 out++;
@@ -4221,14 +4174,14 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 Py_ssize_t in_a = menai_ht_lookup(&sa->ht, sb->elements[i], sb->hashes[i]);
                 if (in_a == -2) {
                     for (Py_ssize_t k = 0; k < out; k++) {
-                        Py_DECREF(nelems[k]);
+                        menai_release(nelems[k]);
                     }
                     PyMem_Free(nelems);
                     PyMem_Free(nhashes);
                     goto error;
                 }
                 if (in_a < 0) {
-                    Py_INCREF(sb->elements[i]);
+                    menai_retain(sb->elements[i]);
                     nelems[out] = sb->elements[i];
                     nhashes[out] = sb->hashes[i];
                     out++;
@@ -4236,7 +4189,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *r = menai_set_from_arrays_steal(nelems, nhashes, out);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -4260,14 +4213,14 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 Py_ssize_t in_b = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
                 if (in_b == -2) {
                     for (Py_ssize_t k = 0; k < out; k++) {
-                        Py_DECREF(nelems[k]);
+                        menai_release(nelems[k]);
                     }
                     PyMem_Free(nelems);
                     PyMem_Free(nhashes);
                     goto error;
                 }
                 if (in_b >= 0) {
-                    Py_INCREF(sa->elements[i]);
+                    menai_retain(sa->elements[i]);
                     nelems[out] = sa->elements[i];
                     nhashes[out] = sa->hashes[i];
                     out++;
@@ -4275,7 +4228,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *r = menai_set_from_arrays_steal(nelems, nhashes, out);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -4299,21 +4252,21 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 Py_ssize_t in_b = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
                 if (in_b == -2) {
                     for (Py_ssize_t k = 0; k < out; k++) {
-                        Py_DECREF(nelems[k]);
+                        menai_release(nelems[k]);
                     }
                     PyMem_Free(nelems);
                     PyMem_Free(nhashes);
                     goto error;
                 }
                 if (in_b < 0) {
-                    Py_INCREF(sa->elements[i]); nelems[out] = sa->elements[i];
+                    menai_retain(sa->elements[i]); nelems[out] = sa->elements[i];
                     nhashes[out] = sa->hashes[i];
                     out++;
                 }
             }
             PyObject *r = menai_set_from_arrays_steal(nelems, nhashes, out);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -4352,12 +4305,12 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 goto error;
             }
             for (Py_ssize_t i = 0; i < set_n; i++) {
-                Py_INCREF(s->elements[i]);
+                menai_retain(s->elements[i]);
                 stl_arr[i] = s->elements[i];
             }
             PyObject *r = menai_list_from_array_steal(stl_arr, set_n);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -4393,7 +4346,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             for (Py_ssize_t i = 0; i < n; i++) {
                 PyObject *mi = make_integer_from_long(val);
                 if (mi == NULL) {
-                    for (Py_ssize_t k = 0; k < i; k++) Py_DECREF(rng_arr[k]);
+                    for (Py_ssize_t k = 0; k < i; k++) menai_release(rng_arr[k]);
                     PyMem_Free(rng_arr);
                     goto error;
                 }
@@ -4402,7 +4355,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *r = menai_list_from_array_steal(rng_arr, n);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -4420,7 +4373,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             int n_fields = src1;
             PyObject *instance = menai_struct_alloc(struct_type, &regs[base + src0 + 1], n_fields);
             if (instance == NULL) goto error;
-            reg_set_own(regs, base + dest, instance);
+            menai_reg_set_own(regs, base + dest, instance);
             break;
         }
 
@@ -4457,7 +4410,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 goto error;
             }
             PyObject *fv = ((MenaiStruct_Object *)val)->items[fi];
-            reg_set_borrow(regs, base + dest, fv);
+            menai_reg_set_borrow(regs, base + dest, fv);
             break;
         }
 
@@ -4471,7 +4424,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!fi_io->is_big) { fi_l = fi_io->small; } else { if (menai_int_to_long(&fi_io->big, &fi_l) < 0) goto error; }
             Py_ssize_t fi = (Py_ssize_t)fi_l;
             PyObject *fv = ((MenaiStruct_Object *)val)->items[fi];
-            reg_set_borrow(regs, base + dest, fv);
+            menai_reg_set_borrow(regs, base + dest, fv);
             break;
         }
 
@@ -4502,7 +4455,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyMem_Free(tmp);
             if (r == NULL) goto error;
 
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -4527,7 +4480,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *r = menai_struct_alloc(stype, tmp, nf);
             PyMem_Free(tmp);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -4572,7 +4525,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
         case OP_STRUCT_TYPE: {
             PyObject *val = regs[base + src0];
             if (!require_struct(val, "struct-type")) goto error;
-            reg_set_borrow(regs, base + dest, ((MenaiStruct_Object *)val)->struct_type);
+            menai_reg_set_borrow(regs, base + dest, ((MenaiStruct_Object *)val)->struct_type);
             break;
         }
 
@@ -4582,7 +4535,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             PyObject *name = ((MenaiStructType_Object *)val)->name;
             PyObject *r = menai_string_from_pyunicode(name);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -4600,7 +4553,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             for (int i = 0; i < n; i++) {
                 PyObject *sym = menai_symbol_alloc(st->fields[i].name);
                 if (sym == NULL) {
-                    for (int k = 0; k < i; k++) Py_DECREF(sf_arr[k]);
+                    for (int k = 0; k < i; k++) menai_release(sf_arr[k]);
                     PyMem_Free(sf_arr);
                     goto error;
                 }
@@ -4608,7 +4561,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             }
             PyObject *r = menai_list_from_array_steal(sf_arr, (Py_ssize_t)n);
             if (r == NULL) goto error;
-            reg_set_own(regs, base + dest, r);
+            menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
@@ -4622,7 +4575,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
 error:
         /* Release all live frames above the sentinel. */
         for (int d = frame_depth; d >= 1; d--)
-            Py_XDECREF(frames[d].code_obj);
+            menai_xrelease(frames[d].code_obj);
         return NULL;
     }
 }
@@ -4671,7 +4624,7 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     }
 
     /* Allocate the register array. */
-    PyObject **regs = regs_alloc(MAX_FRAME_DEPTH, max_locals);
+    PyObject **regs = menai_regs_alloc((Py_ssize_t)(MAX_FRAME_DEPTH + 1) * max_locals, Menai_NONE);
     if (regs == NULL) {
         globals_free(&globals);
         return NULL;
@@ -4681,7 +4634,7 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     PyObject *result = execute_loop(code, &globals, regs, max_locals);
 
     /* Clean up. */
-    regs_free(regs, MAX_FRAME_DEPTH, max_locals);
+    menai_regs_free(regs, (Py_ssize_t)(MAX_FRAME_DEPTH + 1) * max_locals);
     globals_free(&globals);
 
     if (result == NULL)
@@ -4689,7 +4642,7 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
 
     /* Convert fast C types back to compiler-world types. */
     PyObject *slow_result = menai_to_slow(result);
-    Py_DECREF(result);
+    menai_release(result);
     return slow_result;
 }
 

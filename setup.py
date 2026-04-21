@@ -24,6 +24,7 @@ extensions = [
         name="menai.menai_vm_c",
         sources=[
             "src/menai/menai_vm_c.c",
+            "src/menai/menai_vm_memory.c",
             "src/menai/menai_vm_string.c",
             "src/menai/menai_vm_bigint.c",
             "src/menai/menai_vm_hashtable.c",
