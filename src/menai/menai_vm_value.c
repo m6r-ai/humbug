@@ -184,8 +184,11 @@ menai_convert_value(PyObject *src)
     if (t == Slow_SymbolType) {
         PyObject *n = PyObject_GetAttrString(src, "name");
         if (!n) return NULL;
-        MenaiValue r = menai_symbol_alloc(n);
+        MenaiValue name_str = menai_string_from_pyunicode(n);
         Py_DECREF(n);
+        if (!name_str) return NULL;
+        MenaiValue r = menai_symbol_alloc(name_str);
+        menai_release(name_str);
         return (PyObject *)r;
     }
 
@@ -631,30 +634,49 @@ menai_value_describe_string(MenaiValue val)
 PyObject *
 menai_value_describe_symbol(MenaiValue val)
 {
-    PyObject *name = ((MenaiSymbol_Object *)val)->name;
-    Py_INCREF(name);
-    return name;
+    return menai_string_to_pyunicode(((MenaiSymbol_Object *)val)->name);
 }
 
 PyObject *
 menai_value_describe_structtype(MenaiValue val)
 {
     MenaiStructType_Object *st = (MenaiStructType_Object *)val;
-    PyObject *field_names = st->field_names;
-    Py_ssize_t nf = PyTuple_GET_SIZE(field_names);
+    int nf = st->nfields;
+
+    PyObject *type_name = menai_string_to_pyunicode(st->name);
+    if (!type_name) return NULL;
 
     if (nf == 0) {
-        return PyUnicode_FromFormat("<struct-type %U ()>", st->name);
+        PyObject *result = PyUnicode_FromFormat("<struct-type %U ()>", type_name);
+        Py_DECREF(type_name);
+        return result;
     }
 
+    PyObject *parts = PyList_New(nf);
+    if (!parts) {
+        Py_DECREF(type_name);
+        return NULL;
+    }
+    for (int i = 0; i < nf; i++) {
+        PyObject *fname = menai_string_to_pyunicode(st->fields[i].name);
+        if (!fname) {
+            Py_DECREF(parts);
+            Py_DECREF(type_name);
+            return NULL;
+        }
+        PyList_SET_ITEM(parts, i, fname);
+    }
     PyObject *sep = PyUnicode_FromString(" ");
-    if (!sep) return NULL;
-    PyObject *fields_str = PyUnicode_Join(sep, field_names);
-    Py_DECREF(sep);
-    if (!fields_str) return NULL;
+    PyObject *fields_str = sep ? PyUnicode_Join(sep, parts) : NULL;
+    Py_XDECREF(sep);
+    Py_DECREF(parts);
+    if (!fields_str) {
+        Py_DECREF(type_name);
+        return NULL;
+    }
 
-    PyObject *result = PyUnicode_FromFormat("<struct-type %U (%U)>",
-                                            st->name, fields_str);
+    PyObject *result = PyUnicode_FromFormat("<struct-type %U (%U)>", type_name, fields_str);
+    Py_DECREF(type_name);
     Py_DECREF(fields_str);
     return result;
 }
@@ -666,17 +688,26 @@ menai_value_describe_struct(MenaiValue val)
     MenaiStructType_Object *st = (MenaiStructType_Object *)s->struct_type;
     int nf = s->nfields;
 
+    PyObject *type_name = menai_string_to_pyunicode(st->name);
+    if (!type_name) return NULL;
+
     if (nf == 0) {
-        return PyUnicode_FromFormat("(%U)", st->name);
+        PyObject *result = PyUnicode_FromFormat("(%U)", type_name);
+        Py_DECREF(type_name);
+        return result;
     }
 
     PyObject *parts = PyList_New(nf);
-    if (!parts) return NULL;
+    if (!parts) {
+        Py_DECREF(type_name);
+        return NULL;
+    }
 
     for (int i = 0; i < nf; i++) {
         PyObject *fd = menai_value_describe(s->items[i]);
         if (!fd) {
             Py_DECREF(parts);
+            Py_DECREF(type_name);
             return NULL;
         }
         PyList_SET_ITEM(parts, i, fd);
@@ -692,7 +723,8 @@ menai_value_describe_struct(MenaiValue val)
     Py_DECREF(parts);
     if (!fields_str) return NULL;
 
-    PyObject *result = PyUnicode_FromFormat("(%U %U)", st->name, fields_str);
+    PyObject *result = PyUnicode_FromFormat("(%U %U)", type_name, fields_str);
+    Py_DECREF(type_name);
     Py_DECREF(fields_str);
     return result;
 }
@@ -934,16 +966,18 @@ menai_value_to_python_string(MenaiValue val)
 PyObject *
 menai_value_to_python_symbol(MenaiValue val)
 {
-    PyObject *name = ((MenaiSymbol_Object *)val)->name;
-    Py_INCREF(name);
-    return name;
+    return menai_string_to_pyunicode(((MenaiSymbol_Object *)val)->name);
 }
 
 PyObject *
 menai_value_to_python_structtype(MenaiValue val)
 {
     MenaiStructType_Object *st = (MenaiStructType_Object *)val;
-    return PyUnicode_FromFormat("<struct-type %U>", st->name);
+    PyObject *name = menai_string_to_pyunicode(st->name);
+    if (!name) return NULL;
+    PyObject *result = PyUnicode_FromFormat("<struct-type %U>", name);
+    Py_DECREF(name);
+    return result;
 }
 
 PyObject *
@@ -952,19 +986,24 @@ menai_value_to_python_struct(MenaiValue val)
     MenaiStruct_Object *s = (MenaiStruct_Object *)val;
     MenaiStructType_Object *st = (MenaiStructType_Object *)s->struct_type;
     int nf = s->nfields;
-    PyObject *field_names = st->field_names;
 
     PyObject *result = PyDict_New();
     if (!result) return NULL;
 
     for (int i = 0; i < nf; i++) {
-        PyObject *fname = PyTuple_GET_ITEM(field_names, i);
+        PyObject *fname = menai_string_to_pyunicode(st->fields[i].name);
+        if (!fname) {
+            Py_DECREF(result);
+            return NULL;
+        }
         PyObject *fval = menai_value_to_python(s->items[i]);
         if (!fval) {
+            Py_DECREF(fname);
             Py_DECREF(result);
             return NULL;
         }
         int ok = PyDict_SetItem(result, fname, fval);
+        Py_DECREF(fname);
         Py_DECREF(fval);
         if (ok < 0) {
             Py_DECREF(result);
@@ -1014,8 +1053,7 @@ menai_value_to_python_dict(MenaiValue val)
         if (kt == &MenaiString_Type) {
             py_key = menai_string_to_pyunicode(k);
         } else if (kt == &MenaiSymbol_Type) {
-            py_key = ((MenaiSymbol_Object *)k)->name;
-            Py_INCREF(py_key);
+            py_key = menai_string_to_pyunicode(((MenaiSymbol_Object *)k)->name);
         } else {
             /* Non-string/symbol keys are stringified, matching slow VM behaviour */
             PyObject *native = menai_value_to_python(k);
@@ -1065,8 +1103,7 @@ menai_value_to_python_set(MenaiValue val)
         if (et == &MenaiString_Type) {
             py_elem = menai_string_to_pyunicode(elem);
         } else if (et == &MenaiSymbol_Type) {
-            py_elem = ((MenaiSymbol_Object *)elem)->name;
-            Py_INCREF(py_elem);
+            py_elem = menai_string_to_pyunicode(((MenaiSymbol_Object *)elem)->name);
         } else {
             py_elem = menai_value_to_python(elem);
         }
@@ -1339,9 +1376,7 @@ static PyObject *
 symbol_get_name(PyObject *self, void *closure)
 {
     (void)closure;
-    PyObject *n = ((MenaiSymbol_Object *)self)->name;
-    Py_INCREF(n);
-    return n;
+    return menai_string_to_pyunicode(((MenaiSymbol_Object *)self)->name);
 }
 
 static PyGetSetDef _symbol_getsets[] = {

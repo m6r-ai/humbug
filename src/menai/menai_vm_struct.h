@@ -4,16 +4,12 @@
  * MenaiStructType describes a struct schema (name, tag, field names).  The
  * field lookup table is stored as an inline C array of (interned name pointer,
  * index) pairs rather than a Python dict, so field lookup by symbol name
- * reduces to a pointer-comparison linear scan — faster than a dict lookup for
- * the small field counts typical in Menai structs.
+ * reduces to a menai_string_equal() linear scan — fast for the small field
+ * counts typical in Menai structs.
  *
  * MenaiStruct is an instance of a MenaiStructType.  Field values are stored
  * in an inline C array (nfields entries), eliminating the Python tuple object
  * that was previously heap-allocated on every struct construction.
- *
- * The name, tag, and field_names fields on MenaiStructType_Object remain as
- * PyObject * because they originate from Python source and field_names is
- * returned directly to Python by OP_STRUCT_FIELDS.
  */
 
 #ifndef MENAI_VM_STRUCT_H
@@ -23,21 +19,21 @@
 #include <Python.h>
 
 #include "menai_vm_object.h"
+#include "menai_vm_string.h"
 
 /*
  * One entry in the MenaiStructType field-index table.
- * name is an interned PyUnicode object; index is the 0-based field position.
+ * name is an owned MenaiString_Object *; index is the 0-based field position.
  */
 typedef struct {
-    PyObject *name;
+    MenaiValue name;
     int index;
 } MenaiFieldEntry;
 
 typedef struct {
     MenaiObject_HEAD
-    PyObject *name;             /* Python str — struct type name */
+    MenaiValue name;            /* owned MenaiString_Object * — struct type name */
     int tag;                    /* unique integer tag */
-    PyObject *field_names;      /* Python tuple of str — kept for OP_STRUCT_FIELDS */
     int nfields;                /* number of fields */
     MenaiFieldEntry fields[];   /* inline field-index table, nfields entries */
 } MenaiStructType_Object;
@@ -54,15 +50,16 @@ extern MenaiType MenaiStruct_Type;
 
 /*
  * menai_struct_field_index — look up a field by interned name pointer.
- * Returns the 0-based index, or -1 if not found.
+ * name must be a MenaiString_Object *.  Returns the 0-based index, or -1 if
+ * not found.
  */
 static inline int
-menai_struct_field_index(MenaiStructType_Object *st, PyObject *name)
+menai_struct_field_index(MenaiStructType_Object *st, MenaiValue name)
 {
     int n = st->nfields;
     MenaiFieldEntry *fe = st->fields;
     for (int i = 0; i < n; i++) {
-        if (fe[i].name == name) return fe[i].index;
+        if (menai_string_equal(fe[i].name, name)) return fe[i].index;
     }
 
     return -1;
@@ -71,8 +68,8 @@ menai_struct_field_index(MenaiStructType_Object *st, PyObject *name)
 /*
  * menai_struct_alloc — direct C constructor for MenaiStruct.
  *
- * struct_type is borrowed (retain'd internally).  field_values is an array
- * of nfields borrowed references — each is retain'd into the inline array.
+ * struct_type is borrowed (retained internally).  field_values is an array
+ * of nfields borrowed references — each is retained into the inline array.
  * Returns a new reference, or NULL on error.
  */
 MenaiValue menai_struct_alloc(MenaiValue struct_type, MenaiValue *field_values,
@@ -80,8 +77,8 @@ MenaiValue menai_struct_alloc(MenaiValue struct_type, MenaiValue *field_values,
 
 /*
  * menai_struct_type_new_from_args — public wrapper used by menai_convert_value.
- * args is a positional Python tuple (name, tag, field_names).
- * Returns a new reference.
+ * args is a positional Python tuple (name: PyUnicode, tag: int, field_names: sequence of PyUnicode).
+ * Converts strings to MenaiString internally.  Returns a new reference.
  */
 MenaiValue menai_struct_type_new_from_args(PyObject *args);
 

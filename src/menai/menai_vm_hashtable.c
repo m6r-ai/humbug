@@ -148,15 +148,8 @@ menai_value_hash(MenaiValue val)
     if (t == &MenaiString_Type)
         return menai_string_hash(val);
 
-    if (t == &MenaiSymbol_Type) {
-        PyObject *name = ((MenaiSymbol_Object *)val)->name;
-        Py_uhash_t p = (Py_uhash_t)(uintptr_t)name;
-        p ^= p >> 4;
-        p *= 0x9e3779b97f4a7c15ULL;
-        p ^= p >> 27;
-        Py_hash_t h = (Py_hash_t)(p & (Py_uhash_t)PY_SSIZE_T_MAX);
-        return h == -1 ? -2 : h;
-    }
+    if (t == &MenaiSymbol_Type)
+        return menai_string_hash(((MenaiSymbol_Object *)val)->name);
 
     if (t == &MenaiStructType_Type)
         return (Py_hash_t)((MenaiStructType_Object *)val)->tag;
@@ -220,7 +213,7 @@ menai_value_equal(MenaiValue a, MenaiValue b)
         return menai_string_equal(a, b);
 
     if (ta == &MenaiSymbol_Type)
-        return ((MenaiSymbol_Object *)a)->name == ((MenaiSymbol_Object *)b)->name;
+        return menai_string_equal(((MenaiSymbol_Object *)a)->name, ((MenaiSymbol_Object *)b)->name);
 
     if (ta == &MenaiStructType_Type)
         return ((MenaiStructType_Object *)a)->tag == ((MenaiStructType_Object *)b)->tag;

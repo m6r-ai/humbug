@@ -401,7 +401,7 @@ static inline double menai_float_value(MenaiValue o) {
     return ((MenaiFloat_Object *)o)->value;
 }
 
-static inline PyObject *menai_symbol_name(MenaiValue o) {
+static inline MenaiValue menai_symbol_name(MenaiValue o) {
     return ((MenaiSymbol_Object *)o)->name;
 }
 
@@ -1146,10 +1146,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 /* Struct constructor call */
                 int n_fields = ((MenaiStructType_Object *)raw)->nfields;
                 if (arity != (int)n_fields) {
-                    PyObject *sname = ((MenaiStructType_Object *)raw)->name;
+                    PyObject *sname = menai_string_to_pyunicode(((MenaiStructType_Object *)raw)->name);
                     menai_raise_eval_errorf(
                         "Struct constructor '%s' called with wrong number of arguments",
                         sname ? PyUnicode_AsUTF8(sname) : "?");
+                    Py_XDECREF(sname);
                     goto error;
                 }
                 MenaiValue instance = menai_struct_alloc(raw, &regs[callee_base], n_fields);
@@ -1192,10 +1193,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             } else if (IS_MENAI_STRUCTTYPE(raw)) {
                 int n_fields = ((MenaiStructType_Object *)raw)->nfields;
                 if (n_args != (int)n_fields) {
-                    PyObject *sname = ((MenaiStructType_Object *)raw)->name;
+                    PyObject *sname = menai_string_to_pyunicode(((MenaiStructType_Object *)raw)->name);
                     menai_raise_eval_errorf(
                         "Struct constructor '%s' called with wrong number of arguments",
                         sname ? PyUnicode_AsUTF8(sname) : "?");
+                    Py_XDECREF(sname);
                     menai_release(raw);
                     goto error;
                 }
@@ -1264,28 +1266,23 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_SYMBOL_EQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
             if (!require_symbol_pair(a, b, "symbol=?")) goto error;
-            PyObject *na = menai_symbol_name(a);
-            PyObject *nb = menai_symbol_name(b);
-            bool_store(regs, base + dest, na == nb);
+            bool_store(regs, base + dest,
+                menai_string_equal(menai_symbol_name(a), menai_symbol_name(b)));
             break;
         }
 
         case OP_SYMBOL_NEQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
             if (!require_symbol_pair(a, b, "symbol!=?")) goto error;
-            PyObject *na = menai_symbol_name(a);
-            PyObject *nb = menai_symbol_name(b);
-            bool_store(regs, base + dest, na != nb);
+            bool_store(regs, base + dest,
+                !menai_string_equal(menai_symbol_name(a), menai_symbol_name(b)));
             break;
         }
 
         case OP_SYMBOL_TO_STRING: {
             MenaiValue a = regs[base + src0];
             if (!require_symbol(a, "symbol->string")) goto error;
-            PyObject *name = menai_symbol_name(a);
-            MenaiValue r = menai_string_from_pyunicode(name);
-            if (r == NULL) goto error;
-            menai_reg_set_own(regs, base + dest, r);
+            menai_reg_set_borrow(regs, base + dest, menai_symbol_name(a));
             break;
         }
 
@@ -4173,13 +4170,17 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!require_struct(val, "struct-get")) goto error;
             if (!require_symbol(field_sym, "struct-get")) goto error;
             MenaiValue stype = ((MenaiStruct_Object *)val)->struct_type;
-            PyObject *name = menai_symbol_name(field_sym);
-            int fi = menai_struct_field_index((MenaiStructType_Object *)stype, name);
+            MenaiValue field_name = menai_symbol_name(field_sym);
+            int fi = menai_struct_field_index((MenaiStructType_Object *)stype, field_name);
             if (fi < 0) {
+                PyObject *stype_name = menai_string_to_pyunicode(((MenaiStructType_Object *)stype)->name);
+                PyObject *fname_py = menai_string_to_pyunicode(field_name);
                 menai_raise_eval_errorf(
                     "'struct-get': struct '%s' has no field '%s'",
-                    PyUnicode_AsUTF8(((MenaiStructType_Object *)stype)->name),
-                    PyUnicode_AsUTF8(name));
+                    stype_name ? PyUnicode_AsUTF8(stype_name) : "?",
+                    fname_py ? PyUnicode_AsUTF8(fname_py) : "?");
+                Py_XDECREF(stype_name);
+                Py_XDECREF(fname_py);
                 goto error;
             }
             MenaiValue fv = ((MenaiStruct_Object *)val)->items[fi];
@@ -4206,13 +4207,17 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!require_struct(val, "struct-set")) goto error;
             if (!require_symbol(field_sym, "struct-set")) goto error;
             MenaiValue stype = ((MenaiStruct_Object *)val)->struct_type;
-            PyObject *name = menai_symbol_name(field_sym);
-            int fi = menai_struct_field_index((MenaiStructType_Object *)stype, name);
+            MenaiValue field_name = menai_symbol_name(field_sym);
+            int fi = menai_struct_field_index((MenaiStructType_Object *)stype, field_name);
             if (fi < 0) {
+                PyObject *stype_name = menai_string_to_pyunicode(((MenaiStructType_Object *)stype)->name);
+                PyObject *fname_py = menai_string_to_pyunicode(field_name);
                 menai_raise_eval_errorf(
                     "'struct-set': struct '%s' has no field '%s'",
-                    PyUnicode_AsUTF8(((MenaiStructType_Object *)stype)->name),
-                    PyUnicode_AsUTF8(name));
+                    stype_name ? PyUnicode_AsUTF8(stype_name) : "?",
+                    fname_py ? PyUnicode_AsUTF8(fname_py) : "?");
+                Py_XDECREF(stype_name);
+                Py_XDECREF(fname_py);
                 goto error;
             }
             Py_ssize_t nf = ((MenaiStruct_Object *)val)->nfields;
@@ -4305,10 +4310,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRUCT_TYPE_NAME: {
             MenaiValue val = regs[base + src0];
             if (!require_structtype(val, "struct-type-name")) goto error;
-            PyObject *name = ((MenaiStructType_Object *)val)->name;
-            MenaiValue r = menai_string_from_pyunicode(name);
-            if (r == NULL) goto error;
-            menai_reg_set_own(regs, base + dest, r);
+            menai_reg_set_borrow(regs, base + dest,
+                ((MenaiStructType_Object *)val)->name);
             break;
         }
 
