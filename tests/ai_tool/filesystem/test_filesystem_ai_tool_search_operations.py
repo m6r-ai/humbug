@@ -345,6 +345,123 @@ class TestSearchFile:
         assert data["search_text"] == "something"
 
 
+class TestFixEscapedPipePattern:
+    """Tests for the _fix_escaped_pipe_pattern correction helper."""
+
+    def test_search_file_escaped_pipe_corrected_and_warning_returned(self, tmp_path, make_tool_call):
+        """When regexp uses '\\|' and finds nothing, it is corrected to '|' and a warning is added."""
+        f = tmp_path / "alt.txt"
+        f.write_text("foo\nbar\nbaz\n")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_file",
+            "path": "alt.txt",
+            "search_text": r"foo\|bar",
+            "regexp": True
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["match_count"] == 2
+        lines = [m["line"] for m in data["matches"]]
+        assert 1 in lines
+        assert 2 in lines
+        assert "warning" in data
+        assert r"\|" in data["warning"]
+
+    def test_search_file_escaped_pipe_no_correction_when_original_matches(self, tmp_path, make_tool_call):
+        """When the original pattern (with '\\|') already finds matches, no correction is attempted."""
+        f = tmp_path / "literal.txt"
+        f.write_text("foo|bar\nbaz\n")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_file",
+            "path": "literal.txt",
+            "search_text": r"foo\|bar",
+            "regexp": True
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["match_count"] == 1
+        assert "warning" not in data
+
+    def test_search_file_no_escaped_pipe_no_warning(self, tmp_path, make_tool_call):
+        """A regexp with no '\\|' and zero matches does not produce a warning."""
+        f = tmp_path / "nomatch.txt"
+        f.write_text("hello\nworld\n")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_file",
+            "path": "nomatch.txt",
+            "search_text": r"\d{5}",
+            "regexp": True
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["match_count"] == 0
+        assert "warning" not in data
+
+    def test_search_file_plain_text_no_correction(self, tmp_path, make_tool_call):
+        """Plain-text search (regexp=False) with no matches does not trigger correction."""
+        f = tmp_path / "plain.txt"
+        f.write_text("foo\nbar\n")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_file",
+            "path": "plain.txt",
+            "search_text": r"foo\|bar",
+            "regexp": False
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["match_count"] == 0
+        assert "warning" not in data
+
+    def test_search_files_escaped_pipe_corrected_and_warning_returned(self, tmp_path, make_tool_call):
+        """search_files: '\\|' correction fires when the original finds nothing but corrected finds matches."""
+        (tmp_path / "a.txt").write_text("foo\nbaz\n")
+        (tmp_path / "b.txt").write_text("bar\nqux\n")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_files",
+            "path": ".",
+            "search_text": r"foo\|bar",
+            "regexp": True
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 2
+        assert data["files_with_matches"] == 2
+        assert "warning" in data
+        assert r"\|" in data["warning"]
+
+    def test_search_files_escaped_pipe_no_correction_when_original_matches(self, tmp_path, make_tool_call):
+        """search_files: no correction when the original '\\|' pattern already matches."""
+        (tmp_path / "lit.txt").write_text("foo|bar\nother\n")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_files",
+            "path": ".",
+            "search_text": r"foo\|bar",
+            "regexp": True
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert data["total_matches"] == 1
+        assert "warning" not in data
+
+
 class TestSearchFiles:
     """Tests for the search_files operation."""
 

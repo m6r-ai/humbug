@@ -11,6 +11,8 @@ New features:
 Bug fixes:
 
 - Tighten guidance on regexp syntax.
+- Despite instructions, and AI may use the wrong alternation format in regexps.  If we get no results using an escaped form,
+  but get results when it's unescaped, the tool will now return the results and warning that it had to remove the escaping.
 
 ## v44 (2026-04-19)
 

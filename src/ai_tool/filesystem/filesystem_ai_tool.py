@@ -1372,6 +1372,29 @@ class FileSystemAITool(AITool):
 
         return re.compile(re.escape(search_text), flags)
 
+    def _fix_escaped_pipe_pattern(self, search_text: str, case_sensitive: bool) -> re.Pattern | None:
+        """
+        Attempt to correct a regex pattern where '\\|' was used instead of '|' for alternation.
+
+        Args:
+            search_text: The original regex search text
+            case_sensitive: Whether the match is case-sensitive
+
+        Returns:
+            A compiled pattern with '\\|' replaced by '|', or None if the pattern contains
+            no '\\|' sequences or the corrected pattern is not a valid regex.
+        """
+        if r"\|" not in search_text:
+            return None
+
+        corrected = search_text.replace(r"\|", "|")
+        flags = 0 if case_sensitive else re.IGNORECASE
+        try:
+            return re.compile(corrected, flags)
+
+        except re.error:
+            return None
+
     async def _search_file(
         self,
         tool_call: AIToolCall,
@@ -1427,6 +1450,23 @@ class FileSystemAITool(AITool):
                 if len(matches) >= cast(int, max_results):
                     break
 
+        warning = None
+        if not matches and regexp:
+            fixed_pattern = self._fix_escaped_pipe_pattern(search_text, case_sensitive)
+            if fixed_pattern is not None:
+                for line_num, line in enumerate(lines, 1):
+                    if fixed_pattern.search(line):
+                        matches.append({"line": line_num, "content": line.rstrip("\n")})
+                        if len(matches) >= cast(int, max_results):
+                            break
+
+                if matches:
+                    warning = (
+                        "Pattern contained '\\|' which matches a literal '|' character, not alternation. "
+                        "It was automatically corrected to use '|' for alternation. "
+                        "Use '|' (not '\\|') for alternation in future regex patterns."
+                    )
+
         result = {
             "path": display_path,
             "search_text": search_text,
@@ -1436,6 +1476,8 @@ class FileSystemAITool(AITool):
             "truncated": len(matches) >= cast(int, max_results),
             "matches": matches
         }
+        if warning is not None:
+            result["warning"] = warning
 
         return AIToolResult(
             id=tool_call.id,
@@ -1514,6 +1556,7 @@ class FileSystemAITool(AITool):
                 try:
                     rel = file_path.relative_to(path)
                     file_display_path = str(Path(display_path) / rel)
+
                 except ValueError:
                     file_display_path = str(file_path)
 
@@ -1526,6 +1569,66 @@ class FileSystemAITool(AITool):
             if truncated:
                 break
 
+        warning = None
+        if total_matches == 0 and regexp:
+            fixed_pattern = self._fix_escaped_pipe_pattern(search_text, case_sensitive)
+            if fixed_pattern is not None:
+                for file_path in sorted(path.rglob("*")):
+                    if not file_path.is_file():
+                        continue
+
+                    if include and not fnmatch.fnmatch(file_path.name, include):
+                        continue
+
+                    if file_path.stat().st_size > self._max_file_size_bytes:
+                        continue
+
+                    try:
+                        await self._validate_and_resolve_path(
+                            "path", str(file_path), tool_call, request_authorization, allow_external=True
+                        )
+                    except (AIToolExecutionError, AIToolAuthorizationDenied):
+                        continue
+
+                    try:
+                        with open(file_path, 'r', encoding=encoding) as f:
+                            lines = f.readlines()
+                    except (UnicodeDecodeError, PermissionError, OSError):
+                        continue
+
+                    file_matches = []
+                    for line_num, line in enumerate(lines, 1):
+                        if fixed_pattern.search(line):
+                            file_matches.append({"line": line_num, "content": line.rstrip("\n")})
+                            total_matches += 1
+                            if total_matches >= cast(int, max_results):
+                                truncated = True
+                                break
+
+                    if file_matches:
+                        try:
+                            rel = file_path.relative_to(path)
+                            file_display_path = str(Path(display_path) / rel)
+
+                        except ValueError:
+                            file_display_path = str(file_path)
+
+                        files_with_matches.append({
+                            "path": file_display_path,
+                            "match_count": len(file_matches),
+                            "matches": file_matches
+                        })
+
+                    if truncated:
+                        break
+
+                if total_matches > 0:
+                    warning = (
+                        "Pattern contained '\\|' which matches a literal '|' character, not alternation. "
+                        "It was automatically corrected to use '|' for alternation. "
+                        "Use '|' (not '\\|') for alternation in future regex patterns."
+                    )
+
         result = {
             "directory": display_path,
             "search_text": search_text,
@@ -1537,6 +1640,8 @@ class FileSystemAITool(AITool):
             "files_with_matches": len(files_with_matches),
             "results": files_with_matches
         }
+        if warning is not None:
+            result["warning"] = warning
 
         return AIToolResult(
             id=tool_call.id,
@@ -1580,6 +1685,7 @@ class FileSystemAITool(AITool):
             try:
                 rel = file_path.relative_to(path)
                 matches.append(str(Path(display_path) / rel))
+
             except ValueError:
                 matches.append(str(file_path))
 
