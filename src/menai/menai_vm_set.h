@@ -18,27 +18,25 @@
 #ifndef MENAI_VM_SET_H
 #define MENAI_VM_SET_H
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
-
+#include "menai_vm_object.h"
 #include "menai_vm_hashtable.h"
 
 typedef struct {
-    PyObject_HEAD
-    PyObject     **elements; /* C array of original MenaiValues */
+    MenaiObject_HEAD
+    MenaiValue    *elements; /* C array of owned MenaiValues */
     Py_hash_t     *hashes;   /* C array of menai_value_hash(elements[i]) */
     MenaiHashTable ht;       /* pure-C hash table for O(1) membership */
     Py_ssize_t     length;
 } MenaiSet_Object;
 
-extern PyTypeObject MenaiSet_Type;
+extern MenaiType MenaiSet_Type;
 
 /*
  * menai_set_new_empty — create a zero-element MenaiSet.
  * Used by _menai_vm_value_init() to build the Menai_SET_EMPTY singleton.
  * Returns a new reference, or NULL on error.
  */
-PyObject *menai_set_new_empty(void);
+MenaiValue menai_set_new_empty(void);
 
 /*
  * menai_set_from_arrays_steal — build a MenaiSet from two parallel C arrays.
@@ -52,15 +50,12 @@ PyObject *menai_set_new_empty(void);
  *
  * Returns a new reference, or NULL on error.
  */
-PyObject *menai_set_from_arrays_steal(PyObject **elements, Py_hash_t *hashes,
-                                      Py_ssize_t n);
-
-PyObject *MenaiSet_describe(PyObject *self, PyObject *args);
-PyObject *MenaiSet_to_python(PyObject *self, PyObject *args);
+MenaiValue menai_set_from_arrays_steal(MenaiValue *elements, Py_hash_t *hashes,
+                                       Py_ssize_t n);
 
 /*
  * Module init — called once from _menai_vm_value_init().
- * Returns 0 on success, -1 on failure (Python exception set).
+ * Returns 0 on success, -1 on failure.
  */
 int menai_vm_set_init(void);
 

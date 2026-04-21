@@ -4,6 +4,10 @@
  * MenaiSymbol wraps an interned Python str as its name.  Interning is applied
  * at construction time so that equality comparisons reduce to a single pointer
  * comparison with no string content inspection.
+ *
+ * The name field remains a PyObject * because symbol names originate from
+ * Python source strings and interning is a Python-layer operation.  This is
+ * a boundary-layer concern, not part of the object model being migrated.
  */
 
 #ifndef MENAI_VM_SYMBOL_H
@@ -12,12 +16,14 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include "menai_vm_object.h"
+
 typedef struct {
-    PyObject_HEAD
+    MenaiObject_HEAD
     PyObject *name;     /* interned Python str */
 } MenaiSymbol_Object;
 
-extern PyTypeObject MenaiSymbol_Type;
+extern MenaiType MenaiSymbol_Type;
 
 /*
  * menai_symbol_alloc — direct C constructor for MenaiSymbol.
@@ -26,14 +32,11 @@ extern PyTypeObject MenaiSymbol_Type;
  * stored as an owned reference.  Returns a new reference, or NULL on
  * failure (Python exception set).
  */
-PyObject *menai_symbol_alloc(PyObject *name);
-
-PyObject *MenaiSymbol_describe(PyObject *self, PyObject *args);
-PyObject *MenaiSymbol_to_python(PyObject *self, PyObject *args);
+MenaiValue menai_symbol_alloc(PyObject *name);
 
 /*
  * Module init — called once from _menai_vm_value_init().
- * Returns 0 on success, -1 on failure (Python exception set).
+ * Returns 0 on success, -1 on failure.
  */
 int menai_vm_symbol_init(void);
 

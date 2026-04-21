@@ -5,8 +5,7 @@
 #ifndef MENAI_VM_INTEGER_H
 #define MENAI_VM_INTEGER_H
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
+#include "menai_vm_object.h"
 #include "menai_vm_bigint.h"
 
 /*
@@ -20,20 +19,20 @@
  *   is_big == 1: value is stored as a MenaiInt bignum in the big field.
  *                The MenaiInt owns its digit array.
  *
- * The PyObject_HEAD ob_type is always MenaiInteger_Type.
+ * The ob_type is always &MenaiInteger_Type.
  */
 typedef struct {
-    PyObject_HEAD
+    MenaiObject_HEAD
     int is_big;
     long small;     /* valid when is_big == 0 */
     MenaiInt big;   /* valid when is_big == 1 */
 } MenaiInteger_Object;
 
-extern PyTypeObject MenaiInteger_Type;
+extern MenaiType MenaiInteger_Type;
 
 /*
  * Small integer cache — covers [MENAI_INT_CACHE_MIN, MENAI_INT_CACHE_MAX].
- * menai_integer_from_long() returns a new (INCREF'd) reference, hitting the
+ * menai_integer_from_long() returns a retained reference, hitting the
  * cache for in-range values.
  */
 #define MENAI_INT_CACHE_MIN (-5)
@@ -42,25 +41,25 @@ extern PyTypeObject MenaiInteger_Type;
 
 /*
  * menai_integer_from_long — return a MenaiInteger for the given long value.
- * Returns a new reference (Py_INCREF'd from cache for in-range values).
- * Returns NULL on MemoryError (Python exception set).
+ * Returns a new reference (retain'd from cache for in-range values).
+ * Returns NULL on allocation failure.
  */
-PyObject *menai_integer_from_long(long n);
+MenaiValue menai_integer_from_long(long n);
 
 /*
  * menai_integer_from_bigint — return a MenaiInteger that takes ownership of
  * the given MenaiInt.  src must be heap-allocated (not stack) and is consumed:
  * the caller must not call menai_int_free on it after this call.
- * Returns a new reference, or NULL on MemoryError.
+ * Returns a new reference, or NULL on allocation failure.
  */
-PyObject *menai_integer_from_bigint(MenaiInt src);
+MenaiValue menai_integer_from_bigint(MenaiInt src);
 
 /*
  * menai_integer_bigint — return a pointer to the MenaiInt for a big integer.
  * The caller must ensure is_big == 1 before calling.
  */
 static inline const MenaiInt *
-menai_integer_bigint(PyObject *o)
+menai_integer_bigint(MenaiValue o)
 {
     return &((MenaiInteger_Object *)o)->big;
 }
@@ -70,17 +69,14 @@ menai_integer_bigint(PyObject *o)
  * The caller must ensure is_big == 0 before calling.
  */
 static inline long
-menai_integer_small(PyObject *o)
+menai_integer_small(MenaiValue o)
 {
     return ((MenaiInteger_Object *)o)->small;
 }
 
-PyObject *MenaiInteger_describe(PyObject *self, PyObject *args);
-PyObject *MenaiInteger_to_python(PyObject *self, PyObject *args);
-
 /*
  * Module init — called once from _menai_vm_value_init().
- * Returns 0 on success, -1 on failure (Python exception set).
+ * Returns 0 on success, -1 on failure.
  */
 int menai_vm_integer_init(void);
 

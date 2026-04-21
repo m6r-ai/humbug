@@ -7,8 +7,10 @@
  *                           allocating Python objects
  *   menai_value_equal()   — structural equality for any two MenaiValues
  *                           without allocating Python objects
- *   menai_value_describe() — produce a describe string for any MenaiValue
+ *   menai_value_describe() — produce a Python unicode describe string for
+ *                            any MenaiValue (boundary layer)
  *   menai_value_to_python() — convert any MenaiValue to a Python object
+ *                             (boundary layer)
  *   MenaiHashTable        — open-addressing hash table mapping MenaiValue
  *                           keys to Py_ssize_t indices
  *
@@ -23,6 +25,8 @@
 
 #include <stdint.h>
 #include <string.h>
+
+#include "menai_vm_object.h"
 
 /* ---------------------------------------------------------------------------
  * Value hash and equality
@@ -53,7 +57,7 @@ menai_hash_double(double v)
     bits ^= bits >> 27;
     bits *= 0x94d049bb133111ebULL;
     bits ^= bits >> 31;
-    Py_hash_t h = (Py_hash_t)(bits & (uint64_t)PY_SSIZE_T_MAX);
+    Py_hash_t h = (Py_hash_t)(bits & (uint64_t)PTRDIFF_MAX);
     return h == -1 ? -2 : h;
 }
 
@@ -68,7 +72,7 @@ menai_hash_double(double v)
  * struct, structtype.  Lists, dicts, sets, and functions are not hashable
  * (returns -1 with MenaiEvalError set).
  */
-Py_hash_t menai_value_hash(PyObject *val);
+Py_hash_t menai_value_hash(MenaiValue val);
 
 /*
  * menai_value_equal — structural equality for two MenaiValues.
@@ -76,7 +80,7 @@ Py_hash_t menai_value_hash(PyObject *val);
  * Returns 1 if equal, 0 if not equal.  Never fails, never returns -1.
  * All Menai value types are comparable by value without Python API calls.
  */
-int menai_value_equal(PyObject *a, PyObject *b);
+int menai_value_equal(MenaiValue a, MenaiValue b);
 
 /*
  * menai_value_describe — return a new Python unicode string describing val.
@@ -85,7 +89,7 @@ int menai_value_equal(PyObject *a, PyObject *b);
  * bypassing Python method dispatch.  Returns a new reference, or NULL on
  * error.
  */
-PyObject *menai_value_describe(PyObject *val);
+PyObject *menai_value_describe(MenaiValue val);
 
 /*
  * menai_value_to_python — convert val to the nearest Python equivalent.
@@ -94,7 +98,7 @@ PyObject *menai_value_describe(PyObject *val);
  * bypassing Python method dispatch.  Returns a new reference, or NULL on
  * error.
  */
-PyObject *menai_value_to_python(PyObject *val);
+PyObject *menai_value_to_python(MenaiValue val);
 
 /* ---------------------------------------------------------------------------
  * MenaiHashTable — open-addressing hash table
@@ -114,7 +118,7 @@ PyObject *menai_value_to_python(PyObject *val);
 #define MENAI_HT_MAX_LOAD_DEN 3   /* load factor denominator */
 
 typedef struct {
-    PyObject *key;      /* borrowed ref to MenaiValue; NULL = empty slot */
+    MenaiValue key;     /* borrowed ref to MenaiValue; NULL = empty slot */
     Py_hash_t hash;     /* cached hash of key */
     Py_ssize_t index;   /* index into the owning dict/set's element arrays */
 } MenaiHashSlot;
@@ -139,7 +143,7 @@ int menai_ht_init(MenaiHashTable *ht, Py_ssize_t n);
 /*
  * menai_ht_free — release the slot array.
  *
- * Does not DECREF any keys — the owning dict/set manages key lifetimes
+ * Does not release any keys — the owning dict/set manages key lifetimes
  * through its element arrays.
  */
 void menai_ht_free(MenaiHashTable *ht);
@@ -150,7 +154,7 @@ void menai_ht_free(MenaiHashTable *ht);
  * hash must equal menai_value_hash(key).
  * Returns the stored index (>= 0) if found, -1 if not found.
  */
-Py_ssize_t menai_ht_lookup(const MenaiHashTable *ht, PyObject *key, Py_hash_t hash);
+Py_ssize_t menai_ht_lookup(const MenaiHashTable *ht, MenaiValue key, Py_hash_t hash);
 
 /*
  * menai_ht_insert — insert a key/index pair into the table.
@@ -161,7 +165,7 @@ Py_ssize_t menai_ht_lookup(const MenaiHashTable *ht, PyObject *key, Py_hash_t ha
  * The key pointer is stored as a borrowed reference — the owning
  * dict/set's element arrays keep it alive.
  */
-void menai_ht_insert(MenaiHashTable *ht, PyObject *key, Py_hash_t hash, Py_ssize_t index);
+void menai_ht_insert(MenaiHashTable *ht, MenaiValue key, Py_hash_t hash, Py_ssize_t index);
 
 /*
  * menai_ht_build — build a hash table from parallel key and hash arrays.
@@ -172,6 +176,6 @@ void menai_ht_insert(MenaiHashTable *ht, PyObject *key, Py_hash_t hash, Py_ssize
  *
  * Returns 0 on success, -1 on MemoryError.
  */
-int menai_ht_build(MenaiHashTable *ht, PyObject **keys, const Py_hash_t *hashes, Py_ssize_t n);
+int menai_ht_build(MenaiHashTable *ht, MenaiValue *keys, const Py_hash_t *hashes, Py_ssize_t n);
 
 #endif /* MENAI_VM_HASHTABLE_H */

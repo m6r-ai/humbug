@@ -1,74 +1,21 @@
 /*
- * menai_vm_memory.h — Memory management API for the Menai VM.
+ * menai_vm_memory.h — register file operations for the Menai VM.
  *
- * All lifetime operations on Menai values in the VM dispatch loop go through
- * this API.  The current implementation is backed by CPython reference
- * counting, but the interface is defined in terms of Menai semantics so the
- * backing implementation can be replaced without touching the dispatch loop.
+ * Provides the register-level memory operations used by the dispatch loop.
+ * The retain/release/xrelease/is_unique primitives live in menai_vm_object.h;
+ * this header builds on those to provide the higher-level register file API.
  *
  * Naming convention:
- *   menai_retain / menai_release  — claim / relinquish an interest in a value
- *   menai_xrelease                — release if non-NULL (safe on NULL)
- *   menai_is_unique               — true if this is the sole live reference
- *   menai_reg_*                   — register file operations
- *   menai_regs_alloc / _free      — register array lifetime
+ *   menai_reg_*           — register file operations
+ *   menai_regs_alloc/_free — register array lifetime
  */
 
 #ifndef MENAI_VM_MEMORY_H
 #define MENAI_VM_MEMORY_H
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
+#include <stddef.h>
 
-/*
- * menai_retain — claim an interest in val.
- *
- * Must be called whenever a Menai value is stored into a location whose
- * lifetime is independent of the source location (e.g. a closure capture
- * array, a temporary pin before a loop that may overwrite the source slot).
- */
-static inline void
-menai_retain(PyObject *val)
-{
-    Py_INCREF(val);
-}
-
-/*
- * menai_release — relinquish an interest in val.
- *
- * val must not be NULL.  Paired with every menai_retain and every
- * menai_reg_set_own / menai_reg_set_borrow that displaced a live value.
- */
-static inline void
-menai_release(PyObject *val)
-{
-    Py_DECREF(val);
-}
-
-/*
- * menai_xrelease — relinquish an interest in val if val is non-NULL.
- *
- * Used where val may legitimately be NULL (e.g. frame->code_obj before first
- * use, partially-built GlobalsTable entries).
- */
-static inline void
-menai_xrelease(PyObject *val)
-{
-    Py_XDECREF(val);
-}
-
-/*
- * menai_is_unique — return non-zero if val has exactly one live reference.
- *
- * Used to enable in-place mutation optimisations: if the caller holds the
- * only reference to an immutable value, it can be safely reused rather than
- * copying.
- */
-static inline int
-menai_is_unique(PyObject *val)
-{
-    return Py_REFCNT(val) == 1;
-}
+#include "menai_vm_object.h"
 
 /*
  * menai_reg_set_own — store an owned reference into a register slot.
@@ -77,11 +24,11 @@ menai_is_unique(PyObject *val)
  * a constructor).  The old slot value is released.  The slot must not be NULL.
  */
 static inline void
-menai_reg_set_own(PyObject **regs, int slot, PyObject *val)
+menai_reg_set_own(MenaiValue *regs, int slot, MenaiValue val)
 {
-    PyObject *old = regs[slot];
+    MenaiValue old = regs[slot];
     regs[slot] = val;
-    Py_DECREF(old);
+    menai_release(old);
 }
 
 /*
@@ -92,12 +39,12 @@ menai_reg_set_own(PyObject **regs, int slot, PyObject *val)
  * slot value is released.  The slot must not be NULL.
  */
 static inline void
-menai_reg_set_borrow(PyObject **regs, int slot, PyObject *val)
+menai_reg_set_borrow(MenaiValue *regs, int slot, MenaiValue val)
 {
-    PyObject *old = regs[slot];
-    Py_INCREF(val);
+    MenaiValue old = regs[slot];
+    menai_retain(val);
     regs[slot] = val;
-    Py_DECREF(old);
+    menai_release(old);
 }
 
 /*
@@ -108,25 +55,26 @@ menai_reg_set_borrow(PyObject **regs, int slot, PyObject *val)
  * before a call.  The old slot value (Menai_NONE) is released.
  */
 static inline void
-menai_reg_init(PyObject **regs, int slot, PyObject *val, PyObject *none_val)
+menai_reg_init(MenaiValue *regs, int slot, MenaiValue val)
 {
+    MenaiValue old = regs[slot];
     regs[slot] = val;
-    Py_DECREF(none_val);  /* release the Menai_NONE that was there */
+    menai_release(old);
 }
 
 /*
  * menai_regs_alloc — allocate and initialise a register array of n slots.
  *
- * Every slot is initialised to Menai_NONE with an owned reference.
- * Returns NULL and sets MemoryError on failure.
+ * Every slot is initialised to none_val with an owned reference.
+ * Returns NULL on allocation failure.
  */
-PyObject **menai_regs_alloc(Py_ssize_t n, PyObject *none_val);
+MenaiValue *menai_regs_alloc(size_t n, MenaiValue none_val);
 
 /*
  * menai_regs_free — release all owned references in the register array and
- * free it.  Every slot holds either Menai_NONE or an owned Menai value
+ * free it.  Every slot holds either Menai_NONE or an owned MenaiValue
  * reference; all are released.
  */
-void menai_regs_free(PyObject **regs, Py_ssize_t n);
+void menai_regs_free(MenaiValue *regs, size_t n);
 
 #endif /* MENAI_VM_MEMORY_H */

@@ -1,26 +1,23 @@
 /*
- * menai_vm_memory.c — Memory management API implementation for the Menai VM.
+ * menai_vm_memory.c — register array allocation and deallocation.
  *
  * The non-inline functions declared in menai_vm_memory.h are implemented here.
  * All inline functions are defined directly in the header.
  */
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
+#include <stdlib.h>
 
 #include "menai_vm_memory.h"
 
-PyObject **
-menai_regs_alloc(Py_ssize_t n, PyObject *none_val)
+MenaiValue *
+menai_regs_alloc(size_t n, MenaiValue none_val)
 {
-    PyObject **regs = (PyObject **)PyMem_Malloc((size_t)n * sizeof(PyObject *));
-    if (regs == NULL) {
-        PyErr_NoMemory();
+    MenaiValue *regs = (MenaiValue *)malloc(n * sizeof(MenaiValue));
+    if (regs == NULL)
         return NULL;
-    }
 
-    for (Py_ssize_t i = 0; i < n; i++) {
-        Py_INCREF(none_val);
+    for (size_t i = 0; i < n; i++) {
+        menai_retain(none_val);
         regs[i] = none_val;
     }
 
@@ -28,9 +25,9 @@ menai_regs_alloc(Py_ssize_t n, PyObject *none_val)
 }
 
 void
-menai_regs_free(PyObject **regs, Py_ssize_t n)
+menai_regs_free(MenaiValue *regs, size_t n)
 {
     if (regs == NULL) return;
-    for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(regs[i]);
-    PyMem_Free(regs);
+    for (size_t i = 0; i < n; i++) menai_release(regs[i]);
+    free(regs);
 }

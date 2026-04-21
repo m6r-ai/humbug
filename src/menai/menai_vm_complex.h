@@ -8,28 +8,25 @@
 #ifndef MENAI_VM_COMPLEX_H
 #define MENAI_VM_COMPLEX_H
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
+#include "menai_vm_object.h"
 
 typedef struct {
-    PyObject_HEAD
+    MenaiObject_HEAD
     double real;
     double imag;
 } MenaiComplex_Object;
 
-extern PyTypeObject MenaiComplex_Type;
+extern MenaiType MenaiComplex_Type;
 
 /*
- * Return a new Python unicode string describing the complex value.
- * Called directly by the VM for OP_COMPLEX_TO_STRING.
+ * menai_complex_alloc — allocate a new MenaiComplex with the given components.
+ * Returns a new reference, or NULL on allocation failure.
  */
-PyObject *MenaiComplex_describe(PyObject *self, PyObject *args);
-
-PyObject *MenaiComplex_to_python(PyObject *self, PyObject *args);
+MenaiValue menai_complex_alloc(double real, double imag);
 
 /*
  * Module init — called once from _menai_vm_value_init().
- * Returns 0 on success, -1 on failure (Python exception set).
+ * Returns 0 on success, -1 on failure.
  */
 int menai_vm_complex_init(void);
 

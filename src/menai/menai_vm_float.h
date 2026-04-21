@@ -8,22 +8,24 @@
 #ifndef MENAI_VM_FLOAT_H
 #define MENAI_VM_FLOAT_H
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
+#include "menai_vm_object.h"
 
 typedef struct {
-    PyObject_HEAD
+    MenaiObject_HEAD
     double value;
 } MenaiFloat_Object;
 
-extern PyTypeObject MenaiFloat_Type;
+extern MenaiType MenaiFloat_Type;
 
-PyObject *MenaiFloat_describe(PyObject *self, PyObject *args);
-PyObject *MenaiFloat_to_python(PyObject *self, PyObject *args);
+/*
+ * menai_float_alloc — allocate a new MenaiFloat with the given value.
+ * Returns a new reference, or NULL on allocation failure.
+ */
+MenaiValue menai_float_alloc(double value);
 
 /*
  * Module init — called once from _menai_vm_value_init().
- * Returns 0 on success, -1 on failure (Python exception set).
+ * Returns 0 on success, -1 on failure.
  */
 int menai_vm_float_init(void);
 
