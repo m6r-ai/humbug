@@ -422,22 +422,14 @@ static inline PyObject *menai_symbol_name(PyObject *o) {
 static inline void reg_set_own(PyObject **regs, int slot, PyObject *val) {
     PyObject *old = regs[slot];
     regs[slot] = val;
-    Py_XDECREF(old);
-}
-
-/*
- * reg_init — write an owned reference into a slot that is known to be NULL.
- * Used when populating a freshly-cleared frame window.  No DECREF of old value.
- */
-static inline void reg_init(PyObject **regs, int slot, PyObject *val) {
-    regs[slot] = val;
+    Py_DECREF(old);
 }
 
 static inline void reg_set_borrow(PyObject **regs, int slot, PyObject *val) {
     PyObject *old = regs[slot];
     Py_INCREF(val);
     regs[slot] = val;
-    Py_XDECREF(old);
+    Py_DECREF(old);
 }
 
 /*
@@ -832,9 +824,8 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
  *
  * The register array is a flat PyObject* array:
  *   regs[depth * max_locals + slot]
- * All slots are NULL-initialised.  reg_set_own/reg_set_borrow use Py_XDECREF
- * so NULL slots are safe.  Slots are cleared back to NULL when a frame exits,
- * so the array never retains values beyond the lifetime of the frame that wrote them.
+ * All slots are initialised to Menai_NONE (borrowed — the singleton is
+ * kept alive by the module).  reg_set_own/reg_set_borrow manage reference counts correctly.
  * ------------------------------------------------------------------------- */
 
 /*
@@ -845,24 +836,30 @@ static PyObject **
 regs_alloc(int max_depth, int max_locals)
 {
     Py_ssize_t n = (Py_ssize_t)(max_depth + 1) * max_locals;
-    PyObject **regs = (PyObject **)PyMem_RawCalloc(n, sizeof(PyObject *));
+    PyObject **regs = (PyObject **)PyMem_Malloc(n * sizeof(PyObject *));
     if (regs == NULL) {
         PyErr_NoMemory();
         return NULL;
+    }
+
+    for (Py_ssize_t i = 0; i < n; i++) {
+        Py_INCREF(Menai_NONE);
+        regs[i] = Menai_NONE;  /* owned reference */
     }
     return regs;
 }
 
 /*
- * Release all owned references in the register array and free it.  Slots are
- * NULL or owned references; Py_XDECREF handles both.
+ * Release all owned references in the register array and free it.
+ * Slots that hold something other than Menai_NONE were set via reg_set_own/reg_set_borrow
+ * and have an owned reference.
  */
 static void
 regs_free(PyObject **regs, int max_depth, int max_locals)
 {
     if (regs == NULL) return;
     Py_ssize_t n = (Py_ssize_t)(max_depth + 1) * max_locals;
-    for (Py_ssize_t i = 0; i < n; i++) Py_XDECREF(regs[i]);
+    for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(regs[i]);  /* every slot is an owned reference */
     PyMem_Free(regs);
 }
 
@@ -1188,8 +1185,7 @@ call_setup(Frame *new_frame, PyObject *func_obj,
     Py_ssize_t ncap = Py_SIZE(func);
     for (Py_ssize_t i = 0; i < ncap; i++) {
         PyObject *cv = func->captures[i];
-        Py_INCREF(cv);
-        reg_init(regs, callee_base + param_count + (int)i, cv);
+        reg_set_borrow(regs, callee_base + param_count + (int)i, cv);
     }
 
     new_frame->code_obj = bytecode;
@@ -1375,14 +1371,6 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             Py_INCREF(retval);
 
             int saved_return_dest = frame->return_dest;
-
-            /* Clear this frame's register window before releasing the frame,
-             * so values are not retained beyond the lifetime of the frame. */
-            for (int i = 0; i < max_locals; i++) {
-                Py_XDECREF(regs[base + i]);
-                regs[base + i] = NULL;
-            }
-
             Py_XDECREF(frame->code_obj);
             frame_depth--;
             Frame *caller = &frames[frame_depth];
@@ -2596,10 +2584,8 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 int callee_base = base + frame->local_count;
 
                 /* Scatter list elements into the callee window */
-                for (int i = 0; i < arity; i++) {
-                    Py_INCREF(elements[i]);
-                    reg_init(regs, callee_base + i, elements[i]);
-                }
+                for (int i = 0; i < arity; i++)
+                    reg_set_borrow(regs, callee_base + i, elements[i]);
 
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
@@ -4635,15 +4621,8 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
 
 error:
         /* Release all live frames above the sentinel. */
-        for (int d = frame_depth; d >= 1; d--) {
-            Frame *ef = &frames[d];
-            int ef_base = ef->base;
-            for (int i = 0; i < max_locals; i++) {
-                Py_XDECREF(regs[ef_base + i]);
-                regs[ef_base + i] = NULL;
-            }
-            Py_XDECREF(ef->code_obj);
-        }
+        for (int d = frame_depth; d >= 1; d--)
+            Py_XDECREF(frames[d].code_obj);
         return NULL;
     }
 }
