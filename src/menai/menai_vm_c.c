@@ -96,6 +96,7 @@ static inline mc_t mc_logn(mc_t a, mc_t b) {
 #include "menai_vm_hashtable.h"
 #include "menai_vm_integer.h"
 #include "menai_vm_memory.h"
+#include "menai_vm_code.h"
 
 /*
  * Portable overflow-detecting arithmetic for the small-integer fast paths.
@@ -132,8 +133,6 @@ static inline int _menai_mul_overflow(long a, long b, long *r) {
 extern PyObject *_menai_vm_value_init(void);
 
 extern PyObject *menai_convert_value(PyObject *src);
-extern PyObject *menai_convert_code_constants(PyObject *code);
-extern PyObject *menai_build_closure_caches(PyObject *code);
 
 /*
  * Limits
@@ -649,22 +648,18 @@ fail:
 /*
  * Frame struct
  *
- * The C VM maintains a fixed-size stack of Frame structs.  All fields are
- * plain C — no Python objects except code_obj, names, and closure_caches,
- * all of which are kept alive by the frame stack.  constants_items is always
- * borrowed: callee frames borrow from the MenaiFunction_Object, the top-level
- * frame borrows from the array allocated in frame_setup and freed in
- * execute_loop after the loop exits.
+ * All fields are plain C.  code_obj is a retained MenaiCodeObject *; all
+ * other pointers are borrowed from it and live as long as code_obj does.
  */
 typedef struct {
-    PyObject *code_obj;         /* CodeObject — kept alive, not dereferenced in loop */
-    MenaiValue *constants_items; /* borrowed C array of fast constants */
-    Py_ssize_t nconst;           /* number of elements in constants_items */
-    PyObject *names;            /* borrowed ref — list of global name strings */
-    PyObject **names_items;     /* raw pointer into names ob_item array */
-    PyObject *closure_caches;   /* borrowed ref — list of child _closure_cache tuples */
-    PyObject **closure_caches_items; /* raw pointer into closure_caches ob_item, or NULL */
-    uint64_t *instrs;           /* raw C pointer into the array.array buffer */
+    MenaiCodeObject *code_obj;       /* retained — owns all frame metadata */
+    MenaiValue *constants_items;     /* borrowed from code_obj->constants */
+    Py_ssize_t nconst;               /* borrowed from code_obj->nconst */
+    const char **names_items;        /* borrowed from code_obj->names */
+    Py_ssize_t nnames;               /* borrowed from code_obj->nnames */
+    MenaiCodeObject **children;      /* borrowed from code_obj->children */
+    Py_ssize_t nchildren;            /* borrowed from code_obj->nchildren */
+    uint64_t *instrs;                /* borrowed from code_obj->instrs */
     int code_len;
     int local_count;
     int ip;
@@ -673,198 +668,41 @@ typedef struct {
     int is_sentinel;
 } Frame;
 
-static int
-code_get_int(PyObject *code, const char *name, int *out)
-{
-    PyObject *v = PyObject_GetAttrString(code, name);
-    if (v == NULL) return -1;
-    long val = PyLong_AsLong(v);
-    Py_DECREF(v);
-    if (val == -1 && PyErr_Occurred()) return -1;
-    *out = (int)val;
-    return 0;
-}
-
 /*
  * frame_setup
  *
- * Slow path used only for the top-level CodeObject at execute start
- * start.  Once we've done this then everything is cached for use by the opcodes.
+ * Populates a Frame from a MenaiCodeObject.  Takes a retain on co.
  */
 static int
-frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
+frame_setup(Frame *f, MenaiCodeObject *co, int base, int return_dest)
 {
-    PyObject *instrs_obj = PyObject_GetAttrString(code_obj, "instructions");
-    if (instrs_obj == NULL) return -1;
-
-    Py_buffer view;
-    if (PyObject_GetBuffer(instrs_obj, &view, PyBUF_SIMPLE) < 0) {
-        Py_DECREF(instrs_obj);
-        return -1;
-    }
-
-    PyObject *constants = PyObject_GetAttrString(code_obj, "constants");
-    if (constants == NULL) {
-        PyBuffer_Release(&view);
-        Py_DECREF(instrs_obj);
-        return -1;
-    }
-    Py_ssize_t nconst = PyList_GET_SIZE(constants);
-    MenaiValue *const_arr = nconst > 0
-        ? (MenaiValue *)malloc((size_t)nconst * sizeof(MenaiValue)) : NULL;
-    if (nconst > 0 && !const_arr) {
-        Py_DECREF(constants);
-        PyBuffer_Release(&view);
-        Py_DECREF(instrs_obj);
-        return -1;
-    }
-    for (Py_ssize_t i = 0; i < nconst; i++) {
-        const_arr[i] = (MenaiValue)((PyListObject *)constants)->ob_item[i];
-        menai_retain(const_arr[i]);
-    }
-    Py_DECREF(constants);
-
-    PyObject *names = PyObject_GetAttrString(code_obj, "names");
-    if (names == NULL) {
-        for (Py_ssize_t i = 0; i < nconst; i++) menai_release(const_arr[i]);
-        free(const_arr);
-        PyBuffer_Release(&view);
-        Py_DECREF(instrs_obj);
-        return -1;
-    }
-    PyObject *lc_obj = PyObject_GetAttrString(code_obj, "local_count");
-    if (lc_obj == NULL) {
-        Py_DECREF(names);
-        for (Py_ssize_t i = 0; i < nconst; i++) menai_release(const_arr[i]);
-        free(const_arr);
-        PyBuffer_Release(&view);
-        Py_DECREF(instrs_obj);
-        return -1;
-    }
-    int local_count = (int)PyLong_AsLong(lc_obj);
-    Py_DECREF(lc_obj);
-    if (local_count == -1 && PyErr_Occurred()) {
-        Py_DECREF(names);
-        for (Py_ssize_t i = 0; i < nconst; i++) menai_release(const_arr[i]);
-        free(const_arr);
-        PyBuffer_Release(&view);
-        Py_DECREF(instrs_obj);
-        return -1;
-    }
-
-    Py_INCREF(code_obj);
-    Py_XDECREF(f->code_obj);
-    f->code_obj = code_obj;
-    f->constants_items = const_arr;
-    f->nconst = nconst;
-    f->names = names;             /* borrowed — f->code_obj keeps code_obj alive */
-    Py_DECREF(names);             /* drop owned ref from GetAttrString */
-    f->names_items = ((PyListObject *)names)->ob_item;
-    PyObject *_cc = PyObject_GetAttrString(code_obj, "_code_caches");
-    f->closure_caches = (_cc && PyList_Check(_cc)) ? _cc : NULL;
-    f->closure_caches_items = f->closure_caches ? ((PyListObject *)f->closure_caches)->ob_item : NULL;
-    Py_XDECREF(_cc);  /* drop owned ref — f->code_obj keeps code_obj alive */
-    PyErr_Clear();
-    f->instrs = (uint64_t *)view.buf;
-    f->code_len = (int)(view.len / sizeof(uint64_t));
-    f->local_count = local_count;
+    menai_code_object_retain(co);
+    if (f->code_obj) menai_code_object_release(f->code_obj);
+    f->code_obj = co;
+    f->constants_items = co->constants;
+    f->nconst = co->nconst;
+    f->names_items = co->names;
+    f->nnames = co->nnames;
+    f->children = co->children;
+    f->nchildren = co->nchildren;
+    f->instrs = co->instrs;
+    f->code_len = co->code_len;
+    f->local_count = co->local_count;
     f->ip = 0;
     f->base = base;
     f->return_dest = return_dest;
     f->is_sentinel = 0;
-    PyBuffer_Release(&view);
-    Py_DECREF(instrs_obj);  /* top-level: instrs backed by code_obj.instructions which code_obj owns */
     return 0;
 }
 
 /* ---------------------------------------------------------------------------
  * Register array helpers
  *
- * The register array is a flat PyObject* array:
+ * The register array is a flat MenaiValue array:
  *   regs[depth * max_locals + slot]
  * All slots are initialised to Menai_NONE (borrowed — the singleton is
  * kept alive by the module).  menai_reg_set_own/menai_reg_set_borrow manage reference counts correctly.
  * ------------------------------------------------------------------------- */
-
-/* ---------------------------------------------------------------------------
- * max_local_count — mirrors MenaiVM._max_local_count()
- *
- * Walks the code_objects tree and returns the maximum
- * (local_count + outgoing_arg_slots) across all code objects.
- * ------------------------------------------------------------------------- */
-
-static int
-max_local_count(PyObject *code)
-{
-    int local_count = 0, outgoing = 0;
-    if (code_get_int(code, "local_count", &local_count) < 0) return -1;
-    if (code_get_int(code, "outgoing_arg_slots", &outgoing) < 0) return -1;
-    int best = local_count + outgoing;
-
-    PyObject *children = PyObject_GetAttrString(code, "code_objects");
-    if (children == NULL)
-        return -1;
-
-    /* Iterative DFS using a plain C pointer stack of borrowed refs. */
-    Py_ssize_t stack_cap = 16;
-    Py_ssize_t stack_top = 0;
-    PyObject **stack = (PyObject **)malloc(stack_cap * sizeof(PyObject *));
-    if (stack == NULL) {
-        Py_DECREF(children);
-        return -1;
-    }
-
-    Py_ssize_t n = PyList_GET_SIZE(children);
-    for (Py_ssize_t i = 0; i < n; i++) {
-        if (stack_top == stack_cap) {
-            stack_cap *= 2;
-            PyObject **tmp = (PyObject **)realloc(stack, stack_cap * sizeof(PyObject *));
-            if (tmp == NULL) {
-                Py_DECREF(children);
-                free(stack);
-                return -1;
-            }
-            stack = tmp;
-        }
-        stack[stack_top++] = PyList_GET_ITEM(children, i);
-    }
-    Py_DECREF(children);
-
-    while (stack_top > 0) {
-        PyObject *co = stack[--stack_top];
-
-        int lc = 0, oa = 0;
-        if (code_get_int(co, "local_count", &lc) < 0 ||
-            code_get_int(co, "outgoing_arg_slots", &oa) < 0) {
-            free(stack);
-            return -1;
-        }
-        if (lc + oa > best) best = lc + oa;
-
-        PyObject *sub = PyObject_GetAttrString(co, "code_objects");
-        if (sub == NULL) {
-            free(stack);
-            return -1;
-        }
-        Py_ssize_t m = PyList_GET_SIZE(sub);
-        for (Py_ssize_t i = 0; i < m; i++) {
-            if (stack_top == stack_cap) {
-                stack_cap *= 2;
-            PyObject **tmp = (PyObject **)realloc(stack, stack_cap * sizeof(PyObject *));
-                if (tmp == NULL) {
-                    Py_DECREF(sub);
-                free(stack);
-                    return -1;
-                }
-                stack = tmp;
-            }
-            stack[stack_top++] = PyList_GET_ITEM(sub, i);
-        }
-        Py_DECREF(sub);
-    }
-    free(stack);
-    return best;
-}
 
 /*
  * GlobalsTable — open-addressing hash table for O(1) name lookup.
@@ -1059,16 +897,14 @@ call_setup(Frame *new_frame, MenaiValue func_obj,
            int return_dest)
 {
     MenaiFunction_Object *func = (MenaiFunction_Object *)func_obj;
-    PyObject *bytecode = func->bytecode;  /* borrowed — kept alive by func_obj */
-
-    int param_count = func->param_count;
-    int is_variadic = func->is_variadic;
+    MenaiCodeObject *co = func->bytecode;
+    int param_count = co->param_count;
+    int is_variadic = co->is_variadic;
 
     if (is_variadic) {
         int min_arity = param_count - 1;
         if (arity < min_arity) {
-            PyObject *name = func->name;
-            const char *fname = (name != NULL && name != Py_None) ? PyUnicode_AsUTF8(name) : "<lambda>";
+            const char *fname = co->name ? co->name : "<lambda>";
             menai_raise_eval_errorf(
                 "Function '%s' expects at least %d argument%s, got %d",
                 fname, min_arity, min_arity == 1 ? "" : "s", arity);
@@ -1090,8 +926,7 @@ call_setup(Frame *new_frame, MenaiValue func_obj,
         menai_reg_set_own(regs, callee_base + min_arity, rest_list);
 
     } else if (arity != param_count) {
-        PyObject *name = func->name;
-        const char *fname = (name != NULL && name != Py_None) ? PyUnicode_AsUTF8(name) : "<lambda>";
+        const char *fname = co->name ? co->name : "<lambda>";
         menai_raise_eval_errorf(
             "Function '%s' expects %d argument%s, got %d",
             fname, param_count, param_count == 1 ? "" : "s", arity);
@@ -1105,20 +940,7 @@ call_setup(Frame *new_frame, MenaiValue func_obj,
         menai_reg_set_borrow(regs, callee_base + param_count + (int)i, cv);
     }
 
-    new_frame->code_obj = bytecode;
-    new_frame->instrs = func->instrs;
-    new_frame->code_len = func->code_len;
-    new_frame->constants_items = func->constants_items;  /* borrowed from func */
-    new_frame->nconst = func->nconst;
-    new_frame->names = func->names;
-    new_frame->names_items = func->names_items;
-    new_frame->local_count = func->local_count;
-    new_frame->closure_caches = func->closure_caches;  /* borrowed — func owns bytecode which owns it */
-    new_frame->closure_caches_items = func->closure_caches_items;
-    new_frame->ip = 0;
-    new_frame->base = callee_base;
-    new_frame->return_dest = return_dest;
-    new_frame->is_sentinel = 0;    return 0;
+    return frame_setup(new_frame, co, callee_base, return_dest);
 }
 
 /*
@@ -1126,7 +948,7 @@ call_setup(Frame *new_frame, MenaiValue func_obj,
  * Returns the result value (new reference) or NULL on error.
  */
 static PyObject *
-execute_loop(PyObject *code, const GlobalsTable *globals,
+execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
              MenaiValue *regs, int max_locals)
 {
     /* Frame stack — depth 0 is the sentinel. */
@@ -1135,28 +957,18 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
         .is_sentinel = 1,
         .code_obj = NULL,
         .constants_items = NULL,
-        .names = NULL,
         .instrs = NULL,
-        .closure_caches = NULL,
     };
     frames[1] = (Frame){
         .is_sentinel = 0,
         .code_obj = NULL,
         .constants_items = NULL,
-        .names = NULL,
         .instrs = NULL,
-        .closure_caches = NULL,
     };
 
     /* Set up frame at depth 1 for the top-level code object. */
     if (frame_setup(&frames[1], code, 0, 0) < 0)
         return NULL;
-
-    /* Stash the top-level constants array so we can release it at both exit
-     * points (normal return and error).  All other frames borrow their
-     * constants from a MenaiFunction_Object backed by a ClosureCache. */
-    MenaiValue *toplevel_consts = frames[1].constants_items;
-    Py_ssize_t toplevel_nconst = frames[1].nconst;
 
     int frame_depth = 1;
     Frame *frame = &frames[1];
@@ -1217,7 +1029,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
         }
 
         case OP_LOAD_NAME: {
-            const char *name_str = PyUnicode_AsUTF8(frame->names_items[src0]);
+            const char *name_str = frame->names_items[src0];
             MenaiValue val = globals_lookup(globals, name_str);
             if (val == NULL) {
                 /* Build a rich error listing up to 10 available names. */
@@ -1293,15 +1105,12 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             menai_retain(retval);
 
             int saved_return_dest = frame->return_dest;
-            Py_XDECREF(frame->code_obj);
+            menai_code_object_release(frame->code_obj);
             frame_depth--;
             Frame *caller = &frames[frame_depth];
 
             if (caller->is_sentinel) {
                 /* Top-level return — exit the loop. */
-                for (Py_ssize_t i = 0; i < toplevel_nconst; i++)
-                    menai_release(toplevel_consts[i]);
-                free(toplevel_consts);
                 return (PyObject *)retval;
             }
 
@@ -1325,10 +1134,8 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 }
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
-                *new_frame = (Frame){ .code_obj = NULL, .closure_caches = NULL,
-                                      .constants_items = NULL, .names = NULL, .instrs = NULL };
+                *new_frame = (Frame){ .code_obj = NULL, .constants_items = NULL, .instrs = NULL };
 
-                Py_INCREF(((MenaiFunction_Object *)raw)->bytecode);
                 if (call_setup(new_frame, raw, regs, callee_base, arity, dest) < 0) {
                     frame_depth--;
                     goto error;
@@ -1373,12 +1180,10 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 }
 
                 /* Reuse current frame — release old code_obj and instructions. */
-                Py_DECREF(frame->code_obj);
-                frame->code_obj = NULL;
-                frame->instrs = NULL;
+                menai_code_object_release(frame->code_obj);
+                frame->code_obj = NULL;  /* frame_setup will retain the new one */
 
                 int saved_return_dest = frame->return_dest;
-                Py_INCREF(((MenaiFunction_Object *)raw)->bytecode);
                 if (call_setup(frame, raw, regs, base, n_args, saved_return_dest) < 0) {
                     menai_release(raw);
                     goto error;
@@ -1403,7 +1208,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 /* Tail-return the struct: pop frame and deliver to caller. */
                 MenaiValue retval = instance;
                 int saved_return_dest = frame->return_dest;
-                Py_XDECREF(frame->code_obj);
+                menai_code_object_release(frame->code_obj);
                 frame_depth--;
                 Frame *caller = &frames[frame_depth];
                 if (caller->is_sentinel) {
@@ -1508,7 +1313,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             MenaiValue f = regs[base + src0];
             if (!require_function_singular(f, "function-min-arity")) goto error;
             MenaiFunction_Object *fn = (MenaiFunction_Object *)f;
-            int min_a = fn->is_variadic ? fn->param_count - 1 : fn->param_count;
+            int min_a = fn->bytecode->is_variadic ? fn->bytecode->param_count - 1 : fn->bytecode->param_count;
             MenaiValue _r = make_integer_from_long(min_a);
             if (_r == NULL) goto error;
             menai_reg_set_own(regs, base + dest, _r);
@@ -1518,7 +1323,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
         case OP_FUNCTION_VARIADIC_P: {
             MenaiValue f = regs[base + src0];
             if (!require_function_singular(f, "function-variadic?")) goto error;
-            bool_store(regs, base + dest, ((MenaiFunction_Object *)f)->is_variadic);
+            bool_store(regs, base + dest, ((MenaiFunction_Object *)f)->bytecode->is_variadic);
             break;
         }
 
@@ -1528,8 +1333,8 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             if (!require_function_singular(f, "function-accepts?")) goto error;
             if (!require_integer(n_obj, "function-accepts?")) goto error;
             MenaiFunction_Object *fn = (MenaiFunction_Object *)f;
-            int pc = fn->param_count;
-            int is_var = fn->is_variadic;
+            int pc = fn->bytecode->param_count;
+            int is_var = fn->bytecode->is_variadic;
             MenaiInteger_Object *n_io = (MenaiInteger_Object *)n_obj;
             long n;
             if (!n_io->is_big) {
@@ -2443,22 +2248,14 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             /*
              * MAKE_CLOSURE dest, src0:
              * src0 is the index into code_objects of the child CodeObject.
-             * Creates a MenaiFunction with captured_values pre-allocated to
-             * None, ready for PATCH_CLOSURE to fill in.
-             *
-             * All metadata is read from the ClosureCache struct stored in a
-             * PyCapsule built once by menai_build_closure_caches — zero
-             * PyTuple_GET_ITEM or PyLong_AsLong calls on this path.
+             * Creates a MenaiFunction with capture slots initialised to None,
+             * ready for PATCH_CLOSURE to fill in.
              */
-            if (frame->closure_caches == NULL) {
-                menai_raise_eval_error("MAKE_CLOSURE: _code_caches not set on code object");
+            if (src0 >= (int)frame->nchildren) {
+                menai_raise_eval_error("MAKE_CLOSURE: child index out of range");
                 goto error;
             }
-
-            PyObject *capsule = frame->closure_caches_items[src0];
-            const ClosureCache *cc = (const ClosureCache *)PyCapsule_GetPointer(capsule, CLOSURE_CACHE_CAPSULE_NAME);
-            if (cc == NULL) goto error;
-            MenaiValue func = menai_function_alloc(cc, Menai_NONE);
+            MenaiValue func = menai_function_alloc(frame->children[src0], Menai_NONE);
             if (func == NULL) goto error;
             menai_reg_set_own(regs, base + dest, func);
             break;
@@ -2514,10 +2311,8 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
 
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
-                *new_frame = (Frame){ .code_obj = NULL, .closure_caches = NULL,
-                                      .constants_items = NULL, .names = NULL, .instrs = NULL };
+                *new_frame = (Frame){ .code_obj = NULL, .constants_items = NULL, .instrs = NULL };
 
-                Py_INCREF(((MenaiFunction_Object *)raw_func)->bytecode);
                 if (call_setup(new_frame, raw_func, regs, callee_base, arity, dest) < 0) {
                     frame_depth--;
                     goto error;
@@ -2572,12 +2367,10 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 menai_release(raw_args);
 
                 /* Release old code_obj and instructions, reuse frame. */
-                Py_DECREF(frame->code_obj);
-                frame->code_obj = NULL;
-                frame->instrs = NULL;
+                menai_code_object_release(frame->code_obj);
+                frame->code_obj = NULL;  /* frame_setup will retain the new one */
 
                 int saved_return_dest = frame->return_dest;
-                Py_INCREF(((MenaiFunction_Object *)raw_func)->bytecode);
                 if (call_setup(frame, raw_func, regs, base, arity, saved_return_dest) < 0) {
                     menai_release(raw_func);
                     goto error;
@@ -2601,7 +2394,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 }
 
                 int saved_return_dest = frame->return_dest;
-                Py_XDECREF(frame->code_obj);
+                menai_code_object_release(frame->code_obj);
                 frame_depth--;
                 Frame *caller = &frames[frame_depth];
                 if (caller->is_sentinel) {
@@ -4556,11 +4349,8 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
 error:
         /* Release all live frames above the sentinel. */
         for (int d = frame_depth; d >= 1; d--) {
-            Py_XDECREF(frames[d].code_obj);
+            if (frames[d].code_obj) menai_code_object_release(frames[d].code_obj);
         }
-        for (Py_ssize_t i = 0; i < toplevel_nconst; i++)
-            menai_release(toplevel_consts[i]);
-        free(toplevel_consts);
         return NULL;
     }
 }
@@ -4578,39 +4368,25 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "OOO", &code, &constants_dict, &prelude_dict)) return NULL;
 
-    /* Build ClosureCache structs first so _closure_cache is set on all child
-     * code objects before menai_convert_code_constants calls menai_convert_value
-     * on function constants — those constructors read _closure_cache. */
-    if (menai_build_closure_caches(code) == NULL) return NULL;
-    /* Now convert compiler-world constants to fast C types. After this,
-     * the constants lists contain fast MenaiValues and ClosureCache
-     * constants_items pointers are valid to use. */
-    if (menai_convert_code_constants(code) == NULL) return NULL;
+    /* Convert the Python CodeObject tree to a native MenaiCodeObject tree.
+     * All constants are converted to fast MenaiValues during this pass. */
+    MenaiCodeObject *native_code = menai_code_object_from_python(code);
+    if (!native_code) return NULL;
 
     /* Build the globals table (constants + prelude), converting values to fast C types. */
     GlobalsTable globals;
-    if (globals_build(&globals, constants_dict, prelude_dict) < 0)
-        return NULL;
-
-    /* Compute the register window size. */
-    int max_locals = max_local_count(code);
-    if (max_locals < 0) {
-        globals_free(&globals);
+    if (globals_build(&globals, constants_dict, prelude_dict) < 0) {
+        menai_code_object_release(native_code);
         return NULL;
     }
 
-    /* Also scan prelude functions for their max_local_count. */
+    /* Compute the register window size. */
+    int max_locals = menai_code_object_max_locals(native_code);
     for (Py_ssize_t i = 0; i < globals.count; i++) {
         MenaiValue val = globals.entries[i].value;
         if (IS_MENAI_FUNCTION(val)) {
-            PyObject *bc = ((MenaiFunction_Object *)val)->bytecode;
-            int n = max_local_count(bc);
-            if (n < 0) {
-                globals_free(&globals);
-                return NULL;
-            }
-            if (n > max_locals)
-                max_locals = n;
+            int n = menai_code_object_max_locals(((MenaiFunction_Object *)val)->bytecode);
+            if (n > max_locals) max_locals = n;
         }
     }
 
@@ -4618,15 +4394,17 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     MenaiValue *regs = menai_regs_alloc((size_t)(MAX_FRAME_DEPTH + 1) * max_locals, Menai_NONE);
     if (regs == NULL) {
         globals_free(&globals);
+        menai_code_object_release(native_code);
         return NULL;
     }
 
     /* Run the VM. */
-    PyObject *result = execute_loop(code, &globals, regs, max_locals);
+    PyObject *result = execute_loop(native_code, &globals, regs, max_locals);
 
     /* Clean up. */
     menai_regs_free(regs, (size_t)(MAX_FRAME_DEPTH + 1) * max_locals);
     globals_free(&globals);
+    menai_code_object_release(native_code);
 
     if (result == NULL)
         return NULL;

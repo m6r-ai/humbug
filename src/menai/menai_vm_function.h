@@ -1,16 +1,9 @@
 /*
  * menai_vm_function.h — MenaiFunction type definition and API.
  *
- * MenaiFunction represents a Menai closure.  It holds parameters, bytecode,
- * an inline C array of captured values, and a frame-setup cache that
- * eliminates PyObject_GetAttrString calls from the hot call path.
- *
- * The parameters, name, bytecode, and instrs_obj fields remain as PyObject *
- * because they originate from the Python CodeObject layer.  constants_items
- * is borrowed from the ClosureCache (pinned to the CodeObject for the duration
- * of execution); names and closure_caches are borrowed Python lists kept alive
- * by bytecode.  The captures array is MenaiValue — live runtime values owned
- * by the C VM.
+ * MenaiFunction represents a Menai closure.  It holds a retained reference to
+ * a MenaiCodeObject (which owns all frame metadata) and an inline C array of
+ * captured MenaiValues.  No Python objects are held after construction.
  */
 
 #ifndef MENAI_VM_FUNCTION_H
@@ -21,63 +14,21 @@
 #include <stdint.h>
 
 #include "menai_vm_object.h"
+#include "menai_vm_code.h"
 
 /*
- * ClosureCache — pre-extracted metadata for a child CodeObject.
+ * MenaiFunction_Object — a Menai closure.
  *
- * Built once by menai_build_closure_caches() for each child code object and
- * stored as a PyCapsule on the parent's _code_caches list.
- * menai_function_alloc() reads directly from this struct, eliminating all
- * PyTuple_GET_ITEM and PyLong_AsLong calls from the OP_MAKE_CLOSURE hot path.
- *
- * parameters, name, and instrs_obj are owned Python references held by the
- * ClosureCache; the capsule destructor DECREFs them.  constants_items is an
- * owned C array of MenaiValue; the destructor menai_releases each element and
- * frees the array.  constants, names_list, and closure_caches are borrowed
- * Python references kept alive by bytecode.  bytecode itself is a borrowed
- * reference kept alive by the parent's code_objects list for the duration of
- * execution.
+ * bytecode is a retained MenaiCodeObject *.  All frame metadata (instrs,
+ * constants, names, children) is read directly from it.  The Python-facing
+ * getsets (parameters, name, bytecode, is_variadic, param_count,
+ * captured_values) reconstruct Python objects from the native fields on
+ * demand and are used only by the legacy Python VM path and tests.
  */
-typedef struct {
-    PyObject *parameters;            /* tuple of str — param names */
-    PyObject *name;                  /* str or None */
-    PyObject *bytecode;              /* child CodeObject */
-    PyObject *instrs_obj;            /* array.array — keeps instruction buffer alive */
-    PyObject *constants;             /* borrowed — bytecode.constants list of fast MenaiValues */
-    PyObject *names_list;            /* borrowed — list of global name strings */
-    PyObject *closure_caches;        /* borrowed — grandchild ClosureCache capsules, or NULL */
-    PyObject **closure_caches_items; /* raw pointer into closure_caches ob_item, or NULL */
-    uint64_t *instrs;                /* raw pointer into instrs_obj buffer */
-    int param_count;
-    int local_count;
-    int is_variadic;
-    Py_ssize_t ncap;                 /* number of capture slots */
-    int code_len;
-} ClosureCache;
-
 typedef struct {
     MenaiObject_HEAD
     Py_ssize_t ncap;               /* number of captured values */
-    PyObject *parameters;          /* Python tuple of str */
-    PyObject *name;                /* Python str or Py_None */
-    PyObject *bytecode;            /* CodeObject or Py_None */
-    int is_variadic;               /* C int: 0 or 1 */
-    int param_count;               /* C int: number of fixed parameters */
-
-    /*
-     * Frame setup cache — borrowed from the ClosureCache, which is pinned to
-     * the CodeObject for the duration of execution.
-     */
-    uint64_t *instrs;
-    PyObject *instrs_obj;          /* array.array — keeps buffer valid */
-    MenaiValue *constants_items;   /* borrowed from ClosureCache — not freed on dealloc */
-    Py_ssize_t nconst;             /* number of elements in constants_items */
-    PyObject *names;               /* borrowed ref to bytecode.names list */
-    PyObject **names_items;        /* raw pointer into names ob_item array */
-    PyObject *closure_caches;      /* borrowed ref to bytecode._code_caches, or NULL */
-    PyObject **closure_caches_items; /* raw pointer into closure_caches ob_item, or NULL */
-    int code_len;
-    int local_count;
+    MenaiCodeObject *bytecode;     /* retained — owns all frame metadata */
 
     /* Inline capture array — ncap elements follow immediately. */
     MenaiValue captures[1];        /* flexible array member (C99 [1] for MSVC compat) */
@@ -86,18 +37,18 @@ typedef struct {
 extern MenaiType MenaiFunction_Type;
 
 /*
- * menai_function_alloc — direct C constructor for MenaiFunction.
+ * menai_function_alloc — construct a MenaiFunction from a MenaiCodeObject.
  *
- * Allocates a function with cache->ncap capture slots, all initialised to
- * none_val.  cache is a borrowed pointer; none_val is a borrowed reference.
- * The function takes its own references to the PyObject* fields it needs.
- * Returns a new reference, or NULL on failure.
+ * co is borrowed (a retain is taken internally).  none_val is borrowed.
+ * All ncap capture slots are initialised to none_val.
+ * Returns a new reference, or NULL on allocation failure.
  */
-MenaiValue menai_function_alloc(const ClosureCache *cache, MenaiValue none_val);
+MenaiValue menai_function_alloc(MenaiCodeObject *co, MenaiValue none_val);
 
 /*
- * CLOSURE_CACHE_CAPSULE_NAME — the PyCapsule name used to store ClosureCache
- * pointers on code objects.  Checked on retrieval to prevent type confusion.
+ * CLOSURE_CACHE_CAPSULE_NAME — still used during the transition while
+ * menai_build_closure_caches is in place.  Will be removed when the Python
+ * CodeObject boundary is fully eliminated.
  */
 #define CLOSURE_CACHE_CAPSULE_NAME "menai.ClosureCache"
 
