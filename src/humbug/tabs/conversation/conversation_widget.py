@@ -1539,6 +1539,40 @@ class ConversationWidget(QWidget):
 
         self.status_updated.emit()
 
+    def _clear_children_parent_references(self, deleted_path: str) -> None:
+        """Before deleting a .conv file, null-out any other .conv file that references it as parent."""
+        import json
+        mindspace_manager = MindspaceManager()
+        if not mindspace_manager.has_mindspace():
+            return
+        deleted_rel = mindspace_manager.get_mindspace_relative_path(deleted_path)
+        if deleted_rel is None:
+            return
+        deleted_rel_norm = deleted_rel.replace(os.sep, "/")
+        try:
+            conversations_dir = mindspace_manager.get_absolute_path("conversations")
+        except Exception:
+            return
+        if not os.path.isdir(conversations_dir):
+            return
+        for root_dir, _, files in os.walk(conversations_dir):
+            for fname in files:
+                if not fname.lower().endswith(".conv"):
+                    continue
+                fpath = os.path.join(root_dir, fname)
+                try:
+                    with open(fpath, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    parent = data.get("metadata", {}).get("parent")
+                    if not parent:
+                        continue
+                    if parent.replace(os.sep, "/") == deleted_rel_norm:
+                        data["metadata"]["parent"] = None
+                        with open(fpath, "w", encoding="utf-8") as f:
+                            json.dump(data, f, indent=2)
+                except (OSError, json.JSONDecodeError, KeyError):
+                    pass
+
     def _delete_empty_transcript_file(self) -> None:
         """
         Delete the transcript file if the conversation doesn't have any AI messages.
@@ -1559,6 +1593,7 @@ class ConversationWidget(QWidget):
             path = self._transcript_handler.get_path()
             if not has_ai_messages and os.path.exists(path):
                 self._logger.info("Deleting empty conversation transcript: %s", path)
+                self._clear_children_parent_references(path)
                 os.remove(path)
 
         except Exception as e:

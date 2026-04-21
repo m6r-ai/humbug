@@ -38,7 +38,6 @@ class MindspaceFilesTreeView(MindspaceTreeView):
         Returns:
             True if the path can be dragged, False otherwise
         """
-        # Check if this is a valid drag target
         source_basename = os.path.basename(path)
         if source_basename in ['.', '.humbug', 'conversations']:
             return False

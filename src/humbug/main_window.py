@@ -322,6 +322,7 @@ class MainWindow(QMainWindow):
         self._mindspace_view.file_clicked.connect(self._on_mindspace_view_file_clicked)
         self._mindspace_view.file_deleted.connect(self._on_mindspace_view_file_deleted)
         self._mindspace_view.file_renamed.connect(self._on_mindspace_view_file_renamed)
+        self._mindspace_view.file_moved.connect(self._on_mindspace_view_file_moved)
         self._mindspace_view.file_edited.connect(self._on_mindspace_view_file_edited)
         self._mindspace_view.file_opened_in_preview.connect(self._on_mindspace_view_file_opened_in_preview)
         self._mindspace_view.file_opened_in_diff.connect(self._on_mindspace_view_file_opened_in_diff)
@@ -954,6 +955,15 @@ class MainWindow(QMainWindow):
         Args:
             old_path: Original path of renamed file
             new_path: New path after renaming
+        """
+        self._column_manager.handle_file_rename(old_path, new_path)
+
+    def _on_mindspace_view_file_moved(self, old_path: str, new_path: str) -> None:
+        """Handle moving of files (drag-drop into folder).
+
+        Args:
+            old_path: Original path of the moved file
+            new_path: New path after the move
         """
         self._column_manager.handle_file_rename(old_path, new_path)
 

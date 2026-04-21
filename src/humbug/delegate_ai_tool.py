@@ -456,6 +456,12 @@ class DelegateAITool(AITool):
             if parent_tab:
                 self._column_manager.unprotect_tab(parent_tab.tab_id())
 
+            # Record parent-child relationship in the child's conversation history
+            if parent_tab:
+                parent_relative = self._mindspace_manager.get_mindspace_relative_path(parent_tab.path())
+                if parent_relative:
+                    child_ai_conversation.get_conversation_history().set_parent(parent_relative)
+
             # Move the child conversation tab to the next column to the right of the parent
             if parent_tab:
                 parent_info = self._column_manager.get_tab_info_by_id(parent_tab.tab_id())

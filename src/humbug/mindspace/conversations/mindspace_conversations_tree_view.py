@@ -1,11 +1,15 @@
 """Conversations tree view implementation for mindspace conversations with drag and drop support and inline editing."""
 
 import os
-from typing import cast
+from typing import Callable, cast
 
-from PySide6.QtCore import QSortFilterProxyModel, QDir, QModelIndex
-from PySide6.QtWidgets import QWidget, QFileSystemModel
+from PySide6.QtCore import QSortFilterProxyModel, QModelIndex, QTimer
+from PySide6.QtWidgets import QWidget, QTreeView
 
+from humbug.mindspace.conversations.mindspace_conversations_hierarchy_model import (
+    MindspaceConversationsHierarchyModel,
+    MindspaceConversationsSortProxy,
+)
 from humbug.mindspace.mindspace_tree_view import MindspaceTreeView
 
 
@@ -65,6 +69,9 @@ class MindspaceConversationsTreeView(MindspaceTreeView):
         """
         Get the file system path from a model index.
 
+        Supports both the new MindspaceConversationsHierarchyModel (via
+        MindspaceConversationsSortProxy) and the legacy QFileSystemModel stack.
+
         Args:
             index: The model index to get the path for
 
@@ -74,13 +81,90 @@ class MindspaceConversationsTreeView(MindspaceTreeView):
         if not index.isValid():
             return None
 
-        source_model = cast(QSortFilterProxyModel, self.model())
-        if not source_model:
+        proxy = self.model()
+        if not isinstance(proxy, QSortFilterProxyModel):
             return None
 
-        source_index = source_model.mapToSource(index)
-        file_model = cast(QFileSystemModel, source_model.sourceModel())
-        if not file_model:
+        source_index = proxy.mapToSource(index)
+        if not source_index.isValid():
             return None
 
+        source = proxy.sourceModel()
+        if isinstance(source, MindspaceConversationsHierarchyModel):
+            path = source.file_path(source_index)
+            return path if path else None
+
+        # Fallback: legacy QFileSystemModel path
+        from PySide6.QtCore import QDir
+        from PySide6.QtWidgets import QFileSystemModel
+        file_model = cast(QFileSystemModel, source)
         return QDir.toNativeSeparators(file_model.filePath(source_index))
+
+    def _get_hierarchy_model(self) -> MindspaceConversationsHierarchyModel | None:
+        proxy = self.model()
+        if not isinstance(proxy, QSortFilterProxyModel):
+            return None
+        source = proxy.sourceModel()
+        return source if isinstance(source, MindspaceConversationsHierarchyModel) else None
+
+    def scroll_to_and_ensure_visible(self, file_path: str, callback: Callable) -> None:
+        """Override to support hierarchy model's index_for_path."""
+        hierarchy = self._get_hierarchy_model()
+        if hierarchy is None:
+            super().scroll_to_and_ensure_visible(file_path, callback)
+            return
+
+        proxy = cast(QSortFilterProxyModel, self.model())
+        source_index = hierarchy.index_for_path(file_path)
+        if not source_index.isValid():
+            return
+
+        filter_index = proxy.mapFromSource(source_index)
+        if not filter_index.isValid():
+            return
+
+        viewport_rect = self.viewport().rect()
+        item_rect = self.visualRect(filter_index)
+
+        margin = 40
+        is_optimally_visible = (
+            item_rect.top() >= margin
+            and item_rect.bottom() <= viewport_rect.height() - margin
+            and item_rect.left() >= 0
+            and item_rect.right() <= viewport_rect.width()
+        )
+        if is_optimally_visible:
+            callback()
+            return
+
+        self.scrollTo(filter_index, QTreeView.ScrollHint.PositionAtCenter)
+        QTimer.singleShot(100, callback)
+
+    def ensure_path_visible_for_editing(self, file_path: str, callback: Callable) -> None:
+        """Override to support hierarchy model's index_for_path."""
+        hierarchy = self._get_hierarchy_model()
+        if hierarchy is None:
+            super().ensure_path_visible_for_editing(file_path, callback)
+            return
+
+        proxy = cast(QSortFilterProxyModel, self.model())
+        source_index = hierarchy.index_for_path(file_path)
+        if not source_index.isValid():
+            return
+
+        filter_index = proxy.mapFromSource(source_index)
+        if not filter_index.isValid():
+            return
+
+        # Expand all ancestors
+        parents = []
+        current = filter_index.parent()
+        while current.isValid():
+            parents.append(current)
+            current = current.parent()
+
+        for parent in reversed(parents):
+            if not self.isExpanded(parent):
+                self.expand(parent)
+
+        QTimer.singleShot(200, lambda: self.scroll_to_and_ensure_visible(file_path, callback))
