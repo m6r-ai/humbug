@@ -99,11 +99,23 @@ MenaiValue menai_function_alloc(const ClosureCache *cache, MenaiValue none_val);
 #define CLOSURE_CACHE_CAPSULE_NAME "menai.ClosureCache"
 
 /*
- * menai_function_new_from_kwargs — public wrapper used by menai_convert_value
- * in menai_vm_value.c to construct a MenaiFunction from Python keyword args.
- * Returns a new reference, or NULL on failure.
+ * menai_function_alloc_from_slow — construct a MenaiFunction directly from
+ * the raw Python attributes of a slow MenaiFunction object.
+ *
+ * parameters — Python sequence of parameter name strings (borrowed).
+ * name       — Python str or None (borrowed).
+ * bytecode   — Python CodeObject or None (borrowed).
+ * cap_items  — array of ncap already-converted MenaiValue captures; ownership
+ *              of each reference is transferred to the new function object.
+ * ncap       — number of elements in cap_items.
+ * is_variadic — 0 or 1.
+ *
+ * Returns a new reference, or NULL on failure.  On failure, all cap_items
+ * references are released.
  */
-MenaiValue menai_function_new_from_kwargs(PyObject *args, PyObject *kwargs);
+MenaiValue menai_function_alloc_from_slow(PyObject *parameters, PyObject *name,
+                                          PyObject *bytecode, MenaiValue *cap_items,
+                                          Py_ssize_t ncap, int is_variadic);
 
 /*
  * Module init — called once from _menai_vm_value_init().

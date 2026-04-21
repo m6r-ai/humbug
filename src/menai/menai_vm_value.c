@@ -421,19 +421,19 @@ menai_convert_value(PyObject *src)
         }
 
         /*
-         * Build a Python list of captured values for the kwargs dict.
-         * The items are MenaiValue pointers cast to PyObject *; they are
-         * not real Python objects, but menai_function_new_from_kwargs reads
-         * them back as MenaiValue via the same cast, so the round-trip is safe
-         * as long as the list is not used by any Python-layer code.
+         * Recursively convert captured_values to fast C types and store them
+         * in a plain C array.  Prelude closures are fully-formed (no letrec
+         * None placeholders), so eager conversion is safe and eliminates the
+         * slow-type check in call_setup's hot path.
          *
-         * Recursively convert captured_values to fast types.  Prelude closures
-         * are fully-formed (no letrec None placeholders), so eager conversion
-         * is safe and eliminates the slow-type check in call_setup's hot path.
+         * cap_items is passed to menai_function_alloc_from_slow which steals
+         * every reference, so no PyList is involved and Python's allocator
+         * never touches MenaiValue objects.
          */
         Py_ssize_t ncap = PyList_GET_SIZE(cap);
-        PyObject *fast_cap = PyList_New(ncap);
-        if (!fast_cap) {
+        MenaiValue *cap_items = ncap > 0
+            ? (MenaiValue *)malloc((size_t)ncap * sizeof(MenaiValue)) : NULL;
+        if (ncap > 0 && !cap_items) {
             Py_DECREF(cap);
             Py_DECREF(params);
             Py_DECREF(name);
@@ -442,43 +442,27 @@ menai_convert_value(PyObject *src)
         }
 
         for (Py_ssize_t ci = 0; ci < ncap; ci++) {
-            PyObject *fast_cv = menai_convert_value(PyList_GET_ITEM(cap, ci));
+            MenaiValue fast_cv = (MenaiValue)menai_convert_value(PyList_GET_ITEM(cap, ci));
             if (!fast_cv) {
-                for (Py_ssize_t cj = 0; cj < ci; cj++) {
-                    Py_DECREF(PyList_GET_ITEM(fast_cap, cj));
-                }
-                Py_DECREF(fast_cap);
+                for (Py_ssize_t cj = 0; cj < ci; cj++) menai_release(cap_items[cj]);
+                free(cap_items);
                 Py_DECREF(cap);
                 Py_DECREF(params);
                 Py_DECREF(name);
                 Py_DECREF(bc);
                 return NULL;
             }
-            PyList_SET_ITEM(fast_cap, ci, fast_cv);
+            cap_items[ci] = fast_cv;
         }
 
         Py_DECREF(cap);
 
-        PyObject *kwargs = Py_BuildValue("{sOsOsOsOsi}",
-            "parameters", params,
-            "name", name,
-            "bytecode", bc,
-            "captured_values", fast_cap,
-            "is_variadic", iv);
+        MenaiValue r = menai_function_alloc_from_slow(params, name, bc,
+                                                      cap_items, ncap, iv);
+        free(cap_items);
         Py_DECREF(params);
         Py_DECREF(name);
         Py_DECREF(bc);
-        Py_DECREF(fast_cap);
-        if (!kwargs) return NULL;
-        PyObject *empty = PyTuple_New(0);
-        if (!empty) {
-            Py_DECREF(kwargs);
-            return NULL;
-        }
-
-        MenaiValue r = menai_function_new_from_kwargs(empty, kwargs);
-        Py_DECREF(empty);
-        Py_DECREF(kwargs);
         return (PyObject *)r;
     }
 

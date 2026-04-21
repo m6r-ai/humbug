@@ -136,34 +136,17 @@ menai_function_alloc(const ClosureCache *cache, MenaiValue none_val)
 }
 
 MenaiValue
-menai_function_new_from_kwargs(PyObject *args, PyObject *kwargs)
+menai_function_alloc_from_slow(PyObject *parameters, PyObject *name,
+                               PyObject *bytecode, MenaiValue *cap_items,
+                               Py_ssize_t ncap, int is_variadic)
 {
-    PyObject *parameters = NULL, *name = Py_None, *bytecode = Py_None;
-    PyObject *captured_values = NULL;
-    int is_variadic = 0;
-    static char *kwlist[] = {"parameters", "name", "bytecode",
-                             "captured_values", "is_variadic", NULL};
-    if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|OOOOp", kwlist,
-                                     &parameters, &name, &bytecode,
-                                     &captured_values, &is_variadic))
-        return NULL;
-
-    PyObject *params_tup = parameters
-        ? PySequence_Tuple(parameters) : PyTuple_New(0);
+    PyObject *params_tup = PySequence_Tuple(parameters);
     if (!params_tup) return NULL;
-
-    Py_ssize_t ncap = 0;
-    if (captured_values && captured_values != Py_None) {
-        ncap = PySequence_Size(captured_values);
-        if (ncap < 0) {
-            Py_DECREF(params_tup);
-            return NULL;
-        }
-    }
 
     MenaiFunction_Object *self = (MenaiFunction_Object *)malloc(
         sizeof(MenaiFunction_Object) + (size_t)ncap * sizeof(MenaiValue));
     if (!self) {
+        for (Py_ssize_t i = 0; i < ncap; i++) menai_xrelease(cap_items[i]);
         Py_DECREF(params_tup);
         return NULL;
     }
@@ -189,20 +172,9 @@ menai_function_new_from_kwargs(PyObject *args, PyObject *kwargs)
     self->closure_caches_items = NULL;
     self->param_count = 0;
 
-    if (captured_values && captured_values != Py_None) {
-        for (Py_ssize_t i = 0; i < ncap; i++) {
-            PyObject *cv = PySequence_GetItem(captured_values, i);
-            if (!cv) {
-                for (Py_ssize_t j = 0; j < i; j++) menai_xrelease(self->captures[j]);
-                Py_DECREF(params_tup);
-                Py_DECREF(name);
-                Py_DECREF(bytecode);
-                free(self);
-                return NULL;
-            }
-            self->captures[i] = (MenaiValue)cv;
-        }
-    }
+    /* Steal the caller's references directly into the inline captures array. */
+    for (Py_ssize_t i = 0; i < ncap; i++)
+        self->captures[i] = cap_items[i];
 
     if (bytecode != Py_None) {
         _cache_frame_fields(self, bytecode);
