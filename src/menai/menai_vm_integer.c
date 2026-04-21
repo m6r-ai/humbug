@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include "menai_vm_integer.h"
+#include "menai_vm_memory.h"
 
 static PyObject *_integer_cache[MENAI_INT_CACHE_SIZE];
 
@@ -199,7 +200,7 @@ menai_integer_from_long(long n)
 {
     if (n >= MENAI_INT_CACHE_MIN && n <= MENAI_INT_CACHE_MAX) {
         PyObject *cached = _integer_cache[n - MENAI_INT_CACHE_MIN];
-        Py_INCREF(cached);
+        menai_retain(cached);
         return cached;
     }
 

@@ -15,6 +15,7 @@
 #include <stdint.h>
 
 #include "menai_vm_function.h"
+#include "menai_vm_memory.h"
 
 /*
  * _cache_frame_fields — populate the frame-setup cache fields on self from
@@ -152,7 +153,7 @@ MenaiFunction_dealloc(PyObject *self)
     Py_XDECREF(f->name);
     Py_XDECREF(f->bytecode);
     Py_ssize_t ncap = Py_SIZE(f);
-    for (Py_ssize_t i = 0; i < ncap; i++) Py_XDECREF(f->captures[i]);
+    for (Py_ssize_t i = 0; i < ncap; i++) menai_xrelease(f->captures[i]);
     Py_TYPE(self)->tp_free(self);
 }
 
@@ -265,7 +266,7 @@ MenaiFunction_get_captured_values(PyObject *self, void *closure)
 
     for (Py_ssize_t i = 0; i < ncap; i++) {
         PyObject *cv = f->captures[i] ? f->captures[i] : Py_None;
-        Py_INCREF(cv);
+        menai_retain(cv);
         PyList_SET_ITEM(lst, i, cv);
     }
     return lst;
@@ -295,8 +296,8 @@ MenaiFunction_set_captured_values(PyObject *self, PyObject *value, void *closure
 
     for (Py_ssize_t i = 0; i < ncap; i++) {
         PyObject *nv = PyList_GET_ITEM(value, i);
-        Py_INCREF(nv);
-        Py_XDECREF(f->captures[i]);
+        menai_retain(nv);
+        menai_xrelease(f->captures[i]);
         f->captures[i] = nv;
     }
 
@@ -385,7 +386,7 @@ menai_function_alloc(const ClosureCache *cache, PyObject *none_val)
     self->code_len = cache->code_len;
 
     for (Py_ssize_t i = 0; i < cache->ncap; i++) {
-        Py_INCREF(none_val);
+        menai_retain(none_val);
         self->captures[i] = none_val;
     }
 

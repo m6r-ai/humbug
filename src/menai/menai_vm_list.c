@@ -8,7 +8,6 @@
  * Also provides the three C-level constructors used by the VM:
  *   menai_list_from_array        — copy items, INCREF each
  *   menai_list_from_array_steal  — take ownership, no INCREF
- *   menai_list_from_tuple        — copy from tuple, INCREF each, DECREF tuple
  */
 
 #define PY_SSIZE_T_CLEAN
@@ -18,6 +17,7 @@
 #endif
 
 #include "menai_vm_list.h"
+#include "menai_vm_memory.h"
 #include "menai_vm_hashtable.h"
 
 /* ---------------------------------------------------------------------------
@@ -106,7 +106,7 @@ _menai_list_cache_alloc_arr(Py_ssize_t n)
 static void
 _menai_list_cache_free_arr(PyObject **arr, Py_ssize_t n)
 {
-    for (Py_ssize_t i = 0; i < n; i++) Py_DECREF(arr[i]);
+    for (Py_ssize_t i = 0; i < n; i++) menai_release(arr[i]);
     if (arr && n > 0 && n <= LIST_CACHE_MAX_SIZE) {
         int bucket = _bucket_index(n);
         if (_list_arr_counts[bucket] < LIST_CACHE_MAX_BUCKET) {
@@ -175,7 +175,7 @@ MenaiList_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
 
     for (Py_ssize_t i = 0; i < n; i++) {
         arr[i] = PyTuple_GET_ITEM(tup, i);
-        Py_INCREF(arr[i]);
+        menai_retain(arr[i]);
     }
     Py_XDECREF(tup);
 
@@ -200,7 +200,7 @@ MenaiList_dealloc(PyObject *self)
         lst->owner = NULL;
         lst->elements = NULL;
         lst->length = 0;
-        Py_DECREF(owner);
+        menai_release(owner);
     } else {
         /* Owner — free the element array in the normal way. */
         Py_ssize_t n = lst->length;
@@ -290,7 +290,7 @@ MenaiList_hash(PyObject *self)
     if (!tup) return -1;
 
     for (Py_ssize_t i = 0; i < lst->length; i++) {
-        Py_INCREF(lst->elements[i]);
+        menai_retain(lst->elements[i]);
         PyTuple_SET_ITEM(tup, i, lst->elements[i]);
     }
 
@@ -308,7 +308,7 @@ MenaiList_get_elements(PyObject *self, void *closure)
     if (!tup) return NULL;
 
     for (Py_ssize_t i = 0; i < lst->length; i++) {
-        Py_INCREF(lst->elements[i]);
+        menai_retain(lst->elements[i]);
         PyTuple_SET_ITEM(tup, i, lst->elements[i]);
     }
 
@@ -352,7 +352,7 @@ menai_list_from_array(PyObject **items, Py_ssize_t n)
 
         for (Py_ssize_t i = 0; i < n; i++) {
             arr[i] = items[i];
-            Py_INCREF(arr[i]);
+            menai_retain(arr[i]);
         }
     }
 
@@ -375,37 +375,6 @@ menai_list_from_array_steal(PyObject **items, Py_ssize_t n)
         return NULL;
     }
     obj->elements = items;
-    obj->length = n;
-    return (PyObject *)obj;
-}
-
-PyObject *
-menai_list_from_tuple(PyObject *tup)
-{
-    Py_ssize_t n = PyTuple_GET_SIZE(tup);
-    PyObject **arr = NULL;
-    if (n > 0) {
-        arr = _menai_list_cache_alloc_arr(n);
-        if (!arr) {
-            Py_DECREF(tup);
-            PyErr_NoMemory();
-            return NULL;
-        }
-
-        for (Py_ssize_t i = 0; i < n; i++) {
-            arr[i] = PyTuple_GET_ITEM(tup, i);
-            Py_INCREF(arr[i]);
-        }
-    }
-
-    Py_DECREF(tup);
-    MenaiList_Object *obj = _menai_list_cache_alloc_obj();
-    if (!obj) {
-        _menai_list_cache_free_arr(arr, n);
-        return NULL;
-    }
-
-    obj->elements = arr;
     obj->length = n;
     return (PyObject *)obj;
 }
@@ -443,7 +412,7 @@ menai_list_rest(PyObject *lst_obj)
         return NULL;
     }
 
-    Py_INCREF(owner);
+    menai_retain(owner);
     view->owner = owner;
     view->elements = lst->elements + 1;
     view->length = lst->length - 1;
@@ -467,7 +436,7 @@ menai_list_slice(PyObject *lst_obj, Py_ssize_t start, Py_ssize_t end)
         return NULL;
     }
 
-    Py_INCREF(owner);
+    menai_retain(owner);
     view->owner = owner;
     view->elements = lst->elements + start;
     view->length = end - start;

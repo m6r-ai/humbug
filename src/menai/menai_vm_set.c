@@ -16,6 +16,7 @@
 #include <Python.h>
 
 #include "menai_vm_set.h"
+#include "menai_vm_memory.h"
 #include "menai_vm_hashtable.h"
 #include "menai_vm_value.h"
 
@@ -27,7 +28,7 @@ static void
 _set_free_arrays(PyObject **elements, Py_hash_t *hashes, Py_ssize_t n)
 {
     if (elements) {
-        for (Py_ssize_t i = 0; i < n; i++) Py_XDECREF(elements[i]);
+        for (Py_ssize_t i = 0; i < n; i++) menai_xrelease(elements[i]);
         PyMem_Free(elements);
     }
     PyMem_Free(hashes);
@@ -131,7 +132,7 @@ MenaiSet_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
         if (existing == -1) {
             /* Not yet seen — add it */
             menai_ht_insert(&seen, elem, h, out);
-            Py_INCREF(elem);
+            menai_retain(elem);
             elements[out] = elem;
             hashes[out] = h;
             out++;

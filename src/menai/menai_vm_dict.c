@@ -16,6 +16,7 @@
 #include <Python.h>
 
 #include "menai_vm_dict.h"
+#include "menai_vm_memory.h"
 #include "menai_vm_hashtable.h"
 #include "menai_vm_value.h"
 
@@ -62,11 +63,11 @@ _dict_free_arrays(PyObject **keys, PyObject **values, Py_hash_t *hashes,
                   Py_ssize_t n)
 {
     if (keys) {
-        for (Py_ssize_t i = 0; i < n; i++) Py_XDECREF(keys[i]);
+        for (Py_ssize_t i = 0; i < n; i++) menai_xrelease(keys[i]);
         PyMem_Free(keys);
     }
     if (values) {
-        for (Py_ssize_t i = 0; i < n; i++) Py_XDECREF(values[i]);
+        for (Py_ssize_t i = 0; i < n; i++) menai_xrelease(values[i]);
         PyMem_Free(values);
     }
     PyMem_Free(hashes);
@@ -140,8 +141,8 @@ MenaiDict_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
         Py_hash_t h = menai_value_hash(k);
         if (h == -1) {
             for (Py_ssize_t j = 0; j < i; j++) {
-                Py_DECREF(keys[j]);
-                Py_DECREF(values[j]);
+                menai_release(keys[j]);
+                menai_release(values[j]);
             }
             PyMem_Free(keys);
             PyMem_Free(values);
@@ -149,8 +150,8 @@ MenaiDict_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
             Py_DECREF(src);
             return NULL;
         }
-        Py_INCREF(k);
-        Py_INCREF(v);
+        menai_retain(k);
+        menai_retain(v);
         keys[i] = k;
         values[i] = v;
         hashes[i] = h;

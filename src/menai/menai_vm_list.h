@@ -5,10 +5,9 @@
  * It uses a free-list cache for both object structs and element arrays to
  * reduce allocation pressure in the hot VM loop.
  *
- * The three C-level constructors (menai_list_from_array,
- * menai_list_from_array_steal, menai_list_from_tuple) are the primary
- * allocation paths used by the VM.  The Python-level MenaiList() constructor
- * is available via menai_list_new_empty() for creating the empty-list singleton.
+ * The three C-level constructors (menai_list_from_array, * menai_list_from_array_steal) 
+ * are the primary allocation paths used by the VM.  The Python-level MenaiList()
+ * constructor is available via menai_list_new_empty() for creating the empty-list singleton.
  */
 
 #ifndef MENAI_VM_LIST_H
@@ -43,12 +42,6 @@ PyObject *menai_list_from_array(PyObject **items, Py_ssize_t n);
  * Returns a new reference, or NULL on MemoryError (items freed on failure).
  */
 PyObject *menai_list_from_array_steal(PyObject **items, Py_ssize_t n);
-
-/*
- * menai_list_from_tuple — copy from tuple, INCREF each, DECREF tuple.
- * Returns a new reference, or NULL on MemoryError.
- */
-PyObject *menai_list_from_tuple(PyObject *tup);
 
 /*
  * menai_list_new_empty — create a zero-element MenaiList.

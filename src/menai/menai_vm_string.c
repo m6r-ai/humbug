@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include "menai_vm_string.h"
+#include "menai_vm_memory.h"
 #include "menai_vm_string_tables.h"
 
 /* MenaiEvalError — fetched at init time by menai_vm_string_init(). */
@@ -428,7 +429,7 @@ menai_string_replace(PyObject *s, PyObject *from, PyObject *to)
     }
 
     if (slen == 0) {
-        Py_INCREF(s);
+        menai_retain(s);
         return s;
     }
 
@@ -444,7 +445,7 @@ menai_string_replace(PyObject *s, PyObject *from, PyObject *to)
     }
 
     if (count == 0) {
-        Py_INCREF(s);
+        menai_retain(s);
         return s;
     }
 

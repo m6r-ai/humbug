@@ -13,6 +13,7 @@
 #include <Python.h>
 
 #include "menai_vm_struct.h"
+#include "menai_vm_memory.h"
 #include "menai_vm_symbol.h"
 #include "menai_vm_hashtable.h"
 
@@ -199,15 +200,15 @@ MenaiStruct_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
     MenaiStruct_Object *self = (MenaiStruct_Object *)type->tp_alloc(type, n);
     if (!self) return NULL;
 
-    Py_INCREF(struct_type);
+    menai_retain(struct_type);
     self->struct_type = struct_type;
 
     for (Py_ssize_t i = 0; i < n; i++) {
         PyObject *fv = PySequence_GetItem(fields, i);
         if (!fv) {
-            for (Py_ssize_t j = 0; j < i; j++) Py_DECREF(self->items[j]);
+            for (Py_ssize_t j = 0; j < i; j++) menai_release(self->items[j]);
             self->struct_type = NULL;
-            Py_DECREF(struct_type);
+            menai_release(struct_type);
             Py_TYPE(self)->tp_free(self);
             return NULL;
         }
@@ -222,9 +223,9 @@ static void
 MenaiStruct_dealloc(PyObject *self)
 {
     MenaiStruct_Object *s = (MenaiStruct_Object *)self;
-    Py_XDECREF(s->struct_type);
+    menai_xrelease(s->struct_type);
     Py_ssize_t n = Py_SIZE(s);
-    for (Py_ssize_t i = 0; i < n; i++) Py_XDECREF(s->items[i]);
+    for (Py_ssize_t i = 0; i < n; i++) menai_xrelease(s->items[i]);
 
     Py_TYPE(self)->tp_free(self);
 }
@@ -333,7 +334,7 @@ MenaiStruct_get_struct_type(PyObject *self, void *closure)
 {
     (void)closure;
     PyObject *st = ((MenaiStruct_Object *)self)->struct_type;
-    Py_INCREF(st);
+    menai_retain(st);
     return st;
 }
 
@@ -351,7 +352,7 @@ MenaiStruct_get_fields(PyObject *self, void *closure)
     if (!tup) return NULL;
 
     for (Py_ssize_t i = 0; i < n; i++) {
-        Py_INCREF(s->items[i]);
+        menai_retain(s->items[i]);
         PyTuple_SET_ITEM(tup, i, s->items[i]);
     }
 
@@ -390,10 +391,10 @@ menai_struct_alloc(PyObject *struct_type, PyObject **field_values, Py_ssize_t nf
     MenaiStruct_Object *self = (MenaiStruct_Object *)MenaiStruct_Type.tp_alloc(&MenaiStruct_Type, nfields);
     if (!self) return NULL;
 
-    Py_INCREF(struct_type);
+    menai_retain(struct_type);
     self->struct_type = struct_type;
     for (Py_ssize_t i = 0; i < nfields; i++) {
-        Py_INCREF(field_values[i]);
+        menai_retain(field_values[i]);
         self->items[i] = field_values[i];
     }
 
