@@ -768,6 +768,10 @@ class MindspaceConversationsView(QWidget):
                     rename_action.triggered.connect(lambda: self._start_rename(index))
                     delete_action = menu.addAction(strings.delete)
                     delete_action.triggered.connect(lambda: self._handle_delete_file(path))
+                    conv_dir = os.path.normpath(self._conversations_path) if self._conversations_path else ""
+                    if conv_dir and os.path.normpath(os.path.dirname(path)) != conv_dir and not self._has_parent_ref(path):
+                        eject_action = menu.addAction(strings.eject_to_root)
+                        eject_action.triggered.connect(lambda: self._handle_eject_to_root(path))
 
                 menu.addSeparator()
                 sort_menu = menu.addMenu(strings.sort_by)
@@ -1000,6 +1004,42 @@ class MindspaceConversationsView(QWidget):
     def _handle_preview_view_file(self, path: str) -> None:
         """View a file in the preview."""
         self.file_opened_in_preview.emit(path, False)
+
+    def _has_parent_ref(self, path: str) -> bool:
+        """Return True if the .conv file at path has a non-null parent reference."""
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            parent = data.get("metadata", {}).get("parent")
+            return isinstance(parent, str) and bool(parent)
+        except (OSError, json.JSONDecodeError, AttributeError):
+            return False
+
+    def _handle_eject_to_root(self, path: str) -> None:
+        """Move a conversation from its subfolder to the conversations root."""
+        if not self._conversations_path:
+            return
+        filename = os.path.basename(path)
+        destination_path = os.path.join(self._conversations_path, filename)
+        if os.path.exists(destination_path):
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.WARNING,
+                strings.move_error_title,
+                strings.move_error_exists.format(filename)
+            )
+            return
+        try:
+            self._perform_move_operation(path, destination_path)
+        except OSError as e:
+            strings = self._language_manager.strings()
+            MessageBox.show_message(
+                self,
+                MessageBoxType.CRITICAL,
+                strings.move_error_title,
+                strings.move_error_failed.format(str(e))
+            )
 
     def _handle_delete_file(self, path: str) -> None:
         """Handle request to delete a file.
