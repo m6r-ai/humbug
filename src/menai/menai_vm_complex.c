@@ -124,7 +124,7 @@ static PyGetSetDef MenaiComplex_getset[] = {
     {NULL, NULL, NULL, NULL, NULL}
 };
 
-static PyObject *
+PyObject *
 MenaiComplex_to_python(PyObject *self, PyObject *args)
 {
     (void)args;

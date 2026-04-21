@@ -43,7 +43,7 @@ MenaiSymbol_type_name(PyObject *self, PyObject *args)
     return PyUnicode_FromString("symbol");
 }
 
-static PyObject *
+PyObject *
 MenaiSymbol_describe(PyObject *self, PyObject *args)
 {
     (void)args;
@@ -52,7 +52,7 @@ MenaiSymbol_describe(PyObject *self, PyObject *args)
     return n;
 }
 
-static PyObject *
+PyObject *
 MenaiSymbol_to_python(PyObject *self, PyObject *args)
 {
     (void)args;

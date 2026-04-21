@@ -18,6 +18,9 @@ typedef struct {
 
 extern PyTypeObject MenaiFloat_Type;
 
+PyObject *MenaiFloat_describe(PyObject *self, PyObject *args);
+PyObject *MenaiFloat_to_python(PyObject *self, PyObject *args);
+
 /*
  * Module init — called once from _menai_vm_value_init().
  * Returns 0 on success, -1 on failure (Python exception set).

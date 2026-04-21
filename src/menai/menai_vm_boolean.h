@@ -31,6 +31,9 @@ PyObject *menai_boolean_true(void);
  */
 PyObject *menai_boolean_false(void);
 
+PyObject *MenaiBoolean_describe(PyObject *self, PyObject *args);
+PyObject *MenaiBoolean_to_python(PyObject *self, PyObject *args);
+
 /*
  * Module init — called once from _menai_vm_value_init().
  * Returns 0 on success, -1 on failure (Python exception set).

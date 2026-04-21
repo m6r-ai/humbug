@@ -1,18 +1,18 @@
 /*
- * menai_vm_hashtable.h — pure-C hash table and value hash/equality for
- * MenaiDict and MenaiSet.
+ * menai_vm_hashtable.h — pure-C hash table and value operations for
+ * MenaiDict, MenaiSet, and the collection types.
  *
  * Provides:
  *   menai_value_hash()    — compute Py_hash_t for any MenaiValue without
  *                           allocating Python objects
  *   menai_value_equal()   — structural equality for any two MenaiValues
  *                           without allocating Python objects
+ *   menai_value_describe() — produce a describe string for any MenaiValue
+ *   menai_value_to_python() — convert any MenaiValue to a Python object
  *   MenaiHashTable        — open-addressing hash table mapping MenaiValue
  *                           keys to Py_ssize_t indices
  *
- * These replace the Python dict (lookup) and Python frozenset (members) that
- * MenaiDict and MenaiSet previously used, removing all Python-object
- * dependencies from the collection hot paths.
+ * These remove Python-object dependencies from the collection hot paths.
  */
 
 #ifndef MENAI_VM_HASHTABLE_H
@@ -77,6 +77,24 @@ Py_hash_t menai_value_hash(PyObject *val);
  * All Menai value types are comparable by value without Python API calls.
  */
 int menai_value_equal(PyObject *a, PyObject *b);
+
+/*
+ * menai_value_describe — return a new Python unicode string describing val.
+ *
+ * Dispatches directly to the C-level describe function for each value type,
+ * bypassing Python method dispatch.  Returns a new reference, or NULL on
+ * error.
+ */
+PyObject *menai_value_describe(PyObject *val);
+
+/*
+ * menai_value_to_python — convert val to the nearest Python equivalent.
+ *
+ * Dispatches directly to the C-level to_python function for each value type,
+ * bypassing Python method dispatch.  Returns a new reference, or NULL on
+ * error.
+ */
+PyObject *menai_value_to_python(PyObject *val);
 
 /* ---------------------------------------------------------------------------
  * MenaiHashTable — open-addressing hash table

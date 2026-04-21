@@ -32,14 +32,14 @@ MenaiBoolean_type_name(PyObject *self, PyObject *args)
     return PyUnicode_FromString("boolean");
 }
 
-static PyObject *
+PyObject *
 MenaiBoolean_describe(PyObject *self, PyObject *args)
 {
     (void)args;
     return PyUnicode_FromString(((MenaiBoolean_Object *)self)->value ? "#t" : "#f");
 }
 
-static PyObject *
+PyObject *
 MenaiBoolean_to_python(PyObject *self, PyObject *args)
 {
     (void)args;

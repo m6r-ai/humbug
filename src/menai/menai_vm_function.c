@@ -194,7 +194,7 @@ MenaiFunction_type_name(PyObject *self, PyObject *args)
     return PyUnicode_FromString("function");
 }
 
-static PyObject *
+PyObject *
 MenaiFunction_describe(PyObject *self, PyObject *args)
 {
     (void)args;
@@ -217,7 +217,7 @@ MenaiFunction_richcompare(PyObject *self, PyObject *other, int op)
     Py_RETURN_NOTIMPLEMENTED;
 }
 
-static PyObject *
+PyObject *
 MenaiFunction_to_python(PyObject *self, PyObject *args)
 {
     (void)args;

@@ -76,6 +76,11 @@ PyObject *menai_struct_alloc(PyObject *struct_type, PyObject **field_values, Py_
  */
 PyObject *menai_struct_type_new_from_args(PyObject *args);
 
+PyObject *MenaiStructType_describe(PyObject *self, PyObject *args);
+PyObject *MenaiStructType_to_python(PyObject *self, PyObject *args);
+PyObject *MenaiStruct_describe(PyObject *self, PyObject *args);
+PyObject *MenaiStruct_to_python(PyObject *self, PyObject *args);
+
 /*
  * Module init — called once from _menai_vm_value_init().
  * Returns 0 on success, -1 on failure (Python exception set).

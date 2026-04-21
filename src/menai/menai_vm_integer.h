@@ -75,6 +75,9 @@ menai_integer_small(PyObject *o)
     return ((MenaiInteger_Object *)o)->small;
 }
 
+PyObject *MenaiInteger_describe(PyObject *self, PyObject *args);
+PyObject *MenaiInteger_to_python(PyObject *self, PyObject *args);
+
 /*
  * Module init — called once from _menai_vm_value_init().
  * Returns 0 on success, -1 on failure (Python exception set).

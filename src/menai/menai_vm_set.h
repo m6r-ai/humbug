@@ -55,6 +55,9 @@ PyObject *menai_set_new_empty(void);
 PyObject *menai_set_from_arrays_steal(PyObject **elements, Py_hash_t *hashes,
                                       Py_ssize_t n);
 
+PyObject *MenaiSet_describe(PyObject *self, PyObject *args);
+PyObject *MenaiSet_to_python(PyObject *self, PyObject *args);
+
 /*
  * Module init — called once from _menai_vm_value_init().
  * Returns 0 on success, -1 on failure (Python exception set).

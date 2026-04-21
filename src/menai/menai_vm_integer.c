@@ -70,7 +70,7 @@ MenaiInteger_type_name(PyObject *self, PyObject *args)
     return PyUnicode_FromString("integer");
 }
 
-static PyObject *
+PyObject *
 MenaiInteger_describe(PyObject *self, PyObject *args)
 {
     (void)args;
@@ -171,7 +171,7 @@ MenaiInteger_get_value(PyObject *self, void *closure)
     return menai_int_to_pylong(&obj->big);
 }
 
-static PyObject *
+PyObject *
 MenaiInteger_to_python(PyObject *self, PyObject *args)
 {
     (void)args;

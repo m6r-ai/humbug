@@ -54,6 +54,9 @@ PyObject *menai_dict_new_empty(void);
 PyObject *menai_dict_from_arrays_steal(PyObject **keys, PyObject **values,
                                        Py_hash_t *hashes, Py_ssize_t n);
 
+PyObject *MenaiDict_describe(PyObject *self, PyObject *args);
+PyObject *MenaiDict_to_python(PyObject *self, PyObject *args);
+
 /*
  * Module init — called once from _menai_vm_value_init().
  * Returns 0 on success, -1 on failure (Python exception set).

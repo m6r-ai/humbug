@@ -82,6 +82,9 @@ PyObject *menai_string_from_pyunicode(PyObject *pystr);
  */
 PyObject *menai_string_to_pyunicode(PyObject *s);
 
+PyObject *MenaiString_describe(PyObject *self, PyObject *args);
+PyObject *MenaiString_to_python(PyObject *self, PyObject *args);
+
 /* Lexicographic comparison.  Returns <0, 0, or >0. */
 int menai_string_compare(PyObject *a, PyObject *b);
 

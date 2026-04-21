@@ -93,7 +93,7 @@ MenaiStructType_type_name(PyObject *self, PyObject *args)
     return PyUnicode_FromString("struct-type");
 }
 
-static PyObject *
+PyObject *
 MenaiStructType_describe(PyObject *self, PyObject *args)
 {
     (void)args;
@@ -156,7 +156,7 @@ MenaiStructType_get_field_names(PyObject *self, void *closure)
     return fn;
 }
 
-static PyObject *
+PyObject *
 MenaiStructType_to_python(PyObject *self, PyObject *args)
 {
     (void)args;
@@ -246,7 +246,7 @@ MenaiStruct_type_name(PyObject *self, PyObject *args)
     return PyUnicode_FromString("struct");
 }
 
-static PyObject *
+PyObject *
 MenaiStruct_describe(PyObject *self, PyObject *args)
 {
     (void)args;
@@ -258,7 +258,7 @@ MenaiStruct_describe(PyObject *self, PyObject *args)
     if (!parts) return NULL;
 
     for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *desc = PyObject_CallMethod(s->items[i], "describe", NULL);
+        PyObject *desc = menai_value_describe(s->items[i]);
         if (!desc) {
             Py_DECREF(parts);
             return NULL;
@@ -368,7 +368,7 @@ MenaiStruct_get_fields(PyObject *self, void *closure)
     return tup;
 }
 
-static PyObject *
+PyObject *
 MenaiStruct_to_python(PyObject *self, PyObject *args)
 {
     (void)args;
@@ -378,7 +378,7 @@ MenaiStruct_to_python(PyObject *self, PyObject *args)
     PyObject *result = PyDict_New();
     if (!result) return NULL;
     for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *field_val = PyObject_CallMethod(s->items[i], "to_python", NULL);
+        PyObject *field_val = menai_value_to_python(s->items[i]);
         if (!field_val) { Py_DECREF(result); return NULL; }
         PyObject *fname = PyTuple_GET_ITEM(st->field_names, i);
         int ok = PyDict_SetItem(result, fname, field_val);

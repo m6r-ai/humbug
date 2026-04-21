@@ -181,7 +181,7 @@ MenaiDict_type_name(PyObject *self, PyObject *args)
     return PyUnicode_FromString("dict");
 }
 
-static PyObject *
+PyObject *
 MenaiDict_describe(PyObject *self, PyObject *args)
 {
     (void)args;
@@ -193,9 +193,9 @@ MenaiDict_describe(PyObject *self, PyObject *args)
     if (!parts) return NULL;
 
     for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *kd = PyObject_CallMethod(d->keys[i], "describe", NULL);
+        PyObject *kd = menai_value_describe(d->keys[i]);
         PyObject *vd = kd
-            ? PyObject_CallMethod(d->values[i], "describe", NULL)
+            ? menai_value_describe(d->values[i])
             : NULL;
         if (!vd) {
             Py_XDECREF(kd);
@@ -284,7 +284,7 @@ MenaiDict_hash(PyObject *self)
  * String and symbol keys are converted to Python str; all other key types
  * use str(key.to_python()).  Values are recursively converted.
  */
-static PyObject *
+PyObject *
 MenaiDict_to_python(PyObject *self, PyObject *args)
 {
     (void)args;
@@ -301,13 +301,13 @@ MenaiDict_to_python(PyObject *self, PyObject *args)
             py_key = ((MenaiSymbol_Object *)k)->name;
             Py_INCREF(py_key);
         } else {
-            PyObject *kv = PyObject_CallMethod(k, "to_python", NULL);
+            PyObject *kv = menai_value_to_python(k);
             if (!kv) { Py_DECREF(result); return NULL; }
             py_key = PyObject_Str(kv);
             Py_DECREF(kv);
         }
         if (!py_key) { Py_DECREF(result); return NULL; }
-        PyObject *py_val = PyObject_CallMethod(d->values[i], "to_python", NULL);
+        PyObject *py_val = menai_value_to_python(d->values[i]);
         if (!py_val) { Py_DECREF(py_key); Py_DECREF(result); return NULL; }
         int ok = PyDict_SetItem(result, py_key, py_val);
         Py_DECREF(py_key);

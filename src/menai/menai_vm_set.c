@@ -179,7 +179,7 @@ MenaiSet_type_name(PyObject *self, PyObject *args)
     return PyUnicode_FromString("set");
 }
 
-static PyObject *
+PyObject *
 MenaiSet_describe(PyObject *self, PyObject *args)
 {
     (void)args;
@@ -191,7 +191,7 @@ MenaiSet_describe(PyObject *self, PyObject *args)
     if (!parts) return NULL;
 
     for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *desc = PyObject_CallMethod(s->elements[i], "describe", NULL);
+        PyObject *desc = menai_value_describe(s->elements[i]);
         if (!desc) {
             Py_DECREF(parts);
             return NULL;
@@ -272,7 +272,7 @@ MenaiSet_hash(PyObject *self)
     return h;
 }
 
-static PyObject *
+PyObject *
 MenaiSet_to_python(PyObject *self, PyObject *args)
 {
     (void)args;
@@ -281,7 +281,7 @@ MenaiSet_to_python(PyObject *self, PyObject *args)
     PyObject *result = PySet_New(NULL);
     if (!result) return NULL;
     for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *item = PyObject_CallMethod(s->elements[i], "to_python", NULL);
+        PyObject *item = menai_value_to_python(s->elements[i]);
         if (!item) { Py_DECREF(result); return NULL; }
         int ok = PySet_Add(result, item);
         Py_DECREF(item);

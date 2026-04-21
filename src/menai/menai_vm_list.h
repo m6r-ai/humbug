@@ -76,6 +76,9 @@ PyObject *menai_list_slice(PyObject *lst, Py_ssize_t start, Py_ssize_t end);
  */
 int menai_vm_list_init(void);
 
+PyObject *MenaiList_describe(PyObject *self, PyObject *args);
+PyObject *MenaiList_to_python(PyObject *self, PyObject *args);
+
 /* ---------------------------------------------------------------------------
  * Inline accessors — used heavily in the hot VM loop
  * ------------------------------------------------------------------------- */

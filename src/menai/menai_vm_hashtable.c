@@ -1,9 +1,9 @@
 /*
- * menai_vm_hashtable.c — pure-C hash table and value hash/equality.
+ * menai_vm_hashtable.c — pure-C hash table and value operations.
  *
- * menai_value_hash and menai_value_equal operate directly on MenaiValue C
- * structs without allocating any Python objects, removing the Python dict and
- * frozenset dependencies from MenaiDict and MenaiSet operations.
+ * menai_value_hash, menai_value_equal, menai_value_describe, and
+ * menai_value_to_python operate directly on MenaiValue C structs, dispatching
+ * to the C-level type functions without going through Python method lookup.
  *
  * MenaiHashTable is an open-addressing table with power-of-2 slot counts and
  * a 2/3 maximum load factor.  Probing uses the same quadratic-ish sequence
@@ -254,6 +254,62 @@ menai_value_equal(PyObject *a, PyObject *b)
 
     /* Unhashable types — fall back to pointer equality only */
     return 0;
+}
+
+/* ---------------------------------------------------------------------------
+ * menai_value_describe
+ * ------------------------------------------------------------------------- */
+
+PyObject *
+menai_value_describe(PyObject *val)
+{
+    PyTypeObject *t = Py_TYPE(val);
+
+    if (t == &MenaiNone_Type)       return MenaiNone_describe(val, NULL);
+    if (t == &MenaiBoolean_Type)    return MenaiBoolean_describe(val, NULL);
+    if (t == &MenaiInteger_Type)    return MenaiInteger_describe(val, NULL);
+    if (t == &MenaiFloat_Type)      return MenaiFloat_describe(val, NULL);
+    if (t == &MenaiComplex_Type)    return MenaiComplex_describe(val, NULL);
+    if (t == &MenaiString_Type)     return MenaiString_describe(val, NULL);
+    if (t == &MenaiSymbol_Type)     return MenaiSymbol_describe(val, NULL);
+    if (t == &MenaiStructType_Type) return MenaiStructType_describe(val, NULL);
+    if (t == &MenaiStruct_Type)     return MenaiStruct_describe(val, NULL);
+    if (t == &MenaiList_Type)       return MenaiList_describe(val, NULL);
+    if (t == &MenaiDict_Type)       return MenaiDict_describe(val, NULL);
+    if (t == &MenaiSet_Type)        return MenaiSet_describe(val, NULL);
+    if (t == &MenaiFunction_Type)   return MenaiFunction_describe(val, NULL);
+
+    PyErr_Format(PyExc_TypeError, "menai_value_describe: unknown type %s",
+                 t->tp_name);
+    return NULL;
+}
+
+/* ---------------------------------------------------------------------------
+ * menai_value_to_python
+ * ------------------------------------------------------------------------- */
+
+PyObject *
+menai_value_to_python(PyObject *val)
+{
+    PyTypeObject *t = Py_TYPE(val);
+
+    if (t == &MenaiNone_Type)       return MenaiNone_to_python(val, NULL);
+    if (t == &MenaiBoolean_Type)    return MenaiBoolean_to_python(val, NULL);
+    if (t == &MenaiInteger_Type)    return MenaiInteger_to_python(val, NULL);
+    if (t == &MenaiFloat_Type)      return MenaiFloat_to_python(val, NULL);
+    if (t == &MenaiComplex_Type)    return MenaiComplex_to_python(val, NULL);
+    if (t == &MenaiString_Type)     return MenaiString_to_python(val, NULL);
+    if (t == &MenaiSymbol_Type)     return MenaiSymbol_to_python(val, NULL);
+    if (t == &MenaiStructType_Type) return MenaiStructType_to_python(val, NULL);
+    if (t == &MenaiStruct_Type)     return MenaiStruct_to_python(val, NULL);
+    if (t == &MenaiList_Type)       return MenaiList_to_python(val, NULL);
+    if (t == &MenaiDict_Type)       return MenaiDict_to_python(val, NULL);
+    if (t == &MenaiSet_Type)        return MenaiSet_to_python(val, NULL);
+    if (t == &MenaiFunction_Type)   return MenaiFunction_to_python(val, NULL);
+
+    PyErr_Format(PyExc_TypeError, "menai_value_to_python: unknown type %s",
+                 t->tp_name);
+    return NULL;
 }
 
 /* ---------------------------------------------------------------------------

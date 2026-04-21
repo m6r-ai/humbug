@@ -512,7 +512,7 @@ MenaiString_type_name(PyObject *self, PyObject *args)
     return PyUnicode_FromString("string");
 }
 
-static PyObject *
+PyObject *
 MenaiString_describe(PyObject *self, PyObject *args)
 {
     (void)args;
@@ -595,7 +595,7 @@ MenaiString_get_value(PyObject *self, void *closure)
     return menai_string_to_pyunicode(self);
 }
 
-static PyObject *
+PyObject *
 MenaiString_to_python(PyObject *self, PyObject *args)
 {
     (void)args;

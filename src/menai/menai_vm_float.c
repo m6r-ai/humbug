@@ -32,7 +32,7 @@ MenaiFloat_type_name(PyObject *self, PyObject *args)
     return PyUnicode_FromString("float");
 }
 
-static PyObject *
+PyObject *
 MenaiFloat_describe(PyObject *self, PyObject *args)
 {
     (void)args;
@@ -44,7 +44,7 @@ MenaiFloat_describe(PyObject *self, PyObject *args)
     return s;
 }
 
-static PyObject *
+PyObject *
 MenaiFloat_to_python(PyObject *self, PyObject *args)
 {
     (void)args;

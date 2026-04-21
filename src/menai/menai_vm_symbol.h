@@ -28,6 +28,9 @@ extern PyTypeObject MenaiSymbol_Type;
  */
 PyObject *menai_symbol_alloc(PyObject *name);
 
+PyObject *MenaiSymbol_describe(PyObject *self, PyObject *args);
+PyObject *MenaiSymbol_to_python(PyObject *self, PyObject *args);
+
 /*
  * Module init — called once from _menai_vm_value_init().
  * Returns 0 on success, -1 on failure (Python exception set).

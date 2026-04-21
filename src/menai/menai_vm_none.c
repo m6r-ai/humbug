@@ -27,14 +27,14 @@ MenaiNone_type_name(PyObject *self, PyObject *args)
     return PyUnicode_FromString("none");
 }
 
-static PyObject *
+PyObject *
 MenaiNone_describe(PyObject *self, PyObject *args)
 {
     (void)self; (void)args;
     return PyUnicode_FromString("#none");
 }
 
-static PyObject *
+PyObject *
 MenaiNone_to_python(PyObject *self, PyObject *args)
 {
     (void)self; (void)args;

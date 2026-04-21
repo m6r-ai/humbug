@@ -220,7 +220,7 @@ MenaiList_type_name(PyObject *self, PyObject *args)
     return PyUnicode_FromString("list");
 }
 
-static PyObject *
+PyObject *
 MenaiList_describe(PyObject *self, PyObject *args)
 {
     (void)args;
@@ -232,7 +232,7 @@ MenaiList_describe(PyObject *self, PyObject *args)
     PyObject *parts = PyList_New(n);
     if (!parts) return NULL;
     for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *desc = PyObject_CallMethod(lst->elements[i], "describe", NULL);
+        PyObject *desc = menai_value_describe(lst->elements[i]);
         if (!desc) {
             Py_DECREF(parts);
             return NULL;
@@ -315,7 +315,7 @@ MenaiList_get_elements(PyObject *self, void *closure)
     return tup;
 }
 
-static PyObject *
+PyObject *
 MenaiList_to_python(PyObject *self, PyObject *args)
 {
     (void)args;
@@ -324,7 +324,7 @@ MenaiList_to_python(PyObject *self, PyObject *args)
     PyObject *result = PyList_New(n);
     if (!result) return NULL;
     for (Py_ssize_t i = 0; i < n; i++) {
-        PyObject *item = PyObject_CallMethod(lst->elements[i], "to_python", NULL);
+        PyObject *item = menai_value_to_python(lst->elements[i]);
         if (!item) {
             Py_DECREF(result);
             return NULL;
