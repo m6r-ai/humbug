@@ -45,6 +45,13 @@ MenaiFloat_describe(PyObject *self, PyObject *args)
 }
 
 static PyObject *
+MenaiFloat_to_python(PyObject *self, PyObject *args)
+{
+    (void)args;
+    return PyFloat_FromDouble(((MenaiFloat_Object *)self)->value);
+}
+
+static PyObject *
 MenaiFloat_richcompare(PyObject *self, PyObject *other, int op)
 {
     if (Py_TYPE(other) != &MenaiFloat_Type) {
@@ -87,6 +94,7 @@ static PyGetSetDef MenaiFloat_getset[] = {
 static PyMethodDef MenaiFloat_methods[] = {
     {"type_name", MenaiFloat_type_name, METH_NOARGS, NULL},
     {"describe", MenaiFloat_describe, METH_NOARGS, NULL},
+    {"to_python", MenaiFloat_to_python, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 

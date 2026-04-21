@@ -35,6 +35,13 @@ MenaiNone_describe(PyObject *self, PyObject *args)
 }
 
 static PyObject *
+MenaiNone_to_python(PyObject *self, PyObject *args)
+{
+    (void)self; (void)args;
+    Py_RETURN_NONE;
+}
+
+static PyObject *
 MenaiNone_richcompare(PyObject *self, PyObject *other, int op)
 {
     (void)self;
@@ -53,6 +60,7 @@ MenaiNone_hash(PyObject *self)
 static PyMethodDef MenaiNone_methods[] = {
     {"type_name", MenaiNone_type_name, METH_NOARGS, NULL},
     {"describe", MenaiNone_describe, METH_NOARGS, NULL},
+    {"to_python", MenaiNone_to_python, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 

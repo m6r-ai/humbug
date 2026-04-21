@@ -31,7 +31,7 @@ typedef struct {
     PyObject_HEAD
     PyObject *name;             /* Python str — struct type name */
     int tag;                    /* unique integer tag */
-    PyObject *field_names;      /* Python tuple of str — kept for to_slow / OP_STRUCT_FIELDS */
+    PyObject *field_names;      /* Python tuple of str — kept for OP_STRUCT_FIELDS */
     int nfields;                /* number of fields */
     MenaiFieldEntry fields[];   /* inline field-index table, nfields entries */
 } MenaiStructType_Object;

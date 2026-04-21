@@ -279,9 +279,73 @@ MenaiDict_hash(PyObject *self)
     return (Py_hash_t)(acc == (Py_uhash_t)-1 ? -2 : acc);
 }
 
+/*
+ * to_python — convert to a Python dict.
+ * String and symbol keys are converted to Python str; all other key types
+ * use str(key.to_python()).  Values are recursively converted.
+ */
+static PyObject *
+MenaiDict_to_python(PyObject *self, PyObject *args)
+{
+    (void)args;
+    MenaiDict_Object *d = (MenaiDict_Object *)self;
+    Py_ssize_t n = d->length;
+    PyObject *result = PyDict_New();
+    if (!result) return NULL;
+    for (Py_ssize_t i = 0; i < n; i++) {
+        PyObject *k = d->keys[i];
+        PyObject *py_key;
+        if (Py_TYPE(k) == &MenaiString_Type) {
+            py_key = menai_string_to_pyunicode(k);
+        } else if (Py_TYPE(k) == &MenaiSymbol_Type) {
+            py_key = ((MenaiSymbol_Object *)k)->name;
+            Py_INCREF(py_key);
+        } else {
+            PyObject *kv = PyObject_CallMethod(k, "to_python", NULL);
+            if (!kv) { Py_DECREF(result); return NULL; }
+            py_key = PyObject_Str(kv);
+            Py_DECREF(kv);
+        }
+        if (!py_key) { Py_DECREF(result); return NULL; }
+        PyObject *py_val = PyObject_CallMethod(d->values[i], "to_python", NULL);
+        if (!py_val) { Py_DECREF(py_key); Py_DECREF(result); return NULL; }
+        int ok = PyDict_SetItem(result, py_key, py_val);
+        Py_DECREF(py_key);
+        Py_DECREF(py_val);
+        if (ok < 0) { Py_DECREF(result); return NULL; }
+    }
+    return result;
+}
+
+/*
+ * pairs getter — returns a tuple of (key, value) 2-tuples, matching the
+ * slow-world MenaiDict.pairs interface consumed by _load_prelude.
+ */
+static PyObject *
+MenaiDict_get_pairs(PyObject *self, void *closure)
+{
+    (void)closure;
+    MenaiDict_Object *d = (MenaiDict_Object *)self;
+    Py_ssize_t n = d->length;
+    PyObject *tup = PyTuple_New(n);
+    if (!tup) return NULL;
+    for (Py_ssize_t i = 0; i < n; i++) {
+        PyObject *pair = PyTuple_Pack(2, d->keys[i], d->values[i]);
+        if (!pair) { Py_DECREF(tup); return NULL; }
+        PyTuple_SET_ITEM(tup, i, pair);
+    }
+    return tup;
+}
+
+static PyGetSetDef MenaiDict_getset[] = {
+    {"pairs", MenaiDict_get_pairs, NULL, NULL, NULL},
+    {NULL, NULL, NULL, NULL, NULL}
+};
+
 static PyMethodDef MenaiDict_methods[] = {
     {"type_name", MenaiDict_type_name, METH_NOARGS, NULL},
     {"describe",  MenaiDict_describe,  METH_NOARGS, NULL},
+    {"to_python", MenaiDict_to_python, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
@@ -293,6 +357,7 @@ PyTypeObject MenaiDict_Type = {
     .tp_new       = MenaiDict_new,
     .tp_dealloc   = MenaiDict_dealloc,
     .tp_methods   = MenaiDict_methods,
+    .tp_getset    = MenaiDict_getset,
     .tp_richcompare = MenaiDict_richcompare,
     .tp_hash      = MenaiDict_hash,
 };

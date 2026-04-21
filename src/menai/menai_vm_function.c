@@ -217,6 +217,14 @@ MenaiFunction_richcompare(PyObject *self, PyObject *other, int op)
     Py_RETURN_NOTIMPLEMENTED;
 }
 
+static PyObject *
+MenaiFunction_to_python(PyObject *self, PyObject *args)
+{
+    (void)args;
+    Py_INCREF(self);
+    return self;
+}
+
 static Py_hash_t
 MenaiFunction_hash(PyObject *self)
 {
@@ -252,8 +260,7 @@ MenaiFunction_get_bytecode(PyObject *self, void *closure)
 
 /*
  * captured_values getter — builds a Python list on demand from the inline
- * capture array.  This is only used by the Python-facing API (to_slow,
- * tests); the VM hot path reads captures[] directly.
+ * capture array.  Used by tests; the VM hot path reads captures[] directly.
  */
 static PyObject *
 MenaiFunction_get_captured_values(PyObject *self, void *closure)
@@ -274,8 +281,7 @@ MenaiFunction_get_captured_values(PyObject *self, void *closure)
 
 /*
  * captured_values setter — copies values from a list into the inline array.
- * The list must have exactly ob_size elements.  Used by to_slow's two-phase
- * cycle-safe pattern when converting fast→slow.
+ * The list must have exactly ob_size elements.
  */
 static int
 MenaiFunction_set_captured_values(PyObject *self, PyObject *value, void *closure)
@@ -331,6 +337,7 @@ static PyGetSetDef MenaiFunction_getset[] = {
 static PyMethodDef MenaiFunction_methods[] = {
     {"type_name", MenaiFunction_type_name, METH_NOARGS, NULL},
     {"describe", MenaiFunction_describe, METH_NOARGS, NULL},
+    {"to_python", MenaiFunction_to_python, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 

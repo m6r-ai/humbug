@@ -557,7 +557,7 @@ MenaiString_describe(PyObject *self, PyObject *args)
             break;
 
         default:
-            if (cp < 0x20 || (cp >= 0x7F && cp <= 0xFF)) {
+            if (cp < 0x20) {
                 p += sprintf(p, "\\u%04X", (unsigned)cp);
             } else {
                 /* Encode as UTF-8 inline. */
@@ -595,6 +595,13 @@ MenaiString_get_value(PyObject *self, void *closure)
     return menai_string_to_pyunicode(self);
 }
 
+static PyObject *
+MenaiString_to_python(PyObject *self, PyObject *args)
+{
+    (void)args;
+    return menai_string_to_pyunicode(self);
+}
+
 static PyGetSetDef MenaiString_getset[] = {
     {"value", MenaiString_get_value, NULL, NULL, NULL},
     {NULL, NULL, NULL, NULL, NULL}
@@ -603,6 +610,7 @@ static PyGetSetDef MenaiString_getset[] = {
 static PyMethodDef MenaiString_methods[] = {
     {"type_name", MenaiString_type_name, METH_NOARGS, NULL},
     {"describe", MenaiString_describe, METH_NOARGS, NULL},
+    {"to_python", MenaiString_to_python, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 

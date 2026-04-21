@@ -538,6 +538,19 @@ class DiffWidget(QWidget):
         self._left_pane.clear_find()
         self._right_pane.clear_find()
 
+    def get_selected_text(self) -> str:
+        """Return the selected text from whichever pane has an active selection.
+
+        If neither pane has a selection, returns an empty string.  If both
+        panes somehow have a selection, the left pane takes priority.
+        """
+        for pane in (self._left_pane, self._right_pane):
+            cursor = pane.textCursor()
+            if cursor.hasSelection():
+                return cursor.selectedText().replace('\u2029', '\n')
+
+        return ""
+
     def can_navigate_next_hunk(self) -> bool:
         """Return True if there is a hunk after the current scroll position."""
         if not self._cached_hunks:

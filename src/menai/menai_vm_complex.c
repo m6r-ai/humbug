@@ -124,9 +124,18 @@ static PyGetSetDef MenaiComplex_getset[] = {
     {NULL, NULL, NULL, NULL, NULL}
 };
 
+static PyObject *
+MenaiComplex_to_python(PyObject *self, PyObject *args)
+{
+    (void)args;
+    return PyComplex_FromDoubles(((MenaiComplex_Object *)self)->real,
+                                 ((MenaiComplex_Object *)self)->imag);
+}
+
 static PyMethodDef MenaiComplex_methods[] = {
     {"type_name", MenaiComplex_type_name, METH_NOARGS, NULL},
     {"describe", MenaiComplex_describe, METH_NOARGS, NULL},
+    {"to_python", MenaiComplex_to_python, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 

@@ -77,7 +77,7 @@ PyObject *menai_string_from_codepoint(uint32_t cp);
 PyObject *menai_string_from_pyunicode(PyObject *pystr);
 
 /*
- * Convert to a Python unicode object.  Used in to_slow and for error messages.
+ * Convert to a Python unicode object.  Used for error messages.
  * Returns a new reference, or NULL on error.
  */
 PyObject *menai_string_to_pyunicode(PyObject *s);

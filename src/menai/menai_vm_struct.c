@@ -156,6 +156,14 @@ MenaiStructType_get_field_names(PyObject *self, void *closure)
     return fn;
 }
 
+static PyObject *
+MenaiStructType_to_python(PyObject *self, PyObject *args)
+{
+    (void)args;
+    MenaiStructType_Object *s = (MenaiStructType_Object *)self;
+    return PyUnicode_FromFormat("<struct-type %U>", s->name);
+}
+
 static PyGetSetDef MenaiStructType_getset[] = {
     {"name", MenaiStructType_get_name, NULL, NULL, NULL},
     {"tag", MenaiStructType_get_tag, NULL, NULL, NULL},
@@ -166,6 +174,7 @@ static PyGetSetDef MenaiStructType_getset[] = {
 static PyMethodDef MenaiStructType_methods[] = {
     {"type_name", MenaiStructType_type_name, METH_NOARGS, NULL},
     {"describe", MenaiStructType_describe, METH_NOARGS, NULL},
+    {"to_python", MenaiStructType_to_python, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
@@ -340,7 +349,7 @@ MenaiStruct_get_struct_type(PyObject *self, void *closure)
 
 /*
  * fields getter — builds a Python tuple on demand from the inline array.
- * Only used by the Python-facing API (to_slow, tests).
+ * Only used by tests.
  */
 static PyObject *
 MenaiStruct_get_fields(PyObject *self, void *closure)
@@ -359,6 +368,26 @@ MenaiStruct_get_fields(PyObject *self, void *closure)
     return tup;
 }
 
+static PyObject *
+MenaiStruct_to_python(PyObject *self, PyObject *args)
+{
+    (void)args;
+    MenaiStruct_Object *s = (MenaiStruct_Object *)self;
+    MenaiStructType_Object *st = (MenaiStructType_Object *)s->struct_type;
+    Py_ssize_t n = Py_SIZE(s);
+    PyObject *result = PyDict_New();
+    if (!result) return NULL;
+    for (Py_ssize_t i = 0; i < n; i++) {
+        PyObject *field_val = PyObject_CallMethod(s->items[i], "to_python", NULL);
+        if (!field_val) { Py_DECREF(result); return NULL; }
+        PyObject *fname = PyTuple_GET_ITEM(st->field_names, i);
+        int ok = PyDict_SetItem(result, fname, field_val);
+        Py_DECREF(field_val);
+        if (ok < 0) { Py_DECREF(result); return NULL; }
+    }
+    return result;
+}
+
 static PyGetSetDef MenaiStruct_getset[] = {
     {"struct_type", MenaiStruct_get_struct_type, NULL, NULL, NULL},
     {"fields", MenaiStruct_get_fields, NULL, NULL, NULL},
@@ -368,6 +397,7 @@ static PyGetSetDef MenaiStruct_getset[] = {
 static PyMethodDef MenaiStruct_methods[] = {
     {"type_name", MenaiStruct_type_name, METH_NOARGS, NULL},
     {"describe", MenaiStruct_describe, METH_NOARGS, NULL},
+    {"to_python", MenaiStruct_to_python, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 

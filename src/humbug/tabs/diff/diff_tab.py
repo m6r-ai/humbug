@@ -246,6 +246,13 @@ class DiffTab(TabBase):
 
     def show_find(self) -> None:
         """Show the find widget."""
+        text = self._diff_widget.get_selected_text()
+        if text and '\n' not in text:
+            self._find_widget.set_search_text(text)
+
+        else:
+            self._find_widget.set_search_text("")
+
         self._find_widget.show()
         self._find_widget.setFocus()
 

@@ -272,9 +272,28 @@ MenaiSet_hash(PyObject *self)
     return h;
 }
 
+static PyObject *
+MenaiSet_to_python(PyObject *self, PyObject *args)
+{
+    (void)args;
+    MenaiSet_Object *s = (MenaiSet_Object *)self;
+    Py_ssize_t n = s->length;
+    PyObject *result = PySet_New(NULL);
+    if (!result) return NULL;
+    for (Py_ssize_t i = 0; i < n; i++) {
+        PyObject *item = PyObject_CallMethod(s->elements[i], "to_python", NULL);
+        if (!item) { Py_DECREF(result); return NULL; }
+        int ok = PySet_Add(result, item);
+        Py_DECREF(item);
+        if (ok < 0) { Py_DECREF(result); return NULL; }
+    }
+    return result;
+}
+
 static PyMethodDef MenaiSet_methods[] = {
     {"type_name", MenaiSet_type_name, METH_NOARGS, NULL},
     {"describe",  MenaiSet_describe,  METH_NOARGS, NULL},
+    {"to_python", MenaiSet_to_python, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 

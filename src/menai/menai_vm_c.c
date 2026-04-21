@@ -132,8 +132,8 @@ static inline int _menai_mul_overflow(long a, long b, long *r) {
 extern PyObject *_menai_vm_value_init(void);
 
 extern PyObject *menai_convert_value(PyObject *src);
-extern PyObject *menai_convert_code_object(PyObject *code);
-extern PyObject *menai_to_slow(PyObject *src);
+extern PyObject *menai_convert_code_constants(PyObject *code);
+extern PyObject *menai_build_closure_caches(PyObject *code);
 
 /*
  * Limits
@@ -1160,7 +1160,6 @@ call_setup(Frame *new_frame, PyObject *func_obj,
 /*
  * Internal execute — called by menai_vm_c_execute after setup.
  * Returns the result value (new reference) or NULL on error.
- * Caller is responsible for calling to_slow() on the result.
  */
 static PyObject *
 execute_loop(PyObject *code, const GlobalsTable *globals,
@@ -2475,7 +2474,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
              * None, ready for PATCH_CLOSURE to fill in.
              *
              * All metadata is read from the ClosureCache struct stored in a
-             * PyCapsule built once by menai_convert_code_object — zero
+             * PyCapsule built once by menai_build_closure_caches — zero
              * PyTuple_GET_ITEM or PyLong_AsLong calls on this path.
              */
             if (frame->closure_caches == NULL) {
@@ -4593,8 +4592,13 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "OOO", &code, &constants_dict, &prelude_dict)) return NULL;
 
-    /* Convert compiler-world constants in the code object tree to fast C types. */
-    if (menai_convert_code_object(code) == NULL) return NULL;
+    /* Build ClosureCache structs first so _code_caches is set on all code
+     * objects before menai_convert_code_constants constructs MenaiFunction
+     * objects from function constants — those constructors read _code_caches
+     * to cache closure_caches on the fast function object. */
+    if (menai_build_closure_caches(code) == NULL) return NULL;
+    /* Now convert compiler-world constants to fast C types. */
+    if (menai_convert_code_constants(code) == NULL) return NULL;
 
     /* Build the globals table (constants + prelude), converting values to fast C types. */
     GlobalsTable globals;
@@ -4640,10 +4644,8 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     if (result == NULL)
         return NULL;
 
-    /* Convert fast C types back to compiler-world types. */
-    PyObject *slow_result = menai_to_slow(result);
-    menai_release(result);
-    return slow_result;
+    /* Return the fast C value directly — callers use to_python() / describe(). */
+    return result;
 }
 
 /*

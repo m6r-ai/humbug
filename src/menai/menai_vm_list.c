@@ -315,6 +315,25 @@ MenaiList_get_elements(PyObject *self, void *closure)
     return tup;
 }
 
+static PyObject *
+MenaiList_to_python(PyObject *self, PyObject *args)
+{
+    (void)args;
+    MenaiList_Object *lst = (MenaiList_Object *)self;
+    Py_ssize_t n = lst->length;
+    PyObject *result = PyList_New(n);
+    if (!result) return NULL;
+    for (Py_ssize_t i = 0; i < n; i++) {
+        PyObject *item = PyObject_CallMethod(lst->elements[i], "to_python", NULL);
+        if (!item) {
+            Py_DECREF(result);
+            return NULL;
+        }
+        PyList_SET_ITEM(result, i, item);
+    }
+    return result;
+}
+
 static PyGetSetDef MenaiList_getset[] = {
     {"elements", MenaiList_get_elements, NULL, NULL, NULL},
     {NULL, NULL, NULL, NULL, NULL}
@@ -323,6 +342,7 @@ static PyGetSetDef MenaiList_getset[] = {
 static PyMethodDef MenaiList_methods[] = {
     {"type_name", MenaiList_type_name, METH_NOARGS, NULL},
     {"describe", MenaiList_describe, METH_NOARGS, NULL},
+    {"to_python", MenaiList_to_python, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 

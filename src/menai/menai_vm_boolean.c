@@ -40,6 +40,13 @@ MenaiBoolean_describe(PyObject *self, PyObject *args)
 }
 
 static PyObject *
+MenaiBoolean_to_python(PyObject *self, PyObject *args)
+{
+    (void)args;
+    return PyBool_FromLong(((MenaiBoolean_Object *)self)->value);
+}
+
+static PyObject *
 MenaiBoolean_richcompare(PyObject *self, PyObject *other, int op)
 {
     if (Py_TYPE(other) != &MenaiBoolean_Type) {
@@ -78,6 +85,7 @@ static PyGetSetDef MenaiBoolean_getset[] = {
 static PyMethodDef MenaiBoolean_methods[] = {
     {"type_name", MenaiBoolean_type_name, METH_NOARGS, NULL},
     {"describe",  MenaiBoolean_describe,  METH_NOARGS, NULL},
+    {"to_python", MenaiBoolean_to_python, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 

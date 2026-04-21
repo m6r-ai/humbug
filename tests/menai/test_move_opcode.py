@@ -27,7 +27,8 @@ class TestMoveOpcode:
         self.vm = MenaiVM(validate=False)
 
     def _run(self, code):
-        return self.vm.execute(code, {})
+        result = self.vm.execute(code, {})
+        return result.describe()
 
     def test_move_integer(self):
         """MOVE copies an integer from one register to another."""
@@ -36,7 +37,7 @@ class TestMoveOpcode:
             Instruction(Opcode.MOVE, dest=1, src0=0),          # r1 = r0
             Instruction(Opcode.RETURN, src0=1),                # return r1
         ], local_count=2, constants=[MenaiInteger(42)])
-        assert self._run(code) == MenaiInteger(42)
+        assert self._run(code) == MenaiInteger(42).describe()
 
     def test_move_string(self):
         """MOVE copies a string value."""
@@ -45,7 +46,7 @@ class TestMoveOpcode:
             Instruction(Opcode.MOVE, dest=1, src0=0),
             Instruction(Opcode.RETURN, src0=1),
         ], local_count=2, constants=[MenaiString("hello")])
-        assert self._run(code) == MenaiString("hello")
+        assert self._run(code) == MenaiString("hello").describe()
 
     def test_move_boolean(self):
         """MOVE copies a boolean value."""
@@ -54,7 +55,7 @@ class TestMoveOpcode:
             Instruction(Opcode.MOVE, dest=1, src0=0),
             Instruction(Opcode.RETURN, src0=1),
         ], local_count=2)
-        assert self._run(code) == MenaiBoolean(True)
+        assert self._run(code) == MenaiBoolean(True).describe()
 
     def test_move_none(self):
         """MOVE copies a none value."""
@@ -63,7 +64,7 @@ class TestMoveOpcode:
             Instruction(Opcode.MOVE, dest=1, src0=0),
             Instruction(Opcode.RETURN, src0=1),
         ], local_count=2)
-        assert self._run(code) == Menai_NONE
+        assert self._run(code) == Menai_NONE.describe()
 
     def test_move_same_register(self):
         """MOVE with dest == src0 is a no-op."""
@@ -72,7 +73,7 @@ class TestMoveOpcode:
             Instruction(Opcode.MOVE, dest=0, src0=0),
             Instruction(Opcode.RETURN, src0=0),
         ], local_count=1, constants=[MenaiInteger(7)])
-        assert self._run(code) == MenaiInteger(7)
+        assert self._run(code) == MenaiInteger(7).describe()
 
     def test_move_chain(self):
         """A chain of MOVEs propagates the value correctly."""
@@ -83,7 +84,7 @@ class TestMoveOpcode:
             Instruction(Opcode.MOVE, dest=3, src0=2),
             Instruction(Opcode.RETURN, src0=3),
         ], local_count=4, constants=[MenaiInteger(99)])
-        assert self._run(code) == MenaiInteger(99)
+        assert self._run(code) == MenaiInteger(99).describe()
 
     def test_move_does_not_alias(self):
         """Overwriting the source register after MOVE does not affect the dest."""
@@ -93,7 +94,7 @@ class TestMoveOpcode:
             Instruction(Opcode.LOAD_CONST, dest=0, src0=1),   # r0 = 2  (overwrite source)
             Instruction(Opcode.RETURN, src0=1),                # return r1 → still 1
         ], local_count=2, constants=[MenaiInteger(1), MenaiInteger(2)])
-        assert self._run(code) == MenaiInteger(1)
+        assert self._run(code) == MenaiInteger(1).describe()
 
 
 class TestMoveDisassembly:

@@ -1,16 +1,15 @@
 /*
  * menai_vm_value.c — native C implementation of all Menai runtime value types.
  *
- * Replaces menai_value_fast.pyx.  Defines the same types (MenaiNone,
- * MenaiBoolean, MenaiInteger, MenaiFloat, MenaiComplex, MenaiString,
- * MenaiSymbol, MenaiList, MenaiDict, MenaiSet, MenaiFunction,
- * MenaiStructType, MenaiStruct) as Python extension types with known C
- * struct layouts, allowing the C VM to access fields by direct cast.
+ * Defines the same types (MenaiNone, MenaiBoolean, MenaiInteger, MenaiFloat,
+ * MenaiComplex, MenaiString, MenaiSymbol, MenaiList, MenaiDict, MenaiSet,
+ * MenaiFunction, MenaiStructType, MenaiStruct) as Python extension types with
+ * known C struct layouts, allowing the C VM to access fields by direct cast.
  *
  * Also provides:
- *   menai_convert_value()       — slow menai_value.py -> fast C type
- *   menai_convert_code_object() — walk CodeObject tree, convert constants
- *   menai_to_slow()             — fast C type -> slow menai_value.py
+ *   menai_convert_value()          — slow menai_value.py -> fast C type
+ *   menai_convert_code_constants() — walk CodeObject tree, convert constants in-place
+ *   menai_build_closure_caches()   — walk CodeObject tree, build ClosureCache structs
  *
  * Module name: menai.menai_vm_value
  * Exported singletons: Menai_NONE, Menai_BOOLEAN_TRUE, Menai_BOOLEAN_FALSE,
@@ -45,7 +44,9 @@ static PyObject *_Menai_EMPTY_DICT = NULL;
 static PyObject *_Menai_EMPTY_SET = NULL;
 
 /*
- * Slow-world type objects — fetched once at module init
+ * Slow-world type objects — fetched once at module init.
+ * Used by menai_convert_value to identify slow objects by type.
+ * Will be removed in Phase 2 when the compiler emits fast types directly.
  */
 static PyTypeObject *Slow_NoneType = NULL;
 static PyTypeObject *Slow_BooleanType = NULL;
@@ -409,10 +410,12 @@ menai_convert_value(PyObject *src)
             return NULL;
         }
 
-        /* Recursively convert captured_values to fast types.
+        /*
+         * Recursively convert captured_values to fast types.
          * Prelude closures are fully-formed (no letrec None placeholders),
          * so eager conversion is safe and eliminates the slow-type check
-         * in call_setup's hot path. */
+         * in call_setup's hot path.
+         */
         Py_ssize_t ncap = PyList_GET_SIZE(cap);
         PyObject *fast_cap = PyList_New(ncap);
         if (!fast_cap) {
@@ -494,41 +497,42 @@ _closure_cache_capsule_destructor(PyObject *capsule)
 }
 
 /*
- * menai_convert_code_object — walk a CodeObject tree, converting all
- * constants lists in-place from slow to fast types.
+ * menai_convert_code_constants — walk a CodeObject tree, converting all
+ * constants lists in-place from slow to fast types.  Must be called before
+ * menai_build_closure_caches so that any MenaiFunction constants have their
+ * bytecode converted before their ClosureCache is built.
  *
  * Returns the code object (borrowed reference), or NULL on error.
  */
 PyObject *
-menai_convert_code_object(PyObject *code)
+menai_convert_code_constants(PyObject *code)
 {
-    /* Guard against processing the same CodeObject twice.  This happens when
-     * a named function's CodeObject appears both as a MenaiFunction constant
-     * and as a direct child in code_objects.  The second call would rebuild
-     * _code_caches, freeing the list that MenaiFunction_Object.closure_caches
-     * already borrowed a pointer to, causing a use-after-free crash. */
-    PyObject *_existing = PyObject_GetAttrString(code, "_code_caches");
-    int _already_done = (_existing && PyList_Check(_existing));
-    Py_XDECREF(_existing);
+    /*
+     * Guard against processing the same CodeObject twice.  A named function's
+     * CodeObject may appear both as a MenaiFunction constant and as a direct
+     * child in code_objects; the _constants_converted flag prevents redundant
+     * work and the double-conversion that would corrupt the constants list.
+     */
+    PyObject *_flag = PyObject_GetAttrString(code, "_constants_converted");
+    int _already_done = (_flag == Py_True);
+    Py_XDECREF(_flag);
     PyErr_Clear();
     if (_already_done) return code;
 
     /* Convert code.constants list in-place.  For function constants, recurse
-     * into their bytecode first so that _code_caches is populated before
-     * MenaiFunction_new reads it — ensuring closure_caches is set correctly
-     * on the resulting MenaiFunction_Object from the very start. */
+     * into their bytecode first so the nested constants are fast before the
+     * outer MenaiFunction is converted. */
     PyObject *constants = PyObject_GetAttrString(code, "constants");
     if (!constants) return NULL;
     Py_ssize_t n = PyList_GET_SIZE(constants);
     for (Py_ssize_t i = 0; i < n; i++) {
         PyObject *orig = PyList_GET_ITEM(constants, i);
-        /* If this constant is a function (slow or already-fast), recurse into
-         * its bytecode before converting it so _code_caches is ready. */
+        /* If this constant is a function, recurse into its bytecode first. */
         PyObject *bc = PyObject_GetAttrString(orig, "bytecode");
         if (bc == NULL) {
             PyErr_Clear();  /* not a function — no bytecode attribute */
         } else if (bc != Py_None) {
-            if (!menai_convert_code_object(bc)) {
+            if (!menai_convert_code_constants(bc)) {
                 Py_DECREF(bc);
                 Py_DECREF(constants);
                 return NULL;
@@ -552,16 +556,93 @@ menai_convert_code_object(PyObject *code)
     if (!children) return NULL;
     n = PyList_GET_SIZE(children);
     for (Py_ssize_t i = 0; i < n; i++) {
+        if (!menai_convert_code_constants(PyList_GET_ITEM(children, i))) {
+            Py_DECREF(children);
+            return NULL;
+        }
+    }
+    Py_DECREF(children);
+
+    if (PyObject_SetAttrString(code, "_constants_converted", Py_True) < 0)
+        return NULL;
+
+    return code;
+}
+
+/*
+ * menai_build_closure_caches — walk a CodeObject tree, building a
+ * ClosureCache struct (wrapped in a PyCapsule) for each child code object.
+ * OP_MAKE_CLOSURE unwraps the capsule directly — zero PyObject_GetAttrString
+ * calls on the hot closure-creation path.  Must be called before
+ * menai_convert_code_constants: the MenaiFunction constructor reads
+ * _code_caches to initialise closure_caches on the fast function object, so
+ * _code_caches must be set before any function constants are converted.
+ *
+ * Returns the code object (borrowed reference), or NULL on error.
+ */
+PyObject *
+menai_build_closure_caches(PyObject *code)
+{
+    /*
+     * Guard against processing the same CodeObject twice.  A named function's
+     * CodeObject may appear both as a MenaiFunction constant and as a direct
+     * child in code_objects.  The second call would rebuild _code_caches,
+     * freeing the list that MenaiFunction_Object.closure_caches already
+     * borrowed a pointer to, causing a use-after-free crash.
+     */
+    PyObject *_existing = PyObject_GetAttrString(code, "_code_caches");
+    int _already_done = (_existing && PyList_Check(_existing));
+    Py_XDECREF(_existing);
+    PyErr_Clear();
+    if (_already_done) return code;
+
+    PyObject *children = PyObject_GetAttrString(code, "code_objects");
+    if (!children) return NULL;
+
+    /* Recurse into the bytecode of any function constants, mirroring the
+     * logic in menai_convert_code_constants.  A named function's CodeObject
+     * may appear in constants[] but not in code_objects[], so we must visit
+     * it here to ensure its _code_caches are built before it is called. */
+    PyObject *constants = PyObject_GetAttrString(code, "constants");
+    if (!constants) {
+        Py_DECREF(children);
+        return NULL;
+    }
+    Py_ssize_t nc = PyList_GET_SIZE(constants);
+    for (Py_ssize_t i = 0; i < nc; i++) {
+        PyObject *orig = PyList_GET_ITEM(constants, i);
+        PyObject *bc = PyObject_GetAttrString(orig, "bytecode");
+        if (bc == NULL) {
+            PyErr_Clear();  /* not a function — no bytecode attribute */
+        } else if (bc != Py_None) {
+            if (!menai_build_closure_caches(bc)) {
+                Py_DECREF(bc);
+                Py_DECREF(constants);
+                Py_DECREF(children);
+                return NULL;
+            }
+            Py_DECREF(bc);
+        } else {
+            Py_DECREF(bc);
+        }
+    }
+    Py_DECREF(constants);
+
+    Py_ssize_t n = PyList_GET_SIZE(children);
+    for (Py_ssize_t i = 0; i < n; i++) {
         PyObject *child = PyList_GET_ITEM(children, i);
-        if (!menai_convert_code_object(child)) {
+        if (!menai_build_closure_caches(child)) {
             Py_DECREF(children);
             return NULL;
         }
 
-        /* Build a ClosureCache struct for this child and wrap it in a PyCapsule.
-         * OP_MAKE_CLOSURE unwraps the capsule and passes the struct pointer
-         * directly to menai_function_alloc — zero PyTuple_GET_ITEM or
-         * PyLong_AsLong calls on the hot closure-creation path. */
+        /*
+         * Build a ClosureCache struct for this child and wrap it in a
+         * PyCapsule.  OP_MAKE_CLOSURE unwraps the capsule and passes the
+         * struct pointer directly to menai_function_alloc — zero
+         * PyTuple_GET_ITEM or PyLong_AsLong calls on the hot closure-creation
+         * path.
+         */
         PyObject *param_names = PyObject_GetAttrString(child, "param_names");
         if (!param_names) {
             Py_DECREF(children);
@@ -698,10 +779,12 @@ menai_convert_code_object(PyObject *code)
             return NULL;
         }
 
-        /* The ClosureCache owns references to all its PyObject* fields.
+        /*
+         * The ClosureCache owns references to all its PyObject* fields.
          * The destructor will DECREF them.  bytecode (child) is not owned here
          * — it is kept alive by the parent's code_objects list for the
-         * duration of execution. */
+         * duration of execution.
+         */
         cc->parameters = param_names_tup;
         cc->name = cname;
         cc->bytecode = child;
@@ -743,7 +826,7 @@ menai_convert_code_object(PyObject *code)
     }
 
     /*
-     * Build _code_caches — a list of each child's _closure_cache tuple,
+     * Build _code_caches — a list of each child's _closure_cache capsule,
      * indexed by position in code_objects.  Stored on the parent so
      * frame_setup can cache it once and OP_MAKE_CLOSURE uses PyList_GET_ITEM
      * with zero PyObject_GetAttrString calls in the hot loop.
@@ -771,314 +854,6 @@ menai_convert_code_object(PyObject *code)
     return code;
 }
 
-#define GET_SLOW_CLS(name) PyObject_GetAttrString(mod, name)
-
-/*
- * _to_slow_memo — cycle-safe implementation of menai_to_slow.
- */
-static PyObject *
-_to_slow_memo(PyObject *src, PyObject *memo)
-{
-    /* Already slow — pass through */
-    if (!_is_fast(src)) {
-        Py_INCREF(src);
-        return src;
-    }
-
-    PyObject *key = PyLong_FromVoidPtr(src);
-    if (!key) return NULL;
-    PyObject *cached = PyDict_GetItem(memo, key);
-    if (cached) {
-        Py_DECREF(key);
-        Py_INCREF(cached);
-        return cached;
-    }
-
-    PyTypeObject *t = Py_TYPE(src);
-    PyObject *mod = PyImport_ImportModule("menai.menai_value");
-    if (!mod) {
-        Py_DECREF(key);
-        return NULL;
-    }
-
-    PyObject *result = NULL;
-
-    if (t == &MenaiNone_Type) {
-        PyObject *cls = GET_SLOW_CLS("MenaiNone");
-        if (cls) {
-            result = PyObject_CallNoArgs(cls);
-            Py_DECREF(cls);
-        }
-    }
-    else if (t == &MenaiBoolean_Type) {
-        PyObject *cls = GET_SLOW_CLS("MenaiBoolean");
-        if (cls) {
-            PyObject *bv = PyBool_FromLong(((MenaiBoolean_Object *)src)->value);
-            result = PyObject_CallOneArg(cls, bv);
-            Py_DECREF(bv);
-            Py_DECREF(cls);
-        }
-    }
-    else if (t == &MenaiInteger_Type) {
-        PyObject *cls = GET_SLOW_CLS("MenaiInteger");
-        if (cls) {
-            MenaiInteger_Object *obj = (MenaiInteger_Object *)src;
-            PyObject *pylong;
-            if (!obj->is_big) {
-                pylong = PyLong_FromLong(obj->small);
-            } else {
-                pylong = menai_int_to_pylong(&obj->big);
-            }
-            if (pylong != NULL) {
-                result = PyObject_CallOneArg(cls, pylong);
-                Py_DECREF(pylong);
-            }
-            Py_DECREF(cls);
-        }
-    }
-    else if (t == &MenaiFloat_Type) {
-        PyObject *cls = GET_SLOW_CLS("MenaiFloat");
-        if (cls) {
-            PyObject *pf = PyFloat_FromDouble(((MenaiFloat_Object *)src)->value);
-            result = pf ? PyObject_CallOneArg(cls, pf) : NULL;
-            Py_XDECREF(pf);
-            Py_DECREF(cls);
-        }
-    }
-    else if (t == &MenaiComplex_Type) {
-        PyObject *cls = GET_SLOW_CLS("MenaiComplex");
-        if (cls) {
-            PyObject *pc = PyComplex_FromDoubles(((MenaiComplex_Object *)src)->real,
-                                                 ((MenaiComplex_Object *)src)->imag);
-            if (pc) {
-                result = PyObject_CallOneArg(cls, pc);
-                Py_DECREF(pc);
-            }
-            Py_DECREF(cls);
-        }
-    }
-    else if (t == &MenaiString_Type) {
-        PyObject *cls = GET_SLOW_CLS("MenaiString");
-        if (cls) {
-            PyObject *pystr = menai_string_to_pyunicode(src);
-            if (pystr) {
-                result = PyObject_CallOneArg(cls, pystr);
-                Py_DECREF(pystr);
-            }
-            Py_DECREF(cls);
-        }
-    }
-    else if (t == &MenaiSymbol_Type) {
-        PyObject *cls = GET_SLOW_CLS("MenaiSymbol");
-        if (cls) {
-            result = PyObject_CallOneArg(cls, ((MenaiSymbol_Object *)src)->name);
-            Py_DECREF(cls);
-        }
-    }
-    else if (t == &MenaiList_Type) {
-        /* Register placeholder before recursing */
-        if (PyDict_SetItem(memo, key, Py_None) < 0) goto done;
-        MenaiList_Object *lst = (MenaiList_Object *)src;
-        Py_ssize_t n = lst->length;
-        PyObject *slow_tup = PyTuple_New(n);
-        if (!slow_tup) goto done;
-        for (Py_ssize_t i = 0; i < n; i++) {
-            PyObject *se = _to_slow_memo(lst->elements[i], memo);
-            if (!se) {
-                Py_DECREF(slow_tup);
-                goto done;
-            }
-            PyTuple_SET_ITEM(slow_tup, i, se);
-        }
-        PyObject *cls = GET_SLOW_CLS("MenaiList");
-        if (cls) {
-            result = PyObject_CallOneArg(cls, slow_tup);
-            Py_DECREF(cls);
-        }
-        Py_DECREF(slow_tup);
-        if (result) PyDict_SetItem(memo, key, result);
-    }
-    else if (t == &MenaiDict_Type) {
-        if (PyDict_SetItem(memo, key, Py_None) < 0) goto done;
-        MenaiDict_Object *d = (MenaiDict_Object *)src;
-        Py_ssize_t n = d->length;
-        PyObject *slow_pairs = PyTuple_New(n);
-        if (!slow_pairs) goto done;
-        for (Py_ssize_t i = 0; i < n; i++) {
-            PyObject *sk = _to_slow_memo(d->keys[i], memo);
-            if (!sk) {
-                Py_DECREF(slow_pairs);
-                goto done;
-            }
-            PyObject *sv = _to_slow_memo(d->values[i], memo);
-            if (!sv) {
-                Py_DECREF(sk);
-                Py_DECREF(slow_pairs);
-                goto done;
-            }
-            PyObject *sp = PyTuple_Pack(2, sk, sv);
-            Py_DECREF(sk);
-            Py_DECREF(sv);
-            if (!sp) {
-                Py_DECREF(slow_pairs);
-                goto done;
-            }
-            PyTuple_SET_ITEM(slow_pairs, i, sp);
-        }
-        PyObject *cls = GET_SLOW_CLS("MenaiDict");
-        if (cls) {
-            result = PyObject_CallOneArg(cls, slow_pairs);
-            Py_DECREF(cls);
-        }
-        Py_DECREF(slow_pairs);
-        if (result) PyDict_SetItem(memo, key, result);
-    }
-    else if (t == &MenaiSet_Type) {
-        if (PyDict_SetItem(memo, key, Py_None) < 0) goto done;
-        MenaiSet_Object *s = (MenaiSet_Object *)src;
-        Py_ssize_t n = s->length;
-        PyObject *slow_tup = PyTuple_New(n);
-        if (!slow_tup) goto done;
-        for (Py_ssize_t i = 0; i < n; i++) {
-            PyObject *se = _to_slow_memo(s->elements[i], memo);
-            if (!se) {
-                Py_DECREF(slow_tup);
-                goto done;
-            }
-            PyTuple_SET_ITEM(slow_tup, i, se);
-        }
-        PyObject *cls = GET_SLOW_CLS("MenaiSet");
-        if (cls) {
-            result = PyObject_CallOneArg(cls, slow_tup);
-            Py_DECREF(cls);
-        }
-        Py_DECREF(slow_tup);
-        if (result) PyDict_SetItem(memo, key, result);
-    }
-    else if (t == &MenaiStructType_Type) {
-        MenaiStructType_Object *st = (MenaiStructType_Object *)src;
-        PyObject *cls = GET_SLOW_CLS("MenaiStructType");
-        if (cls) {
-            PyObject *tag = PyLong_FromLong(st->tag);
-            result = tag ? PyObject_CallFunctionObjArgs(cls, st->name, tag, st->field_names, NULL) : NULL;
-            Py_XDECREF(tag);
-            Py_DECREF(cls);
-        }
-    }
-    else if (t == &MenaiStruct_Type) {
-        if (PyDict_SetItem(memo, key, Py_None) < 0) goto done;
-        MenaiStruct_Object *s = (MenaiStruct_Object *)src;
-        PyObject *slow_st = _to_slow_memo(s->struct_type, memo);
-        if (!slow_st) goto done;
-        Py_ssize_t n = Py_SIZE(s);
-        PyObject *slow_fields = PyTuple_New(n);
-        if (!slow_fields) {
-            Py_DECREF(slow_st);
-            goto done;
-        }
-        for (Py_ssize_t i = 0; i < n; i++) {
-            PyObject *sf = _to_slow_memo(s->items[i], memo);
-            if (!sf) {
-                Py_DECREF(slow_fields);
-                Py_DECREF(slow_st);
-                goto done;
-            }
-            PyTuple_SET_ITEM(slow_fields, i, sf);
-        }
-        PyObject *cls = GET_SLOW_CLS("MenaiStruct");
-        if (cls) {
-            PyObject *kwargs = Py_BuildValue("{sOsO}", "struct_type", slow_st, "fields", slow_fields);
-            if (kwargs) {
-                PyObject *empty = PyTuple_New(0);
-                if (empty) {
-                    result = PyObject_Call(cls, empty, kwargs);
-                    Py_DECREF(empty);
-                }
-                Py_DECREF(kwargs);
-            }
-            Py_DECREF(cls);
-        }
-        Py_DECREF(slow_st);
-        Py_DECREF(slow_fields);
-        if (result) PyDict_SetItem(memo, key, result);
-    }
-    else if (t == &MenaiFunction_Type) {
-        MenaiFunction_Object *f = (MenaiFunction_Object *)src;
-        PyObject *cls = GET_SLOW_CLS("MenaiFunction");
-        if (cls) {
-            /* Two-phase: create with empty captures, register, then fill */
-            PyObject *empty_list = PyList_New(0);
-            if (empty_list) {
-                PyObject *kwargs = Py_BuildValue("{sOsOsOsOsi}",
-                    "parameters", f->parameters,
-                    "name", f->name,
-                    "bytecode", f->bytecode,
-                    "captured_values", empty_list,
-                    "is_variadic", f->is_variadic);
-                Py_DECREF(empty_list);
-                if (kwargs) {
-                    PyObject *empty_args = PyTuple_New(0);
-                    if (empty_args) {
-                        result = PyObject_Call(cls, empty_args, kwargs);
-                        Py_DECREF(empty_args);
-                    }
-                    Py_DECREF(kwargs);
-                }
-            }
-            Py_DECREF(cls);
-        }
-        if (result) {
-            if (PyDict_SetItem(memo, key, result) < 0) {
-                Py_DECREF(result);
-                result = NULL;
-                goto done;
-            }
-            /* Now fill captured_values */
-            Py_ssize_t n = Py_SIZE(f);
-            PyObject *slow_caps = PyList_New(n);
-            if (!slow_caps) {
-                Py_DECREF(result);
-                result = NULL;
-                goto done;
-            }
-            for (Py_ssize_t i = 0; i < n; i++) {
-                PyObject *sc = _to_slow_memo(f->captures[i], memo);
-                if (!sc) {
-                    Py_DECREF(slow_caps);
-                    Py_DECREF(result);
-                    result = NULL;
-                    goto done;
-                }
-                PyList_SET_ITEM(slow_caps, i, sc);
-            }
-            if (PyObject_SetAttrString(result, "captured_values", slow_caps) < 0) {
-                Py_DECREF(slow_caps);
-                Py_DECREF(result);
-                result = NULL;
-                goto done;
-            }
-            Py_DECREF(slow_caps);
-        }
-    }
-
-done:
-    Py_DECREF(mod);
-    Py_DECREF(key);
-    return result;
-
-#undef GET_SLOW_CLS
-}
-
-PyObject *
-menai_to_slow(PyObject *src)
-{
-    PyObject *memo = PyDict_New();
-    if (!memo) return NULL;
-    PyObject *result = _to_slow_memo(src, memo);
-    Py_DECREF(memo);
-    return result;
-}
-
 /* ===========================================================================
  * Python-callable wrappers (exposed on the module for the C VM's shim init)
  * =========================================================================*/
@@ -1091,20 +866,23 @@ py_convert_value(PyObject *self, PyObject *arg)
 }
 
 static PyObject *
-py_convert_code_object(PyObject *self, PyObject *arg)
+py_convert_code_constants(PyObject *self, PyObject *arg)
 {
     (void)self;
-    PyObject *r = menai_convert_code_object(arg);
+    PyObject *r = menai_convert_code_constants(arg);
     if (!r) return NULL;
     Py_INCREF(r);
     return r;
 }
 
 static PyObject *
-py_to_slow(PyObject *self, PyObject *arg)
+py_build_closure_caches(PyObject *self, PyObject *arg)
 {
     (void)self;
-    return menai_to_slow(arg);
+    PyObject *r = menai_build_closure_caches(arg);
+    if (!r) return NULL;
+    Py_INCREF(r);
+    return r;
 }
 
 /* ===========================================================================
@@ -1123,8 +901,8 @@ fetch_slow_type(PyObject *mod, const char *name, PyTypeObject **dst)
 
 static PyMethodDef module_methods[] = {
     {"convert_value", py_convert_value, METH_O, NULL},
-    {"convert_code_object", py_convert_code_object, METH_O, NULL},
-    {"to_slow", py_to_slow, METH_O, NULL},
+    {"convert_code_constants", py_convert_code_constants, METH_O, NULL},
+    {"build_closure_caches", py_build_closure_caches, METH_O, NULL},
     {NULL, NULL, 0, NULL}
 };
 
@@ -1139,7 +917,7 @@ static struct PyModuleDef module_def = {
 PyObject *
 _menai_vm_value_init(void)
 {
-    /* Fetch slow-world types */
+    /* Fetch slow-world types — needed by menai_convert_value. */
     PyObject *slow_mod = PyImport_ImportModule("menai.menai_value");
     if (!slow_mod) return NULL;
 
@@ -1213,6 +991,18 @@ _menai_vm_value_init(void)
     /* Create module */
     PyObject *module = PyModule_Create(&module_def);
     if (!module) return NULL;
+
+    /* Register in sys.modules so Python code can import menai.menai_vm_value
+     * after menai_vm_c has been loaded. */
+    PyObject *sys_modules = PySys_GetObject("modules");
+    if (sys_modules == NULL) {
+        Py_DECREF(module);
+        return NULL;
+    }
+    if (PyDict_SetItemString(sys_modules, "menai.menai_vm_value", module) < 0) {
+        Py_DECREF(module);
+        return NULL;
+    }
 
     /* Add MenaiNone type — readied by menai_vm_none_init() */
     Py_INCREF(&MenaiNone_Type);

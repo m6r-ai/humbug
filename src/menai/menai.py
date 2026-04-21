@@ -10,9 +10,18 @@ from contextlib import contextmanager
 from menai.menai_bytecode import CodeObject
 from menai.menai_compiler import MenaiCompiler
 from menai.menai_ast import MenaiASTNode
-from menai.menai_value import MenaiDict, MenaiFunction, MenaiFloat, MenaiString, MenaiValue
+from menai.menai_value import MenaiDict as SlowMenaiDict
+from menai.menai_value import MenaiFunction as SlowMenaiFunction
+from menai.menai_value import MenaiFloat, MenaiString as SlowMenaiString, MenaiValue
 from menai.menai_vm import MenaiVM, MenaiTraceWatcher
 from menai.menai_error import MenaiModuleNotFoundError, MenaiModuleError, MenaiCircularImportError
+
+try:
+    from menai.menai_vm_value import MenaiDict, MenaiFunction, MenaiString  # type: ignore[import-not-found]
+except ImportError:
+    MenaiDict = SlowMenaiDict  # type: ignore[assignment,misc]
+    MenaiFunction = SlowMenaiFunction  # type: ignore[assignment,misc]
+    MenaiString = SlowMenaiString  # type: ignore[assignment,misc]
 
 
 class Menai:

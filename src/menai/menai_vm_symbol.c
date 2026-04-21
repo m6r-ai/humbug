@@ -53,6 +53,15 @@ MenaiSymbol_describe(PyObject *self, PyObject *args)
 }
 
 static PyObject *
+MenaiSymbol_to_python(PyObject *self, PyObject *args)
+{
+    (void)args;
+    PyObject *n = ((MenaiSymbol_Object *)self)->name;
+    Py_INCREF(n);
+    return n;
+}
+
+static PyObject *
 MenaiSymbol_richcompare(PyObject *self, PyObject *other, int op)
 {
     if (Py_TYPE(other) != &MenaiSymbol_Type) {
@@ -92,6 +101,7 @@ static PyGetSetDef MenaiSymbol_getset[] = {
 static PyMethodDef MenaiSymbol_methods[] = {
     {"type_name", MenaiSymbol_type_name, METH_NOARGS, NULL},
     {"describe", MenaiSymbol_describe, METH_NOARGS, NULL},
+    {"to_python", MenaiSymbol_to_python, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 

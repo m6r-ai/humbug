@@ -3,7 +3,7 @@
  *
  * Three-tier representation: small integer cache for [-5, 256], inline long
  * for values that fit in a C long, and MenaiInt bignum for everything else.
- * The Python C API is only used at the boundary (convert_value / to_slow).
+ * The Python C API is only used at the boundary (convert_value).
  */
 
 #define PY_SSIZE_T_CLEAN
@@ -171,6 +171,13 @@ MenaiInteger_get_value(PyObject *self, void *closure)
     return menai_int_to_pylong(&obj->big);
 }
 
+static PyObject *
+MenaiInteger_to_python(PyObject *self, PyObject *args)
+{
+    (void)args;
+    return MenaiInteger_get_value(self, NULL);
+}
+
 static PyGetSetDef MenaiInteger_getset[] = {
     {"value", MenaiInteger_get_value, NULL, NULL, NULL},
     {NULL, NULL, NULL, NULL, NULL}
@@ -179,6 +186,7 @@ static PyGetSetDef MenaiInteger_getset[] = {
 static PyMethodDef MenaiInteger_methods[] = {
     {"type_name", MenaiInteger_type_name, METH_NOARGS, NULL},
     {"describe", MenaiInteger_describe, METH_NOARGS, NULL},
+    {"to_python", MenaiInteger_to_python, METH_NOARGS, NULL},
     {NULL, NULL, 0, NULL}
 };
 
