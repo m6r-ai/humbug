@@ -748,8 +748,7 @@ code_get_int(PyObject *code, const char *name, int *out)
  * frame_setup
  *
  * Slow path used only for the top-level CodeObject at execute start
- * start.  All subsequent calls go through frame_setup_func which reads
- * pre-cached fields directly from MenaiFunction_Object.
+ * start.  Once we've done this then everything is cached for use by the opcodes.
  */
 static int
 frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
@@ -818,46 +817,6 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
     PyBuffer_Release(&view);
     Py_DECREF(instrs_obj);  /* top-level: instrs backed by code_obj.instructions which code_obj owns */
     return 0;
-}
-
-/*
- * frame_setup_func — fast path for all function calls.
- * Reads pre-cached fields from func with zero Python API calls.
- */
-static inline void
-frame_setup_func(Frame *f, MenaiFunction_Object *func,
-                 PyObject *code_obj, int base, int return_dest)
-{
-    Py_INCREF(code_obj);
-    Py_XDECREF(f->code_obj);
-    f->code_obj = code_obj;
-    f->instrs = func->instrs;
-    f->code_len = func->code_len;
-    f->constants = func->constants;
-    f->constants_items = func->constants_items;
-    f->names = func->names;
-    f->names_items = func->names_items;
-    f->local_count = func->local_count;
-    f->closure_caches = func->closure_caches;  /* borrowed — func owns bytecode which owns it */
-    f->closure_caches_items = func->closure_caches_items;
-    f->ip = 0;
-    f->base = base;
-    f->return_dest = return_dest;
-    f->is_sentinel = 0;
-}
-
-static void
-frame_release(Frame *f)
-{
-    Py_XDECREF(f->code_obj);
-    f->code_obj = NULL;
-    f->instrs = NULL;
-    f->constants = NULL;
-    f->constants_items = NULL;
-    f->names = NULL;
-    f->names_items = NULL;
-    f->closure_caches = NULL;
-    f->closure_caches_items = NULL;
 }
 
 /* ---------------------------------------------------------------------------
@@ -1229,8 +1188,20 @@ call_setup(Frame *new_frame, PyObject *func_obj,
         reg_set_borrow(regs, callee_base + param_count + (int)i, cv);
     }
 
-    frame_setup_func(new_frame, func, bytecode, callee_base, return_dest);
-    return 0;
+    new_frame->code_obj = bytecode;
+    new_frame->instrs = func->instrs;
+    new_frame->code_len = func->code_len;
+    new_frame->constants = func->constants;
+    new_frame->constants_items = func->constants_items;
+    new_frame->names = func->names;
+    new_frame->names_items = func->names_items;
+    new_frame->local_count = func->local_count;
+    new_frame->closure_caches = func->closure_caches;  /* borrowed — func owns bytecode which owns it */
+    new_frame->closure_caches_items = func->closure_caches_items;
+    new_frame->ip = 0;
+    new_frame->base = callee_base;
+    new_frame->return_dest = return_dest;
+    new_frame->is_sentinel = 0;    return 0;
 }
 
 /*
@@ -1400,7 +1371,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
             Py_INCREF(retval);
 
             int saved_return_dest = frame->return_dest;
-            frame_release(frame);
+            Py_XDECREF(frame->code_obj);
             frame_depth--;
             Frame *caller = &frames[frame_depth];
 
@@ -1432,8 +1403,8 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 *new_frame = (Frame){ .code_obj = NULL, .closure_caches = NULL,
                                       .constants = NULL, .names = NULL, .instrs = NULL };
 
-                if (call_setup(new_frame, raw, regs, callee_base,
-                               arity, dest) < 0) {
+                Py_INCREF(((MenaiFunction_Object *)raw)->bytecode);
+                if (call_setup(new_frame, raw, regs, callee_base, arity, dest) < 0) {
                     frame_depth--;
                     goto error;
                 }
@@ -1476,10 +1447,13 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                     reg_set_borrow(regs, base + i, v);
                 }
 
-                /* Reuse current frame — release old instructions first. */
+                /* Reuse current frame — release old code_obj and instructions. */
+                Py_DECREF(frame->code_obj);
+                frame->code_obj = NULL;
                 frame->instrs = NULL;
 
                 int saved_return_dest = frame->return_dest;
+                Py_INCREF(((MenaiFunction_Object *)raw)->bytecode);
                 if (call_setup(frame, raw, regs, base, n_args, saved_return_dest) < 0) {
                     Py_DECREF(raw);
                     goto error;
@@ -1504,7 +1478,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 /* Tail-return the struct: pop frame and deliver to caller. */
                 PyObject *retval = instance;
                 int saved_return_dest = frame->return_dest;
-                frame_release(frame);
+                Py_XDECREF(frame->code_obj);
                 frame_depth--;
                 Frame *caller = &frames[frame_depth];
                 if (caller->is_sentinel) {
@@ -2617,6 +2591,8 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 Frame *new_frame = &frames[frame_depth];
                 *new_frame = (Frame){ .code_obj = NULL, .closure_caches = NULL,
                                       .constants = NULL, .names = NULL, .instrs = NULL };
+
+                Py_INCREF(((MenaiFunction_Object *)raw_func)->bytecode);
                 if (call_setup(new_frame, raw_func, regs, callee_base, arity, dest) < 0) {
                     frame_depth--;
                     goto error;
@@ -2670,10 +2646,13 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 for (int i = 0; i < arity; i++) reg_set_borrow(regs, base + i, elements[i]);
                 Py_DECREF(raw_args);
 
-                /* Release old frame instructions, reuse frame */
+                /* Release old code_obj and instructions, reuse frame. */
+                Py_DECREF(frame->code_obj);
+                frame->code_obj = NULL;
                 frame->instrs = NULL;
 
                 int saved_return_dest = frame->return_dest;
+                Py_INCREF(((MenaiFunction_Object *)raw_func)->bytecode);
                 if (call_setup(frame, raw_func, regs, base, arity, saved_return_dest) < 0) {
                     Py_DECREF(raw_func);
                     goto error;
@@ -2697,7 +2676,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 }
 
                 int saved_return_dest = frame->return_dest;
-                frame_release(frame);
+                Py_XDECREF(frame->code_obj);
                 frame_depth--;
                 Frame *caller = &frames[frame_depth];
                 if (caller->is_sentinel) {
@@ -4643,7 +4622,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
 error:
         /* Release all live frames above the sentinel. */
         for (int d = frame_depth; d >= 1; d--)
-            frame_release(&frames[d]);
+            Py_XDECREF(frames[d].code_obj);
         return NULL;
     }
 }
