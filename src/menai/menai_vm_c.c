@@ -650,15 +650,16 @@ fail:
  * Frame struct
  *
  * The C VM maintains a fixed-size stack of Frame structs.  All fields are
- * plain C — no Python objects except those listed below, all of which are
- * kept alive by the frame stack.  constants, names, and local_count are
- * cached here at frame_setup time so the hot loop never calls
- * PyObject_GetAttrString on the code object.
+ * plain C — no Python objects except code_obj, names, and closure_caches,
+ * all of which are kept alive by the frame stack.  constants_items is always
+ * borrowed: callee frames borrow from the MenaiFunction_Object, the top-level
+ * frame borrows from the array allocated in frame_setup and freed in
+ * execute_loop after the loop exits.
  */
 typedef struct {
     PyObject *code_obj;         /* CodeObject — kept alive, not dereferenced in loop */
-    PyObject *constants;        /* borrowed ref — list of fast constant values */
-    MenaiValue *constants_items; /* raw pointer into constants ob_item array */
+    MenaiValue *constants_items; /* borrowed C array of fast constants */
+    Py_ssize_t nconst;           /* number of elements in constants_items */
     PyObject *names;            /* borrowed ref — list of global name strings */
     PyObject **names_items;     /* raw pointer into names ob_item array */
     PyObject *closure_caches;   /* borrowed ref — list of child _closure_cache tuples */
@@ -708,9 +709,25 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
         Py_DECREF(instrs_obj);
         return -1;
     }
+    Py_ssize_t nconst = PyList_GET_SIZE(constants);
+    MenaiValue *const_arr = nconst > 0
+        ? (MenaiValue *)malloc((size_t)nconst * sizeof(MenaiValue)) : NULL;
+    if (nconst > 0 && !const_arr) {
+        Py_DECREF(constants);
+        PyBuffer_Release(&view);
+        Py_DECREF(instrs_obj);
+        return -1;
+    }
+    for (Py_ssize_t i = 0; i < nconst; i++) {
+        const_arr[i] = (MenaiValue)((PyListObject *)constants)->ob_item[i];
+        menai_retain(const_arr[i]);
+    }
+    Py_DECREF(constants);
+
     PyObject *names = PyObject_GetAttrString(code_obj, "names");
     if (names == NULL) {
-        Py_DECREF(constants);
+        for (Py_ssize_t i = 0; i < nconst; i++) menai_release(const_arr[i]);
+        free(const_arr);
         PyBuffer_Release(&view);
         Py_DECREF(instrs_obj);
         return -1;
@@ -718,7 +735,8 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
     PyObject *lc_obj = PyObject_GetAttrString(code_obj, "local_count");
     if (lc_obj == NULL) {
         Py_DECREF(names);
-        Py_DECREF(constants);
+        for (Py_ssize_t i = 0; i < nconst; i++) menai_release(const_arr[i]);
+        free(const_arr);
         PyBuffer_Release(&view);
         Py_DECREF(instrs_obj);
         return -1;
@@ -727,7 +745,8 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
     Py_DECREF(lc_obj);
     if (local_count == -1 && PyErr_Occurred()) {
         Py_DECREF(names);
-        Py_DECREF(constants);
+        for (Py_ssize_t i = 0; i < nconst; i++) menai_release(const_arr[i]);
+        free(const_arr);
         PyBuffer_Release(&view);
         Py_DECREF(instrs_obj);
         return -1;
@@ -736,9 +755,8 @@ frame_setup(Frame *f, PyObject *code_obj, int base, int return_dest)
     Py_INCREF(code_obj);
     Py_XDECREF(f->code_obj);
     f->code_obj = code_obj;
-    f->constants = constants;     /* borrowed — f->code_obj keeps code_obj alive */
-    Py_DECREF(constants);         /* drop owned ref from GetAttrString */
-    f->constants_items = (MenaiValue *)((PyListObject *)constants)->ob_item;
+    f->constants_items = const_arr;
+    f->nconst = nconst;
     f->names = names;             /* borrowed — f->code_obj keeps code_obj alive */
     Py_DECREF(names);             /* drop owned ref from GetAttrString */
     f->names_items = ((PyListObject *)names)->ob_item;
@@ -1090,8 +1108,8 @@ call_setup(Frame *new_frame, MenaiValue func_obj,
     new_frame->code_obj = bytecode;
     new_frame->instrs = func->instrs;
     new_frame->code_len = func->code_len;
-    new_frame->constants = func->constants;
-    new_frame->constants_items = (MenaiValue *)func->constants_items;
+    new_frame->constants_items = func->constants_items;  /* borrowed from func */
+    new_frame->nconst = func->nconst;
     new_frame->names = func->names;
     new_frame->names_items = func->names_items;
     new_frame->local_count = func->local_count;
@@ -1116,7 +1134,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
     frames[0] = (Frame){
         .is_sentinel = 1,
         .code_obj = NULL,
-        .constants = NULL,
+        .constants_items = NULL,
         .names = NULL,
         .instrs = NULL,
         .closure_caches = NULL,
@@ -1124,7 +1142,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
     frames[1] = (Frame){
         .is_sentinel = 0,
         .code_obj = NULL,
-        .constants = NULL,
+        .constants_items = NULL,
         .names = NULL,
         .instrs = NULL,
         .closure_caches = NULL,
@@ -1133,6 +1151,12 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
     /* Set up frame at depth 1 for the top-level code object. */
     if (frame_setup(&frames[1], code, 0, 0) < 0)
         return NULL;
+
+    /* Stash the top-level constants array so we can release it at both exit
+     * points (normal return and error).  All other frames borrow their
+     * constants from a MenaiFunction_Object backed by a ClosureCache. */
+    MenaiValue *toplevel_consts = frames[1].constants_items;
+    Py_ssize_t toplevel_nconst = frames[1].nconst;
 
     int frame_depth = 1;
     Frame *frame = &frames[1];
@@ -1275,6 +1299,9 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
 
             if (caller->is_sentinel) {
                 /* Top-level return — exit the loop. */
+                for (Py_ssize_t i = 0; i < toplevel_nconst; i++)
+                    menai_release(toplevel_consts[i]);
+                free(toplevel_consts);
                 return (PyObject *)retval;
             }
 
@@ -1299,7 +1326,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
                 *new_frame = (Frame){ .code_obj = NULL, .closure_caches = NULL,
-                                      .constants = NULL, .names = NULL, .instrs = NULL };
+                                      .constants_items = NULL, .names = NULL, .instrs = NULL };
 
                 Py_INCREF(((MenaiFunction_Object *)raw)->bytecode);
                 if (call_setup(new_frame, raw, regs, callee_base, arity, dest) < 0) {
@@ -2488,7 +2515,7 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
                 *new_frame = (Frame){ .code_obj = NULL, .closure_caches = NULL,
-                                      .constants = NULL, .names = NULL, .instrs = NULL };
+                                      .constants_items = NULL, .names = NULL, .instrs = NULL };
 
                 Py_INCREF(((MenaiFunction_Object *)raw_func)->bytecode);
                 if (call_setup(new_frame, raw_func, regs, callee_base, arity, dest) < 0) {
@@ -4528,8 +4555,12 @@ execute_loop(PyObject *code, const GlobalsTable *globals,
 
 error:
         /* Release all live frames above the sentinel. */
-        for (int d = frame_depth; d >= 1; d--)
+        for (int d = frame_depth; d >= 1; d--) {
             Py_XDECREF(frames[d].code_obj);
+        }
+        for (Py_ssize_t i = 0; i < toplevel_nconst; i++)
+            menai_release(toplevel_consts[i]);
+        free(toplevel_consts);
         return NULL;
     }
 }
@@ -4547,12 +4578,13 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
 
     if (!PyArg_ParseTuple(args, "OOO", &code, &constants_dict, &prelude_dict)) return NULL;
 
-    /* Build ClosureCache structs first so _code_caches is set on all code
-     * objects before menai_convert_code_constants constructs MenaiFunction
-     * objects from function constants — those constructors read _code_caches
-     * to cache closure_caches on the fast function object. */
+    /* Build ClosureCache structs first so _closure_cache is set on all child
+     * code objects before menai_convert_code_constants calls menai_convert_value
+     * on function constants — those constructors read _closure_cache. */
     if (menai_build_closure_caches(code) == NULL) return NULL;
-    /* Now convert compiler-world constants to fast C types. */
+    /* Now convert compiler-world constants to fast C types. After this,
+     * the constants lists contain fast MenaiValues and ClosureCache
+     * constants_items pointers are valid to use. */
     if (menai_convert_code_constants(code) == NULL) return NULL;
 
     /* Build the globals table (constants + prelude), converting values to fast C types. */

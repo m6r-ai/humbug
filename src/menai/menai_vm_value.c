@@ -396,73 +396,52 @@ menai_convert_value(PyObject *src)
     }
 
     if (t == Slow_FunctionType) {
-        PyObject *params = PyObject_GetAttrString(src, "parameters");
-        PyObject *name = PyObject_GetAttrString(src, "name");
         PyObject *bc = PyObject_GetAttrString(src, "bytecode");
         PyObject *cap = PyObject_GetAttrString(src, "captured_values");
-        PyObject *is_var = PyObject_GetAttrString(src, "is_variadic");
-        if (!params || !name || !bc || !cap || !is_var) {
-            Py_XDECREF(params);
-            Py_XDECREF(name);
+        if (!bc || !cap) {
             Py_XDECREF(bc);
             Py_XDECREF(cap);
-            Py_XDECREF(is_var);
-            return NULL;
-        }
-
-        int iv = PyObject_IsTrue(is_var);
-        Py_DECREF(is_var);
-        if (iv < 0) {
-            Py_DECREF(params);
-            Py_DECREF(name);
-            Py_DECREF(bc);
-            Py_DECREF(cap);
             return NULL;
         }
 
         /*
-         * Recursively convert captured_values to fast C types and store them
-         * in a plain C array.  Prelude closures are fully-formed (no letrec
-         * None placeholders), so eager conversion is safe and eliminates the
-         * slow-type check in call_setup's hot path.
-         *
-         * cap_items is passed to menai_function_alloc_from_slow which steals
-         * every reference, so no PyList is involved and Python's allocator
-         * never touches MenaiValue objects.
+         * menai_build_closure_caches has already run, so bc carries a
+         * _closure_cache capsule with all frame metadata pre-extracted.
+         * Allocate the fast function from that cache (captures initialised
+         * to None), then patch in the converted captured values.
          */
-        Py_ssize_t ncap = PyList_GET_SIZE(cap);
-        MenaiValue *cap_items = ncap > 0
-            ? (MenaiValue *)malloc((size_t)ncap * sizeof(MenaiValue)) : NULL;
-        if (ncap > 0 && !cap_items) {
+        PyObject *capsule = PyObject_GetAttrString(bc, "_closure_cache");
+        Py_DECREF(bc);
+        if (!capsule) {
             Py_DECREF(cap);
-            Py_DECREF(params);
-            Py_DECREF(name);
-            Py_DECREF(bc);
+            return NULL;
+        }
+        const ClosureCache *cc = (const ClosureCache *)PyCapsule_GetPointer(
+            capsule, CLOSURE_CACHE_CAPSULE_NAME);
+        Py_DECREF(capsule);
+        if (!cc) {
+            Py_DECREF(cap);
             return NULL;
         }
 
-        for (Py_ssize_t ci = 0; ci < ncap; ci++) {
-            MenaiValue fast_cv = (MenaiValue)menai_convert_value(PyList_GET_ITEM(cap, ci));
-            if (!fast_cv) {
-                for (Py_ssize_t cj = 0; cj < ci; cj++) menai_release(cap_items[cj]);
-                free(cap_items);
-                Py_DECREF(cap);
-                Py_DECREF(params);
-                Py_DECREF(name);
-                Py_DECREF(bc);
-                return NULL;
-            }
-            cap_items[ci] = fast_cv;
+        MenaiValue r = menai_function_alloc(cc, menai_none_singleton());
+        if (!r) {
+            Py_DECREF(cap);
+            return NULL;
         }
 
+        MenaiFunction_Object *f = (MenaiFunction_Object *)r;
+        for (Py_ssize_t ci = 0; ci < cc->ncap; ci++) {
+            MenaiValue fast_cv = (MenaiValue)menai_convert_value(PyList_GET_ITEM(cap, ci));
+            if (!fast_cv) {
+                menai_release(r);
+                Py_DECREF(cap);
+                return NULL;
+            }
+            menai_release(f->captures[ci]);  /* release the None placeholder */
+            f->captures[ci] = fast_cv;       /* owns the ref from menai_convert_value */
+        }
         Py_DECREF(cap);
-
-        MenaiValue r = menai_function_alloc_from_slow(params, name, bc,
-                                                      cap_items, ncap, iv);
-        free(cap_items);
-        Py_DECREF(params);
-        Py_DECREF(name);
-        Py_DECREF(bc);
         return (PyObject *)r;
     }
 
@@ -479,9 +458,7 @@ _closure_cache_capsule_destructor(PyObject *capsule)
     Py_XDECREF(cc->parameters);
     Py_XDECREF(cc->name);
     Py_XDECREF(cc->instrs_obj);
-    Py_XDECREF(cc->constants);
-    Py_XDECREF(cc->names_list);
-    Py_XDECREF(cc->closure_caches);
+    /* constants, names_list, and closure_caches are borrowed — not released here. */
     free(cc);
 }
 
@@ -699,6 +676,10 @@ menai_build_closure_caches(PyObject *code)
             return NULL;
         }
 
+        /* child_constants is borrowed — kept alive by child (the CodeObject).
+         * menai_convert_code_constants will have run before any MenaiFunction
+         * is created from this cache, so ob_item will contain fast values. */
+
         PyObject *names_list = PyObject_GetAttrString(child, "names");
         if (!names_list) {
             Py_DECREF(child_constants);
@@ -773,18 +754,18 @@ menai_build_closure_caches(PyObject *code)
         }
 
         /*
-         * The ClosureCache owns references to all its PyObject* fields.
-         * The destructor will DECREF them.  bytecode (child) is not owned here
-         * — it is kept alive by the parent's code_objects list for the
-         * duration of execution.
+         * The ClosureCache owns parameters, name, and instrs_obj.
+         * constants, names_list, and closure_caches are borrowed — kept alive
+         * by bytecode.  bytecode itself is not owned here — kept alive by the
+         * parent's code_objects list for the duration of execution.
          */
         cc->parameters = param_names_tup;
         cc->name = cname;
         cc->bytecode = child;
         cc->instrs_obj = instrs_obj;
-        cc->constants = child_constants;
-        cc->names_list = names_list;
-        cc->closure_caches = child_cc_list;  /* owned if non-NULL (child_cc ref) */
+        cc->constants = child_constants;       /* borrowed */
+        cc->names_list = names_list;           /* borrowed */
+        cc->closure_caches = child_cc_list;    /* borrowed */
         cc->instrs = instrs_ptr;
         cc->param_count = (int)PyLong_AsLong(pc_obj);
         cc->local_count = (int)PyLong_AsLong(lc_obj);
@@ -794,14 +775,12 @@ menai_build_closure_caches(PyObject *code)
         cc->closure_caches_items = child_cc_list
             ? ((PyListObject *)child_cc_list)->ob_item : NULL;
 
-        /* child_cc ownership transferred to cc->closure_caches if it was a list;
-         * otherwise drop the ref here. */
-        if (child_cc && child_cc != child_cc_list)
-            Py_DECREF(child_cc);
+        /* child_cc is borrowed by cc->closure_caches; drop our GetAttrString ref. */
+        Py_XDECREF(child_cc);
         Py_DECREF(lc_obj);
         Py_DECREF(pc_obj);
-        /* names_list, child_constants, instrs_obj, param_names_tup, cname are now
-         * owned by cc — do not DECREF them here. */
+        /* instrs_obj, param_names_tup, cname owned by cc — do not DECREF. */
+        /* constants, names_list, closure_caches borrowed — do not DECREF. */
 
         PyObject *capsule = PyCapsule_New(cc, CLOSURE_CACHE_CAPSULE_NAME,
                                           _closure_cache_capsule_destructor);
