@@ -1384,10 +1384,10 @@ class FileSystemAITool(AITool):
             A compiled pattern with '\\|' replaced by '|', or None if the pattern contains
             no '\\|' sequences or the corrected pattern is not a valid regex.
         """
-        if r"\|" not in search_text:
+        if not re.search(r"(?<!\\)\\[|]", search_text):
             return None
 
-        corrected = search_text.replace(r"\|", "|")
+        corrected = re.sub(r"(?<!\\)\\[|]", "|", search_text)
         flags = 0 if case_sensitive else re.IGNORECASE
         try:
             return re.compile(corrected, flags)

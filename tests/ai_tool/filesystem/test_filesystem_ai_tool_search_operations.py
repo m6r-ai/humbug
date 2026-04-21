@@ -424,6 +424,39 @@ class TestFixEscapedPipePattern:
         assert data["match_count"] == 0
         assert "warning" not in data
 
+    def test_search_file_double_backslash_pipe_not_corrected(self, tmp_path, make_tool_call):
+        """A '\\\\|' pattern (double backslash + pipe) is not treated as an escaped pipe mistake."""
+        f = tmp_path / "bs.txt"
+        f.write_text("foo\nbar\n")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_file",
+            "path": "bs.txt",
+            "search_text": "foo\\\\|bar",
+            "regexp": True
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert "warning" not in data
+
+    def test_search_files_double_backslash_pipe_not_corrected(self, tmp_path, make_tool_call):
+        """search_files: '\\\\|' pattern is not treated as an escaped pipe mistake."""
+        (tmp_path / "a.txt").write_text("foo\nbar\n")
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_files",
+            "path": ".",
+            "search_text": "foo\\\\|bar",
+            "regexp": True
+        })
+        result = asyncio.run(tool.execute(tool_call, "", None))
+        data = json.loads(result.content)
+
+        assert "warning" not in data
+
     def test_search_files_escaped_pipe_corrected_and_warning_returned(self, tmp_path, make_tool_call):
         """search_files: '\\|' correction fires when the original finds nothing but corrected finds matches."""
         (tmp_path / "a.txt").write_text("foo\nbaz\n")
