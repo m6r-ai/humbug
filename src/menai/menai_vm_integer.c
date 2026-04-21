@@ -61,6 +61,7 @@ menai_integer_from_long(long n)
 
     r->ob_refcnt = 1;
     r->ob_type = &MenaiInteger_Type;
+    r->ob_destructor = (menai_destructor)MenaiInteger_dealloc;
     r->is_big = 0;
     r->small = n;
     menai_int_init(&r->big);
@@ -93,6 +94,7 @@ menai_integer_from_bigint(MenaiInt src)
 
     r->ob_refcnt = 1;
     r->ob_type = &MenaiInteger_Type;
+    r->ob_destructor = (menai_destructor)MenaiInteger_dealloc;
     r->is_big = 1;
     r->small = 0;
     r->big = src; /* transfer ownership */
@@ -111,6 +113,7 @@ menai_vm_integer_init(void)
 
         obj->ob_refcnt = 1;
         obj->ob_type = &MenaiInteger_Type;
+        obj->ob_destructor = (menai_destructor)MenaiInteger_dealloc;
         obj->is_big = 0;
         obj->small = v;
         menai_int_init(&obj->big);

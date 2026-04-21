@@ -31,6 +31,7 @@ menai_float_alloc(double value)
     if (self == NULL) return NULL;
     self->ob_refcnt = 1;
     self->ob_type = &MenaiFloat_Type;
+    self->ob_destructor = (menai_destructor)MenaiFloat_dealloc;
     self->value = value;
     return (MenaiValue)self;
 }

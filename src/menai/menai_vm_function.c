@@ -44,6 +44,7 @@ menai_function_alloc(MenaiCodeObject *co, MenaiValue none_val)
 
     self->ob_refcnt = 1;
     self->ob_type = &MenaiFunction_Type;
+    self->ob_destructor = (menai_destructor)MenaiFunction_dealloc;
     self->ncap = ncap;
     menai_code_object_retain(co);
     self->bytecode = co;

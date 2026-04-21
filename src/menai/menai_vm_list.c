@@ -22,6 +22,8 @@
 #include "menai_vm_memory.h"
 #include "menai_vm_hashtable.h"
 
+static void MenaiList_dealloc(PyObject *self);
+
 /* ---------------------------------------------------------------------------
  * Free-list cache
  * ------------------------------------------------------------------------- */
@@ -79,6 +81,7 @@ _menai_list_cache_alloc_obj(void)
 
     obj->ob_refcnt = 1;
     obj->ob_type = &MenaiList_Type;
+    obj->ob_destructor = (menai_destructor)MenaiList_dealloc;
     obj->elements = NULL;
     obj->length = 0;
     obj->owner = NULL;

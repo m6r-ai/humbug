@@ -63,6 +63,7 @@ _build_struct_type(PyObject *name, int tag, PyObject *fn_tup)
 
     self->ob_refcnt = 1;
     self->ob_type = &MenaiStructType_Type;
+    self->ob_destructor = (menai_destructor)MenaiStructType_dealloc;
     Py_INCREF(name);
     self->name = name;
     self->tag = tag;
@@ -127,6 +128,7 @@ menai_struct_alloc(MenaiValue struct_type, MenaiValue *field_values,
 
     self->ob_refcnt = 1;
     self->ob_type = &MenaiStruct_Type;
+    self->ob_destructor = (menai_destructor)MenaiStruct_dealloc;
     self->nfields = (int)nfields;
     menai_retain(struct_type);
     self->struct_type = struct_type;

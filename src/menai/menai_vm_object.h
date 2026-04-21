@@ -11,9 +11,10 @@
  * objects as PyTypeObject instances with tp_dealloc set to a native C
  * function that calls free() (or the type-specific free-list).
  *
- * The VM reads ob_type->tp_name for error messages and calls
- * ob_type->tp_dealloc for deallocation — both are standard PyTypeObject
- * fields, so no special casting is needed.
+ * The VM reads ob_type->tp_name for error messages.  Deallocation goes
+ * through ob_destructor, a direct function pointer stored in every object at
+ * construction time.  This avoids the two-pointer-chase and unpredictable
+ * indirect branch through PyTypeObject.tp_dealloc on every release.
  *
  * Future: once the Python embedding is removed, MenaiType can be replaced
  * with a smaller native struct.  The MenaiObject_HEAD layout and all call
@@ -46,10 +47,13 @@ typedef PyTypeObject MenaiType;
  *
  * ob_refcnt  — reference count.  Starts at 1 on allocation.
  * ob_type    — pointer to the PyTypeObject for this object.
+ * ob_destructor — called by menai_release when ob_refcnt reaches zero.
+ *                 Set once at construction; never changes.
  *
  * The layout (ob_refcnt at offset 0, ob_type at offset sizeof(size_t)) is
  * identical to PyObject_HEAD, so MenaiValue pointers can be cast to
- * PyObject * at the boundary without any field reordering.
+ * PyObject * at the boundary without any field reordering.  ob_destructor
+ * follows ob_type and is invisible to Python.
  *
  * Usage:
  *
@@ -58,9 +62,12 @@ typedef PyTypeObject MenaiType;
  *       double value;
  *   } MenaiFloat_Object;
  */
-#define MenaiObject_HEAD  \
-    size_t ob_refcnt;     \
-    MenaiType *ob_type;
+typedef void (*menai_destructor)(void *);
+
+#define MenaiObject_HEAD              \
+    size_t ob_refcnt;                 \
+    MenaiType *ob_type;               \
+    menai_destructor ob_destructor;
 
 /*
  * MenaiObject — the minimal struct that every MenaiValue pointer can be
@@ -92,7 +99,7 @@ static inline void
 menai_release(MenaiValue val)
 {
     if (--val->ob_refcnt == 0)
-        val->ob_type->tp_dealloc((PyObject *)val);
+        val->ob_destructor(val);
 }
 
 /*

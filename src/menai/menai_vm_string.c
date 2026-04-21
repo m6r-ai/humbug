@@ -16,6 +16,8 @@
 #include "menai_vm_string.h"
 #include "menai_vm_string_tables.h"
 
+static void MenaiString_dealloc(PyObject *self);
+
 /* MenaiEvalError — fetched at init time by menai_vm_string_init(). */
 static PyObject *_MenaiEvalError = NULL;
 
@@ -34,6 +36,7 @@ _menai_string_alloc(Py_ssize_t len)
 
     obj->ob_refcnt = 1;
     obj->ob_type = &MenaiString_Type;
+    obj->ob_destructor = (menai_destructor)MenaiString_dealloc;
     obj->length = len;
     obj->hash = -1;
 

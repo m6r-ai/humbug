@@ -17,7 +17,11 @@ static MenaiValue _Menai_NONE = NULL;
 static void
 MenaiNone_dealloc(PyObject *self)
 {
-    /* The singleton is never freed — its refcount should never reach zero. */
+    /*
+     * The singleton is never freed — its refcount should never reach zero.
+     * ob_destructor points here so menai_release has a valid target, but
+     * this body is intentionally empty.
+     */
     (void)self;
 }
 
@@ -43,6 +47,7 @@ menai_vm_none_init(void)
     if (PyType_Ready(&MenaiNone_Type) < 0) return -1;
     _none_storage.ob_refcnt = 1;
     _none_storage.ob_type = &MenaiNone_Type;
+    _none_storage.ob_destructor = (menai_destructor)MenaiNone_dealloc;
     _Menai_NONE = (MenaiValue)&_none_storage;
     return 0;
 }

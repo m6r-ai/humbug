@@ -62,6 +62,7 @@ menai_set_from_arrays_steal(MenaiValue *elements, Py_hash_t *hashes, Py_ssize_t 
 
     obj->ob_refcnt = 1;
     obj->ob_type = &MenaiSet_Type;
+    obj->ob_destructor = (menai_destructor)MenaiSet_dealloc;
 
     if (menai_ht_build(&obj->ht, elements, hashes, n) < 0) {
         _set_free_arrays(elements, hashes, n);
@@ -84,6 +85,7 @@ menai_set_new_empty(void)
 
     obj->ob_refcnt = 1;
     obj->ob_type = &MenaiSet_Type;
+    obj->ob_destructor = (menai_destructor)MenaiSet_dealloc;
     obj->elements = NULL;
     obj->hashes = NULL;
     obj->ht.slots = NULL;

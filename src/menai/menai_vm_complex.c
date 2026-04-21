@@ -31,6 +31,7 @@ menai_complex_alloc(double real, double imag)
     if (self == NULL) return NULL;
     self->ob_refcnt = 1;
     self->ob_type = &MenaiComplex_Type;
+    self->ob_destructor = (menai_destructor)MenaiComplex_dealloc;
     self->real = real;
     self->imag = imag;
     return (MenaiValue)self;

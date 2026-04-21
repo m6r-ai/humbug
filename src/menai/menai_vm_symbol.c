@@ -43,6 +43,7 @@ menai_symbol_alloc(PyObject *name)
 
     self->ob_refcnt = 1;
     self->ob_type = &MenaiSymbol_Type;
+    self->ob_destructor = (menai_destructor)MenaiSymbol_dealloc;
     self->name = name;
 
     return (MenaiValue)self;

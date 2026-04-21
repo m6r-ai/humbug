@@ -69,6 +69,7 @@ menai_dict_from_arrays_steal(MenaiValue *keys, MenaiValue *values,
 
     obj->ob_refcnt = 1;
     obj->ob_type = &MenaiDict_Type;
+    obj->ob_destructor = (menai_destructor)MenaiDict_dealloc;
 
     if (menai_ht_build(&obj->ht, keys, hashes, n) < 0) {
         _dict_free_arrays(keys, values, hashes, n);
@@ -92,6 +93,7 @@ menai_dict_new_empty(void)
 
     obj->ob_refcnt = 1;
     obj->ob_type = &MenaiDict_Type;
+    obj->ob_destructor = (menai_destructor)MenaiDict_dealloc;
     obj->keys = NULL;
     obj->values = NULL;
     obj->hashes = NULL;

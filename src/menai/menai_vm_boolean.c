@@ -19,7 +19,10 @@ static MenaiValue _Menai_FALSE = NULL;
 static void
 MenaiBoolean_dealloc(PyObject *self)
 {
-    /* Singletons are never freed. */
+    /*
+     * Singletons are never freed.  ob_destructor points here so
+     * menai_release has a valid target, but this body is intentionally empty.
+     */
     (void)self;
 }
 
@@ -52,11 +55,13 @@ menai_vm_boolean_init(void)
 
     _true_storage.ob_refcnt = 1;
     _true_storage.ob_type = &MenaiBoolean_Type;
+    _true_storage.ob_destructor = (menai_destructor)MenaiBoolean_dealloc;
     _true_storage.value = 1;
     _Menai_TRUE = (MenaiValue)&_true_storage;
 
     _false_storage.ob_refcnt = 1;
     _false_storage.ob_type = &MenaiBoolean_Type;
+    _false_storage.ob_destructor = (menai_destructor)MenaiBoolean_dealloc;
     _false_storage.value = 0;
     _Menai_FALSE = (MenaiValue)&_false_storage;
 
