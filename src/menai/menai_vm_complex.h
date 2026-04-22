@@ -22,7 +22,7 @@ extern MenaiType MenaiComplex_Type;
  * menai_complex_alloc — allocate a new MenaiComplex with the given components.
  * Returns a new reference, or NULL on allocation failure.
  */
-MenaiValue menai_complex_alloc(double real, double imag);
+MenaiValue *menai_complex_alloc(double real, double imag);
 
 /*
  * Module init — called once from _menai_vm_value_init().

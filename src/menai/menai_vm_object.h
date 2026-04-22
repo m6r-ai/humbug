@@ -30,7 +30,7 @@
 #include "menai_vm_types.h"
 
 typedef struct MenaiObject_s MenaiObject;
-typedef MenaiObject *MenaiValue;
+typedef MenaiObject MenaiValue;
 
 /*
  * MenaiType — the type descriptor for a Menai value type.
@@ -62,7 +62,7 @@ typedef PyTypeObject MenaiType;
  *       double value;
  *   } MenaiFloat_Object;
  */
-typedef void (*menai_destructor)(MenaiValue);
+typedef void (*menai_destructor)(MenaiValue *);
 
 #define MenaiObject_HEAD              \
     size_t ob_refcnt;                 \
@@ -77,15 +77,11 @@ struct MenaiObject_s {
     MenaiObject_HEAD
 };
 
-/* ---------------------------------------------------------------------------
- * Reference counting — inline operations on MenaiValue.
- * ------------------------------------------------------------------------- */
-
 /*
  * menai_retain — claim an interest in val.
  */
 static inline void
-menai_retain(MenaiValue val)
+menai_retain(MenaiValue *val)
 {
     val->ob_refcnt++;
 }
@@ -96,7 +92,7 @@ menai_retain(MenaiValue val)
  * val must not be NULL.  When ob_refcnt reaches zero, tp_dealloc is called.
  */
 static inline void
-menai_release(MenaiValue val)
+menai_release(MenaiValue *val)
 {
     if (--val->ob_refcnt == 0) {
         val->ob_destructor(val);
@@ -107,7 +103,7 @@ menai_release(MenaiValue val)
  * menai_xrelease — relinquish an interest in val if val is non-NULL.
  */
 static inline void
-menai_xrelease(MenaiValue val)
+menai_xrelease(MenaiValue *val)
 {
     if (val != NULL) {
         menai_release(val);
@@ -118,7 +114,7 @@ menai_xrelease(MenaiValue val)
  * menai_is_unique — return non-zero if val has exactly one live reference.
  */
 static inline int
-menai_is_unique(MenaiValue val)
+menai_is_unique(MenaiValue *val)
 {
     return val->ob_refcnt == 1;
 }

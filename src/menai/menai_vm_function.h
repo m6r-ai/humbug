@@ -31,7 +31,7 @@ typedef struct {
     MenaiCodeObject *bytecode;     /* retained — owns all frame metadata */
 
     /* Inline capture array — ncap elements follow immediately. */
-    MenaiValue captures[1];        /* flexible array member (C99 [1] for MSVC compat) */
+    MenaiValue *captures[1];       /* flexible array member (C99 [1] for MSVC compat) */
 } MenaiFunction_Object;
 
 extern MenaiType MenaiFunction_Type;
@@ -43,7 +43,7 @@ extern MenaiType MenaiFunction_Type;
  * All ncap capture slots are initialised to none_val.
  * Returns a new reference, or NULL on allocation failure.
  */
-MenaiValue menai_function_alloc(MenaiCodeObject *co, MenaiValue none_val);
+MenaiValue *menai_function_alloc(MenaiCodeObject *co, MenaiValue *none_val);
 
 /*
  * Module init — called once from _menai_vm_value_init().

@@ -2,7 +2,7 @@
  * menai_vm_hashtable.c — pure-C hash table and value operations.
  *
  * menai_value_hash, menai_value_equal, menai_value_describe, and
- * menai_value_to_python operate directly on MenaiValue C structs, dispatching
+ * menai_value_to_python operate directly on MenaiValue structs, dispatching
  * to the C-level type functions without going through Python method lookup.
  *
  * MenaiHashTable is an open-addressing table with power-of-2 slot counts and
@@ -36,33 +36,33 @@
  * Forward-declared here so the dispatch tables below can call them without
  * a circular include dependency.
  */
-PyObject *menai_value_describe_none(MenaiValue val);
-PyObject *menai_value_describe_boolean(MenaiValue val);
-PyObject *menai_value_describe_integer(MenaiValue val);
-PyObject *menai_value_describe_float(MenaiValue val);
-PyObject *menai_value_describe_complex(MenaiValue val);
-PyObject *menai_value_describe_string(MenaiValue val);
-PyObject *menai_value_describe_symbol(MenaiValue val);
-PyObject *menai_value_describe_structtype(MenaiValue val);
-PyObject *menai_value_describe_struct(MenaiValue val);
-PyObject *menai_value_describe_list(MenaiValue val);
-PyObject *menai_value_describe_dict(MenaiValue val);
-PyObject *menai_value_describe_set(MenaiValue val);
-PyObject *menai_value_describe_function(MenaiValue val);
+PyObject *menai_value_describe_none(MenaiValue *val);
+PyObject *menai_value_describe_boolean(MenaiValue *val);
+PyObject *menai_value_describe_integer(MenaiValue *val);
+PyObject *menai_value_describe_float(MenaiValue *val);
+PyObject *menai_value_describe_complex(MenaiValue *val);
+PyObject *menai_value_describe_string(MenaiValue *val);
+PyObject *menai_value_describe_symbol(MenaiValue *val);
+PyObject *menai_value_describe_structtype(MenaiValue *val);
+PyObject *menai_value_describe_struct(MenaiValue *val);
+PyObject *menai_value_describe_list(MenaiValue *val);
+PyObject *menai_value_describe_dict(MenaiValue *val);
+PyObject *menai_value_describe_set(MenaiValue *val);
+PyObject *menai_value_describe_function(MenaiValue *val);
 
-PyObject *menai_value_to_python_none(MenaiValue val);
-PyObject *menai_value_to_python_boolean(MenaiValue val);
-PyObject *menai_value_to_python_integer(MenaiValue val);
-PyObject *menai_value_to_python_float(MenaiValue val);
-PyObject *menai_value_to_python_complex(MenaiValue val);
-PyObject *menai_value_to_python_string(MenaiValue val);
-PyObject *menai_value_to_python_symbol(MenaiValue val);
-PyObject *menai_value_to_python_structtype(MenaiValue val);
-PyObject *menai_value_to_python_struct(MenaiValue val);
-PyObject *menai_value_to_python_list(MenaiValue val);
-PyObject *menai_value_to_python_dict(MenaiValue val);
-PyObject *menai_value_to_python_set(MenaiValue val);
-PyObject *menai_value_to_python_function(MenaiValue val);
+PyObject *menai_value_to_python_none(MenaiValue *val);
+PyObject *menai_value_to_python_boolean(MenaiValue *val);
+PyObject *menai_value_to_python_integer(MenaiValue *val);
+PyObject *menai_value_to_python_float(MenaiValue *val);
+PyObject *menai_value_to_python_complex(MenaiValue *val);
+PyObject *menai_value_to_python_string(MenaiValue *val);
+PyObject *menai_value_to_python_symbol(MenaiValue *val);
+PyObject *menai_value_to_python_structtype(MenaiValue *val);
+PyObject *menai_value_to_python_struct(MenaiValue *val);
+PyObject *menai_value_to_python_list(MenaiValue *val);
+PyObject *menai_value_to_python_dict(MenaiValue *val);
+PyObject *menai_value_to_python_set(MenaiValue *val);
+PyObject *menai_value_to_python_function(MenaiValue *val);
 
 /* Defined in menai_vm_value.c, initialised during _menai_vm_value_init(). */
 extern PyObject *MenaiEvalError_type;
@@ -153,7 +153,7 @@ _hash_finalise(Py_uhash_t acc, Py_ssize_t n)
  * ------------------------------------------------------------------------- */
 
 Py_hash_t
-menai_value_hash(MenaiValue val)
+menai_value_hash(MenaiValue *val)
 {
     MenaiType *t = val->ob_type;
 
@@ -228,7 +228,7 @@ menai_value_hash(MenaiValue val)
  * ------------------------------------------------------------------------- */
 
 int
-menai_value_equal(MenaiValue a, MenaiValue b)
+menai_value_equal(MenaiValue *a, MenaiValue *b)
 {
     if (a == b) {
         return 1;
@@ -370,7 +370,7 @@ menai_value_equal(MenaiValue a, MenaiValue b)
  * ------------------------------------------------------------------------- */
 
 PyObject *
-menai_value_describe(MenaiValue val)
+menai_value_describe(MenaiValue *val)
 {
     MenaiType *t = val->ob_type;
 
@@ -435,7 +435,7 @@ menai_value_describe(MenaiValue val)
  * ------------------------------------------------------------------------- */
 
 PyObject *
-menai_value_to_python(MenaiValue val)
+menai_value_to_python(MenaiValue *val)
 {
     MenaiType *t = val->ob_type;
 
@@ -495,10 +495,6 @@ menai_value_to_python(MenaiValue val)
     return NULL;
 }
 
-/* ---------------------------------------------------------------------------
- * MenaiHashTable
- * ------------------------------------------------------------------------- */
-
 static Py_ssize_t
 _ht_slot_count(Py_ssize_t n)
 {
@@ -550,7 +546,7 @@ menai_ht_free(MenaiHashTable *ht)
 }
 
 Py_ssize_t
-menai_ht_lookup(const MenaiHashTable *ht, MenaiValue key, Py_hash_t hash)
+menai_ht_lookup(const MenaiHashTable *ht, MenaiValue *key, Py_hash_t hash)
 {
     if (ht->slot_count == 0) {
         return -1;
@@ -576,7 +572,7 @@ menai_ht_lookup(const MenaiHashTable *ht, MenaiValue key, Py_hash_t hash)
 }
 
 void
-menai_ht_insert(MenaiHashTable *ht, MenaiValue key, Py_hash_t hash, Py_ssize_t index)
+menai_ht_insert(MenaiHashTable *ht, MenaiValue *key, Py_hash_t hash, Py_ssize_t index)
 {
     Py_ssize_t mask = ht->slot_count - 1;
     Py_uhash_t perturb = (Py_uhash_t)hash;
@@ -598,8 +594,7 @@ menai_ht_insert(MenaiHashTable *ht, MenaiValue key, Py_hash_t hash, Py_ssize_t i
 }
 
 int
-menai_ht_build(MenaiHashTable *ht, MenaiValue *keys, const Py_hash_t *hashes,
-               Py_ssize_t n)
+menai_ht_build(MenaiHashTable *ht, MenaiValue **keys, const Py_hash_t *hashes, Py_ssize_t n)
 {
     if (menai_ht_init(ht, n) < 0) {
         return -1;

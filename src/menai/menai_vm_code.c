@@ -17,7 +17,7 @@
  * Forward declaration — menai_convert_value lives in menai_vm_value.c and is
  * linked into the same shared library.
  */
-extern MenaiValue menai_convert_value(PyObject *src);
+extern MenaiValue *menai_convert_value(PyObject *src);
 
 void
 menai_code_object_release(MenaiCodeObject *co)
@@ -300,7 +300,7 @@ menai_code_object_from_python(PyObject *py_code)
     }
 
     /*
-     * constants — convert each slow Python value to a fast MenaiValue.
+     * constants — convert each slow Python value to a fast MenaiValue *.
      */
     {
         PyObject *py_constants = PyObject_GetAttrString(py_code, "constants");
@@ -310,8 +310,8 @@ menai_code_object_from_python(PyObject *py_code)
 
         co->nconst = PyList_GET_SIZE(py_constants);
         if (co->nconst > 0) {
-            co->constants = (MenaiValue *)calloc(
-                (size_t)co->nconst, sizeof(MenaiValue));
+            co->constants = (MenaiValue **)calloc(
+                (size_t)co->nconst, sizeof(MenaiValue *));
             if (!co->constants) {
                 Py_DECREF(py_constants);
                 PyErr_NoMemory();
@@ -320,7 +320,7 @@ menai_code_object_from_python(PyObject *py_code)
 
             for (Py_ssize_t i = 0; i < co->nconst; i++) {
                 PyObject *orig = PyList_GET_ITEM(py_constants, i);
-                MenaiValue fast = menai_convert_value(orig);
+                MenaiValue *fast = menai_convert_value(orig);
                 if (!fast) {
                     Py_DECREF(py_constants);
                     goto fail;

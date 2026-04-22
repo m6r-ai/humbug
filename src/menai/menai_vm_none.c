@@ -12,10 +12,10 @@
 #include "menai_vm_none.h"
 
 static MenaiNone_Object _none_storage;
-static MenaiValue _Menai_NONE = NULL;
+static MenaiValue *_Menai_NONE = NULL;
 
 static void
-MenaiNone_dealloc(MenaiValue self)
+MenaiNone_dealloc(MenaiValue *self)
 {
     /*
      * The singleton is never freed — its refcount should never reach zero.
@@ -35,7 +35,7 @@ PyTypeObject MenaiNone_Type = {
     Py_TPFLAGS_DEFAULT,         /* tp_flags — no Py_TPFLAGS_HAVE_GC */
 };
 
-MenaiValue
+MenaiValue *
 menai_none_singleton(void)
 {
     return _Menai_NONE;
@@ -51,6 +51,6 @@ menai_vm_none_init(void)
     _none_storage.ob_refcnt = 1;
     _none_storage.ob_type = &MenaiNone_Type;
     _none_storage.ob_destructor = MenaiNone_dealloc;
-    _Menai_NONE = (MenaiValue)&_none_storage;
+    _Menai_NONE = (MenaiValue *)&_none_storage;
     return 0;
 }

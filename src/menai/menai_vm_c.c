@@ -3,7 +3,7 @@
  *
  * Exposes a single Python-callable function:
  *
- * menai_vm_c.execute(code, globals_dict, prelude_dict) -> MenaiValue
+ * menai_vm_c.execute(code, globals_dict, prelude_dict) -> MenaiValue *
  *
  * The MenaiVM Python class in menai_vm.py calls this in place of its Python
  * execute loop when this extension is available.
@@ -135,7 +135,7 @@ static inline int _menai_mul_overflow(long a, long b, long *r) {
 /* menai_vm_value init — lives in the same .so */
 extern PyObject *_menai_vm_value_init(void);
 
-extern MenaiValue menai_convert_value(PyObject *src);
+extern MenaiValue *menai_convert_value(PyObject *src);
 
 /*
  * Limits
@@ -360,12 +360,12 @@ extern MenaiValue menai_convert_value(PyObject *src);
 /*
  * Singleton values fetched from menai_vm_value at init time.
  */
-MenaiValue Menai_NONE = NULL;
-MenaiValue Menai_TRUE = NULL;
-MenaiValue Menai_FALSE = NULL;
-MenaiValue Menai_EMPTY_LIST = NULL;
-MenaiValue Menai_EMPTY_DICT = NULL;
-MenaiValue Menai_EMPTY_SET = NULL;
+MenaiValue *Menai_NONE = NULL;
+MenaiValue *Menai_TRUE = NULL;
+MenaiValue *Menai_FALSE = NULL;
+MenaiValue *Menai_EMPTY_LIST = NULL;
+MenaiValue *Menai_EMPTY_DICT = NULL;
+MenaiValue *Menai_EMPTY_SET = NULL;
 
 /*
  * Module-level state fetched at init
@@ -376,30 +376,33 @@ static PyObject *MenaiCancelledException_type = NULL;
 /*
  * Fast type-check macros
  */
-#define IS_MENAI_NONE(o)       (((MenaiValue)(o))->ob_type == &MenaiNone_Type)
-#define IS_MENAI_BOOLEAN(o)    (((MenaiValue)(o))->ob_type == &MenaiBoolean_Type)
-#define IS_MENAI_INTEGER(o)    (((MenaiValue)(o))->ob_type == &MenaiInteger_Type)
-#define IS_MENAI_FLOAT(o)      (((MenaiValue)(o))->ob_type == &MenaiFloat_Type)
-#define IS_MENAI_COMPLEX(o)    (((MenaiValue)(o))->ob_type == &MenaiComplex_Type)
-#define IS_MENAI_STRING(o)     (((MenaiValue)(o))->ob_type == &MenaiString_Type)
-#define IS_MENAI_SYMBOL(o)     (((MenaiValue)(o))->ob_type == &MenaiSymbol_Type)
-#define IS_MENAI_LIST(o)       (((MenaiValue)(o))->ob_type == &MenaiList_Type)
-#define IS_MENAI_DICT(o)       (((MenaiValue)(o))->ob_type == &MenaiDict_Type)
-#define IS_MENAI_SET(o)        (((MenaiValue)(o))->ob_type == &MenaiSet_Type)
-#define IS_MENAI_FUNCTION(o)   (((MenaiValue)(o))->ob_type == &MenaiFunction_Type)
-#define IS_MENAI_STRUCTTYPE(o) (((MenaiValue)(o))->ob_type == &MenaiStructType_Type)
-#define IS_MENAI_STRUCT(o)     (((MenaiValue)(o))->ob_type == &MenaiStruct_Type)
+#define IS_MENAI_NONE(o)       (((MenaiValue *)(o))->ob_type == &MenaiNone_Type)
+#define IS_MENAI_BOOLEAN(o)    (((MenaiValue *)(o))->ob_type == &MenaiBoolean_Type)
+#define IS_MENAI_INTEGER(o)    (((MenaiValue *)(o))->ob_type == &MenaiInteger_Type)
+#define IS_MENAI_FLOAT(o)      (((MenaiValue *)(o))->ob_type == &MenaiFloat_Type)
+#define IS_MENAI_COMPLEX(o)    (((MenaiValue *)(o))->ob_type == &MenaiComplex_Type)
+#define IS_MENAI_STRING(o)     (((MenaiValue *)(o))->ob_type == &MenaiString_Type)
+#define IS_MENAI_SYMBOL(o)     (((MenaiValue *)(o))->ob_type == &MenaiSymbol_Type)
+#define IS_MENAI_LIST(o)       (((MenaiValue *)(o))->ob_type == &MenaiList_Type)
+#define IS_MENAI_DICT(o)       (((MenaiValue *)(o))->ob_type == &MenaiDict_Type)
+#define IS_MENAI_SET(o)        (((MenaiValue *)(o))->ob_type == &MenaiSet_Type)
+#define IS_MENAI_FUNCTION(o)   (((MenaiValue *)(o))->ob_type == &MenaiFunction_Type)
+#define IS_MENAI_STRUCTTYPE(o) (((MenaiValue *)(o))->ob_type == &MenaiStructType_Type)
+#define IS_MENAI_STRUCT(o)     (((MenaiValue *)(o))->ob_type == &MenaiStruct_Type)
 
 
-static inline int menai_boolean_value(MenaiValue o) {
+static inline int menai_boolean_value(MenaiValue *o)
+{
     return ((MenaiBoolean_Object *)o)->value;
 }
 
-static inline double menai_float_value(MenaiValue o) {
+static inline double menai_float_value(MenaiValue *o)
+{
     return ((MenaiFloat_Object *)o)->value;
 }
 
-static inline MenaiValue menai_symbol_name(MenaiValue o) {
+static inline MenaiValue *menai_symbol_name(MenaiValue *o)
+{
     return ((MenaiSymbol_Object *)o)->name;
 }
 
@@ -413,7 +416,7 @@ static inline MenaiValue menai_symbol_name(MenaiValue o) {
  * Never fails.
  */
 static inline int
-menai_integer_compare(MenaiValue a, MenaiValue b, int op)
+menai_integer_compare(MenaiValue* a, MenaiValue* b, int op)
 {
     MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
     MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
@@ -466,27 +469,27 @@ menai_integer_compare(MenaiValue a, MenaiValue b, int op)
  * Py_ssize_t fits in a long on all supported platforms, so this is a direct
  * delegation to menai_integer_from_long.
  */
-static inline MenaiValue make_integer_from_ssize_t(Py_ssize_t n)
+static inline MenaiValue *make_integer_from_ssize_t(Py_ssize_t n)
 {
     return menai_integer_from_long((long)n);
 }
 
-static inline MenaiValue make_integer_from_long(long n)
+static inline MenaiValue *make_integer_from_long(long n)
 {
     return menai_integer_from_long(n);
 }
 
-static inline MenaiValue make_float(double v)
+static inline MenaiValue *make_float(double v)
 {
     return menai_float_alloc(v);
 }
 
-static inline MenaiValue make_complex(double real, double imag)
+static inline MenaiValue *make_complex(double real, double imag)
 {
     return menai_complex_alloc(real, imag);
 }
 
-static inline void bool_store(MenaiValue *regs, int slot, int cond)
+static inline void bool_store(MenaiValue **regs, int slot, int cond)
 {
     menai_reg_set_borrow(regs, slot, cond ? Menai_TRUE : Menai_FALSE);
 }
@@ -495,7 +498,7 @@ static PyObject *menai_raise_eval_error(const char *message);
 static PyObject *menai_raise_eval_errorf(const char *fmt, ...);
 
 static const char *
-menai_type_name(MenaiValue val)
+menai_type_name(MenaiValue *val)
 {
     /*
      * tp_name is "menai.MenaiXxx" — map to the short lowercase Menai type
@@ -559,7 +562,7 @@ menai_type_name(MenaiValue val)
 }
 
 static inline int
-require_type_impl(int ok, MenaiValue val, const char *op_name, const char *noun)
+require_type_impl(int ok, MenaiValue *val, const char *op_name, const char *noun)
 {
     if (ok) {
         return 1;
@@ -570,63 +573,78 @@ require_type_impl(int ok, MenaiValue val, const char *op_name, const char *noun)
     return 0;
 }
 
-static inline int require_integer(MenaiValue val, const char *op_name) {
+static inline int require_integer(MenaiValue *val, const char *op_name)
+{
     return require_type_impl(IS_MENAI_INTEGER(val), val, op_name, "integer arguments");
 }
 
-static inline int require_float(MenaiValue val, const char *op_name) {
+static inline int require_float(MenaiValue* val, const char *op_name)
+{
     return require_type_impl(IS_MENAI_FLOAT(val), val, op_name, "float arguments");
 }
 
-static inline int require_complex(MenaiValue val, const char *op_name) {
+static inline int require_complex(MenaiValue* val, const char *op_name)
+{
     return require_type_impl(IS_MENAI_COMPLEX(val), val, op_name, "complex arguments");
 }
 
-static inline int require_string(MenaiValue val, const char *op_name) {
+static inline int require_string(MenaiValue* val, const char *op_name)
+{
     return require_type_impl(IS_MENAI_STRING(val), val, op_name, "string arguments");
 }
 
-static inline int require_list(MenaiValue val, const char *op_name) {
+static inline int require_list(MenaiValue* val, const char *op_name)
+{
     return require_type_impl(IS_MENAI_LIST(val), val, op_name, "list arguments");
 }
 
-static inline int require_list_singular(MenaiValue val, const char *op_name) {
+static inline int require_list_singular(MenaiValue *val, const char *op_name)
+{
     return require_type_impl(IS_MENAI_LIST(val), val, op_name, "a list argument");
 }
 
-static inline int require_dict(MenaiValue val, const char *op_name) {
+static inline int require_dict(MenaiValue *val, const char *op_name)
+{
     return require_type_impl(IS_MENAI_DICT(val), val, op_name, "dict arguments");
 }
 
-static inline int require_set(MenaiValue val, const char *op_name) {
+static inline int require_set(MenaiValue *val, const char *op_name)
+{
     return require_type_impl(IS_MENAI_SET(val), val, op_name, "set arguments");
 }
 
-static inline int require_set_singular(MenaiValue val, const char *op_name) {
+static inline int require_set_singular(MenaiValue *val, const char *op_name)
+{
     return require_type_impl(IS_MENAI_SET(val), val, op_name, "a set argument");
 }
 
-static inline int require_boolean(MenaiValue val, const char *op_name) {
+static inline int require_boolean(MenaiValue *val, const char *op_name)
+{
     return require_type_impl(IS_MENAI_BOOLEAN(val), val, op_name, "boolean arguments");
 }
 
-static inline int require_function(MenaiValue val, const char *op_name) {
+static inline int require_function(MenaiValue *val, const char *op_name)
+{
     return require_type_impl(IS_MENAI_FUNCTION(val), val, op_name, "function arguments");
 }
 
-static inline int require_function_singular(MenaiValue val, const char *op_name) {
+static inline int require_function_singular(MenaiValue *val, const char *op_name)
+{
     return require_type_impl(IS_MENAI_FUNCTION(val), val, op_name, "a function argument");
 }
 
-static inline int require_struct(MenaiValue val, const char *op_name) {
+static inline int require_struct(MenaiValue *val, const char *op_name)
+{
     return require_type_impl(IS_MENAI_STRUCT(val), val, op_name, "a struct argument");
 }
 
-static inline int require_structtype(MenaiValue val, const char *op_name) {
+static inline int require_structtype(MenaiValue *val, const char *op_name)
+{
     return require_type_impl(IS_MENAI_STRUCTTYPE(val), val, op_name, "a struct type argument");
 }
 
-static inline int require_symbol(MenaiValue val, const char *op_name) {
+static inline int require_symbol(MenaiValue *val, const char *op_name)
+{
     if (IS_MENAI_SYMBOL(val)) {
         return 1;
     }
@@ -635,7 +653,8 @@ static inline int require_symbol(MenaiValue val, const char *op_name) {
     return 0;
 }
 
-static inline int require_symbol_pair(MenaiValue a, MenaiValue b, const char *op_name) {
+static inline int require_symbol_pair(MenaiValue *a, MenaiValue *b, const char *op_name)
+{
     if (IS_MENAI_SYMBOL(a) && IS_MENAI_SYMBOL(b)) {
         return 1;
     }
@@ -668,14 +687,14 @@ menai_raise_eval_errorf(const char *fmt, ...)
 }
 
 static int
-fetch_singleton(PyObject *module, const char *name, MenaiValue *dst)
+fetch_singleton(PyObject *module, const char *name, MenaiValue **dst)
 {
     PyObject *obj = PyObject_GetAttrString(module, name);
     if (obj == NULL) {
         return -1;
     }
 
-    *dst = (MenaiValue)obj;
+    *dst = (MenaiValue *)obj;
     return 0;
 }
 
@@ -739,7 +758,7 @@ fail:
  */
 typedef struct {
     MenaiCodeObject *code_obj;       /* retained — owns all frame metadata */
-    MenaiValue *constants_items;     /* borrowed from code_obj->constants */
+    MenaiValue **constants_items;    /* borrowed from code_obj->constants */
     Py_ssize_t nconst;               /* borrowed from code_obj->nconst */
     const char **names_items;        /* borrowed from code_obj->names */
     Py_ssize_t nnames;               /* borrowed from code_obj->nnames */
@@ -786,7 +805,7 @@ frame_setup(Frame *f, MenaiCodeObject *co, int base, int return_dest)
 /* ---------------------------------------------------------------------------
  * Register array helpers
  *
- * The register array is a flat MenaiValue array:
+ * The register array is a flat MenaiValue * array:
  *   regs[depth * max_locals + slot]
  * All slots are initialised to Menai_NONE (borrowed — the singleton is
  * kept alive by the module).  menai_reg_set_own/menai_reg_set_borrow manage reference counts correctly.
@@ -804,14 +823,14 @@ frame_setup(Frame *f, MenaiCodeObject *co, int base, int return_dest)
  * The slot count is the smallest power of 2 satisfying slot_count * 2 / 3 >= count.
  */
 typedef struct {
-    const char *name;  /* UTF-8 — points into PyUnicode internal buffer; NULL = empty */
-    Py_hash_t hash;    /* FNV-1a hash of name */
-    MenaiValue value;  /* owned reference — valid only when name != NULL */
+    const char *name;   /* UTF-8 — points into PyUnicode internal buffer; NULL = empty */
+    Py_hash_t hash;     /* FNV-1a hash of name */
+    MenaiValue *value;  /* owned reference — valid only when name != NULL */
 } GlobalsSlot;
 
 typedef struct {
-    const char *name;  /* UTF-8 — points into PyUnicode internal buffer */
-    MenaiValue value;  /* owned reference */
+    const char *name;   /* UTF-8 — points into PyUnicode internal buffer */
+    MenaiValue *value;  /* owned reference */
 } GlobalsEntry;
 
 typedef struct {
@@ -853,7 +872,7 @@ static int _cached_prelude_gt_valid = 0;
  * prelude_globals_get — return a pointer to the cached prelude GlobalsTable,
  * building it the first time a given prelude_dict is seen.
  *
- * prelude_dict must already contain fast MenaiValue objects (as produced by
+ * prelude_dict must already contain fast MenaiValue * objects (as produced by
  * executing the prelude through the C VM).  Returns NULL on error with a
  * Python exception set.
  */
@@ -892,9 +911,9 @@ prelude_globals_get(PyObject *prelude_dict)
                 return NULL;
             }
 
-            menai_retain((MenaiValue)val);
+            menai_retain((MenaiValue *)val);
             _cached_prelude_gt.entries[_cached_prelude_gt.count].name = name_utf8;
-            _cached_prelude_gt.entries[_cached_prelude_gt.count].value = (MenaiValue)val;
+            _cached_prelude_gt.entries[_cached_prelude_gt.count].value = (MenaiValue *)val;
             _cached_prelude_gt.count++;
         }
     }
@@ -971,7 +990,7 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, const GlobalsTable *pr
     PyObject *key, *val;
     Py_ssize_t pos = 0;
     while (PyDict_Next(constants_dict, &pos, &key, &val)) {
-        MenaiValue converted = menai_convert_value(val);
+        MenaiValue *converted = menai_convert_value(val);
         if (converted == NULL) {
             globals_free(gt);
             return -1;
@@ -1019,7 +1038,7 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, const GlobalsTable *pr
     return 0;
 }
 
-static MenaiValue
+static MenaiValue *
 globals_lookup(const GlobalsTable *gt, const char *name)
 {
     if (gt->slot_count == 0) {
@@ -1059,9 +1078,7 @@ globals_lookup(const GlobalsTable *gt, const char *name)
  * Returns 0 on success, -1 on error (Python exception set).
  */
 static int
-call_setup(Frame *new_frame, MenaiValue func_obj,
-           MenaiValue *regs, int callee_base, int arity,
-           int return_dest)
+call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee_base, int arity, int return_dest)
 {
     MenaiFunction_Object *func = (MenaiFunction_Object *)func_obj;
     MenaiCodeObject *co = func->bytecode;
@@ -1080,7 +1097,7 @@ call_setup(Frame *new_frame, MenaiValue func_obj,
 
         /* Pack excess args into a MenaiList for the rest parameter. */
         int rest_count = arity - min_arity;
-        MenaiValue *rest_arr = rest_count > 0 ? (MenaiValue *)malloc(rest_count * sizeof(MenaiValue)) : NULL;
+        MenaiValue **rest_arr = rest_count > 0 ? (MenaiValue **)malloc(rest_count * sizeof(MenaiValue *)) : NULL;
         if (rest_count > 0 && !rest_arr) {
             return -1;
         }
@@ -1090,7 +1107,7 @@ call_setup(Frame *new_frame, MenaiValue func_obj,
             menai_retain(rest_arr[k]);
         }
 
-        MenaiValue rest_list = menai_list_from_array_steal(rest_arr, rest_count);
+        MenaiValue *rest_list = menai_list_from_array_steal(rest_arr, rest_count);
         if (rest_list == NULL) {
             return -1;
         }
@@ -1107,7 +1124,7 @@ call_setup(Frame *new_frame, MenaiValue func_obj,
     /* Populate capture slots: regs[callee_base + param_count + i] */
     Py_ssize_t ncap = func->ncap;
     for (Py_ssize_t i = 0; i < ncap; i++) {
-        MenaiValue cv = func->captures[i];
+        MenaiValue *cv = func->captures[i];
         menai_reg_set_borrow(regs, callee_base + param_count + (int)i, cv);
     }
 
@@ -1121,7 +1138,7 @@ call_setup(Frame *new_frame, MenaiValue func_obj,
  */
 static PyObject *
 execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
-             MenaiValue *regs, int max_locals)
+             MenaiValue **regs, int max_locals)
 {
     /* Frame stack — depth 0 is the sentinel. */
     Frame frames[MAX_FRAME_DEPTH + 1];
@@ -1195,14 +1212,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_LOAD_CONST: {
-            MenaiValue val = frame->constants_items[src0];
+            MenaiValue *val = frame->constants_items[src0];
             menai_reg_set_borrow(regs, base + dest, val);
             break;
         }
 
         case OP_LOAD_NAME: {
             const char *name_str = frame->names_items[src0];
-            MenaiValue val = globals_lookup(globals, name_str);
+            MenaiValue *val = globals_lookup(globals, name_str);
             if (val == NULL) {
                 /* Build a rich error listing up to 10 available names. */
                 Py_ssize_t nk = globals->count;
@@ -1245,7 +1262,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_JUMP_IF_FALSE: {
-            MenaiValue cond = regs[base + src0];
+            MenaiValue *cond = regs[base + src0];
             if (!IS_MENAI_BOOLEAN(cond)) {
                 menai_raise_eval_error("If condition must be boolean");
                 goto error;
@@ -1259,7 +1276,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_JUMP_IF_TRUE: {
-            MenaiValue cond = regs[base + src0];
+            MenaiValue *cond = regs[base + src0];
             if (!IS_MENAI_BOOLEAN(cond)) {
                 menai_raise_eval_error("If condition must be boolean");
                 goto error;
@@ -1273,7 +1290,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_RAISE_ERROR: {
-            MenaiValue msg = regs[base + src0];
+            MenaiValue *msg = regs[base + src0];
             if (!IS_MENAI_STRING(msg)) {
                 menai_raise_eval_error("error: message must be a string");
                 goto error;
@@ -1290,7 +1307,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_RETURN: {
-            MenaiValue retval = regs[base + src0];
+            MenaiValue *retval = regs[base + src0];
             menai_retain(retval);
 
             int saved_return_dest = frame->return_dest;
@@ -1311,7 +1328,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_CALL: {
-            MenaiValue raw = regs[base + src0];
+            MenaiValue *raw = regs[base + src0];
             int arity = src1;
 
             int callee_base = base + frame->local_count;
@@ -1349,7 +1366,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     goto error;
                 }
 
-                MenaiValue instance = menai_struct_alloc(raw, &regs[callee_base], n_fields);
+                MenaiValue *instance = menai_struct_alloc(raw, &regs[callee_base], n_fields);
                 if (instance == NULL) {
                     goto error;
                 }
@@ -1363,7 +1380,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_TAIL_CALL: {
-            MenaiValue raw = regs[base + src0];
+            MenaiValue *raw = regs[base + src0];
             int n_args = src1;
 
             /* Take an owned reference before the arg-moving loop.
@@ -1376,7 +1393,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (IS_MENAI_FUNCTION(raw)) {
                 /* Move outgoing args down to base+0..n_args-1 in place. */
                 for (int i = 0; i < n_args; i++) {
-                    MenaiValue v = regs[base + local_count + i];
+                    MenaiValue *v = regs[base + local_count + i];
                     menai_reg_set_borrow(regs, base + i, v);
                 }
 
@@ -1406,14 +1423,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     goto error;
                 }
 
-                MenaiValue instance = menai_struct_alloc(raw, &regs[base + local_count], n_fields);
+                MenaiValue *instance = menai_struct_alloc(raw, &regs[base + local_count], n_fields);
                 if (instance == NULL) {
                     menai_release(raw);
                     goto error;
                 }
 
                 /* Tail-return the struct: pop frame and deliver to caller. */
-                MenaiValue retval = instance;
+                MenaiValue *retval = instance;
                 int saved_return_dest = frame->return_dest;
                 menai_code_object_release(frame->code_obj);
                 frame_depth--;
@@ -1440,15 +1457,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
              * src0 = function register, src1 = arg_list register.
              * Scatters the list into the callee's register window and pushes a frame.
              */
-            MenaiValue raw_func = regs[base + src0];
-            MenaiValue raw_args = regs[base + src1];
+            MenaiValue *raw_func = regs[base + src0];
+            MenaiValue *raw_args = regs[base + src1];
 
             if (!IS_MENAI_LIST(raw_args)) {
                 menai_raise_eval_error("apply: second argument must be a list");
                 goto error;
             }
 
-            MenaiValue *elements = ((MenaiList_Object *)raw_args)->elements;
+            MenaiValue **elements = ((MenaiList_Object *)raw_args)->elements;
             int arity = (int)((MenaiList_Object *)raw_args)->length;
 
             if (IS_MENAI_FUNCTION(raw_func)) {
@@ -1486,7 +1503,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     goto error;
                 }
 
-                MenaiValue instance = menai_struct_alloc(raw_func, elements, n_fields);
+                MenaiValue *instance = menai_struct_alloc(raw_func, elements, n_fields);
                 if (instance == NULL) {
                     goto error;
                 }
@@ -1505,8 +1522,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
              * src0 = function register, src1 = arg_list register.
              * Reuses current frame (tail position).
              */
-            MenaiValue raw_func = regs[base + src0];
-            MenaiValue raw_args = regs[base + src1];
+            MenaiValue *raw_func = regs[base + src0];
+            MenaiValue *raw_args = regs[base + src1];
             /* Own raw_func before the scatter loop which may overwrite its slot. */
             /* Own raw_args for the same reason — src1 may be < arity. */
             menai_retain(raw_func);
@@ -1519,7 +1536,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue *elements = ((MenaiList_Object *)raw_args)->elements;
+            MenaiValue **elements = ((MenaiList_Object *)raw_args)->elements;
             int arity = (int)((MenaiList_Object *)raw_args)->length;
 
             if (IS_MENAI_FUNCTION(raw_func)) {
@@ -1553,7 +1570,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     goto error;
                 }
 
-                MenaiValue retval = menai_struct_alloc(raw_func, elements, n_fields);
+                MenaiValue *retval = menai_struct_alloc(raw_func, elements, n_fields);
                 if (retval == NULL) {
                     menai_release(raw_args);
                     menai_release(raw_func);
@@ -1596,7 +1613,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_BOOLEAN_EQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_boolean(a, "boolean=?")) {
                 goto error;
             }
@@ -1610,7 +1628,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_BOOLEAN_NEQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_boolean(a, "boolean!=?")) {
                 goto error;
             }
@@ -1624,7 +1643,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_BOOLEAN_NOT: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_boolean(a, "boolean-not")) {
                 goto error;
             }
@@ -1638,7 +1657,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_SYMBOL_EQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_symbol_pair(a, b, "symbol=?")) {
                 goto error;
             }
@@ -1649,7 +1669,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SYMBOL_NEQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_symbol_pair(a, b, "symbol!=?")) {
                 goto error;
             }
@@ -1660,7 +1681,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SYMBOL_TO_STRING: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_symbol(a, "symbol->string")) {
                 goto error;
             }
@@ -1674,7 +1695,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_FUNCTION_EQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_function(a, "function=?")) {
                 goto error;
             }
@@ -1688,7 +1710,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FUNCTION_NEQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_function(a, "function!=?")) {
                 goto error;
             }
@@ -1702,14 +1725,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FUNCTION_MIN_ARITY: {
-            MenaiValue f = regs[base + src0];
+            MenaiValue *f = regs[base + src0];
             if (!require_function_singular(f, "function-min-arity")) {
                 goto error;
             }
 
             MenaiFunction_Object *fn = (MenaiFunction_Object *)f;
             int min_a = fn->bytecode->is_variadic ? fn->bytecode->param_count - 1 : fn->bytecode->param_count;
-            MenaiValue _r = make_integer_from_long(min_a);
+            MenaiValue *_r = make_integer_from_long(min_a);
             if (_r == NULL) {
                 goto error;
             }
@@ -1719,7 +1742,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FUNCTION_VARIADIC_P: {
-            MenaiValue f = regs[base + src0];
+            MenaiValue *f = regs[base + src0];
             if (!require_function_singular(f, "function-variadic?")) {
                 goto error;
             }
@@ -1729,8 +1752,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FUNCTION_ACCEPTS_P: {
-            MenaiValue f = regs[base + src0];
-            MenaiValue n_obj = regs[base + src1];
+            MenaiValue *f = regs[base + src0];
+            MenaiValue *n_obj = regs[base + src1];
             if (!require_function_singular(f, "function-accepts?")) {
                 goto error;
             }
@@ -1762,7 +1785,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_INTEGER_EQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer=?")) {
                 goto error;
             }
@@ -1776,7 +1800,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_NEQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer!=?")) {
                 goto error;
             }
@@ -1790,7 +1815,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_LT_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer<?")) {
                 goto error;
             }
@@ -1804,7 +1830,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_GT_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer>?")) {
                 goto error;
             }
@@ -1818,7 +1845,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_LTE_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer<=?")) {
                 goto error;
             }
@@ -1832,7 +1860,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_GTE_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer>=?")) {
                 goto error;
             }
@@ -1846,7 +1875,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_ABS: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_integer(a, "integer-abs")) {
                 goto error;
             }
@@ -1869,7 +1898,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     }
 
                     menai_int_free(&tmp);
-                    MenaiValue _r = menai_integer_from_bigint(res);
+                    MenaiValue *_r = menai_integer_from_bigint(res);
                     if (!_r) {
                         goto error;
                     }
@@ -1878,7 +1907,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     break;
                 }
 
-                MenaiValue _r = menai_integer_from_long(rv);
+                MenaiValue *_r = menai_integer_from_long(rv);
                 if (!_r) {
                     goto error;
                 }
@@ -1893,7 +1922,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = menai_integer_from_bigint(res);
+            MenaiValue *_r = menai_integer_from_bigint(res);
             if (!_r) {
                 goto error;
             }
@@ -1903,7 +1932,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_NEG: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_integer(a, "integer-neg")) {
                 goto error;
             }
@@ -1925,7 +1954,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     }
 
                     menai_int_free(&tmp);
-                    MenaiValue _r = menai_integer_from_bigint(res);
+                    MenaiValue *_r = menai_integer_from_bigint(res);
                     if (!_r) {
                         goto error;
                     }
@@ -1934,7 +1963,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     break;
                 }
 
-                MenaiValue _r = menai_integer_from_long(-sv);
+                MenaiValue *_r = menai_integer_from_long(-sv);
                 if (!_r) {
                     goto error;
                 }
@@ -1949,7 +1978,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = menai_integer_from_bigint(res);
+            MenaiValue *_r = menai_integer_from_bigint(res);
             if (!_r) {
                 goto error;
             }
@@ -1959,7 +1988,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_BIT_NOT: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_integer(a, "integer-bit-not")) {
                 goto error;
             }
@@ -1983,7 +2012,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             menai_int_free(&tmp);
-            MenaiValue _r = menai_integer_from_bigint(res);
+            MenaiValue *_r = menai_integer_from_bigint(res);
             if (!_r) {
                 goto error;
             }
@@ -1993,7 +2022,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_ADD: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer+")) {
                 goto error;
             }
@@ -2007,7 +2037,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 long lb = ((MenaiInteger_Object *)b)->small;
                 long lr;
                 if (!_menai_add_overflow(la, lb, &lr)) {
-                    MenaiValue _r = menai_integer_from_long(lr);
+                    MenaiValue *_r = menai_integer_from_long(lr);
                     if (!_r) {
                         goto error;
                     }
@@ -2051,7 +2081,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             menai_int_free(&av);
             menai_int_free(&bv);
-            MenaiValue _r = menai_integer_from_bigint(res);
+            MenaiValue *_r = menai_integer_from_bigint(res);
             if (!_r) {
                 goto error;
             }
@@ -2061,7 +2091,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_SUB: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer-")) {
                 goto error;
             }
@@ -2075,7 +2106,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 long lb = ((MenaiInteger_Object *)b)->small;
                 long lr;
                 if (!_menai_sub_overflow(la, lb, &lr)) {
-                    MenaiValue _r = menai_integer_from_long(lr);
+                    MenaiValue *_r = menai_integer_from_long(lr);
                     if (!_r) {
                         goto error;
                     }
@@ -2112,7 +2143,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             menai_int_free(&av); menai_int_free(&bv);
-            MenaiValue _r = menai_integer_from_bigint(res);
+            MenaiValue *_r = menai_integer_from_bigint(res);
             if (!_r) {
                 goto error;
             }
@@ -2122,7 +2153,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_MUL: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer*")) {
                 goto error;
             }
@@ -2136,7 +2168,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 long lb = ((MenaiInteger_Object *)b)->small;
                 long lr;
                 if (!_menai_mul_overflow(la, lb, &lr)) {
-                    MenaiValue _r = menai_integer_from_long(lr);
+                    MenaiValue *_r = menai_integer_from_long(lr);
                     if (!_r) {
                         goto error;
                     }
@@ -2173,7 +2205,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             menai_int_free(&av); menai_int_free(&bv);
-            MenaiValue _r = menai_integer_from_bigint(res);
+            MenaiValue *_r = menai_integer_from_bigint(res);
             if (!_r) {
                 goto error;
             }
@@ -2183,7 +2215,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_DIV: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer/")) {
                 goto error;
             }
@@ -2229,7 +2262,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             menai_int_free(&av); menai_int_free(&bv);
-            MenaiValue _r = menai_integer_from_bigint(res);
+            MenaiValue *_r = menai_integer_from_bigint(res);
             if (_r == NULL) {
                 goto error;
             }
@@ -2239,7 +2272,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_MOD: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer%")) {
                 goto error;
             }
@@ -2259,7 +2293,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             MenaiInt av, bv, res;
-            menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
+            menai_int_init(&av);
+            menai_int_init(&bv);
+            menai_int_init(&res);
             if (!((MenaiInteger_Object *)a)->is_big) {
                 if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
                     goto error;
@@ -2285,7 +2321,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             menai_int_free(&av); menai_int_free(&bv);
-            MenaiValue _r = menai_integer_from_bigint(res);
+            MenaiValue *_r = menai_integer_from_bigint(res);
             if (_r == NULL) {
                 goto error;
             }
@@ -2295,7 +2331,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_EXPN: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer-expn")) {
                 goto error;
             }
@@ -2306,16 +2343,17 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             {
                 MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
-                int b_is_neg = (!ib->is_big && ib->small < 0) ||
-                               (ib->is_big && ib->big.sign == -1);
+                int b_is_neg = (!ib->is_big && ib->small < 0) || (ib->is_big && ib->big.sign == -1);
                 if (b_is_neg) {
-                menai_raise_eval_error("Function 'integer-expn' requires a non-negative exponent");
-                goto error;
+                    menai_raise_eval_error("Function 'integer-expn' requires a non-negative exponent");
+                    goto error;
                 }
             }
 
             MenaiInt av, bv, res;
-            menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
+            menai_int_init(&av);
+            menai_int_init(&bv);
+            menai_int_init(&res);
             if (!((MenaiInteger_Object *)a)->is_big) {
                 if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
                     goto error;
@@ -2341,7 +2379,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             menai_int_free(&av); menai_int_free(&bv);
-            MenaiValue _r = menai_integer_from_bigint(res);
+            MenaiValue *_r = menai_integer_from_bigint(res);
             if (_r == NULL) {
                 goto error;
             }
@@ -2351,7 +2389,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_BIT_OR: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-or")) {
                 goto error;
             }
@@ -2361,7 +2400,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             MenaiInt av, bv, res;
-            menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
+            menai_int_init(&av);
+            menai_int_init(&bv);
+            menai_int_init(&res);
             if (!((MenaiInteger_Object *)a)->is_big) {
                 if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
                     goto error;
@@ -2387,7 +2428,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             menai_int_free(&av); menai_int_free(&bv);
-            MenaiValue _r = menai_integer_from_bigint(res);
+            MenaiValue *_r = menai_integer_from_bigint(res);
             if (!_r) {
                 goto error;
             }
@@ -2397,7 +2438,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_BIT_AND: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-and")) {
                 goto error;
             }
@@ -2407,7 +2449,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             MenaiInt av, bv, res;
-            menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
+            menai_int_init(&av);
+            menai_int_init(&bv);
+            menai_int_init(&res);
             if (!((MenaiInteger_Object *)a)->is_big) {
                 if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
                     goto error;
@@ -2433,7 +2477,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             menai_int_free(&av); menai_int_free(&bv);
-            MenaiValue _r = menai_integer_from_bigint(res);
+            MenaiValue *_r = menai_integer_from_bigint(res);
             if (!_r) {
                 goto error;
             }
@@ -2443,7 +2487,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_BIT_XOR: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-xor")) {
                 goto error;
             }
@@ -2453,7 +2498,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             MenaiInt av, bv, res;
-            menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
+            menai_int_init(&av);
+            menai_int_init(&bv);
+            menai_int_init(&res);
             if (!((MenaiInteger_Object *)a)->is_big) {
                 if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
                     goto error;
@@ -2479,7 +2526,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             menai_int_free(&av); menai_int_free(&bv);
-            MenaiValue _r = menai_integer_from_bigint(res);
+            MenaiValue *_r = menai_integer_from_bigint(res);
             if (!_r) {
                 goto error;
             }
@@ -2489,7 +2536,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_BIT_SHIFT_LEFT: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-shift-left")) {
                 goto error;
             }
@@ -2498,58 +2546,56 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            {
-                MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
-                long shift;
-                if (!ib->is_big) {
-                    shift = ib->small;
-                } else {
-                    if (!menai_int_fits_long(&ib->big)) {
-                        menai_raise_eval_error("integer-bit-shift-left: shift amount too large");
-                        goto error;
-                    }
-
-                    if (menai_int_to_long(&ib->big, &shift) < 0) {
-                        goto error;
-                    }
-                }
-
-                if (shift < 0) {
-                    menai_raise_eval_error("integer-bit-shift-left: shift amount must be non-negative");
+            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            long shift;
+            if (!ib->is_big) {
+                shift = ib->small;
+            } else {
+                if (!menai_int_fits_long(&ib->big)) {
+                    menai_raise_eval_error("integer-bit-shift-left: shift amount too large");
                     goto error;
                 }
 
-                MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
-                MenaiInt av, res;
-                menai_int_init(&av); menai_int_init(&res);
-                if (!ia->is_big) {
-                    if (menai_int_from_long(ia->small, &av) < 0) {
-                        goto error;
-                    }
-                } else {
-                    if (menai_int_copy(&ia->big, &av) < 0) {
-                        goto error;
-                    }
-                }
-
-                if (menai_int_shift_left(&av, (Py_ssize_t)shift, &res) < 0) {
-                    menai_int_free(&av); goto error;
-                }
-
-                menai_int_free(&av);
-                MenaiValue _r = menai_integer_from_bigint(res);
-                if (!_r) {
+                if (menai_int_to_long(&ib->big, &shift) < 0) {
                     goto error;
                 }
-
-                menai_reg_set_own(regs, base + dest, _r);
             }
 
+            if (shift < 0) {
+                menai_raise_eval_error("integer-bit-shift-left: shift amount must be non-negative");
+                goto error;
+            }
+
+            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            MenaiInt av, res;
+            menai_int_init(&av); menai_int_init(&res);
+            if (!ia->is_big) {
+                if (menai_int_from_long(ia->small, &av) < 0) {
+                    goto error;
+                }
+            } else {
+                if (menai_int_copy(&ia->big, &av) < 0) {
+                    goto error;
+                }
+            }
+
+            if (menai_int_shift_left(&av, (Py_ssize_t)shift, &res) < 0) {
+                menai_int_free(&av); goto error;
+            }
+
+            menai_int_free(&av);
+            MenaiValue *_r = menai_integer_from_bigint(res);
+            if (!_r) {
+                goto error;
+            }
+
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_INTEGER_BIT_SHIFT_RIGHT: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer-bit-shift-right")) {
                 goto error;
             }
@@ -2558,58 +2604,56 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            {
-                MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
-                long shift;
-                if (!ib->is_big) {
-                    shift = ib->small;
-                } else {
-                    if (!menai_int_fits_long(&ib->big)) {
-                        menai_raise_eval_error("integer-bit-shift-right: shift amount too large");
-                        goto error;
-                    }
-
-                    if (menai_int_to_long(&ib->big, &shift) < 0) {
-                        goto error;
-                    }
-                }
-
-                if (shift < 0) {
-                    menai_raise_eval_error("integer-bit-shift-right: shift amount must be non-negative");
+            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            long shift;
+            if (!ib->is_big) {
+                shift = ib->small;
+            } else {
+                if (!menai_int_fits_long(&ib->big)) {
+                    menai_raise_eval_error("integer-bit-shift-right: shift amount too large");
                     goto error;
                 }
 
-                MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
-                MenaiInt av, res;
-                menai_int_init(&av); menai_int_init(&res);
-                if (!ia->is_big) {
-                    if (menai_int_from_long(ia->small, &av) < 0) {
-                        goto error;
-                    }
-                } else {
-                    if (menai_int_copy(&ia->big, &av) < 0) {
-                        goto error;
-                    }
-                }
-
-                if (menai_int_shift_right(&av, (Py_ssize_t)shift, &res) < 0) {
-                    menai_int_free(&av); goto error;
-                }
-
-                menai_int_free(&av);
-                MenaiValue _r = menai_integer_from_bigint(res);
-                if (!_r) {
+                if (menai_int_to_long(&ib->big, &shift) < 0) {
                     goto error;
                 }
-
-                menai_reg_set_own(regs, base + dest, _r);
             }
 
+            if (shift < 0) {
+                menai_raise_eval_error("integer-bit-shift-right: shift amount must be non-negative");
+                goto error;
+            }
+
+            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            MenaiInt av, res;
+            menai_int_init(&av); menai_int_init(&res);
+            if (!ia->is_big) {
+                if (menai_int_from_long(ia->small, &av) < 0) {
+                    goto error;
+                }
+            } else {
+                if (menai_int_copy(&ia->big, &av) < 0) {
+                    goto error;
+                }
+            }
+
+            if (menai_int_shift_right(&av, (Py_ssize_t)shift, &res) < 0) {
+                menai_int_free(&av); goto error;
+            }
+
+            menai_int_free(&av);
+            MenaiValue *_r = menai_integer_from_bigint(res);
+            if (!_r) {
+                goto error;
+            }
+
+            menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_INTEGER_MIN: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer-min")) {
                 goto error;
             }
@@ -2623,7 +2667,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_MAX: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer-max")) {
                 goto error;
             }
@@ -2637,7 +2682,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_TO_FLOAT: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_integer(a, "integer->float")) {
                 goto error;
             }
@@ -2652,7 +2697,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
-            MenaiValue _r = make_float(d);
+            MenaiValue *_r = make_float(d);
             if (_r == NULL) {
                 goto error;
             }
@@ -2662,7 +2707,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_TO_COMPLEX: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer->complex")) {
                 goto error;
             }
@@ -2690,7 +2736,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
-            MenaiValue r = make_complex(re, im);
+            MenaiValue *r = make_complex(re, im);
             if (r == NULL) {
                 goto error;
             }
@@ -2700,7 +2746,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_TO_STRING: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_integer(a, "integer->string")) {
                 goto error;
             }
@@ -2743,7 +2790,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             menai_int_free(&tmp);
-            MenaiValue r = menai_string_from_utf8(cstr, (Py_ssize_t)strlen(cstr));
+            MenaiValue *r = menai_string_from_utf8(cstr, (Py_ssize_t)strlen(cstr));
             free(cstr);
             if (r == NULL) {
                 goto error;
@@ -2754,7 +2801,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_CODEPOINT_TO_STRING: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_integer(a, "integer-codepoint->string")) {
                 goto error;
             }
@@ -2775,7 +2822,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue r = menai_string_from_codepoint((uint32_t)cp);
+            MenaiValue *r = menai_string_from_codepoint((uint32_t)cp);
             if (r == NULL) {
                 goto error;
             }
@@ -2789,7 +2836,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_FLOAT_EQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float=?")) {
                 goto error;
             }
@@ -2803,7 +2851,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_NEQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float!=?")) {
                 goto error;
             }
@@ -2817,7 +2866,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_LT_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float<?")) {
                 goto error;
             }
@@ -2831,7 +2881,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_GT_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float>?")) {
                 goto error;
             }
@@ -2845,7 +2896,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_LTE_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float<=?")) {
                 goto error;
             }
@@ -2859,7 +2911,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_GTE_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float>=?")) {
                 goto error;
             }
@@ -2873,12 +2926,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_NEG: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-neg")) {
                 goto error;
             }
 
-            MenaiValue _r = make_float(-menai_float_value(a));
+            MenaiValue *_r = make_float(-menai_float_value(a));
             if (_r == NULL) {
                 goto error;
             }
@@ -2888,14 +2941,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_ABS: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-abs")) {
                 goto error;
             }
 
             double v = menai_float_value(a);
             {
-                MenaiValue _r = make_float(fabs(v));
+                MenaiValue *_r = make_float(fabs(v));
                 if (_r == NULL) {
                     goto error;
                 }
@@ -2907,7 +2960,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_ADD: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float+")) {
                 goto error;
             }
@@ -2916,7 +2970,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = make_float(menai_float_value(a) + menai_float_value(b));
+            MenaiValue *_r = make_float(menai_float_value(a) + menai_float_value(b));
             if (_r == NULL) {
                 goto error;
             }
@@ -2926,7 +2980,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_SUB: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float-")) {
                 goto error;
             }
@@ -2935,7 +2990,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = make_float(menai_float_value(a) - menai_float_value(b));
+            MenaiValue *_r = make_float(menai_float_value(a) - menai_float_value(b));
             if (_r == NULL) {
                 goto error;
             }
@@ -2945,7 +3000,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_MUL: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float*")) {
                 goto error;
             }
@@ -2954,7 +3010,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = make_float(menai_float_value(a) * menai_float_value(b));
+            MenaiValue *_r = make_float(menai_float_value(a) * menai_float_value(b));
             if (_r == NULL) {
                 goto error;
             }
@@ -2964,7 +3020,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_DIV: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float/")) {
                 goto error;
             }
@@ -2979,7 +3036,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = make_float(menai_float_value(a) / bv);
+            MenaiValue *_r = make_float(menai_float_value(a) / bv);
             if (_r == NULL) {
                 goto error;
             }
@@ -2989,7 +3046,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_FLOOR_DIV: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float//")) {
                 goto error;
             }
@@ -3004,7 +3062,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = make_float(floor(menai_float_value(a) / bv));
+            MenaiValue *_r = make_float(floor(menai_float_value(a) / bv));
             if (_r == NULL) {
                 goto error;
             }
@@ -3014,7 +3072,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_MOD: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float%")) {
                 goto error;
             }
@@ -3029,7 +3088,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = make_float(fmod(menai_float_value(a), bv));
+            MenaiValue *_r = make_float(fmod(menai_float_value(a), bv));
             if (_r == NULL) {
                 goto error;
             }
@@ -3039,12 +3098,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_EXP: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-exp")) {
                 goto error;
             }
 
-            MenaiValue _r = make_float(exp(menai_float_value(a)));
+            MenaiValue *_r = make_float(exp(menai_float_value(a)));
             if (_r == NULL) {
                 goto error;
             }
@@ -3054,7 +3113,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_EXPN: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float-expn")) {
                 goto error;
             }
@@ -3063,7 +3123,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = make_float(pow(menai_float_value(a), menai_float_value(b)));
+            MenaiValue *_r = make_float(pow(menai_float_value(a), menai_float_value(b)));
             if (_r == NULL) {
                 goto error;
             }
@@ -3073,7 +3133,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_LOG: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-log")) {
                 goto error;
             }
@@ -3084,7 +3144,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = make_float(v == 0.0 ? -INFINITY : log(v));
+            MenaiValue *_r = make_float(v == 0.0 ? -INFINITY : log(v));
             if (_r == NULL) {
                 goto error;
             }
@@ -3094,7 +3154,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_LOG10: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-log10")) {
                 goto error;
             }
@@ -3105,7 +3165,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = make_float(v == 0.0 ? -INFINITY : log10(v));
+            MenaiValue *_r = make_float(v == 0.0 ? -INFINITY : log10(v));
             if (_r == NULL) {
                 goto error;
             }
@@ -3115,7 +3175,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_LOG2: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-log2")) {
                 goto error;
             }
@@ -3126,7 +3186,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = make_float(v == 0.0 ? -INFINITY : log2(v));
+            MenaiValue *_r = make_float(v == 0.0 ? -INFINITY : log2(v));
             if (_r == NULL) {
                 goto error;
             }
@@ -3136,7 +3196,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_LOGN: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float-logn")) {
                 goto error;
             }
@@ -3156,7 +3217,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = make_float(av == 0.0 ? -INFINITY : log(av) / log(bv));
+            MenaiValue *_r = make_float(av == 0.0 ? -INFINITY : log(av) / log(bv));
             if (_r == NULL) {
                 goto error;
             }
@@ -3166,12 +3227,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_SIN: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-sin")) {
                 goto error;
             }
 
-            MenaiValue _r = make_float(sin(menai_float_value(a)));
+            MenaiValue *_r = make_float(sin(menai_float_value(a)));
             if (_r == NULL) {
                 goto error;
             }
@@ -3181,12 +3242,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_COS: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-cos")) {
                 goto error;
             }
 
-            MenaiValue _r = make_float(cos(menai_float_value(a)));
+            MenaiValue *_r = make_float(cos(menai_float_value(a)));
             if (_r == NULL) {
                 goto error;
             }
@@ -3196,12 +3257,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_TAN: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-tan")) {
                 goto error;
             }
 
-            MenaiValue _r = make_float(tan(menai_float_value(a)));
+            MenaiValue *_r = make_float(tan(menai_float_value(a)));
             if (_r == NULL) {
                 goto error;
             }
@@ -3211,7 +3272,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_SQRT: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-sqrt")) {
                 goto error;
             }
@@ -3222,7 +3283,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = make_float(sqrt(v));
+            MenaiValue *_r = make_float(sqrt(v));
             if (_r == NULL) {
                 goto error;
             }
@@ -3232,12 +3293,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_FLOOR: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-floor")) {
                 goto error;
             }
 
-            MenaiValue _r = make_float(floor(menai_float_value(a)));
+            MenaiValue *_r = make_float(floor(menai_float_value(a)));
             if (_r == NULL) {
                 goto error;
             }
@@ -3247,12 +3308,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_CEIL: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-ceil")) {
                 goto error;
             }
 
-            MenaiValue _r = make_float(ceil(menai_float_value(a)));
+            MenaiValue *_r = make_float(ceil(menai_float_value(a)));
             if (_r == NULL) {
                 goto error;
             }
@@ -3262,12 +3323,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_ROUND: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-round")) {
                 goto error;
             }
 
-            MenaiValue _r = make_float(round(menai_float_value(a)));
+            MenaiValue *_r = make_float(round(menai_float_value(a)));
             if (_r == NULL) {
                 goto error;
             }
@@ -3277,7 +3338,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_MIN: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float-min")) {
                 goto error;
             }
@@ -3287,7 +3349,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             double av = menai_float_value(a), bv = menai_float_value(b);
-            MenaiValue _r = make_float(av <= bv ? av : bv);
+            MenaiValue *_r = make_float(av <= bv ? av : bv);
             if (_r == NULL) {
                 goto error;
             }
@@ -3297,7 +3359,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_MAX: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float-max")) {
                 goto error;
             }
@@ -3307,7 +3370,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             double av = menai_float_value(a), bv = menai_float_value(b);
-            MenaiValue _r = make_float(av >= bv ? av : bv);
+            MenaiValue *_r = make_float(av >= bv ? av : bv);
             if (_r == NULL) {
                 goto error;
             }
@@ -3317,7 +3380,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_TO_INTEGER: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float->integer")) {
                 goto error;
             }
@@ -3329,7 +3392,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = menai_integer_from_bigint(res);
+            MenaiValue *_r = menai_integer_from_bigint(res);
             if (_r == NULL) {
                 goto error;
             }
@@ -3339,7 +3402,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_TO_COMPLEX: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_float(a, "float->complex")) {
                 goto error;
             }
@@ -3348,7 +3412,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue r = make_complex(menai_float_value(a), menai_float_value(b));
+            MenaiValue *r = make_complex(menai_float_value(a), menai_float_value(b));
             if (r == NULL) {
                 goto error;
             }
@@ -3358,7 +3422,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_TO_STRING: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float->string")) {
                 goto error;
             }
@@ -3369,7 +3433,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue r = menai_string_from_utf8(_fsbuf, (Py_ssize_t)strlen(_fsbuf));
+            MenaiValue *r = menai_string_from_utf8(_fsbuf, (Py_ssize_t)strlen(_fsbuf));
             PyMem_Free(_fsbuf);
             if (r == NULL) {
                 goto error;
@@ -3391,7 +3455,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue func = menai_function_alloc(frame->children[src0], Menai_NONE);
+            MenaiValue *func = menai_function_alloc(frame->children[src0], Menai_NONE);
             if (func == NULL) {
                 goto error;
             }
@@ -3405,15 +3469,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
              * PATCH_CLOSURE src0, src1, src2:
              * src0 = closure register, src1 = capture slot index, src2 = value register.
              */
-            MenaiValue closure = regs[base + src0];
+            MenaiValue *closure = regs[base + src0];
             if (!IS_MENAI_FUNCTION(closure)) {
                 menai_raise_eval_error("PATCH_CLOSURE requires a function");
                 goto error;
             }
 
-            MenaiValue val = regs[base + src2];
+            MenaiValue *val = regs[base + src2];
             MenaiFunction_Object *fn = (MenaiFunction_Object *)closure;
-            MenaiValue old = fn->captures[src1];
+            MenaiValue *old = fn->captures[src1];
             menai_retain(val);
             fn->captures[src1] = val;
             menai_release(old);
@@ -3425,7 +3489,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_COMPLEX_EQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_complex(a, "complex=?")) {
                 goto error;
             }
@@ -3441,7 +3506,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_NEQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_complex(a, "complex!=?")) {
                 goto error;
             }
@@ -3457,12 +3523,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_REAL: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-real")) {
                 goto error;
             }
 
-            MenaiValue _fr = make_float(((MenaiComplex_Object *)a)->real);
+            MenaiValue *_fr = make_float(((MenaiComplex_Object *)a)->real);
             if (_fr == NULL) {
                 goto error;
             }
@@ -3472,12 +3538,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_IMAG: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-imag")) {
                 goto error;
             }
 
-            MenaiValue _fr = make_float(((MenaiComplex_Object *)a)->imag);
+            MenaiValue *_fr = make_float(((MenaiComplex_Object *)a)->imag);
             if (_fr == NULL) {
                 goto error;
             }
@@ -3487,14 +3553,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_ABS: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-abs")) {
                 goto error;
             }
 
             double re = ((MenaiComplex_Object *)a)->real;
             double im = ((MenaiComplex_Object *)a)->imag;
-            MenaiValue _fr = make_float(sqrt(re * re + im * im));
+            MenaiValue *_fr = make_float(sqrt(re * re + im * im));
             if (_fr == NULL) {
                 goto error;
             }
@@ -3504,12 +3570,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_NEG: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-neg")) {
                 goto error;
             }
 
-            MenaiValue _r = make_complex(-((MenaiComplex_Object *)a)->real,
+            MenaiValue *_r = make_complex(-((MenaiComplex_Object *)a)->real,
                                         -((MenaiComplex_Object *)a)->imag);
             if (_r == NULL) {
                 goto error;
@@ -3520,7 +3586,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_ADD: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_complex(a, "complex+")) {
                 goto error;
             }
@@ -3529,7 +3596,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = make_complex(
+            MenaiValue *_r = make_complex(
                 ((MenaiComplex_Object *)a)->real + ((MenaiComplex_Object *)b)->real,
                 ((MenaiComplex_Object *)a)->imag + ((MenaiComplex_Object *)b)->imag);
             if (_r == NULL) {
@@ -3541,7 +3608,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_SUB: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_complex(a, "complex-")) {
                 goto error;
             }
@@ -3550,7 +3618,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = make_complex(
+            MenaiValue *_r = make_complex(
                 ((MenaiComplex_Object *)a)->real - ((MenaiComplex_Object *)b)->real,
                 ((MenaiComplex_Object *)a)->imag - ((MenaiComplex_Object *)b)->imag);
             if (_r == NULL) {
@@ -3562,7 +3630,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_MUL: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_complex(a, "complex*")) {
                 goto error;
             }
@@ -3573,7 +3642,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             double ar = ((MenaiComplex_Object *)a)->real, ai = ((MenaiComplex_Object *)a)->imag;
             double br = ((MenaiComplex_Object *)b)->real, bi = ((MenaiComplex_Object *)b)->imag;
-            MenaiValue _r = make_complex(ar * br - ai * bi, ar * bi + ai * br);
+            MenaiValue *_r = make_complex(ar * br - ai * bi, ar * bi + ai * br);
             if (_r == NULL) {
                 goto error;
             }
@@ -3583,7 +3652,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_DIV: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_complex(a, "complex/")) {
                 goto error;
             }
@@ -3600,7 +3670,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             double denom = br * br + bi * bi;
-            MenaiValue _r = make_complex(
+            MenaiValue *_r = make_complex(
                 (ar * br + ai * bi) / denom,
                 (ai * br - ar * bi) / denom);
             if (_r == NULL) {
@@ -3612,7 +3682,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_EXPN: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_complex(a, "complex-expn")) {
                 goto error;
             }
@@ -3624,7 +3695,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             mc_t za = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t zb = mc(((MenaiComplex_Object *)b)->real, ((MenaiComplex_Object *)b)->imag);
             mc_t cr = mc_pow(za, zb);
-            MenaiValue _r = make_complex(cr.re, cr.im);
+            MenaiValue *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) {
                 goto error;
             }
@@ -3634,14 +3705,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_EXP: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-exp")) {
                 goto error;
             }
 
             mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t cr = mc_exp(z);
-            MenaiValue _r = make_complex(cr.re, cr.im);
+            MenaiValue *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) {
                 goto error;
             }
@@ -3651,14 +3722,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_LOG: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-log")) {
                 goto error;
             }
 
             mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t cr = mc_log(z);
-            MenaiValue _r = make_complex(cr.re, cr.im);
+            MenaiValue *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) {
                 goto error;
             }
@@ -3668,14 +3739,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_LOG10: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-log10")) {
                 goto error;
             }
 
             mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t cr = mc_log10(z);
-            MenaiValue _r = make_complex(cr.re, cr.im);
+            MenaiValue *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) {
                 goto error;
             }
@@ -3685,14 +3756,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_SIN: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-sin")) {
                 goto error;
             }
 
             mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t cr = mc_sin(z);
-            MenaiValue _r = make_complex(cr.re, cr.im);
+            MenaiValue *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) {
                 goto error;
             }
@@ -3702,14 +3773,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_COS: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-cos")) {
                 goto error;
             }
 
             mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t cr = mc_cos(z);
-            MenaiValue _r = make_complex(cr.re, cr.im);
+            MenaiValue *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) {
                 goto error;
             }
@@ -3719,14 +3790,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_TAN: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-tan")) {
                 goto error;
             }
 
             mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t cr = mc_tan(z);
-            MenaiValue _r = make_complex(cr.re, cr.im);
+            MenaiValue *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) {
                 goto error;
             }
@@ -3736,14 +3807,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_SQRT: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-sqrt")) {
                 goto error;
             }
 
             mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t cr = mc_sqrt(z);
-            MenaiValue _r = make_complex(cr.re, cr.im);
+            MenaiValue *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) {
                 goto error;
             }
@@ -3753,7 +3824,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_LOGN: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_complex(a, "complex-logn")) {
                 goto error;
             }
@@ -3770,7 +3842,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             mc_t cr = mc_logn(za, zb);
-            MenaiValue _r = make_complex(cr.re, cr.im);
+            MenaiValue *_r = make_complex(cr.re, cr.im);
             if (_r == NULL) {
                 goto error;
             }
@@ -3780,7 +3852,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_TO_STRING: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex->string")) {
                 goto error;
             }
@@ -3790,7 +3862,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue r = menai_string_from_pyunicode(py_str);
+            MenaiValue *r = menai_string_from_pyunicode(py_str);
             Py_DECREF(py_str);
             if (r == NULL) {
                 goto error;
@@ -3805,7 +3877,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_STRING_EQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_string(a, "string=?")) {
                 goto error;
             }
@@ -3819,7 +3892,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_NEQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_string(a, "string!=?")) {
                 goto error;
             }
@@ -3833,7 +3907,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_LT_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_string(a, "string<?")) {
                 goto error;
             }
@@ -3847,7 +3922,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_GT_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_string(a, "string>?")) {
                 goto error;
             }
@@ -3861,7 +3937,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_LTE_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_string(a, "string<=?")) {
                 goto error;
             }
@@ -3875,7 +3952,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_GTE_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_string(a, "string>=?")) {
                 goto error;
             }
@@ -3889,12 +3967,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_LENGTH: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string-length")) {
                 goto error;
             }
 
-            MenaiValue _r = make_integer_from_ssize_t(menai_string_length(a));
+            MenaiValue *_r = make_integer_from_ssize_t(menai_string_length(a));
             if (_r == NULL) {
                 goto error;
             }
@@ -3904,12 +3982,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_UPCASE: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string-upcase")) {
                 goto error;
             }
 
-            MenaiValue r = menai_string_upcase(a);
+            MenaiValue *r = menai_string_upcase(a);
             if (r == NULL) {
                 goto error;
             }
@@ -3919,12 +3997,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_DOWNCASE: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string-downcase")) {
                 goto error;
             }
 
-            MenaiValue r = menai_string_downcase(a);
+            MenaiValue *r = menai_string_downcase(a);
             if (r == NULL) {
                 goto error;
             }
@@ -3934,12 +4012,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_TRIM: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string-trim")) {
                 goto error;
             }
 
-            MenaiValue r = menai_string_trim(a);
+            MenaiValue *r = menai_string_trim(a);
             if (r == NULL) {
                 goto error;
             }
@@ -3949,12 +4027,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_TRIM_LEFT: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string-trim-left")) {
                 goto error;
             }
 
-            MenaiValue r = menai_string_trim_left(a);
+            MenaiValue *r = menai_string_trim_left(a);
             if (r == NULL) {
                 goto error;
             }
@@ -3964,12 +4042,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_TRIM_RIGHT: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string-trim-right")) {
                 goto error;
             }
 
-            MenaiValue r = menai_string_trim_right(a);
+            MenaiValue *r = menai_string_trim_right(a);
             if (r == NULL) {
                 goto error;
             }
@@ -3979,7 +4057,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_CONCAT: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_string(a, "string-concat")) {
                 goto error;
             }
@@ -3988,7 +4067,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue r = menai_string_concat(a, b);
+            MenaiValue *r = menai_string_concat(a, b);
             if (r == NULL) {
                 goto error;
             }
@@ -3998,7 +4077,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_PREFIX_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_string(a, "string-prefix?")) {
                 goto error;
             }
@@ -4012,7 +4092,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_SUFFIX_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_string(a, "string-suffix?")) {
                 goto error;
             }
@@ -4026,7 +4107,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_REF: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_string(a, "string-ref")) {
                 goto error;
             }
@@ -4053,7 +4135,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue r = menai_string_ref(a, idx);
+            MenaiValue *r = menai_string_ref(a, idx);
             if (r == NULL) {
                 goto error;
             }
@@ -4063,7 +4145,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_SLICE: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1], c = regs[base + src2];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
+            MenaiValue *c = regs[base + src2];
             if (!require_string(a, "string-slice")) {
                 goto error;
             }
@@ -4119,7 +4203,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue r = menai_string_slice(a, start, end);
+            MenaiValue *r = menai_string_slice(a, start, end);
             if (r == NULL) {
                 goto error;
             }
@@ -4129,7 +4213,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_REPLACE: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1], c = regs[base + src2];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
+            MenaiValue *c = regs[base + src2];
             if (!require_string(a, "string-replace")) {
                 goto error;
             }
@@ -4142,7 +4228,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue r = menai_string_replace(a, b, c);
+            MenaiValue *r = menai_string_replace(a, b, c);
             if (r == NULL) {
                 goto error;
             }
@@ -4152,7 +4238,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_INDEX: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_string(a, "string-index")) {
                 goto error;
             }
@@ -4169,7 +4256,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (idx == -1) {
                 menai_reg_set_borrow(regs, base + dest, Menai_NONE);
             } else {
-                MenaiValue _r = make_integer_from_ssize_t(idx);
+                MenaiValue *_r = make_integer_from_ssize_t(idx);
                 if (_r == NULL) {
                     goto error;
                 }
@@ -4181,7 +4268,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_TO_INTEGER_CODEPOINT: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string->integer-codepoint")) {
                 goto error;
             }
@@ -4192,7 +4279,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue _r = make_integer_from_long((long)menai_string_get(a, 0));
+            MenaiValue *_r = make_integer_from_long((long)menai_string_get(a, 0));
             if (_r == NULL) {
                 goto error;
             }
@@ -4203,7 +4290,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_STRING_TO_INTEGER: {
             /* src0=string, src1=radix(integer) */
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_string(a, "string->integer")) {
                 goto error;
             }
@@ -4228,7 +4316,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue trimmed = menai_string_trim(a);
+            MenaiValue *trimmed = menai_string_trim(a);
             if (trimmed == NULL) {
                 goto error;
             }
@@ -4244,7 +4332,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_Clear();
                 menai_reg_set_borrow(regs, base + dest, Menai_NONE);
             } else {
-                MenaiValue _r = menai_integer_from_bigint(sti_tmp);
+                MenaiValue *_r = menai_integer_from_bigint(sti_tmp);
                 if (_r == NULL) {
                     goto error;
                 }
@@ -4256,7 +4344,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_TO_NUMBER: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string->number")) {
                 goto error;
             }
@@ -4281,7 +4369,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 MenaiInt stn_tmp;
                 menai_int_init(&stn_tmp);
                 if (menai_int_from_codepoints(sdata, slen, 10, &stn_tmp) == 0) {
-                    MenaiValue r = menai_integer_from_bigint(stn_tmp);
+                    MenaiValue *r = menai_integer_from_bigint(stn_tmp);
                     if (r == NULL) {
                         goto error;
                     }
@@ -4307,7 +4395,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyObject *cplx = PyObject_CallOneArg((PyObject *)&PyComplex_Type, sa_j);
                 Py_DECREF(sa_j);
                 if (cplx != NULL) {
-                    MenaiValue r = make_complex(PyComplex_RealAsDouble(cplx),
+                    MenaiValue *r = make_complex(PyComplex_RealAsDouble(cplx),
                                                PyComplex_ImagAsDouble(cplx));
                     Py_DECREF(cplx);
                     if (r == NULL) {
@@ -4321,44 +4409,42 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_Clear();
             }
 
-            {
-                /* Float parse via strtod on a temporary UTF-8 buffer.
-                 * Valid float literals are ASCII-only so this is safe. */
-                char *stn_fbuf = (char *)PyMem_Malloc((size_t)(slen + 1));
-                if (!stn_fbuf) {
-                    PyErr_NoMemory(); goto error;
+            /* Float parse via strtod on a temporary UTF-8 buffer.
+                * Valid float literals are ASCII-only so this is safe. */
+            char *stn_fbuf = (char *)PyMem_Malloc((size_t)(slen + 1));
+            if (!stn_fbuf) {
+                PyErr_NoMemory(); goto error;
+            }
+
+            int stn_ascii_ok = 1;
+            for (Py_ssize_t _i = 0; _i < slen; _i++) {
+                if (sdata[_i] > 0x7F) {
+                    stn_ascii_ok = 0; break;
                 }
 
-                int stn_ascii_ok = 1;
-                for (Py_ssize_t _i = 0; _i < slen; _i++) {
-                    if (sdata[_i] > 0x7F) {
-                        stn_ascii_ok = 0; break;
-                    }
+                stn_fbuf[_i] = (char)sdata[_i];
+            }
 
-                    stn_fbuf[_i] = (char)sdata[_i];
-                }
-
-                stn_fbuf[slen] = '\0';
-                if (!stn_ascii_ok) {
-                    PyMem_Free(stn_fbuf);
-                    menai_reg_set_borrow(regs, base + dest, Menai_NONE);
-                    break;
-                }
-
-                char *stn_end = NULL;
-                double stn_dv = strtod(stn_fbuf, &stn_end);
-                int stn_ok = (stn_end != stn_fbuf && *stn_end == '\0');
+            stn_fbuf[slen] = '\0';
+            if (!stn_ascii_ok) {
                 PyMem_Free(stn_fbuf);
-                if (stn_ok) {
-                    MenaiValue _r = make_float(stn_dv);
-                    if (_r == NULL) {
-                        goto error;
-                    }
+                menai_reg_set_borrow(regs, base + dest, Menai_NONE);
+                break;
+            }
 
-                    menai_reg_set_own(regs, base + dest, _r);
-                } else {
-                    menai_reg_set_borrow(regs, base + dest, Menai_NONE);
+            char *stn_end = NULL;
+            double stn_dv = strtod(stn_fbuf, &stn_end);
+            int stn_ok = (stn_end != stn_fbuf && *stn_end == '\0');
+            PyMem_Free(stn_fbuf);
+            if (stn_ok) {
+                MenaiValue *_r = make_float(stn_dv);
+                if (_r == NULL) {
+                    goto error;
                 }
+
+                menai_reg_set_own(regs, base + dest, _r);
+            } else {
+                menai_reg_set_borrow(regs, base + dest, Menai_NONE);
             }
 
             break;
@@ -4366,7 +4452,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_STRING_TO_LIST: {
             /* src0=string, src1=delimiter string */
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_string(a, "string->list")) {
                 goto error;
             }
@@ -4379,11 +4466,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             Py_ssize_t blen = menai_string_length(b);
             const uint32_t *adata = menai_string_data(a);
             const uint32_t *bdata = menai_string_data(b);
-            MenaiValue r;
+            MenaiValue *r;
             if (blen == 0) {
                 /* Split into individual codepoints */
-                MenaiValue *stl_arr = alen > 0
-                    ? (MenaiValue *)malloc(alen * sizeof(MenaiValue)) : NULL;
+                MenaiValue **stl_arr = alen > 0
+                    ? (MenaiValue **)malloc(alen * sizeof(MenaiValue *)) : NULL;
 
                 if (alen > 0 && !stl_arr) {
                     PyErr_NoMemory();
@@ -4416,7 +4503,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
 
                 Py_ssize_t nparts = count + 1;
-                MenaiValue *parts2 = (MenaiValue *)malloc(nparts * sizeof(MenaiValue));
+                MenaiValue **parts2 = (MenaiValue **)malloc(nparts * sizeof(MenaiValue *));
                 if (!parts2) {
                     PyErr_NoMemory();
                     goto error;
@@ -4464,7 +4551,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_LIST_EQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_list(a, "list=?")) {
                 goto error;
             }
@@ -4479,7 +4567,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_NEQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_list(a, "list!=?")) {
                 goto error;
             }
@@ -4494,7 +4583,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_NULL_P: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_list(a, "list-null?")) {
                 goto error;
             }
@@ -4505,13 +4594,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_LENGTH: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_list(a, "list-length")) {
                 goto error;
             }
 
             Py_ssize_t n = ((MenaiList_Object *)a)->length;
-            MenaiValue _r = make_integer_from_ssize_t(n);
+            MenaiValue *_r = make_integer_from_ssize_t(n);
             if (_r == NULL) {
                 goto error;
             }
@@ -4521,7 +4610,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_FIRST: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_list(a, "list-first")) {
                 goto error;
             }
@@ -4537,7 +4626,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_REST: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_list(a, "list-rest")) {
                 goto error;
             }
@@ -4547,7 +4636,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue r = menai_list_rest(a);
+            MenaiValue *r = menai_list_rest(a);
             if (r == NULL) {
                 goto error;
             }
@@ -4557,7 +4646,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_LAST: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_list(a, "list-last")) {
                 goto error;
             }
@@ -4574,7 +4663,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_REF: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_list(a, "list-ref")) {
                 goto error;
             }
@@ -4607,14 +4697,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_PREPEND: {
-            MenaiValue a = regs[base + src0], item = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *item = regs[base + src1];
             if (!require_list(a, "list-prepend")) {
                 goto error;
             }
 
             MenaiList_Object *lst_pre = (MenaiList_Object *)a;
             Py_ssize_t n = lst_pre->length;
-            MenaiValue *pre_arr = (MenaiValue *)malloc((n + 1) * sizeof(MenaiValue));
+            MenaiValue **pre_arr = (MenaiValue **)malloc((n + 1) * sizeof(MenaiValue *));
             if (!pre_arr) {
                 PyErr_NoMemory();
                 goto error;
@@ -4627,7 +4718,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_retain(pre_arr[i + 1]);
             }
 
-            MenaiValue r = menai_list_from_array_steal(pre_arr, n + 1);
+            MenaiValue *r = menai_list_from_array_steal(pre_arr, n + 1);
             if (r == NULL) {
                 goto error;
             }
@@ -4637,14 +4728,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_APPEND: {
-            MenaiValue a = regs[base + src0], item = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *item = regs[base + src1];
             if (!require_list(a, "list-append")) {
                 goto error;
             }
 
             MenaiList_Object *lst_app = (MenaiList_Object *)a;
             Py_ssize_t n = lst_app->length;
-            MenaiValue *app_arr = (MenaiValue *)malloc((n + 1) * sizeof(MenaiValue));
+            MenaiValue **app_arr = (MenaiValue **)malloc((n + 1) * sizeof(MenaiValue *));
             if (!app_arr) {
                 PyErr_NoMemory();
                 goto error;
@@ -4657,7 +4749,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             app_arr[n] = item;
             menai_retain(item);
-            MenaiValue r = menai_list_from_array_steal(app_arr, n + 1);
+            MenaiValue *r = menai_list_from_array_steal(app_arr, n + 1);
             if (r == NULL) {
                 goto error;
             }
@@ -4667,15 +4759,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_REVERSE: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_list(a, "list-reverse")) {
                 goto error;
             }
 
             MenaiList_Object *lst_rev = (MenaiList_Object *)a;
             Py_ssize_t n = lst_rev->length;
-            MenaiValue *rev_arr = n > 0
-                ? (MenaiValue *)malloc(n * sizeof(MenaiValue)) : NULL;
+            MenaiValue **rev_arr = n > 0
+                ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
 
             if (n > 0 && !rev_arr) {
                 PyErr_NoMemory();
@@ -4687,7 +4779,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_retain(rev_arr[i]);
             }
 
-            MenaiValue r = menai_list_from_array_steal(rev_arr, n);
+            MenaiValue *r = menai_list_from_array_steal(rev_arr, n);
             if (r == NULL) {
                 goto error;
             }
@@ -4697,7 +4789,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_CONCAT: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_list(a, "list-concat")) {
                 goto error;
             }
@@ -4710,8 +4803,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiList_Object *lst_cb = (MenaiList_Object *)b;
             Py_ssize_t na = lst_ca->length, nb = lst_cb->length;
             Py_ssize_t nc = na + nb;
-            MenaiValue *cat_arr = nc > 0
-                ? (MenaiValue *)malloc(nc * sizeof(MenaiValue)) : NULL;
+            MenaiValue **cat_arr = nc > 0
+                ? (MenaiValue **)malloc(nc * sizeof(MenaiValue *)) : NULL;
 
             if (nc > 0 && !cat_arr) {
                 PyErr_NoMemory();
@@ -4728,7 +4821,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_retain(cat_arr[na + i]);
             }
 
-            MenaiValue r = menai_list_from_array_steal(cat_arr, nc);
+            MenaiValue *r = menai_list_from_array_steal(cat_arr, nc);
             if (r == NULL) {
                 goto error;
             }
@@ -4738,7 +4831,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_MEMBER_P: {
-            MenaiValue a = regs[base + src0], item = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *item = regs[base + src1];
             if (!require_list(a, "list-member?")) {
                 goto error;
             }
@@ -4758,7 +4852,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_INDEX: {
-            MenaiValue a = regs[base + src0], item = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *item = regs[base + src1];
             if (!require_list(a, "list-index")) {
                 goto error;
             }
@@ -4777,7 +4872,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (found == -1) {
                 menai_reg_set_borrow(regs, base + dest, Menai_NONE);
             } else {
-                MenaiValue _r = make_integer_from_ssize_t(found);
+                MenaiValue *_r = make_integer_from_ssize_t(found);
                 if (_r == NULL) {
                     goto error;
                 }
@@ -4789,7 +4884,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_SLICE: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1], c = regs[base + src2];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
+            MenaiValue *c = regs[base + src2];
             if (!require_list(a, "list-slice")) {
                 goto error;
             }
@@ -4846,7 +4943,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue r = menai_list_slice(a, start, end);
+            MenaiValue *r = menai_list_slice(a, start, end);
             if (r == NULL) {
                 goto error;
             }
@@ -4856,7 +4953,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_REMOVE: {
-            MenaiValue a = regs[base + src0], item = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *item = regs[base + src1];
             if (!require_list(a, "list-remove")) {
                 goto error;
             }
@@ -4872,9 +4970,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
-            MenaiValue *rm_arr = keep > 0
-                ? (MenaiValue *)malloc(keep * sizeof(MenaiValue)) : NULL;
-
+            MenaiValue **rm_arr = keep > 0 ? (MenaiValue **)malloc(keep * sizeof(MenaiValue *)) : NULL;
             if (keep > 0 && !rm_arr) {
                 PyErr_NoMemory();
                 goto error;
@@ -4882,7 +4978,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             Py_ssize_t j = 0;
             for (Py_ssize_t i = 0; i < n; i++) {
-                MenaiValue e = lst_rm->elements[i];
+                MenaiValue *e = lst_rm->elements[i];
                 int eq = menai_value_equal(e, item);
                 if (!eq) {
                     menai_retain(e);
@@ -4890,7 +4986,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
-            MenaiValue r = menai_list_from_array_steal(rm_arr, keep);
+            MenaiValue *r = menai_list_from_array_steal(rm_arr, keep);
             if (r == NULL) {
                 goto error;
             }
@@ -4900,7 +4996,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_TO_STRING: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_list(a, "list->string")) {
                 goto error;
             }
@@ -4927,8 +5024,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 total += menai_string_length(lst_ts->elements[i]);
             }
 
-            uint32_t *lts_buf = total > 0
-                ? (uint32_t *)malloc((size_t)total * sizeof(uint32_t)) : NULL;
+            uint32_t *lts_buf = total > 0 ? (uint32_t *)malloc((size_t)total * sizeof(uint32_t)) : NULL;
             if (total > 0 && !lts_buf) {
                 goto error;
             }
@@ -4948,7 +5044,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
-            MenaiValue r = menai_string_from_codepoints(lts_buf, total);
+            MenaiValue *r = menai_string_from_codepoints(lts_buf, total);
             free(lts_buf);
             if (r == NULL) {
                 goto error;
@@ -4959,14 +5055,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_TO_SET: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_list_singular(a, "list->set")) {
                 goto error;
             }
 
             MenaiList_Object *lst = (MenaiList_Object *)a;
             Py_ssize_t n = lst->length;
-            MenaiValue *nelems = n > 0 ? (MenaiValue *)malloc(n * sizeof(MenaiValue)) : NULL;
+            MenaiValue **nelems = n > 0 ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
             Py_hash_t *nhashes = n > 0 ? (Py_hash_t *)malloc(n * sizeof(Py_hash_t)) : NULL;
             if (n > 0 && (!nelems || !nhashes)) {
                 free(nelems);
@@ -4985,7 +5081,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             Py_ssize_t out = 0;
             for (Py_ssize_t i = 0; i < n && !lts_err; i++) {
-                MenaiValue elem = lst->elements[i];
+                MenaiValue *elem = lst->elements[i];
                 Py_hash_t h = menai_value_hash(elem);
                 if (h == -1) {
                     lts_err = 1;
@@ -5021,7 +5117,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue r = menai_set_from_arrays_steal(nelems, nhashes, out);
+            MenaiValue *r = menai_set_from_arrays_steal(nelems, nhashes, out);
             if (r == NULL) {
                 goto error;
             }
@@ -5035,7 +5131,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_DICT_EQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_dict(a, "dict=?")) {
                 goto error;
             }
@@ -5071,7 +5168,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_DICT_NEQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_dict(a, "dict!=?")) {
                 goto error;
             }
@@ -5107,12 +5205,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_DICT_LENGTH: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_dict(a, "dict-length")) {
                 goto error;
             }
 
-            MenaiValue _r = make_integer_from_ssize_t(((MenaiDict_Object *)a)->length);
+            MenaiValue *_r = make_integer_from_ssize_t(((MenaiDict_Object *)a)->length);
             if (_r == NULL) {
                 goto error;
             }
@@ -5122,15 +5220,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_DICT_KEYS: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_dict(a, "dict-keys")) {
                 goto error;
             }
 
             MenaiDict_Object *d = (MenaiDict_Object *)a;
             Py_ssize_t n = d->length;
-            MenaiValue *dk_arr = n > 0
-                ? (MenaiValue *)malloc(n * sizeof(MenaiValue)) : NULL;
+            MenaiValue **dk_arr = n > 0
+                ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
 
             if (n > 0 && !dk_arr) {
                 PyErr_NoMemory();
@@ -5142,7 +5240,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 dk_arr[i] = d->keys[i];
             }
 
-            MenaiValue r = menai_list_from_array_steal(dk_arr, n);
+            MenaiValue *r = menai_list_from_array_steal(dk_arr, n);
             if (r == NULL) {
                 goto error;
             }
@@ -5152,15 +5250,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_DICT_VALUES: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_dict(a, "dict-values")) {
                 goto error;
             }
 
             MenaiDict_Object *d = (MenaiDict_Object *)a;
             Py_ssize_t n = d->length;
-            MenaiValue *dv_arr = n > 0
-                ? (MenaiValue *)malloc(n * sizeof(MenaiValue)) : NULL;
+            MenaiValue **dv_arr = n > 0
+                ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
 
             if (n > 0 && !dv_arr) {
                 PyErr_NoMemory();
@@ -5172,7 +5270,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 dv_arr[i] = d->values[i];
             }
 
-            MenaiValue r = menai_list_from_array_steal(dv_arr, n);
+            MenaiValue *r = menai_list_from_array_steal(dv_arr, n);
             if (r == NULL) {
                 goto error;
             }
@@ -5182,7 +5280,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_DICT_HAS_P: {
-            MenaiValue a = regs[base + src0], key = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *key = regs[base + src1];
             if (!require_dict(a, "dict-has?")) {
                 goto error;
             }
@@ -5200,7 +5299,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_DICT_GET: {
             /* src0=dict, src1=key, src2=default */
-            MenaiValue a = regs[base + src0], key = regs[base + src1], def = regs[base + src2];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *key = regs[base + src1];
+            MenaiValue *def = regs[base + src2];
             if (!require_dict(a, "dict-get")) {
                 goto error;
             }
@@ -5227,7 +5328,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_DICT_SET: {
             /* src0=dict, src1=key, src2=value */
-            MenaiValue a = regs[base + src0], key = regs[base + src1], val = regs[base + src2];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *key = regs[base + src1];
+            MenaiValue *val = regs[base + src2];
             if (!require_dict(a, "dict-set")) {
                 goto error;
             }
@@ -5245,8 +5348,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             Py_ssize_t n = d->length;
             Py_ssize_t new_n = (replace_idx >= 0) ? n : n + 1;
-            MenaiValue *nkeys = (MenaiValue *)malloc(new_n * sizeof(MenaiValue));
-            MenaiValue *nvals = (MenaiValue *)malloc(new_n * sizeof(MenaiValue));
+            MenaiValue **nkeys = (MenaiValue **)malloc(new_n * sizeof(MenaiValue *));
+            MenaiValue **nvals = (MenaiValue **)malloc(new_n * sizeof(MenaiValue *));
             Py_hash_t *nhashes = (Py_hash_t *)malloc(new_n * sizeof(Py_hash_t));
             if (!nkeys || !nvals || !nhashes) {
                 free(nkeys);
@@ -5288,7 +5391,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 nhashes[n] = h;
             }
 
-            MenaiValue result = menai_dict_from_arrays_steal(nkeys, nvals, nhashes, new_n);
+            MenaiValue *result = menai_dict_from_arrays_steal(nkeys, nvals, nhashes, new_n);
             if (result == NULL) {
                 goto error;
             }
@@ -5298,7 +5401,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_DICT_REMOVE: {
-            MenaiValue a = regs[base + src0], key = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *key = regs[base + src1];
             if (!require_dict(a, "dict-remove")) {
                 goto error;
             }
@@ -5321,8 +5425,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             Py_ssize_t n = d->length;
             Py_ssize_t new_n = n - 1;
-            MenaiValue *nkeys = new_n > 0 ? (MenaiValue *)malloc(new_n * sizeof(MenaiValue)) : NULL;
-            MenaiValue *nvals = new_n > 0 ? (MenaiValue *)malloc(new_n * sizeof(MenaiValue)) : NULL;
+            MenaiValue **nkeys = new_n > 0 ? (MenaiValue **)malloc(new_n * sizeof(MenaiValue *)) : NULL;
+            MenaiValue **nvals = new_n > 0 ? (MenaiValue **)malloc(new_n * sizeof(MenaiValue *)) : NULL;
             Py_hash_t *nhashes = new_n > 0 ? (Py_hash_t *)malloc(new_n * sizeof(Py_hash_t)) : NULL;
             if (new_n > 0 && (!nkeys || !nvals || !nhashes)) {
                 free(nkeys);
@@ -5345,7 +5449,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 j++;
             }
 
-            MenaiValue r = menai_dict_from_arrays_steal(nkeys, nvals, nhashes, new_n);
+            MenaiValue *r = menai_dict_from_arrays_steal(nkeys, nvals, nhashes, new_n);
             if (r == NULL) {
                 goto error;
             }
@@ -5355,7 +5459,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_DICT_MERGE: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_dict(a, "dict-merge")) {
                 goto error;
             }
@@ -5368,8 +5473,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiDict_Object *db = (MenaiDict_Object *)b;
             Py_ssize_t na = da->length, nb = db->length;
             Py_ssize_t cap = na + nb;
-            MenaiValue *nkeys = cap > 0 ? (MenaiValue *)malloc(cap * sizeof(MenaiValue)) : NULL;
-            MenaiValue *nvals = cap > 0 ? (MenaiValue *)malloc(cap * sizeof(MenaiValue)) : NULL;
+            MenaiValue **nkeys = cap > 0 ? (MenaiValue **)malloc(cap * sizeof(MenaiValue *)) : NULL;
+            MenaiValue **nvals = cap > 0 ? (MenaiValue **)malloc(cap * sizeof(MenaiValue *)) : NULL;
             Py_hash_t *nhashes = cap > 0 ? (Py_hash_t *)malloc(cap * sizeof(Py_hash_t)) : NULL;
             if (cap > 0 && (!nkeys || !nvals || !nhashes)) {
                 free(nkeys);
@@ -5434,7 +5539,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
-            MenaiValue r = menai_dict_from_arrays_steal(nkeys, nvals, nhashes, out);
+            MenaiValue *r = menai_dict_from_arrays_steal(nkeys, nvals, nhashes, out);
             if (r == NULL) {
                 goto error;
             }
@@ -5448,7 +5553,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_SET_EQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_set(a, "set=?")) {
                 goto error;
             }
@@ -5477,7 +5583,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_NEQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_set(a, "set!=?")) {
                 goto error;
             }
@@ -5506,12 +5613,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_LENGTH: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_set_singular(a, "set-length")) {
                 goto error;
             }
 
-            MenaiValue _r = make_integer_from_ssize_t(((MenaiSet_Object *)a)->length);
+            MenaiValue *_r = make_integer_from_ssize_t(((MenaiSet_Object *)a)->length);
             if (_r == NULL) {
                 goto error;
             }
@@ -5521,7 +5628,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_MEMBER_P: {
-            MenaiValue a = regs[base + src0], item = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *item = regs[base + src1];
             if (!require_set_singular(a, "set-member?")) {
                 goto error;
             }
@@ -5542,7 +5650,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_ADD: {
-            MenaiValue a = regs[base + src0], item = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *item = regs[base + src1];
             if (!require_set_singular(a, "set-add")) {
                 goto error;
             }
@@ -5562,7 +5671,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_reg_set_borrow(regs, base + dest, a);
             } else {
                 Py_ssize_t n = s->length;
-                MenaiValue *nelems = (MenaiValue *)malloc((n + 1) * sizeof(MenaiValue));
+                MenaiValue **nelems = (MenaiValue **)malloc((n + 1) * sizeof(MenaiValue *));
                 Py_hash_t *nhashes = (Py_hash_t *)malloc((n + 1) * sizeof(Py_hash_t));
                 if (!nelems || !nhashes) {
                     free(nelems);
@@ -5580,7 +5689,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_retain(item);
                 nelems[n] = item;
                 nhashes[n] = h;
-                MenaiValue r = menai_set_from_arrays_steal(nelems, nhashes, n + 1);
+                MenaiValue *r = menai_set_from_arrays_steal(nelems, nhashes, n + 1);
                 if (r == NULL) {
                     goto error;
                 }
@@ -5592,7 +5701,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_REMOVE: {
-            MenaiValue a = regs[base + src0], item = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *item = regs[base + src1];
             if (!require_set_singular(a, "set-remove")) {
                 goto error;
             }
@@ -5615,7 +5725,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             Py_ssize_t n = s->length;
             Py_ssize_t new_n = n - 1;
-            MenaiValue *nelems = new_n > 0 ? (MenaiValue *)malloc(new_n * sizeof(MenaiValue)) : NULL;
+            MenaiValue **nelems = new_n > 0 ? (MenaiValue **)malloc(new_n * sizeof(MenaiValue *)) : NULL;
             Py_hash_t *nhashes = new_n > 0 ? (Py_hash_t *)malloc(new_n * sizeof(Py_hash_t)) : NULL;
             if (new_n > 0 && (!nelems || !nhashes)) {
                 free(nelems);
@@ -5635,7 +5745,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 j++;
             }
 
-            MenaiValue r = menai_set_from_arrays_steal(nelems, nhashes, new_n);
+            MenaiValue *r = menai_set_from_arrays_steal(nelems, nhashes, new_n);
             if (r == NULL) {
                 goto error;
             }
@@ -5645,7 +5755,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_UNION: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_set(a, "set-union")) {
                 goto error;
             }
@@ -5658,7 +5769,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiSet_Object *sb = (MenaiSet_Object *)b;
             Py_ssize_t na = sa->length, nb = sb->length;
             Py_ssize_t cap = na + nb;
-            MenaiValue *nelems = cap > 0 ? (MenaiValue *)malloc(cap * sizeof(MenaiValue)) : NULL;
+            MenaiValue **nelems = cap > 0 ? (MenaiValue **)malloc(cap * sizeof(MenaiValue *)) : NULL;
             Py_hash_t *nhashes = cap > 0 ? (Py_hash_t *)malloc(cap * sizeof(Py_hash_t)) : NULL;
             if (cap > 0 && (!nelems || !nhashes)) {
                 free(nelems);
@@ -5695,7 +5806,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
-            MenaiValue r = menai_set_from_arrays_steal(nelems, nhashes, out);
+            MenaiValue *r = menai_set_from_arrays_steal(nelems, nhashes, out);
             if (r == NULL) {
                 goto error;
             }
@@ -5705,7 +5816,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_INTERSECTION: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_set(a, "set-intersection")) {
                 goto error;
             }
@@ -5717,7 +5829,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiSet_Object *sa = (MenaiSet_Object *)a;
             MenaiSet_Object *sb = (MenaiSet_Object *)b;
             Py_ssize_t na = sa->length;
-            MenaiValue *nelems = na > 0 ? (MenaiValue *)malloc(na * sizeof(MenaiValue)) : NULL;
+            MenaiValue **nelems = na > 0 ? (MenaiValue **)malloc(na * sizeof(MenaiValue *)) : NULL;
             Py_hash_t *nhashes = na > 0 ? (Py_hash_t *)malloc(na * sizeof(Py_hash_t)) : NULL;
             if (na > 0 && (!nelems || !nhashes)) {
                 free(nelems);
@@ -5747,7 +5859,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
-            MenaiValue r = menai_set_from_arrays_steal(nelems, nhashes, out);
+            MenaiValue *r = menai_set_from_arrays_steal(nelems, nhashes, out);
             if (r == NULL) {
                 goto error;
             }
@@ -5757,7 +5869,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_DIFFERENCE: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_set(a, "set-difference")) {
                 goto error;
             }
@@ -5769,7 +5882,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiSet_Object *sa = (MenaiSet_Object *)a;
             MenaiSet_Object *sb = (MenaiSet_Object *)b;
             Py_ssize_t na = sa->length;
-            MenaiValue *nelems = na > 0 ? (MenaiValue *)malloc(na * sizeof(MenaiValue)) : NULL;
+            MenaiValue **nelems = na > 0 ? (MenaiValue **)malloc(na * sizeof(MenaiValue *)) : NULL;
             Py_hash_t *nhashes = na > 0 ? (Py_hash_t *)malloc(na * sizeof(Py_hash_t)) : NULL;
             if (na > 0 && (!nelems || !nhashes)) {
                 free(nelems);
@@ -5798,7 +5911,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
-            MenaiValue r = menai_set_from_arrays_steal(nelems, nhashes, out);
+            MenaiValue *r = menai_set_from_arrays_steal(nelems, nhashes, out);
             if (r == NULL) {
                 goto error;
             }
@@ -5808,7 +5921,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_SUBSET_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_set(a, "set-subset?")) {
                 goto error;
             }
@@ -5842,15 +5956,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_TO_LIST: {
-            MenaiValue a = regs[base + src0];
+            MenaiValue *a = regs[base + src0];
             if (!require_set_singular(a, "set->list")) {
                 goto error;
             }
 
             MenaiSet_Object *s = (MenaiSet_Object *)a;
             Py_ssize_t set_n = s->length;
-            MenaiValue *stl_arr = set_n > 0
-                ? (MenaiValue *)malloc(set_n * sizeof(MenaiValue)) : NULL;
+            MenaiValue **stl_arr = set_n > 0
+                ? (MenaiValue **)malloc(set_n * sizeof(MenaiValue *)) : NULL;
 
             if (set_n > 0 && !stl_arr) {
                 PyErr_NoMemory();
@@ -5862,7 +5976,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 stl_arr[i] = s->elements[i];
             }
 
-            MenaiValue r = menai_list_from_array_steal(stl_arr, set_n);
+            MenaiValue *r = menai_list_from_array_steal(stl_arr, set_n);
             if (r == NULL) {
                 goto error;
             }
@@ -5873,7 +5987,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_RANGE: {
             /* src0=start, src1=end, src2=step — all integers */
-            MenaiValue ra = regs[base + src0], rb = regs[base + src1], rc = regs[base + src2];
+            MenaiValue *ra = regs[base + src0];
+            MenaiValue *rb = regs[base + src1];
+            MenaiValue *rc = regs[base + src2];
             if (!IS_MENAI_INTEGER(ra) || !IS_MENAI_INTEGER(rb) || !IS_MENAI_INTEGER(rc)) {
                 menai_raise_eval_error("range requires integer arguments");
                 goto error;
@@ -5920,8 +6036,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 n = (start - end - step - 1) / (-step);
             }
 
-            MenaiValue *rng_arr = n > 0
-                ? (MenaiValue *)malloc(n * sizeof(MenaiValue)) : NULL;
+            MenaiValue **rng_arr = n > 0
+                ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
 
             if (n > 0 && !rng_arr) {
                 PyErr_NoMemory();
@@ -5930,7 +6046,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             long val = start;
             for (Py_ssize_t i = 0; i < n; i++) {
-                MenaiValue mi = make_integer_from_long(val);
+                MenaiValue *mi = make_integer_from_long(val);
                 if (mi == NULL) {
                     for (Py_ssize_t k = 0; k < i; k++) {
                         menai_release(rng_arr[k]);
@@ -5944,7 +6060,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 val += step;
             }
 
-            MenaiValue r = menai_list_from_array_steal(rng_arr, n);
+            MenaiValue *r = menai_list_from_array_steal(rng_arr, n);
             if (r == NULL) {
                 goto error;
             }
@@ -5959,14 +6075,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
              * src0 = absolute slot of MenaiStructType descriptor in outgoing zone.
              * src1 = field count. Fields are in slots src0+1..src0+n_fields.
              */
-            MenaiValue struct_type = regs[base + src0];
+            MenaiValue *struct_type = regs[base + src0];
             if (!IS_MENAI_STRUCTTYPE(struct_type)) {
                 menai_raise_eval_error("struct constructor: first argument must be a struct type");
                 goto error;
             }
 
             int n_fields = src1;
-            MenaiValue instance = menai_struct_alloc(struct_type, &regs[base + src0 + 1], n_fields);
+            MenaiValue *instance = menai_struct_alloc(struct_type, &regs[base + src0 + 1], n_fields);
             if (instance == NULL) {
                 goto error;
             }
@@ -5980,7 +6096,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_STRUCT_TYPE_P: {
-            MenaiValue stype = regs[base + src0], val = regs[base + src1];
+            MenaiValue *stype = regs[base + src0];
+            MenaiValue *val = regs[base + src1];
             if (!require_structtype(stype, "struct-type?")) {
                 goto error;
             }
@@ -5998,7 +6115,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_STRUCT_GET: {
             /* src1 holds a MenaiSymbol field name */
-            MenaiValue val = regs[base + src0], field_sym = regs[base + src1];
+            MenaiValue *val = regs[base + src0];
+            MenaiValue *field_sym = regs[base + src1];
             if (!require_struct(val, "struct-get")) {
                 goto error;
             }
@@ -6007,8 +6125,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue stype = ((MenaiStruct_Object *)val)->struct_type;
-            MenaiValue field_name = menai_symbol_name(field_sym);
+            MenaiValue *stype = ((MenaiStruct_Object *)val)->struct_type;
+            MenaiValue *field_name = menai_symbol_name(field_sym);
             int fi = menai_struct_field_index((MenaiStructType_Object *)stype, field_name);
             if (fi < 0) {
                 PyObject *stype_name = menai_string_to_pyunicode(((MenaiStructType_Object *)stype)->name);
@@ -6022,14 +6140,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue fv = ((MenaiStruct_Object *)val)->items[fi];
+            MenaiValue *fv = ((MenaiStruct_Object *)val)->items[fi];
             menai_reg_set_borrow(regs, base + dest, fv);
             break;
         }
 
         case OP_STRUCT_GET_IMM: {
             /* src1 holds a MenaiInteger field index */
-            MenaiValue val = regs[base + src0], fidx = regs[base + src1];
+            MenaiValue *val = regs[base + src0];
+            MenaiValue *fidx = regs[base + src1];
             if (!require_struct(val, "struct-get-imm")) {
                 goto error;
             }
@@ -6049,13 +6168,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             Py_ssize_t fi = (Py_ssize_t)fi_l;
-            MenaiValue fv = ((MenaiStruct_Object *)val)->items[fi];
+            MenaiValue *fv = ((MenaiStruct_Object *)val)->items[fi];
             menai_reg_set_borrow(regs, base + dest, fv);
             break;
         }
 
         case OP_STRUCT_SET: {
-            MenaiValue val = regs[base + src0], field_sym = regs[base + src1], new_val = regs[base + src2];
+            MenaiValue *val = regs[base + src0];
+            MenaiValue *field_sym = regs[base + src1];
+            MenaiValue *new_val = regs[base + src2];
             if (!require_struct(val, "struct-set")) {
                 goto error;
             }
@@ -6064,8 +6185,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue stype = ((MenaiStruct_Object *)val)->struct_type;
-            MenaiValue field_name = menai_symbol_name(field_sym);
+            MenaiValue *stype = ((MenaiStruct_Object *)val)->struct_type;
+            MenaiValue *field_name = menai_symbol_name(field_sym);
             int fi = menai_struct_field_index((MenaiStructType_Object *)stype, field_name);
             if (fi < 0) {
                 PyObject *stype_name = menai_string_to_pyunicode(((MenaiStructType_Object *)stype)->name);
@@ -6080,7 +6201,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             Py_ssize_t nf = ((MenaiStruct_Object *)val)->nfields;
-            MenaiValue *tmp = (MenaiValue *)malloc(nf * sizeof(MenaiValue));
+            MenaiValue **tmp = (MenaiValue **)malloc(nf * sizeof(MenaiValue *));
             if (!tmp) {
                 PyErr_NoMemory();
                 goto error;
@@ -6090,7 +6211,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 tmp[i] = (i == fi) ? new_val : ((MenaiStruct_Object *)val)->items[i];
             }
 
-            MenaiValue r = menai_struct_alloc(stype, tmp, nf);
+            MenaiValue *r = menai_struct_alloc(stype, tmp, nf);
             free(tmp);
             if (r == NULL) {
                 goto error;
@@ -6101,7 +6222,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRUCT_SET_IMM: {
-            MenaiValue val = regs[base + src0], fidx = regs[base + src1], new_val = regs[base + src2];
+            MenaiValue *val = regs[base + src0];
+            MenaiValue *fidx = regs[base + src1];
+            MenaiValue *new_val = regs[base + src2];
             if (!require_struct(val, "struct-set-imm")) {
                 goto error;
             }
@@ -6121,9 +6244,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             Py_ssize_t fi = (Py_ssize_t)fi_l;
-            MenaiValue stype = ((MenaiStruct_Object *)val)->struct_type;
+            MenaiValue *stype = ((MenaiStruct_Object *)val)->struct_type;
             Py_ssize_t nf = ((MenaiStruct_Object *)val)->nfields;
-            MenaiValue *tmp = (MenaiValue *)malloc(nf * sizeof(MenaiValue));
+            MenaiValue **tmp = (MenaiValue **)malloc(nf * sizeof(MenaiValue *));
             if (!tmp) {
                 PyErr_NoMemory();
                 goto error;
@@ -6133,7 +6256,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 tmp[i] = (i == fi) ? new_val : ((MenaiStruct_Object *)val)->items[i];
             }
 
-            MenaiValue r = menai_struct_alloc(stype, tmp, nf);
+            MenaiValue *r = menai_struct_alloc(stype, tmp, nf);
             free(tmp);
             if (r == NULL) {
                 goto error;
@@ -6144,7 +6267,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRUCT_EQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_struct(a, "struct=?")) {
                 goto error;
             }
@@ -6167,7 +6291,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRUCT_NEQ_P: {
-            MenaiValue a = regs[base + src0], b = regs[base + src1];
+            MenaiValue *a = regs[base + src0];
+            MenaiValue *b = regs[base + src1];
             if (!require_struct(a, "struct!=?")) {
                 goto error;
             }
@@ -6196,7 +6321,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRUCT_TYPE: {
-            MenaiValue val = regs[base + src0];
+            MenaiValue *val = regs[base + src0];
             if (!require_struct(val, "struct-type")) {
                 goto error;
             }
@@ -6206,7 +6331,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRUCT_TYPE_NAME: {
-            MenaiValue val = regs[base + src0];
+            MenaiValue *val = regs[base + src0];
             if (!require_structtype(val, "struct-type-name")) {
                 goto error;
             }
@@ -6217,15 +6342,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRUCT_FIELDS: {
-            MenaiValue val = regs[base + src0];
+            MenaiValue *val = regs[base + src0];
             if (!require_structtype(val, "struct-fields")) {
                 goto error;
             }
 
             MenaiStructType_Object *st = (MenaiStructType_Object *)val;
             int n = st->nfields;
-            MenaiValue *sf_arr = n > 0
-                ? (MenaiValue *)malloc(n * sizeof(MenaiValue)) : NULL;
+            MenaiValue **sf_arr = n > 0
+                ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
 
             if (n > 0 && !sf_arr) {
                 PyErr_NoMemory();
@@ -6233,7 +6358,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             for (int i = 0; i < n; i++) {
-                MenaiValue sym = menai_symbol_alloc(st->fields[i].name);
+                MenaiValue *sym = menai_symbol_alloc(st->fields[i].name);
                 if (sym == NULL) {
                     for (int k = 0; k < i; k++) {
                         menai_release(sf_arr[k]);
@@ -6246,7 +6371,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 sf_arr[i] = sym;
             }
 
-            MenaiValue r = menai_list_from_array_steal(sf_arr, (Py_ssize_t)n);
+            MenaiValue *r = menai_list_from_array_steal(sf_arr, (Py_ssize_t)n);
             if (r == NULL) {
                 goto error;
             }
@@ -6290,7 +6415,7 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     }
 
     /* Convert the Python CodeObject tree to a native MenaiCodeObject tree.
-     * All constants are converted to fast MenaiValues during this pass. */
+     * All constants are converted to fast MenaiValue *s during this pass. */
     MenaiCodeObject *native_code = menai_code_object_from_python(code);
     if (!native_code) {
         return NULL;
@@ -6316,7 +6441,7 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     /* Compute the register window size. */
     int max_locals = menai_code_object_max_locals(native_code);
     for (Py_ssize_t i = 0; i < globals.count; i++) {
-        MenaiValue val = globals.entries[i].value;
+        MenaiValue *val = globals.entries[i].value;
         if (IS_MENAI_FUNCTION(val)) {
             int n = menai_code_object_max_locals(((MenaiFunction_Object *)val)->bytecode);
             if (n > max_locals) {
@@ -6326,7 +6451,7 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     }
 
     /* Allocate the register array. */
-    MenaiValue *regs = menai_regs_alloc((size_t)(MAX_FRAME_DEPTH + 1) * max_locals, Menai_NONE);
+    MenaiValue **regs = menai_regs_alloc((size_t)(MAX_FRAME_DEPTH + 1) * max_locals, Menai_NONE);
     if (regs == NULL) {
         globals_free(&globals);
         menai_code_object_release(native_code);

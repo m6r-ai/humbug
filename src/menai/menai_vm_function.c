@@ -3,7 +3,7 @@
  *
  * MenaiFunction represents a Menai closure.  It holds a retained reference to
  * a MenaiCodeObject (which owns all frame metadata) and an inline C array of
- * captured MenaiValues.  No Python objects are referenced after construction.
+ * captured MenaiValue *s.  No Python objects are referenced after construction.
  */
 
 #define PY_SSIZE_T_CLEAN
@@ -15,7 +15,7 @@
 #include "menai_vm_memory.h"
 
 static void
-MenaiFunction_dealloc(MenaiValue self)
+MenaiFunction_dealloc(MenaiValue *self)
 {
     MenaiFunction_Object *f = (MenaiFunction_Object *)self;
     menai_code_object_release(f->bytecode);
@@ -30,19 +30,19 @@ MenaiFunction_dealloc(MenaiValue self)
 PyTypeObject MenaiFunction_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "menai.MenaiFunction",                        /* tp_name */
-    sizeof(MenaiFunction_Object) - sizeof(MenaiValue), /* tp_basicsize */
+    sizeof(MenaiFunction_Object) - sizeof(MenaiValue *), /* tp_basicsize */
     0,                                            /* tp_itemsize */
     (destructor)MenaiFunction_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     Py_TPFLAGS_DEFAULT,
 };
 
-MenaiValue
-menai_function_alloc(MenaiCodeObject *co, MenaiValue none_val)
+MenaiValue *
+menai_function_alloc(MenaiCodeObject *co, MenaiValue *none_val)
 {
     Py_ssize_t ncap = co->ncap;
     MenaiFunction_Object *self = (MenaiFunction_Object *)malloc(
-        sizeof(MenaiFunction_Object) + (size_t)ncap * sizeof(MenaiValue));
+        sizeof(MenaiFunction_Object) + (size_t)ncap * sizeof(MenaiValue *));
     if (!self) {
         return NULL;
     }
@@ -59,7 +59,7 @@ menai_function_alloc(MenaiCodeObject *co, MenaiValue none_val)
         self->captures[i] = none_val;
     }
 
-    return (MenaiValue)self;
+    return (MenaiValue *)self;
 }
 
 int

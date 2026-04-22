@@ -22,11 +22,11 @@
 
 typedef struct {
     MenaiObject_HEAD
-    MenaiValue    *keys;     /* C array of owned MenaiValues */
-    MenaiValue    *values;   /* C array of owned MenaiValues */
-    Py_hash_t     *hashes;   /* C array of menai_value_hash(keys[i]) */
+    MenaiValue **keys;       /* C array of owned MenaiValue *s */
+    MenaiValue **values;     /* C array of owned MenaiValue *s */
+    Py_hash_t *hashes;       /* C array of menai_value_hash(keys[i]) */
     MenaiHashTable ht;       /* pure-C hash table for O(1) key lookup */
-    Py_ssize_t     length;
+    Py_ssize_t length;
 } MenaiDict_Object;
 
 extern MenaiType MenaiDict_Type;
@@ -36,7 +36,7 @@ extern MenaiType MenaiDict_Type;
  * Used by _menai_vm_value_init() to build the Menai_DICT_EMPTY singleton.
  * Returns a new reference, or NULL on error.
  */
-MenaiValue menai_dict_new_empty(void);
+MenaiValue *menai_dict_new_empty(void);
 
 /*
  * menai_dict_from_arrays_steal — build a MenaiDict from three parallel C arrays.
@@ -49,8 +49,7 @@ MenaiValue menai_dict_new_empty(void);
  *
  * Returns a new reference, or NULL on error.
  */
-MenaiValue menai_dict_from_arrays_steal(MenaiValue *keys, MenaiValue *values,
-                                        Py_hash_t *hashes, Py_ssize_t n);
+MenaiValue *menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, Py_ssize_t n);
 
 /*
  * Module init — called once from _menai_vm_value_init().

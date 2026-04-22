@@ -14,10 +14,10 @@
 
 #include "menai_vm_integer.h"
 
-static MenaiValue _integer_cache[MENAI_INT_CACHE_SIZE];
+static MenaiValue *_integer_cache[MENAI_INT_CACHE_SIZE];
 
 static void
-MenaiInteger_dealloc(MenaiValue self)
+MenaiInteger_dealloc(MenaiValue *self)
 {
     MenaiInteger_Object *obj = (MenaiInteger_Object *)self;
     if (!obj->is_big) {
@@ -47,11 +47,11 @@ PyTypeObject MenaiInteger_Type = {
     Py_TPFLAGS_DEFAULT,
 };
 
-MenaiValue
+MenaiValue *
 menai_integer_from_long(long n)
 {
     if (n >= MENAI_INT_CACHE_MIN && n <= MENAI_INT_CACHE_MAX) {
-        MenaiValue cached = _integer_cache[n - MENAI_INT_CACHE_MIN];
+        MenaiValue *cached = _integer_cache[n - MENAI_INT_CACHE_MIN];
         menai_retain(cached);
         return cached;
     }
@@ -68,10 +68,10 @@ menai_integer_from_long(long n)
     r->small = n;
     menai_int_init(&r->big);
 
-    return (MenaiValue)r;
+    return (MenaiValue *)r;
 }
 
-MenaiValue
+MenaiValue *
 menai_integer_from_bigint(MenaiInt src)
 {
     /*
@@ -102,7 +102,7 @@ menai_integer_from_bigint(MenaiInt src)
     r->small = 0;
     r->big = src; /* transfer ownership */
 
-    return (MenaiValue)r;
+    return (MenaiValue *)r;
 }
 
 int
@@ -125,7 +125,7 @@ menai_vm_integer_init(void)
         obj->small = v;
         menai_int_init(&obj->big);
 
-        _integer_cache[v - MENAI_INT_CACHE_MIN] = (MenaiValue)obj;
+        _integer_cache[v - MENAI_INT_CACHE_MIN] = (MenaiValue *)obj;
     }
 
     return 0;

@@ -9,7 +9,7 @@
  *
  * Ownership:
  *   instrs        — owned (malloc'd copy of the instruction array)
- *   constants     — owned (array of retained MenaiValue references)
+ *   constants     — owned (array of retained MenaiValue * references)
  *   names         — owned (array of strdup'd UTF-8 name strings)
  *   param_names   — owned (array of strdup'd UTF-8 parameter name strings)
  *   children      — owned (array of retained MenaiCodeObject * pointers)
@@ -31,7 +31,7 @@ typedef struct MenaiCodeObject_s {
     uint64_t *instrs;                    /* packed instruction words */
     int code_len;                        /* number of instructions */
 
-    MenaiValue *constants;               /* fast constant pool */
+    MenaiValue **constants;              /* fast constant pool */
     Py_ssize_t nconst;
 
     const char **names;                  /* global name strings for OP_LOAD_NAME */

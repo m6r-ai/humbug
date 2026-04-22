@@ -30,6 +30,6 @@
 #include "menai_vm_struct.h"
 #include "menai_vm_symbol.h"
 
-MenaiValue menai_convert_value(PyObject *src);
+MenaiValue *menai_convert_value(PyObject *src);
 
 #endif /* MENAI_VM_VALUE_H */

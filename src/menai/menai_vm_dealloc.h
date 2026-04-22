@@ -22,6 +22,6 @@
  *
  * Must only be called when val->ob_refcnt == 0.  Defined in menai_vm_dealloc.c.
  */
-void menai_dealloc(MenaiValue val);
+void menai_dealloc(MenaiValue *val);
 
 #endif /* MENAI_VM_DEALLOC_H */

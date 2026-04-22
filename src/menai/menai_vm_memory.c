@@ -9,10 +9,10 @@
 
 #include "menai_vm_memory.h"
 
-MenaiValue *
-menai_regs_alloc(size_t n, MenaiValue none_val)
+MenaiValue **
+menai_regs_alloc(size_t n, MenaiValue *none_val)
 {
-    MenaiValue *regs = (MenaiValue *)malloc(n * sizeof(MenaiValue));
+    MenaiValue **regs = (MenaiValue **)malloc(n * sizeof(MenaiValue *));
     if (regs == NULL) {
         return NULL;
     }
@@ -26,7 +26,7 @@ menai_regs_alloc(size_t n, MenaiValue none_val)
 }
 
 void
-menai_regs_free(MenaiValue *regs, size_t n)
+menai_regs_free(MenaiValue **regs, size_t n)
 {
     for (size_t i = 0; i < n; i++) {
         menai_release(regs[i]);

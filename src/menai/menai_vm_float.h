@@ -21,7 +21,7 @@ extern MenaiType MenaiFloat_Type;
  * menai_float_alloc — allocate a new MenaiFloat with the given value.
  * Returns a new reference, or NULL on allocation failure.
  */
-MenaiValue menai_float_alloc(double value);
+MenaiValue *menai_float_alloc(double value);
 
 /*
  * Module init — called once from _menai_vm_value_init().

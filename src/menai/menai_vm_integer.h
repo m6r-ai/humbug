@@ -44,7 +44,7 @@ extern MenaiType MenaiInteger_Type;
  * Returns a new reference (retain'd from cache for in-range values).
  * Returns NULL on allocation failure.
  */
-MenaiValue menai_integer_from_long(long n);
+MenaiValue *menai_integer_from_long(long n);
 
 /*
  * menai_integer_from_bigint — return a MenaiInteger that takes ownership of
@@ -52,14 +52,14 @@ MenaiValue menai_integer_from_long(long n);
  * the caller must not call menai_int_free on it after this call.
  * Returns a new reference, or NULL on allocation failure.
  */
-MenaiValue menai_integer_from_bigint(MenaiInt src);
+MenaiValue *menai_integer_from_bigint(MenaiInt src);
 
 /*
  * menai_integer_bigint — return a pointer to the MenaiInt for a big integer.
  * The caller must ensure is_big == 1 before calling.
  */
 static inline const MenaiInt *
-menai_integer_bigint(MenaiValue o)
+menai_integer_bigint(MenaiValue *o)
 {
     return &((MenaiInteger_Object *)o)->big;
 }
@@ -69,7 +69,7 @@ menai_integer_bigint(MenaiValue o)
  * The caller must ensure is_big == 0 before calling.
  */
 static inline long
-menai_integer_small(MenaiValue o)
+menai_integer_small(MenaiValue *o)
 {
     return ((MenaiInteger_Object *)o)->small;
 }

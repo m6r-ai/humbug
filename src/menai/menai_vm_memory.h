@@ -24,9 +24,9 @@
  * a constructor).  The old slot value is released.  The slot must not be NULL.
  */
 static inline void
-menai_reg_set_own(MenaiValue *regs, int slot, MenaiValue val)
+menai_reg_set_own(MenaiValue **regs, int slot, MenaiValue *val)
 {
-    MenaiValue old = regs[slot];
+    MenaiValue *old = regs[slot];
     regs[slot] = val;
     menai_release(old);
 }
@@ -39,9 +39,9 @@ menai_reg_set_own(MenaiValue *regs, int slot, MenaiValue val)
  * slot value is released.  The slot must not be NULL.
  */
 static inline void
-menai_reg_set_borrow(MenaiValue *regs, int slot, MenaiValue val)
+menai_reg_set_borrow(MenaiValue **regs, int slot, MenaiValue *val)
 {
-    MenaiValue old = regs[slot];
+    MenaiValue *old = regs[slot];
     menai_retain(val);
     regs[slot] = val;
     menai_release(old);
@@ -55,9 +55,9 @@ menai_reg_set_borrow(MenaiValue *regs, int slot, MenaiValue val)
  * before a call.  The old slot value (Menai_NONE) is released.
  */
 static inline void
-menai_reg_init(MenaiValue *regs, int slot, MenaiValue val)
+menai_reg_init(MenaiValue **regs, int slot, MenaiValue *val)
 {
-    MenaiValue old = regs[slot];
+    MenaiValue *old = regs[slot];
     regs[slot] = val;
     menai_release(old);
 }
@@ -68,13 +68,13 @@ menai_reg_init(MenaiValue *regs, int slot, MenaiValue val)
  * Every slot is initialised to none_val with an owned reference.
  * Returns NULL on allocation failure.
  */
-MenaiValue *menai_regs_alloc(size_t n, MenaiValue none_val);
+MenaiValue **menai_regs_alloc(size_t n, MenaiValue *none_val);
 
 /*
  * menai_regs_free — release all owned references in the register array and
- * free it.  Every slot holds either Menai_NONE or an owned MenaiValue
+ * free it.  Every slot holds either Menai_NONE or an owned MenaiValue *
  * reference; all are released.
  */
-void menai_regs_free(MenaiValue *regs, size_t n);
+void menai_regs_free(MenaiValue **regs, size_t n);
 
 #endif /* MENAI_VM_MEMORY_H */

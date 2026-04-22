@@ -17,7 +17,7 @@
 
 typedef struct {
     MenaiObject_HEAD
-    MenaiValue *elements; /* pointer to first live element */
+    MenaiValue **elements; /* pointer to first live element */
     Py_ssize_t length;    /* number of live elements */
     /*
      * owner is non-NULL when this list is a slice view into another list's
@@ -25,7 +25,7 @@ typedef struct {
      * must not be freed; only menai_release(owner) is needed on dealloc.
      * owner always points to a list with owner == NULL (never a chain).
      */
-    MenaiValue owner;
+    MenaiValue *owner;
 } MenaiList_Object;
 
 extern MenaiType MenaiList_Type;
@@ -34,20 +34,20 @@ extern MenaiType MenaiList_Type;
  * menai_list_from_array — copy items, retain each element.
  * Returns a new reference, or NULL on MemoryError.
  */
-MenaiValue menai_list_from_array(MenaiValue *items, Py_ssize_t n);
+MenaiValue *menai_list_from_array(MenaiValue **items, Py_ssize_t n);
 
 /*
  * menai_list_from_array_steal — take ownership of items without retaining.
  * Returns a new reference, or NULL on MemoryError (items freed on failure).
  */
-MenaiValue menai_list_from_array_steal(MenaiValue *items, Py_ssize_t n);
+MenaiValue *menai_list_from_array_steal(MenaiValue **items, Py_ssize_t n);
 
 /*
  * menai_list_new_empty — create a zero-element MenaiList.
  * Used by _menai_vm_value_init() to build the Menai_LIST_EMPTY singleton.
  * Returns a new reference, or NULL on error.
  */
-MenaiValue menai_list_new_empty(void);
+MenaiValue *menai_list_new_empty(void);
 
 /*
  * menai_list_rest — return a slice view of lst starting at element 1.
@@ -58,7 +58,7 @@ MenaiValue menai_list_new_empty(void);
  * Otherwise returns a new MenaiList_Object that shares lst's backing array
  * without copying or retaining any elements.
  */
-MenaiValue menai_list_rest(MenaiValue lst);
+MenaiValue *menai_list_rest(MenaiValue *lst);
 
 /*
  * menai_list_slice — return a slice view of lst covering [start, end).
@@ -67,7 +67,7 @@ MenaiValue menai_list_rest(MenaiValue lst);
  * <= lst->length).  Returns a new MenaiList_Object that shares lst's backing
  * array without copying or retaining any elements.
  */
-MenaiValue menai_list_slice(MenaiValue lst, Py_ssize_t start, Py_ssize_t end);
+MenaiValue *menai_list_slice(MenaiValue *lst, Py_ssize_t start, Py_ssize_t end);
 
 /*
  * Module init — called once from _menai_vm_value_init().
@@ -79,20 +79,20 @@ int menai_vm_list_init(void);
  * Inline accessors — used heavily in the hot VM loop
  * ------------------------------------------------------------------------- */
 
-static inline MenaiValue
+static inline MenaiValue *
 menai_list_get(MenaiList_Object *list, Py_ssize_t i)
 {
     return list->elements[i];
 }
 
-static inline MenaiValue *
-menai_list_elements(MenaiValue list_obj)
+static inline MenaiValue **
+menai_list_elements(MenaiValue *list_obj)
 {
     return ((MenaiList_Object *)list_obj)->elements;
 }
 
 static inline Py_ssize_t
-menai_list_length(MenaiValue list_obj)
+menai_list_length(MenaiValue *list_obj)
 {
     return ((MenaiList_Object *)list_obj)->length;
 }

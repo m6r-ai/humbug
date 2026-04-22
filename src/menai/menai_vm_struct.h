@@ -26,24 +26,24 @@
  * name is an owned MenaiString_Object *; index is the 0-based field position.
  */
 typedef struct {
-    MenaiValue name;
+    MenaiValue *name;
     int index;
 } MenaiFieldEntry;
 
 typedef struct {
     MenaiObject_HEAD
-    MenaiValue name;            /* owned MenaiString_Object * — struct type name */
-    int tag;                    /* unique integer tag */
-    int nfields;                /* number of fields */
-    MenaiHashTable field_ht;    /* name -> index hash table; keys are borrowed from fields[] */
-    MenaiFieldEntry fields[];   /* inline field-index table, nfields entries */
+    MenaiValue *name;            /* owned MenaiString_Object * — struct type name */
+    int tag;                     /* unique integer tag */
+    int nfields;                 /* number of fields */
+    MenaiHashTable field_ht;     /* name -> index hash table; keys are borrowed from fields[] */
+    MenaiFieldEntry fields[];    /* inline field-index table, nfields entries */
 } MenaiStructType_Object;
 
 typedef struct {
     MenaiObject_HEAD
-    int nfields;                /* number of fields */
-    MenaiValue struct_type;     /* owned reference to MenaiStructType_Object */
-    MenaiValue items[1];        /* inline field values, nfields entries */
+    int nfields;                 /* number of fields */
+    MenaiValue *struct_type;     /* owned reference to MenaiStructType_Object */
+    MenaiValue *items[1];        /* inline field values, nfields entries */
 } MenaiStruct_Object;
 
 extern MenaiType MenaiStructType_Type;
@@ -55,7 +55,7 @@ extern MenaiType MenaiStruct_Type;
  * if not found.
  */
 static inline int
-menai_struct_field_index(MenaiStructType_Object *st, MenaiValue name)
+menai_struct_field_index(MenaiStructType_Object *st, MenaiValue *name)
 {
     Py_hash_t h = menai_string_hash(name);
     return (int)menai_ht_lookup(&st->field_ht, name, h);
@@ -68,15 +68,14 @@ menai_struct_field_index(MenaiStructType_Object *st, MenaiValue name)
  * of nfields borrowed references — each is retained into the inline array.
  * Returns a new reference, or NULL on error.
  */
-MenaiValue menai_struct_alloc(MenaiValue struct_type, MenaiValue *field_values,
-                              Py_ssize_t nfields);
+MenaiValue *menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, Py_ssize_t nfields);
 
 /*
  * menai_struct_type_new_from_args — public wrapper used by menai_convert_value.
  * args is a positional Python tuple (name: PyUnicode, tag: int, field_names: sequence of PyUnicode).
  * Converts strings to MenaiString internally.  Returns a new reference.
  */
-MenaiValue menai_struct_type_new_from_args(PyObject *args);
+MenaiValue *menai_struct_type_new_from_args(PyObject *args);
 
 /*
  * Module init — called once from _menai_vm_value_init().

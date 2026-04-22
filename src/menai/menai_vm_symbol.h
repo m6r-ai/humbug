@@ -16,7 +16,7 @@
 
 typedef struct {
     MenaiObject_HEAD
-    MenaiValue name;    /* owned MenaiString_Object * */
+    MenaiValue *name;    /* owned MenaiString_Object * */
 } MenaiSymbol_Object;
 
 extern MenaiType MenaiSymbol_Type;
@@ -24,10 +24,10 @@ extern MenaiType MenaiSymbol_Type;
 /*
  * menai_symbol_alloc — direct C constructor for MenaiSymbol.
  *
- * name must be a MenaiString_Object * (as MenaiValue).  A retain is taken
+ * name must be a MenaiString_Object * (as MenaiValue *).  A retain is taken
  * on name.  Returns a new reference, or NULL on allocation failure.
  */
-MenaiValue menai_symbol_alloc(MenaiValue name);
+MenaiValue *menai_symbol_alloc(MenaiValue *name);
 
 /*
  * Module init — called once from _menai_vm_value_init().

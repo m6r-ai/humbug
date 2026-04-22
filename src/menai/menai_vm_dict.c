@@ -24,8 +24,7 @@
  * free all three arrays.  NULL pointers are safely ignored.
  */
 static void
-_dict_free_arrays(MenaiValue *keys, MenaiValue *values, Py_hash_t *hashes,
-                  Py_ssize_t n)
+_dict_free_arrays(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, Py_ssize_t n)
 {
     if (keys) {
         for (Py_ssize_t i = 0; i < n; i++) {
@@ -47,7 +46,7 @@ _dict_free_arrays(MenaiValue *keys, MenaiValue *values, Py_hash_t *hashes,
 }
 
 static void
-MenaiDict_dealloc(MenaiValue self)
+MenaiDict_dealloc(MenaiValue *self)
 {
     MenaiDict_Object *d = (MenaiDict_Object *)self;
     _dict_free_arrays(d->keys, d->values, d->hashes, d->length);
@@ -65,9 +64,8 @@ PyTypeObject MenaiDict_Type = {
     Py_TPFLAGS_DEFAULT,
 };
 
-MenaiValue
-menai_dict_from_arrays_steal(MenaiValue *keys, MenaiValue *values,
-                              Py_hash_t *hashes, Py_ssize_t n)
+MenaiValue *
+menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, Py_ssize_t n)
 {
     MenaiDict_Object *obj = (MenaiDict_Object *)malloc(sizeof(MenaiDict_Object));
     if (!obj) {
@@ -90,10 +88,10 @@ menai_dict_from_arrays_steal(MenaiValue *keys, MenaiValue *values,
     obj->hashes = hashes;
     obj->length = n;
 
-    return (MenaiValue)obj;
+    return (MenaiValue *)obj;
 }
 
-MenaiValue
+MenaiValue *
 menai_dict_new_empty(void)
 {
     MenaiDict_Object *obj = (MenaiDict_Object *)malloc(sizeof(MenaiDict_Object));
@@ -112,7 +110,7 @@ menai_dict_new_empty(void)
     obj->ht.used = 0;
     obj->length = 0;
 
-    return (MenaiValue)obj;
+    return (MenaiValue *)obj;
 }
 
 int

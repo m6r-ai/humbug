@@ -16,7 +16,7 @@
 #include "menai_vm_string.h"
 #include "menai_vm_string_tables.h"
 
-static void MenaiString_dealloc(MenaiValue self);
+static void MenaiString_dealloc(MenaiValue *self);
 
 /* MenaiEvalError — fetched at init time by menai_vm_string_init(). */
 static PyObject *_MenaiEvalError = NULL;
@@ -45,7 +45,7 @@ _menai_string_alloc(Py_ssize_t len)
 }
 
 static void
-MenaiString_dealloc(MenaiValue self)
+MenaiString_dealloc(MenaiValue *self)
 {
     /* Data is inline — one free covers the whole allocation. */
     free(self);
@@ -194,7 +194,7 @@ _utf8_encode(const uint32_t *data, Py_ssize_t len, Py_ssize_t *out_nbytes)
     return buf;
 }
 
-MenaiValue
+MenaiValue *
 menai_string_from_utf8(const char *utf8, Py_ssize_t nbytes)
 {
     Py_ssize_t len;
@@ -212,10 +212,10 @@ menai_string_from_utf8(const char *utf8, Py_ssize_t nbytes)
     memcpy(obj->data, buf, (size_t)len * sizeof(uint32_t));
     free(buf);
 
-    return (MenaiValue)obj;
+    return (MenaiValue *)obj;
 }
 
-MenaiValue
+MenaiValue *
 menai_string_from_codepoints(const uint32_t *cp, Py_ssize_t len)
 {
     MenaiString_Object *obj = _menai_string_alloc(len);
@@ -227,10 +227,10 @@ menai_string_from_codepoints(const uint32_t *cp, Py_ssize_t len)
         memcpy(obj->data, cp, (size_t)len * sizeof(uint32_t));
     }
 
-    return (MenaiValue)obj;
+    return (MenaiValue *)obj;
 }
 
-MenaiValue
+MenaiValue *
 menai_string_from_codepoint(uint32_t cp)
 {
     MenaiString_Object *obj = _menai_string_alloc(1);
@@ -240,10 +240,10 @@ menai_string_from_codepoint(uint32_t cp)
 
     obj->data[0] = cp;
 
-    return (MenaiValue)obj;
+    return (MenaiValue *)obj;
 }
 
-MenaiValue
+MenaiValue *
 menai_string_from_pyunicode(PyObject *pystr)
 {
     Py_ssize_t nbytes;
@@ -256,7 +256,7 @@ menai_string_from_pyunicode(PyObject *pystr)
 }
 
 PyObject *
-menai_string_to_pyunicode(MenaiValue s)
+menai_string_to_pyunicode(MenaiValue *s)
 {
     MenaiString_Object *ms = (MenaiString_Object *)s;
     Py_ssize_t nbytes;
@@ -272,7 +272,7 @@ menai_string_to_pyunicode(MenaiValue s)
 }
 
 int
-menai_string_compare(MenaiValue a, MenaiValue b)
+menai_string_compare(MenaiValue *a, MenaiValue *b)
 {
     MenaiString_Object *ma = (MenaiString_Object *)a;
     MenaiString_Object *mb = (MenaiString_Object *)b;
@@ -300,7 +300,7 @@ menai_string_compare(MenaiValue a, MenaiValue b)
 }
 
 int
-menai_string_equal(MenaiValue a, MenaiValue b)
+menai_string_equal(MenaiValue *a, MenaiValue *b)
 {
     MenaiString_Object *ma = (MenaiString_Object *)a;
     MenaiString_Object *mb = (MenaiString_Object *)b;
@@ -313,7 +313,7 @@ menai_string_equal(MenaiValue a, MenaiValue b)
 }
 
 Py_hash_t
-menai_string_hash(MenaiValue s)
+menai_string_hash(MenaiValue *s)
 {
     MenaiString_Object *ms = (MenaiString_Object *)s;
     if (ms->hash != -1) {
@@ -340,8 +340,8 @@ menai_string_hash(MenaiValue s)
     return result;
 }
 
-MenaiValue
-menai_string_concat(MenaiValue a, MenaiValue b)
+MenaiValue *
+menai_string_concat(MenaiValue *a, MenaiValue *b)
 {
     MenaiString_Object *ma = (MenaiString_Object *)a;
     MenaiString_Object *mb = (MenaiString_Object *)b;
@@ -359,23 +359,23 @@ menai_string_concat(MenaiValue a, MenaiValue b)
         memcpy(obj->data + la, mb->data, (size_t)lb * sizeof(uint32_t));
     }
 
-    return (MenaiValue)obj;
+    return (MenaiValue *)obj;
 }
 
-MenaiValue
-menai_string_ref(MenaiValue s, Py_ssize_t i)
+MenaiValue *
+menai_string_ref(MenaiValue *s, Py_ssize_t i)
 {
     return menai_string_from_codepoint(((MenaiString_Object *)s)->data[i]);
 }
 
-MenaiValue
-menai_string_slice(MenaiValue s, Py_ssize_t start, Py_ssize_t end)
+MenaiValue *
+menai_string_slice(MenaiValue *s, Py_ssize_t start, Py_ssize_t end)
 {
     return menai_string_from_codepoints(((MenaiString_Object *)s)->data + start, end - start);
 }
 
-MenaiValue
-menai_string_upcase(MenaiValue s)
+MenaiValue *
+menai_string_upcase(MenaiValue *s)
 {
     MenaiString_Object *ms = (MenaiString_Object *)s;
     Py_ssize_t len = ms->length;
@@ -411,11 +411,11 @@ menai_string_upcase(MenaiValue s)
         }
     }
 
-    return (MenaiValue)obj;
+    return (MenaiValue *)obj;
 }
 
-MenaiValue
-menai_string_downcase(MenaiValue s)
+MenaiValue *
+menai_string_downcase(MenaiValue *s)
 {
     MenaiString_Object *ms = (MenaiString_Object *)s;
     Py_ssize_t len = ms->length;
@@ -428,11 +428,11 @@ menai_string_downcase(MenaiValue s)
         obj->data[i] = unicode_simple_downcase(ms->data[i]);
     }
 
-    return (MenaiValue)obj;
+    return (MenaiValue *)obj;
 }
 
-MenaiValue
-menai_string_trim_left(MenaiValue s)
+MenaiValue *
+menai_string_trim_left(MenaiValue *s)
 {
     MenaiString_Object *ms = (MenaiString_Object *)s;
     Py_ssize_t len = ms->length;
@@ -444,8 +444,8 @@ menai_string_trim_left(MenaiValue s)
     return menai_string_from_codepoints(ms->data + start, len - start);
 }
 
-MenaiValue
-menai_string_trim_right(MenaiValue s)
+MenaiValue *
+menai_string_trim_right(MenaiValue *s)
 {
     MenaiString_Object *ms = (MenaiString_Object *)s;
     Py_ssize_t end = ms->length;
@@ -456,8 +456,8 @@ menai_string_trim_right(MenaiValue s)
     return menai_string_from_codepoints(ms->data, end);
 }
 
-MenaiValue
-menai_string_trim(MenaiValue s)
+MenaiValue *
+menai_string_trim(MenaiValue *s)
 {
     MenaiString_Object *ms = (MenaiString_Object *)s;
     Py_ssize_t len = ms->length;
@@ -474,7 +474,7 @@ menai_string_trim(MenaiValue s)
 }
 
 Py_ssize_t
-menai_string_find(MenaiValue haystack, MenaiValue needle)
+menai_string_find(MenaiValue *haystack, MenaiValue *needle)
 {
     MenaiString_Object *mh = (MenaiString_Object *)haystack;
     MenaiString_Object *mn = (MenaiString_Object *)needle;
@@ -499,7 +499,7 @@ menai_string_find(MenaiValue haystack, MenaiValue needle)
 }
 
 int
-menai_string_has_prefix(MenaiValue s, MenaiValue prefix)
+menai_string_has_prefix(MenaiValue *s, MenaiValue *prefix)
 {
     MenaiString_Object *ms = (MenaiString_Object *)s;
     MenaiString_Object *mp = (MenaiString_Object *)prefix;
@@ -512,7 +512,7 @@ menai_string_has_prefix(MenaiValue s, MenaiValue prefix)
 }
 
 int
-menai_string_has_suffix(MenaiValue s, MenaiValue suffix)
+menai_string_has_suffix(MenaiValue *s, MenaiValue *suffix)
 {
     MenaiString_Object *ms = (MenaiString_Object *)s;
     MenaiString_Object *msu = (MenaiString_Object *)suffix;
@@ -524,8 +524,8 @@ menai_string_has_suffix(MenaiValue s, MenaiValue suffix)
     return memcmp(ms->data + (slen - sulen), msu->data, (size_t)sulen * sizeof(uint32_t)) == 0;
 }
 
-MenaiValue
-menai_string_replace(MenaiValue s, MenaiValue from, MenaiValue to)
+MenaiValue *
+menai_string_replace(MenaiValue *s, MenaiValue *from, MenaiValue *to)
 {
     MenaiString_Object *ms = (MenaiString_Object *)s;
     MenaiString_Object *mfr = (MenaiString_Object *)from;
@@ -557,7 +557,7 @@ menai_string_replace(MenaiValue s, MenaiValue from, MenaiValue to)
             }
         }
 
-        return (MenaiValue)obj;
+        return (MenaiValue *)obj;
     }
 
     if (slen == 0) {
@@ -606,7 +606,7 @@ menai_string_replace(MenaiValue s, MenaiValue from, MenaiValue to)
         obj->data[dst++] = ms->data[src++];
     }
 
-    return (MenaiValue)obj;
+    return (MenaiValue *)obj;
 }
 
 int

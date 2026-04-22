@@ -9,7 +9,7 @@
 #include "menai_vm_float.h"
 
 static void
-MenaiFloat_dealloc(MenaiValue self)
+MenaiFloat_dealloc(MenaiValue *self)
 {
     free(self);
 }
@@ -24,7 +24,7 @@ PyTypeObject MenaiFloat_Type = {
     Py_TPFLAGS_DEFAULT,
 };
 
-MenaiValue
+MenaiValue *
 menai_float_alloc(double value)
 {
     MenaiFloat_Object *self = (MenaiFloat_Object *)malloc(sizeof(MenaiFloat_Object));
@@ -36,7 +36,7 @@ menai_float_alloc(double value)
     self->ob_type = &MenaiFloat_Type;
     self->ob_destructor = MenaiFloat_dealloc;
     self->value = value;
-    return (MenaiValue)self;
+    return (MenaiValue *)self;
 }
 
 int

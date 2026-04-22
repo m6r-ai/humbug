@@ -23,10 +23,10 @@
 
 typedef struct {
     MenaiObject_HEAD
-    MenaiValue    *elements; /* C array of owned MenaiValues */
-    Py_hash_t     *hashes;   /* C array of menai_value_hash(elements[i]) */
+    MenaiValue **elements;   /* C array of owned MenaiValue *s */
+    Py_hash_t *hashes;       /* C array of menai_value_hash(elements[i]) */
     MenaiHashTable ht;       /* pure-C hash table for O(1) membership */
-    Py_ssize_t     length;
+    Py_ssize_t length;
 } MenaiSet_Object;
 
 extern MenaiType MenaiSet_Type;
@@ -36,7 +36,7 @@ extern MenaiType MenaiSet_Type;
  * Used by _menai_vm_value_init() to build the Menai_SET_EMPTY singleton.
  * Returns a new reference, or NULL on error.
  */
-MenaiValue menai_set_new_empty(void);
+MenaiValue *menai_set_new_empty(void);
 
 /*
  * menai_set_from_arrays_steal — build a MenaiSet from two parallel C arrays.
@@ -50,8 +50,7 @@ MenaiValue menai_set_new_empty(void);
  *
  * Returns a new reference, or NULL on error.
  */
-MenaiValue menai_set_from_arrays_steal(MenaiValue *elements, Py_hash_t *hashes,
-                                       Py_ssize_t n);
+MenaiValue *menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t n);
 
 /*
  * Module init — called once from _menai_vm_value_init().

@@ -37,9 +37,9 @@
 /*
  * Module-level singletons
  */
-static MenaiValue _Menai_EMPTY_LIST = NULL;
-static MenaiValue _Menai_EMPTY_DICT = NULL;
-static MenaiValue _Menai_EMPTY_SET = NULL;
+static MenaiValue *_Menai_EMPTY_LIST = NULL;
+static MenaiValue *_Menai_EMPTY_DICT = NULL;
+static MenaiValue *_Menai_EMPTY_SET = NULL;
 
 /*
  * Slow-world type objects — fetched once at module init.
@@ -71,7 +71,7 @@ PyObject *MenaiEvalError_type = NULL;
  * captured_values are NOT recursively converted here — call_setup in the VM
  * does that lazily at call time to avoid cycles in letrec closures.
  */
-MenaiValue
+MenaiValue *
 menai_convert_value(PyObject *src)
 {
     assert(!( Py_TYPE(src) == (PyTypeObject *)&MenaiNone_Type      ||
@@ -90,7 +90,7 @@ menai_convert_value(PyObject *src)
     PyTypeObject *t = Py_TYPE(src);
 
     if (t == Slow_NoneType) {
-        MenaiValue s = menai_none_singleton();
+        MenaiValue *s = menai_none_singleton();
         menai_retain(s);
         return s;
     }
@@ -107,7 +107,7 @@ menai_convert_value(PyObject *src)
             return NULL;
         }
 
-        MenaiValue r = b ? menai_boolean_true() : menai_boolean_false();
+        MenaiValue *r = b ? menai_boolean_true() : menai_boolean_false();
         menai_retain(r);
         return r;
     }
@@ -181,7 +181,7 @@ menai_convert_value(PyObject *src)
             return NULL;
         }
 
-        MenaiValue r = menai_string_from_pyunicode(v);
+        MenaiValue *r = menai_string_from_pyunicode(v);
         Py_DECREF(v);
         return r;
     }
@@ -192,13 +192,13 @@ menai_convert_value(PyObject *src)
             return NULL;
         }
 
-        MenaiValue name_str = menai_string_from_pyunicode(n);
+        MenaiValue *name_str = menai_string_from_pyunicode(n);
         Py_DECREF(n);
         if (!name_str) {
             return NULL;
         }
 
-        MenaiValue r = menai_symbol_alloc(name_str);
+        MenaiValue *r = menai_symbol_alloc(name_str);
         menai_release(name_str);
         return r;
     }
@@ -210,7 +210,7 @@ menai_convert_value(PyObject *src)
         }
 
         Py_ssize_t n = PyTuple_GET_SIZE(elems);
-        MenaiValue *arr = n > 0 ? (MenaiValue *)malloc(n * sizeof(MenaiValue)) : NULL;
+        MenaiValue **arr = n > 0 ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
         if (n > 0 && !arr) {
             Py_DECREF(elems);
             PyErr_NoMemory();
@@ -241,8 +241,8 @@ menai_convert_value(PyObject *src)
         }
 
         Py_ssize_t n = PyTuple_GET_SIZE(pairs);
-        MenaiValue *keys = n > 0 ? (MenaiValue *)malloc(n * sizeof(MenaiValue)) : NULL;
-        MenaiValue *values = n > 0 ? (MenaiValue *)malloc(n * sizeof(MenaiValue)) : NULL;
+        MenaiValue **keys = n > 0 ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
+        MenaiValue **values = n > 0 ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
         Py_hash_t *hashes = n > 0 ? (Py_hash_t *)malloc(n * sizeof(Py_hash_t)) : NULL;
         if (n > 0 && (!keys || !values || !hashes)) {
             free(keys);
@@ -255,7 +255,7 @@ menai_convert_value(PyObject *src)
 
         for (Py_ssize_t i = 0; i < n; i++) {
             PyObject *pair = PyTuple_GET_ITEM(pairs, i);
-            MenaiValue fk = menai_convert_value(PyTuple_GET_ITEM(pair, 0));
+            MenaiValue *fk = menai_convert_value(PyTuple_GET_ITEM(pair, 0));
             if (!fk) {
                 for (Py_ssize_t j = 0; j < i; j++) {
                     menai_release(keys[j]);
@@ -269,7 +269,7 @@ menai_convert_value(PyObject *src)
                 return NULL;
             }
 
-            MenaiValue fv = menai_convert_value(PyTuple_GET_ITEM(pair, 1));
+            MenaiValue *fv = menai_convert_value(PyTuple_GET_ITEM(pair, 1));
             if (!fv) {
                 menai_release(fk);
                 for (Py_ssize_t j = 0; j < i; j++) {
@@ -316,7 +316,7 @@ menai_convert_value(PyObject *src)
         }
 
         Py_ssize_t n = PyTuple_GET_SIZE(elems);
-        MenaiValue *elements = n > 0 ? (MenaiValue *)malloc(n * sizeof(MenaiValue)) : NULL;
+        MenaiValue **elements = n > 0 ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
         Py_hash_t *hashes = n > 0 ? (Py_hash_t *)malloc(n * sizeof(Py_hash_t)) : NULL;
         if (n > 0 && (!elements || !hashes)) {
             free(elements);
@@ -327,7 +327,7 @@ menai_convert_value(PyObject *src)
         }
 
         for (Py_ssize_t i = 0; i < n; i++) {
-            MenaiValue fe = menai_convert_value(PyTuple_GET_ITEM(elems, i));
+            MenaiValue *fe = menai_convert_value(PyTuple_GET_ITEM(elems, i));
             if (!fe) {
                 for (Py_ssize_t j = 0; j < i; j++) {
                     menai_release(elements[j]);
@@ -379,7 +379,7 @@ menai_convert_value(PyObject *src)
             return NULL;
         }
 
-        MenaiValue r = menai_struct_type_new_from_args(args);
+        MenaiValue *r = menai_struct_type_new_from_args(args);
         Py_DECREF(args);
         return r;
     }
@@ -393,7 +393,7 @@ menai_convert_value(PyObject *src)
             return NULL;
         }
 
-        MenaiValue fast_st = menai_convert_value(st);
+        MenaiValue *fast_st = menai_convert_value(st);
         Py_DECREF(st);
         if (!fast_st) {
             Py_DECREF(fields);
@@ -401,8 +401,8 @@ menai_convert_value(PyObject *src)
         }
 
         Py_ssize_t n = PyTuple_GET_SIZE(fields);
-        MenaiValue *fast_arr = n > 0
-            ? (MenaiValue *)malloc(n * sizeof(MenaiValue)) : NULL;
+        MenaiValue **fast_arr = n > 0
+            ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
         if (n > 0 && !fast_arr) {
             menai_release(fast_st);
             Py_DECREF(fields);
@@ -411,7 +411,7 @@ menai_convert_value(PyObject *src)
         }
 
         for (Py_ssize_t i = 0; i < n; i++) {
-            MenaiValue ff = menai_convert_value(PyTuple_GET_ITEM(fields, i));
+            MenaiValue *ff = menai_convert_value(PyTuple_GET_ITEM(fields, i));
             if (!ff) {
                 for (Py_ssize_t j = 0; j < i; j++) {
                     menai_release(fast_arr[j]);
@@ -431,7 +431,7 @@ menai_convert_value(PyObject *src)
          * menai_struct_alloc retains fast_st and each element of fast_arr
          * internally, so we release our references afterward.
          */
-        MenaiValue r = menai_struct_alloc(fast_st, fast_arr, n);
+        MenaiValue *r = menai_struct_alloc(fast_st, fast_arr, n);
         for (Py_ssize_t i = 0; i < n; i++) {
             menai_release(fast_arr[i]);
         }
@@ -457,7 +457,7 @@ menai_convert_value(PyObject *src)
             return NULL;
         }
 
-        MenaiValue r = menai_function_alloc(co, menai_none_singleton());
+        MenaiValue *r = menai_function_alloc(co, menai_none_singleton());
         menai_code_object_release(co);
         if (!r) {
             Py_DECREF(cap);
@@ -466,7 +466,7 @@ menai_convert_value(PyObject *src)
 
         MenaiFunction_Object *f = (MenaiFunction_Object *)r;
         for (Py_ssize_t ci = 0; ci < f->bytecode->ncap; ci++) {
-            MenaiValue fast_cv = menai_convert_value(PyList_GET_ITEM(cap, ci));
+            MenaiValue *fast_cv = menai_convert_value(PyList_GET_ITEM(cap, ci));
             if (!fast_cv) {
                 menai_release(r);
                 Py_DECREF(cap);
@@ -490,21 +490,21 @@ menai_convert_value(PyObject *src)
  * ------------------------------------------------------------------------- */
 
 PyObject *
-menai_value_describe_none(MenaiValue val)
+menai_value_describe_none(MenaiValue *val)
 {
     (void)val;
     return PyUnicode_FromString("#none");
 }
 
 PyObject *
-menai_value_describe_boolean(MenaiValue val)
+menai_value_describe_boolean(MenaiValue *val)
 {
     int v = ((MenaiBoolean_Object *)val)->value;
     return PyUnicode_FromString(v ? "#t" : "#f");
 }
 
 PyObject *
-menai_value_describe_integer(MenaiValue val)
+menai_value_describe_integer(MenaiValue *val)
 {
     MenaiInteger_Object *obj = (MenaiInteger_Object *)val;
     if (!obj->is_big) {
@@ -522,7 +522,7 @@ menai_value_describe_integer(MenaiValue val)
 }
 
 PyObject *
-menai_value_describe_float(MenaiValue val)
+menai_value_describe_float(MenaiValue *val)
 {
     double v = ((MenaiFloat_Object *)val)->value;
     PyObject *pf = PyFloat_FromDouble(v);
@@ -536,7 +536,7 @@ menai_value_describe_float(MenaiValue val)
 }
 
 PyObject *
-menai_value_describe_complex(MenaiValue val)
+menai_value_describe_complex(MenaiValue *val)
 {
     MenaiComplex_Object *c = (MenaiComplex_Object *)val;
     double r = c->real;
@@ -597,7 +597,7 @@ menai_value_describe_complex(MenaiValue val)
 }
 
 PyObject *
-menai_value_describe_string(MenaiValue val)
+menai_value_describe_string(MenaiValue *val)
 {
     /*
      * Convert to Python unicode, then escape and wrap in double quotes,
@@ -696,13 +696,13 @@ menai_value_describe_string(MenaiValue val)
 }
 
 PyObject *
-menai_value_describe_symbol(MenaiValue val)
+menai_value_describe_symbol(MenaiValue *val)
 {
     return menai_string_to_pyunicode(((MenaiSymbol_Object *)val)->name);
 }
 
 PyObject *
-menai_value_describe_structtype(MenaiValue val)
+menai_value_describe_structtype(MenaiValue *val)
 {
     MenaiStructType_Object *st = (MenaiStructType_Object *)val;
     int nf = st->nfields;
@@ -751,7 +751,7 @@ menai_value_describe_structtype(MenaiValue val)
 }
 
 PyObject *
-menai_value_describe_struct(MenaiValue val)
+menai_value_describe_struct(MenaiValue *val)
 {
     MenaiStruct_Object *s = (MenaiStruct_Object *)val;
     MenaiStructType_Object *st = (MenaiStructType_Object *)s->struct_type;
@@ -805,7 +805,7 @@ menai_value_describe_struct(MenaiValue val)
 }
 
 PyObject *
-menai_value_describe_list(MenaiValue val)
+menai_value_describe_list(MenaiValue *val)
 {
     MenaiList_Object *lst = (MenaiList_Object *)val;
     Py_ssize_t n = lst->length;
@@ -848,7 +848,7 @@ menai_value_describe_list(MenaiValue val)
 }
 
 PyObject *
-menai_value_describe_dict(MenaiValue val)
+menai_value_describe_dict(MenaiValue *val)
 {
     MenaiDict_Object *d = (MenaiDict_Object *)val;
     Py_ssize_t n = d->length;
@@ -906,7 +906,7 @@ menai_value_describe_dict(MenaiValue val)
 }
 
 PyObject *
-menai_value_describe_set(MenaiValue val)
+menai_value_describe_set(MenaiValue *val)
 {
     MenaiSet_Object *s = (MenaiSet_Object *)val;
     Py_ssize_t n = s->length;
@@ -949,7 +949,7 @@ menai_value_describe_set(MenaiValue val)
 }
 
 PyObject *
-menai_value_describe_function(MenaiValue val)
+menai_value_describe_function(MenaiValue *val)
 {
     MenaiFunction_Object *fn = (MenaiFunction_Object *)val;
     MenaiCodeObject *co = fn->bytecode;
@@ -1039,21 +1039,21 @@ menai_value_describe_function(MenaiValue val)
  * ------------------------------------------------------------------------- */
 
 PyObject *
-menai_value_to_python_none(MenaiValue val)
+menai_value_to_python_none(MenaiValue *val)
 {
     (void)val;
     Py_RETURN_NONE;
 }
 
 PyObject *
-menai_value_to_python_boolean(MenaiValue val)
+menai_value_to_python_boolean(MenaiValue *val)
 {
     int v = ((MenaiBoolean_Object *)val)->value;
     return PyBool_FromLong(v);
 }
 
 PyObject *
-menai_value_to_python_integer(MenaiValue val)
+menai_value_to_python_integer(MenaiValue *val)
 {
     MenaiInteger_Object *obj = (MenaiInteger_Object *)val;
     if (!obj->is_big) {
@@ -1064,32 +1064,32 @@ menai_value_to_python_integer(MenaiValue val)
 }
 
 PyObject *
-menai_value_to_python_float(MenaiValue val)
+menai_value_to_python_float(MenaiValue *val)
 {
     return PyFloat_FromDouble(((MenaiFloat_Object *)val)->value);
 }
 
 PyObject *
-menai_value_to_python_complex(MenaiValue val)
+menai_value_to_python_complex(MenaiValue *val)
 {
     MenaiComplex_Object *c = (MenaiComplex_Object *)val;
     return PyComplex_FromDoubles(c->real, c->imag);
 }
 
 PyObject *
-menai_value_to_python_string(MenaiValue val)
+menai_value_to_python_string(MenaiValue *val)
 {
     return menai_string_to_pyunicode(val);
 }
 
 PyObject *
-menai_value_to_python_symbol(MenaiValue val)
+menai_value_to_python_symbol(MenaiValue *val)
 {
     return menai_string_to_pyunicode(((MenaiSymbol_Object *)val)->name);
 }
 
 PyObject *
-menai_value_to_python_structtype(MenaiValue val)
+menai_value_to_python_structtype(MenaiValue *val)
 {
     MenaiStructType_Object *st = (MenaiStructType_Object *)val;
     PyObject *name = menai_string_to_pyunicode(st->name);
@@ -1103,7 +1103,7 @@ menai_value_to_python_structtype(MenaiValue val)
 }
 
 PyObject *
-menai_value_to_python_struct(MenaiValue val)
+menai_value_to_python_struct(MenaiValue *val)
 {
     MenaiStruct_Object *s = (MenaiStruct_Object *)val;
     MenaiStructType_Object *st = (MenaiStructType_Object *)s->struct_type;
@@ -1141,7 +1141,7 @@ menai_value_to_python_struct(MenaiValue val)
 }
 
 PyObject *
-menai_value_to_python_list(MenaiValue val)
+menai_value_to_python_list(MenaiValue *val)
 {
     MenaiList_Object *lst = (MenaiList_Object *)val;
     Py_ssize_t n = lst->length;
@@ -1165,7 +1165,7 @@ menai_value_to_python_list(MenaiValue val)
 }
 
 PyObject *
-menai_value_to_python_dict(MenaiValue val)
+menai_value_to_python_dict(MenaiValue *val)
 {
     MenaiDict_Object *d = (MenaiDict_Object *)val;
     Py_ssize_t n = d->length;
@@ -1176,7 +1176,7 @@ menai_value_to_python_dict(MenaiValue val)
     }
 
     for (Py_ssize_t i = 0; i < n; i++) {
-        MenaiValue k = d->keys[i];
+        MenaiValue *k = d->keys[i];
         MenaiType *kt = k->ob_type;
         PyObject *py_key;
 
@@ -1221,7 +1221,7 @@ menai_value_to_python_dict(MenaiValue val)
 }
 
 PyObject *
-menai_value_to_python_set(MenaiValue val)
+menai_value_to_python_set(MenaiValue *val)
 {
     MenaiSet_Object *s = (MenaiSet_Object *)val;
     Py_ssize_t n = s->length;
@@ -1232,7 +1232,7 @@ menai_value_to_python_set(MenaiValue val)
     }
 
     for (Py_ssize_t i = 0; i < n; i++) {
-        MenaiValue elem = s->elements[i];
+        MenaiValue *elem = s->elements[i];
         MenaiType *et = elem->ob_type;
         PyObject *py_elem;
 
@@ -1261,7 +1261,7 @@ menai_value_to_python_set(MenaiValue val)
 }
 
 PyObject *
-menai_value_to_python_function(MenaiValue val)
+menai_value_to_python_function(MenaiValue *val)
 {
     /* Functions return themselves as opaque Python objects */
     Py_INCREF((PyObject *)val);
@@ -1347,14 +1347,14 @@ static PyObject *
 py_describe(PyObject *self, PyObject *args)
 {
     (void)args;
-    return menai_value_describe((MenaiValue)self);
+    return menai_value_describe((MenaiValue *)self);
 }
 
 static PyObject *
 py_to_python(PyObject *self, PyObject *args)
 {
     (void)args;
-    return menai_value_to_python((MenaiValue)self);
+    return menai_value_to_python((MenaiValue *)self);
 }
 
 static PyMethodDef _shared_methods[] = {
@@ -1399,7 +1399,7 @@ static PyObject *
 string_get_value(PyObject *self, void *closure)
 {
     (void)closure;
-    return menai_string_to_pyunicode((MenaiValue)self);
+    return menai_string_to_pyunicode((MenaiValue *)self);
 }
 
 static PyGetSetDef _string_getsets[] = {
@@ -1525,7 +1525,7 @@ func_set_captured_values(PyObject *self, PyObject *value, void *closure)
     }
 
     for (Py_ssize_t i = 0; i < ncap; i++) {
-        MenaiValue nv = (MenaiValue)PyList_GET_ITEM(value, i);
+        MenaiValue *nv = (MenaiValue *)PyList_GET_ITEM(value, i);
         menai_retain(nv);
         menai_xrelease(f->captures[i]);
         f->captures[i] = nv;
@@ -1785,7 +1785,7 @@ _menai_vm_value_init(void)
 
     /* Add singletons to module.  menai_retain increments ob_refcnt at offset 0,
      * which is the same field Py_INCREF would increment given the shared layout. */
-    MenaiValue none_val = menai_none_singleton();
+    MenaiValue *none_val = menai_none_singleton();
     menai_retain(none_val);
     if (PyModule_AddObject(module, "Menai_NONE", (PyObject *)none_val) < 0) {
         menai_release(none_val);
@@ -1793,7 +1793,7 @@ _menai_vm_value_init(void)
         return NULL;
     }
 
-    MenaiValue bool_true = menai_boolean_true();
+    MenaiValue *bool_true = menai_boolean_true();
     menai_retain(bool_true);
     if (PyModule_AddObject(module, "Menai_BOOLEAN_TRUE", (PyObject *)bool_true) < 0) {
         menai_release(bool_true);
@@ -1801,7 +1801,7 @@ _menai_vm_value_init(void)
         return NULL;
     }
 
-    MenaiValue bool_false = menai_boolean_false();
+    MenaiValue *bool_false = menai_boolean_false();
     menai_retain(bool_false);
     if (PyModule_AddObject(module, "Menai_BOOLEAN_FALSE", (PyObject *)bool_false) < 0) {
         menai_release(bool_false);
@@ -1811,7 +1811,7 @@ _menai_vm_value_init(void)
 
     struct {
         const char *name;
-        MenaiValue *obj;
+        MenaiValue **obj;
     } singletons[] = {
         {"Menai_LIST_EMPTY", &_Menai_EMPTY_LIST},
         {"Menai_DICT_EMPTY", &_Menai_EMPTY_DICT},

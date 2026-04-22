@@ -23,7 +23,7 @@
  * both arrays.  NULL pointers are safely ignored.
  */
 static void
-_set_free_arrays(MenaiValue *elements, Py_hash_t *hashes, Py_ssize_t n)
+_set_free_arrays(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t n)
 {
     if (elements) {
         for (Py_ssize_t i = 0; i < n; i++) {
@@ -37,7 +37,7 @@ _set_free_arrays(MenaiValue *elements, Py_hash_t *hashes, Py_ssize_t n)
 }
 
 static void
-MenaiSet_dealloc(MenaiValue self)
+MenaiSet_dealloc(MenaiValue *self)
 {
     MenaiSet_Object *s = (MenaiSet_Object *)self;
     _set_free_arrays(s->elements, s->hashes, s->length);
@@ -55,8 +55,8 @@ PyTypeObject MenaiSet_Type = {
     Py_TPFLAGS_DEFAULT,
 };
 
-MenaiValue
-menai_set_from_arrays_steal(MenaiValue *elements, Py_hash_t *hashes, Py_ssize_t n)
+MenaiValue *
+menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t n)
 {
     MenaiSet_Object *obj = (MenaiSet_Object *)malloc(sizeof(MenaiSet_Object));
     if (!obj) {
@@ -78,10 +78,10 @@ menai_set_from_arrays_steal(MenaiValue *elements, Py_hash_t *hashes, Py_ssize_t 
     obj->hashes = hashes;
     obj->length = n;
 
-    return (MenaiValue)obj;
+    return (MenaiValue *)obj;
 }
 
-MenaiValue
+MenaiValue *
 menai_set_new_empty(void)
 {
     MenaiSet_Object *obj = (MenaiSet_Object *)malloc(sizeof(MenaiSet_Object));
@@ -99,7 +99,7 @@ menai_set_new_empty(void)
     obj->ht.used = 0;
     obj->length = 0;
 
-    return (MenaiValue)obj;
+    return (MenaiValue *)obj;
 }
 
 int

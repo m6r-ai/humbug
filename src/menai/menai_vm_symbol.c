@@ -12,7 +12,7 @@
 #include "menai_vm_symbol.h"
 
 static void
-MenaiSymbol_dealloc(MenaiValue self)
+MenaiSymbol_dealloc(MenaiValue *self)
 {
     menai_xrelease(((MenaiSymbol_Object *)self)->name);
     free(self);
@@ -28,8 +28,8 @@ PyTypeObject MenaiSymbol_Type = {
     Py_TPFLAGS_DEFAULT,
 };
 
-MenaiValue
-menai_symbol_alloc(MenaiValue name)
+MenaiValue *
+menai_symbol_alloc(MenaiValue *name)
 {
     MenaiSymbol_Object *self = (MenaiSymbol_Object *)malloc(sizeof(MenaiSymbol_Object));
     if (self == NULL) {
@@ -42,7 +42,7 @@ menai_symbol_alloc(MenaiValue name)
     menai_retain(name);
     self->name = name;
 
-    return (MenaiValue)self;
+    return (MenaiValue *)self;
 }
 
 int
