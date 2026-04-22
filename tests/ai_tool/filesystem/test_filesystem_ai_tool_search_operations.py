@@ -864,3 +864,42 @@ class TestSearchFiles:
 
         assert data["results"][0]["match_count"] == 3
         assert data["total_matches"] == 3
+
+    def test_response_size_limit_raises_error_when_exceeded(self, tmp_path, make_tool_call):
+        """search_files raises AIToolExecutionError when match content exceeds 64KB."""
+        long_line = "needle " + "x" * 2000 + "\n"
+        for i in range(40):
+            (tmp_path / f"file_{i:02d}.txt").write_text(long_line)
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_files",
+            "path": ".",
+            "search_text": "needle",
+            "max_results": 1000
+        })
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(tool.execute(tool_call, "", None))
+
+        assert "64KB" in str(exc_info.value)
+        assert "response size limit" in str(exc_info.value)
+
+    def test_response_size_limit_raises_error_in_escaped_pipe_fallback(self, tmp_path, make_tool_call):
+        """search_files raises AIToolExecutionError when the escaped-pipe fallback exceeds 64KB."""
+        long_line = "needle\\|mark " + "x" * 2000 + "\n"
+        for i in range(40):
+            (tmp_path / f"file_{i:02d}.txt").write_text(long_line)
+        tool = make_tool_with_tmp(tmp_path)
+
+        tool_call = make_tool_call("filesystem", {
+            "operation": "search_files",
+            "path": ".",
+            "search_text": "needle\\|mark",
+            "regexp": True,
+            "max_results": 1000
+        })
+        with pytest.raises(AIToolExecutionError) as exc_info:
+            asyncio.run(tool.execute(tool_call, "", None))
+
+        assert "64KB" in str(exc_info.value)
+        assert "response size limit" in str(exc_info.value)

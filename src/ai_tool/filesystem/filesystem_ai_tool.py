@@ -1512,6 +1512,8 @@ class FileSystemAITool(AITool):
         max_results = self._get_optional_int_value("max_results", arguments, 50)
         encoding = cast(str, self._get_optional_str_value("encoding", arguments, "utf-8"))
 
+        max_response_bytes = 64 * 1024
+        response_bytes = 0
         pattern = self._compile_search_pattern(search_text, case_sensitive, regexp)
 
         total_matches = 0
@@ -1546,7 +1548,15 @@ class FileSystemAITool(AITool):
             file_matches = []
             for line_num, line in enumerate(lines, 1):
                 if pattern.search(line):
-                    file_matches.append({"line": line_num, "content": line.rstrip("\n")})
+                    content = line.rstrip("\n")
+                    match_bytes = len(json.dumps({"line": line_num, "content": content}).encode("utf-8"))
+                    if response_bytes + match_bytes > max_response_bytes:
+                        raise AIToolExecutionError(
+                            f"Search results exceed the {max_response_bytes // 1024}KB response size limit. "
+                            "Use a more specific search pattern, the include filter, or reduce max_results."
+                        )
+                    response_bytes += match_bytes
+                    file_matches.append({"line": line_num, "content": content})
                     total_matches += 1
                     if total_matches >= cast(int, max_results):
                         truncated = True
@@ -1599,7 +1609,15 @@ class FileSystemAITool(AITool):
                     file_matches = []
                     for line_num, line in enumerate(lines, 1):
                         if fixed_pattern.search(line):
-                            file_matches.append({"line": line_num, "content": line.rstrip("\n")})
+                            content = line.rstrip("\n")
+                            match_bytes = len(json.dumps({"line": line_num, "content": content}).encode("utf-8"))
+                            if response_bytes + match_bytes > max_response_bytes:
+                                raise AIToolExecutionError(
+                                    f"Search results exceed the {max_response_bytes // 1024}KB response size limit. "
+                                    "Use a more specific search pattern, the include filter, or reduce max_results."
+                                )
+                            response_bytes += match_bytes
+                            file_matches.append({"line": line_num, "content": content})
                             total_matches += 1
                             if total_matches >= cast(int, max_results):
                                 truncated = True
