@@ -144,11 +144,6 @@ extern MenaiValue menai_convert_value(PyObject *src);
 
 /*
  * Cancellation check interval.
- *
- * PyErr_CheckSignals is not free — it was measured at ~6.7% of total CPU at
- * an interval of 1000.  Menai is a pure functional language with no I/O side
- * effects, so a few extra milliseconds of Ctrl-C latency is acceptable.
- * 1 << 17 = 131072 instructions between checks.
  */
 #define CANCEL_CHECK_INTERVAL (1 << 17)
 
@@ -1372,6 +1367,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_TAIL_CALL: {
             MenaiValue raw = regs[base + src0];
             int n_args = src1;
+
             /* Take an owned reference before the arg-moving loop.
              * The loop may overwrite regs[base+src0] if src0 < n_args,
              * which would decrement raw's refcount to zero and free it. */
@@ -1439,6 +1435,161 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             menai_raise_eval_error("Cannot call non-function value");
             goto error;
         }
+
+        case OP_APPLY: {
+            /*
+             * APPLY dest, src0, src1:
+             * src0 = function register, src1 = arg_list register.
+             * Scatters the list into the callee's register window and pushes a frame.
+             */
+            MenaiValue raw_func = regs[base + src0];
+            MenaiValue raw_args = regs[base + src1];
+
+            if (!IS_MENAI_LIST(raw_args)) {
+                menai_raise_eval_error("apply: second argument must be a list");
+                goto error;
+            }
+
+            MenaiValue *elements = ((MenaiList_Object *)raw_args)->elements;
+            int arity = (int)((MenaiList_Object *)raw_args)->length;
+
+            if (IS_MENAI_FUNCTION(raw_func)) {
+                if (frame_depth >= MAX_FRAME_DEPTH) {
+                    menai_raise_eval_error("Maximum call depth exceeded");
+                    goto error;
+                }
+
+                int callee_base = base + frame->local_count;
+
+                /* Scatter list elements into the callee window */
+                for (int i = 0; i < arity; i++) {
+                    menai_reg_set_borrow(regs, callee_base + i, elements[i]);
+                }
+
+                frame_depth++;
+                Frame *new_frame = &frames[frame_depth];
+                *new_frame = (Frame){
+                    .code_obj = NULL, .constants_items = NULL, .instrs = NULL
+                }
+
+                ;
+
+                if (call_setup(new_frame, raw_func, regs, callee_base, arity, dest) < 0) {
+                    frame_depth--;
+                    goto error;
+                }
+
+                frame = new_frame;
+                break;
+            }
+
+            if (IS_MENAI_STRUCTTYPE(raw_func)) {
+                int n_fields = ((MenaiStructType_Object *)raw_func)->nfields;
+                if (arity != (int)n_fields) {
+                    menai_raise_eval_error("Struct constructor called with wrong number of arguments");
+                    goto error;
+                }
+
+                MenaiValue instance = menai_struct_alloc(raw_func, elements, n_fields);
+                if (instance == NULL) {
+                    goto error;
+                }
+
+                menai_reg_set_own(regs, base + dest, instance);
+                break;
+            }
+
+            menai_raise_eval_error("apply: first argument must be a function");
+            goto error;
+        }
+
+        case OP_TAIL_APPLY: {
+            /*
+             * TAIL_APPLY src0, src1:
+             * src0 = function register, src1 = arg_list register.
+             * Reuses current frame (tail position).
+             */
+            MenaiValue raw_func = regs[base + src0];
+            MenaiValue raw_args = regs[base + src1];
+            /* Own raw_func before the scatter loop which may overwrite its slot. */
+            /* Own raw_args for the same reason — src1 may be < arity. */
+            menai_retain(raw_func);
+            menai_retain(raw_args);
+
+            if (!IS_MENAI_LIST(raw_args)) {
+                menai_release(raw_func);
+                menai_release(raw_args);
+                menai_raise_eval_error("apply: second argument must be a list");
+                goto error;
+            }
+
+            MenaiValue *elements = ((MenaiList_Object *)raw_args)->elements;
+            int arity = (int)((MenaiList_Object *)raw_args)->length;
+
+            if (IS_MENAI_FUNCTION(raw_func)) {
+                /* Scatter args into base+0..arity-1 (reusing current frame's base) */
+                for (int i = 0; i < arity; i++) {
+                    menai_reg_set_borrow(regs, base + i, elements[i]);
+                }
+
+                menai_release(raw_args);
+
+                /* Release old code_obj and instructions, reuse frame. */
+                menai_code_object_release(frame->code_obj);
+                frame->code_obj = NULL;  /* frame_setup will retain the new one */
+
+                int saved_return_dest = frame->return_dest;
+                if (call_setup(frame, raw_func, regs, base, arity, saved_return_dest) < 0) {
+                    menai_release(raw_func);
+                    goto error;
+                }
+
+                menai_release(raw_func);
+                break;
+            }
+
+            if (IS_MENAI_STRUCTTYPE(raw_func)) {
+                int n_fields = ((MenaiStructType_Object *)raw_func)->nfields;
+                if (arity != (int)n_fields) {
+                    menai_release(raw_func);
+                    menai_release(raw_args);
+                    menai_raise_eval_error("Struct constructor called with wrong number of arguments");
+                    goto error;
+                }
+
+                MenaiValue retval = menai_struct_alloc(raw_func, elements, n_fields);
+                if (retval == NULL) {
+                    menai_release(raw_args);
+                    menai_release(raw_func);
+                    goto error;
+                }
+
+                int saved_return_dest = frame->return_dest;
+                menai_code_object_release(frame->code_obj);
+                frame_depth--;
+                Frame *caller = &frames[frame_depth];
+                if (caller->is_sentinel) {
+                    menai_release(raw_args);
+                    menai_release(raw_func);
+                    return (PyObject *)retval;
+                }
+
+                menai_reg_set_own(regs, caller->base + saved_return_dest, retval);
+                menai_release(raw_args);
+                menai_release(raw_func);
+                frame = caller;
+                break;
+            }
+
+            menai_release(raw_func);
+            menai_release(raw_args);
+            menai_raise_eval_error("apply: first argument must be a function");
+            goto error;
+        }
+
+        case OP_EMIT_TRACE:
+            /* Trace is a no-op in the C VM — no watcher support yet. */
+            break;
 
         case OP_NONE_P:
             bool_store(regs, base + dest, IS_MENAI_NONE(regs[base + src0]));
@@ -3272,161 +3423,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             menai_release(old);
             break;
         }
-
-        case OP_APPLY: {
-            /*
-             * APPLY dest, src0, src1:
-             * src0 = function register, src1 = arg_list register.
-             * Scatters the list into the callee's register window and pushes a frame.
-             */
-            MenaiValue raw_func = regs[base + src0];
-            MenaiValue raw_args = regs[base + src1];
-
-            if (!IS_MENAI_LIST(raw_args)) {
-                menai_raise_eval_error("apply: second argument must be a list");
-                goto error;
-            }
-
-            MenaiValue *elements = ((MenaiList_Object *)raw_args)->elements;
-            int arity = (int)((MenaiList_Object *)raw_args)->length;
-
-            if (IS_MENAI_FUNCTION(raw_func)) {
-                if (frame_depth >= MAX_FRAME_DEPTH) {
-                    menai_raise_eval_error("Maximum call depth exceeded");
-                    goto error;
-                }
-
-                int callee_base = base + frame->local_count;
-
-                /* Scatter list elements into the callee window */
-                for (int i = 0; i < arity; i++) {
-                    menai_reg_set_borrow(regs, callee_base + i, elements[i]);
-                }
-
-                frame_depth++;
-                Frame *new_frame = &frames[frame_depth];
-                *new_frame = (Frame){
-                    .code_obj = NULL, .constants_items = NULL, .instrs = NULL
-                }
-
-                ;
-
-                if (call_setup(new_frame, raw_func, regs, callee_base, arity, dest) < 0) {
-                    frame_depth--;
-                    goto error;
-                }
-
-                frame = new_frame;
-                break;
-            }
-
-            if (IS_MENAI_STRUCTTYPE(raw_func)) {
-                int n_fields = ((MenaiStructType_Object *)raw_func)->nfields;
-                if (arity != (int)n_fields) {
-                    menai_raise_eval_error("Struct constructor called with wrong number of arguments");
-                    goto error;
-                }
-
-                MenaiValue instance = menai_struct_alloc(raw_func, elements, n_fields);
-                if (instance == NULL) {
-                    goto error;
-                }
-
-                menai_reg_set_own(regs, base + dest, instance);
-                break;
-            }
-
-            menai_raise_eval_error("apply: first argument must be a function");
-            goto error;
-        }
-
-        case OP_TAIL_APPLY: {
-            /*
-             * TAIL_APPLY src0, src1:
-             * src0 = function register, src1 = arg_list register.
-             * Reuses current frame (tail position).
-             */
-            MenaiValue raw_func = regs[base + src0];
-            MenaiValue raw_args = regs[base + src1];
-            /* Own raw_func before the scatter loop which may overwrite its slot. */
-            /* Own raw_args for the same reason — src1 may be < arity. */
-            menai_retain(raw_func);
-            menai_retain(raw_args);
-
-            if (!IS_MENAI_LIST(raw_args)) {
-                menai_release(raw_func);
-                menai_release(raw_args);
-                menai_raise_eval_error("apply: second argument must be a list");
-                goto error;
-            }
-
-            MenaiValue *elements = ((MenaiList_Object *)raw_args)->elements;
-            int arity = (int)((MenaiList_Object *)raw_args)->length;
-
-            if (IS_MENAI_FUNCTION(raw_func)) {
-                /* Scatter args into base+0..arity-1 (reusing current frame's base) */
-                for (int i = 0; i < arity; i++) {
-                    menai_reg_set_borrow(regs, base + i, elements[i]);
-                }
-
-                menai_release(raw_args);
-
-                /* Release old code_obj and instructions, reuse frame. */
-                menai_code_object_release(frame->code_obj);
-                frame->code_obj = NULL;  /* frame_setup will retain the new one */
-
-                int saved_return_dest = frame->return_dest;
-                if (call_setup(frame, raw_func, regs, base, arity, saved_return_dest) < 0) {
-                    menai_release(raw_func);
-                    goto error;
-                }
-
-                menai_release(raw_func);
-                break;
-            }
-
-            if (IS_MENAI_STRUCTTYPE(raw_func)) {
-                int n_fields = ((MenaiStructType_Object *)raw_func)->nfields;
-                if (arity != (int)n_fields) {
-                    menai_release(raw_func);
-                    menai_release(raw_args);
-                    menai_raise_eval_error("Struct constructor called with wrong number of arguments");
-                    goto error;
-                }
-
-                MenaiValue retval = menai_struct_alloc(raw_func, elements, n_fields);
-                if (retval == NULL) {
-                    menai_release(raw_args);
-                    menai_release(raw_func);
-                    goto error;
-                }
-
-                int saved_return_dest = frame->return_dest;
-                menai_code_object_release(frame->code_obj);
-                frame_depth--;
-                Frame *caller = &frames[frame_depth];
-                if (caller->is_sentinel) {
-                    menai_release(raw_args);
-                    menai_release(raw_func);
-                    return (PyObject *)retval;
-                }
-
-                menai_reg_set_own(regs, caller->base + saved_return_dest, retval);
-                menai_release(raw_args);
-                menai_release(raw_func);
-                frame = caller;
-                break;
-            }
-
-            menai_release(raw_func);
-            menai_release(raw_args);
-            menai_raise_eval_error("apply: first argument must be a function");
-            goto error;
-        }
-
-        case OP_EMIT_TRACE:
-            /* Trace is a no-op in the C VM — no watcher support yet. */
-            break;
 
         case OP_COMPLEX_P:
             bool_store(regs, base + dest, IS_MENAI_COMPLEX(regs[base + src0]));
