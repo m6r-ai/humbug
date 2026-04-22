@@ -22,10 +22,6 @@ extern MenaiValue menai_convert_value(PyObject *src);
 void
 menai_code_object_release(MenaiCodeObject *co)
 {
-    if (co == NULL) {
-        return;
-    }
-
     if (--co->ob_refcnt > 0) {
         return;
     }
@@ -53,7 +49,6 @@ menai_code_object_release(MenaiCodeObject *co)
     }
 
     free(co->children);
-
     free(co->instrs);
     free(co->name);
     free(co);
