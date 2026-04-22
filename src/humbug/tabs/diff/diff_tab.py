@@ -227,10 +227,10 @@ class DiffTab(TabBase):
         pass
 
     def can_copy(self) -> bool:
-        return False
+        return bool(self._diff_widget.get_selected_text())
 
     def copy(self) -> None:
-        pass
+        self._diff_widget.copy()
 
     def can_paste(self) -> bool:
         return False

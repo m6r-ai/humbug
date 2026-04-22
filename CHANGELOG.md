@@ -16,6 +16,7 @@ Bug fixes:
   but get results when it's unescaped, the tool will now return the results and warning that it had to remove the escaping.
 - If you highlight text and the open the find control in a diff tab it now uses the selected text as the initial search
   option.
+- Enabled keyboard shortcuts for "copy" operations in diff tabs.
 
 ## v44 (2026-04-19)
 

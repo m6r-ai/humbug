@@ -551,6 +551,14 @@ class DiffWidget(QWidget):
 
         return ""
 
+    def copy(self) -> None:
+        """Copy the selected text from whichever pane has an active selection."""
+        for pane in (self._left_pane, self._right_pane):
+            cursor = pane.textCursor()
+            if cursor.hasSelection():
+                pane.copy()
+                return
+
     def can_navigate_next_hunk(self) -> bool:
         """Return True if there is a hunk after the current scroll position."""
         if not self._cached_hunks:
