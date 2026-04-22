@@ -471,23 +471,28 @@ menai_integer_compare(MenaiValue a, MenaiValue b, int op)
  * Py_ssize_t fits in a long on all supported platforms, so this is a direct
  * delegation to menai_integer_from_long.
  */
-static inline MenaiValue make_integer_from_ssize_t(Py_ssize_t n) {
+static inline MenaiValue make_integer_from_ssize_t(Py_ssize_t n)
+{
     return menai_integer_from_long((long)n);
 }
 
-static inline MenaiValue make_integer_from_long(long n) {
+static inline MenaiValue make_integer_from_long(long n)
+{
     return menai_integer_from_long(n);
 }
 
-static inline MenaiValue make_float(double v) {
+static inline MenaiValue make_float(double v)
+{
     return menai_float_alloc(v);
 }
 
-static inline MenaiValue make_complex(double real, double imag) {
+static inline MenaiValue make_complex(double real, double imag)
+{
     return menai_complex_alloc(real, imag);
 }
 
-static inline void bool_store(MenaiValue *regs, int slot, int cond) {
+static inline void bool_store(MenaiValue *regs, int slot, int cond)
+{
     menai_reg_set_borrow(regs, slot, cond ? Menai_TRUE : Menai_FALSE);
 }
 
@@ -1096,7 +1101,6 @@ call_setup(Frame *new_frame, MenaiValue func_obj,
         }
 
         menai_reg_set_own(regs, callee_base + min_arity, rest_list);
-
     } else if (arity != param_count) {
         const char *fname = co->name ? co->name : "<lambda>";
         menai_raise_eval_errorf(
@@ -1337,8 +1341,10 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
 
                 frame = new_frame;
+                break;
+            }
 
-            } else if (IS_MENAI_STRUCTTYPE(raw)) {
+            if (IS_MENAI_STRUCTTYPE(raw)) {
                 /* Struct constructor call */
                 int n_fields = ((MenaiStructType_Object *)raw)->nfields;
                 if (arity != (int)n_fields) {
@@ -1356,12 +1362,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
 
                 menai_reg_set_own(regs, base + dest, instance);
-            } else {
-                menai_raise_eval_error("Cannot call non-function value");
-                goto error;
+                break;
             }
 
-            break;
+            menai_raise_eval_error("Cannot call non-function value");
+            goto error;
         }
 
         case OP_TAIL_CALL: {
@@ -1392,7 +1397,10 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
 
                 menai_release(raw);
-            } else if (IS_MENAI_STRUCTTYPE(raw)) {
+                break;
+            }
+
+            if (IS_MENAI_STRUCTTYPE(raw)) {
                 int n_fields = ((MenaiStructType_Object *)raw)->nfields;
                 if (n_args != (int)n_fields) {
                     PyObject *sname = menai_string_to_pyunicode(((MenaiStructType_Object *)raw)->name);
@@ -1424,13 +1432,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_reg_set_own(regs, caller->base + saved_return_dest, retval);
                 menai_release(raw);
                 frame = caller;
-            } else {
-                menai_release(raw);
-                menai_raise_eval_error("Cannot call non-function value");
-                goto error;
+                break;
             }
 
-            break;
+            menai_release(raw);
+            menai_raise_eval_error("Cannot call non-function value");
+            goto error;
         }
 
         case OP_NONE_P:
@@ -3310,8 +3317,10 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
 
                 frame = new_frame;
+                break;
+            }
 
-            } else if (IS_MENAI_STRUCTTYPE(raw_func)) {
+            if (IS_MENAI_STRUCTTYPE(raw_func)) {
                 int n_fields = ((MenaiStructType_Object *)raw_func)->nfields;
                 if (arity != (int)n_fields) {
                     menai_raise_eval_error("Struct constructor called with wrong number of arguments");
@@ -3324,12 +3333,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
 
                 menai_reg_set_own(regs, base + dest, instance);
-            } else {
-                menai_raise_eval_error("apply: first argument must be a function");
-                goto error;
+                break;
             }
 
-            break;
+            menai_raise_eval_error("apply: first argument must be a function");
+            goto error;
         }
 
         case OP_TAIL_APPLY: {
@@ -3374,8 +3382,10 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
 
                 menai_release(raw_func);
+                break;
+            }
 
-            } else if (IS_MENAI_STRUCTTYPE(raw_func)) {
+            if (IS_MENAI_STRUCTTYPE(raw_func)) {
                 int n_fields = ((MenaiStructType_Object *)raw_func)->nfields;
                 if (arity != (int)n_fields) {
                     menai_release(raw_func);
@@ -3405,14 +3415,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_release(raw_args);
                 menai_release(raw_func);
                 frame = caller;
-            } else {
-                menai_release(raw_func);
-                menai_release(raw_args);
-                menai_raise_eval_error("apply: first argument must be a function");
-                goto error;
+                break;
             }
 
-            break;
+            menai_release(raw_func);
+            menai_release(raw_args);
+            menai_raise_eval_error("apply: first argument must be a function");
+            goto error;
         }
 
         case OP_EMIT_TRACE:

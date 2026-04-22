@@ -28,10 +28,6 @@ menai_regs_alloc(size_t n, MenaiValue none_val)
 void
 menai_regs_free(MenaiValue *regs, size_t n)
 {
-    if (regs == NULL) {
-        return;
-    }
-
     for (size_t i = 0; i < n; i++) {
         menai_release(regs[i]);
     }
