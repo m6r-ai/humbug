@@ -11,8 +11,8 @@
 
 #include "menai_vm_boolean.h"
 
-static MenaiBoolean_Object _true_storage;
-static MenaiBoolean_Object _false_storage;
+static MenaiBoolean _true_storage;
+static MenaiBoolean _false_storage;
 static MenaiValue *_Menai_TRUE = NULL;
 static MenaiValue *_Menai_FALSE = NULL;
 
@@ -29,7 +29,7 @@ MenaiBoolean_dealloc(MenaiValue *self)
 PyTypeObject MenaiBoolean_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "menai.MenaiBoolean",          /* tp_name */
-    sizeof(MenaiBoolean_Object),   /* tp_basicsize */
+    sizeof(MenaiBoolean),   /* tp_basicsize */
     0,                             /* tp_itemsize */
     (destructor)MenaiBoolean_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

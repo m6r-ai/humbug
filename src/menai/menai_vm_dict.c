@@ -48,7 +48,7 @@ _dict_free_arrays(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, Py_
 static void
 MenaiDict_dealloc(MenaiValue *self)
 {
-    MenaiDict_Object *d = (MenaiDict_Object *)self;
+    MenaiDict *d = (MenaiDict *)self;
     _dict_free_arrays(d->keys, d->values, d->hashes, d->length);
     menai_ht_free(&d->ht);
     free(self);
@@ -57,7 +57,7 @@ MenaiDict_dealloc(MenaiValue *self)
 PyTypeObject MenaiDict_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "menai.MenaiDict",          /* tp_name */
-    sizeof(MenaiDict_Object),   /* tp_basicsize */
+    sizeof(MenaiDict),   /* tp_basicsize */
     0,                             /* tp_itemsize */
     (destructor)MenaiDict_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -67,7 +67,7 @@ PyTypeObject MenaiDict_Type = {
 MenaiValue *
 menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, Py_ssize_t n)
 {
-    MenaiDict_Object *obj = (MenaiDict_Object *)malloc(sizeof(MenaiDict_Object));
+    MenaiDict *obj = (MenaiDict *)malloc(sizeof(MenaiDict));
     if (!obj) {
         _dict_free_arrays(keys, values, hashes, n);
         return NULL;
@@ -94,7 +94,7 @@ menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, Py_hash_t *
 MenaiValue *
 menai_dict_new_empty(void)
 {
-    MenaiDict_Object *obj = (MenaiDict_Object *)malloc(sizeof(MenaiDict_Object));
+    MenaiDict *obj = (MenaiDict *)malloc(sizeof(MenaiDict));
     if (!obj) {
         return NULL;
     }

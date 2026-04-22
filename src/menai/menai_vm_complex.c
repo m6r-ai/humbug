@@ -17,7 +17,7 @@ MenaiComplex_dealloc(MenaiValue *self)
 PyTypeObject MenaiComplex_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "menai.MenaiComplex",          /* tp_name */
-    sizeof(MenaiComplex_Object),   /* tp_basicsize */
+    sizeof(MenaiComplex),   /* tp_basicsize */
     0,                             /* tp_itemsize */
     (destructor)MenaiComplex_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -27,7 +27,7 @@ PyTypeObject MenaiComplex_Type = {
 MenaiValue *
 menai_complex_alloc(double real, double imag)
 {
-    MenaiComplex_Object *self = (MenaiComplex_Object *)malloc(sizeof(MenaiComplex_Object));
+    MenaiComplex *self = (MenaiComplex *)malloc(sizeof(MenaiComplex));
     if (self == NULL) {
         return NULL;
     }

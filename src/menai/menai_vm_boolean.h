@@ -14,7 +14,7 @@
 typedef struct {
     MenaiObject_HEAD
     int value;          /* 0 or 1 */
-} MenaiBoolean_Object;
+} MenaiBoolean;
 
 extern MenaiType MenaiBoolean_Type;
 

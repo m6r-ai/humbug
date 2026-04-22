@@ -26,7 +26,7 @@ typedef struct {
      * owner always points to a list with owner == NULL (never a chain).
      */
     MenaiValue *owner;
-} MenaiList_Object;
+} MenaiList;
 
 extern MenaiType MenaiList_Type;
 
@@ -55,7 +55,7 @@ MenaiValue *menai_list_new_empty(void);
  * If lst is empty, raises MenaiEvalError and returns NULL.
  * If lst has one element, returns the Menai_EMPTY_LIST singleton (borrowed
  * from the caller — the caller must reg_set_borrow it).
- * Otherwise returns a new MenaiList_Object that shares lst's backing array
+ * Otherwise returns a new MenaiList that shares lst's backing array
  * without copying or retaining any elements.
  */
 MenaiValue *menai_list_rest(MenaiValue *lst);
@@ -64,7 +64,7 @@ MenaiValue *menai_list_rest(MenaiValue *lst);
  * menai_list_slice — return a slice view of lst covering [start, end).
  *
  * start and end must already be validated by the caller (0 <= start <= end
- * <= lst->length).  Returns a new MenaiList_Object that shares lst's backing
+ * <= lst->length).  Returns a new MenaiList that shares lst's backing
  * array without copying or retaining any elements.
  */
 MenaiValue *menai_list_slice(MenaiValue *lst, Py_ssize_t start, Py_ssize_t end);
@@ -75,12 +75,8 @@ MenaiValue *menai_list_slice(MenaiValue *lst, Py_ssize_t start, Py_ssize_t end);
  */
 int menai_vm_list_init(void);
 
-/* ---------------------------------------------------------------------------
- * Inline accessors — used heavily in the hot VM loop
- * ------------------------------------------------------------------------- */
-
 static inline MenaiValue *
-menai_list_get(MenaiList_Object *list, Py_ssize_t i)
+menai_list_get(MenaiList *list, Py_ssize_t i)
 {
     return list->elements[i];
 }
@@ -88,13 +84,13 @@ menai_list_get(MenaiList_Object *list, Py_ssize_t i)
 static inline MenaiValue **
 menai_list_elements(MenaiValue *list_obj)
 {
-    return ((MenaiList_Object *)list_obj)->elements;
+    return ((MenaiList *)list_obj)->elements;
 }
 
 static inline Py_ssize_t
 menai_list_length(MenaiValue *list_obj)
 {
-    return ((MenaiList_Object *)list_obj)->length;
+    return ((MenaiList *)list_obj)->length;
 }
 
 #endif /* MENAI_VM_LIST_H */

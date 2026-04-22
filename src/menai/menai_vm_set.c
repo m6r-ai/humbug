@@ -39,7 +39,7 @@ _set_free_arrays(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t n)
 static void
 MenaiSet_dealloc(MenaiValue *self)
 {
-    MenaiSet_Object *s = (MenaiSet_Object *)self;
+    MenaiSet *s = (MenaiSet *)self;
     _set_free_arrays(s->elements, s->hashes, s->length);
     menai_ht_free(&s->ht);
     free(self);
@@ -48,7 +48,7 @@ MenaiSet_dealloc(MenaiValue *self)
 PyTypeObject MenaiSet_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "menai.MenaiSet",          /* tp_name */
-    sizeof(MenaiSet_Object),   /* tp_basicsize */
+    sizeof(MenaiSet),   /* tp_basicsize */
     0,                             /* tp_itemsize */
     (destructor)MenaiSet_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -58,7 +58,7 @@ PyTypeObject MenaiSet_Type = {
 MenaiValue *
 menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t n)
 {
-    MenaiSet_Object *obj = (MenaiSet_Object *)malloc(sizeof(MenaiSet_Object));
+    MenaiSet *obj = (MenaiSet *)malloc(sizeof(MenaiSet));
     if (!obj) {
         _set_free_arrays(elements, hashes, n);
         return NULL;
@@ -84,7 +84,7 @@ menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t
 MenaiValue *
 menai_set_new_empty(void)
 {
-    MenaiSet_Object *obj = (MenaiSet_Object *)malloc(sizeof(MenaiSet_Object));
+    MenaiSet *obj = (MenaiSet *)malloc(sizeof(MenaiSet));
     if (!obj) {
         return NULL;
     }

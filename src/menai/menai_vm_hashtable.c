@@ -162,7 +162,7 @@ menai_value_hash(MenaiValue *val)
     }
 
     if (t == &MenaiBoolean_Type) {
-        return (Py_hash_t)((MenaiBoolean_Object *)val)->value;
+        return (Py_hash_t)((MenaiBoolean *)val)->value;
     }
 
     if (t == &MenaiInteger_Type) {
@@ -180,7 +180,7 @@ menai_value_hash(MenaiValue *val)
     }
 
     if (t == &MenaiComplex_Type) {
-        MenaiComplex_Object *c = (MenaiComplex_Object *)val;
+        MenaiComplex *c = (MenaiComplex *)val;
         Py_hash_t hr = menai_hash_double(c->real);
         Py_hash_t hi = menai_hash_double(c->imag);
         Py_uhash_t acc = (Py_uhash_t)hr * 1000003UL ^ (Py_uhash_t)hi;
@@ -246,7 +246,7 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
     }
 
     if (ta == &MenaiBoolean_Type) {
-        return ((MenaiBoolean_Object *)a)->value == ((MenaiBoolean_Object *)b)->value;
+        return ((MenaiBoolean *)a)->value == ((MenaiBoolean *)b)->value;
     }
 
     if (ta == &MenaiInteger_Type) {
@@ -268,8 +268,8 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
     }
 
     if (ta == &MenaiComplex_Type) {
-        MenaiComplex_Object *ca = (MenaiComplex_Object *)a;
-        MenaiComplex_Object *cb = (MenaiComplex_Object *)b;
+        MenaiComplex *ca = (MenaiComplex *)a;
+        MenaiComplex *cb = (MenaiComplex *)b;
         return ca->real == cb->real && ca->imag == cb->imag;
     }
 
@@ -307,8 +307,8 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
     }
 
     if (ta == &MenaiList_Type) {
-        MenaiList_Object *la = (MenaiList_Object *)a;
-        MenaiList_Object *lb = (MenaiList_Object *)b;
+        MenaiList *la = (MenaiList *)a;
+        MenaiList *lb = (MenaiList *)b;
         if (la->length != lb->length) {
             return 0;
         }
@@ -323,8 +323,8 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
     }
 
     if (ta == &MenaiDict_Type) {
-        MenaiDict_Object *da = (MenaiDict_Object *)a;
-        MenaiDict_Object *db = (MenaiDict_Object *)b;
+        MenaiDict *da = (MenaiDict *)a;
+        MenaiDict *db = (MenaiDict *)b;
         if (da->length != db->length) {
             return 0;
         }
@@ -347,8 +347,8 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
     }
 
     if (ta == &MenaiSet_Type) {
-        MenaiSet_Object *sa = (MenaiSet_Object *)a;
-        MenaiSet_Object *sb = (MenaiSet_Object *)b;
+        MenaiSet *sa = (MenaiSet *)a;
+        MenaiSet *sb = (MenaiSet *)b;
         if (sa->length != sb->length) {
             return 0;
         }

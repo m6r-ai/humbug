@@ -27,7 +27,7 @@ typedef struct {
     Py_hash_t *hashes;       /* C array of menai_value_hash(keys[i]) */
     MenaiHashTable ht;       /* pure-C hash table for O(1) key lookup */
     Py_ssize_t length;
-} MenaiDict_Object;
+} MenaiDict;
 
 extern MenaiType MenaiDict_Type;
 

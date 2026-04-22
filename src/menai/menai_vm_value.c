@@ -499,7 +499,7 @@ menai_value_describe_none(MenaiValue *val)
 PyObject *
 menai_value_describe_boolean(MenaiValue *val)
 {
-    int v = ((MenaiBoolean_Object *)val)->value;
+    int v = ((MenaiBoolean *)val)->value;
     return PyUnicode_FromString(v ? "#t" : "#f");
 }
 
@@ -538,7 +538,7 @@ menai_value_describe_float(MenaiValue *val)
 PyObject *
 menai_value_describe_complex(MenaiValue *val)
 {
-    MenaiComplex_Object *c = (MenaiComplex_Object *)val;
+    MenaiComplex *c = (MenaiComplex *)val;
     double r = c->real;
     double im = c->imag;
 
@@ -807,7 +807,7 @@ menai_value_describe_struct(MenaiValue *val)
 PyObject *
 menai_value_describe_list(MenaiValue *val)
 {
-    MenaiList_Object *lst = (MenaiList_Object *)val;
+    MenaiList *lst = (MenaiList *)val;
     Py_ssize_t n = lst->length;
 
     if (n == 0) {
@@ -850,7 +850,7 @@ menai_value_describe_list(MenaiValue *val)
 PyObject *
 menai_value_describe_dict(MenaiValue *val)
 {
-    MenaiDict_Object *d = (MenaiDict_Object *)val;
+    MenaiDict *d = (MenaiDict *)val;
     Py_ssize_t n = d->length;
 
     if (n == 0) {
@@ -908,7 +908,7 @@ menai_value_describe_dict(MenaiValue *val)
 PyObject *
 menai_value_describe_set(MenaiValue *val)
 {
-    MenaiSet_Object *s = (MenaiSet_Object *)val;
+    MenaiSet *s = (MenaiSet *)val;
     Py_ssize_t n = s->length;
 
     if (n == 0) {
@@ -1048,7 +1048,7 @@ menai_value_to_python_none(MenaiValue *val)
 PyObject *
 menai_value_to_python_boolean(MenaiValue *val)
 {
-    int v = ((MenaiBoolean_Object *)val)->value;
+    int v = ((MenaiBoolean *)val)->value;
     return PyBool_FromLong(v);
 }
 
@@ -1072,7 +1072,7 @@ menai_value_to_python_float(MenaiValue *val)
 PyObject *
 menai_value_to_python_complex(MenaiValue *val)
 {
-    MenaiComplex_Object *c = (MenaiComplex_Object *)val;
+    MenaiComplex *c = (MenaiComplex *)val;
     return PyComplex_FromDoubles(c->real, c->imag);
 }
 
@@ -1143,7 +1143,7 @@ menai_value_to_python_struct(MenaiValue *val)
 PyObject *
 menai_value_to_python_list(MenaiValue *val)
 {
-    MenaiList_Object *lst = (MenaiList_Object *)val;
+    MenaiList *lst = (MenaiList *)val;
     Py_ssize_t n = lst->length;
 
     PyObject *result = PyList_New(n);
@@ -1167,7 +1167,7 @@ menai_value_to_python_list(MenaiValue *val)
 PyObject *
 menai_value_to_python_dict(MenaiValue *val)
 {
-    MenaiDict_Object *d = (MenaiDict_Object *)val;
+    MenaiDict *d = (MenaiDict *)val;
     Py_ssize_t n = d->length;
 
     PyObject *result = PyDict_New();
@@ -1223,7 +1223,7 @@ menai_value_to_python_dict(MenaiValue *val)
 PyObject *
 menai_value_to_python_set(MenaiValue *val)
 {
-    MenaiSet_Object *s = (MenaiSet_Object *)val;
+    MenaiSet *s = (MenaiSet *)val;
     Py_ssize_t n = s->length;
 
     PyObject *result = PySet_New(NULL);
@@ -1369,7 +1369,7 @@ static PyObject *
 dict_get_pairs(PyObject *self, void *closure)
 {
     (void)closure;
-    MenaiDict_Object *d = (MenaiDict_Object *)self;
+    MenaiDict *d = (MenaiDict *)self;
     Py_ssize_t n = d->length;
     PyObject *tup = PyTuple_New(n);
     if (!tup) {
@@ -1549,7 +1549,7 @@ static PyObject *
 boolean_get_value(PyObject *self, void *closure)
 {
     (void)closure;
-    return PyBool_FromLong(((MenaiBoolean_Object *)self)->value);
+    return PyBool_FromLong(((MenaiBoolean *)self)->value);
 }
 
 static PyGetSetDef _boolean_getsets[] = {

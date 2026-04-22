@@ -14,7 +14,7 @@ typedef struct {
     MenaiObject_HEAD
     double real;
     double imag;
-} MenaiComplex_Object;
+} MenaiComplex;
 
 extern MenaiType MenaiComplex_Type;
 

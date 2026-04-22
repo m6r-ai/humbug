@@ -37,7 +37,7 @@ static Py_ssize_t _list_size_classes[LIST_CACHE_NUM_BUCKETS] = {
 };
 
 /* Object free list — singly-linked via the elements pointer overlay */
-static MenaiList_Object *_list_obj_free = NULL;
+static MenaiList *_list_obj_free = NULL;
 
 /* Element array cache — power-of-2 size buckets */
 static MenaiValue ***_list_arr_buckets[LIST_CACHE_NUM_BUCKETS];
@@ -68,12 +68,12 @@ _bucket_index(Py_ssize_t n)
     return bucket < LIST_CACHE_NUM_BUCKETS ? bucket : LIST_CACHE_NUM_BUCKETS - 1;
 }
 
-static MenaiList_Object *
+static MenaiList *
 _menai_list_cache_alloc_obj(void)
 {
     if (_list_obj_free) {
-        MenaiList_Object *obj = _list_obj_free;
-        _list_obj_free = (MenaiList_Object *)obj->elements;
+        MenaiList *obj = _list_obj_free;
+        _list_obj_free = (MenaiList *)obj->elements;
         obj->elements = NULL;
         obj->length = 0;
         obj->owner = NULL;
@@ -81,7 +81,7 @@ _menai_list_cache_alloc_obj(void)
         return obj;
     }
 
-    MenaiList_Object *obj = (MenaiList_Object *)malloc(sizeof(MenaiList_Object));
+    MenaiList *obj = (MenaiList *)malloc(sizeof(MenaiList));
     if (obj == NULL) {
         return NULL;
     }
@@ -97,7 +97,7 @@ _menai_list_cache_alloc_obj(void)
 }
 
 static void
-_menai_list_cache_free_obj(MenaiList_Object *obj)
+_menai_list_cache_free_obj(MenaiList *obj)
 {
     obj->elements = (MenaiValue **)_list_obj_free;
     obj->owner = NULL;
@@ -152,9 +152,9 @@ _menai_list_cache_free_arr(MenaiValue **arr, Py_ssize_t n)
 static void
 _menai_list_cache_clear(void)
 {
-    MenaiList_Object *obj = _list_obj_free;
+    MenaiList *obj = _list_obj_free;
     while (obj) {
-        MenaiList_Object *next = (MenaiList_Object *)obj->elements;
+        MenaiList *next = (MenaiList *)obj->elements;
         free(obj);
         obj = next;
     }
@@ -182,7 +182,7 @@ _menai_list_cache_clear(void)
 static void
 MenaiList_dealloc(MenaiValue *self)
 {
-    MenaiList_Object *lst = (MenaiList_Object *)self;
+    MenaiList *lst = (MenaiList *)self;
     if (lst->owner != NULL) {
         /* View — release the backing list; do not touch the element array. */
         MenaiValue *owner = lst->owner;
@@ -205,7 +205,7 @@ MenaiList_dealloc(MenaiValue *self)
 PyTypeObject MenaiList_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "menai.MenaiList",          /* tp_name */
-    sizeof(MenaiList_Object),   /* tp_basicsize */
+    sizeof(MenaiList),   /* tp_basicsize */
     0,                             /* tp_itemsize */
     (destructor)MenaiList_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -228,7 +228,7 @@ menai_list_from_array(MenaiValue **items, Py_ssize_t n)
         }
     }
 
-    MenaiList_Object *obj = _menai_list_cache_alloc_obj();
+    MenaiList *obj = _menai_list_cache_alloc_obj();
     if (!obj) {
         _menai_list_cache_free_arr(arr, n);
         return NULL;
@@ -243,7 +243,7 @@ menai_list_from_array(MenaiValue **items, Py_ssize_t n)
 MenaiValue *
 menai_list_from_array_steal(MenaiValue **items, Py_ssize_t n)
 {
-    MenaiList_Object *obj = _menai_list_cache_alloc_obj();
+    MenaiList *obj = _menai_list_cache_alloc_obj();
     if (!obj) {
         /* Free the stolen array and its references on failure. */
         for (Py_ssize_t i = 0; i < n; i++) {
@@ -263,7 +263,7 @@ menai_list_from_array_steal(MenaiValue **items, Py_ssize_t n)
 MenaiValue *
 menai_list_new_empty(void)
 {
-    MenaiList_Object *obj = _menai_list_cache_alloc_obj();
+    MenaiList *obj = _menai_list_cache_alloc_obj();
     if (!obj) {
         return NULL;
     }
@@ -277,7 +277,7 @@ menai_list_new_empty(void)
 MenaiValue *
 menai_list_rest(MenaiValue *lst_val)
 {
-    MenaiList_Object *lst = (MenaiList_Object *)lst_val;
+    MenaiList *lst = (MenaiList *)lst_val;
     if (lst->length == 0) {
         /* Error reporting still goes through Python exceptions for now. */
         PyErr_SetString(PyExc_RuntimeError,
@@ -291,7 +291,7 @@ menai_list_rest(MenaiValue *lst_val)
      */
     MenaiValue *owner = (lst->owner != NULL) ? lst->owner : lst_val;
 
-    MenaiList_Object *view = _menai_list_cache_alloc_obj();
+    MenaiList *view = _menai_list_cache_alloc_obj();
     if (view == NULL) {
         return NULL;
     }
@@ -307,7 +307,7 @@ menai_list_rest(MenaiValue *lst_val)
 MenaiValue *
 menai_list_slice(MenaiValue *lst_val, Py_ssize_t start, Py_ssize_t end)
 {
-    MenaiList_Object *lst = (MenaiList_Object *)lst_val;
+    MenaiList *lst = (MenaiList *)lst_val;
 
     /*
      * Resolve the owner: if lst is itself a view, point at its owner so
@@ -315,7 +315,7 @@ menai_list_slice(MenaiValue *lst_val, Py_ssize_t start, Py_ssize_t end)
      */
     MenaiValue *owner = (lst->owner != NULL) ? lst->owner : lst_val;
 
-    MenaiList_Object *view = _menai_list_cache_alloc_obj();
+    MenaiList *view = _menai_list_cache_alloc_obj();
     if (view == NULL) {
         return NULL;
     }
