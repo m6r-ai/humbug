@@ -132,7 +132,7 @@ static inline int _menai_mul_overflow(long a, long b, long *r) {
 /* menai_vm_value init — lives in the same .so */
 extern PyObject *_menai_vm_value_init(void);
 
-extern PyObject *menai_convert_value(PyObject *src);
+extern MenaiValue menai_convert_value(PyObject *src);
 
 /*
  * Limits
@@ -804,7 +804,7 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, PyObject *prelude_dict
     PyObject *key, *val;
     Py_ssize_t pos = 0;
     while (PyDict_Next(constants_dict, &pos, &key, &val)) {
-        MenaiValue converted = (MenaiValue)menai_convert_value(val);
+        MenaiValue converted = menai_convert_value(val);
         if (converted == NULL) {
             globals_free(gt);
             return -1;
@@ -823,7 +823,7 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, PyObject *prelude_dict
     if (np > 0) {
         pos = 0;
         while (PyDict_Next(prelude_dict, &pos, &key, &val)) {
-            MenaiValue converted = (MenaiValue)menai_convert_value(val);
+            MenaiValue converted = menai_convert_value(val);
             if (converted == NULL) {
                 globals_free(gt);
                 return -1;

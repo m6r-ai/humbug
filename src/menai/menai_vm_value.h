@@ -46,7 +46,7 @@
  *   the same code object (borrowed), or NULL on error.  Must be called after
  *   menai_convert_code_constants.
  */
-PyObject *menai_convert_value(PyObject *src);
+MenaiValue menai_convert_value(PyObject *src);
 PyObject *menai_convert_code_constants(PyObject *code);
 PyObject *menai_build_closure_caches(PyObject *code);
 
