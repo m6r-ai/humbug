@@ -1,11 +1,10 @@
 /*
  * menai_vm_struct.h — MenaiStructType and MenaiStruct type definitions and API.
  *
- * MenaiStructType describes a struct schema (name, tag, field names).  The
- * field lookup table is stored as an inline C array of (interned name pointer,
- * index) pairs rather than a Python dict, so field lookup by symbol name
- * reduces to a menai_string_equal() linear scan — fast for the small field
- * counts typical in Menai structs.
+ * MenaiStructType describes a struct schema (name, tag, field names).  Field
+ * names are stored in an inline C array of (name, index) pairs; a MenaiHashTable
+ * provides O(1) lookup by name.  The array is retained for ordered enumeration
+ * and deallocation; the hash table is used for all name-to-index queries.
  *
  * MenaiStruct is an instance of a MenaiStructType.  Field values are stored
  * in an inline C array (nfields entries), eliminating the Python tuple object
@@ -19,6 +18,7 @@
 #include <Python.h>
 
 #include "menai_vm_object.h"
+#include "menai_vm_hashtable.h"
 #include "menai_vm_string.h"
 
 /*
@@ -35,6 +35,7 @@ typedef struct {
     MenaiValue name;            /* owned MenaiString_Object * — struct type name */
     int tag;                    /* unique integer tag */
     int nfields;                /* number of fields */
+    MenaiHashTable field_ht;    /* name -> index hash table; keys are borrowed from fields[] */
     MenaiFieldEntry fields[];   /* inline field-index table, nfields entries */
 } MenaiStructType_Object;
 
@@ -49,22 +50,15 @@ extern MenaiType MenaiStructType_Type;
 extern MenaiType MenaiStruct_Type;
 
 /*
- * menai_struct_field_index — look up a field by interned name pointer.
- * name must be a MenaiString_Object *.  Returns the 0-based index, or -1 if
- * not found.
+ * menai_struct_field_index — look up a field index by name in O(1).
+ * name must be a MenaiString_Object *.  Returns the 0-based index, or -1
+ * if not found.
  */
 static inline int
 menai_struct_field_index(MenaiStructType_Object *st, MenaiValue name)
 {
-    int n = st->nfields;
-    MenaiFieldEntry *fe = st->fields;
-    for (int i = 0; i < n; i++) {
-        if (menai_string_equal(fe[i].name, name)) {
-            return fe[i].index;
-        }
-    }
-
-    return -1;
+    Py_hash_t h = menai_string_hash(name);
+    return (int)menai_ht_lookup(&st->field_ht, name, h);
 }
 
 /*

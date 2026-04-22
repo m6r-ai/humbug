@@ -1,9 +1,11 @@
 /*
  * menai_vm_struct.c — MenaiStructType and MenaiStruct type implementations.
  *
- * MenaiStructType: field lookup uses an inline C array of (MenaiString name,
- * index) pairs rather than a Python dict.  All string fields are native
- * MenaiString_Object * values managed with menai_retain/menai_release.
+ * MenaiStructType: field names are stored in an inline C array of
+ * (MenaiString name, index) pairs.  A MenaiHashTable built at construction
+ * time provides O(1) name-to-index lookup; its slots hold borrowed references
+ * into fields[].  All string fields are native MenaiString_Object * values
+ * managed with menai_retain/menai_release.
  *
  * MenaiStruct: field values are stored in an inline C array (nfields entries),
  * eliminating the Python tuple previously heap-allocated on every struct
@@ -28,6 +30,7 @@ static void
 MenaiStructType_dealloc(MenaiValue self)
 {
     MenaiStructType_Object *s = (MenaiStructType_Object *)self;
+    menai_ht_free(&s->field_ht);
     menai_xrelease(s->name);
     int n = s->nfields;
     for (int i = 0; i < n; i++) {
@@ -68,6 +71,9 @@ _build_struct_type(MenaiValue name, int tag, PyObject *fn_tup)
     self->ob_type = &MenaiStructType_Type;
     self->ob_destructor = MenaiStructType_dealloc;
     menai_retain(name);
+    self->field_ht.slots = NULL;
+    self->field_ht.slot_count = 0;
+    self->field_ht.used = 0;
     self->name = name;
     self->tag = tag;
     self->nfields = (int)n;
@@ -84,6 +90,16 @@ _build_struct_type(MenaiValue name, int tag, PyObject *fn_tup)
 
         self->fields[i].name = fname_str;
         self->fields[i].index = (int)i;
+    }
+
+    if (menai_ht_init(&self->field_ht, n) < 0) {
+        MenaiStructType_dealloc((MenaiValue)self);
+        return NULL;
+    }
+
+    for (Py_ssize_t i = 0; i < n; i++) {
+        Py_hash_t h = menai_string_hash(self->fields[i].name);
+        menai_ht_insert(&self->field_ht, self->fields[i].name, h, i);
     }
 
     return (MenaiValue)self;
