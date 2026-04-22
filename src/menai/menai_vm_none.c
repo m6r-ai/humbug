@@ -11,7 +11,7 @@
 
 #include "menai_vm_none.h"
 
-static MenaiNone_Object _none_storage;
+static MenaiNone _none_storage;
 static MenaiValue *_Menai_NONE = NULL;
 
 static void
@@ -28,7 +28,7 @@ MenaiNone_dealloc(MenaiValue *self)
 PyTypeObject MenaiNone_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "menai.MenaiNone",          /* tp_name */
-    sizeof(MenaiNone_Object),   /* tp_basicsize */
+    sizeof(MenaiNone),   /* tp_basicsize */
     0,                          /* tp_itemsize */
     (destructor)MenaiNone_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,

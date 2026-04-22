@@ -166,7 +166,7 @@ menai_value_hash(MenaiValue *val)
     }
 
     if (t == &MenaiInteger_Type) {
-        MenaiInteger_Object *obj = (MenaiInteger_Object *)val;
+        MenaiInteger *obj = (MenaiInteger *)val;
         if (!obj->is_big) {
             Py_hash_t h = (Py_hash_t)obj->small;
             return h == -1 ? -2 : h;
@@ -250,8 +250,8 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
     }
 
     if (ta == &MenaiInteger_Type) {
-        MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
-        MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+        MenaiInteger *ia = (MenaiInteger *)a;
+        MenaiInteger *ib = (MenaiInteger *)b;
         if (!ia->is_big && !ib->is_big) {
             return ia->small == ib->small;
         }

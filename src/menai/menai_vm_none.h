@@ -12,7 +12,7 @@
 
 typedef struct {
     MenaiObject_HEAD
-} MenaiNone_Object;
+} MenaiNone;
 
 extern MenaiType MenaiNone_Type;
 

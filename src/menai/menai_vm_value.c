@@ -506,7 +506,7 @@ menai_value_describe_boolean(MenaiValue *val)
 PyObject *
 menai_value_describe_integer(MenaiValue *val)
 {
-    MenaiInteger_Object *obj = (MenaiInteger_Object *)val;
+    MenaiInteger *obj = (MenaiInteger *)val;
     if (!obj->is_big) {
         return PyUnicode_FromFormat("%ld", obj->small);
     }
@@ -1055,7 +1055,7 @@ menai_value_to_python_boolean(MenaiValue *val)
 PyObject *
 menai_value_to_python_integer(MenaiValue *val)
 {
-    MenaiInteger_Object *obj = (MenaiInteger_Object *)val;
+    MenaiInteger *obj = (MenaiInteger *)val;
     if (!obj->is_big) {
         return PyLong_FromLong(obj->small);
     }
@@ -1425,7 +1425,7 @@ static PyObject *
 integer_get_value(PyObject *self, void *closure)
 {
     (void)closure;
-    MenaiInteger_Object *obj = (MenaiInteger_Object *)self;
+    MenaiInteger *obj = (MenaiInteger *)self;
     if (!obj->is_big) {
         return PyLong_FromLong(obj->small);
     }

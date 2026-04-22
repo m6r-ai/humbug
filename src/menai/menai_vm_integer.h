@@ -26,7 +26,7 @@ typedef struct {
     int is_big;
     long small;     /* valid when is_big == 0 */
     MenaiInt big;   /* valid when is_big == 1 */
-} MenaiInteger_Object;
+} MenaiInteger;
 
 extern MenaiType MenaiInteger_Type;
 
@@ -61,7 +61,7 @@ MenaiValue *menai_integer_from_bigint(MenaiInt src);
 static inline const MenaiInt *
 menai_integer_bigint(MenaiValue *o)
 {
-    return &((MenaiInteger_Object *)o)->big;
+    return &((MenaiInteger *)o)->big;
 }
 
 /*
@@ -71,7 +71,7 @@ menai_integer_bigint(MenaiValue *o)
 static inline long
 menai_integer_small(MenaiValue *o)
 {
-    return ((MenaiInteger_Object *)o)->small;
+    return ((MenaiInteger *)o)->small;
 }
 
 /*

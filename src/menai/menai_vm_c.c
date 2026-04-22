@@ -418,8 +418,8 @@ static inline MenaiValue *menai_symbol_name(MenaiValue *o)
 static inline int
 menai_integer_compare(MenaiValue* a, MenaiValue* b, int op)
 {
-    MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
-    MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+    MenaiInteger *ia = (MenaiInteger *)a;
+    MenaiInteger *ib = (MenaiInteger *)b;
     if (!ia->is_big && !ib->is_big) {
         long la = ia->small, lb = ib->small;
         switch (op) {
@@ -1765,7 +1765,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiFunction *fn = (MenaiFunction *)f;
             int pc = fn->bytecode->param_count;
             int is_var = fn->bytecode->is_variadic;
-            MenaiInteger_Object *n_io = (MenaiInteger_Object *)n_obj;
+            MenaiInteger *n_io = (MenaiInteger *)n_obj;
             long n;
             if (!n_io->is_big) {
                 n = n_io->small;
@@ -1880,7 +1880,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            MenaiInteger *ia = (MenaiInteger *)a;
             if (!ia->is_big) {
                 long sv = ia->small;
                 long rv = sv < 0 ? -sv : sv;
@@ -1937,7 +1937,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            MenaiInteger *ia = (MenaiInteger *)a;
             if (!ia->is_big) {
                 long sv = ia->small;
                 /* LONG_MIN negation overflows — promote to bigint. */
@@ -1993,7 +1993,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            MenaiInteger *ia = (MenaiInteger *)a;
             MenaiInt tmp, res;
             menai_int_init(&tmp);
             menai_int_init(&res);
@@ -2032,9 +2032,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!((MenaiInteger_Object *)a)->is_big && !((MenaiInteger_Object *)b)->is_big) {
-                long la = ((MenaiInteger_Object *)a)->small;
-                long lb = ((MenaiInteger_Object *)b)->small;
+            if (!((MenaiInteger *)a)->is_big && !((MenaiInteger *)b)->is_big) {
+                long la = ((MenaiInteger *)a)->small;
+                long lb = ((MenaiInteger *)b)->small;
                 long lr;
                 if (!_menai_add_overflow(la, lb, &lr)) {
                     MenaiValue *_r = menai_integer_from_long(lr);
@@ -2051,23 +2051,23 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             menai_int_init(&av);
             menai_int_init(&bv);
             menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+            if (!((MenaiInteger *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)a)->small, &av) < 0) {
                     goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)a)->big, &av) < 0) {
                     goto error;
                 }
             }
 
-            if (!((MenaiInteger_Object *)b)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+            if (!((MenaiInteger *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)b)->small, &bv) < 0) {
                     menai_int_free(&av);
                     goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)b)->big, &bv) < 0) {
                     menai_int_free(&av);
                     goto error;
                 }
@@ -2101,9 +2101,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!((MenaiInteger_Object *)a)->is_big && !((MenaiInteger_Object *)b)->is_big) {
-                long la = ((MenaiInteger_Object *)a)->small;
-                long lb = ((MenaiInteger_Object *)b)->small;
+            if (!((MenaiInteger *)a)->is_big && !((MenaiInteger *)b)->is_big) {
+                long la = ((MenaiInteger *)a)->small;
+                long lb = ((MenaiInteger *)b)->small;
                 long lr;
                 if (!_menai_sub_overflow(la, lb, &lr)) {
                     MenaiValue *_r = menai_integer_from_long(lr);
@@ -2118,22 +2118,22 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiInt av, bv, res;
             menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+            if (!((MenaiInteger *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)a)->small, &av) < 0) {
                     goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)a)->big, &av) < 0) {
                     goto error;
                 }
             }
 
-            if (!((MenaiInteger_Object *)b)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+            if (!((MenaiInteger *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)b)->small, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)b)->big, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             }
@@ -2163,9 +2163,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!((MenaiInteger_Object *)a)->is_big && !((MenaiInteger_Object *)b)->is_big) {
-                long la = ((MenaiInteger_Object *)a)->small;
-                long lb = ((MenaiInteger_Object *)b)->small;
+            if (!((MenaiInteger *)a)->is_big && !((MenaiInteger *)b)->is_big) {
+                long la = ((MenaiInteger *)a)->small;
+                long lb = ((MenaiInteger *)b)->small;
                 long lr;
                 if (!_menai_mul_overflow(la, lb, &lr)) {
                     MenaiValue *_r = menai_integer_from_long(lr);
@@ -2180,22 +2180,22 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiInt av, bv, res;
             menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+            if (!((MenaiInteger *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)a)->small, &av) < 0) {
                     goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)a)->big, &av) < 0) {
                     goto error;
                 }
             }
 
-            if (!((MenaiInteger_Object *)b)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+            if (!((MenaiInteger *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)b)->small, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)b)->big, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             }
@@ -2226,7 +2226,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             {
-                MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+                MenaiInteger *ib = (MenaiInteger *)b;
                 int b_is_zero = (!ib->is_big && ib->small == 0) ||
                                 (ib->is_big && ib->big.sign == 0);
                 if (b_is_zero) {
@@ -2237,22 +2237,22 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiInt av, bv, res;
             menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+            if (!((MenaiInteger *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)a)->small, &av) < 0) {
                     goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)a)->big, &av) < 0) {
                     goto error;
                 }
             }
 
-            if (!((MenaiInteger_Object *)b)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+            if (!((MenaiInteger *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)b)->small, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)b)->big, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             }
@@ -2283,7 +2283,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             {
-                MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+                MenaiInteger *ib = (MenaiInteger *)b;
                 int b_is_zero = (!ib->is_big && ib->small == 0) ||
                                 (ib->is_big && ib->big.sign == 0);
                 if (b_is_zero) {
@@ -2296,22 +2296,22 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             menai_int_init(&av);
             menai_int_init(&bv);
             menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+            if (!((MenaiInteger *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)a)->small, &av) < 0) {
                     goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)a)->big, &av) < 0) {
                     goto error;
                 }
             }
 
-            if (!((MenaiInteger_Object *)b)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+            if (!((MenaiInteger *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)b)->small, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)b)->big, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             }
@@ -2342,7 +2342,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             {
-                MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+                MenaiInteger *ib = (MenaiInteger *)b;
                 int b_is_neg = (!ib->is_big && ib->small < 0) || (ib->is_big && ib->big.sign == -1);
                 if (b_is_neg) {
                     menai_raise_eval_error("Function 'integer-expn' requires a non-negative exponent");
@@ -2354,22 +2354,22 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             menai_int_init(&av);
             menai_int_init(&bv);
             menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+            if (!((MenaiInteger *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)a)->small, &av) < 0) {
                     goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)a)->big, &av) < 0) {
                     goto error;
                 }
             }
 
-            if (!((MenaiInteger_Object *)b)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+            if (!((MenaiInteger *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)b)->small, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)b)->big, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             }
@@ -2403,22 +2403,22 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             menai_int_init(&av);
             menai_int_init(&bv);
             menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+            if (!((MenaiInteger *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)a)->small, &av) < 0) {
                     goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)a)->big, &av) < 0) {
                     goto error;
                 }
             }
 
-            if (!((MenaiInteger_Object *)b)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+            if (!((MenaiInteger *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)b)->small, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)b)->big, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             }
@@ -2452,22 +2452,22 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             menai_int_init(&av);
             menai_int_init(&bv);
             menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+            if (!((MenaiInteger *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)a)->small, &av) < 0) {
                     goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)a)->big, &av) < 0) {
                     goto error;
                 }
             }
 
-            if (!((MenaiInteger_Object *)b)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+            if (!((MenaiInteger *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)b)->small, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)b)->big, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             }
@@ -2501,22 +2501,22 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             menai_int_init(&av);
             menai_int_init(&bv);
             menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+            if (!((MenaiInteger *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)a)->small, &av) < 0) {
                     goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)a)->big, &av) < 0) {
                     goto error;
                 }
             }
 
-            if (!((MenaiInteger_Object *)b)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+            if (!((MenaiInteger *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger *)b)->small, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                if (menai_int_copy(&((MenaiInteger *)b)->big, &bv) < 0) {
                     menai_int_free(&av); goto error;
                 }
             }
@@ -2546,7 +2546,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            MenaiInteger *ib = (MenaiInteger *)b;
             long shift;
             if (!ib->is_big) {
                 shift = ib->small;
@@ -2566,7 +2566,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            MenaiInteger *ia = (MenaiInteger *)a;
             MenaiInt av, res;
             menai_int_init(&av); menai_int_init(&res);
             if (!ia->is_big) {
@@ -2604,7 +2604,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            MenaiInteger *ib = (MenaiInteger *)b;
             long shift;
             if (!ib->is_big) {
                 shift = ib->small;
@@ -2624,7 +2624,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            MenaiInteger *ia = (MenaiInteger *)a;
             MenaiInt av, res;
             menai_int_init(&av); menai_int_init(&res);
             if (!ia->is_big) {
@@ -2687,7 +2687,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            MenaiInteger *ia = (MenaiInteger *)a;
             double d;
             if (!ia->is_big) {
                 d = (double)ia->small;
@@ -2717,8 +2717,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
-            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            MenaiInteger *ia = (MenaiInteger *)a;
+            MenaiInteger *ib = (MenaiInteger *)b;
             double re, im;
             if (!ia->is_big) {
                 re = (double)ia->small;
@@ -2756,7 +2756,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            MenaiInteger *ib = (MenaiInteger *)b;
             long radix;
             if (!ib->is_big) {
                 radix = ib->small;
@@ -2771,7 +2771,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            MenaiInteger *ia = (MenaiInteger *)a;
             MenaiInt tmp;
             menai_int_init(&tmp);
             if (!ia->is_big) {
@@ -2806,7 +2806,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
+            MenaiInteger *ia = (MenaiInteger *)a;
             long cp;
             if (!ia->is_big) {
                 cp = ia->small;
@@ -4118,7 +4118,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            MenaiInteger *ib = (MenaiInteger *)b;
             long idx_l;
             if (!ib->is_big) {
                 idx_l = ib->small;
@@ -4157,8 +4157,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
-            MenaiInteger_Object *ic = (MenaiInteger_Object *)c;
+            MenaiInteger *ib = (MenaiInteger *)b;
+            MenaiInteger *ic = (MenaiInteger *)c;
             long start_l, end_l;
             if (!ib->is_big) {
                 start_l = ib->small;
@@ -4301,7 +4301,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            MenaiInteger *ib = (MenaiInteger *)b;
             long radix;
             if (!ib->is_big) {
                 radix = ib->small;
@@ -4675,7 +4675,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             MenaiList_Object *lst_ref = (MenaiList_Object *)a;
-            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
+            MenaiInteger *ib = (MenaiInteger *)b;
             long idx_l;
             if (!ib->is_big) {
                 idx_l = ib->small;
@@ -4897,8 +4897,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             MenaiList_Object *lst_sl = (MenaiList_Object *)a;
-            MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
-            MenaiInteger_Object *ic = (MenaiInteger_Object *)c;
+            MenaiInteger *ib = (MenaiInteger *)b;
+            MenaiInteger *ic = (MenaiInteger *)c;
             long start_l, end_l;
             if (!ib->is_big) {
                 start_l = ib->small;
@@ -5995,9 +5995,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *ia = (MenaiInteger_Object *)ra;
-            MenaiInteger_Object *ib = (MenaiInteger_Object *)rb;
-            MenaiInteger_Object *ic = (MenaiInteger_Object *)rc;
+            MenaiInteger *ia = (MenaiInteger *)ra;
+            MenaiInteger *ib = (MenaiInteger *)rb;
+            MenaiInteger *ic = (MenaiInteger *)rc;
             long start, end, step;
             if (!ia->is_big) {
                 start = ia->small;
@@ -6157,7 +6157,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *fi_io = (MenaiInteger_Object *)fidx;
+            MenaiInteger *fi_io = (MenaiInteger *)fidx;
             long fi_l;
             if (!fi_io->is_big) {
                 fi_l = fi_io->small;
@@ -6233,7 +6233,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiInteger_Object *fi_io = (MenaiInteger_Object *)fidx;
+            MenaiInteger *fi_io = (MenaiInteger *)fidx;
             long fi_l;
             if (!fi_io->is_big) {
                 fi_l = fi_io->small;

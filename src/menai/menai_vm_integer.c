@@ -19,7 +19,7 @@ static MenaiValue *_integer_cache[MENAI_INT_CACHE_SIZE];
 static void
 MenaiInteger_dealloc(MenaiValue *self)
 {
-    MenaiInteger_Object *obj = (MenaiInteger_Object *)self;
+    MenaiInteger *obj = (MenaiInteger *)self;
     if (!obj->is_big) {
         long v = obj->small;
         if (v >= MENAI_INT_CACHE_MIN && v <= MENAI_INT_CACHE_MAX) {
@@ -40,7 +40,7 @@ MenaiInteger_dealloc(MenaiValue *self)
 PyTypeObject MenaiInteger_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "menai.MenaiInteger",          /* tp_name */
-    sizeof(MenaiInteger_Object),   /* tp_basicsize */
+    sizeof(MenaiInteger),   /* tp_basicsize */
     0,                             /* tp_itemsize */
     (destructor)MenaiInteger_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -56,7 +56,7 @@ menai_integer_from_long(long n)
         return cached;
     }
 
-    MenaiInteger_Object *r = (MenaiInteger_Object *)malloc(sizeof(MenaiInteger_Object));
+    MenaiInteger *r = (MenaiInteger *)malloc(sizeof(MenaiInteger));
     if (r == NULL) {
         return NULL;
     }
@@ -89,7 +89,7 @@ menai_integer_from_bigint(MenaiInt src)
         return menai_integer_from_long(v);
     }
 
-    MenaiInteger_Object *r = (MenaiInteger_Object *)malloc(sizeof(MenaiInteger_Object));
+    MenaiInteger *r = (MenaiInteger *)malloc(sizeof(MenaiInteger));
     if (r == NULL) {
         menai_int_free(&src);
         return NULL;
@@ -113,7 +113,7 @@ menai_vm_integer_init(void)
     }
 
     for (long v = MENAI_INT_CACHE_MIN; v <= MENAI_INT_CACHE_MAX; v++) {
-        MenaiInteger_Object *obj = (MenaiInteger_Object *)malloc(sizeof(MenaiInteger_Object));
+        MenaiInteger *obj = (MenaiInteger *)malloc(sizeof(MenaiInteger));
         if (obj == NULL) {
             return -1;
         }
