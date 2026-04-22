@@ -357,16 +357,14 @@ class MenaiVM:
     def execute(
         self,
         code: CodeObject,
-        constants: Dict[str, MenaiValue],
-        prelude_functions: Dict[str, MenaiFunction] | None = None
+        globals_dict: Dict[str, MenaiValue] | None = None
     ) -> MenaiValue:
         """
         Execute a code object and return the result.
 
         Args:
             code: Compiled code object to execute
-            constants: Dictionary of constant values (e.g., pi, e, j)
-            prelude_functions: Optional dictionary of prelude functions
+            globals_dict: Optional dictionary of global values (prelude functions and constants)
 
         Returns:
             Result value
@@ -377,21 +375,19 @@ class MenaiVM:
 
         # Delegate to the C VM when available and no trace watcher is active.
         if _C_VM_AVAILABLE and self.trace_watcher is None and not self._cancelled:
-            return cast(Callable, _c_vm_execute)(code, constants, prelude_functions or {})
+            return cast(Callable, _c_vm_execute)(code, globals_dict or {})
 
-        self.globals = constants.copy()
-        if prelude_functions:
-            self.globals.update(prelude_functions)
+        self.globals = dict(globals_dict) if globals_dict else {}
 
         # Reset state
         self._cancelled = False
 
         # Allocate the flat register array: one window per depth level, sized to the
         # maximum local_count across all code objects reachable from `code` and from
-        # any prelude functions (which live in globals, not in the code tree).
+        # any globals functions (which live in globals, not in the code tree).
         max_locals = self._max_local_count(code)
-        if prelude_functions:
-            for func in prelude_functions.values():
+        if globals_dict:
+            for func in globals_dict.values():
                 if type(func) is MenaiFunction:  # pylint: disable=unidiomatic-typecheck
                     n = self._max_local_count(func.bytecode)
                     max_locals = max(max_locals, n)

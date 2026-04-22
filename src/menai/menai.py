@@ -1,7 +1,6 @@
 """Main Menai (AI Functional Programming Language) class with enhanced error messages."""
 
 import hashlib
-import math
 from pathlib import Path
 import os
 from typing import Union, Dict, List, Iterator
@@ -12,7 +11,7 @@ from menai.menai_compiler import MenaiCompiler
 from menai.menai_ast import MenaiASTNode
 from menai.menai_value import MenaiDict as SlowMenaiDict
 from menai.menai_value import MenaiFunction as SlowMenaiFunction
-from menai.menai_value import MenaiFloat, MenaiString as SlowMenaiString, MenaiValue
+from menai.menai_value import MenaiString as SlowMenaiString, MenaiValue
 from menai.menai_vm import MenaiVM, MenaiTraceWatcher
 from menai.menai_error import MenaiModuleNotFoundError, MenaiModuleError, MenaiCircularImportError
 
@@ -46,7 +45,9 @@ class Menai:
     # Menai implementations of higher-order functions
     _PRELUDE_SOURCE = """
 (letrec
-  ((function? (lambda (x) ($function? x)))
+  ((pi 3.141592653589793)
+   (e 2.718281828459045)
+   (function? (lambda (x) ($function? x)))
    (function=? (lambda (a b) ($function=? a b)))
    (function!=? (lambda (a b) ($function!=? a b)))
    (function-min-arity (lambda (f) ($function-min-arity f)))
@@ -1087,14 +1088,10 @@ class Menai:
         "fold-set" fold-set
         "any-set?" any-set?
         "all-set?" all-set?
-        "range" range))
+        "range" range
+        "pi" pi
+        "e" e))
 """
-
-    # Mathematical constants
-    CONSTANTS: Dict[str, MenaiValue] = {
-        'pi': MenaiFloat(math.pi),
-        'e': MenaiFloat(math.e),
-    }
 
     # Class-level cache for prelude functions
     _prelude_cache = None
@@ -1104,25 +1101,23 @@ class Menai:
         cls,
         compiler: MenaiCompiler,
         vm: MenaiVM
-    ) -> Dict[str, MenaiFunction]:
-        """Load prelude as bytecode MenaiFunction objects (cached)."""
+    ) -> Dict[str, MenaiValue]:
+        """Load prelude globals (functions and constants) as MenaiValue objects (cached)."""
         if cls._prelude_cache is not None:
             return cls._prelude_cache
 
         bytecode = compiler.compile(cls._PRELUDE_SOURCE, name="<prelude>")
 
-        result = vm.execute(bytecode, cls.CONSTANTS, {})
+        result = vm.execute(bytecode, {})
         assert isinstance(result, MenaiDict), \
             f"Prelude must evaluate to a dict, got {result.type_name()}"
 
-        stdlib: dict[str, MenaiFunction] = {}
+        stdlib: dict[str, MenaiValue] = {}
         for key, value in result.pairs:
             assert isinstance(key, MenaiString), \
                 f"Prelude dict key must be a string, got {key.type_name()}"
-            assert isinstance(value, MenaiFunction), \
-                f"Prelude dict value for '{key.value}' must be a function, got {value.type_name()}"
             assert stdlib.get(key.value) is None, \
-                f"Duplicate function name in prelude: '{key.value}'"
+                f"Duplicate name in prelude: '{key.value}'"
             stdlib[key.value] = value
 
         cls._prelude_cache = stdlib
@@ -1178,7 +1173,7 @@ class Menai:
         Returns:
             The result as a raw MenaiValue
         """
-        return self.vm.execute(code, self.CONSTANTS, self._prelude)
+        return self.vm.execute(code, self._prelude)
 
     def _evaluate_raw(self, expression: str) -> 'MenaiValue':
         """
@@ -1194,7 +1189,7 @@ class Menai:
         code = self.compiler.compile(expression)
 
         # Execute
-        result = self.vm.execute(code, self.CONSTANTS, self._prelude)
+        result = self.vm.execute(code, self._prelude)
         return result
 
     def evaluate(self, expression: str) -> Union[int, float, complex, str, bool, list, MenaiFunction]:
