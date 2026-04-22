@@ -7,6 +7,7 @@ New features:
 - If an AI generates a diff hunk with `@@` but with no line numbers, the diff applier will try to find with a fuzzy match.
 - Dramatically improve the performance of the Menai VM.
 - Added keyboard scrolling of diff tabs.
+- Double-clicking an ephemeral tab label will now make the tab persistent.
 
 Bug fixes:
 

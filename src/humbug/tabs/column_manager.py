@@ -421,6 +421,20 @@ class ColumnManager(QWidget):
             f"User closed tab\ntab ID: {tab_id}"
         )
 
+    def _on_tab_label_double_clicked(self, tab_id: str) -> None:
+        """
+        Handle double-click on a tab label, making ephemeral tabs persistent.
+
+        Args:
+            tab_id: ID of the tab that was double-clicked
+        """
+        tab = self._tabs.get(tab_id)
+        if tab is None:
+            return
+
+        if tab.is_ephemeral():
+            self._make_tab_permanent(tab)
+
     def _on_tab_updated_state_changed(self, tab_id: str, is_updated: bool) -> None:
         """
         Update a tab's updated state.
@@ -508,6 +522,7 @@ class ColumnManager(QWidget):
         tab_id = tab.tab_id()
         label = TabLabel(tab_id, icon, title, tool_tip)
         label.close_clicked.connect(lambda: self._on_tab_label_close_clicked(tab_id))
+        label.double_clicked.connect(lambda: self._on_tab_label_double_clicked(tab_id))
         tab.activated.connect(lambda: self._on_tab_activated(tab))
         tab.updated_state_changed.connect(self._on_tab_updated_state_changed)
         tab.modified_state_changed.connect(self._on_tab_modified_state_changed)

@@ -15,6 +15,7 @@ class TabLabel(QWidget):
 
     close_clicked = Signal()
     drag_started = Signal()
+    double_clicked = Signal()
 
     def __init__(self, tab_id: str, icon_name: str, text: str, tool_tip: str, parent: QWidget | None = None) -> None:
         """
@@ -216,6 +217,13 @@ class TabLabel(QWidget):
         """Handle mouse release events."""
         self._drag_start_pos = None
         super().mouseReleaseEvent(event)
+
+    def mouseDoubleClickEvent(self, event: QMouseEvent) -> None:
+        """Handle double-click events to make an ephemeral tab persistent."""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.double_clicked.emit()
+
+        super().mouseDoubleClickEvent(event)
 
     def update_hover_state(self, is_hovered: bool) -> None:
         """Handle updates to the hover state for the label."""
