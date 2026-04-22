@@ -64,50 +64,29 @@ static PyTypeObject *Slow_StructType = NULL;
 PyObject *MenaiEvalError_type = NULL;
 
 /*
- * _is_fast — return 1 if obj is already a fast C value type.
- *
- * MenaiObject_HEAD and PyObject_HEAD share the same layout: both begin with
- * a size_t refcount followed by a type pointer.  Py_TYPE() reads the type
- * pointer at the same offset regardless of which header was used, so
- * comparing the result against (PyTypeObject *)&MenaiXxx_Type is a valid
- * pointer identity test.
- */
-static int
-_is_fast(PyObject *obj)
-{
-    PyTypeObject *t = Py_TYPE(obj);
-    return (t == (PyTypeObject *)&MenaiNone_Type     ||
-            t == (PyTypeObject *)&MenaiBoolean_Type  ||
-            t == (PyTypeObject *)&MenaiInteger_Type  ||
-            t == (PyTypeObject *)&MenaiFloat_Type    ||
-            t == (PyTypeObject *)&MenaiComplex_Type  ||
-            t == (PyTypeObject *)&MenaiString_Type   ||
-            t == (PyTypeObject *)&MenaiSymbol_Type   ||
-            t == (PyTypeObject *)&MenaiList_Type     ||
-            t == (PyTypeObject *)&MenaiDict_Type     ||
-            t == (PyTypeObject *)&MenaiSet_Type      ||
-            t == (PyTypeObject *)&MenaiFunction_Type ||
-            t == (PyTypeObject *)&MenaiStructType_Type ||
-            t == (PyTypeObject *)&MenaiStruct_Type);
-}
-
-/*
  * menai_convert_value — convert one slow menai_value.py object to a fast type.
  *
- * Returns a new reference.  If src is already a fast type, returns it with
- * an incremented refcount.  For MenaiFunction, captured_values are NOT
- * recursively converted here — call_setup in the VM does that lazily at call
- * time to avoid cycles in letrec closures.
+ * Returns a new reference.  src must be a slow menai_value.py object; passing
+ * a fast C value is a programming error and will abort.  For MenaiFunction,
+ * captured_values are NOT recursively converted here — call_setup in the VM
+ * does that lazily at call time to avoid cycles in letrec closures.
  */
 MenaiValue
 menai_convert_value(PyObject *src)
 {
-    /* TODO: work out what to do about this */
-    if (_is_fast(src)) {
-        Py_INCREF(src);
-        return (MenaiValue)src;
-    }
-
+    assert(!( Py_TYPE(src) == (PyTypeObject *)&MenaiNone_Type      ||
+              Py_TYPE(src) == (PyTypeObject *)&MenaiBoolean_Type    ||
+              Py_TYPE(src) == (PyTypeObject *)&MenaiInteger_Type    ||
+              Py_TYPE(src) == (PyTypeObject *)&MenaiFloat_Type      ||
+              Py_TYPE(src) == (PyTypeObject *)&MenaiComplex_Type    ||
+              Py_TYPE(src) == (PyTypeObject *)&MenaiString_Type     ||
+              Py_TYPE(src) == (PyTypeObject *)&MenaiSymbol_Type     ||
+              Py_TYPE(src) == (PyTypeObject *)&MenaiList_Type       ||
+              Py_TYPE(src) == (PyTypeObject *)&MenaiDict_Type       ||
+              Py_TYPE(src) == (PyTypeObject *)&MenaiSet_Type        ||
+              Py_TYPE(src) == (PyTypeObject *)&MenaiFunction_Type   ||
+              Py_TYPE(src) == (PyTypeObject *)&MenaiStructType_Type ||
+              Py_TYPE(src) == (PyTypeObject *)&MenaiStruct_Type ));
     PyTypeObject *t = Py_TYPE(src);
 
     if (t == Slow_NoneType) {

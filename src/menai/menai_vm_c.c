@@ -746,6 +746,70 @@ globals_free(GlobalsTable *gt)
 }
 
 /*
+ * Cached prelude GlobalsTable.
+ *
+ * The prelude dict is built once at Menai startup and never changes.  We
+ * cache the converted GlobalsTable keyed by the identity of the Python dict
+ * object.  On every subsequent execute() call with the same dict pointer we
+ * reuse the cached table directly, avoiding repeated conversion of already-fast
+ * MenaiFunction values.
+ */
+static PyObject *_cached_prelude_dict = NULL;
+static GlobalsTable _cached_prelude_gt;
+static int _cached_prelude_gt_valid = 0;
+
+/*
+ * prelude_globals_get — return a pointer to the cached prelude GlobalsTable,
+ * building it the first time a given prelude_dict is seen.
+ *
+ * prelude_dict must already contain fast MenaiValue objects (as produced by
+ * executing the prelude through the C VM).  Returns NULL on error with a
+ * Python exception set.
+ */
+static const GlobalsTable *
+prelude_globals_get(PyObject *prelude_dict)
+{
+    if (prelude_dict == _cached_prelude_dict && _cached_prelude_gt_valid) {
+        return &_cached_prelude_gt;
+    }
+    if (_cached_prelude_gt_valid) {
+        globals_free(&_cached_prelude_gt);
+        _cached_prelude_gt_valid = 0;
+        Py_DECREF(_cached_prelude_dict);
+        _cached_prelude_dict = NULL;
+    }
+    Py_ssize_t n = PyDict_Size(prelude_dict);
+    _cached_prelude_gt.slots = NULL;
+    _cached_prelude_gt.entries = NULL;
+    _cached_prelude_gt.slot_count = 0;
+    _cached_prelude_gt.count = 0;
+    if (n > 0) {
+        _cached_prelude_gt.entries = (GlobalsEntry *)malloc(n * sizeof(GlobalsEntry));
+        if (!_cached_prelude_gt.entries) {
+            PyErr_NoMemory();
+            return NULL;
+        }
+        PyObject *key, *val;
+        Py_ssize_t pos = 0;
+        while (PyDict_Next(prelude_dict, &pos, &key, &val)) {
+            const char *name_utf8 = PyUnicode_AsUTF8(key);
+            if (!name_utf8) {
+                globals_free(&_cached_prelude_gt);
+                return NULL;
+            }
+            menai_retain((MenaiValue)val);
+            _cached_prelude_gt.entries[_cached_prelude_gt.count].name = name_utf8;
+            _cached_prelude_gt.entries[_cached_prelude_gt.count].value = (MenaiValue)val;
+            _cached_prelude_gt.count++;
+        }
+    }
+    Py_INCREF(prelude_dict);
+    _cached_prelude_dict = prelude_dict;
+    _cached_prelude_gt_valid = 1;
+    return &_cached_prelude_gt;
+}
+
+/*
  * _globals_str_hash — FNV-1a hash of a UTF-8 C string.
  *
  * Returns a value in [0, PY_SSIZE_T_MAX]; never -1.
@@ -764,17 +828,19 @@ _globals_str_hash(const char *s)
 }
 
 /*
- * globals_build — build a GlobalsTable from one or two Python dicts.
+ * globals_build — build a GlobalsTable from a slow Python constants dict and
+ * an optional pre-built prelude GlobalsTable.
  *
- * prelude_dict may be NULL or Py_None.  Values from both dicts are converted
- * to fast C types via fn_convert_value before being stored.  Returns 0 on
- * success, -1 on error with a Python exception set.
+ * constants_dict values are always slow menai_value.py objects and are
+ * converted via menai_convert_value.  prelude_gt entries are already fast;
+ * their values are retained and copied directly.  Returns 0 on success, -1
+ * on error with a Python exception set.
  */
 static int
-globals_build(GlobalsTable *gt, PyObject *constants_dict, PyObject *prelude_dict)
+globals_build(GlobalsTable *gt, PyObject *constants_dict, const GlobalsTable *prelude_gt)
 {
     Py_ssize_t nc = PyDict_Size(constants_dict);
-    Py_ssize_t np = (prelude_dict && prelude_dict != Py_None) ? PyDict_Size(prelude_dict) : 0;
+    Py_ssize_t np = prelude_gt ? prelude_gt->count : 0;
     Py_ssize_t total = nc + np;
 
     gt->slots = NULL;
@@ -787,7 +853,6 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, PyObject *prelude_dict
         if (gt->entries == NULL) {
             return -1;
         }
-        /* Slot count: smallest power of 2 with slot_count * 2 / 3 >= total */
         Py_ssize_t min_slots = (total * 3 + 1) / 2;
         Py_ssize_t sc = 4;
         while (sc < min_slots) sc <<= 1;
@@ -820,24 +885,11 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, PyObject *prelude_dict
         gt->count++;
     }
 
-    if (np > 0) {
-        pos = 0;
-        while (PyDict_Next(prelude_dict, &pos, &key, &val)) {
-            MenaiValue converted = menai_convert_value(val);
-            if (converted == NULL) {
-                globals_free(gt);
-                return -1;
-            }
-            const char *name_utf8 = PyUnicode_AsUTF8(key);
-            if (name_utf8 == NULL) {
-                menai_release(converted);
-                globals_free(gt);
-                return -1;
-            }
-            gt->entries[gt->count].name = name_utf8;
-            gt->entries[gt->count].value = converted;
-            gt->count++;
-        }
+    for (Py_ssize_t i = 0; i < np; i++) {
+        menai_retain(prelude_gt->entries[i].value);
+        gt->entries[gt->count].name = prelude_gt->entries[i].name;
+        gt->entries[gt->count].value = prelude_gt->entries[i].value;
+        gt->count++;
     }
 
     /* Populate the hash table from the entries array. */
@@ -4376,9 +4428,19 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     MenaiCodeObject *native_code = menai_code_object_from_python(code);
     if (!native_code) return NULL;
 
-    /* Build the globals table (constants + prelude), converting values to fast C types. */
+    /* Get (or build) the cached prelude GlobalsTable. */
+    const GlobalsTable *prelude_gt = NULL;
+    if (prelude_dict && prelude_dict != Py_None && PyDict_Size(prelude_dict) > 0) {
+        prelude_gt = prelude_globals_get(prelude_dict);
+        if (!prelude_gt) {
+            menai_code_object_release(native_code);
+            return NULL;
+        }
+    }
+
+    /* Build the per-call globals table: convert slow constants, copy fast prelude entries. */
     GlobalsTable globals;
-    if (globals_build(&globals, constants_dict, prelude_dict) < 0) {
+    if (globals_build(&globals, constants_dict, prelude_gt) < 0) {
         menai_code_object_release(native_code);
         return NULL;
     }
