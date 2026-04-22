@@ -38,8 +38,7 @@ static const MenaiCpRange menai_whitespace_ranges[] = {
     { 0xFEFF, 0xFEFF }, /* BOM / ZERO WIDTH NO-BREAK SPACE */
 };
 
-#define MENAI_WHITESPACE_RANGE_COUNT \
-    ((int)(sizeof(menai_whitespace_ranges) / sizeof(menai_whitespace_ranges[0])))
+#define MENAI_WHITESPACE_RANGE_COUNT ((int)(sizeof(menai_whitespace_ranges) / sizeof(menai_whitespace_ranges[0])))
 
 static inline int unicode_is_whitespace(uint32_t cp)
 {
@@ -76,8 +75,16 @@ static inline int unicode_is_whitespace(uint32_t cp)
  * All tables must be sorted by .lo / .from for binary search to be correct.
  * ------------------------------------------------------------------------- */
 
-typedef struct { uint32_t lo; uint32_t hi; int32_t delta; } MenaiCaseRange;
-typedef struct { uint32_t from; uint32_t to; } MenaiCasePair;
+typedef struct {
+    uint32_t lo;
+    uint32_t hi;
+    int32_t delta;
+} MenaiCaseRange;
+
+typedef struct {
+    uint32_t from;
+    uint32_t to;
+} MenaiCasePair;
 
 /* ---- Binary search helpers ----------------------------------------------- */
 
