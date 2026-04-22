@@ -60,7 +60,7 @@ typedef PyTypeObject MenaiType;
  *   typedef struct {
  *       MenaiObject_HEAD
  *       double value;
- *   } MenaiFloat_Object;
+ *   } MenaiFloat;
  */
 typedef void (*menai_destructor)(MenaiValue *);
 

@@ -13,7 +13,7 @@
 typedef struct {
     MenaiObject_HEAD
     double value;
-} MenaiFloat_Object;
+} MenaiFloat;
 
 extern MenaiType MenaiFloat_Type;
 

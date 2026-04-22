@@ -37,14 +37,14 @@ typedef struct {
     int nfields;                 /* number of fields */
     MenaiHashTable field_ht;     /* name -> index hash table; keys are borrowed from fields[] */
     MenaiFieldEntry fields[];    /* inline field-index table, nfields entries */
-} MenaiStructType_Object;
+} MenaiStructType;
 
 typedef struct {
     MenaiObject_HEAD
     int nfields;                 /* number of fields */
-    MenaiValue *struct_type;     /* owned reference to MenaiStructType_Object */
+    MenaiValue *struct_type;     /* owned reference to MenaiStructType */
     MenaiValue *items[1];        /* inline field values, nfields entries */
-} MenaiStruct_Object;
+} MenaiStruct;
 
 extern MenaiType MenaiStructType_Type;
 extern MenaiType MenaiStruct_Type;
@@ -55,7 +55,7 @@ extern MenaiType MenaiStruct_Type;
  * if not found.
  */
 static inline int
-menai_struct_field_index(MenaiStructType_Object *st, MenaiValue *name)
+menai_struct_field_index(MenaiStructType *st, MenaiValue *name)
 {
     Py_hash_t h = menai_string_hash(name);
     return (int)menai_ht_lookup(&st->field_ht, name, h);

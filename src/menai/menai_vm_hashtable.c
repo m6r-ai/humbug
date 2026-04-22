@@ -176,7 +176,7 @@ menai_value_hash(MenaiValue *val)
     }
 
     if (t == &MenaiFloat_Type) {
-        return menai_hash_double(((MenaiFloat_Object *)val)->value);
+        return menai_hash_double(((MenaiFloat *)val)->value);
     }
 
     if (t == &MenaiComplex_Type) {
@@ -197,12 +197,12 @@ menai_value_hash(MenaiValue *val)
     }
 
     if (t == &MenaiStructType_Type) {
-        return (Py_hash_t)((MenaiStructType_Object *)val)->tag;
+        return (Py_hash_t)((MenaiStructType *)val)->tag;
     }
 
     if (t == &MenaiStruct_Type) {
-        MenaiStruct_Object *s = (MenaiStruct_Object *)val;
-        int tag = ((MenaiStructType_Object *)s->struct_type)->tag;
+        MenaiStruct *s = (MenaiStruct *)val;
+        int tag = ((MenaiStructType *)s->struct_type)->tag;
         int n = s->nfields;
         Py_uhash_t acc = 0x345678UL ^ (Py_uhash_t)tag;
         for (int i = 0; i < n; i++) {
@@ -264,7 +264,7 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
     }
 
     if (ta == &MenaiFloat_Type) {
-        return ((MenaiFloat_Object *)a)->value == ((MenaiFloat_Object *)b)->value;
+        return ((MenaiFloat *)a)->value == ((MenaiFloat *)b)->value;
     }
 
     if (ta == &MenaiComplex_Type) {
@@ -282,13 +282,13 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
     }
 
     if (ta == &MenaiStructType_Type) {
-        return ((MenaiStructType_Object *)a)->tag == ((MenaiStructType_Object *)b)->tag;
+        return ((MenaiStructType *)a)->tag == ((MenaiStructType *)b)->tag;
     }
 
     if (ta == &MenaiStruct_Type) {
-        MenaiStruct_Object *sa = (MenaiStruct_Object *)a;
-        MenaiStruct_Object *sb = (MenaiStruct_Object *)b;
-        if (((MenaiStructType_Object *)sa->struct_type)->tag != ((MenaiStructType_Object *)sb->struct_type)->tag) {
+        MenaiStruct *sa = (MenaiStruct *)a;
+        MenaiStruct *sb = (MenaiStruct *)b;
+        if (((MenaiStructType *)sa->struct_type)->tag != ((MenaiStructType *)sb->struct_type)->tag) {
             return 0;
         }
 

@@ -17,7 +17,7 @@ MenaiFloat_dealloc(MenaiValue *self)
 PyTypeObject MenaiFloat_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "menai.MenaiFloat",          /* tp_name */
-    sizeof(MenaiFloat_Object),   /* tp_basicsize */
+    sizeof(MenaiFloat),   /* tp_basicsize */
     0,                           /* tp_itemsize */
     (destructor)MenaiFloat_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -27,7 +27,7 @@ PyTypeObject MenaiFloat_Type = {
 MenaiValue *
 menai_float_alloc(double value)
 {
-    MenaiFloat_Object *self = (MenaiFloat_Object *)malloc(sizeof(MenaiFloat_Object));
+    MenaiFloat *self = (MenaiFloat *)malloc(sizeof(MenaiFloat));
     if (self == NULL) {
         return NULL;
     }

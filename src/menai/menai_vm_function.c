@@ -17,7 +17,7 @@
 static void
 MenaiFunction_dealloc(MenaiValue *self)
 {
-    MenaiFunction_Object *f = (MenaiFunction_Object *)self;
+    MenaiFunction *f = (MenaiFunction *)self;
     menai_code_object_release(f->bytecode);
     Py_ssize_t ncap = f->ncap;
     for (Py_ssize_t i = 0; i < ncap; i++) {
@@ -30,7 +30,7 @@ MenaiFunction_dealloc(MenaiValue *self)
 PyTypeObject MenaiFunction_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "menai.MenaiFunction",                        /* tp_name */
-    sizeof(MenaiFunction_Object) - sizeof(MenaiValue *), /* tp_basicsize */
+    sizeof(MenaiFunction) - sizeof(MenaiValue *), /* tp_basicsize */
     0,                                            /* tp_itemsize */
     (destructor)MenaiFunction_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -41,8 +41,8 @@ MenaiValue *
 menai_function_alloc(MenaiCodeObject *co, MenaiValue *none_val)
 {
     Py_ssize_t ncap = co->ncap;
-    MenaiFunction_Object *self = (MenaiFunction_Object *)malloc(
-        sizeof(MenaiFunction_Object) + (size_t)ncap * sizeof(MenaiValue *));
+    MenaiFunction *self = (MenaiFunction *)malloc(
+        sizeof(MenaiFunction) + (size_t)ncap * sizeof(MenaiValue *));
     if (!self) {
         return NULL;
     }

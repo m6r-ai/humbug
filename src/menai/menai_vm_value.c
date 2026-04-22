@@ -464,7 +464,7 @@ menai_convert_value(PyObject *src)
             return NULL;
         }
 
-        MenaiFunction_Object *f = (MenaiFunction_Object *)r;
+        MenaiFunction *f = (MenaiFunction *)r;
         for (Py_ssize_t ci = 0; ci < f->bytecode->ncap; ci++) {
             MenaiValue *fast_cv = menai_convert_value(PyList_GET_ITEM(cap, ci));
             if (!fast_cv) {
@@ -524,7 +524,7 @@ menai_value_describe_integer(MenaiValue *val)
 PyObject *
 menai_value_describe_float(MenaiValue *val)
 {
-    double v = ((MenaiFloat_Object *)val)->value;
+    double v = ((MenaiFloat *)val)->value;
     PyObject *pf = PyFloat_FromDouble(v);
     if (!pf) {
         return NULL;
@@ -704,7 +704,7 @@ menai_value_describe_symbol(MenaiValue *val)
 PyObject *
 menai_value_describe_structtype(MenaiValue *val)
 {
-    MenaiStructType_Object *st = (MenaiStructType_Object *)val;
+    MenaiStructType *st = (MenaiStructType *)val;
     int nf = st->nfields;
 
     PyObject *type_name = menai_string_to_pyunicode(st->name);
@@ -753,8 +753,8 @@ menai_value_describe_structtype(MenaiValue *val)
 PyObject *
 menai_value_describe_struct(MenaiValue *val)
 {
-    MenaiStruct_Object *s = (MenaiStruct_Object *)val;
-    MenaiStructType_Object *st = (MenaiStructType_Object *)s->struct_type;
+    MenaiStruct *s = (MenaiStruct *)val;
+    MenaiStructType *st = (MenaiStructType *)s->struct_type;
     int nf = s->nfields;
 
     PyObject *type_name = menai_string_to_pyunicode(st->name);
@@ -951,7 +951,7 @@ menai_value_describe_set(MenaiValue *val)
 PyObject *
 menai_value_describe_function(MenaiValue *val)
 {
-    MenaiFunction_Object *fn = (MenaiFunction_Object *)val;
+    MenaiFunction *fn = (MenaiFunction *)val;
     MenaiCodeObject *co = fn->bytecode;
     Py_ssize_t np = co->nparam_names;
 
@@ -1066,7 +1066,7 @@ menai_value_to_python_integer(MenaiValue *val)
 PyObject *
 menai_value_to_python_float(MenaiValue *val)
 {
-    return PyFloat_FromDouble(((MenaiFloat_Object *)val)->value);
+    return PyFloat_FromDouble(((MenaiFloat *)val)->value);
 }
 
 PyObject *
@@ -1091,7 +1091,7 @@ menai_value_to_python_symbol(MenaiValue *val)
 PyObject *
 menai_value_to_python_structtype(MenaiValue *val)
 {
-    MenaiStructType_Object *st = (MenaiStructType_Object *)val;
+    MenaiStructType *st = (MenaiStructType *)val;
     PyObject *name = menai_string_to_pyunicode(st->name);
     if (!name) {
         return NULL;
@@ -1105,8 +1105,8 @@ menai_value_to_python_structtype(MenaiValue *val)
 PyObject *
 menai_value_to_python_struct(MenaiValue *val)
 {
-    MenaiStruct_Object *s = (MenaiStruct_Object *)val;
-    MenaiStructType_Object *st = (MenaiStructType_Object *)s->struct_type;
+    MenaiStruct *s = (MenaiStruct *)val;
+    MenaiStructType *st = (MenaiStructType *)s->struct_type;
     int nf = s->nfields;
 
     PyObject *result = PyDict_New();
@@ -1412,7 +1412,7 @@ static PyObject *
 float_get_value(PyObject *self, void *closure)
 {
     (void)closure;
-    return PyFloat_FromDouble(((MenaiFloat_Object *)self)->value);
+    return PyFloat_FromDouble(((MenaiFloat *)self)->value);
 }
 
 static PyGetSetDef _float_getsets[] = {
@@ -1443,7 +1443,7 @@ static PyObject *
 func_get_parameters(PyObject *self, void *closure)
 {
     (void)closure;
-    MenaiCodeObject *co = ((MenaiFunction_Object *)self)->bytecode;
+    MenaiCodeObject *co = ((MenaiFunction *)self)->bytecode;
     PyObject *lst = PyList_New(co->param_count);
     if (!lst) {
         return NULL;
@@ -1457,7 +1457,7 @@ static PyObject *
 func_get_name(PyObject *self, void *closure)
 {
     (void)closure;
-    MenaiCodeObject *co = ((MenaiFunction_Object *)self)->bytecode;
+    MenaiCodeObject *co = ((MenaiFunction *)self)->bytecode;
     if (co->name) {
         return PyUnicode_FromString(co->name);
     }
@@ -1477,21 +1477,21 @@ static PyObject *
 func_get_is_variadic(PyObject *self, void *closure)
 {
     (void)closure;
-    return PyBool_FromLong(((MenaiFunction_Object *)self)->bytecode->is_variadic);
+    return PyBool_FromLong(((MenaiFunction *)self)->bytecode->is_variadic);
 }
 
 static PyObject *
 func_get_param_count(PyObject *self, void *closure)
 {
     (void)closure;
-    return PyLong_FromLong(((MenaiFunction_Object *)self)->bytecode->param_count);
+    return PyLong_FromLong(((MenaiFunction *)self)->bytecode->param_count);
 }
 
 static PyObject *
 func_get_captured_values(PyObject *self, void *closure)
 {
     (void)closure;
-    MenaiFunction_Object *f = (MenaiFunction_Object *)self;
+    MenaiFunction *f = (MenaiFunction *)self;
     Py_ssize_t ncap = f->ncap;
     PyObject *lst = PyList_New(ncap);
     if (!lst) {
@@ -1516,7 +1516,7 @@ func_set_captured_values(PyObject *self, PyObject *value, void *closure)
         return -1;
     }
 
-    MenaiFunction_Object *f = (MenaiFunction_Object *)self;
+    MenaiFunction *f = (MenaiFunction *)self;
     Py_ssize_t ncap = f->ncap;
     if (PyList_GET_SIZE(value) != ncap) {
         PyErr_SetString(PyExc_ValueError,

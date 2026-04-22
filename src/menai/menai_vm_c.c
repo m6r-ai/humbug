@@ -398,7 +398,7 @@ static inline int menai_boolean_value(MenaiValue *o)
 
 static inline double menai_float_value(MenaiValue *o)
 {
-    return ((MenaiFloat_Object *)o)->value;
+    return ((MenaiFloat *)o)->value;
 }
 
 static inline MenaiValue *menai_symbol_name(MenaiValue *o)
@@ -1080,7 +1080,7 @@ globals_lookup(const GlobalsTable *gt, const char *name)
 static int
 call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee_base, int arity, int return_dest)
 {
-    MenaiFunction_Object *func = (MenaiFunction_Object *)func_obj;
+    MenaiFunction *func = (MenaiFunction *)func_obj;
     MenaiCodeObject *co = func->bytecode;
     int param_count = co->param_count;
     int is_variadic = co->is_variadic;
@@ -1356,9 +1356,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             if (IS_MENAI_STRUCTTYPE(raw)) {
                 /* Struct constructor call */
-                int n_fields = ((MenaiStructType_Object *)raw)->nfields;
+                int n_fields = ((MenaiStructType *)raw)->nfields;
                 if (arity != (int)n_fields) {
-                    PyObject *sname = menai_string_to_pyunicode(((MenaiStructType_Object *)raw)->name);
+                    PyObject *sname = menai_string_to_pyunicode(((MenaiStructType *)raw)->name);
                     menai_raise_eval_errorf(
                         "Struct constructor '%s' called with wrong number of arguments",
                         sname ? PyUnicode_AsUTF8(sname) : "?");
@@ -1412,9 +1412,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             if (IS_MENAI_STRUCTTYPE(raw)) {
-                int n_fields = ((MenaiStructType_Object *)raw)->nfields;
+                int n_fields = ((MenaiStructType *)raw)->nfields;
                 if (n_args != (int)n_fields) {
-                    PyObject *sname = menai_string_to_pyunicode(((MenaiStructType_Object *)raw)->name);
+                    PyObject *sname = menai_string_to_pyunicode(((MenaiStructType *)raw)->name);
                     menai_raise_eval_errorf(
                         "Struct constructor '%s' called with wrong number of arguments",
                         sname ? PyUnicode_AsUTF8(sname) : "?");
@@ -1497,7 +1497,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             if (IS_MENAI_STRUCTTYPE(raw_func)) {
-                int n_fields = ((MenaiStructType_Object *)raw_func)->nfields;
+                int n_fields = ((MenaiStructType *)raw_func)->nfields;
                 if (arity != (int)n_fields) {
                     menai_raise_eval_error("Struct constructor called with wrong number of arguments");
                     goto error;
@@ -1562,7 +1562,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             if (IS_MENAI_STRUCTTYPE(raw_func)) {
-                int n_fields = ((MenaiStructType_Object *)raw_func)->nfields;
+                int n_fields = ((MenaiStructType *)raw_func)->nfields;
                 if (arity != (int)n_fields) {
                     menai_release(raw_func);
                     menai_release(raw_args);
@@ -1730,7 +1730,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiFunction_Object *fn = (MenaiFunction_Object *)f;
+            MenaiFunction *fn = (MenaiFunction *)f;
             int min_a = fn->bytecode->is_variadic ? fn->bytecode->param_count - 1 : fn->bytecode->param_count;
             MenaiValue *_r = make_integer_from_long(min_a);
             if (_r == NULL) {
@@ -1747,7 +1747,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            bool_store(regs, base + dest, ((MenaiFunction_Object *)f)->bytecode->is_variadic);
+            bool_store(regs, base + dest, ((MenaiFunction *)f)->bytecode->is_variadic);
             break;
         }
 
@@ -1762,7 +1762,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiFunction_Object *fn = (MenaiFunction_Object *)f;
+            MenaiFunction *fn = (MenaiFunction *)f;
             int pc = fn->bytecode->param_count;
             int is_var = fn->bytecode->is_variadic;
             MenaiInteger_Object *n_io = (MenaiInteger_Object *)n_obj;
@@ -3476,7 +3476,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             MenaiValue *val = regs[base + src2];
-            MenaiFunction_Object *fn = (MenaiFunction_Object *)closure;
+            MenaiFunction *fn = (MenaiFunction *)closure;
             MenaiValue *old = fn->captures[src1];
             menai_retain(val);
             fn->captures[src1] = val;
@@ -6107,8 +6107,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 break;
             }
 
-            int tag_a = ((MenaiStructType_Object *)stype)->tag;
-            int tag_b = ((MenaiStructType_Object *)((MenaiStruct_Object *)val)->struct_type)->tag;
+            int tag_a = ((MenaiStructType *)stype)->tag;
+            int tag_b = ((MenaiStructType *)((MenaiStruct *)val)->struct_type)->tag;
             bool_store(regs, base + dest, tag_a == tag_b);
             break;
         }
@@ -6125,11 +6125,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue *stype = ((MenaiStruct_Object *)val)->struct_type;
+            MenaiValue *stype = ((MenaiStruct *)val)->struct_type;
             MenaiValue *field_name = menai_symbol_name(field_sym);
-            int fi = menai_struct_field_index((MenaiStructType_Object *)stype, field_name);
+            int fi = menai_struct_field_index((MenaiStructType *)stype, field_name);
             if (fi < 0) {
-                PyObject *stype_name = menai_string_to_pyunicode(((MenaiStructType_Object *)stype)->name);
+                PyObject *stype_name = menai_string_to_pyunicode(((MenaiStructType *)stype)->name);
                 PyObject *fname_py = menai_string_to_pyunicode(field_name);
                 menai_raise_eval_errorf(
                     "'struct-get': struct '%s' has no field '%s'",
@@ -6140,7 +6140,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue *fv = ((MenaiStruct_Object *)val)->items[fi];
+            MenaiValue *fv = ((MenaiStruct *)val)->items[fi];
             menai_reg_set_borrow(regs, base + dest, fv);
             break;
         }
@@ -6168,7 +6168,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             Py_ssize_t fi = (Py_ssize_t)fi_l;
-            MenaiValue *fv = ((MenaiStruct_Object *)val)->items[fi];
+            MenaiValue *fv = ((MenaiStruct *)val)->items[fi];
             menai_reg_set_borrow(regs, base + dest, fv);
             break;
         }
@@ -6185,11 +6185,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiValue *stype = ((MenaiStruct_Object *)val)->struct_type;
+            MenaiValue *stype = ((MenaiStruct *)val)->struct_type;
             MenaiValue *field_name = menai_symbol_name(field_sym);
-            int fi = menai_struct_field_index((MenaiStructType_Object *)stype, field_name);
+            int fi = menai_struct_field_index((MenaiStructType *)stype, field_name);
             if (fi < 0) {
-                PyObject *stype_name = menai_string_to_pyunicode(((MenaiStructType_Object *)stype)->name);
+                PyObject *stype_name = menai_string_to_pyunicode(((MenaiStructType *)stype)->name);
                 PyObject *fname_py = menai_string_to_pyunicode(field_name);
                 menai_raise_eval_errorf(
                     "'struct-set': struct '%s' has no field '%s'",
@@ -6200,7 +6200,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            Py_ssize_t nf = ((MenaiStruct_Object *)val)->nfields;
+            Py_ssize_t nf = ((MenaiStruct *)val)->nfields;
             MenaiValue **tmp = (MenaiValue **)malloc(nf * sizeof(MenaiValue *));
             if (!tmp) {
                 PyErr_NoMemory();
@@ -6208,7 +6208,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             for (Py_ssize_t i = 0; i < nf; i++) {
-                tmp[i] = (i == fi) ? new_val : ((MenaiStruct_Object *)val)->items[i];
+                tmp[i] = (i == fi) ? new_val : ((MenaiStruct *)val)->items[i];
             }
 
             MenaiValue *r = menai_struct_alloc(stype, tmp, nf);
@@ -6244,8 +6244,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             Py_ssize_t fi = (Py_ssize_t)fi_l;
-            MenaiValue *stype = ((MenaiStruct_Object *)val)->struct_type;
-            Py_ssize_t nf = ((MenaiStruct_Object *)val)->nfields;
+            MenaiValue *stype = ((MenaiStruct *)val)->struct_type;
+            Py_ssize_t nf = ((MenaiStruct *)val)->nfields;
             MenaiValue **tmp = (MenaiValue **)malloc(nf * sizeof(MenaiValue *));
             if (!tmp) {
                 PyErr_NoMemory();
@@ -6253,7 +6253,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             for (Py_ssize_t i = 0; i < nf; i++) {
-                tmp[i] = (i == fi) ? new_val : ((MenaiStruct_Object *)val)->items[i];
+                tmp[i] = (i == fi) ? new_val : ((MenaiStruct *)val)->items[i];
             }
 
             MenaiValue *r = menai_struct_alloc(stype, tmp, nf);
@@ -6277,10 +6277,10 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiStruct_Object *sa = (MenaiStruct_Object *)a;
-            MenaiStruct_Object *sb = (MenaiStruct_Object *)b;
-            int eq = (((MenaiStructType_Object *)sa->struct_type)->tag ==
-                      ((MenaiStructType_Object *)sb->struct_type)->tag);
+            MenaiStruct *sa = (MenaiStruct *)a;
+            MenaiStruct *sb = (MenaiStruct *)b;
+            int eq = (((MenaiStructType *)sa->struct_type)->tag ==
+                      ((MenaiStructType *)sb->struct_type)->tag);
             Py_ssize_t nf = sa->nfields;
             for (Py_ssize_t i = 0; eq && i < nf; i++) {
                 eq = menai_value_equal(sa->items[i], sb->items[i]);
@@ -6301,10 +6301,10 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiStruct_Object *sa = (MenaiStruct_Object *)a;
-            MenaiStruct_Object *sb = (MenaiStruct_Object *)b;
-            int neq = (((MenaiStructType_Object *)sa->struct_type)->tag !=
-                       ((MenaiStructType_Object *)sb->struct_type)->tag);
+            MenaiStruct *sa = (MenaiStruct *)a;
+            MenaiStruct *sb = (MenaiStruct *)b;
+            int neq = (((MenaiStructType *)sa->struct_type)->tag !=
+                       ((MenaiStructType *)sb->struct_type)->tag);
             if (!neq) {
                 Py_ssize_t nf = sa->nfields;
                 for (Py_ssize_t i = 0; i < nf; i++) {
@@ -6326,7 +6326,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            menai_reg_set_borrow(regs, base + dest, ((MenaiStruct_Object *)val)->struct_type);
+            menai_reg_set_borrow(regs, base + dest, ((MenaiStruct *)val)->struct_type);
             break;
         }
 
@@ -6337,7 +6337,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             menai_reg_set_borrow(regs, base + dest,
-                ((MenaiStructType_Object *)val)->name);
+                ((MenaiStructType *)val)->name);
             break;
         }
 
@@ -6347,7 +6347,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            MenaiStructType_Object *st = (MenaiStructType_Object *)val;
+            MenaiStructType *st = (MenaiStructType *)val;
             int n = st->nfields;
             MenaiValue **sf_arr = n > 0
                 ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
@@ -6443,7 +6443,7 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     for (Py_ssize_t i = 0; i < globals.count; i++) {
         MenaiValue *val = globals.entries[i].value;
         if (IS_MENAI_FUNCTION(val)) {
-            int n = menai_code_object_max_locals(((MenaiFunction_Object *)val)->bytecode);
+            int n = menai_code_object_max_locals(((MenaiFunction *)val)->bytecode);
             if (n > max_locals) {
                 max_locals = n;
             }

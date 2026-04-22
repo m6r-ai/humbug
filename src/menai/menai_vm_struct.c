@@ -29,7 +29,7 @@
 static void
 MenaiStructType_dealloc(MenaiValue *self)
 {
-    MenaiStructType_Object *s = (MenaiStructType_Object *)self;
+    MenaiStructType *s = (MenaiStructType *)self;
     menai_ht_free(&s->field_ht);
     menai_xrelease(s->name);
     int n = s->nfields;
@@ -43,7 +43,7 @@ MenaiStructType_dealloc(MenaiValue *self)
 PyTypeObject MenaiStructType_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "menai.MenaiStructType",          /* tp_name */
-    sizeof(MenaiStructType_Object),   /* tp_basicsize */
+    sizeof(MenaiStructType),   /* tp_basicsize */
     0,                             /* tp_itemsize */
     (destructor)MenaiStructType_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -61,8 +61,8 @@ _build_struct_type(MenaiValue *name, int tag, PyObject *fn_tup)
 {
     Py_ssize_t n = PyTuple_GET_SIZE(fn_tup);
 
-    MenaiStructType_Object *self = (MenaiStructType_Object *)malloc(
-        sizeof(MenaiStructType_Object) + (size_t)n * sizeof(MenaiFieldEntry));
+    MenaiStructType *self = (MenaiStructType *)malloc(
+        sizeof(MenaiStructType) + (size_t)n * sizeof(MenaiFieldEntry));
     if (!self) {
         return NULL;
     }
@@ -134,7 +134,7 @@ menai_struct_type_new_from_args(PyObject *args)
 static void
 MenaiStruct_dealloc(MenaiValue *self)
 {
-    MenaiStruct_Object *s = (MenaiStruct_Object *)self;
+    MenaiStruct *s = (MenaiStruct *)self;
     menai_xrelease(s->struct_type);
     int n = s->nfields;
     for (int i = 0; i < n; i++) {
@@ -147,7 +147,7 @@ MenaiStruct_dealloc(MenaiValue *self)
 PyTypeObject MenaiStruct_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "menai.MenaiStruct",          /* tp_name */
-    sizeof(MenaiStruct_Object) - sizeof(MenaiValue *),   /* tp_basicsize */
+    sizeof(MenaiStruct) - sizeof(MenaiValue *),   /* tp_basicsize */
     0,                             /* tp_itemsize */
     (destructor)MenaiStruct_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -157,8 +157,8 @@ PyTypeObject MenaiStruct_Type = {
 MenaiValue *
 menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, Py_ssize_t nfields)
 {
-    MenaiStruct_Object *self = (MenaiStruct_Object *)malloc(
-        sizeof(MenaiStruct_Object) + (size_t)nfields * sizeof(MenaiValue *));
+    MenaiStruct *self = (MenaiStruct *)malloc(
+        sizeof(MenaiStruct) + (size_t)nfields * sizeof(MenaiValue *));
     if (!self) {
         return NULL;
     }

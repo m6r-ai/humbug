@@ -17,7 +17,7 @@
 #include "menai_vm_code.h"
 
 /*
- * MenaiFunction_Object — a Menai closure.
+ * MenaiFunction — a Menai closure.
  *
  * bytecode is a retained MenaiCodeObject *.  All frame metadata (instrs,
  * constants, names, children) is read directly from it.  The Python-facing
@@ -32,7 +32,7 @@ typedef struct {
 
     /* Inline capture array — ncap elements follow immediately. */
     MenaiValue *captures[1];       /* flexible array member (C99 [1] for MSVC compat) */
-} MenaiFunction_Object;
+} MenaiFunction;
 
 extern MenaiType MenaiFunction_Type;
 
