@@ -673,7 +673,7 @@ typedef struct {
  *
  * Populates a Frame from a MenaiCodeObject.  Takes a retain on co.
  */
-static int
+static void
 frame_setup(Frame *f, MenaiCodeObject *co, int base, int return_dest)
 {
     menai_code_object_retain(co);
@@ -692,7 +692,6 @@ frame_setup(Frame *f, MenaiCodeObject *co, int base, int return_dest)
     f->base = base;
     f->return_dest = return_dest;
     f->is_sentinel = 0;
-    return 0;
 }
 
 /* ---------------------------------------------------------------------------
@@ -992,7 +991,8 @@ call_setup(Frame *new_frame, MenaiValue func_obj,
         menai_reg_set_borrow(regs, callee_base + param_count + (int)i, cv);
     }
 
-    return frame_setup(new_frame, co, callee_base, return_dest);
+    frame_setup(new_frame, co, callee_base, return_dest);
+    return 0;
 }
 
 /*
@@ -1019,8 +1019,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
     };
 
     /* Set up frame at depth 1 for the top-level code object. */
-    if (frame_setup(&frames[1], code, 0, 0) < 0)
-        return NULL;
+    frame_setup(&frames[1], code, 0, 0);
 
     int frame_depth = 1;
     Frame *frame = &frames[1];
