@@ -30,24 +30,6 @@
 #include "menai_vm_struct.h"
 #include "menai_vm_symbol.h"
 
-/*
- * Conversion functions — defined in menai_vm_value.c, called by the C VM.
- *
- * menai_convert_value: translate one slow menai_value.py object to a fast C
- *   type.  Returns a new reference, or NULL on error.
- *
- * menai_convert_code_constants: walk a CodeObject tree, converting all
- *   constants lists in-place from slow to fast types.  Returns the same code
- *   object (borrowed), or NULL on error.  Must be called before
- *   menai_build_closure_caches.
- *
- * menai_build_closure_caches: walk a CodeObject tree, building a ClosureCache
- *   struct for each child code object and storing it as a PyCapsule.  Returns
- *   the same code object (borrowed), or NULL on error.  Must be called after
- *   menai_convert_code_constants.
- */
 MenaiValue menai_convert_value(PyObject *src);
-PyObject *menai_convert_code_constants(PyObject *code);
-PyObject *menai_build_closure_caches(PyObject *code);
 
 #endif /* MENAI_VM_VALUE_H */

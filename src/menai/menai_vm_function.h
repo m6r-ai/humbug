@@ -46,13 +46,6 @@ extern MenaiType MenaiFunction_Type;
 MenaiValue menai_function_alloc(MenaiCodeObject *co, MenaiValue none_val);
 
 /*
- * CLOSURE_CACHE_CAPSULE_NAME — still used during the transition while
- * menai_build_closure_caches is in place.  Will be removed when the Python
- * CodeObject boundary is fully eliminated.
- */
-#define CLOSURE_CACHE_CAPSULE_NAME "menai.ClosureCache"
-
-/*
  * Module init — called once from _menai_vm_value_init().
  * Returns 0 on success, -1 on failure.
  */

@@ -237,16 +237,6 @@ menai_code_object_from_python(PyObject *py_code)
 
     /*
      * constants — convert each slow Python value to a fast MenaiValue.
-     * Function constants whose bytecode is a child code object will have
-     * their _closure_cache looked up from bc._closure_cache, which is set
-     * by menai_build_closure_caches.  Since we now own the children as
-     * MenaiCodeObject *, we store a pointer to the child directly on the
-     * function's bytecode field after conversion.
-     *
-     * For now: convert each constant using menai_convert_value, which for
-     * function constants reads bc._closure_cache (still set on the Python
-     * CodeObject by menai_build_closure_caches).  In the next step
-     * menai_build_closure_caches will be replaced entirely.
      */
     {
         PyObject *py_constants = PyObject_GetAttrString(py_code, "constants");
