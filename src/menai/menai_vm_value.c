@@ -1129,17 +1129,6 @@ menai_value_to_python_function(MenaiValue val)
 }
 
 /* ---------------------------------------------------------------------------
- * Python-callable wrappers (exposed on the module for the C VM's shim init)
- * ------------------------------------------------------------------------- */
-
-static PyObject *
-py_convert_value(PyObject *self, PyObject *arg)
-{
-    (void)self;
-    return (PyObject *)menai_convert_value(arg);
-}
-
-/* ---------------------------------------------------------------------------
  * Module init
  * ------------------------------------------------------------------------- */
 
@@ -1389,17 +1378,12 @@ fetch_slow_type(PyObject *mod, const char *name, PyTypeObject **dst)
     return 0;
 }
 
-static PyMethodDef module_methods[] = {
-    {"convert_value", py_convert_value, METH_O, NULL},
-    {NULL, NULL, 0, NULL}
-};
-
 static struct PyModuleDef module_def = {
     PyModuleDef_HEAD_INIT,
     "menai.menai_vm_value",
     NULL,
     -1,
-    module_methods
+    NULL
 };
 
 PyObject *
