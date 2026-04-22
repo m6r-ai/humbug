@@ -422,12 +422,12 @@ menai_integer_compare(MenaiValue a, MenaiValue b, int op)
     if (!ia->is_big && !ib->is_big) {
         long la = ia->small, lb = ib->small;
         switch (op) {
-            case Py_EQ: return la == lb;
-            case Py_NE: return la != lb;
-            case Py_LT: return la < lb;
-            case Py_GT: return la > lb;
-            case Py_LE: return la <= lb;
-            case Py_GE: return la >= lb;
+        case Py_EQ: return la == lb;
+        case Py_NE: return la != lb;
+        case Py_LT: return la < lb;
+        case Py_GT: return la > lb;
+        case Py_LE: return la <= lb;
+        case Py_GE: return la >= lb;
         }
     }
     const MenaiInt *ma = ia->is_big ? &ia->big : NULL;
@@ -441,13 +441,13 @@ menai_integer_compare(MenaiValue a, MenaiValue b, int op)
     const MenaiInt *pb = ib->is_big ? mb : &tmp_b;
     int result;
     switch (op) {
-        case Py_EQ: result = menai_int_eq(pa, pb); break;
-        case Py_NE: result = menai_int_ne(pa, pb); break;
-        case Py_LT: result = menai_int_lt(pa, pb); break;
-        case Py_GT: result = menai_int_gt(pa, pb); break;
-        case Py_LE: result = menai_int_le(pa, pb); break;
-        case Py_GE: result = menai_int_ge(pa, pb); break;
-        default: result = 0; break;
+    case Py_EQ: result = menai_int_eq(pa, pb); break;
+    case Py_NE: result = menai_int_ne(pa, pb); break;
+    case Py_LT: result = menai_int_lt(pa, pb); break;
+    case Py_GT: result = menai_int_gt(pa, pb); break;
+    case Py_LE: result = menai_int_le(pa, pb); break;
+    case Py_GE: result = menai_int_ge(pa, pb); break;
+    default: result = 0; break;
     }
     menai_int_free(&tmp_a);
     menai_int_free(&tmp_b);

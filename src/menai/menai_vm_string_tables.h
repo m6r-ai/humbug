@@ -484,8 +484,7 @@ static const MenaiCasePair menai_upcase_pairs[] = {
     { 0x2C66, 0x023E }, /* ⱦ → Ⱦ */
 };
 
-#define MENAI_UPCASE_PAIR_COUNT \
-    ((int)(sizeof(menai_upcase_pairs) / sizeof(menai_upcase_pairs[0])))
+#define MENAI_UPCASE_PAIR_COUNT ((int)(sizeof(menai_upcase_pairs) / sizeof(menai_upcase_pairs[0])))
 
 /* ---- Downcase range table ------------------------------------------------
  * Each entry covers a contiguous run of uppercase codepoints that all map to
@@ -759,8 +758,7 @@ static const MenaiCaseRange menai_downcase_ranges[] = {
     { 0x10CD, 0x10CD, 0x1C60 },
 };
 
-#define MENAI_DOWNCASE_RANGE_COUNT \
-    ((int)(sizeof(menai_downcase_ranges) / sizeof(menai_downcase_ranges[0])))
+#define MENAI_DOWNCASE_RANGE_COUNT ((int)(sizeof(menai_downcase_ranges) / sizeof(menai_downcase_ranges[0])))
 
 /* ---- Downcase pair table (irregular uppercase → lowercase) ---------------
  * Sorted by .from.
@@ -895,38 +893,38 @@ static inline uint32_t unicode_simple_downcase(uint32_t cp)
 
     /* Latin-1 Supplement uppercase letters. */
     switch (cp) {
-        case 0x00C0: return 0x00E0; /* À → à */
-        case 0x00C1: return 0x00E1; /* Á → á */
-        case 0x00C2: return 0x00E2; /* Â → â */
-        case 0x00C3: return 0x00E3; /* Ã → ã */
-        case 0x00C4: return 0x00E4; /* Ä → ä */
-        case 0x00C5: return 0x00E5; /* Å → å */
-        case 0x00C6: return 0x00E6; /* Æ → æ */
-        case 0x00C7: return 0x00E7; /* Ç → ç */
-        case 0x00C8: return 0x00E8; /* È → è */
-        case 0x00C9: return 0x00E9; /* É → é */
-        case 0x00CA: return 0x00EA; /* Ê → ê */
-        case 0x00CB: return 0x00EB; /* Ë → ë */
-        case 0x00CC: return 0x00EC; /* Ì → ì */
-        case 0x00CD: return 0x00ED; /* Í → í */
-        case 0x00CE: return 0x00EE; /* Î → î */
-        case 0x00CF: return 0x00EF; /* Ï → ï */
-        case 0x00D0: return 0x00F0; /* Ð → ð */
-        case 0x00D1: return 0x00F1; /* Ñ → ñ */
-        case 0x00D2: return 0x00F2; /* Ò → ò */
-        case 0x00D3: return 0x00F3; /* Ó → ó */
-        case 0x00D4: return 0x00F4; /* Ô → ô */
-        case 0x00D5: return 0x00F5; /* Õ → õ */
-        case 0x00D6: return 0x00F6; /* Ö → ö */
-        case 0x00D8: return 0x00F8; /* Ø → ø */
-        case 0x00D9: return 0x00F9; /* Ù → ù */
-        case 0x00DA: return 0x00FA; /* Ú → ú */
-        case 0x00DB: return 0x00FB; /* Û → û */
-        case 0x00DC: return 0x00FC; /* Ü → ü */
-        case 0x00DD: return 0x00FD; /* Ý → ý */
-        case 0x00DE: return 0x00FE; /* Þ → þ */
-        case 0x0178: return 0x00FF; /* Ÿ → ÿ */
-        default: return cp;
+    case 0x00C0: return 0x00E0; /* À → à */
+    case 0x00C1: return 0x00E1; /* Á → á */
+    case 0x00C2: return 0x00E2; /* Â → â */
+    case 0x00C3: return 0x00E3; /* Ã → ã */
+    case 0x00C4: return 0x00E4; /* Ä → ä */
+    case 0x00C5: return 0x00E5; /* Å → å */
+    case 0x00C6: return 0x00E6; /* Æ → æ */
+    case 0x00C7: return 0x00E7; /* Ç → ç */
+    case 0x00C8: return 0x00E8; /* È → è */
+    case 0x00C9: return 0x00E9; /* É → é */
+    case 0x00CA: return 0x00EA; /* Ê → ê */
+    case 0x00CB: return 0x00EB; /* Ë → ë */
+    case 0x00CC: return 0x00EC; /* Ì → ì */
+    case 0x00CD: return 0x00ED; /* Í → í */
+    case 0x00CE: return 0x00EE; /* Î → î */
+    case 0x00CF: return 0x00EF; /* Ï → ï */
+    case 0x00D0: return 0x00F0; /* Ð → ð */
+    case 0x00D1: return 0x00F1; /* Ñ → ñ */
+    case 0x00D2: return 0x00F2; /* Ò → ò */
+    case 0x00D3: return 0x00F3; /* Ó → ó */
+    case 0x00D4: return 0x00F4; /* Ô → ô */
+    case 0x00D5: return 0x00F5; /* Õ → õ */
+    case 0x00D6: return 0x00F6; /* Ö → ö */
+    case 0x00D8: return 0x00F8; /* Ø → ø */
+    case 0x00D9: return 0x00F9; /* Ù → ù */
+    case 0x00DA: return 0x00FA; /* Ú → ú */
+    case 0x00DB: return 0x00FB; /* Û → û */
+    case 0x00DC: return 0x00FC; /* Ü → ü */
+    case 0x00DD: return 0x00FD; /* Ý → ý */
+    case 0x00DE: return 0x00FE; /* Þ → þ */
+    case 0x0178: return 0x00FF; /* Ÿ → ÿ */
+    default: return cp;
     }
 }
 

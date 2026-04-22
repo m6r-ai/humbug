@@ -1313,12 +1313,12 @@ func_set_captured_values(PyObject *self, PyObject *value, void *closure)
 }
 
 static PyGetSetDef _function_getsets[] = {
-    {"parameters",      func_get_parameters,      NULL,                      NULL, NULL},
-    {"name",            func_get_name,             NULL,                      NULL, NULL},
-    {"bytecode",        func_get_bytecode,         NULL,                      NULL, NULL},
-    {"is_variadic",     func_get_is_variadic,      NULL,                      NULL, NULL},
-    {"param_count",     func_get_param_count,      NULL,                      NULL, NULL},
-    {"captured_values", func_get_captured_values,  func_set_captured_values,  NULL, NULL},
+    {"parameters", func_get_parameters, NULL, NULL, NULL},
+    {"name", func_get_name, NULL, NULL, NULL},
+    {"bytecode", func_get_bytecode, NULL, NULL, NULL},
+    {"is_variadic", func_get_is_variadic, NULL, NULL, NULL},
+    {"param_count", func_get_param_count, NULL, NULL, NULL},
+    {"captured_values", func_get_captured_values, func_set_captured_values,  NULL, NULL},
     {NULL, NULL, NULL, NULL, NULL}
 };
 
@@ -1400,26 +1400,26 @@ _menai_vm_value_init(void)
      * All types get the shared methods (type_name, describe, to_python).
      * Selected types also get type-specific getsets.
      */
-    MenaiNone_Type.tp_methods     = _shared_methods;
-    MenaiBoolean_Type.tp_methods  = _shared_methods;
-    MenaiBoolean_Type.tp_getset   = _boolean_getsets;
-    MenaiInteger_Type.tp_methods  = _shared_methods;
-    MenaiInteger_Type.tp_getset   = _integer_getsets;
-    MenaiFloat_Type.tp_methods    = _shared_methods;
-    MenaiFloat_Type.tp_getset     = _float_getsets;
-    MenaiComplex_Type.tp_methods  = _shared_methods;
-    MenaiString_Type.tp_methods   = _shared_methods;
-    MenaiString_Type.tp_getset    = _string_getsets;
-    MenaiSymbol_Type.tp_methods   = _shared_methods;
-    MenaiSymbol_Type.tp_getset    = _symbol_getsets;
-    MenaiList_Type.tp_methods     = _shared_methods;
-    MenaiDict_Type.tp_methods     = _shared_methods;
-    MenaiDict_Type.tp_getset      = _dict_getsets;
-    MenaiSet_Type.tp_methods      = _shared_methods;
+    MenaiNone_Type.tp_methods = _shared_methods;
+    MenaiBoolean_Type.tp_methods = _shared_methods;
+    MenaiBoolean_Type.tp_getset = _boolean_getsets;
+    MenaiInteger_Type.tp_methods = _shared_methods;
+    MenaiInteger_Type.tp_getset = _integer_getsets;
+    MenaiFloat_Type.tp_methods = _shared_methods;
+    MenaiFloat_Type.tp_getset = _float_getsets;
+    MenaiComplex_Type.tp_methods = _shared_methods;
+    MenaiString_Type.tp_methods = _shared_methods;
+    MenaiString_Type.tp_getset = _string_getsets;
+    MenaiSymbol_Type.tp_methods = _shared_methods;
+    MenaiSymbol_Type.tp_getset = _symbol_getsets;
+    MenaiList_Type.tp_methods = _shared_methods;
+    MenaiDict_Type.tp_methods = _shared_methods;
+    MenaiDict_Type.tp_getset = _dict_getsets;
+    MenaiSet_Type.tp_methods = _shared_methods;
     MenaiFunction_Type.tp_methods = _shared_methods;
-    MenaiFunction_Type.tp_getset  = _function_getsets;
+    MenaiFunction_Type.tp_getset = _function_getsets;
     MenaiStructType_Type.tp_methods = _shared_methods;
-    MenaiStruct_Type.tp_methods   = _shared_methods;
+    MenaiStruct_Type.tp_methods = _shared_methods;
 
     if (menai_vm_string_init(MenaiEvalError_type) < 0) return NULL;
     if (menai_vm_none_init() < 0) return NULL;
@@ -1506,8 +1506,7 @@ _menai_vm_value_init(void)
     };
     for (int i = 0; i < (int)(sizeof(singletons)/sizeof(singletons[0])); i++) {
         menai_retain(*singletons[i].obj);
-        if (PyModule_AddObject(module, singletons[i].name,
-                               (PyObject *)*singletons[i].obj) < 0) {
+        if (PyModule_AddObject(module, singletons[i].name, (PyObject *)*singletons[i].obj) < 0) {
             menai_release(*singletons[i].obj);
             Py_DECREF(module);
             return NULL;
@@ -1520,24 +1519,23 @@ _menai_vm_value_init(void)
         const char *name;
         PyTypeObject *type;
     } types[] = {
-        {"MenaiNone",       &MenaiNone_Type},
-        {"MenaiBoolean",    &MenaiBoolean_Type},
-        {"MenaiInteger",    &MenaiInteger_Type},
-        {"MenaiFloat",      &MenaiFloat_Type},
-        {"MenaiComplex",    &MenaiComplex_Type},
-        {"MenaiString",     &MenaiString_Type},
-        {"MenaiSymbol",     &MenaiSymbol_Type},
-        {"MenaiList",       &MenaiList_Type},
-        {"MenaiDict",       &MenaiDict_Type},
-        {"MenaiSet",        &MenaiSet_Type},
-        {"MenaiFunction",   &MenaiFunction_Type},
+        {"MenaiNone", &MenaiNone_Type},
+        {"MenaiBoolean", &MenaiBoolean_Type},
+        {"MenaiInteger", &MenaiInteger_Type},
+        {"MenaiFloat", &MenaiFloat_Type},
+        {"MenaiComplex", &MenaiComplex_Type},
+        {"MenaiString", &MenaiString_Type},
+        {"MenaiSymbol", &MenaiSymbol_Type},
+        {"MenaiList", &MenaiList_Type},
+        {"MenaiDict", &MenaiDict_Type},
+        {"MenaiSet", &MenaiSet_Type},
+        {"MenaiFunction", &MenaiFunction_Type},
         {"MenaiStructType", &MenaiStructType_Type},
-        {"MenaiStruct",     &MenaiStruct_Type},
+        {"MenaiStruct", &MenaiStruct_Type},
     };
     for (int i = 0; i < (int)(sizeof(types)/sizeof(types[0])); i++) {
         Py_INCREF(types[i].type);
-        if (PyModule_AddObject(module, types[i].name,
-                               (PyObject *)types[i].type) < 0) {
+        if (PyModule_AddObject(module, types[i].name, (PyObject *)types[i].type) < 0) {
             Py_DECREF(types[i].type);
             Py_DECREF(module);
             return NULL;
