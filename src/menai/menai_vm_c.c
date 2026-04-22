@@ -1324,11 +1324,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
-                *new_frame = (Frame){
-                    .code_obj = NULL, .constants_items = NULL, .instrs = NULL
-                }
-
-                ;
+                new_frame->code_obj = NULL;
+                new_frame->constants_items = NULL;
+                new_frame->instrs = NULL;
 
                 if (call_setup(new_frame, raw, regs, callee_base, arity, dest) < 0) {
                     frame_depth--;
@@ -1468,11 +1466,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
-                *new_frame = (Frame){
-                    .code_obj = NULL, .constants_items = NULL, .instrs = NULL
-                }
-
-                ;
+                new_frame->code_obj = NULL;
+                new_frame->constants_items = NULL;
+                new_frame->instrs = NULL;
 
                 if (call_setup(new_frame, raw_func, regs, callee_base, arity, dest) < 0) {
                     frame_depth--;
