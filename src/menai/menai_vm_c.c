@@ -1395,11 +1395,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-
         case OP_INTEGER_P:
             bool_store(regs, base + dest, IS_MENAI_INTEGER(regs[base + src0]));
             break;
-
 
         case OP_INTEGER_EQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
@@ -1552,13 +1550,32 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
             MenaiInt av, bv, res;
-            menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
-            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
-            if (menai_int_add(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
-            menai_int_free(&av); menai_int_free(&bv);
+            menai_int_init(&av);
+            menai_int_init(&bv);
+            menai_int_init(&res);
+            if (!((MenaiInteger_Object *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error;
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error;
+            }
+            if (!((MenaiInteger_Object *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+                    menai_int_free(&av);
+                    goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                    menai_int_free(&av);
+                    goto error;
+                }
+            }
+            if (menai_int_add(&av, &bv, &res) < 0) {
+                menai_int_free(&av);
+                menai_int_free(&bv);
+                goto error;
+            }
+            menai_int_free(&av);
+            menai_int_free(&bv);
             MenaiValue _r = menai_integer_from_bigint(res);
             if (!_r) goto error;
             menai_reg_set_own(regs, base + dest, _r);
