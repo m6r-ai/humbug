@@ -33,6 +33,7 @@ MenaiInteger_dealloc(MenaiValue self)
     } else {
         menai_int_free(&obj->big);
     }
+
     free(self);
 }
 
@@ -56,8 +57,9 @@ menai_integer_from_long(long n)
     }
 
     MenaiInteger_Object *r = (MenaiInteger_Object *)malloc(sizeof(MenaiInteger_Object));
-    if (r == NULL)
+    if (r == NULL) {
         return NULL;
+    }
 
     r->ob_refcnt = 1;
     r->ob_type = &MenaiInteger_Type;
@@ -82,6 +84,7 @@ menai_integer_from_bigint(MenaiInt src)
             menai_int_free(&src);
             return NULL;
         }
+
         menai_int_free(&src);
         return menai_integer_from_long(v);
     }
@@ -105,11 +108,15 @@ menai_integer_from_bigint(MenaiInt src)
 int
 menai_vm_integer_init(void)
 {
-    if (PyType_Ready(&MenaiInteger_Type) < 0) return -1;
+    if (PyType_Ready(&MenaiInteger_Type) < 0) {
+        return -1;
+    }
+
     for (long v = MENAI_INT_CACHE_MIN; v <= MENAI_INT_CACHE_MAX; v++) {
         MenaiInteger_Object *obj = (MenaiInteger_Object *)malloc(sizeof(MenaiInteger_Object));
-        if (obj == NULL)
+        if (obj == NULL) {
             return -1;
+        }
 
         obj->ob_refcnt = 1;
         obj->ob_type = &MenaiInteger_Type;
@@ -120,5 +127,6 @@ menai_vm_integer_init(void)
 
         _integer_cache[v - MENAI_INT_CACHE_MIN] = (MenaiValue)obj;
     }
+
     return 0;
 }

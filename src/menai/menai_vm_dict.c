@@ -28,13 +28,21 @@ _dict_free_arrays(MenaiValue *keys, MenaiValue *values, Py_hash_t *hashes,
                   Py_ssize_t n)
 {
     if (keys) {
-        for (Py_ssize_t i = 0; i < n; i++) menai_xrelease(keys[i]);
+        for (Py_ssize_t i = 0; i < n; i++) {
+            menai_xrelease(keys[i]);
+        }
+
         free(keys);
     }
+
     if (values) {
-        for (Py_ssize_t i = 0; i < n; i++) menai_xrelease(values[i]);
+        for (Py_ssize_t i = 0; i < n; i++) {
+            menai_xrelease(values[i]);
+        }
+
         free(values);
     }
+
     free(hashes);
 }
 
@@ -89,7 +97,9 @@ MenaiValue
 menai_dict_new_empty(void)
 {
     MenaiDict_Object *obj = (MenaiDict_Object *)malloc(sizeof(MenaiDict_Object));
-    if (!obj) return NULL;
+    if (!obj) {
+        return NULL;
+    }
 
     obj->ob_refcnt = 1;
     obj->ob_type = &MenaiDict_Type;
@@ -108,6 +118,9 @@ menai_dict_new_empty(void)
 int
 menai_vm_dict_init(void)
 {
-    if (PyType_Ready(&MenaiDict_Type) < 0) return -1;
+    if (PyType_Ready(&MenaiDict_Type) < 0) {
+        return -1;
+    }
+
     return 0;
 }

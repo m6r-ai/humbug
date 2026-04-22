@@ -13,8 +13,9 @@ MenaiValue *
 menai_regs_alloc(size_t n, MenaiValue none_val)
 {
     MenaiValue *regs = (MenaiValue *)malloc(n * sizeof(MenaiValue));
-    if (regs == NULL)
+    if (regs == NULL) {
         return NULL;
+    }
 
     for (size_t i = 0; i < n; i++) {
         menai_retain(none_val);
@@ -27,7 +28,13 @@ menai_regs_alloc(size_t n, MenaiValue none_val)
 void
 menai_regs_free(MenaiValue *regs, size_t n)
 {
-    if (regs == NULL) return;
-    for (size_t i = 0; i < n; i++) menai_release(regs[i]);
+    if (regs == NULL) {
+        return;
+    }
+
+    for (size_t i = 0; i < n; i++) {
+        menai_release(regs[i]);
+    }
+
     free(regs);
 }

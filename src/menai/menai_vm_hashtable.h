@@ -49,8 +49,12 @@ static inline Py_hash_t
 menai_hash_double(double v)
 {
     uint64_t bits;
-    if (v != v) bits = 0x7FF8000000000000ULL;  /* canonical quiet NaN */
-    else memcpy(&bits, &v, sizeof(bits));
+    if (v != v) {
+        bits = 0x7FF8000000000000ULL;
+    } else {
+        memcpy(&bits, &v, sizeof(bits));
+    }
+
     /* Finalisation mix from SplitMix64 */
     bits ^= bits >> 30;
     bits *= 0xbf58476d1ce4e5b9ULL;

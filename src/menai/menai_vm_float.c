@@ -28,7 +28,10 @@ MenaiValue
 menai_float_alloc(double value)
 {
     MenaiFloat_Object *self = (MenaiFloat_Object *)malloc(sizeof(MenaiFloat_Object));
-    if (self == NULL) return NULL;
+    if (self == NULL) {
+        return NULL;
+    }
+
     self->ob_refcnt = 1;
     self->ob_type = &MenaiFloat_Type;
     self->ob_destructor = MenaiFloat_dealloc;

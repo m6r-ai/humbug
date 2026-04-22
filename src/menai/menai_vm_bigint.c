@@ -46,11 +46,13 @@ _menai_int_normalize(MenaiInt *a)
     while (a->length > 0 && a->digits[a->length - 1] == 0) {
         a->length--;
     }
+
     if (a->length == 0) {
         if (a->digits != NULL) {
             free(a->digits);
             a->digits = NULL;
         }
+
         a->sign = 0;
     }
 }
@@ -65,11 +67,13 @@ _menai_int_cmp_mag(const MenaiInt *a, const MenaiInt *b)
     if (a->length != b->length) {
         return (a->length < b->length) ? -1 : 1;
     }
+
     for (Py_ssize_t i = a->length - 1; i >= 0; i--) {
         if (a->digits[i] != b->digits[i]) {
             return (a->digits[i] < b->digits[i]) ? -1 : 1;
         }
     }
+
     return 0;
 }
 
@@ -129,6 +133,7 @@ _menai_int_sub_mag(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
         } else {
             borrow = 0;
         }
+
         digits[i] = (uint32_t)diff;
     }
 
@@ -194,6 +199,7 @@ _menai_int_divmod_mag(
         if (menai_int_copy(a, remainder) < 0) {
             return -1;
         }
+
         return 0;
     }
 
@@ -215,6 +221,7 @@ _menai_int_divmod_mag(
         PyErr_NoMemory();
         return -1;
     }
+
     uint32_t *vn = (uint32_t *)malloc((size_t)n * sizeof(uint32_t));
     if (vn == NULL) {
         free(un);
@@ -227,6 +234,7 @@ _menai_int_divmod_mag(
         for (Py_ssize_t i = 0; i < m; i++) {
             un[i] = a->digits[i];
         }
+
         un[m] = 0;
     } else {
         uint32_t carry = 0;
@@ -235,6 +243,7 @@ _menai_int_divmod_mag(
             un[i] = (uint32_t)(v & 0xFFFFFFFFULL);
             carry = (uint32_t)(v >> 32);
         }
+
         un[m] = carry;
     }
 
@@ -250,6 +259,7 @@ _menai_int_divmod_mag(
             vn[i] = (uint32_t)(v & 0xFFFFFFFFULL);
             carry = (uint32_t)(v >> 32);
         }
+
         /* carry must be 0 here because we chose d so leading bit is set */
     }
 
@@ -292,6 +302,7 @@ _menai_int_divmod_mag(
             if (lhs <= rhs) {
                 break;
             }
+
             q_hat--;
             r_hat += vn1;
         }
@@ -304,6 +315,7 @@ _menai_int_divmod_mag(
             un[j + i] = (uint32_t)(sub & 0xFFFFFFFFLL);
             borrow = (int64_t)(prod >> 32) - (sub >> 32);
         }
+
         int64_t sub = (int64_t)un[j + n] - borrow;
         un[j + n] = (uint32_t)(sub & 0xFFFFFFFFLL);
 
@@ -318,6 +330,7 @@ _menai_int_divmod_mag(
                 un[j + i] = (uint32_t)(s & 0xFFFFFFFFULL);
                 carry = s >> 32;
             }
+
             un[j + n] = (uint32_t)((uint64_t)un[j + n] + carry);
         }
     }
@@ -368,6 +381,7 @@ menai_int_free(MenaiInt *a)
         free(a->digits);
         a->digits = NULL;
     }
+
     a->length = 0;
     a->sign = 0;
 }
@@ -380,11 +394,13 @@ menai_int_copy(const MenaiInt *src, MenaiInt *dst)
         menai_int_free(dst);
         return 0;
     }
+
     uint32_t *digits = (uint32_t *)malloc((size_t)src->length * sizeof(uint32_t));
     if (digits == NULL) {
         PyErr_NoMemory();
         return -1;
     }
+
     memcpy(digits, src->digits, (size_t)src->length * sizeof(uint32_t));
     menai_int_free(dst);
     dst->digits = digits;
@@ -426,6 +442,7 @@ menai_int_from_long(long v, MenaiInt *a)
         PyErr_NoMemory();
         return -1;
     }
+
     digits[0] = (uint32_t)(mag & 0xFFFFFFFFUL);
     if (len == 2) {
         digits[1] = (uint32_t)(mag >> 32);
@@ -454,6 +471,7 @@ menai_int_from_pylong(PyObject *obj, MenaiInt *a)
         if (v == -1 && PyErr_Occurred()) {
             return -1;
         }
+
         return menai_int_from_long(v, a);
     }
 
@@ -462,6 +480,7 @@ menai_int_from_pylong(PyObject *obj, MenaiInt *a)
     if (PyLong_GetSign(obj, &sign) < 0) {
         return -1;
     }
+
     int is_neg = (sign < 0);
 
     /* Get number of bits. */
@@ -469,6 +488,7 @@ menai_int_from_pylong(PyObject *obj, MenaiInt *a)
     if (nbits == (size_t)-1 && PyErr_Occurred()) {
         return -1;
     }
+
     /*
      * For negative numbers, the two's complement representation may need one
      * extra bit (sign bit), so we add 1 to nbits before computing nbytes.
@@ -524,6 +544,7 @@ menai_int_from_pylong(PyObject *obj, MenaiInt *a)
                 d |= ((uint32_t)buf[byte_idx]) << (b * 8);
             }
         }
+
         digits[i] = d;
     }
 
@@ -578,10 +599,12 @@ menai_int_from_string(const char *s, int base, MenaiInt *a)
             PyErr_Format(PyExc_ValueError, "invalid character in integer string: '%c'", c);
             return -1;
         }
+
         if (digit >= base) {
             PyErr_Format(PyExc_ValueError, "invalid character for base %d: '%c'", base, c);
             return -1;
         }
+
         p++;
     }
 
@@ -616,6 +639,7 @@ menai_int_from_string(const char *s, int base, MenaiInt *a)
         if (menai_int_mul(&acc, &base_int, &tmp) < 0) {
             goto fail;
         }
+
         if (menai_int_copy(&tmp, &acc) < 0) {
             goto fail;
         }
@@ -624,9 +648,11 @@ menai_int_from_string(const char *s, int base, MenaiInt *a)
         if (menai_int_from_long((long)digit, &digit_int) < 0) {
             goto fail;
         }
+
         if (menai_int_add(&acc, &digit_int, &tmp) < 0) {
             goto fail;
         }
+
         if (menai_int_copy(&tmp, &acc) < 0) {
             goto fail;
         }
@@ -641,6 +667,7 @@ menai_int_from_string(const char *s, int base, MenaiInt *a)
     if (a->sign != 0) {
         a->sign = sign;
     }
+
     return 0;
 
 fail:
@@ -678,8 +705,10 @@ menai_int_from_codepoints(const uint32_t *data, Py_ssize_t len, int base, MenaiI
             PyErr_SetString(PyExc_ValueError, "non-ASCII character in integer string");
             return -1;
         }
+
         buf[i] = (char)data[i];
     }
+
     buf[len] = '\0';
 
     int result = menai_int_from_string(buf, base, a);
@@ -720,12 +749,14 @@ menai_int_from_double(double v, MenaiInt *a)
         PyErr_NoMemory();
         return -1;
     }
+
     for (Py_ssize_t i = nlimbs - 1; i >= 0; i--) {
         frac *= 4294967296.0;  /* frac * 2^32 */
         uint32_t limb = (uint32_t)frac;
         digits[i] = limb;
         frac -= (double)limb;
     }
+
     menai_int_free(a);
     a->digits = digits;
     a->length = nlimbs;
@@ -741,35 +772,45 @@ menai_int_fits_long(const MenaiInt *a)
     if (a->length == 0) {
         return 1;
     }
+
     if (sizeof(long) == 4) {
         if (a->length > 1) {
             return 0;
         }
+
         if (a->sign == 1 && a->digits[0] > (uint32_t)0x7FFFFFFFUL) {
             return 0;
         }
+
         if (a->sign == -1 && a->digits[0] > (uint32_t)0x80000000UL) {
             return 0;
         }
+
         return 1;
     }
+
     /* sizeof(long) == 8 */
     if (a->length > 2) {
         return 0;
     }
+
     uint64_t mag = 0;
     if (a->length >= 1) {
         mag = a->digits[0];
     }
+
     if (a->length == 2) {
         mag |= ((uint64_t)a->digits[1] << 32);
     }
+
     if (a->sign == 1 && mag > (uint64_t)0x7FFFFFFFFFFFFFFFULL) {
         return 0;
     }
+
     if (a->sign == -1 && mag > (uint64_t)0x8000000000000000ULL) {
         return 0;
     }
+
     return 1;
 }
 
@@ -781,14 +822,17 @@ menai_int_to_long(const MenaiInt *a, long *out)
         PyErr_SetString(PyExc_OverflowError, "integer too large to convert to C long");
         return -1;
     }
+
     if (a->length == 0) {
         *out = 0;
         return 0;
     }
+
     unsigned long mag = a->digits[0];
     if (sizeof(long) == 8 && a->length == 2) {
         mag |= ((unsigned long)a->digits[1] << 32);
     }
+
     if (a->sign == -1) {
         /*
          * Use unsigned negation to avoid UB for LONG_MIN.
@@ -798,6 +842,7 @@ menai_int_to_long(const MenaiInt *a, long *out)
     } else {
         *out = (long)mag;
     }
+
     return 0;
 }
 
@@ -863,6 +908,7 @@ menai_int_to_pylong(const MenaiInt *a)
         Py_DECREF(result);
         return neg;
     }
+
     return result;
 }
 
@@ -882,6 +928,7 @@ menai_int_to_string(const MenaiInt *a, int base, char **out)
             PyErr_NoMemory();
             return -1;
         }
+
         s[0] = '0';
         s[1] = '\0';
         *out = s;
@@ -894,6 +941,7 @@ menai_int_to_string(const MenaiInt *a, int base, char **out)
     if (menai_int_copy(a, &tmp) < 0) {
         return -1;
     }
+
     tmp.sign = 1; /* work with magnitude */
 
     /* Upper bound on number of digits: ceil(bits / log2(base)) + 2. */
@@ -931,6 +979,7 @@ menai_int_to_string(const MenaiInt *a, int base, char **out)
             free(buf);
             return -1;
         }
+
         menai_int_free(&tmp);
         tmp = quotient;
         menai_int_init(&quotient);
@@ -943,6 +992,7 @@ menai_int_to_string(const MenaiInt *a, int base, char **out)
     if (pos == 0) {
         buf[pos++] = '0';
     }
+
     if (a->sign == -1) {
         buf[pos++] = '-';
     }
@@ -953,6 +1003,7 @@ menai_int_to_string(const MenaiInt *a, int base, char **out)
         buf[i] = buf[j];
         buf[j] = c;
     }
+
     buf[pos] = '\0';
 
     *out = buf;
@@ -980,6 +1031,7 @@ menai_int_hash(const MenaiInt *a)
         h ^= (uint64_t)((d >> 16) & 0xFF); h *= 1099511628211ULL;
         h ^= (uint64_t)((d >> 24) & 0xFF); h *= 1099511628211ULL;
     }
+
     if (a->sign == -1) {
         h = ~h;
     }
@@ -999,16 +1051,19 @@ menai_int_add(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
         if (menai_int_copy(b, &tmp) < 0) {
             return -1;
         }
+
         menai_int_free(result);
         *result = tmp;
         return 0;
     }
+
     if (b->sign == 0) {
         MenaiInt tmp;
         menai_int_init(&tmp);
         if (menai_int_copy(a, &tmp) < 0) {
             return -1;
         }
+
         menai_int_free(result);
         *result = tmp;
         return 0;
@@ -1022,9 +1077,11 @@ menai_int_add(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
         if (_menai_int_add_mag(a, b, &tmp) < 0) {
             return -1;
         }
+
         if (tmp.sign != 0) {
             tmp.sign = s;
         }
+
         menai_int_free(result);
         *result = tmp;
         return 0;
@@ -1045,17 +1102,21 @@ menai_int_add(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
         if (_menai_int_sub_mag(a, b, &tmp) < 0) {
             return -1;
         }
+
         res_sign = a->sign;
     } else {
         /* |b| > |a|: result has sign of b */
         if (_menai_int_sub_mag(b, a, &tmp) < 0) {
             return -1;
         }
+
         res_sign = b->sign;
     }
+
     if (tmp.sign != 0) {
         tmp.sign = res_sign;
     }
+
     menai_int_free(result);
     *result = tmp;
     return 0;
@@ -1071,9 +1132,11 @@ menai_int_sub(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
     if (menai_int_copy(b, &neg_b) < 0) {
         return -1;
     }
+
     if (neg_b.sign != 0) {
         neg_b.sign = -neg_b.sign;
     }
+
     int r = menai_int_add(a, &neg_b, result);
     menai_int_free(&neg_b);
     return r;
@@ -1094,6 +1157,7 @@ menai_int_mul(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
         PyErr_NoMemory();
         return -1;
     }
+
     memset(digits, 0, (size_t)out_len * sizeof(uint32_t));
 
     for (Py_ssize_t i = 0; i < a->length; i++) {
@@ -1104,6 +1168,7 @@ menai_int_mul(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
             digits[i + j] = (uint32_t)(prod & 0xFFFFFFFFULL);
             carry = prod >> 32;
         }
+
         /* Propagate carry through remaining high digits. */
         for (Py_ssize_t k = i + b->length; carry != 0 && k < out_len; k++) {
             uint64_t s = (uint64_t)digits[k] + carry;
@@ -1152,6 +1217,7 @@ menai_int_divmod(
         if (ret < 0) {
             return -1;
         }
+
         if (rem_digit != 0) {
             ret = menai_int_from_long((long)rem_digit, &r);
             if (ret < 0) {
@@ -1173,6 +1239,7 @@ menai_int_divmod(
     if (q.sign != 0) {
         q.sign = q_sign;
     }
+
     if (r.sign != 0) {
         r.sign = r_sign;
     }
@@ -1190,6 +1257,7 @@ menai_int_divmod(
             menai_int_free(&r);
             return -1;
         }
+
         MenaiInt q_adj;
         menai_int_init(&q_adj);
         if (menai_int_sub(&q, &one, &q_adj) < 0) {
@@ -1198,6 +1266,7 @@ menai_int_divmod(
             menai_int_free(&one);
             return -1;
         }
+
         menai_int_free(&q);
         q = q_adj;
         menai_int_free(&one);
@@ -1210,6 +1279,7 @@ menai_int_divmod(
             menai_int_free(&r);
             return -1;
         }
+
         menai_int_free(&r);
         r = r_adj;
     }
@@ -1234,6 +1304,7 @@ menai_int_floordiv(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
     if (menai_int_divmod(a, b, &q, &r) < 0) {
         return -1;
     }
+
     menai_int_free(&r);
     menai_int_free(result);
     *result = q;
@@ -1255,6 +1326,7 @@ menai_int_mod(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
     if (menai_int_divmod(a, b, &q, &r) < 0) {
         return -1;
     }
+
     menai_int_free(&q);
     menai_int_free(result);
     *result = r;
@@ -1270,9 +1342,11 @@ menai_int_neg(const MenaiInt *a, MenaiInt *result)
     if (menai_int_copy(a, &tmp) < 0) {
         return -1;
     }
+
     if (tmp.sign != 0) {
         tmp.sign = -tmp.sign;
     }
+
     menai_int_free(result);
     *result = tmp;
     return 0;
@@ -1287,9 +1361,11 @@ menai_int_abs(const MenaiInt *a, MenaiInt *result)
     if (menai_int_copy(a, &tmp) < 0) {
         return -1;
     }
+
     if (tmp.sign == -1) {
         tmp.sign = 1;
     }
+
     menai_int_free(result);
     *result = tmp;
     return 0;
@@ -1339,6 +1415,7 @@ menai_int_pow(const MenaiInt *a, const MenaiInt *exp, MenaiInt *result)
             if (menai_int_mul(&res, &base, &tmp) < 0) {
                 goto fail;
             }
+
             menai_int_free(&res);
             res = tmp;
             menai_int_init(&tmp);
@@ -1348,6 +1425,7 @@ menai_int_pow(const MenaiInt *a, const MenaiInt *exp, MenaiInt *result)
         if (menai_int_shift_right(&e, 1, &half) < 0) {
             goto fail;
         }
+
         menai_int_free(&e);
         e = half;
         menai_int_init(&half);
@@ -1360,6 +1438,7 @@ menai_int_pow(const MenaiInt *a, const MenaiInt *exp, MenaiInt *result)
         if (menai_int_mul(&base, &base, &tmp) < 0) {
             goto fail;
         }
+
         menai_int_free(&base);
         base = tmp;
         menai_int_init(&tmp);
@@ -1405,6 +1484,7 @@ _to_twos_complement(const MenaiInt *a, Py_ssize_t *len_out)
         for (Py_ssize_t i = 0; i < a->length; i++) {
             buf[i] = a->digits[i];
         }
+
         buf[a->length] = 0;
     } else {
         /* Negative: flip bits and add 1. */
@@ -1414,6 +1494,7 @@ _to_twos_complement(const MenaiInt *a, Py_ssize_t *len_out)
             buf[i] = (uint32_t)(v & 0xFFFFFFFFULL);
             carry = v >> 32;
         }
+
         /* The extra word: ~0 + carry. For a non-zero negative number,
          * the two's complement of the magnitude fills the lower words,
          * and the sign extension is all 1s. */
@@ -1445,9 +1526,11 @@ _from_twos_complement(const uint32_t *buf, Py_ssize_t len, MenaiInt *result)
             PyErr_NoMemory();
             return -1;
         }
+
         for (Py_ssize_t i = 0; i < len; i++) {
             digits[i] = buf[i];
         }
+
         result->digits = digits;
         result->length = len;
         result->sign = 1;
@@ -1459,17 +1542,20 @@ _from_twos_complement(const uint32_t *buf, Py_ssize_t len, MenaiInt *result)
             PyErr_NoMemory();
             return -1;
         }
+
         uint64_t carry = 1;
         for (Py_ssize_t i = 0; i < len; i++) {
             uint64_t v = (~buf[i] & 0xFFFFFFFFULL) + carry;
             digits[i] = (uint32_t)(v & 0xFFFFFFFFULL);
             carry = v >> 32;
         }
+
         result->digits = digits;
         result->length = len;
         result->sign = -1;
         _menai_int_normalize(result);
     }
+
     return 0;
 }
 
@@ -1482,6 +1568,7 @@ menai_int_and(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
     if (ta == NULL) {
         return -1;
     }
+
     uint32_t *tb = _to_twos_complement(b, &lb);
     if (tb == NULL) {
         free(ta);
@@ -1524,6 +1611,7 @@ menai_int_or(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
     if (ta == NULL) {
         return -1;
     }
+
     uint32_t *tb = _to_twos_complement(b, &lb);
     if (tb == NULL) {
         free(ta);
@@ -1565,6 +1653,7 @@ menai_int_xor(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
     if (ta == NULL) {
         return -1;
     }
+
     uint32_t *tb = _to_twos_complement(b, &lb);
     if (tb == NULL) {
         free(ta);
@@ -1613,12 +1702,14 @@ menai_int_not(const MenaiInt *a, MenaiInt *result)
         menai_int_free(&one);
         return -1;
     }
+
     menai_int_free(&one);
 
     if (menai_int_neg(&sum, result) < 0) {
         menai_int_free(&sum);
         return -1;
     }
+
     menai_int_free(&sum);
     return 0;
 }
@@ -1631,12 +1722,14 @@ menai_int_shift_left(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
         PyErr_SetString(PyExc_ValueError, "negative shift count");
         return -1;
     }
+
     if (a->sign == 0 || shift == 0) {
         MenaiInt tmp;
         menai_int_init(&tmp);
         if (menai_int_copy(a, &tmp) < 0) {
             return -1;
         }
+
         menai_int_free(result);
         *result = tmp;
         return 0;
@@ -1651,6 +1744,7 @@ menai_int_shift_left(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
         PyErr_NoMemory();
         return -1;
     }
+
     memset(digits, 0, (size_t)out_len * sizeof(uint32_t));
 
     if (bit_shift == 0) {
@@ -1664,6 +1758,7 @@ menai_int_shift_left(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
             digits[i + word_shift] = (uint32_t)(v & 0xFFFFFFFFULL);
             carry = (uint32_t)(v >> 32);
         }
+
         digits[a->length + word_shift] = carry;
     }
 
@@ -1683,16 +1778,19 @@ menai_int_shift_right(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
         PyErr_SetString(PyExc_ValueError, "negative shift count");
         return -1;
     }
+
     if (a->sign == 0) {
         menai_int_free(result);
         return 0;
     }
+
     if (shift == 0) {
         MenaiInt tmp;
         menai_int_init(&tmp);
         if (menai_int_copy(a, &tmp) < 0) {
             return -1;
         }
+
         menai_int_free(result);
         *result = tmp;
         return 0;
@@ -1707,6 +1805,7 @@ menai_int_shift_right(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
         if (a->sign == -1) {
             return menai_int_from_long(-1L, result);
         }
+
         return 0;
     }
 
@@ -1722,6 +1821,7 @@ menai_int_shift_right(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
                 any_bits_out = 1;
             }
         }
+
         if (!any_bits_out && bit_shift > 0) {
             uint32_t mask = (1U << bit_shift) - 1U;
             if (a->digits[word_shift] & mask) {
@@ -1748,6 +1848,7 @@ menai_int_shift_right(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
             if (i + word_shift + 1 < a->length) {
                 hi = a->digits[i + word_shift + 1] << (32 - bit_shift);
             }
+
             digits[i] = lo | hi;
         }
     }
@@ -1766,6 +1867,7 @@ menai_int_shift_right(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
             menai_int_free(result);
             return -1;
         }
+
         MenaiInt adj;
         menai_int_init(&adj);
         if (menai_int_sub(result, &one, &adj) < 0) {
@@ -1773,10 +1875,12 @@ menai_int_shift_right(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
             menai_int_free(result);
             return -1;
         }
+
         menai_int_free(&one);
         menai_int_free(result);
         *result = adj;
     }
+
     return 0;
 }
 
@@ -1787,14 +1891,17 @@ menai_int_eq(const MenaiInt *a, const MenaiInt *b)
     if (a->sign != b->sign) {
         return 0;
     }
+
     if (a->length != b->length) {
         return 0;
     }
+
     for (Py_ssize_t i = 0; i < a->length; i++) {
         if (a->digits[i] != b->digits[i]) {
             return 0;
         }
     }
+
     return 1;
 }
 
@@ -1812,13 +1919,16 @@ menai_int_lt(const MenaiInt *a, const MenaiInt *b)
     if (a->sign != b->sign) {
         return a->sign < b->sign;
     }
+
     if (a->sign == 0) {
         return 0;
     }
+
     int cmp = _menai_int_cmp_mag(a, b);
     if (a->sign == 1) {
         return cmp < 0;
     }
+
     /* Both negative: larger magnitude means smaller value. */
     return cmp > 0;
 }

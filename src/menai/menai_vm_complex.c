@@ -28,7 +28,10 @@ MenaiValue
 menai_complex_alloc(double real, double imag)
 {
     MenaiComplex_Object *self = (MenaiComplex_Object *)malloc(sizeof(MenaiComplex_Object));
-    if (self == NULL) return NULL;
+    if (self == NULL) {
+        return NULL;
+    }
+
     self->ob_refcnt = 1;
     self->ob_type = &MenaiComplex_Type;
     self->ob_destructor = MenaiComplex_dealloc;

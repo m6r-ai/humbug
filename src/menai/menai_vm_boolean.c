@@ -51,7 +51,9 @@ menai_boolean_false(void)
 int
 menai_vm_boolean_init(void)
 {
-    if (PyType_Ready(&MenaiBoolean_Type) < 0) return -1;
+    if (PyType_Ready(&MenaiBoolean_Type) < 0) {
+        return -1;
+    }
 
     _true_storage.ob_refcnt = 1;
     _true_storage.ob_type = &MenaiBoolean_Type;

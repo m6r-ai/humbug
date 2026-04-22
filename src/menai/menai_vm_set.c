@@ -26,9 +26,13 @@ static void
 _set_free_arrays(MenaiValue *elements, Py_hash_t *hashes, Py_ssize_t n)
 {
     if (elements) {
-        for (Py_ssize_t i = 0; i < n; i++) menai_xrelease(elements[i]);
+        for (Py_ssize_t i = 0; i < n; i++) {
+            menai_xrelease(elements[i]);
+        }
+
         free(elements);
     }
+
     free(hashes);
 }
 
@@ -81,7 +85,9 @@ MenaiValue
 menai_set_new_empty(void)
 {
     MenaiSet_Object *obj = (MenaiSet_Object *)malloc(sizeof(MenaiSet_Object));
-    if (!obj) return NULL;
+    if (!obj) {
+        return NULL;
+    }
 
     obj->ob_refcnt = 1;
     obj->ob_type = &MenaiSet_Type;
@@ -99,6 +105,9 @@ menai_set_new_empty(void)
 int
 menai_vm_set_init(void)
 {
-    if (PyType_Ready(&MenaiSet_Type) < 0) return -1;
+    if (PyType_Ready(&MenaiSet_Type) < 0) {
+        return -1;
+    }
+
     return 0;
 }

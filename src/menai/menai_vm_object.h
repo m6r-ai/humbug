@@ -98,8 +98,9 @@ menai_retain(MenaiValue val)
 static inline void
 menai_release(MenaiValue val)
 {
-    if (--val->ob_refcnt == 0)
+    if (--val->ob_refcnt == 0) {
         val->ob_destructor(val);
+    }
 }
 
 /*
@@ -108,8 +109,9 @@ menai_release(MenaiValue val)
 static inline void
 menai_xrelease(MenaiValue val)
 {
-    if (val != NULL)
+    if (val != NULL) {
         menai_release(val);
+    }
 }
 
 /*

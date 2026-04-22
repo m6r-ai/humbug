@@ -30,7 +30,10 @@ MenaiStructType_dealloc(MenaiValue self)
     MenaiStructType_Object *s = (MenaiStructType_Object *)self;
     menai_xrelease(s->name);
     int n = s->nfields;
-    for (int i = 0; i < n; i++) menai_xrelease(s->fields[i].name);
+    for (int i = 0; i < n; i++) {
+        menai_xrelease(s->fields[i].name);
+    }
+
     free(self);
 }
 
@@ -78,6 +81,7 @@ _build_struct_type(MenaiValue name, int tag, PyObject *fn_tup)
             MenaiStructType_dealloc((MenaiValue)self);
             return NULL;
         }
+
         self->fields[i].name = fname_str;
         self->fields[i].index = (int)i;
     }
@@ -90,10 +94,14 @@ menai_struct_type_new_from_args(PyObject *args)
 {
     PyObject *py_name = NULL, *field_names = NULL;
     int tag = 0;
-    if (!PyArg_ParseTuple(args, "UiO", &py_name, &tag, &field_names)) return NULL;
+    if (!PyArg_ParseTuple(args, "UiO", &py_name, &tag, &field_names)) {
+        return NULL;
+    }
 
     PyObject *fn_tup = PySequence_Tuple(field_names);
-    if (!fn_tup) return NULL;
+    if (!fn_tup) {
+        return NULL;
+    }
 
     MenaiValue name = menai_string_from_pyunicode(py_name);
     if (!name) {
@@ -117,7 +125,10 @@ MenaiStruct_dealloc(MenaiValue self)
     MenaiStruct_Object *s = (MenaiStruct_Object *)self;
     menai_xrelease(s->struct_type);
     int n = s->nfields;
-    for (int i = 0; i < n; i++) menai_xrelease(s->items[i]);
+    for (int i = 0; i < n; i++) {
+        menai_xrelease(s->items[i]);
+    }
+
     free(self);
 }
 
@@ -137,7 +148,9 @@ menai_struct_alloc(MenaiValue struct_type, MenaiValue *field_values,
 {
     MenaiStruct_Object *self = (MenaiStruct_Object *)malloc(
         sizeof(MenaiStruct_Object) + (size_t)nfields * sizeof(MenaiValue));
-    if (!self) return NULL;
+    if (!self) {
+        return NULL;
+    }
 
     self->ob_refcnt = 1;
     self->ob_type = &MenaiStruct_Type;
@@ -157,7 +170,13 @@ menai_struct_alloc(MenaiValue struct_type, MenaiValue *field_values,
 int
 menai_vm_struct_init(void)
 {
-    if (PyType_Ready(&MenaiStruct_Type) < 0) return -1;
-    if (PyType_Ready(&MenaiStructType_Type) < 0) return -1;
+    if (PyType_Ready(&MenaiStruct_Type) < 0) {
+        return -1;
+    }
+
+    if (PyType_Ready(&MenaiStructType_Type) < 0) {
+        return -1;
+    }
+
     return 0;
 }

@@ -44,7 +44,10 @@ menai_none_singleton(void)
 int
 menai_vm_none_init(void)
 {
-    if (PyType_Ready(&MenaiNone_Type) < 0) return -1;
+    if (PyType_Ready(&MenaiNone_Type) < 0) {
+        return -1;
+    }
+
     _none_storage.ob_refcnt = 1;
     _none_storage.ob_type = &MenaiNone_Type;
     _none_storage.ob_destructor = MenaiNone_dealloc;

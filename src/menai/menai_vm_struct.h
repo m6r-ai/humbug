@@ -59,7 +59,9 @@ menai_struct_field_index(MenaiStructType_Object *st, MenaiValue name)
     int n = st->nfields;
     MenaiFieldEntry *fe = st->fields;
     for (int i = 0; i < n; i++) {
-        if (menai_string_equal(fe[i].name, name)) return fe[i].index;
+        if (menai_string_equal(fe[i].name, name)) {
+            return fe[i].index;
+        }
     }
 
     return -1;

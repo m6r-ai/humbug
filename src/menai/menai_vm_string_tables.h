@@ -55,6 +55,7 @@ static inline int unicode_is_whitespace(uint32_t cp)
             return 1;
         }
     }
+
     return 0;
 }
 
@@ -95,6 +96,7 @@ static inline uint32_t menai_search_case_ranges(
             return (uint32_t)((int32_t)cp + ranges[mid].delta);
         }
     }
+
     return 0;
 }
 
@@ -113,6 +115,7 @@ static inline uint32_t menai_search_case_pairs(
             return pairs[mid].to;
         }
     }
+
     return 0;
 }
 
@@ -821,17 +824,23 @@ static inline uint32_t unicode_simple_upcase(uint32_t cp)
     uint32_t result;
 
     /* ASCII a-z */
-    if (cp >= 0x0061 && cp <= 0x007A)
+    if (cp >= 0x0061 && cp <= 0x007A) {
         return cp - 0x0020;
+    }
 
     /* Extended BMP ranges and irregular pairs */
     if (cp >= 0x0100) {
         result = menai_search_case_ranges(cp, menai_upcase_ranges,
                                           MENAI_UPCASE_RANGE_COUNT);
-        if (result) return result;
+        if (result) {
+            return result;
+        }
+
         result = menai_search_case_pairs(cp, menai_upcase_pairs,
                                          MENAI_UPCASE_PAIR_COUNT);
-        if (result) return result;
+        if (result) {
+            return result;
+        }
     }
 
     /* Latin-1 Supplement lowercase letters.
@@ -878,17 +887,23 @@ static inline uint32_t unicode_simple_downcase(uint32_t cp)
     uint32_t result;
 
     /* ASCII A-Z */
-    if (cp >= 0x0041 && cp <= 0x005A)
+    if (cp >= 0x0041 && cp <= 0x005A) {
         return cp + 0x0020;
+    }
 
     /* Extended BMP ranges and irregular pairs */
     if (cp >= 0x0100) {
         result = menai_search_case_ranges(cp, menai_downcase_ranges,
                                           MENAI_DOWNCASE_RANGE_COUNT);
-        if (result) return result;
+        if (result) {
+            return result;
+        }
+
         result = menai_search_case_pairs(cp, menai_downcase_pairs,
                                          MENAI_DOWNCASE_PAIR_COUNT);
-        if (result) return result;
+        if (result) {
+            return result;
+        }
     }
 
     /* Latin-1 Supplement uppercase letters. */
@@ -968,6 +983,7 @@ static inline const MenaiUpcaseExpansion *unicode_upcase_expansion(uint32_t cp)
             return &menai_upcase_expansions[mid];
         }
     }
+
     return 0;
 }
 

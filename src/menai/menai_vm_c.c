@@ -115,18 +115,21 @@ static inline int _menai_add_overflow(long a, long b, long *r) {
     *r = (long)ur;
     return (a > 0 && b > 0 && *r < 0) || (a < 0 && b < 0 && *r > 0);
 }
+
 static inline int _menai_sub_overflow(long a, long b, long *r) {
     unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
     unsigned long ur = ua - ub;
     *r = (long)ur;
     return (b < 0 && a > 0 && *r < 0) || (b > 0 && a < 0 && *r > 0);
 }
+
 static inline int _menai_mul_overflow(long a, long b, long *r) {
     /* Conservative: use double to detect overflow. */
     double d = (double)a * (double)b;
     *r = (long)((unsigned long)a * (unsigned long)b);
     return d > (double)LONG_MAX || d < (double)LONG_MIN;
 }
+
 #endif
 
 /* menai_vm_value init — lives in the same .so */
@@ -430,13 +433,20 @@ menai_integer_compare(MenaiValue a, MenaiValue b, int op)
         case Py_GE: return la >= lb;
         }
     }
+
     const MenaiInt *ma = ia->is_big ? &ia->big : NULL;
     const MenaiInt *mb = ib->is_big ? &ib->big : NULL;
     MenaiInt tmp_a, tmp_b;
     menai_int_init(&tmp_a);
     menai_int_init(&tmp_b);
-    if (!ia->is_big) menai_int_from_long(ia->small, &tmp_a);
-    if (!ib->is_big) menai_int_from_long(ib->small, &tmp_b);
+    if (!ia->is_big) {
+        menai_int_from_long(ia->small, &tmp_a);
+    }
+
+    if (!ib->is_big) {
+        menai_int_from_long(ib->small, &tmp_b);
+    }
+
     const MenaiInt *pa = ia->is_big ? ma : &tmp_a;
     const MenaiInt *pb = ib->is_big ? mb : &tmp_b;
     int result;
@@ -449,6 +459,7 @@ menai_integer_compare(MenaiValue a, MenaiValue b, int op)
     case Py_GE: result = menai_int_ge(pa, pb); break;
     default: result = 0; break;
     }
+
     menai_int_free(&tmp_a);
     menai_int_free(&tmp_b);
     return result;
@@ -492,26 +503,68 @@ menai_type_name(MenaiValue val)
      * Use a lookup table keyed on the PyTypeObject address for O(1) dispatch.
      */
     MenaiType *t = val->ob_type;
-    if (t == &MenaiNone_Type)       return "none";
-    if (t == &MenaiBoolean_Type)    return "boolean";
-    if (t == &MenaiInteger_Type)    return "integer";
-    if (t == &MenaiFloat_Type)      return "float";
-    if (t == &MenaiComplex_Type)    return "complex";
-    if (t == &MenaiString_Type)     return "string";
-    if (t == &MenaiSymbol_Type)     return "symbol";
-    if (t == &MenaiList_Type)       return "list";
-    if (t == &MenaiDict_Type)       return "dict";
-    if (t == &MenaiSet_Type)        return "set";
-    if (t == &MenaiFunction_Type)   return "function";
-    if (t == &MenaiStructType_Type) return "struct-type";
-    if (t == &MenaiStruct_Type)     return "struct";
+    if (t == &MenaiNone_Type) {
+        return "none";
+    }
+
+    if (t == &MenaiBoolean_Type) {
+        return "boolean";
+    }
+
+    if (t == &MenaiInteger_Type) {
+        return "integer";
+    }
+
+    if (t == &MenaiFloat_Type) {
+        return "float";
+    }
+
+    if (t == &MenaiComplex_Type) {
+        return "complex";
+    }
+
+    if (t == &MenaiString_Type) {
+        return "string";
+    }
+
+    if (t == &MenaiSymbol_Type) {
+        return "symbol";
+    }
+
+    if (t == &MenaiList_Type) {
+        return "list";
+    }
+
+    if (t == &MenaiDict_Type) {
+        return "dict";
+    }
+
+    if (t == &MenaiSet_Type) {
+        return "set";
+    }
+
+    if (t == &MenaiFunction_Type) {
+        return "function";
+    }
+
+    if (t == &MenaiStructType_Type) {
+        return "struct-type";
+    }
+
+    if (t == &MenaiStruct_Type) {
+        return "struct";
+    }
+
     return t->tp_name;
 }
 
 static inline int
 require_type_impl(int ok, MenaiValue val, const char *op_name, const char *noun)
 {
-    if (ok) return 1;
+    if (ok) {
+        return 1;
+    }
+
     menai_raise_eval_errorf("Function '%s' requires %s, got %s",
                             op_name, noun, menai_type_name(val));
     return 0;
@@ -574,13 +627,19 @@ static inline int require_structtype(MenaiValue val, const char *op_name) {
 }
 
 static inline int require_symbol(MenaiValue val, const char *op_name) {
-    if (IS_MENAI_SYMBOL(val)) return 1;
+    if (IS_MENAI_SYMBOL(val)) {
+        return 1;
+    }
+
     menai_raise_eval_errorf("%s: argument must be a symbol", op_name);
     return 0;
 }
 
 static inline int require_symbol_pair(MenaiValue a, MenaiValue b, const char *op_name) {
-    if (IS_MENAI_SYMBOL(a) && IS_MENAI_SYMBOL(b)) return 1;
+    if (IS_MENAI_SYMBOL(a) && IS_MENAI_SYMBOL(b)) {
+        return 1;
+    }
+
     menai_raise_eval_errorf("%s: arguments must be symbols", op_name);
     return 0;
 }
@@ -599,7 +658,9 @@ menai_raise_eval_errorf(const char *fmt, ...)
     va_start(args, fmt);
     PyObject *msg = PyUnicode_FromFormatV(fmt, args);
     va_end(args);
-    if (msg == NULL) return NULL;
+    if (msg == NULL) {
+        return NULL;
+    }
  
     PyErr_SetObject(MenaiEvalError_type, msg);
     Py_DECREF(msg);
@@ -610,7 +671,9 @@ static int
 fetch_singleton(PyObject *module, const char *name, MenaiValue *dst)
 {
     PyObject *obj = PyObject_GetAttrString(module, name);
-    if (obj == NULL) return -1;
+    if (obj == NULL) {
+        return -1;
+    }
 
     *dst = (MenaiValue)obj;
     return 0;
@@ -620,22 +683,45 @@ int
 menai_vm_shim_init(void)
 {
     PyObject *vc = _menai_vm_value_init();
-    if (vc == NULL) return -1;
+    if (vc == NULL) {
+        return -1;
+    }
 
-    if (fetch_singleton(vc, "Menai_NONE", &Menai_NONE) < 0) goto fail;
-    if (fetch_singleton(vc, "Menai_BOOLEAN_TRUE", &Menai_TRUE) < 0) goto fail;
-    if (fetch_singleton(vc, "Menai_BOOLEAN_FALSE", &Menai_FALSE) < 0) goto fail;
-    if (fetch_singleton(vc, "Menai_LIST_EMPTY", &Menai_EMPTY_LIST) < 0) goto fail;
-    if (fetch_singleton(vc, "Menai_DICT_EMPTY", &Menai_EMPTY_DICT) < 0) goto fail;
-    if (fetch_singleton(vc, "Menai_SET_EMPTY", &Menai_EMPTY_SET) < 0) goto fail;
+    if (fetch_singleton(vc, "Menai_NONE", &Menai_NONE) < 0) {
+        goto fail;
+    }
+
+    if (fetch_singleton(vc, "Menai_BOOLEAN_TRUE", &Menai_TRUE) < 0) {
+        goto fail;
+    }
+
+    if (fetch_singleton(vc, "Menai_BOOLEAN_FALSE", &Menai_FALSE) < 0) {
+        goto fail;
+    }
+
+    if (fetch_singleton(vc, "Menai_LIST_EMPTY", &Menai_EMPTY_LIST) < 0) {
+        goto fail;
+    }
+
+    if (fetch_singleton(vc, "Menai_DICT_EMPTY", &Menai_EMPTY_DICT) < 0) {
+        goto fail;
+    }
+
+    if (fetch_singleton(vc, "Menai_SET_EMPTY", &Menai_EMPTY_SET) < 0) {
+        goto fail;
+    }
 
     PyObject *err_mod = PyImport_ImportModule("menai.menai_error");
-    if (err_mod == NULL) goto fail;
+    if (err_mod == NULL) {
+        goto fail;
+    }
 
     MenaiEvalError_type = PyObject_GetAttrString(err_mod, "MenaiEvalError");
     MenaiCancelledException_type = PyObject_GetAttrString(err_mod, "MenaiCancelledException");
     Py_DECREF(err_mod);
-    if (MenaiEvalError_type == NULL || MenaiCancelledException_type == NULL) goto fail;
+    if (MenaiEvalError_type == NULL || MenaiCancelledException_type == NULL) {
+        goto fail;
+    }
 
     Py_DECREF(vc);
     return 0;
@@ -677,7 +763,10 @@ static void
 frame_setup(Frame *f, MenaiCodeObject *co, int base, int return_dest)
 {
     menai_code_object_retain(co);
-    if (f->code_obj) menai_code_object_release(f->code_obj);
+    if (f->code_obj) {
+        menai_code_object_release(f->code_obj);
+    }
+
     f->code_obj = co;
     f->constants_items = co->constants;
     f->nconst = co->nconst;
@@ -735,7 +824,10 @@ typedef struct {
 static void
 globals_free(GlobalsTable *gt)
 {
-    for (Py_ssize_t i = 0; i < gt->count; i++) menai_xrelease(gt->entries[i].value);
+    for (Py_ssize_t i = 0; i < gt->count; i++) {
+        menai_xrelease(gt->entries[i].value);
+    }
+
     free(gt->slots);
     free(gt->entries);
     gt->slots = NULL;
@@ -771,12 +863,14 @@ prelude_globals_get(PyObject *prelude_dict)
     if (prelude_dict == _cached_prelude_dict && _cached_prelude_gt_valid) {
         return &_cached_prelude_gt;
     }
+
     if (_cached_prelude_gt_valid) {
         globals_free(&_cached_prelude_gt);
         _cached_prelude_gt_valid = 0;
         Py_DECREF(_cached_prelude_dict);
         _cached_prelude_dict = NULL;
     }
+
     Py_ssize_t n = PyDict_Size(prelude_dict);
     _cached_prelude_gt.slots = NULL;
     _cached_prelude_gt.entries = NULL;
@@ -788,6 +882,7 @@ prelude_globals_get(PyObject *prelude_dict)
             PyErr_NoMemory();
             return NULL;
         }
+
         PyObject *key, *val;
         Py_ssize_t pos = 0;
         while (PyDict_Next(prelude_dict, &pos, &key, &val)) {
@@ -796,12 +891,14 @@ prelude_globals_get(PyObject *prelude_dict)
                 globals_free(&_cached_prelude_gt);
                 return NULL;
             }
+
             menai_retain((MenaiValue)val);
             _cached_prelude_gt.entries[_cached_prelude_gt.count].name = name_utf8;
             _cached_prelude_gt.entries[_cached_prelude_gt.count].value = (MenaiValue)val;
             _cached_prelude_gt.count++;
         }
     }
+
     Py_INCREF(prelude_dict);
     _cached_prelude_dict = prelude_dict;
     _cached_prelude_gt_valid = 1;
@@ -822,6 +919,7 @@ _globals_str_hash(const char *s)
         h ^= (Py_uhash_t)*p++;
         h *= 1099511628211ULL;  /* FNV prime */
     }
+
     Py_hash_t r = (Py_hash_t)(h & (Py_uhash_t)PY_SSIZE_T_MAX);
     return r == -1 ? -2 : r;
 }
@@ -852,15 +950,20 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, const GlobalsTable *pr
         if (gt->entries == NULL) {
             return -1;
         }
+
         Py_ssize_t min_slots = (total * 3 + 1) / 2;
         Py_ssize_t sc = 4;
-        while (sc < min_slots) sc <<= 1;
+        while (sc < min_slots) {
+            sc <<= 1;
+        }
+
         gt->slots = (GlobalsSlot *)malloc(sc * sizeof(GlobalsSlot));
         if (gt->slots == NULL) {
             free(gt->entries);
             gt->entries = NULL;
             return -1;
         }
+
         memset(gt->slots, 0, sc * sizeof(GlobalsSlot));
         gt->slot_count = sc;
     }
@@ -873,12 +976,14 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, const GlobalsTable *pr
             globals_free(gt);
             return -1;
         }
+
         const char *name_utf8 = PyUnicode_AsUTF8(key);
         if (name_utf8 == NULL) {
             menai_release(converted);
             globals_free(gt);
             return -1;
         }
+
         gt->entries[gt->count].name = name_utf8;
         gt->entries[gt->count].value = converted;
         gt->count++;
@@ -905,25 +1010,36 @@ globals_build(GlobalsTable *gt, PyObject *constants_dict, const GlobalsTable *pr
                 gt->slots[slot].value = gt->entries[i].value;
                 break;
             }
+
             perturb >>= 5;
             slot = (Py_ssize_t)((5 * (Py_uhash_t)slot + 1 + perturb) & (Py_uhash_t)mask);
         }
     }
+
     return 0;
 }
 
 static MenaiValue
 globals_lookup(const GlobalsTable *gt, const char *name)
 {
-    if (gt->slot_count == 0) return NULL;
+    if (gt->slot_count == 0) {
+        return NULL;
+    }
+
     Py_hash_t h = _globals_str_hash(name);
     Py_ssize_t mask = gt->slot_count - 1;
     Py_uhash_t perturb = (Py_uhash_t)h;
     Py_ssize_t slot = (Py_ssize_t)(perturb & (Py_uhash_t)mask);
     for (;;) {
         GlobalsSlot *s = &gt->slots[slot];
-        if (s->name == NULL) return NULL;
-        if (s->hash == h && strcmp(s->name, name) == 0) return s->value;
+        if (s->name == NULL) {
+            return NULL;
+        }
+
+        if (s->hash == h && strcmp(s->name, name) == 0) {
+            return s->value;
+        }
+
         perturb >>= 5;
         slot = (Py_ssize_t)((5 * (Py_uhash_t)slot + 1 + perturb) & (Py_uhash_t)mask);
     }
@@ -961,18 +1077,23 @@ call_setup(Frame *new_frame, MenaiValue func_obj,
                 fname, min_arity, min_arity == 1 ? "" : "s", arity);
             return -1;
         }
+
         /* Pack excess args into a MenaiList for the rest parameter. */
         int rest_count = arity - min_arity;
         MenaiValue *rest_arr = rest_count > 0 ? (MenaiValue *)malloc(rest_count * sizeof(MenaiValue)) : NULL;
         if (rest_count > 0 && !rest_arr) {
             return -1;
         }
+
         for (int k = 0; k < rest_count; k++) {
             rest_arr[k] = regs[callee_base + min_arity + k];
             menai_retain(rest_arr[k]);
         }
+
         MenaiValue rest_list = menai_list_from_array_steal(rest_arr, rest_count);
-        if (rest_list == NULL) return -1;
+        if (rest_list == NULL) {
+            return -1;
+        }
 
         menai_reg_set_own(regs, callee_base + min_arity, rest_list);
 
@@ -1029,8 +1150,9 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         /* Cancellation check */
         if ((++instr_count & (CANCEL_CHECK_INTERVAL - 1)) == 0) {
             instr_count = 0;
-            if (PyErr_CheckSignals() < 0)
+            if (PyErr_CheckSignals() < 0) {
                 goto error;
+            }
         }
 
         if (frame->ip >= frame->code_len) {
@@ -1093,18 +1215,24 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                         buf[off++] = ',';
                         buf[off++] = ' ';
                     }
+
                     const char *kn = globals->entries[i].name;
                     int klen = (int)strlen(kn);
-                    if (off + klen >= (int)sizeof(buf) - 4) break;
+                    if (off + klen >= (int)sizeof(buf) - 4) {
+                        break;
+                    }
+
                     memcpy(buf + off, kn, klen);
                     off += klen;
                 }
+
                 buf[off] = '\0';
                 menai_raise_eval_errorf(
                     "Undefined variable: '%s'\n  Available variables: %s%s",
                     name_str, buf, nk > 10 ? "..." : "");
                 goto error;
             }
+
             menai_reg_set_borrow(regs, base + dest, val);
             break;
         }
@@ -1124,7 +1252,10 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            if (!menai_boolean_value(cond)) frame->ip = src1;
+            if (!menai_boolean_value(cond)) {
+                frame->ip = src1;
+            }
+
             break;
         }
 
@@ -1134,7 +1265,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("If condition must be boolean");
                 goto error;
             }
-            if (menai_boolean_value(cond)) frame->ip = src1;
+
+            if (menai_boolean_value(cond)) {
+                frame->ip = src1;
+            }
+
             break;
         }
 
@@ -1144,8 +1279,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("error: message must be a string");
                 goto error;
             }
+
             PyObject *s = menai_string_to_pyunicode(msg);
-            if (s == NULL) goto error;
+            if (s == NULL) {
+                goto error;
+            }
+
             PyErr_SetObject(MenaiEvalError_type, s);
             Py_DECREF(s);
             goto error;
@@ -1183,14 +1322,20 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     menai_raise_eval_error("Maximum call depth exceeded");
                     goto error;
                 }
+
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
-                *new_frame = (Frame){ .code_obj = NULL, .constants_items = NULL, .instrs = NULL };
+                *new_frame = (Frame){
+                    .code_obj = NULL, .constants_items = NULL, .instrs = NULL
+                }
+
+                ;
 
                 if (call_setup(new_frame, raw, regs, callee_base, arity, dest) < 0) {
                     frame_depth--;
                     goto error;
                 }
+
                 frame = new_frame;
 
             } else if (IS_MENAI_STRUCTTYPE(raw)) {
@@ -1204,13 +1349,18 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     Py_XDECREF(sname);
                     goto error;
                 }
+
                 MenaiValue instance = menai_struct_alloc(raw, &regs[callee_base], n_fields);
-                if (instance == NULL) goto error;
+                if (instance == NULL) {
+                    goto error;
+                }
+
                 menai_reg_set_own(regs, base + dest, instance);
             } else {
                 menai_raise_eval_error("Cannot call non-function value");
                 goto error;
             }
+
             break;
         }
 
@@ -1240,6 +1390,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     menai_release(raw);
                     goto error;
                 }
+
                 menai_release(raw);
             } else if (IS_MENAI_STRUCTTYPE(raw)) {
                 int n_fields = ((MenaiStructType_Object *)raw)->nfields;
@@ -1252,6 +1403,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     menai_release(raw);
                     goto error;
                 }
+
                 MenaiValue instance = menai_struct_alloc(raw, &regs[base + local_count], n_fields);
                 if (instance == NULL) {
                     menai_release(raw);
@@ -1268,6 +1420,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     menai_release(raw);
                     return (PyObject *)retval;
                 }
+
                 menai_reg_set_own(regs, caller->base + saved_return_dest, retval);
                 menai_release(raw);
                 frame = caller;
@@ -1276,6 +1429,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("Cannot call non-function value");
                 goto error;
             }
+
             break;
         }
 
@@ -1289,23 +1443,38 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_BOOLEAN_EQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_boolean(a, "boolean=?")) goto error;
-            if (!require_boolean(b, "boolean=?")) goto error;
+            if (!require_boolean(a, "boolean=?")) {
+                goto error;
+            }
+
+            if (!require_boolean(b, "boolean=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_boolean_value(a) == menai_boolean_value(b));
             break;
         }
 
         case OP_BOOLEAN_NEQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_boolean(a, "boolean!=?")) goto error;
-            if (!require_boolean(b, "boolean!=?")) goto error;
+            if (!require_boolean(a, "boolean!=?")) {
+                goto error;
+            }
+
+            if (!require_boolean(b, "boolean!=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_boolean_value(a) != menai_boolean_value(b));
             break;
         }
 
         case OP_BOOLEAN_NOT: {
             MenaiValue a = regs[base + src0];
-            if (!require_boolean(a, "boolean-not")) goto error;
+            if (!require_boolean(a, "boolean-not")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, !menai_boolean_value(a));
             break;
         }
@@ -1316,7 +1485,10 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_SYMBOL_EQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_symbol_pair(a, b, "symbol=?")) goto error;
+            if (!require_symbol_pair(a, b, "symbol=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest,
                 menai_string_equal(menai_symbol_name(a), menai_symbol_name(b)));
             break;
@@ -1324,7 +1496,10 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_SYMBOL_NEQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_symbol_pair(a, b, "symbol!=?")) goto error;
+            if (!require_symbol_pair(a, b, "symbol!=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest,
                 !menai_string_equal(menai_symbol_name(a), menai_symbol_name(b)));
             break;
@@ -1332,7 +1507,10 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_SYMBOL_TO_STRING: {
             MenaiValue a = regs[base + src0];
-            if (!require_symbol(a, "symbol->string")) goto error;
+            if (!require_symbol(a, "symbol->string")) {
+                goto error;
+            }
+
             menai_reg_set_borrow(regs, base + dest, menai_symbol_name(a));
             break;
         }
@@ -1343,34 +1521,55 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_FUNCTION_EQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_function(a, "function=?")) goto error;
-            if (!require_function(b, "function=?")) goto error;
+            if (!require_function(a, "function=?")) {
+                goto error;
+            }
+
+            if (!require_function(b, "function=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, a == b);
             break;
         }
 
         case OP_FUNCTION_NEQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_function(a, "function!=?")) goto error;
-            if (!require_function(b, "function!=?")) goto error;
+            if (!require_function(a, "function!=?")) {
+                goto error;
+            }
+
+            if (!require_function(b, "function!=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, a != b);
             break;
         }
 
         case OP_FUNCTION_MIN_ARITY: {
             MenaiValue f = regs[base + src0];
-            if (!require_function_singular(f, "function-min-arity")) goto error;
+            if (!require_function_singular(f, "function-min-arity")) {
+                goto error;
+            }
+
             MenaiFunction_Object *fn = (MenaiFunction_Object *)f;
             int min_a = fn->bytecode->is_variadic ? fn->bytecode->param_count - 1 : fn->bytecode->param_count;
             MenaiValue _r = make_integer_from_long(min_a);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FUNCTION_VARIADIC_P: {
             MenaiValue f = regs[base + src0];
-            if (!require_function_singular(f, "function-variadic?")) goto error;
+            if (!require_function_singular(f, "function-variadic?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, ((MenaiFunction_Object *)f)->bytecode->is_variadic);
             break;
         }
@@ -1378,8 +1577,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_FUNCTION_ACCEPTS_P: {
             MenaiValue f = regs[base + src0];
             MenaiValue n_obj = regs[base + src1];
-            if (!require_function_singular(f, "function-accepts?")) goto error;
-            if (!require_integer(n_obj, "function-accepts?")) goto error;
+            if (!require_function_singular(f, "function-accepts?")) {
+                goto error;
+            }
+
+            if (!require_integer(n_obj, "function-accepts?")) {
+                goto error;
+            }
+
             MenaiFunction_Object *fn = (MenaiFunction_Object *)f;
             int pc = fn->bytecode->param_count;
             int is_var = fn->bytecode->is_variadic;
@@ -1388,8 +1593,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (!n_io->is_big) {
                 n = n_io->small;
             } else {
-                if (menai_int_to_long(&n_io->big, &n) < 0) goto error;
+                if (menai_int_to_long(&n_io->big, &n) < 0) {
+                    goto error;
+                }
             }
+
             int accepts = is_var ? (n >= pc - 1) : (n == pc);
             bool_store(regs, base + dest, accepts);
             break;
@@ -1401,55 +1609,94 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_INTEGER_EQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer=?")) goto error;
-            if (!require_integer(b, "integer=?")) goto error;
+            if (!require_integer(a, "integer=?")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_integer_compare(a, b, Py_EQ));
             break;
         }
 
         case OP_INTEGER_NEQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer!=?")) goto error;
-            if (!require_integer(b, "integer!=?")) goto error;
+            if (!require_integer(a, "integer!=?")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer!=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_integer_compare(a, b, Py_NE));
             break;
         }
 
         case OP_INTEGER_LT_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer<?")) goto error;
-            if (!require_integer(b, "integer<?")) goto error;
+            if (!require_integer(a, "integer<?")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer<?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_integer_compare(a, b, Py_LT));
             break;
         }
 
         case OP_INTEGER_GT_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer>?")) goto error;
-            if (!require_integer(b, "integer>?")) goto error;
+            if (!require_integer(a, "integer>?")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer>?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_integer_compare(a, b, Py_GT));
             break;
         }
 
         case OP_INTEGER_LTE_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer<=?")) goto error;
-            if (!require_integer(b, "integer<=?")) goto error;
+            if (!require_integer(a, "integer<=?")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer<=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_integer_compare(a, b, Py_LE));
             break;
         }
 
         case OP_INTEGER_GTE_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer>=?")) goto error;
-            if (!require_integer(b, "integer>=?")) goto error;
+            if (!require_integer(a, "integer>=?")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer>=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_integer_compare(a, b, Py_GE));
             break;
         }
 
         case OP_INTEGER_ABS: {
             MenaiValue a = regs[base + src0];
-            if (!require_integer(a, "integer-abs")) goto error;
+            if (!require_integer(a, "integer-abs")) {
+                goto error;
+            }
+
             MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
             if (!ia->is_big) {
                 long sv = ia->small;
@@ -1459,31 +1706,54 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     MenaiInt tmp, res;
                     menai_int_init(&tmp);
                     menai_int_init(&res);
-                    if (menai_int_from_long(sv, &tmp) < 0) goto error;
-                    if (menai_int_abs(&tmp, &res) < 0) { menai_int_free(&tmp); goto error; }
+                    if (menai_int_from_long(sv, &tmp) < 0) {
+                        goto error;
+                    }
+
+                    if (menai_int_abs(&tmp, &res) < 0) {
+                        menai_int_free(&tmp); goto error;
+                    }
+
                     menai_int_free(&tmp);
                     MenaiValue _r = menai_integer_from_bigint(res);
-                    if (!_r) goto error;
+                    if (!_r) {
+                        goto error;
+                    }
+
                     menai_reg_set_own(regs, base + dest, _r);
                     break;
                 }
+
                 MenaiValue _r = menai_integer_from_long(rv);
-                if (!_r) goto error;
+                if (!_r) {
+                    goto error;
+                }
+
                 menai_reg_set_own(regs, base + dest, _r);
                 break;
             }
+
             MenaiInt res;
             menai_int_init(&res);
-            if (menai_int_abs(&ia->big, &res) < 0) goto error;
+            if (menai_int_abs(&ia->big, &res) < 0) {
+                goto error;
+            }
+
             MenaiValue _r = menai_integer_from_bigint(res);
-            if (!_r) goto error;
+            if (!_r) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_INTEGER_NEG: {
             MenaiValue a = regs[base + src0];
-            if (!require_integer(a, "integer-neg")) goto error;
+            if (!require_integer(a, "integer-neg")) {
+                goto error;
+            }
+
             MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
             if (!ia->is_big) {
                 long sv = ia->small;
@@ -1492,72 +1762,121 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     MenaiInt tmp, res;
                     menai_int_init(&tmp);
                     menai_int_init(&res);
-                    if (menai_int_from_long(sv, &tmp) < 0) goto error;
-                    if (menai_int_neg(&tmp, &res) < 0) { menai_int_free(&tmp); goto error; }
+                    if (menai_int_from_long(sv, &tmp) < 0) {
+                        goto error;
+                    }
+
+                    if (menai_int_neg(&tmp, &res) < 0) {
+                        menai_int_free(&tmp); goto error;
+                    }
+
                     menai_int_free(&tmp);
                     MenaiValue _r = menai_integer_from_bigint(res);
-                    if (!_r) goto error;
+                    if (!_r) {
+                        goto error;
+                    }
+
                     menai_reg_set_own(regs, base + dest, _r);
                     break;
                 }
+
                 MenaiValue _r = menai_integer_from_long(-sv);
-                if (!_r) goto error;
+                if (!_r) {
+                    goto error;
+                }
+
                 menai_reg_set_own(regs, base + dest, _r);
                 break;
             }
+
             MenaiInt res;
             menai_int_init(&res);
-            if (menai_int_neg(&ia->big, &res) < 0) goto error;
+            if (menai_int_neg(&ia->big, &res) < 0) {
+                goto error;
+            }
+
             MenaiValue _r = menai_integer_from_bigint(res);
-            if (!_r) goto error;
+            if (!_r) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_INTEGER_BIT_NOT: {
             MenaiValue a = regs[base + src0];
-            if (!require_integer(a, "integer-bit-not")) goto error;
+            if (!require_integer(a, "integer-bit-not")) {
+                goto error;
+            }
+
             MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
             MenaiInt tmp, res;
             menai_int_init(&tmp);
             menai_int_init(&res);
             if (!ia->is_big) {
-                if (menai_int_from_long(ia->small, &tmp) < 0) goto error;
+                if (menai_int_from_long(ia->small, &tmp) < 0) {
+                    goto error;
+                }
             } else {
-                if (menai_int_copy(&ia->big, &tmp) < 0) goto error;
+                if (menai_int_copy(&ia->big, &tmp) < 0) {
+                    goto error;
+                }
             }
-            if (menai_int_not(&tmp, &res) < 0) { menai_int_free(&tmp); goto error; }
+
+            if (menai_int_not(&tmp, &res) < 0) {
+                menai_int_free(&tmp); goto error;
+            }
+
             menai_int_free(&tmp);
             MenaiValue _r = menai_integer_from_bigint(res);
-            if (!_r) goto error;
+            if (!_r) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_INTEGER_ADD: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer+")) goto error;
-            if (!require_integer(b, "integer+")) goto error;
+            if (!require_integer(a, "integer+")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer+")) {
+                goto error;
+            }
+
             if (!((MenaiInteger_Object *)a)->is_big && !((MenaiInteger_Object *)b)->is_big) {
                 long la = ((MenaiInteger_Object *)a)->small;
                 long lb = ((MenaiInteger_Object *)b)->small;
                 long lr;
                 if (!_menai_add_overflow(la, lb, &lr)) {
                     MenaiValue _r = menai_integer_from_long(lr);
-                    if (!_r) goto error;
+                    if (!_r) {
+                        goto error;
+                    }
+
                     menai_reg_set_own(regs, base + dest, _r);
                     break;
                 }
             }
+
             MenaiInt av, bv, res;
             menai_int_init(&av);
             menai_int_init(&bv);
             menai_int_init(&res);
             if (!((MenaiInteger_Object *)a)->is_big) {
-                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error;
+                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+                    goto error;
+                }
             } else {
-                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error;
+                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                    goto error;
+                }
             }
+
             if (!((MenaiInteger_Object *)b)->is_big) {
                 if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
                     menai_int_free(&av);
@@ -1569,81 +1888,156 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     goto error;
                 }
             }
+
             if (menai_int_add(&av, &bv, &res) < 0) {
                 menai_int_free(&av);
                 menai_int_free(&bv);
                 goto error;
             }
+
             menai_int_free(&av);
             menai_int_free(&bv);
             MenaiValue _r = menai_integer_from_bigint(res);
-            if (!_r) goto error;
+            if (!_r) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_INTEGER_SUB: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer-")) goto error;
-            if (!require_integer(b, "integer-")) goto error;
+            if (!require_integer(a, "integer-")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer-")) {
+                goto error;
+            }
+
             if (!((MenaiInteger_Object *)a)->is_big && !((MenaiInteger_Object *)b)->is_big) {
                 long la = ((MenaiInteger_Object *)a)->small;
                 long lb = ((MenaiInteger_Object *)b)->small;
                 long lr;
                 if (!_menai_sub_overflow(la, lb, &lr)) {
                     MenaiValue _r = menai_integer_from_long(lr);
-                    if (!_r) goto error;
+                    if (!_r) {
+                        goto error;
+                    }
+
                     menai_reg_set_own(regs, base + dest, _r);
                     break;
                 }
             }
+
             MenaiInt av, bv, res;
             menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
-            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
-            if (menai_int_sub(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            if (!((MenaiInteger_Object *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+                    goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                    goto error;
+                }
+            }
+
+            if (!((MenaiInteger_Object *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            }
+
+            if (menai_int_sub(&av, &bv, &res) < 0) {
+                menai_int_free(&av); menai_int_free(&bv); goto error;
+            }
+
             menai_int_free(&av); menai_int_free(&bv);
             MenaiValue _r = menai_integer_from_bigint(res);
-            if (!_r) goto error;
+            if (!_r) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_INTEGER_MUL: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer*")) goto error;
-            if (!require_integer(b, "integer*")) goto error;
+            if (!require_integer(a, "integer*")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer*")) {
+                goto error;
+            }
+
             if (!((MenaiInteger_Object *)a)->is_big && !((MenaiInteger_Object *)b)->is_big) {
                 long la = ((MenaiInteger_Object *)a)->small;
                 long lb = ((MenaiInteger_Object *)b)->small;
                 long lr;
                 if (!_menai_mul_overflow(la, lb, &lr)) {
                     MenaiValue _r = menai_integer_from_long(lr);
-                    if (!_r) goto error;
+                    if (!_r) {
+                        goto error;
+                    }
+
                     menai_reg_set_own(regs, base + dest, _r);
                     break;
                 }
             }
+
             MenaiInt av, bv, res;
             menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
-            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
-            if (menai_int_mul(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            if (!((MenaiInteger_Object *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+                    goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                    goto error;
+                }
+            }
+
+            if (!((MenaiInteger_Object *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            }
+
+            if (menai_int_mul(&av, &bv, &res) < 0) {
+                menai_int_free(&av); menai_int_free(&bv); goto error;
+            }
+
             menai_int_free(&av); menai_int_free(&bv);
             MenaiValue _r = menai_integer_from_bigint(res);
-            if (!_r) goto error;
+            if (!_r) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_INTEGER_DIV: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer/")) goto error;
-            if (!require_integer(b, "integer/")) goto error;
+            if (!require_integer(a, "integer/")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer/")) {
+                goto error;
+            }
+
             {
                 MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
                 int b_is_zero = (!ib->is_big && ib->small == 0) ||
@@ -1653,24 +2047,53 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
                 }
             }
+
             MenaiInt av, bv, res;
             menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
-            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
-            if (menai_int_floordiv(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            if (!((MenaiInteger_Object *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+                    goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                    goto error;
+                }
+            }
+
+            if (!((MenaiInteger_Object *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            }
+
+            if (menai_int_floordiv(&av, &bv, &res) < 0) {
+                menai_int_free(&av); menai_int_free(&bv); goto error;
+            }
+
             menai_int_free(&av); menai_int_free(&bv);
             MenaiValue _r = menai_integer_from_bigint(res);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_INTEGER_MOD: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer%")) goto error;
-            if (!require_integer(b, "integer%")) goto error;
+            if (!require_integer(a, "integer%")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer%")) {
+                goto error;
+            }
+
             {
                 MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
                 int b_is_zero = (!ib->is_big && ib->small == 0) ||
@@ -1680,24 +2103,53 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
                 }
             }
+
             MenaiInt av, bv, res;
             menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
-            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
-            if (menai_int_mod(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            if (!((MenaiInteger_Object *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+                    goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                    goto error;
+                }
+            }
+
+            if (!((MenaiInteger_Object *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            }
+
+            if (menai_int_mod(&av, &bv, &res) < 0) {
+                menai_int_free(&av); menai_int_free(&bv); goto error;
+            }
+
             menai_int_free(&av); menai_int_free(&bv);
             MenaiValue _r = menai_integer_from_bigint(res);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_INTEGER_EXPN: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer-expn")) goto error;
-            if (!require_integer(b, "integer-expn")) goto error;
+            if (!require_integer(a, "integer-expn")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer-expn")) {
+                goto error;
+            }
+
             {
                 MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
                 int b_is_neg = (!ib->is_big && ib->small < 0) ||
@@ -1707,78 +2159,191 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
                 }
             }
+
             MenaiInt av, bv, res;
             menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
-            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
-            if (menai_int_pow(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            if (!((MenaiInteger_Object *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+                    goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                    goto error;
+                }
+            }
+
+            if (!((MenaiInteger_Object *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            }
+
+            if (menai_int_pow(&av, &bv, &res) < 0) {
+                menai_int_free(&av); menai_int_free(&bv); goto error;
+            }
+
             menai_int_free(&av); menai_int_free(&bv);
             MenaiValue _r = menai_integer_from_bigint(res);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_INTEGER_BIT_OR: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer-bit-or")) goto error;
-            if (!require_integer(b, "integer-bit-or")) goto error;
+            if (!require_integer(a, "integer-bit-or")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer-bit-or")) {
+                goto error;
+            }
+
             MenaiInt av, bv, res;
             menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
-            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
-            if (menai_int_or(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            if (!((MenaiInteger_Object *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+                    goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                    goto error;
+                }
+            }
+
+            if (!((MenaiInteger_Object *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            }
+
+            if (menai_int_or(&av, &bv, &res) < 0) {
+                menai_int_free(&av); menai_int_free(&bv); goto error;
+            }
+
             menai_int_free(&av); menai_int_free(&bv);
             MenaiValue _r = menai_integer_from_bigint(res);
-            if (!_r) goto error;
+            if (!_r) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_INTEGER_BIT_AND: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer-bit-and")) goto error;
-            if (!require_integer(b, "integer-bit-and")) goto error;
+            if (!require_integer(a, "integer-bit-and")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer-bit-and")) {
+                goto error;
+            }
+
             MenaiInt av, bv, res;
             menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
-            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
-            if (menai_int_and(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            if (!((MenaiInteger_Object *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+                    goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                    goto error;
+                }
+            }
+
+            if (!((MenaiInteger_Object *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            }
+
+            if (menai_int_and(&av, &bv, &res) < 0) {
+                menai_int_free(&av); menai_int_free(&bv); goto error;
+            }
+
             menai_int_free(&av); menai_int_free(&bv);
             MenaiValue _r = menai_integer_from_bigint(res);
-            if (!_r) goto error;
+            if (!_r) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_INTEGER_BIT_XOR: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer-bit-xor")) goto error;
-            if (!require_integer(b, "integer-bit-xor")) goto error;
+            if (!require_integer(a, "integer-bit-xor")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer-bit-xor")) {
+                goto error;
+            }
+
             MenaiInt av, bv, res;
             menai_int_init(&av); menai_int_init(&bv); menai_int_init(&res);
-            if (!((MenaiInteger_Object *)a)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) goto error; }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) goto error; }
-            if (!((MenaiInteger_Object *)b)->is_big) { if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) { menai_int_free(&av); goto error; } }
-            else { if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) { menai_int_free(&av); goto error; } }
-            if (menai_int_xor(&av, &bv, &res) < 0) { menai_int_free(&av); menai_int_free(&bv); goto error; }
+            if (!((MenaiInteger_Object *)a)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)a)->small, &av) < 0) {
+                    goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)a)->big, &av) < 0) {
+                    goto error;
+                }
+            }
+
+            if (!((MenaiInteger_Object *)b)->is_big) {
+                if (menai_int_from_long(((MenaiInteger_Object *)b)->small, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            } else {
+                if (menai_int_copy(&((MenaiInteger_Object *)b)->big, &bv) < 0) {
+                    menai_int_free(&av); goto error;
+                }
+            }
+
+            if (menai_int_xor(&av, &bv, &res) < 0) {
+                menai_int_free(&av); menai_int_free(&bv); goto error;
+            }
+
             menai_int_free(&av); menai_int_free(&bv);
             MenaiValue _r = menai_integer_from_bigint(res);
-            if (!_r) goto error;
+            if (!_r) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_INTEGER_BIT_SHIFT_LEFT: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer-bit-shift-left")) goto error;
-            if (!require_integer(b, "integer-bit-shift-left")) goto error;
+            if (!require_integer(a, "integer-bit-shift-left")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer-bit-shift-left")) {
+                goto error;
+            }
+
             {
                 MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
                 long shift;
@@ -1789,32 +2354,56 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                         menai_raise_eval_error("integer-bit-shift-left: shift amount too large");
                         goto error;
                     }
-                    if (menai_int_to_long(&ib->big, &shift) < 0) goto error;
+
+                    if (menai_int_to_long(&ib->big, &shift) < 0) {
+                        goto error;
+                    }
                 }
+
                 if (shift < 0) {
                     menai_raise_eval_error("integer-bit-shift-left: shift amount must be non-negative");
                     goto error;
                 }
+
                 MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
                 MenaiInt av, res;
                 menai_int_init(&av); menai_int_init(&res);
-                if (!ia->is_big) { if (menai_int_from_long(ia->small, &av) < 0) goto error; }
-                else { if (menai_int_copy(&ia->big, &av) < 0) goto error; }
+                if (!ia->is_big) {
+                    if (menai_int_from_long(ia->small, &av) < 0) {
+                        goto error;
+                    }
+                } else {
+                    if (menai_int_copy(&ia->big, &av) < 0) {
+                        goto error;
+                    }
+                }
+
                 if (menai_int_shift_left(&av, (Py_ssize_t)shift, &res) < 0) {
                     menai_int_free(&av); goto error;
                 }
+
                 menai_int_free(&av);
                 MenaiValue _r = menai_integer_from_bigint(res);
-                if (!_r) goto error;
+                if (!_r) {
+                    goto error;
+                }
+
                 menai_reg_set_own(regs, base + dest, _r);
             }
+
             break;
         }
 
         case OP_INTEGER_BIT_SHIFT_RIGHT: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer-bit-shift-right")) goto error;
-            if (!require_integer(b, "integer-bit-shift-right")) goto error;
+            if (!require_integer(a, "integer-bit-shift-right")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer-bit-shift-right")) {
+                goto error;
+            }
+
             {
                 MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
                 long shift;
@@ -1825,132 +2414,218 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                         menai_raise_eval_error("integer-bit-shift-right: shift amount too large");
                         goto error;
                     }
-                    if (menai_int_to_long(&ib->big, &shift) < 0) goto error;
+
+                    if (menai_int_to_long(&ib->big, &shift) < 0) {
+                        goto error;
+                    }
                 }
+
                 if (shift < 0) {
                     menai_raise_eval_error("integer-bit-shift-right: shift amount must be non-negative");
                     goto error;
                 }
+
                 MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
                 MenaiInt av, res;
                 menai_int_init(&av); menai_int_init(&res);
-                if (!ia->is_big) { if (menai_int_from_long(ia->small, &av) < 0) goto error; }
-                else { if (menai_int_copy(&ia->big, &av) < 0) goto error; }
+                if (!ia->is_big) {
+                    if (menai_int_from_long(ia->small, &av) < 0) {
+                        goto error;
+                    }
+                } else {
+                    if (menai_int_copy(&ia->big, &av) < 0) {
+                        goto error;
+                    }
+                }
+
                 if (menai_int_shift_right(&av, (Py_ssize_t)shift, &res) < 0) {
                     menai_int_free(&av); goto error;
                 }
+
                 menai_int_free(&av);
                 MenaiValue _r = menai_integer_from_bigint(res);
-                if (!_r) goto error;
+                if (!_r) {
+                    goto error;
+                }
+
                 menai_reg_set_own(regs, base + dest, _r);
             }
+
             break;
         }
 
         case OP_INTEGER_MIN: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer-min")) goto error;
-            if (!require_integer(b, "integer-min")) goto error;
+            if (!require_integer(a, "integer-min")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer-min")) {
+                goto error;
+            }
+
             menai_reg_set_borrow(regs, base + dest, menai_integer_compare(a, b, Py_LE) ? a : b);
             break;
         }
 
         case OP_INTEGER_MAX: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer-max")) goto error;
-            if (!require_integer(b, "integer-max")) goto error;
+            if (!require_integer(a, "integer-max")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer-max")) {
+                goto error;
+            }
+
             menai_reg_set_borrow(regs, base + dest, menai_integer_compare(a, b, Py_GE) ? a : b);
             break;
         }
 
         case OP_INTEGER_TO_FLOAT: {
             MenaiValue a = regs[base + src0];
-            if (!require_integer(a, "integer->float")) goto error;
+            if (!require_integer(a, "integer->float")) {
+                goto error;
+            }
+
             MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
             double d;
             if (!ia->is_big) {
                 d = (double)ia->small;
             } else {
-                if (menai_int_to_double(&ia->big, &d) < 0) goto error;
+                if (menai_int_to_double(&ia->big, &d) < 0) {
+                    goto error;
+                }
             }
+
             MenaiValue _r = make_float(d);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_INTEGER_TO_COMPLEX: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer->complex")) goto error;
-            if (!require_integer(b, "integer->complex")) goto error;
+            if (!require_integer(a, "integer->complex")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer->complex")) {
+                goto error;
+            }
+
             MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
             MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
             double re, im;
             if (!ia->is_big) {
                 re = (double)ia->small;
             } else {
-                if (menai_int_to_double(&ia->big, &re) < 0) goto error;
+                if (menai_int_to_double(&ia->big, &re) < 0) {
+                    goto error;
+                }
             }
+
             if (!ib->is_big) {
                 im = (double)ib->small;
             } else {
-                if (menai_int_to_double(&ib->big, &im) < 0) goto error;
+                if (menai_int_to_double(&ib->big, &im) < 0) {
+                    goto error;
+                }
             }
+
             MenaiValue r = make_complex(re, im);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_INTEGER_TO_STRING: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_integer(a, "integer->string")) goto error;
-            if (!require_integer(b, "integer->string")) goto error;
+            if (!require_integer(a, "integer->string")) {
+                goto error;
+            }
+
+            if (!require_integer(b, "integer->string")) {
+                goto error;
+            }
+
             MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
             long radix;
             if (!ib->is_big) {
                 radix = ib->small;
             } else {
-                if (menai_int_to_long(&ib->big, &radix) < 0) goto error;
+                if (menai_int_to_long(&ib->big, &radix) < 0) {
+                    goto error;
+                }
             }
+
             if (radix != 2 && radix != 8 && radix != 10 && radix != 16) {
                 menai_raise_eval_errorf("integer->string: radix must be 2, 8, 10, or 16, got %ld", radix);
                 goto error;
             }
+
             MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
             MenaiInt tmp;
             menai_int_init(&tmp);
-            if (!ia->is_big) { if (menai_int_from_long(ia->small, &tmp) < 0) goto error; }
-            else { if (menai_int_copy(&ia->big, &tmp) < 0) goto error; }
+            if (!ia->is_big) {
+                if (menai_int_from_long(ia->small, &tmp) < 0) {
+                    goto error;
+                }
+            } else {
+                if (menai_int_copy(&ia->big, &tmp) < 0) {
+                    goto error;
+                }
+            }
+
             char *cstr = NULL;
             if (menai_int_to_string(&tmp, (int)radix, &cstr) < 0) {
                 menai_int_free(&tmp); goto error;
             }
+
             menai_int_free(&tmp);
             MenaiValue r = menai_string_from_utf8(cstr, (Py_ssize_t)strlen(cstr));
             free(cstr);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_INTEGER_CODEPOINT_TO_STRING: {
             MenaiValue a = regs[base + src0];
-            if (!require_integer(a, "integer-codepoint->string")) goto error;
+            if (!require_integer(a, "integer-codepoint->string")) {
+                goto error;
+            }
+
             MenaiInteger_Object *ia = (MenaiInteger_Object *)a;
             long cp;
             if (!ia->is_big) {
                 cp = ia->small;
             } else {
-                if (menai_int_to_long(&ia->big, &cp) < 0) goto error;
+                if (menai_int_to_long(&ia->big, &cp) < 0) {
+                    goto error;
+                }
             }
+
             if (cp < 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) {
                 menai_raise_eval_errorf(
                     "integer-codepoint->string: invalid Unicode scalar value %ld", cp);
                 goto error;
             }
+
             MenaiValue r = menai_string_from_codepoint((uint32_t)cp);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
@@ -1961,350 +2636,591 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_FLOAT_EQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float=?")) goto error;
-            if (!require_float(b, "float=?")) goto error;
+            if (!require_float(a, "float=?")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_float_value(a) == menai_float_value(b));
             break;
         }
 
         case OP_FLOAT_NEQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float!=?")) goto error;
-            if (!require_float(b, "float!=?")) goto error;
+            if (!require_float(a, "float!=?")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float!=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_float_value(a) != menai_float_value(b));
             break;
         }
 
         case OP_FLOAT_LT_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float<?")) goto error;
-            if (!require_float(b, "float<?")) goto error;
+            if (!require_float(a, "float<?")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float<?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_float_value(a) < menai_float_value(b));
             break;
         }
 
         case OP_FLOAT_GT_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float>?")) goto error;
-            if (!require_float(b, "float>?")) goto error;
+            if (!require_float(a, "float>?")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float>?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_float_value(a) > menai_float_value(b));
             break;
         }
 
         case OP_FLOAT_LTE_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float<=?")) goto error;
-            if (!require_float(b, "float<=?")) goto error;
+            if (!require_float(a, "float<=?")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float<=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_float_value(a) <= menai_float_value(b));
             break;
         }
 
         case OP_FLOAT_GTE_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float>=?")) goto error;
-            if (!require_float(b, "float>=?")) goto error;
+            if (!require_float(a, "float>=?")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float>=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_float_value(a) >= menai_float_value(b));
             break;
         }
 
         case OP_FLOAT_NEG: {
             MenaiValue a = regs[base + src0];
-            if (!require_float(a, "float-neg")) goto error;
+            if (!require_float(a, "float-neg")) {
+                goto error;
+            }
+
             MenaiValue _r = make_float(-menai_float_value(a));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_ABS: {
             MenaiValue a = regs[base + src0];
-            if (!require_float(a, "float-abs")) goto error;
+            if (!require_float(a, "float-abs")) {
+                goto error;
+            }
+
             double v = menai_float_value(a);
             {
                 MenaiValue _r = make_float(fabs(v));
-                if (_r == NULL) goto error;
+                if (_r == NULL) {
+                    goto error;
+                }
+
                 menai_reg_set_own(regs, base + dest, _r);
             }
+
             break;
         }
 
         case OP_FLOAT_ADD: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float+")) goto error;
-            if (!require_float(b, "float+")) goto error;
+            if (!require_float(a, "float+")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float+")) {
+                goto error;
+            }
+
             MenaiValue _r = make_float(menai_float_value(a) + menai_float_value(b));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_SUB: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float-")) goto error;
-            if (!require_float(b, "float-")) goto error;
+            if (!require_float(a, "float-")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float-")) {
+                goto error;
+            }
+
             MenaiValue _r = make_float(menai_float_value(a) - menai_float_value(b));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_MUL: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float*")) goto error;
-            if (!require_float(b, "float*")) goto error;
+            if (!require_float(a, "float*")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float*")) {
+                goto error;
+            }
+
             MenaiValue _r = make_float(menai_float_value(a) * menai_float_value(b));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_DIV: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float/")) goto error;
-            if (!require_float(b, "float/")) goto error;
+            if (!require_float(a, "float/")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float/")) {
+                goto error;
+            }
+
             double bv = menai_float_value(b);
             if (bv == 0.0) {
                 menai_raise_eval_error("Division by zero in 'float/'");
                 goto error;
             }
+
             MenaiValue _r = make_float(menai_float_value(a) / bv);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_FLOOR_DIV: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float//")) goto error;
-            if (!require_float(b, "float//")) goto error;
+            if (!require_float(a, "float//")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float//")) {
+                goto error;
+            }
+
             double bv = menai_float_value(b);
             if (bv == 0.0) {
                 menai_raise_eval_error("Division by zero in 'float//'");
                 goto error;
             }
+
             MenaiValue _r = make_float(floor(menai_float_value(a) / bv));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_MOD: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float%")) goto error;
-            if (!require_float(b, "float%")) goto error;
+            if (!require_float(a, "float%")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float%")) {
+                goto error;
+            }
+
             double bv = menai_float_value(b);
             if (bv == 0.0) {
                 menai_raise_eval_error("Modulo by zero in 'float%'");
                 goto error;
             }
+
             MenaiValue _r = make_float(fmod(menai_float_value(a), bv));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_EXP: {
             MenaiValue a = regs[base + src0];
-            if (!require_float(a, "float-exp")) goto error;
+            if (!require_float(a, "float-exp")) {
+                goto error;
+            }
+
             MenaiValue _r = make_float(exp(menai_float_value(a)));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_EXPN: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float-expn")) goto error;
-            if (!require_float(b, "float-expn")) goto error;
+            if (!require_float(a, "float-expn")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float-expn")) {
+                goto error;
+            }
+
             MenaiValue _r = make_float(pow(menai_float_value(a), menai_float_value(b)));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_LOG: {
             MenaiValue a = regs[base + src0];
-            if (!require_float(a, "float-log")) goto error;
+            if (!require_float(a, "float-log")) {
+                goto error;
+            }
+
             double v = menai_float_value(a);
             if (v < 0.0) {
                 menai_raise_eval_error("float-log: argument must be non-negative");
                 goto error;
             }
+
             MenaiValue _r = make_float(v == 0.0 ? -INFINITY : log(v));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_LOG10: {
             MenaiValue a = regs[base + src0];
-            if (!require_float(a, "float-log10")) goto error;
+            if (!require_float(a, "float-log10")) {
+                goto error;
+            }
+
             double v = menai_float_value(a);
             if (v < 0.0) {
                 menai_raise_eval_error("float-log10: argument must be non-negative");
                 goto error;
             }
+
             MenaiValue _r = make_float(v == 0.0 ? -INFINITY : log10(v));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_LOG2: {
             MenaiValue a = regs[base + src0];
-            if (!require_float(a, "float-log2")) goto error;
+            if (!require_float(a, "float-log2")) {
+                goto error;
+            }
+
             double v = menai_float_value(a);
             if (v < 0.0) {
                 menai_raise_eval_error("float-log2: argument must be non-negative");
                 goto error;
             }
+
             MenaiValue _r = make_float(v == 0.0 ? -INFINITY : log2(v));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_LOGN: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float-logn")) goto error;
-            if (!require_float(b, "float-logn")) goto error;
+            if (!require_float(a, "float-logn")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float-logn")) {
+                goto error;
+            }
+
             double av = menai_float_value(a), bv = menai_float_value(b);
             if (bv <= 0.0 || bv == 1.0) {
                 menai_raise_eval_error("Function 'float-logn' requires a positive base not equal to 1");
                 goto error;
             }
+
             if (av < 0.0) {
                 menai_raise_eval_error("float-logn: argument must be non-negative");
                 goto error;
             }
+
             MenaiValue _r = make_float(av == 0.0 ? -INFINITY : log(av) / log(bv));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_SIN: {
             MenaiValue a = regs[base + src0];
-            if (!require_float(a, "float-sin")) goto error;
+            if (!require_float(a, "float-sin")) {
+                goto error;
+            }
+
             MenaiValue _r = make_float(sin(menai_float_value(a)));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_COS: {
             MenaiValue a = regs[base + src0];
-            if (!require_float(a, "float-cos")) goto error;
+            if (!require_float(a, "float-cos")) {
+                goto error;
+            }
+
             MenaiValue _r = make_float(cos(menai_float_value(a)));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_TAN: {
             MenaiValue a = regs[base + src0];
-            if (!require_float(a, "float-tan")) goto error;
+            if (!require_float(a, "float-tan")) {
+                goto error;
+            }
+
             MenaiValue _r = make_float(tan(menai_float_value(a)));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_SQRT: {
             MenaiValue a = regs[base + src0];
-            if (!require_float(a, "float-sqrt")) goto error;
+            if (!require_float(a, "float-sqrt")) {
+                goto error;
+            }
+
             double v = menai_float_value(a);
             if (v < 0.0) {
                 menai_raise_eval_error("float-sqrt: argument must be non-negative");
                 goto error;
             }
+
             MenaiValue _r = make_float(sqrt(v));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_FLOOR: {
             MenaiValue a = regs[base + src0];
-            if (!require_float(a, "float-floor")) goto error;
+            if (!require_float(a, "float-floor")) {
+                goto error;
+            }
+
             MenaiValue _r = make_float(floor(menai_float_value(a)));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_CEIL: {
             MenaiValue a = regs[base + src0];
-            if (!require_float(a, "float-ceil")) goto error;
+            if (!require_float(a, "float-ceil")) {
+                goto error;
+            }
+
             MenaiValue _r = make_float(ceil(menai_float_value(a)));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_ROUND: {
             MenaiValue a = regs[base + src0];
-            if (!require_float(a, "float-round")) goto error;
+            if (!require_float(a, "float-round")) {
+                goto error;
+            }
+
             MenaiValue _r = make_float(round(menai_float_value(a)));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_MIN: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float-min")) goto error;
-            if (!require_float(b, "float-min")) goto error;
+            if (!require_float(a, "float-min")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float-min")) {
+                goto error;
+            }
+
             double av = menai_float_value(a), bv = menai_float_value(b);
             MenaiValue _r = make_float(av <= bv ? av : bv);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_MAX: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float-max")) goto error;
-            if (!require_float(b, "float-max")) goto error;
+            if (!require_float(a, "float-max")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float-max")) {
+                goto error;
+            }
+
             double av = menai_float_value(a), bv = menai_float_value(b);
             MenaiValue _r = make_float(av >= bv ? av : bv);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_TO_INTEGER: {
             MenaiValue a = regs[base + src0];
-            if (!require_float(a, "float->integer")) goto error;
+            if (!require_float(a, "float->integer")) {
+                goto error;
+            }
+
             double v = menai_float_value(a);
             MenaiInt res;
             menai_int_init(&res);
-            if (menai_int_from_double(trunc(v), &res) < 0) goto error;
+            if (menai_int_from_double(trunc(v), &res) < 0) {
+                goto error;
+            }
+
             MenaiValue _r = menai_integer_from_bigint(res);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_FLOAT_TO_COMPLEX: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_float(a, "float->complex")) goto error;
-            if (!require_float(b, "float->complex")) goto error;
+            if (!require_float(a, "float->complex")) {
+                goto error;
+            }
+
+            if (!require_float(b, "float->complex")) {
+                goto error;
+            }
+
             MenaiValue r = make_complex(menai_float_value(a), menai_float_value(b));
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_FLOAT_TO_STRING: {
             MenaiValue a = regs[base + src0];
-            if (!require_float(a, "float->string")) goto error;
+            if (!require_float(a, "float->string")) {
+                goto error;
+            }
+
             char *_fsbuf = PyOS_double_to_string(menai_float_value(a), 'r', 0,
                                                  Py_DTSF_ADD_DOT_0, NULL);
-            if (_fsbuf == NULL) goto error;
+            if (_fsbuf == NULL) {
+                goto error;
+            }
+
             MenaiValue r = menai_string_from_utf8(_fsbuf, (Py_ssize_t)strlen(_fsbuf));
             PyMem_Free(_fsbuf);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
@@ -2320,8 +3236,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("MAKE_CLOSURE: child index out of range");
                 goto error;
             }
+
             MenaiValue func = menai_function_alloc(frame->children[src0], Menai_NONE);
-            if (func == NULL) goto error;
+            if (func == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, func);
             break;
         }
@@ -2336,6 +3256,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("PATCH_CLOSURE requires a function");
                 goto error;
             }
+
             MenaiValue val = regs[base + src2];
             MenaiFunction_Object *fn = (MenaiFunction_Object *)closure;
             MenaiValue old = fn->captures[src1];
@@ -2371,12 +3292,17 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 int callee_base = base + frame->local_count;
 
                 /* Scatter list elements into the callee window */
-                for (int i = 0; i < arity; i++)
+                for (int i = 0; i < arity; i++) {
                     menai_reg_set_borrow(regs, callee_base + i, elements[i]);
+                }
 
                 frame_depth++;
                 Frame *new_frame = &frames[frame_depth];
-                *new_frame = (Frame){ .code_obj = NULL, .constants_items = NULL, .instrs = NULL };
+                *new_frame = (Frame){
+                    .code_obj = NULL, .constants_items = NULL, .instrs = NULL
+                }
+
+                ;
 
                 if (call_setup(new_frame, raw_func, regs, callee_base, arity, dest) < 0) {
                     frame_depth--;
@@ -2393,13 +3319,16 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
 
                 MenaiValue instance = menai_struct_alloc(raw_func, elements, n_fields);
-                if (instance == NULL) goto error;
+                if (instance == NULL) {
+                    goto error;
+                }
 
                 menai_reg_set_own(regs, base + dest, instance);
             } else {
                 menai_raise_eval_error("apply: first argument must be a function");
                 goto error;
             }
+
             break;
         }
 
@@ -2428,7 +3357,10 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             if (IS_MENAI_FUNCTION(raw_func)) {
                 /* Scatter args into base+0..arity-1 (reusing current frame's base) */
-                for (int i = 0; i < arity; i++) menai_reg_set_borrow(regs, base + i, elements[i]);
+                for (int i = 0; i < arity; i++) {
+                    menai_reg_set_borrow(regs, base + i, elements[i]);
+                }
+
                 menai_release(raw_args);
 
                 /* Release old code_obj and instructions, reuse frame. */
@@ -2440,6 +3372,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     menai_release(raw_func);
                     goto error;
                 }
+
                 menai_release(raw_func);
 
             } else if (IS_MENAI_STRUCTTYPE(raw_func)) {
@@ -2478,6 +3411,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("apply: first argument must be a function");
                 goto error;
             }
+
             break;
         }
 
@@ -2491,8 +3425,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_COMPLEX_EQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_complex(a, "complex=?")) goto error;
-            if (!require_complex(b, "complex=?")) goto error;
+            if (!require_complex(a, "complex=?")) {
+                goto error;
+            }
+
+            if (!require_complex(b, "complex=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest,
                 ((MenaiComplex_Object *)a)->real == ((MenaiComplex_Object *)b)->real &&
                 ((MenaiComplex_Object *)a)->imag == ((MenaiComplex_Object *)b)->imag);
@@ -2501,8 +3441,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_COMPLEX_NEQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_complex(a, "complex!=?")) goto error;
-            if (!require_complex(b, "complex!=?")) goto error;
+            if (!require_complex(a, "complex!=?")) {
+                goto error;
+            }
+
+            if (!require_complex(b, "complex!=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest,
                 ((MenaiComplex_Object *)a)->real != ((MenaiComplex_Object *)b)->real ||
                 ((MenaiComplex_Object *)a)->imag != ((MenaiComplex_Object *)b)->imag);
@@ -2511,213 +3457,344 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_COMPLEX_REAL: {
             MenaiValue a = regs[base + src0];
-            if (!require_complex(a, "complex-real")) goto error;
+            if (!require_complex(a, "complex-real")) {
+                goto error;
+            }
+
             MenaiValue _fr = make_float(((MenaiComplex_Object *)a)->real);
-            if (_fr == NULL) goto error;
+            if (_fr == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _fr);
             break;
         }
 
         case OP_COMPLEX_IMAG: {
             MenaiValue a = regs[base + src0];
-            if (!require_complex(a, "complex-imag")) goto error;
+            if (!require_complex(a, "complex-imag")) {
+                goto error;
+            }
+
             MenaiValue _fr = make_float(((MenaiComplex_Object *)a)->imag);
-            if (_fr == NULL) goto error;
+            if (_fr == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _fr);
             break;
         }
 
         case OP_COMPLEX_ABS: {
             MenaiValue a = regs[base + src0];
-            if (!require_complex(a, "complex-abs")) goto error;
+            if (!require_complex(a, "complex-abs")) {
+                goto error;
+            }
+
             double re = ((MenaiComplex_Object *)a)->real;
             double im = ((MenaiComplex_Object *)a)->imag;
             MenaiValue _fr = make_float(sqrt(re * re + im * im));
-            if (_fr == NULL) goto error;
+            if (_fr == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _fr);
             break;
         }
 
         case OP_COMPLEX_NEG: {
             MenaiValue a = regs[base + src0];
-            if (!require_complex(a, "complex-neg")) goto error;
+            if (!require_complex(a, "complex-neg")) {
+                goto error;
+            }
+
             MenaiValue _r = make_complex(-((MenaiComplex_Object *)a)->real,
                                         -((MenaiComplex_Object *)a)->imag);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_COMPLEX_ADD: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_complex(a, "complex+")) goto error;
-            if (!require_complex(b, "complex+")) goto error;
+            if (!require_complex(a, "complex+")) {
+                goto error;
+            }
+
+            if (!require_complex(b, "complex+")) {
+                goto error;
+            }
+
             MenaiValue _r = make_complex(
                 ((MenaiComplex_Object *)a)->real + ((MenaiComplex_Object *)b)->real,
                 ((MenaiComplex_Object *)a)->imag + ((MenaiComplex_Object *)b)->imag);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_COMPLEX_SUB: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_complex(a, "complex-")) goto error;
-            if (!require_complex(b, "complex-")) goto error;
+            if (!require_complex(a, "complex-")) {
+                goto error;
+            }
+
+            if (!require_complex(b, "complex-")) {
+                goto error;
+            }
+
             MenaiValue _r = make_complex(
                 ((MenaiComplex_Object *)a)->real - ((MenaiComplex_Object *)b)->real,
                 ((MenaiComplex_Object *)a)->imag - ((MenaiComplex_Object *)b)->imag);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_COMPLEX_MUL: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_complex(a, "complex*")) goto error;
-            if (!require_complex(b, "complex*")) goto error;
+            if (!require_complex(a, "complex*")) {
+                goto error;
+            }
+
+            if (!require_complex(b, "complex*")) {
+                goto error;
+            }
+
             double ar = ((MenaiComplex_Object *)a)->real, ai = ((MenaiComplex_Object *)a)->imag;
             double br = ((MenaiComplex_Object *)b)->real, bi = ((MenaiComplex_Object *)b)->imag;
             MenaiValue _r = make_complex(ar * br - ai * bi, ar * bi + ai * br);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_COMPLEX_DIV: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_complex(a, "complex/")) goto error;
-            if (!require_complex(b, "complex/")) goto error;
+            if (!require_complex(a, "complex/")) {
+                goto error;
+            }
+
+            if (!require_complex(b, "complex/")) {
+                goto error;
+            }
+
             double ar = ((MenaiComplex_Object *)a)->real, ai = ((MenaiComplex_Object *)a)->imag;
             double br = ((MenaiComplex_Object *)b)->real, bi = ((MenaiComplex_Object *)b)->imag;
             if (br == 0.0 && bi == 0.0) {
                 menai_raise_eval_error("Division by zero in 'complex/'");
                 goto error;
             }
+
             double denom = br * br + bi * bi;
             MenaiValue _r = make_complex(
                 (ar * br + ai * bi) / denom,
                 (ai * br - ar * bi) / denom);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_COMPLEX_EXPN: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_complex(a, "complex-expn")) goto error;
-            if (!require_complex(b, "complex-expn")) goto error;
+            if (!require_complex(a, "complex-expn")) {
+                goto error;
+            }
+
+            if (!require_complex(b, "complex-expn")) {
+                goto error;
+            }
+
             mc_t za = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t zb = mc(((MenaiComplex_Object *)b)->real, ((MenaiComplex_Object *)b)->imag);
             mc_t cr = mc_pow(za, zb);
             MenaiValue _r = make_complex(cr.re, cr.im);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_COMPLEX_EXP: {
             MenaiValue a = regs[base + src0];
-            if (!require_complex(a, "complex-exp")) goto error;
+            if (!require_complex(a, "complex-exp")) {
+                goto error;
+            }
+
             mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t cr = mc_exp(z);
             MenaiValue _r = make_complex(cr.re, cr.im);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_COMPLEX_LOG: {
             MenaiValue a = regs[base + src0];
-            if (!require_complex(a, "complex-log")) goto error;
+            if (!require_complex(a, "complex-log")) {
+                goto error;
+            }
+
             mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t cr = mc_log(z);
             MenaiValue _r = make_complex(cr.re, cr.im);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_COMPLEX_LOG10: {
             MenaiValue a = regs[base + src0];
-            if (!require_complex(a, "complex-log10")) goto error;
+            if (!require_complex(a, "complex-log10")) {
+                goto error;
+            }
+
             mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t cr = mc_log10(z);
             MenaiValue _r = make_complex(cr.re, cr.im);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_COMPLEX_SIN: {
             MenaiValue a = regs[base + src0];
-            if (!require_complex(a, "complex-sin")) goto error;
+            if (!require_complex(a, "complex-sin")) {
+                goto error;
+            }
+
             mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t cr = mc_sin(z);
             MenaiValue _r = make_complex(cr.re, cr.im);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_COMPLEX_COS: {
             MenaiValue a = regs[base + src0];
-            if (!require_complex(a, "complex-cos")) goto error;
+            if (!require_complex(a, "complex-cos")) {
+                goto error;
+            }
+
             mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t cr = mc_cos(z);
             MenaiValue _r = make_complex(cr.re, cr.im);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_COMPLEX_TAN: {
             MenaiValue a = regs[base + src0];
-            if (!require_complex(a, "complex-tan")) goto error;
+            if (!require_complex(a, "complex-tan")) {
+                goto error;
+            }
+
             mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t cr = mc_tan(z);
             MenaiValue _r = make_complex(cr.re, cr.im);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_COMPLEX_SQRT: {
             MenaiValue a = regs[base + src0];
-            if (!require_complex(a, "complex-sqrt")) goto error;
+            if (!require_complex(a, "complex-sqrt")) {
+                goto error;
+            }
+
             mc_t z = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t cr = mc_sqrt(z);
             MenaiValue _r = make_complex(cr.re, cr.im);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_COMPLEX_LOGN: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_complex(a, "complex-logn")) goto error;
-            if (!require_complex(b, "complex-logn")) goto error;
+            if (!require_complex(a, "complex-logn")) {
+                goto error;
+            }
+
+            if (!require_complex(b, "complex-logn")) {
+                goto error;
+            }
+
             mc_t za = mc(((MenaiComplex_Object *)a)->real, ((MenaiComplex_Object *)a)->imag);
             mc_t zb = mc(((MenaiComplex_Object *)b)->real, ((MenaiComplex_Object *)b)->imag);
             if (mc_zero(zb)) {
                 menai_raise_eval_error("Function 'complex-logn' requires a non-zero base");
                 goto error;
             }
+
             mc_t cr = mc_logn(za, zb);
             MenaiValue _r = make_complex(cr.re, cr.im);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_COMPLEX_TO_STRING: {
             MenaiValue a = regs[base + src0];
-            if (!require_complex(a, "complex->string")) goto error;
+            if (!require_complex(a, "complex->string")) {
+                goto error;
+            }
+
             PyObject *py_str = menai_value_describe(a);
-            if (py_str == NULL) goto error;
+            if (py_str == NULL) {
+                goto error;
+            }
+
             MenaiValue r = menai_string_from_pyunicode(py_str);
             Py_DECREF(py_str);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
@@ -2728,232 +3805,397 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_STRING_EQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_string(a, "string=?")) goto error;
-            if (!require_string(b, "string=?")) goto error;
+            if (!require_string(a, "string=?")) {
+                goto error;
+            }
+
+            if (!require_string(b, "string=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_string_equal(a, b));
             break;
         }
 
         case OP_STRING_NEQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_string(a, "string!=?")) goto error;
-            if (!require_string(b, "string!=?")) goto error;
+            if (!require_string(a, "string!=?")) {
+                goto error;
+            }
+
+            if (!require_string(b, "string!=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, !menai_string_equal(a, b));
             break;
         }
 
         case OP_STRING_LT_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_string(a, "string<?")) goto error;
-            if (!require_string(b, "string<?")) goto error;
+            if (!require_string(a, "string<?")) {
+                goto error;
+            }
+
+            if (!require_string(b, "string<?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_string_compare(a, b) < 0);
             break;
         }
 
         case OP_STRING_GT_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_string(a, "string>?")) goto error;
-            if (!require_string(b, "string>?")) goto error;
+            if (!require_string(a, "string>?")) {
+                goto error;
+            }
+
+            if (!require_string(b, "string>?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_string_compare(a, b) > 0);
             break;
         }
 
         case OP_STRING_LTE_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_string(a, "string<=?")) goto error;
-            if (!require_string(b, "string<=?")) goto error;
+            if (!require_string(a, "string<=?")) {
+                goto error;
+            }
+
+            if (!require_string(b, "string<=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_string_compare(a, b) <= 0);
             break;
         }
 
         case OP_STRING_GTE_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_string(a, "string>=?")) goto error;
-            if (!require_string(b, "string>=?")) goto error;
+            if (!require_string(a, "string>=?")) {
+                goto error;
+            }
+
+            if (!require_string(b, "string>=?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_string_compare(a, b) >= 0);
             break;
         }
 
         case OP_STRING_LENGTH: {
             MenaiValue a = regs[base + src0];
-            if (!require_string(a, "string-length")) goto error;
+            if (!require_string(a, "string-length")) {
+                goto error;
+            }
+
             MenaiValue _r = make_integer_from_ssize_t(menai_string_length(a));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_STRING_UPCASE: {
             MenaiValue a = regs[base + src0];
-            if (!require_string(a, "string-upcase")) goto error;
+            if (!require_string(a, "string-upcase")) {
+                goto error;
+            }
+
             MenaiValue r = menai_string_upcase(a);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_STRING_DOWNCASE: {
             MenaiValue a = regs[base + src0];
-            if (!require_string(a, "string-downcase")) goto error;
+            if (!require_string(a, "string-downcase")) {
+                goto error;
+            }
+
             MenaiValue r = menai_string_downcase(a);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_STRING_TRIM: {
             MenaiValue a = regs[base + src0];
-            if (!require_string(a, "string-trim")) goto error;
+            if (!require_string(a, "string-trim")) {
+                goto error;
+            }
+
             MenaiValue r = menai_string_trim(a);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_STRING_TRIM_LEFT: {
             MenaiValue a = regs[base + src0];
-            if (!require_string(a, "string-trim-left")) goto error;
+            if (!require_string(a, "string-trim-left")) {
+                goto error;
+            }
+
             MenaiValue r = menai_string_trim_left(a);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_STRING_TRIM_RIGHT: {
             MenaiValue a = regs[base + src0];
-            if (!require_string(a, "string-trim-right")) goto error;
+            if (!require_string(a, "string-trim-right")) {
+                goto error;
+            }
+
             MenaiValue r = menai_string_trim_right(a);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_STRING_CONCAT: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_string(a, "string-concat")) goto error;
-            if (!require_string(b, "string-concat")) goto error;
+            if (!require_string(a, "string-concat")) {
+                goto error;
+            }
+
+            if (!require_string(b, "string-concat")) {
+                goto error;
+            }
+
             MenaiValue r = menai_string_concat(a, b);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_STRING_PREFIX_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_string(a, "string-prefix?")) goto error;
-            if (!require_string(b, "string-prefix?")) goto error;
+            if (!require_string(a, "string-prefix?")) {
+                goto error;
+            }
+
+            if (!require_string(b, "string-prefix?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_string_has_prefix(a, b));
             break;
         }
 
         case OP_STRING_SUFFIX_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_string(a, "string-suffix?")) goto error;
-            if (!require_string(b, "string-suffix?")) goto error;
+            if (!require_string(a, "string-suffix?")) {
+                goto error;
+            }
+
+            if (!require_string(b, "string-suffix?")) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, menai_string_has_suffix(a, b));
             break;
         }
 
         case OP_STRING_REF: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_string(a, "string-ref")) goto error;
+            if (!require_string(a, "string-ref")) {
+                goto error;
+            }
+
             if (!IS_MENAI_INTEGER(b)) {
                 menai_raise_eval_error("string-ref: index must be integer");
                 goto error;
             }
+
             MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
             long idx_l;
-            if (!ib->is_big) { idx_l = ib->small; }
-            else { if (menai_int_to_long(&ib->big, &idx_l) < 0) goto error; }
+            if (!ib->is_big) {
+                idx_l = ib->small;
+            } else {
+                if (menai_int_to_long(&ib->big, &idx_l) < 0) {
+                    goto error;
+                }
+            }
+
             Py_ssize_t idx = (Py_ssize_t)idx_l;
             Py_ssize_t slen = menai_string_length(a);
             if (idx < 0 || idx >= slen) {
                 menai_raise_eval_errorf("string-ref index out of range: %zd", idx);
                 goto error;
             }
+
             MenaiValue r = menai_string_ref(a, idx);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_STRING_SLICE: {
             MenaiValue a = regs[base + src0], b = regs[base + src1], c = regs[base + src2];
-            if (!require_string(a, "string-slice")) goto error;
+            if (!require_string(a, "string-slice")) {
+                goto error;
+            }
+
             if (!IS_MENAI_INTEGER(b) || !IS_MENAI_INTEGER(c)) {
                 menai_raise_eval_error("string-slice: indices must be integers");
                 goto error;
             }
+
             MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
             MenaiInteger_Object *ic = (MenaiInteger_Object *)c;
             long start_l, end_l;
-            if (!ib->is_big) { start_l = ib->small; } else { if (menai_int_to_long(&ib->big, &start_l) < 0) goto error; }
-            if (!ic->is_big) { end_l = ic->small; } else { if (menai_int_to_long(&ic->big, &end_l) < 0) goto error; }
+            if (!ib->is_big) {
+                start_l = ib->small;
+            } else {
+                if (menai_int_to_long(&ib->big, &start_l) < 0) {
+                    goto error;
+                }
+            }
+
+            if (!ic->is_big) {
+                end_l = ic->small;
+            } else {
+                if (menai_int_to_long(&ic->big, &end_l) < 0) {
+                    goto error;
+                }
+            }
+
             Py_ssize_t start = (Py_ssize_t)start_l, end = (Py_ssize_t)end_l;
             Py_ssize_t slen = menai_string_length(a);
             if (start < 0) {
                 menai_raise_eval_errorf("string-slice start index cannot be negative: %zd", start);
                 goto error;
             }
+
             if (end < 0) {
                 menai_raise_eval_errorf("string-slice end index cannot be negative: %zd", end);
                 goto error;
             }
+
             if (start > slen) {
                 menai_raise_eval_errorf("string-slice start index out of range: %zd (string length: %zd)", start, slen);
                 goto error;
             }
+
             if (end > slen) {
                 menai_raise_eval_errorf("string-slice end index out of range: %zd (string length: %zd)", end, slen);
                 goto error;
             }
+
             if (start > end) {
                 menai_raise_eval_errorf("string-slice start index (%zd) cannot be greater than end index (%zd)", start, end);
                 goto error;
             }
+
             MenaiValue r = menai_string_slice(a, start, end);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_STRING_REPLACE: {
             MenaiValue a = regs[base + src0], b = regs[base + src1], c = regs[base + src2];
-            if (!require_string(a, "string-replace")) goto error;
-            if (!require_string(b, "string-replace")) goto error;
-            if (!require_string(c, "string-replace")) goto error;
+            if (!require_string(a, "string-replace")) {
+                goto error;
+            }
+
+            if (!require_string(b, "string-replace")) {
+                goto error;
+            }
+
+            if (!require_string(c, "string-replace")) {
+                goto error;
+            }
+
             MenaiValue r = menai_string_replace(a, b, c);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_STRING_INDEX: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_string(a, "string-index")) goto error;
-            if (!require_string(b, "string-index")) goto error;
+            if (!require_string(a, "string-index")) {
+                goto error;
+            }
+
+            if (!require_string(b, "string-index")) {
+                goto error;
+            }
+
             Py_ssize_t idx = menai_string_find(a, b);
-            if (idx == -2) goto error;
+            if (idx == -2) {
+                goto error;
+            }
+
             if (idx == -1) {
                 menai_reg_set_borrow(regs, base + dest, Menai_NONE);
             } else {
                 MenaiValue _r = make_integer_from_ssize_t(idx);
-                if (_r == NULL) goto error;
+                if (_r == NULL) {
+                    goto error;
+                }
+
                 menai_reg_set_own(regs, base + dest, _r);
             }
+
             break;
         }
 
         case OP_STRING_TO_INTEGER_CODEPOINT: {
             MenaiValue a = regs[base + src0];
-            if (!require_string(a, "string->integer-codepoint")) goto error;
+            if (!require_string(a, "string->integer-codepoint")) {
+                goto error;
+            }
+
             Py_ssize_t slen = menai_string_length(a);
             if (slen != 1) {
                 menai_raise_eval_error("string->integer-codepoint: requires single-character string");
                 goto error;
             }
+
             MenaiValue _r = make_integer_from_long((long)menai_string_get(a, 0));
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
@@ -2961,21 +4203,35 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRING_TO_INTEGER: {
             /* src0=string, src1=radix(integer) */
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_string(a, "string->integer")) goto error;
+            if (!require_string(a, "string->integer")) {
+                goto error;
+            }
+
             if (!IS_MENAI_INTEGER(b)) {
                 menai_raise_eval_error("string->integer: radix must be integer");
                 goto error;
             }
+
             MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
             long radix;
-            if (!ib->is_big) { radix = ib->small; }
-            else { if (menai_int_to_long(&ib->big, &radix) < 0) goto error; }
+            if (!ib->is_big) {
+                radix = ib->small;
+            } else {
+                if (menai_int_to_long(&ib->big, &radix) < 0) {
+                    goto error;
+                }
+            }
+
             if (radix != 2 && radix != 8 && radix != 10 && radix != 16) {
                 menai_raise_eval_errorf("string->integer radix must be 2, 8, 10, or 16, got %ld", radix);
                 goto error;
             }
+
             MenaiValue trimmed = menai_string_trim(a);
-            if (trimmed == NULL) goto error;
+            if (trimmed == NULL) {
+                goto error;
+            }
+
             MenaiInt sti_tmp;
             menai_int_init(&sti_tmp);
             int sti_ok = menai_int_from_codepoints(
@@ -2988,37 +4244,54 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_reg_set_borrow(regs, base + dest, Menai_NONE);
             } else {
                 MenaiValue _r = menai_integer_from_bigint(sti_tmp);
-                if (_r == NULL) goto error;
+                if (_r == NULL) {
+                    goto error;
+                }
+
                 menai_reg_set_own(regs, base + dest, _r);
             }
+
             break;
         }
 
         case OP_STRING_TO_NUMBER: {
             MenaiValue a = regs[base + src0];
-            if (!require_string(a, "string->number")) goto error;
+            if (!require_string(a, "string->number")) {
+                goto error;
+            }
+
             /* Scan codepoints directly to classify the string. */
             Py_ssize_t slen = menai_string_length(a);
             const uint32_t *sdata = menai_string_data(a);
             int has_j = 0, has_dot = 0, has_e = 0;
             for (Py_ssize_t _i = 0; _i < slen; _i++) {
                 uint32_t _cp = sdata[_i];
-                if (_cp == 'j' || _cp == 'J') has_j = 1;
-                else if (_cp == '.') has_dot = 1;
-                else if (_cp == 'e' || _cp == 'E') has_e = 1;
+                if (_cp == 'j' || _cp == 'J') {
+                    has_j = 1;
+                } else if (_cp == '.') {
+                    has_dot = 1;
+                } else if (_cp == 'e' || _cp == 'E') {
+                    has_e = 1;
+                }
             }
+
             if (!has_dot && !has_e && !has_j) {
                 /* Try integer parse directly on the codepoint array. */
                 MenaiInt stn_tmp;
                 menai_int_init(&stn_tmp);
                 if (menai_int_from_codepoints(sdata, slen, 10, &stn_tmp) == 0) {
                     MenaiValue r = menai_integer_from_bigint(stn_tmp);
-                    if (r == NULL) goto error;
+                    if (r == NULL) {
+                        goto error;
+                    }
+
                     menai_reg_set_own(regs, base + dest, r);
                     break;
                 }
+
                 PyErr_Clear();
             }
+
             if (has_j) {
                 /*
                  * Complex literal parse — still uses Python's complex()
@@ -3026,55 +4299,81 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                  * non-trivial to implement correctly.
                  */
                 PyObject *sa_j = menai_string_to_pyunicode(a);
-                if (sa_j == NULL) goto error;
+                if (sa_j == NULL) {
+                    goto error;
+                }
+
                 PyObject *cplx = PyObject_CallOneArg((PyObject *)&PyComplex_Type, sa_j);
                 Py_DECREF(sa_j);
                 if (cplx != NULL) {
                     MenaiValue r = make_complex(PyComplex_RealAsDouble(cplx),
                                                PyComplex_ImagAsDouble(cplx));
                     Py_DECREF(cplx);
-                    if (r == NULL) goto error;
+                    if (r == NULL) {
+                        goto error;
+                    }
+
                     menai_reg_set_own(regs, base + dest, r);
                     break;
                 }
+
                 PyErr_Clear();
             }
+
             {
                 /* Float parse via strtod on a temporary UTF-8 buffer.
                  * Valid float literals are ASCII-only so this is safe. */
                 char *stn_fbuf = (char *)PyMem_Malloc((size_t)(slen + 1));
-                if (!stn_fbuf) { PyErr_NoMemory(); goto error; }
+                if (!stn_fbuf) {
+                    PyErr_NoMemory(); goto error;
+                }
+
                 int stn_ascii_ok = 1;
                 for (Py_ssize_t _i = 0; _i < slen; _i++) {
-                    if (sdata[_i] > 0x7F) { stn_ascii_ok = 0; break; }
+                    if (sdata[_i] > 0x7F) {
+                        stn_ascii_ok = 0; break;
+                    }
+
                     stn_fbuf[_i] = (char)sdata[_i];
                 }
+
                 stn_fbuf[slen] = '\0';
                 if (!stn_ascii_ok) {
                     PyMem_Free(stn_fbuf);
                     menai_reg_set_borrow(regs, base + dest, Menai_NONE);
                     break;
                 }
+
                 char *stn_end = NULL;
                 double stn_dv = strtod(stn_fbuf, &stn_end);
                 int stn_ok = (stn_end != stn_fbuf && *stn_end == '\0');
                 PyMem_Free(stn_fbuf);
                 if (stn_ok) {
                     MenaiValue _r = make_float(stn_dv);
-                    if (_r == NULL) goto error;
+                    if (_r == NULL) {
+                        goto error;
+                    }
+
                     menai_reg_set_own(regs, base + dest, _r);
                 } else {
                     menai_reg_set_borrow(regs, base + dest, Menai_NONE);
                 }
             }
+
             break;
         }
 
         case OP_STRING_TO_LIST: {
             /* src0=string, src1=delimiter string */
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_string(a, "string->list")) goto error;
-            if (!require_string(b, "string->list")) goto error;
+            if (!require_string(a, "string->list")) {
+                goto error;
+            }
+
+            if (!require_string(b, "string->list")) {
+                goto error;
+            }
+
             Py_ssize_t alen = menai_string_length(a);
             Py_ssize_t blen = menai_string_length(b);
             const uint32_t *adata = menai_string_data(a);
@@ -3089,14 +4388,19 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     PyErr_NoMemory();
                     goto error;
                 }
+
                 for (Py_ssize_t i = 0; i < alen; i++) {
                     stl_arr[i] = menai_string_from_codepoint(adata[i]);
                     if (!stl_arr[i]) {
-                        for (Py_ssize_t k = 0; k < i; k++) menai_release(stl_arr[k]);
+                        for (Py_ssize_t k = 0; k < i; k++) {
+                            menai_release(stl_arr[k]);
+                        }
+
                         free(stl_arr);
                         goto error;
                     }
                 }
+
                 r = menai_list_from_array_steal(stl_arr, alen);
             } else {
                 /* Split on delimiter — find occurrences and build list */
@@ -3109,12 +4413,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                         i++;
                     }
                 }
+
                 Py_ssize_t nparts = count + 1;
                 MenaiValue *parts2 = (MenaiValue *)malloc(nparts * sizeof(MenaiValue));
                 if (!parts2) {
                     PyErr_NoMemory();
                     goto error;
                 }
+
                 Py_ssize_t seg_start = 0, pi2 = 0;
                 for (Py_ssize_t i = 0; i <= alen; ) {
                     int match = (i <= alen - blen) &&
@@ -3122,20 +4428,32 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     if (match || i == alen) {
                         parts2[pi2] = menai_string_from_codepoints(adata + seg_start, i - seg_start);
                         if (!parts2[pi2]) {
-                            for (Py_ssize_t k = 0; k < pi2; k++) menai_release(parts2[k]);
+                            for (Py_ssize_t k = 0; k < pi2; k++) {
+                                menai_release(parts2[k]);
+                            }
+
                             free(parts2);
                             goto error;
                         }
+
                         pi2++;
-                        if (match) { seg_start = i + blen; i += blen; }
-                        else break;
+                        if (match) {
+                            seg_start = i + blen; i += blen;
+                        } else {
+                            break;
+                        }
                     } else {
                         i++;
                     }
                 }
+
                 r = menai_list_from_array_steal(parts2, pi2);
             }
-            if (r == NULL) goto error;
+
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
@@ -3146,8 +4464,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_LIST_EQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_list(a, "list=?")) goto error;
-            if (!require_list(b, "list=?")) goto error;
+            if (!require_list(a, "list=?")) {
+                goto error;
+            }
+
+            if (!require_list(b, "list=?")) {
+                goto error;
+            }
+
             int eq = menai_value_equal(a, b);
             bool_store(regs, base + dest, eq);
             break;
@@ -3155,8 +4479,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_LIST_NEQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_list(a, "list!=?")) goto error;
-            if (!require_list(b, "list!=?")) goto error;
+            if (!require_list(a, "list!=?")) {
+                goto error;
+            }
+
+            if (!require_list(b, "list!=?")) {
+                goto error;
+            }
+
             int eq = menai_value_equal(a, b);
             bool_store(regs, base + dest, !eq);
             break;
@@ -3164,7 +4494,10 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_LIST_NULL_P: {
             MenaiValue a = regs[base + src0];
-            if (!require_list(a, "list-null?")) goto error;
+            if (!require_list(a, "list-null?")) {
+                goto error;
+            }
+
             int is_null = (((MenaiList_Object *)a)->length == 0);
             bool_store(regs, base + dest, is_null);
             break;
@@ -3172,76 +4505,112 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_LIST_LENGTH: {
             MenaiValue a = regs[base + src0];
-            if (!require_list(a, "list-length")) goto error;
+            if (!require_list(a, "list-length")) {
+                goto error;
+            }
+
             Py_ssize_t n = ((MenaiList_Object *)a)->length;
             MenaiValue _r = make_integer_from_ssize_t(n);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_LIST_FIRST: {
             MenaiValue a = regs[base + src0];
-            if (!require_list(a, "list-first")) goto error;
+            if (!require_list(a, "list-first")) {
+                goto error;
+            }
+
             MenaiList_Object *lst_f = (MenaiList_Object *)a;
             if (lst_f->length == 0) {
                 menai_raise_eval_error("Function 'list-first' requires a non-empty list");
                 goto error;
             }
+
             menai_reg_set_borrow(regs, base + dest, lst_f->elements[0]);
             break;
         }
 
         case OP_LIST_REST: {
             MenaiValue a = regs[base + src0];
-            if (!require_list(a, "list-rest")) goto error;
+            if (!require_list(a, "list-rest")) {
+                goto error;
+            }
+
             if (((MenaiList_Object *)a)->length == 0) {
                 menai_raise_eval_error("Function 'list-rest' requires a non-empty list");
                 goto error;
             }
+
             MenaiValue r = menai_list_rest(a);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_LIST_LAST: {
             MenaiValue a = regs[base + src0];
-            if (!require_list(a, "list-last")) goto error;
+            if (!require_list(a, "list-last")) {
+                goto error;
+            }
+
             MenaiList_Object *lst_l = (MenaiList_Object *)a;
             Py_ssize_t n = lst_l->length;
             if (n == 0) {
                 menai_raise_eval_error("Function 'list-last' requires a non-empty list");
                 goto error;
             }
+
             menai_reg_set_borrow(regs, base + dest, lst_l->elements[n - 1]);
             break;
         }
 
         case OP_LIST_REF: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_list(a, "list-ref")) goto error;
+            if (!require_list(a, "list-ref")) {
+                goto error;
+            }
+
             if (!IS_MENAI_INTEGER(b)) {
                 menai_raise_eval_error("list-ref: index must be integer");
                 goto error;
             }
+
             MenaiList_Object *lst_ref = (MenaiList_Object *)a;
             MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
             long idx_l;
-            if (!ib->is_big) { idx_l = ib->small; } else { if (menai_int_to_long(&ib->big, &idx_l) < 0) goto error; }
+            if (!ib->is_big) {
+                idx_l = ib->small;
+            } else {
+                if (menai_int_to_long(&ib->big, &idx_l) < 0) {
+                    goto error;
+                }
+            }
+
             Py_ssize_t idx = (Py_ssize_t)idx_l;
             Py_ssize_t n = lst_ref->length;
             if (idx < 0 || idx >= n) {
                 menai_raise_eval_errorf("list-ref: index out of range: %zd", idx);
                 goto error;
             }
+
             menai_reg_set_borrow(regs, base + dest, lst_ref->elements[idx]);
             break;
         }
 
         case OP_LIST_PREPEND: {
             MenaiValue a = regs[base + src0], item = regs[base + src1];
-            if (!require_list(a, "list-prepend")) goto error;
+            if (!require_list(a, "list-prepend")) {
+                goto error;
+            }
+
             MenaiList_Object *lst_pre = (MenaiList_Object *)a;
             Py_ssize_t n = lst_pre->length;
             MenaiValue *pre_arr = (MenaiValue *)malloc((n + 1) * sizeof(MenaiValue));
@@ -3249,21 +4618,29 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             pre_arr[0] = item;
             menai_retain(item);
             for (Py_ssize_t i = 0; i < n; i++) {
                 pre_arr[i + 1] = lst_pre->elements[i];
                 menai_retain(pre_arr[i + 1]);
             }
+
             MenaiValue r = menai_list_from_array_steal(pre_arr, n + 1);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_LIST_APPEND: {
             MenaiValue a = regs[base + src0], item = regs[base + src1];
-            if (!require_list(a, "list-append")) goto error;
+            if (!require_list(a, "list-append")) {
+                goto error;
+            }
+
             MenaiList_Object *lst_app = (MenaiList_Object *)a;
             Py_ssize_t n = lst_app->length;
             MenaiValue *app_arr = (MenaiValue *)malloc((n + 1) * sizeof(MenaiValue));
@@ -3271,21 +4648,29 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             for (Py_ssize_t i = 0; i < n; i++) {
                 app_arr[i] = lst_app->elements[i];
                 menai_retain(app_arr[i]);
             }
+
             app_arr[n] = item;
             menai_retain(item);
             MenaiValue r = menai_list_from_array_steal(app_arr, n + 1);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_LIST_REVERSE: {
             MenaiValue a = regs[base + src0];
-            if (!require_list(a, "list-reverse")) goto error;
+            if (!require_list(a, "list-reverse")) {
+                goto error;
+            }
+
             MenaiList_Object *lst_rev = (MenaiList_Object *)a;
             Py_ssize_t n = lst_rev->length;
             MenaiValue *rev_arr = n > 0
@@ -3295,20 +4680,31 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             for (Py_ssize_t i = 0; i < n; i++) {
                 rev_arr[i] = lst_rev->elements[n - 1 - i];
                 menai_retain(rev_arr[i]);
             }
+
             MenaiValue r = menai_list_from_array_steal(rev_arr, n);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_LIST_CONCAT: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_list(a, "list-concat")) goto error;
-            if (!require_list(b, "list-concat")) goto error;
+            if (!require_list(a, "list-concat")) {
+                goto error;
+            }
+
+            if (!require_list(b, "list-concat")) {
+                goto error;
+            }
+
             MenaiList_Object *lst_ca = (MenaiList_Object *)a;
             MenaiList_Object *lst_cb = (MenaiList_Object *)b;
             Py_ssize_t na = lst_ca->length, nb = lst_cb->length;
@@ -3320,23 +4716,32 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             for (Py_ssize_t i = 0; i < na; i++) {
                 cat_arr[i] = lst_ca->elements[i];
                 menai_retain(cat_arr[i]);
             }
+
             for (Py_ssize_t i = 0; i < nb; i++) {
                 cat_arr[na + i] = lst_cb->elements[i];
                 menai_retain(cat_arr[na + i]);
             }
+
             MenaiValue r = menai_list_from_array_steal(cat_arr, nc);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_LIST_MEMBER_P: {
             MenaiValue a = regs[base + src0], item = regs[base + src1];
-            if (!require_list(a, "list-member?")) goto error;
+            if (!require_list(a, "list-member?")) {
+                goto error;
+            }
+
             MenaiList_Object *lst_mem = (MenaiList_Object *)a;
             int mem_found = 0;
             for (Py_ssize_t i = 0; i < lst_mem->length; i++) {
@@ -3346,13 +4751,17 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     break;
                 }
             }
+
             bool_store(regs, base + dest, mem_found);
             break;
         }
 
         case OP_LIST_INDEX: {
             MenaiValue a = regs[base + src0], item = regs[base + src1];
-            if (!require_list(a, "list-index")) goto error;
+            if (!require_list(a, "list-index")) {
+                goto error;
+            }
+
             MenaiList_Object *lst_idx = (MenaiList_Object *)a;
             Py_ssize_t n = lst_idx->length;
             Py_ssize_t found = -1;
@@ -3363,68 +4772,105 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     break;
                 }
             }
+
             if (found == -1) {
                 menai_reg_set_borrow(regs, base + dest, Menai_NONE);
             } else {
                 MenaiValue _r = make_integer_from_ssize_t(found);
-                if (_r == NULL) goto error;
+                if (_r == NULL) {
+                    goto error;
+                }
+
                 menai_reg_set_own(regs, base + dest, _r);
             }
+
             break;
         }
 
         case OP_LIST_SLICE: {
             MenaiValue a = regs[base + src0], b = regs[base + src1], c = regs[base + src2];
-            if (!require_list(a, "list-slice")) goto error;
+            if (!require_list(a, "list-slice")) {
+                goto error;
+            }
+
             if (!IS_MENAI_INTEGER(b) || !IS_MENAI_INTEGER(c)) {
                 menai_raise_eval_error("list-slice: indices must be integers");
                 goto error;
             }
+
             MenaiList_Object *lst_sl = (MenaiList_Object *)a;
             MenaiInteger_Object *ib = (MenaiInteger_Object *)b;
             MenaiInteger_Object *ic = (MenaiInteger_Object *)c;
             long start_l, end_l;
-            if (!ib->is_big) { start_l = ib->small; } else { if (menai_int_to_long(&ib->big, &start_l) < 0) goto error; }
-            if (!ic->is_big) { end_l = ic->small; } else { if (menai_int_to_long(&ic->big, &end_l) < 0) goto error; }
+            if (!ib->is_big) {
+                start_l = ib->small;
+            } else {
+                if (menai_int_to_long(&ib->big, &start_l) < 0) {
+                    goto error;
+                }
+            }
+
+            if (!ic->is_big) {
+                end_l = ic->small;
+            } else {
+                if (menai_int_to_long(&ic->big, &end_l) < 0) {
+                    goto error;
+                }
+            }
+
             Py_ssize_t start = (Py_ssize_t)start_l, end = (Py_ssize_t)end_l;
             Py_ssize_t n = lst_sl->length;
             if (start < 0) {
                 menai_raise_eval_errorf("list-slice start index cannot be negative: %zd", start);
                 goto error;
             }
+
             if (end < 0) {
                 menai_raise_eval_errorf("list-slice end index cannot be negative: %zd", end);
                 goto error;
             }
+
             if (start > n) {
                 menai_raise_eval_errorf("list-slice start index out of range: %zd (list length: %zd)", start, n);
                 goto error;
             }
+
             if (end > n) {
                 menai_raise_eval_errorf("list-slice end index out of range: %zd (list length: %zd)", end, n);
                 goto error;
             }
+
             if (start > end) {
                 menai_raise_eval_errorf("list-slice start index (%zd) cannot be greater than end index (%zd)", start, end);
                 goto error;
             }
+
             MenaiValue r = menai_list_slice(a, start, end);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_LIST_REMOVE: {
             MenaiValue a = regs[base + src0], item = regs[base + src1];
-            if (!require_list(a, "list-remove")) goto error;
+            if (!require_list(a, "list-remove")) {
+                goto error;
+            }
+
             MenaiList_Object *lst_rm = (MenaiList_Object *)a;
             Py_ssize_t n = lst_rm->length;
             /* Count non-matching elements first */
             Py_ssize_t keep = 0;
             for (Py_ssize_t i = 0; i < n; i++) {
                 int eq = menai_value_equal(lst_rm->elements[i], item);
-                if (!eq) keep++;
+                if (!eq) {
+                    keep++;
+                }
             }
+
             MenaiValue *rm_arr = keep > 0
                 ? (MenaiValue *)malloc(keep * sizeof(MenaiValue)) : NULL;
 
@@ -3432,6 +4878,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             Py_ssize_t j = 0;
             for (Py_ssize_t i = 0; i < n; i++) {
                 MenaiValue e = lst_rm->elements[i];
@@ -3441,16 +4888,26 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     rm_arr[j++] = e;
                 }
             }
+
             MenaiValue r = menai_list_from_array_steal(rm_arr, keep);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_LIST_TO_STRING: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_list(a, "list->string")) goto error;
-            if (!require_string(b, "list->string")) goto error;
+            if (!require_list(a, "list->string")) {
+                goto error;
+            }
+
+            if (!require_string(b, "list->string")) {
+                goto error;
+            }
+
             MenaiList_Object *lst_ts = (MenaiList_Object *)a;
             Py_ssize_t n = lst_ts->length;
             /* Validate all elements are strings first. */
@@ -3460,21 +4917,28 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     goto error;
                 }
             }
+
             /* Compute total output length. */
             Py_ssize_t sep_len = menai_string_length(b);
             const uint32_t *sep_data = menai_string_data(b);
             Py_ssize_t total = (n > 0) ? (n - 1) * sep_len : 0;
-            for (Py_ssize_t i = 0; i < n; i++)
+            for (Py_ssize_t i = 0; i < n; i++) {
                 total += menai_string_length(lst_ts->elements[i]);
+            }
+
             uint32_t *lts_buf = total > 0
                 ? (uint32_t *)malloc((size_t)total * sizeof(uint32_t)) : NULL;
-            if (total > 0 && !lts_buf) goto error;
+            if (total > 0 && !lts_buf) {
+                goto error;
+            }
+
             uint32_t *dst = lts_buf;
             for (Py_ssize_t i = 0; i < n; i++) {
                 if (i > 0 && sep_len > 0) {
                     memcpy(dst, sep_data, (size_t)sep_len * sizeof(uint32_t));
                     dst += sep_len;
                 }
+
                 Py_ssize_t elen = menai_string_length(lst_ts->elements[i]);
                 if (elen > 0) {
                     memcpy(dst, menai_string_data(lst_ts->elements[i]),
@@ -3482,16 +4946,23 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     dst += elen;
                 }
             }
+
             MenaiValue r = menai_string_from_codepoints(lts_buf, total);
             free(lts_buf);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_LIST_TO_SET: {
             MenaiValue a = regs[base + src0];
-            if (!require_list_singular(a, "list->set")) goto error;
+            if (!require_list_singular(a, "list->set")) {
+                goto error;
+            }
+
             MenaiList_Object *lst = (MenaiList_Object *)a;
             Py_ssize_t n = lst->length;
             MenaiValue *nelems = n > 0 ? (MenaiValue *)malloc(n * sizeof(MenaiValue)) : NULL;
@@ -3502,6 +4973,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             MenaiHashTable lts_seen;
             int lts_err = 0;
             if (n > 0 && menai_ht_init(&lts_seen, n) < 0) {
@@ -3509,6 +4981,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 free(nhashes);
                 goto error;
             }
+
             Py_ssize_t out = 0;
             for (Py_ssize_t i = 0; i < n && !lts_err; i++) {
                 MenaiValue elem = lst->elements[i];
@@ -3517,11 +4990,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     lts_err = 1;
                     break;
                 }
+
                 Py_ssize_t existing = menai_ht_lookup(&lts_seen, elem, h);
                 if (existing == -2) {
                     lts_err = 1;
                     break;
                 }
+
                 if (existing < 0) {
                     menai_ht_insert(&lts_seen, elem, h, out);
                     menai_retain(elem);
@@ -3530,15 +5005,26 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     out++;
                 }
             }
-            if (n > 0) menai_ht_free(&lts_seen);
+
+            if (n > 0) {
+                menai_ht_free(&lts_seen);
+            }
+
             if (lts_err) {
-                for (Py_ssize_t k = 0; k < out; k++) menai_release(nelems[k]);
+                for (Py_ssize_t k = 0; k < out; k++) {
+                    menai_release(nelems[k]);
+                }
+
                 free(nelems);
                 free(nhashes);
                 goto error;
             }
+
             MenaiValue r = menai_set_from_arrays_steal(nelems, nhashes, out);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
@@ -3549,8 +5035,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_DICT_EQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_dict(a, "dict=?")) goto error;
-            if (!require_dict(b, "dict=?")) goto error;
+            if (!require_dict(a, "dict=?")) {
+                goto error;
+            }
+
+            if (!require_dict(b, "dict=?")) {
+                goto error;
+            }
+
             MenaiDict_Object *da = (MenaiDict_Object *)a;
             MenaiDict_Object *db = (MenaiDict_Object *)b;
             int eq = (da->length == db->length);
@@ -3559,25 +5051,34 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     eq = 0;
                     break;
                 }
+
                 int keq = menai_value_equal(da->keys[i], db->keys[i]);
                 if (!keq) {
                     eq = 0;
                     break;
                 }
+
                 int veq = menai_value_equal(da->values[i], db->values[i]);
                 if (!veq) {
                     eq = 0;
                     break;
                 }
             }
+
             bool_store(regs, base + dest, eq);
             break;
         }
 
         case OP_DICT_NEQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_dict(a, "dict!=?")) goto error;
-            if (!require_dict(b, "dict!=?")) goto error;
+            if (!require_dict(a, "dict!=?")) {
+                goto error;
+            }
+
+            if (!require_dict(b, "dict!=?")) {
+                goto error;
+            }
+
             MenaiDict_Object *da = (MenaiDict_Object *)a;
             MenaiDict_Object *db = (MenaiDict_Object *)b;
             int neq = (da->length != db->length);
@@ -3586,33 +5087,45 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     neq = 1;
                     break;
                 }
+
                 int keq = menai_value_equal(da->keys[i], db->keys[i]);
                 if (!keq) {
                     neq = 1;
                     break;
                 }
+
                 int veq = menai_value_equal(da->values[i], db->values[i]);
                 if (!veq) {
                     neq = 1;
                     break;
                 }
             }
+
             bool_store(regs, base + dest, neq);
             break;
         }
 
         case OP_DICT_LENGTH: {
             MenaiValue a = regs[base + src0];
-            if (!require_dict(a, "dict-length")) goto error;
+            if (!require_dict(a, "dict-length")) {
+                goto error;
+            }
+
             MenaiValue _r = make_integer_from_ssize_t(((MenaiDict_Object *)a)->length);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_DICT_KEYS: {
             MenaiValue a = regs[base + src0];
-            if (!require_dict(a, "dict-keys")) goto error;
+            if (!require_dict(a, "dict-keys")) {
+                goto error;
+            }
+
             MenaiDict_Object *d = (MenaiDict_Object *)a;
             Py_ssize_t n = d->length;
             MenaiValue *dk_arr = n > 0
@@ -3622,19 +5135,27 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             for (Py_ssize_t i = 0; i < n; i++) {
                 menai_retain(d->keys[i]);
                 dk_arr[i] = d->keys[i];
             }
+
             MenaiValue r = menai_list_from_array_steal(dk_arr, n);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_DICT_VALUES: {
             MenaiValue a = regs[base + src0];
-            if (!require_dict(a, "dict-values")) goto error;
+            if (!require_dict(a, "dict-values")) {
+                goto error;
+            }
+
             MenaiDict_Object *d = (MenaiDict_Object *)a;
             Py_ssize_t n = d->length;
             MenaiValue *dv_arr = n > 0
@@ -3644,22 +5165,33 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             for (Py_ssize_t i = 0; i < n; i++) {
                 menai_retain(d->values[i]);
                 dv_arr[i] = d->values[i];
             }
+
             MenaiValue r = menai_list_from_array_steal(dv_arr, n);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_DICT_HAS_P: {
             MenaiValue a = regs[base + src0], key = regs[base + src1];
-            if (!require_dict(a, "dict-has?")) goto error;
+            if (!require_dict(a, "dict-has?")) {
+                goto error;
+            }
+
             MenaiDict_Object *d = (MenaiDict_Object *)a;
             Py_hash_t h = menai_value_hash(key);
-            if (h == -1) goto error;
+            if (h == -1) {
+                goto error;
+            }
+
             int has = (menai_ht_lookup(&d->ht, key, h) >= 0);
             bool_store(regs, base + dest, has);
             break;
@@ -3668,29 +5200,48 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_DICT_GET: {
             /* src0=dict, src1=key, src2=default */
             MenaiValue a = regs[base + src0], key = regs[base + src1], def = regs[base + src2];
-            if (!require_dict(a, "dict-get")) goto error;
+            if (!require_dict(a, "dict-get")) {
+                goto error;
+            }
+
             MenaiDict_Object *d = (MenaiDict_Object *)a;
             Py_hash_t h = menai_value_hash(key);
-            if (h == -1) goto error;
+            if (h == -1) {
+                goto error;
+            }
+
             Py_ssize_t idx = menai_ht_lookup(&d->ht, key, h);
-            if (idx == -2) goto error;
+            if (idx == -2) {
+                goto error;
+            }
+
             if (idx >= 0) {
                 menai_reg_set_borrow(regs, base + dest, d->values[idx]);
             } else {
                 menai_reg_set_borrow(regs, base + dest, def);
             }
+
             break;
         }
 
         case OP_DICT_SET: {
             /* src0=dict, src1=key, src2=value */
             MenaiValue a = regs[base + src0], key = regs[base + src1], val = regs[base + src2];
-            if (!require_dict(a, "dict-set")) goto error;
+            if (!require_dict(a, "dict-set")) {
+                goto error;
+            }
+
             MenaiDict_Object *d = (MenaiDict_Object *)a;
             Py_hash_t h = menai_value_hash(key);
-            if (h == -1) goto error;
+            if (h == -1) {
+                goto error;
+            }
+
             Py_ssize_t replace_idx = menai_ht_lookup(&d->ht, key, h);
-            if (replace_idx == -2) goto error;
+            if (replace_idx == -2) {
+                goto error;
+            }
+
             Py_ssize_t n = d->length;
             Py_ssize_t new_n = (replace_idx >= 0) ? n : n + 1;
             MenaiValue *nkeys = (MenaiValue *)malloc(new_n * sizeof(MenaiValue));
@@ -3703,6 +5254,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             if (replace_idx >= 0) {
                 for (Py_ssize_t i = 0; i < n; i++) {
                     if (i == replace_idx) {
@@ -3727,30 +5279,45 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     nvals[i] = d->values[i];
                     nhashes[i] = d->hashes[i];
                 }
+
                 menai_retain(key);
                 nkeys[n] = key;
                 menai_retain(val);
                 nvals[n] = val;
                 nhashes[n] = h;
             }
+
             MenaiValue result = menai_dict_from_arrays_steal(nkeys, nvals, nhashes, new_n);
-            if (result == NULL) goto error;
+            if (result == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, result);
             break;
         }
 
         case OP_DICT_REMOVE: {
             MenaiValue a = regs[base + src0], key = regs[base + src1];
-            if (!require_dict(a, "dict-remove")) goto error;
+            if (!require_dict(a, "dict-remove")) {
+                goto error;
+            }
+
             MenaiDict_Object *d = (MenaiDict_Object *)a;
             Py_hash_t h = menai_value_hash(key);
-            if (h == -1) goto error;
+            if (h == -1) {
+                goto error;
+            }
+
             Py_ssize_t remove_idx = menai_ht_lookup(&d->ht, key, h);
-            if (remove_idx == -2) goto error;
+            if (remove_idx == -2) {
+                goto error;
+            }
+
             if (remove_idx < 0) {
                 menai_reg_set_borrow(regs, base + dest, a);
                 break;
             }
+
             Py_ssize_t n = d->length;
             Py_ssize_t new_n = n - 1;
             MenaiValue *nkeys = new_n > 0 ? (MenaiValue *)malloc(new_n * sizeof(MenaiValue)) : NULL;
@@ -3763,8 +5330,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             for (Py_ssize_t i = 0, j = 0; i < n; i++) {
-                if (i == remove_idx) continue;
+                if (i == remove_idx) {
+                    continue;
+                }
+
                 menai_retain(d->keys[i]);
                 nkeys[j] = d->keys[i];
                 menai_retain(d->values[i]);
@@ -3772,16 +5343,26 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 nhashes[j] = d->hashes[i];
                 j++;
             }
+
             MenaiValue r = menai_dict_from_arrays_steal(nkeys, nvals, nhashes, new_n);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_DICT_MERGE: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_dict(a, "dict-merge")) goto error;
-            if (!require_dict(b, "dict-merge")) goto error;
+            if (!require_dict(a, "dict-merge")) {
+                goto error;
+            }
+
+            if (!require_dict(b, "dict-merge")) {
+                goto error;
+            }
+
             MenaiDict_Object *da = (MenaiDict_Object *)a;
             MenaiDict_Object *db = (MenaiDict_Object *)b;
             Py_ssize_t na = da->length, nb = db->length;
@@ -3796,6 +5377,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             Py_ssize_t out = 0;
             /* Add a's entries, using b's value where b overrides */
             for (Py_ssize_t i = 0; i < na; i++) {
@@ -3805,11 +5387,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                         menai_release(nkeys[k]);
                         menai_release(nvals[k]);
                     }
+
                     free(nkeys);
                     free(nvals);
                     free(nhashes);
                     goto error;
                 }
+
                 menai_retain(da->keys[i]);
                 nkeys[out] = da->keys[i];
                 nhashes[out] = da->hashes[i];
@@ -3820,8 +5404,10 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     menai_retain(da->values[i]);
                     nvals[out] = da->values[i];
                 }
+
                 out++;
             }
+
             /* Add b's entries not in a */
             for (Py_ssize_t i = 0; i < nb; i++) {
                 Py_ssize_t ai = menai_ht_lookup(&da->ht, db->keys[i], db->hashes[i]);
@@ -3830,11 +5416,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                         menai_release(nkeys[k]);
                         menai_release(nvals[k]);
                     }
+
                     free(nkeys);
                     free(nvals);
                     free(nhashes);
                     goto error;
                 }
+
                 if (ai < 0) {
                     menai_retain(db->keys[i]);
                     nkeys[out] = db->keys[i];
@@ -3844,8 +5432,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     out++;
                 }
             }
+
             MenaiValue r = menai_dict_from_arrays_steal(nkeys, nvals, nhashes, out);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
@@ -3856,71 +5448,115 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_SET_EQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_set(a, "set=?")) goto error;
-            if (!require_set(b, "set=?")) goto error;
+            if (!require_set(a, "set=?")) {
+                goto error;
+            }
+
+            if (!require_set(b, "set=?")) {
+                goto error;
+            }
+
             MenaiSet_Object *sa = (MenaiSet_Object *)a;
             MenaiSet_Object *sb = (MenaiSet_Object *)b;
             int eq = (sa->length == sb->length);
             for (Py_ssize_t i = 0; eq && i < sa->length; i++) {
                 Py_ssize_t idx = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
-                if (idx == -2) goto error;
+                if (idx == -2) {
+                    goto error;
+                }
+
                 if (idx < 0) {
                     eq = 0;
                     break;
                 }
             }
+
             bool_store(regs, base + dest, eq);
             break;
         }
 
         case OP_SET_NEQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_set(a, "set!=?")) goto error;
-            if (!require_set(b, "set!=?")) goto error;
+            if (!require_set(a, "set!=?")) {
+                goto error;
+            }
+
+            if (!require_set(b, "set!=?")) {
+                goto error;
+            }
+
             MenaiSet_Object *sa = (MenaiSet_Object *)a;
             MenaiSet_Object *sb = (MenaiSet_Object *)b;
             int neq = (sa->length != sb->length);
             for (Py_ssize_t i = 0; !neq && i < sa->length; i++) {
                 Py_ssize_t idx = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
-                if (idx == -2) goto error;
+                if (idx == -2) {
+                    goto error;
+                }
+
                 if (idx < 0) {
                     neq = 1;
                     break;
                 }
             }
+
             bool_store(regs, base + dest, neq);
             break;
         }
 
         case OP_SET_LENGTH: {
             MenaiValue a = regs[base + src0];
-            if (!require_set_singular(a, "set-length")) goto error;
+            if (!require_set_singular(a, "set-length")) {
+                goto error;
+            }
+
             MenaiValue _r = make_integer_from_ssize_t(((MenaiSet_Object *)a)->length);
-            if (_r == NULL) goto error;
+            if (_r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, _r);
             break;
         }
 
         case OP_SET_MEMBER_P: {
             MenaiValue a = regs[base + src0], item = regs[base + src1];
-            if (!require_set_singular(a, "set-member?")) goto error;
+            if (!require_set_singular(a, "set-member?")) {
+                goto error;
+            }
+
             MenaiSet_Object *s = (MenaiSet_Object *)a;
             Py_hash_t h = menai_value_hash(item);
-            if (h == -1) goto error;
+            if (h == -1) {
+                goto error;
+            }
+
             Py_ssize_t idx = menai_ht_lookup(&s->ht, item, h);
-            if (idx == -2) goto error;
+            if (idx == -2) {
+                goto error;
+            }
+
             bool_store(regs, base + dest, idx >= 0);
             break;
         }
 
         case OP_SET_ADD: {
             MenaiValue a = regs[base + src0], item = regs[base + src1];
-            if (!require_set_singular(a, "set-add")) goto error;
+            if (!require_set_singular(a, "set-add")) {
+                goto error;
+            }
+
             MenaiSet_Object *s = (MenaiSet_Object *)a;
             Py_hash_t h = menai_value_hash(item);
-            if (h == -1) goto error;
+            if (h == -1) {
+                goto error;
+            }
+
             Py_ssize_t existing = menai_ht_lookup(&s->ht, item, h);
-            if (existing == -2) goto error;
+            if (existing == -2) {
+                goto error;
+            }
+
             if (existing >= 0) {
                 menai_reg_set_borrow(regs, base + dest, a);
             } else {
@@ -3933,33 +5569,49 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     PyErr_NoMemory();
                     goto error;
                 }
+
                 for (Py_ssize_t i = 0; i < n; i++) {
                     menai_retain(s->elements[i]);
                     nelems[i] = s->elements[i];
                     nhashes[i] = s->hashes[i];
                 }
+
                 menai_retain(item);
                 nelems[n] = item;
                 nhashes[n] = h;
                 MenaiValue r = menai_set_from_arrays_steal(nelems, nhashes, n + 1);
-                if (r == NULL) goto error;
+                if (r == NULL) {
+                    goto error;
+                }
+
                 menai_reg_set_own(regs, base + dest, r);
             }
+
             break;
         }
 
         case OP_SET_REMOVE: {
             MenaiValue a = regs[base + src0], item = regs[base + src1];
-            if (!require_set_singular(a, "set-remove")) goto error;
+            if (!require_set_singular(a, "set-remove")) {
+                goto error;
+            }
+
             MenaiSet_Object *s = (MenaiSet_Object *)a;
             Py_hash_t h = menai_value_hash(item);
-            if (h == -1) goto error;
+            if (h == -1) {
+                goto error;
+            }
+
             Py_ssize_t remove_idx = menai_ht_lookup(&s->ht, item, h);
-            if (remove_idx == -2) goto error;
+            if (remove_idx == -2) {
+                goto error;
+            }
+
             if (remove_idx < 0) {
                 menai_reg_set_borrow(regs, base + dest, a);
                 break;
             }
+
             Py_ssize_t n = s->length;
             Py_ssize_t new_n = n - 1;
             MenaiValue *nelems = new_n > 0 ? (MenaiValue *)malloc(new_n * sizeof(MenaiValue)) : NULL;
@@ -3970,23 +5622,37 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             for (Py_ssize_t i = 0, j = 0; i < n; i++) {
-                if (i == remove_idx) continue;
+                if (i == remove_idx) {
+                    continue;
+                }
+
                 menai_retain(s->elements[i]);
                 nelems[j] = s->elements[i];
                 nhashes[j] = s->hashes[i];
                 j++;
             }
+
             MenaiValue r = menai_set_from_arrays_steal(nelems, nhashes, new_n);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_SET_UNION: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_set(a, "set-union")) goto error;
-            if (!require_set(b, "set-union")) goto error;
+            if (!require_set(a, "set-union")) {
+                goto error;
+            }
+
+            if (!require_set(b, "set-union")) {
+                goto error;
+            }
+
             MenaiSet_Object *sa = (MenaiSet_Object *)a;
             MenaiSet_Object *sb = (MenaiSet_Object *)b;
             Py_ssize_t na = sa->length, nb = sb->length;
@@ -3999,6 +5665,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             Py_ssize_t out = 0;
             for (Py_ssize_t i = 0; i < na; i++) {
                 menai_retain(sa->elements[i]);
@@ -4006,16 +5673,19 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 nhashes[out] = sa->hashes[i];
                 out++;
             }
+
             for (Py_ssize_t i = 0; i < nb; i++) {
                 Py_ssize_t in_a = menai_ht_lookup(&sa->ht, sb->elements[i], sb->hashes[i]);
                 if (in_a == -2) {
                     for (Py_ssize_t k = 0; k < out; k++) {
                         menai_release(nelems[k]);
                     }
+
                     free(nelems);
                     free(nhashes);
                     goto error;
                 }
+
                 if (in_a < 0) {
                     menai_retain(sb->elements[i]);
                     nelems[out] = sb->elements[i];
@@ -4023,16 +5693,26 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     out++;
                 }
             }
+
             MenaiValue r = menai_set_from_arrays_steal(nelems, nhashes, out);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_SET_INTERSECTION: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_set(a, "set-intersection")) goto error;
-            if (!require_set(b, "set-intersection")) goto error;
+            if (!require_set(a, "set-intersection")) {
+                goto error;
+            }
+
+            if (!require_set(b, "set-intersection")) {
+                goto error;
+            }
+
             MenaiSet_Object *sa = (MenaiSet_Object *)a;
             MenaiSet_Object *sb = (MenaiSet_Object *)b;
             Py_ssize_t na = sa->length;
@@ -4044,6 +5724,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             Py_ssize_t out = 0;
             for (Py_ssize_t i = 0; i < na; i++) {
                 Py_ssize_t in_b = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
@@ -4051,10 +5732,12 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     for (Py_ssize_t k = 0; k < out; k++) {
                         menai_release(nelems[k]);
                     }
+
                     free(nelems);
                     free(nhashes);
                     goto error;
                 }
+
                 if (in_b >= 0) {
                     menai_retain(sa->elements[i]);
                     nelems[out] = sa->elements[i];
@@ -4062,16 +5745,26 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     out++;
                 }
             }
+
             MenaiValue r = menai_set_from_arrays_steal(nelems, nhashes, out);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_SET_DIFFERENCE: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_set(a, "set-difference")) goto error;
-            if (!require_set(b, "set-difference")) goto error;
+            if (!require_set(a, "set-difference")) {
+                goto error;
+            }
+
+            if (!require_set(b, "set-difference")) {
+                goto error;
+            }
+
             MenaiSet_Object *sa = (MenaiSet_Object *)a;
             MenaiSet_Object *sb = (MenaiSet_Object *)b;
             Py_ssize_t na = sa->length;
@@ -4083,6 +5776,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             Py_ssize_t out = 0;
             for (Py_ssize_t i = 0; i < na; i++) {
                 Py_ssize_t in_b = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
@@ -4090,48 +5784,68 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     for (Py_ssize_t k = 0; k < out; k++) {
                         menai_release(nelems[k]);
                     }
+
                     free(nelems);
                     free(nhashes);
                     goto error;
                 }
+
                 if (in_b < 0) {
                     menai_retain(sa->elements[i]); nelems[out] = sa->elements[i];
                     nhashes[out] = sa->hashes[i];
                     out++;
                 }
             }
+
             MenaiValue r = menai_set_from_arrays_steal(nelems, nhashes, out);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_SET_SUBSET_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_set(a, "set-subset?")) goto error;
-            if (!require_set(b, "set-subset?")) goto error;
+            if (!require_set(a, "set-subset?")) {
+                goto error;
+            }
+
+            if (!require_set(b, "set-subset?")) {
+                goto error;
+            }
+
             MenaiSet_Object *sa = (MenaiSet_Object *)a;
             MenaiSet_Object *sb = (MenaiSet_Object *)b;
             if (sa->length > sb->length) {
                 bool_store(regs, base + dest, 0);
                 break;
             }
+
             int is_subset = 1;
             for (Py_ssize_t i = 0; i < sa->length; i++) {
                 Py_ssize_t idx = menai_ht_lookup(&sb->ht, sa->elements[i], sa->hashes[i]);
-                if (idx == -2) goto error;
+                if (idx == -2) {
+                    goto error;
+                }
+
                 if (idx < 0) {
                     is_subset = 0;
                     break;
                 }
             }
+
             bool_store(regs, base + dest, is_subset);
             break;
         }
 
         case OP_SET_TO_LIST: {
             MenaiValue a = regs[base + src0];
-            if (!require_set_singular(a, "set->list")) goto error;
+            if (!require_set_singular(a, "set->list")) {
+                goto error;
+            }
+
             MenaiSet_Object *s = (MenaiSet_Object *)a;
             Py_ssize_t set_n = s->length;
             MenaiValue *stl_arr = set_n > 0
@@ -4141,12 +5855,17 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             for (Py_ssize_t i = 0; i < set_n; i++) {
                 menai_retain(s->elements[i]);
                 stl_arr[i] = s->elements[i];
             }
+
             MenaiValue r = menai_list_from_array_steal(stl_arr, set_n);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
@@ -4158,21 +5877,48 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("range requires integer arguments");
                 goto error;
             }
+
             MenaiInteger_Object *ia = (MenaiInteger_Object *)ra;
             MenaiInteger_Object *ib = (MenaiInteger_Object *)rb;
             MenaiInteger_Object *ic = (MenaiInteger_Object *)rc;
             long start, end, step;
-            if (!ia->is_big) { start = ia->small; } else { if (menai_int_to_long(&ia->big, &start) < 0) goto error; }
-            if (!ib->is_big) { end = ib->small; } else { if (menai_int_to_long(&ib->big, &end) < 0) goto error; }
-            if (!ic->is_big) { step = ic->small; } else { if (menai_int_to_long(&ic->big, &step) < 0) goto error; }
+            if (!ia->is_big) {
+                start = ia->small;
+            } else {
+                if (menai_int_to_long(&ia->big, &start) < 0) {
+                    goto error;
+                }
+            }
+
+            if (!ib->is_big) {
+                end = ib->small;
+            } else {
+                if (menai_int_to_long(&ib->big, &end) < 0) {
+                    goto error;
+                }
+            }
+
+            if (!ic->is_big) {
+                step = ic->small;
+            } else {
+                if (menai_int_to_long(&ic->big, &step) < 0) {
+                    goto error;
+                }
+            }
+
             if (step == 0) {
                 menai_raise_eval_error("range: step cannot be zero");
                 goto error;
             }
+
             /* Compute length */
             Py_ssize_t n = 0;
-            if (step > 0 && end > start) n = (end - start + step - 1) / step;
-            else if (step < 0 && end < start) n = (start - end - step - 1) / (-step);
+            if (step > 0 && end > start) {
+                n = (end - start + step - 1) / step;
+            } else if (step < 0 && end < start) {
+                n = (start - end - step - 1) / (-step);
+            }
+
             MenaiValue *rng_arr = n > 0
                 ? (MenaiValue *)malloc(n * sizeof(MenaiValue)) : NULL;
 
@@ -4180,19 +5926,28 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             long val = start;
             for (Py_ssize_t i = 0; i < n; i++) {
                 MenaiValue mi = make_integer_from_long(val);
                 if (mi == NULL) {
-                    for (Py_ssize_t k = 0; k < i; k++) menai_release(rng_arr[k]);
+                    for (Py_ssize_t k = 0; k < i; k++) {
+                        menai_release(rng_arr[k]);
+                    }
+
                     free(rng_arr);
                     goto error;
                 }
+
                 rng_arr[i] = mi;
                 val += step;
             }
+
             MenaiValue r = menai_list_from_array_steal(rng_arr, n);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
@@ -4208,9 +5963,13 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 menai_raise_eval_error("struct constructor: first argument must be a struct type");
                 goto error;
             }
+
             int n_fields = src1;
             MenaiValue instance = menai_struct_alloc(struct_type, &regs[base + src0 + 1], n_fields);
-            if (instance == NULL) goto error;
+            if (instance == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, instance);
             break;
         }
@@ -4221,11 +5980,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_STRUCT_TYPE_P: {
             MenaiValue stype = regs[base + src0], val = regs[base + src1];
-            if (!require_structtype(stype, "struct-type?")) goto error;
+            if (!require_structtype(stype, "struct-type?")) {
+                goto error;
+            }
+
             if (!IS_MENAI_STRUCT(val)) {
                 bool_store(regs, base + dest, 0);
                 break;
             }
+
             int tag_a = ((MenaiStructType_Object *)stype)->tag;
             int tag_b = ((MenaiStructType_Object *)((MenaiStruct_Object *)val)->struct_type)->tag;
             bool_store(regs, base + dest, tag_a == tag_b);
@@ -4235,8 +5998,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRUCT_GET: {
             /* src1 holds a MenaiSymbol field name */
             MenaiValue val = regs[base + src0], field_sym = regs[base + src1];
-            if (!require_struct(val, "struct-get")) goto error;
-            if (!require_symbol(field_sym, "struct-get")) goto error;
+            if (!require_struct(val, "struct-get")) {
+                goto error;
+            }
+
+            if (!require_symbol(field_sym, "struct-get")) {
+                goto error;
+            }
+
             MenaiValue stype = ((MenaiStruct_Object *)val)->struct_type;
             MenaiValue field_name = menai_symbol_name(field_sym);
             int fi = menai_struct_field_index((MenaiStructType_Object *)stype, field_name);
@@ -4251,6 +6020,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 Py_XDECREF(fname_py);
                 goto error;
             }
+
             MenaiValue fv = ((MenaiStruct_Object *)val)->items[fi];
             menai_reg_set_borrow(regs, base + dest, fv);
             break;
@@ -4259,11 +6029,24 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         case OP_STRUCT_GET_IMM: {
             /* src1 holds a MenaiInteger field index */
             MenaiValue val = regs[base + src0], fidx = regs[base + src1];
-            if (!require_struct(val, "struct-get-imm")) goto error;
-            if (!require_integer(fidx, "struct-get-imm")) goto error;
+            if (!require_struct(val, "struct-get-imm")) {
+                goto error;
+            }
+
+            if (!require_integer(fidx, "struct-get-imm")) {
+                goto error;
+            }
+
             MenaiInteger_Object *fi_io = (MenaiInteger_Object *)fidx;
             long fi_l;
-            if (!fi_io->is_big) { fi_l = fi_io->small; } else { if (menai_int_to_long(&fi_io->big, &fi_l) < 0) goto error; }
+            if (!fi_io->is_big) {
+                fi_l = fi_io->small;
+            } else {
+                if (menai_int_to_long(&fi_io->big, &fi_l) < 0) {
+                    goto error;
+                }
+            }
+
             Py_ssize_t fi = (Py_ssize_t)fi_l;
             MenaiValue fv = ((MenaiStruct_Object *)val)->items[fi];
             menai_reg_set_borrow(regs, base + dest, fv);
@@ -4272,8 +6055,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_STRUCT_SET: {
             MenaiValue val = regs[base + src0], field_sym = regs[base + src1], new_val = regs[base + src2];
-            if (!require_struct(val, "struct-set")) goto error;
-            if (!require_symbol(field_sym, "struct-set")) goto error;
+            if (!require_struct(val, "struct-set")) {
+                goto error;
+            }
+
+            if (!require_symbol(field_sym, "struct-set")) {
+                goto error;
+            }
+
             MenaiValue stype = ((MenaiStruct_Object *)val)->struct_type;
             MenaiValue field_name = menai_symbol_name(field_sym);
             int fi = menai_struct_field_index((MenaiStructType_Object *)stype, field_name);
@@ -4288,6 +6077,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 Py_XDECREF(fname_py);
                 goto error;
             }
+
             Py_ssize_t nf = ((MenaiStruct_Object *)val)->nfields;
             MenaiValue *tmp = (MenaiValue *)malloc(nf * sizeof(MenaiValue));
             if (!tmp) {
@@ -4295,11 +6085,15 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 goto error;
             }
 
-            for (Py_ssize_t i = 0; i < nf; i++) tmp[i] = (i == fi) ? new_val : ((MenaiStruct_Object *)val)->items[i];
+            for (Py_ssize_t i = 0; i < nf; i++) {
+                tmp[i] = (i == fi) ? new_val : ((MenaiStruct_Object *)val)->items[i];
+            }
 
             MenaiValue r = menai_struct_alloc(stype, tmp, nf);
             free(tmp);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
 
             menai_reg_set_own(regs, base + dest, r);
             break;
@@ -4307,11 +6101,24 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_STRUCT_SET_IMM: {
             MenaiValue val = regs[base + src0], fidx = regs[base + src1], new_val = regs[base + src2];
-            if (!require_struct(val, "struct-set-imm")) goto error;
-            if (!require_integer(fidx, "struct-set-imm")) goto error;
+            if (!require_struct(val, "struct-set-imm")) {
+                goto error;
+            }
+
+            if (!require_integer(fidx, "struct-set-imm")) {
+                goto error;
+            }
+
             MenaiInteger_Object *fi_io = (MenaiInteger_Object *)fidx;
             long fi_l;
-            if (!fi_io->is_big) { fi_l = fi_io->small; } else { if (menai_int_to_long(&fi_io->big, &fi_l) < 0) goto error; }
+            if (!fi_io->is_big) {
+                fi_l = fi_io->small;
+            } else {
+                if (menai_int_to_long(&fi_io->big, &fi_l) < 0) {
+                    goto error;
+                }
+            }
+
             Py_ssize_t fi = (Py_ssize_t)fi_l;
             MenaiValue stype = ((MenaiStruct_Object *)val)->struct_type;
             Py_ssize_t nf = ((MenaiStruct_Object *)val)->nfields;
@@ -4320,20 +6127,31 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             for (Py_ssize_t i = 0; i < nf; i++) {
                 tmp[i] = (i == fi) ? new_val : ((MenaiStruct_Object *)val)->items[i];
             }
+
             MenaiValue r = menai_struct_alloc(stype, tmp, nf);
             free(tmp);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
 
         case OP_STRUCT_EQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_struct(a, "struct=?")) goto error;
-            if (!require_struct(b, "struct=?")) goto error;
+            if (!require_struct(a, "struct=?")) {
+                goto error;
+            }
+
+            if (!require_struct(b, "struct=?")) {
+                goto error;
+            }
+
             MenaiStruct_Object *sa = (MenaiStruct_Object *)a;
             MenaiStruct_Object *sb = (MenaiStruct_Object *)b;
             int eq = (((MenaiStructType_Object *)sa->struct_type)->tag ==
@@ -4342,14 +6160,21 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             for (Py_ssize_t i = 0; eq && i < nf; i++) {
                 eq = menai_value_equal(sa->items[i], sb->items[i]);
             }
+
             bool_store(regs, base + dest, eq);
             break;
         }
 
         case OP_STRUCT_NEQ_P: {
             MenaiValue a = regs[base + src0], b = regs[base + src1];
-            if (!require_struct(a, "struct!=?")) goto error;
-            if (!require_struct(b, "struct!=?")) goto error;
+            if (!require_struct(a, "struct!=?")) {
+                goto error;
+            }
+
+            if (!require_struct(b, "struct!=?")) {
+                goto error;
+            }
+
             MenaiStruct_Object *sa = (MenaiStruct_Object *)a;
             MenaiStruct_Object *sb = (MenaiStruct_Object *)b;
             int neq = (((MenaiStructType_Object *)sa->struct_type)->tag !=
@@ -4364,20 +6189,27 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                     }
                 }
             }
+
             bool_store(regs, base + dest, neq);
             break;
         }
 
         case OP_STRUCT_TYPE: {
             MenaiValue val = regs[base + src0];
-            if (!require_struct(val, "struct-type")) goto error;
+            if (!require_struct(val, "struct-type")) {
+                goto error;
+            }
+
             menai_reg_set_borrow(regs, base + dest, ((MenaiStruct_Object *)val)->struct_type);
             break;
         }
 
         case OP_STRUCT_TYPE_NAME: {
             MenaiValue val = regs[base + src0];
-            if (!require_structtype(val, "struct-type-name")) goto error;
+            if (!require_structtype(val, "struct-type-name")) {
+                goto error;
+            }
+
             menai_reg_set_borrow(regs, base + dest,
                 ((MenaiStructType_Object *)val)->name);
             break;
@@ -4385,7 +6217,10 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_STRUCT_FIELDS: {
             MenaiValue val = regs[base + src0];
-            if (!require_structtype(val, "struct-fields")) goto error;
+            if (!require_structtype(val, "struct-fields")) {
+                goto error;
+            }
+
             MenaiStructType_Object *st = (MenaiStructType_Object *)val;
             int n = st->nfields;
             MenaiValue *sf_arr = n > 0
@@ -4395,17 +6230,26 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 PyErr_NoMemory();
                 goto error;
             }
+
             for (int i = 0; i < n; i++) {
                 MenaiValue sym = menai_symbol_alloc(st->fields[i].name);
                 if (sym == NULL) {
-                    for (int k = 0; k < i; k++) menai_release(sf_arr[k]);
+                    for (int k = 0; k < i; k++) {
+                        menai_release(sf_arr[k]);
+                    }
+
                     free(sf_arr);
                     goto error;
                 }
+
                 sf_arr[i] = sym;
             }
+
             MenaiValue r = menai_list_from_array_steal(sf_arr, (Py_ssize_t)n);
-            if (r == NULL) goto error;
+            if (r == NULL) {
+                goto error;
+            }
+
             menai_reg_set_own(regs, base + dest, r);
             break;
         }
@@ -4420,8 +6264,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 error:
         /* Release all live frames above the sentinel. */
         for (int d = frame_depth; d >= 1; d--) {
-            if (frames[d].code_obj) menai_code_object_release(frames[d].code_obj);
+            if (frames[d].code_obj) {
+                menai_code_object_release(frames[d].code_obj);
+            }
         }
+
         return NULL;
     }
 }
@@ -4437,12 +6284,16 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     PyObject *constants_dict;
     PyObject *prelude_dict;
 
-    if (!PyArg_ParseTuple(args, "OOO", &code, &constants_dict, &prelude_dict)) return NULL;
+    if (!PyArg_ParseTuple(args, "OOO", &code, &constants_dict, &prelude_dict)) {
+        return NULL;
+    }
 
     /* Convert the Python CodeObject tree to a native MenaiCodeObject tree.
      * All constants are converted to fast MenaiValues during this pass. */
     MenaiCodeObject *native_code = menai_code_object_from_python(code);
-    if (!native_code) return NULL;
+    if (!native_code) {
+        return NULL;
+    }
 
     /* Get (or build) the cached prelude GlobalsTable. */
     const GlobalsTable *prelude_gt = NULL;
@@ -4467,7 +6318,9 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
         MenaiValue val = globals.entries[i].value;
         if (IS_MENAI_FUNCTION(val)) {
             int n = menai_code_object_max_locals(((MenaiFunction_Object *)val)->bytecode);
-            if (n > max_locals) max_locals = n;
+            if (n > max_locals) {
+                max_locals = n;
+            }
         }
     }
 
@@ -4487,8 +6340,9 @@ menai_vm_c_execute(PyObject *self, PyObject *args)
     globals_free(&globals);
     menai_code_object_release(native_code);
 
-    if (result == NULL)
+    if (result == NULL) {
         return NULL;
+    }
 
     /* Return the fast C value directly — callers use to_python() / describe(). */
     return result;
@@ -4519,8 +6373,9 @@ PyMODINIT_FUNC
 PyInit_menai_vm_c(void)
 {
     PyObject *module = PyModule_Create(&menai_vm_c_module);
-    if (module == NULL)
+    if (module == NULL) {
         return NULL;
+    }
 
     if (menai_vm_shim_init() < 0) {
         Py_DECREF(module);

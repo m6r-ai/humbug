@@ -46,7 +46,9 @@ static int _list_arr_counts[LIST_CACHE_NUM_BUCKETS];
 static inline int
 _bucket_index(Py_ssize_t n)
 {
-    if (n <= 1) return 0;
+    if (n <= 1) {
+        return 0;
+    }
 
 #if defined(_MSC_VER)
     unsigned long idx;
@@ -57,7 +59,10 @@ _bucket_index(Py_ssize_t n)
 #else
     int bucket = 0;
     unsigned long v = (unsigned long)(n - 1);
-    while (v >>= 1) bucket++;
+    while (v >>= 1) {
+        bucket++;
+    }
+
     bucket++;
 #endif
     return bucket < LIST_CACHE_NUM_BUCKETS ? bucket : LIST_CACHE_NUM_BUCKETS - 1;
@@ -77,7 +82,9 @@ _menai_list_cache_alloc_obj(void)
     }
 
     MenaiList_Object *obj = (MenaiList_Object *)malloc(sizeof(MenaiList_Object));
-    if (obj == NULL) return NULL;
+    if (obj == NULL) {
+        return NULL;
+    }
 
     obj->ob_refcnt = 1;
     obj->ob_type = &MenaiList_Type;
@@ -118,7 +125,10 @@ _menai_list_cache_alloc_arr(Py_ssize_t n)
 static void
 _menai_list_cache_free_arr(MenaiValue *arr, Py_ssize_t n)
 {
-    for (Py_ssize_t i = 0; i < n; i++) menai_release(arr[i]);
+    for (Py_ssize_t i = 0; i < n; i++) {
+        menai_release(arr[i]);
+    }
+
     if (arr && n > 0 && n <= LIST_CACHE_MAX_SIZE) {
         int bucket = _bucket_index(n);
         if (_list_arr_counts[bucket] < LIST_CACHE_MAX_BUCKET) {
@@ -135,6 +145,7 @@ _menai_list_cache_free_arr(MenaiValue *arr, Py_ssize_t n)
             return;
         }
     }
+
     free(arr);
 }
 
@@ -151,8 +162,9 @@ _menai_list_cache_clear(void)
     _list_obj_free = NULL;
 
     for (int i = 0; i < LIST_CACHE_NUM_BUCKETS; i++) {
-        for (int j = 0; j < _list_arr_counts[i]; j++)
+        for (int j = 0; j < _list_arr_counts[i]; j++) {
             free(_list_arr_buckets[i][j]);
+        }
 
         if (_list_arr_buckets[i]) {
             free(_list_arr_buckets[i]);
@@ -186,6 +198,7 @@ MenaiList_dealloc(MenaiValue self)
         lst->elements = NULL;
         _menai_list_cache_free_arr(arr, n);
     }
+
     _menai_list_cache_free_obj(lst);
 }
 
@@ -205,7 +218,9 @@ menai_list_from_array(MenaiValue *items, Py_ssize_t n)
     MenaiValue *arr = NULL;
     if (n > 0) {
         arr = _menai_list_cache_alloc_arr(n);
-        if (!arr) return NULL;
+        if (!arr) {
+            return NULL;
+        }
 
         for (Py_ssize_t i = 0; i < n; i++) {
             arr[i] = items[i];
@@ -218,6 +233,7 @@ menai_list_from_array(MenaiValue *items, Py_ssize_t n)
         _menai_list_cache_free_arr(arr, n);
         return NULL;
     }
+
     obj->elements = arr;
     obj->length = n;
 
@@ -230,10 +246,14 @@ menai_list_from_array_steal(MenaiValue *items, Py_ssize_t n)
     MenaiList_Object *obj = _menai_list_cache_alloc_obj();
     if (!obj) {
         /* Free the stolen array and its references on failure. */
-        for (Py_ssize_t i = 0; i < n; i++) menai_release(items[i]);
+        for (Py_ssize_t i = 0; i < n; i++) {
+            menai_release(items[i]);
+        }
+
         free(items);
         return NULL;
     }
+
     obj->elements = items;
     obj->length = n;
 
@@ -244,7 +264,9 @@ MenaiValue
 menai_list_new_empty(void)
 {
     MenaiList_Object *obj = _menai_list_cache_alloc_obj();
-    if (!obj) return NULL;
+    if (!obj) {
+        return NULL;
+    }
 
     obj->elements = NULL;
     obj->length = 0;
@@ -270,7 +292,9 @@ menai_list_rest(MenaiValue lst_val)
     MenaiValue owner = (lst->owner != NULL) ? lst->owner : lst_val;
 
     MenaiList_Object *view = _menai_list_cache_alloc_obj();
-    if (view == NULL) return NULL;
+    if (view == NULL) {
+        return NULL;
+    }
 
     menai_retain(owner);
     view->owner = owner;
@@ -292,7 +316,9 @@ menai_list_slice(MenaiValue lst_val, Py_ssize_t start, Py_ssize_t end)
     MenaiValue owner = (lst->owner != NULL) ? lst->owner : lst_val;
 
     MenaiList_Object *view = _menai_list_cache_alloc_obj();
-    if (view == NULL) return NULL;
+    if (view == NULL) {
+        return NULL;
+    }
 
     menai_retain(owner);
     view->owner = owner;
@@ -305,7 +331,10 @@ menai_list_slice(MenaiValue lst_val, Py_ssize_t start, Py_ssize_t end)
 int
 menai_vm_list_init(void)
 {
-    if (PyType_Ready(&MenaiList_Type) < 0) return -1;
+    if (PyType_Ready(&MenaiList_Type) < 0) {
+        return -1;
+    }
+
     _menai_list_cache_clear();
     return 0;
 }
