@@ -403,7 +403,7 @@ static inline double menai_float_value(MenaiValue *o)
 
 static inline MenaiValue *menai_symbol_name(MenaiValue *o)
 {
-    return ((MenaiSymbol_Object *)o)->name;
+    return ((MenaiSymbol *)o)->name;
 }
 
 /*

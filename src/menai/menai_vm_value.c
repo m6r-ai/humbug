@@ -698,7 +698,7 @@ menai_value_describe_string(MenaiValue *val)
 PyObject *
 menai_value_describe_symbol(MenaiValue *val)
 {
-    return menai_string_to_pyunicode(((MenaiSymbol_Object *)val)->name);
+    return menai_string_to_pyunicode(((MenaiSymbol *)val)->name);
 }
 
 PyObject *
@@ -1085,7 +1085,7 @@ menai_value_to_python_string(MenaiValue *val)
 PyObject *
 menai_value_to_python_symbol(MenaiValue *val)
 {
-    return menai_string_to_pyunicode(((MenaiSymbol_Object *)val)->name);
+    return menai_string_to_pyunicode(((MenaiSymbol *)val)->name);
 }
 
 PyObject *
@@ -1184,7 +1184,7 @@ menai_value_to_python_dict(MenaiValue *val)
         if (kt == &MenaiString_Type) {
             py_key = menai_string_to_pyunicode(k);
         } else if (kt == &MenaiSymbol_Type) {
-            py_key = menai_string_to_pyunicode(((MenaiSymbol_Object *)k)->name);
+            py_key = menai_string_to_pyunicode(((MenaiSymbol *)k)->name);
         } else {
             /* Non-string/symbol keys are stringified, matching slow VM behaviour */
             PyObject *native = menai_value_to_python(k);
@@ -1239,7 +1239,7 @@ menai_value_to_python_set(MenaiValue *val)
         if (et == &MenaiString_Type) {
             py_elem = menai_string_to_pyunicode(elem);
         } else if (et == &MenaiSymbol_Type) {
-            py_elem = menai_string_to_pyunicode(((MenaiSymbol_Object *)elem)->name);
+            py_elem = menai_string_to_pyunicode(((MenaiSymbol *)elem)->name);
         } else {
             py_elem = menai_value_to_python(elem);
         }
@@ -1562,7 +1562,7 @@ static PyObject *
 symbol_get_name(PyObject *self, void *closure)
 {
     (void)closure;
-    return menai_string_to_pyunicode(((MenaiSymbol_Object *)self)->name);
+    return menai_string_to_pyunicode(((MenaiSymbol *)self)->name);
 }
 
 static PyGetSetDef _symbol_getsets[] = {

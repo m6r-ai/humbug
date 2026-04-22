@@ -1,7 +1,7 @@
 /*
  * menai_vm_symbol.h — MenaiSymbol type definition and API.
  *
- * MenaiSymbol stores its name as a MenaiString_Object *.  Equality is
+ * MenaiSymbol stores its name as a MenaiString *.  Equality is
  * determined by menai_string_equal() on the name field.
  */
 
@@ -16,15 +16,15 @@
 
 typedef struct {
     MenaiObject_HEAD
-    MenaiValue *name;    /* owned MenaiString_Object * */
-} MenaiSymbol_Object;
+    MenaiValue *name;    /* owned MenaiString * */
+} MenaiSymbol;
 
 extern MenaiType MenaiSymbol_Type;
 
 /*
  * menai_symbol_alloc — direct C constructor for MenaiSymbol.
  *
- * name must be a MenaiString_Object * (as MenaiValue *).  A retain is taken
+ * name must be a MenaiString * (as MenaiValue *).  A retain is taken
  * on name.  Returns a new reference, or NULL on allocation failure.
  */
 MenaiValue *menai_symbol_alloc(MenaiValue *name);

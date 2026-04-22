@@ -4,7 +4,7 @@
  * MenaiStructType: field names are stored in an inline C array of
  * (MenaiString name, index) pairs.  A MenaiHashTable built at construction
  * time provides O(1) name-to-index lookup; its slots hold borrowed references
- * into fields[].  All string fields are native MenaiString_Object * values
+ * into fields[].  All string fields are native MenaiString * values
  * managed with menai_retain/menai_release.
  *
  * MenaiStruct: field values are stored in an inline C array (nfields entries),
@@ -52,7 +52,7 @@ PyTypeObject MenaiStructType_Type = {
 
 /*
  * _build_struct_type — shared constructor body for MenaiStructType.
- * name must be a MenaiString_Object * (borrowed).  tag is a C int.
+ * name must be a MenaiString * (borrowed).  tag is a C int.
  * fn_tup must be a Python tuple of PyUnicode field name strings (borrowed).
  * Returns a new reference, or NULL on error.
  */

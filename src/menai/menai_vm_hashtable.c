@@ -193,7 +193,7 @@ menai_value_hash(MenaiValue *val)
     }
 
     if (t == &MenaiSymbol_Type) {
-        return menai_string_hash(((MenaiSymbol_Object *)val)->name);
+        return menai_string_hash(((MenaiSymbol *)val)->name);
     }
 
     if (t == &MenaiStructType_Type) {
@@ -278,7 +278,7 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
     }
 
     if (ta == &MenaiSymbol_Type) {
-        return menai_string_equal(((MenaiSymbol_Object *)a)->name, ((MenaiSymbol_Object *)b)->name);
+        return menai_string_equal(((MenaiSymbol *)a)->name, ((MenaiSymbol *)b)->name);
     }
 
     if (ta == &MenaiStructType_Type) {

@@ -1,7 +1,7 @@
 /*
  * menai_vm_symbol.c — MenaiSymbol type implementation.
  *
- * MenaiSymbol stores its name as an owned MenaiString_Object *.  Equality
+ * MenaiSymbol stores its name as an owned MenaiString *.  Equality
  * is determined by menai_string_equal() on the name field.
  */
 
@@ -14,14 +14,14 @@
 static void
 MenaiSymbol_dealloc(MenaiValue *self)
 {
-    menai_xrelease(((MenaiSymbol_Object *)self)->name);
+    menai_xrelease(((MenaiSymbol *)self)->name);
     free(self);
 }
 
 PyTypeObject MenaiSymbol_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "menai.MenaiSymbol",          /* tp_name */
-    sizeof(MenaiSymbol_Object),   /* tp_basicsize */
+    sizeof(MenaiSymbol),   /* tp_basicsize */
     0,                            /* tp_itemsize */
     (destructor)MenaiSymbol_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -31,7 +31,7 @@ PyTypeObject MenaiSymbol_Type = {
 MenaiValue *
 menai_symbol_alloc(MenaiValue *name)
 {
-    MenaiSymbol_Object *self = (MenaiSymbol_Object *)malloc(sizeof(MenaiSymbol_Object));
+    MenaiSymbol *self = (MenaiSymbol *)malloc(sizeof(MenaiSymbol));
     if (self == NULL) {
         return NULL;
     }

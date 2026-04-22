@@ -20,38 +20,38 @@
 
 #include "menai_vm_object.h"
 
-/* ---------------------------------------------------------------------------
- * MenaiString_Object
+/*
+ * MenaiString
  *
  * length holds the codepoint count.  The codepoint data follows immediately
  * in memory via the flexible array member — one allocation per string.
- * ------------------------------------------------------------------------- */
+ */
 
 typedef struct {
     MenaiObject_HEAD
     Py_ssize_t length;          /* codepoint count */
     Py_hash_t hash;             /* cached hash; -1 = not yet computed */
     uint32_t data[];            /* UTF-32 codepoints, flexible array */
-} MenaiString_Object;
+} MenaiString;
 
 extern MenaiType MenaiString_Type;
 
 static inline Py_ssize_t
 menai_string_length(MenaiValue *s)
 {
-    return ((MenaiString_Object *)s)->length;
+    return ((MenaiString *)s)->length;
 }
 
 static inline const uint32_t *
 menai_string_data(MenaiValue *s)
 {
-    return ((MenaiString_Object *)s)->data;
+    return ((MenaiString *)s)->data;
 }
 
 static inline uint32_t
 menai_string_get(MenaiValue *s, Py_ssize_t i)
 {
-    return ((MenaiString_Object *)s)->data[i];
+    return ((MenaiString *)s)->data[i];
 }
 
 /*

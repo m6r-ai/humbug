@@ -22,15 +22,15 @@ static void MenaiString_dealloc(MenaiValue *self);
 static PyObject *_MenaiEvalError = NULL;
 
 /*
- * Allocate a MenaiString_Object with room for len codepoints.
+ * Allocate a MenaiString with room for len codepoints.
  * length is set to len; hash is set to -1; data is uninitialised.
  * Returns a new reference, or NULL on allocation failure.
  */
-static MenaiString_Object *
+static MenaiString *
 _menai_string_alloc(Py_ssize_t len)
 {
-    MenaiString_Object *obj = (MenaiString_Object *)malloc(
-        sizeof(MenaiString_Object) + (size_t)len * sizeof(uint32_t));
+    MenaiString *obj = (MenaiString *)malloc(
+        sizeof(MenaiString) + (size_t)len * sizeof(uint32_t));
     if (obj == NULL) {
         return NULL;
     }
@@ -54,7 +54,7 @@ MenaiString_dealloc(MenaiValue *self)
 PyTypeObject MenaiString_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     "menai.MenaiString",          /* tp_name */
-    sizeof(MenaiString_Object),   /* tp_basicsize */
+    sizeof(MenaiString),   /* tp_basicsize */
     0,                             /* tp_itemsize */
     (destructor)MenaiString_dealloc, /* tp_dealloc */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
@@ -203,7 +203,7 @@ menai_string_from_utf8(const char *utf8, Py_ssize_t nbytes)
         return NULL;
     }
 
-    MenaiString_Object *obj = _menai_string_alloc(len);
+    MenaiString *obj = _menai_string_alloc(len);
     if (!obj) {
         free(buf);
         return NULL;
@@ -218,7 +218,7 @@ menai_string_from_utf8(const char *utf8, Py_ssize_t nbytes)
 MenaiValue *
 menai_string_from_codepoints(const uint32_t *cp, Py_ssize_t len)
 {
-    MenaiString_Object *obj = _menai_string_alloc(len);
+    MenaiString *obj = _menai_string_alloc(len);
     if (!obj) {
         return NULL;
     }
@@ -233,7 +233,7 @@ menai_string_from_codepoints(const uint32_t *cp, Py_ssize_t len)
 MenaiValue *
 menai_string_from_codepoint(uint32_t cp)
 {
-    MenaiString_Object *obj = _menai_string_alloc(1);
+    MenaiString *obj = _menai_string_alloc(1);
     if (!obj) {
         return NULL;
     }
@@ -258,7 +258,7 @@ menai_string_from_pyunicode(PyObject *pystr)
 PyObject *
 menai_string_to_pyunicode(MenaiValue *s)
 {
-    MenaiString_Object *ms = (MenaiString_Object *)s;
+    MenaiString *ms = (MenaiString *)s;
     Py_ssize_t nbytes;
     char *utf8 = _utf8_encode(ms->data, ms->length, &nbytes);
     if (!utf8) {
@@ -274,8 +274,8 @@ menai_string_to_pyunicode(MenaiValue *s)
 int
 menai_string_compare(MenaiValue *a, MenaiValue *b)
 {
-    MenaiString_Object *ma = (MenaiString_Object *)a;
-    MenaiString_Object *mb = (MenaiString_Object *)b;
+    MenaiString *ma = (MenaiString *)a;
+    MenaiString *mb = (MenaiString *)b;
     Py_ssize_t la = ma->length, lb = mb->length;
     Py_ssize_t min_len = la < lb ? la : lb;
     for (Py_ssize_t i = 0; i < min_len; i++) {
@@ -302,8 +302,8 @@ menai_string_compare(MenaiValue *a, MenaiValue *b)
 int
 menai_string_equal(MenaiValue *a, MenaiValue *b)
 {
-    MenaiString_Object *ma = (MenaiString_Object *)a;
-    MenaiString_Object *mb = (MenaiString_Object *)b;
+    MenaiString *ma = (MenaiString *)a;
+    MenaiString *mb = (MenaiString *)b;
     Py_ssize_t la = ma->length;
     if (la != mb->length) {
         return 0;
@@ -315,7 +315,7 @@ menai_string_equal(MenaiValue *a, MenaiValue *b)
 Py_hash_t
 menai_string_hash(MenaiValue *s)
 {
-    MenaiString_Object *ms = (MenaiString_Object *)s;
+    MenaiString *ms = (MenaiString *)s;
     if (ms->hash != -1) {
         return ms->hash;
     }
@@ -343,10 +343,10 @@ menai_string_hash(MenaiValue *s)
 MenaiValue *
 menai_string_concat(MenaiValue *a, MenaiValue *b)
 {
-    MenaiString_Object *ma = (MenaiString_Object *)a;
-    MenaiString_Object *mb = (MenaiString_Object *)b;
+    MenaiString *ma = (MenaiString *)a;
+    MenaiString *mb = (MenaiString *)b;
     Py_ssize_t la = ma->length, lb = mb->length;
-    MenaiString_Object *obj = _menai_string_alloc(la + lb);
+    MenaiString *obj = _menai_string_alloc(la + lb);
     if (!obj) {
         return NULL;
     }
@@ -365,19 +365,19 @@ menai_string_concat(MenaiValue *a, MenaiValue *b)
 MenaiValue *
 menai_string_ref(MenaiValue *s, Py_ssize_t i)
 {
-    return menai_string_from_codepoint(((MenaiString_Object *)s)->data[i]);
+    return menai_string_from_codepoint(((MenaiString *)s)->data[i]);
 }
 
 MenaiValue *
 menai_string_slice(MenaiValue *s, Py_ssize_t start, Py_ssize_t end)
 {
-    return menai_string_from_codepoints(((MenaiString_Object *)s)->data + start, end - start);
+    return menai_string_from_codepoints(((MenaiString *)s)->data + start, end - start);
 }
 
 MenaiValue *
 menai_string_upcase(MenaiValue *s)
 {
-    MenaiString_Object *ms = (MenaiString_Object *)s;
+    MenaiString *ms = (MenaiString *)s;
     Py_ssize_t len = ms->length;
 
     /* First pass: compute output length (expansions may add codepoints). */
@@ -393,7 +393,7 @@ menai_string_upcase(MenaiValue *s)
         }
     }
 
-    MenaiString_Object *obj = _menai_string_alloc(out_len);
+    MenaiString *obj = _menai_string_alloc(out_len);
     if (!obj) {
         return NULL;
     }
@@ -417,9 +417,9 @@ menai_string_upcase(MenaiValue *s)
 MenaiValue *
 menai_string_downcase(MenaiValue *s)
 {
-    MenaiString_Object *ms = (MenaiString_Object *)s;
+    MenaiString *ms = (MenaiString *)s;
     Py_ssize_t len = ms->length;
-    MenaiString_Object *obj = _menai_string_alloc(len);
+    MenaiString *obj = _menai_string_alloc(len);
     if (!obj) {
         return NULL;
     }
@@ -434,7 +434,7 @@ menai_string_downcase(MenaiValue *s)
 MenaiValue *
 menai_string_trim_left(MenaiValue *s)
 {
-    MenaiString_Object *ms = (MenaiString_Object *)s;
+    MenaiString *ms = (MenaiString *)s;
     Py_ssize_t len = ms->length;
     Py_ssize_t start = 0;
     while (start < len && unicode_is_whitespace(ms->data[start])) {
@@ -447,7 +447,7 @@ menai_string_trim_left(MenaiValue *s)
 MenaiValue *
 menai_string_trim_right(MenaiValue *s)
 {
-    MenaiString_Object *ms = (MenaiString_Object *)s;
+    MenaiString *ms = (MenaiString *)s;
     Py_ssize_t end = ms->length;
     while (end > 0 && unicode_is_whitespace(ms->data[end - 1])) {
         end--;
@@ -459,7 +459,7 @@ menai_string_trim_right(MenaiValue *s)
 MenaiValue *
 menai_string_trim(MenaiValue *s)
 {
-    MenaiString_Object *ms = (MenaiString_Object *)s;
+    MenaiString *ms = (MenaiString *)s;
     Py_ssize_t len = ms->length;
     Py_ssize_t start = 0, end = len;
     while (start < end && unicode_is_whitespace(ms->data[start])) {
@@ -476,8 +476,8 @@ menai_string_trim(MenaiValue *s)
 Py_ssize_t
 menai_string_find(MenaiValue *haystack, MenaiValue *needle)
 {
-    MenaiString_Object *mh = (MenaiString_Object *)haystack;
-    MenaiString_Object *mn = (MenaiString_Object *)needle;
+    MenaiString *mh = (MenaiString *)haystack;
+    MenaiString *mn = (MenaiString *)needle;
     Py_ssize_t hlen = mh->length, nlen = mn->length;
 
     if (nlen == 0) {
@@ -501,8 +501,8 @@ menai_string_find(MenaiValue *haystack, MenaiValue *needle)
 int
 menai_string_has_prefix(MenaiValue *s, MenaiValue *prefix)
 {
-    MenaiString_Object *ms = (MenaiString_Object *)s;
-    MenaiString_Object *mp = (MenaiString_Object *)prefix;
+    MenaiString *ms = (MenaiString *)s;
+    MenaiString *mp = (MenaiString *)prefix;
     Py_ssize_t plen = mp->length;
     if (plen > ms->length) {
         return 0;
@@ -514,8 +514,8 @@ menai_string_has_prefix(MenaiValue *s, MenaiValue *prefix)
 int
 menai_string_has_suffix(MenaiValue *s, MenaiValue *suffix)
 {
-    MenaiString_Object *ms = (MenaiString_Object *)s;
-    MenaiString_Object *msu = (MenaiString_Object *)suffix;
+    MenaiString *ms = (MenaiString *)s;
+    MenaiString *msu = (MenaiString *)suffix;
     Py_ssize_t slen = ms->length, sulen = msu->length;
     if (sulen > slen) {
         return 0;
@@ -527,9 +527,9 @@ menai_string_has_suffix(MenaiValue *s, MenaiValue *suffix)
 MenaiValue *
 menai_string_replace(MenaiValue *s, MenaiValue *from, MenaiValue *to)
 {
-    MenaiString_Object *ms = (MenaiString_Object *)s;
-    MenaiString_Object *mfr = (MenaiString_Object *)from;
-    MenaiString_Object *mto = (MenaiString_Object *)to;
+    MenaiString *ms = (MenaiString *)s;
+    MenaiString *mfr = (MenaiString *)from;
+    MenaiString *mto = (MenaiString *)to;
     Py_ssize_t slen = ms->length;
     Py_ssize_t frlen = mfr->length;
     Py_ssize_t tolen = mto->length;
@@ -540,7 +540,7 @@ menai_string_replace(MenaiValue *s, MenaiValue *from, MenaiValue *to)
          * last.  "hello".replace("", "X") -> "XhXeXlXlXoX"
          */
         Py_ssize_t out_len = slen + (slen + 1) * tolen;
-        MenaiString_Object *obj = _menai_string_alloc(out_len);
+        MenaiString *obj = _menai_string_alloc(out_len);
         if (!obj) {
             return NULL;
         }
@@ -582,7 +582,7 @@ menai_string_replace(MenaiValue *s, MenaiValue *from, MenaiValue *to)
     }
 
     Py_ssize_t out_len = slen + count * (tolen - frlen);
-    MenaiString_Object *obj = _menai_string_alloc(out_len);
+    MenaiString *obj = _menai_string_alloc(out_len);
     if (!obj) {
         return NULL;
     }

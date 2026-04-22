@@ -23,7 +23,7 @@
 
 /*
  * One entry in the MenaiStructType field-index table.
- * name is an owned MenaiString_Object *; index is the 0-based field position.
+ * name is an owned MenaiString *; index is the 0-based field position.
  */
 typedef struct {
     MenaiValue *name;
@@ -32,7 +32,7 @@ typedef struct {
 
 typedef struct {
     MenaiObject_HEAD
-    MenaiValue *name;            /* owned MenaiString_Object * — struct type name */
+    MenaiValue *name;            /* owned MenaiString * — struct type name */
     int tag;                     /* unique integer tag */
     int nfields;                 /* number of fields */
     MenaiHashTable field_ht;     /* name -> index hash table; keys are borrowed from fields[] */
@@ -51,7 +51,7 @@ extern MenaiType MenaiStruct_Type;
 
 /*
  * menai_struct_field_index — look up a field index by name in O(1).
- * name must be a MenaiString_Object *.  Returns the 0-based index, or -1
+ * name must be a MenaiString *.  Returns the 0-based index, or -1
  * if not found.
  */
 static inline int
