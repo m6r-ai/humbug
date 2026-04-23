@@ -988,6 +988,10 @@ class PreviewWidget(QWidget):
         self._current_match_index = -1
         self._last_search = ("", False, False)
 
+    def clear_highlights(self) -> None:
+        """Remove find highlights without resetting match state."""
+        self._clear_highlights()
+
     def create_state_metadata(self) -> Dict[str, Any]:
         """
         Create metadata dictionary capturing current widget state.

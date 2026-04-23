@@ -100,33 +100,15 @@ class EditorTab(TabBase):
 
     def _update_search_after_edit(self) -> None:
         """Update search results after text has been modified."""
-        # Only proceed if find widget is still visible
         if self._find_widget.isHidden():
             return
 
-        search_text = self._find_widget.get_search_text()
-        if not search_text:
-            return
-
-        # Store current match index before clearing
         current_match, _total_matches = self._editor_widget.get_match_status()
-        previous_match_index = current_match - 1 if current_match > 0 else -1  # Convert to 0-based
+        previous_match_index = current_match - 1  # convert 1-based to 0-based; -1 when no active match
 
-        # Clear current search state and re-search without moving cursor
-        case_sensitive = self._find_widget.is_case_sensitive()
-        regexp = self._find_widget.is_regexp()
-        self._editor_widget.clear_find()
-        self._editor_widget.find_text(search_text, True, move_cursor=False, case_sensitive=case_sensitive, regexp=regexp)
+        self._editor_widget.refresh_find(previous_match_index)
 
-        # Try to restore the same match index if possible
         new_current, new_total = self._editor_widget.get_match_status()
-        if new_total > 0 and previous_match_index >= 0:
-            # If the previous index is still valid, try to set it
-            if previous_match_index < new_total:
-                self._editor_widget.set_current_match_index(previous_match_index)
-                new_current, new_total = self._editor_widget.get_match_status()
-
-        # Update match count display
         self._find_widget.set_match_status(new_current, new_total)
 
     def _on_file_saved(self, path: str) -> None:
@@ -344,7 +326,7 @@ class EditorTab(TabBase):
     def _close_find(self) -> None:
         """Close the find widget and clear search state."""
         self._find_widget.hide()
-        self._editor_widget.clear_find()
+        self._editor_widget.clear_highlights()
 
     def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""

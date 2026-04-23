@@ -327,7 +327,7 @@ class PreviewTab(TabBase):
     def _close_find(self) -> None:
         """Close the find widget and clear search state."""
         self._find_widget.hide()
-        self._preview_content_widget.clear_find()
+        self._preview_content_widget.clear_highlights()
 
     def _find_next(self, forward: bool = True) -> None:
         """Find next/previous match."""

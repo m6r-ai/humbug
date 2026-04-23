@@ -538,6 +538,11 @@ class DiffWidget(QWidget):
         self._left_pane.clear_find()
         self._right_pane.clear_find()
 
+    def clear_highlights(self) -> None:
+        """Remove find highlights without resetting match state."""
+        self._left_pane.clear_find()
+        self._right_pane.clear_find()
+
     def get_selected_text(self) -> str:
         """Return the selected text from whichever pane has an active selection.
 

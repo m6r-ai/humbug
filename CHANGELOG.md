@@ -17,6 +17,7 @@ Bug fixes:
 - If you highlight text and the open the find control in a diff tab it now uses the selected text as the initial search
   option.
 - Enabled keyboard shortcuts for "copy" operations in diff tabs.
+- Resolved a problem where find positions could be lost when hiding and unhiding the find bar in a tab.
 
 ## v44 (2026-04-19)
 

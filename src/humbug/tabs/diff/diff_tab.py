@@ -259,7 +259,7 @@ class DiffTab(TabBase):
     def _close_find(self) -> None:
         """Close the find widget and clear search highlights."""
         self._find_widget.hide()
-        self._diff_widget.clear_find()
+        self._diff_widget.clear_highlights()
 
     def _find_next(self, forward: bool = True) -> None:
         """Find the next or previous match and update the status label.

@@ -263,6 +263,10 @@ class EditorWidget(QPlainTextEdit):
         current_content = self.toPlainText()
         is_modified = current_content != self._last_save_content
         self._set_modified(is_modified)
+
+        if self._matches:
+            self._matches = []
+
         self.text_changed.emit()
 
         if not self._mindspace_manager.has_mindspace():
@@ -1191,6 +1195,34 @@ class EditorWidget(QPlainTextEdit):
             self._current_match = index
             self._highlight_matches()
 
+    def refresh_find(self, previous_match_index: int) -> None:
+        """Re-run the current search after a document edit, restoring the match index.
+
+        Clears the cached match list and re-scans the document using the same
+        search parameters as the last search.  The current match is set to
+        *previous_match_index* (0-based) clamped to the new total, so the
+        highlighted match stays as stable as possible across edits.  The cursor
+        and scroll position are not changed.
+
+        Args:
+            previous_match_index: 0-based index of the match that was active
+                before the edit, or -1 if there was no active match.
+        """
+        search_text, case_sensitive, regexp = self._last_search
+        if not search_text:
+            return
+
+        self._matches = []
+        self._current_match = -1
+        # Reset _last_search so find_text treats this as a new search and
+        # re-populates _matches, but keep the same search parameters.
+        self._last_search = ("", False, False)
+        self.find_text(search_text, forward=True, move_cursor=False, case_sensitive=case_sensitive, regexp=regexp)
+
+        if self._matches and previous_match_index >= 0:
+            self._current_match = min(previous_match_index, len(self._matches) - 1)
+            self._highlight_matches()
+
     def _highlight_matches(self) -> None:
         """Update the highlighting of all matches."""
         self._clear_highlights()
@@ -1304,6 +1336,10 @@ class EditorWidget(QPlainTextEdit):
         self._matches = []
         self._current_match = -1
         self._last_search = ("", False, False)
+
+    def clear_highlights(self) -> None:
+        """Remove find highlights without resetting match state."""
+        self._clear_highlights()
 
     def replace_current(self, replace_text: str) -> bool:
         """

@@ -1521,6 +1521,10 @@ class TerminalWidget(QAbstractScrollArea):
         self._selection_active = False
         self.clear_search_highlights()
 
+    def clear_highlights(self) -> None:
+        """Remove find highlights without resetting match state."""
+        self.clear_search_highlights()
+
     def _scroll_to_match(self) -> None:
         """Scroll to ensure the current match is visible."""
         match = self._matches[self._current_match]

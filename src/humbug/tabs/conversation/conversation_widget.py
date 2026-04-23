@@ -2849,6 +2849,10 @@ class ConversationWidget(QWidget):
         self._current_match_index = -1
         self._last_search = ("", False, False)
 
+    def clear_highlights(self) -> None:
+        """Remove find highlights without resetting match state."""
+        self._clear_highlights()
+
     # AI Tool Support Methods
 
     def get_conversation_info(self) -> Dict[str, Any]:
