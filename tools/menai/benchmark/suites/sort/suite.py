@@ -3,12 +3,11 @@ from __future__ import annotations
 import random
 from pathlib import Path
 from typing import Any
-from typing import cast
 
 from benchmark import BenchmarkCase, BenchmarkSuite, Implementation
 from menai import Menai
 
-_SIZES = [10, 50, 100, 250, 500, 1000, 2000]
+_SIZES = [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000]
 _ITERATIONS = 5
 _SUITE_DIR = Path(__file__).resolve().parent
 
