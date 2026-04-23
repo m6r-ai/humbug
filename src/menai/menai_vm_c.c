@@ -761,6 +761,7 @@ typedef struct {
     MenaiValue **constants_items;    /* borrowed from code_obj->constants */
     Py_ssize_t nconst;               /* borrowed from code_obj->nconst */
     const char **names_items;        /* borrowed from code_obj->names */
+    Py_hash_t *name_hashes;          /* borrowed from code_obj->name_hashes */
     Py_ssize_t nnames;               /* borrowed from code_obj->nnames */
     MenaiCodeObject **children;      /* borrowed from code_obj->children */
     Py_ssize_t nchildren;            /* borrowed from code_obj->nchildren */
@@ -790,6 +791,7 @@ frame_setup(Frame *f, MenaiCodeObject *co, int base, int return_dest)
     f->constants_items = co->constants;
     f->nconst = co->nconst;
     f->names_items = co->names;
+    f->name_hashes = co->name_hashes;
     f->nnames = co->nnames;
     f->children = co->children;
     f->nchildren = co->nchildren;
@@ -924,25 +926,6 @@ globals_get(PyObject *globals_dict)
 }
 
 /*
- * _globals_str_hash — FNV-1a hash of a UTF-8 C string.
- *
- * Returns a value in [0, PY_SSIZE_T_MAX]; never -1.
- */
-static inline Py_hash_t
-_globals_str_hash(const char *s)
-{
-    Py_uhash_t h = 14695981039346656037ULL;  /* FNV offset basis */
-    const unsigned char *p = (const unsigned char *)s;
-    while (*p) {
-        h ^= (Py_uhash_t)*p++;
-        h *= 1099511628211ULL;  /* FNV prime */
-    }
-
-    Py_hash_t r = (Py_hash_t)(h & (Py_uhash_t)PY_SSIZE_T_MAX);
-    return r == -1 ? -2 : r;
-}
-
-/*
  * globals_build — build a GlobalsTable from the cached globals GlobalsTable.
  *
  * All entries are already fast MenaiValue * objects retained and copied
@@ -993,7 +976,7 @@ globals_build(GlobalsTable *gt, const GlobalsTable *globals_gt)
     Py_ssize_t mask = gt->slot_count - 1;
     for (Py_ssize_t i = 0; i < gt->count; i++) {
         const char *name = gt->entries[i].name;
-        Py_hash_t h = _globals_str_hash(name);
+        Py_hash_t h = menai_name_str_hash(name);
         Py_uhash_t perturb = (Py_uhash_t)h;
         Py_ssize_t slot = (Py_ssize_t)(perturb & (Py_uhash_t)mask);
         for (;;) {
@@ -1013,13 +996,12 @@ globals_build(GlobalsTable *gt, const GlobalsTable *globals_gt)
 }
 
 static MenaiValue *
-globals_lookup(const GlobalsTable *gt, const char *name)
+globals_lookup_h(const GlobalsTable *gt, const char *name, Py_hash_t h)
 {
     if (gt->slot_count == 0) {
         return NULL;
     }
 
-    Py_hash_t h = _globals_str_hash(name);
     Py_ssize_t mask = gt->slot_count - 1;
     Py_uhash_t perturb = (Py_uhash_t)h;
     Py_ssize_t slot = (Py_ssize_t)(perturb & (Py_uhash_t)mask);
@@ -1193,7 +1175,8 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_LOAD_NAME: {
             const char *name_str = frame->names_items[src0];
-            MenaiValue *val = globals_lookup(globals, name_str);
+            Py_hash_t name_hash = frame->name_hashes[src0];
+            MenaiValue *val = globals_lookup_h(globals, name_str, name_hash);
             if (val == NULL) {
                 /* Build a rich error listing up to 10 available names. */
                 Py_ssize_t nk = globals->count;

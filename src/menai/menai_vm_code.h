@@ -35,6 +35,7 @@ typedef struct MenaiCodeObject_s {
     Py_ssize_t nconst;
 
     const char **names;                  /* global name strings for OP_LOAD_NAME */
+    Py_hash_t *name_hashes;              /* precomputed FNV-1a hash of each name */
     Py_ssize_t nnames;
 
     struct MenaiCodeObject_s **children; /* child code objects, one per closure */

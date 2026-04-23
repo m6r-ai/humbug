@@ -12,6 +12,7 @@
 
 #include "menai_vm_code.h"
 #include "menai_vm_object.h"
+#include "menai_vm_hashtable.h"
 
 /*
  * Forward declaration — menai_convert_value lives in menai_vm_value.c and is
@@ -37,6 +38,7 @@ menai_code_object_release(MenaiCodeObject *co)
     }
 
     free(co->names);
+    free(co->name_hashes);
 
     for (Py_ssize_t i = 0; i < co->nparam_names; i++) {
         free(co->param_names[i]);
@@ -264,6 +266,19 @@ menai_code_object_from_python(PyObject *py_code)
         }
 
         Py_DECREF(py_names);
+    }
+
+    /* name_hashes — precompute FNV-1a hash of each global name string */
+    if (co->nnames > 0) {
+        co->name_hashes = (Py_hash_t *)malloc((size_t)co->nnames * sizeof(Py_hash_t));
+        if (!co->name_hashes) {
+            PyErr_NoMemory();
+            goto fail;
+        }
+
+        for (Py_ssize_t i = 0; i < co->nnames; i++) {
+            co->name_hashes[i] = menai_name_str_hash(co->names[i]);
+        }
     }
 
     /*

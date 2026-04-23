@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "menai_vm_types.h"
 #include "menai_vm_object.h"
 
 /* ---------------------------------------------------------------------------
@@ -49,6 +50,27 @@ menai_hash_double(double v)
     bits ^= bits >> 31;
     Py_hash_t h = (Py_hash_t)(bits & (uint64_t)PTRDIFF_MAX);
     return h == -1 ? -2 : h;
+}
+
+/*
+ * menai_name_str_hash — FNV-1a hash of a UTF-8 C string.
+ *
+ * Used to precompute hashes for global name strings stored in
+ * MenaiCodeObject::name_hashes, and to hash entries when building
+ * GlobalsTable slots.  Returns a value in [0, PY_SSIZE_T_MAX]; never -1.
+ */
+static inline Py_hash_t
+menai_name_str_hash(const char *s)
+{
+    Py_uhash_t h = 14695981039346656037ULL;  /* FNV offset basis */
+    const unsigned char *p = (const unsigned char *)s;
+    while (*p) {
+        h ^= (Py_uhash_t)*p++;
+        h *= 1099511628211ULL;              /* FNV prime */
+    }
+
+    Py_hash_t r = (Py_hash_t)(h & (Py_uhash_t)PTRDIFF_MAX);
+    return r == -1 ? -2 : r;
 }
 
 /*
