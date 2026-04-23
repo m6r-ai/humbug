@@ -4,7 +4,7 @@
  * Representation: sign-magnitude, base 2^32, little-endian digits.
  * Zero: sign=0, length=0, digits=NULL.
  *
- * Only menai_int_from_pylong and menai_int_to_pylong may call the Python C API.
+ * Only menai_bigint_from_pylong and menai_bigint_to_pylong may call the Python C API.
  */
 
 #define PY_SSIZE_T_CLEAN
@@ -20,14 +20,14 @@
 #include "menai_vm_bigint.h"
 
 /* Internal forward declarations. */
-static int _menai_int_cmp_mag(const MenaiInt *a, const MenaiInt *b);
-static int _menai_int_add_mag(const MenaiInt *a, const MenaiInt *b, MenaiInt *result);
-static int _menai_int_sub_mag(const MenaiInt *a, const MenaiInt *b, MenaiInt *result);
-static void _menai_int_normalize(MenaiInt *a);
-static int _menai_int_divmod_1(
-    const MenaiInt *a, uint32_t b, MenaiInt *quotient, uint32_t *remainder);
-static int _menai_int_divmod_mag(
-    const MenaiInt *a, const MenaiInt *b, MenaiInt *quotient, MenaiInt *remainder);
+static int _menai_bigint_cmp_mag(const MenaiBigInt *a, const MenaiBigInt *b);
+static int _menai_bigint_add_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
+static int _menai_bigint_sub_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
+static void _menai_bigint_normalize(MenaiBigInt *a);
+static int _menai_bigint_divmod_1(
+    const MenaiBigInt *a, uint32_t b, MenaiBigInt *quotient, uint32_t *remainder);
+static int _menai_bigint_divmod_mag(
+    const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *quotient, MenaiBigInt *remainder);
 
 /*
  * Multiply two 32-bit values and return the 64-bit product split into
@@ -41,7 +41,7 @@ _mul32(uint32_t a, uint32_t b)
 
 /* Strip leading zero digits and fix sign when length reaches 0. */
 static void
-_menai_int_normalize(MenaiInt *a)
+_menai_bigint_normalize(MenaiBigInt *a)
 {
     while (a->length > 0 && a->digits[a->length - 1] == 0) {
         a->length--;
@@ -62,7 +62,7 @@ _menai_int_normalize(MenaiInt *a)
  * Returns -1 if |a| < |b|, 0 if |a| == |b|, 1 if |a| > |b|.
  */
 static int
-_menai_int_cmp_mag(const MenaiInt *a, const MenaiInt *b)
+_menai_bigint_cmp_mag(const MenaiBigInt *a, const MenaiBigInt *b)
 {
     if (a->length != b->length) {
         return (a->length < b->length) ? -1 : 1;
@@ -81,7 +81,7 @@ _menai_int_cmp_mag(const MenaiInt *a, const MenaiInt *b)
  * result = |a| + |b|.  result may alias a or b.
  */
 static int
-_menai_int_add_mag(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
+_menai_bigint_add_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
     Py_ssize_t max_len = (a->length > b->length) ? a->length : b->length;
     Py_ssize_t out_len = max_len + 1;
@@ -100,11 +100,11 @@ _menai_int_add_mag(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
         carry = sum >> 32;
     }
 
-    menai_int_free(result);
+    menai_bigint_free(result);
     result->digits = digits;
     result->length = out_len;
     result->sign = 1;
-    _menai_int_normalize(result);
+    _menai_bigint_normalize(result);
     return 0;
 }
 
@@ -112,7 +112,7 @@ _menai_int_add_mag(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
  * result = |a| - |b|, assuming |a| >= |b|.  result may alias a or b.
  */
 static int
-_menai_int_sub_mag(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
+_menai_bigint_sub_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
     /* |a| >= |b| is a precondition. */
     Py_ssize_t out_len = a->length;
@@ -137,11 +137,11 @@ _menai_int_sub_mag(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
         digits[i] = (uint32_t)diff;
     }
 
-    menai_int_free(result);
+    menai_bigint_free(result);
     result->digits = digits;
     result->length = out_len;
     result->sign = 1;
-    _menai_int_normalize(result);
+    _menai_bigint_normalize(result);
     return 0;
 }
 
@@ -150,11 +150,11 @@ _menai_int_sub_mag(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
  * and remainder digit in *remainder.  b must be non-zero.
  */
 static int
-_menai_int_divmod_1(
-    const MenaiInt *a, uint32_t b, MenaiInt *quotient, uint32_t *remainder)
+_menai_bigint_divmod_1(
+    const MenaiBigInt *a, uint32_t b, MenaiBigInt *quotient, uint32_t *remainder)
 {
     if (a->length == 0) {
-        menai_int_free(quotient);
+        menai_bigint_free(quotient);
         *remainder = 0;
         return 0;
     }
@@ -172,11 +172,11 @@ _menai_int_divmod_1(
         rem = cur % b;
     }
 
-    menai_int_free(quotient);
+    menai_bigint_free(quotient);
     quotient->digits = qdigits;
     quotient->length = a->length;
     quotient->sign = 1;
-    _menai_int_normalize(quotient);
+    _menai_bigint_normalize(quotient);
     *remainder = (uint32_t)rem;
     return 0;
 }
@@ -187,16 +187,16 @@ _menai_int_divmod_1(
  * Neither quotient nor remainder may alias a or b.
  */
 static int
-_menai_int_divmod_mag(
-    const MenaiInt *a, const MenaiInt *b, MenaiInt *quotient, MenaiInt *remainder)
+_menai_bigint_divmod_mag(
+    const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *quotient, MenaiBigInt *remainder)
 {
     Py_ssize_t m = a->length;
     Py_ssize_t n = b->length;
 
     /* If |a| < |b|, quotient = 0, remainder = |a|. */
     if (m < n) {
-        menai_int_init(quotient);
-        if (menai_int_copy(a, remainder) < 0) {
+        menai_bigint_init(quotient);
+        if (menai_bigint_copy(a, remainder) < 0) {
             return -1;
         }
 
@@ -339,7 +339,7 @@ _menai_int_divmod_mag(
     quotient->digits = qdigits;
     quotient->length = q_len;
     quotient->sign = 1;
-    _menai_int_normalize(quotient);
+    _menai_bigint_normalize(quotient);
 
     /* Unnormalize remainder: shift un right by d bits. */
     uint32_t *rdigits = (uint32_t *)malloc((size_t)n * sizeof(uint32_t));
@@ -366,7 +366,7 @@ _menai_int_divmod_mag(
     remainder->digits = rdigits;
     remainder->length = n;
     remainder->sign = 1;
-    _menai_int_normalize(remainder);
+    _menai_bigint_normalize(remainder);
 
     free(un);
     free(vn);
@@ -375,7 +375,7 @@ _menai_int_divmod_mag(
 
 /* Free the digit array and reset to zero. */
 void
-menai_int_free(MenaiInt *a)
+menai_bigint_free(MenaiBigInt *a)
 {
     if (a->digits != NULL) {
         free(a->digits);
@@ -388,10 +388,10 @@ menai_int_free(MenaiInt *a)
 
 /* Copy src into dst. */
 int
-menai_int_copy(const MenaiInt *src, MenaiInt *dst)
+menai_bigint_copy(const MenaiBigInt *src, MenaiBigInt *dst)
 {
     if (src->length == 0) {
-        menai_int_free(dst);
+        menai_bigint_free(dst);
         return 0;
     }
 
@@ -402,7 +402,7 @@ menai_int_copy(const MenaiInt *src, MenaiInt *dst)
     }
 
     memcpy(digits, src->digits, (size_t)src->length * sizeof(uint32_t));
-    menai_int_free(dst);
+    menai_bigint_free(dst);
     dst->digits = digits;
     dst->length = src->length;
     dst->sign = src->sign;
@@ -411,9 +411,9 @@ menai_int_copy(const MenaiInt *src, MenaiInt *dst)
 
 /* Set a to the value of v. */
 int
-menai_int_from_long(long v, MenaiInt *a)
+menai_bigint_from_long(long v, MenaiBigInt *a)
 {
-    menai_int_free(a);
+    menai_bigint_free(a);
     if (v == 0) {
         return 0;
     }
@@ -451,13 +451,13 @@ menai_int_from_long(long v, MenaiInt *a)
     a->digits = digits;
     a->length = len;
     a->sign = sign;
-    _menai_int_normalize(a);
+    _menai_bigint_normalize(a);
     return 0;
 }
 
 /* Set a to the value of the CPython integer object obj. */
 int
-menai_int_from_pylong(PyObject *obj, MenaiInt *a)
+menai_bigint_from_pylong(PyObject *obj, MenaiBigInt *a)
 {
     if (!PyLong_Check(obj)) {
         PyErr_SetString(PyExc_TypeError, "expected int");
@@ -472,7 +472,7 @@ menai_int_from_pylong(PyObject *obj, MenaiInt *a)
             return -1;
         }
 
-        return menai_int_from_long(v, a);
+        return menai_bigint_from_long(v, a);
     }
 
     /* Large value: use _PyLong_AsByteArray. */
@@ -549,17 +549,17 @@ menai_int_from_pylong(PyObject *obj, MenaiInt *a)
     }
 
     free(buf);
-    menai_int_free(a);
+    menai_bigint_free(a);
     a->digits = digits;
     a->length = ndigits;
     a->sign = is_neg ? -1 : 1;
-    _menai_int_normalize(a);
+    _menai_bigint_normalize(a);
     return 0;
 }
 
 /* Parse a NUL-terminated string in the given base and store the result in a. */
 int
-menai_int_from_string(const char *s, int base, MenaiInt *a)
+menai_bigint_from_string(const char *s, int base, MenaiBigInt *a)
 {
     if (s == NULL || (base != 2 && base != 8 && base != 10 && base != 16)) {
         PyErr_SetString(PyExc_ValueError, "invalid base");
@@ -609,20 +609,20 @@ menai_int_from_string(const char *s, int base, MenaiInt *a)
     }
 
     /* Build the value by Horner's method: acc = acc * base + digit. */
-    MenaiInt acc;
-    menai_int_init(&acc);
+    MenaiBigInt acc;
+    menai_bigint_init(&acc);
 
-    MenaiInt base_int;
-    menai_int_init(&base_int);
-    if (menai_int_from_long((long)base, &base_int) < 0) {
+    MenaiBigInt base_int;
+    menai_bigint_init(&base_int);
+    if (menai_bigint_from_long((long)base, &base_int) < 0) {
         return -1;
     }
 
-    MenaiInt digit_int;
-    menai_int_init(&digit_int);
+    MenaiBigInt digit_int;
+    menai_bigint_init(&digit_int);
 
-    MenaiInt tmp;
-    menai_int_init(&tmp);
+    MenaiBigInt tmp;
+    menai_bigint_init(&tmp);
 
     for (; *s != '\0'; s++) {
         int digit;
@@ -636,33 +636,33 @@ menai_int_from_string(const char *s, int base, MenaiInt *a)
         }
 
         /* acc = acc * base */
-        if (menai_int_mul(&acc, &base_int, &tmp) < 0) {
+        if (menai_bigint_mul(&acc, &base_int, &tmp) < 0) {
             goto fail;
         }
 
-        if (menai_int_copy(&tmp, &acc) < 0) {
+        if (menai_bigint_copy(&tmp, &acc) < 0) {
             goto fail;
         }
 
         /* acc = acc + digit */
-        if (menai_int_from_long((long)digit, &digit_int) < 0) {
+        if (menai_bigint_from_long((long)digit, &digit_int) < 0) {
             goto fail;
         }
 
-        if (menai_int_add(&acc, &digit_int, &tmp) < 0) {
+        if (menai_bigint_add(&acc, &digit_int, &tmp) < 0) {
             goto fail;
         }
 
-        if (menai_int_copy(&tmp, &acc) < 0) {
+        if (menai_bigint_copy(&tmp, &acc) < 0) {
             goto fail;
         }
     }
 
-    menai_int_free(&base_int);
-    menai_int_free(&digit_int);
-    menai_int_free(&tmp);
+    menai_bigint_free(&base_int);
+    menai_bigint_free(&digit_int);
+    menai_bigint_free(&tmp);
 
-    menai_int_free(a);
+    menai_bigint_free(a);
     *a = acc;
     if (a->sign != 0) {
         a->sign = sign;
@@ -671,21 +671,21 @@ menai_int_from_string(const char *s, int base, MenaiInt *a)
     return 0;
 
 fail:
-    menai_int_free(&acc);
-    menai_int_free(&base_int);
-    menai_int_free(&digit_int);
-    menai_int_free(&tmp);
+    menai_bigint_free(&acc);
+    menai_bigint_free(&base_int);
+    menai_bigint_free(&digit_int);
+    menai_bigint_free(&tmp);
     return -1;
 }
 
 /*
  * Parse a UTF-32 codepoint array as an integer in the given base.
  * Since all valid digit characters are ASCII, each codepoint is validated
- * against 0x7F before being cast to char and forwarded to menai_int_from_string
+ * against 0x7F before being cast to char and forwarded to menai_bigint_from_string
  * via a temporary UTF-8 buffer.
  */
 int
-menai_int_from_codepoints(const uint32_t *data, Py_ssize_t len, int base, MenaiInt *a)
+menai_bigint_from_codepoints(const uint32_t *data, Py_ssize_t len, int base, MenaiBigInt *a)
 {
     if (base != 2 && base != 8 && base != 10 && base != 16) {
         PyErr_SetString(PyExc_ValueError, "invalid base");
@@ -711,7 +711,7 @@ menai_int_from_codepoints(const uint32_t *data, Py_ssize_t len, int base, MenaiI
 
     buf[len] = '\0';
 
-    int result = menai_int_from_string(buf, base, a);
+    int result = menai_bigint_from_string(buf, base, a);
     free(buf);
     return result;
 }
@@ -719,12 +719,12 @@ menai_int_from_codepoints(const uint32_t *data, Py_ssize_t len, int base, MenaiI
 /*
  * Convert trunc(v) to a MenaiInt.  v must be finite.
  *
- * Fast path: if trunc(v) fits in a long, delegate to menai_int_from_long.
+ * Fast path: if trunc(v) fits in a long, delegate to menai_bigint_from_long.
  * Slow path: decompose the magnitude via frexp into 32-bit limbs, then
  * set the sign.  This avoids any Python C API call.
  */
 int
-menai_int_from_double(double v, MenaiInt *a)
+menai_bigint_from_double(double v, MenaiBigInt *a)
 {
     /* Work with the magnitude; v is already trunc()'d by the caller. */
     double t = v < 0.0 ? -v : v;
@@ -736,7 +736,7 @@ menai_int_from_double(double v, MenaiInt *a)
     /* Fast path: magnitude fits in a non-negative long. */
     if (t <= (double)LONG_MAX) {
         long lv = (long)v;
-        return menai_int_from_long(lv, a);
+        return menai_bigint_from_long(lv, a);
     }
 
     /* Slow path: decompose into 32-bit base-2^32 limbs using ldexp/frexp. */
@@ -757,17 +757,17 @@ menai_int_from_double(double v, MenaiInt *a)
         frac -= (double)limb;
     }
 
-    menai_int_free(a);
+    menai_bigint_free(a);
     a->digits = digits;
     a->length = nlimbs;
     a->sign = (v < 0.0) ? -1 : 1;
-    _menai_int_normalize(a);
+    _menai_bigint_normalize(a);
     return 0;
 }
 
 /* Return 1 if the value of a fits in a C long, 0 otherwise. */
 int
-menai_int_fits_long(const MenaiInt *a)
+menai_bigint_fits_long(const MenaiBigInt *a)
 {
     if (a->length == 0) {
         return 1;
@@ -816,9 +816,9 @@ menai_int_fits_long(const MenaiInt *a)
 
 /* Store the value of a in *out as a C long. */
 int
-menai_int_to_long(const MenaiInt *a, long *out)
+menai_bigint_to_long(const MenaiBigInt *a, long *out)
 {
-    if (!menai_int_fits_long(a)) {
+    if (!menai_bigint_fits_long(a)) {
         PyErr_SetString(PyExc_OverflowError, "integer too large to convert to C long");
         return -1;
     }
@@ -848,7 +848,7 @@ menai_int_to_long(const MenaiInt *a, long *out)
 
 /* Store the value of a as a double in *out. */
 int
-menai_int_to_double(const MenaiInt *a, double *out)
+menai_bigint_to_double(const MenaiBigInt *a, double *out)
 {
     if (a->length == 0) {
         *out = 0.0;
@@ -875,7 +875,7 @@ menai_int_to_double(const MenaiInt *a, double *out)
 
 /* Return a new CPython integer object representing the value of a. */
 PyObject *
-menai_int_to_pylong(const MenaiInt *a)
+menai_bigint_to_pylong(const MenaiBigInt *a)
 {
     if (a->length == 0) {
         return PyLong_FromLong(0);
@@ -914,7 +914,7 @@ menai_int_to_pylong(const MenaiInt *a)
 
 /* Write the string representation of a in the given base into *out. */
 int
-menai_int_to_string(const MenaiInt *a, int base, char **out)
+menai_bigint_to_string(const MenaiBigInt *a, int base, char **out)
 {
     *out = NULL;
     if (base != 2 && base != 8 && base != 10 && base != 16) {
@@ -936,9 +936,9 @@ menai_int_to_string(const MenaiInt *a, int base, char **out)
     }
 
     /* Work on a copy so we can do repeated division. */
-    MenaiInt tmp;
-    menai_int_init(&tmp);
-    if (menai_int_copy(a, &tmp) < 0) {
+    MenaiBigInt tmp;
+    menai_bigint_init(&tmp);
+    if (menai_bigint_copy(a, &tmp) < 0) {
         return -1;
     }
 
@@ -960,7 +960,7 @@ menai_int_to_string(const MenaiInt *a, int base, char **out)
 
     char *buf = (char *)malloc((size_t)max_chars);
     if (buf == NULL) {
-        menai_int_free(&tmp);
+        menai_bigint_free(&tmp);
         PyErr_NoMemory();
         return -1;
     }
@@ -968,26 +968,26 @@ menai_int_to_string(const MenaiInt *a, int base, char **out)
     static const char hex_digits[] = "0123456789abcdef";
     Py_ssize_t pos = 0;
 
-    MenaiInt quotient;
-    menai_int_init(&quotient);
+    MenaiBigInt quotient;
+    menai_bigint_init(&quotient);
 
     while (tmp.length > 0) {
         uint32_t rem;
-        if (_menai_int_divmod_1(&tmp, (uint32_t)base, &quotient, &rem) < 0) {
-            menai_int_free(&tmp);
-            menai_int_free(&quotient);
+        if (_menai_bigint_divmod_1(&tmp, (uint32_t)base, &quotient, &rem) < 0) {
+            menai_bigint_free(&tmp);
+            menai_bigint_free(&quotient);
             free(buf);
             return -1;
         }
 
-        menai_int_free(&tmp);
+        menai_bigint_free(&tmp);
         tmp = quotient;
-        menai_int_init(&quotient);
+        menai_bigint_init(&quotient);
         buf[pos++] = hex_digits[rem];
     }
 
-    menai_int_free(&tmp);
-    menai_int_free(&quotient);
+    menai_bigint_free(&tmp);
+    menai_bigint_free(&quotient);
 
     if (pos == 0) {
         buf[pos++] = '0';
@@ -1016,7 +1016,7 @@ menai_int_to_string(const MenaiInt *a, int base, char **out)
  * as an error sentinel by convention); -1 is remapped to -2.
  */
 Py_hash_t
-menai_int_hash(const MenaiInt *a)
+menai_bigint_hash(const MenaiBigInt *a)
 {
     if (a->sign == 0) {
         return 0;
@@ -1042,29 +1042,29 @@ menai_int_hash(const MenaiInt *a)
 
 /* result = a + b */
 int
-menai_int_add(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
+menai_bigint_add(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
     /* Handle zero operands. */
     if (a->sign == 0) {
-        MenaiInt tmp;
-        menai_int_init(&tmp);
-        if (menai_int_copy(b, &tmp) < 0) {
+        MenaiBigInt tmp;
+        menai_bigint_init(&tmp);
+        if (menai_bigint_copy(b, &tmp) < 0) {
             return -1;
         }
 
-        menai_int_free(result);
+        menai_bigint_free(result);
         *result = tmp;
         return 0;
     }
 
     if (b->sign == 0) {
-        MenaiInt tmp;
-        menai_int_init(&tmp);
-        if (menai_int_copy(a, &tmp) < 0) {
+        MenaiBigInt tmp;
+        menai_bigint_init(&tmp);
+        if (menai_bigint_copy(a, &tmp) < 0) {
             return -1;
         }
 
-        menai_int_free(result);
+        menai_bigint_free(result);
         *result = tmp;
         return 0;
     }
@@ -1072,9 +1072,9 @@ menai_int_add(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
     if (a->sign == b->sign) {
         /* Same sign: add magnitudes, keep sign. */
         int s = a->sign;
-        MenaiInt tmp;
-        menai_int_init(&tmp);
-        if (_menai_int_add_mag(a, b, &tmp) < 0) {
+        MenaiBigInt tmp;
+        menai_bigint_init(&tmp);
+        if (_menai_bigint_add_mag(a, b, &tmp) < 0) {
             return -1;
         }
 
@@ -1082,31 +1082,31 @@ menai_int_add(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
             tmp.sign = s;
         }
 
-        menai_int_free(result);
+        menai_bigint_free(result);
         *result = tmp;
         return 0;
     }
 
     /* Different signs: subtract smaller magnitude from larger. */
-    int cmp = _menai_int_cmp_mag(a, b);
+    int cmp = _menai_bigint_cmp_mag(a, b);
     if (cmp == 0) {
-        menai_int_free(result);
+        menai_bigint_free(result);
         return 0;
     }
 
-    MenaiInt tmp;
-    menai_int_init(&tmp);
+    MenaiBigInt tmp;
+    menai_bigint_init(&tmp);
     int res_sign;
     if (cmp > 0) {
         /* |a| > |b|: result has sign of a */
-        if (_menai_int_sub_mag(a, b, &tmp) < 0) {
+        if (_menai_bigint_sub_mag(a, b, &tmp) < 0) {
             return -1;
         }
 
         res_sign = a->sign;
     } else {
         /* |b| > |a|: result has sign of b */
-        if (_menai_int_sub_mag(b, a, &tmp) < 0) {
+        if (_menai_bigint_sub_mag(b, a, &tmp) < 0) {
             return -1;
         }
 
@@ -1117,19 +1117,19 @@ menai_int_add(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
         tmp.sign = res_sign;
     }
 
-    menai_int_free(result);
+    menai_bigint_free(result);
     *result = tmp;
     return 0;
 }
 
 /* result = a - b */
 int
-menai_int_sub(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
+menai_bigint_sub(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
     /* Negate b and add. */
-    MenaiInt neg_b;
-    menai_int_init(&neg_b);
-    if (menai_int_copy(b, &neg_b) < 0) {
+    MenaiBigInt neg_b;
+    menai_bigint_init(&neg_b);
+    if (menai_bigint_copy(b, &neg_b) < 0) {
         return -1;
     }
 
@@ -1137,17 +1137,17 @@ menai_int_sub(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
         neg_b.sign = -neg_b.sign;
     }
 
-    int r = menai_int_add(a, &neg_b, result);
-    menai_int_free(&neg_b);
+    int r = menai_bigint_add(a, &neg_b, result);
+    menai_bigint_free(&neg_b);
     return r;
 }
 
 /* result = a * b */
 int
-menai_int_mul(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
+menai_bigint_mul(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
     if (a->sign == 0 || b->sign == 0) {
-        menai_int_free(result);
+        menai_bigint_free(result);
         return 0;
     }
 
@@ -1178,21 +1178,21 @@ menai_int_mul(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
     }
 
     int res_sign = (a->sign == b->sign) ? 1 : -1;
-    menai_int_free(result);
+    menai_bigint_free(result);
     result->digits = digits;
     result->length = out_len;
     result->sign = res_sign;
-    _menai_int_normalize(result);
+    _menai_bigint_normalize(result);
     return 0;
 }
 
 /* Compute floor-division and modulo simultaneously. */
 int
-menai_int_divmod(
-    const MenaiInt *a,
-    const MenaiInt *b,
-    MenaiInt *quotient,
-    MenaiInt *remainder)
+menai_bigint_divmod(
+    const MenaiBigInt *a,
+    const MenaiBigInt *b,
+    MenaiBigInt *quotient,
+    MenaiBigInt *remainder)
 {
     if (b->sign == 0) {
         PyErr_SetString(PyExc_ZeroDivisionError, "integer division or modulo by zero");
@@ -1200,33 +1200,33 @@ menai_int_divmod(
     }
 
     if (a->sign == 0) {
-        menai_int_free(quotient);
-        menai_int_free(remainder);
+        menai_bigint_free(quotient);
+        menai_bigint_free(remainder);
         return 0;
     }
 
     /* Compute truncated division on magnitudes. */
-    MenaiInt q, r;
-    menai_int_init(&q);
-    menai_int_init(&r);
+    MenaiBigInt q, r;
+    menai_bigint_init(&q);
+    menai_bigint_init(&r);
 
     int ret;
     if (b->length == 1) {
         uint32_t rem_digit;
-        ret = _menai_int_divmod_1(a, b->digits[0], &q, &rem_digit);
+        ret = _menai_bigint_divmod_1(a, b->digits[0], &q, &rem_digit);
         if (ret < 0) {
             return -1;
         }
 
         if (rem_digit != 0) {
-            ret = menai_int_from_long((long)rem_digit, &r);
+            ret = menai_bigint_from_long((long)rem_digit, &r);
             if (ret < 0) {
-                menai_int_free(&q);
+                menai_bigint_free(&q);
                 return -1;
             }
         }
     } else {
-        ret = _menai_int_divmod_mag(a, b, &q, &r);
+        ret = _menai_bigint_divmod_mag(a, b, &q, &r);
         if (ret < 0) {
             return -1;
         }
@@ -1250,37 +1250,37 @@ menai_int_divmod(
      */
     if (r.sign != 0 && a->sign != b->sign) {
         /* quotient -= 1 */
-        MenaiInt one;
-        menai_int_init(&one);
-        if (menai_int_from_long(1L, &one) < 0) {
-            menai_int_free(&q);
-            menai_int_free(&r);
+        MenaiBigInt one;
+        menai_bigint_init(&one);
+        if (menai_bigint_from_long(1L, &one) < 0) {
+            menai_bigint_free(&q);
+            menai_bigint_free(&r);
             return -1;
         }
 
-        MenaiInt q_adj;
-        menai_int_init(&q_adj);
-        if (menai_int_sub(&q, &one, &q_adj) < 0) {
-            menai_int_free(&q);
-            menai_int_free(&r);
-            menai_int_free(&one);
+        MenaiBigInt q_adj;
+        menai_bigint_init(&q_adj);
+        if (menai_bigint_sub(&q, &one, &q_adj) < 0) {
+            menai_bigint_free(&q);
+            menai_bigint_free(&r);
+            menai_bigint_free(&one);
             return -1;
         }
 
-        menai_int_free(&q);
+        menai_bigint_free(&q);
         q = q_adj;
-        menai_int_free(&one);
+        menai_bigint_free(&one);
 
         /* remainder += b */
-        MenaiInt r_adj;
-        menai_int_init(&r_adj);
-        if (menai_int_add(&r, b, &r_adj) < 0) {
-            menai_int_free(&q);
-            menai_int_free(&r);
+        MenaiBigInt r_adj;
+        menai_bigint_init(&r_adj);
+        if (menai_bigint_add(&r, b, &r_adj) < 0) {
+            menai_bigint_free(&q);
+            menai_bigint_free(&r);
             return -1;
         }
 
-        menai_int_free(&r);
+        menai_bigint_free(&r);
         r = r_adj;
     }
 
@@ -1291,55 +1291,55 @@ menai_int_divmod(
 
 /* result = floor(a / b) */
 int
-menai_int_floordiv(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
+menai_bigint_floordiv(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
     if (b->sign == 0) {
         PyErr_SetString(PyExc_ZeroDivisionError, "integer division or modulo by zero");
         return -1;
     }
 
-    MenaiInt q, r;
-    menai_int_init(&q);
-    menai_int_init(&r);
-    if (menai_int_divmod(a, b, &q, &r) < 0) {
+    MenaiBigInt q, r;
+    menai_bigint_init(&q);
+    menai_bigint_init(&r);
+    if (menai_bigint_divmod(a, b, &q, &r) < 0) {
         return -1;
     }
 
-    menai_int_free(&r);
-    menai_int_free(result);
+    menai_bigint_free(&r);
+    menai_bigint_free(result);
     *result = q;
     return 0;
 }
 
 /* result = a mod b */
 int
-menai_int_mod(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
+menai_bigint_mod(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
     if (b->sign == 0) {
         PyErr_SetString(PyExc_ZeroDivisionError, "integer division or modulo by zero");
         return -1;
     }
 
-    MenaiInt q, r;
-    menai_int_init(&q);
-    menai_int_init(&r);
-    if (menai_int_divmod(a, b, &q, &r) < 0) {
+    MenaiBigInt q, r;
+    menai_bigint_init(&q);
+    menai_bigint_init(&r);
+    if (menai_bigint_divmod(a, b, &q, &r) < 0) {
         return -1;
     }
 
-    menai_int_free(&q);
-    menai_int_free(result);
+    menai_bigint_free(&q);
+    menai_bigint_free(result);
     *result = r;
     return 0;
 }
 
 /* result = -a */
 int
-menai_int_neg(const MenaiInt *a, MenaiInt *result)
+menai_bigint_neg(const MenaiBigInt *a, MenaiBigInt *result)
 {
-    MenaiInt tmp;
-    menai_int_init(&tmp);
-    if (menai_int_copy(a, &tmp) < 0) {
+    MenaiBigInt tmp;
+    menai_bigint_init(&tmp);
+    if (menai_bigint_copy(a, &tmp) < 0) {
         return -1;
     }
 
@@ -1347,18 +1347,18 @@ menai_int_neg(const MenaiInt *a, MenaiInt *result)
         tmp.sign = -tmp.sign;
     }
 
-    menai_int_free(result);
+    menai_bigint_free(result);
     *result = tmp;
     return 0;
 }
 
 /* result = |a| */
 int
-menai_int_abs(const MenaiInt *a, MenaiInt *result)
+menai_bigint_abs(const MenaiBigInt *a, MenaiBigInt *result)
 {
-    MenaiInt tmp;
-    menai_int_init(&tmp);
-    if (menai_int_copy(a, &tmp) < 0) {
+    MenaiBigInt tmp;
+    menai_bigint_init(&tmp);
+    if (menai_bigint_copy(a, &tmp) < 0) {
         return -1;
     }
 
@@ -1366,14 +1366,14 @@ menai_int_abs(const MenaiInt *a, MenaiInt *result)
         tmp.sign = 1;
     }
 
-    menai_int_free(result);
+    menai_bigint_free(result);
     *result = tmp;
     return 0;
 }
 
 /* result = a ** exp */
 int
-menai_int_pow(const MenaiInt *a, const MenaiInt *exp, MenaiInt *result)
+menai_bigint_pow(const MenaiBigInt *a, const MenaiBigInt *exp, MenaiBigInt *result)
 {
     if (exp->sign == -1) {
         PyErr_SetString(PyExc_ValueError, "negative exponent in integer pow");
@@ -1381,88 +1381,88 @@ menai_int_pow(const MenaiInt *a, const MenaiInt *exp, MenaiInt *result)
     }
 
     /* result = 1 */
-    MenaiInt res;
-    menai_int_init(&res);
-    if (menai_int_from_long(1L, &res) < 0) {
+    MenaiBigInt res;
+    menai_bigint_init(&res);
+    if (menai_bigint_from_long(1L, &res) < 0) {
         return -1;
     }
 
     /* base = a (copy so we can square it) */
-    MenaiInt base;
-    menai_int_init(&base);
-    if (menai_int_copy(a, &base) < 0) {
-        menai_int_free(&res);
+    MenaiBigInt base;
+    menai_bigint_init(&base);
+    if (menai_bigint_copy(a, &base) < 0) {
+        menai_bigint_free(&res);
         return -1;
     }
 
     /* e = exp (copy so we can shift it) */
-    MenaiInt e;
-    menai_int_init(&e);
-    if (menai_int_copy(exp, &e) < 0) {
-        menai_int_free(&res);
-        menai_int_free(&base);
+    MenaiBigInt e;
+    menai_bigint_init(&e);
+    if (menai_bigint_copy(exp, &e) < 0) {
+        menai_bigint_free(&res);
+        menai_bigint_free(&base);
         return -1;
     }
 
-    MenaiInt tmp;
-    menai_int_init(&tmp);
-    MenaiInt half;
-    menai_int_init(&half);
+    MenaiBigInt tmp;
+    menai_bigint_init(&tmp);
+    MenaiBigInt half;
+    menai_bigint_init(&half);
 
     while (e.sign != 0) {
         /* Check if lowest bit of e is set. */
         if (e.digits[0] & 1U) {
-            if (menai_int_mul(&res, &base, &tmp) < 0) {
+            if (menai_bigint_mul(&res, &base, &tmp) < 0) {
                 goto fail;
             }
 
-            menai_int_free(&res);
+            menai_bigint_free(&res);
             res = tmp;
-            menai_int_init(&tmp);
+            menai_bigint_init(&tmp);
         }
 
         /* e >>= 1 */
-        if (menai_int_shift_right(&e, 1, &half) < 0) {
+        if (menai_bigint_shift_right(&e, 1, &half) < 0) {
             goto fail;
         }
 
-        menai_int_free(&e);
+        menai_bigint_free(&e);
         e = half;
-        menai_int_init(&half);
+        menai_bigint_init(&half);
 
         if (e.sign == 0) {
             break;
         }
 
         /* base = base * base */
-        if (menai_int_mul(&base, &base, &tmp) < 0) {
+        if (menai_bigint_mul(&base, &base, &tmp) < 0) {
             goto fail;
         }
 
-        menai_int_free(&base);
+        menai_bigint_free(&base);
         base = tmp;
-        menai_int_init(&tmp);
+        menai_bigint_init(&tmp);
     }
 
-    menai_int_free(&base);
-    menai_int_free(&e);
-    menai_int_free(&tmp);
-    menai_int_free(&half);
-    menai_int_free(result);
+    menai_bigint_free(&base);
+    menai_bigint_free(&e);
+    menai_bigint_free(&tmp);
+    menai_bigint_free(&half);
+    menai_bigint_free(result);
     *result = res;
     return 0;
 
 fail:
-    menai_int_free(&res);
-    menai_int_free(&base);
-    menai_int_free(&e);
-    menai_int_free(&tmp);
-    menai_int_free(&half);
+    menai_bigint_free(&res);
+    menai_bigint_free(&base);
+    menai_bigint_free(&e);
+    menai_bigint_free(&tmp);
+    menai_bigint_free(&half);
     return -1;
 }
 
 /*
- * Convert a MenaiInt to a two's complement digit array of length *len_out.
+ * Convert a MenaiBigInt to a two's complement digit array of length *len_out.
  * The caller must free the returned array with free().
  * For positive numbers: digits as-is, with a leading zero word to ensure
  * the sign bit is clear.
@@ -1470,7 +1470,7 @@ fail:
  * Returns NULL on allocation failure (PyErr_NoMemory set).
  */
 static uint32_t *
-_to_twos_complement(const MenaiInt *a, Py_ssize_t *len_out)
+_to_twos_complement(const MenaiBigInt *a, Py_ssize_t *len_out)
 {
     Py_ssize_t len = a->length + 1; /* extra word for sign bit */
     uint32_t *buf = (uint32_t *)malloc((size_t)len * sizeof(uint32_t));
@@ -1510,9 +1510,9 @@ _to_twos_complement(const MenaiInt *a, Py_ssize_t *len_out)
  * The sign bit is the MSB of buf[len-1].
  */
 static int
-_from_twos_complement(const uint32_t *buf, Py_ssize_t len, MenaiInt *result)
+_from_twos_complement(const uint32_t *buf, Py_ssize_t len, MenaiBigInt *result)
 {
-    menai_int_free(result);
+    menai_bigint_free(result);
     if (len == 0) {
         return 0;
     }
@@ -1534,7 +1534,7 @@ _from_twos_complement(const uint32_t *buf, Py_ssize_t len, MenaiInt *result)
         result->digits = digits;
         result->length = len;
         result->sign = 1;
-        _menai_int_normalize(result);
+        _menai_bigint_normalize(result);
     } else {
         /* Negative: negate to get magnitude. */
         uint32_t *digits = (uint32_t *)malloc((size_t)len * sizeof(uint32_t));
@@ -1553,7 +1553,7 @@ _from_twos_complement(const uint32_t *buf, Py_ssize_t len, MenaiInt *result)
         result->digits = digits;
         result->length = len;
         result->sign = -1;
-        _menai_int_normalize(result);
+        _menai_bigint_normalize(result);
     }
 
     return 0;
@@ -1561,7 +1561,7 @@ _from_twos_complement(const uint32_t *buf, Py_ssize_t len, MenaiInt *result)
 
 /* result = a & b */
 int
-menai_int_and(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
+menai_bigint_and(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
     Py_ssize_t la, lb;
     uint32_t *ta = _to_twos_complement(a, &la);
@@ -1604,7 +1604,7 @@ menai_int_and(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
 
 /* result = a | b */
 int
-menai_int_or(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
+menai_bigint_or(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
     Py_ssize_t la, lb;
     uint32_t *ta = _to_twos_complement(a, &la);
@@ -1646,7 +1646,7 @@ menai_int_or(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
 
 /* result = a ^ b */
 int
-menai_int_xor(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
+menai_bigint_xor(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result)
 {
     Py_ssize_t la, lb;
     uint32_t *ta = _to_twos_complement(a, &la);
@@ -1688,35 +1688,35 @@ menai_int_xor(const MenaiInt *a, const MenaiInt *b, MenaiInt *result)
 
 /* result = ~a, equivalent to -(a + 1) */
 int
-menai_int_not(const MenaiInt *a, MenaiInt *result)
+menai_bigint_not(const MenaiBigInt *a, MenaiBigInt *result)
 {
-    MenaiInt one;
-    menai_int_init(&one);
-    if (menai_int_from_long(1L, &one) < 0) {
+    MenaiBigInt one;
+    menai_bigint_init(&one);
+    if (menai_bigint_from_long(1L, &one) < 0) {
         return -1;
     }
 
-    MenaiInt sum;
-    menai_int_init(&sum);
-    if (menai_int_add(a, &one, &sum) < 0) {
-        menai_int_free(&one);
+    MenaiBigInt sum;
+    menai_bigint_init(&sum);
+    if (menai_bigint_add(a, &one, &sum) < 0) {
+        menai_bigint_free(&one);
         return -1;
     }
 
-    menai_int_free(&one);
+    menai_bigint_free(&one);
 
-    if (menai_int_neg(&sum, result) < 0) {
-        menai_int_free(&sum);
+    if (menai_bigint_neg(&sum, result) < 0) {
+        menai_bigint_free(&sum);
         return -1;
     }
 
-    menai_int_free(&sum);
+    menai_bigint_free(&sum);
     return 0;
 }
 
 /* result = a << shift */
 int
-menai_int_shift_left(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
+menai_bigint_shift_left(const MenaiBigInt *a, Py_ssize_t shift, MenaiBigInt *result)
 {
     if (shift < 0) {
         PyErr_SetString(PyExc_ValueError, "negative shift count");
@@ -1724,13 +1724,13 @@ menai_int_shift_left(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
     }
 
     if (a->sign == 0 || shift == 0) {
-        MenaiInt tmp;
-        menai_int_init(&tmp);
-        if (menai_int_copy(a, &tmp) < 0) {
+        MenaiBigInt tmp;
+        menai_bigint_init(&tmp);
+        if (menai_bigint_copy(a, &tmp) < 0) {
             return -1;
         }
 
-        menai_int_free(result);
+        menai_bigint_free(result);
         *result = tmp;
         return 0;
     }
@@ -1762,17 +1762,17 @@ menai_int_shift_left(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
         digits[a->length + word_shift] = carry;
     }
 
-    menai_int_free(result);
+    menai_bigint_free(result);
     result->digits = digits;
     result->length = out_len;
     result->sign = a->sign;
-    _menai_int_normalize(result);
+    _menai_bigint_normalize(result);
     return 0;
 }
 
 /* result = a >> shift (arithmetic, floor toward -inf) */
 int
-menai_int_shift_right(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
+menai_bigint_shift_right(const MenaiBigInt *a, Py_ssize_t shift, MenaiBigInt *result)
 {
     if (shift < 0) {
         PyErr_SetString(PyExc_ValueError, "negative shift count");
@@ -1780,18 +1780,18 @@ menai_int_shift_right(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
     }
 
     if (a->sign == 0) {
-        menai_int_free(result);
+        menai_bigint_free(result);
         return 0;
     }
 
     if (shift == 0) {
-        MenaiInt tmp;
-        menai_int_init(&tmp);
-        if (menai_int_copy(a, &tmp) < 0) {
+        MenaiBigInt tmp;
+        menai_bigint_init(&tmp);
+        if (menai_bigint_copy(a, &tmp) < 0) {
             return -1;
         }
 
-        menai_int_free(result);
+        menai_bigint_free(result);
         *result = tmp;
         return 0;
     }
@@ -1801,9 +1801,9 @@ menai_int_shift_right(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
 
     /* If shifting away all digits, result is 0 (positive) or -1 (negative). */
     if (word_shift >= a->length) {
-        menai_int_free(result);
+        menai_bigint_free(result);
         if (a->sign == -1) {
-            return menai_int_from_long(-1L, result);
+            return menai_bigint_from_long(-1L, result);
         }
 
         return 0;
@@ -1853,31 +1853,31 @@ menai_int_shift_right(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
         }
     }
 
-    menai_int_free(result);
+    menai_bigint_free(result);
     result->digits = digits;
     result->length = out_len;
     result->sign = a->sign;
-    _menai_int_normalize(result);
+    _menai_bigint_normalize(result);
 
     /* For negative numbers with bits shifted out, subtract 1 (floor). */
     if (a->sign == -1 && any_bits_out) {
-        MenaiInt one;
-        menai_int_init(&one);
-        if (menai_int_from_long(1L, &one) < 0) {
-            menai_int_free(result);
+        MenaiBigInt one;
+        menai_bigint_init(&one);
+        if (menai_bigint_from_long(1L, &one) < 0) {
+            menai_bigint_free(result);
             return -1;
         }
 
-        MenaiInt adj;
-        menai_int_init(&adj);
-        if (menai_int_sub(result, &one, &adj) < 0) {
-            menai_int_free(&one);
-            menai_int_free(result);
+        MenaiBigInt adj;
+        menai_bigint_init(&adj);
+        if (menai_bigint_sub(result, &one, &adj) < 0) {
+            menai_bigint_free(&one);
+            menai_bigint_free(result);
             return -1;
         }
 
-        menai_int_free(&one);
-        menai_int_free(result);
+        menai_bigint_free(&one);
+        menai_bigint_free(result);
         *result = adj;
     }
 
@@ -1886,7 +1886,7 @@ menai_int_shift_right(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result)
 
 /* Return 1 if a == b, 0 otherwise. */
 int
-menai_int_eq(const MenaiInt *a, const MenaiInt *b)
+menai_bigint_eq(const MenaiBigInt *a, const MenaiBigInt *b)
 {
     if (a->sign != b->sign) {
         return 0;
@@ -1907,14 +1907,14 @@ menai_int_eq(const MenaiInt *a, const MenaiInt *b)
 
 /* Return 1 if a != b, 0 otherwise. */
 int
-menai_int_ne(const MenaiInt *a, const MenaiInt *b)
+menai_bigint_ne(const MenaiBigInt *a, const MenaiBigInt *b)
 {
-    return !menai_int_eq(a, b);
+    return !menai_bigint_eq(a, b);
 }
 
 /* Return 1 if a < b, 0 otherwise. */
 int
-menai_int_lt(const MenaiInt *a, const MenaiInt *b)
+menai_bigint_lt(const MenaiBigInt *a, const MenaiBigInt *b)
 {
     if (a->sign != b->sign) {
         return a->sign < b->sign;
@@ -1924,7 +1924,7 @@ menai_int_lt(const MenaiInt *a, const MenaiInt *b)
         return 0;
     }
 
-    int cmp = _menai_int_cmp_mag(a, b);
+    int cmp = _menai_bigint_cmp_mag(a, b);
     if (a->sign == 1) {
         return cmp < 0;
     }
@@ -1935,21 +1935,21 @@ menai_int_lt(const MenaiInt *a, const MenaiInt *b)
 
 /* Return 1 if a > b, 0 otherwise. */
 int
-menai_int_gt(const MenaiInt *a, const MenaiInt *b)
+menai_bigint_gt(const MenaiBigInt *a, const MenaiBigInt *b)
 {
-    return menai_int_lt(b, a);
+    return menai_bigint_lt(b, a);
 }
 
 /* Return 1 if a <= b, 0 otherwise. */
 int
-menai_int_le(const MenaiInt *a, const MenaiInt *b)
+menai_bigint_le(const MenaiBigInt *a, const MenaiBigInt *b)
 {
-    return !menai_int_gt(a, b);
+    return !menai_bigint_gt(a, b);
 }
 
 /* Return 1 if a >= b, 0 otherwise. */
 int
-menai_int_ge(const MenaiInt *a, const MenaiInt *b)
+menai_bigint_ge(const MenaiBigInt *a, const MenaiBigInt *b)
 {
-    return !menai_int_lt(a, b);
+    return !menai_bigint_lt(a, b);
 }

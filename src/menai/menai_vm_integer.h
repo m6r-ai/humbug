@@ -16,8 +16,8 @@
  *                the object is a pre-allocated singleton and must never
  *                be freed.
  *
- *   is_big == 1: value is stored as a MenaiInt bignum in the big field.
- *                The MenaiInt owns its digit array.
+ *   is_big == 1: value is stored as a MenaiBigInt bignum in the big field.
+ *                The MenaiBigInt owns its digit array.
  *
  * The ob_type is always &MenaiInteger_Type.
  */
@@ -25,7 +25,7 @@ typedef struct {
     MenaiValue_HEAD
     int is_big;
     long small;     /* valid when is_big == 0 */
-    MenaiInt big;   /* valid when is_big == 1 */
+    MenaiBigInt big;   /* valid when is_big == 1 */
 } MenaiInteger;
 
 extern MenaiType MenaiInteger_Type;
@@ -40,13 +40,13 @@ extern MenaiType MenaiInteger_Type;
 #define MENAI_INT_CACHE_SIZE (MENAI_INT_CACHE_MAX - MENAI_INT_CACHE_MIN + 1)
 
 MenaiValue *menai_integer_from_long(long n);
-MenaiValue *menai_integer_from_bigint(MenaiInt src);
+MenaiValue *menai_integer_from_bigint(MenaiBigInt src);
 
 /*
- * menai_integer_bigint — return a pointer to the MenaiInt for a big integer.
+ * menai_integer_bigint — return a pointer to the MenaiBigInt for a big integer.
  * The caller must ensure is_big == 1 before calling.
  */
-static inline const MenaiInt *
+static inline const MenaiBigInt *
 menai_integer_bigint(MenaiValue *o)
 {
     return &((MenaiInteger *)o)->big;

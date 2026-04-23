@@ -5,15 +5,15 @@
  * Zero is the unique value with sign == 0, length == 0, digits == NULL.
  *
  * Lifecycle contract:
- *   Every MenaiInt used as an output parameter must first be initialised with
- *   menai_int_init.  Call menai_int_free when the value is no longer needed.
- *   Freeing a zero-initialised MenaiInt that was never written to is safe.
+ *   Every MenaiBigInt used as an output parameter must first be initialised with
+ *   menai_bigint_init.  Call menai_bigint_free when the value is no longer needed.
+ *   Freeing a zero-initialised MenaiBigInt that was never written to is safe.
  *
  * Output aliasing:
  *   All arithmetic and bitwise functions accept an output pointer that may
  *   alias one or both inputs.  Implementations use temporaries as needed to
  *   ensure correct behaviour in the aliased case.
- *   Exception: menai_int_divmod requires that quotient and remainder do not
+ *   Exception: menai_bigint_divmod requires that quotient and remainder do not
  *   alias each other or either input.
  *
  * Return values:
@@ -23,12 +23,12 @@
  *   is set.
  *
  * Python API boundary:
- *   Only menai_int_from_pylong and menai_int_to_pylong may call the Python
+ *   Only menai_bigint_from_pylong and menai_bigint_to_pylong may call the Python
  *   C API.  All other functions are pure C.
  *
  * Memory:
  *   All heap allocation uses malloc / free.
- *   Strings returned by menai_int_to_string must be freed with free().
+ *   Strings returned by menai_bigint_to_string must be freed with free().
  */
 
 #ifndef MENAI_VM_BIGINT_H
@@ -45,201 +45,44 @@ typedef struct {
     uint32_t *digits;  /* little-endian base-2^32 magnitude; NULL when zero */
     Py_ssize_t length; /* number of valid digits; 0 when zero */
     int sign;          /* -1, 0, or 1 */
-} MenaiInt;
+} MenaiBigInt;
 
-/* Initialise a MenaiInt to zero. Must be called before first use as output. */
-#define menai_int_init(x) (memset((x), 0, sizeof(MenaiInt)))
+/* Initialise a MenaiBigInt to zero. Must be called before first use as output. */
+#define menai_bigint_init(x) (memset((x), 0, sizeof(MenaiBigInt)))
 
-/* Free the digit array and reset to zero. Safe on a zero-initialised value. */
-void menai_int_free(MenaiInt *a);
-
-/* Copy src into dst. Returns 0 on success, -1 on error. */
-int menai_int_copy(const MenaiInt *src, MenaiInt *dst);
-
-/*
- * Construct from primitive types.
- */
-
-/* Set a to the value of v. Returns 0 on success, -1 on error. */
-int menai_int_from_long(long v, MenaiInt *a);
-
-/*
- * Set a to the value of the CPython integer object obj.
- * obj must be a PyLongObject. Returns 0 on success, -1 on error.
- * May use the Python C API.
- */
-int menai_int_from_pylong(PyObject *obj, MenaiInt *a);
-
-/*
- * Parse the NUL-terminated string s in the given base (2, 8, 10, or 16)
- * and store the result in a. An optional leading sign is accepted.
- * Returns 0 on success, -1 on error (ValueError set for bad input).
- */
-int menai_int_from_string(const char *s, int base, MenaiInt *a);
-
-/*
- * Parse a UTF-32 codepoint array of length len in the given base (2, 8, 10,
- * or 16) and store the result in a.  An optional leading '+' or '-' is
- * accepted.  All valid integer literals in any supported base are ASCII-only,
- * so each codepoint is simply cast to char after a range check.
- * Returns 0 on success, -1 on error (ValueError set for bad input).
- */
-int menai_int_from_codepoints(const uint32_t *data, Py_ssize_t len, int base, MenaiInt *a);
-
-/*
- * Convert the truncated value of v (i.e. trunc(v)) to a MenaiInt.
- * v must be finite. Returns 0 on success, -1 on error.
- */
-int menai_int_from_double(double v, MenaiInt *a);
-
-/*
- * Convert to primitive types.
- */
-
-/* Return 1 if the value of a fits in a C long, 0 otherwise. Never fails. */
-int menai_int_fits_long(const MenaiInt *a);
-
-/*
- * Store the value of a in *out as a C long.
- * Returns 0 on success, -1 with OverflowError set if the value does not fit.
- */
-int menai_int_to_long(const MenaiInt *a, long *out);
-
-/*
- * Store the value of a as a double in *out.
- * Returns 0 on success, -1 with OverflowError set if the magnitude is too
- * large to represent as a finite double.
- */
-int menai_int_to_double(const MenaiInt *a, double *out);
-
-/*
- * Return a new CPython integer object representing the value of a, or NULL
- * on error. The caller owns the returned reference.
- * May use the Python C API.
- */
-PyObject *menai_int_to_pylong(const MenaiInt *a);
-
-/*
- * Write the string representation of a in the given base (2, 8, 10, or 16)
- * into *out. The returned buffer is NUL-terminated and must be freed by the
- * caller with PyMem_Free. On success stores the buffer in *out and returns 0.
- * On error sets *out to NULL and returns -1.
- */
-int menai_int_to_string(const MenaiInt *a, int base, char **out);
-
-/*
- * Compute a hash for a.  Zero hashes to 0.  The result is never -1; values
- * that would hash to -1 are remapped to -2 by convention.  Never fails.
- */
-Py_hash_t menai_int_hash(const MenaiInt *a);
-
-/*
- * Arithmetic operations.
- * All write their result to *result, which may alias *a and/or *b.
- * Return 0 on success, -1 on error.
- */
-
-/* result = a + b */
-int menai_int_add(const MenaiInt *a, const MenaiInt *b, MenaiInt *result);
-
-/* result = a - b */
-int menai_int_sub(const MenaiInt *a, const MenaiInt *b, MenaiInt *result);
-
-/* result = a * b */
-int menai_int_mul(const MenaiInt *a, const MenaiInt *b, MenaiInt *result);
-
-/*
- * result = floor(a / b), rounding toward negative infinity.
- * Matches Python's // operator semantics.
- * Returns -1 with ZeroDivisionError set if b is zero.
- */
-int menai_int_floordiv(const MenaiInt *a, const MenaiInt *b, MenaiInt *result);
-
-/*
- * result = a mod b, with result having the same sign as b (or zero).
- * Matches Python's % operator semantics.
- * Returns -1 with ZeroDivisionError set if b is zero.
- */
-int menai_int_mod(const MenaiInt *a, const MenaiInt *b, MenaiInt *result);
-
-/*
- * Compute floor-division and modulo simultaneously.
- * *quotient = floor(a / b), *remainder = a mod b.
- * quotient and remainder must not alias each other or either input.
- * Returns -1 with ZeroDivisionError set if b is zero.
- */
-int menai_int_divmod(
-    const MenaiInt *a,
-    const MenaiInt *b,
-    MenaiInt *quotient,
-    MenaiInt *remainder
-);
-
-/* result = -a */
-int menai_int_neg(const MenaiInt *a, MenaiInt *result);
-
-/* result = |a| */
-int menai_int_abs(const MenaiInt *a, MenaiInt *result);
-
-/*
- * result = a ** exp (exp must be non-negative).
- * Returns -1 with ValueError set if exp is negative.
- */
-int menai_int_pow(const MenaiInt *a, const MenaiInt *exp, MenaiInt *result);
-
-/*
- * Bitwise operations (two's complement, infinite precision).
- * All write their result to *result, which may alias *a and/or *b.
- * Return 0 on success, -1 on error.
- */
-
-/* result = a & b */
-int menai_int_and(const MenaiInt *a, const MenaiInt *b, MenaiInt *result);
-
-/* result = a | b */
-int menai_int_or(const MenaiInt *a, const MenaiInt *b, MenaiInt *result);
-
-/* result = a ^ b */
-int menai_int_xor(const MenaiInt *a, const MenaiInt *b, MenaiInt *result);
-
-/*
- * result = ~a (bitwise NOT in two's complement infinite precision).
- * Equivalent to -(a + 1).
- */
-int menai_int_not(const MenaiInt *a, MenaiInt *result);
-
-/*
- * result = a << shift (left shift by shift bits, shift >= 0).
- */
-int menai_int_shift_left(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result);
-
-/*
- * result = a >> shift (arithmetic right shift, sign-extending, shift >= 0).
- * Equivalent to floor(a / 2^shift).
- */
-int menai_int_shift_right(const MenaiInt *a, Py_ssize_t shift, MenaiInt *result);
-
-/*
- * Comparison operations.
- * Return 1 if the relation holds, 0 if not. Never fail.
- */
-
-/* Return 1 if a == b, 0 otherwise. */
-int menai_int_eq(const MenaiInt *a, const MenaiInt *b);
-
-/* Return 1 if a != b, 0 otherwise. */
-int menai_int_ne(const MenaiInt *a, const MenaiInt *b);
-
-/* Return 1 if a < b, 0 otherwise. */
-int menai_int_lt(const MenaiInt *a, const MenaiInt *b);
-
-/* Return 1 if a > b, 0 otherwise. */
-int menai_int_gt(const MenaiInt *a, const MenaiInt *b);
-
-/* Return 1 if a <= b, 0 otherwise. */
-int menai_int_le(const MenaiInt *a, const MenaiInt *b);
-
-/* Return 1 if a >= b, 0 otherwise. */
-int menai_int_ge(const MenaiInt *a, const MenaiInt *b);
+void menai_bigint_free(MenaiBigInt *a);
+int menai_bigint_copy(const MenaiBigInt *src, MenaiBigInt *dst);
+int menai_bigint_from_long(long v, MenaiBigInt *a);
+int menai_bigint_from_pylong(PyObject *obj, MenaiBigInt *a);
+int menai_bigint_from_string(const char *s, int base, MenaiBigInt *a);
+int menai_bigint_from_codepoints(const uint32_t *data, Py_ssize_t len, int base, MenaiBigInt *a);
+int menai_bigint_from_double(double v, MenaiBigInt *a);
+int menai_bigint_fits_long(const MenaiBigInt *a);
+int menai_bigint_to_long(const MenaiBigInt *a, long *out);
+int menai_bigint_to_double(const MenaiBigInt *a, double *out);
+PyObject *menai_bigint_to_pylong(const MenaiBigInt *a);
+int menai_bigint_to_string(const MenaiBigInt *a, int base, char **out);
+Py_hash_t menai_bigint_hash(const MenaiBigInt *a);
+int menai_bigint_add(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
+int menai_bigint_sub(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
+int menai_bigint_mul(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
+int menai_bigint_floordiv(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
+int menai_bigint_mod(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
+int menai_bigint_divmod(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *quotient, MenaiBigInt *remainder);
+int menai_bigint_neg(const MenaiBigInt *a, MenaiBigInt *result);
+int menai_bigint_abs(const MenaiBigInt *a, MenaiBigInt *result);
+int menai_bigint_pow(const MenaiBigInt *a, const MenaiBigInt *exp, MenaiBigInt *result);
+int menai_bigint_and(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
+int menai_bigint_or(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
+int menai_bigint_xor(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt *result);
+int menai_bigint_not(const MenaiBigInt *a, MenaiBigInt *result);
+int menai_bigint_shift_left(const MenaiBigInt *a, Py_ssize_t shift, MenaiBigInt *result);
+int menai_bigint_shift_right(const MenaiBigInt *a, Py_ssize_t shift, MenaiBigInt *result);
+int menai_bigint_eq(const MenaiBigInt *a, const MenaiBigInt *b);
+int menai_bigint_ne(const MenaiBigInt *a, const MenaiBigInt *b);
+int menai_bigint_lt(const MenaiBigInt *a, const MenaiBigInt *b);
+int menai_bigint_gt(const MenaiBigInt *a, const MenaiBigInt *b);
+int menai_bigint_le(const MenaiBigInt *a, const MenaiBigInt *b);
+int menai_bigint_ge(const MenaiBigInt *a, const MenaiBigInt *b);
 
 #endif /* MENAI_VM_BIGINT_H */

@@ -124,10 +124,10 @@ menai_convert_value(PyObject *src)
             return menai_integer_from_long(lv);
         }
 
-        /* Bignum — convert via MenaiInt */
-        MenaiInt big;
-        menai_int_init(&big);
-        if (menai_int_from_pylong(v, &big) < 0) {
+        /* Bignum — convert via MenaiBigInt */
+        MenaiBigInt big;
+        menai_bigint_init(&big);
+        if (menai_bigint_from_pylong(v, &big) < 0) {
             Py_DECREF(v);
             return NULL;
         }
@@ -496,7 +496,7 @@ menai_value_describe_integer(MenaiValue *val)
     }
 
     char *s = NULL;
-    if (menai_int_to_string(&obj->big, 10, &s) < 0) {
+    if (menai_bigint_to_string(&obj->big, 10, &s) < 0) {
         return NULL;
     }
 
@@ -1040,7 +1040,7 @@ menai_value_to_python_integer(MenaiValue *val)
         return PyLong_FromLong(obj->small);
     }
 
-    return menai_int_to_pylong(&obj->big);
+    return menai_bigint_to_pylong(&obj->big);
 }
 
 PyObject *
@@ -1406,7 +1406,7 @@ integer_get_value(PyObject *self, void *closure)
         return PyLong_FromLong(obj->small);
     }
 
-    return menai_int_to_pylong(&obj->big);
+    return menai_bigint_to_pylong(&obj->big);
 }
 
 static PyGetSetDef _integer_getsets[] = {

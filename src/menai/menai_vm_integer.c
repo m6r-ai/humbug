@@ -2,9 +2,9 @@
  * menai_vm_integer.c — MenaiInteger type implementation.
  *
  * Three-tier representation: small integer cache for [-5, 256], inline long
- * for values that fit in a C long, and MenaiInt bignum for everything else.
- * The Python C API is only used at the boundary (menai_int_from_pylong /
- * menai_int_to_pylong in menai_vm_bigint.c).
+ * for values that fit in a C long, and MenaiBigInt bignum for everything else.
+ * The Python C API is only used at the boundary (menai_bigint_from_pylong /
+ * menai_bigint_to_pylong in menai_vm_bigint.c).
  */
 
 #include <stdlib.h>
@@ -32,7 +32,7 @@ MenaiInteger_dealloc(MenaiValue *self)
             return;
         }
     } else {
-        menai_int_free(&obj->big);
+        menai_bigint_free(&obj->big);
     }
 
     menai_free(self, sizeof(MenaiInteger));
@@ -67,32 +67,32 @@ menai_integer_from_long(long n)
     r->ob_destructor = MenaiInteger_dealloc;
     r->is_big = 0;
     r->small = n;
-    menai_int_init(&r->big);
+    menai_bigint_init(&r->big);
 
     return (MenaiValue *)r;
 }
 
 MenaiValue *
-menai_integer_from_bigint(MenaiInt src)
+menai_integer_from_bigint(MenaiBigInt src)
 {
     /*
      * If the value fits in a long, demote to small representation so the
      * inline fast path is used for subsequent operations.
      */
-    if (menai_int_fits_long(&src)) {
+    if (menai_bigint_fits_long(&src)) {
         long v;
-        if (menai_int_to_long(&src, &v) < 0) {
-            menai_int_free(&src);
+        if (menai_bigint_to_long(&src, &v) < 0) {
+            menai_bigint_free(&src);
             return NULL;
         }
 
-        menai_int_free(&src);
+        menai_bigint_free(&src);
         return menai_integer_from_long(v);
     }
 
     MenaiInteger *r = (MenaiInteger *)menai_alloc(sizeof(MenaiInteger));
     if (r == NULL) {
-        menai_int_free(&src);
+        menai_bigint_free(&src);
         return NULL;
     }
 
@@ -124,7 +124,7 @@ menai_vm_integer_init(void)
         obj->ob_destructor = MenaiInteger_dealloc;
         obj->is_big = 0;
         obj->small = v;
-        menai_int_init(&obj->big);
+        menai_bigint_init(&obj->big);
 
         _integer_cache[v - MENAI_INT_CACHE_MIN] = (MenaiValue *)obj;
     }

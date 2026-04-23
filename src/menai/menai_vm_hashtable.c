@@ -173,7 +173,7 @@ menai_value_hash(MenaiValue *val)
             return h == -1 ? -2 : h;
         }
 
-        return menai_int_hash(&obj->big);
+        return menai_bigint_hash(&obj->big);
     }
 
     if (t == &MenaiFloat_Type) {
@@ -261,7 +261,7 @@ menai_value_equal(MenaiValue *a, MenaiValue *b)
             return 0;
         }
 
-        return menai_int_eq(&ia->big, &ib->big);
+        return menai_bigint_eq(&ia->big, &ib->big);
     }
 
     if (ta == &MenaiFloat_Type) {
