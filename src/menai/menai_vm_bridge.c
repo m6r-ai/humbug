@@ -1,5 +1,5 @@
 /*
- * menai_vm_value.c — Python boundary layer for all Menai runtime value types.
+ * menai_vm_bridge.c — Python boundary layer for all Menai runtime value types.
  *
  * Provides:
  *   menai_convert_value() — slow menai_value.py -> fast C type
@@ -7,7 +7,7 @@
  * Also defines the boundary describe/to_python functions forward-declared in
  * menai_vm_hashtable.c.
  *
- * Module name: menai.menai_vm_value
+ * Module name: menai.menai_vm_bridge
  * Exported singletons: Menai_NONE, Menai_BOOLEAN_TRUE, Menai_BOOLEAN_FALSE,
  *                      Menai_LIST_EMPTY, Menai_DICT_EMPTY, Menai_SET_EMPTY
  */
@@ -32,7 +32,7 @@
 #include "menai_vm_boolean.h"
 #include "menai_vm_none.h"
 #include "menai_vm_string.h"
-#include "menai_vm_value.h"
+#include "menai_vm_bridge.h"
 #include "menai_vm_hashtable.h"
 
 /*
@@ -1252,7 +1252,7 @@ menai_value_to_python_function(MenaiValue *val)
  * Python-facing methods and getsets for all fast value types.
  *
  * These are patched onto each PyTypeObject before PyType_Ready() is called
- * in _menai_vm_value_init().  They provide the Python API expected by
+ * in _menai_vm_bridge_init().  They provide the Python API expected by
  * menai.py and tests: type_name(), describe(), to_python(), and properties
  * such as .pairs, .value, .parameters, etc.
  */
@@ -1560,14 +1560,14 @@ fetch_slow_type(PyObject *mod, const char *name, PyTypeObject **dst)
 
 static struct PyModuleDef module_def = {
     PyModuleDef_HEAD_INIT,
-    "menai.menai_vm_value",
+    "menai.menai_vm_bridge",
     NULL,
     -1,
     NULL
 };
 
 PyObject *
-_menai_vm_value_init(void)
+menai_vm_bridge_init(void)
 {
     /* Fetch slow-world types — needed by menai_convert_value. */
     PyObject *slow_mod = PyImport_ImportModule("menai.menai_value");
@@ -1727,7 +1727,7 @@ _menai_vm_value_init(void)
         return NULL;
     }
 
-    /* Register in sys.modules so Python code can import menai.menai_vm_value
+    /* Register in sys.modules so Python code can import menai.menai_vm_bridge
      * after menai_vm_c has been loaded. */
     PyObject *sys_modules = PySys_GetObject("modules");
     if (sys_modules == NULL) {
@@ -1735,7 +1735,7 @@ _menai_vm_value_init(void)
         return NULL;
     }
 
-    if (PyDict_SetItemString(sys_modules, "menai.menai_vm_value", module) < 0) {
+    if (PyDict_SetItemString(sys_modules, "menai.menai_vm_bridge", module) < 0) {
         Py_DECREF(module);
         return NULL;
     }

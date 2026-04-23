@@ -1,12 +1,8 @@
 /*
- * menai_vm_value.h — C struct definitions for all Menai runtime value types.
+ * menai_vm_bridge.h — C struct definitions for all Menai runtime value types.
  *
- * Included by menai_vm_c.c and menai_vm_value.c.  Provides the concrete
- * PyObject struct layouts so that the C VM can access fields directly by cast
- * rather than via PyObject_GetAttrString.
- *
- * All types are defined in menai_vm_value.c and exposed via the
- * menai_vm_value module.  The VM imports that module at init time to obtain
+ * All types are defined in menai_vm_bridge.c and exposed via the
+ * menai_vm_bridge module.  The VM imports that module at init time to obtain
  * the type objects and singleton values; after that it uses these structs
  * directly.
  */
@@ -31,5 +27,6 @@
 #include "menai_vm_symbol.h"
 
 MenaiValue *menai_convert_value(PyObject *src);
+PyObject *menai_vm_bridge_init(void);
 
 #endif /* MENAI_VM_VALUE_H */

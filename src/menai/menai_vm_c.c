@@ -117,7 +117,7 @@ mc_logn(mc_t a, mc_t b)
     return mc_div(mc_log(a), mc_log(b)); 
 }
 
-#include "menai_vm_value.h"
+#include "menai_vm_bridge.h"
 #include "menai_vm_alloc.h"
 #include "menai_vm_string.h"
 #include "menai_vm_hashtable.h"
@@ -161,11 +161,6 @@ _menai_mul_overflow(long a, long b, long *r) {
 }
 
 #endif
-
-/* menai_vm_value init — lives in the same .so */
-extern PyObject *_menai_vm_value_init(void);
-
-extern MenaiValue *menai_convert_value(PyObject *src);
 
 /*
  * Limits
@@ -388,7 +383,7 @@ extern MenaiValue *menai_convert_value(PyObject *src);
 #define OP_RANGE 380
 
 /*
- * Singleton values fetched from menai_vm_value at init time.
+ * Singleton values fetched from menai_vm_bridge at init time.
  */
 MenaiValue *Menai_NONE = NULL;
 MenaiValue *Menai_TRUE = NULL;
@@ -406,19 +401,19 @@ static PyObject *MenaiCancelledException_type = NULL;
 /*
  * Fast type-check macros
  */
-#define IS_MENAI_NONE(o)       (((MenaiValue *)(o))->ob_type == &MenaiNone_Type)
-#define IS_MENAI_BOOLEAN(o)    (((MenaiValue *)(o))->ob_type == &MenaiBoolean_Type)
-#define IS_MENAI_INTEGER(o)    (((MenaiValue *)(o))->ob_type == &MenaiInteger_Type)
-#define IS_MENAI_FLOAT(o)      (((MenaiValue *)(o))->ob_type == &MenaiFloat_Type)
-#define IS_MENAI_COMPLEX(o)    (((MenaiValue *)(o))->ob_type == &MenaiComplex_Type)
-#define IS_MENAI_STRING(o)     (((MenaiValue *)(o))->ob_type == &MenaiString_Type)
-#define IS_MENAI_SYMBOL(o)     (((MenaiValue *)(o))->ob_type == &MenaiSymbol_Type)
-#define IS_MENAI_LIST(o)       (((MenaiValue *)(o))->ob_type == &MenaiList_Type)
-#define IS_MENAI_DICT(o)       (((MenaiValue *)(o))->ob_type == &MenaiDict_Type)
-#define IS_MENAI_SET(o)        (((MenaiValue *)(o))->ob_type == &MenaiSet_Type)
-#define IS_MENAI_FUNCTION(o)   (((MenaiValue *)(o))->ob_type == &MenaiFunction_Type)
+#define IS_MENAI_NONE(o) (((MenaiValue *)(o))->ob_type == &MenaiNone_Type)
+#define IS_MENAI_BOOLEAN(o) (((MenaiValue *)(o))->ob_type == &MenaiBoolean_Type)
+#define IS_MENAI_INTEGER(o) (((MenaiValue *)(o))->ob_type == &MenaiInteger_Type)
+#define IS_MENAI_FLOAT(o) (((MenaiValue *)(o))->ob_type == &MenaiFloat_Type)
+#define IS_MENAI_COMPLEX(o) (((MenaiValue *)(o))->ob_type == &MenaiComplex_Type)
+#define IS_MENAI_STRING(o) (((MenaiValue *)(o))->ob_type == &MenaiString_Type)
+#define IS_MENAI_SYMBOL(o) (((MenaiValue *)(o))->ob_type == &MenaiSymbol_Type)
+#define IS_MENAI_LIST(o) (((MenaiValue *)(o))->ob_type == &MenaiList_Type)
+#define IS_MENAI_DICT(o) (((MenaiValue *)(o))->ob_type == &MenaiDict_Type)
+#define IS_MENAI_SET(o) (((MenaiValue *)(o))->ob_type == &MenaiSet_Type)
+#define IS_MENAI_FUNCTION(o) (((MenaiValue *)(o))->ob_type == &MenaiFunction_Type)
 #define IS_MENAI_STRUCTTYPE(o) (((MenaiValue *)(o))->ob_type == &MenaiStructType_Type)
-#define IS_MENAI_STRUCT(o)     (((MenaiValue *)(o))->ob_type == &MenaiStruct_Type)
+#define IS_MENAI_STRUCT(o) (((MenaiValue *)(o))->ob_type == &MenaiStruct_Type)
 
 
 static inline int
@@ -735,7 +730,7 @@ fetch_singleton(PyObject *module, const char *name, MenaiValue **dst)
 int
 menai_vm_shim_init(void)
 {
-    PyObject *vc = _menai_vm_value_init();
+    PyObject *vc = menai_vm_bridge_init();
     if (vc == NULL) {
         return -1;
     }

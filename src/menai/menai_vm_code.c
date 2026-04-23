@@ -15,7 +15,7 @@
 #include "menai_vm_hashtable.h"
 
 /*
- * Forward declaration — menai_convert_value lives in menai_vm_value.c and is
+ * Forward declaration — menai_convert_value lives in menai_vm_bridge.c and is
  * linked into the same shared library.
  */
 extern MenaiValue *menai_convert_value(PyObject *src);
