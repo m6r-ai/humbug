@@ -31,63 +31,89 @@ typedef struct {
     double im;
 } mc_t;
 
-static inline mc_t mc(double re, double im) {
+static inline mc_t
+mc(double re, double im)
+{
     mc_t z = {re, im};
     return z;
 }
 
-static inline int mc_zero(mc_t z) {
+static inline int
+mc_zero(mc_t z)
+{
     return z.re == 0.0 && z.im == 0.0;
 }
 
-static inline mc_t mc_mul(mc_t a, mc_t b) {
+static inline mc_t
+mc_mul(mc_t a, mc_t b)
+{
     return mc(a.re * b.re - a.im * b.im, a.re * b.im + a.im * b.re);
 }
 
-static inline mc_t mc_div(mc_t a, mc_t b) {
+static inline mc_t
+mc_div(mc_t a, mc_t b)
+{
     double d = b.re * b.re + b.im * b.im;
     return mc((a.re * b.re + a.im * b.im) / d, (a.im * b.re - a.re * b.im) / d);
 }
 
-static inline mc_t mc_exp(mc_t z) {
+static inline mc_t
+mc_exp(mc_t z)
+{
     double e = exp(z.re);
     return mc(e * cos(z.im), e * sin(z.im));
 }
 
-static inline mc_t mc_log(mc_t z) {
+static inline mc_t
+mc_log(mc_t z)
+{
     return mc(log(hypot(z.re, z.im)), atan2(z.im, z.re));
 }
 
-static inline mc_t mc_pow(mc_t a, mc_t b) {
+static inline mc_t
+mc_pow(mc_t a, mc_t b)
+{
     return mc_zero(a) ? mc(0.0, 0.0) : mc_exp(mc_mul(b, mc_log(a)));
 }
 
-static inline mc_t mc_sqrt(mc_t z) {
+static inline mc_t
+mc_sqrt(mc_t z)
+{
     double r = hypot(z.re, z.im);
     double s = sqrt((r + z.re) / 2.0);
     double t = (z.im >= 0.0 ? 1.0 : -1.0) * sqrt((r - z.re) / 2.0);
     return mc(s, t);
 }
 
-static inline mc_t mc_sin(mc_t z) {
+static inline mc_t
+mc_sin(mc_t z)
+{
     return mc(sin(z.re) * cosh(z.im), cos(z.re) * sinh(z.im));
 }
 
-static inline mc_t mc_cos(mc_t z) {
+static inline mc_t
+mc_cos(mc_t z)
+{
     return mc(cos(z.re) * cosh(z.im), -sin(z.re) * sinh(z.im));
 }
 
-static inline mc_t mc_tan(mc_t z) {
+static inline mc_t
+mc_tan(mc_t z)
+{
     return mc_div(mc_sin(z), mc_cos(z));
 }
 
-static inline mc_t mc_log10(mc_t z) {
+static inline mc_t
+mc_log10(mc_t z)
+{
     mc_t l = mc_log(z);
     double s = 1.0 / log(10.0);
     return mc(l.re * s, l.im * s);
 }
 
-static inline mc_t mc_logn(mc_t a, mc_t b) {
+static inline mc_t
+mc_logn(mc_t a, mc_t b)
+{
     return mc_div(mc_log(a), mc_log(b)); 
 }
 
@@ -110,21 +136,24 @@ static inline mc_t mc_logn(mc_t a, mc_t b) {
 #define _menai_sub_overflow(a, b, rp) __builtin_sub_overflow((a), (b), (rp))
 #define _menai_mul_overflow(a, b, rp) __builtin_mul_overflow((a), (b), (rp))
 #else
-static inline int _menai_add_overflow(long a, long b, long *r) {
+static inline int
+_menai_add_overflow(long a, long b, long *r) {
     unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
     unsigned long ur = ua + ub;
     *r = (long)ur;
     return (a > 0 && b > 0 && *r < 0) || (a < 0 && b < 0 && *r > 0);
 }
 
-static inline int _menai_sub_overflow(long a, long b, long *r) {
+static inline int
+_menai_sub_overflow(long a, long b, long *r) {
     unsigned long ua = (unsigned long)a, ub = (unsigned long)b;
     unsigned long ur = ua - ub;
     *r = (long)ur;
     return (b < 0 && a > 0 && *r < 0) || (b > 0 && a < 0 && *r > 0);
 }
 
-static inline int _menai_mul_overflow(long a, long b, long *r) {
+static inline int
+_menai_mul_overflow(long a, long b, long *r) {
     /* Conservative: use double to detect overflow. */
     double d = (double)a * (double)b;
     *r = (long)((unsigned long)a * (unsigned long)b);
@@ -392,17 +421,20 @@ static PyObject *MenaiCancelledException_type = NULL;
 #define IS_MENAI_STRUCT(o)     (((MenaiValue *)(o))->ob_type == &MenaiStruct_Type)
 
 
-static inline int menai_boolean_value(MenaiValue *o)
+static inline int
+menai_boolean_value(MenaiValue *o)
 {
     return ((MenaiBoolean *)o)->value;
 }
 
-static inline double menai_float_value(MenaiValue *o)
+static inline double
+menai_float_value(MenaiValue *o)
 {
     return ((MenaiFloat *)o)->value;
 }
 
-static inline MenaiValue *menai_symbol_name(MenaiValue *o)
+static inline MenaiValue *
+menai_symbol_name(MenaiValue *o)
 {
     return ((MenaiSymbol *)o)->name;
 }
@@ -470,7 +502,8 @@ menai_integer_compare(MenaiValue* a, MenaiValue* b, int op)
  * Py_ssize_t fits in a long on all supported platforms, so this is a direct
  * delegation to menai_integer_from_long.
  */
-static inline MenaiValue *make_integer_from_ssize_t(Py_ssize_t n)
+static inline MenaiValue *
+make_integer_from_ssize_t(Py_ssize_t n)
 {
     return menai_integer_from_long((long)n);
 }
