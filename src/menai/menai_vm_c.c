@@ -1200,12 +1200,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_LOAD_CONST: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = frame->constants_items[src0];
             menai_reg_set_borrow(regs, base + dest, val);
             break;
         }
 
         case OP_LOAD_NAME: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             const char *name_str = frame->names_items[src0];
             Py_hash_t name_hash = frame->name_hashes[src0];
             MenaiValue *val = globals_lookup_h(globals, name_str, name_hash);
@@ -1242,15 +1244,20 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-        case OP_MOVE:
-            menai_reg_set_borrow(regs, base + dest, regs[base + src0]);
+        case OP_MOVE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            menai_reg_set_borrow(regs, base + dest, regs[base +src0]);
             break;
+        }
 
-        case OP_JUMP:
+        case OP_JUMP: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             frame->ip = src0;
             break;
+        }
 
         case OP_JUMP_IF_FALSE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *cond = regs[base + src0];
             if (!IS_MENAI_BOOLEAN(cond)) {
@@ -1266,6 +1273,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_JUMP_IF_TRUE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *cond = regs[base + src0];
             if (!IS_MENAI_BOOLEAN(cond)) {
@@ -1281,6 +1289,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_RAISE_ERROR: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *msg = regs[base + src0];
             if (!IS_MENAI_STRING(msg)) {
                 menai_raise_eval_error("error: message must be a string");
@@ -1298,6 +1307,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_RETURN: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *retval = regs[base + src0];
             menai_retain(retval);
 
@@ -1319,6 +1329,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_CALL: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *raw = regs[base + src0];
             int arity = src1;
@@ -1372,6 +1383,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_TAIL_CALL: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *raw = regs[base + src0];
             int n_args = src1;
@@ -1450,6 +1462,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
              * src0 = function register, src1 = arg_list register.
              * Scatters the list into the callee's register window and pushes a frame.
              */
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *raw_func = regs[base + src0];
             MenaiValue *raw_args = regs[base + src1];
@@ -1516,6 +1529,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
              * src0 = function register, src1 = arg_list register.
              * Reuses current frame (tail position).
              */
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *raw_func = regs[base + src0];
             MenaiValue *raw_args = regs[base + src1];
@@ -1599,15 +1613,20 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             /* Trace is a no-op in the C VM — no watcher support yet. */
             break;
 
-        case OP_NONE_P:
+        case OP_NONE_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             bool_store(regs, base + dest, IS_MENAI_NONE(regs[base + src0]));
             break;
+        }
 
-        case OP_BOOLEAN_P:
+        case OP_BOOLEAN_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             bool_store(regs, base + dest, IS_MENAI_BOOLEAN(regs[base + src0]));
             break;
+        }
 
         case OP_BOOLEAN_EQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -1624,6 +1643,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_BOOLEAN_NEQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -1640,6 +1660,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_BOOLEAN_NOT: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_boolean(a, "boolean-not")) {
                 goto error;
@@ -1649,11 +1670,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-        case OP_SYMBOL_P:
+        case OP_SYMBOL_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             bool_store(regs, base + dest, IS_MENAI_SYMBOL(regs[base + src0]));
             break;
+        }
 
         case OP_SYMBOL_EQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -1667,6 +1691,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SYMBOL_NEQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -1680,6 +1705,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SYMBOL_TO_STRING: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_symbol(a, "symbol->string")) {
                 goto error;
@@ -1689,11 +1715,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-        case OP_FUNCTION_P:
+        case OP_FUNCTION_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             bool_store(regs, base + dest, IS_MENAI_FUNCTION(regs[base + src0]));
             break;
+        }
 
         case OP_FUNCTION_EQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -1710,6 +1739,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FUNCTION_NEQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -1726,6 +1756,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FUNCTION_MIN_ARITY: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *f = regs[base + src0];
             if (!require_function_singular(f, "function-min-arity")) {
                 goto error;
@@ -1743,6 +1774,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FUNCTION_VARIADIC_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *f = regs[base + src0];
             if (!require_function_singular(f, "function-variadic?")) {
                 goto error;
@@ -1753,6 +1785,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FUNCTION_ACCEPTS_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *f = regs[base + src0];
             MenaiValue *n_obj = regs[base + src1];
@@ -1782,11 +1815,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-        case OP_INTEGER_P:
+        case OP_INTEGER_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             bool_store(regs, base + dest, IS_MENAI_INTEGER(regs[base + src0]));
             break;
+        }
 
         case OP_INTEGER_EQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -1803,6 +1839,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_NEQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -1819,6 +1856,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_LT_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -1835,6 +1873,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_GT_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -1851,6 +1890,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_LTE_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -1867,6 +1907,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_GTE_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -1883,6 +1924,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_ABS: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_integer(a, "integer-abs")) {
                 goto error;
@@ -1940,6 +1982,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_NEG: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_integer(a, "integer-neg")) {
                 goto error;
@@ -1996,6 +2039,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_BIT_NOT: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_integer(a, "integer-bit-not")) {
                 goto error;
@@ -2030,6 +2074,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_ADD: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2100,6 +2145,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_SUB: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2163,6 +2209,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_MUL: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2226,6 +2273,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_DIV: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2281,6 +2329,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_MOD: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2338,6 +2387,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_EXPN: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2395,6 +2445,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_BIT_OR: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2445,6 +2496,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_BIT_AND: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2495,6 +2547,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_BIT_XOR: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2545,6 +2598,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_BIT_SHIFT_LEFT: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2604,6 +2658,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_BIT_SHIFT_RIGHT: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2663,6 +2718,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_MIN: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2679,6 +2735,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_MAX: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2695,6 +2752,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_TO_FLOAT: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_integer(a, "integer->float")) {
                 goto error;
@@ -2720,6 +2778,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_TO_COMPLEX: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2760,6 +2819,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_TO_STRING: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2816,6 +2876,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_INTEGER_CODEPOINT_TO_STRING: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_integer(a, "integer-codepoint->string")) {
                 goto error;
@@ -2846,11 +2907,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-        case OP_FLOAT_P:
+        case OP_FLOAT_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             bool_store(regs, base + dest, IS_MENAI_FLOAT(regs[base + src0]));
             break;
+        }
 
         case OP_FLOAT_EQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2867,6 +2931,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_NEQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2883,6 +2948,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_LT_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2899,6 +2965,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_GT_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2915,6 +2982,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_LTE_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2931,6 +2999,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_GTE_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -2947,6 +3016,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_NEG: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-neg")) {
                 goto error;
@@ -2962,6 +3032,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_ABS: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-abs")) {
                 goto error;
@@ -2981,6 +3052,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_ADD: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3002,6 +3074,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_SUB: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3023,6 +3096,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_MUL: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3044,6 +3118,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_DIV: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3071,6 +3146,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_FLOOR_DIV: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3098,6 +3174,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_MOD: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3125,6 +3202,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_EXP: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-exp")) {
                 goto error;
@@ -3140,6 +3218,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_EXPN: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3161,6 +3240,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_LOG: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-log")) {
                 goto error;
@@ -3182,6 +3262,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_LOG10: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-log10")) {
                 goto error;
@@ -3203,6 +3284,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_LOG2: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-log2")) {
                 goto error;
@@ -3224,6 +3306,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_LOGN: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3256,6 +3339,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_SIN: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-sin")) {
                 goto error;
@@ -3271,6 +3355,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_COS: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-cos")) {
                 goto error;
@@ -3286,6 +3371,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_TAN: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-tan")) {
                 goto error;
@@ -3301,6 +3387,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_SQRT: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-sqrt")) {
                 goto error;
@@ -3322,6 +3409,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_FLOOR: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-floor")) {
                 goto error;
@@ -3337,6 +3425,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_CEIL: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-ceil")) {
                 goto error;
@@ -3352,6 +3441,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_ROUND: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float-round")) {
                 goto error;
@@ -3367,6 +3457,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_MIN: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3389,6 +3480,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_MAX: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3411,6 +3503,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_TO_INTEGER: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float->integer")) {
                 goto error;
@@ -3433,6 +3526,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_TO_COMPLEX: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3454,6 +3548,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_FLOAT_TO_STRING: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_float(a, "float->string")) {
                 goto error;
@@ -3481,6 +3576,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
              * Creates a MenaiFunction with capture slots initialised to None,
              * ready for PATCH_CLOSURE to fill in.
              */
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             if (src0 >= (int)frame->nchildren) {
                 menai_raise_eval_error("MAKE_CLOSURE: child index out of range");
                 goto error;
@@ -3500,6 +3596,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
              * PATCH_CLOSURE src0, src1, src2:
              * src0 = closure register, src1 = capture slot index, src2 = value register.
              */
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             int src2 = (int)(word & FIELD_MASK);
             MenaiValue *closure = regs[base + src0];
@@ -3517,11 +3614,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-        case OP_COMPLEX_P:
+        case OP_COMPLEX_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             bool_store(regs, base + dest, IS_MENAI_COMPLEX(regs[base + src0]));
             break;
+        }
 
         case OP_COMPLEX_EQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3540,6 +3640,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_NEQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3558,6 +3659,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_REAL: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-real")) {
                 goto error;
@@ -3573,6 +3675,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_IMAG: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-imag")) {
                 goto error;
@@ -3588,6 +3691,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_ABS: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-abs")) {
                 goto error;
@@ -3605,6 +3709,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_NEG: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-neg")) {
                 goto error;
@@ -3621,6 +3726,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_ADD: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3644,6 +3750,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_SUB: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3667,6 +3774,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_MUL: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3690,6 +3798,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_DIV: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3721,6 +3830,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_EXPN: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3745,6 +3855,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_EXP: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-exp")) {
                 goto error;
@@ -3762,6 +3873,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_LOG: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-log")) {
                 goto error;
@@ -3779,6 +3891,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_LOG10: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-log10")) {
                 goto error;
@@ -3796,6 +3909,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_SIN: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-sin")) {
                 goto error;
@@ -3813,6 +3927,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_COS: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-cos")) {
                 goto error;
@@ -3830,6 +3945,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_TAN: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-tan")) {
                 goto error;
@@ -3847,6 +3963,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_SQRT: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex-sqrt")) {
                 goto error;
@@ -3864,6 +3981,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_LOGN: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3893,6 +4011,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_COMPLEX_TO_STRING: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_complex(a, "complex->string")) {
                 goto error;
@@ -3913,11 +4032,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-        case OP_STRING_P:
+        case OP_STRING_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             bool_store(regs, base + dest, IS_MENAI_STRING(regs[base + src0]));
             break;
+        }
 
         case OP_STRING_EQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3934,6 +4056,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_NEQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3950,6 +4073,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_LT_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3966,6 +4090,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_GT_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3982,6 +4107,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_LTE_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -3998,6 +4124,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_GTE_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -4014,6 +4141,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_LENGTH: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string-length")) {
                 goto error;
@@ -4029,6 +4157,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_UPCASE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string-upcase")) {
                 goto error;
@@ -4044,6 +4173,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_DOWNCASE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string-downcase")) {
                 goto error;
@@ -4059,6 +4189,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_TRIM: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string-trim")) {
                 goto error;
@@ -4074,6 +4205,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_TRIM_LEFT: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string-trim-left")) {
                 goto error;
@@ -4089,6 +4221,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_TRIM_RIGHT: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string-trim-right")) {
                 goto error;
@@ -4104,6 +4237,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_CONCAT: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -4125,6 +4259,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_PREFIX_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -4141,6 +4276,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_SUFFIX_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -4157,6 +4293,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_REF: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -4196,6 +4333,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_SLICE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             int src2 = (int)(word & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
@@ -4266,6 +4404,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_REPLACE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             int src2 = (int)(word & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
@@ -4293,6 +4432,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_INDEX: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -4324,6 +4464,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_TO_INTEGER_CODEPOINT: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string->integer-codepoint")) {
                 goto error;
@@ -4346,6 +4487,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_STRING_TO_INTEGER: {
             /* src0=string, src1=radix(integer) */
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -4401,6 +4543,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRING_TO_NUMBER: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_string(a, "string->number")) {
                 goto error;
@@ -4509,6 +4652,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_STRING_TO_LIST: {
             /* src0=string, src1=delimiter string */
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -4604,11 +4748,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-        case OP_LIST_P:
+        case OP_LIST_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             bool_store(regs, base + dest, IS_MENAI_LIST(regs[base + src0]));
             break;
+        }
 
         case OP_LIST_EQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -4626,6 +4773,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_NEQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -4643,6 +4791,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_NULL_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_list(a, "list-null?")) {
                 goto error;
@@ -4654,6 +4803,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_LENGTH: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_list(a, "list-length")) {
                 goto error;
@@ -4670,6 +4820,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_FIRST: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_list(a, "list-first")) {
                 goto error;
@@ -4686,6 +4837,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_REST: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_list(a, "list-rest")) {
                 goto error;
@@ -4706,6 +4858,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_LAST: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_list(a, "list-last")) {
                 goto error;
@@ -4723,6 +4876,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_REF: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -4758,6 +4912,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_PREPEND: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
@@ -4790,6 +4945,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_APPEND: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
@@ -4822,6 +4978,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_REVERSE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_list(a, "list-reverse")) {
                 goto error;
@@ -4852,6 +5009,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_CONCAT: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -4895,6 +5053,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_MEMBER_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
@@ -4917,6 +5076,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_INDEX: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
@@ -4950,6 +5110,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_SLICE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             int src2 = (int)(word & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
@@ -5021,6 +5182,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_REMOVE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
@@ -5065,6 +5227,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_TO_STRING: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -5125,6 +5288,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_LIST_TO_SET: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_list_singular(a, "list->set")) {
                 goto error;
@@ -5196,11 +5360,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-        case OP_DICT_P:
+        case OP_DICT_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             bool_store(regs, base + dest, IS_MENAI_DICT(regs[base + src0]));
             break;
+        }
 
         case OP_DICT_EQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -5239,6 +5406,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_DICT_NEQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -5277,6 +5445,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_DICT_LENGTH: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_dict(a, "dict-length")) {
                 goto error;
@@ -5292,6 +5461,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_DICT_KEYS: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_dict(a, "dict-keys")) {
                 goto error;
@@ -5322,6 +5492,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_DICT_VALUES: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_dict(a, "dict-values")) {
                 goto error;
@@ -5352,6 +5523,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_DICT_HAS_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *key = regs[base + src1];
@@ -5372,6 +5544,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_DICT_GET: {
             /* src0=dict, src1=key, src2=default */
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             int src2 = (int)(word & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
@@ -5403,6 +5576,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_DICT_SET: {
             /* src0=dict, src1=key, src2=value */
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             int src2 = (int)(word & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
@@ -5478,6 +5652,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_DICT_REMOVE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *key = regs[base + src1];
@@ -5537,6 +5712,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_DICT_MERGE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -5627,11 +5803,14 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-        case OP_SET_P:
+        case OP_SET_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             bool_store(regs, base + dest, IS_MENAI_SET(regs[base + src0]));
             break;
+        }
 
         case OP_SET_EQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -5663,6 +5842,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_NEQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -5694,6 +5874,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_LENGTH: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_set_singular(a, "set-length")) {
                 goto error;
@@ -5709,6 +5890,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_MEMBER_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
@@ -5732,6 +5914,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_ADD: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
@@ -5784,6 +5967,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_REMOVE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *item = regs[base + src1];
@@ -5839,6 +6023,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_UNION: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -5901,6 +6086,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_INTERSECTION: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -5955,6 +6141,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_DIFFERENCE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -6008,6 +6195,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_SUBSET_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -6044,6 +6232,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_SET_TO_LIST: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             if (!require_set_singular(a, "set->list")) {
                 goto error;
@@ -6075,6 +6264,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_RANGE: {
             /* src0=start, src1=end, src2=step — all integers */
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             int src2 = (int)(word & FIELD_MASK);
             MenaiValue *ra = regs[base + src0];
@@ -6165,6 +6355,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
              * src0 = absolute slot of MenaiStructType descriptor in outgoing zone.
              * src1 = field count. Fields are in slots src0+1..src0+n_fields.
              */
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *struct_type = regs[base + src0];
             if (!IS_MENAI_STRUCTTYPE(struct_type)) {
@@ -6187,6 +6378,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
 
         case OP_STRUCT_TYPE_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *stype = regs[base + src0];
             MenaiValue *val = regs[base + src1];
@@ -6207,6 +6399,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_STRUCT_GET: {
             /* src1 holds a MenaiSymbol field name */
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
             MenaiValue *field_sym = regs[base + src1];
@@ -6240,6 +6433,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
         case OP_STRUCT_GET_IMM: {
             /* src1 holds a MenaiInteger field index */
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
             MenaiValue *fidx = regs[base + src1];
@@ -6268,6 +6462,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRUCT_SET: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             int src2 = (int)(word & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
@@ -6318,6 +6513,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRUCT_SET_IMM: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             int src2 = (int)(word & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
@@ -6365,6 +6561,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRUCT_EQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -6390,6 +6587,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRUCT_NEQ_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
             MenaiValue *a = regs[base + src0];
             MenaiValue *b = regs[base + src1];
@@ -6421,6 +6619,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRUCT_TYPE: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
             if (!require_struct(val, "struct-type")) {
                 goto error;
@@ -6431,6 +6630,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRUCT_TYPE_NAME: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
             if (!require_structtype(val, "struct-type-name")) {
                 goto error;
@@ -6442,6 +6642,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         }
 
         case OP_STRUCT_FIELDS: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             MenaiValue *val = regs[base + src0];
             if (!require_structtype(val, "struct-fields")) {
                 goto error;
