@@ -31,30 +31,8 @@ typedef struct {
 
 extern MenaiType MenaiDict_Type;
 
-/*
- * menai_dict_new_empty — create a zero-entry MenaiDict.
- * Used by _menai_vm_value_init() to build the Menai_DICT_EMPTY singleton.
- * Returns a new reference, or NULL on error.
- */
 MenaiValue *menai_dict_new_empty(void);
-
-/*
- * menai_dict_from_arrays_steal — build a MenaiDict from three parallel C arrays.
- *
- * keys, values, and hashes must each have n entries.  hashes[i] must equal
- * menai_value_hash(keys[i]) for every i.  All three arrays and their contents
- * are stolen: on success they are owned by the new dict; on failure the arrays
- * are freed and all contained references are released.
- * The caller must guarantee that all keys are distinct (already deduplicated).
- *
- * Returns a new reference, or NULL on error.
- */
 MenaiValue *menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, Py_ssize_t n);
-
-/*
- * Module init — called once from _menai_vm_value_init().
- * Returns 0 on success, -1 on failure.
- */
 int menai_vm_dict_init(void);
 
 #endif /* MENAI_VM_DICT_H */

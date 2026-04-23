@@ -54,102 +54,26 @@ menai_string_get(MenaiValue *s, Py_ssize_t i)
     return ((MenaiString *)s)->data[i];
 }
 
-/*
- * From a UTF-8 encoded buffer of nbytes bytes.  Returns a new reference,
- * or NULL on error (MenaiEvalError or MemoryError set).
- */
 MenaiValue *menai_string_from_utf8(const char *utf8, Py_ssize_t nbytes);
-
-/*
- * From an existing UTF-32 codepoint array of len codepoints.
- * Returns a new reference, or NULL on MemoryError.
- */
 MenaiValue *menai_string_from_codepoints(const uint32_t *cp, Py_ssize_t len);
-
-/* From a single codepoint.  Returns a new reference, or NULL on MemoryError. */
 MenaiValue *menai_string_from_codepoint(uint32_t cp);
-
-/*
- * From a Python unicode object (PyUnicode).  Used in convert_value.
- * Returns a new reference, or NULL on error.
- */
 MenaiValue *menai_string_from_pyunicode(PyObject *pystr);
-
-/*
- * Convert to a Python unicode object.  Used for error messages and
- * Python boundary output.  Returns a new reference, or NULL on error.
- */
 PyObject *menai_string_to_pyunicode(MenaiValue *s);
-
-/* Lexicographic comparison.  Returns <0, 0, or >0. */
 int menai_string_compare(MenaiValue *a, MenaiValue *b);
-
-/* Returns 1 if equal, 0 if not. */
 int menai_string_equal(MenaiValue *a, MenaiValue *b);
-
-/* Returns the hash, computing and caching it on first call. */
 Py_hash_t menai_string_hash(MenaiValue *s);
-
-/* Concatenate two strings.  Returns a new reference. */
 MenaiValue *menai_string_concat(MenaiValue *a, MenaiValue *b);
-
-/*
- * Extract the codepoint at index i as a single-character string.
- * i must be in [0, length).  Returns a new reference.
- */
 MenaiValue *menai_string_ref(MenaiValue *s, Py_ssize_t i);
-
-/*
- * Extract the substring [start, end).  start and end must satisfy
- * 0 <= start <= end <= length.  Returns a new reference.
- */
 MenaiValue *menai_string_slice(MenaiValue *s, Py_ssize_t start, Py_ssize_t end);
-
-/*
- * Return a new string with all codepoints mapped to uppercase.
- * Handles multi-codepoint expansions (e.g. ß → SS).
- * Returns a new reference.
- */
 MenaiValue *menai_string_upcase(MenaiValue *s);
-
-/*
- * Return a new string with all codepoints mapped to lowercase.
- * Returns a new reference.
- */
 MenaiValue *menai_string_downcase(MenaiValue *s);
-
-/* Return a new string with leading and trailing whitespace removed. */
 MenaiValue *menai_string_trim(MenaiValue *s);
-
-/* Return a new string with leading whitespace removed. */
 MenaiValue *menai_string_trim_left(MenaiValue *s);
-
-/* Return a new string with trailing whitespace removed. */
 MenaiValue *menai_string_trim_right(MenaiValue *s);
-
-/*
- * Find the first occurrence of needle in haystack.
- * Returns the codepoint index, or -1 if not found, or -2 on error.
- */
 Py_ssize_t menai_string_find(MenaiValue *haystack, MenaiValue *needle);
-
-/* Returns 1 if s starts with prefix, 0 otherwise. */
 int menai_string_has_prefix(MenaiValue *s, MenaiValue *prefix);
-
-/* Returns 1 if s ends with suffix, 0 otherwise. */
 int menai_string_has_suffix(MenaiValue *s, MenaiValue *suffix);
-
-/*
- * Return a new string with all occurrences of from replaced by to.
- * Returns a new reference.
- */
 MenaiValue *menai_string_replace(MenaiValue *s, MenaiValue *from, MenaiValue *to);
-
-/*
- * Module init — called once from _menai_vm_value_init().
- * eval_error_type is a borrowed reference to MenaiEvalError.
- * Returns 0 on success, -1 on failure (Python exception set).
- */
 int menai_vm_string_init(PyObject *eval_error_type);
 
 #endif /* MENAI_VM_STRING_H */

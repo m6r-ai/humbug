@@ -16,16 +16,7 @@ typedef struct {
 
 extern MenaiType MenaiNone_Type;
 
-/*
- * Return the MenaiNone singleton (borrowed reference).
- * Valid only after menai_vm_none_init() has been called.
- */
 MenaiValue *menai_none_singleton(void);
-
-/*
- * Module init — called once from _menai_vm_value_init().
- * Returns 0 on success, -1 on failure.
- */
 int menai_vm_none_init(void);
 
 #endif /* MENAI_VM_NONE_H */

@@ -36,19 +36,7 @@ typedef struct {
 
 extern MenaiType MenaiFunction_Type;
 
-/*
- * menai_function_alloc — construct a MenaiFunction from a MenaiCodeObject.
- *
- * co is borrowed (a retain is taken internally).  none_val is borrowed.
- * All ncap capture slots are initialised to none_val.
- * Returns a new reference, or NULL on allocation failure.
- */
 MenaiValue *menai_function_alloc(MenaiCodeObject *co, MenaiValue *none_val);
-
-/*
- * Module init — called once from _menai_vm_value_init().
- * Returns 0 on success, -1 on failure.
- */
 int menai_vm_function_init(void);
 
 #endif /* MENAI_VM_FUNCTION_H */

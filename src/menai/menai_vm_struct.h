@@ -61,26 +61,8 @@ menai_struct_field_index(MenaiStructType *st, MenaiValue *name)
     return (int)menai_ht_lookup(&st->field_ht, name, h);
 }
 
-/*
- * menai_struct_alloc — direct C constructor for MenaiStruct.
- *
- * struct_type is borrowed (retained internally).  field_values is an array
- * of nfields borrowed references — each is retained into the inline array.
- * Returns a new reference, or NULL on error.
- */
 MenaiValue *menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, Py_ssize_t nfields);
-
-/*
- * menai_struct_type_new_from_args — public wrapper used by menai_convert_value.
- * args is a positional Python tuple (name: PyUnicode, tag: int, field_names: sequence of PyUnicode).
- * Converts strings to MenaiString internally.  Returns a new reference.
- */
 MenaiValue *menai_struct_type_new_from_args(PyObject *args);
-
-/*
- * Module init — called once from _menai_vm_value_init().
- * Returns 0 on success, -1 on failure.
- */
 int menai_vm_struct_init(void);
 
 #endif /* MENAI_VM_STRUCT_H */

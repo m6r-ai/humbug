@@ -30,49 +30,11 @@ typedef struct {
 
 extern MenaiType MenaiList_Type;
 
-/*
- * menai_list_from_array — copy items, retain each element.
- * Returns a new reference, or NULL on MemoryError.
- */
 MenaiValue *menai_list_from_array(MenaiValue **items, Py_ssize_t n);
-
-/*
- * menai_list_from_array_steal — take ownership of items without retaining.
- * Returns a new reference, or NULL on MemoryError (items freed on failure).
- */
 MenaiValue *menai_list_from_array_steal(MenaiValue **items, Py_ssize_t n);
-
-/*
- * menai_list_new_empty — create a zero-element MenaiList.
- * Used by _menai_vm_value_init() to build the Menai_LIST_EMPTY singleton.
- * Returns a new reference, or NULL on error.
- */
 MenaiValue *menai_list_new_empty(void);
-
-/*
- * menai_list_rest — return a slice view of lst starting at element 1.
- *
- * If lst is empty, raises MenaiEvalError and returns NULL.
- * If lst has one element, returns the Menai_EMPTY_LIST singleton (borrowed
- * from the caller — the caller must reg_set_borrow it).
- * Otherwise returns a new MenaiList that shares lst's backing array
- * without copying or retaining any elements.
- */
 MenaiValue *menai_list_rest(MenaiValue *lst);
-
-/*
- * menai_list_slice — return a slice view of lst covering [start, end).
- *
- * start and end must already be validated by the caller (0 <= start <= end
- * <= lst->length).  Returns a new MenaiList that shares lst's backing
- * array without copying or retaining any elements.
- */
 MenaiValue *menai_list_slice(MenaiValue *lst, Py_ssize_t start, Py_ssize_t end);
-
-/*
- * Module init — called once from _menai_vm_value_init().
- * Returns 0 on success, -1 on failure.
- */
 int menai_vm_list_init(void);
 
 static inline MenaiValue *

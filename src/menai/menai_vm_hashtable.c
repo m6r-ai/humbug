@@ -65,7 +65,7 @@ PyObject *menai_value_to_python_dict(MenaiValue *val);
 PyObject *menai_value_to_python_set(MenaiValue *val);
 PyObject *menai_value_to_python_function(MenaiValue *val);
 
-/* Defined in menai_vm_value.c, initialised during _menai_vm_value_init(). */
+/* Defined in menai_vm_value.c, */
 extern PyObject *MenaiEvalError_type;
 
 /*

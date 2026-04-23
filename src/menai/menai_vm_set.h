@@ -31,31 +31,8 @@ typedef struct {
 
 extern MenaiType MenaiSet_Type;
 
-/*
- * menai_set_new_empty — create a zero-element MenaiSet.
- * Used by _menai_vm_value_init() to build the Menai_SET_EMPTY singleton.
- * Returns a new reference, or NULL on error.
- */
 MenaiValue *menai_set_new_empty(void);
-
-/*
- * menai_set_from_arrays_steal — build a MenaiSet from two parallel C arrays.
- *
- * elements must have n entries; hashes[i] must equal
- * menai_value_hash(elements[i]) for every i.  Both arrays and their contents
- * are stolen: on success the arrays are owned by the new set; on failure the
- * arrays are freed and all contained references are released.
- * The caller must guarantee that all elements are distinct (already
- * deduplicated).
- *
- * Returns a new reference, or NULL on error.
- */
 MenaiValue *menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t n);
-
-/*
- * Module init — called once from _menai_vm_value_init().
- * Returns 0 on success, -1 on failure.
- */
 int menai_vm_set_init(void);
 
 #endif /* MENAI_VM_SET_H */

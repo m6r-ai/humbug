@@ -18,22 +18,8 @@ typedef struct {
 
 extern MenaiType MenaiBoolean_Type;
 
-/*
- * Return the #t singleton (borrowed reference).
- * Valid only after menai_vm_boolean_init() has been called.
- */
 MenaiValue *menai_boolean_true(void);
-
-/*
- * Return the #f singleton (borrowed reference).
- * Valid only after menai_vm_boolean_init() has been called.
- */
 MenaiValue *menai_boolean_false(void);
-
-/*
- * Module init — called once from _menai_vm_value_init().
- * Returns 0 on success, -1 on failure.
- */
 int menai_vm_boolean_init(void);
 
 #endif /* MENAI_VM_BOOLEAN_H */

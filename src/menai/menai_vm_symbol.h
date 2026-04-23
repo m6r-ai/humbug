@@ -21,18 +21,7 @@ typedef struct {
 
 extern MenaiType MenaiSymbol_Type;
 
-/*
- * menai_symbol_alloc — direct C constructor for MenaiSymbol.
- *
- * name must be a MenaiString * (as MenaiValue *).  A retain is taken
- * on name.  Returns a new reference, or NULL on allocation failure.
- */
 MenaiValue *menai_symbol_alloc(MenaiValue *name);
-
-/*
- * Module init — called once from _menai_vm_value_init().
- * Returns 0 on success, -1 on failure.
- */
 int menai_vm_symbol_init(void);
 
 #endif /* MENAI_VM_SYMBOL_H */

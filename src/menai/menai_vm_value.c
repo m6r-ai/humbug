@@ -75,19 +75,6 @@ PyObject *MenaiEvalError_type = NULL;
 MenaiValue *
 menai_convert_value(PyObject *src)
 {
-    assert(!( Py_TYPE(src) == (PyTypeObject *)&MenaiNone_Type      ||
-              Py_TYPE(src) == (PyTypeObject *)&MenaiBoolean_Type    ||
-              Py_TYPE(src) == (PyTypeObject *)&MenaiInteger_Type    ||
-              Py_TYPE(src) == (PyTypeObject *)&MenaiFloat_Type      ||
-              Py_TYPE(src) == (PyTypeObject *)&MenaiComplex_Type    ||
-              Py_TYPE(src) == (PyTypeObject *)&MenaiString_Type     ||
-              Py_TYPE(src) == (PyTypeObject *)&MenaiSymbol_Type     ||
-              Py_TYPE(src) == (PyTypeObject *)&MenaiList_Type       ||
-              Py_TYPE(src) == (PyTypeObject *)&MenaiDict_Type       ||
-              Py_TYPE(src) == (PyTypeObject *)&MenaiSet_Type        ||
-              Py_TYPE(src) == (PyTypeObject *)&MenaiFunction_Type   ||
-              Py_TYPE(src) == (PyTypeObject *)&MenaiStructType_Type ||
-              Py_TYPE(src) == (PyTypeObject *)&MenaiStruct_Type ));
     PyTypeObject *t = Py_TYPE(src);
 
     if (t == Slow_NoneType) {
@@ -485,10 +472,6 @@ menai_convert_value(PyObject *src)
     PyErr_Format(PyExc_TypeError, "menai_convert_value: unexpected type %R", (PyObject *)t);
     return NULL;
 }
-
-/* ---------------------------------------------------------------------------
- * Boundary describe functions — forward-declared in menai_vm_hashtable.c
- * ------------------------------------------------------------------------- */
 
 PyObject *
 menai_value_describe_none(MenaiValue *val)
@@ -1035,10 +1018,6 @@ menai_value_describe_function(MenaiValue *val)
     return result;
 }
 
-/* ---------------------------------------------------------------------------
- * Boundary to_python functions — forward-declared in menai_vm_hashtable.c
- * ------------------------------------------------------------------------- */
-
 PyObject *
 menai_value_to_python_none(MenaiValue *val)
 {
@@ -1269,18 +1248,14 @@ menai_value_to_python_function(MenaiValue *val)
     return (PyObject *)val;
 }
 
-/* ---------------------------------------------------------------------------
- * Module init
- * ------------------------------------------------------------------------- */
-
-/* ---------------------------------------------------------------------------
+/*
  * Python-facing methods and getsets for all fast value types.
  *
  * These are patched onto each PyTypeObject before PyType_Ready() is called
  * in _menai_vm_value_init().  They provide the Python API expected by
  * menai.py and tests: type_name(), describe(), to_python(), and properties
  * such as .pairs, .value, .parameters, etc.
- * ------------------------------------------------------------------------- */
+ */
 
 /* Shared method wrappers — dispatch via menai_value_describe/to_python */
 

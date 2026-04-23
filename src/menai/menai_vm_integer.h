@@ -39,19 +39,7 @@ extern MenaiType MenaiInteger_Type;
 #define MENAI_INT_CACHE_MAX 256
 #define MENAI_INT_CACHE_SIZE (MENAI_INT_CACHE_MAX - MENAI_INT_CACHE_MIN + 1)
 
-/*
- * menai_integer_from_long — return a MenaiInteger for the given long value.
- * Returns a new reference (retain'd from cache for in-range values).
- * Returns NULL on allocation failure.
- */
 MenaiValue *menai_integer_from_long(long n);
-
-/*
- * menai_integer_from_bigint — return a MenaiInteger that takes ownership of
- * the given MenaiInt.  src must be heap-allocated (not stack) and is consumed:
- * the caller must not call menai_int_free on it after this call.
- * Returns a new reference, or NULL on allocation failure.
- */
 MenaiValue *menai_integer_from_bigint(MenaiInt src);
 
 /*
@@ -74,10 +62,6 @@ menai_integer_small(MenaiValue *o)
     return ((MenaiInteger *)o)->small;
 }
 
-/*
- * Module init — called once from _menai_vm_value_init().
- * Returns 0 on success, -1 on failure.
- */
 int menai_vm_integer_init(void);
 
 #endif /* MENAI_VM_INTEGER_H */
