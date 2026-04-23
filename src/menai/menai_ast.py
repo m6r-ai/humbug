@@ -11,7 +11,7 @@ from typing import Any, Tuple
 
 from menai.menai_value import (
     MenaiValue, MenaiInteger, MenaiFloat, MenaiComplex,
-    MenaiString, MenaiBoolean, MenaiSymbol, MenaiList, MenaiDict, MenaiNone, Menai_NONE,
+    MenaiString, MenaiBoolean, MenaiSymbol, MenaiList, MenaiDict, MenaiSet, MenaiNone, Menai_NONE,
     MenaiStructType
 )
 
@@ -254,6 +254,48 @@ class MenaiASTList(MenaiASTNode):
     def get(self, index: int) -> MenaiASTNode:
         """Get element at index (raises IndexError if out of bounds)."""
         return self.elements[index]
+
+
+@dataclass(frozen=True)
+class MenaiASTListLiteral(MenaiASTNode):
+    """A fully-constant list literal produced by the constant folder.
+
+    Distinct from MenaiASTList (which represents a call or special form) so
+    that the IR builder can unambiguously treat it as a single constant rather
+    than a call expression.  All elements must be compile-time constants.
+    """
+    elements: Tuple[MenaiASTNode, ...] = ()
+
+    def to_runtime_value(self) -> MenaiList:
+        """Convert to a MenaiList constant."""
+        return MenaiList(tuple(elem.to_runtime_value() for elem in self.elements))
+
+    def type_name(self) -> str:
+        return "list"
+
+    def describe(self) -> str:
+        return "(" + " ".join(e.describe() for e in self.elements) + ")"
+
+
+@dataclass(frozen=True)
+class MenaiASTSet(MenaiASTNode):
+    """A fully-constant set literal produced by the constant folder.
+
+    Distinct from a (set ...) call so the IR builder can treat it as a single
+    constant rather than a runtime construction.  All elements must be
+    compile-time constants.
+    """
+    elements: Tuple[MenaiASTNode, ...] = ()
+
+    def to_runtime_value(self) -> MenaiSet:
+        """Convert to a MenaiSet constant."""
+        return MenaiSet(tuple(elem.to_runtime_value() for elem in self.elements))
+
+    def type_name(self) -> str:
+        return "set"
+
+    def describe(self) -> str:
+        return "{" + " ".join(e.describe() for e in self.elements) + "}"
 
 
 @dataclass(frozen=True)

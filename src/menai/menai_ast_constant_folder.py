@@ -12,7 +12,8 @@ from typing import List
 
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex,
-    MenaiASTBoolean, MenaiASTSymbol, MenaiASTList, MenaiASTString
+    MenaiASTBoolean, MenaiASTSymbol, MenaiASTList, MenaiASTListLiteral, MenaiASTString,
+    MenaiASTDict, MenaiASTSet
 )
 from menai.menai_ast_optimization_pass import MenaiASTOptimizationPass
 
@@ -231,6 +232,18 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
                 assert optimizer is not None
                 return optimizer(expr)
 
+            # Fold (list k1 ... kn) where all args are constants into a data list.
+            if op_name == 'list':
+                return self._try_fold_list(list(expr.elements[1:]), expr)
+
+            # Fold (dict k1 v1 ... kn vn) where all args are constants into a dict literal.
+            if op_name == 'dict':
+                return self._try_fold_dict(list(expr.elements[1:]), expr)
+
+            # Fold (set e1 ... en) where all args are constants into a set literal.
+            if op_name == 'set':
+                return self._try_fold_set(list(expr.elements[1:]), expr)
+
             # Check if it's a foldable builtin
             if op_name in self.FOLDABLE_BUILTINS:
                 return self._try_fold_builtin(op_name, list(expr.elements[1:]), expr)
@@ -330,6 +343,89 @@ class MenaiASTConstantFolder(MenaiASTOptimizationPass):
     def _optimize_quote(self, expr: MenaiASTList) -> MenaiASTNode:
         """Optimize 'quote' special form - quoted expressions are not evaluated."""
         return expr
+
+    def _is_constant(self, node: MenaiASTNode) -> bool:
+        """Return True if node is a compile-time constant (not a variable or call)."""
+        if isinstance(node, MenaiASTSymbol):
+            return False
+
+        if isinstance(node, MenaiASTList):
+            # MenaiASTList is always a call or special form, never a constant.
+            return False
+
+        if isinstance(node, MenaiASTListLiteral):
+            return True
+
+        if isinstance(node, (MenaiASTDict, MenaiASTSet)):
+            return True
+
+        return True
+
+    def _try_fold_list(self, args: List[MenaiASTNode], source_expr: MenaiASTList) -> MenaiASTNode:
+        """
+        Try to fold (list k1 ... kn) into a single MenaiASTListLiteral node.
+
+        Folds only when every argument is a compile-time constant, so that the
+        entire list becomes one entry in the constant pool instead of one entry
+        per element.  Falls back to optimising arguments individually when any
+        argument is not a constant.
+        """
+        opt_args = [self.optimize(arg) for arg in args]
+
+        if all(self._is_constant(a) for a in opt_args):
+            return MenaiASTListLiteral(
+                tuple(opt_args),
+                line=source_expr.line, column=source_expr.column, source_file=source_expr.source_file,
+            )
+
+        return MenaiASTList(
+            (MenaiASTSymbol('list'),) + tuple(opt_args),
+            line=source_expr.line, column=source_expr.column, source_file=source_expr.source_file,
+        )
+
+    def _try_fold_dict(self, args: List[MenaiASTNode], source_expr: MenaiASTList) -> MenaiASTNode:
+        """
+        Try to fold (dict k1 v1 ... kn vn) into a single MenaiASTDict node.
+
+        Folds only when every key and value is a compile-time constant.  Falls
+        back to optimising arguments individually otherwise.
+        """
+        opt_args = [self.optimize(arg) for arg in args]
+
+        if all(self._is_constant(a) for a in opt_args):
+            pairs: list[tuple[MenaiASTNode, MenaiASTNode]] = []
+            for i in range(0, len(opt_args), 2):
+                pairs.append((opt_args[i], opt_args[i + 1]))
+
+            return MenaiASTDict(
+                tuple(pairs),
+                line=source_expr.line, column=source_expr.column, source_file=source_expr.source_file,
+            )
+
+        return MenaiASTList(
+            (MenaiASTSymbol('dict'),) + tuple(opt_args),
+            line=source_expr.line, column=source_expr.column, source_file=source_expr.source_file,
+        )
+
+    def _try_fold_set(self, args: List[MenaiASTNode], source_expr: MenaiASTList) -> MenaiASTNode:
+        """
+        Try to fold (set e1 ... en) into a single MenaiASTSet node.
+
+        Folds only when every element is a compile-time constant.  Falls back
+        to optimising arguments individually otherwise.
+        """
+        opt_args = [self.optimize(arg) for arg in args]
+
+        if all(self._is_constant(a) for a in opt_args):
+            return MenaiASTSet(
+                tuple(opt_args),
+                line=source_expr.line, column=source_expr.column, source_file=source_expr.source_file,
+            )
+
+        return MenaiASTList(
+            (MenaiASTSymbol('set'),) + tuple(opt_args),
+            line=source_expr.line, column=source_expr.column, source_file=source_expr.source_file,
+        )
 
     def _try_fold_builtin(self, op_name: str, args: List[MenaiASTNode], source_expr: MenaiASTList) -> MenaiASTNode:
         """

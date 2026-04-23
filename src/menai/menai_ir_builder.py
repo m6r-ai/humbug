@@ -13,8 +13,8 @@ from menai.menai_ir import (
 )
 from menai.menai_ast import (
     MenaiASTNode, MenaiASTInteger, MenaiASTFloat, MenaiASTComplex,
-    MenaiASTString, MenaiASTBoolean, MenaiASTNone, MenaiASTSymbol, MenaiASTList, MenaiASTDict,
-    MenaiASTStruct
+    MenaiASTString, MenaiASTBoolean, MenaiASTNone, MenaiASTSymbol, MenaiASTList, MenaiASTListLiteral,
+    MenaiASTDict, MenaiASTSet, MenaiASTStruct
 )
 
 
@@ -159,7 +159,14 @@ class MenaiIRBuilder:
             return self._analyze_variable(cast(MenaiASTSymbol, expr).name, ctx)
 
         if expr_type is MenaiASTList:
-            return self._analyze_list(cast(MenaiASTList, expr), ctx, in_tail_position)
+            list_expr = cast(MenaiASTList, expr)
+            return self._analyze_list(list_expr, ctx, in_tail_position)
+
+        if expr_type is MenaiASTListLiteral:
+            return MenaiIRConstant(value=cast(MenaiASTListLiteral, expr).to_runtime_value())
+
+        if expr_type is MenaiASTSet:
+            return MenaiIRConstant(value=cast(MenaiASTSet, expr).to_runtime_value())
 
         if expr_type is MenaiASTDict:
             return MenaiIRConstant(value=cast(MenaiASTDict, expr).to_runtime_value())

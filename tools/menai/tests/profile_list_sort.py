@@ -31,7 +31,7 @@ sys.path.insert(0, str(_REPO_ROOT / "src"))
 from menai import Menai
 
 
-DEFAULT_SIZES = [10, 50, 100, 250, 500, 1000, 2000]
+DEFAULT_SIZES = [10, 50, 100, 250, 500, 1000, 2500, 5000, 10000]
 DEFAULT_ITERATIONS = 10
 MENAI_FILE = _SCRIPT_DIR / "list-sort.menai"
 
