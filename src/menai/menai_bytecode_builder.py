@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Set, Tuple
 
 from menai.menai_bytecode import BUILTIN_OPCODE_MAP, CodeObject, Opcode, pack_instruction, make_instructions_array
+from menai.menai_error import MenaiCodegenError
 from menai.menai_value import (
     MenaiBoolean,
     MenaiComplex,
@@ -157,6 +158,9 @@ class _EmitContext:
         const_idx = self.add_constant(value)
         self.emit(Opcode.LOAD_CONST, const_idx, dest=dest)
 
+    # Maximum index that fits in a 12-bit instruction field.
+    _MAX_INDEX = 0xFFF
+
     def add_constant(self, value: MenaiValue) -> int:
         """Add value to the constant pool if not already present, and return its index."""
         if isinstance(value, (MenaiInteger, MenaiFloat, MenaiComplex, MenaiBoolean, MenaiString)):
@@ -169,6 +173,13 @@ class _EmitContext:
             return self.constant_map[key]
 
         idx = len(self.constants)
+        if idx > self._MAX_INDEX:
+            raise MenaiCodegenError(
+                f"Constant pool overflow: cannot add constant at index {idx} "
+                f"(maximum is {self._MAX_INDEX}). "
+                f"Expression contains too many distinct constant values."
+            )
+
         self.constants.append(value)
         self.constant_map[key] = idx
         return idx
@@ -179,6 +190,13 @@ class _EmitContext:
             return self.name_map[name]
 
         idx = len(self.names)
+        if idx > self._MAX_INDEX:
+            raise MenaiCodegenError(
+                f"Name pool overflow: cannot add name '{name}' at index {idx} "
+                f"(maximum is {self._MAX_INDEX}). "
+                f"Expression references too many distinct global names."
+            )
+
         self.names.append(name)
         self.name_map[name] = idx
         return idx
@@ -186,6 +204,13 @@ class _EmitContext:
     def add_code_object(self, code_obj: CodeObject) -> int:
         """Add a code object to the code object pool and return its index."""
         idx = len(self.code_objects)
+        if idx > self._MAX_INDEX:
+            raise MenaiCodegenError(
+                f"Code object pool overflow: cannot add code object at index {idx} "
+                f"(maximum is {self._MAX_INDEX}). "
+                f"Expression contains too many nested closures."
+            )
+
         self.code_objects.append(code_obj)
         return idx
 

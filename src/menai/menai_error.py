@@ -182,6 +182,10 @@ class MenaiASTBuildError(MenaiError):
     """AST build errors with detailed context."""
 
 
+class MenaiCodegenError(MenaiError):
+    """Code generation errors — raised when an expression cannot be represented in the instruction encoding."""
+
+
 class MenaiEvalError(MenaiError):
     """Evaluation errors with detailed context."""
 

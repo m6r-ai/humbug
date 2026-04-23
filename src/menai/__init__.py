@@ -5,7 +5,7 @@ from menai.menai import Menai
 
 # Exceptions (enhanced with detailed context)
 from menai.menai_error import (
-    MenaiError, MenaiTokenError, MenaiASTBuildError, MenaiEvalError,
+    MenaiError, MenaiTokenError, MenaiASTBuildError, MenaiCodegenError, MenaiEvalError,
     MenaiCancelledException
 )
 
@@ -38,7 +38,7 @@ __all__ = [
     "Menai",
 
     # Exceptions (enhanced with detailed context)
-    "MenaiError", "MenaiTokenError", "MenaiASTBuildError", "MenaiEvalError", "MenaiCancelledException",
+    "MenaiError", "MenaiTokenError", "MenaiASTBuildError", "MenaiCodegenError", "MenaiEvalError", "MenaiCancelledException",
 
     # AST node types
     "MenaiASTNode", "MenaiASTInteger", "MenaiASTFloat", "MenaiASTComplex",
