@@ -11,7 +11,7 @@
 #include <string.h>
 
 #include "menai_vm_code.h"
-#include "menai_vm_object.h"
+#include "menai_vm_value.h"
 #include "menai_vm_hashtable.h"
 
 /*

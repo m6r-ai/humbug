@@ -5,7 +5,7 @@
 #ifndef MENAI_VM_INTEGER_H
 #define MENAI_VM_INTEGER_H
 
-#include "menai_vm_object.h"
+#include "menai_vm_value.h"
 #include "menai_vm_bigint.h"
 
 /*
@@ -22,7 +22,7 @@
  * The ob_type is always &MenaiInteger_Type.
  */
 typedef struct {
-    MenaiObject_HEAD
+    MenaiValue_HEAD
     int is_big;
     long small;     /* valid when is_big == 0 */
     MenaiInt big;   /* valid when is_big == 1 */

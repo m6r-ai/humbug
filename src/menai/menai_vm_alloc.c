@@ -13,7 +13,7 @@
 #include <stddef.h>
 #include <assert.h>
 
-#include "menai_vm_object.h"
+#include "menai_vm_value.h"
 #include "menai_vm_alloc.h"
 
 #define MENAI_POOL_MIN_SIZE  32
@@ -88,7 +88,7 @@ menai_alloc(size_t size)
         _pool_heads[bucket] = *(void **)ptr;
         _pool_depths[bucket]--;
         /* The block must have been poisoned when it was freed. */
-        assert(((MenaiObject *)ptr)->ob_type == NULL);
+        assert(((MenaiValue *)ptr)->ob_type == NULL);
         return ptr;
     }
 
@@ -112,8 +112,8 @@ menai_free(void *ptr, size_t size)
 
     if (_pool_depths[bucket] < MENAI_POOL_MAX_DEPTH) {
         /* Poison ob_type so use-after-free is detectable. */
-        assert(((MenaiObject *)ptr)->ob_type != NULL);
-        ((MenaiObject *)ptr)->ob_type = NULL;
+        assert(((MenaiValue *)ptr)->ob_type != NULL);
+        ((MenaiValue *)ptr)->ob_type = NULL;
         *(void **)ptr = _pool_heads[bucket];
         _pool_heads[bucket] = ptr;
         _pool_depths[bucket]++;

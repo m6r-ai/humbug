@@ -23,7 +23,7 @@
 #include <Python.h>
 #include <stdint.h>
 
-#include "menai_vm_object.h"
+#include "menai_vm_value.h"
 
 typedef struct MenaiCodeObject_s {
     size_t ob_refcnt;

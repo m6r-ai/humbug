@@ -1,11 +1,11 @@
 /*
- * menai_vm_object.h — base object model for the Menai VM.
+ * menai_vm_value.h — base object model for the Menai VM.
  *
- * Defines the MenaiValue pointer type, the MenaiObject_HEAD macro, and the
+ * Defines the MenaiValue pointer type, the MenaiValue_HEAD macro, and the
  * MenaiType typedef.
  *
  * MenaiType is currently a typedef for PyTypeObject.  This means every live
- * MenaiObject has an ob_type that Python can safely dereference as a
+ * MenaiValue has an ob_type that Python can safely dereference as a
  * PyTypeObject *, which is required for correct interaction with Python's GC
  * and type system.  The value type implementation files define their type
  * objects as PyTypeObject instances with tp_dealloc set to a native C
@@ -17,7 +17,7 @@
  * indirect branch through PyTypeObject.tp_dealloc on every release.
  *
  * Future: once the Python embedding is removed, MenaiType can be replaced
- * with a smaller native struct.  The MenaiObject_HEAD layout and all call
+ * with a smaller native struct.  The MenaiValue_HEAD layout and all call
  * sites will remain unchanged.
  */
 
@@ -31,8 +31,7 @@
 
 #include "menai_vm_types.h"
 
-typedef struct MenaiObject_s MenaiObject;
-typedef MenaiObject MenaiValue;
+typedef struct MenaiValue_s MenaiValue;
 
 /*
  * MenaiType — the type descriptor for a Menai value type.
@@ -45,7 +44,7 @@ typedef MenaiObject MenaiValue;
 typedef PyTypeObject MenaiType;
 
 /*
- * MenaiObject_HEAD — common prefix for every Menai value struct.
+ * MenaiValue_HEAD — common prefix for every Menai value struct.
  *
  * ob_refcnt  — reference count.  Starts at 1 on allocation.
  * ob_type    — pointer to the PyTypeObject for this object.
@@ -60,23 +59,23 @@ typedef PyTypeObject MenaiType;
  * Usage:
  *
  *   typedef struct {
- *       MenaiObject_HEAD
+ *       MenaiValue_HEAD
  *       double value;
  *   } MenaiFloat;
  */
 typedef void (*menai_destructor)(MenaiValue *);
 
-#define MenaiObject_HEAD              \
+#define MenaiValue_HEAD              \
     size_t ob_refcnt;                 \
     MenaiType *ob_type;               \
     menai_destructor ob_destructor;
 
 /*
- * MenaiObject — the minimal struct that every MenaiValue pointer can be
+ * MenaiValue — the minimal struct that every MenaiValue pointer can be
  * safely cast to in order to read ob_refcnt and ob_type.
  */
-struct MenaiObject_s {
-    MenaiObject_HEAD
+struct MenaiValue_s {
+    MenaiValue_HEAD
 };
 
 /*

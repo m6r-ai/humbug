@@ -8,10 +8,10 @@
 #ifndef MENAI_VM_FLOAT_H
 #define MENAI_VM_FLOAT_H
 
-#include "menai_vm_object.h"
+#include "menai_vm_value.h"
 
 typedef struct {
-    MenaiObject_HEAD
+    MenaiValue_HEAD
     double value;
 } MenaiFloat;
 

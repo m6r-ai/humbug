@@ -17,11 +17,11 @@
 #ifndef MENAI_VM_DICT_H
 #define MENAI_VM_DICT_H
 
-#include "menai_vm_object.h"
+#include "menai_vm_value.h"
 #include "menai_vm_hashtable.h"
 
 typedef struct {
-    MenaiObject_HEAD
+    MenaiValue_HEAD
     MenaiValue **keys;       /* C array of owned MenaiValue *s */
     MenaiValue **values;     /* C array of owned MenaiValue *s */
     Py_hash_t *hashes;       /* C array of menai_value_hash(keys[i]) */

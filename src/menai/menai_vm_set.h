@@ -18,11 +18,11 @@
 #ifndef MENAI_VM_SET_H
 #define MENAI_VM_SET_H
 
-#include "menai_vm_object.h"
+#include "menai_vm_value.h"
 #include "menai_vm_hashtable.h"
 
 typedef struct {
-    MenaiObject_HEAD
+    MenaiValue_HEAD
     MenaiValue **elements;   /* C array of owned MenaiValue *s */
     Py_hash_t *hashes;       /* C array of menai_value_hash(elements[i]) */
     MenaiHashTable ht;       /* pure-C hash table for O(1) membership */

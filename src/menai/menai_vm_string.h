@@ -18,7 +18,7 @@
 #include <Python.h>
 #include <stdint.h>
 
-#include "menai_vm_object.h"
+#include "menai_vm_value.h"
 
 /*
  * MenaiString
@@ -28,7 +28,7 @@
  */
 
 typedef struct {
-    MenaiObject_HEAD
+    MenaiValue_HEAD
     Py_ssize_t length;          /* codepoint count */
     Py_hash_t hash;             /* cached hash; -1 = not yet computed */
     uint32_t data[];            /* UTF-32 codepoints, flexible array */

@@ -17,7 +17,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-#include "menai_vm_object.h"
+#include "menai_vm_value.h"
 #include "menai_vm_hashtable.h"
 #include "menai_vm_string.h"
 
@@ -31,7 +31,7 @@ typedef struct {
 } MenaiFieldEntry;
 
 typedef struct {
-    MenaiObject_HEAD
+    MenaiValue_HEAD
     MenaiValue *name;            /* owned MenaiString * — struct type name */
     int tag;                     /* unique integer tag */
     int nfields;                 /* number of fields */
@@ -40,7 +40,7 @@ typedef struct {
 } MenaiStructType;
 
 typedef struct {
-    MenaiObject_HEAD
+    MenaiValue_HEAD
     int nfields;                 /* number of fields */
     MenaiValue *struct_type;     /* owned reference to MenaiStructType */
     MenaiValue *items[1];        /* inline field values, nfields entries */

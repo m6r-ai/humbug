@@ -2,7 +2,7 @@
  * menai_vm_memory.h — register file operations for the Menai VM.
  *
  * Provides the register-level memory operations used by the dispatch loop.
- * The retain/release/xrelease/is_unique primitives live in menai_vm_object.h;
+ * The retain/release/xrelease/is_unique primitives live in menai_vm_value.h;
  * this header builds on those to provide the higher-level register file API.
  *
  * Naming convention:
@@ -15,7 +15,7 @@
 
 #include <stddef.h>
 
-#include "menai_vm_object.h"
+#include "menai_vm_value.h"
 
 /*
  * menai_reg_set_own — store an owned reference into a register slot.
@@ -62,19 +62,7 @@ menai_reg_init(MenaiValue **regs, int slot, MenaiValue *val)
     menai_release(old);
 }
 
-/*
- * menai_regs_alloc — allocate and initialise a register array of n slots.
- *
- * Every slot is initialised to none_val with an owned reference.
- * Returns NULL on allocation failure.
- */
 MenaiValue **menai_regs_alloc(size_t n, MenaiValue *none_val);
-
-/*
- * menai_regs_free — release all owned references in the register array and
- * free it.  Every slot holds either Menai_NONE or an owned MenaiValue *
- * reference; all are released.
- */
 void menai_regs_free(MenaiValue **regs, size_t n);
 
 #endif /* MENAI_VM_MEMORY_H */

@@ -13,7 +13,7 @@
 #include <Python.h>
 #include <stdint.h>
 
-#include "menai_vm_object.h"
+#include "menai_vm_value.h"
 #include "menai_vm_code.h"
 
 /*
@@ -26,7 +26,7 @@
  * demand and are used only by the legacy Python VM path and tests.
  */
 typedef struct {
-    MenaiObject_HEAD
+    MenaiValue_HEAD
     Py_ssize_t ncap;               /* number of captured values */
     MenaiCodeObject *bytecode;     /* retained — owns all frame metadata */
 

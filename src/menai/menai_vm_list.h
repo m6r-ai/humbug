@@ -13,10 +13,10 @@
 #ifndef MENAI_VM_LIST_H
 #define MENAI_VM_LIST_H
 
-#include "menai_vm_object.h"
+#include "menai_vm_value.h"
 
 typedef struct {
-    MenaiObject_HEAD
+    MenaiValue_HEAD
     MenaiValue **elements; /* pointer to first live element */
     Py_ssize_t length;    /* number of live elements */
     /*

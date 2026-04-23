@@ -11,11 +11,11 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-#include "menai_vm_object.h"
+#include "menai_vm_value.h"
 #include "menai_vm_string.h"
 
 typedef struct {
-    MenaiObject_HEAD
+    MenaiValue_HEAD
     MenaiValue *name;    /* owned MenaiString * */
 } MenaiSymbol;
 

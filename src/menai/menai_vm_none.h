@@ -8,10 +8,10 @@
 #ifndef MENAI_VM_NONE_H
 #define MENAI_VM_NONE_H
 
-#include "menai_vm_object.h"
+#include "menai_vm_value.h"
 
 typedef struct {
-    MenaiObject_HEAD
+    MenaiValue_HEAD
 } MenaiNone;
 
 extern MenaiType MenaiNone_Type;
