@@ -92,6 +92,7 @@ static inline mc_t mc_logn(mc_t a, mc_t b) {
 }
 
 #include "menai_vm_value.h"
+#include "menai_vm_alloc.h"
 #include "menai_vm_string.h"
 #include "menai_vm_hashtable.h"
 #include "menai_vm_integer.h"
@@ -1053,7 +1054,7 @@ call_setup(Frame *new_frame, MenaiValue *func_obj, MenaiValue **regs, int callee
 
         /* Pack excess args into a MenaiList for the rest parameter. */
         int rest_count = arity - min_arity;
-        MenaiValue **rest_arr = rest_count > 0 ? (MenaiValue **)malloc(rest_count * sizeof(MenaiValue *)) : NULL;
+        MenaiValue **rest_arr = rest_count > 0 ? (MenaiValue **)menai_alloc((size_t)rest_count * sizeof(MenaiValue *)) : NULL;
         if (rest_count > 0 && !rest_arr) {
             return -1;
         }
@@ -4427,7 +4428,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             if (blen == 0) {
                 /* Split into individual codepoints */
                 MenaiValue **stl_arr = alen > 0
-                    ? (MenaiValue **)malloc(alen * sizeof(MenaiValue *)) : NULL;
+                    ? (MenaiValue **)menai_alloc((size_t)alen * sizeof(MenaiValue *)) : NULL;
 
                 if (alen > 0 && !stl_arr) {
                     PyErr_NoMemory();
@@ -4441,7 +4442,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                             menai_release(stl_arr[k]);
                         }
 
-                        free(stl_arr);
+                        menai_free(stl_arr, (size_t)alen * sizeof(MenaiValue *));
                         goto error;
                     }
                 }
@@ -4460,7 +4461,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
 
                 Py_ssize_t nparts = count + 1;
-                MenaiValue **parts2 = (MenaiValue **)malloc(nparts * sizeof(MenaiValue *));
+                MenaiValue **parts2 = (MenaiValue **)menai_alloc((size_t)nparts * sizeof(MenaiValue *));
                 if (!parts2) {
                     PyErr_NoMemory();
                     goto error;
@@ -4477,7 +4478,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                                 menai_release(parts2[k]);
                             }
 
-                            free(parts2);
+                            menai_free(parts2, (size_t)nparts * sizeof(MenaiValue *));
                             goto error;
                         }
 
@@ -4662,7 +4663,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiList *lst_pre = (MenaiList *)a;
             Py_ssize_t n = lst_pre->length;
-            MenaiValue **pre_arr = (MenaiValue **)malloc((n + 1) * sizeof(MenaiValue *));
+            MenaiValue **pre_arr = (MenaiValue **)menai_alloc((size_t)(n + 1) * sizeof(MenaiValue *));
             if (!pre_arr) {
                 PyErr_NoMemory();
                 goto error;
@@ -4693,7 +4694,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiList *lst_app = (MenaiList *)a;
             Py_ssize_t n = lst_app->length;
-            MenaiValue **app_arr = (MenaiValue **)malloc((n + 1) * sizeof(MenaiValue *));
+            MenaiValue **app_arr = (MenaiValue **)menai_alloc((size_t)(n + 1) * sizeof(MenaiValue *));
             if (!app_arr) {
                 PyErr_NoMemory();
                 goto error;
@@ -4724,7 +4725,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiList *lst_rev = (MenaiList *)a;
             Py_ssize_t n = lst_rev->length;
             MenaiValue **rev_arr = n > 0
-                ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
+                ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
 
             if (n > 0 && !rev_arr) {
                 PyErr_NoMemory();
@@ -4761,7 +4762,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             Py_ssize_t na = lst_ca->length, nb = lst_cb->length;
             Py_ssize_t nc = na + nb;
             MenaiValue **cat_arr = nc > 0
-                ? (MenaiValue **)malloc(nc * sizeof(MenaiValue *)) : NULL;
+                ? (MenaiValue **)menai_alloc((size_t)nc * sizeof(MenaiValue *)) : NULL;
 
             if (nc > 0 && !cat_arr) {
                 PyErr_NoMemory();
@@ -4927,7 +4928,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                 }
             }
 
-            MenaiValue **rm_arr = keep > 0 ? (MenaiValue **)malloc(keep * sizeof(MenaiValue *)) : NULL;
+            MenaiValue **rm_arr = keep > 0 ? (MenaiValue **)menai_alloc((size_t)keep * sizeof(MenaiValue *)) : NULL;
             if (keep > 0 && !rm_arr) {
                 PyErr_NoMemory();
                 goto error;
@@ -5185,7 +5186,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiDict *d = (MenaiDict *)a;
             Py_ssize_t n = d->length;
             MenaiValue **dk_arr = n > 0
-                ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
+                ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
 
             if (n > 0 && !dk_arr) {
                 PyErr_NoMemory();
@@ -5215,7 +5216,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiDict *d = (MenaiDict *)a;
             Py_ssize_t n = d->length;
             MenaiValue **dv_arr = n > 0
-                ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
+                ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
 
             if (n > 0 && !dv_arr) {
                 PyErr_NoMemory();
@@ -5921,7 +5922,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiSet *s = (MenaiSet *)a;
             Py_ssize_t set_n = s->length;
             MenaiValue **stl_arr = set_n > 0
-                ? (MenaiValue **)malloc(set_n * sizeof(MenaiValue *)) : NULL;
+                ? (MenaiValue **)menai_alloc((size_t)set_n * sizeof(MenaiValue *)) : NULL;
 
             if (set_n > 0 && !stl_arr) {
                 PyErr_NoMemory();
@@ -5994,7 +5995,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             }
 
             MenaiValue **rng_arr = n > 0
-                ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
+                ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
 
             if (n > 0 && !rng_arr) {
                 PyErr_NoMemory();
@@ -6009,7 +6010,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                         menai_release(rng_arr[k]);
                     }
 
-                    free(rng_arr);
+                    menai_free(rng_arr, (size_t)n * sizeof(MenaiValue *));
                     goto error;
                 }
 
@@ -6307,7 +6308,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             MenaiStructType *st = (MenaiStructType *)val;
             int n = st->nfields;
             MenaiValue **sf_arr = n > 0
-                ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
+                ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
 
             if (n > 0 && !sf_arr) {
                 PyErr_NoMemory();
@@ -6321,7 +6322,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
                         menai_release(sf_arr[k]);
                     }
 
-                    free(sf_arr);
+                    menai_free(sf_arr, (size_t)n * sizeof(MenaiValue *));
                     goto error;
                 }
 

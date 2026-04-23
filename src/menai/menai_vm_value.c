@@ -18,6 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "menai_vm_alloc.h"
 #include "menai_vm_float.h"
 #include "menai_vm_dict.h"
 #include "menai_vm_function.h"
@@ -210,7 +211,7 @@ menai_convert_value(PyObject *src)
         }
 
         Py_ssize_t n = PyTuple_GET_SIZE(elems);
-        MenaiValue **arr = n > 0 ? (MenaiValue **)malloc(n * sizeof(MenaiValue *)) : NULL;
+        MenaiValue **arr = n > 0 ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
         if (n > 0 && !arr) {
             Py_DECREF(elems);
             PyErr_NoMemory();
@@ -224,7 +225,7 @@ menai_convert_value(PyObject *src)
                     menai_release(arr[j]);
                 }
 
-                free(arr);
+                menai_free(arr, (size_t)n * sizeof(MenaiValue *));
                 Py_DECREF(elems);
                 return NULL;
             }

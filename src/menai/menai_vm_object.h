@@ -24,6 +24,8 @@
 #ifndef MENAI_VM_OBJECT_H
 #define MENAI_VM_OBJECT_H
 
+#include <assert.h>
+
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
@@ -83,6 +85,7 @@ struct MenaiObject_s {
 static inline void
 menai_retain(MenaiValue *val)
 {
+    assert(val->ob_type != NULL);
     val->ob_refcnt++;
 }
 
@@ -94,6 +97,7 @@ menai_retain(MenaiValue *val)
 static inline void
 menai_release(MenaiValue *val)
 {
+    assert(val->ob_type != NULL);
     if (--val->ob_refcnt == 0) {
         val->ob_destructor(val);
     }

@@ -6,12 +6,13 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include "menai_vm_alloc.h"
 #include "menai_vm_float.h"
 
 static void
 MenaiFloat_dealloc(MenaiValue *self)
 {
-    free(self);
+    menai_free(self, sizeof(MenaiFloat));
 }
 
 PyTypeObject MenaiFloat_Type = {
@@ -27,7 +28,7 @@ PyTypeObject MenaiFloat_Type = {
 MenaiValue *
 menai_float_alloc(double value)
 {
-    MenaiFloat *self = (MenaiFloat *)malloc(sizeof(MenaiFloat));
+    MenaiFloat *self = (MenaiFloat *)menai_alloc(sizeof(MenaiFloat));
     if (self == NULL) {
         return NULL;
     }

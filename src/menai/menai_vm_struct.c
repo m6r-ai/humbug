@@ -16,6 +16,7 @@
 #include <Python.h>
 #include <stdlib.h>
 
+#include "menai_vm_alloc.h"
 #include "menai_vm_struct.h"
 #include "menai_vm_memory.h"
 #include "menai_vm_symbol.h"
@@ -37,7 +38,8 @@ MenaiStructType_dealloc(MenaiValue *self)
         menai_xrelease(s->fields[i].name);
     }
 
-    free(self);
+    size_t sz = sizeof(MenaiStructType) + (size_t)n * sizeof(MenaiFieldEntry);
+    menai_free(self, sz);
 }
 
 PyTypeObject MenaiStructType_Type = {
@@ -61,8 +63,8 @@ _build_struct_type(MenaiValue *name, int tag, PyObject *fn_tup)
 {
     Py_ssize_t n = PyTuple_GET_SIZE(fn_tup);
 
-    MenaiStructType *self = (MenaiStructType *)malloc(
-        sizeof(MenaiStructType) + (size_t)n * sizeof(MenaiFieldEntry));
+    size_t sz = sizeof(MenaiStructType) + (size_t)n * sizeof(MenaiFieldEntry);
+    MenaiStructType *self = (MenaiStructType *)menai_alloc(sz);
     if (!self) {
         return NULL;
     }
@@ -141,7 +143,8 @@ MenaiStruct_dealloc(MenaiValue *self)
         menai_xrelease(s->items[i]);
     }
 
-    free(self);
+    size_t sz = sizeof(MenaiStruct) + (size_t)n * sizeof(MenaiValue *);
+    menai_free(self, sz);
 }
 
 PyTypeObject MenaiStruct_Type = {
@@ -157,8 +160,8 @@ PyTypeObject MenaiStruct_Type = {
 MenaiValue *
 menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, Py_ssize_t nfields)
 {
-    MenaiStruct *self = (MenaiStruct *)malloc(
-        sizeof(MenaiStruct) + (size_t)nfields * sizeof(MenaiValue *));
+    size_t sz = sizeof(MenaiStruct) + (size_t)nfields * sizeof(MenaiValue *);
+    MenaiStruct *self = (MenaiStruct *)menai_alloc(sz);
     if (!self) {
         return NULL;
     }

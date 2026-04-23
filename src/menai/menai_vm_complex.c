@@ -6,12 +6,13 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
+#include "menai_vm_alloc.h"
 #include "menai_vm_complex.h"
 
 static void
 MenaiComplex_dealloc(MenaiValue *self)
 {
-    free(self);
+    menai_free(self, sizeof(MenaiComplex));
 }
 
 PyTypeObject MenaiComplex_Type = {
@@ -27,7 +28,7 @@ PyTypeObject MenaiComplex_Type = {
 MenaiValue *
 menai_complex_alloc(double real, double imag)
 {
-    MenaiComplex *self = (MenaiComplex *)malloc(sizeof(MenaiComplex));
+    MenaiComplex *self = (MenaiComplex *)menai_alloc(sizeof(MenaiComplex));
     if (self == NULL) {
         return NULL;
     }

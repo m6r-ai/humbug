@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "menai_vm_alloc.h"
 #include "menai_vm_string.h"
 #include "menai_vm_string_tables.h"
 
@@ -29,8 +30,8 @@ static PyObject *_MenaiEvalError = NULL;
 static MenaiString *
 _menai_string_alloc(Py_ssize_t len)
 {
-    MenaiString *obj = (MenaiString *)malloc(
-        sizeof(MenaiString) + (size_t)len * sizeof(uint32_t));
+    size_t sz = sizeof(MenaiString) + (size_t)len * sizeof(uint32_t);
+    MenaiString *obj = (MenaiString *)menai_alloc(sz);
     if (obj == NULL) {
         return NULL;
     }
@@ -47,8 +48,9 @@ _menai_string_alloc(Py_ssize_t len)
 static void
 MenaiString_dealloc(MenaiValue *self)
 {
-    /* Data is inline — one free covers the whole allocation. */
-    free(self);
+    MenaiString *s = (MenaiString *)self;
+    size_t sz = sizeof(MenaiString) + (size_t)s->length * sizeof(uint32_t);
+    menai_free(self, sz);
 }
 
 PyTypeObject MenaiString_Type = {

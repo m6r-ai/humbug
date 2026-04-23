@@ -14,6 +14,7 @@
 #include <Python.h>
 #include <stdlib.h>
 
+#include "menai_vm_alloc.h"
 #include "menai_vm_set.h"
 #include "menai_vm_memory.h"
 #include "menai_vm_hashtable.h"
@@ -42,7 +43,7 @@ MenaiSet_dealloc(MenaiValue *self)
     MenaiSet *s = (MenaiSet *)self;
     _set_free_arrays(s->elements, s->hashes, s->length);
     menai_ht_free(&s->ht);
-    free(self);
+    menai_free(self, sizeof(MenaiSet));
 }
 
 PyTypeObject MenaiSet_Type = {
@@ -58,7 +59,7 @@ PyTypeObject MenaiSet_Type = {
 MenaiValue *
 menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t n)
 {
-    MenaiSet *obj = (MenaiSet *)malloc(sizeof(MenaiSet));
+    MenaiSet *obj = (MenaiSet *)menai_alloc(sizeof(MenaiSet));
     if (!obj) {
         _set_free_arrays(elements, hashes, n);
         return NULL;
@@ -70,7 +71,7 @@ menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t
 
     if (menai_ht_build(&obj->ht, elements, hashes, n) < 0) {
         _set_free_arrays(elements, hashes, n);
-        free(obj);
+        menai_free(obj, sizeof(MenaiSet));
         return NULL;
     }
 
@@ -84,7 +85,7 @@ menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t
 MenaiValue *
 menai_set_new_empty(void)
 {
-    MenaiSet *obj = (MenaiSet *)malloc(sizeof(MenaiSet));
+    MenaiSet *obj = (MenaiSet *)menai_alloc(sizeof(MenaiSet));
     if (!obj) {
         return NULL;
     }

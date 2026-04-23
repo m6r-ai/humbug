@@ -12,6 +12,7 @@
 #include <Python.h>
 #include <string.h>
 
+#include "menai_vm_alloc.h"
 #include "menai_vm_integer.h"
 
 static MenaiValue *_integer_cache[MENAI_INT_CACHE_SIZE];
@@ -34,7 +35,7 @@ MenaiInteger_dealloc(MenaiValue *self)
         menai_int_free(&obj->big);
     }
 
-    free(self);
+    menai_free(self, sizeof(MenaiInteger));
 }
 
 PyTypeObject MenaiInteger_Type = {
@@ -56,7 +57,7 @@ menai_integer_from_long(long n)
         return cached;
     }
 
-    MenaiInteger *r = (MenaiInteger *)malloc(sizeof(MenaiInteger));
+    MenaiInteger *r = (MenaiInteger *)menai_alloc(sizeof(MenaiInteger));
     if (r == NULL) {
         return NULL;
     }
@@ -89,7 +90,7 @@ menai_integer_from_bigint(MenaiInt src)
         return menai_integer_from_long(v);
     }
 
-    MenaiInteger *r = (MenaiInteger *)malloc(sizeof(MenaiInteger));
+    MenaiInteger *r = (MenaiInteger *)menai_alloc(sizeof(MenaiInteger));
     if (r == NULL) {
         menai_int_free(&src);
         return NULL;
@@ -113,7 +114,7 @@ menai_vm_integer_init(void)
     }
 
     for (long v = MENAI_INT_CACHE_MIN; v <= MENAI_INT_CACHE_MAX; v++) {
-        MenaiInteger *obj = (MenaiInteger *)malloc(sizeof(MenaiInteger));
+        MenaiInteger *obj = (MenaiInteger *)menai_alloc(sizeof(MenaiInteger));
         if (obj == NULL) {
             return -1;
         }

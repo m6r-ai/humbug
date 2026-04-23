@@ -9,13 +9,14 @@
 #include <Python.h>
 #include <stdlib.h>
 
+#include "menai_vm_alloc.h"
 #include "menai_vm_symbol.h"
 
 static void
 MenaiSymbol_dealloc(MenaiValue *self)
 {
     menai_xrelease(((MenaiSymbol *)self)->name);
-    free(self);
+    menai_free(self, sizeof(MenaiSymbol));
 }
 
 PyTypeObject MenaiSymbol_Type = {
@@ -31,7 +32,7 @@ PyTypeObject MenaiSymbol_Type = {
 MenaiValue *
 menai_symbol_alloc(MenaiValue *name)
 {
-    MenaiSymbol *self = (MenaiSymbol *)malloc(sizeof(MenaiSymbol));
+    MenaiSymbol *self = (MenaiSymbol *)menai_alloc(sizeof(MenaiSymbol));
     if (self == NULL) {
         return NULL;
     }

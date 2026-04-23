@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "menai_vm_alloc.h"
 #include "menai_vm_function.h"
 #include "menai_vm_memory.h"
 
@@ -24,7 +25,8 @@ MenaiFunction_dealloc(MenaiValue *self)
         menai_xrelease(f->captures[i]);
     }
 
-    free(self);
+    size_t sz = sizeof(MenaiFunction) + (size_t)ncap * sizeof(MenaiValue *);
+    menai_free(self, sz);
 }
 
 PyTypeObject MenaiFunction_Type = {
@@ -41,8 +43,8 @@ MenaiValue *
 menai_function_alloc(MenaiCodeObject *co, MenaiValue *none_val)
 {
     Py_ssize_t ncap = co->ncap;
-    MenaiFunction *self = (MenaiFunction *)malloc(
-        sizeof(MenaiFunction) + (size_t)ncap * sizeof(MenaiValue *));
+    size_t sz = sizeof(MenaiFunction) + (size_t)ncap * sizeof(MenaiValue *);
+    MenaiFunction *self = (MenaiFunction *)menai_alloc(sz);
     if (!self) {
         return NULL;
     }
