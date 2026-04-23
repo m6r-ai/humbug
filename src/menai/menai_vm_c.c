@@ -1171,7 +1171,6 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
         uint64_t word = frame->instrs[frame->ip++];
         int opcode = (int)((word >> OPCODE_SHIFT) & OPCODE_MASK);
         int dest = (int)((word >> DEST_SHIFT) & FIELD_MASK);
-        int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
         int base = frame->base;
 
         switch (opcode) {
@@ -6373,9 +6372,11 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
             break;
         }
 
-        case OP_STRUCT_P:
+        case OP_STRUCT_P: {
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
             bool_store(regs, base + dest, IS_MENAI_STRUCT(regs[base + src0]));
             break;
+        }
 
         case OP_STRUCT_TYPE_P: {
             int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
