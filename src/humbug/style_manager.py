@@ -1420,6 +1420,8 @@ class StyleManager(QObject):
 
     def get_menu_stylesheet(self) -> str:
         """Apply styling to a specific menu."""
+        zoom_factor = self.zoom_factor()
+        base_font_size = self.base_font_size()
         return f"""
             QMenu {{
                 background-color: {self.get_color_str(ColorRole.MENU_BACKGROUND)};
@@ -1429,6 +1431,7 @@ class StyleManager(QObject):
                 border-style: solid;
                 border-radius: 8px;
                 margin: 0px;
+                font-size: {base_font_size * zoom_factor}pt;
             }}
             QMenu::item {{
                 margin: 2px;
