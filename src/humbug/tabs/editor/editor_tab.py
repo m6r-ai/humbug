@@ -342,12 +342,14 @@ class EditorTab(TabBase):
     def _replace_current(self, replace_text: str) -> None:
         """Replace the current match and advance to the next."""
         self._editor_widget.replace_current(replace_text)
+        self._search_update_timer.stop()
         current, total = self._editor_widget.get_match_status()
         self._find_widget.set_match_status(current, total)
 
     def _replace_all(self, replace_text: str) -> None:
         """Replace all matches and update the status display."""
         count = self._editor_widget.replace_all(replace_text)
+        self._search_update_timer.stop()
         if count > 0:
             strings = self._language_manager.strings()
             status_text = strings.replace_count.format(count=count)

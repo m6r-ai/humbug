@@ -9,8 +9,10 @@
 #include <stdint.h>
 
 #include "menai_vm_alloc.h"
-#include "menai_vm_function.h"
 #include "menai_vm_memory.h"
+#include "menai_vm_hashtable.h"
+
+#include "menai_vm_function.h"
 
 static void
 MenaiFunction_dealloc(MenaiValue *self)

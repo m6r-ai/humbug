@@ -15,12 +15,9 @@
  *   children      — owned (array of retained MenaiCodeObject * pointers)
  *   name          — owned (strdup'd UTF-8 name string, may be NULL)
  */
-
 #ifndef MENAI_VM_CODE_H
 #define MENAI_VM_CODE_H
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <stdint.h>
 
 #include "menai_vm_value.h"
@@ -32,23 +29,23 @@ typedef struct MenaiCodeObject_s {
     int code_len;                        /* number of instructions */
 
     MenaiValue **constants;              /* fast constant pool */
-    Py_ssize_t nconst;
+    ssize_t nconst;
 
     const char **names;                  /* global name strings for OP_LOAD_NAME */
-    Py_hash_t *name_hashes;              /* precomputed FNV-1a hash of each name */
-    Py_ssize_t nnames;
+    hash_t *name_hashes;                 /* precomputed FNV-1a hash of each name */
+    ssize_t nnames;
 
     struct MenaiCodeObject_s **children; /* child code objects, one per closure */
-    Py_ssize_t nchildren;
+    ssize_t nchildren;
 
     int param_count;
     int local_count;
     int outgoing_arg_slots;
     int is_variadic;
-    Py_ssize_t ncap;                     /* number of free variables (capture slots) */
+    ssize_t ncap;                        /* number of free variables (capture slots) */
 
     char **param_names;                  /* parameter name strings, parallel to param_count */
-    Py_ssize_t nparam_names;             /* number of elements in param_names */
+    ssize_t nparam_names;                /* number of elements in param_names */
 
     char *name;                          /* function name for error messages, or NULL */
 } MenaiCodeObject;

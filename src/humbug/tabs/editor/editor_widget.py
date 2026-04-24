@@ -1229,17 +1229,17 @@ class EditorWidget(QPlainTextEdit):
 
     def _last_match_before_cursor(self) -> int:
         """
-        Return the index of the last match whose start is before the cursor.
+        Return the index of the last match whose start is at or before the cursor.
 
         This is used after a re-scan so that the next forward navigation lands
-        on the first match at or after the cursor position.  Returns -1 if all
-        matches are at or after the cursor (so the next forward step wraps to
+        on the first match after the cursor position.  Returns -1 if all
+        matches are after the cursor (so the next forward step wraps to
         match 0).
         """
         cursor_pos = self.textCursor().position()
         result = -1
         for i, (start, _end) in enumerate(self._matches):
-            if start < cursor_pos:
+            if start <= cursor_pos:
                 result = i
 
             else:

@@ -7,9 +7,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "menai_vm_code.h"
-#include "menai_vm_value.h"
+#define PY_SSIZE_T_CLEAN
+#include <Python.h>
+
 #include "menai_vm_hashtable.h"
+#include "menai_vm_value.h"
+
+#include "menai_vm_code.h"
 
 /*
  * Forward declaration — menai_convert_value lives in menai_vm_bridge.c and is
@@ -24,26 +28,26 @@ menai_code_object_release(MenaiCodeObject *co)
         return;
     }
 
-    for (Py_ssize_t i = 0; i < co->nconst; i++) {
+    for (ssize_t i = 0; i < co->nconst; i++) {
         menai_release(co->constants[i]);
     }
 
     free(co->constants);
 
-    for (Py_ssize_t i = 0; i < co->nnames; i++) {
+    for (ssize_t i = 0; i < co->nnames; i++) {
         free((char *)co->names[i]);
     }
 
     free(co->names);
     free(co->name_hashes);
 
-    for (Py_ssize_t i = 0; i < co->nparam_names; i++) {
+    for (ssize_t i = 0; i < co->nparam_names; i++) {
         free(co->param_names[i]);
     }
 
     free(co->param_names);
 
-    for (Py_ssize_t i = 0; i < co->nchildren; i++) {
+    for (ssize_t i = 0; i < co->nchildren; i++) {
         menai_code_object_release(co->children[i]);
     }
 
@@ -57,7 +61,7 @@ int
 menai_code_object_max_locals(const MenaiCodeObject *co)
 {
     int best = co->local_count + co->outgoing_arg_slots;
-    for (Py_ssize_t i = 0; i < co->nchildren; i++) {
+    for (ssize_t i = 0; i < co->nchildren; i++) {
         int child_best = menai_code_object_max_locals(co->children[i]);
         if (child_best > best) {
             best = child_best;
@@ -181,7 +185,7 @@ menai_code_object_from_python(PyObject *py_code)
                 goto fail;
             }
 
-            for (Py_ssize_t i = 0; i < co->nparam_names; i++) {
+            for (ssize_t i = 0; i < co->nparam_names; i++) {
                 const char *s = PyUnicode_AsUTF8(PyList_GET_ITEM(py_pnames, i));
                 if (!s) {
                     Py_DECREF(py_pnames);
@@ -246,7 +250,7 @@ menai_code_object_from_python(PyObject *py_code)
                 goto fail;
             }
 
-            for (Py_ssize_t i = 0; i < co->nnames; i++) {
+            for (ssize_t i = 0; i < co->nnames; i++) {
                 const char *s = PyUnicode_AsUTF8(PyList_GET_ITEM(py_names, i));
                 if (!s) {
                     Py_DECREF(py_names);
@@ -273,7 +277,7 @@ menai_code_object_from_python(PyObject *py_code)
             goto fail;
         }
 
-        for (Py_ssize_t i = 0; i < co->nnames; i++) {
+        for (ssize_t i = 0; i < co->nnames; i++) {
             co->name_hashes[i] = menai_name_str_hash(co->names[i]);
         }
     }
@@ -298,7 +302,7 @@ menai_code_object_from_python(PyObject *py_code)
                 goto fail;
             }
 
-            for (Py_ssize_t i = 0; i < co->nchildren; i++) {
+            for (ssize_t i = 0; i < co->nchildren; i++) {
                 co->children[i] = menai_code_object_from_python(
                     PyList_GET_ITEM(py_children, i));
                 if (!co->children[i]) {
@@ -330,7 +334,7 @@ menai_code_object_from_python(PyObject *py_code)
                 goto fail;
             }
 
-            for (Py_ssize_t i = 0; i < co->nconst; i++) {
+            for (ssize_t i = 0; i < co->nconst; i++) {
                 PyObject *orig = PyList_GET_ITEM(py_constants, i);
                 MenaiValue *fast = menai_convert_value(orig);
                 if (!fast) {
