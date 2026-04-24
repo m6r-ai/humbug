@@ -59,6 +59,9 @@ from menai.menai_cfg import (
     MenaiCFGParamInstr,
     MenaiCFGPatchClosureInstr,
     MenaiCFGMakeStructInstr,
+    MenaiCFGMakeListInstr,
+    MenaiCFGMakeSetInstr,
+    MenaiCFGMakeDictInstr,
     MenaiCFGPhiInstr,
     MenaiCFGRaiseTerm,
     MenaiCFGReturnTerm,
@@ -84,6 +87,9 @@ from menai.menai_vcode import (
     MenaiVCodeMove,
     MenaiVCodePatchClosure,
     MenaiVCodeMakeStruct,
+    MenaiVCodeMakeList,
+    MenaiVCodeMakeSet,
+    MenaiVCodeMakeDict,
     MenaiVCodeRaise,
     MenaiVCodeReg,
     MenaiVCodeReturn,
@@ -368,6 +374,25 @@ class MenaiVCodeBuilder:
             args = [self._reg(a) for a in instr.args]
             instrs.append(MenaiVCodeMakeStruct(dst=dst, struct_type=instr.struct_type, args=args))
             return max(max_reg_id, dst.id, *(r.id for r in args)) if args else max(max_reg_id, dst.id)
+
+        if isinstance(instr, MenaiCFGMakeListInstr):
+            dst = self._reg(instr.result)
+            args = [self._reg(a) for a in instr.args]
+            instrs.append(MenaiVCodeMakeList(dst=dst, args=args))
+            return max(max_reg_id, dst.id, *(r.id for r in args)) if args else max(max_reg_id, dst.id)
+
+        if isinstance(instr, MenaiCFGMakeSetInstr):
+            dst = self._reg(instr.result)
+            args = [self._reg(a) for a in instr.args]
+            instrs.append(MenaiVCodeMakeSet(dst=dst, args=args))
+            return max(max_reg_id, dst.id, *(r.id for r in args)) if args else max(max_reg_id, dst.id)
+
+        if isinstance(instr, MenaiCFGMakeDictInstr):
+            dst = self._reg(instr.result)
+            pairs = [(self._reg(k), self._reg(v)) for k, v in instr.pairs]
+            instrs.append(MenaiVCodeMakeDict(dst=dst, pairs=pairs))
+            all_regs = [r for k, v in pairs for r in (k, v)]
+            return max(max_reg_id, dst.id, *(r.id for r in all_regs)) if all_regs else max(max_reg_id, dst.id)
 
         if isinstance(instr, MenaiCFGTraceInstr):
             dst = self._reg(instr.result)

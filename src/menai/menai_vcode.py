@@ -18,7 +18,7 @@ Key properties
 """
 
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from menai.menai_value import MenaiValue, MenaiStructType
 
@@ -158,6 +158,45 @@ class MenaiVCodeMakeStruct:
 
 
 @dataclass
+class MenaiVCodeMakeList:
+    """
+    dst = make_list(args...)
+
+    Constructs a new MenaiList from N element values.  The bytecode emitter
+    stages element values into the outgoing zone and emits MAKE_LIST, which
+    allocates the list in a single call.
+    """
+    dst: MenaiVCodeReg
+    args: List[MenaiVCodeReg]
+
+
+@dataclass
+class MenaiVCodeMakeSet:
+    """
+    dst = make_set(args...)
+
+    Constructs a new MenaiSet from N element values.  The bytecode emitter
+    stages element values into the outgoing zone and emits MAKE_SET, which
+    allocates the set in a single call.
+    """
+    dst: MenaiVCodeReg
+    args: List[MenaiVCodeReg]
+
+
+@dataclass
+class MenaiVCodeMakeDict:
+    """
+    dst = make_dict(pairs...)
+
+    Constructs a new MenaiDict from N key-value pairs.  The bytecode emitter
+    stages pairs into the outgoing zone as (k0, v0, k1, v1, ...) and emits
+    MAKE_DICT, which allocates the dict in a single call.
+    """
+    dst: MenaiVCodeReg
+    pairs: List[Tuple[MenaiVCodeReg, MenaiVCodeReg]]
+
+
+@dataclass
 class MenaiVCodePatchClosure:
     """
     patch_closure(closure, capture_index, value)
@@ -229,6 +268,9 @@ MenaiVCodeInstr = (  # pylint: disable=invalid-name
     | MenaiVCodeMakeClosure
     | MenaiVCodePatchClosure
     | MenaiVCodeMakeStruct
+    | MenaiVCodeMakeList
+    | MenaiVCodeMakeSet
+    | MenaiVCodeMakeDict
     | MenaiVCodeTrace
     | MenaiVCodeJump
     | MenaiVCodeJumpIfTrue
@@ -323,6 +365,15 @@ def _fmt_instr(instr: MenaiVCodeInstr) -> str:
 
     if isinstance(instr, MenaiVCodeMakeStruct):
         return f"{instr.dst} = MAKE_STRUCT {instr.struct_type.name!r} {_fmt_regs(instr.args)}"
+
+    if isinstance(instr, MenaiVCodeMakeList):
+        return f"{instr.dst} = MAKE_LIST {_fmt_regs(instr.args)}"
+
+    if isinstance(instr, MenaiVCodeMakeSet):
+        return f"{instr.dst} = MAKE_SET {_fmt_regs(instr.args)}"
+
+    if isinstance(instr, MenaiVCodeMakeDict):
+        return f"{instr.dst} = MAKE_DICT {[(str(k), str(v)) for k, v in instr.pairs]}"
 
     if isinstance(instr, MenaiVCodeTrace):
         return f"{instr.dst} = TRACE {_fmt_regs(instr.messages)} {instr.value}"

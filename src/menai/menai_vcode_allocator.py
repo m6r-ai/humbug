@@ -64,6 +64,9 @@ from menai.menai_vcode import (
     MenaiVCodeMove,
     MenaiVCodePatchClosure,
     MenaiVCodeMakeStruct,
+    MenaiVCodeMakeList,
+    MenaiVCodeMakeSet,
+    MenaiVCodeMakeDict,
     MenaiVCodeReg,
     MenaiVCodeReturn,
     MenaiVCodeTailApply,
@@ -257,7 +260,8 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
                 scan_instr = func.instrs[scan_idx]
                 if isinstance(scan_instr, (MenaiVCodeCall, MenaiVCodeApply,
                                            MenaiVCodeTailCall, MenaiVCodeTailApply,
-                                           MenaiVCodeMakeStruct)):
+                                           MenaiVCodeMakeStruct, MenaiVCodeMakeList,
+                                           MenaiVCodeMakeSet, MenaiVCodeMakeDict)):
                     barrier = True
                     break
 
@@ -315,7 +319,8 @@ def allocate_slots(func: MenaiVCodeFunction) -> SlotMap:
                 scan_instr = func.instrs[scan_idx]
                 if isinstance(scan_instr, (MenaiVCodeCall, MenaiVCodeApply,
                                            MenaiVCodeTailCall, MenaiVCodeTailApply,
-                                           MenaiVCodeMakeStruct)):
+                                           MenaiVCodeMakeStruct, MenaiVCodeMakeList,
+                                           MenaiVCodeMakeSet, MenaiVCodeMakeDict)):
                     barrier = True
                     break
 
@@ -375,6 +380,15 @@ def _defs_uses(instr: MenaiVCodeInstr) -> Tuple[List[int], List[int]]:
 
     if isinstance(instr, MenaiVCodeMakeStruct):
         return [instr.dst.id], [r.id for r in instr.args]
+
+    if isinstance(instr, MenaiVCodeMakeList):
+        return [instr.dst.id], [r.id for r in instr.args]
+
+    if isinstance(instr, MenaiVCodeMakeSet):
+        return [instr.dst.id], [r.id for r in instr.args]
+
+    if isinstance(instr, MenaiVCodeMakeDict):
+        return [instr.dst.id], [r.id for k, v in instr.pairs for r in (k, v)]
 
     if isinstance(instr, MenaiVCodeTrace):
         return [instr.dst.id], [r.id for r in instr.messages] + [instr.value.id]

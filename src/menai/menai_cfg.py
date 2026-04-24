@@ -177,6 +177,46 @@ class MenaiCFGMakeStructInstr:
 
 
 @dataclass
+class MenaiCFGMakeListInstr:
+    """
+    %result = make_list [%elem, ...]
+
+    Constructs a new MenaiList from a flat list of element values known at
+    compile time to be N elements.  The VM codegen lowers this to MAKE_LIST,
+    staging element values into the outgoing zone and allocating the list in
+    a single call.
+    """
+    result: MenaiCFGValue
+    args: List[MenaiCFGValue]
+
+
+@dataclass
+class MenaiCFGMakeSetInstr:
+    """
+    %result = make_set [%elem, ...]
+
+    Constructs a new MenaiSet from a flat list of element values.  The VM
+    codegen lowers this to MAKE_SET, staging element values into the outgoing
+    zone and allocating the set in a single call.
+    """
+    result: MenaiCFGValue
+    args: List[MenaiCFGValue]
+
+
+@dataclass
+class MenaiCFGMakeDictInstr:
+    """
+    %result = make_dict [(%key, %val), ...]
+
+    Constructs a new MenaiDict from a flat list of key-value pairs.  The VM
+    codegen lowers this to MAKE_DICT, staging pairs into the outgoing zone
+    (k0, v0, k1, v1, ...) and allocating the dict in a single call.
+    """
+    result: MenaiCFGValue
+    pairs: List[Tuple[MenaiCFGValue, MenaiCFGValue]]
+
+
+@dataclass
 class MenaiCFGPatchClosureInstr:
     """
     patch_closure %closure, capture_index, %value
@@ -240,6 +280,9 @@ MenaiCFGInstr = (  # pylint: disable=invalid-name
     | MenaiCFGCallInstr
     | MenaiCFGApplyInstr
     | MenaiCFGMakeStructInstr
+    | MenaiCFGMakeListInstr
+    | MenaiCFGMakeSetInstr
+    | MenaiCFGMakeDictInstr
     | MenaiCFGMakeClosureInstr
     | MenaiCFGPatchClosureInstr
     | MenaiCFGPhiInstr
@@ -450,6 +493,16 @@ def _fmt_instr(instr: MenaiCFGInstr) -> str:
     if isinstance(instr, MenaiCFGMakeStructInstr):
         return f"{instr.result} = make_struct {instr.struct_type.name!r} {_fmt_values(instr.args)}"
 
+    if isinstance(instr, MenaiCFGMakeListInstr):
+        return f"{instr.result} = make_list {_fmt_values(instr.args)}"
+
+    if isinstance(instr, MenaiCFGMakeSetInstr):
+        return f"{instr.result} = make_set {_fmt_values(instr.args)}"
+
+    if isinstance(instr, MenaiCFGMakeDictInstr):
+        pairs_str = ", ".join(f"({k}, {v})" for k, v in instr.pairs)
+        return f"{instr.result} = make_dict [{pairs_str}]"
+
     if isinstance(instr, MenaiCFGPhiInstr):
         parts = ", ".join(f"{v} <- block{b.id}" for v, b in instr.incoming)
         return f"{instr.result} = phi [{parts}]"
@@ -562,6 +615,15 @@ def value_ids_in_instr(instr: 'MenaiCFGInstr') -> List[int]:
 
     if isinstance(instr, MenaiCFGMakeStructInstr):
         return [a.id for a in instr.args]
+
+    if isinstance(instr, MenaiCFGMakeListInstr):
+        return [a.id for a in instr.args]
+
+    if isinstance(instr, MenaiCFGMakeSetInstr):
+        return [a.id for a in instr.args]
+
+    if isinstance(instr, MenaiCFGMakeDictInstr):
+        return [i.id for k, v in instr.pairs for i in (k, v)]
 
     if isinstance(instr, MenaiCFGPatchClosureInstr):
         return [instr.closure.id, instr.value.id]

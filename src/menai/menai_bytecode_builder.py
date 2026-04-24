@@ -56,6 +56,9 @@ from menai.menai_vcode import (
     MenaiVCodeMove,
     MenaiVCodePatchClosure,
     MenaiVCodeMakeStruct,
+    MenaiVCodeMakeList,
+    MenaiVCodeMakeSet,
+    MenaiVCodeMakeDict,
     MenaiVCodeRaise,
     MenaiVCodeReg,
     MenaiVCodeReturn,
@@ -328,8 +331,55 @@ class MenaiBytecodeBuilder:
                     dst_slot = local_count + 1 + j
                     if src != dst_slot:
                         ctx.emit(Opcode.MOVE, src, dest=dst_slot)
+
                 ctx.max_outgoing_args = max(ctx.max_outgoing_args, 1 + n_fields)
                 ctx.emit(Opcode.MAKE_STRUCT, local_count, n_fields, dest=ctx.slot_of(instr.dst))
+                i += 1
+                continue
+
+            if isinstance(instr, MenaiVCodeMakeList):
+                local_count = ctx.slot_map.local_count
+                n_elems = len(instr.args)
+                # Stage each element value into outgoing zone slots 0..n_elems-1.
+                for j, arg in enumerate(instr.args):
+                    src = ctx.slot_of(arg)
+                    dst_slot = local_count + j
+                    if src != dst_slot:
+                        ctx.emit(Opcode.MOVE, src, dest=dst_slot)
+
+                ctx.max_outgoing_args = max(ctx.max_outgoing_args, n_elems)
+                ctx.emit(Opcode.MAKE_LIST, local_count, n_elems, dest=ctx.slot_of(instr.dst))
+                i += 1
+                continue
+
+            if isinstance(instr, MenaiVCodeMakeSet):
+                local_count = ctx.slot_map.local_count
+                n_elems = len(instr.args)
+                # Stage each element value into outgoing zone slots 0..n_elems-1.
+                for j, arg in enumerate(instr.args):
+                    src = ctx.slot_of(arg)
+                    dst_slot = local_count + j
+                    if src != dst_slot:
+                        ctx.emit(Opcode.MOVE, src, dest=dst_slot)
+
+                ctx.max_outgoing_args = max(ctx.max_outgoing_args, n_elems)
+                ctx.emit(Opcode.MAKE_SET, local_count, n_elems, dest=ctx.slot_of(instr.dst))
+                i += 1
+                continue
+
+            if isinstance(instr, MenaiVCodeMakeDict):
+                local_count = ctx.slot_map.local_count
+                n_pairs = len(instr.pairs)
+                # Stage pairs as (k0, v0, k1, v1, ...) into outgoing zone.
+                for j, (k, v) in enumerate(instr.pairs):
+                    for offset, reg in enumerate((k, v)):
+                        src = ctx.slot_of(reg)
+                        dst_slot = local_count + j * 2 + offset
+                        if src != dst_slot:
+                            ctx.emit(Opcode.MOVE, src, dest=dst_slot)
+
+                ctx.max_outgoing_args = max(ctx.max_outgoing_args, n_pairs * 2)
+                ctx.emit(Opcode.MAKE_DICT, local_count, n_pairs, dest=ctx.slot_of(instr.dst))
                 i += 1
                 continue
 

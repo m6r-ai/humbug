@@ -22,6 +22,9 @@ from menai.menai_cfg import (
     MenaiCFGPatchClosureInstr,
     MenaiCFGParamInstr,
     MenaiCFGMakeStructInstr,
+    MenaiCFGMakeListInstr,
+    MenaiCFGMakeSetInstr,
+    MenaiCFGMakeDictInstr,
     MenaiCFGPhiInstr,
     MenaiCFGRaiseTerm,
     MenaiCFGReturnTerm,
@@ -684,28 +687,20 @@ class MenaiCFGBuilder:
         self, ir: MenaiIRBuildList, block: MenaiCFGBlock, scope: MenaiCFGScope, state: _FunctionState,
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         """
-        Build a list literal iteratively.
+        Build a list literal.
 
-        Emits LOAD_EMPTY_LIST into an accumulator slot, then for each element
-        emits a LIST_APPEND builtin op into the same accumulator slot,
-        reusing the slot each time.  This is O(N) in instructions and O(1)
-        in register slots regardless of list size.
+        Evaluates each element plan, then emits a single MenaiCFGMakeListInstr
+        carrying all element values.  The VM codegen lowers this to MAKE_LIST,
+        which allocates the list in one call.
         """
-        # Seed: empty list into a fresh accumulator slot.
-        acc_val = state.new_value("list_acc")
-        block.instrs.append(MenaiCFGConstInstr(result=acc_val, value=MenaiList()))
-
+        elem_vals: List[MenaiCFGValue] = []
         for elem_plan in ir.element_plans:
             elem_val, block = self._build_expr(elem_plan, block, scope, state, tail=False)
-            new_acc = state.new_value("list_acc")
-            block.instrs.append(MenaiCFGBuiltinInstr(
-                result=new_acc,
-                op='list-append',
-                args=[acc_val, elem_val],
-            ))
-            acc_val = new_acc
+            elem_vals.append(elem_val)
 
-        return acc_val, block
+        result = state.new_value("list")
+        block.instrs.append(MenaiCFGMakeListInstr(result=result, args=elem_vals))
+        return result, block
 
     def _build_dict(
         self,
@@ -715,26 +710,21 @@ class MenaiCFGBuilder:
         state: _FunctionState,
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         """
-        Build a dict literal iteratively.
+        Build a dict literal.
 
-        Emits LOAD_EMPTY_DICT into an accumulator slot, then for each
-        (key, value) pair emits a DICT_SET builtin op into the accumulator.
+        Evaluates each key and value plan, then emits a single
+        MenaiCFGMakeDictInstr carrying all pairs.  The VM codegen lowers this
+        to MAKE_DICT, which allocates the dict in a single call.
         """
-        acc_val = state.new_value("dict_acc")
-        block.instrs.append(MenaiCFGConstInstr(result=acc_val, value=MenaiDict()))
-
+        pair_vals: List[Tuple[MenaiCFGValue, MenaiCFGValue]] = []
         for key_plan, val_plan in ir.pair_plans:
             key_val, block = self._build_expr(key_plan, block, scope, state, tail=False)
             val_val, block = self._build_expr(val_plan, block, scope, state, tail=False)
-            new_acc = state.new_value("dict_acc")
-            block.instrs.append(MenaiCFGBuiltinInstr(
-                result=new_acc,
-                op='dict-set',
-                args=[acc_val, key_val, val_val],
-            ))
-            acc_val = new_acc
+            pair_vals.append((key_val, val_val))
 
-        return acc_val, block
+        result = state.new_value("dict")
+        block.instrs.append(MenaiCFGMakeDictInstr(result=result, pairs=pair_vals))
+        return result, block
 
     def _build_set(
         self,
@@ -744,25 +734,20 @@ class MenaiCFGBuilder:
         state: _FunctionState,
     ) -> Tuple[MenaiCFGValue, MenaiCFGBlock]:
         """
-        Build a set literal iteratively.
+        Build a set literal.
 
-        Emits LOAD_EMPTY_SET into an accumulator slot, then for each element
-        emits a SET_ADD builtin op into the accumulator.
+        Evaluates each element plan, then emits a single MenaiCFGMakeSetInstr
+        carrying all element values.  The VM codegen lowers this to MAKE_SET,
+        which allocates the set in a single call.
         """
-        acc_val = state.new_value("set_acc")
-        block.instrs.append(MenaiCFGConstInstr(result=acc_val, value=MenaiSet()))
-
+        elem_vals: List[MenaiCFGValue] = []
         for elem_plan in ir.element_plans:
             elem_val, block = self._build_expr(elem_plan, block, scope, state, tail=False)
-            new_acc = state.new_value("set_acc")
-            block.instrs.append(MenaiCFGBuiltinInstr(
-                result=new_acc,
-                op='set-add',
-                args=[acc_val, elem_val],
-            ))
-            acc_val = new_acc
+            elem_vals.append(elem_val)
 
-        return acc_val, block
+        result = state.new_value("set")
+        block.instrs.append(MenaiCFGMakeSetInstr(result=result, args=elem_vals))
+        return result, block
 
     def _build_struct(
         self,

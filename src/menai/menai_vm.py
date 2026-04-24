@@ -66,6 +66,12 @@ class MenaiVM:
     Virtual machine for executing Menai bytecode.
     """
 
+    # Class-level cache: prelude CodeObject id → (resolved globals dict,
+    # max_locals contribution from globals functions).  Shared across all VM
+    # instances so the prelude is only executed and walked once per process,
+    # mirroring the C VM's globals cache.
+    _prelude_cache: Dict[int, tuple] = {}
+
     def __init__(self, validate: bool = True) -> None:
         self.regs: List[MenaiValue] = []
 
@@ -277,6 +283,7 @@ class MenaiVM:
         table[Opcode.STRING_REPLACE] = self._op_string_replace
         table[Opcode.STRING_INDEX] = self._op_string_index
         table[Opcode.STRING_TO_INTEGER_CODEPOINT] = self._op_string_to_integer_codepoint
+        table[Opcode.MAKE_DICT] = self._op_make_dict
         table[Opcode.DICT_P] = self._op_dict_p
         table[Opcode.DICT_EQ_P] = self._op_dict_eq_p
         table[Opcode.DICT_NEQ_P] = self._op_dict_neq_p
@@ -288,6 +295,7 @@ class MenaiVM:
         table[Opcode.DICT_MERGE] = self._op_dict_merge
         table[Opcode.DICT_SET] = self._op_dict_set
         table[Opcode.DICT_GET] = self._op_dict_get
+        table[Opcode.MAKE_LIST] = self._op_make_list
         table[Opcode.LIST_P] = self._op_list_p
         table[Opcode.LIST_EQ_P] = self._op_list_eq_p
         table[Opcode.LIST_NEQ_P] = self._op_list_neq_p
@@ -307,6 +315,7 @@ class MenaiVM:
         table[Opcode.LIST_CONCAT] = self._op_list_concat
         table[Opcode.LIST_TO_STRING] = self._op_list_to_string
         table[Opcode.LIST_TO_SET] = self._op_list_to_set
+        table[Opcode.MAKE_SET] = self._op_make_set
         table[Opcode.SET_P] = self._op_set_p
         table[Opcode.SET_EQ_P] = self._op_set_eq_p
         table[Opcode.SET_NEQ_P] = self._op_set_neq_p
@@ -377,7 +386,38 @@ class MenaiVM:
         if _C_VM_AVAILABLE and self.trace_watcher is None and not self._cancelled:
             return cast(Callable, _c_vm_execute)(code, globals_dict or {})
 
-        self.globals = dict(globals_dict) if globals_dict else {}
+        # If globals_dict is a CodeObject (the prelude), execute it to obtain
+        # the actual globals dict, caching the result by object identity so the
+        # prelude is only executed once per VM instance.
+        resolved_globals: Dict[str, MenaiValue] | None = None
+        globals_max_locals: int = 0
+        if isinstance(globals_dict, CodeObject):
+            cache_key = id(globals_dict)
+            cached = self._prelude_cache.get(cache_key)
+            if cached is not None:
+                resolved_globals, globals_max_locals = cached
+
+            else:
+                prelude_result = self.execute(globals_dict, None)
+                if not isinstance(prelude_result, MenaiDict):
+                    raise MenaiEvalError("Prelude must evaluate to a dict")
+
+                resolved_globals = {k.value: v for k, v in prelude_result.pairs}
+                for func in resolved_globals.values():
+                    if type(func) is MenaiFunction:  # pylint: disable=unidiomatic-typecheck
+                        n = self._max_local_count(func.bytecode)
+                        globals_max_locals = max(globals_max_locals, n)
+
+                self._prelude_cache[cache_key] = (resolved_globals, globals_max_locals)
+
+        elif globals_dict is not None:
+            resolved_globals = dict(globals_dict)
+            for func in resolved_globals.values():
+                if type(func) is MenaiFunction:  # pylint: disable=unidiomatic-typecheck
+                    n = self._max_local_count(func.bytecode)
+                    globals_max_locals = max(globals_max_locals, n)
+
+        self.globals = resolved_globals if resolved_globals is not None else {}
 
         # Reset state
         self._cancelled = False
@@ -386,11 +426,7 @@ class MenaiVM:
         # maximum local_count across all code objects reachable from `code` and from
         # any globals functions (which live in globals, not in the code tree).
         max_locals = self._max_local_count(code)
-        if globals_dict:
-            for func in globals_dict.values():
-                if type(func) is MenaiFunction:  # pylint: disable=unidiomatic-typecheck
-                    n = self._max_local_count(func.bytecode)
-                    max_locals = max(max_locals, n)
+        max_locals = max(max_locals, globals_max_locals)
 
         self.regs = [Menai_NONE] * ((self._max_frame_depth + 1) * max_locals)
 
@@ -4106,4 +4142,52 @@ class MenaiVM:
             raise MenaiEvalError("Range step cannot be zero")
 
         regs[base + dest] = MenaiList(tuple(MenaiInteger(v) for v in range(start, end, step)))
+        return None
+
+    def _op_make_list(  # pylint: disable=useless-return
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
+    ) -> MenaiValue | None:
+        """
+        MAKE_LIST dest, src0, src1: construct a list.
+
+        src0 is the absolute slot index of the first element in the outgoing
+        zone.  src1 is the element count.  Elements are in slots src0..src0+n-1.
+        """
+        base = frame.base
+        regs = self.regs
+        n = src1
+        regs[base + dest] = MenaiList(tuple(regs[base + src0 + i] for i in range(n)))
+        return None
+
+    def _op_make_set(  # pylint: disable=useless-return
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
+    ) -> MenaiValue | None:
+        """
+        MAKE_SET dest, src0, src1: construct a set.
+
+        src0 is the absolute slot index of the first element in the outgoing
+        zone.  src1 is the element count.  Elements are in slots src0..src0+n-1.
+        """
+        base = frame.base
+        regs = self.regs
+        n = src1
+        elements = tuple(regs[base + src0 + i] for i in range(n))
+        regs[base + dest] = MenaiSet(elements)
+        return None
+
+    def _op_make_dict(  # pylint: disable=useless-return
+        self, frame: Frame, dest: int, src0: int, src1: int, _src2: int
+    ) -> MenaiValue | None:
+        """
+        MAKE_DICT dest, src0, src1: construct a dict.
+
+        src0 is the absolute slot index of the first slot in the outgoing zone.
+        src1 is the pair count.  Pairs are interleaved as k0, v0, k1, v1, ...
+        in slots src0..src0+n*2-1.
+        """
+        base = frame.base
+        regs = self.regs
+        n = src1
+        pairs = tuple((regs[base + src0 + i * 2], regs[base + src0 + i * 2 + 1]) for i in range(n))
+        regs[base + dest] = MenaiDict(pairs)
         return None

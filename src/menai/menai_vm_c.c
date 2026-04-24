@@ -339,48 +339,51 @@ _menai_mul_overflow(long a, long b, long *r) {
 #define OP_STRING_REPLACE 261
 #define OP_STRING_INDEX 262
 #define OP_STRING_TO_INTEGER_CODEPOINT 263
-#define OP_DICT_P 280
-#define OP_DICT_EQ_P 281
-#define OP_DICT_NEQ_P 282
-#define OP_DICT_KEYS 283
-#define OP_DICT_VALUES 284
-#define OP_DICT_LENGTH 285
-#define OP_DICT_HAS_P 286
-#define OP_DICT_REMOVE 287
-#define OP_DICT_MERGE 288
-#define OP_DICT_SET 289
-#define OP_DICT_GET 290
-#define OP_LIST_P 300
-#define OP_LIST_EQ_P 301
-#define OP_LIST_NEQ_P 302
-#define OP_LIST_PREPEND 303
-#define OP_LIST_APPEND 304
-#define OP_LIST_REVERSE 305
-#define OP_LIST_FIRST 306
-#define OP_LIST_REST 307
-#define OP_LIST_LAST 308
-#define OP_LIST_LENGTH 309
-#define OP_LIST_REF 310
-#define OP_LIST_NULL_P 311
-#define OP_LIST_MEMBER_P 312
-#define OP_LIST_INDEX 313
-#define OP_LIST_SLICE 314
-#define OP_LIST_REMOVE 315
-#define OP_LIST_CONCAT 316
-#define OP_LIST_TO_STRING 317
-#define OP_LIST_TO_SET 318
-#define OP_SET_P 340
-#define OP_SET_EQ_P 341
-#define OP_SET_NEQ_P 342
-#define OP_SET_MEMBER_P 343
-#define OP_SET_ADD 344
-#define OP_SET_REMOVE 345
-#define OP_SET_LENGTH 346
-#define OP_SET_UNION 347
-#define OP_SET_INTERSECTION 348
-#define OP_SET_DIFFERENCE 349
-#define OP_SET_SUBSET_P 350
-#define OP_SET_TO_LIST 351
+#define OP_MAKE_DICT 280
+#define OP_DICT_P 281
+#define OP_DICT_EQ_P 282
+#define OP_DICT_NEQ_P 283
+#define OP_DICT_KEYS 284
+#define OP_DICT_VALUES 285
+#define OP_DICT_LENGTH 286
+#define OP_DICT_HAS_P 287
+#define OP_DICT_REMOVE 288
+#define OP_DICT_MERGE 289
+#define OP_DICT_SET 290
+#define OP_DICT_GET 291
+#define OP_MAKE_LIST 300
+#define OP_LIST_P 301
+#define OP_LIST_EQ_P 302
+#define OP_LIST_NEQ_P 303
+#define OP_LIST_PREPEND 304
+#define OP_LIST_APPEND 305
+#define OP_LIST_REVERSE 306
+#define OP_LIST_FIRST 307
+#define OP_LIST_REST 308
+#define OP_LIST_LAST 309
+#define OP_LIST_LENGTH 310
+#define OP_LIST_REF 311
+#define OP_LIST_NULL_P 312
+#define OP_LIST_MEMBER_P 313
+#define OP_LIST_INDEX 314
+#define OP_LIST_SLICE 315
+#define OP_LIST_REMOVE 316
+#define OP_LIST_CONCAT 317
+#define OP_LIST_TO_STRING 318
+#define OP_LIST_TO_SET 319
+#define OP_MAKE_SET 340
+#define OP_SET_P 341
+#define OP_SET_EQ_P 342
+#define OP_SET_NEQ_P 343
+#define OP_SET_MEMBER_P 344
+#define OP_SET_ADD 345
+#define OP_SET_REMOVE 346
+#define OP_SET_LENGTH 347
+#define OP_SET_UNION 348
+#define OP_SET_INTERSECTION 349
+#define OP_SET_DIFFERENCE 350
+#define OP_SET_SUBSET_P 351
+#define OP_SET_TO_LIST 352
 #define OP_MAKE_STRUCT 360
 #define OP_STRUCT_P 361
 #define OP_STRUCT_TYPE_P 362
@@ -6359,6 +6362,120 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
                 rng_arr[i] = mi;
                 val += step;
+            }
+
+            menai_reg_set_own(regs, base + dest, r);
+            break;
+        }
+
+        case OP_MAKE_LIST: {
+            /*
+             * MAKE_LIST src0, src1:
+             * src0 = base slot of outgoing zone (absolute slot index).
+             * src1 = element count.
+             * Elements are in slots src0..src0+n-1.
+             */
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            int n = src1;
+            MenaiValue *r = menai_list_alloc(n);
+            if (!r) {
+                PyErr_NoMemory();
+                goto error;
+            }
+
+            MenaiValue **lst_arr = menai_list_elements(r);
+            for (int i = 0; i < n; i++) {
+                lst_arr[i] = regs[base + src0 + i];
+                menai_retain(lst_arr[i]);
+            }
+
+            menai_reg_set_own(regs, base + dest, r);
+            break;
+        }
+
+        case OP_MAKE_SET: {
+            /*
+             * MAKE_SET src0, src1:
+             * src0 = base slot of outgoing zone (absolute slot index).
+             * src1 = element count.
+             * Elements are in slots src0..src0+n-1.
+             */
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            int n = src1;
+            MenaiValue *r = menai_set_alloc(n);
+            if (!r) {
+                PyErr_NoMemory();
+                goto error;
+            }
+
+            MenaiSet *s = (MenaiSet *)r;
+            for (int i = 0; i < n; i++) {
+                MenaiValue *elem = regs[base + src0 + i];
+                Py_hash_t h = menai_value_hash(elem);
+                if (h == -1) {
+                    menai_release(r);
+                    goto error;
+                }
+
+                menai_retain(elem);
+                s->elements[i] = elem;
+                s->hashes[i] = h;
+            }
+
+            s->length = n;
+            if (n > 0 && menai_ht_build(&s->ht, s->elements, s->hashes, n) < 0) {
+                menai_release(r);
+                goto error;
+            }
+
+            menai_reg_set_own(regs, base + dest, r);
+            break;
+        }
+
+        case OP_MAKE_DICT: {
+            /*
+             * MAKE_DICT src0, src1:
+             * src0 = base slot of outgoing zone (absolute slot index).
+             * src1 = pair count.
+             * Pairs are interleaved as k0, v0, k1, v1, ... in slots src0..src0+n*2-1.
+             */
+            int src0 = (int)((word >> SRC0_SHIFT) & FIELD_MASK);
+            int src1 = (int)((word >> SRC1_SHIFT) & FIELD_MASK);
+            int n = src1;
+            MenaiValue **keys = (MenaiValue **)malloc((size_t)n * sizeof(MenaiValue *));
+            MenaiValue **values = (MenaiValue **)malloc((size_t)n * sizeof(MenaiValue *));
+            hash_t *hashes = (hash_t *)malloc((size_t)n * sizeof(hash_t));
+            if (!keys || !values || !hashes) {
+                free(keys);
+                free(values);
+                free(hashes);
+                PyErr_NoMemory();
+                goto error;
+            }
+
+            for (int i = 0; i < n; i++) {
+                MenaiValue *k = regs[base + src0 + i * 2];
+                MenaiValue *v = regs[base + src0 + i * 2 + 1];
+                Py_hash_t h = menai_value_hash(k);
+                if (h == -1) {
+                    free(keys);
+                    free(values);
+                    free(hashes);
+                    goto error;
+                }
+
+                menai_retain(k);
+                menai_retain(v);
+                keys[i] = k;
+                values[i] = v;
+                hashes[i] = h;
+            }
+
+            MenaiValue *r = menai_dict_from_arrays_steal(keys, values, hashes, n);
+            if (!r) {
+                goto error;
             }
 
             menai_reg_set_own(regs, base + dest, r);
