@@ -475,7 +475,11 @@ menai_bigint_from_pylong(PyObject *obj, MenaiBigInt *a)
 
     /* Large value: use _PyLong_AsByteArray. */
     int sign = 0;
+#if PY_VERSION_HEX >= 0x030E00A1
+    PyLong_GetSign(obj, &sign);
+#else
     sign = _PyLong_Sign(obj);
+#endif
 
     int is_neg = (sign < 0);
 
