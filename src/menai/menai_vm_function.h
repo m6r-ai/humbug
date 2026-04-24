@@ -27,7 +27,7 @@
  */
 typedef struct {
     MenaiValue_HEAD
-    Py_ssize_t ncap;               /* number of captured values */
+    ssize_t ncap;                  /* number of captured values */
     MenaiCodeObject *bytecode;     /* retained — owns all frame metadata */
 
     /* Inline capture array — ncap elements follow immediately. */

@@ -25,10 +25,10 @@
  * free all three arrays.  NULL pointers are safely ignored.
  */
 static void
-_dict_free_arrays(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, Py_ssize_t n)
+_dict_free_arrays(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, ssize_t n)
 {
     if (keys) {
-        for (Py_ssize_t i = 0; i < n; i++) {
+        for (ssize_t i = 0; i < n; i++) {
             menai_xrelease(keys[i]);
         }
 
@@ -36,7 +36,7 @@ _dict_free_arrays(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, Py_
     }
 
     if (values) {
-        for (Py_ssize_t i = 0; i < n; i++) {
+        for (ssize_t i = 0; i < n; i++) {
             menai_xrelease(values[i]);
         }
 
@@ -56,7 +56,7 @@ MenaiDict_dealloc(MenaiValue *self)
 }
 
 MenaiValue *
-menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, Py_ssize_t n)
+menai_dict_from_arrays_steal(MenaiValue **keys, MenaiValue **values, Py_hash_t *hashes, ssize_t n)
 {
     MenaiDict *obj = (MenaiDict *)menai_alloc(sizeof(MenaiDict));
     if (!obj) {

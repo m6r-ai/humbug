@@ -20,8 +20,8 @@ MenaiFunction_dealloc(MenaiValue *self)
 {
     MenaiFunction *f = (MenaiFunction *)self;
     menai_code_object_release(f->bytecode);
-    Py_ssize_t ncap = f->ncap;
-    for (Py_ssize_t i = 0; i < ncap; i++) {
+    ssize_t ncap = f->ncap;
+    for (ssize_t i = 0; i < ncap; i++) {
         menai_xrelease(f->captures[i]);
     }
 
@@ -32,7 +32,7 @@ MenaiFunction_dealloc(MenaiValue *self)
 MenaiValue *
 menai_function_alloc(MenaiCodeObject *co, MenaiValue *none_val)
 {
-    Py_ssize_t ncap = co->ncap;
+    ssize_t ncap = co->ncap;
     size_t sz = sizeof(MenaiFunction) + (size_t)ncap * sizeof(MenaiValue *);
     MenaiFunction *self = (MenaiFunction *)menai_alloc(sz);
     if (!self) {
@@ -46,7 +46,7 @@ menai_function_alloc(MenaiCodeObject *co, MenaiValue *none_val)
     menai_code_object_retain(co);
     self->bytecode = co;
 
-    for (Py_ssize_t i = 0; i < ncap; i++) {
+    for (ssize_t i = 0; i < ncap; i++) {
         menai_retain(none_val);
         self->captures[i] = none_val;
     }

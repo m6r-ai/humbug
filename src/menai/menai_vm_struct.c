@@ -23,10 +23,6 @@
 #include "menai_vm_string.h"
 #include "menai_vm_hashtable.h"
 
-/* ---------------------------------------------------------------------------
- * MenaiStructType
- * ------------------------------------------------------------------------- */
-
 static void
 MenaiStructType_dealloc(MenaiValue *self)
 {
@@ -51,7 +47,7 @@ MenaiStructType_dealloc(MenaiValue *self)
 static MenaiValue *
 _build_struct_type(MenaiValue *name, int tag, PyObject *fn_tup)
 {
-    Py_ssize_t n = PyTuple_GET_SIZE(fn_tup);
+    ssize_t n = PyTuple_GET_SIZE(fn_tup);
 
     size_t sz = sizeof(MenaiStructType) + (size_t)n * sizeof(MenaiFieldEntry);
     MenaiStructType *self = (MenaiStructType *)menai_alloc(sz);
@@ -70,7 +66,7 @@ _build_struct_type(MenaiValue *name, int tag, PyObject *fn_tup)
     self->tag = tag;
     self->nfields = (int)n;
 
-    for (Py_ssize_t i = 0; i < n; i++) {
+    for (ssize_t i = 0; i < n; i++) {
         PyObject *fname = PyTuple_GET_ITEM(fn_tup, i);
         MenaiValue *fname_str = menai_string_from_pyunicode(fname);
         if (!fname_str) {
@@ -89,7 +85,7 @@ _build_struct_type(MenaiValue *name, int tag, PyObject *fn_tup)
         return NULL;
     }
 
-    for (Py_ssize_t i = 0; i < n; i++) {
+    for (ssize_t i = 0; i < n; i++) {
         Py_hash_t h = menai_string_hash(self->fields[i].name);
         menai_ht_insert(&self->field_ht, self->fields[i].name, h, i);
     }
@@ -138,7 +134,7 @@ MenaiStruct_dealloc(MenaiValue *self)
 }
 
 MenaiValue *
-menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, Py_ssize_t nfields)
+menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, ssize_t nfields)
 {
     size_t sz = sizeof(MenaiStruct) + (size_t)nfields * sizeof(MenaiValue *);
     MenaiStruct *self = (MenaiStruct *)menai_alloc(sz);
@@ -153,7 +149,7 @@ menai_struct_alloc(MenaiValue *struct_type, MenaiValue **field_values, Py_ssize_
     menai_retain(struct_type);
     self->struct_type = struct_type;
 
-    for (Py_ssize_t i = 0; i < nfields; i++) {
+    for (ssize_t i = 0; i < nfields; i++) {
         menai_retain(field_values[i]);
         self->items[i] = field_values[i];
     }
