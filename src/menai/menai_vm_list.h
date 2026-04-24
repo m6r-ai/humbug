@@ -25,7 +25,6 @@ typedef struct {
     MenaiValue *owner;
 } MenaiList;
 
-MenaiValue *menai_list_from_array(MenaiValue **items, ssize_t n);
 MenaiValue *menai_list_from_array_steal(MenaiValue **items, ssize_t n);
 MenaiValue *menai_list_new_empty(void);
 MenaiValue *menai_list_rest(MenaiValue *lst);

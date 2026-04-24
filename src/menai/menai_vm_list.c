@@ -49,42 +49,6 @@ MenaiList_dealloc(MenaiValue *self)
 }
 
 MenaiValue *
-menai_list_from_array(MenaiValue **items, ssize_t n)
-{
-    MenaiValue **arr = NULL;
-    if (n > 0) {
-        arr = (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *));
-        if (!arr) {
-            return NULL;
-        }
-
-        for (ssize_t i = 0; i < n; i++) {
-            arr[i] = items[i];
-            menai_retain(arr[i]);
-        }
-    }
-
-    MenaiList *obj = (MenaiList *)menai_alloc(sizeof(MenaiList));
-    if (!obj) {
-        for (ssize_t i = 0; i < n; i++) {
-            menai_release(arr[i]);
-        }
-
-        menai_free(arr, (size_t)n * sizeof(MenaiValue *));
-        return NULL;
-    }
-
-    obj->ob_refcnt = 1;
-    obj->ob_type = MENAITYPE_LIST;
-    obj->ob_destructor = MenaiList_dealloc;
-    obj->elements = arr;
-    obj->length = n;
-    obj->owner = NULL;
-
-    return (MenaiValue *)obj;
-}
-
-MenaiValue *
 menai_list_from_array_steal(MenaiValue **items, ssize_t n)
 {
     MenaiList *obj = (MenaiList *)menai_alloc(sizeof(MenaiList));
