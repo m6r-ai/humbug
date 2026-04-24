@@ -39,6 +39,7 @@ extensions = [
             "src/menai/menai_vm_complex.c",
             "src/menai/menai_vm_float.c",
             "src/menai/menai_vm_integer.c",
+            "src/menai/menai_vm_format.c",
             "src/menai/menai_vm_boolean.c",
             "src/menai/menai_vm_none.c",
             "src/menai/menai_vm_bridge.c",
