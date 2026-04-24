@@ -6,13 +6,9 @@
 #ifndef MENAI_VM_HASHTABLE_H
 #define MENAI_VM_HASHTABLE_H
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
-
 #include <stdint.h>
 #include <string.h>
 
-#include "menai_vm_types.h"
 #include "menai_vm_value.h"
 
 /*

@@ -14,8 +14,6 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-#include "menai_vm_types.h"
-
 typedef struct MenaiValue_s MenaiValue;
 
 /*

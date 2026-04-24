@@ -24,10 +24,10 @@
  * both arrays.  NULL pointers are safely ignored.
  */
 static void
-_set_free_arrays(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t n)
+_set_free_arrays(MenaiValue **elements, Py_hash_t *hashes, ssize_t n)
 {
     if (elements) {
-        for (Py_ssize_t i = 0; i < n; i++) {
+        for (ssize_t i = 0; i < n; i++) {
             menai_xrelease(elements[i]);
         }
 
@@ -47,7 +47,7 @@ MenaiSet_dealloc(MenaiValue *self)
 }
 
 MenaiValue *
-menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, Py_ssize_t n)
+menai_set_from_arrays_steal(MenaiValue **elements, Py_hash_t *hashes, ssize_t n)
 {
     MenaiSet *obj = (MenaiSet *)menai_alloc(sizeof(MenaiSet));
     if (!obj) {
