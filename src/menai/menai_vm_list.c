@@ -1,16 +1,15 @@
 /*
  * menai_vm_list.c — MenaiList type implementation.
  *
- * MenaiList stores a C array of MenaiValue elements.  Object structs and
- * element arrays are allocated via menai_alloc/menai_free.  Also provides
- * the three C-level constructors used by the VM:
- *   menai_list_from_array        — copy items, retain each
- *   menai_list_from_array_steal  — take ownership, no retain
+ * MenaiList stores a C array of MenaiValue elements.  Object structs and element
+ * arrays are allocated via menai_alloc/menai_free.  The two C-level constructors
+ * used by the VM are:
+ *   menai_list_from_array        — copy items array, retain each element
+ *   menai_list_from_array_steal  — take ownership of a menai_alloc'd array whose
+ *                                  elements already carry a reference each
  */
 
 #include <stdlib.h>
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
 #include <string.h>
 
 #include "menai_vm_alloc.h"
@@ -31,11 +30,11 @@ MenaiList_dealloc(MenaiValue *self)
         menai_release(owner);
     } else {
         /* Owner — release all elements then free the element array. */
-        Py_ssize_t n = lst->length;
+        ssize_t n = lst->length;
         lst->length = 0;
         MenaiValue **arr = lst->elements;
         lst->elements = NULL;
-        for (Py_ssize_t i = 0; i < n; i++) {
+        for (ssize_t i = 0; i < n; i++) {
             menai_release(arr[i]);
         }
 
@@ -46,7 +45,7 @@ MenaiList_dealloc(MenaiValue *self)
 }
 
 MenaiValue *
-menai_list_from_array(MenaiValue **items, Py_ssize_t n)
+menai_list_from_array(MenaiValue **items, ssize_t n)
 {
     MenaiValue **arr = NULL;
     if (n > 0) {
@@ -55,7 +54,7 @@ menai_list_from_array(MenaiValue **items, Py_ssize_t n)
             return NULL;
         }
 
-        for (Py_ssize_t i = 0; i < n; i++) {
+        for (ssize_t i = 0; i < n; i++) {
             arr[i] = items[i];
             menai_retain(arr[i]);
         }
@@ -63,7 +62,7 @@ menai_list_from_array(MenaiValue **items, Py_ssize_t n)
 
     MenaiList *obj = (MenaiList *)menai_alloc(sizeof(MenaiList));
     if (!obj) {
-        for (Py_ssize_t i = 0; i < n; i++) {
+        for (ssize_t i = 0; i < n; i++) {
             menai_release(arr[i]);
         }
 
@@ -82,16 +81,16 @@ menai_list_from_array(MenaiValue **items, Py_ssize_t n)
 }
 
 MenaiValue *
-menai_list_from_array_steal(MenaiValue **items, Py_ssize_t n)
+menai_list_from_array_steal(MenaiValue **items, ssize_t n)
 {
     MenaiList *obj = (MenaiList *)menai_alloc(sizeof(MenaiList));
     if (!obj) {
-        /* Free the stolen array and its references on failure. */
-        for (Py_ssize_t i = 0; i < n; i++) {
+        /* Release elements and free the array on failure. */
+        for (ssize_t i = 0; i < n; i++) {
             menai_release(items[i]);
         }
 
-        free(items);
+        menai_free(items, (size_t)n * sizeof(MenaiValue *));
         return NULL;
     }
 
@@ -157,7 +156,7 @@ menai_list_rest(MenaiValue *lst_val)
 }
 
 MenaiValue *
-menai_list_slice(MenaiValue *lst_val, Py_ssize_t start, Py_ssize_t end)
+menai_list_slice(MenaiValue *lst_val, ssize_t start, ssize_t end)
 {
     MenaiList *lst = (MenaiList *)lst_val;
 

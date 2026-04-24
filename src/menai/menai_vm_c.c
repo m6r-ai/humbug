@@ -5445,8 +5445,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiDict *d = (MenaiDict *)a;
             Py_ssize_t n = d->length;
-            MenaiValue **dk_arr = n > 0
-                ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
+            MenaiValue **dk_arr = n > 0 ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
 
             if (n > 0 && !dk_arr) {
                 PyErr_NoMemory();
@@ -5476,8 +5475,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiDict *d = (MenaiDict *)a;
             Py_ssize_t n = d->length;
-            MenaiValue **dv_arr = n > 0
-                ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
+            MenaiValue **dv_arr = n > 0 ? (MenaiValue **)menai_alloc((size_t)n * sizeof(MenaiValue *)) : NULL;
 
             if (n > 0 && !dv_arr) {
                 PyErr_NoMemory();
@@ -6216,8 +6214,7 @@ execute_loop(MenaiCodeObject *code, const GlobalsTable *globals,
 
             MenaiSet *s = (MenaiSet *)a;
             Py_ssize_t set_n = s->length;
-            MenaiValue **stl_arr = set_n > 0
-                ? (MenaiValue **)menai_alloc((size_t)set_n * sizeof(MenaiValue *)) : NULL;
+            MenaiValue **stl_arr = set_n > 0 ? (MenaiValue **)menai_alloc((size_t)set_n * sizeof(MenaiValue *)) : NULL;
 
             if (set_n > 0 && !stl_arr) {
                 PyErr_NoMemory();

@@ -18,7 +18,7 @@
 typedef struct {
     MenaiValue_HEAD
     MenaiValue **elements; /* pointer to first live element */
-    Py_ssize_t length;    /* number of live elements */
+    ssize_t length;        /* number of live elements */
     /*
      * owner is non-NULL when this list is a slice view into another list's
      * element array.  In that case elements points into owner->elements and
@@ -28,14 +28,14 @@ typedef struct {
     MenaiValue *owner;
 } MenaiList;
 
-MenaiValue *menai_list_from_array(MenaiValue **items, Py_ssize_t n);
-MenaiValue *menai_list_from_array_steal(MenaiValue **items, Py_ssize_t n);
+MenaiValue *menai_list_from_array(MenaiValue **items, ssize_t n);
+MenaiValue *menai_list_from_array_steal(MenaiValue **items, ssize_t n);
 MenaiValue *menai_list_new_empty(void);
 MenaiValue *menai_list_rest(MenaiValue *lst);
-MenaiValue *menai_list_slice(MenaiValue *lst, Py_ssize_t start, Py_ssize_t end);
+MenaiValue *menai_list_slice(MenaiValue *lst, ssize_t start, ssize_t end);
 
 static inline MenaiValue *
-menai_list_get(MenaiList *list, Py_ssize_t i)
+menai_list_get(MenaiList *list, ssize_t i)
 {
     return list->elements[i];
 }
@@ -46,7 +46,7 @@ menai_list_elements(MenaiValue *list_obj)
     return ((MenaiList *)list_obj)->elements;
 }
 
-static inline Py_ssize_t
+static inline ssize_t
 menai_list_length(MenaiValue *list_obj)
 {
     return ((MenaiList *)list_obj)->length;
