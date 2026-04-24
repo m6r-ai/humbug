@@ -118,6 +118,9 @@ Humbug is open source and the project welcomes contributions. If you're interest
   (Visual C++ 14.0 or later) — required to compile the Menai C extension.
   During installation, select the **"Desktop development with C++"** workload.
   This is a one-time setup; once installed it is used automatically by `setup.py`.
+- **Linux only:** Python development headers — required to compile the Menai C extension.
+  Install via your package manager, e.g. on Debian/Ubuntu: `sudo apt install gcc python3-dev`
+  (gcc is also required if not already present).
 - API keys for most cloud-based LLMs (some are free; Ollama runs locally without API keys)
 
 Runtime dependencies (installed automatically):

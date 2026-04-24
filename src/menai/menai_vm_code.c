@@ -4,6 +4,7 @@
  * Converts Python CodeObject trees to native C MenaiCodeObject trees and
  * manages their lifetimes via reference counting.
  */
+#define _POSIX_C_SOURCE 200809L
 #include <stdlib.h>
 #include <string.h>
 

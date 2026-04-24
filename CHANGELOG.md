@@ -5,6 +5,7 @@
 New features:
 
 - If an AI generates a diff hunk with `@@` but with no line numbers, the diff applier will try to find with a fuzzy match.
+- Added support for using the C version of the Menai VM for Linux systems.
 - Dramatically improve the performance of the Menai VM.
 - The Menai VM C code is now much cleaner and decoupled from the original Python implementation.
 - Added keyboard scrolling of diff tabs.

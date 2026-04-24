@@ -220,7 +220,7 @@ _menai_bigint_divmod_mag(const MenaiBigInt *a, const MenaiBigInt *b, MenaiBigInt
         return -1;
     }
 
-    uint32_t *vn = (uint32_t *)malloc((size_t)n * sizeof(uint32_t));
+    uint32_t *vn = (uint32_t *)calloc((size_t)n, sizeof(uint32_t));
     if (vn == NULL) {
         free(un);
         PyErr_NoMemory();
@@ -475,13 +475,7 @@ menai_bigint_from_pylong(PyObject *obj, MenaiBigInt *a)
 
     /* Large value: use _PyLong_AsByteArray. */
     int sign = 0;
-#if PY_VERSION_HEX >= 0x030C00A1
-    if (PyLong_GetSign(obj, &sign) < 0) {
-        return -1;
-    }
-#else
     sign = _PyLong_Sign(obj);
-#endif
 
     int is_neg = (sign < 0);
 

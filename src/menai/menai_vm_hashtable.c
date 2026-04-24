@@ -7,6 +7,7 @@
  * Tables are built once and never mutated (Menai collections are immutable),
  * so there is no deletion or rehashing logic.
  */
+#define _POSIX_C_SOURCE 200809L
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,7 +45,7 @@ static inline hash_t
 _hash_finalise(uhash_t acc, ssize_t n)
 {
     acc ^= (uhash_t)n;
-    return (hash_t)(acc == (uhash_t)-1 ? -2 : acc);
+    return (hash_t)(acc == (uhash_t)-1 ? (uhash_t)-2 : acc);
 }
 
 hash_t

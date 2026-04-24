@@ -11,6 +11,7 @@
  * Build:
  *   python setup.py build_ext --inplace
  */
+#define _POSIX_C_SOURCE 200809L
 #include <math.h>
 #include <stdarg.h>
 #include <stddef.h>
